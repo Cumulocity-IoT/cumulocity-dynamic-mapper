@@ -25,4 +25,8 @@ public class SystemException extends Exception {
     public SystemException(String string) {
         super(string);
     }
+
+    public SystemException(String string, Exception e) {
+        super(string, e);
+    }
 }

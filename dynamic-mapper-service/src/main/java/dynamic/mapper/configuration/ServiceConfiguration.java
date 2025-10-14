@@ -66,87 +66,87 @@ public class ServiceConfiguration implements Cloneable {
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Enable logging of message payloads for debugging purposes. Caution: May expose sensitive data in logs.", example = "false")
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
-    public boolean logPayload;
+    private boolean logPayload;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Enable logging of field substitutions during mapping transformation for debugging.", example = "false")
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
-    public boolean logSubstitution;
+    private boolean logSubstitution;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Enable logging of connector errors in the backend system for monitoring and troubleshooting.", example = "false")
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
-    public boolean logConnectorErrorInBackend;
+    private boolean logConnectorErrorInBackend;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Enable sending connector lifecycle events (connect/disconnect) to Cumulocity IoT.", example = "false")
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
-    public boolean sendConnectorLifecycle;
+    private boolean sendConnectorLifecycle;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Enable sending mapping execution status and statistics to Cumulocity IoT.", example = "true")
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
-    public boolean sendMappingStatus;
+    private boolean sendMappingStatus;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Enable sending subscription events when mappings are activated/deactivated.", example = "false")
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
-    public boolean sendSubscriptionEvents;
+    private boolean sendSubscriptionEvents;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Enable sending notification lifecycle events for outbound mapping subscriptions.", example = "false")
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
-    public boolean sendNotificationLifecycle;
+    private boolean sendNotificationLifecycle;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Enable support for external processor extensions that provide custom transformation capabilities.", example = "true")
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
-    public boolean externalExtensionEnabled;
+    private boolean externalExtensionEnabled;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Enable outbound mapping functionality for sending data from Cumulocity IoT to external systems.", example = "true")
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
-    public boolean outboundMappingEnabled;
+    private boolean outboundMappingEnabled;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Size of the cache for inbound external ID lookups. Set to 0 to disable caching.", example = "1000", minimum = "0")
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
-    public Integer inboundExternalIdCacheSize;
+    private Integer inboundExternalIdCacheSize;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Retention time in hours for inbound external ID cache entries.", example = "24", minimum = "1")
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
-    public Integer inboundExternalIdCacheRetention;
+    private Integer inboundExternalIdCacheRetention;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Size of the inventory cache for device lookups. Set to 0 to disable caching.", example = "500", minimum = "0")
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
-    public Integer inventoryCacheSize;
+    private Integer inventoryCacheSize;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Retention time in hours for inventory cache entries.", example = "12", minimum = "1")
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
-    public Integer inventoryCacheRetention;
+    private Integer inventoryCacheRetention;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "List of inventory fragments to include in cache for better performance. Examples: c8y_IsDevice, c8y_Hardware, c8y_Mobile", example = "[\"c8y_IsDevice\", \"c8y_Hardware\", \"c8y_Mobile\"]")
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
-    public List<String> inventoryFragmentsToCache;
+    private List<String> inventoryFragmentsToCache;
 
     @Schema(description = "Map of code templates used for custom processing logic in mappings")
     @JsonProperty("codeTemplates")
-    public Map<String, CodeTemplate> codeTemplates;
+    private Map<String, CodeTemplate> codeTemplates;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Maximum CPU time in milliseconds allowed for code execution in mappings. Prevents infinite loops and excessive processing.", example = "5000", minimum = "100", maximum = "30000")
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
-    public Integer maxCPUTimeMS;
+    private Integer maxCPUTimeMS;
 
     @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "Name of jsonata agent to be used when generating substitutions. The needs to be defined in the AI Agent Manager.", example = "jsonataAgent")
     @JsonSetter(nulls = Nulls.SKIP)
-    public String jsonataAgent;
+    private String jsonataAgent;
 
     @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "Name of javaScript agent to be used when generating substitutions as JavaScript code. The needs to be defined in the AI Agent Manager.", example = "javaScriptAgent")
     @JsonSetter(nulls = Nulls.SKIP)
-    public String javaScriptAgent;
+    private String javaScriptAgent;
 }

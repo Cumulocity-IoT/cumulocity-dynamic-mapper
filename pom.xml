@@ -34,9 +34,9 @@
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<revision>6.0.2</revision>
+		<revision>6.1.0</revision>
 		<spring-boot-dependencies.version>3.3.5</spring-boot-dependencies.version>
-		<c8y.version>2025.44.0</c8y.version>
+		<c8y.version>2025.68.0</c8y.version>
 		<lombok.version>1.18.38</lombok.version>
 		<slf4j.version>2.0.17</slf4j.version>
 		<maven.compiler.source>21</maven.compiler.source>
@@ -47,7 +47,8 @@
 		<graalvm.js.version>23.1.7</graalvm.js.version>
 		<springdoc.version>2.8.5</springdoc.version>
 		<spring-ai.version>1.1.0-SNAPSHOT</spring-ai.version>
-		<pulsar.version>4.0.6</pulsar.version>
+		<pulsar.version>4.0.5</pulsar.version>
+		<camel.version>4.2.0</camel.version>
 		<!-- <spring-ai.version>1.0.1</spring-ai.version> -->
 		<authToken>${env.AUTH_TOKEN}</authToken>
 	</properties>
@@ -101,6 +102,49 @@
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
+
+			<dependency>
+				<groupId>org.springframework.ai</groupId>
+				<artifactId>spring-ai-bom</artifactId>
+				<version>${spring-ai.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+
+			<dependency>
+				<groupId>org.apache.pulsar</groupId>
+				<artifactId>pulsar-bom</artifactId>
+				<version>${pulsar.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+
+			<dependency>
+				<groupId>org.apache.pulsar</groupId>
+				<artifactId>pulsar-client</artifactId>
+				<version>${pulsar.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.pulsar</groupId>
+				<artifactId>pulsar-common</artifactId>
+				<version>${pulsar.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.pulsar</groupId>
+				<artifactId>pulsar-client-api</artifactId>
+				<version>${pulsar.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.pulsar</groupId>
+				<artifactId>pulsar-client-admin-api</artifactId>
+				<version>${pulsar.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.pulsar</groupId>
+				<artifactId>bouncy-castle-bc</artifactId>
+				<version>${pulsar.version}</version>
+			</dependency>
+
 			<dependency>
 				<groupId>com.jayway.jsonpath</groupId>
 				<artifactId>json-path</artifactId>
@@ -255,19 +299,26 @@
 				<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
 				<version>${springdoc.version}</version>
 			</dependency>
+
+			<!-- Camel Spring Boot Starter -->
 			<dependency>
-				<groupId>org.springframework.ai</groupId>
-				<artifactId>spring-ai-bom</artifactId>
-				<version>${spring-ai.version}</version>
-				<type>pom</type>
-				<scope>import</scope>
+				<groupId>org.apache.camel.springboot</groupId>
+				<artifactId>camel-spring-boot-starter</artifactId>
+				<version>${camel.version}</version>
 			</dependency>
+
+			<!-- Camel Core (included in starter but explicit for clarity) -->
 			<dependency>
-				<groupId>org.apache.pulsar</groupId>
-				<artifactId>pulsar-bom</artifactId>
-				<version>${pulsar.version}</version>
-				<type>pom</type>
-				<scope>import</scope>
+				<groupId>org.apache.camel</groupId>
+				<artifactId>camel-core</artifactId>
+				<version>${camel.version}</version>
+			</dependency>
+
+			<!-- Camel Direct component for internal routing -->
+			<dependency>
+				<groupId>org.apache.camel</groupId>
+				<artifactId>camel-direct</artifactId>
+				<version>${camel.version}</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>

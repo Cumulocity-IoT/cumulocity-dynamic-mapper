@@ -59,7 +59,7 @@ public class NotificationSubscriptionService {
 
             if (mor != null) {
                 allChildDevices = configurationRegistry.getNotificationSubscriber()
-                        .findAllRelatedDevicesByMO(mor, allChildDevices, false);
+                        .findAllRelatedDevicesByMO(tenant, mor, allChildDevices, false);
 
                 // Subscribe each child device
                 for (Device childDevice : allChildDevices) {
@@ -132,10 +132,10 @@ public class NotificationSubscriptionService {
                 ManagedObjectRepresentation groupMor = c8yAgent.getManagedObjectForId(tenant, group.getId());
                 if (groupMor != null) {
                     // add subscription for deviceGroup
-                    configurationRegistry.getNotificationSubscriber().subscribeByDeviceGroup(groupMor);
+                    configurationRegistry.getNotificationSubscriber().subscribeByDeviceGroup(tenant, groupMor);
                     try {
                         allChildDevices = configurationRegistry.getNotificationSubscriber()
-                                .findAllRelatedDevicesByMO(groupMor, allChildDevices, false);
+                                .findAllRelatedDevicesByMO(tenant, groupMor, allChildDevices, false);
                     } catch (Exception e) {
                         log.error("{} - Error creating group subscriptions: ", tenant, e);
                         throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
@@ -160,10 +160,10 @@ public class NotificationSubscriptionService {
                 ManagedObjectRepresentation groupMor = c8yAgent.getManagedObjectForId(tenant, group.getId());
                 if (groupMor != null) {
                     // remove subscription for deviceGroup
-                    configurationRegistry.getNotificationSubscriber().unsubscribeByDeviceGroup(groupMor);
+                    configurationRegistry.getNotificationSubscriber().unsubscribeByDeviceGroup(tenant, groupMor);
                     try {
                         List<Device> devicesToRemove = configurationRegistry.getNotificationSubscriber()
-                                .findAllRelatedDevicesByMO(groupMor, new ArrayList<>(), false);
+                                .findAllRelatedDevicesByMO(tenant, groupMor, new ArrayList<>(), false);
                         for (Device deviceToRemove : devicesToRemove) {
                             ManagedObjectRepresentation deviceMor = c8yAgent.getManagedObjectForId(tenant,
                                     deviceToRemove.getId());
@@ -193,11 +193,11 @@ public class NotificationSubscriptionService {
 
     public void deleteGroupSubscription(String tenant, ManagedObjectRepresentation groupMor) {
         // Remove group subscription
-        configurationRegistry.getNotificationSubscriber().unsubscribeByDeviceGroup(groupMor);
+        configurationRegistry.getNotificationSubscriber().unsubscribeByDeviceGroup(tenant, groupMor);
 
         // Find and unsubscribe all devices in group
         List<Device> devicesInGroup = configurationRegistry.getNotificationSubscriber()
-                .findAllRelatedDevicesByMO(groupMor, new ArrayList<>(), false);
+                .findAllRelatedDevicesByMO(tenant, groupMor, new ArrayList<>(), false);
 
         for (Device device : devicesInGroup) {
             ManagedObjectRepresentation deviceMor = configurationRegistry.getC8yAgent()

@@ -72,7 +72,6 @@ import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.Agent;
 import com.cumulocity.model.ID;
-import com.cumulocity.model.JSONBase;
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.model.measurement.MeasurementValue;
 import com.cumulocity.model.operation.OperationStatus;
@@ -115,12 +114,12 @@ import dynamic.mapper.model.ExtensionType;
 import dynamic.mapper.model.LoggingEventType;
 import dynamic.mapper.model.MapperServiceRepresentation;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.extension.ExtensibleProcessorInbound;
 import dynamic.mapper.processor.extension.ExtensionsComponent;
 import dynamic.mapper.processor.extension.ProcessorExtensionSource;
 import dynamic.mapper.processor.extension.ProcessorExtensionTarget;
-import dynamic.mapper.processor.model.C8YRequest;
+import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.service.ExtensionInboundRegistry;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Metrics;
@@ -134,7 +133,7 @@ import static com.cumulocity.rest.representation.alarm.AlarmMediaType.ALARM;;
 
 @Slf4j
 @Component
-public class C8YAgent implements ImportBeanDefinitionRegistrar {
+public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichmentClient {
 
     ConnectorStatus previousConnectorStatus = ConnectorStatus.UNKNOWN;
 
@@ -184,6 +183,10 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     @Getter
     private ConfigurationRegistry configurationRegistry;
+
+    @Getter
+    @Autowired
+    private ExtensionInboundRegistry extensionInboundRegistry;
 
     @Autowired
     CumulocityClientProperties clientProperties;
@@ -434,12 +437,13 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     // TODO Change this to use ExecutorService + Virtual Threads when available
-    public CompletableFuture<AbstractExtensibleRepresentation> createMEAOAsync(ProcessingContext<?> context)
+    public CompletableFuture<AbstractExtensibleRepresentation> createMEAOAsync(ProcessingContext<?> context,
+            int requestIndex)
             throws ProcessingException {
         return CompletableFuture.supplyAsync(() -> {
             String tenant = context.getTenant();
             StringBuffer error = new StringBuffer("");
-            C8YRequest currentRequest = context.getCurrentRequest();
+            DynamicMapperRequest currentRequest = context.getRequests().get(requestIndex);
             String payload = currentRequest.getRequest();
             API targetAPI = context.getMapping().getTargetAPI();
             AbstractExtensibleRepresentation result = subscriptionsService.callForTenant(tenant, () -> {
@@ -542,7 +546,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     }
 
-    public AbstractExtensibleRepresentation createMEAO(ProcessingContext<?> context)
+    public AbstractExtensibleRepresentation createMEAO(ProcessingContext<?> context, int requestIndex)
             throws ProcessingException {
         // initializeTransientApis();
         // log.info("{} - C8Y Connections available: {}",
@@ -551,7 +555,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         // this.c8yRequestTimerMap.get(tenant);
         Timer.Sample timer = Timer.start(Metrics.globalRegistry);
         AtomicReference<ProcessingException> pe = new AtomicReference<>();
-        C8YRequest currentRequest = context.getCurrentRequest();
+        DynamicMapperRequest currentRequest = context.getRequests().get(requestIndex);
         String payload = currentRequest.getRequest();
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         API targetAPI = context.getMapping().getTargetAPI();
@@ -589,11 +593,11 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                             c8ySemaphore.release();
                         }
                         GId eventId = ((EventRepresentation) rt).getId();
-                        if (context.getMapping().eventWithAttachment) {
+                        if (context.getMapping().getEventWithAttachment()) {
                             BinaryInfo binaryInfo = context.getBinaryInfo();
                             uploadEventAttachment(binaryInfo, eventId.getValue(), false);
                         }
-                        if (serviceConfiguration.logPayload)
+                        if (serviceConfiguration.isLogPayload())
                             log.info("{} - SEND: event posted: {}", tenant, rt);
                         else
                             log.info("{} - SEND: event posted with Id {}", tenant,
@@ -627,7 +631,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                         } finally {
                             c8ySemaphore.release();
                         }
-                        if (serviceConfiguration.logPayload)
+                        if (serviceConfiguration.isLogPayload())
                             log.info("{} - SEND: alarm posted: {}", tenant, rt);
                         else
                             log.info("{} - SEND: alarm posted with Id {}", tenant,
@@ -664,7 +668,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                         } finally {
                             c8ySemaphore.release();
                         }
-                        if (serviceConfiguration.logPayload)
+                        if (serviceConfiguration.isLogPayload())
                             log.info("{} - SEND: measurement posted: {}", tenant, rt);
                         else
                             log.info("{} - SEND: measurement posted with Id {}", tenant,
@@ -686,11 +690,12 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                         log.error("{} - Not existing API!", tenant);
                     }
                 } catch (JsonProcessingException e) {
-                    log.error("{} - Could not map payload: {} {}", tenant, targetAPI, payload, e);
+                    log.error("{} - Could not map payload: {} {}", tenant, targetAPI, payload, e.getMessage());
                     pe.set(new ProcessingException("Could not map payload: " + targetAPI + "/" + payload, e));
                     // error.append("Could not map payload: " + targetAPI + "/" + payload);
                 } catch (SDKException s) {
-                    log.error("{} - Could not sent payload to c8y: {} {}: ", tenant, targetAPI, payload, s);
+                    log.error("{} - Could not sent payload to c8y: {} {}: ", tenant, targetAPI, payload,
+                            s.getMessage());
                     pe.set(new ProcessingException("Could not sent payload to c8y: " + targetAPI + "/" + payload, s));
                     // error.append("Could not sent payload to c8y: " + targetAPI + "/" + payload +
                     // "/" + s);
@@ -705,10 +710,11 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         return result;
     }
 
-    public ManagedObjectRepresentation upsertDevice(String tenant, ID identity, ProcessingContext<?> context)
+    public ManagedObjectRepresentation upsertDevice(String tenant, ID identity, ProcessingContext<?> context,
+            int requestIndex)
             throws ProcessingException {
         // StringBuffer error = new StringBuffer("");
-        C8YRequest currentRequest = context.getCurrentRequest();
+        DynamicMapperRequest currentRequest = context.getRequests().get(requestIndex);
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         AtomicReference<ProcessingException> pe = new AtomicReference<>();
         API targetAPI = context.getMapping().getTargetAPI();
@@ -721,7 +727,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 try {
                     // ExternalIDRepresentation extId = resolveExternalId2GlobalId(tenant, identity,
                     // context);
-                    if (context.getSourceId() == null) {
+                    if (currentRequest.getSourceId() == null) {
                         // Device does not exist
                         // append external id to name
                         mor.setName(mor.getName());
@@ -742,7 +748,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                             c8ySemaphore.acquire();
                             mor = inventoryApi.create(mor, context);
                             // TODO Add/Update new managed object to IdentityCache
-                            if (serviceConfiguration.logPayload)
+                            if (serviceConfiguration.isLogPayload())
                                 log.info("{} - New device created: {}", tenant, mor);
                             else
                                 log.info("{} - New device created with Id {}", tenant, mor.getId().getValue());
@@ -754,7 +760,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                         }
                     } else {
                         // Device exists - update needed
-                        mor.setId(new GId(context.getSourceId()));
+                        mor.setId(new GId(currentRequest.getSourceId()));
                         try {
                             c8ySemaphore.acquire();
                             mor = inventoryApi.update(mor, context);
@@ -763,7 +769,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                         } finally {
                             c8ySemaphore.release();
                         }
-                        if (serviceConfiguration.logPayload)
+                        if (serviceConfiguration.isLogPayload())
                             log.info("{} - Device updated: {}", tenant, mor);
                         else
                             log.info("{} - Device {} updated.", tenant, mor.getId().getValue());
@@ -855,8 +861,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     private void registerExtensionInProcessor(String tenant, String id, String extensionName, ClassLoader dynamicLoader,
             boolean external)
             throws IOException {
-        ExtensibleProcessorInbound extensibleProcessor = configurationRegistry.getExtensibleProcessor(tenant);
-        extensibleProcessor.addExtension(tenant, new Extension(id, extensionName, external));
+        // manage extensions for Camel routes
+        extensionInboundRegistry.addExtension(tenant, new Extension(id, extensionName, external));
+
         String resource = external ? EXTENSION_EXTERNAL_FILE : EXTENSION_INTERNAL_FILE;
         InputStream resourceAsStream = dynamicLoader.getResourceAsStream(resource);
         InputStreamReader in = null;
@@ -882,7 +889,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             Class<?> clazz;
             ExtensionEntry extensionEntry = ExtensionEntry.builder().eventName(key).extensionName(extensionName)
                     .fqnClassName(newExtensions.getProperty(key)).loaded(true).message("OK").build();
-            extensibleProcessor.addExtensionEntry(tenant, extensionName, extensionEntry);
+
+            // manage extensions for Camel routes
+            extensionInboundRegistry.addExtensionEntry(tenant, extensionName, extensionEntry);
 
             try {
                 clazz = dynamicLoader.loadClass(newExtensions.getProperty(key));
@@ -947,33 +956,32 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 extensionEntry.setLoaded(false);
             }
         }
-        extensibleProcessor.updateStatusExtension(extensionName);
+        // manage extensions for Camel routes
+        extensionInboundRegistry.updateStatusExtension(tenant, extensionName);
     }
 
     public Map<String, Extension> getProcessorExtensions(String tenant) {
-        ExtensibleProcessorInbound extensibleProcessor = configurationRegistry.getExtensibleProcessor(tenant);
-        return extensibleProcessor.getExtensions();
+        return extensionInboundRegistry.getExtensions(tenant);
     }
 
     public Extension getProcessorExtension(String tenant, String extension) {
-        ExtensibleProcessorInbound extensibleProcessor = configurationRegistry.getExtensibleProcessor(tenant);
-        return extensibleProcessor.getExtension(extension);
+        return extensionInboundRegistry.getExtension(tenant, extension);
     }
 
     public Extension deleteProcessorExtension(String tenant, String extensionName) {
-        ExtensibleProcessorInbound extensibleProcessor = configurationRegistry.getExtensibleProcessor(tenant);
         for (ManagedObjectRepresentation extensionRepresentation : extensionsComponent.get()) {
             if (extensionName.equals(extensionRepresentation.getName())) {
                 binaryApi.deleteFile(extensionRepresentation.getId());
                 log.info("{} - Deleted extension: {} permanently!", tenant, extensionName);
             }
         }
-        return extensibleProcessor.deleteExtension(extensionName);
+        // manage extensions for Camel routes
+        return extensionInboundRegistry.deleteExtension(tenant, extensionName);
     }
 
     public void reloadExtensions(String tenant) {
-        ExtensibleProcessorInbound extensibleProcessor = configurationRegistry.getExtensibleProcessor(tenant);
-        extensibleProcessor.deleteExtensions();
+        // manage extensions for Camel routes
+        extensionInboundRegistry.deleteExtensions(tenant);
         loadProcessorExtensions(tenant);
     }
 
@@ -1076,9 +1084,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     public void createExtensibleProcessor(String tenant) {
-        ExtensibleProcessorInbound extensibleProcessor = new ExtensibleProcessorInbound(configurationRegistry);
-        configurationRegistry.addExtensibleProcessor(tenant, extensibleProcessor);
-        log.debug("{} - Create ExtensibleProcessor {}", tenant, extensibleProcessor);
+        log.debug("{} - Create ExtensibleProcessor", tenant);
 
         // check if managedObject for internal mapping extension exists
         List<ManagedObjectRepresentation> internalExtension = extensionsComponent.getInternal();
@@ -1100,7 +1106,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     public void sendNotificationLifecycle(String tenant, ConnectorStatus connectorStatus, String message) {
-        if (configurationRegistry.getServiceConfiguration(tenant).sendNotificationLifecycle
+        if (configurationRegistry.getServiceConfiguration(tenant).isSendNotificationLifecycle()
                 && !(connectorStatus.equals(previousConnectorStatus))) {
             previousConnectorStatus = connectorStatus;
             DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -1136,7 +1142,14 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     public void initializeInventoryCache(String tenant, int inventoryCacheSize) {
         log.info("{} - Initialize inventoryCache {}", tenant, inventoryCacheSize);
-        inventoryCaches.put(tenant, new InventoryCache(inventoryCacheSize, tenant));
+        InventoryCache inventoryCache = new InventoryCache(inventoryCacheSize, tenant);
+        // Set up eviction listener
+        inventoryCache.setEvictionListener(evictedSourceId -> {
+            ManagedObjectRepresentation moRep = new ManagedObjectRepresentation();
+            moRep.setId(new GId(evictedSourceId));
+            configurationRegistry.getNotificationSubscriber().unsubscribeMOForInventoryCacheUpdates(tenant, moRep);
+        });
+        inventoryCaches.put(tenant, inventoryCache);
     }
 
     public InboundExternalIdCache removeInboundExternalIdCache(String tenant) {
@@ -1191,8 +1204,11 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             // FIXME Recreating the cache creates a new instance of InventoryCache
             // which causes issues with Metering
             if (recreate) {
+                // this is required to unregister all subscriptions for inventory updates
+                configurationRegistry.getNotificationSubscriber().unsubscribeAllMOForInventoryCacheUpdates(tenant);
                 inventoryCaches.put(tenant, new InventoryCache(inventoryCacheSize, tenant));
             } else {
+                configurationRegistry.getNotificationSubscriber().unsubscribeAllMOForInventoryCacheUpdates(tenant);
                 inventoryCache.clearCache();
             }
         }
@@ -1206,18 +1222,24 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             return 0;
     }
 
-    public Map<String, Object> getMOFromInventoryCache(String tenant, String deviceId) {
-        Map<String, Object> result = getInventoryCache(tenant).getMOBySource(deviceId);
-        if (result != null) {
-            return result;
+    public Map<String, Object> getMOFromInventoryCacheByExternalId(String tenant, String externalId, String type) {
+        ID identity = new ID(type, externalId);
+        ExternalIDRepresentation sourceId = this.resolveExternalId2GlobalId(tenant, identity, null);
+        if (sourceId != null) {
+            return getMOFromInventoryCache(tenant, sourceId.getManagedObject().getId().getValue());
         }
+        return null;
+    }
+
+    public Map<String, Object> updateMOInInventoryCache(String tenant, String sourceId, Map<String, Object> updates) {
+        InventoryCache inventoryCache = getInventoryCache(tenant);
 
         // Create new managed object cache entry
         final Map<String, Object> newMO = new HashMap<>();
-        getInventoryCache(tenant).putMOforSource(deviceId, newMO);
+        inventoryCache.putMO(sourceId, newMO);
 
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
-        ManagedObjectRepresentation device = getManagedObjectForId(tenant, deviceId);
+        ManagedObjectRepresentation device = getManagedObjectForId(tenant, sourceId);
         Map<String, Object> attrs = device.getAttrs();
 
         // Process each fragment
@@ -1226,7 +1248,61 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
             // Handle special cases
             if ("id".equals(frag)) {
-                newMO.put(frag, deviceId);
+                newMO.put(frag, sourceId);
+                return; // using return in forEach as continue
+            }
+            if ("name".equals(frag)) {
+                newMO.put(frag, device.getName());
+                return;
+            }
+            if ("owner".equals(frag)) {
+                newMO.put(frag, device.getOwner());
+                return;
+            }
+
+            if ("type".equals(frag)) {
+                newMO.put(frag, device.getType());
+                return;
+            }
+
+            // Handle nested attributes
+            Object value = resolveNestedAttribute(attrs, frag);
+            if (value != null) {
+                newMO.put(frag, value);
+            }
+        });
+
+        return newMO;
+    }
+
+    public Map<String, Object> getMOFromInventoryCache(String tenant, String sourceId) {
+        InventoryCache inventoryCache = getInventoryCache(tenant);
+        Map<String, Object> result = inventoryCache.getMOBySource(sourceId);
+        if (result != null) {
+            return result;
+        }
+
+        // Create new managed object cache entry
+        final Map<String, Object> newMO = new HashMap<>();
+        inventoryCache.putMO(sourceId, newMO);
+        ManagedObjectRepresentation mor = new ManagedObjectRepresentation();
+        mor.setId(new GId(sourceId));
+
+        // register for updates
+        configurationRegistry.getNotificationSubscriber()
+                .subscribeMOForInventoryCacheUpdates(tenant, mor);
+
+        ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
+        ManagedObjectRepresentation device = getManagedObjectForId(tenant, sourceId);
+        Map<String, Object> attrs = device.getAttrs();
+
+        // Process each fragment
+        serviceConfiguration.getInventoryFragmentsToCache().forEach(frag -> {
+            frag = frag.trim();
+
+            // Handle special cases
+            if ("id".equals(frag)) {
+                newMO.put(frag, sourceId);
                 return; // using return in forEach as continue
             }
             if ("name".equals(frag)) {

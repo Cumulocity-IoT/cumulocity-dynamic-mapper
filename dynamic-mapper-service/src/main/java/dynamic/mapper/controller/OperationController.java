@@ -21,6 +21,7 @@
 
 package dynamic.mapper.controller;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -65,21 +66,16 @@ import dynamic.mapper.model.SnoopStatus;
 import dynamic.mapper.service.ConnectorConfigurationService;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.service.ServiceConfigurationService;
+import dynamic.mapper.service.deployment.DeploymentMapService;
+import dynamic.mapper.service.status.MappingStatusService;
 import dynamic.mapper.model.Mapping;
 
-import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.enums.SecuritySchemeIn;
-import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
-import io.swagger.v3.oas.annotations.info.Info;
-import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 @Slf4j
@@ -114,6 +110,12 @@ public class OperationController {
 
     @Value("${APP.externalExtensionsEnabled}")
     private boolean externalExtensionsEnabled;
+
+    @Autowired
+    private DeploymentMapService deploymentMapService;
+
+    @Autowired
+    private MappingStatusService mappingStatusService;
 
     private ObjectMapper objectMapper;
 
@@ -386,15 +388,20 @@ public class OperationController {
     }
 
     private ResponseEntity<?> handleReloadMappings(String tenant) throws ConnectorRegistryException {
-        List<Mapping> updatedMappingsInbound = mappingService.rebuildMappingInboundCache(tenant,
-                ConnectorId.INTERNAL);
-        List<Mapping> updatedMappingsOutbound = mappingService.rebuildMappingOutboundCache(tenant,
-                ConnectorId.INTERNAL);
+        // Rebuild all caches at once
+        mappingService.rebuildMappingCaches(tenant, ConnectorId.INTERNAL);
 
+        // Get the updated mappings from cache
+        List<Mapping> updatedMappingsInbound = new ArrayList<>(
+                mappingService.getCacheMappingInbound(tenant).values());
+        List<Mapping> updatedMappingsOutbound = new ArrayList<>(
+                mappingService.getCacheOutboundMappings(tenant).values());
+
+        // Update connector subscriptions
         Map<String, AConnectorClient> connectorMap = connectorRegistry.getClientsForTenant(tenant);
         connectorMap.values().forEach(client -> {
-            // we always start with a cleanSession in case we reload the mappings
-            client.initializeSubscriptionsInbound(updatedMappingsInbound, false, true);
+            // We always start with a cleanSession in case we reload the mappings
+            client.initializeSubscriptionsInbound(updatedMappingsInbound, false);
             updatedMappingsOutbound.forEach(mapping -> client.updateSubscriptionForOutbound(mapping, false, false));
         });
 
@@ -402,7 +409,7 @@ public class OperationController {
     }
 
     private ResponseEntity<?> handleResetDeploymentMap(String tenant) throws Exception {
-        mappingService.initializeDeploymentMap(tenant, true);
+        deploymentMapService.initializeTenantDeploymentMap(tenant, true);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
@@ -422,12 +429,11 @@ public class OperationController {
         // outbound mapping
         Map<String, String> failed = new HashMap<>();
         for (AConnectorClient client : connectorMap.values()) {
-            if (updatedMapping.direction == Direction.INBOUND) {
+            if (updatedMapping.getDirection() == Direction.INBOUND) {
                 if (!client.updateSubscriptionForInbound(updatedMapping, false, true)) {
                     ConnectorConfiguration conf = client.getConnectorConfiguration();
                     failed.put(conf.getIdentifier(), conf.getName());
                 }
-                ;
             } else {
                 client.updateSubscriptionForOutbound(updatedMapping, false, true);
             }
@@ -459,7 +465,7 @@ public class OperationController {
     }
 
     private ResponseEntity<?> handleResetStatusMapping(String tenant) throws Exception {
-        mappingService.initializeMappingStatus(tenant, true);
+        mappingStatusService.initializeTenantStatus(tenant, true);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
@@ -535,13 +541,13 @@ public class OperationController {
         String cacheId = parameters.get("cacheId");
         if ("INBOUND_ID_CACHE".equals(cacheId)) {
             Integer cacheSize = serviceConfigurationService
-                    .getServiceConfiguration(tenant).inboundExternalIdCacheSize;
+                    .getServiceConfiguration(tenant).getInboundExternalIdCacheSize();
             configurationRegistry.getC8yAgent().clearInboundExternalIdCache(tenant, false, cacheSize);
             log.info("{} - Cache cleared: {}", tenant, cacheId);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } else if ("INVENTORY_CACHE".equals(cacheId)) {
             Integer cacheSize = serviceConfigurationService
-                    .getServiceConfiguration(tenant).inventoryCacheSize;
+                    .getServiceConfiguration(tenant).getInventoryCacheSize();
             configurationRegistry.getC8yAgent().clearInventoryCache(tenant, false, cacheSize);
             log.info("{} - Cache cleared: {}", tenant, cacheId);
             return ResponseEntity.status(HttpStatus.CREATED).build();

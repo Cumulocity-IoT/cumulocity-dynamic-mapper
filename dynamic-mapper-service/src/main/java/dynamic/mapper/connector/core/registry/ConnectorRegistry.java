@@ -22,12 +22,13 @@
 package dynamic.mapper.connector.core.registry;
 
 import dynamic.mapper.connector.core.ConnectorSpecification;
+import dynamic.mapper.processor.outbound.CamelDispatcherOutbound;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.http.HttpClient;
-import dynamic.mapper.connector.kafka.KafkaClient;
+import dynamic.mapper.connector.kafka.KafkaClientV2;
 import dynamic.mapper.connector.mqtt.MQTT3Client;
 import dynamic.mapper.connector.mqtt.MQTTServiceClient;
 import dynamic.mapper.connector.pulsar.MQTTServicePulsarClient;
@@ -37,6 +38,7 @@ import dynamic.mapper.core.ConnectorStatusEvent;
 
 import org.springframework.stereotype.Component;
 
+import jakarta.annotation.PreDestroy;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -47,14 +49,20 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class ConnectorRegistry {
 
-    // Structure: < Tenant, < ConnectorStatusEvent, ConnectorInstance > >
+    // Structure: < Tenant, < ConnectorIdentifier, ConnectorInstance > >
     private Map<String, Map<String, AConnectorClient>> connectorTenantMap = new ConcurrentHashMap<>();
     
-    // Structure: < ConnectorType, < Property, PropertyDefinition > >
+    // Structure: < ConnectorType, ConnectorSpecification >
     private Map<ConnectorType, ConnectorSpecification> connectorSpecificationMap = new ConcurrentHashMap<>();
 
-    // Structure: < Tenant, < ConnectorIdentifier, connectorStatusEvent > >
+    // Structure: < Tenant, < ConnectorIdentifier, ConnectorStatusEvent > >
     private Map<String, Map<String, ConnectorStatusEvent>> connectorStatusMaps = new ConcurrentHashMap<>();
+
+    // Structure: < Tenant, < ConnectorIdentifier, CamelDispatcherOutbound > >
+    // Added for NotificationSubscriber support
+    private Map<String, Map<String, CamelDispatcherOutbound>> dispatcherOutboundMaps = new ConcurrentHashMap<>();
+
+    // === Existing Methods ===
 
     public ConnectorSpecification getConnectorSpecification(ConnectorType connectorType) {
         return connectorSpecificationMap.get(connectorType);
@@ -83,7 +91,6 @@ public class ConnectorRegistry {
                 log.debug("{} - Client {} is already registered!", tenant, client.getConnectorIdentifier());
             }
         }
-
     }
 
     public Map<String, AConnectorClient> getClientsForTenant(String tenant) throws ConnectorRegistryException {
@@ -129,9 +136,6 @@ public class ConnectorRegistry {
                 entryNext.getValue().stopHousekeepingAndClose();
                 iterator.remove();
             }
-            // for (AConnectorClient client : connectorMap.values()) {
-            // this.unregisterClient(tenant, client.getConnectorIdent());
-            // }
         }
     }
 
@@ -148,11 +152,9 @@ public class ConnectorRegistry {
                 // to avoid memory leaks
                 client.setDispatcher(null);
                 client.submitDisconnect();
-                // client.disconnect();
                 client.stopHousekeepingAndClose();
 
                 // store last connector status for monitoring
-                connectorStatusMaps.get(tenant).put(identifier, client.getConnectorStatus());
                 connectorMap.remove(identifier);
             } else {
                 log.warn("{} - Client {} is not registered", tenant, identifier);
@@ -170,7 +172,6 @@ public class ConnectorRegistry {
         if (connectorStatusMaps.get(tenant) != null) {
             connectorStatusMaps.get(tenant).remove(identifier);
         }
-
     }
 
     public HttpClient getHttpConnectorForTenant(String tenant) throws ConnectorRegistryException {
@@ -183,20 +184,98 @@ public class ConnectorRegistry {
 
     public void initializeResources(String tenant) {
         connectorStatusMaps.put(tenant, new ConcurrentHashMap<>());
+        dispatcherOutboundMaps.put(tenant, new ConcurrentHashMap<>());
     }
 
     public void removeResources(String tenant) {
         connectorStatusMaps.remove(tenant);
+        dispatcherOutboundMaps.remove(tenant);
     }
 
     public void registerConnectors() throws ConnectorRegistryException, ConnectorException {
         connectorSpecificationMap.put(ConnectorType.MQTT, new MQTT3Client().getConnectorSpecification());
         connectorSpecificationMap.put(ConnectorType.CUMULOCITY_MQTT_SERVICE,
                 new MQTTServiceClient().getConnectorSpecification());
-        connectorSpecificationMap.put(ConnectorType.KAFKA, new KafkaClient().getConnectorSpecification());
+        connectorSpecificationMap.put(ConnectorType.KAFKA, new KafkaClientV2().getConnectorSpecification());
         connectorSpecificationMap.put(ConnectorType.WEB_HOOK, new WebHook().getConnectorSpecification());
         connectorSpecificationMap.put(ConnectorType.HTTP, new HttpClient().getConnectorSpecification());
         connectorSpecificationMap.put(ConnectorType.PULSAR, new PulsarConnectorClient().getConnectorSpecification());
-        connectorSpecificationMap.put(ConnectorType.CUMULOCITY_MQTT_SERVICE_PULSAR, new MQTTServicePulsarClient().getConnectorSpecification());
+        connectorSpecificationMap.put(ConnectorType.CUMULOCITY_MQTT_SERVICE_PULSAR, 
+                new MQTTServicePulsarClient().getConnectorSpecification());
+    }
+
+    // === New Methods for NotificationSubscriber Support ===
+
+    /**
+     * Add a dispatcher for notification subscriber tracking
+     */
+    public void addSubscriber(String tenant, String identifier, CamelDispatcherOutbound dispatcherOutbound) {
+        if (tenant == null || identifier == null || dispatcherOutbound == null) {
+            log.warn("Cannot add subscriber with null parameters: tenant={}, identifier={}", tenant, identifier);
+            return;
+        }
+
+        dispatcherOutboundMaps.computeIfAbsent(tenant, k -> new ConcurrentHashMap<>())
+                .put(identifier, dispatcherOutbound);
+        log.debug("{} - Added subscriber {} for tenant", tenant, identifier);
+    }
+
+    /**
+     * Remove a dispatcher
+     */
+    public void removeSubscriber(String tenant, String identifier) {
+        if (tenant == null || identifier == null) {
+            log.warn("Cannot remove subscriber: invalid parameters (tenant={}, identifier={})", tenant, identifier);
+            return;
+        }
+
+        Map<String, CamelDispatcherOutbound> dispatchers = dispatcherOutboundMaps.get(tenant);
+        if (dispatchers != null) {
+            dispatchers.remove(identifier);
+            log.debug("{} - Removed subscriber {}", tenant, identifier);
+        }
+    }
+
+    /**
+     * Get all dispatchers for a tenant
+     */
+    public Map<String, CamelDispatcherOutbound> getDispatchers(String tenant) {
+        if (tenant == null) {
+            return new HashMap<>();
+        }
+        return dispatcherOutboundMaps.getOrDefault(tenant, new HashMap<>());
+    }
+
+    /**
+     * Get a specific dispatcher
+     */
+    public CamelDispatcherOutbound getDispatcher(String tenant, String identifier) {
+        Map<String, CamelDispatcherOutbound> dispatchers = dispatcherOutboundMaps.get(tenant);
+        if (dispatchers != null) {
+            return dispatchers.get(identifier);
+        }
+        return null;
+    }
+
+    @PreDestroy
+    public void cleanup() {
+        log.info("Cleaning up ConnectorRegistry");
+
+        // Unregister all clients for all tenants
+        for (String tenant : new HashMap<>(connectorTenantMap).keySet()) {
+            try {
+                unregisterAllClientsForTenant(tenant);
+            } catch (ConnectorRegistryException e) {
+                log.warn("Error unregistering clients for tenant {}: {}", tenant, e.getMessage());
+            }
+        }
+
+        // Clear all maps
+        connectorTenantMap.clear();
+        connectorStatusMaps.clear();
+        dispatcherOutboundMaps.clear();
+        connectorSpecificationMap.clear();
+
+        log.info("ConnectorRegistry cleanup completed");
     }
 }

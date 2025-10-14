@@ -22,8 +22,12 @@
 package dynamic.mapper.configuration;
 
 public enum TemplateType {
-    INBOUND,
-    OUTBOUND,
+    INBOUND, // deprecated, use INBOUND_SUBSTITUTION_AS_CODE instead
+    OUTBOUND, // deprecated, use OUTBOUND_SUBSTITUTION_AS_CODE instead
+    INBOUND_SUBSTITUTION_AS_CODE,
+    OUTBOUND_SUBSTITUTION_AS_CODE,
+    INBOUND_SMART_FUNCTION,
+    OUTBOUND_SMART_FUNCTION,
     SHARED,
-    SYSTEM
+    SYSTEM,
 }

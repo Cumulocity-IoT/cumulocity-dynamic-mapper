@@ -210,13 +210,13 @@ Also you can decide if you want to start with snooping messages on specific topi
 
 #### Connector selection
 
-As a next step you need to create or select the connectors the mapping should be effective for.
+As a next step you need to create or select the connectors the mapping should be deployed to.
 
 <p align="center">
 <img src="resources/image/Dynamic_Mapper_Connector_Select.png"  style="width: 80%;" />
 </p>
 
-Make sure to select at least one connector before you proceed to the next step. You can select multiple connectors if your mapping should be effective for them.
+Make sure to select at least one connector before you proceed to the next step. You can select multiple connectors if your mapping should be deployed to all of them.
 For creating a new connector please review the [connector configuration guide](#connector-configuration-to-broker)
 
 #### Define topic properties
@@ -370,7 +370,7 @@ To avoid inconsistent JSON being sent to the Cumulocity API the defined target t
 In the sample below, e.g. a warning is shown since the required property `source.id` is missing in the payload.
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_SchemaValidation_Annnotated.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_SchemaValidation_Annotated.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -379,14 +379,14 @@ In the sample below, e.g. a warning is shown since the required property `source
 When you choose to define the substitutions in javascript code, see following screenshot, then the flow in the stepper is different.
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_CodeBasedSubstitution.png"  style="width: 50%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_SubstitutionAsJavaScript.png"  style="width: 50%;" />
 </p>
 <br/>
 
 In step 4 of the mapping stepper 
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_CodeBasedSubstitution.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_SubstitutionAsJavaScript.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -590,7 +590,7 @@ The configuration of the microservice can be changed using the following UI:
 When you choose the mapping type `Extension Source` the wizard for defining your mapping changes. On the second step you are not be able to change the source format of the inbound message and define substitutions. This is done by the processor extension. Instead you are able to choose a processor extension by selecting the respective message in the dropdown:
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_ProtobufMessage_Annnotated.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_ProtobufMessage_Annotated.png"  style="width: 70%;" />
 </p>
 <br/>
 

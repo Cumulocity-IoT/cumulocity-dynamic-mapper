@@ -30,6 +30,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
+import org.apache.camel.CamelContext;
 import org.graalvm.polyglot.Engine;
 import org.graalvm.polyglot.HostAccess;
 import org.graalvm.polyglot.Source;
@@ -46,9 +47,9 @@ import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
-
+import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.connector.http.HttpClient;
-import dynamic.mapper.connector.kafka.KafkaClient;
+import dynamic.mapper.connector.kafka.KafkaClientV2;
 import dynamic.mapper.connector.mqtt.MQTT3Client;
 import dynamic.mapper.connector.mqtt.MQTT5Client;
 import dynamic.mapper.connector.mqtt.MQTTServiceClient;
@@ -60,22 +61,10 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MapperServiceRepresentation;
 import dynamic.mapper.notification.NotificationSubscriber;
-import dynamic.mapper.processor.extension.ExtensibleProcessorInbound;
-import dynamic.mapper.processor.inbound.BaseProcessorInbound;
-import dynamic.mapper.processor.inbound.CodeBasedProcessorInbound;
-import dynamic.mapper.processor.inbound.FlatFileProcessorInbound;
-import dynamic.mapper.processor.inbound.HexProcessorInbound;
-import dynamic.mapper.processor.inbound.JSONProcessorInbound;
-import dynamic.mapper.processor.model.MappingType;
-import dynamic.mapper.processor.outbound.BaseProcessorOutbound;
-import dynamic.mapper.processor.outbound.CodeBasedProcessorOutbound;
-import dynamic.mapper.processor.outbound.DispatcherOutbound;
-import dynamic.mapper.processor.outbound.JSONProcessorOutbound;
-import dynamic.mapper.processor.processor.fixed.InternalProtobufProcessor;
+import dynamic.mapper.processor.outbound.CamelDispatcherOutbound;
 import dynamic.mapper.service.ConnectorConfigurationService;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.service.ServiceConfigurationService;
-import jakarta.validation.Valid;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -104,18 +93,8 @@ public class ConfigurationRegistry {
     // Structure: < Tenant, < MappingType, < MapperServiceRepresentation > >
     private Map<String, MapperServiceRepresentation> mapperServiceRepresentations = new ConcurrentHashMap<>();
 
-    // Structure: < Tenant, < MappingType, ProcessorInbound>>
-    private Map<String, Map<MappingType, BaseProcessorInbound<?>>> payloadProcessorsInbound = new ConcurrentHashMap<>();
-
-    // Structure: < Tenant, < ConnectorIdentifier, < MappingType, ProcessorOutbound
-    // > >>
-    private Map<String, Map<String, Map<MappingType, BaseProcessorOutbound<?>>>> payloadProcessorsOutbound = new ConcurrentHashMap<>();
-
     // Structure: < Tenant, < ServiceConfiguration > >
     private Map<String, ServiceConfiguration> serviceConfigurations = new ConcurrentHashMap<>();
-
-    // Structure: < Tenant, < ExtensibleProcessorSource > >
-    private Map<String, ExtensibleProcessorInbound> extensibleProcessors = new ConcurrentHashMap<>();
 
     // Structure: < Tenant, < Device, Client > >
     private Map<String, Map<String, String>> deviceToClientPerTenant = new ConcurrentHashMap<>();
@@ -130,7 +109,7 @@ public class ConfigurationRegistry {
     @Getter
     String mqttServiceUrl;
 
-    @Value("${APP.mqttServicePulsarUrl}")
+    @Value("${C8Y_BASEURL_PULSAR}")
     @Getter
     String mqttServicePulsarUrl;
 
@@ -138,6 +117,10 @@ public class ConfigurationRegistry {
     public void setC8yAgent(C8YAgent c8yAgent) {
         this.c8yAgent = c8yAgent;
     }
+
+    @Autowired
+    @Getter
+    private ConnectorRegistry connectorRegistry;
 
     @Getter
     private NotificationSubscriber notificationSubscriber;
@@ -185,17 +168,8 @@ public class ConfigurationRegistry {
     @Autowired
     private ExecutorService virtualThreadPool;
 
-    public Map<MappingType, BaseProcessorInbound<?>> createPayloadProcessorsInbound(String tenant) {
-        ExtensibleProcessorInbound extensibleProcessor = extensibleProcessors.get(tenant);
-        return Map.of(
-                MappingType.JSON, new JSONProcessorInbound(this),
-                MappingType.CODE_BASED, new CodeBasedProcessorInbound(this),
-                MappingType.FLAT_FILE, new FlatFileProcessorInbound(this),
-                MappingType.HEX, new HexProcessorInbound(this),
-                MappingType.PROTOBUF_INTERNAL, new InternalProtobufProcessor(this),
-                MappingType.EXTENSION_SOURCE, extensibleProcessor,
-                MappingType.EXTENSION_SOURCE_TARGET, extensibleProcessor);
-    }
+    @Autowired
+    private CamelContext camelContext;
 
     public static Source decodeCode(String code, String sourceCodeFileName, boolean replaceIdentifier,
             String mappingIdentifier) {
@@ -224,11 +198,11 @@ public class ConfigurationRegistry {
                 String version = ((String) connectorConfiguration.getProperties().getOrDefault("version",
                         AConnectorClient.MQTT_VERSION_3_1_1));
                 if (AConnectorClient.MQTT_VERSION_3_1_1.equals(version)) {
-                    connectorClient = new MQTT3Client(this, connectorConfiguration,
+                    connectorClient = new MQTT3Client(this, connectorRegistry, connectorConfiguration,
                             null,
                             additionalSubscriptionIdTest, tenant);
                 } else {
-                    connectorClient = new MQTT5Client(this, connectorConfiguration,
+                    connectorClient = new MQTT5Client(this, connectorRegistry, connectorConfiguration,
                             null,
                             additionalSubscriptionIdTest, tenant);
                 }
@@ -237,7 +211,7 @@ public class ConfigurationRegistry {
                 break;
 
             case CUMULOCITY_MQTT_SERVICE:
-                connectorClient = new MQTTServiceClient(this, connectorConfiguration,
+                connectorClient = new MQTTServiceClient(this, connectorRegistry, connectorConfiguration,
                         null,
                         additionalSubscriptionIdTest, tenant);
                 log.info("{} - MQTTService Connector created, identifier: {}", tenant,
@@ -245,15 +219,15 @@ public class ConfigurationRegistry {
                 break;
 
             case KAFKA:
-                connectorClient = new KafkaClient(this, connectorConfiguration,
+                connectorClient = new KafkaClientV2(this, connectorRegistry, connectorConfiguration,
                         null,
                         additionalSubscriptionIdTest, tenant);
-                log.info("{} - Kafka Connector created, identifier: {}", tenant,
+                log.info("{} - Kafka Connector V2 created, identifier: {}", tenant,
                         connectorConfiguration.getIdentifier());
                 break;
 
             case HTTP:
-                connectorClient = new HttpClient(this, connectorConfiguration,
+                connectorClient = new HttpClient(this, connectorRegistry, connectorConfiguration,
                         null,
                         additionalSubscriptionIdTest, tenant);
                 log.info("{} - HTTP Connector created, identifier: {}", tenant,
@@ -261,7 +235,7 @@ public class ConfigurationRegistry {
                 break;
 
             case WEB_HOOK:
-                connectorClient = new WebHook(this, connectorConfiguration,
+                connectorClient = new WebHook(this, connectorRegistry, connectorConfiguration,
                         null,
                         additionalSubscriptionIdTest, tenant);
                 log.info("{} - WebHook Connector created, identifier: {}", tenant,
@@ -269,7 +243,7 @@ public class ConfigurationRegistry {
                 break;
 
             case PULSAR:
-                connectorClient = new PulsarConnectorClient(this, connectorConfiguration,
+                connectorClient = new PulsarConnectorClient(this, connectorRegistry, connectorConfiguration,
                         null,
                         additionalSubscriptionIdTest, tenant);
                 log.info("{} - Pulsar Connector created, identifier: {}", tenant,
@@ -277,7 +251,7 @@ public class ConfigurationRegistry {
                 break;
 
             case CUMULOCITY_MQTT_SERVICE_PULSAR:
-                connectorClient = new MQTTServicePulsarClient(this, connectorConfiguration,
+                connectorClient = new MQTTServicePulsarClient(this, connectorRegistry, connectorConfiguration,
                         null,
                         additionalSubscriptionIdTest, tenant);
                 log.info("{} - MQTTService Pulsar Connector created, identifier: {}", tenant,
@@ -291,23 +265,7 @@ public class ConfigurationRegistry {
         return connectorClient;
     }
 
-    public Map<MappingType, BaseProcessorOutbound<?>> createPayloadProcessorsOutbound(
-            AConnectorClient connectorClient) {
-        return Map.of(
-                MappingType.JSON, new JSONProcessorOutbound(this, connectorClient),
-                MappingType.CODE_BASED, new CodeBasedProcessorOutbound(this, connectorClient));
-    }
-
     public void initializeResources(String tenant) {
-        payloadProcessorsInbound.put(tenant, createPayloadProcessorsInbound(tenant));
-        payloadProcessorsOutbound.put(tenant, new ConcurrentHashMap<>());
-    }
-
-    public void initializePayloadProcessorsOutbound(AConnectorClient connectorClient) {
-        Map<String, Map<MappingType, BaseProcessorOutbound<?>>> processorPerTenant = payloadProcessorsOutbound
-                .get(connectorClient.getTenant());
-        processorPerTenant.put(connectorClient.getConnectorIdentifier(),
-                createPayloadProcessorsOutbound(connectorClient));
     }
 
     public MapperServiceRepresentation initializeMapperServiceRepresentation(String tenant) {
@@ -434,18 +392,6 @@ public class ConfigurationRegistry {
         return deviceToClientMapRepresentations.get(tenant);
     }
 
-    public ExtensibleProcessorInbound getExtensibleProcessor(String tenant) {
-        return extensibleProcessors.get(tenant);
-    }
-
-    public void addExtensibleProcessor(String tenant, ExtensibleProcessorInbound extensibleProcessor) {
-        extensibleProcessors.put(tenant, extensibleProcessor);
-    }
-
-    public void removeExtensibleProcessor(String tenant) {
-        extensibleProcessors.remove(tenant);
-    }
-
     public void addMicroserviceCredentials(String tenant, MicroserviceCredentials credentials) {
         microserviceCredentials.put(tenant, credentials);
     }
@@ -454,40 +400,18 @@ public class ConfigurationRegistry {
         microserviceCredentials.remove(tenant);
     }
 
-    public void addPayloadProcessorInbound(String tenant, MappingType mappingType,
-            BaseProcessorInbound<?> payloadProcessorInbound) {
-        payloadProcessorsInbound.get(tenant).put(mappingType, payloadProcessorInbound);
-    }
-
-    public Map<MappingType, BaseProcessorInbound<?>> getPayloadProcessorsInbound(String tenant) {
-        return payloadProcessorsInbound.get(tenant);
-    }
-
-    public void removePayloadProcessorsInbound(String tenant) {
-        payloadProcessorsInbound.remove(tenant);
-    }
-
-    public Map<MappingType, BaseProcessorOutbound<?>> getPayloadProcessorsOutbound(String tenant,
-            String connectorIdentifier) {
-        return payloadProcessorsOutbound.get(tenant).get(connectorIdentifier);
-    }
-
-    public void addPayloadProcessorOutbound(String tenant, String connectorIdentifier, MappingType mappingType,
-            BaseProcessorOutbound<?> payloadProcessorOutbound) {
-        payloadProcessorsOutbound.get(tenant).get(connectorIdentifier).put(mappingType, payloadProcessorOutbound);
-    }
-
-    public void removePayloadProcessorsOutbound(String tenant) {
-        payloadProcessorsOutbound.remove(tenant);
+    // In ConfigurationRegistry
+    public CamelContext getCamelContext() {
+        return this.camelContext; // Assuming you have it stored
     }
 
     public void initializeOutboundMapping(String tenant, ServiceConfiguration serviceConfiguration,
             AConnectorClient connectorClient) {
         if (serviceConfiguration.isOutboundMappingEnabled()
                 && connectorClient.supportedDirections().contains(Direction.OUTBOUND)) {
-            // initialize AsynchronousDispatcherOutbound
-            initializePayloadProcessorsOutbound(connectorClient);
-            DispatcherOutbound dispatcherOutbound = new DispatcherOutbound(
+            // DispatcherOutbound dispatcherOutbound = new DispatcherOutbound(
+            // this, connectorClient);
+            CamelDispatcherOutbound dispatcherOutbound = new CamelDispatcherOutbound(
                     this, connectorClient);
             // Only initialize Connectors which are enabled
             if (connectorClient.getConnectorConfiguration().isEnabled())

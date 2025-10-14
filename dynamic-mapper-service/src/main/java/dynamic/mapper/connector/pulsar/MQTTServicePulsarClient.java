@@ -21,554 +21,768 @@
 
 package dynamic.mapper.connector.pulsar;
 
-import java.util.AbstractMap;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-
-import org.apache.pulsar.client.api.ClientBuilder;
-import org.apache.pulsar.client.api.Consumer;
-import org.apache.pulsar.client.api.Producer;
-import org.apache.pulsar.client.api.PulsarClient;
-import org.apache.pulsar.client.api.PulsarClientException;
-import org.apache.pulsar.client.api.SubscriptionType;
-
+import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.configuration.ConnectorId;
 import dynamic.mapper.connector.core.ConnectorProperty;
 import dynamic.mapper.connector.core.ConnectorPropertyCondition;
 import dynamic.mapper.connector.core.ConnectorPropertyType;
 import dynamic.mapper.connector.core.ConnectorSpecification;
-import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
+import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.core.ConnectorStatus;
-import dynamic.mapper.core.ConnectorStatusEvent;
+import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.processor.inbound.DispatcherInbound;
-import dynamic.mapper.processor.model.C8YRequest;
+import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
+import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
+import org.apache.commons.lang3.StringUtils;
+import org.apache.pulsar.client.api.*;
+import org.apache.pulsar.client.api.PulsarClientException.UnsupportedAuthenticationException;
+
+import java.nio.charset.StandardCharsets;
+import java.text.MessageFormat;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+
+/**
+ * Cumulocity MQTT Service Pulsar Connector.
+ * Connects to Cumulocity MQTT Service using Pulsar protocol with device
+ * isolation.
+ * Uses two topics: to-device (outbound) and from-device (inbound).
+ */
 @Slf4j
 public class MQTTServicePulsarClient extends PulsarConnectorClient {
+
+    // Pulsar message properties
+    public static final String PULSAR_PROPERTY_TOPIC = "topic";
     public static final String PULSAR_PROPERTY_CHANNEL = "channel";
-    public static final String PULSAR_PROPERTY_CLIENT = "client";
+    public static final String PULSAR_PROPERTY_CLIENT_ID = "clientID";
+
+    // Topic names
     public static final String PULSAR_TOWARDS_DEVICE_TOPIC = "to-device";
     public static final String PULSAR_TOWARDS_PLATFORM_TOPIC = "from-device";
     public static final String PULSAR_NAMESPACE = "mqtt";
-    /**
-     * Handling Pulsar connections with QoS support
-     * QoS 0 (AT_MOST_ONCE): Messages are acknowledged immediately, providing
-     * fire-and-forget behavior
-     * QoS 1 (AT_LEAST_ONCE): Uses Pulsar's default acknowledgment mechanism with
-     * retry
-     * QoS 2 (EXACTLY_ONCE): Uses exclusive subscription and enables deduplication
-     * features
-     * Flexible Configuration: Allows configuration override while providing
-     * sensible QoS-based defaults
-     * Performance Optimization: Different timeout and batching strategies based on
-     * QoS requirements
-     */
 
     private static final int DEFAULT_CONNECTION_TIMEOUT = 30;
     private static final int DEFAULT_OPERATION_TIMEOUT = 30;
     private static final int DEFAULT_KEEP_ALIVE = 30;
 
-    public MQTTServicePulsarClient() {
-        Map<String, ConnectorProperty> configProps = new HashMap<>();
+    // Cumulocity-specific consumer and producer
+    private Consumer<byte[]> platformConsumer;
+    private Producer<byte[]> deviceProducer;
 
-        ConnectorPropertyCondition tlsCondition = new ConnectorPropertyCondition("enableTls",
-                new String[] { "true" });
-        ConnectorPropertyCondition authCondition = new ConnectorPropertyCondition("authenticationMethod",
-                new String[] { "token", "oauth2", "tls" });
-
-        configProps.put("serviceUrl",
-                new ConnectorProperty(
-                        "This can be in the format: pulsar://localhost:6650 for non-TLS or pulsar+ssl://localhost:6651 for TLS",
-                        true, 0, ConnectorPropertyType.STRING_PROPERTY, true, true,
-                        "pulsar://cumulocity:6650", null, null));
-        configProps.put("enableTls",
-                new ConnectorProperty(null, false, 1, ConnectorPropertyType.BOOLEAN_PROPERTY, false, true,
-                        false, null, null));
-        configProps.put("useSelfSignedCertificate",
-                new ConnectorProperty(null, false, 2, ConnectorPropertyType.BOOLEAN_PROPERTY, false, true,
-                        false, null, tlsCondition));
-        configProps.put("fingerprintSelfSignedCertificate",
-                new ConnectorProperty(null, false, 3, ConnectorPropertyType.STRING_PROPERTY, false, true,
-                        null, null, null));
-        configProps.put("nameCertificate",
-                new ConnectorProperty(null, false, 4, ConnectorPropertyType.STRING_PROPERTY, false, true,
-                        null, null, null));
-        configProps.put("authenticationMethod",
-                new ConnectorProperty(null, false, 5, ConnectorPropertyType.OPTION_PROPERTY, false, true,
-                        "none",
-                        Map.ofEntries(
-                                new AbstractMap.SimpleEntry<String, String>("none", "None"),
-                                new AbstractMap.SimpleEntry<String, String>("token", "Token"),
-                                new AbstractMap.SimpleEntry<String, String>("oauth2", "OAuth2"),
-                                new AbstractMap.SimpleEntry<String, String>("tls", "TLS")),
-                        null));
-        configProps.put("authenticationParams",
-                new ConnectorProperty(null, false, 6, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, false, true,
-                        null, null, authCondition));
-        configProps.put("connectionTimeoutSeconds",
-                new ConnectorProperty(null, false, 7, ConnectorPropertyType.NUMERIC_PROPERTY, false, true,
-                        DEFAULT_CONNECTION_TIMEOUT, null, null));
-        configProps.put("operationTimeoutSeconds",
-                new ConnectorProperty(null, false, 8, ConnectorPropertyType.NUMERIC_PROPERTY, false, true,
-                        DEFAULT_OPERATION_TIMEOUT, null, null));
-        configProps.put("keepAliveIntervalSeconds",
-                new ConnectorProperty(null, false, 9, ConnectorPropertyType.NUMERIC_PROPERTY, false, true,
-                        DEFAULT_KEEP_ALIVE, null, null));
-        configProps.put("subscriptionType",
-                new ConnectorProperty(null, false, 10, ConnectorPropertyType.OPTION_PROPERTY, false, true,
-                        "Shared",
-                        Map.ofEntries(
-                                new AbstractMap.SimpleEntry<String, String>("Exclusive", "Exclusive"),
-                                new AbstractMap.SimpleEntry<String, String>("Shared", "Shared"),
-                                new AbstractMap.SimpleEntry<String, String>("Failover", "Failover"),
-                                new AbstractMap.SimpleEntry<String, String>("Key_Shared", "Key Shared")),
-                        null));
-        configProps.put("subscriptionName",
-                new ConnectorProperty(
-                        "Controls how Pulsar subscription names are generated - 'default' creates connector-specific subscriptions, 'mapping' creates separate subscriptions per mapping, 'shared' uses one subscription for all mappings, 'custom' allows user-defined patterns.",
-                        false, 11, ConnectorPropertyType.STRING_PROPERTY, false, true,
-                        null, null, null));
-        configProps.put("supportsWildcardInTopic",
-                new ConnectorProperty(null, false, 12, ConnectorPropertyType.BOOLEAN_PROPERTY, true, false,
-                        false, null, null));
-        configProps.put("pulsarTenant",
-                new ConnectorProperty(null, false, 13, ConnectorPropertyType.STRING_PROPERTY, false, true,
-                        "public", null, null));
-        configProps.put("pulsarNamespace",
-                new ConnectorProperty(null, false, 14, ConnectorPropertyType.STRING_PROPERTY, false, true,
-                        "default", null, null));
-
-        String name = "Cumulocity MQTT Service - (device isolation)";
-        String description = "Connector for connecting to Cumulocity MQTT Service. The MQTT Service does not support wildcards, i.e. '+', '#'. The QoS 'exactly once' is reduced to 'at least once'.";
-        singleton = true;
-        connectorType = ConnectorType.CUMULOCITY_MQTT_SERVICE_PULSAR;
-        connectorSpecification = new ConnectorSpecification(name, description, connectorType, singleton, configProps,
-                false,
-                supportedDirections());
-    }
-
-    public MQTTServicePulsarClient(ConfigurationRegistry configurationRegistry,
-            ConnectorConfiguration connectorConfiguration,
-            DispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant) {
-        this();
-        this.configurationRegistry = configurationRegistry;
-        this.mappingService = configurationRegistry.getMappingService();
-        this.serviceConfigurationService = configurationRegistry.getServiceConfigurationService();
-        this.connectorConfigurationService = configurationRegistry.getConnectorConfigurationService();
-        this.connectorConfiguration = connectorConfiguration;
-        this.connectorName = connectorConfiguration.name;
-        this.connectorIdentifier = connectorConfiguration.identifier;
-        this.connectorId = new ConnectorId(connectorConfiguration.name, connectorConfiguration.identifier,
-                connectorType);
-        this.connectorStatus = ConnectorStatusEvent.unknown(connectorConfiguration.name,
-                connectorConfiguration.identifier);
-        this.c8yAgent = configurationRegistry.getC8yAgent();
-        this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
-        this.objectMapper = configurationRegistry.getObjectMapper();
-        this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
-        this.serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
-        this.dispatcher = dispatcher;
-        this.tenant = tenant;
-        // Pulsar doesn't have MQTT QoS but supports reliable delivery through
-        // acknowledgments
-        this.supportedQOS = Arrays.asList(Qos.AT_LEAST_ONCE, Qos.AT_MOST_ONCE);
-        getConnectorSpecification().getProperties().put("serviceUrl",
-                new ConnectorProperty(null, true, 0, ConnectorPropertyType.STRING_PROPERTY, true, true,
-                        configurationRegistry.getMqttServicePulsarUrl(), null, null));
-        // getConnectorSpecification().getProperties().put("subscriptionName",
-        // new ConnectorProperty(
-        // "Controls how Pulsar subscription names are generated - 'default' creates
-        // connector-specific subscriptions, 'mapping' creates separate subscriptions
-        // per mapping, 'shared' uses one subscription for all mappings, 'custom' allows
-        // user-defined patterns.",
-        // false, 11, ConnectorPropertyType.STRING_PROPERTY, false, true,
-        // getSubscriptionName(this.connectorIdentifier,
-        // this.additionalSubscriptionIdTest), null, null));
-        getConnectorSpecification().getProperties().put("pulsarTenant",
-                new ConnectorProperty(null, false, 13, ConnectorPropertyType.STRING_PROPERTY, true, true,
-                        tenant, null, null));
-        getConnectorSpecification().getProperties().put("pulsarNamespace",
-                new ConnectorProperty(null, false, 14, ConnectorPropertyType.STRING_PROPERTY, true, true,
-                        PULSAR_NAMESPACE, null, null));
-    }
-
-    protected AConnectorClient.Certificate cert;
-    protected MQTTServicePulsarCallback pulsarCallback = null;
-    protected PulsarClient pulsarClient;
-    private Consumer<byte[]> consumer;
-
-    private Producer<byte[]> producer;
     private String towardsDeviceTopic;
     private String towardsPlatformTopic;
+
+    private MQTTServicePulsarCallback mqttServiceCallback;
 
     @Getter
     protected List<Qos> supportedQOS;
 
-    public boolean initialize() {
-        loadConfiguration();
-        log.info("{} - Phase 0: {} initialized , connectorType: {}", tenant,
-                getConnectorType(),
-                getConnectorName());
-        return true;
+    /**
+     * Default constructor
+     */
+    public MQTTServicePulsarClient() {
+        super();
+        this.connectorType = ConnectorType.CUMULOCITY_MQTT_SERVICE_PULSAR;
+        this.singleton = true;
+        this.supportedQOS = Arrays.asList(Qos.AT_MOST_ONCE, Qos.AT_LEAST_ONCE);
+        this.connectorSpecification = createConnectorSpecification();
+    }
+
+    /**
+     * Full constructor with dependencies
+     */
+    public MQTTServicePulsarClient(ConfigurationRegistry configurationRegistry,
+            ConnectorRegistry connectorRegistry,
+            ConnectorConfiguration connectorConfiguration,
+            CamelDispatcherInbound dispatcher,
+            String additionalSubscriptionIdTest,
+            String tenant) {
+        this();
+
+        this.configurationRegistry = configurationRegistry;
+        this.connectorRegistry = connectorRegistry;
+        this.connectorConfiguration = connectorConfiguration;
+        this.connectorName = connectorConfiguration.getName();
+        this.connectorIdentifier = connectorConfiguration.getIdentifier();
+        this.connectorId = new ConnectorId(
+                connectorConfiguration.getName(),
+                connectorConfiguration.getIdentifier(),
+                connectorType);
+        this.tenant = tenant;
+        this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
+
+        // Initialize dependencies from registry
+        this.mappingService = configurationRegistry.getMappingService();
+        this.serviceConfigurationService = configurationRegistry.getServiceConfigurationService();
+        this.connectorConfigurationService = configurationRegistry.getConnectorConfigurationService();
+        this.c8yAgent = configurationRegistry.getC8yAgent();
+        this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
+        this.objectMapper = configurationRegistry.getObjectMapper();
+        this.serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
+        this.dispatcher = dispatcher;
+
+        // Configure for Cumulocity internal
+        configureCumulocityMqttService();
+
+        // Initialize managers
+        initializeManagers();
+    }
+
+    /**
+     * Configure for Cumulocity internal MQTT Service
+     */
+    private void configureCumulocityMqttService() {
+        Map<String, ConnectorProperty> props = connectorSpecification.getProperties();
+
+        // Set service URL
+        String serviceUrl = configurationRegistry.getMqttServicePulsarUrl();
+        props.put("serviceUrl",
+                new ConnectorProperty(null, true, 0, ConnectorPropertyType.STRING_PROPERTY,
+                        true, true, serviceUrl, null, null));
+
+        // Set authentication
+        props.put("authenticationMethod",
+                new ConnectorProperty(null, true, 5, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY,
+                        true, true, "basic", null, null));
+
+        MicroserviceCredentials credentials = configurationRegistry.getMicroserviceCredential(tenant);
+        String authParams = MessageFormat.format(
+                "'{'\"userId\":\"{0}/{1}\",\"password\":\"{2}\"'}'",
+                tenant, credentials.getUsername(), credentials.getPassword());
+
+        props.put("authenticationParams",
+                new ConnectorProperty(null, true, 6, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY,
+                        true, true, authParams, null, null));
+
+        // Set tenant and namespace
+        props.put("pulsarTenant",
+                new ConnectorProperty(null, true, 13, ConnectorPropertyType.STRING_PROPERTY,
+                        true, true, tenant, null, null));
+
+        props.put("pulsarNamespace",
+                new ConnectorProperty(null, true, 14, ConnectorPropertyType.STRING_PROPERTY,
+                        true, true, PULSAR_NAMESPACE, null, null));
+
+        log.info("{} - Configured MQTT Service Pulsar connector for Cumulocity internal use", tenant);
     }
 
     @Override
-    public void connect() {
-        log.info("{} - Phase I: {} connecting, isConnected: {}, shouldConnect: {}",
-                tenant, getConnectorName(), isConnected(), shouldConnect());
-
-        if (isConnected())
-            disconnect();
-
-        if (shouldConnect())
-            updateConnectorStatusAndSend(ConnectorStatus.CONNECTING, true, shouldConnect());
-
-        String serviceUrl;
-        if (additionalSubscriptionIdTest != null && additionalSubscriptionIdTest.length() > 0) {
-            // test against local pulsar broker
-            serviceUrl = configurationRegistry.getMqttServicePulsarUrl();
-        } else {
-            serviceUrl = (String) connectorConfiguration.getProperties().get("serviceUrl");
-        }
-        Boolean enableTls = (Boolean) connectorConfiguration.getProperties().getOrDefault("enableTls", false);
-        String authenticationMethod = (String) connectorConfiguration.getProperties()
-                .getOrDefault("authenticationMethod", "none");
-        String authenticationParams = (String) connectorConfiguration.getProperties().get("authenticationParams");
-        Integer connectionTimeout = (Integer) connectorConfiguration.getProperties()
-                .getOrDefault("connectionTimeoutSeconds", DEFAULT_CONNECTION_TIMEOUT);
-        Integer operationTimeout = (Integer) connectorConfiguration.getProperties()
-                .getOrDefault("operationTimeoutSeconds", DEFAULT_OPERATION_TIMEOUT);
-        Integer keepAlive = (Integer) connectorConfiguration.getProperties()
-                .getOrDefault("keepAliveIntervalSeconds", DEFAULT_KEEP_ALIVE);
-
-        String namespace = (String) connectorConfiguration.getProperties().getOrDefault("pulsarNamespace", "default");
-
-        towardsPlatformTopic = String.format("persistent://%s/%s/%s", tenant, namespace, PULSAR_TOWARDS_PLATFORM_TOPIC);
-        towardsDeviceTopic = String.format("persistent://%s/%s/%s", tenant, namespace, PULSAR_TOWARDS_DEVICE_TOPIC);
+    public boolean initialize() {
+        loadConfiguration();
 
         try {
+            // Build Pulsar client
+            String serviceUrl = (String) connectorConfiguration.getProperties().get("serviceUrl");
+            Boolean enableTls = (Boolean) connectorConfiguration.getProperties().getOrDefault("enableTls", false);
+            String authMethod = (String) connectorConfiguration.getProperties()
+                    .getOrDefault("authenticationMethod", "basic");
+            String authParams = (String) connectorConfiguration.getProperties().get("authenticationParams");
+            Integer connectionTimeout = (Integer) connectorConfiguration.getProperties()
+                    .getOrDefault("connectionTimeoutSeconds", DEFAULT_CONNECTION_TIMEOUT);
+            Integer operationTimeout = (Integer) connectorConfiguration.getProperties()
+                    .getOrDefault("operationTimeoutSeconds", DEFAULT_OPERATION_TIMEOUT);
+            Integer keepAlive = (Integer) connectorConfiguration.getProperties()
+                    .getOrDefault("keepAliveIntervalSeconds", DEFAULT_KEEP_ALIVE);
+
             String finalServiceUrl = adjustServiceUrlForTls(serviceUrl, enableTls);
 
             ClientBuilder clientBuilder = PulsarClient.builder()
                     .serviceUrl(finalServiceUrl)
                     .connectionTimeout(connectionTimeout, TimeUnit.SECONDS)
                     .operationTimeout(operationTimeout, TimeUnit.SECONDS)
-                    .keepAliveInterval(keepAlive, TimeUnit.SECONDS);
+                    .keepAliveInterval(keepAlive, TimeUnit.SECONDS)
+                    .enableBusyWait(false)
+                    .maxNumberOfRejectedRequestPerConnection(0);
 
-            configureAuthentication(clientBuilder, authenticationMethod, authenticationParams);
-            pulsarClient = clientBuilder.build();
+            configureAuthentication(clientBuilder, authMethod, authParams);
 
-            pulsarCallback = new MQTTServicePulsarCallback(tenant, configurationRegistry, dispatcher,
-                    getConnectorIdentifier(), getConnectorName(), false);
-
-            boolean successful = false;
-            while (!successful) {
-                if (Thread.currentThread().isInterrupted())
-                    return;
-                loadConfiguration();
-                var firstRun = true;
-                var mappingOutboundCacheRebuild = false;
-
-                while (!isConnected() && shouldConnect()) {
-                    if (Thread.currentThread().isInterrupted())
-                        return;
-                    log.info("{} - Phase II: {} connecting, shouldConnect: {}, server: {}", tenant,
-                            getConnectorName(), shouldConnect(), serviceUrl);
-                    if (!firstRun) {
-                        try {
-                            Thread.sleep(WAIT_PERIOD_MS);
-                        } catch (InterruptedException e) {
-                            return;
-                        }
-                    }
-                    try {
-                        connectionState.setTrue();
-                        log.info("{} - Phase III: {} connected, server: {}", tenant, getConnectorName(), serviceUrl);
-                        updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
-
-                        // TODO IMPLEMENTATION: Subscribe to towardsPlatformTopic on connect
-                        subscribeToTowardsPlatformTopic();
-
-                        // Create producer for towardsDeviceTopic
-                        createTowardsDeviceProducer();
-
-                        List<Mapping> updatedMappingsInbound = mappingService.rebuildMappingInboundCache(tenant,
-                                connectorId);
-                        initializeSubscriptionsInbound(updatedMappingsInbound, true, true);
-                        List<Mapping> updatedMappingsOutbound = mappingService.rebuildMappingOutboundCache(tenant,
-                                connectorId);
-                        mappingOutboundCacheRebuild = true;
-                        initializeSubscriptionsOutbound(updatedMappingsOutbound);
-
-                    } catch (Exception e) {
-                        if (e instanceof InterruptedException || e instanceof RuntimeException) {
-                            log.error("{} - Phase III: {} interrupted while connecting to server: {}, {}, {}, {}",
-                                    tenant, getConnectorName(), serviceUrl,
-                                    e.getMessage(), connectionState.booleanValue(), isConnected(), e);
-                            return;
-                        }
-                        log.error("{} - Phase III: {} failed to connect to server {}, {}, {}, {}", tenant,
-                                serviceUrl, e.getMessage(), connectionState.booleanValue(),
-                                isConnected(), e);
-                        updateConnectorStatusToFailed(e);
-                        sendConnectorLifecycle();
-                    }
-                    firstRun = false;
+            try {
+                pulsarClient = clientBuilder.build();
+                log.info("{} - MQTT Service Pulsar client created successfully", tenant);
+                if (isConfigValid(connectorConfiguration)) {
+                    connectionStateManager.updateStatus(ConnectorStatus.CONFIGURED, true, true);
                 }
-
-                if (!mappingOutboundCacheRebuild) {
-                    mappingService.rebuildMappingOutboundCache(tenant, connectorId);
+            } catch (Exception e) {
+                if (containsPip344Error(e)) {
+                    log.error("{} - Broker doesn't support PIP-344. Please upgrade Pulsar broker to 2.11.0+", tenant);
+                    return false;
                 }
-                successful = true;
+                throw e;
             }
+
+            // Create callback
+            mqttServiceCallback = new MQTTServicePulsarCallback(
+                    tenant,
+                    configurationRegistry,
+                    dispatcher,
+                    connectorIdentifier,
+                    connectorName,
+                    false);
+
+            // Build topic names
+            String namespace = (String) connectorConfiguration.getProperties()
+                    .getOrDefault("pulsarNamespace", PULSAR_NAMESPACE);
+            towardsPlatformTopic = String.format("persistent://%s/%s/%s",
+                    tenant, namespace, PULSAR_TOWARDS_PLATFORM_TOPIC);
+            towardsDeviceTopic = String.format("persistent://%s/%s/%s",
+                    tenant, namespace, PULSAR_TOWARDS_DEVICE_TOPIC);
+
+            log.info("{} - MQTT Service Pulsar connector initialized", tenant);
+            log.info("{} - Platform topic: {}", tenant, towardsPlatformTopic);
+            log.info("{} - Device topic: {}", tenant, towardsDeviceTopic);
+
+            return true;
+
         } catch (Exception e) {
-            log.error("{} - Error creating Pulsar client: ", tenant, e);
-            updateConnectorStatusToFailed(e);
-            sendConnectorLifecycle();
+            log.error("{} - Error initializing MQTT Service Pulsar connector: {}", tenant, e.getMessage(), e);
+            connectionStateManager.updateStatusWithError(e);
+            return false;
         }
-    }
-
-    /**
-     * Subscribe to the towardsPlatformTopic to receive inbound messages from MQTT
-     * Service
-     */
-    private void subscribeToTowardsPlatformTopic() throws PulsarClientException {
-        if (consumer != null) {
-            log.warn("{} - Consumer already exists for towardsPlatformTopic, closing existing", tenant);
-            consumer.close();
-        }
-
-        String subscriptionName = (String) connectorConfiguration.getProperties().get("subscriptionName");
-
-        consumer = pulsarClient.newConsumer()
-                .topic(towardsPlatformTopic)
-                .subscriptionName(getSubscriptionName(this.connectorIdentifier, this.additionalSubscriptionIdTest))
-                .subscriptionType(SubscriptionType.Shared)
-                .messageListener(pulsarCallback)
-                .subscribe();
-
-        log.info("{} - Subscribed to towardsPlatformTopic: [{}] with subscription: [{}]",
-                tenant, towardsPlatformTopic, subscriptionName);
-    }
-
-    /**
-     * Create producer for towardsDeviceTopic for outbound messages to MQTT Service
-     */
-    private void createTowardsDeviceProducer() throws PulsarClientException {
-        if (producer != null) {
-            log.warn("{} - Producer already exists for towardsDeviceTopic, closing existing", tenant);
-            producer.close();
-        }
-        // Get default namespace from configuration or use public/default
-
-        // Construct full Pulsar topic format
-        producer = pulsarClient.newProducer()
-                .topic(towardsDeviceTopic)
-                .sendTimeout(30, TimeUnit.SECONDS)
-                .create();
-
-        log.info("{} - Created producer for towardsDeviceTopic: [{}]", tenant, towardsDeviceTopic);
     }
 
     @Override
-    public boolean isConnected() {
-        return connectionState.booleanValue() && pulsarClient != null && !pulsarClient.isClosed();
+    public void connect() {
+        log.info("{} - Connecting MQTT Service Pulsar connector: {}", tenant, connectorName);
+
+        if (isConnected()) {
+            log.debug("{} - Already connected", tenant);
+            return;
+        }
+
+        if (!shouldConnect()) {
+            log.info("{} - Connector disabled or invalid configuration", tenant);
+            return;
+        }
+
+        if (pulsarClient == null || pulsarClient.isClosed()) {
+            log.error("{} - Pulsar client not available - initialization may have failed", tenant);
+            connectionStateManager.updateStatusWithError(new Exception("Pulsar client not initialized"));
+            return;
+        }
+
+        try {
+            connectionStateManager.updateStatus(ConnectorStatus.CONNECTING, true, true);
+
+            // Subscribe to platform topic (inbound)
+            subscribeToTowardsPlatformTopic();
+
+            // Create producer for device topic (outbound)
+            createTowardsDeviceProducer();
+
+            // Verify connection
+            boolean consumerConnected = platformConsumer != null && platformConsumer.isConnected();
+            boolean producerConnected = deviceProducer != null && deviceProducer.isConnected();
+
+            if (!consumerConnected || !producerConnected) {
+                throw new ConnectorException(
+                        String.format("Connection incomplete - consumer: %s, producer: %s",
+                                consumerConnected, producerConnected));
+            }
+
+            // Now set connected state
+            connectionStateManager.setConnected(true);
+            connectionStateManager.updateStatus(ConnectorStatus.CONNECTED, true, true);
+
+            log.info("{} - MQTT Service Pulsar connector connected successfully (consumer: {}, producer: {})",
+                    tenant, consumerConnected, producerConnected);
+
+            // Initialize subscriptions after successful connection
+            if (isConnected()) {
+                initializeSubscriptionsAfterConnect();
+            }
+
+        } catch (Exception e) {
+            log.error("{} - Error connecting MQTT Service Pulsar connector: {}", tenant, e.getMessage(), e);
+            connectionStateManager.updateStatusWithError(e);
+            connectionStateManager.setConnected(false);
+
+            // Cleanup on failure
+            cleanupOnConnectionFailure();
+        }
+    }
+
+    private void cleanupOnConnectionFailure() {
+        if (platformConsumer != null) {
+            try {
+                platformConsumer.close();
+            } catch (Exception e) {
+                log.debug("{} - Error closing consumer during cleanup", tenant);
+            }
+            platformConsumer = null;
+        }
+
+        if (deviceProducer != null) {
+            try {
+                deviceProducer.close();
+            } catch (Exception e) {
+                log.debug("{} - Error closing producer during cleanup", tenant);
+            }
+            deviceProducer = null;
+        }
+    }
+
+    /**
+     * Subscribe to platform topic for inbound messages
+     */
+    private void subscribeToTowardsPlatformTopic() throws PulsarClientException {
+        if (platformConsumer != null) {
+            log.warn("{} - Platform consumer already exists, closing existing", tenant);
+            platformConsumer.close();
+        }
+
+        String subscriptionName = getSubscriptionName(connectorIdentifier, additionalSubscriptionIdTest);
+
+        Exception lastException = null;
+
+        // Try multiple subscription strategies
+
+        // Strategy 1: Standard subscription
+        try {
+            platformConsumer = pulsarClient.newConsumer()
+                    .topic(towardsPlatformTopic)
+                    .subscriptionName(subscriptionName)
+                    .autoUpdatePartitions(false)
+                    .messageListener(mqttServiceCallback)
+                    .subscribe();
+
+            log.info("{} - Subscribed to platform topic: [{}], subscription: [{}]",
+                    tenant, towardsPlatformTopic, subscriptionName);
+            return;
+
+        } catch (PulsarClientException.FeatureNotSupportedException e) {
+            lastException = e;
+            log.warn("{} - Standard subscription failed (PIP-344), trying async", tenant);
+        }
+
+        // Strategy 2: Async subscription
+        try {
+            platformConsumer = pulsarClient.newConsumer()
+                    .topic(towardsPlatformTopic)
+                    .subscriptionName(subscriptionName)
+                    .autoUpdatePartitions(false)
+                    .messageListener(mqttServiceCallback)
+                    .subscribeAsync()
+                    .get(30, TimeUnit.SECONDS);
+
+            log.info("{} - Subscribed to platform topic via async: [{}], subscription: [{}]",
+                    tenant, towardsPlatformTopic, subscriptionName);
+            return;
+
+        } catch (Exception e) {
+            lastException = e;
+            log.warn("{} - Async subscription failed, trying basic", tenant);
+        }
+
+        // Strategy 3: Basic subscription
+        try {
+            platformConsumer = pulsarClient.newConsumer()
+                    .topic(towardsPlatformTopic)
+                    .subscriptionName(subscriptionName)
+                    .messageListener(mqttServiceCallback)
+                    .subscribeAsync()
+                    .get(30, TimeUnit.SECONDS);
+
+            log.info("{} - Subscribed to platform topic via basic async: [{}], subscription: [{}]",
+                    tenant, towardsPlatformTopic, subscriptionName);
+
+        } catch (Exception e) {
+            log.error("{} - All subscription strategies failed for platform topic", tenant);
+            throw new PulsarClientException(
+                    "Failed to subscribe after trying multiple strategies. Last error: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Create producer for device topic
+     */
+    private void createTowardsDeviceProducer() throws PulsarClientException {
+        if (deviceProducer != null) {
+            log.warn("{} - Device producer already exists, closing existing", tenant);
+            deviceProducer.close();
+        }
+
+        deviceProducer = pulsarClient.newProducer()
+                .topic(towardsDeviceTopic)
+                .create();
+
+        log.info("{} - Created producer for device topic: [{}]", tenant, towardsDeviceTopic);
+    }
+
+    @Override
+    protected void subscribe(String topic, Qos qos) throws ConnectorException {
+        // MQTT Service handles subscriptions via platform topic
+        log.debug("{} - MQTT Service subscription for topic: [{}], QoS: {} - handled by platform topic",
+                tenant, topic, qos);
+        sendSubscriptionEvents(topic, "Subscribed");
+
+        log.info("{} - Subscription registered for topic: [{}] - messages via platform topic",
+                tenant, topic);
+    }
+
+    @Override
+    protected void unsubscribe(String topic) throws ConnectorException {
+        // MQTT Service handles unsubscriptions via platform topic
+        log.debug("{} - MQTT Service unsubscription for topic: [{}] - handled by platform topic", tenant, topic);
+        sendSubscriptionEvents(topic, "Unsubscribed");
+
+        log.info("{} - Unsubscription registered for topic: [{}]", tenant, topic);
     }
 
     @Override
     public void disconnect() {
-        if (isConnected()) {
-            updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTING, true, true);
-            log.info("{} - Disconnecting from Pulsar: {}", tenant,
-                    (pulsarClient == null ? (String) connectorConfiguration.getProperties().get("serviceUrl")
-                            : "Pulsar client"));
+        if (!isConnected()) {
+            log.debug("{} - Already disconnected", tenant);
+            return;
+        }
 
-            // TODO IMPLEMENTATION: Close consumer for towardsPlatformTopic on disconnect
-            if (consumer != null) {
+        log.info("{} - Disconnecting MQTT Service Pulsar connector", tenant);
+        connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTING, true, true);
+
+        try {
+            // Close platform consumer
+            if (platformConsumer != null) {
                 try {
-                    consumer.close();
-                    log.info("{} - Closed consumer for towardsPlatformTopic", tenant);
+                    platformConsumer.close();
+                    log.info("{} - Closed platform consumer", tenant);
                 } catch (PulsarClientException e) {
-                    log.error("{} - Error closing consumer for towardsPlatformTopic:", tenant, e);
+                    log.error("{} - Error closing platform consumer: {}", tenant, e.getMessage());
                 }
-                consumer = null;
+                platformConsumer = null;
             }
 
-            // Close producer for towardsDeviceTopic
-            if (producer != null) {
+            // Close device producer
+            if (deviceProducer != null) {
                 try {
-                    producer.close();
-                    log.info("{} - Closed producer for towardsDeviceTopic", tenant);
+                    deviceProducer.close();
+                    log.info("{} - Closed device producer", tenant);
                 } catch (PulsarClientException e) {
-                    log.error("{} - Error closing producer for towardsDeviceTopic:", tenant, e);
+                    log.error("{} - Error closing device producer: {}", tenant, e.getMessage());
                 }
-                producer = null;
+                deviceProducer = null;
             }
 
-            try {
-                if (pulsarClient != null && !pulsarClient.isClosed()) {
-                    pulsarClient.close();
-                }
-            } catch (Exception e) {
-                log.error("{} - Error disconnecting from Pulsar:", tenant, e);
+            // Close client
+            if (pulsarClient != null && !pulsarClient.isClosed()) {
+                pulsarClient.close();
             }
 
-            connectionState.setFalse();
-            updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTED, true, true);
+            connectionStateManager.setConnected(false);
+            connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTED, true, true);
 
-            List<Mapping> updatedMappingsInbound = mappingService.rebuildMappingInboundCache(tenant, connectorId);
-            initializeSubscriptionsInbound(updatedMappingsInbound, true, true);
-            List<Mapping> updatedMappingsOutbound = mappingService.rebuildMappingOutboundCache(tenant, connectorId);
-            initializeSubscriptionsOutbound(updatedMappingsOutbound);
+            log.info("{} - MQTT Service Pulsar connector disconnected", tenant);
 
-            log.info("{} - Disconnected from MQTTService Pulsar", tenant);
+        } catch (Exception e) {
+            log.error("{} - Error during disconnect: {}", tenant, e.getMessage(), e);
         }
     }
 
     /**
-     * Override subscribe method - Cumulocity MQTT Service handles subscriptions
-     * differently
+     * Adjust service URL for TLS
      */
-    @Override
-    public void subscribe(String topic, Qos qos) throws ConnectorException {
-        if (isConnected()) {
-            log.debug(
-                    "{} - MQTT Service subscription request for topic: [{}] with QoS: {} - handled by platform topic consumer",
-                    tenant, topic, qos);
-            sendSubscriptionEvents(topic, "Subscribing");
-
-            // In Cumulocity MQTT Service model, we don't create individual topic
-            // subscriptions
-            // All inbound messages come through towardsPlatformTopic and are filtered by
-            // properties
-            log.info(
-                    "{} - Subscription registered for topic: [{}] - messages will be received via towardsPlatformTopic",
-                    tenant, topic);
+    private String adjustServiceUrlForTls(String originalUrl, Boolean enableTls) {
+        if (enableTls != null && enableTls) {
+            if (originalUrl.startsWith("pulsar://")) {
+                return originalUrl.replace("pulsar://", "pulsar+ssl://");
+            }
+        } else {
+            if (originalUrl.startsWith("pulsar+ssl://")) {
+                return originalUrl.replace("pulsar+ssl://", "pulsar://");
+            }
         }
+        return originalUrl;
     }
 
     /**
-     * Override unsubscribe method - Cumulocity MQTT Service handles subscriptions
-     * differently
+     * Configures authentication based on method
+     * 
+     * @throws UnsupportedAuthenticationException
      */
-    @Override
-    public void unsubscribe(String topic) throws Exception {
-        log.debug("{} - MQTT Service unsubscription request for topic: [{}] - handled by platform topic consumer",
-                tenant, topic);
-        sendSubscriptionEvents(topic, "Unsubscribing");
-
-        // In Cumulocity MQTT Service model, we don't manage individual subscriptions
-        // The platform topic consumer remains active
-        log.info("{} - Unsubscribing registered for topic: [{}]", tenant, topic);
+    protected void configureAuthentication(ClientBuilder clientBuilder, String authMethod, String authParams)
+            throws UnsupportedAuthenticationException {
+        if (!"none".equals(authMethod) && !StringUtils.isEmpty(authParams)) {
+            switch (authMethod) {
+                case "token":
+                    clientBuilder.authentication(AuthenticationFactory.token(authParams));
+                    log.debug("{} - Using token authentication", tenant);
+                    break;
+                case "oauth2":
+                    clientBuilder.authentication(
+                            AuthenticationFactory.create(
+                                    "org.apache.pulsar.client.impl.auth.oauth2.AuthenticationOAuth2",
+                                    authParams));
+                    log.debug("{} - Using OAuth2 authentication", tenant);
+                    break;
+                case "tls":
+                    clientBuilder.authentication(
+                            AuthenticationFactory.create(
+                                    "org.apache.pulsar.client.impl.auth.AuthenticationTls",
+                                    authParams));
+                    log.debug("{} - Using TLS authentication", tenant);
+                    break;
+                case "basic":
+                    clientBuilder.authentication(
+                            AuthenticationFactory.create(
+                                    "org.apache.pulsar.client.impl.auth.AuthenticationBasic",
+                                    authParams));
+                    log.debug("{} - Using basic authentication", tenant);
+                    break;
+                default:
+                    log.warn("{} - Unknown authentication method: {}", tenant, authMethod);
+                    break;
+            }
+        }
     }
 
+    @Override
+    public void close() {
+        disconnect();
+    }
 
     @Override
-    public void connectorSpecificHousekeeping(String tenant) {
-        //mappingService.sendDeviceToClientMap(tenant);
+    public boolean isConnected() {
+        boolean clientConnected = pulsarClient != null && !pulsarClient.isClosed();
+        boolean consumerConnected = platformConsumer != null && platformConsumer.isConnected();
+        boolean producerConnected = deviceProducer != null && deviceProducer.isConnected();
+
+        boolean fullyConnected = clientConnected && consumerConnected && producerConnected;
+
+        // Sync connection state with manager
+        if (fullyConnected != connectionStateManager.isConnected()) {
+            connectionStateManager.setConnected(fullyConnected);
+        }
+
+        return fullyConnected;
     }
 
     @Override
     public void publishMEAO(ProcessingContext<?> context) {
-        C8YRequest currentRequest = context.getCurrentRequest();
-        String payload = currentRequest.getRequest();
-        String topic = context.getResolvedPublishTopic();
+        if (pulsarClient == null || pulsarClient.isClosed()) {
+            log.warn("{} - Pulsar client is closed, attempting reconnect", tenant);
+            reconnect();
+            return;
+        }
 
-        Qos qos = context.getQos(); // Get QoS from context
+        DynamicMapperRequest request = context.getCurrentRequest();
+        String payload = request.getRequest();
+        String originalMqttTopic = context.getResolvedPublishTopic();
+        Qos qos = Qos.AT_LEAST_ONCE; // MQTT Service uses AT_LEAST_ONCE
 
         try {
-            // Check if client is still valid before creating producer
-            if (pulsarClient == null || pulsarClient.isClosed()) {
-                log.warn("{} - Pulsar client is closed, attempting to reconnect", tenant);
-                reconnect();
-                return; // Message will be retried
-            }
-
-            // Check if producer exists producer
-            if (producer != null && !producer.isConnected()) {
-                log.warn("{} - Producer is disconnected, recreating", tenant);
-                try {
-                    producer.close();
-                } catch (PulsarClientException closeEx) {
-                    log.debug("{} - Error closing disconnected producer: {}", tenant, closeEx.getMessage());
+            // Check/recreate producer if needed
+            if (deviceProducer == null || !deviceProducer.isConnected()) {
+                log.warn("{} - Device producer disconnected, recreating", tenant);
+                if (deviceProducer != null) {
+                    try {
+                        deviceProducer.close();
+                    } catch (PulsarClientException e) {
+                        log.debug("{} - Error closing disconnected producer: {}", tenant, e.getMessage());
+                    }
                 }
-                producer = createProducerWithQos(towardsDeviceTopic, qos);
-            } else if (producer == null) {
-                // Create new producer if it doesn't exist
-                log.debug("{} - Creating new producer for towardsDeviceTopic: {} with QoS: {}", tenant,
-                        towardsDeviceTopic, qos);
-                producer = createProducerWithQos(towardsDeviceTopic, qos);
+                createTowardsDeviceProducer();
             }
 
-            if (producer != null) {
-                sendMessageWithQos(producer, payload, qos, context);
-            } else {
-                log.error("{} - No producer available", tenant);
-            }
+            sendMessageToDevice(deviceProducer, payload, originalMqttTopic, qos, context);
 
-        } catch (PulsarClientException e) {
-            handlePublishError(e, topic, qos, context);
         } catch (Exception e) {
-            log.error("{} - Unexpected error publishing to topic: {} with QoS: {}", tenant, topic, qos, e);
+            log.error("{} - Error publishing to MQTT Service: {}", tenant, e.getMessage(), e);
+            context.addError(new dynamic.mapper.processor.ProcessingException(
+                    "Failed to publish message", e));
         }
     }
 
     /**
-     * Sends message with QoS-specific logic and topic as Pulsar message property
+     * Send message to device with topic as property
      */
-    private void sendMessageWithQos(Producer<byte[]> producer, String payload, Qos qos, ProcessingContext<?> context)
-            throws PulsarClientException {
+    private void sendMessageToDevice(Producer<byte[]> producer, String payload, String mqttTopic,
+            Qos qos, ProcessingContext<?> context) throws PulsarClientException {
 
-        // TODO IMPLEMENTATION: Add topic as property to Pulsar message
-        // All messages go to towardsDeviceTopic, but original MQTT topic is stored as
-        // property
-        String originalMqttTopic = context.getResolvedPublishTopic();
+        byte[] payloadBytes = payload.getBytes(StandardCharsets.UTF_8);
 
         if (qos == Qos.AT_MOST_ONCE) {
-            // Fire and forget with topic property
             producer.newMessage()
-                    .value(payload.getBytes())
-                    .property(PULSAR_PROPERTY_CHANNEL, originalMqttTopic) // Store original MQTT topic
-                    .property(PULSAR_PROPERTY_CLIENT,
-                            configurationRegistry.resolveDeviceToClient(tenant, context.getSourceId()))
+                    .value(payloadBytes)
+                    .property(PULSAR_PROPERTY_TOPIC, mqttTopic)
+                    .key(mqttTopic)
                     .sendAsync()
                     .exceptionally(throwable -> {
-                        log.debug("{} - Failed to send AT_MOST_ONCE message (expected): {}",
+                        log.debug("{} - AT_MOST_ONCE send failed (expected): {}",
                                 tenant, throwable.getMessage());
                         return null;
                     });
         } else {
-            // Wait for acknowledgment with topic property
             producer.newMessage()
-                    .value(payload.getBytes())
-                    .property(PULSAR_PROPERTY_CHANNEL, originalMqttTopic) // Store original MQTT topic
-                    .property(PULSAR_PROPERTY_CLIENT,
-                            configurationRegistry.resolveDeviceToClient(tenant, context.getSourceId()))
+                    .value(payloadBytes)
+                    .property(PULSAR_PROPERTY_TOPIC, mqttTopic)
+                    .key(mqttTopic)
                     .send();
         }
 
-        // Enhanced logging to show the N-2 topic mapping
-        if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
-            log.info(
-                    "{} - Published to Cumulocity MQTT Service: QoS={}, originalTopic=[{}], pulsarTopic=[{}], mapping={}, connector={}",
-                    tenant, qos, originalMqttTopic, towardsDeviceTopic, context.getMapping().name, connectorName);
+        if (context.getMapping().getDebug() || serviceConfiguration.isLogPayload()) {
+            log.info("{} - Published to MQTT Service: QoS={}, topic=[{}], pulsarTopic=[{}], mapping={}",
+                    tenant, qos, mqttTopic, towardsDeviceTopic, context.getMapping().getName());
         }
     }
 
-    private static String getSubscriptionName(String identifier, String suffix) {
-        return "CUMULOCITY_MQTT_SERVICE_PULSAR" + identifier + suffix;
+    @Override
+    public Boolean supportsWildcardInTopic(Direction direction) {
+        // MQTT Service doesn't support wildcards
+        return false;
     }
 
+    @Override
+    protected void connectorSpecificHousekeeping(String tenant) {
+        // Check consumer and producer health
+        if (platformConsumer != null && !platformConsumer.isConnected()) {
+            log.warn("{} - Platform consumer disconnected, will reconnect on next cycle", tenant);
+        }
+
+        if (deviceProducer != null && !deviceProducer.isConnected()) {
+            log.warn("{} - Device producer disconnected, will reconnect on next publish", tenant);
+        }
+    }
+
+    @Override
+    public List<Direction> supportedDirections() {
+        return Arrays.asList(Direction.INBOUND, Direction.OUTBOUND);
+    }
+
+    @Override
+    public String getConnectorIdentifier() {
+        return connectorIdentifier;
+    }
+
+    @Override
+    public String getConnectorName() {
+        return connectorName;
+    }
+
+    /**
+     * Generate subscription name
+     */
+    private static String getSubscriptionName(String identifier, String suffix) {
+        return "CUMULOCITY_MQTT_SERVICE_PULSAR_" + identifier +
+                (suffix != null ? suffix : "");
+    }
+
+    /**
+     * Check if exception contains PIP-344 error
+     */
+    private boolean containsPip344Error(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null) {
+            if (current instanceof PulsarClientException.FeatureNotSupportedException &&
+                    current.getMessage() != null &&
+                    current.getMessage().contains("PIP-344")) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
+    }
+
+    /**
+     * Create MQTT Service Pulsar specification
+     */
+    private ConnectorSpecification createConnectorSpecification() {
+        Map<String, ConnectorProperty> configProps = new LinkedHashMap<>();
+
+        ConnectorPropertyCondition tlsCondition = new ConnectorPropertyCondition("enableTls", new String[] { "true" });
+        ConnectorPropertyCondition authCondition = new ConnectorPropertyCondition(
+                "authenticationMethod", new String[] { "token", "oauth2", "tls", "basic" });
+
+        configProps.put("serviceUrl",
+                new ConnectorProperty(
+                        "Pulsar service URL for Cumulocity MQTT Service",
+                        true, 0, ConnectorPropertyType.STRING_PROPERTY, true, true,
+                        "pulsar://cumulocity:6650", null, null));
+
+        configProps.put("enableTls",
+                new ConnectorProperty(null, false, 1, ConnectorPropertyType.BOOLEAN_PROPERTY,
+                        false, true, false, null, null));
+
+        configProps.put("useSelfSignedCertificate",
+                new ConnectorProperty(null, false, 2, ConnectorPropertyType.BOOLEAN_PROPERTY,
+                        false, true, false, null, tlsCondition));
+
+        configProps.put("fingerprintSelfSignedCertificate",
+                new ConnectorProperty(null, false, 3, ConnectorPropertyType.STRING_PROPERTY,
+                        false, true, null, null, null));
+
+        configProps.put("nameCertificate",
+                new ConnectorProperty(null, false, 4, ConnectorPropertyType.STRING_PROPERTY,
+                        false, true, null, null, null));
+
+        configProps.put("authenticationMethod",
+                new ConnectorProperty(null, false, 5, ConnectorPropertyType.OPTION_PROPERTY,
+                        false, true, "basic",
+                        Map.of("none", "None", "token", "Token", "oauth2", "OAuth2",
+                                "tls", "TLS", "basic", "Basic"),
+                        null));
+
+        configProps.put("authenticationParams",
+                new ConnectorProperty(null, false, 6, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY,
+                        false, true, null, null, authCondition));
+
+        configProps.put("connectionTimeoutSeconds",
+                new ConnectorProperty(null, false, 7, ConnectorPropertyType.NUMERIC_PROPERTY,
+                        false, true, DEFAULT_CONNECTION_TIMEOUT, null, null));
+
+        configProps.put("operationTimeoutSeconds",
+                new ConnectorProperty(null, false, 8, ConnectorPropertyType.NUMERIC_PROPERTY,
+                        false, true, DEFAULT_OPERATION_TIMEOUT, null, null));
+
+        configProps.put("keepAliveIntervalSeconds",
+                new ConnectorProperty(null, false, 9, ConnectorPropertyType.NUMERIC_PROPERTY,
+                        false, true, DEFAULT_KEEP_ALIVE, null, null));
+
+        configProps.put("subscriptionType",
+                new ConnectorProperty(null, false, 10, ConnectorPropertyType.OPTION_PROPERTY,
+                        false, true, "Shared",
+                        Map.of("Exclusive", "Exclusive", "Shared", "Shared",
+                                "Failover", "Failover", "Key_Shared", "Key Shared"),
+                        null));
+
+        configProps.put("subscriptionName",
+                new ConnectorProperty("Pulsar subscription name", false, 11,
+                        ConnectorPropertyType.STRING_PROPERTY, false, true, null, null, null));
+
+        configProps.put("supportsWildcardInTopicInbound",
+                new ConnectorProperty(null, false, 12, ConnectorPropertyType.BOOLEAN_PROPERTY,
+                        true, false, false, null, null));
+
+        configProps.put("supportsWildcardInTopicOutbound",
+                new ConnectorProperty(null, false, 13, ConnectorPropertyType.BOOLEAN_PROPERTY,
+                        true, false, false, null, null));
+
+        configProps.put("pulsarTenant",
+                new ConnectorProperty(null, false, 14, ConnectorPropertyType.STRING_PROPERTY,
+                        false, true, "public", null, null));
+
+        configProps.put("pulsarNamespace",
+                new ConnectorProperty(null, false, 15, ConnectorPropertyType.STRING_PROPERTY,
+                        false, true, PULSAR_NAMESPACE, null, null));
+
+        String name = "Cumulocity MQTT Service - (Device Isolation)";
+        String description = "Connector for connecting to Cumulocity MQTT Service using Pulsar protocol. " +
+                "The MQTT Service does not support wildcards. " +
+                "The QoS 'exactly once' is reduced to 'at least once'.";
+
+        return new ConnectorSpecification(
+                name,
+                description,
+                ConnectorType.CUMULOCITY_MQTT_SERVICE_PULSAR,
+                true, // singleton
+                configProps,
+                false,
+                supportedDirections());
+    }
 }

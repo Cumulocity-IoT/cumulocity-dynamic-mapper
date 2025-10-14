@@ -48,6 +48,7 @@ import dynamic.mapper.configuration.CodeTemplate;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.configuration.TemplateType;
 import dynamic.mapper.util.Utils;
+import dynamic.mapper.model.Direction;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -138,6 +139,21 @@ public class ServiceConfigurationService {
                     String description = extractAnnotation(content, "@description");
                     boolean internal = Boolean.parseBoolean(extractAnnotation(content, "@internal"));
                     String templateTypeStr = extractAnnotation(content, "@templateType");
+
+                    // MIGRATION: derive direction from tmeplateType if not found in annotations
+                    String directionAsString = extractAnnotation(content, "@direction");
+                    if (directionAsString == null || directionAsString.isEmpty()) {
+                        directionAsString = templateTypeStr;
+                    }
+
+                    // Convert direction string to enum
+                    Direction direction = null;
+                    try {
+                        direction = Direction.valueOf(directionAsString);
+                    } catch (Exception e) {
+                        // ignore as it is an optional field
+                    }
+
                     boolean defaultTemplate = Boolean.parseBoolean(extractAnnotation(content, "@defaultTemplate"));
                     boolean readonly = Boolean.parseBoolean(extractAnnotation(content, "@readonly"));
 
@@ -167,12 +183,14 @@ public class ServiceConfigurationService {
                             name,
                             description,
                             templateType,
+                            direction,
                             encode(content),
                             internal,
                             readonly,
                             defaultTemplate);
 
                     codeTemplates.put(templateId, template);
+
                     log.info("Loaded template: {} ({})", name, templateId);
 
                 } catch (Exception e) {
@@ -184,6 +202,62 @@ public class ServiceConfigurationService {
         }
 
         configuration.setCodeTemplates(codeTemplates);
+    }
+
+    /*
+     * this step is required to use the new templateType:
+     * INBOUND_SUBSTITUTION_AS_CODE
+     * OUTBOUND_SUBSTITUTION_AS_CODE
+     * instead of
+     * INBOUND, // deprecated, use INBOUND_SUBSTITUTION_AS_CODE instead
+     * OUTBOUND, // deprecated, use OUTBOUND_SUBSTITUTION_AS_CODE instead
+     */
+    public void migrateCodeTemplates(ServiceConfiguration configuration) {
+        Map<String, CodeTemplate> codeTemplates = configuration.getCodeTemplates();
+        Map<String, CodeTemplate> templatesToAdd = new HashMap<>();
+
+        try {
+            // First pass: collect templates that need to be migrated
+            for (CodeTemplate template : codeTemplates.values()) {
+                TemplateType templateType = template.templateType;
+                String templateId = template.id;
+                String name = template.name;
+
+                // MIGRATION
+                if (templateType == TemplateType.INBOUND) {
+                    // Create a copy with updated templateType
+                    CodeTemplate migratedTemplate = createMigratedTemplate(template,
+                            TemplateType.INBOUND_SUBSTITUTION_AS_CODE);
+                    templatesToAdd.put(TemplateType.INBOUND_SUBSTITUTION_AS_CODE.name(), migratedTemplate);
+                    log.info("Prepared migration for template: {} ({})", name, templateId);
+                } else if (templateType == TemplateType.OUTBOUND) {
+                    // Create a copy with updated templateType
+                    CodeTemplate migratedTemplate = createMigratedTemplate(template,
+                            TemplateType.OUTBOUND_SUBSTITUTION_AS_CODE);
+                    templatesToAdd.put(TemplateType.OUTBOUND_SUBSTITUTION_AS_CODE.name(), migratedTemplate);
+                    log.info("Prepared migration for template: {} ({})", name, templateId);
+                }
+            }
+
+            // Second pass: add the migrated templates
+            codeTemplates.putAll(templatesToAdd);
+
+            log.info("Successfully migrated {} templates", templatesToAdd.size());
+
+        } catch (Exception e) {
+            log.error("Failed to initialize code templates", e);
+        }
+    }
+
+    private CodeTemplate createMigratedTemplate(CodeTemplate original, TemplateType newTemplateType) {
+        CodeTemplate migrated = (CodeTemplate) original.clone(); // assuming you implement Cloneable
+        migrated.templateType = newTemplateType;
+        // Set direction based on the original templateType
+        migrated.direction = (original.templateType == TemplateType.INBOUND)
+                ? Direction.INBOUND
+                : Direction.OUTBOUND;
+        migrated.id = newTemplateType.name(); // Use the enum name as ID
+        return migrated;
     }
 
     /**
@@ -283,7 +357,7 @@ public class ServiceConfigurationService {
                     rt = objectMapper.readValue(optionRepresentation.getValue(),
                             ServiceConfiguration.class);
                 }
-                log.debug("{} - Returning service configuration found: {}:", tenant, rt.logPayload);
+                log.debug("{} - Returning service configuration found: {}:", tenant, rt.isLogPayload());
                 log.debug("{} - Found connection configuration: {}", tenant, rt);
             } catch (SDKException exception) {
                 log.warn("{} - No configuration found, returning empty element!", tenant);
@@ -374,6 +448,23 @@ public class ServiceConfigurationService {
                 codeTemplate.description = description;
                 // Update other annotations in the header
                 header = updateAnnotation(header, "@templateType", codeTemplate.templateType.name());
+                String templateTypeStr = codeTemplate.templateType.name();
+
+                // MIGRATION: derive direction from tmeplateType if not found in annotations
+                String directionAsString = extractAnnotation(header, "@direction");
+                if (directionAsString == null || directionAsString.isEmpty()) {
+                    directionAsString = templateTypeStr;
+                }
+
+                // Convert direction string to enum
+                Direction direction = null;
+                try {
+                    direction = Direction.valueOf(directionAsString);
+                } catch (Exception e) {
+                    log.warn("Invalid template type: {}", templateTypeStr);
+
+                }
+                header = updateAnnotation(header, "@direction", String.valueOf(direction));
                 header = updateAnnotation(header, "@defaultTemplate", String.valueOf(codeTemplate.defaultTemplate));
                 header = updateAnnotation(header, "@internal", String.valueOf(codeTemplate.internal));
                 header = updateAnnotation(header, "@readonly", String.valueOf(codeTemplate.readonly));
@@ -403,6 +494,9 @@ public class ServiceConfigurationService {
         header.append(" * @name ").append(codeTemplate.name).append("\n");
         header.append(" * @description ").append(codeTemplate.description).append("\n");
         header.append(" * @templateType ").append(codeTemplate.templateType.name()).append("\n");
+        if (codeTemplate.direction != null) {
+            header.append(" * @direction ").append(codeTemplate.direction).append("\n");
+        }
         header.append(" * @defaultTemplate ").append(codeTemplate.defaultTemplate).append("\n");
         header.append(" * @internal ").append(codeTemplate.internal).append("\n");
         header.append(" * @readonly ").append(codeTemplate.readonly).append("\n");

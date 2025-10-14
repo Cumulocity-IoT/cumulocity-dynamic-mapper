@@ -31,12 +31,14 @@ import dynamic.mapper.processor.extension.internal.InternalCustomAlarmOuter;
 import dynamic.mapper.processor.extension.internal.InternalCustomAlarmOuter.InternalCustomAlarm;
 import dynamic.mapper.processor.processor.fixed.InternalCustomMeasurementOuter;
 import dynamic.mapper.processor.processor.fixed.InternalCustomMeasurementOuter.InternalCustomMeasurement;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public class ProtobufMqttClient {
     Mqtt3BlockingClient testClient;
-    static String brokerHost = System.getenv("broker_host");
-    static Integer brokerPort = Integer.valueOf(System.getenv("broker_port"));
-    static String clientId = System.getenv("client_id");
+    static String brokerHost = System.getenv("BROKER_HOST");
+    static Integer brokerPort = Integer.valueOf(System.getenv("BROKER_PORT"));
+    static String clientId = System.getenv("CLIENT_ID");
     static String brokerUsername = System.getenv("BROKER_USERNAME");
     static String brokerPassword = System.getenv("BROKER_PASSWORD");
 
@@ -74,10 +76,10 @@ public class ProtobufMqttClient {
     private void testSendMeasurement() {
 
         String topic = "protobuf/measurement";
-        System.out.println("Connecting to server: ssl://" + brokerHost + ":" + brokerPort);
+        log.info("Connecting to server: ssl://" + brokerHost + ":" + brokerPort);
         testClient.connect();
 
-        System.out.println("Publishing message on topic:" + topic);
+        log.info("Publishing message on topic:" + topic);
 
         InternalCustomMeasurementOuter.InternalCustomMeasurement proto = InternalCustomMeasurement.newBuilder()
                 .setExternalIdType("c8y_Serial")
@@ -91,19 +93,19 @@ public class ProtobufMqttClient {
         Mqtt3AsyncClient sampleClientAsync = testClient.toAsync();
         sampleClientAsync.publishWith().topic(topic).qos(MqttQos.AT_LEAST_ONCE).payload(proto.toByteArray()).send();
 
-        System.out.println("Message published");
+        log.info("Message published");
         testClient.disconnect();
-        System.out.println("Disconnected");
+        log.info("Disconnected");
 
     }
 
     private void testSendAlarm() {
 
         String topic = "protobuf/alarm";
-        System.out.println("Connecting to server: ssl://" + brokerHost + ":" + brokerPort);
+        log.info("Connecting to server: ssl://" + brokerHost + ":" + brokerPort);
         testClient.connect();
 
-        System.out.println("Publishing message on topic:" + topic);
+        log.info("Publishing message on topic:" + topic);
 
         InternalCustomAlarmOuter.InternalCustomAlarm proto = InternalCustomAlarm.newBuilder()
                 .setExternalIdType("c8y_Serial")
@@ -115,9 +117,9 @@ public class ProtobufMqttClient {
         Mqtt3AsyncClient sampleClientAsync = testClient.toAsync();
         sampleClientAsync.publishWith().topic(topic).qos(MqttQos.AT_LEAST_ONCE).payload(proto.toByteArray()).send();
 
-        System.out.println("Message published");
+        log.info("Message published");
         testClient.disconnect();
-        System.out.println("Disconnected");
+        log.info("Disconnected");
 
     }
 

@@ -1,17 +1,17 @@
 {
-  "apiVersion":"2",
-  "version":"@project.version@",
+  "apiVersion": "2",
+  "version": "@project.version@",
   "name": "dynamic-mapper-service",
   "settingsCategory": "dynMappingService",
   "provider": {
-    "name":"Cumulocity GmbH"
+    "name": "Cumulocity GmbH"
   },
   "buildSpec": {
     "targetBuildArchitectures": [
       "linux/amd64"
     ]
   },
-  "isolation":"MULTI_TENANT",
+  "isolation": "MULTI_TENANT",
   "resources": {
     "cpu": "8",
     "memory": "8G"
@@ -35,9 +35,11 @@
     "ROLE_MEASUREMENT_READ",
     "ROLE_NOTIFICATION_2_ADMIN",
     "ROLE_AI_AGENT_ADMIN",
-    "ROLE_AI_AGENT_READ"
+    "ROLE_AI_AGENT_READ",
+    "ROLE_MQTT_SERVICE_MESSAGING_TOPICS_READ",
+    "ROLE_MQTT_SERVICE_MESSAGING_TOPICS_UPDATE"
   ],
-  "roles":[
+  "roles": [
     "ROLE_DYNAMIC_MAPPER_ADMIN",
     "ROLE_DYNAMIC_MAPPER_CREATE",
     "ROLE_DYNAMIC_MAPPER_HTTP_CONNECTOR_CREATE",
@@ -55,7 +57,6 @@
     "httpGet": {
       "path": "/health",
       "port": 80
-
     },
     "initialDelaySeconds": 90,
     "periodSeconds": 10

@@ -165,7 +165,7 @@ public class ConfigurationController {
     public ResponseEntity<List<ConnectorSpecification>> getConnectorSpecifications() {
         String tenant = contextService.getContext().getTenant();
         List<ConnectorSpecification> connectorConfigurations = new ArrayList<>();
-        log.info("{} - Get connector specifications", tenant);
+        log.debug("{} - Get connector specifications", tenant);
         Map<ConnectorType, ConnectorSpecification> spec = connectorRegistry
                 .getConnectorSpecifications();
         // Iterate over all connectors
@@ -209,12 +209,12 @@ public class ConfigurationController {
                     }
                     """))) @Valid @RequestBody ConnectorConfiguration configuration) {
         String tenant = contextService.getContext().getTenant();
-        if (configuration.connectorType.equals(ConnectorType.HTTP)) {
+        if (configuration.getConnectorType().equals(ConnectorType.HTTP)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Can't create a HttpConnector!");
         }
         // Remove sensitive data before printing to log
         ConnectorSpecification connectorSpecification = connectorRegistry
-                .getConnectorSpecification(configuration.connectorType);
+                .getConnectorSpecification(configuration.getConnectorType());
         ConnectorConfiguration clonedConfig = configuration.getCleanedConfig(connectorSpecification);
         log.info("{} - Post Connector configuration: {}", tenant, clonedConfig.toString());
         try {
@@ -259,7 +259,7 @@ public class ConfigurationController {
             // Remove sensitive data before sending to UI
             for (ConnectorConfiguration config : configurations) {
                 ConnectorSpecification connectorSpecification = connectorRegistry
-                        .getConnectorSpecification(config.connectorType);
+                        .getConnectorSpecification(config.getConnectorType());
                 ConnectorConfiguration cleanedConfig = config.getCleanedConfig(connectorSpecification);
 
                 if (pattern == null || pattern.matcher(cleanedConfig.getName()).matches()) {
@@ -294,7 +294,7 @@ public class ConfigurationController {
             for (ConnectorConfiguration config : configurations) {
                 if (config.getIdentifier().equals(identifier)) {
                     ConnectorSpecification connectorSpecification = connectorRegistry
-                            .getConnectorSpecification(config.connectorType);
+                            .getConnectorSpecification(config.getConnectorType());
                     ConnectorConfiguration cleanedConfig = config.getCleanedConfig(connectorSpecification);
                     modifiedConfig = cleanedConfig;
                 }
@@ -337,10 +337,10 @@ public class ConfigurationController {
         try {
             ConnectorConfiguration configuration = connectorConfigurationService.getConnectorConfiguration(identifier,
                     tenant);
-            if (configuration.enabled)
+            if (configuration.isEnabled())
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body("Can't delete an enabled connector! Disable connector first.");
-            if (configuration.connectorType.equals(ConnectorType.HTTP)) {
+            if (configuration.getConnectorType().equals(ConnectorType.HTTP)) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Can't delete a HttpConnector!");
             }
             // make sure the connector is disconnected before it is deleted.
@@ -394,17 +394,17 @@ public class ConfigurationController {
         String tenant = contextService.getContext().getTenant();
         log.info("{} - Update connection instance {}", tenant, identifier);
         // make sure we are using the correct identifier
-        configuration.identifier = identifier;
+        configuration.setIdentifier(identifier);
         // Remove sensitive data before printing to log
         ConnectorSpecification connectorSpecification = connectorRegistry
-                .getConnectorSpecification(configuration.connectorType);
+                .getConnectorSpecification(configuration.getConnectorType());
         ConnectorConfiguration clonedConfig = configuration.getCleanedConfig(connectorSpecification);
         log.info("{} - Post Connector configuration: {}", tenant, clonedConfig.toString());
         try {
             // check if password filed was touched, e.g. != "****", then use password from
             // new payload, otherwise copy password from previously saved configuration
             ConnectorConfiguration originalConfiguration = connectorConfigurationService
-                    .getConnectorConfiguration(configuration.identifier, tenant);
+                    .getConnectorConfiguration(configuration.getIdentifier(), tenant);
 
             for (String property : configuration.getProperties().keySet()) {
                 if (connectorSpecification.isPropertySensitive(property)
@@ -434,7 +434,7 @@ public class ConfigurationController {
     @GetMapping(value = "/service", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ServiceConfiguration> getServiceConfiguration() {
         String tenant = contextService.getContext().getTenant();
-        log.info("{} - Get service configuration", tenant);
+        // log.info("{} - Get service configuration", tenant);
 
         try {
             final ServiceConfiguration configuration = serviceConfigurationService.getServiceConfiguration(tenant);
@@ -505,8 +505,8 @@ public class ConfigurationController {
                         }
                         // Optionally add error handling in a separate thread if needed
                     }
-                    configurationRegistry.getNotificationSubscriber().initializeDeviceClient();
-                    configurationRegistry.getNotificationSubscriber().initializeManagementClient();
+                    configurationRegistry.getNotificationSubscriber().initializeDeviceClient(tenant);
+                    configurationRegistry.getNotificationSubscriber().initializeManagementClient(tenant);
                 }
             }
 

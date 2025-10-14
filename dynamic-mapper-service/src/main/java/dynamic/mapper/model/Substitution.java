@@ -21,12 +21,17 @@
 
 package dynamic.mapper.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.internal.JsonFormatter;
 
+import lombok.Builder;
 import lombok.Getter;
+import lombok.Setter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.processor.model.RepairStrategy;
@@ -38,62 +43,53 @@ import java.util.Map;
 
 @Slf4j
 @Getter
+@Setter
+@Builder
 @ToString()
+@JsonDeserialize(builder = Substitution.SubstitutionBuilder.class)
 @Schema(description = "Field substitution configuration for transforming data between source and target formats during mapping execution")
 public class Substitution implements Serializable {
 
-    public Substitution() {
-        this.repairStrategy = RepairStrategy.DEFAULT;
-        this.expandArray = false;
-    }
-
-    @Schema(
-        requiredMode = Schema.RequiredMode.REQUIRED,
-        description = """
-            JSONPath expression to extract data from the source payload. 
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = """
+            JSONPath expression to extract data from the source payload.
             Supports standard JSONPath syntax including:
             - Root reference: $
             - Property access: $.temperature, $.device.id
             - Array access: $.readings[0], $.sensors[*].value
             - Wildcards: $.devices.*.name
             - Filters: $.readings[?(@.type == 'temperature')]
-            """,
-        example = "$.device.temperature"
-    )
+            """, example = "$.device.temperature")
     @NotNull
-    public String pathSource;
+    private String pathSource;
 
-    @Schema(
-        requiredMode = Schema.RequiredMode.REQUIRED,
-        description = """
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = """
             JSONPath expression defining where to place the extracted data in the target payload.
             Can reference:
             - Static paths: $.temperature.value
             - Device identity: _IDENTITY_.c8ySourceId, _IDENTITY_.externalId
             - Topic levels: _TOPIC_LEVEL_[0], _TOPIC_LEVEL_[1]
             - Context data: _CONTEXT_DATA_.timestamp
-            """,
-        example = "$.c8y_TemperatureMeasurement.T.value"
-    )
+            """, example = "$.c8y_TemperatureMeasurement.T.value")
     @NotNull
-    public String pathTarget;
+    private String pathTarget;
 
-    @Schema(
-        requiredMode = Schema.RequiredMode.REQUIRED,
-        description = "Strategy to handle data extraction and transformation edge cases",
-        implementation = RepairStrategy.class,
-        example = "DEFAULT"
-    )
+    @Builder.Default
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Strategy to handle data extraction and transformation edge cases", implementation = RepairStrategy.class, example = "DEFAULT")
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
-    public RepairStrategy repairStrategy;
+    private RepairStrategy repairStrategy = RepairStrategy.DEFAULT;
 
-    @Schema(
-        description = "Whether to expand arrays by creating multiple target objects (one for each array element) instead of copying the entire array",
-        example = "false"
-    )
+    @Builder.Default
+    @Schema(description = "Whether to expand arrays by creating multiple target objects (one for each array element) instead of copying the entire array", example = "false")
     @JsonSetter(nulls = Nulls.SKIP)
-    public boolean expandArray;
+    private boolean expandArray = false;
+
+    // Add the builder configuration
+    @JsonPOJOBuilder(withPrefix = "", buildMethodName = "build")
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class SubstitutionBuilder {
+        // Lombok will generate the builder methods
+    }
 
     public static String toPrettyJsonString(Object obj) {
         if (obj == null) {

@@ -67,19 +67,21 @@ public class PulsarCallback implements MessageListener<byte[]> {
 
     @Override
     public void received(Consumer<byte[]> consumer, Message<byte[]> message) {
-        String topic = message.getTopicName();
+        String topic = message.getProperty(MQTTServicePulsarClient.PULSAR_PROPERTY_CHANNEL);
+        String client = message.getProperty(MQTTServicePulsarClient.PULSAR_PROPERTY_CLIENT_ID);
         byte[] payloadBytes = message.getData();
 
         ConnectorMessage connectorMessage = ConnectorMessage.builder()
                 .tenant(tenant)
                 .supportsMessageContext(supportsMessageContext)
                 .topic(topic)
+                .clientId(client)
                 .sendPayload(true)
                 .connectorIdentifier(connectorIdentifier)
                 .payload(payloadBytes)
                 .build();
 
-        if (serviceConfiguration.logPayload) {
+        if (serviceConfiguration.isLogPayload()) {
             log.info(
                     "{} - INITIAL: message on topic: [{}], connector: {}, {}",
                     tenant, topic, connectorName, connectorIdentifier);
@@ -90,9 +92,9 @@ public class PulsarCallback implements MessageListener<byte[]> {
 
         int timeout = processedResults.getMaxCPUTimeMS();
 
-        if (serviceConfiguration.logPayload) {
+        if (serviceConfiguration.isLogPayload()) {
             log.info(
-                    "{} - WAIT_ON_RESULTS: message on topic: [{}], connector {}",
+                    "{} - PREPARING_RESULTS: message on topic: [{}], connector {}",
                     tenant, topic, connectorIdentifier);
         }
 
@@ -133,7 +135,7 @@ public class PulsarCallback implements MessageListener<byte[]> {
 
                 if (!hasErrors) {
                     // No errors found, acknowledge based on original QoS requirements
-                    if (serviceConfiguration.logPayload) {
+                    if (serviceConfiguration.isLogPayload()) {
                         log.debug("{} - END: Sending ack for Pulsar message: topic: [{}], connector: {}",
                                 tenant, topic, connectorIdentifier);
                     }

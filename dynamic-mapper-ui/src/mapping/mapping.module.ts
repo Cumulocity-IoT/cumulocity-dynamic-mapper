@@ -23,6 +23,7 @@ import {
   CoreModule,
   DynamicFormsModule,
   hookRoute,
+  hookTab,
   ModalModule
 } from '@c8y/ngx-components';
 import { DeviceGridModule, DeviceGridService } from '@c8y/ngx-components/device-grid';
@@ -31,12 +32,12 @@ import { EditorComponent, MonacoEditorMarkerValidatorDirective } from '@c8y/ngx-
 import { FORMLY_CONFIG } from '@ngx-formly/core';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { ServiceConfigurationModule } from '../configuration';
-import { ManageTemplateComponent, LabelRendererComponent, NODE1, SharedModule, featureResolver } from '../shared';
+import { ManageTemplateComponent, LabelRendererComponent, NODE1, SharedModule, featureResolver, LabelTaggedRendererComponent } from '../shared';
 import { MappingFilterComponent } from './filter/mapping-filter.component';
 import { AdviceActionComponent } from './grid/advisor/advice-action.component';
 import { MappingComponent } from './grid/mapping.component';
 import { ImportMappingsComponent } from './import/import-modal.component';
-import { MappingTypeDrawerComponent } from './mapping-type/mapping-type-drawer.component';
+import { MappingTypeDrawerComponent } from './mapping-create/mapping-type-drawer.component';
 import { MappingDeploymentRendererComponent } from './renderer/mapping-deployment.renderer.component';
 import { MappingIdCellRendererComponent } from './renderer/mapping-id.renderer.component';
 import { NameRendererComponent } from './renderer/name.renderer.component';
@@ -64,6 +65,7 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { CollapseModule } from 'ngx-bootstrap/collapse';
 import { DeviceClientMapComponent } from './client-relation/device-client-map.component';
 import { ClientRelationStepperComponent } from './client-relation/client-relation-stepper.component';
+import { MappingTabFactory } from './mapping-tab.factory';
 
 @NgModule({
   declarations: [
@@ -88,6 +90,7 @@ import { ClientRelationStepperComponent } from './client-relation/client-relatio
     SubstitutionRendererComponent,
     MappingStatusActivationRendererComponent,
     LabelRendererComponent,
+    LabelTaggedRendererComponent,
     NameRendererComponent,
     MappingTypeDrawerComponent,
     MappingConnectorComponent,
@@ -152,6 +155,7 @@ import { ClientRelationStepperComponent } from './client-relation/client-relatio
         feature: featureResolver
       }
     }),
+    hookTab(MappingTabFactory),
     {
       provide: FORMLY_CONFIG,
       multi: true,

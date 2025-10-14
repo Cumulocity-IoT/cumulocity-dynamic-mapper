@@ -26,6 +26,7 @@ import jakarta.validation.constraints.NotNull;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 
+import dynamic.mapper.model.Direction;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -47,10 +48,13 @@ public class CodeTemplate implements Cloneable {
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     public String description;
-    
+
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     public TemplateType templateType;
+
+    @JsonSetter(nulls = Nulls.SKIP)
+    public Direction direction;
 
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
@@ -67,4 +71,14 @@ public class CodeTemplate implements Cloneable {
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     public boolean defaultTemplate = false;
+
+    @Override
+    public CodeTemplate clone() {
+        try {
+            return (CodeTemplate) super.clone();
+        } catch (CloneNotSupportedException e) {
+            // This should never happen since we implement Cloneable
+            throw new RuntimeException("Clone not supported", e);
+        }
+    }
 }

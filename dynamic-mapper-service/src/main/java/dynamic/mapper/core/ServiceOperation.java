@@ -35,9 +35,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Schema(description = "Service operation request containing the operation type and parameters")
 public class ServiceOperation {
-
-    @Schema(description = "Tenant identifier (automatically set from context)", example = "t12345")
-    private String tenant;
     
     @Schema(
         requiredMode = Schema.RequiredMode.REQUIRED, 
@@ -53,22 +50,4 @@ public class ServiceOperation {
         example = "{\"connectorIdentifier\": \"jrr12x\", \"active\": \"true\"}"
     )
     private Map<String, String> parameter;
-
-    public static ServiceOperation reloadMappings(String tenant) {
-        return new ServiceOperation(tenant, Operation.RELOAD_MAPPINGS, null);
-    }   
-    
-    public static ServiceOperation connect(String tenant, String connectorIdentifier) {
-        HashMap<String, String> params = new HashMap<>();
-        params.put("connectorIdentifier", connectorIdentifier);
-        return new ServiceOperation(tenant, Operation.CONNECT, params);
-    }
-    
-    public static ServiceOperation reloadExtensions(String tenant) {
-        return new ServiceOperation(tenant, Operation.RELOAD_EXTENSIONS, null);
-    } 
-    
-    public static ServiceOperation refreshNotificationSubscription(String tenant) {
-        return new ServiceOperation(tenant, Operation.REFRESH_NOTIFICATIONS_SUBSCRIPTIONS, null);
-    }
 }

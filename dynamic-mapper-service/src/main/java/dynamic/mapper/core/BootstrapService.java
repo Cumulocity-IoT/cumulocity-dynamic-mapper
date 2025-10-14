@@ -44,6 +44,7 @@ import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionRe
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
+import dynamic.mapper.connector.core.callback.GenericMessageCallback;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
@@ -51,8 +52,10 @@ import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.connector.core.registry.ConnectorRegistryException;
 import dynamic.mapper.connector.http.HttpClient;
 import dynamic.mapper.notification.NotificationSubscriber;
-import dynamic.mapper.processor.inbound.DispatcherInbound;
+import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
+
 import dynamic.mapper.service.ConnectorConfigurationService;
+import dynamic.mapper.service.ExtensionInboundRegistry;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.service.ServiceConfigurationService;
 import jakarta.annotation.PreDestroy;
@@ -74,6 +77,7 @@ public class BootstrapService {
     private final Integer inventoryCacheSize;
     private final Map<String, Instant> cacheInboundExternalIdRetentionStartMap;
     private final Map<String, Instant> cacheInventoryRetentionStartMap;
+    private final ExtensionInboundRegistry extensionInboundRegistry;
 
     @Qualifier("virtualThreadPool")
     private ExecutorService virtualThreadPool;
@@ -94,6 +98,7 @@ public class BootstrapService {
             ServiceConfigurationService serviceConfigurationService,
             ConnectorConfigurationService connectorConfigurationService,
             MicroserviceSubscriptionsService subscriptionsService,
+            ExtensionInboundRegistry extensionInboundRegistry,
             @Value("${APP.additionalSubscriptionIdTest}") String additionalSubscriptionIdTest,
             @Value("#{new Integer('${APP.inboundExternalIdCacheSize}')}") Integer inboundExternalIdCacheSize,
             @Value("#{new Integer('${APP.inventoryCacheSize}')}") Integer inventoryCacheSize) {
@@ -105,6 +110,7 @@ public class BootstrapService {
         this.serviceConfigurationService = serviceConfigurationService;
         this.connectorConfigurationService = connectorConfigurationService;
         this.subscriptionsService = subscriptionsService;
+        this.extensionInboundRegistry = extensionInboundRegistry;
         this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
         this.inboundExternalIdCacheSize = inboundExternalIdCacheSize;
         this.inventoryCacheSize = inventoryCacheSize;
@@ -113,55 +119,130 @@ public class BootstrapService {
         TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"));
     }
 
-    @PreDestroy
-    public void destroy() {
-        log.info("Shutting down mapper...");
-        subscriptionsService.runForEachTenant(() -> {
-            try {
-                connectorRegistry.unregisterAllClientsForTenant(subscriptionsService.getTenant());
-            } catch (ConnectorRegistryException e) {
-                throw new RuntimeException(e);
-            }
-            configurationRegistry.getNotificationSubscriber().disconnect(subscriptionsService.getTenant());
-        });
-    }
-
-    @EventListener
-    public void unsubscribeTenant(MicroserviceSubscriptionRemovedEvent event) {
-        String tenant = event.getTenant();
-        log.info("{} - Microservice unsubscribed", tenant);
-
+@PreDestroy
+public void destroy() {
+    log.info("Shutting down mapper...");
+    subscriptionsService.runForEachTenant(() -> {
+        String tenant = subscriptionsService.getTenant();
         try {
-            cleanTenantResources(tenant);
-        } catch (Exception e) {
-            log.error("{} - Error during unsubscribing cleanup: {}", tenant, e.getMessage(), e);
+            log.info("{} - Cleaning up tenant resources", tenant);
+            
+            // Disconnect notification subscriber
+            configurationRegistry.getNotificationSubscriber().disconnect(tenant);
+            
+            // Unregister all connector clients
+            connectorRegistry.unregisterAllClientsForTenant(tenant);
+            
+            log.info("{} - Successfully cleaned up tenant resources", tenant);
+        } catch (ConnectorRegistryException e) {
+            log.error("{} - Error during shutdown: {}", tenant, e.getMessage(), e);
+            throw new RuntimeException(e);
         }
+    });
+    
+    log.info("Mapper shutdown completed");
+}
+
+@EventListener
+public void unsubscribeTenant(MicroserviceSubscriptionRemovedEvent event) {
+    String tenant = event.getTenant();
+    log.info("{} - Microservice unsubscribed", tenant);
+
+    try {
+        cleanTenantResources(tenant);
+    } catch (Exception e) {
+        log.error("{} - Error during unsubscribing cleanup: {}", tenant, e.getMessage(), e);
+    }
+}
+
+private void cleanTenantResources(String tenant) throws ConnectorRegistryException {
+    log.info("{} - Starting tenant resource cleanup", tenant);
+    
+    NotificationSubscriber subscriber = configurationRegistry.getNotificationSubscriber();
+    
+    try {
+        // Disconnect all notification connections
+        subscriber.disconnect(tenant);
+        log.debug("{} - Disconnected notification subscriber", tenant);
+    } catch (Exception e) {
+        log.error("{} - Error disconnecting subscriber: {}", tenant, e.getMessage(), e);
+    }
+    
+    try {
+        // Unsubscribe device tokens
+        subscriber.unsubscribeDeviceSubscriber(tenant);
+        log.debug("{} - Unsubscribed device subscriber", tenant);
+    } catch (Exception e) {
+        log.error("{} - Error unsubscribing device subscriber: {}", tenant, e.getMessage(), e);
+    }
+    
+    try {
+        // Unsubscribe device group tokens
+        subscriber.unsubscribeDeviceGroupSubscriber(tenant);
+        log.debug("{} - Unsubscribed device group subscriber", tenant);
+    } catch (Exception e) {
+        log.error("{} - Error unsubscribing device group subscriber: {}", tenant, e.getMessage(), e);
     }
 
-    private void cleanTenantResources(String tenant) throws ConnectorRegistryException {
-        NotificationSubscriber subscriber = configurationRegistry.getNotificationSubscriber();
-        subscriber.disconnect(tenant);
-        subscriber.unsubscribeDeviceSubscriber(tenant);
-        subscriber.unsubscribeDeviceGroupSubscriber(tenant);
-
+    try {
+        // Unregister all connector clients
         connectorRegistry.unregisterAllClientsForTenant(tenant);
+        log.debug("{} - Unregistered all connector clients", tenant);
+    } catch (Exception e) {
+        log.error("{} - Error unregistering clients: {}", tenant, e.getMessage(), e);
+    }
 
+    try {
         // Clean up configurations
         configurationRegistry.removeServiceConfiguration(tenant);
+        log.debug("{} - Removed service configuration", tenant);
+    } catch (Exception e) {
+        log.error("{} - Error removing service configuration: {}", tenant, e.getMessage(), e);
+    }
+
+    try {
+        // DO NOT REMOVE deviceToClient feature currently disabled
+        // configurationRegistry.clearCacheDeviceToClient(tenant);
+
         configurationRegistry.removeMapperServiceRepresentation(tenant);
-        configurationRegistry.removePayloadProcessorsInbound(tenant);
-        configurationRegistry.removePayloadProcessorsOutbound(tenant);
-        configurationRegistry.removeExtensibleProcessor(tenant);
         configurationRegistry.removeGraalsResources(tenant);
         configurationRegistry.removeMicroserviceCredentials(tenant);
+        log.debug("{} - Removed configuration registry resources", tenant);
+    } catch (Exception e) {
+        log.error("{} - Error removing configuration registry resources: {}", tenant, e.getMessage(), e);
+    }
 
+    try {
+        extensionInboundRegistry.deleteExtensions(tenant);
+        log.debug("{} - Deleted extensions", tenant);
+    } catch (Exception e) {
+        log.error("{} - Error deleting extensions: {}", tenant, e.getMessage(), e);
+    }
+
+    try {
         mappingService.removeResources(tenant);
+        log.debug("{} - Removed mapping service resources", tenant);
+    } catch (Exception e) {
+        log.error("{} - Error removing mapping service resources: {}", tenant, e.getMessage(), e);
+    }
 
+    try {
         connectorRegistry.removeResources(tenant);
+        log.debug("{} - Removed connector registry resources", tenant);
+    } catch (Exception e) {
+        log.error("{} - Error removing connector registry resources: {}", tenant, e.getMessage(), e);
+    }
 
+    try {
         c8YAgent.removeInboundExternalIdCache(tenant);
         c8YAgent.removeInventoryCache(tenant);
+        log.debug("{} - Removed C8Y agent caches", tenant);
+    } catch (Exception e) {
+        log.error("{} - Error removing C8Y agent caches: {}", tenant, e.getMessage(), e);
     }
+
+    log.info("{} - Completed tenant resource cleanup", tenant);
+}
 
     @EventListener
     public void subscribeTenant(MicroserviceSubscriptionAddedEvent event) {
@@ -176,6 +257,9 @@ public class BootstrapService {
     }
 
     private void initializeTenantResources(String tenant, MicroserviceCredentials credentials) {
+
+        extensionInboundRegistry.initializeExtensions(tenant);
+
         c8YAgent.createExtensibleProcessor(tenant);
         c8YAgent.loadProcessorExtensions(tenant);
 
@@ -186,7 +270,9 @@ public class BootstrapService {
         configurationRegistry.initializeResources(tenant);
         configurationRegistry.createGraalsResources(tenant, serviceConfiguration);
         configurationRegistry.initializeMapperServiceRepresentation(tenant);
-        configurationRegistry.initializeDeviceToClientMapRepresentation(tenant);
+
+        // DO NOT REMOVE deviceToClient feature currently disabled
+        // configurationRegistry.initializeDeviceToClientMapRepresentation(tenant);
 
         mappingService.createResources(tenant);
 
@@ -216,18 +302,19 @@ public class BootstrapService {
         ServiceConfiguration serviceConfig = serviceConfigurationService.getServiceConfiguration(tenant);
         boolean requiresSave = false;
 
-        if (serviceConfig.inboundExternalIdCacheSize == null || serviceConfig.inboundExternalIdCacheSize == 0) {
-            serviceConfig.inboundExternalIdCacheSize = inboundExternalIdCacheSize;
+        if (serviceConfig.getInboundExternalIdCacheSize() == null
+                || serviceConfig.getInboundExternalIdCacheSize() == 0) {
+            serviceConfig.setInboundExternalIdCacheSize(inboundExternalIdCacheSize);
             requiresSave = true;
         }
 
-        if (serviceConfig.inboundExternalIdCacheRetention == null) {
-            serviceConfig.inboundExternalIdCacheRetention = 1;
+        if (serviceConfig.getInboundExternalIdCacheRetention() == null) {
+            serviceConfig.setInboundExternalIdCacheRetention(1);
             requiresSave = true;
         }
 
-        if (serviceConfig.inventoryCacheSize == null || serviceConfig.inventoryCacheSize == 0) {
-            serviceConfig.inventoryCacheSize = inventoryCacheSize;
+        if (serviceConfig.getInventoryCacheSize() == null || serviceConfig.getInventoryCacheSize() == 0) {
+            serviceConfig.setInventoryCacheSize(inventoryCacheSize);
             requiresSave = true;
         }
 
@@ -237,6 +324,9 @@ public class BootstrapService {
             serviceConfigurationService.initCodeTemplates(serviceConfig, false);
             requiresSave = true;
         }
+        // else {
+        // serviceConfigurationService.migrateCodeTemplates(serviceConfig);
+        // }
 
         if (requiresSave) {
             try {
@@ -251,15 +341,18 @@ public class BootstrapService {
     }
 
     private void initializeCaches(String tenant, ServiceConfiguration serviceConfig) {
-        int cacheSizeInbound = Optional.ofNullable(serviceConfig.inboundExternalIdCacheSize)
+        int cacheSizeInbound = Optional.ofNullable(serviceConfig.getInboundExternalIdCacheSize())
                 .filter(size -> size != 0)
                 .orElse(inboundExternalIdCacheSize);
 
-        int cacheSizeInventory = Optional.ofNullable(serviceConfig.inventoryCacheSize)
+        int cacheSizeInventory = Optional.ofNullable(serviceConfig.getInventoryCacheSize())
                 .filter(size -> size != 0)
                 .orElse(inventoryCacheSize);
 
         c8YAgent.initializeInboundExternalIdCache(tenant, cacheSizeInbound);
+        
+        // to test cache eviction
+        // c8YAgent.initializeInventoryCache(tenant, 1);
         c8YAgent.initializeInventoryCache(tenant, cacheSizeInventory);
 
         cacheInboundExternalIdRetentionStartMap.put(tenant, Instant.now());
@@ -288,7 +381,7 @@ public class BootstrapService {
             if (connectTask != null)
                 connectTasks.add(connectTask);
 
-            if (ConnectorType.HTTP.equals(config.connectorType)) {
+            if (ConnectorType.HTTP.equals(config.getConnectorType())) {
                 httpConfig = config;
             }
         }
@@ -302,14 +395,14 @@ public class BootstrapService {
     private void createAndInitializeDefaultHttpConnector(String tenant, ServiceConfiguration serviceConfig)
             throws ConnectorRegistryException {
         ConnectorConfiguration httpConfig = new ConnectorConfiguration();
-        httpConfig.connectorType = ConnectorType.HTTP;
-        httpConfig.identifier = HttpClient.HTTP_CONNECTOR_IDENTIFIER;
-        httpConfig.enabled = true;
-        httpConfig.name = "Default HTTP Connector";
+        httpConfig.setConnectorType(ConnectorType.HTTP);
+        httpConfig.setIdentifier(HttpClient.HTTP_CONNECTOR_IDENTIFIER);
+        httpConfig.setEnabled(true);
+        httpConfig.setName("Default HTTP Connector");
 
         HttpClient initialHttpClient = new HttpClient();
         initialHttpClient.getConnectorSpecification().getProperties()
-                .forEach((key, prop) -> httpConfig.properties.put(key, prop.defaultValue));
+                .forEach((key, prop) -> httpConfig.getProperties().put(key, prop.defaultValue));
 
         try {
             connectorConfigurationService.saveConnectorConfiguration(httpConfig);
@@ -352,8 +445,8 @@ public class BootstrapService {
         if (!configurationRegistry.getNotificationSubscriber().isNotificationServiceAvailable(tenant)) {
             disableOutboundMapping(tenant, serviceConfig);
         } else {
-            configurationRegistry.getNotificationSubscriber().initializeDeviceClient();
-            configurationRegistry.getNotificationSubscriber().initializeManagementClient();
+            configurationRegistry.getNotificationSubscriber().initializeDeviceClient(tenant);
+            configurationRegistry.getNotificationSubscriber().initializeManagementClient(tenant);
         }
     }
 
@@ -383,7 +476,10 @@ public class BootstrapService {
             }
             connectorRegistry.registerClient(tenant, connectorClient);
             // initialize AsynchronousDispatcherInbound
-            DispatcherInbound dispatcherInbound = new DispatcherInbound(configurationRegistry,
+            // DispatcherInbound dispatcherInbound = new
+            // DispatcherInbound(configurationRegistry,
+            // connectorClient);
+            GenericMessageCallback dispatcherInbound = new CamelDispatcherInbound(configurationRegistry,
                     connectorClient);
             connectorClient.setDispatcher(dispatcherInbound);
             // Connection is done async, future is returned to wait for the connection if
@@ -403,13 +499,14 @@ public class BootstrapService {
         });
     }
 
-    @Scheduled(cron = "* 30 * * * *")
-    public void sendDeviceToClientMap() {
-        subscriptionsService.runForEachTenant(() -> {
-            String tenant = subscriptionsService.getTenant();
-            mappingService.sendDeviceToClientMap(tenant);
-        });
-    }
+    // DO NOT REMOVE deviceToClient feature currently disabled
+    // @Scheduled(cron = "* 30 * * * *")
+    // public void sendDeviceToClientMap() {
+    // subscriptionsService.runForEachTenant(() -> {
+    // String tenant = subscriptionsService.getTenant();
+    // mappingService.sendDeviceToClientMap(tenant);
+    // });
+    // }
 
     private void cleanupCachesForTenant(String tenant) {
 

@@ -75,7 +75,8 @@ export interface ConnectorSpecification {
   description: string;
   connectorType: ConnectorType;
   singleton: boolean;
-  supportsWildcardInTopic: boolean;
+  supportsWildcardInTopicInbound: boolean;
+  supportsWildcardInTopicOutbound: boolean;
   supportsMessageContext?: boolean;
   supportedDirections?: Direction[];
   properties: { [name: string]: ConnectorProperty };

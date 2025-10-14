@@ -183,8 +183,8 @@ public class ConnectorConfigurationService {
             final ConnectorConfiguration configuration = objectMapper.readValue(optionRepresentation.getValue(),
                     ConnectorConfiguration.class);
 
-            configuration.enabled = enabled;
-            log.debug("{} - Setting connection: {}:", tenant, configuration.enabled);
+            configuration.setEnabled(enabled);
+            log.debug("{} - Setting connection: {}:", tenant, configuration.isEnabled());
             final String configurationJson = objectMapper.writeValueAsString(configuration);
             optionRepresentation.setCategory(Utils.OPTION_CATEGORY_CONFIGURATION);
             optionRepresentation.setKey(getConnectorOptionKey(identifier));

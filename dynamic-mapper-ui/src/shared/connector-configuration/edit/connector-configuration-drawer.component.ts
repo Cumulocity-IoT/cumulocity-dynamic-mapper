@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { ChangeDetectorRef, Component, EventEmitter, inject, Input, OnInit, Output } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, Input, OnInit } from '@angular/core';
 import { BottomDrawerRef, ModalLabels } from '@c8y/ngx-components';
 import { FormlyFieldConfig } from '@ngx-formly/core';
 import { FormGroup } from '@angular/forms';
@@ -41,7 +41,7 @@ interface PropertyEntry {
 @Component({
   selector: 'd11r-edit-connector-drawer',
   templateUrl: 'connector-configuration-drawer.component.html',
-  styleUrls:['./connector-configuration-drawer.component.css'],
+  styleUrls: ['./connector-configuration-drawer.component.css'],
   standalone: false
 })
 export class ConnectorConfigurationDrawerComponent implements OnInit {
@@ -103,9 +103,10 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
       wrappers: ['c8y-form-field'],
       props: {
         label: 'Connector type',
-        options: this.specifications.filter(sp => this.allowedConnectors.includes(sp.connectorType)).map(sp => ({
-          label: sp.name,
-          value: sp.connectorType
+        options: this.specifications.map(sp => ({
+          label: !this.allowedConnectors.includes(sp.connectorType) ? sp.name + '-  Only one instance per tenant allowed': sp.name ,
+          value: sp.connectorType,
+          disabled: !this.allowedConnectors.includes(sp.connectorType) // Disable if not allowed
         })),
         change: () => this.createDynamicForm(this.brokerForm.get('connectorType').value),
         required: true,

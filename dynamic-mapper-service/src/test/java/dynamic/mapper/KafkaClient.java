@@ -27,14 +27,17 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringSerializer;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 public class KafkaClient {
 	KafkaProducer<String, String> testClient;
-	static String brokerHost = System.getenv("kafka_broker_host");
+	static String brokerHost = System.getenv("KAFKA_BROKER_HOST");
 	static String brokerUsername = System.getenv("BROKER_USERNAME");
 	static String brokerPassword = System.getenv("BROKER_PASSWORD");
-	static String groupId = System.getenv("group_id");
-	static String topic = System.getenv("topic");
-	static String saslMechanism = System.getenv("sasl_mechanism");
+	static String groupId = System.getenv("GROUP_ID");
+	static String topic = System.getenv("TOPIC");
+	static String saslMechanism = System.getenv("SASL_MECHANISM");
 
 	public KafkaClient(KafkaProducer<String, String> sampleClient) {
 		testClient = sampleClient;
@@ -44,7 +47,7 @@ public class KafkaClient {
 
 		String jaasTemplate = "org.apache.kafka.common.security.scram.ScramLoginModule required username=\"%s\" password=\"%s\";";
 		String jaasCfg = String.format(jaasTemplate, brokerUsername, brokerPassword);
-		System.out.println("JAASConfig: " + jaasCfg);
+		log.info("JAASConfig: " + jaasCfg);
 		String serializer = StringSerializer.class.getName();
 
 		Properties props = new Properties();
@@ -67,9 +70,9 @@ public class KafkaClient {
 	private void testSendMeasurement() {
 
 		String topic = KafkaClient.topic;
-		System.out.println("Connecting to Kafka broker: " + brokerHost + "!");
+		log.info("Connecting to Kafka broker: " + brokerHost + "!");
 
-		System.out.println("Publishing message on topic: " + topic);
+		log.info("Publishing message on topic: " + topic);
 
 		String payload = "{ \"deviceId\": \"863859042393327\", \"version\": \"1\",\"deviceType\": \"20\", \"deviceTimestamp\": \"1665473038000\", \"deviceStatus\": \"BTR\", \"temperature\": 90 }";
 		String key = "863859042393327";
@@ -77,8 +80,8 @@ public class KafkaClient {
 		testClient.send(new ProducerRecord<String, String>(topic, key, payload));
 		testClient.close();
 
-		System.out.println("Message published");
-		System.out.println("Disconnected");
+		log.info("Message published");
+		log.info("Disconnected");
 
 	}
 

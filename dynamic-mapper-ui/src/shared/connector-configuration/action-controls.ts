@@ -20,6 +20,7 @@
 // Now update action-controls.config.ts
 import { BuiltInActionType, Column } from '@c8y/ngx-components';
 import { ActionControlConfig, ActionVisibilityRule } from './types'
+import { LabelTaggedRendererComponent } from '../component/renderer/label-tagged.renderer.component';
 import { LabelRendererComponent } from '../component/renderer/label.renderer.component';
 import { ConnectorStatusRendererComponent } from './renderer/connector-status.renderer.component';
 import { ConnectorStatusEnabledRendererComponent } from './renderer/status-enabled-renderer.component';
@@ -72,6 +73,25 @@ export const ACTION_CONTROLS: ActionControlConfig[] = [
 
 export const GRID_COLUMNS: Column[] = [
   {
+    name: 'name',
+    header: 'Name',
+    path: 'name',
+    filterable: false,
+    sortOrder: 'ASC',
+    visible: true,
+    cellRendererComponent: ConnectorDetailCellRendererComponent,
+    gridTrackSize: '30%'
+  },
+  {
+    name: 'status',
+    header: 'Status',
+    path: 'status',
+    filterable: false,
+    sortable: true,
+    cellRendererComponent: ConnectorStatusRendererComponent,
+    gridTrackSize: '17%'
+  },
+  {
     name: 'identifier',
     header: 'Identifier',
     path: 'identifier',
@@ -81,23 +101,13 @@ export const GRID_COLUMNS: Column[] = [
     gridTrackSize: '10%'
   },
   {
-    name: 'name',
-    header: 'Name',
-    path: 'name',
-    filterable: false,
-    sortOrder: 'ASC',
-    visible: true,
-    cellRendererComponent: ConnectorDetailCellRendererComponent,
-    gridTrackSize: '25%'
-  },
-  {
     name: 'connectorType',
     header: 'Type',
     path: 'connectorType',
     filterable: false,
     sortOrder: 'ASC',
     visible: true,
-    cellRendererComponent: LabelRendererComponent,
+    cellRendererComponent: LabelTaggedRendererComponent,
     gridTrackSize: '15%'
   },
   {
@@ -111,21 +121,12 @@ export const GRID_COLUMNS: Column[] = [
     gridTrackSize: '10%'
   },
   {
-    name: 'status',
-    header: 'Status',
-    path: 'status',
-    filterable: false,
-    sortable: true,
-    cellRendererComponent: ConnectorStatusRendererComponent,
-    gridTrackSize: '17%'
-  },
-  {
     name: 'enabled',
     header: 'Enabled',
     path: 'enabled',
     filterable: false,
     sortable: true,
     cellRendererComponent: ConnectorStatusEnabledRendererComponent,
-    gridTrackSize: '16%'
+    gridTrackSize: '11%'
   }
 ] as Column[];

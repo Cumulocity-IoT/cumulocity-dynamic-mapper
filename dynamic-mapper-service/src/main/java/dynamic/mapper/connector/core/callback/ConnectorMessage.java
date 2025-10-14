@@ -32,7 +32,7 @@ import lombok.Setter;
 public class ConnectorMessage {
     private byte[] payload;
 
-    private byte[] key;
+    private String key;
 
     private String[] headers;
 
@@ -41,7 +41,7 @@ public class ConnectorMessage {
 
     private String topic;
 
-    private String client;
+    private String clientId;
 
     @NotNull
     private String connectorIdentifier;

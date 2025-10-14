@@ -143,7 +143,7 @@ public class MappingTreeNode {
 
         writeLock.lock();
         try {
-            List<String> levels = Mapping.splitTopicIncludingSeparatorAsList(mapping.mappingTopic);
+            List<String> levels = Mapping.splitTopicIncludingSeparatorAsList(mapping.getMappingTopic());
             addMapping(mapping, levels, 0);
         } finally {
             writeLock.unlock();
@@ -156,7 +156,7 @@ public class MappingTreeNode {
 
         writeLock.lock();
         try {
-            List<String> levels = Mapping.splitTopicIncludingSeparatorAsList(mapping.mappingTopic);
+            List<String> levels = Mapping.splitTopicIncludingSeparatorAsList(mapping.getMappingTopic());
             MutableInt branchingLevel = new MutableInt(0);
             deleteMapping(mapping, levels, 0, branchingLevel);
         } finally {
@@ -393,7 +393,7 @@ public class MappingTreeNode {
     private boolean shouldRemoveNode(MappingTreeNode node, Mapping mapping, MappingContext context,
             MutableInt branchingLevel) {
         return Optional.ofNullable(node.getMapping())
-                .map(m -> m.id.equals(mapping.id))
+                .map(m -> m.getId().equals(mapping.getId()))
                 .map(matches -> {
                     if (matches && countGrandChildren() > 1) {
                         branchingLevel.setValue(context.level);
@@ -426,7 +426,7 @@ public class MappingTreeNode {
     private void logMappingNodeAddition(Mapping mapping, MappingContext context) {
         log.debug(TENANT_LOG_PREFIX
                 + "Adding mappingNode  : currentPathMonitoring [{}], currentNode.absolutePath [{}], mappingId [{}]",
-                tenant, context.currentPathMonitoring, getAbsolutePath(), mapping.id);
+                tenant, context.currentPathMonitoring, getAbsolutePath(), mapping.getId());
     }
 
     private void logInnerNodeAddition(MappingContext context) {
@@ -438,7 +438,7 @@ public class MappingTreeNode {
         log.debug(
                 TENANT_LOG_PREFIX
                         + "Deleting mappingNode: currentPathMonitoring [{}], branchingLevel [{}], mappingId [{}]",
-                tenant, context.currentPathMonitoring, branchingLevel, mapping.id);
+                tenant, context.currentPathMonitoring, branchingLevel, mapping.getId());
     }
 
     private void logInnerNodeDeletion(MappingContext context, MutableInt branchingLevel) {

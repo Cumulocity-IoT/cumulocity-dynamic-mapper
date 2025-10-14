@@ -22,6 +22,17 @@ import { CellRendererContext } from '@c8y/ngx-components';
 
 @Component({
   selector: 'd11r-mapping-renderer-qos',
+  // template: `<span
+  //   [class]="
+  //     'text-12 tag ' +
+  //     ((context.item?.status) === 'CONNECTED'
+  //       ? 'tag--success'
+  //       : (context.item?.status) === 'FAILED'
+  //         ? 'tag--danger'
+  //         : 'tag--default')
+  //   "
+  //   >{{ context.item?.status }}
+  // </span> `,
   template: `<span
     [class]="
       'text-12 tag ' +
@@ -29,6 +40,8 @@ import { CellRendererContext } from '@c8y/ngx-components';
         ? 'tag--success'
         : (context.item?.status) === 'FAILED'
           ? 'tag--danger'
+          : (context.item?.status) === 'DISCONNECTED'
+          ? 'tag--info'
           : 'tag--default')
     "
     >{{ context.item?.status }}

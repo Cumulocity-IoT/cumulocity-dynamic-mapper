@@ -48,7 +48,7 @@ export class DeviceSelectorSubscriptionComponent implements OnInit {
   }
 
   selectionChanged(event: AssetSelectionChangeEvent) {
-    // console.log(event);
+    console.log(event);
   }
 
   clickedUpdateSubscription() {

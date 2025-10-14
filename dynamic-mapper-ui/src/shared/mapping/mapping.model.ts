@@ -121,8 +121,11 @@ export interface Mapping {
    */
   targetTemplate: string;
 
-  /** Type of mapping transformation */
+  /** Type of mapping payload */
   mappingType: MappingType;
+
+  /** Type of transformation */
+  transformationType: TransformationType;
 
   /** Array of field substitutions for data transformation */
   substitutions?: Substitution[];
@@ -180,9 +183,6 @@ export interface Mapping {
 
   /** Base64 encoded code for custom substitutions */
   code?: string;
-
-  /** Define substitutions as JavaScript code */
-  substitutionsAsCode?: boolean;
 
   /** Timestamp of last update */
   lastUpdate: number;
@@ -273,6 +273,13 @@ export interface StepperConfiguration {
   advanceFromStepToEndStep?: number;
 }
 
+export enum TransformationType {
+  DEFAULT = 'DEFAULT',
+  SUBSTITUTION_AS_CODE = 'SUBSTITUTION_AS_CODE',
+  SMART_FUNCTION = 'SMART_FUNCTION',
+  JSONATA = 'JSONATA'
+}
+
 export enum MappingType {
   JSON = 'JSON',
   FLAT_FILE = 'FLAT_FILE',
@@ -283,15 +290,55 @@ export enum MappingType {
   CODE_BASED = 'CODE_BASED'
 }
 
+export const TransformationTypeLabels = {
+[Direction.INBOUND]:{  [TransformationType.DEFAULT]: 'Default Transformation',
+  [TransformationType.SUBSTITUTION_AS_CODE]: 'Substitution as JavaScript Code',
+  [TransformationType.SMART_FUNCTION]: 'Smart Function (JavaScript) to create Cumulocity API calls',
+  [TransformationType.JSONATA]: 'Substitution as JSONata Expression'},
+  [Direction.OUTBOUND]:{  [TransformationType.DEFAULT]: 'Default Transformation',
+  [TransformationType.SUBSTITUTION_AS_CODE]: 'Substitution as JavaScript Code',
+  [TransformationType.SMART_FUNCTION]: 'Smart Function (JavaScript) to create Broker Payload',
+  [TransformationType.JSONATA]: 'Substitution as JSONata Expression'}
+} as const;
+
+export const TransformationTypeDescriptions = {
+  [TransformationType.DEFAULT]: 'Uses the default transformation logic without custom processing',
+  [TransformationType.SUBSTITUTION_AS_CODE]: 'Allows writing custom JavaScript code for complex transformations',
+  [TransformationType.SMART_FUNCTION]: 'Executes a predefined Smart Function for data transformation and create payload for Cumulocity API calls',
+  [TransformationType.JSONATA]: 'Uses JSONata query and transformation language for data mapping'
+} as const;
+
+export const MappingTypeLabels = {
+  [MappingType.JSON]: 'JSON Payload',
+  [MappingType.FLAT_FILE]: 'Flat File Payload',
+  [MappingType.HEX]: 'Hexadecimal Payload',
+  [MappingType.PROTOBUF_INTERNAL]: 'PROTOBUF Payload',
+  [MappingType.EXTENSION_SOURCE]: 'Payload parsed in Java Extension',
+  [MappingType.EXTENSION_SOURCE_TARGET]: 'Payload parsed and sent in Extension',
+  [MappingType.CODE_BASED]: 'Code-based Mapping'
+} as const;
+
+export const MappingTypeDescriptions = {
+  [MappingType.JSON]: 'Standard JSON payload transformation and mapping',
+  [MappingType.FLAT_FILE]: 'Fixed-width or delimited flat file processing',
+  [MappingType.HEX]: 'Hexadecimal data processing and conversion',
+  [MappingType.PROTOBUF_INTERNAL]: 'Payload is in PROTOBUF format and is parsed by an internal extension',
+  [MappingType.EXTENSION_SOURCE]: 'Custom extension for source data processing',
+  [MappingType.EXTENSION_SOURCE_TARGET]: 'Custom extension for both source and target processing',
+  [MappingType.CODE_BASED]: 'Fully customizable code-based transformation logic'
+} as const;
+
 export interface MappingTypeProperties {
   snoopSupported: boolean;
   directionSupported: boolean;
   substitutionsAsCodeSupported: boolean;
+  supportedTransformationTypes: TransformationType[]; // Add this line
 }
 
 export interface MappingTypeDescriptionInterface {
   key: MappingType;
   description: string;
+  enabled: boolean;
   properties: Record<Direction, MappingTypeProperties>;
   stepperConfiguration: StepperConfiguration;
 }
@@ -302,10 +349,31 @@ export const MappingTypeDescriptionMap: Record<
 > = {
   [MappingType.JSON]: {
     key: MappingType.JSON,
+    enabled: true,
     description: 'Mapping handles payloads in JSON format.',
     properties: {
-      [Direction.INBOUND]: { snoopSupported: true, directionSupported: true, substitutionsAsCodeSupported: true },
-      [Direction.OUTBOUND]: { snoopSupported: true, directionSupported: true, substitutionsAsCodeSupported: true },
+      [Direction.INBOUND]: {
+        snoopSupported: true,
+        directionSupported: true,
+        substitutionsAsCodeSupported: true,
+        supportedTransformationTypes: [
+          TransformationType.DEFAULT,
+          TransformationType.JSONATA,
+          TransformationType.SUBSTITUTION_AS_CODE,
+          TransformationType.SMART_FUNCTION
+        ]
+      },
+      [Direction.OUTBOUND]: {
+        snoopSupported: true,
+        directionSupported: true,
+        substitutionsAsCodeSupported: true,
+        supportedTransformationTypes: [
+          TransformationType.DEFAULT,
+          TransformationType.JSONATA,
+          TransformationType.SUBSTITUTION_AS_CODE,
+          TransformationType.SMART_FUNCTION
+        ]
+      },
     },
     stepperConfiguration: {
       showCodeEditor: false,
@@ -320,17 +388,38 @@ export const MappingTypeDescriptionMap: Record<
   },
   [MappingType.FLAT_FILE]: {
     key: MappingType.FLAT_FILE,
+    enabled: true,
     description: `Mapping handles payloads in CSV format. Any separator can be defined./nUse the following expression to return the fields in an array.\nFor the expression $split(payload, /,\\s*/) the result is:
-			[
-				"165",
-				"14.5",
-				"2022-08-06T00:14:50.000+02:00",
-				"c8y_FuelMeasurement"
-			]
-			.`,
+      [
+        "165",
+        "14.5",
+        "2022-08-06T00:14:50.000+02:00",
+        "c8y_FuelMeasurement"
+      ]
+      .`,
     properties: {
-      [Direction.INBOUND]: { snoopSupported: true, directionSupported: true, substitutionsAsCodeSupported: true },
-      [Direction.OUTBOUND]: { snoopSupported: false, directionSupported: false, substitutionsAsCodeSupported: false },
+      [Direction.INBOUND]: {
+        snoopSupported: true,
+        directionSupported: true,
+        substitutionsAsCodeSupported: true,
+        supportedTransformationTypes: [
+          TransformationType.DEFAULT,
+          TransformationType.JSONATA,
+          TransformationType.SUBSTITUTION_AS_CODE,
+          TransformationType.SMART_FUNCTION
+        ]
+      },
+      [Direction.OUTBOUND]: {
+        snoopSupported: false,
+        directionSupported: false,
+        substitutionsAsCodeSupported: false,
+        supportedTransformationTypes: [
+          TransformationType.DEFAULT,
+          TransformationType.JSONATA,
+          TransformationType.SUBSTITUTION_AS_CODE,
+          TransformationType.SMART_FUNCTION
+        ]
+      },
     },
     stepperConfiguration: {
       showCodeEditor: false,
@@ -345,11 +434,32 @@ export const MappingTypeDescriptionMap: Record<
   },
   [MappingType.HEX]: {
     key: MappingType.HEX,
+    enabled: true,
     description: `Mapping handles payloads in hex format. In the mapper the incoming hexadecimal payload is decoded as hexadecimal string with a leading "0x". 
 Use the JSONata function "$number() to parse an hexadecimal string as a number, e.g. $number("0x5a75") returns 23157.`,
     properties: {
-      [Direction.INBOUND]: { snoopSupported: true, directionSupported: true, substitutionsAsCodeSupported: true },
-      [Direction.OUTBOUND]: { snoopSupported: false, directionSupported: false, substitutionsAsCodeSupported: false }
+      [Direction.INBOUND]: {
+        snoopSupported: true,
+        directionSupported: true,
+        substitutionsAsCodeSupported: true,
+        supportedTransformationTypes: [
+          TransformationType.DEFAULT,
+          TransformationType.JSONATA,
+          TransformationType.SUBSTITUTION_AS_CODE,
+          TransformationType.SMART_FUNCTION
+        ]
+      },
+      [Direction.OUTBOUND]: {
+        snoopSupported: false,
+        directionSupported: false,
+        substitutionsAsCodeSupported: false,
+        supportedTransformationTypes: [
+          TransformationType.DEFAULT,
+          TransformationType.JSONATA,
+          TransformationType.SUBSTITUTION_AS_CODE,
+          TransformationType.SMART_FUNCTION
+        ]
+      }
     },
     stepperConfiguration: {
       showCodeEditor: false,
@@ -364,10 +474,21 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
   },
   [MappingType.PROTOBUF_INTERNAL]: {
     key: MappingType.PROTOBUF_INTERNAL,
-    description: 'Mapping handles payloads in protobuf format.',
+    enabled: true,
+    description: 'Mapping parses payloads in PROTOBUF format by an internal extension.',
     properties: {
-      [Direction.INBOUND]: { snoopSupported: false, directionSupported: true, substitutionsAsCodeSupported: false },
-      [Direction.OUTBOUND]: { snoopSupported: false, directionSupported: false, substitutionsAsCodeSupported: false },
+      [Direction.INBOUND]: {
+        snoopSupported: false,
+        directionSupported: true,
+        substitutionsAsCodeSupported: false,
+        supportedTransformationTypes: [TransformationType.DEFAULT]
+      },
+      [Direction.OUTBOUND]: {
+        snoopSupported: false,
+        directionSupported: false,
+        substitutionsAsCodeSupported: false,
+        supportedTransformationTypes: [] // No transformation types supported for outbound
+      },
     },
     stepperConfiguration: {
       showProcessorExtensionsSource: false,
@@ -383,11 +504,22 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
   },
   [MappingType.EXTENSION_SOURCE]: {
     key: MappingType.EXTENSION_SOURCE,
+    enabled: true,
     description:
       'Mapping handles payloads in custom format. It can be used if you want to process the message yourself. This requires that a custom processor extension in Java is implemented and uploaded through the "Processor extension" tab.',
     properties: {
-      [Direction.INBOUND]: { snoopSupported: false, directionSupported: true, substitutionsAsCodeSupported: false },
-      [Direction.OUTBOUND]: { snoopSupported: false, directionSupported: false, substitutionsAsCodeSupported: false },
+      [Direction.INBOUND]: {
+        snoopSupported: false,
+        directionSupported: true,
+        substitutionsAsCodeSupported: false,
+        supportedTransformationTypes: [TransformationType.DEFAULT]
+      },
+      [Direction.OUTBOUND]: {
+        snoopSupported: false,
+        directionSupported: false,
+        substitutionsAsCodeSupported: false,
+        supportedTransformationTypes: [] // No transformation types supported for outbound
+      },
     },
     stepperConfiguration: {
       showProcessorExtensionsSource: true,
@@ -404,11 +536,22 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
   },
   [MappingType.EXTENSION_SOURCE_TARGET]: {
     key: MappingType.EXTENSION_SOURCE_TARGET,
+    enabled: false,
     description:
       'Mapping handles payloads in custom format. In contrast to the EXTENSION_SOURCE the completed processing of the payload: extract values from the incoming payload and then transform this to a Cumulocity API call. This requires that a custom processor extension in Java is implemented and uploaded through the "Processor extension" tab.',
     properties: {
-      [Direction.INBOUND]: { snoopSupported: false, directionSupported: true, substitutionsAsCodeSupported: false },
-      [Direction.OUTBOUND]: { snoopSupported: false, directionSupported: false, substitutionsAsCodeSupported: false },
+      [Direction.INBOUND]: {
+        snoopSupported: false,
+        directionSupported: true,
+        substitutionsAsCodeSupported: false,
+        supportedTransformationTypes: [] // No transformation types supported
+      },
+      [Direction.OUTBOUND]: {
+        snoopSupported: false,
+        directionSupported: false,
+        substitutionsAsCodeSupported: false,
+        supportedTransformationTypes: [] // No transformation types supported
+      },
     },
     stepperConfiguration: {
       showProcessorExtensionsSource: false,
@@ -424,10 +567,21 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
   },
   [MappingType.CODE_BASED]: {
     key: MappingType.CODE_BASED,
+    enabled: false,
     description: 'Mapping handles payloads in JSON format and defines substitutions as code.',
     properties: {
-      [Direction.INBOUND]: { snoopSupported: true, directionSupported: false, substitutionsAsCodeSupported: false },
-      [Direction.OUTBOUND]: { snoopSupported: true, directionSupported: true, substitutionsAsCodeSupported: false },
+      [Direction.INBOUND]: {
+        snoopSupported: true,
+        directionSupported: false,
+        substitutionsAsCodeSupported: false,
+        supportedTransformationTypes: [] // No transformation types supported
+      },
+      [Direction.OUTBOUND]: {
+        snoopSupported: true,
+        directionSupported: true,
+        substitutionsAsCodeSupported: false,
+        supportedTransformationTypes: [] // No transformation types supported
+      },
     },
     stepperConfiguration: {
       showEditorSource: true,
@@ -594,5 +748,5 @@ export function getGenericDeviceIdentifier(mapping: Mapping): string {
 }
 
 export function isSubstitutionsAsCode(mapping: Mapping): boolean {
-  return mapping.substitutionsAsCode || MappingType.CODE_BASED === mapping.mappingType;
+  return  MappingType.CODE_BASED === mapping.mappingType || mapping.transformationType == TransformationType.SUBSTITUTION_AS_CODE || mapping.transformationType == TransformationType.SMART_FUNCTION;
 }
