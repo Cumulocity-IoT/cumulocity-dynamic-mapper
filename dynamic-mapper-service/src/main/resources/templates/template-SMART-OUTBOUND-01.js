@@ -32,7 +32,7 @@ function onMessage(inputMsg, context) {
                 }
             }
         },
-        transportFields: { "key": payload["source"]["id"]}  // define key to add to Kafka payload (record)
+        transportFields: { "key": payload["source"]["id"]},  // define key to add to Kafka payload (record)
         externalSource: [{"type":"c8y_Serial"}]
     }];
 }
