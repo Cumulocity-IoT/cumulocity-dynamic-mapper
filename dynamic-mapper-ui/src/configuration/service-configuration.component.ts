@@ -26,7 +26,7 @@ import { Feature, Operation, SharedService } from '../shared';
 import { ServiceConfiguration } from './shared/configuration.model';
 import { ActivatedRoute } from '@angular/router';
 import { AIAgentService } from 'src/mapping/core/ai-agent.service';
-import { BehaviorSubject, from, map, Observable, of, Subject, takeUntil } from 'rxjs';
+import { BehaviorSubject, from, map, Subject, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'd11r-mapping-service-configuration',

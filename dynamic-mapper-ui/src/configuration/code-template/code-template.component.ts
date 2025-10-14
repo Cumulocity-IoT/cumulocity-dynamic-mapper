@@ -119,7 +119,7 @@ export class CodeComponent implements OnInit {
 
     await this.updateCodeTemplateEntries(); // Call this after setting codeTemplates
     this.codeTemplateDecoded = this.codeTemplatesDecoded.get(this.template);
-    console.log("CodeTemplateEntries after init:", this.codeTemplateEntries);
+    // console.log("CodeTemplateEntries after init:", this.codeTemplateEntries);
 
     this.onSelectCodeTemplate();
 

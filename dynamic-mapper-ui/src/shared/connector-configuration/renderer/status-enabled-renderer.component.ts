@@ -61,14 +61,16 @@ export class ConnectorStatusEnabledRendererComponent implements OnInit {
     private connectorConfigurationService: ConnectorConfigurationService,
     private cdr: ChangeDetectorRef
   ) {
+    this.featurePromise = this.sharedService.getFeatures();
     // console.log('Status', context, context.value);
   }
 
-  feature: Feature;
-  
+  feature: Feature | null = null;
+  private featurePromise: Promise<Feature>;
+
   async ngOnInit() {
     try {
-      this.feature = await this.sharedService.getFeatures();
+      this.feature = await this.featurePromise;
       this.cdr.detectChanges();
     } catch (error) {
       console.error('Error loading features in component', error);
@@ -76,7 +78,13 @@ export class ConnectorStatusEnabledRendererComponent implements OnInit {
   }
 
   get isInputDisabled(): boolean {
+    if (!this.feature) {
+      return true;
+    }
     const disabled = this.context.item.readOnly || !this.feature?.userHasMappingAdminRole;
+    if (disabled) {
+      console.log("Please verify:", this.context.item, this.feature, this.context.item.readOnly, this.feature?.userHasMappingAdminRole);
+    }
     return disabled;
   }
 

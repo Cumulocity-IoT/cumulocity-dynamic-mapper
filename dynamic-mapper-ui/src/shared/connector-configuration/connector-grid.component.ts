@@ -79,11 +79,13 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
   intervals: PollingInterval[];
   currentPollingInterval: number;
   private destroy$: Subject<void> = new Subject<void>();
+  private featurePromise: Promise<Feature>;
   initialStateDrawer: any;
 
   constructor(
   ) {
     this.toggleIntervalForm = this.initForm();
+    this.featurePromise = this.sharedService.getFeatures();
   }
 
   alertService = inject(AlertService);
@@ -103,7 +105,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
     this.currentPollingInterval = this.connectorConfigurationService.getCurrentPollingIntervalValue();
     // console.log('Current Polling Interval:', this.currentPollingInterval);
     this.customClasses = this.shouldHideBulkActionsAndReadOnly ? 'hide-bulk-actions' : '';
-    this.feature = await this.sharedService.getFeatures();
+    this.feature = await this.featurePromise;
     this.toggleIntervalForm.get('refreshInterval')?.valueChanges.subscribe(value => {
       this.currentPollingInterval = value;
       this.onRefreshIntervalChange(value);

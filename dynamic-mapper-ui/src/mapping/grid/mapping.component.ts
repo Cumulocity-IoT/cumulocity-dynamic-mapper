@@ -1070,6 +1070,8 @@ export class MappingComponent implements OnInit, OnDestroy {
     } else {
       this.alertService.danger(gettext('Failed to reset deployment cache!'));
     }
+
+    this.mappingService.refreshMappings(this.stepperConfiguration.direction);
   }
 
 }
