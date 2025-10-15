@@ -21,8 +21,11 @@
 
 package dynamic.mapper.controller;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -124,38 +127,75 @@ public class TestController {
         Mapping mapping = context.getMapping();
         String payload = context.getPayload();
         String tenant = contextService.getContext().getTenant();
-        log.info("{} - Test mapping: {}, {}, {}", tenant, mapping, send,
+        log.info("{} - Test mapping: {}, {}, {}", tenant, mapping.getIdentifier(), send,
                 payload);
         try {
-            try {
-                AConnectorClient connectorClient = connectorRegistry
-                        .getClientForTenant(tenant, TestClient.TEST_CONNECTOR_IDENTIFIER);
-                // String payloadMessage = new ObjectMapper().writeValueAsString(payload);
-                ConnectorMessage testMessage = createTestMessage(tenant, connectorClient,
-                        mapping.getMappingTopicSample(), send, payload);
-                ProcessingResult<?> processingResult = connectorClient.getDispatcher().onTestMessage(testMessage,
-                        mapping);
-                if (processingResult.getProcessingResult() != null) {
-                    // Wait for the future to complete and get the result
-                    result = (List<? extends ProcessingContext<?>>) processingResult.getProcessingResult().get();
+            AConnectorClient connectorClient = connectorRegistry
+                    .getClientForTenant(tenant, TestClient.TEST_CONNECTOR_IDENTIFIER);
+
+            ConnectorMessage testMessage = createTestMessage(tenant, connectorClient,
+                    mapping.getMappingTopicSample(), send, payload);
+
+            ProcessingResult<?> processingResult = connectorClient.getDispatcher().onTestMessage(testMessage,
+                    mapping);
+
+            if (processingResult != null && processingResult.getProcessingResult() != null) {
+                // Wait for the future to complete and get the result
+                result = (List<? extends ProcessingContext<?>>) processingResult.getProcessingResult().get();
+
+                if (result != null) {
                     result.forEach(r -> {
                         // Reset clientId for test results
                         r.setFlowContext(null);
                         r.setGraalContext(null);
                         // Clear processing cache for test results
-                        r.getProcessingCache().clear();
-                        // r.setMapping(null);
-                        r.getMapping().setCode(null);
-                        r.getMapping().setSnoopedTemplates(null);
+                        if (r.getProcessingCache() != null) {
+                            r.getProcessingCache().clear();
+                        }
+                        // Clear sensitive/large data from mapping
+                        if (r.getMapping() != null) {
+                            r.getMapping().setCode(null);
+                            r.getMapping().setSnoopedTemplates(null);
+                        }
                         r.setServiceConfiguration(null);
+
+                        // Replace errors with sanitized versions that can be serialized
+                        if (r.getErrors() != null && !r.getErrors().isEmpty()) {
+                            List<Exception> sanitizedErrors = new ArrayList<>();
+                            r.getErrors().forEach(e -> {
+                                // Create new exception with only class name and message
+                                String className = e.getClass().getName();
+                                String message = e.getMessage();
+                                Exception sanitized = new Exception(
+                                        String.format("[%s] %s", className, message != null ? message : "No message"));
+                                // Ensure no stack trace
+                                sanitized.setStackTrace(new StackTraceElement[0]);
+                                sanitizedErrors.add(sanitized);
+                            });
+                            r.getErrors().clear();
+                            r.getErrors().addAll(sanitizedErrors);
+                        }
                     });
                 }
-            } catch (ConnectorRegistryException e) {
-                throw new RuntimeException(e);
             }
-            return new ResponseEntity<>(result, HttpStatus.OK);
+
+            return new ResponseEntity<>(result != null ? result : Collections.emptyList(), HttpStatus.OK);
+
+        } catch (ConnectorRegistryException e) {
+            log.error("{} - Connector not found for tenant: {}", tenant, e.getMessage());
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "Connector not found: " + e.getMessage());
+        } catch (InterruptedException e) {
+            log.error("{} - Test interrupted: {}", tenant, e.getMessage());
+            Thread.currentThread().interrupt(); // Restore interrupt status
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Test execution interrupted");
+        } catch (ExecutionException e) {
+            log.error("{} - Error executing test: {}", tenant, e.getMessage());
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Test execution failed: " + (e.getCause() != null ? e.getCause().getMessage() : e.getMessage()));
         } catch (Exception ex) {
-            log.error("{} - Error transforming payload: {}", tenant, ex);
+            log.error("{} - Error transforming payload: {}", tenant, ex.getMessage(), ex);
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getLocalizedMessage());
         }
     }

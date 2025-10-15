@@ -50,7 +50,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class TestClient extends AConnectorClient {
 
-    public static final String TEST_CONNECTOR_IDENTIFIER = "TEST_CONNECTOR";
+    public static final String TEST_CONNECTOR_IDENTIFIER = "TESTCONNECTOR";
     public static final String TEST_CONNECTOR_NAME = "Test Connector";
 
     @Getter

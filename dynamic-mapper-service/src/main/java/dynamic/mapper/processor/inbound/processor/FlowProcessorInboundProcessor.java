@@ -50,10 +50,10 @@ public class FlowProcessorInboundProcessor extends BaseProcessor  {
                     "Tenant %s - Error in FlowProcessorInboundProcessor: %s for mapping: %s, line %s",
                     tenant, mapping.getName(), e.getMessage(), lineNumber);
             log.error(errorMessage, e);
+            context.addError(new ProcessingException(errorMessage, e));
 
             if ( !testing) {
                 MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
-                context.addError(new ProcessingException(errorMessage, e));
                 mappingStatus.errors++;
                 mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
             } 

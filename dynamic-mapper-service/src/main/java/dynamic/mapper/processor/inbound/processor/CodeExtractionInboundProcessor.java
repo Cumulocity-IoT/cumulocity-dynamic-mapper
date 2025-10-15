@@ -59,10 +59,10 @@ public class CodeExtractionInboundProcessor extends BaseProcessor {
                     "Tenant %s - Error in CodeExtractionInboundProcessor: %s for mapping: %s, line %s",
                     tenant, mapping.getName(), e.getMessage(), lineNumber);
             log.error(errorMessage, e);
+            context.addError(new ProcessingException(errorMessage, e));
 
             if ( !testing) {
                 MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
-                context.addError(new ProcessingException(errorMessage, e));
                 mappingStatus.errors++;
                 mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
             } 

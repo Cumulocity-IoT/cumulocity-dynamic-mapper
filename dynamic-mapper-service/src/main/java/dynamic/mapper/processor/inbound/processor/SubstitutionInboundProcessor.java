@@ -74,10 +74,10 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
             String errorMessage = String.format("Tenant %s - Error in substitution processor for mapping: %s",
                     tenant, mapping.getName());
             log.error(errorMessage, e);
-            context.addError(new ProcessingException("Substitution failed", e));
+            context.addError(new ProcessingException(errorMessage, e));
+
             if (!testing) {
                 MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
-                context.addError(new ProcessingException(errorMessage, e));
                 mappingStatus.errors++;
                 mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
             }
