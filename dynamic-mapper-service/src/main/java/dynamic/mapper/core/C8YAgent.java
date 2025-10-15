@@ -225,18 +225,18 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     }
 
     public ExternalIDRepresentation resolveExternalId2GlobalId(String tenant, ID identity,
-            ProcessingContext<?> context) {
+            Boolean testing) {
         if (identity.getType() == null) {
             identity.setType("c8y_Serial");
         }
-        ExternalIDRepresentation result = subscriptionsService.callForTenant(tenant, () -> {
+         ExternalIDRepresentation result = subscriptionsService.callForTenant(tenant, () -> {
             try {
                 ExternalIDRepresentation resultInner = inboundExternalIdCaches.get(tenant)
                         .getIdByExternalId(identity);
                 Counter.builder("dynmapper_inbound_identity_requests_total").tag("tenant", tenant)
                         .register(Metrics.globalRegistry).increment();
                 if (resultInner == null) {
-                    resultInner = identityApi.resolveExternalId2GlobalId(identity, context, c8ySemaphore);
+                    resultInner = identityApi.resolveExternalId2GlobalId(identity, testing, c8ySemaphore);
                     inboundExternalIdCaches.get(tenant).putIdForExternalId(identity,
                             resultInner);
 
@@ -256,7 +256,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     }
 
     public ExternalIDRepresentation resolveGlobalId2ExternalId(String tenant, GId gid, String idType,
-            ProcessingContext<?> context) {
+            Boolean testing) {
         // TODO Use Cache
         if (idType == null) {
             idType = "c8y_Serial";
@@ -264,7 +264,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         final String idt = idType;
         ExternalIDRepresentation result = subscriptionsService.callForTenant(tenant, () -> {
             try {
-                return identityApi.resolveGlobalId2ExternalId(gid, idt, context, c8ySemaphore);
+                return identityApi.resolveGlobalId2ExternalId(gid, idt, testing, c8ySemaphore);
             } catch (SDKException e) {
                 log.warn("{} - External ID type {} for {} not found", tenant, idt, gid.getValue());
             }
@@ -715,6 +715,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
             throws ProcessingException {
         // StringBuffer error = new StringBuffer("");
         DynamicMapperRequest currentRequest = context.getRequests().get(requestIndex);
+        Boolean testing = context.isTesting();
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         AtomicReference<ProcessingException> pe = new AtomicReference<>();
         API targetAPI = context.getMapping().getTargetAPI();
@@ -746,13 +747,13 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                         mor.setId(null);
                         try {
                             c8ySemaphore.acquire();
-                            mor = inventoryApi.create(mor, context);
+                            mor = inventoryApi.create(mor, testing);
                             // TODO Add/Update new managed object to IdentityCache
                             if (serviceConfiguration.isLogPayload())
                                 log.info("{} - New device created: {}", tenant, mor);
                             else
                                 log.info("{} - New device created with Id {}", tenant, mor.getId().getValue());
-                            identityApi.create(mor, identity, context);
+                            identityApi.create(mor, identity, testing);
                         } catch (InterruptedException e) {
                             log.error("{} - Failed to acquire semaphore for creating Device", tenant, e);
                         } finally {
@@ -763,7 +764,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                         mor.setId(new GId(currentRequest.getSourceId()));
                         try {
                             c8ySemaphore.acquire();
-                            mor = inventoryApi.update(mor, context);
+                            mor = inventoryApi.update(mor, testing);
                         } catch (InterruptedException e) {
                             log.error("{} - Failed to acquire semaphore for updating Device", tenant, e);
                         } finally {
@@ -985,10 +986,10 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         loadProcessorExtensions(tenant);
     }
 
-    public ManagedObjectRepresentation getManagedObjectForId(String tenant, String deviceId) {
+    public ManagedObjectRepresentation getManagedObjectForId(String tenant, String deviceId, Boolean testing) {
         ManagedObjectRepresentation device = subscriptionsService.callForTenant(tenant, () -> {
             try {
-                return inventoryApi.get(GId.asGId(deviceId));
+                return inventoryApi.get(GId.asGId(deviceId), testing);
             } catch (SDKException exception) {
                 log.warn("{} - Device with id {} not found!", tenant, deviceId);
             }
@@ -1020,12 +1021,12 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     public ManagedObjectRepresentation initializeMapperServiceRepresentation(String tenant) {
         ExternalIDRepresentation mapperServiceIdRepresentation = resolveExternalId2GlobalId(tenant,
                 new ID(null, MapperServiceRepresentation.AGENT_ID),
-                null);
+                false);
         ;
         ManagedObjectRepresentation amo = new ManagedObjectRepresentation();
 
         if (mapperServiceIdRepresentation != null) {
-            amo = inventoryApi.get(mapperServiceIdRepresentation.getManagedObject().getId());
+            amo = inventoryApi.get(mapperServiceIdRepresentation.getManagedObject().getId(), false);
             log.info("{} - Agent with external ID [{}] already exists, sourceId: {}", tenant,
                     MapperServiceRepresentation.AGENT_ID,
                     amo.getId().getValue());
@@ -1048,7 +1049,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
             ExternalIDRepresentation externalAgentId = identityApi.create(amo,
                     new ID("c8y_Serial",
                             MapperServiceRepresentation.AGENT_ID),
-                    null);
+                    false);
             log.debug("{} - ExternalId created: {}", tenant, externalAgentId.getExternalId());
         }
         return amo;
@@ -1062,7 +1063,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         ManagedObjectRepresentation amo = new ManagedObjectRepresentation();
 
         if (deviceToClientMapRepresentation != null) {
-            amo = inventoryApi.get(deviceToClientMapRepresentation.getManagedObject().getId());
+            amo = inventoryApi.get(deviceToClientMapRepresentation.getManagedObject().getId(), null);
             log.info("{} - Dynamic Mapper Device To Client Map with external ID [{}] already exists, sourceId: {}",
                     tenant,
                     DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_ID,
@@ -1222,16 +1223,16 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
             return 0;
     }
 
-    public Map<String, Object> getMOFromInventoryCacheByExternalId(String tenant, String externalId, String type) {
+    public Map<String, Object> getMOFromInventoryCacheByExternalId(String tenant, String externalId, String type, Boolean testing) {
         ID identity = new ID(type, externalId);
-        ExternalIDRepresentation sourceId = this.resolveExternalId2GlobalId(tenant, identity, null);
+        ExternalIDRepresentation sourceId = this.resolveExternalId2GlobalId(tenant, identity, testing);
         if (sourceId != null) {
-            return getMOFromInventoryCache(tenant, sourceId.getManagedObject().getId().getValue());
+            return getMOFromInventoryCache(tenant, sourceId.getManagedObject().getId().getValue(), testing);
         }
         return null;
     }
 
-    public Map<String, Object> updateMOInInventoryCache(String tenant, String sourceId, Map<String, Object> updates) {
+    public Map<String, Object> updateMOInInventoryCache(String tenant, String sourceId, Map<String, Object> updates, Boolean testing) {
         InventoryCache inventoryCache = getInventoryCache(tenant);
 
         // Create new managed object cache entry
@@ -1239,7 +1240,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         inventoryCache.putMO(sourceId, newMO);
 
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
-        ManagedObjectRepresentation device = getManagedObjectForId(tenant, sourceId);
+        ManagedObjectRepresentation device = getManagedObjectForId(tenant, sourceId, testing);
         Map<String, Object> attrs = device.getAttrs();
 
         // Process each fragment
@@ -1275,7 +1276,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         return newMO;
     }
 
-    public Map<String, Object> getMOFromInventoryCache(String tenant, String sourceId) {
+    public Map<String, Object> getMOFromInventoryCache(String tenant, String sourceId, Boolean testing) {
         InventoryCache inventoryCache = getInventoryCache(tenant);
         Map<String, Object> result = inventoryCache.getMOBySource(sourceId);
         if (result != null) {
@@ -1293,7 +1294,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                 .subscribeMOForInventoryCacheUpdates(tenant, mor);
 
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
-        ManagedObjectRepresentation device = getManagedObjectForId(tenant, sourceId);
+        ManagedObjectRepresentation device = getManagedObjectForId(tenant, sourceId, testing);
         Map<String, Object> attrs = device.getAttrs();
 
         // Process each fragment

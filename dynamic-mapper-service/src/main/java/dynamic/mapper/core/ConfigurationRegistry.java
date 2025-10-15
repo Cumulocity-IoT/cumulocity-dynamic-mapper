@@ -55,6 +55,7 @@ import dynamic.mapper.connector.mqtt.MQTT5Client;
 import dynamic.mapper.connector.mqtt.MQTTServiceClient;
 import dynamic.mapper.connector.pulsar.MQTTServicePulsarClient;
 import dynamic.mapper.connector.pulsar.PulsarConnectorClient;
+import dynamic.mapper.connector.test.TestClient;
 import dynamic.mapper.connector.webhook.WebHook;
 import dynamic.mapper.model.DeviceToClientMapRepresentation;
 import dynamic.mapper.model.Direction;
@@ -255,6 +256,13 @@ public class ConfigurationRegistry {
                         null,
                         additionalSubscriptionIdTest, tenant);
                 log.info("{} - MQTTService Pulsar Connector created, identifier: {}", tenant,
+                        connectorConfiguration.getIdentifier());
+                break;
+            case TEST:
+                connectorClient = new TestClient(this, connectorRegistry, connectorConfiguration,
+                        null,
+                        additionalSubscriptionIdTest, tenant);
+                log.info("{} - TestClient Connector created, identifier: {}", tenant,
                         connectorConfiguration.getIdentifier());
                 break;
             default:

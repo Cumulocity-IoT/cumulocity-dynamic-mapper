@@ -101,6 +101,9 @@ public class ProcessingContext<O> {
     private boolean sendPayload = false;
 
     @Builder.Default
+    private boolean testing = false;
+
+    @Builder.Default
     private boolean needsRepair = false;
 
     private String tenant;

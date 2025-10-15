@@ -27,6 +27,8 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.sdk.client.inventory.InventoryApi;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.facade.IdentityFacade;
+import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.*;
 import dynamic.mapper.service.cache.MappingCacheManager;
 import lombok.RequiredArgsConstructor;
@@ -47,7 +49,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class MappingStatusService {
 
-    private final InventoryApi inventoryApi;
+    private final InventoryFacade inventoryApi;
     private final ConfigurationRegistry configurationRegistry;
     private final MappingCacheManager cacheManager;
     private final MicroserviceSubscriptionsService subscriptionsService;
@@ -275,7 +277,7 @@ public class MappingStatusService {
         updateMor.setAttrs(fragment);
 
         subscriptionsService.runForTenant(tenant, () -> {
-            inventoryApi.update(updateMor);
+            inventoryApi.update(updateMor, false);
         });
     }
 }

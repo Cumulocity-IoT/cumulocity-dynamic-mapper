@@ -93,6 +93,7 @@ class DeserializationOutboundProcessorTest {
         when(message.getHeader("c8yMessage", C8YMessage.class)).thenReturn(c8yMessage);
         when(message.getBody(Mapping.class)).thenReturn(mapping);
         when(message.getHeader("serviceConfiguration", ServiceConfiguration.class)).thenReturn(serviceConfiguration);
+        when(message.getHeader("testing", Boolean.class)).thenReturn(Boolean.FALSE);
 
         // Setup service configuration defaults
         when(serviceConfiguration.isLogPayload()).thenReturn(false);
@@ -404,6 +405,7 @@ class DeserializationOutboundProcessorTest {
         when(message.getHeader("c8yMessage", C8YMessage.class)).thenReturn(c8yMessage);
         when(message.getBody(Mapping.class)).thenReturn(mapping);
         when(message.getHeader("serviceConfiguration", ServiceConfiguration.class)).thenReturn(serviceConfiguration);
+        when(message.getHeader("testing", Boolean.class)).thenReturn(Boolean.FALSE);
 
         c8yMessage.setOperation("UPDATE");
         processor.process(exchange);

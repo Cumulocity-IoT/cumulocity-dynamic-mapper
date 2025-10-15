@@ -159,7 +159,7 @@ public class SendInboundProcessor extends BaseProcessor {
             // Resolve external ID if needed
             if (request.getExternalId() != null) {
                 identity = new ID(request.getExternalIdType(), request.getExternalId());
-                ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId2GlobalId(tenant, identity, context);
+                ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId2GlobalId(tenant, identity, context.isTesting());
 
                 if (sourceId != null) {
                     request.setSourceId(sourceId.getManagedObject().getId().getValue());

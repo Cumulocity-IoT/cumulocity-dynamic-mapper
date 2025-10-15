@@ -29,4 +29,5 @@ public enum ConnectorType {
     WEB_HOOK,
     PULSAR,
     CUMULOCITY_MQTT_SERVICE_PULSAR,
+    TEST,
 }

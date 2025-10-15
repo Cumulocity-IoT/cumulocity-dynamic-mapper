@@ -49,6 +49,7 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
         ProcessingContext<Object> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
         Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
+        Boolean testing = context.isTesting();
 
         try {
             validateProcessingCache(context);
@@ -57,7 +58,7 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
             // Check inventory filter condition if specified
             if (mapping.getFilterInventory() != null && !mapping.getCreateNonExistingDevice()) {
                 boolean filterInventory = evaluateInventoryFilter(tenant, mapping.getFilterInventory(),
-                        context.getSourceId());
+                        context.getSourceId(), context.isTesting());
                 if (context.getSourceId() == null
                         || !filterInventory) {
                     if (mapping.getDebug()) {
@@ -74,10 +75,12 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
                     tenant, mapping.getName());
             log.error(errorMessage, e);
             context.addError(new ProcessingException("Substitution failed", e));
-            MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
-            context.addError(new ProcessingException(errorMessage, e));
-            mappingStatus.errors++;
-            mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+            if (!testing) {
+                MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
+                context.addError(new ProcessingException(errorMessage, e));
+                mappingStatus.errors++;
+                mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+            }
         }
 
     }
@@ -168,7 +171,7 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
             SubstituteValue sourceId = new SubstituteValue(substitute.getValue(),
                     TYPE.TEXTUAL, RepairStrategy.CREATE_IF_MISSING, false);
             if (!context.getApi().equals(API.INVENTORY)) {
-                var resolvedSourceId = c8yAgent.resolveExternalId2GlobalId(tenant, identity, context);
+                var resolvedSourceId = c8yAgent.resolveExternalId2GlobalId(tenant, identity, context.isTesting());
                 if (resolvedSourceId == null) {
                     if (mapping.getCreateNonExistingDevice()) {
                         sourceId.setValue(ProcessingResultHelper.createImplicitDevice(identity, context, log, c8yAgent,

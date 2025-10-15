@@ -320,7 +320,7 @@ public class SubscriptionQueryService {
 
         try {
             ManagedObjectRepresentation mor = configurationRegistry.getC8yAgent()
-                    .getManagedObjectForId(tenant, device.getId());
+                    .getManagedObjectForId(tenant, device.getId(), false);
             if (mor != null) {
                 device.setName(mor.getName());
                 device.setType(mor.getType());

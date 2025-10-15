@@ -60,7 +60,7 @@ public abstract class BaseProcessor implements Processor {
     }
 
     protected ProcessingContext<Object> createProcessingContextAsObject(String tenant, Mapping mapping,
-            C8YMessage message, ServiceConfiguration serviceConfiguration) {
+            C8YMessage message, ServiceConfiguration serviceConfiguration, Boolean testing) {
         return ProcessingContext.<Object>builder()
                 .payload(message.getParsedPayload())
                 .topic(mapping.getPublishTopic())
@@ -68,6 +68,7 @@ public abstract class BaseProcessor implements Processor {
                 .mappingType(mapping.getMappingType())
                 .mapping(mapping)
                 .sendPayload(message.isSendPayload())
+                .testing(testing)
                 .tenant(tenant)
                 .supportsMessageContext(
                         mapping.getSupportsMessageContext())

@@ -207,7 +207,7 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
         for (String childId : toAdd) {
             try {
                 ManagedObjectRepresentation childMO = configurationRegistry.getC8yAgent()
-                        .getManagedObjectForId(tenant, childId);
+                        .getManagedObjectForId(tenant, childId, false);
 
                 if (childMO == null) {
                     log.warn("{} - Child device {} not found for subscription", tenant, childId);
@@ -232,7 +232,7 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
         for (String childId : toRemove) {
             try {
                 ManagedObjectRepresentation childMO = configurationRegistry.getC8yAgent()
-                        .getManagedObjectForId(tenant, childId);
+                        .getManagedObjectForId(tenant, childId, false);
 
                 if (childMO == null) {
                     log.warn("{} - Child device {} not found for unsubscription", tenant, childId);
@@ -261,7 +261,7 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
     private void updateGroupCache(String tenant, String groupId) {
         try {
             ManagedObjectRepresentation updatedGroup = configurationRegistry.getC8yAgent()
-                    .getManagedObjectForId(tenant, groupId);
+                    .getManagedObjectForId(tenant, groupId, false);
 
             if (updatedGroup != null) {
                 groupCache.put(groupId, new CachedGroup(updatedGroup, LocalDateTime.now()));

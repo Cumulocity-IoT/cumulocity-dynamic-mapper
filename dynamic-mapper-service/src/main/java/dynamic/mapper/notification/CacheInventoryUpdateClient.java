@@ -72,7 +72,7 @@ public class CacheInventoryUpdateClient implements NotificationCallback {
             String sourceId = NotificationHelper.extractSourceId(update, notification.getApi());
             
             if (sourceId != null) {
-                c8yAgent.updateMOInInventoryCache(notificationTenant, sourceId, update);
+                c8yAgent.updateMOInInventoryCache(notificationTenant, sourceId, update, false);
                 log.debug("{} - Updated inventory cache for MO: {}", notificationTenant, sourceId);
             }
             

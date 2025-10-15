@@ -19,12 +19,14 @@ public class SimpleFlowContext implements FlowContext {
     private final Context graalContext;
     private final String tenant;
     private final InventoryEnrichmentClient inventoryEnrichmentClient;
+    private Boolean testing;
 
-    public SimpleFlowContext(Context graalContext, String tenant, InventoryEnrichmentClient inventoryEnrichmentClient) {
+    public SimpleFlowContext(Context graalContext, String tenant, InventoryEnrichmentClient inventoryEnrichmentClient, Boolean testing) {
         this.state = new HashMap<>();
         this.graalContext = graalContext;
         this.tenant = tenant != null ? tenant : "unknown";
         this.inventoryEnrichmentClient = inventoryEnrichmentClient;
+        this.testing = testing;
     }
 
     @Override
@@ -219,13 +221,13 @@ public class SimpleFlowContext implements FlowContext {
 
     @Override
     public Value lookupDeviceByDeviceId(String deviceId) {
-        Object javaValue = inventoryEnrichmentClient.getMOFromInventoryCache(tenant, deviceId);
+        Object javaValue = inventoryEnrichmentClient.getMOFromInventoryCache(tenant, deviceId, testing);
         return graalContext.asValue(javaValue);
     }
 
     @Override
     public Value lookupDeviceByExternalId(String externalId, String type) {
-        Object javaValue = inventoryEnrichmentClient.getMOFromInventoryCacheByExternalId(tenant, externalId, type);
+        Object javaValue = inventoryEnrichmentClient.getMOFromInventoryCacheByExternalId(tenant, externalId, type, testing);
         return graalContext.asValue(javaValue);
     }
 }

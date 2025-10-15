@@ -34,7 +34,6 @@ import com.cumulocity.sdk.client.identity.ExternalIDCollection;
 import com.cumulocity.sdk.client.identity.IdentityApi;
 
 import dynamic.mapper.core.mock.MockIdentity;
-import dynamic.mapper.processor.model.ProcessingContext;
 
 import java.util.concurrent.Semaphore;
 
@@ -50,20 +49,20 @@ public class IdentityFacade {
     @Autowired
     private IdentityApi identityApi;
 
-    public ExternalIDRepresentation create(ManagedObjectRepresentation mor, ID id, ProcessingContext<?> context) {
+    public ExternalIDRepresentation create(ManagedObjectRepresentation mor, ID id, Boolean testing) {
         ExternalIDRepresentation externalIDRepresentation = new ExternalIDRepresentation();
         externalIDRepresentation.setType(id.getType());
         externalIDRepresentation.setExternalId(id.getValue());
         externalIDRepresentation.setManagedObject(mor);
-        if (context == null || context.isSendPayload()) {
+        if ( !testing ) {
             return identityApi.create(externalIDRepresentation);
         } else {
             return identityMock.create(externalIDRepresentation);
         }
     }
 
-    public ExternalIDRepresentation resolveExternalId2GlobalId(ID externalID, ProcessingContext<?> context, Semaphore c8ySemaphore) {
-        if (context == null || context.isSendPayload()) {
+    public ExternalIDRepresentation resolveExternalId2GlobalId(ID externalID, Boolean testing, Semaphore c8ySemaphore) {
+        if ( !testing ) {
             try {
                 c8ySemaphore.acquire();
                 return identityApi.getExternalId(externalID);
@@ -79,8 +78,8 @@ public class IdentityFacade {
     }
 
     public ExternalIDRepresentation resolveGlobalId2ExternalId(GId gid, String externalIdType,
-            ProcessingContext<?> context, Semaphore c8ySemaphore) {
-        if (context == null || context.isSendPayload()) {
+            Boolean testing, Semaphore c8ySemaphore) {
+        if ( !testing ) {
             MutableObject<ExternalIDRepresentation> result = new MutableObject<ExternalIDRepresentation>(null);
             try {
                 c8ySemaphore.acquire();

@@ -351,7 +351,7 @@ public class NotificationConnectionManager {
             try {
                 if (isValidSubscription(sub)) {
                     ManagedObjectRepresentation groupMO = configurationRegistry.getC8yAgent()
-                            .getManagedObjectForId(tenant, sub.getSource().getId().getValue());
+                            .getManagedObjectForId(tenant, sub.getSource().getId().getValue(), false);
                     if (groupMO != null && callback instanceof ManagementSubscriptionClient) {
                         ((ManagementSubscriptionClient) callback).addGroupToCache(groupMO);
                         cachedCount++;

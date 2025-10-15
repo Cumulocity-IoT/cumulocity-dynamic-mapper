@@ -51,7 +51,7 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
 
     @Override
     public ProcessingResult<?> onMessage(ConnectorMessage message) {
-        return processMessage(message);
+        return processMessage(message, null);
     }
 
     @Override
@@ -69,7 +69,8 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
      * Process message using Camel routes - matches DispatcherInbound.processMessage
      * signature
      */
-    public ProcessingResult<?> processMessage(ConnectorMessage connectorMessage) {
+    private ProcessingResult<?> processMessage(ConnectorMessage connectorMessage, Mapping testMapping) {
+        boolean testing = testMapping != null;
         String topic = connectorMessage.getTopic();
         String tenant = connectorMessage.getTenant();
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
@@ -98,7 +99,12 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
 
         try {
             // Resolve mappings for the topic
-            resolvedMappings = mappingService.resolveMappingInbound(tenant, topic);
+            if (testMapping != null) {
+                resolvedMappings = new ArrayList<>();
+                resolvedMappings.add(testMapping);
+            } else {
+                resolvedMappings = mappingService.resolveMappingInbound(tenant, topic);
+            }
 
             result.setConsolidatedQos(connectorClient.determineMaxQosInbound(resolvedMappings));
 
@@ -123,7 +129,7 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
         // Process using Camel routes asynchronously
         Future<List<ProcessingContext<Object>>> futureProcessingResult = virtualThreadPool.submit(() -> {
             try {
-                Exchange exchange = createExchange(connectorMessage, resolvedMappings); // Now can use final variable
+                Exchange exchange = createExchange(connectorMessage, resolvedMappings, testing); // Now can use final variable
                 Exchange resultExchange = producerTemplate.send("direct:processInboundMessage", exchange);
 
                 @SuppressWarnings("unchecked")
@@ -144,7 +150,7 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
     /**
      * Create Camel Exchange from ConnectorMessage and resolved mappings
      */
-    private Exchange createExchange(ConnectorMessage message, List<Mapping> resolvedMappings) {
+    private Exchange createExchange(ConnectorMessage message, List<Mapping> resolvedMappings, boolean testing) {
         Exchange exchange = new DefaultExchange(camelContext);
         Message camelMessage = exchange.getIn();
 
@@ -155,6 +161,7 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
         camelMessage.setHeader("connectorIdentifier", message.getConnectorIdentifier());
         camelMessage.setHeader("tenant", message.getTenant());
         camelMessage.setHeader("client", message.getClientId());
+        camelMessage.setHeader("testing", testing);
         camelMessage.setHeader("mappings", resolvedMappings);
         camelMessage.setHeader("connectorMessage", message);
         camelMessage.setHeader("serviceConfiguration",
@@ -167,5 +174,10 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
         }
 
         return exchange;
+    }
+
+    @Override
+    public ProcessingResult<?> onTestMessage(ConnectorMessage message, Mapping testMapping) {
+        return processMessage(message, testMapping);
     }
 }

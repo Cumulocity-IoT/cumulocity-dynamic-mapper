@@ -30,7 +30,7 @@ public abstract class BaseProcessor implements Processor {
     public abstract void process(Exchange exchange) throws Exception;
 
     protected ProcessingContext<Object> createProcessingContextAsObject(String tenant, Mapping mapping,
-            ConnectorMessage connectorMessage, ServiceConfiguration serviceConfiguration) {
+            ConnectorMessage connectorMessage, ServiceConfiguration serviceConfiguration, Boolean testing) {
         return ProcessingContext.<Object>builder()
                 .rawPayload(connectorMessage.getPayload())
                 .topic(connectorMessage.getTopic())
@@ -39,6 +39,7 @@ public abstract class BaseProcessor implements Processor {
                 .serviceConfiguration(serviceConfiguration)
                 .mapping(mapping)
                 .sendPayload(connectorMessage.isSendPayload())
+                                .testing(testing)
                 .tenant(tenant)
                 .supportsMessageContext(
                         connectorMessage.isSupportsMessageContext() && mapping.getSupportsMessageContext())
@@ -47,7 +48,7 @@ public abstract class BaseProcessor implements Processor {
     }
 
     protected ProcessingContext<byte[]> createProcessingContextAsByteArray(String tenant, Mapping mapping,
-            ConnectorMessage connectorMessage, ServiceConfiguration serviceConfiguration) {
+            ConnectorMessage connectorMessage, ServiceConfiguration serviceConfiguration, Boolean testing) {
         return ProcessingContext.<byte[]>builder().rawPayload(connectorMessage.getPayload())
                 .topic(connectorMessage.getTopic())
                 .clientId(connectorMessage.getClientId())
@@ -55,6 +56,7 @@ public abstract class BaseProcessor implements Processor {
                 .serviceConfiguration(serviceConfiguration)
                 .mapping(mapping)
                 .sendPayload(connectorMessage.isSendPayload())
+                .testing(testing)
                 .tenant(tenant)
                 .supportsMessageContext(
                         connectorMessage.isSupportsMessageContext() && mapping.getSupportsMessageContext())
@@ -90,10 +92,10 @@ public abstract class BaseProcessor implements Processor {
     /**
      * Evaluates an inventory filter against cached inventory data
      */
-    protected boolean evaluateInventoryFilter(String tenant, String filterExpression, String sourceId) {
+    protected boolean evaluateInventoryFilter(String tenant, String filterExpression, String sourceId, Boolean testing) {
         try {
             Map<String, Object> cachedInventoryContent = configurationRegistry.getC8yAgent()
-                    .getMOFromInventoryCache(tenant, sourceId);
+                    .getMOFromInventoryCache(tenant, sourceId, testing);
             List<String> keyList = new ArrayList<>(cachedInventoryContent.keySet());
             log.info("{} - For object {} found following fragments in inventory cache {}",
                     tenant, sourceId, keyList);

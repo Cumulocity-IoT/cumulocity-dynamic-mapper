@@ -96,7 +96,8 @@ public class MappingContextOutboundProcessor extends BaseProcessor {
                 processingContext.setGraalContext(graalContext);
                 processingContext.setFlowState(new HashMap<String, Object>());
                 processingContext.setFlowContext(new SimpleFlowContext(graalContext, tenant,
-                        (InventoryEnrichmentClient) configurationRegistry.getC8yAgent()));
+                        (InventoryEnrichmentClient) configurationRegistry.getC8yAgent(),
+                        processingContext.isTesting()));
 
             } catch (Exception e) {
                 handleGraalVMError(tenant, mapping, e, processingContext);

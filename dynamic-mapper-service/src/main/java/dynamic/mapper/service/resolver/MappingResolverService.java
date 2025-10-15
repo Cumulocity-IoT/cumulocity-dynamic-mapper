@@ -145,7 +145,7 @@ public class MappingResolverService {
 
         try {
             Map<String, Object> inventoryData = configurationRegistry.getC8yAgent()
-                .getMOFromInventoryCache(tenant, sourceId);
+                .getMOFromInventoryCache(tenant, sourceId, false);
 
             log.debug("{} - Evaluating inventory filter for source {} with fragments: {}", 
                 tenant, sourceId, inventoryData.keySet());

@@ -18,35 +18,25 @@
  *  @authors Christof Strack, Stefan Witschel
  *
  */
-
 package dynamic.mapper.model;
 
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 
-import jakarta.validation.constraints.NotNull;
-
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
 
 @Getter
 @Setter
 @Schema(description = "Feature flags for the dynamic mapping service")
 @ToString()
-public class Feature {
-    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Flag to check if outbound mapping is enabled or not", example = "true")
+public class TestContext {
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Mapping to test")
     @NotNull
-    private boolean outputMappingEnabled;
+    private Mapping mapping;
 
-    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Flag to check if external extensions are enabled or not", example = "true")
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "JSON payload as string for test")
     @NotNull
-    private boolean externalExtensionsEnabled;
-
-    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Flag to check if the logged in user has the CREATE Role", example = "true")
-    @NotNull
-    private boolean userHasMappingCreateRole;
-
-    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Flag to check if the logged in user has the ADMIN Role", example = "true")
-    @NotNull
-    private boolean userHasMappingAdminRole;
+    private String payload;
 }

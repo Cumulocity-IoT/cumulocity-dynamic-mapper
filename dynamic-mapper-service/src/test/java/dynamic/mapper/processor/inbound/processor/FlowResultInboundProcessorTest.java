@@ -156,7 +156,7 @@ class FlowResultInboundProcessorTest {
         ExternalIDRepresentation mockExternalIdRep = new ExternalIDRepresentation();
         mockExternalIdRep.setManagedObject(mockDevice);
 
-        when(c8yAgent.resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), any(ProcessingContext.class)))
+        when(c8yAgent.resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), any(Boolean.class)))
                 .thenReturn(mockExternalIdRep);
     }
 
@@ -226,7 +226,7 @@ class FlowResultInboundProcessorTest {
         assertEquals(RequestMethod.POST, request.getMethod(), "Should use POST method for create");
         assertEquals(TEST_DEVICE_ID, request.getSourceId(), "Should have correct source ID");
 
-        verify(c8yAgent).resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), eq(processingContext));
+        verify(c8yAgent).resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class),  eq(Boolean.FALSE));
 
         log.info("✅ Single CumulocityMessage processing test passed");
     }
@@ -290,7 +290,7 @@ class FlowResultInboundProcessorTest {
         // Given - Mapping with createNonExistingDevice enabled and external source that
         // doesn't exist
         mapping.setCreateNonExistingDevice(true);
-        when(c8yAgent.resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), any(ProcessingContext.class)))
+        when(c8yAgent.resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), any(Boolean.class)))
                 .thenReturn(null); // Simulate device not found
 
         CumulocityMessage cumulocityMsg = createCumulocityMessage();
@@ -459,7 +459,7 @@ class FlowResultInboundProcessorTest {
         assertFalse(processingContext.getRequests().isEmpty(),
                 "Should have processed Map-based external source");
 
-        verify(c8yAgent).resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), eq(processingContext));
+        verify(c8yAgent).resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), eq(Boolean.FALSE));
 
         log.info("✅ External source conversion test passed");
     }

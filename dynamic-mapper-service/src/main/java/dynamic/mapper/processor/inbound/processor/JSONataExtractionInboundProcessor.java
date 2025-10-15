@@ -10,7 +10,6 @@ import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-
 import static dynamic.mapper.model.Substitution.toPrettyJsonString;
 import static com.dashjoin.jsonata.Jsonata.jsonata;
 
@@ -41,17 +40,21 @@ public class JSONataExtractionInboundProcessor extends BaseProcessor {
 
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
+        Boolean testing = context.isTesting();
 
         try {
             extractFromSource(context);
         } catch (Exception e) {
-            String errorMessage = String.format("Tenant %s - Error in JSONataExtractionInboundProcessor for mapping: %s,",
+            String errorMessage = String.format(
+                    "Tenant %s - Error in JSONataExtractionInboundProcessor for mapping: %s,",
                     tenant, mapping.getName());
             log.error(errorMessage, e);
-            MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
-            context.addError(new ProcessingException(errorMessage, e));
-            mappingStatus.errors++;
-            mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+            if (!testing) {
+                MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
+                context.addError(new ProcessingException(errorMessage, e));
+                mappingStatus.errors++;
+                mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+            }
             return;
         }
 
@@ -133,6 +136,5 @@ public class JSONataExtractionInboundProcessor extends BaseProcessor {
             throw new ProcessingException(e.getMessage());
         }
     }
-
 
 }

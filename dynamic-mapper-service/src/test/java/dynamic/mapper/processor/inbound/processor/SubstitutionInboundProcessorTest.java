@@ -139,7 +139,7 @@ class SubstitutionInboundProcessorTest {
         mockExternalIdRep.setManagedObject(mockDevice);
 
         // Setup the mock
-        when(c8yAgent.resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), any(ProcessingContext.class)))
+        when(c8yAgent.resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), any(Boolean.class)))
                 .thenReturn(mockExternalIdRep);
 
         // Mock inventory filter
@@ -276,7 +276,7 @@ class SubstitutionInboundProcessorTest {
         processor.process(exchange);
 
         // Then
-        verify(c8yAgent).resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), any(ProcessingContext.class));
+        verify(c8yAgent).resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), any(Boolean.class));
         // Don't assert specific state since the processor might handle errors
         // internally
         log.info("External ID resolution test completed");
@@ -286,14 +286,14 @@ class SubstitutionInboundProcessorTest {
     void testProcessWithCreateNonExistingDevice() throws Exception {
         // Given
         mapping.setCreateNonExistingDevice(true);
-        when(c8yAgent.resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), any(ProcessingContext.class)))
+        when(c8yAgent.resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), any(Boolean.class)))
                 .thenReturn(null); // Simulate device not found
 
         // When
         processor.process(exchange);
 
         // Then - Just verify the method was called
-        verify(c8yAgent).resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), any(ProcessingContext.class));
+        verify(c8yAgent).resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), any(Boolean.class));
         log.info("CreateNonExistingDevice test completed");
     }
 

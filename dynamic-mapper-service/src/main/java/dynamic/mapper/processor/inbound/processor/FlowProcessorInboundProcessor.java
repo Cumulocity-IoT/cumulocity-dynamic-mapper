@@ -37,6 +37,7 @@ public class FlowProcessorInboundProcessor extends BaseProcessor  {
 
         Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
+        Boolean testing = context.isTesting();
 
         try {
             processSmartMapping(context);
@@ -50,10 +51,12 @@ public class FlowProcessorInboundProcessor extends BaseProcessor  {
                     tenant, mapping.getName(), e.getMessage(), lineNumber);
             log.error(errorMessage, e);
 
-            MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
-            context.addError(new ProcessingException(errorMessage, e));
-            mappingStatus.errors++;
-            mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+            if ( !testing) {
+                MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
+                context.addError(new ProcessingException(errorMessage, e));
+                mappingStatus.errors++;
+                mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+            } 
             return;
         } 
     }

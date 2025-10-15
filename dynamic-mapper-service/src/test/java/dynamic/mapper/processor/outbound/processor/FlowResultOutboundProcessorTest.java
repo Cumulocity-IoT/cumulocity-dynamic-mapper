@@ -177,7 +177,7 @@ class FlowResultOutboundProcessorTest {
         ExternalIDRepresentation mockExternalIdRep = new ExternalIDRepresentation();
         mockExternalIdRep.setManagedObject(mockDevice);
         
-        when(c8yAgent.resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), any(ProcessingContext.class)))
+        when(c8yAgent.resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), any(Boolean.class)))
                 .thenReturn(mockExternalIdRep);
     }
 
@@ -292,7 +292,7 @@ class FlowResultOutboundProcessorTest {
 
         // Only verify C8Y agent if the field was successfully injected
         try {
-            verify(c8yAgent).resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), eq(processingContext));
+            verify(c8yAgent).resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), eq(Boolean.FALSE));
         } catch (Exception e) {
             log.warn("Could not verify c8yAgent interaction: {}", e.getMessage());
         }
@@ -387,7 +387,7 @@ class FlowResultOutboundProcessorTest {
     @Test
     void testProcessWithExternalSourceResolutionFailure() throws Exception {
         // Given - External source that cannot be resolved
-        when(c8yAgent.resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), any(ProcessingContext.class)))
+        when(c8yAgent.resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), any(Boolean.class)))
                 .thenReturn(null);
 
         DeviceMessage deviceMsg = createTemperatureMeasurementDeviceMessage();

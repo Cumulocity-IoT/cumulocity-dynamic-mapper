@@ -46,6 +46,7 @@ public class CodeExtractionInboundProcessor extends BaseProcessor {
         ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
         Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
+        Boolean testing = context.isTesting();
 
         try {
             extractFromSource(context);
@@ -54,14 +55,17 @@ public class CodeExtractionInboundProcessor extends BaseProcessor {
             if (e.getStackTrace().length > 0) {
                 lineNumber = e.getStackTrace()[0].getLineNumber();
             }
-            String errorMessage = String.format("Tenant %s - Error in CodeExtractionInboundProcessor: %s for mapping: %s, line %s",
-            tenant, mapping.getName(), e.getMessage(), lineNumber);
+            String errorMessage = String.format(
+                    "Tenant %s - Error in CodeExtractionInboundProcessor: %s for mapping: %s, line %s",
+                    tenant, mapping.getName(), e.getMessage(), lineNumber);
             log.error(errorMessage, e);
-            
-            MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
-            context.addError(new ProcessingException(errorMessage, e));
-            mappingStatus.errors++;
-            mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+
+            if ( !testing) {
+                MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
+                context.addError(new ProcessingException(errorMessage, e));
+                mappingStatus.errors++;
+                mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+            } 
             return;
         }
     }
@@ -189,7 +193,8 @@ public class CodeExtractionInboundProcessor extends BaseProcessor {
         }
 
         // no substitution for the time property exists, then use the system time
-        if (!substitutionTimeExists && mapping.getTargetAPI() != API.INVENTORY && mapping.getTargetAPI() != API.OPERATION) {
+        if (!substitutionTimeExists && mapping.getTargetAPI() != API.INVENTORY
+                && mapping.getTargetAPI() != API.OPERATION) {
             List<SubstituteValue> processingCacheEntry = processingCache.getOrDefault(
                     Mapping.KEY_TIME,
                     new ArrayList<>());

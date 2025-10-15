@@ -47,7 +47,6 @@ import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.core.ConnectorStatus;
 import dynamic.mapper.model.Direction;
-import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
 import dynamic.mapper.processor.model.DynamicMapperRequest;

@@ -179,7 +179,7 @@ public class DeviceDiscoveryService {
             try {
                 if (isValidManagedObjectRef(childRef)) {
                     ManagedObjectRepresentation child = configurationRegistry.getC8yAgent()
-                            .getManagedObjectForId(tenant, childRef.getManagedObject().getId().getValue());
+                            .getManagedObjectForId(tenant, childRef.getManagedObject().getId().getValue(), false);
                     if (child != null) {
                         findAllRelatedDevicesByMO(tenant, child, devices, true);
                     } else {
@@ -203,7 +203,7 @@ public class DeviceDiscoveryService {
             try {
                 if (isValidManagedObjectRef(assetRef)) {
                     ManagedObjectRepresentation asset = configurationRegistry.getC8yAgent()
-                            .getManagedObjectForId(tenant, assetRef.getManagedObject().getId().getValue());
+                            .getManagedObjectForId(tenant, assetRef.getManagedObject().getId().getValue(), false);
                     if (asset != null) {
                         findAllRelatedDevicesByMO(tenant, asset, devices, false);
                     } else {
