@@ -697,8 +697,12 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                     log.error("{} - Could not sent payload to c8y: {} {}: ", tenant, targetAPI, payload,
                             s.getMessage());
                     pe.set(new ProcessingException("Could not sent payload to c8y: " + targetAPI + "/" + payload, s));
-                    // error.append("Could not sent payload to c8y: " + targetAPI + "/" + payload +
-                    // "/" + s);
+
+                    //Remove device from Cache
+                    if (s.getHttpStatus() == 422) {
+                        ID identity = new ID(currentRequest.getExternalId(), currentRequest.getExternalId());
+                        this.removeDeviceFromInboundExternalIdCache(tenant, identity);
+                    }
                 }
                 return rt;
             });

@@ -114,19 +114,6 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
             try {
                 getBuildProcessingContext(context, deviceEntries.get(i),
                         i, deviceEntries.size());
-                if (context.getCurrentRequest() != null && context.getCurrentRequest().hasError()) {
-                    Exception e = context.getCurrentRequest().getError();
-                    if (e instanceof ProcessingException &&
-                            e.getCause() != null &&
-                            e.getCause() instanceof SDKException &&
-                            ((SDKException) e.getCause()).getHttpStatus() == 422) {
-                        ID identity = new ID(mapping.getExternalIdType(), deviceEntries.get(i).value.toString());
-                        c8yAgent.removeDeviceFromInboundExternalIdCache(tenant, identity);
-                        context.setSourceId(null);
-                        getBuildProcessingContext(context, deviceEntries.get(i),
-                                i, deviceEntries.size());
-                    }
-                }
 
                 log.debug("Created request {} of {} for mapping: {}", i + 1, cardinality, mapping.getName());
 
