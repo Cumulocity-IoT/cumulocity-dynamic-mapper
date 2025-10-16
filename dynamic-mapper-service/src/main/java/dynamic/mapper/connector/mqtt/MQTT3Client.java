@@ -504,7 +504,7 @@ public class MQTT3Client extends AConnectorClient {
             if (mappingSubscriptionManager != null && mqttClient != null) {
                 try {
                     if (mqttClient.getState().isConnected()) {
-                        mappingSubscriptionManager.getSubscriptionCounts().keySet().forEach(topic -> {
+                        mappingSubscriptionManager.getSubscriptionCountsView().keySet().forEach(topic -> {
                             try {
                                 mqttClient.unsubscribe(Mqtt3Unsubscribe.builder().topicFilter(topic).build());
                                 log.debug("{} - Unsubscribed from topic: [{}]", tenant, topic);

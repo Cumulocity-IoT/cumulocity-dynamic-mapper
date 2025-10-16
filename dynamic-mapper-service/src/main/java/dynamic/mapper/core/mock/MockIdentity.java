@@ -49,7 +49,8 @@ import java.util.stream.Collectors;
  * calls.
  * 
  * Features:
- * - Thread-safe storage of external ID to managed object mappings with tenant separation
+ * - Thread-safe storage of external ID to managed object mappings with tenant
+ * separation
  * - Bidirectional lookup (external ID to global ID and vice versa)
  * - Support for multiple external IDs per managed object
  * - Statistics and utilities for testing
@@ -67,7 +68,8 @@ public class MockIdentity {
 
     /**
      * Reverse index: tenant -> GlobalId -> List of external IDs
-     * This allows quick lookup of all external IDs for a managed object within tenant context
+     * This allows quick lookup of all external IDs for a managed object within
+     * tenant context
      */
     private final Map<String, Map<String, List<ExternalIDRepresentation>>> globalIdIndex = new ConcurrentHashMap<>();
 
@@ -102,7 +104,7 @@ public class MockIdentity {
      */
     public ExternalIDRepresentation create(ExternalIDRepresentation externalIDRepresentation) {
         String tenant = subscriptionsService.getTenant();
-        
+
         if (tenant == null) {
             throw new IllegalStateException("No tenant context available");
         }
@@ -175,7 +177,7 @@ public class MockIdentity {
      */
     public ExternalIDRepresentation getExternalId(ID id) {
         String tenant = subscriptionsService.getTenant();
-        
+
         if (tenant == null) {
             throw new IllegalStateException("No tenant context available");
         }
@@ -215,7 +217,7 @@ public class MockIdentity {
      */
     public ExternalIDRepresentation getExternalIdsOfGlobalId(GId gid) {
         String tenant = subscriptionsService.getTenant();
-        
+
         if (tenant == null) {
             throw new IllegalStateException("No tenant context available");
         }
@@ -254,7 +256,7 @@ public class MockIdentity {
      */
     public ExternalIDCollection getExternalIdsCollectionOfGlobalId(GId gid) {
         String tenant = subscriptionsService.getTenant();
-        
+
         if (tenant == null) {
             throw new IllegalStateException("No tenant context available");
         }
@@ -283,7 +285,7 @@ public class MockIdentity {
      */
     public void deleteExternalId(ID id) {
         String tenant = subscriptionsService.getTenant();
-        
+
         if (tenant == null) {
             throw new IllegalStateException("No tenant context available");
         }
@@ -332,7 +334,7 @@ public class MockIdentity {
      */
     public void deleteExternalIdsOfGlobalId(GId gid) {
         String tenant = subscriptionsService.getTenant();
-        
+
         if (tenant == null) {
             throw new IllegalStateException("No tenant context available");
         }
@@ -357,7 +359,7 @@ public class MockIdentity {
                 tenantExternalIdStorage.remove(storageKey);
             }
 
-            log.info("{} - Mock: Deleted {} external ID(s) for global ID: {}", 
+            log.info("{} - Mock: Deleted {} external ID(s) for global ID: {}",
                     tenant, externalIds.size(), globalIdKey);
         } else {
             log.warn("{} - Mock: No external IDs found for global ID: {}", tenant, globalIdKey);
@@ -443,6 +445,7 @@ public class MockIdentity {
             }
 
             @Override
+            @SuppressWarnings("rawtypes")
             public PagedExternalIDCollectionRepresentation getNextPage(
                     BaseCollectionRepresentation collectionRepresentation) throws SDKException {
 
@@ -477,6 +480,7 @@ public class MockIdentity {
             }
 
             @Override
+            @SuppressWarnings("rawtypes")
             public PagedExternalIDCollectionRepresentation getPreviousPage(
                     BaseCollectionRepresentation collectionRepresentation) throws SDKException {
 
@@ -509,6 +513,7 @@ public class MockIdentity {
             }
 
             @Override
+            @SuppressWarnings("rawtypes")
             public PagedExternalIDCollectionRepresentation getPage(
                     BaseCollectionRepresentation collectionRepresentation,
                     int pageNumber) throws SDKException {
@@ -526,6 +531,7 @@ public class MockIdentity {
             }
 
             @Override
+            @SuppressWarnings("rawtypes")
             public PagedExternalIDCollectionRepresentation getPage(
                     BaseCollectionRepresentation collectionRepresentation,
                     int pageNumber,
@@ -629,6 +635,7 @@ public class MockIdentity {
                     }
 
                     @Override
+                    @SuppressWarnings("rawtypes")
                     public ExternalIDCollectionRepresentation getNextPage(
                             BaseCollectionRepresentation collectionRepresentation) throws SDKException {
 
@@ -655,6 +662,7 @@ public class MockIdentity {
                     }
 
                     @Override
+                    @SuppressWarnings("rawtypes")
                     public ExternalIDCollectionRepresentation getPreviousPage(
                             BaseCollectionRepresentation collectionRepresentation) throws SDKException {
 
@@ -679,6 +687,7 @@ public class MockIdentity {
                     }
 
                     @Override
+                    @SuppressWarnings("rawtypes")
                     public ExternalIDCollectionRepresentation getPage(
                             BaseCollectionRepresentation collectionRepresentation,
                             int pageNumber) throws SDKException {
@@ -694,6 +703,7 @@ public class MockIdentity {
                     }
 
                     @Override
+                    @SuppressWarnings("rawtypes")
                     public ExternalIDCollectionRepresentation getPage(
                             BaseCollectionRepresentation collectionRepresentation,
                             int pageNumber,
@@ -715,7 +725,7 @@ public class MockIdentity {
      */
     public void clear() {
         String tenant = subscriptionsService.getTenant();
-        
+
         if (tenant == null) {
             throw new IllegalStateException("No tenant context available");
         }
@@ -760,7 +770,7 @@ public class MockIdentity {
      */
     public boolean exists(ID id) {
         String tenant = subscriptionsService.getTenant();
-        
+
         if (tenant == null) {
             throw new IllegalStateException("No tenant context available");
         }
@@ -782,7 +792,7 @@ public class MockIdentity {
      */
     public boolean hasExternalIds(GId gid) {
         String tenant = subscriptionsService.getTenant();
-        
+
         if (tenant == null) {
             throw new IllegalStateException("No tenant context available");
         }
@@ -803,7 +813,7 @@ public class MockIdentity {
      */
     public int getExternalIdCount() {
         String tenant = subscriptionsService.getTenant();
-        
+
         if (tenant == null) {
             throw new IllegalStateException("No tenant context available");
         }
@@ -830,7 +840,7 @@ public class MockIdentity {
      */
     public int getGlobalIdCount() {
         String tenant = subscriptionsService.getTenant();
-        
+
         if (tenant == null) {
             throw new IllegalStateException("No tenant context available");
         }
@@ -857,7 +867,7 @@ public class MockIdentity {
      */
     public List<ExternalIDRepresentation> getAllExternalIds() {
         String tenant = subscriptionsService.getTenant();
-        
+
         if (tenant == null) {
             throw new IllegalStateException("No tenant context available");
         }
@@ -876,7 +886,7 @@ public class MockIdentity {
      */
     public List<ExternalIDRepresentation> getExternalIdsByType(String type) {
         String tenant = subscriptionsService.getTenant();
-        
+
         if (tenant == null) {
             throw new IllegalStateException("No tenant context available");
         }
@@ -895,7 +905,7 @@ public class MockIdentity {
      */
     public Map<String, Object> getStatistics() {
         String tenant = subscriptionsService.getTenant();
-        
+
         if (tenant == null) {
             throw new IllegalStateException("No tenant context available");
         }
@@ -931,23 +941,23 @@ public class MockIdentity {
      */
     public Map<String, Object> getAllStatistics() {
         Map<String, Object> allStats = new HashMap<>();
-        
+
         allStats.put("totalTenants", externalIdStorage.size());
         allStats.put("totalExternalIds", getTotalExternalIdCount());
         allStats.put("totalGlobalIds", getTotalGlobalIdCount());
-        
+
         Map<String, Integer> externalIdsByTenant = new HashMap<>();
         externalIdStorage.forEach((tenant, tenantStorage) -> {
             externalIdsByTenant.put(tenant, tenantStorage.size());
         });
         allStats.put("externalIdsByTenant", externalIdsByTenant);
-        
+
         Map<String, Integer> globalIdsByTenant = new HashMap<>();
         globalIdIndex.forEach((tenant, tenantIndex) -> {
             globalIdsByTenant.put(tenant, tenantIndex.size());
         });
         allStats.put("globalIdsByTenant", globalIdsByTenant);
-        
+
         log.debug("Mock: Generated all-tenant statistics: {}", allStats);
         return allStats;
     }
@@ -959,7 +969,7 @@ public class MockIdentity {
      */
     public String getSummary() {
         String tenant = subscriptionsService.getTenant();
-        
+
         if (tenant == null) {
             throw new IllegalStateException("No tenant context available");
         }

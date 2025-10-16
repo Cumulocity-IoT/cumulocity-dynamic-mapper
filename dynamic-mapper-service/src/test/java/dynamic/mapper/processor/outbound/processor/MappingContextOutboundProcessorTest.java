@@ -30,7 +30,6 @@ import java.util.Map;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.Message;
-import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Engine;
 import org.graalvm.polyglot.HostAccess;
 import org.junit.jupiter.api.BeforeEach;
@@ -51,8 +50,6 @@ import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.model.SnoopStatus;
 import dynamic.mapper.model.Substitution;
-import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.flow.SimpleFlowContext;
 import dynamic.mapper.processor.model.C8YMessage;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;

@@ -474,14 +474,14 @@ public abstract class AConnectorClient {
     private void deleteInboundSubscription(Mapping mapping) {
         String topic = mapping.getMappingTopic();
 
-        if (mappingSubscriptionManager.getSubscriptionCounts().containsKey(topic) && isConnected()) {
-            MutableInt count = mappingSubscriptionManager.getSubscriptionCounts().get(topic);
+        if (mappingSubscriptionManager.getSubscriptionCountsView().containsKey(topic) && isConnected()) {
+            MutableInt count = mappingSubscriptionManager.getSubscriptionCountsView().get(topic);
             count.decrement();
 
             if (count.intValue() <= 0) {
                 try {
                     unsubscribe(topic);
-                    mappingSubscriptionManager.getSubscriptionCounts().remove(topic);
+                    mappingSubscriptionManager.getSubscriptionCountsView().remove(topic);
                     log.info("{} - Unsubscribed from topic: [{}] after mapping deletion", tenant, topic);
                 } catch (Exception e) {
                     log.error("{} - Error unsubscribing from topic: [{}]", tenant, topic, e);
@@ -502,14 +502,14 @@ public abstract class AConnectorClient {
      * Get subscription counts per topic for inbound mappings
      */
     public Map<String, MutableInt> getCountSubscriptionsPerTopicInbound() {
-        return mappingSubscriptionManager.getSubscriptionCounts();
+        return mappingSubscriptionManager.getSubscriptionCountsView();
     }
 
     /**
      * Get read-only view of subscription counts (for external use)
      */
     public Map<String, MutableInt> getCountSubscriptionsPerTopicInboundView() {
-        return mappingSubscriptionManager.getSubscriptionCounts();
+        return mappingSubscriptionManager.getSubscriptionCountsView();
     }
 
     /**

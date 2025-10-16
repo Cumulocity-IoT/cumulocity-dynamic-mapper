@@ -1058,12 +1058,12 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     public ManagedObjectRepresentation initializeDeviceToClientMapRepresentation(String tenant) {
         ExternalIDRepresentation deviceToClientMapRepresentation = resolveExternalId2GlobalId(tenant,
                 new ID(null, DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_ID),
-                null);
+                false);
         ;
         ManagedObjectRepresentation amo = new ManagedObjectRepresentation();
 
         if (deviceToClientMapRepresentation != null) {
-            amo = inventoryApi.get(deviceToClientMapRepresentation.getManagedObject().getId(), null);
+            amo = inventoryApi.get(deviceToClientMapRepresentation.getManagedObject().getId(), false);
             log.info("{} - Dynamic Mapper Device To Client Map with external ID [{}] already exists, sourceId: {}",
                     tenant,
                     DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_ID,

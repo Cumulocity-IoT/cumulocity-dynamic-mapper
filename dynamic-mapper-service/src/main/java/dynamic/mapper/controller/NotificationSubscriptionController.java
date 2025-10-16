@@ -153,7 +153,7 @@ public class NotificationSubscriptionController {
         validateOutboundMappingEnabled(tenant);
 
         try {
-            ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(tenant, deviceId, null);
+            ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(tenant, deviceId, false);
             if (mor == null) {
                 throw new DeviceNotFoundException("Device with id " + deviceId + " not found");
             }
@@ -212,7 +212,7 @@ public class NotificationSubscriptionController {
         validateOutboundMappingEnabled(tenant);
 
         try {
-            ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(tenant, groupId, null);
+            ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(tenant, groupId, false);
             if (mor == null) {
                 throw new DeviceNotFoundException("Device group with id " + groupId + " not found");
             }

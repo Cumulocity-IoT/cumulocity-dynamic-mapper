@@ -100,7 +100,7 @@ public class MockInventory {
      */
     public ManagedObjectRepresentation create(ManagedObjectRepresentation mor) {
         String tenant = subscriptionsService.getTenant();
-        
+
         if (tenant == null) {
             throw new IllegalStateException("No tenant context available");
         }
@@ -112,7 +112,7 @@ public class MockInventory {
         log.debug("{} - Mock: Creating managed object: {}", tenant, mor.getName());
 
         Map<String, ManagedObjectRepresentation> tenantStorage = getTenantStorage(tenant);
-        
+
         // Deep copy to avoid external modifications
         ManagedObjectRepresentation mockObject = deepCopy(mor);
 
@@ -153,7 +153,7 @@ public class MockInventory {
      */
     public ManagedObjectRepresentation get(GId id) {
         String tenant = subscriptionsService.getTenant();
-        
+
         if (tenant == null) {
             throw new IllegalStateException("No tenant context available");
         }
@@ -186,7 +186,7 @@ public class MockInventory {
      */
     public ManagedObjectRepresentation update(ManagedObjectRepresentation mor) {
         String tenant = subscriptionsService.getTenant();
-        
+
         if (tenant == null) {
             throw new IllegalStateException("No tenant context available");
         }
@@ -203,7 +203,7 @@ public class MockInventory {
         log.debug("{} - Mock: Updating managed object with ID: {}", tenant, id);
 
         Map<String, ManagedObjectRepresentation> tenantStorage = getTenantStorage(tenant);
-        
+
         // Check if object exists
         ManagedObjectRepresentation existing = tenantStorage.get(id);
         if (existing == null) {
@@ -243,7 +243,7 @@ public class MockInventory {
      */
     public void delete(GId id) {
         String tenant = subscriptionsService.getTenant();
-        
+
         if (tenant == null) {
             throw new IllegalStateException("No tenant context available");
         }
@@ -275,7 +275,7 @@ public class MockInventory {
      */
     public ManagedObjectCollection getManagedObjectsByFilter(InventoryFilter filter) {
         String tenant = subscriptionsService.getTenant();
-        
+
         if (tenant == null) {
             throw new IllegalStateException("No tenant context available");
         }
@@ -462,6 +462,7 @@ public class MockInventory {
             }
 
             @Override
+            @SuppressWarnings("rawtypes")
             public PagedManagedObjectCollectionRepresentation getNextPage(
                     BaseCollectionRepresentation collectionRepresentation) throws SDKException {
 
@@ -485,6 +486,7 @@ public class MockInventory {
             }
 
             @Override
+            @SuppressWarnings("rawtypes")
             public PagedManagedObjectCollectionRepresentation getPreviousPage(
                     BaseCollectionRepresentation collectionRepresentation) throws SDKException {
 
@@ -508,6 +510,7 @@ public class MockInventory {
             }
 
             @Override
+            @SuppressWarnings("rawtypes")
             public PagedManagedObjectCollectionRepresentation getPage(
                     BaseCollectionRepresentation collectionRepresentation, int pageNumber) throws SDKException {
 
@@ -520,6 +523,7 @@ public class MockInventory {
             }
 
             @Override
+            @SuppressWarnings("rawtypes")
             public PagedManagedObjectCollectionRepresentation getPage(
                     BaseCollectionRepresentation collectionRepresentation,
                     int pageNumber,
@@ -625,6 +629,7 @@ public class MockInventory {
                     }
 
                     @Override
+                    @SuppressWarnings("rawtypes")
                     public ManagedObjectCollectionRepresentation getNextPage(
                             BaseCollectionRepresentation collectionRepresentation) throws SDKException {
 
@@ -655,7 +660,8 @@ public class MockInventory {
                         return createBaseCollection(nextPage, pageSize);
                     }
 
-                    @Override
+            @Override
+            @SuppressWarnings("rawtypes") 
                     public ManagedObjectCollectionRepresentation getPreviousPage(
                             BaseCollectionRepresentation collectionRepresentation) throws SDKException {
 
@@ -686,6 +692,7 @@ public class MockInventory {
                     }
 
                     @Override
+                    @SuppressWarnings("rawtypes")
                     public ManagedObjectCollectionRepresentation getPage(
                             BaseCollectionRepresentation collectionRepresentation,
                             int pageNumber) throws SDKException {
@@ -707,6 +714,7 @@ public class MockInventory {
                     }
 
                     @Override
+                    @SuppressWarnings("rawtypes")
                     public ManagedObjectCollectionRepresentation getPage(
                             BaseCollectionRepresentation collectionRepresentation,
                             int pageNumber,
@@ -810,7 +818,7 @@ public class MockInventory {
      */
     public void clear() {
         String tenant = subscriptionsService.getTenant();
-        
+
         if (tenant == null) {
             throw new IllegalStateException("No tenant context available");
         }
@@ -818,10 +826,10 @@ public class MockInventory {
         Map<String, ManagedObjectRepresentation> tenantStorage = getTenantStorage(tenant);
         int count = tenantStorage.size();
         tenantStorage.clear();
-        
+
         AtomicLong counter = getTenantIdCounter(tenant);
         counter.set(10000);
-        
+
         log.info("{} - Mock: Cleared {} objects from storage", tenant, count);
     }
 
@@ -833,10 +841,10 @@ public class MockInventory {
         int totalCount = storage.values().stream()
                 .mapToInt(Map::size)
                 .sum();
-        
+
         storage.clear();
         idCounters.clear();
-        
+
         log.info("Mock: Cleared {} objects from all tenants", totalCount);
     }
 
@@ -848,7 +856,7 @@ public class MockInventory {
      */
     public boolean exists(GId id) {
         String tenant = subscriptionsService.getTenant();
-        
+
         if (tenant == null) {
             throw new IllegalStateException("No tenant context available");
         }
@@ -864,7 +872,7 @@ public class MockInventory {
      */
     public int getStorageCount() {
         String tenant = subscriptionsService.getTenant();
-        
+
         if (tenant == null) {
             throw new IllegalStateException("No tenant context available");
         }
@@ -892,7 +900,7 @@ public class MockInventory {
      */
     public List<ManagedObjectRepresentation> getAllObjects() {
         String tenant = subscriptionsService.getTenant();
-        
+
         if (tenant == null) {
             throw new IllegalStateException("No tenant context available");
         }
@@ -911,7 +919,7 @@ public class MockInventory {
      */
     public List<ManagedObjectRepresentation> getObjectsByType(String type) {
         String tenant = subscriptionsService.getTenant();
-        
+
         if (tenant == null) {
             throw new IllegalStateException("No tenant context available");
         }
@@ -931,7 +939,7 @@ public class MockInventory {
      */
     public List<ManagedObjectRepresentation> getObjectsByName(String name) {
         String tenant = subscriptionsService.getTenant();
-        
+
         if (tenant == null) {
             throw new IllegalStateException("No tenant context available");
         }
@@ -950,7 +958,7 @@ public class MockInventory {
      */
     public void addMockObject(ManagedObjectRepresentation mor) {
         String tenant = subscriptionsService.getTenant();
-        
+
         if (tenant == null) {
             throw new IllegalStateException("No tenant context available");
         }
@@ -993,7 +1001,7 @@ public class MockInventory {
      */
     public void setNextId(long nextId) {
         String tenant = subscriptionsService.getTenant();
-        
+
         if (tenant == null) {
             throw new IllegalStateException("No tenant context available");
         }
@@ -1010,14 +1018,14 @@ public class MockInventory {
      */
     public Map<String, Object> getStatistics() {
         String tenant = subscriptionsService.getTenant();
-        
+
         if (tenant == null) {
             throw new IllegalStateException("No tenant context available");
         }
 
         Map<String, ManagedObjectRepresentation> tenantStorage = getTenantStorage(tenant);
         AtomicLong counter = getTenantIdCounter(tenant);
-        
+
         Map<String, Object> stats = new HashMap<>();
         stats.put("tenant", tenant);
         stats.put("totalObjects", tenantStorage.size());
@@ -1048,16 +1056,16 @@ public class MockInventory {
      */
     public Map<String, Object> getAllStatistics() {
         Map<String, Object> allStats = new HashMap<>();
-        
+
         allStats.put("totalTenants", storage.size());
         allStats.put("totalObjects", getTotalStorageCount());
-        
+
         Map<String, Integer> tenantCounts = new HashMap<>();
         storage.forEach((tenant, tenantStorage) -> {
             tenantCounts.put(tenant, tenantStorage.size());
         });
         allStats.put("objectsByTenant", tenantCounts);
-        
+
         log.debug("Mock: Generated all-tenant statistics: {}", allStats);
         return allStats;
     }
@@ -1069,7 +1077,7 @@ public class MockInventory {
      */
     public String getSummary() {
         String tenant = subscriptionsService.getTenant();
-        
+
         if (tenant == null) {
             throw new IllegalStateException("No tenant context available");
         }

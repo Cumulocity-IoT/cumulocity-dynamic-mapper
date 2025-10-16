@@ -330,7 +330,7 @@ public class NotificationConnectionManager {
             try {
                 if (isValidSubscription(sub)) {
                     ExternalIDRepresentation extId = configurationRegistry.getC8yAgent()
-                            .resolveGlobalId2ExternalId(tenant, sub.getSource().getId(), null, null);
+                            .resolveGlobalId2ExternalId(tenant, sub.getSource().getId(), null, false);
 
                     if (extId != null) {
                         mqttPushManager.activatePushConnectivity(tenant, extId.getExternalId());
