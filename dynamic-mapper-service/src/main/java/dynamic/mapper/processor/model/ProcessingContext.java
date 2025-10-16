@@ -183,7 +183,17 @@ public class ProcessingContext<O> {
         return requests.size() - 1;
     }
 
+    /**
+     * Get the current (last) request from the requests list.
+     * This method is safe to call even when requests is empty.
+     * 
+     * @return the last request or null if no requests exist
+     */
+    @JsonIgnore
     public DynamicMapperRequest getCurrentRequest() {
+        if (requests == null || requests.isEmpty()) {
+            return null;
+        }
         return requests.get(requests.size() - 1);
     }
 

@@ -150,11 +150,19 @@ public class TestController {
                     result.forEach(r -> {
                         // Reset clientId for test results
                         r.setFlowContext(null);
+                        r.setAlarms(null);
+                        r.setBinaryInfo(null);
+                        r.setFlowResult(null);
+
                         r.setGraalContext(null);
-                        // Clear processing cache for test results
                         if (r.getProcessingCache() != null) {
                             r.getProcessingCache().clear();
                         }
+                        r.setProcessingMode(null);
+                        r.setProcessingType(null);
+                        r.setTenant(null);
+                        r.setQos(null);
+
                         // Clear sensitive/large data from mapping
                         if (r.getMapping() != null) {
                             r.getMapping().setCode(null);
@@ -172,9 +180,12 @@ public class TestController {
                                         e.getMessage() != null ? e.getMessage() : "No message"));
                             });
                             r.setSerializableErrors(sanitizedErrors);
-                            r.getErrors().clear();
+                            r.setErrors(null);
                         }
                         r.setRawPayload(null);
+                        // if (r.getRequests() != null && r.getRequests().isEmpty()) {
+                        //     r.setRequests(null);
+                        // }
                     });
                 }
             }

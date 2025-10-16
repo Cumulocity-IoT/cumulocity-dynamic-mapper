@@ -111,8 +111,9 @@ export class TestingService {
   ): Promise<ProcessingContext> {
     const { mapping } = context;
     if (context.mapping.transformationType == TransformationType.SMART_FUNCTION) {
-      const testingContext = { mapping: context.mapping, payload: context.mapping.sourceTemplate, send: false };
+      const testingContext = { mapping: context.mapping, payload: JSON.stringify(message), send: false };
       const testingResult = await this.testMapping(testingContext);
+      context.requests = testingResult[0].requests;
       console.log(testingResult);
     } else {
       if (mapping.direction == Direction.INBOUND) {
