@@ -21,6 +21,7 @@
 
 package dynamic.mapper.core.mock;
 
+import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.BaseCollectionRepresentation;
 import com.cumulocity.rest.representation.PageStatisticsRepresentation;
@@ -33,6 +34,7 @@ import com.cumulocity.sdk.client.inventory.InventoryFilter;
 import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
 import com.cumulocity.sdk.client.inventory.PagedManagedObjectCollectionRepresentation;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.joda.time.DateTime;
 import org.springframework.stereotype.Component;
@@ -48,24 +50,45 @@ import java.util.stream.Collectors;
  * C8Y API calls.
  * 
  * Features:
- * - Thread-safe in-memory storage
- * - Automatic ID generation
+ * - Thread-safe in-memory storage with tenant separation
+ * - Automatic ID generation per tenant
  * - Deep object cloning to prevent reference issues
  * - Full filter support for queries
  * - Statistics and utilities for testing
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class MockInventory {
 
-    // In-memory storage for mock managed objects (thread-safe)
-    private final Map<String, ManagedObjectRepresentation> storage = new ConcurrentHashMap<>();
+    // In-memory storage for mock managed objects (thread-safe, tenant-separated)
+    // Structure: tenant -> id -> ManagedObjectRepresentation
+    private final Map<String, Map<String, ManagedObjectRepresentation>> storage = new ConcurrentHashMap<>();
 
-    // Counter for generating unique mock IDs
-    private final AtomicLong idCounter = new AtomicLong(10000);
+    // Counter for generating unique mock IDs per tenant
+    // Structure: tenant -> AtomicLong counter
+    private final Map<String, AtomicLong> idCounters = new ConcurrentHashMap<>();
 
-    public MockInventory() {
-        log.info("MockInventory initialized");
+    private final MicroserviceSubscriptionsService subscriptionsService;
+
+    /**
+     * Get or create storage for a specific tenant.
+     * 
+     * @param tenant The tenant identifier
+     * @return The storage map for the tenant
+     */
+    private Map<String, ManagedObjectRepresentation> getTenantStorage(String tenant) {
+        return storage.computeIfAbsent(tenant, k -> new ConcurrentHashMap<>());
+    }
+
+    /**
+     * Get or create ID counter for a specific tenant.
+     * 
+     * @param tenant The tenant identifier
+     * @return The ID counter for the tenant
+     */
+    private AtomicLong getTenantIdCounter(String tenant) {
+        return idCounters.computeIfAbsent(tenant, k -> new AtomicLong(10000));
     }
 
     /**
@@ -76,20 +99,28 @@ public class MockInventory {
      * @return A copy of the created managed object with generated metadata
      */
     public ManagedObjectRepresentation create(ManagedObjectRepresentation mor) {
+        String tenant = subscriptionsService.getTenant();
+        
+        if (tenant == null) {
+            throw new IllegalStateException("No tenant context available");
+        }
+
         if (mor == null) {
             throw new IllegalArgumentException("Cannot create null managed object");
         }
 
-        log.debug("Mock: Creating managed object: {}", mor.getName());
+        log.debug("{} - Mock: Creating managed object: {}", tenant, mor.getName());
 
+        Map<String, ManagedObjectRepresentation> tenantStorage = getTenantStorage(tenant);
+        
         // Deep copy to avoid external modifications
         ManagedObjectRepresentation mockObject = deepCopy(mor);
 
         // Generate ID if not present
         if (mockObject.getId() == null) {
-            String mockId = generateId();
+            String mockId = generateId(tenant);
             mockObject.setId(GId.asGId(mockId));
-            log.trace("Mock: Generated new ID: {}", mockId);
+            log.trace("{} - Mock: Generated new ID: {}", tenant, mockId);
         }
 
         // Set creation timestamp using DateTime
@@ -104,11 +135,11 @@ public class MockInventory {
             mockObject.setSelf(generateSelfLink(mockObject.getId()));
         }
 
-        // Store in mock storage
-        storage.put(mockObject.getId().getValue(), mockObject);
+        // Store in tenant-specific mock storage
+        tenantStorage.put(mockObject.getId().getValue(), mockObject);
 
-        log.info("Mock: Created managed object [id={}, name={}, type={}]",
-                mockObject.getId().getValue(), mockObject.getName(), mockObject.getType());
+        log.info("{} - Mock: Created managed object [id={}, name={}, type={}]",
+                tenant, mockObject.getId().getValue(), mockObject.getName(), mockObject.getType());
 
         // Return a copy to prevent external modification
         return deepCopy(mockObject);
@@ -121,21 +152,28 @@ public class MockInventory {
      * @return A copy of the managed object, or null if not found
      */
     public ManagedObjectRepresentation get(GId id) {
+        String tenant = subscriptionsService.getTenant();
+        
+        if (tenant == null) {
+            throw new IllegalStateException("No tenant context available");
+        }
+
         if (id == null) {
             throw new IllegalArgumentException("Cannot get managed object with null ID");
         }
 
         String idValue = id.getValue();
-        log.debug("Mock: Getting managed object with ID: {}", idValue);
+        log.debug("{} - Mock: Getting managed object with ID: {}", tenant, idValue);
 
-        ManagedObjectRepresentation mockObject = storage.get(idValue);
+        Map<String, ManagedObjectRepresentation> tenantStorage = getTenantStorage(tenant);
+        ManagedObjectRepresentation mockObject = tenantStorage.get(idValue);
 
         if (mockObject == null) {
-            log.debug("Mock: Managed object with ID {} not found", idValue);
+            log.debug("{} - Mock: Managed object with ID {} not found", tenant, idValue);
             return null;
         }
 
-        log.trace("Mock: Found managed object: {}", mockObject.getName());
+        log.trace("{} - Mock: Found managed object: {}", tenant, mockObject.getName());
         return deepCopy(mockObject);
     }
 
@@ -147,6 +185,12 @@ public class MockInventory {
      * @return A copy of the updated managed object
      */
     public ManagedObjectRepresentation update(ManagedObjectRepresentation mor) {
+        String tenant = subscriptionsService.getTenant();
+        
+        if (tenant == null) {
+            throw new IllegalStateException("No tenant context available");
+        }
+
         if (mor == null) {
             throw new IllegalArgumentException("Cannot update null managed object");
         }
@@ -156,12 +200,14 @@ public class MockInventory {
         }
 
         String id = mor.getId().getValue();
-        log.debug("Mock: Updating managed object with ID: {}", id);
+        log.debug("{} - Mock: Updating managed object with ID: {}", tenant, id);
 
+        Map<String, ManagedObjectRepresentation> tenantStorage = getTenantStorage(tenant);
+        
         // Check if object exists
-        ManagedObjectRepresentation existing = storage.get(id);
+        ManagedObjectRepresentation existing = tenantStorage.get(id);
         if (existing == null) {
-            log.warn("Mock: Managed object with ID {} not found, creating new entry", id);
+            log.warn("{} - Mock: Managed object with ID {} not found, creating new entry", tenant, id);
             return create(mor);
         }
 
@@ -182,10 +228,10 @@ public class MockInventory {
         }
 
         // Store updated object
-        storage.put(id, updated);
+        tenantStorage.put(id, updated);
 
-        log.info("Mock: Updated managed object [id={}, name={}, type={}]",
-                id, updated.getName(), updated.getType());
+        log.info("{} - Mock: Updated managed object [id={}, name={}, type={}]",
+                tenant, id, updated.getName(), updated.getType());
 
         return deepCopy(updated);
     }
@@ -196,19 +242,26 @@ public class MockInventory {
      * @param id The ID of the managed object to delete
      */
     public void delete(GId id) {
+        String tenant = subscriptionsService.getTenant();
+        
+        if (tenant == null) {
+            throw new IllegalStateException("No tenant context available");
+        }
+
         if (id == null) {
             throw new IllegalArgumentException("Cannot delete managed object with null ID");
         }
 
         String idValue = id.getValue();
-        log.debug("Mock: Deleting managed object with ID: {}", idValue);
+        log.debug("{} - Mock: Deleting managed object with ID: {}", tenant, idValue);
 
-        ManagedObjectRepresentation removed = storage.remove(idValue);
+        Map<String, ManagedObjectRepresentation> tenantStorage = getTenantStorage(tenant);
+        ManagedObjectRepresentation removed = tenantStorage.remove(idValue);
 
         if (removed != null) {
-            log.info("Mock: Deleted managed object [id={}, name={}]", idValue, removed.getName());
+            log.info("{} - Mock: Deleted managed object [id={}, name={}]", tenant, idValue, removed.getName());
         } else {
-            log.warn("Mock: Attempted to delete non-existent managed object with ID: {}", idValue);
+            log.warn("{} - Mock: Attempted to delete non-existent managed object with ID: {}", tenant, idValue);
         }
     }
 
@@ -221,11 +274,17 @@ public class MockInventory {
      * @return A mock collection containing matching managed objects
      */
     public ManagedObjectCollection getManagedObjectsByFilter(InventoryFilter filter) {
-        log.debug("Mock: Getting managed objects by filter");
+        String tenant = subscriptionsService.getTenant();
+        
+        if (tenant == null) {
+            throw new IllegalStateException("No tenant context available");
+        }
 
-        List<ManagedObjectRepresentation> filtered = applyFilter(filter);
+        log.debug("{} - Mock: Getting managed objects by filter", tenant);
 
-        log.info("Mock: Found {} managed objects matching filter", filtered.size());
+        List<ManagedObjectRepresentation> filtered = applyFilter(filter, tenant);
+
+        log.info("{} - Mock: Found {} managed objects matching filter", tenant, filtered.size());
 
         return createMockCollection(filtered);
     }
@@ -234,17 +293,20 @@ public class MockInventory {
      * Apply filter criteria to stored managed objects.
      * 
      * @param filter The filter to apply
+     * @param tenant The tenant context
      * @return List of matching managed objects
      */
-    private List<ManagedObjectRepresentation> applyFilter(InventoryFilter filter) {
+    private List<ManagedObjectRepresentation> applyFilter(InventoryFilter filter, String tenant) {
+        Map<String, ManagedObjectRepresentation> tenantStorage = getTenantStorage(tenant);
+
         if (filter == null) {
-            // No filter - return all objects
-            return storage.values().stream()
+            // No filter - return all objects for this tenant
+            return tenantStorage.values().stream()
                     .map(this::deepCopy)
                     .collect(Collectors.toList());
         }
 
-        return storage.values().stream()
+        return tenantStorage.values().stream()
                 .filter(mo -> matchesFilter(mo, filter))
                 .map(this::deepCopy)
                 .collect(Collectors.toList());
@@ -541,126 +603,125 @@ public class MockInventory {
                 return collection;
             }
 
-/**
- * Create a mock PagedCollectionResource for the collection.
- * This is needed by PagedManagedObjectCollectionRepresentation.
- */
-private PagedCollectionResource<ManagedObjectRepresentation, ManagedObjectCollectionRepresentation> 
-        createMockCollectionResource() {
+            /**
+             * Create a mock PagedCollectionResource for the collection.
+             * This is needed by PagedManagedObjectCollectionRepresentation.
+             */
+            private PagedCollectionResource<ManagedObjectRepresentation, ManagedObjectCollectionRepresentation> createMockCollectionResource() {
 
-    return new PagedCollectionResource<ManagedObjectRepresentation, ManagedObjectCollectionRepresentation>() {
+                return new PagedCollectionResource<ManagedObjectRepresentation, ManagedObjectCollectionRepresentation>() {
 
-        @Override
-        public ManagedObjectCollectionRepresentation get(QueryParam... queryParams) throws SDKException {
-            log.debug("Mock: CollectionResource.get() called with default page size");
-            return createBaseCollection(1, DEFAULT_PAGE_SIZE);
-        }
+                    @Override
+                    public ManagedObjectCollectionRepresentation get(QueryParam... queryParams) throws SDKException {
+                        log.debug("Mock: CollectionResource.get() called with default page size");
+                        return createBaseCollection(1, DEFAULT_PAGE_SIZE);
+                    }
 
-        @Override
-        public ManagedObjectCollectionRepresentation get(int pageSize, QueryParam... queryParams)
-                throws SDKException {
-            log.debug("Mock: CollectionResource.get() called with pageSize={}", pageSize);
-            return createBaseCollection(1, pageSize);
-        }
+                    @Override
+                    public ManagedObjectCollectionRepresentation get(int pageSize, QueryParam... queryParams)
+                            throws SDKException {
+                        log.debug("Mock: CollectionResource.get() called with pageSize={}", pageSize);
+                        return createBaseCollection(1, pageSize);
+                    }
 
-        @Override
-        public ManagedObjectCollectionRepresentation getNextPage(
-                BaseCollectionRepresentation collectionRepresentation) throws SDKException {
-            
-            if (collectionRepresentation == null) {
-                throw new SDKException("Collection representation cannot be null");
+                    @Override
+                    public ManagedObjectCollectionRepresentation getNextPage(
+                            BaseCollectionRepresentation collectionRepresentation) throws SDKException {
+
+                        if (collectionRepresentation == null) {
+                            throw new SDKException("Collection representation cannot be null");
+                        }
+
+                        PageStatisticsRepresentation stats = collectionRepresentation.getPageStatistics();
+                        if (stats == null) {
+                            log.warn("Mock: No statistics found in collection, returning first page");
+                            return createBaseCollection(1, DEFAULT_PAGE_SIZE);
+                        }
+
+                        int currentPage = stats.getCurrentPage() != 0 ? stats.getCurrentPage() : 1;
+                        int pageSize = stats.getPageSize() != 0 ? stats.getPageSize() : DEFAULT_PAGE_SIZE;
+                        int totalPages = stats.getTotalPages() != 0 ? stats.getTotalPages() : 1;
+
+                        // Check if there's a next page
+                        if (currentPage >= totalPages) {
+                            log.debug("Mock: Already on last page {}, returning same page", currentPage);
+                            return createBaseCollection(currentPage, pageSize);
+                        }
+
+                        int nextPage = currentPage + 1;
+                        log.debug("Mock: CollectionResource.getNextPage() - moving from page {} to {}",
+                                currentPage, nextPage);
+
+                        return createBaseCollection(nextPage, pageSize);
+                    }
+
+                    @Override
+                    public ManagedObjectCollectionRepresentation getPreviousPage(
+                            BaseCollectionRepresentation collectionRepresentation) throws SDKException {
+
+                        if (collectionRepresentation == null) {
+                            throw new SDKException("Collection representation cannot be null");
+                        }
+
+                        PageStatisticsRepresentation stats = collectionRepresentation.getPageStatistics();
+                        if (stats == null) {
+                            log.warn("Mock: No statistics found in collection, returning first page");
+                            return createBaseCollection(1, DEFAULT_PAGE_SIZE);
+                        }
+
+                        int currentPage = stats.getCurrentPage() != 0 ? stats.getCurrentPage() : 1;
+                        int pageSize = stats.getPageSize() != 0 ? stats.getPageSize() : DEFAULT_PAGE_SIZE;
+
+                        // Check if there's a previous page
+                        if (currentPage <= 1) {
+                            log.debug("Mock: Already on first page, returning same page");
+                            return createBaseCollection(1, pageSize);
+                        }
+
+                        int previousPage = currentPage - 1;
+                        log.debug("Mock: CollectionResource.getPreviousPage() - moving from page {} to {}",
+                                currentPage, previousPage);
+
+                        return createBaseCollection(previousPage, pageSize);
+                    }
+
+                    @Override
+                    public ManagedObjectCollectionRepresentation getPage(
+                            BaseCollectionRepresentation collectionRepresentation,
+                            int pageNumber) throws SDKException {
+
+                        if (collectionRepresentation == null) {
+                            log.warn("Mock: Null collection representation, using default page size");
+                            return createBaseCollection(pageNumber, DEFAULT_PAGE_SIZE);
+                        }
+
+                        PageStatisticsRepresentation stats = collectionRepresentation.getPageStatistics();
+                        int pageSize = stats != null && stats.getPageSize() != 0
+                                ? stats.getPageSize()
+                                : DEFAULT_PAGE_SIZE;
+
+                        log.debug("Mock: CollectionResource.getPage() - page {}, pageSize {}",
+                                pageNumber, pageSize);
+
+                        return createBaseCollection(pageNumber, pageSize);
+                    }
+
+                    @Override
+                    public ManagedObjectCollectionRepresentation getPage(
+                            BaseCollectionRepresentation collectionRepresentation,
+                            int pageNumber,
+                            int pageSize) throws SDKException {
+
+                        log.debug("Mock: CollectionResource.getPage() - page {}, pageSize {}",
+                                pageNumber, pageSize);
+
+                        // Validate page size
+                        int actualPageSize = pageSize > 0 ? pageSize : DEFAULT_PAGE_SIZE;
+
+                        return createBaseCollection(pageNumber, actualPageSize);
+                    }
+                };
             }
-
-            PageStatisticsRepresentation stats = collectionRepresentation.getPageStatistics();
-            if (stats == null) {
-                log.warn("Mock: No statistics found in collection, returning first page");
-                return createBaseCollection(1, DEFAULT_PAGE_SIZE);
-            }
-
-            int currentPage = stats.getCurrentPage() != 0 ? stats.getCurrentPage() : 1;
-            int pageSize = stats.getPageSize() != 0 ? stats.getPageSize() : DEFAULT_PAGE_SIZE;
-            int totalPages = stats.getTotalPages() != 0 ? stats.getTotalPages() : 1;
-            
-            // Check if there's a next page
-            if (currentPage >= totalPages) {
-                log.debug("Mock: Already on last page {}, returning same page", currentPage);
-                return createBaseCollection(currentPage, pageSize);
-            }
-            
-            int nextPage = currentPage + 1;
-            log.debug("Mock: CollectionResource.getNextPage() - moving from page {} to {}", 
-                    currentPage, nextPage);
-            
-            return createBaseCollection(nextPage, pageSize);
-        }
-
-        @Override
-        public ManagedObjectCollectionRepresentation getPreviousPage(
-                BaseCollectionRepresentation collectionRepresentation) throws SDKException {
-            
-            if (collectionRepresentation == null) {
-                throw new SDKException("Collection representation cannot be null");
-            }
-
-            PageStatisticsRepresentation stats = collectionRepresentation.getPageStatistics();
-            if (stats == null) {
-                log.warn("Mock: No statistics found in collection, returning first page");
-                return createBaseCollection(1, DEFAULT_PAGE_SIZE);
-            }
-
-            int currentPage = stats.getCurrentPage() != 0 ? stats.getCurrentPage() : 1;
-            int pageSize = stats.getPageSize() != 0 ? stats.getPageSize() : DEFAULT_PAGE_SIZE;
-            
-            // Check if there's a previous page
-            if (currentPage <= 1) {
-                log.debug("Mock: Already on first page, returning same page");
-                return createBaseCollection(1, pageSize);
-            }
-            
-            int previousPage = currentPage - 1;
-            log.debug("Mock: CollectionResource.getPreviousPage() - moving from page {} to {}", 
-                    currentPage, previousPage);
-            
-            return createBaseCollection(previousPage, pageSize);
-        }
-
-        @Override
-        public ManagedObjectCollectionRepresentation getPage(
-                BaseCollectionRepresentation collectionRepresentation, 
-                int pageNumber) throws SDKException {
-            
-            if (collectionRepresentation == null) {
-                log.warn("Mock: Null collection representation, using default page size");
-                return createBaseCollection(pageNumber, DEFAULT_PAGE_SIZE);
-            }
-
-            PageStatisticsRepresentation stats = collectionRepresentation.getPageStatistics();
-            int pageSize = stats != null && stats.getPageSize() != 0 
-                    ? stats.getPageSize() 
-                    : DEFAULT_PAGE_SIZE;
-            
-            log.debug("Mock: CollectionResource.getPage() - page {}, pageSize {}", 
-                    pageNumber, pageSize);
-            
-            return createBaseCollection(pageNumber, pageSize);
-        }
-
-        @Override
-        public ManagedObjectCollectionRepresentation getPage(
-                BaseCollectionRepresentation collectionRepresentation, 
-                int pageNumber, 
-                int pageSize) throws SDKException {
-            
-            log.debug("Mock: CollectionResource.getPage() - page {}, pageSize {}", 
-                    pageNumber, pageSize);
-            
-            // Validate page size
-            int actualPageSize = pageSize > 0 ? pageSize : DEFAULT_PAGE_SIZE;
-            
-            return createBaseCollection(pageNumber, actualPageSize);
-        }
-    };
-}
         };
     }
 
@@ -721,12 +782,14 @@ private PagedCollectionResource<ManagedObjectRepresentation, ManagedObjectCollec
     }
 
     /**
-     * Generate a unique ID for a new managed object.
+     * Generate a unique ID for a new managed object in a specific tenant.
      * 
+     * @param tenant The tenant identifier
      * @return A unique ID string
      */
-    private String generateId() {
-        return String.valueOf(idCounter.getAndIncrement());
+    private String generateId(String tenant) {
+        AtomicLong counter = getTenantIdCounter(tenant);
+        return String.valueOf(counter.getAndIncrement());
     }
 
     /**
@@ -742,88 +805,166 @@ private PagedCollectionResource<ManagedObjectRepresentation, ManagedObjectCollec
     // ===== Testing and Utility Methods =====
 
     /**
-     * Clear all objects from mock storage.
+     * Clear all objects from mock storage for the current tenant.
      * Useful for test cleanup.
      */
     public void clear() {
-        int count = storage.size();
-        storage.clear();
-        idCounter.set(10000);
-        log.info("Mock: Cleared {} objects from storage", count);
+        String tenant = subscriptionsService.getTenant();
+        
+        if (tenant == null) {
+            throw new IllegalStateException("No tenant context available");
+        }
+
+        Map<String, ManagedObjectRepresentation> tenantStorage = getTenantStorage(tenant);
+        int count = tenantStorage.size();
+        tenantStorage.clear();
+        
+        AtomicLong counter = getTenantIdCounter(tenant);
+        counter.set(10000);
+        
+        log.info("{} - Mock: Cleared {} objects from storage", tenant, count);
     }
 
     /**
-     * Check if a managed object exists in mock storage.
+     * Clear all objects from all tenants.
+     * Use with caution - typically only for test cleanup.
+     */
+    public void clearAll() {
+        int totalCount = storage.values().stream()
+                .mapToInt(Map::size)
+                .sum();
+        
+        storage.clear();
+        idCounters.clear();
+        
+        log.info("Mock: Cleared {} objects from all tenants", totalCount);
+    }
+
+    /**
+     * Check if a managed object exists in mock storage for the current tenant.
      * 
      * @param id The ID to check
      * @return true if the object exists
      */
     public boolean exists(GId id) {
-        return id != null && storage.containsKey(id.getValue());
+        String tenant = subscriptionsService.getTenant();
+        
+        if (tenant == null) {
+            throw new IllegalStateException("No tenant context available");
+        }
+
+        Map<String, ManagedObjectRepresentation> tenantStorage = getTenantStorage(tenant);
+        return id != null && tenantStorage.containsKey(id.getValue());
     }
 
     /**
-     * Get the count of objects in mock storage.
+     * Get the count of objects in mock storage for the current tenant.
      * 
      * @return The number of stored objects
      */
     public int getStorageCount() {
-        return storage.size();
+        String tenant = subscriptionsService.getTenant();
+        
+        if (tenant == null) {
+            throw new IllegalStateException("No tenant context available");
+        }
+
+        Map<String, ManagedObjectRepresentation> tenantStorage = getTenantStorage(tenant);
+        return tenantStorage.size();
     }
 
     /**
-     * Get all objects from mock storage.
+     * Get the total count of objects across all tenants.
+     * 
+     * @return The total number of stored objects
+     */
+    public int getTotalStorageCount() {
+        return storage.values().stream()
+                .mapToInt(Map::size)
+                .sum();
+    }
+
+    /**
+     * Get all objects from mock storage for the current tenant.
      * Returns copies to prevent external modification.
      * 
      * @return List of all stored managed objects
      */
     public List<ManagedObjectRepresentation> getAllObjects() {
-        return storage.values().stream()
+        String tenant = subscriptionsService.getTenant();
+        
+        if (tenant == null) {
+            throw new IllegalStateException("No tenant context available");
+        }
+
+        Map<String, ManagedObjectRepresentation> tenantStorage = getTenantStorage(tenant);
+        return tenantStorage.values().stream()
                 .map(this::deepCopy)
                 .collect(Collectors.toList());
     }
 
     /**
-     * Get objects by type.
+     * Get objects by type for the current tenant.
      * 
      * @param type The type to filter by
      * @return List of matching managed objects
      */
     public List<ManagedObjectRepresentation> getObjectsByType(String type) {
-        return storage.values().stream()
+        String tenant = subscriptionsService.getTenant();
+        
+        if (tenant == null) {
+            throw new IllegalStateException("No tenant context available");
+        }
+
+        Map<String, ManagedObjectRepresentation> tenantStorage = getTenantStorage(tenant);
+        return tenantStorage.values().stream()
                 .filter(mo -> type.equals(mo.getType()))
                 .map(this::deepCopy)
                 .collect(Collectors.toList());
     }
 
     /**
-     * Get objects by name (partial match).
+     * Get objects by name (partial match) for the current tenant.
      * 
      * @param name The name to search for
      * @return List of matching managed objects
      */
     public List<ManagedObjectRepresentation> getObjectsByName(String name) {
-        return storage.values().stream()
+        String tenant = subscriptionsService.getTenant();
+        
+        if (tenant == null) {
+            throw new IllegalStateException("No tenant context available");
+        }
+
+        Map<String, ManagedObjectRepresentation> tenantStorage = getTenantStorage(tenant);
+        return tenantStorage.values().stream()
                 .filter(mo -> mo.getName() != null && mo.getName().contains(name))
                 .map(this::deepCopy)
                 .collect(Collectors.toList());
     }
 
     /**
-     * Pre-populate mock storage with a test object.
+     * Pre-populate mock storage with a test object for the current tenant.
      * 
      * @param mor The managed object to add
      */
     public void addMockObject(ManagedObjectRepresentation mor) {
+        String tenant = subscriptionsService.getTenant();
+        
+        if (tenant == null) {
+            throw new IllegalStateException("No tenant context available");
+        }
+
         if (mor == null) {
             throw new IllegalArgumentException("Cannot add null managed object");
         }
 
+        Map<String, ManagedObjectRepresentation> tenantStorage = getTenantStorage(tenant);
         ManagedObjectRepresentation copy = deepCopy(mor);
 
         // Generate ID if not present
         if (copy.getId() == null) {
-            copy.setId(GId.asGId(generateId()));
+            copy.setId(GId.asGId(generateId(tenant)));
         }
 
         // Set timestamps if not present
@@ -840,59 +981,113 @@ private PagedCollectionResource<ManagedObjectRepresentation, ManagedObjectCollec
             copy.setSelf(generateSelfLink(copy.getId()));
         }
 
-        storage.put(copy.getId().getValue(), copy);
-        log.debug("Mock: Pre-populated object [id={}, name={}]", copy.getId().getValue(), copy.getName());
+        tenantStorage.put(copy.getId().getValue(), copy);
+        log.debug("{} - Mock: Pre-populated object [id={}, name={}]", tenant, copy.getId().getValue(), copy.getName());
     }
 
     /**
-     * Set the next ID to be generated.
+     * Set the next ID to be generated for the current tenant.
      * Useful for controlling IDs in tests.
      * 
      * @param nextId The next ID value
      */
     public void setNextId(long nextId) {
-        idCounter.set(nextId);
-        log.debug("Mock: Set next ID to {}", nextId);
+        String tenant = subscriptionsService.getTenant();
+        
+        if (tenant == null) {
+            throw new IllegalStateException("No tenant context available");
+        }
+
+        AtomicLong counter = getTenantIdCounter(tenant);
+        counter.set(nextId);
+        log.debug("{} - Mock: Set next ID to {}", tenant, nextId);
     }
 
     /**
-     * Get statistics about mock storage.
+     * Get statistics about mock storage for the current tenant.
      * 
      * @return Map containing storage statistics
      */
     public Map<String, Object> getStatistics() {
+        String tenant = subscriptionsService.getTenant();
+        
+        if (tenant == null) {
+            throw new IllegalStateException("No tenant context available");
+        }
+
+        Map<String, ManagedObjectRepresentation> tenantStorage = getTenantStorage(tenant);
+        AtomicLong counter = getTenantIdCounter(tenant);
+        
         Map<String, Object> stats = new HashMap<>();
-        stats.put("totalObjects", storage.size());
-        stats.put("nextId", idCounter.get());
+        stats.put("tenant", tenant);
+        stats.put("totalObjects", tenantStorage.size());
+        stats.put("nextId", counter.get());
 
         // Count by type
-        Map<String, Long> typeCount = storage.values().stream()
+        Map<String, Long> typeCount = tenantStorage.values().stream()
                 .collect(Collectors.groupingBy(
                         mo -> mo.getType() != null ? mo.getType() : "unknown",
                         Collectors.counting()));
         stats.put("objectsByType", typeCount);
 
         // Count by owner
-        Map<String, Long> ownerCount = storage.values().stream()
+        Map<String, Long> ownerCount = tenantStorage.values().stream()
                 .collect(Collectors.groupingBy(
                         mo -> mo.getOwner() != null ? mo.getOwner() : "unknown",
                         Collectors.counting()));
         stats.put("objectsByOwner", ownerCount);
 
-        log.debug("Mock: Generated statistics: {}", stats);
+        log.debug("{} - Mock: Generated statistics: {}", tenant, stats);
         return stats;
     }
 
     /**
-     * Get a summary of the mock storage state.
+     * Get statistics for all tenants.
+     * 
+     * @return Map containing storage statistics for all tenants
+     */
+    public Map<String, Object> getAllStatistics() {
+        Map<String, Object> allStats = new HashMap<>();
+        
+        allStats.put("totalTenants", storage.size());
+        allStats.put("totalObjects", getTotalStorageCount());
+        
+        Map<String, Integer> tenantCounts = new HashMap<>();
+        storage.forEach((tenant, tenantStorage) -> {
+            tenantCounts.put(tenant, tenantStorage.size());
+        });
+        allStats.put("objectsByTenant", tenantCounts);
+        
+        log.debug("Mock: Generated all-tenant statistics: {}", allStats);
+        return allStats;
+    }
+
+    /**
+     * Get a summary of the mock storage state for the current tenant.
      * 
      * @return Human-readable summary string
      */
     public String getSummary() {
+        String tenant = subscriptionsService.getTenant();
+        
+        if (tenant == null) {
+            throw new IllegalStateException("No tenant context available");
+        }
+
         Map<String, Object> stats = getStatistics();
-        return String.format("MockInventory[objects=%d, nextId=%d, types=%s]",
+        return String.format("MockInventory[tenant=%s, objects=%d, nextId=%d, types=%s]",
+                stats.get("tenant"),
                 stats.get("totalObjects"),
                 stats.get("nextId"),
                 stats.get("objectsByType"));
+    }
+
+    /**
+     * Get a list of all tenants with mock data.
+     * 
+     * @return Set of tenant identifiers
+     */
+    public Set<String> getTenants() {
+        return new HashSet<>(storage.keySet());
     }
 }

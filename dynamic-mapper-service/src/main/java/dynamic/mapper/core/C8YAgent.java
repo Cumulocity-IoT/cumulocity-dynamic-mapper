@@ -1224,6 +1224,10 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     }
 
     public Map<String, Object> getMOFromInventoryCacheByExternalId(String tenant, String externalId, String type, Boolean testing) {
+
+        if (externalId == null || type == null) {
+            return null;
+        }
         ID identity = new ID(type, externalId);
         ExternalIDRepresentation sourceId = this.resolveExternalId2GlobalId(tenant, identity, testing);
         if (sourceId != null) {
@@ -1277,6 +1281,11 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     }
 
     public Map<String, Object> getMOFromInventoryCache(String tenant, String sourceId, Boolean testing) {
+
+        if (sourceId == null) {
+            return null;
+        }
+
         InventoryCache inventoryCache = getInventoryCache(tenant);
         Map<String, Object> result = inventoryCache.getMOBySource(sourceId);
         if (result != null) {

@@ -38,6 +38,7 @@ import dynamic.mapper.core.*;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.TestContext;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.model.ProcessingContext.SerializableError;
 import dynamic.mapper.processor.model.ProcessingResult;
 import dynamic.mapper.service.ConnectorConfigurationService;
 import dynamic.mapper.service.MappingService;
@@ -159,22 +160,19 @@ public class TestController {
                         }
                         r.setServiceConfiguration(null);
 
+                        // Simply clear the errors list - don't try to serialize Exception objects
                         // Replace errors with sanitized versions that can be serialized
                         if (r.getErrors() != null && !r.getErrors().isEmpty()) {
-                            List<Exception> sanitizedErrors = new ArrayList<>();
+                            List<SerializableError> sanitizedErrors = new ArrayList<>();
                             r.getErrors().forEach(e -> {
-                                // Create new exception with only class name and message
-                                String className = e.getClass().getName();
-                                String message = e.getMessage();
-                                Exception sanitized = new Exception(
-                                        String.format("[%s] %s", className, message != null ? message : "No message"));
-                                // Ensure no stack trace
-                                sanitized.setStackTrace(new StackTraceElement[0]);
-                                sanitizedErrors.add(sanitized);
+                                sanitizedErrors.add(new SerializableError(
+                                        e.getClass().getName(),
+                                        e.getMessage() != null ? e.getMessage() : "No message"));
                             });
+                            r.setSerializableErrors(sanitizedErrors);
                             r.getErrors().clear();
-                            r.getErrors().addAll(sanitizedErrors);
                         }
+                        r.setRawPayload(null);
                     });
                 }
             }
@@ -250,4 +248,5 @@ public class TestController {
                 .payload(payloadMessage.getBytes())
                 .build();
     }
+
 }

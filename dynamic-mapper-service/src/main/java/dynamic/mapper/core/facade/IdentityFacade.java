@@ -54,7 +54,7 @@ public class IdentityFacade {
         externalIDRepresentation.setType(id.getType());
         externalIDRepresentation.setExternalId(id.getValue());
         externalIDRepresentation.setManagedObject(mor);
-        if ( !testing ) {
+        if (!testing) {
             return identityApi.create(externalIDRepresentation);
         } else {
             return identityMock.create(externalIDRepresentation);
@@ -62,7 +62,7 @@ public class IdentityFacade {
     }
 
     public ExternalIDRepresentation resolveExternalId2GlobalId(ID externalID, Boolean testing, Semaphore c8ySemaphore) {
-        if ( !testing ) {
+        if (!testing) {
             try {
                 c8ySemaphore.acquire();
                 return identityApi.getExternalId(externalID);
@@ -79,7 +79,7 @@ public class IdentityFacade {
 
     public ExternalIDRepresentation resolveGlobalId2ExternalId(GId gid, String externalIdType,
             Boolean testing, Semaphore c8ySemaphore) {
-        if ( !testing ) {
+        if (!testing) {
             MutableObject<ExternalIDRepresentation> result = new MutableObject<ExternalIDRepresentation>(null);
             try {
                 c8ySemaphore.acquire();
@@ -99,6 +99,10 @@ public class IdentityFacade {
         } else {
             return identityMock.getExternalIdsOfGlobalId(gid);
         }
+    }
+
+    public void clearMockIdentityCache() {
+        identityMock.clear();
     }
 
 }

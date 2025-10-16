@@ -110,7 +110,7 @@ public class ConnectorConfiguration implements Cloneable, Serializable {
     public ConnectorConfiguration getCleanedConfig(ConnectorSpecification connectorSpecification) {
         ConnectorConfiguration clonedConfig = (ConnectorConfiguration) this.clone();
         for (String property : clonedConfig.getProperties().keySet()) {
-            if (connectorSpecification.isPropertySensitive(property)) {
+            if (connectorSpecification != null && connectorSpecification.isPropertySensitive(property)) {
                 clonedConfig.getProperties().replace(property, "****");
             }
         }

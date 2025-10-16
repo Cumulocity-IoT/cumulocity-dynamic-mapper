@@ -200,4 +200,9 @@ public class InventoryFacade {
     public boolean existsInMock(GId id) {
         return inventoryMock.exists(id);
     }
+
+
+    public void clearInventoryCache() {
+       inventoryMock.clear();
+    }
 }

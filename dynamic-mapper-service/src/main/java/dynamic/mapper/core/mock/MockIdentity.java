@@ -21,6 +21,7 @@
 
 package dynamic.mapper.core.mock;
 
+import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.ID;
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.BaseCollectionRepresentation;
@@ -34,6 +35,7 @@ import com.cumulocity.sdk.client.SDKException;
 import com.cumulocity.sdk.client.identity.ExternalIDCollection;
 import com.cumulocity.sdk.client.identity.PagedExternalIDCollectionRepresentation;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -47,29 +49,48 @@ import java.util.stream.Collectors;
  * calls.
  * 
  * Features:
- * - Thread-safe storage of external ID to managed object mappings
+ * - Thread-safe storage of external ID to managed object mappings with tenant separation
  * - Bidirectional lookup (external ID to global ID and vice versa)
  * - Support for multiple external IDs per managed object
  * - Statistics and utilities for testing
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class MockIdentity {
 
     /**
-     * Storage structure: Key = "type:externalId", Value = ExternalIDRepresentation
-     * This allows quick lookup by external ID
+     * Storage structure: tenant -> "type:externalId" -> ExternalIDRepresentation
+     * This allows quick lookup by external ID within tenant context
      */
-    private final Map<String, ExternalIDRepresentation> externalIdStorage = new ConcurrentHashMap<>();
+    private final Map<String, Map<String, ExternalIDRepresentation>> externalIdStorage = new ConcurrentHashMap<>();
 
     /**
-     * Reverse index: Key = GlobalId, Value = List of external IDs
-     * This allows quick lookup of all external IDs for a managed object
+     * Reverse index: tenant -> GlobalId -> List of external IDs
+     * This allows quick lookup of all external IDs for a managed object within tenant context
      */
-    private final Map<String, List<ExternalIDRepresentation>> globalIdIndex = new ConcurrentHashMap<>();
+    private final Map<String, Map<String, List<ExternalIDRepresentation>>> globalIdIndex = new ConcurrentHashMap<>();
 
-    public MockIdentity() {
-        log.info("MockIdentity initialized");
+    private final MicroserviceSubscriptionsService subscriptionsService;
+
+    /**
+     * Get or create external ID storage for a specific tenant.
+     * 
+     * @param tenant The tenant identifier
+     * @return The external ID storage map for the tenant
+     */
+    private Map<String, ExternalIDRepresentation> getTenantExternalIdStorage(String tenant) {
+        return externalIdStorage.computeIfAbsent(tenant, k -> new ConcurrentHashMap<>());
+    }
+
+    /**
+     * Get or create global ID index for a specific tenant.
+     * 
+     * @param tenant The tenant identifier
+     * @return The global ID index map for the tenant
+     */
+    private Map<String, List<ExternalIDRepresentation>> getTenantGlobalIdIndex(String tenant) {
+        return globalIdIndex.computeIfAbsent(tenant, k -> new ConcurrentHashMap<>());
     }
 
     /**
@@ -80,6 +101,12 @@ public class MockIdentity {
      * @return The created external ID representation
      */
     public ExternalIDRepresentation create(ExternalIDRepresentation externalIDRepresentation) {
+        String tenant = subscriptionsService.getTenant();
+        
+        if (tenant == null) {
+            throw new IllegalStateException("No tenant context available");
+        }
+
         if (externalIDRepresentation == null) {
             throw new IllegalArgumentException("Cannot create null external ID");
         }
@@ -92,9 +119,13 @@ public class MockIdentity {
             throw new IllegalArgumentException("Managed object must not be null");
         }
 
-        log.debug("Mock: Creating external ID [type={}, id={}]",
+        log.debug("{} - Mock: Creating external ID [type={}, id={}]",
+                tenant,
                 externalIDRepresentation.getType(),
                 externalIDRepresentation.getExternalId());
+
+        Map<String, ExternalIDRepresentation> tenantExternalIdStorage = getTenantExternalIdStorage(tenant);
+        Map<String, List<ExternalIDRepresentation>> tenantGlobalIdIndex = getTenantGlobalIdIndex(tenant);
 
         // Create storage key
         String storageKey = createStorageKey(
@@ -102,31 +133,33 @@ public class MockIdentity {
                 externalIDRepresentation.getExternalId());
 
         // Check if external ID already exists
-        if (externalIdStorage.containsKey(storageKey)) {
-            log.warn("Mock: External ID [type={}, id={}] already exists, updating it",
+        if (tenantExternalIdStorage.containsKey(storageKey)) {
+            log.warn("{} - Mock: External ID [type={}, id={}] already exists, updating it",
+                    tenant,
                     externalIDRepresentation.getType(),
                     externalIDRepresentation.getExternalId());
         }
 
         // Store the external ID
         ExternalIDRepresentation copy = deepCopy(externalIDRepresentation);
-        externalIdStorage.put(storageKey, copy);
+        tenantExternalIdStorage.put(storageKey, copy);
 
         // Update reverse index
         GId globalId = copy.getManagedObject().getId();
         if (globalId != null) {
             String globalIdKey = globalId.getValue();
-            globalIdIndex.computeIfAbsent(globalIdKey, k -> new ArrayList<>()).add(copy);
+            tenantGlobalIdIndex.computeIfAbsent(globalIdKey, k -> new ArrayList<>()).add(copy);
 
             // Remove duplicates in the list
-            List<ExternalIDRepresentation> externalIds = globalIdIndex.get(globalIdKey);
-            globalIdIndex.put(globalIdKey,
+            List<ExternalIDRepresentation> externalIds = tenantGlobalIdIndex.get(globalIdKey);
+            tenantGlobalIdIndex.put(globalIdKey,
                     externalIds.stream()
                             .distinct()
                             .collect(Collectors.toList()));
         }
 
-        log.info("Mock: Created external ID [type={}, id={}, globalId={}]",
+        log.info("{} - Mock: Created external ID [type={}, id={}, globalId={}]",
+                tenant,
                 copy.getType(),
                 copy.getExternalId(),
                 globalId != null ? globalId.getValue() : "null");
@@ -141,6 +174,12 @@ public class MockIdentity {
      * @return The external ID representation, or null if not found
      */
     public ExternalIDRepresentation getExternalId(ID id) {
+        String tenant = subscriptionsService.getTenant();
+        
+        if (tenant == null) {
+            throw new IllegalStateException("No tenant context available");
+        }
+
         if (id == null) {
             throw new IllegalArgumentException("ID cannot be null");
         }
@@ -151,17 +190,18 @@ public class MockIdentity {
 
         String storageKey = createStorageKey(id.getType(), id.getValue());
 
-        log.debug("Mock: Getting external ID [type={}, id={}]", id.getType(), id.getValue());
+        log.debug("{} - Mock: Getting external ID [type={}, id={}]", tenant, id.getType(), id.getValue());
 
-        ExternalIDRepresentation result = externalIdStorage.get(storageKey);
+        Map<String, ExternalIDRepresentation> tenantExternalIdStorage = getTenantExternalIdStorage(tenant);
+        ExternalIDRepresentation result = tenantExternalIdStorage.get(storageKey);
 
         if (result == null) {
-            log.debug("Mock: External ID [type={}, id={}] not found", id.getType(), id.getValue());
+            log.debug("{} - Mock: External ID [type={}, id={}] not found", tenant, id.getType(), id.getValue());
             return null;
         }
 
-        log.trace("Mock: Found external ID mapping to global ID: {}",
-                result.getManagedObject().getId().getValue());
+        log.trace("{} - Mock: Found external ID mapping to global ID: {}",
+                tenant, result.getManagedObject().getId().getValue());
 
         return deepCopy(result);
     }
@@ -174,26 +214,33 @@ public class MockIdentity {
      * @return The external ID representation, or null if not found
      */
     public ExternalIDRepresentation getExternalIdsOfGlobalId(GId gid) {
+        String tenant = subscriptionsService.getTenant();
+        
+        if (tenant == null) {
+            throw new IllegalStateException("No tenant context available");
+        }
+
         if (gid == null) {
             throw new IllegalArgumentException("Global ID cannot be null");
         }
 
         String globalIdKey = gid.getValue();
 
-        log.debug("Mock: Getting external IDs for global ID: {}", globalIdKey);
+        log.debug("{} - Mock: Getting external IDs for global ID: {}", tenant, globalIdKey);
 
-        List<ExternalIDRepresentation> externalIds = globalIdIndex.get(globalIdKey);
+        Map<String, List<ExternalIDRepresentation>> tenantGlobalIdIndex = getTenantGlobalIdIndex(tenant);
+        List<ExternalIDRepresentation> externalIds = tenantGlobalIdIndex.get(globalIdKey);
 
         if (externalIds == null || externalIds.isEmpty()) {
-            log.debug("Mock: No external IDs found for global ID: {}", globalIdKey);
+            log.debug("{} - Mock: No external IDs found for global ID: {}", tenant, globalIdKey);
             return null;
         }
 
         // Return first external ID (matches the behavior in IdentityFacade)
         ExternalIDRepresentation result = externalIds.get(0);
 
-        log.trace("Mock: Found {} external ID(s) for global ID: {}, returning first one [type={}, id={}]",
-                externalIds.size(), globalIdKey, result.getType(), result.getExternalId());
+        log.trace("{} - Mock: Found {} external ID(s) for global ID: {}, returning first one [type={}, id={}]",
+                tenant, externalIds.size(), globalIdKey, result.getType(), result.getExternalId());
 
         return deepCopy(result);
     }
@@ -206,17 +253,24 @@ public class MockIdentity {
      * @return Collection of external IDs
      */
     public ExternalIDCollection getExternalIdsCollectionOfGlobalId(GId gid) {
+        String tenant = subscriptionsService.getTenant();
+        
+        if (tenant == null) {
+            throw new IllegalStateException("No tenant context available");
+        }
+
         if (gid == null) {
             throw new IllegalArgumentException("Global ID cannot be null");
         }
 
         String globalIdKey = gid.getValue();
 
-        log.debug("Mock: Getting external ID collection for global ID: {}", globalIdKey);
+        log.debug("{} - Mock: Getting external ID collection for global ID: {}", tenant, globalIdKey);
 
-        List<ExternalIDRepresentation> externalIds = globalIdIndex.getOrDefault(globalIdKey, new ArrayList<>());
+        Map<String, List<ExternalIDRepresentation>> tenantGlobalIdIndex = getTenantGlobalIdIndex(tenant);
+        List<ExternalIDRepresentation> externalIds = tenantGlobalIdIndex.getOrDefault(globalIdKey, new ArrayList<>());
 
-        log.info("Mock: Found {} external ID(s) for global ID: {}", externalIds.size(), globalIdKey);
+        log.info("{} - Mock: Found {} external ID(s) for global ID: {}", tenant, externalIds.size(), globalIdKey);
 
         // Return a mock collection
         return createMockExternalIDCollection(externalIds);
@@ -228,37 +282,46 @@ public class MockIdentity {
      * @param id The ID to delete
      */
     public void deleteExternalId(ID id) {
+        String tenant = subscriptionsService.getTenant();
+        
+        if (tenant == null) {
+            throw new IllegalStateException("No tenant context available");
+        }
+
         if (id == null) {
             throw new IllegalArgumentException("ID cannot be null");
         }
 
         String storageKey = createStorageKey(id.getType(), id.getValue());
 
-        log.debug("Mock: Deleting external ID [type={}, id={}]", id.getType(), id.getValue());
+        log.debug("{} - Mock: Deleting external ID [type={}, id={}]", tenant, id.getType(), id.getValue());
 
-        ExternalIDRepresentation removed = externalIdStorage.remove(storageKey);
+        Map<String, ExternalIDRepresentation> tenantExternalIdStorage = getTenantExternalIdStorage(tenant);
+        Map<String, List<ExternalIDRepresentation>> tenantGlobalIdIndex = getTenantGlobalIdIndex(tenant);
+
+        ExternalIDRepresentation removed = tenantExternalIdStorage.remove(storageKey);
 
         if (removed != null) {
             // Update reverse index
             GId globalId = removed.getManagedObject().getId();
             if (globalId != null) {
                 String globalIdKey = globalId.getValue();
-                List<ExternalIDRepresentation> externalIds = globalIdIndex.get(globalIdKey);
+                List<ExternalIDRepresentation> externalIds = tenantGlobalIdIndex.get(globalIdKey);
                 if (externalIds != null) {
                     externalIds.removeIf(ext -> ext.getType().equals(id.getType()) &&
                             ext.getExternalId().equals(id.getValue()));
 
                     // Remove entry if list is empty
                     if (externalIds.isEmpty()) {
-                        globalIdIndex.remove(globalIdKey);
+                        tenantGlobalIdIndex.remove(globalIdKey);
                     }
                 }
             }
 
-            log.info("Mock: Deleted external ID [type={}, id={}]", id.getType(), id.getValue());
+            log.info("{} - Mock: Deleted external ID [type={}, id={}]", tenant, id.getType(), id.getValue());
         } else {
-            log.warn("Mock: Attempted to delete non-existent external ID [type={}, id={}]",
-                    id.getType(), id.getValue());
+            log.warn("{} - Mock: Attempted to delete non-existent external ID [type={}, id={}]",
+                    tenant, id.getType(), id.getValue());
         }
     }
 
@@ -268,26 +331,36 @@ public class MockIdentity {
      * @param gid The global ID
      */
     public void deleteExternalIdsOfGlobalId(GId gid) {
+        String tenant = subscriptionsService.getTenant();
+        
+        if (tenant == null) {
+            throw new IllegalStateException("No tenant context available");
+        }
+
         if (gid == null) {
             throw new IllegalArgumentException("Global ID cannot be null");
         }
 
         String globalIdKey = gid.getValue();
 
-        log.debug("Mock: Deleting all external IDs for global ID: {}", globalIdKey);
+        log.debug("{} - Mock: Deleting all external IDs for global ID: {}", tenant, globalIdKey);
 
-        List<ExternalIDRepresentation> externalIds = globalIdIndex.remove(globalIdKey);
+        Map<String, ExternalIDRepresentation> tenantExternalIdStorage = getTenantExternalIdStorage(tenant);
+        Map<String, List<ExternalIDRepresentation>> tenantGlobalIdIndex = getTenantGlobalIdIndex(tenant);
+
+        List<ExternalIDRepresentation> externalIds = tenantGlobalIdIndex.remove(globalIdKey);
 
         if (externalIds != null) {
             // Remove from main storage
             for (ExternalIDRepresentation externalId : externalIds) {
                 String storageKey = createStorageKey(externalId.getType(), externalId.getExternalId());
-                externalIdStorage.remove(storageKey);
+                tenantExternalIdStorage.remove(storageKey);
             }
 
-            log.info("Mock: Deleted {} external ID(s) for global ID: {}", externalIds.size(), globalIdKey);
+            log.info("{} - Mock: Deleted {} external ID(s) for global ID: {}", 
+                    tenant, externalIds.size(), globalIdKey);
         } else {
-            log.warn("Mock: No external IDs found for global ID: {}", globalIdKey);
+            log.warn("{} - Mock: No external IDs found for global ID: {}", tenant, globalIdKey);
         }
     }
 
@@ -637,18 +710,46 @@ public class MockIdentity {
     // ===== Testing and Utility Methods =====
 
     /**
-     * Clear all external ID mappings.
+     * Clear all external ID mappings for the current tenant.
      * Useful for test cleanup.
      */
     public void clear() {
-        int externalIdCount = externalIdStorage.size();
-        int globalIdCount = globalIdIndex.size();
+        String tenant = subscriptionsService.getTenant();
+        
+        if (tenant == null) {
+            throw new IllegalStateException("No tenant context available");
+        }
+
+        Map<String, ExternalIDRepresentation> tenantExternalIdStorage = getTenantExternalIdStorage(tenant);
+        Map<String, List<ExternalIDRepresentation>> tenantGlobalIdIndex = getTenantGlobalIdIndex(tenant);
+
+        int externalIdCount = tenantExternalIdStorage.size();
+        int globalIdCount = tenantGlobalIdIndex.size();
+
+        tenantExternalIdStorage.clear();
+        tenantGlobalIdIndex.clear();
+
+        log.info("{} - Mock: Cleared {} external ID(s) and {} global ID index entries",
+                tenant, externalIdCount, globalIdCount);
+    }
+
+    /**
+     * Clear all external ID mappings for all tenants.
+     * Use with caution - typically only for test cleanup.
+     */
+    public void clearAll() {
+        int totalExternalIds = externalIdStorage.values().stream()
+                .mapToInt(Map::size)
+                .sum();
+        int totalGlobalIds = globalIdIndex.values().stream()
+                .mapToInt(Map::size)
+                .sum();
 
         externalIdStorage.clear();
         globalIdIndex.clear();
 
-        log.info("Mock: Cleared {} external ID(s) and {} global ID index entries",
-                externalIdCount, globalIdCount);
+        log.info("Mock: Cleared {} external ID(s) and {} global ID index entries from all tenants",
+                totalExternalIds, totalGlobalIds);
     }
 
     /**
@@ -658,12 +759,19 @@ public class MockIdentity {
      * @return true if the external ID exists
      */
     public boolean exists(ID id) {
+        String tenant = subscriptionsService.getTenant();
+        
+        if (tenant == null) {
+            throw new IllegalStateException("No tenant context available");
+        }
+
         if (id == null || id.getType() == null || id.getValue() == null) {
             return false;
         }
 
         String storageKey = createStorageKey(id.getType(), id.getValue());
-        return externalIdStorage.containsKey(storageKey);
+        Map<String, ExternalIDRepresentation> tenantExternalIdStorage = getTenantExternalIdStorage(tenant);
+        return tenantExternalIdStorage.containsKey(storageKey);
     }
 
     /**
@@ -673,92 +781,206 @@ public class MockIdentity {
      * @return true if the global ID has external IDs
      */
     public boolean hasExternalIds(GId gid) {
+        String tenant = subscriptionsService.getTenant();
+        
+        if (tenant == null) {
+            throw new IllegalStateException("No tenant context available");
+        }
+
         if (gid == null) {
             return false;
         }
 
-        List<ExternalIDRepresentation> externalIds = globalIdIndex.get(gid.getValue());
+        Map<String, List<ExternalIDRepresentation>> tenantGlobalIdIndex = getTenantGlobalIdIndex(tenant);
+        List<ExternalIDRepresentation> externalIds = tenantGlobalIdIndex.get(gid.getValue());
         return externalIds != null && !externalIds.isEmpty();
     }
 
     /**
-     * Get count of stored external IDs.
+     * Get count of stored external IDs for the current tenant.
      * 
      * @return The number of external IDs
      */
     public int getExternalIdCount() {
-        return externalIdStorage.size();
+        String tenant = subscriptionsService.getTenant();
+        
+        if (tenant == null) {
+            throw new IllegalStateException("No tenant context available");
+        }
+
+        Map<String, ExternalIDRepresentation> tenantExternalIdStorage = getTenantExternalIdStorage(tenant);
+        return tenantExternalIdStorage.size();
     }
 
     /**
-     * Get count of global IDs that have external IDs.
+     * Get total count of external IDs across all tenants.
+     * 
+     * @return The total number of external IDs
+     */
+    public int getTotalExternalIdCount() {
+        return externalIdStorage.values().stream()
+                .mapToInt(Map::size)
+                .sum();
+    }
+
+    /**
+     * Get count of global IDs that have external IDs for the current tenant.
      * 
      * @return The number of global IDs
      */
     public int getGlobalIdCount() {
-        return globalIdIndex.size();
+        String tenant = subscriptionsService.getTenant();
+        
+        if (tenant == null) {
+            throw new IllegalStateException("No tenant context available");
+        }
+
+        Map<String, List<ExternalIDRepresentation>> tenantGlobalIdIndex = getTenantGlobalIdIndex(tenant);
+        return tenantGlobalIdIndex.size();
     }
 
     /**
-     * Get all external IDs (for testing).
+     * Get total count of global IDs across all tenants.
+     * 
+     * @return The total number of global IDs
+     */
+    public int getTotalGlobalIdCount() {
+        return globalIdIndex.values().stream()
+                .mapToInt(Map::size)
+                .sum();
+    }
+
+    /**
+     * Get all external IDs for the current tenant (for testing).
      * 
      * @return List of all external IDs
      */
     public List<ExternalIDRepresentation> getAllExternalIds() {
-        return externalIdStorage.values().stream()
+        String tenant = subscriptionsService.getTenant();
+        
+        if (tenant == null) {
+            throw new IllegalStateException("No tenant context available");
+        }
+
+        Map<String, ExternalIDRepresentation> tenantExternalIdStorage = getTenantExternalIdStorage(tenant);
+        return tenantExternalIdStorage.values().stream()
                 .map(this::deepCopy)
                 .collect(Collectors.toList());
     }
 
     /**
-     * Get external IDs by type (for testing).
+     * Get external IDs by type for the current tenant (for testing).
      * 
      * @param type The type to filter by
      * @return List of matching external IDs
      */
     public List<ExternalIDRepresentation> getExternalIdsByType(String type) {
-        return externalIdStorage.values().stream()
+        String tenant = subscriptionsService.getTenant();
+        
+        if (tenant == null) {
+            throw new IllegalStateException("No tenant context available");
+        }
+
+        Map<String, ExternalIDRepresentation> tenantExternalIdStorage = getTenantExternalIdStorage(tenant);
+        return tenantExternalIdStorage.values().stream()
                 .filter(ext -> type.equals(ext.getType()))
                 .map(this::deepCopy)
                 .collect(Collectors.toList());
     }
 
     /**
-     * Get statistics about mock storage.
+     * Get statistics about mock storage for the current tenant.
      * 
      * @return Map containing storage statistics
      */
     public Map<String, Object> getStatistics() {
+        String tenant = subscriptionsService.getTenant();
+        
+        if (tenant == null) {
+            throw new IllegalStateException("No tenant context available");
+        }
+
+        Map<String, ExternalIDRepresentation> tenantExternalIdStorage = getTenantExternalIdStorage(tenant);
+        Map<String, List<ExternalIDRepresentation>> tenantGlobalIdIndex = getTenantGlobalIdIndex(tenant);
+
         Map<String, Object> stats = new HashMap<>();
-        stats.put("totalExternalIds", externalIdStorage.size());
-        stats.put("totalGlobalIds", globalIdIndex.size());
+        stats.put("tenant", tenant);
+        stats.put("totalExternalIds", tenantExternalIdStorage.size());
+        stats.put("totalGlobalIds", tenantGlobalIdIndex.size());
 
         // Count by type
-        Map<String, Long> typeCount = externalIdStorage.values().stream()
+        Map<String, Long> typeCount = tenantExternalIdStorage.values().stream()
                 .collect(Collectors.groupingBy(
                         ExternalIDRepresentation::getType,
                         Collectors.counting()));
         stats.put("externalIdsByType", typeCount);
 
         // Average external IDs per global ID
-        double avgExternalIdsPerGlobalId = globalIdIndex.isEmpty() ? 0.0
-                : (double) externalIdStorage.size() / globalIdIndex.size();
+        double avgExternalIdsPerGlobalId = tenantGlobalIdIndex.isEmpty() ? 0.0
+                : (double) tenantExternalIdStorage.size() / tenantGlobalIdIndex.size();
         stats.put("avgExternalIdsPerGlobalId", avgExternalIdsPerGlobalId);
 
-        log.debug("Mock: Generated statistics: {}", stats);
+        log.debug("{} - Mock: Generated statistics: {}", tenant, stats);
         return stats;
     }
 
     /**
-     * Get a summary of the mock identity state.
+     * Get statistics for all tenants.
+     * 
+     * @return Map containing storage statistics for all tenants
+     */
+    public Map<String, Object> getAllStatistics() {
+        Map<String, Object> allStats = new HashMap<>();
+        
+        allStats.put("totalTenants", externalIdStorage.size());
+        allStats.put("totalExternalIds", getTotalExternalIdCount());
+        allStats.put("totalGlobalIds", getTotalGlobalIdCount());
+        
+        Map<String, Integer> externalIdsByTenant = new HashMap<>();
+        externalIdStorage.forEach((tenant, tenantStorage) -> {
+            externalIdsByTenant.put(tenant, tenantStorage.size());
+        });
+        allStats.put("externalIdsByTenant", externalIdsByTenant);
+        
+        Map<String, Integer> globalIdsByTenant = new HashMap<>();
+        globalIdIndex.forEach((tenant, tenantIndex) -> {
+            globalIdsByTenant.put(tenant, tenantIndex.size());
+        });
+        allStats.put("globalIdsByTenant", globalIdsByTenant);
+        
+        log.debug("Mock: Generated all-tenant statistics: {}", allStats);
+        return allStats;
+    }
+
+    /**
+     * Get a summary of the mock identity state for the current tenant.
      * 
      * @return Human-readable summary string
      */
     public String getSummary() {
+        String tenant = subscriptionsService.getTenant();
+        
+        if (tenant == null) {
+            throw new IllegalStateException("No tenant context available");
+        }
+
         Map<String, Object> stats = getStatistics();
-        return String.format("MockIdentity[externalIds=%d, globalIds=%d, types=%s]",
+        return String.format("MockIdentity[tenant=%s, externalIds=%d, globalIds=%d, types=%s]",
+                stats.get("tenant"),
                 stats.get("totalExternalIds"),
                 stats.get("totalGlobalIds"),
                 stats.get("externalIdsByType"));
+    }
+
+    /**
+     * Get a list of all tenants with mock data.
+     * 
+     * @return Set of tenant identifiers
+     */
+    public Set<String> getTenants() {
+        Set<String> tenants = new HashSet<>();
+        tenants.addAll(externalIdStorage.keySet());
+        tenants.addAll(globalIdIndex.keySet());
+        return tenants;
     }
 }

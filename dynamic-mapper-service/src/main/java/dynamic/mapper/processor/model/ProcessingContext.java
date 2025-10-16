@@ -36,8 +36,11 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.flow.FlowContext;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Data;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import org.graalvm.polyglot.Context;
@@ -46,6 +49,7 @@ import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
 
 import com.cumulocity.sdk.client.ProcessingMode;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Getter
 @Setter
@@ -58,6 +62,13 @@ import com.cumulocity.sdk.client.ProcessingMode;
  * when a <code>mapping</code> is applied to an inbound <code>payload</code>
  */
 public class ProcessingContext<O> {
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class SerializableError {
+        private String type;
+        private String message;
+    }
 
     private Mapping mapping;
 
@@ -81,8 +92,12 @@ public class ProcessingContext<O> {
     @Builder.Default
     private List<DynamicMapperRequest> requests = new ArrayList<DynamicMapperRequest>();
 
+    @JsonIgnore
     @Builder.Default
     private List<Exception> errors = new ArrayList<Exception>();
+
+    @Builder.Default
+    private List<SerializableError> serializableErrors = new ArrayList<>();
 
     @Builder.Default
     private ProcessingType processingType = ProcessingType.UNDEFINED;
