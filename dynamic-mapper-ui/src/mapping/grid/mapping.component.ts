@@ -1034,7 +1034,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       ...((transformationType == TransformationType.SMART_FUNCTION) && {
         showEditorTarget: false,
         allowTestSending: false,
-        allowTestTransformation: false
+        allowTestTransformation: true
       })
     };
 

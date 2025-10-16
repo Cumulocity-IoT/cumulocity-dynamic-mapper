@@ -15,11 +15,11 @@ import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
-
+import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
-
+import dynamic.mapper.service.MappingService;
 import dynamic.mapper.util.Utils;
 import lombok.extern.slf4j.Slf4j;
 
@@ -36,26 +36,47 @@ public class SendInboundProcessor extends BaseProcessor {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private MappingService mappingService;
+
     @Override
     @SuppressWarnings("unchecked")
     public void process(Exchange exchange) throws Exception {
         ProcessingContext<Object> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
         Boolean parallelProcessing = exchange.getIn().getHeader("parallelProcessing", Boolean.class);
         String tenant = context.getTenant();
+        Boolean testing = context.isTesting();
+        Mapping mapping = context.getMapping();
+        try {
 
-        // Check if we have a single request from parallel processing
-        DynamicMapperRequest singleRequest = exchange.getIn().getBody(DynamicMapperRequest.class);
+            // Check if we have a single request from parallel processing
+            DynamicMapperRequest singleRequest = exchange.getIn().getBody(DynamicMapperRequest.class);
 
-        if (singleRequest != null) {
-            // Parallel mode: process single request from body
-            processParallelMode(context, singleRequest);
-        } else if (Boolean.TRUE.equals(parallelProcessing)) {
-            // This shouldn't happen - parallel requests should be split already
-            log.warn("{} - Parallel processing flag set but no single request found", tenant);
-            processSequentialMode(context);
-        } else {
-            // Sequential mode: process all requests in context
-            processSequentialMode(context);
+            if (singleRequest != null) {
+                // Parallel mode: process single request from body
+                processParallelMode(context, singleRequest);
+            } else if (Boolean.TRUE.equals(parallelProcessing)) {
+                // This shouldn't happen - parallel requests should be split already
+                log.warn("{} - Parallel processing flag set but no single request found", tenant);
+                processSequentialMode(context);
+            } else {
+                // Sequential mode: process all requests in context
+                processSequentialMode(context);
+            }
+        } catch (Exception e) {
+
+            String errorMessage = String.format(
+                    "Tenant %s - Error in SendInboundProcessor: %s for mapping: %s",
+                    tenant, mapping.getName(), e.getMessage());
+            log.error(errorMessage, e);
+            context.addError(new ProcessingException(errorMessage, e));
+
+            if (!testing) {
+                MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
+                mappingStatus.errors++;
+                mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+            }
+            return;
         }
     }
 
@@ -159,7 +180,8 @@ public class SendInboundProcessor extends BaseProcessor {
             // Resolve external ID if needed
             if (request.getExternalId() != null) {
                 identity = new ID(request.getExternalIdType(), request.getExternalId());
-                ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId2GlobalId(tenant, identity, context.isTesting());
+                ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId2GlobalId(tenant, identity,
+                        context.isTesting());
 
                 if (sourceId != null) {
                     request.setSourceId(sourceId.getManagedObject().getId().getValue());
