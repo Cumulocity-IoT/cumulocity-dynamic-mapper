@@ -34,7 +34,8 @@ import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.connector.core.registry.ConnectorRegistryException;
 import dynamic.mapper.connector.test.TestClient;
-import dynamic.mapper.core.*;
+import dynamic.mapper.core.BootstrapService;
+import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.TestContext;
 import dynamic.mapper.processor.model.ProcessingContext;
@@ -122,11 +123,12 @@ public class TestController {
     }
 
     @RequestMapping(value = "/test/mapping", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<List<? extends ProcessingContext<?>>> testMapping(@RequestParam boolean send,
+    public ResponseEntity<List<? extends ProcessingContext<?>>> testMapping(
             @RequestBody TestContext context) {
         List<? extends ProcessingContext<?>> result = null;
         Mapping mapping = context.getMapping();
         String payload = context.getPayload();
+        Boolean send = context.getSend();
         String tenant = contextService.getContext().getTenant();
         log.info("{} - Test mapping: {}, {}, {}", tenant, mapping.getIdentifier(), send,
                 payload);

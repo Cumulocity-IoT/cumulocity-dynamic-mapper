@@ -52,6 +52,12 @@ export interface ProcessingContext {
   deviceType?: string;
 }
 
+export interface TestContext {
+  mapping: Mapping;
+  payload: string;
+  send?: boolean;
+}
+
 export enum ProcessingType {
   UNDEFINED,
   ONE_DEVICE_ONE_VALUE,

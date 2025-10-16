@@ -18,11 +18,10 @@
  * @authors Christof Strack
  */
 
-import { inject, Injectable, OnDestroy } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import {
   FetchClient,
   IFetchResponse,
-  QueriesUtil
 } from '@c8y/client';
 import {
   Observable,
@@ -50,25 +49,19 @@ import {
   PATH_MAPPING_ENDPOINT,
   LoggingEventTypeMap,
   LoggingEventType,
-  isSubstitutionsAsCode
 } from '../../shared';
-import { JSONProcessorInbound } from './processor/impl/json-processor-inbound.service';
-import { JSONProcessorOutbound } from './processor/impl/json-processor-outbound.service';
-import { CodeBasedProcessorOutbound } from './processor/impl/code-based-processor-outbound.service';
-import { CodeBasedProcessorInbound } from './processor/impl/code-based-processor-inbound.service';
+
 import {
   EventRealtimeService,
   RealtimeSubjectService
 } from '@c8y/ngx-components';
-import { ProcessingContext, ProcessingType, SubstituteValue } from './processor/processor.model';
 
 @Injectable({
   providedIn: 'root'
 })
-export class MappingService implements OnDestroy {
+export class MappingService {
   // Core dependencies
   private readonly eventRealtimeService: EventRealtimeService;
-  private readonly queriesUtil: QueriesUtil;
 
   // Observables and subjects
   private readonly updateMappingEnriched$ = new Subject<MappingEnriched>();
@@ -84,15 +77,10 @@ export class MappingService implements OnDestroy {
   private readonly JSONATA = require('jsonata');
 
   constructor(
-    private readonly jsonProcessorInbound: JSONProcessorInbound,
-    private readonly jsonProcessorOutbound: JSONProcessorOutbound,
-    private readonly codeBasedProcessorOutbound: CodeBasedProcessorOutbound,
-    private readonly codeBasedProcessorInbound: CodeBasedProcessorInbound,
     private readonly sharedService: SharedService,
     private readonly client: FetchClient
   ) {
     this.eventRealtimeService = new EventRealtimeService(inject(RealtimeSubjectService));
-    this.queriesUtil = new QueriesUtil();
     this.reloadInbound$ = this.sharedService.reloadInbound$;
     this.reloadOutbound$ = this.sharedService.reloadOutbound$;
     this.initializeMappingsEnriched();
@@ -296,58 +284,6 @@ export class MappingService implements OnDestroy {
     return m;
   }
 
-  // ===== PROCESSING OPERATIONS =====
-
-  public initializeContext(mapping: Mapping): ProcessingContext {
-    const ctx: ProcessingContext = {
-      mapping: mapping,
-      topic:
-        mapping.direction == Direction.INBOUND
-          ? mapping.mappingTopicSample
-          : mapping.publishTopicSample,
-      processingType: ProcessingType.UNDEFINED,
-      errors: [],
-      mappingType: mapping.mappingType,
-      processingCache: new Map<string, SubstituteValue[]>(),
-      sendPayload: false,
-      requests: []
-    };
-    return ctx;
-  }
-
-  async testResult(
-    context: ProcessingContext,
-    message: any
-  ): Promise<ProcessingContext> {
-    const { mapping } = context;
-    if (mapping.direction == Direction.INBOUND) {
-      if (isSubstitutionsAsCode(mapping)) {
-        this.codeBasedProcessorInbound.deserializePayload(mapping, message, context);
-        this.codeBasedProcessorInbound.enrichPayload(context);
-        await this.codeBasedProcessorInbound.extractFromSource(context);
-        this.codeBasedProcessorInbound.validateProcessingCache(context);
-        await this.codeBasedProcessorInbound.substituteInTargetAndSend(context);
-      } else {
-        this.jsonProcessorInbound.deserializePayload(mapping, message, context);
-        this.jsonProcessorInbound.enrichPayload(context);
-        await this.jsonProcessorInbound.extractFromSource(context);
-        this.jsonProcessorInbound.validateProcessingCache(context);
-        await this.jsonProcessorInbound.substituteInTargetAndSend(context);
-      }
-    } else {
-      if (isSubstitutionsAsCode(mapping)) {
-        this.codeBasedProcessorOutbound.deserializePayload(mapping, message, context);
-        await this.codeBasedProcessorOutbound.extractFromSource(context);
-        await this.codeBasedProcessorOutbound.substituteInTargetAndSend(context);
-      } else {
-        this.jsonProcessorOutbound.deserializePayload(mapping, message, context);
-        await this.jsonProcessorOutbound.extractFromSource(context);
-        await this.jsonProcessorOutbound.substituteInTargetAndSend(context);
-      }
-    }
-
-    return context;
-  }
 
   // ===== UTILITY METHODS =====
 
@@ -373,11 +309,6 @@ export class MappingService implements OnDestroy {
     return result;
   }
 
-  initializeCache(dir: Direction): void {
-    if (dir == Direction.INBOUND) {
-      this.jsonProcessorInbound.initializeCache();
-    }
-  }
 
   refreshMappings(direction: Direction) {
     if (direction == Direction.INBOUND) {

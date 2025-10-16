@@ -38,12 +38,12 @@ import {
   Mapping,
   getSchema
 } from '../../shared/';
-import { MappingService } from '../core/mapping.service';
 import { C8YRequest, ProcessingContext, TOKEN_TOPIC_LEVEL } from '../core/processor/processor.model';
 import { isSubstitutionsAsCode, MappingType, StepperConfiguration } from '../../shared/mapping/mapping.model';
 import { patchC8YTemplateForTesting, sortObjectKeys } from '../shared/util';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { Content } from 'vanilla-jsoneditor';
+import { TestingService } from '../core/testing.service';
 
 interface TestingModel {
   payload?: any;
@@ -110,7 +110,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   ignoreErrorNonExisting = false;
 
   constructor(
-    private readonly mappingService: MappingService,
+    private readonly testingService: TestingService,
     private readonly alertService: AlertService,
     private readonly elementRef: ElementRef,
     private readonly bsModalService: BsModalService,
@@ -143,7 +143,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       this.resetTestingModel();
       this.updateEditors();
       await this.initializeTestContext(this.testMapping);
-      this.mappingService.initializeCache(this.mapping.direction);
+      this.testingService.initializeCache(this.mapping.direction);
     } catch (error) {
       await this.handleError('Failed to reset transformation', error);
     }
@@ -229,7 +229,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   }
 
   private async initializeTestContext(testMapping: Mapping): Promise<void> {
-    this.testContext = this.mappingService.initializeContext(testMapping);
+    this.testContext = this.testingService.initializeContext(testMapping);
 
     if (this.isEditorAvailable()) {
       await this.setupEditor();
@@ -320,7 +320,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     this.testContext.sendPayload = sendPayload;
 
     // Update test context
-    this.testContext = await this.mappingService.testResult(
+    this.testContext = await this.testingService.testResult(
       this.testContext,
       this.sourceTemplate
     );

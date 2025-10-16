@@ -39,4 +39,8 @@ public class TestContext {
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "JSON payload as string for test")
     @NotNull
     private String payload;
+
+    @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "Send payload to backend")
+    @NotNull
+    private Boolean send = false;
 }
