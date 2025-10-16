@@ -31,9 +31,11 @@ import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.model.Mapping;
+import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.service.MappingService;
 import dynamic.mapper.util.Utils;
 import lombok.extern.slf4j.Slf4j;
 
@@ -47,11 +49,16 @@ public class SendOutboundProcessor extends BaseProcessor {
     @Autowired
     private ConnectorRegistry connectorRegistry;
 
+    @Autowired
+    private MappingService mappingService;
 
     @Override
     @SuppressWarnings("unchecked")
     public void process(Exchange exchange) throws Exception {
         ProcessingContext<Object> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+        String tenant = context.getTenant();
+        Boolean testing = context.isTesting();
+        Mapping mapping = context.getMapping();
 
         try {
             // Process all C8Y requests that were created by SubstitutionProcessor
@@ -62,9 +69,17 @@ public class SendOutboundProcessor extends BaseProcessor {
             createProcessingAlarms(context);
 
         } catch (Exception e) {
-            log.error("Error in inbound send processor for mapping: {}",
-                    context.getMapping().getName(), e);
-            context.addError(new ProcessingException("Send processing failed", e));
+            String errorMessage = String.format(
+                    "Tenant %s - Error in SendOutboundProcessor: %s for mapping: %s",
+                    tenant, mapping.getName(), e.getMessage());
+            log.error(errorMessage, e);
+            context.addError(new ProcessingException(errorMessage, e));
+
+            if (!testing) {
+                MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
+                mappingStatus.errors++;
+                mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+            }
         }
 
     }
