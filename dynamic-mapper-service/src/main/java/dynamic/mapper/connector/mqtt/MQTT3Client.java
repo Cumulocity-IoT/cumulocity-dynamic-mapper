@@ -22,7 +22,6 @@
 package dynamic.mapper.connector.mqtt;
 
 import com.hivemq.client.mqtt.MqttClientSslConfig;
-import com.hivemq.client.mqtt.MqttClientSslConfigBuilder;
 import com.hivemq.client.mqtt.datatypes.MqttQos;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3BlockingClient;
@@ -41,6 +40,7 @@ import dynamic.mapper.connector.core.ConnectorPropertyCondition;
 import dynamic.mapper.connector.core.ConnectorPropertyType;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.client.AConnectorClient;
+import dynamic.mapper.connector.core.client.Certificate;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
@@ -57,10 +57,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
 import javax.net.ssl.TrustManagerFactory;
-import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
-import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.*;
 
@@ -75,7 +73,7 @@ public class MQTT3Client extends AConnectorClient {
     private Mqtt3BlockingClient mqttClient;
     private MQTT3Callback mqttCallback;
     private MqttClientSslConfig sslConfig;
-    protected AConnectorClient.Certificate cert;
+    protected Certificate cert;
     private Boolean cleanSession = true;
 
     // Synchronization objects
@@ -146,6 +144,14 @@ public class MQTT3Client extends AConnectorClient {
             Boolean useSelfSignedCertificate = (Boolean) connectorConfiguration.getProperties()
                     .getOrDefault("useSelfSignedCertificate", false);
 
+            // log.info("{} - Debugging server certificate before SSL initialization",
+            // tenant);
+            // String mqttHost = (String)
+            // connectorConfiguration.getProperties().get("mqttHost");
+            // Integer mqttPort = (Integer)
+            // connectorConfiguration.getProperties().get("mqttPort");
+            // debugServerCertificate(mqttHost, mqttPort);
+
             if (useSelfSignedCertificate) {
                 initializeSslConfiguration();
             }
@@ -164,95 +170,46 @@ public class MQTT3Client extends AConnectorClient {
     }
 
     private void initializeSslConfiguration() throws Exception {
-        String nameCertificate = (String) connectorConfiguration.getProperties().get("nameCertificate");
-        String fingerprint = (String) connectorConfiguration.getProperties()
-                .get("fingerprintSelfSignedCertificate");
-
-        if (nameCertificate == null || fingerprint == null) {
-            throw new ConnectorException(
-                    "Required properties nameCertificate and fingerprint are not set");
-        }
-
-        // Load certificate (might be a chain)
-        cert = c8yAgent.loadCertificateByName(nameCertificate, fingerprint, tenant, connectorName);
-        if (cert == null) {
-            throw new ConnectorException(
-                    String.format("Certificate %s with fingerprint %s not found",
-                            nameCertificate, fingerprint));
-        }
-
         try {
-            // Log certificate chain info
-            log.info("{} - Certificate chain contains {} certificate(s)",
-                    tenant, cert.getCertificateCount());
+            // Load certificate using common method
+            cert = loadCertificateFromConfiguration();
 
-            if (cert.isChain()) {
-                log.info("{} - Processing certificate chain", tenant);
-            }
+            // Log certificate information
+            logCertificateInfo(cert);
 
-            // Parse ALL certificates in the PEM format (handles chains automatically)
-            CertificateFactory cf = CertificateFactory.getInstance("X.509");
-
-            ByteArrayInputStream certStream = new ByteArrayInputStream(
-                    cert.getCertInPemFormat().getBytes(StandardCharsets.UTF_8));
-
-            Collection<? extends java.security.cert.Certificate> certificates = cf.generateCertificates(certStream);
-
-            log.info("{} - Successfully parsed {} certificate(s) from PEM", tenant, certificates.size());
-
-            // Create KeyStore and add ALL certificates
-            KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
-            trustStore.load(null, null);
-
-            int certIndex = 0;
-            for (java.security.cert.Certificate certificate : certificates) {
-                if (certificate instanceof X509Certificate) {
-                    X509Certificate x509Cert = (X509Certificate) certificate;
-
-                    String alias = "cert-" + certIndex++;
-                    trustStore.setCertificateEntry(alias, x509Cert);
-
-                    boolean isSelfSigned = x509Cert.getSubjectX500Principal()
-                            .equals(x509Cert.getIssuerX500Principal());
-
-                    log.info("{} - Added certificate [{}]: Subject={}, Issuer={}, Serial={}, SelfSigned={}",
-                            tenant,
-                            alias,
-                            x509Cert.getSubjectX500Principal().getName(),
-                            x509Cert.getIssuerX500Principal().getName(),
-                            x509Cert.getSerialNumber().toString(16),
-                            isSelfSigned);
-
-                    // Verify certificate is not expired
-                    try {
-                        x509Cert.checkValidity();
-                        log.debug("{} - Certificate [{}] is valid", tenant, alias);
-                    } catch (Exception e) {
-                        log.warn("{} - Certificate [{}] validity check failed: {}",
-                                tenant, alias, e.getMessage());
-                    }
-                }
-            }
-
-            if (certIndex == 0) {
+            // Get X509 certificates
+            List<X509Certificate> customCertificates = cert.getX509Certificates();
+            if (customCertificates.isEmpty()) {
                 throw new ConnectorException("No valid X.509 certificates found in PEM");
             }
 
-            // Initialize TrustManagerFactory
-            TrustManagerFactory tmf = TrustManagerFactory
-                    .getInstance(TrustManagerFactory.getDefaultAlgorithm());
-            tmf.init(trustStore);
+            log.info("{} - Successfully parsed {} X.509 certificate(s)", tenant, customCertificates.size());
+
+            // Create truststore (include system CAs)
+            KeyStore trustStore = createTrustStore(true, customCertificates);
+
+            // Create TrustManagerFactory
+            TrustManagerFactory tmf = createTrustManagerFactory(trustStore);
 
             // Build SSL configuration
-            List<String> expectedProtocols = Arrays.asList("TLSv1.2", "TLSv1.3");
             sslConfig = MqttClientSslConfig.builder()
                     .trustManagerFactory(tmf)
-                    .protocols(expectedProtocols)
+                    .protocols(DEFAULT_TLS_PROTOCOLS)
                     .handshakeTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+                    .hostnameVerifier(createHostnameVerifier())
                     .build();
 
-            log.info("{} - SSL configuration initialized with {} certificate(s), protocols: {}",
-                    tenant, certIndex, expectedProtocols);
+            log.info("{} - SSL configuration initialized successfully", tenant);
+            log.info("{}   Custom CAs: {}", tenant, customCertificates.size());
+            log.info("{}   Protocols: {}", tenant, DEFAULT_TLS_PROTOCOLS);
+
+            // Log chain structure
+            logChainStructure(cert);
+
+            // Optional: Print full summary at debug level
+            if (log.isDebugEnabled()) {
+                log.debug("{} - Full certificate chain summary:\n{}", tenant, cert.getSummary());
+            }
 
         } catch (Exception e) {
             log.error("{} - Error creating SSL configuration", tenant, e);
@@ -790,27 +747,31 @@ public class MQTT3Client extends AConnectorClient {
 
         configProps.put("fingerprintSelfSignedCertificate",
                 new ConnectorProperty("SHA 1 fingerprint of CA or Self Signed Certificate", false, 8,
-                        ConnectorPropertyType.STRING_PROPERTY, false, false,
+                        ConnectorPropertyType.STRING_LARGE_PROPERTY, false, false,
                         null, null, certCondition));
 
         configProps.put("nameCertificate",
                 new ConnectorProperty(null, false, 9, ConnectorPropertyType.STRING_PROPERTY, false, false,
                         null, null, certCondition));
 
+        configProps.put("certificateChainInPemFormat",
+                new ConnectorProperty(null, false, 10, ConnectorPropertyType.STRING_LARGE_PROPERTY, false, false,
+                        null, null, certCondition));
+
         configProps.put("supportsWildcardInTopicInbound",
-                new ConnectorProperty(null, false, 10, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false,
+                new ConnectorProperty(null, false, 11, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false,
                         true, null, null));
 
         configProps.put("supportsWildcardInTopicOutbound",
-                new ConnectorProperty(null, false, 11, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false,
+                new ConnectorProperty(null, false, 12, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false,
                         false, null, null));
 
         configProps.put("serverPath",
-                new ConnectorProperty(null, false, 12, ConnectorPropertyType.STRING_PROPERTY, false, false,
+                new ConnectorProperty(null, false, 13, ConnectorPropertyType.STRING_PROPERTY, false, false,
                         null, null, wsCondition));
 
         configProps.put("cleanSession",
-                new ConnectorProperty(null, false, 13, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false,
+                new ConnectorProperty(null, false, 14, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false,
                         true, null, null));
 
         String name = "Generic MQTT";

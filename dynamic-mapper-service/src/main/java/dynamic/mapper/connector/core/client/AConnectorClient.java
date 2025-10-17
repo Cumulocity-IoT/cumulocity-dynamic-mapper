@@ -23,6 +23,10 @@ package dynamic.mapper.connector.core.client;
 
 import static java.util.Map.entry;
 
+import java.security.KeyStore;
+import java.security.MessageDigest;
+import java.security.cert.X509Certificate;
+
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.configuration.ConnectorId;
 import dynamic.mapper.configuration.ServiceConfiguration;
@@ -42,24 +46,28 @@ import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.service.ConnectorConfigurationService;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.service.ServiceConfigurationService;
-import lombok.AllArgsConstructor;
-import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.*;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManagerFactory;
+
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.joda.time.DateTime;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hivemq.client.mqtt.MqttClientSslConfig;
 
 /**
  * Base class for connector clients.
@@ -67,68 +75,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  */
 @Slf4j
 public abstract class AConnectorClient {
-
-    @Data
-    @AllArgsConstructor
-    public static class Certificate {
-        private String fingerprint;
-        private String certInPemFormat;
-
-        /**
-         * Get all certificates in the chain as separate PEM strings
-         */
-        public List<String> getCertificatesInChain() {
-            List<String> certs = new ArrayList<>();
-            if (certInPemFormat == null)
-                return certs;
-
-            String[] parts = certInPemFormat.split("-----END CERTIFICATE-----");
-            for (String part : parts) {
-                if (part.trim().isEmpty())
-                    continue;
-
-                String cert = part.trim();
-                if (!cert.startsWith("-----BEGIN CERTIFICATE-----")) {
-                    cert = "-----BEGIN CERTIFICATE-----\n" + cert;
-                }
-                cert = cert + "\n-----END CERTIFICATE-----";
-                certs.add(cert);
-            }
-            return certs;
-        }
-
-        /**
-         * Check if this contains a certificate chain (multiple certificates)
-         */
-        public boolean isChain() {
-            if (certInPemFormat == null)
-                return false;
-            int count = 0;
-            int index = 0;
-            while ((index = certInPemFormat.indexOf("-----BEGIN CERTIFICATE-----", index)) != -1) {
-                count++;
-                index += 27;
-                if (count > 1)
-                    return true;
-            }
-            return false;
-        }
-
-        /**
-         * Get the number of certificates in the chain
-         */
-        public int getCertificateCount() {
-            if (certInPemFormat == null)
-                return 0;
-            int count = 0;
-            int index = 0;
-            while ((index = certInPemFormat.indexOf("-----BEGIN CERTIFICATE-----", index)) != -1) {
-                count++;
-                index += 27;
-            }
-            return count;
-        }
-    }
 
     // Constants
     protected static final int HOUSEKEEPING_INTERVAL_SECONDS = 30;
@@ -234,6 +180,14 @@ public abstract class AConnectorClient {
     // Helper
     @Getter
     protected ObjectMapper objectMapper;
+
+    // Existing fields
+    protected SSLContext sslContext;
+    protected MqttClientSslConfig sslConfig; // For MQTT clients
+
+    // Common SSL configuration constants
+    protected static final List<String> DEFAULT_TLS_PROTOCOLS = Arrays.asList("TLSv1.2", "TLSv1.3");
+    protected static final String CACERTS_PASSWORD = "changeit";
 
     /**
      * Initialize managers
@@ -841,6 +795,327 @@ public abstract class AConnectorClient {
                 entry("message", message),
                 entry("connectorName", getConnectorName()),
                 entry("date", date));
+    }
+
+    /**
+     * Debug method to inspect server certificate
+     */
+    protected void debugServerCertificate(String host, int port) {
+        log.info("{} - Attempting to inspect server certificate at {}:{}", tenant, host, port);
+
+        try {
+            // Create a trust manager that accepts all certificates for debugging
+            javax.net.ssl.TrustManager[] trustAllCerts = new javax.net.ssl.TrustManager[] {
+                    new javax.net.ssl.X509TrustManager() {
+                        public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+                            return new java.security.cert.X509Certificate[0];
+                        }
+
+                        public void checkClientTrusted(java.security.cert.X509Certificate[] certs, String authType) {
+                        }
+
+                        public void checkServerTrusted(java.security.cert.X509Certificate[] certs, String authType) {
+                            log.info("{} - Server presented {} certificate(s):", tenant, certs.length);
+                            for (int i = 0; i < certs.length; i++) {
+                                java.security.cert.X509Certificate cert = certs[i];
+                                log.info("{}   Certificate [{}]:", tenant, i);
+                                log.info("{}     Subject: {}", tenant, cert.getSubjectX500Principal().getName());
+                                log.info("{}     Issuer: {}", tenant, cert.getIssuerX500Principal().getName());
+                                log.info("{}     Serial: {}", tenant,
+                                        cert.getSerialNumber().toString(16).toUpperCase());
+                                log.info("{}     Valid from: {}", tenant, cert.getNotBefore());
+                                log.info("{}     Valid to: {}", tenant, cert.getNotAfter());
+
+                                try {
+                                    MessageDigest md = MessageDigest.getInstance("SHA-1");
+                                    byte[] digest = md.digest(cert.getEncoded());
+                                    StringBuilder fp = new StringBuilder();
+                                    for (int j = 0; j < digest.length; j++) {
+                                        if (j > 0)
+                                            fp.append(":");
+                                        fp.append(String.format("%02X", digest[j]));
+                                    }
+                                    log.info("{}     Fingerprint (SHA-1): {}", tenant, fp.toString());
+                                } catch (Exception e) {
+                                    // ignore
+                                }
+                            }
+                        }
+                    }
+            };
+
+            javax.net.ssl.SSLContext sc = javax.net.ssl.SSLContext.getInstance("TLS");
+            sc.init(null, trustAllCerts, new java.security.SecureRandom());
+
+            try (javax.net.ssl.SSLSocket socket = (javax.net.ssl.SSLSocket) sc.getSocketFactory().createSocket(host,
+                    port)) {
+                socket.startHandshake();
+                log.info("{} - Successfully connected to server (for debugging)", tenant);
+            }
+
+        } catch (Exception e) {
+            log.error("{} - Error inspecting server certificate", tenant, e);
+        }
+    }
+
+    /**
+     * Load certificate from configuration properties
+     * Supports both inline PEM and C8Y certificate store
+     */
+    protected Certificate loadCertificateFromConfiguration() throws ConnectorException {
+        String nameCertificate = (String) connectorConfiguration.getProperties().get("nameCertificate");
+        String fingerprint = (String) connectorConfiguration.getProperties()
+                .get("fingerprintSelfSignedCertificate");
+        String certificateChainInPemFormat = (String) connectorConfiguration.getProperties()
+                .get("certificateChainInPemFormat");
+
+        // Option 1: Load from inline PEM
+        if (certificateChainInPemFormat != null && !certificateChainInPemFormat.isEmpty()) {
+            log.info("{} - Using certificate chain from configuration property", tenant);
+            return Certificate.fromPem(certificateChainInPemFormat);
+        }
+
+        // Option 2: Load from C8Y certificate store
+        if (nameCertificate != null && fingerprint != null) {
+            log.info("{} - Loading certificate from C8Y: name={}, fingerprint={}",
+                    tenant, nameCertificate, fingerprint);
+            Certificate loadedCert = c8yAgent.loadCertificateByName(
+                    nameCertificate, fingerprint, tenant, connectorName);
+
+            if (loadedCert == null) {
+                throw new ConnectorException(
+                        String.format("Certificate %s with fingerprint %s not found",
+                                nameCertificate, fingerprint));
+            }
+            return loadedCert;
+        }
+
+        throw new ConnectorException(
+                "Either 'certificateChainInPemFormat' or both 'nameCertificate' and 'fingerprint' must be provided");
+    }
+
+    /**
+     * Log certificate information
+     */
+    protected void logCertificateInfo(Certificate cert) {
+        log.info("{} - Certificate Summary:", tenant);
+        log.info("{}   Total certificates: {}", tenant, cert.getCertificateCount());
+        log.info("{}   Is chain: {}", tenant, cert.isChain());
+        log.info("{}   Is valid: {}", tenant, cert.isValid());
+        log.info("{}   Chain ordered: {}", tenant, cert.isChainOrdered());
+
+        // Check for validation errors
+        List<String> validationErrors = cert.getValidationErrors();
+        if (!validationErrors.isEmpty()) {
+            log.warn("{} - Certificate validation warnings:", tenant);
+            validationErrors.forEach(error -> log.warn("{}   - {}", tenant, error));
+        }
+
+        // Log detailed certificate information
+        List<Certificate.CertificateInfo> certInfos = cert.getCertificateInfoList();
+        for (Certificate.CertificateInfo info : certInfos) {
+            log.info("{} - Certificate [{}] ({}):", tenant, info.getIndex(), info.getCertificateType());
+            log.info("{}     CN: {}", tenant, info.getCommonName());
+            log.info("{}     Issuer CN: {}", tenant, info.getIssuerCommonName());
+            log.info("{}     Serial: {}", tenant, info.getSerialNumber());
+            log.info("{}     Valid: {} to {}", tenant, info.getNotBefore(), info.getNotAfter());
+            log.info("{}     Signature: {}", tenant, info.getSignatureAlgorithm());
+            log.info("{}     Public Key: {} ({} bits)", tenant,
+                    info.getPublicKeyAlgorithm(), info.getPublicKeySize());
+
+            List<String> sans = info.getSubjectAlternativeNames();
+            if (!sans.isEmpty()) {
+                log.info("{}     SANs: {}", tenant, String.join(", ", sans));
+            }
+        }
+
+        // Verify certificate chain cryptographically
+        if (cert.isChain() && !cert.verifyChain()) {
+            log.warn("{} - Certificate chain verification failed - signatures may not be valid", tenant);
+        } else if (cert.isChain()) {
+            log.info("{} - Certificate chain verification successful", tenant);
+        }
+    }
+
+    /**
+     * Create truststore with system CA certificates and custom certificates
+     * 
+     * @param includeSystemCAs   if true, loads default Java cacerts; if false,
+     *                           creates empty truststore
+     * @param customCertificates list of custom certificates to add
+     * @return configured KeyStore
+     */
+    protected KeyStore createTrustStore(boolean includeSystemCAs, List<X509Certificate> customCertificates)
+            throws Exception {
+
+        KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
+
+        int systemCertCount = 0;
+        if (includeSystemCAs) {
+            String cacertsPath = System.getProperty("java.home") + "/lib/security/cacerts";
+            try (java.io.FileInputStream fis = new java.io.FileInputStream(cacertsPath)) {
+                trustStore.load(fis, CACERTS_PASSWORD.toCharArray());
+                systemCertCount = trustStore.size();
+                log.info("{} - Loaded default cacerts from {} with {} system certificates",
+                        tenant, cacertsPath, systemCertCount);
+            } catch (Exception e) {
+                log.warn("{} - Could not load default cacerts: {}, creating empty truststore",
+                        tenant, e.getMessage());
+                trustStore.load(null, null);
+            }
+        } else {
+            trustStore.load(null, null);
+            log.info("{} - Created empty truststore", tenant);
+        }
+
+        // Add custom certificates
+        if (customCertificates != null && !customCertificates.isEmpty()) {
+            List<Certificate.CertificateInfo> certInfos = cert.getCertificateInfoList();
+
+            for (int i = 0; i < customCertificates.size(); i++) {
+                X509Certificate x509Cert = customCertificates.get(i);
+                Certificate.CertificateInfo info = certInfos.get(i);
+
+                String alias = String.format("custom-%s-%d",
+                        info.getCertificateType().toLowerCase().replace(" ", "-"), i);
+                trustStore.setCertificateEntry(alias, x509Cert);
+
+                log.info("{} - Added certificate [{}] to truststore:", tenant, alias);
+                log.info("{}     Type: {}", tenant, info.getCertificateType());
+                log.info("{}     CN: {}", tenant, info.getCommonName());
+                log.info("{}     Serial: {}", tenant, info.getSerialNumber());
+                log.info("{}     Fingerprint (SHA-1): {}", tenant,
+                        cert.getAllFingerprints().get(i));
+                log.info("{}     Fingerprint (SHA-256): {}", tenant,
+                        cert.getAllFingerprints("SHA-256").get(i));
+            }
+
+            log.info("{} - Final truststore contains {} total certificates ({} system + {} custom)",
+                    tenant, trustStore.size(), systemCertCount, customCertificates.size());
+        }
+
+        return trustStore;
+    }
+
+    /**
+     * Create TrustManagerFactory from KeyStore
+     */
+    protected TrustManagerFactory createTrustManagerFactory(KeyStore trustStore) throws Exception {
+        TrustManagerFactory tmf = TrustManagerFactory.getInstance(
+                TrustManagerFactory.getDefaultAlgorithm());
+        tmf.init(trustStore);
+        log.info("{} - TrustManagerFactory initialized with algorithm: {}",
+                tenant, tmf.getAlgorithm());
+        return tmf;
+    }
+
+    /**
+     * Log chain structure
+     */
+    protected void logChainStructure(Certificate cert) {
+        if (!cert.isChain()) {
+            return;
+        }
+
+        Certificate.CertificateInfo leaf = cert.getLeafCertificateInfo();
+        Certificate.CertificateInfo root = cert.getRootCertificateInfo();
+        List<Certificate.CertificateInfo> intermediates = cert.getIntermediateCertificates();
+
+        log.info("{} - Certificate chain structure:", tenant);
+        log.info("{}   Leaf: {}", tenant, leaf != null ? leaf.getCommonName() : "N/A");
+        if (!intermediates.isEmpty()) {
+            log.info("{}   Intermediates: {}", tenant,
+                    intermediates.stream()
+                            .map(Certificate.CertificateInfo::getCommonName)
+                            .collect(java.util.stream.Collectors.joining(", ")));
+        }
+        log.info("{}   Root: {}", tenant, root != null ? root.getCommonName() : "N/A");
+    }
+
+    /**
+     * Create custom hostname verifier for MQTT
+     */
+    protected javax.net.ssl.HostnameVerifier createHostnameVerifier() {
+        return (hostname, session) -> {
+            log.info("{} - Hostname verification: requested={}", tenant, hostname);
+
+            try {
+                java.security.cert.Certificate[] peerCerts = session.getPeerCertificates();
+                if (peerCerts.length > 0 && peerCerts[0] instanceof X509Certificate) {
+                    X509Certificate cert = (X509Certificate) peerCerts[0];
+
+                    String certCN = extractCN(cert.getSubjectX500Principal().getName());
+                    log.info("{} -   Certificate CN: {}", tenant, certCN);
+
+                    // Check Subject Alternative Names
+                    Collection<List<?>> sans = cert.getSubjectAlternativeNames();
+                    if (sans != null) {
+                        for (List<?> san : sans) {
+                            if (san.size() >= 2) {
+                                String sanValue = san.get(1).toString();
+                                log.info("{} -   SAN: {}", tenant, sanValue);
+
+                                if (matchesHostname(hostname, sanValue)) {
+                                    log.info("{} - Hostname verified via SAN", tenant);
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+
+                    // Check CN
+                    if (matchesHostname(hostname, certCN)) {
+                        log.info("{} - Hostname verified via CN", tenant);
+                        return true;
+                    }
+                }
+
+                log.warn("{} - Hostname verification failed for: {}", tenant, hostname);
+                return false;
+
+            } catch (Exception e) {
+                log.error("{} - Error during hostname verification", tenant, e);
+                return false;
+            }
+        };
+    }
+
+    /**
+     * Extract CN from Distinguished Name
+     */
+    protected String extractCN(String dn) {
+        if (dn == null)
+            return null;
+
+        for (String part : dn.split(",")) {
+            String trimmed = part.trim();
+            if (trimmed.startsWith("CN=")) {
+                return trimmed.substring(3);
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Check if hostname matches pattern (supports wildcards)
+     */
+    protected boolean matchesHostname(String hostname, String pattern) {
+        if (hostname == null || pattern == null) {
+            return false;
+        }
+
+        // Exact match
+        if (hostname.equalsIgnoreCase(pattern)) {
+            return true;
+        }
+
+        // Wildcard match (e.g., *.isotopia.ca)
+        if (pattern.startsWith("*.")) {
+            String patternSuffix = pattern.substring(1);
+            return hostname.endsWith(patternSuffix);
+        }
+
+        return false;
     }
 
 }

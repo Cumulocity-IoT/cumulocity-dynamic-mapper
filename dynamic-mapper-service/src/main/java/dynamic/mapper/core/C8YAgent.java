@@ -99,7 +99,7 @@ import dynamic.mapper.App;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.configuration.TrustedCertificateCollectionRepresentation;
 import dynamic.mapper.configuration.TrustedCertificateRepresentation;
-import dynamic.mapper.connector.core.client.AConnectorClient;
+import dynamic.mapper.connector.core.client.Certificate;
 import dynamic.mapper.core.cache.InboundExternalIdCache;
 import dynamic.mapper.core.cache.InventoryCache;
 import dynamic.mapper.core.facade.IdentityFacade;
@@ -380,7 +380,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         });
     }
 
-    public AConnectorClient.Certificate loadCertificateByName(String certificateName, String fingerprint,
+    public Certificate loadCertificateByName(String certificateName, String fingerprint,
             String tenant, String connectorName) {
         TrustedCertificateRepresentation result = subscriptionsService.callForTenant(tenant,
                 () -> {
@@ -499,7 +499,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
             int certCount = countCertificatesInChain(fullPemCert);
             log.info("{} - Certificate chain contains {} certificate(s)", tenant, certCount);
 
-            return new AConnectorClient.Certificate(result.getFingerprint(), fullPemCert);
+            return new Certificate(result.getFingerprint(), fullPemCert);
         } else {
             log.warn("{} - Connector {} - No certificate found with name='{}' and fingerprint='{}'",
                     tenant, connectorName, certificateName, fingerprint);
