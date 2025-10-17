@@ -4,7 +4,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
+import com.cumulocity.model.ID;
+import com.cumulocity.sdk.client.SDKException;
+import dynamic.mapper.processor.ProcessingException;
 import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
 import org.apache.camel.Message;
@@ -135,6 +139,43 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
                 @SuppressWarnings("unchecked")
                 List<ProcessingContext<Object>> contexts = resultExchange.getIn().getHeader("processedContexts",
                         List.class);
+                boolean resend = false;
+                if (contexts != null) {
+                    for (ProcessingContext<?> context : contexts) {
+                        int httpStatus = 0;
+                        if (context.hasError()) {
+                            for (Exception error : context.getErrors()) {
+                                if (error instanceof ProcessingException) {
+                                    if (((ProcessingException) error)
+                                            .getOriginException() instanceof SDKException) {
+                                        if (((SDKException) ((ProcessingException) error).getOriginException())
+                                                .getHttpStatus() > httpStatus) {
+                                            httpStatus = ((SDKException) ((ProcessingException) error).getOriginException())
+                                                    .getHttpStatus();
+                                        }
+                                    }
+                                }
+                            }
+                            if(httpStatus == 422) {
+                                log.info("{} - Removing device from Identity Cache with external ID: {}",
+                                        tenant, context.getCurrentRequest().getExternalId());
+                                ID identity = new ID(context.getCurrentRequest().getExternalIdType(), context.getExternalId());
+                                this.connectorClient.getC8yAgent().removeDeviceFromInboundExternalIdCache(tenant, identity);
+                                resend = true;
+                            }
+                        }
+                    }
+                }
+                if(resend) {
+                    if (serviceConfiguration.isLogPayload())
+                        log.info("{} - Resending message to C8Y due to previous 422 error with payload {}", tenant, connectorMessage.getPayload());
+                    else
+                        log.info("{} - Resending message to C8Y due to previous 422 error", tenant);
+                    exchange = createExchange(connectorMessage, resolvedMappings, testing);
+                    resultExchange = producerTemplate.send("direct:processInboundMessage", exchange);
+                    contexts = resultExchange.getIn().getHeader("processedContexts",
+                            List.class);
+                }
                 return contexts != null ? contexts : new ArrayList<>();
 
             } catch (Exception e) {
@@ -144,6 +185,7 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
         });
 
         result.setProcessingResult((Future) futureProcessingResult);
+
         return result;
     }
 

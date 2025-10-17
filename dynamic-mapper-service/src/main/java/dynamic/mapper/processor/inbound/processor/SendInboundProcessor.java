@@ -64,12 +64,15 @@ public class SendInboundProcessor extends BaseProcessor {
                 processSequentialMode(context);
             }
         } catch (Exception e) {
-
             String errorMessage = String.format(
-                    "Tenant %s - Error in SendInboundProcessor: %s for mapping: %s",
+                    "%s - Error in SendInboundProcessor: %s for mapping: %s",
                     tenant, mapping.getName(), e.getMessage());
             log.error(errorMessage, e);
-            context.addError(new ProcessingException(errorMessage, e));
+            //Don't double wrap ProcessingExceptions
+            if(e instanceof ProcessingException)
+                context.addError((ProcessingException) e);
+            else
+                context.addError(new ProcessingException(errorMessage, e));
 
             if (!testing) {
                 MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
@@ -92,9 +95,9 @@ public class SendInboundProcessor extends BaseProcessor {
             createProcessingAlarms(context);
 
         } catch (Exception e) {
-            log.error("Error in inbound send processor for mapping: {}",
-                    context.getMapping().getName(), e);
-            context.addError(new ProcessingException("Send processing failed", e));
+            log.error("{} - Error in inbound send processor for mapping: '{}'",
+                     context.getTenant(), context.getMapping().getName(), e);
+            //context.addError(new ProcessingException("Send processing failed", e));
             throw e;
         }
     }

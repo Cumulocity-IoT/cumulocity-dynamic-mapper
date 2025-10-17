@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import org.apache.camel.Exchange;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -141,15 +142,23 @@ public class FlowResultInboundProcessor extends BaseProcessor {
 
             // Resolve device ID and set it hierarchically in the payload
             String resolvedDeviceId = resolveDeviceIdentifier(cumulocityMessage, context, tenant);
+            List<ExternalSource> externalSources = convertToExternalSourceList(cumulocityMessage.getExternalSource());
+            String externalId = null;
+            String externalType = null;
+            if(externalSources != null && externalSources.size() > 0) {
+                ExternalSource externalSource = externalSources.get(0);
+                externalId = externalSource.getExternalId();
+                externalType = externalSource.getType();
+                context.setExternalId(externalId);
+            }
+
             if (resolvedDeviceId != null) {
                 setHierarchicalValue(payload, targetAPI.identifier, resolvedDeviceId);
                 context.setSourceId(resolvedDeviceId);
             } else if (cumulocityMessage.getExternalSource() != null) {
                 // create implicitDevice
                 if (mapping.getCreateNonExistingDevice()) {
-                    var externalSources = convertToExternalSourceList(cumulocityMessage.getExternalSource());
                     ExternalSource externalSource = externalSources.get(0);
-
                     if (externalSource != null && externalSource.getType() != null
                             && externalSource.getExternalId() != null) {
                         ID identity = new ID(externalSource.getType(),
@@ -158,6 +167,9 @@ public class FlowResultInboundProcessor extends BaseProcessor {
                                 c8yAgent,
                                 objectMapper);
                         context.setSourceId(sourceId);
+                        externalType = externalSource.getType();
+                        externalId = externalSource.getExternalId();
+                        context.setExternalId(externalSource.getExternalId());
                         setHierarchicalValue(payload, targetAPI.identifier, sourceId);
                     }
 
@@ -170,6 +182,8 @@ public class FlowResultInboundProcessor extends BaseProcessor {
             // Create the C8Y request using the correct constructor and methods
             DynamicMapperRequest c8yRequest = createDynamicMapperRequest(payloadJson, targetAPI,
                     cumulocityMessage.getAction(), resolvedDeviceId);
+            c8yRequest.setExternalId(externalId);
+            c8yRequest.setExternalIdType(externalType);
 
             // Add the request to context
             context.addRequest(c8yRequest);
@@ -250,12 +264,13 @@ public class FlowResultInboundProcessor extends BaseProcessor {
         // Use the first external source for resolution
         ExternalSource externalSource = externalSources.get(0);
 
+
         try {
             // Use C8YAgent to resolve external ID to global ID
             var globalId = c8yAgent.resolveExternalId2GlobalId(tenant,
                     new ID(externalSource.getType(), externalSource.getExternalId()),
                     context.isTesting());
-
+            context.setExternalId(externalSource.getExternalId());
             if (globalId != null) {
                 return globalId.getManagedObject().getId().getValue();
             } else {
