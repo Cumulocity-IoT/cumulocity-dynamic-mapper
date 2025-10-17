@@ -21,16 +21,17 @@ import { AlertService } from '@c8y/ngx-components';
 import * as _ from 'lodash';
 import { getTypeOf, randomIdAsString } from '../../../mapping/shared/util';
 import { API, getPathTargetForDeviceIdentifiers, Mapping, Substitution, MappingType, RepairStrategy } from '../../../shared';
-import { Java, SubstitutionContext } from './processor-js.model';
+import { SubstitutionContext } from './processor-js.model';
 
-export interface C8YRequest {
+export interface DynamicMapperRequest {
   predecessor?: number;
   method?: string;
+  targetAPI?: string;
   sourceId?: any;
+  externalId?: string;
   externalIdType?: string;
   request?: any;
   response?: any;
-  targetAPI?: string;
   error?: string;
   hidden?: boolean;
 }
@@ -40,7 +41,7 @@ export interface ProcessingContext {
   topic: string;
   resolvedPublishTopic?: string;
   payload?: JSON;
-  requests?: C8YRequest[];
+  requests?: DynamicMapperRequest[];
   errors?: string[];
   processingType?: ProcessingType;
   mappingType: MappingType;
@@ -58,9 +59,15 @@ export interface TestContext {
   send?: boolean;
 }
 
+export interface TestResult {
+  success: boolean;
+  requests: DynamicMapperRequest[];
+  errors: string[];
+  warnings?: string[];
+}
+
 export enum ProcessingType {
   UNDEFINED,
-  ONE_DEVICE_ONE_VALUE,
   ONE_DEVICE_MULTIPLE_VALUE,
   MULTIPLE_DEVICE_ONE_VALUE,
   MULTIPLE_DEVICE_MULTIPLE_VALUE
@@ -207,7 +214,7 @@ export function sortProcessingCache(context: ProcessingContext): void {
   // Convert Map to array of entries, sort, then create new Map
   const sortedEntries = Array.from(context.processingCache.entries())
     .sort(([keyA], [keyB]) => keyA.localeCompare(keyB));
-  
+
   // Clear the original map and repopulate with sorted entries
   context.processingCache.clear();
   sortedEntries.forEach(([key, value]) => {

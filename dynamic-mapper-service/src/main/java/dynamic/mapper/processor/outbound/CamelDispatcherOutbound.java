@@ -49,7 +49,7 @@ import dynamic.mapper.notification.websocket.NotificationCallback;
 import dynamic.mapper.processor.model.C8YMessage;
 
 import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.ProcessingResult;
+import dynamic.mapper.processor.model.ProcessingResultWrapper;
 import dynamic.mapper.service.MappingService;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -90,9 +90,9 @@ public class CamelDispatcherOutbound implements NotificationCallback {
     }
 
     @Override
-    public ProcessingResult<?> onNotification(Notification notification) {
+    public ProcessingResultWrapper<?> onNotification(Notification notification) {
         Qos consolidatedQos = Qos.AT_LEAST_ONCE;
-        ProcessingResult<?> result = ProcessingResult.builder().consolidatedQos(consolidatedQos).build();
+        ProcessingResultWrapper<?> result = ProcessingResultWrapper.builder().consolidatedQos(consolidatedQos).build();
 
         // We don't care about UPDATES nor DELETES and ignore notifications if connector
         // is not connected
@@ -155,7 +155,7 @@ public class CamelDispatcherOutbound implements NotificationCallback {
      * Process message using Camel routes - matches DispatcherInbound.processMessage
      * signature
      */
-    public ProcessingResult<?> processMessage(C8YMessage c8yMessage) {
+    public ProcessingResultWrapper<?> processMessage(C8YMessage c8yMessage) {
         String tenant = c8yMessage.getTenant();
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
 
@@ -170,7 +170,7 @@ public class CamelDispatcherOutbound implements NotificationCallback {
         }
 
         Qos consolidatedQos = Qos.AT_LEAST_ONCE;
-        ProcessingResult<?> result = ProcessingResult.builder()
+        ProcessingResultWrapper<?> result = ProcessingResultWrapper.builder()
                 .consolidatedQos(consolidatedQos)
                 .build();
 

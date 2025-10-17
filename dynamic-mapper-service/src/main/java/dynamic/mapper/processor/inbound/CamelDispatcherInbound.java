@@ -19,7 +19,7 @@ import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.ProcessingResult;
+import dynamic.mapper.processor.model.ProcessingResultWrapper;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -50,7 +50,7 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
     }
 
     @Override
-    public ProcessingResult<?> onMessage(ConnectorMessage message) {
+    public ProcessingResultWrapper<?> onMessage(ConnectorMessage message) {
         return processMessage(message, null);
     }
 
@@ -69,7 +69,7 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
      * Process message using Camel routes - matches DispatcherInbound.processMessage
      * signature
      */
-    private ProcessingResult<?> processMessage(ConnectorMessage connectorMessage, Mapping testMapping) {
+    private ProcessingResultWrapper<?> processMessage(ConnectorMessage connectorMessage, Mapping testMapping) {
         boolean testing = testMapping != null;
         String topic = connectorMessage.getTopic();
         String tenant = connectorMessage.getTenant();
@@ -84,7 +84,7 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
         }
 
         Qos consolidatedQos = Qos.AT_LEAST_ONCE;
-        ProcessingResult<?> result = ProcessingResult.builder()
+        ProcessingResultWrapper<?> result = ProcessingResultWrapper.builder()
                 .consolidatedQos(consolidatedQos)
                 .build();
 
@@ -177,7 +177,7 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
     }
 
     @Override
-    public ProcessingResult<?> onTestMessage(ConnectorMessage message, Mapping testMapping) {
+    public ProcessingResultWrapper<?> onTestMessage(ConnectorMessage message, Mapping testMapping) {
         return processMessage(message, testMapping);
     }
 }

@@ -33,7 +33,7 @@ import lombok.Setter;
 @Setter
 @Builder
 
-public class ProcessingResult<O> {
+public class ProcessingResultWrapper<O> {
     private Future<List<ProcessingContext<O>>> processingResult;
     private Qos consolidatedQos;
     private int maxCPUTimeMS;

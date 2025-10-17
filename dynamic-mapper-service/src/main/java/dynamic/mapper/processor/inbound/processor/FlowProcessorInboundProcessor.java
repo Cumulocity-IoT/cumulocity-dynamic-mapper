@@ -26,7 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
-public class FlowProcessorInboundProcessor extends BaseProcessor  {
+public class FlowProcessorInboundProcessor extends BaseProcessor {
 
     @Autowired
     private MappingService mappingService;
@@ -52,13 +52,13 @@ public class FlowProcessorInboundProcessor extends BaseProcessor  {
             log.error(errorMessage, e);
             context.addError(new ProcessingException(errorMessage, e));
 
-            if ( !testing) {
+            if (!testing) {
                 MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
                 mappingStatus.errors++;
                 mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
-            } 
+            }
             return;
-        } 
+        }
     }
 
     public void processSmartMapping(ProcessingContext<?> context) throws ProcessingException {
@@ -149,14 +149,16 @@ public class FlowProcessorInboundProcessor extends BaseProcessor  {
 
     private void processResult(Value result, ProcessingContext<?> context, String tenant) {
         if (!result.hasArrayElements()) {
-            log.warn("{} - onMessage function did not return an array", tenant);
+            log.warn("{} - onMessage function did not return any transformation result", tenant);
+            context.getWarnings().add("onMessage function did not return any transformation result");
             context.setIgnoreFurtherProcessing(true);
             return;
         }
 
         long arraySize = result.getArraySize();
         if (arraySize == 0) {
-            log.info("{} - onMessage function returned empty array", tenant);
+            log.info("{} - onMessage function did not return any transformation result", tenant);
+            context.getWarnings().add("onMessage function did not return any transformation result");
             context.setIgnoreFurtherProcessing(true);
             return;
         }

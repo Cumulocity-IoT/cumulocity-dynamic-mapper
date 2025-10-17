@@ -38,7 +38,7 @@ import {
   Mapping,
   getSchema
 } from '../../shared/';
-import { C8YRequest, ProcessingContext, TOKEN_TOPIC_LEVEL } from '../core/processor/processor.model';
+import { DynamicMapperRequest, ProcessingContext, TestResult, TOKEN_TOPIC_LEVEL } from '../core/processor/processor.model';
 import { isSubstitutionsAsCode, MappingType, StepperConfiguration } from '../../shared/mapping/mapping.model';
 import { patchC8YTemplateForTesting, sortObjectKeys } from '../shared/util';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
@@ -47,16 +47,11 @@ import { TestingService } from '../core/testing.service';
 
 interface TestingModel {
   payload?: any;
-  results: C8YRequest[];
+  results: DynamicMapperRequest[];
   errorMsg?: string;
   request?: any;
   response?: any;
   selectedResult: number;
-}
-
-interface TestResult {
-  success: boolean;
-  errors: string[];
 }
 
 @Component({
@@ -289,7 +284,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     }
   }
 
-  private updateTestingModelFromResult(result: C8YRequest): void {
+  private updateTestingModelFromResult(result: DynamicMapperRequest): void {
     const { request, response, targetAPI, error } = result;
     this.testingModel.request = sortObjectKeys(request);
     this.testingModel.response = sortObjectKeys(response);
@@ -334,7 +329,8 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
     return {
       success: requestErrors.length === 0 && contextErrors.length === 0,
-      errors: [...contextErrors, ...requestErrors]
+      errors: [...contextErrors, ...requestErrors],
+      requests: this.testContext.requests
     };
   }
 

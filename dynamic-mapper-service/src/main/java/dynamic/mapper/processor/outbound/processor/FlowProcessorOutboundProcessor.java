@@ -46,7 +46,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
-public class FlowProcessorOutboundProcessor extends BaseProcessor  {
+public class FlowProcessorOutboundProcessor extends BaseProcessor {
 
     @Autowired
     private MappingService mappingService;
@@ -75,7 +75,7 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor  {
             mappingStatus.errors++;
             mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
             return;
-        } 
+        }
     }
 
     public void processSmartMapping(ProcessingContext<?> context) throws ProcessingException {
@@ -161,14 +161,16 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor  {
 
     private void processResult(Value result, ProcessingContext<?> context, String tenant) {
         if (!result.hasArrayElements()) {
-            log.warn("{} - onMessage function did not return an array", tenant);
+            log.warn("{} - onMessage function did not return any transformation result", tenant);
+            context.getWarnings().add("onMessage function did not return any transformation result");
             context.setIgnoreFurtherProcessing(true);
             return;
         }
 
         long arraySize = result.getArraySize();
         if (arraySize == 0) {
-            log.info("{} - onMessage function returned empty array", tenant);
+            log.info("{} - onMessage function did not return any transformation result", tenant);
+            context.getWarnings().add("onMessage function did not return any transformation result");
             context.setIgnoreFurtherProcessing(true);
             return;
         }

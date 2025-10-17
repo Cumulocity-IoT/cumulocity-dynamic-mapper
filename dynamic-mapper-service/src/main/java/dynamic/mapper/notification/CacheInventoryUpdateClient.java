@@ -23,7 +23,7 @@ package dynamic.mapper.notification;
 
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.notification.websocket.NotificationCallback;
-import dynamic.mapper.processor.model.ProcessingResult;
+import dynamic.mapper.processor.model.ProcessingResultWrapper;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
@@ -56,10 +56,10 @@ public class CacheInventoryUpdateClient implements NotificationCallback {
     }
 
     @Override
-    public ProcessingResult<?> onNotification(Notification notification) {
+    public ProcessingResultWrapper<?> onNotification(Notification notification) {
         if (!"UPDATE".equals(notification.getOperation())) {
             log.debug("{} - Ignoring non-UPDATE notification", tenant);
-            return ProcessingResult.builder()
+            return ProcessingResultWrapper.builder()
                 .consolidatedQos(Qos.AT_LEAST_ONCE)
                 .build();
         }
@@ -76,13 +76,13 @@ public class CacheInventoryUpdateClient implements NotificationCallback {
                 log.debug("{} - Updated inventory cache for MO: {}", notificationTenant, sourceId);
             }
             
-            return ProcessingResult.builder()
+            return ProcessingResultWrapper.builder()
                 .consolidatedQos(Qos.AT_LEAST_ONCE)
                 .build();
                 
         } catch (Exception e) {
             log.error("{} - Error processing inventory cache update: {}", tenant, e.getMessage(), e);
-            return ProcessingResult.builder()
+            return ProcessingResultWrapper.builder()
                 .consolidatedQos(Qos.AT_LEAST_ONCE)
                 .error(e)
                 .build();

@@ -38,9 +38,9 @@ import dynamic.mapper.core.BootstrapService;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.TestContext;
+import dynamic.mapper.model.TestResult;
 import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.ProcessingContext.SerializableError;
-import dynamic.mapper.processor.model.ProcessingResult;
+import dynamic.mapper.processor.model.ProcessingResultWrapper;
 import dynamic.mapper.service.ConnectorConfigurationService;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.service.ServiceConfigurationService;
@@ -107,7 +107,7 @@ public class TestController {
                         .getClientForTenant(tenant, connectorIdentifier);
                 String payloadMessage = new ObjectMapper().writeValueAsString(payload);
                 ConnectorMessage testMessage = createTestMessage(tenant, connectorClient, topic, send, payloadMessage);
-                ProcessingResult<?> processingResult = connectorClient.getDispatcher().onMessage(testMessage);
+                ProcessingResultWrapper<?> processingResult = connectorClient.getDispatcher().onMessage(testMessage);
                 if (processingResult.getProcessingResult() != null) {
                     // Wait for the future to complete and get the result
                     result = (List<? extends ProcessingContext<?>>) processingResult.getProcessingResult().get();
@@ -123,9 +123,9 @@ public class TestController {
     }
 
     @RequestMapping(value = "/test/mapping", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<List<? extends ProcessingContext<?>>> testMapping(
+    public ResponseEntity<TestResult> testMapping(
             @RequestBody TestContext context) {
-        List<? extends ProcessingContext<?>> result = null;
+        TestResult result = new TestResult();
         Mapping mapping = context.getMapping();
         String payload = context.getPayload();
         Boolean send = context.getSend();
@@ -139,58 +139,34 @@ public class TestController {
             ConnectorMessage testMessage = createTestMessage(tenant, connectorClient,
                     mapping.getMappingTopicSample(), send, payload);
 
-            ProcessingResult<?> processingResult = connectorClient.getDispatcher().onTestMessage(testMessage,
+            ProcessingResultWrapper<?> processingResultWrapper = connectorClient.getDispatcher().onTestMessage(
+                    testMessage,
                     mapping);
 
-            if (processingResult != null && processingResult.getProcessingResult() != null) {
+            if (processingResultWrapper != null && processingResultWrapper.getProcessingResult() != null) {
                 // Wait for the future to complete and get the result
-                result = (List<? extends ProcessingContext<?>>) processingResult.getProcessingResult().get();
+                var processingResult = (List<? extends ProcessingContext<?>>) processingResultWrapper
+                        .getProcessingResult().get();
 
-                if (result != null) {
-                    result.forEach(r -> {
-                        // Reset clientId for test results
-                        r.setFlowContext(null);
-                        r.setAlarms(null);
-                        r.setBinaryInfo(null);
-                        r.setFlowResult(null);
-
-                        r.setGraalContext(null);
-                        if (r.getProcessingCache() != null) {
-                            r.getProcessingCache().clear();
-                        }
-                        r.setProcessingMode(null);
-                        r.setProcessingType(null);
-                        r.setTenant(null);
-                        r.setQos(null);
-
-                        // Clear sensitive/large data from mapping
-                        if (r.getMapping() != null) {
-                            r.getMapping().setCode(null);
-                            r.getMapping().setSnoopedTemplates(null);
-                        }
-                        r.setServiceConfiguration(null);
-
-                        // Simply clear the errors list - don't try to serialize Exception objects
-                        // Replace errors with sanitized versions that can be serialized
-                        if (r.getErrors() != null && !r.getErrors().isEmpty()) {
-                            List<SerializableError> sanitizedErrors = new ArrayList<>();
-                            r.getErrors().forEach(e -> {
-                                sanitizedErrors.add(new SerializableError(
-                                        e.getClass().getName(),
-                                        e.getMessage() != null ? e.getMessage() : "No message"));
-                            });
-                            r.setSerializableErrors(sanitizedErrors);
-                            r.setErrors(null);
-                        }
-                        r.setRawPayload(null);
-                        // if (r.getRequests() != null && r.getRequests().isEmpty()) {
-                        //     r.setRequests(null);
-                        // }
-                    });
+                if (processingResult != null && processingResult.size() > 1) {
+                    log.warn("{} - Test mapping produced {} result(s), only returning the first result", tenant,
+                            processingResult.size());
+                } else if (processingResult != null && processingResult.size() == 1) {
+                    log.info("{} - Test mapping produced no results", tenant);
+                    var firstResult = processingResult.get(0);
+                    result.setRequests(firstResult.getRequests());
+                    result.setWarnings(firstResult.getWarnings());
+                    result.setSuccess(firstResult.getErrors().isEmpty());
+                    if (firstResult.getErrors() != null && !firstResult.getErrors().isEmpty()) {
+                        firstResult.getErrors().forEach(e -> {
+                            String errorMessage = String.format("%s - [%s]",
+                                    e.getMessage() != null ? e.getMessage() : "No message", e.getClass().getName());
+                            result.getErrors().add(errorMessage);
+                        });
+                    }
                 }
             }
-
-            return new ResponseEntity<>(result != null ? result : Collections.emptyList(), HttpStatus.OK);
+            return new ResponseEntity<>(result, HttpStatus.OK);
 
         } catch (ConnectorRegistryException e) {
             log.error("{} - Connector not found for tenant: {}", tenant, e.getMessage());

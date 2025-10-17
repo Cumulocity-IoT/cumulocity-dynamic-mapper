@@ -40,7 +40,7 @@ import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
 import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.ProcessingResult;
+import dynamic.mapper.processor.model.ProcessingResultWrapper;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.mutable.MutableInt;
@@ -466,7 +466,7 @@ public class KafkaClientV2 extends AConnectorClient {
                     tenant, topic, record.partition(), record.offset(), key, connectorName);
         }
 
-        ProcessingResult<?> processedResults = dispatcher.onMessage(connectorMessage);
+        ProcessingResultWrapper<?> processedResults = dispatcher.onMessage(connectorMessage);
 
         int mappingQos = processedResults.getConsolidatedQos().ordinal();
         int timeout = processedResults.getMaxCPUTimeMS();
@@ -482,7 +482,7 @@ public class KafkaClientV2 extends AConnectorClient {
      * Process message with QoS handling
      */
     private Void processMessageWithQos(ConsumerRecord<String, String> record,
-            ProcessingResult<?> processedResults,
+            ProcessingResultWrapper<?> processedResults,
             int timeout) {
         String topic = record.topic();
 

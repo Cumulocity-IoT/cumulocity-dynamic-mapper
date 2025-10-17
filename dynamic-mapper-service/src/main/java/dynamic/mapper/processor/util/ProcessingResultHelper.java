@@ -41,12 +41,12 @@ import dynamic.mapper.model.MappingRepresentation;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.ProcessingResult;
+import dynamic.mapper.processor.model.ProcessingResultWrapper;
 
 @Component
 public class ProcessingResultHelper {
     
-    public static <T> ProcessingResult<T> success(List<ProcessingContext<T>> contexts) {
+    public static <T> ProcessingResultWrapper<T> success(List<ProcessingContext<T>> contexts) {
         CompletableFuture<List<ProcessingContext<T>>> future = CompletableFuture.completedFuture(contexts);
         
         // Determine consolidated QoS from contexts
@@ -59,40 +59,40 @@ public class ProcessingResultHelper {
         // Calculate processing time based on contexts
         int processingTime = calculateProcessingTime(contexts);
         
-        return ProcessingResult.<T>builder()
+        return ProcessingResultWrapper.<T>builder()
             .processingResult(future)
             .consolidatedQos(consolidatedQos)
             .maxCPUTimeMS(processingTime)
             .build();
     }
     
-    public static <T> ProcessingResult<T> successAsync(Future<List<ProcessingContext<T>>> future, Qos qos, int maxCPUTimeMS) {
-        return ProcessingResult.<T>builder()
+    public static <T> ProcessingResultWrapper<T> successAsync(Future<List<ProcessingContext<T>>> future, Qos qos, int maxCPUTimeMS) {
+        return ProcessingResultWrapper.<T>builder()
             .processingResult(future)
             .consolidatedQos(qos)
             .maxCPUTimeMS(maxCPUTimeMS)
             .build();
     }
     
-    public static <T> ProcessingResult<T> failure(Exception error) {
-        return ProcessingResult.<T>builder()
+    public static <T> ProcessingResultWrapper<T> failure(Exception error) {
+        return ProcessingResultWrapper.<T>builder()
             .error(error)
             .maxCPUTimeMS(0)
             .build();
     }
     
-    public static <T> ProcessingResult<T> failure(Exception error, int maxCPUTimeMS) {
-        return ProcessingResult.<T>builder()
+    public static <T> ProcessingResultWrapper<T> failure(Exception error, int maxCPUTimeMS) {
+        return ProcessingResultWrapper.<T>builder()
             .error(error)
             .maxCPUTimeMS(maxCPUTimeMS)
             .build();
     }
     
-    public static <T> ProcessingResult<T> empty() {
+    public static <T> ProcessingResultWrapper<T> empty() {
         CompletableFuture<List<ProcessingContext<T>>> emptyFuture = 
             CompletableFuture.completedFuture(new ArrayList<>());
             
-        return ProcessingResult.<T>builder()
+        return ProcessingResultWrapper.<T>builder()
             .processingResult(emptyFuture)
             .consolidatedQos(Qos.AT_MOST_ONCE)
             .maxCPUTimeMS(0)

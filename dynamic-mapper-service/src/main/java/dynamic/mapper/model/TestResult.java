@@ -24,23 +24,31 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import dynamic.mapper.processor.model.DynamicMapperRequest;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 
 @Getter
 @Setter
-@Schema(description = "Data to test mapping with payload in backend")
+@Schema(description = "Result of testing mapping with payload in backend")
 @ToString()
-public class TestContext {
-    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Mapping to test")
+public class TestResult {
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Generated requests resulting from the transformation")
     @NotNull
-    private Mapping mapping;
+    private List<DynamicMapperRequest> requests = new ArrayList<>();
 
-    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "JSON payload as string for test")
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "List of errors")
     @NotNull
-    private String payload;
+    private List<String> errors= new ArrayList<>();
 
-    @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "Send payload to backend")
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "List of warnings")
     @NotNull
-    private Boolean send = false;
+    private List<String> warnings= new ArrayList<>();
+
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Was the test successful")
+    @NotNull
+    private Boolean success = false;
 }
