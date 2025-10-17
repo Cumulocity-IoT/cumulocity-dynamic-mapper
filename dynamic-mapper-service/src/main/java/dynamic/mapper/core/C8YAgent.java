@@ -229,7 +229,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         if (identity.getType() == null) {
             identity.setType("c8y_Serial");
         }
-         ExternalIDRepresentation result = subscriptionsService.callForTenant(tenant, () -> {
+        ExternalIDRepresentation result = subscriptionsService.callForTenant(tenant, () -> {
             try {
                 ExternalIDRepresentation resultInner = inboundExternalIdCaches.get(tenant)
                         .getIdByExternalId(identity);
@@ -1223,7 +1223,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
             return 0;
     }
 
-    public Map<String, Object> getMOFromInventoryCacheByExternalId(String tenant, String externalId, String type, Boolean testing) {
+    public Map<String, Object> getMOFromInventoryCacheByExternalId(String tenant, String externalId, String type,
+            Boolean testing) {
 
         if (externalId == null || type == null) {
             return null;
@@ -1236,7 +1237,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         return null;
     }
 
-    public Map<String, Object> updateMOInInventoryCache(String tenant, String sourceId, Map<String, Object> updates, Boolean testing) {
+    public Map<String, Object> updateMOInInventoryCache(String tenant, String sourceId, Map<String, Object> updates,
+            Boolean testing) {
         InventoryCache inventoryCache = getInventoryCache(tenant);
 
         // Create new managed object cache entry
@@ -1304,37 +1306,39 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
 
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         ManagedObjectRepresentation device = getManagedObjectForId(tenant, sourceId, testing);
-        Map<String, Object> attrs = device.getAttrs();
+        if (device != null) {
+            Map<String, Object> attrs = device.getAttrs();
 
-        // Process each fragment
-        serviceConfiguration.getInventoryFragmentsToCache().forEach(frag -> {
-            frag = frag.trim();
+            // Process each fragment
+            serviceConfiguration.getInventoryFragmentsToCache().forEach(frag -> {
+                frag = frag.trim();
 
-            // Handle special cases
-            if ("id".equals(frag)) {
-                newMO.put(frag, sourceId);
-                return; // using return in forEach as continue
-            }
-            if ("name".equals(frag)) {
-                newMO.put(frag, device.getName());
-                return;
-            }
-            if ("owner".equals(frag)) {
-                newMO.put(frag, device.getOwner());
-                return;
-            }
+                // Handle special cases
+                if ("id".equals(frag)) {
+                    newMO.put(frag, sourceId);
+                    return; // using return in forEach as continue
+                }
+                if ("name".equals(frag)) {
+                    newMO.put(frag, device.getName());
+                    return;
+                }
+                if ("owner".equals(frag)) {
+                    newMO.put(frag, device.getOwner());
+                    return;
+                }
 
-            if ("type".equals(frag)) {
-                newMO.put(frag, device.getType());
-                return;
-            }
+                if ("type".equals(frag)) {
+                    newMO.put(frag, device.getType());
+                    return;
+                }
 
-            // Handle nested attributes
-            Object value = resolveNestedAttribute(attrs, frag);
-            if (value != null) {
-                newMO.put(frag, value);
-            }
-        });
+                // Handle nested attributes
+                Object value = resolveNestedAttribute(attrs, frag);
+                if (value != null) {
+                    newMO.put(frag, value);
+                }
+            });
+        }
 
         return newMO;
     }

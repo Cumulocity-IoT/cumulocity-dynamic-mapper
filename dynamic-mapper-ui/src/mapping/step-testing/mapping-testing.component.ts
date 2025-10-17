@@ -347,7 +347,9 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
         this.testResult.emit(false);
       }
     } else {
-      this.handleTestSuccess(sendPayload);
+      if (result?.warnings) {
+        this.handleTestWarning(result);
+       } else { this.handleTestSuccess(sendPayload); }
     }
   }
 
@@ -355,6 +357,12 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     errors.forEach(error => {
       this.alertService.danger(error);
     });
+  }
+
+  private handleTestWarning(result: TestResult): void {
+
+      this.alertService.warning(`Test completed with warning: ${result?.warnings[0]}.`);
+  
   }
 
   private handleTestSuccess(sendPayload: boolean): void {
