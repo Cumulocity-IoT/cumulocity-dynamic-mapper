@@ -73,6 +73,61 @@ public abstract class AConnectorClient {
     public static class Certificate {
         private String fingerprint;
         private String certInPemFormat;
+
+        /**
+         * Get all certificates in the chain as separate PEM strings
+         */
+        public List<String> getCertificatesInChain() {
+            List<String> certs = new ArrayList<>();
+            if (certInPemFormat == null)
+                return certs;
+
+            String[] parts = certInPemFormat.split("-----END CERTIFICATE-----");
+            for (String part : parts) {
+                if (part.trim().isEmpty())
+                    continue;
+
+                String cert = part.trim();
+                if (!cert.startsWith("-----BEGIN CERTIFICATE-----")) {
+                    cert = "-----BEGIN CERTIFICATE-----\n" + cert;
+                }
+                cert = cert + "\n-----END CERTIFICATE-----";
+                certs.add(cert);
+            }
+            return certs;
+        }
+
+        /**
+         * Check if this contains a certificate chain (multiple certificates)
+         */
+        public boolean isChain() {
+            if (certInPemFormat == null)
+                return false;
+            int count = 0;
+            int index = 0;
+            while ((index = certInPemFormat.indexOf("-----BEGIN CERTIFICATE-----", index)) != -1) {
+                count++;
+                index += 27;
+                if (count > 1)
+                    return true;
+            }
+            return false;
+        }
+
+        /**
+         * Get the number of certificates in the chain
+         */
+        public int getCertificateCount() {
+            if (certInPemFormat == null)
+                return 0;
+            int count = 0;
+            int index = 0;
+            while ((index = certInPemFormat.indexOf("-----BEGIN CERTIFICATE-----", index)) != -1) {
+                count++;
+                index += 27;
+            }
+            return count;
+        }
     }
 
     // Constants
@@ -351,8 +406,6 @@ public abstract class AConnectorClient {
         monitorSubscriptions();
     }
 
-
-
     /**
      * Connector-specific housekeeping - to be implemented by subclasses
      */
@@ -385,7 +438,8 @@ public abstract class AConnectorClient {
                 .filter(Mapping::getActive)
                 .filter(this::isMappingValidForDeployment)
                 .filter(this::isDeployedInConnector)
-                .forEach(mapping -> mappingSubscriptionManager.addSubscriptionOutbound(mapping.getIdentifier(), mapping));
+                .forEach(mapping -> mappingSubscriptionManager.addSubscriptionOutbound(mapping.getIdentifier(),
+                        mapping));
 
         log.info("{} - Initialized {} outbound mappings for connector: {}",
                 tenant,

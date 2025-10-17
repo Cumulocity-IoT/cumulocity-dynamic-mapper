@@ -389,60 +389,150 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                     TrustedCertificateRepresentation certResult = null;
                     try {
                         List<TrustedCertificateRepresentation> certificatesList = new ArrayList<>();
-                        boolean next = true;
                         String nextUrl = String.format("/tenant/tenants/%s/trusted-certificates", tenant);
-                        TrustedCertificateCollectionRepresentation certificatesResult;
-                        while (next) {
-                            certificatesResult = platform.rest().get(
+
+                        // Pagination with safety limit
+                        int pageCount = 0;
+                        int maxPages = 100; // Safety limit to prevent infinite loops
+
+                        while (nextUrl != null && !nextUrl.isEmpty() && pageCount < maxPages) {
+                            pageCount++;
+
+                            TrustedCertificateCollectionRepresentation certificatesResult = platform.rest().get(
                                     nextUrl,
                                     CumulocityMediaType.APPLICATION_JSON_TYPE,
                                     TrustedCertificateCollectionRepresentation.class);
-                            certificatesList.addAll(certificatesResult.getCertificates());
+
+                            List<TrustedCertificateRepresentation> pageCerts = certificatesResult.getCertificates();
+
+                            if (pageCerts != null && !pageCerts.isEmpty()) {
+                                certificatesList.addAll(pageCerts);
+                                log.debug("{} - Connector {} - Page {}: Retrieved {} certificates (total: {})",
+                                        tenant, connectorName, pageCount, pageCerts.size(), certificatesList.size());
+                            } else {
+                                log.debug("{} - Connector {} - Page {}: No more certificates",
+                                        tenant, connectorName, pageCount);
+                                break; // No more certificates
+                            }
+
+                            // Get next URL - THIS IS THE KEY FIX
                             nextUrl = certificatesResult.getNext();
-                            next = certificatesResult.getCertificates().size() > 0;
-                            log.info("{} - Connector {} - Retrieved certificates {} - next {} - nextUrl {}",
-                                    tenant,
-                                    connectorName, certificatesList.size(), next, nextUrl);
+
+                            // Break if no next URL
+                            if (nextUrl == null || nextUrl.isEmpty()) {
+                                log.debug("{} - Connector {} - No more pages (nextUrl is null/empty)",
+                                        tenant, connectorName);
+                                break;
+                            }
                         }
-                        for (int index = 0; index < certificatesList.size(); index++) {
-                            TrustedCertificateRepresentation certificateIterate = certificatesList.get(index);
-                            log.info("{} - Found certificate with fingerprint: {} with name: {}", tenant,
-                                    certificateIterate.getFingerprint(),
-                                    certificateIterate.getName());
+
+                        if (pageCount >= maxPages) {
+                            log.warn("{} - Connector {} - Reached maximum page limit ({}), stopping pagination",
+                                    tenant, connectorName, maxPages);
+                        }
+
+                        log.info("{} - Connector {} - Retrieved total of {} certificates across {} pages",
+                                tenant, connectorName, certificatesList.size(), pageCount);
+
+                        // Search for matching certificate
+                        for (TrustedCertificateRepresentation certificateIterate : certificatesList) {
+                            log.debug("{} - Checking certificate: name='{}', fingerprint='{}'",
+                                    tenant,
+                                    certificateIterate.getName(),
+                                    certificateIterate.getFingerprint());
 
                             // Normalize both fingerprints for comparison
                             String normalizedStoredFingerprint = normalizeFingerprint(
                                     certificateIterate.getFingerprint());
                             String normalizedInputFingerprint = normalizeFingerprint(fingerprint);
 
-                            if (certificateIterate.getName().equals(certificateName)
-                                    && normalizedStoredFingerprint.equals(normalizedInputFingerprint)) {
+                            boolean nameMatches = certificateIterate.getName().equals(certificateName);
+                            boolean fingerprintMatches = normalizedStoredFingerprint.equals(normalizedInputFingerprint);
+
+                            if (nameMatches && fingerprintMatches) {
                                 certResult = certificateIterate;
-                                log.info("{} - Connector {} - Found certificate {} with fingerprint {} ", tenant,
-                                        connectorName, certificateName, certificateIterate.getFingerprint());
+                                log.info("{} - Connector {} - Found matching certificate: name='{}', fingerprint='{}'",
+                                        tenant, connectorName, certificateName, certificateIterate.getFingerprint());
                                 break;
+                            } else if (nameMatches) {
+                                log.debug("{} - Name matches but fingerprint differs: expected='{}', got='{}'",
+                                        tenant, normalizedInputFingerprint, normalizedStoredFingerprint);
                             }
                         }
+
+                        if (certResult == null) {
+                            log.warn("{} - Connector {} - Certificate not found: name='{}', fingerprint='{}'",
+                                    tenant, connectorName, certificateName, fingerprint);
+                        }
+
                     } catch (Exception e) {
-                        log.error("{} - Connector {} - Error initializing connector: ", tenant,
+                        log.error("{} - Connector {} - Error retrieving certificate: ", tenant,
                                 connectorName, e);
                     }
                     return certResult;
                 });
+
         if (result != null) {
-            log.info("{} - Connector {} - Found certificate {} with fingerprint {} ", tenant,
-                    connectorName, certificateName, result.getFingerprint());
-            StringBuffer cert = new StringBuffer("-----BEGIN CERTIFICATE-----\n")
-                    .append(result.getCertInPemFormat())
-                    .append("\n").append("-----END CERTIFICATE-----");
-            return new AConnectorClient.Certificate(result.getFingerprint(), cert.toString());
+            log.info("{} - Connector {} - Found certificate '{}' with fingerprint '{}'",
+                    tenant, connectorName, certificateName, result.getFingerprint());
+
+            // Handle PEM format - check if markers already exist
+            String pemContent = result.getCertInPemFormat();
+            String fullPemCert;
+
+            if (pemContent != null && pemContent.contains("-----BEGIN CERTIFICATE-----")) {
+                // Already has PEM markers (might be a chain)
+                fullPemCert = pemContent;
+                log.debug("{} - Certificate already in PEM format with markers", tenant);
+            } else if (pemContent != null && !pemContent.isEmpty()) {
+                // Need to add PEM markers
+                fullPemCert = "-----BEGIN CERTIFICATE-----\n"
+                        + pemContent
+                        + "\n-----END CERTIFICATE-----";
+                log.debug("{} - Added PEM markers to certificate", tenant);
+            } else {
+                log.error("{} - Certificate PEM content is null or empty", tenant);
+                return null;
+            }
+
+            // Count certificates in chain
+            int certCount = countCertificatesInChain(fullPemCert);
+            log.info("{} - Certificate chain contains {} certificate(s)", tenant, certCount);
+
+            return new AConnectorClient.Certificate(result.getFingerprint(), fullPemCert);
         } else {
-            log.info("{} - Connector {} - No certificate found!", tenant, connectorName);
+            log.warn("{} - Connector {} - No certificate found with name='{}' and fingerprint='{}'",
+                    tenant, connectorName, certificateName, fingerprint);
             return null;
         }
     }
 
-    // TODO Change this to use ExecutorService + Virtual Threads when available
+    // Helper method to normalize fingerprints
+    private String normalizeFingerprint(String fingerprint) {
+        if (fingerprint == null || fingerprint.isEmpty()) {
+            return "";
+        }
+        // Remove colons, spaces, and convert to lowercase
+        return fingerprint.replace(":", "")
+                .replace(" ", "")
+                .trim()
+                .toLowerCase();
+    }
+
+    // Helper method to count certificates in a PEM chain
+    private int countCertificatesInChain(String pemContent) {
+        if (pemContent == null)
+            return 0;
+
+        int count = 0;
+        int index = 0;
+        while ((index = pemContent.indexOf("-----BEGIN CERTIFICATE-----", index)) != -1) {
+            count++;
+            index += 27; // Length of "-----BEGIN CERTIFICATE-----"
+        }
+        return count;
+    }
+
     public CompletableFuture<AbstractExtensibleRepresentation> createMEAOAsync(ProcessingContext<?> context,
             int requestIndex)
             throws ProcessingException {
@@ -1546,14 +1636,4 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     // }
     // }
     // }
-
-    // Helper method to normalize fingerprint format
-    private String normalizeFingerprint(String fingerprint) {
-        if (fingerprint == null) {
-            return null;
-        }
-        // Remove colons and convert to lowercase for comparison
-        return fingerprint.replace(":", "").toLowerCase();
-    }
-
 }

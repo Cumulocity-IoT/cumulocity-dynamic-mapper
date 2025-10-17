@@ -102,8 +102,9 @@ public class SendInboundProcessor extends BaseProcessor {
     /**
      * Process and send all C8Y requests created during substitution (sequential
      * mode)
+     * @throws Exception 
      */
-    private void processAndPrepareRequests(ProcessingContext<Object> context) {
+    private void processAndPrepareRequests(ProcessingContext<Object> context) throws Exception {
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
 
@@ -126,6 +127,7 @@ public class SendInboundProcessor extends BaseProcessor {
             } catch (Exception e) {
                 log.error("{} - Failed to process request: {}", tenant, e.getMessage(), e);
                 request.setError(e);
+                throw e;
             }
         }
     }

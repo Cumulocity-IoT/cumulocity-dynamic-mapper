@@ -173,7 +173,7 @@ public class MQTT3Client extends AConnectorClient {
                     "Required properties nameCertificate and fingerprint are not set");
         }
 
-        // Load certificate
+        // Load certificate (might be a chain)
         cert = c8yAgent.loadCertificateByName(nameCertificate, fingerprint, tenant, connectorName);
         if (cert == null) {
             throw new ConnectorException(
@@ -181,25 +181,83 @@ public class MQTT3Client extends AConnectorClient {
                             nameCertificate, fingerprint));
         }
 
-        // Configure SSL
-        KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
-        trustStore.load(null, null);
-        trustStore.setCertificateEntry("Custom CA",
-                (X509Certificate) CertificateFactory.getInstance("X509")
-                        .generateCertificate(new ByteArrayInputStream(
-                                cert.getCertInPemFormat().getBytes(StandardCharsets.UTF_8))));
+        try {
+            // Log certificate chain info
+            log.info("{} - Certificate chain contains {} certificate(s)",
+                    tenant, cert.getCertificateCount());
 
-        TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-        tmf.init(trustStore);
+            if (cert.isChain()) {
+                log.info("{} - Processing certificate chain", tenant);
+            }
 
-        MqttClientSslConfigBuilder sslConfigBuilder = MqttClientSslConfig.builder();
-        List<String> expectedProtocols = Arrays.asList("TLSv1.2", "TLSv1.3");
-        sslConfig = sslConfigBuilder
-                .trustManagerFactory(tmf)
-                .protocols(expectedProtocols)
-                .build();
+            // Parse ALL certificates in the PEM format (handles chains automatically)
+            CertificateFactory cf = CertificateFactory.getInstance("X.509");
 
-        log.debug("{} - SSL configuration initialized", tenant);
+            ByteArrayInputStream certStream = new ByteArrayInputStream(
+                    cert.getCertInPemFormat().getBytes(StandardCharsets.UTF_8));
+
+            Collection<? extends java.security.cert.Certificate> certificates = cf.generateCertificates(certStream);
+
+            log.info("{} - Successfully parsed {} certificate(s) from PEM", tenant, certificates.size());
+
+            // Create KeyStore and add ALL certificates
+            KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
+            trustStore.load(null, null);
+
+            int certIndex = 0;
+            for (java.security.cert.Certificate certificate : certificates) {
+                if (certificate instanceof X509Certificate) {
+                    X509Certificate x509Cert = (X509Certificate) certificate;
+
+                    String alias = "cert-" + certIndex++;
+                    trustStore.setCertificateEntry(alias, x509Cert);
+
+                    boolean isSelfSigned = x509Cert.getSubjectX500Principal()
+                            .equals(x509Cert.getIssuerX500Principal());
+
+                    log.info("{} - Added certificate [{}]: Subject={}, Issuer={}, Serial={}, SelfSigned={}",
+                            tenant,
+                            alias,
+                            x509Cert.getSubjectX500Principal().getName(),
+                            x509Cert.getIssuerX500Principal().getName(),
+                            x509Cert.getSerialNumber().toString(16),
+                            isSelfSigned);
+
+                    // Verify certificate is not expired
+                    try {
+                        x509Cert.checkValidity();
+                        log.debug("{} - Certificate [{}] is valid", tenant, alias);
+                    } catch (Exception e) {
+                        log.warn("{} - Certificate [{}] validity check failed: {}",
+                                tenant, alias, e.getMessage());
+                    }
+                }
+            }
+
+            if (certIndex == 0) {
+                throw new ConnectorException("No valid X.509 certificates found in PEM");
+            }
+
+            // Initialize TrustManagerFactory
+            TrustManagerFactory tmf = TrustManagerFactory
+                    .getInstance(TrustManagerFactory.getDefaultAlgorithm());
+            tmf.init(trustStore);
+
+            // Build SSL configuration
+            List<String> expectedProtocols = Arrays.asList("TLSv1.2", "TLSv1.3");
+            sslConfig = MqttClientSslConfig.builder()
+                    .trustManagerFactory(tmf)
+                    .protocols(expectedProtocols)
+                    .handshakeTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+                    .build();
+
+            log.info("{} - SSL configuration initialized with {} certificate(s), protocols: {}",
+                    tenant, certIndex, expectedProtocols);
+
+        } catch (Exception e) {
+            log.error("{} - Error creating SSL configuration", tenant, e);
+            throw new ConnectorException("Failed to initialize SSL configuration: " + e.getMessage(), e);
+        }
     }
 
     @Override
@@ -390,7 +448,7 @@ public class MQTT3Client extends AConnectorClient {
 
             } catch (Exception e) {
                 attempt++;
-                log.error("{} - Connection attempt {} failed: {}", tenant, attempt, e.getMessage());
+                log.error("{} - Connection attempt {} failed: {}", tenant, attempt, e);
 
                 if (attempt >= maxAttempts) {
                     connectionStateManager.updateStatusWithError(e);
@@ -731,7 +789,8 @@ public class MQTT3Client extends AConnectorClient {
                         false, null, tlsCondition));
 
         configProps.put("fingerprintSelfSignedCertificate",
-                new ConnectorProperty("SHA 1 fingerprint of CA or Self Signed Certificate", false, 8, ConnectorPropertyType.STRING_PROPERTY, false, false,
+                new ConnectorProperty("SHA 1 fingerprint of CA or Self Signed Certificate", false, 8,
+                        ConnectorPropertyType.STRING_PROPERTY, false, false,
                         null, null, certCondition));
 
         configProps.put("nameCertificate",
