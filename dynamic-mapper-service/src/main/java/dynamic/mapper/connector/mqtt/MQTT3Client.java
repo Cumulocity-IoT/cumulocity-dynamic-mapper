@@ -758,20 +758,24 @@ public class MQTT3Client extends AConnectorClient {
                 new ConnectorProperty(null, false, 10, ConnectorPropertyType.STRING_LARGE_PROPERTY, false, false,
                         null, null, certCondition));
 
-        configProps.put("supportsWildcardInTopicInbound",
+        configProps.put("disableHostnameValidation",
                 new ConnectorProperty(null, false, 11, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false,
+                        false, null, certCondition));
+
+        configProps.put("supportsWildcardInTopicInbound",
+                new ConnectorProperty(null, false, 12, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false,
                         true, null, null));
 
         configProps.put("supportsWildcardInTopicOutbound",
-                new ConnectorProperty(null, false, 12, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false,
+                new ConnectorProperty(null, false, 13, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false,
                         false, null, null));
 
         configProps.put("serverPath",
-                new ConnectorProperty(null, false, 13, ConnectorPropertyType.STRING_PROPERTY, false, false,
+                new ConnectorProperty(null, false, 14, ConnectorPropertyType.STRING_PROPERTY, false, false,
                         null, null, wsCondition));
 
         configProps.put("cleanSession",
-                new ConnectorProperty(null, false, 14, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false,
+                new ConnectorProperty(null, false, 15, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false,
                         true, null, null));
 
         String name = "Generic MQTT";

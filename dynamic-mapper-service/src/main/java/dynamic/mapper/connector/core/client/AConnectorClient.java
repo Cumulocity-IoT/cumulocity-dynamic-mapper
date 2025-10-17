@@ -60,6 +60,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.*;
 
+import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 
@@ -1035,7 +1036,26 @@ public abstract class AConnectorClient {
     /**
      * Create custom hostname verifier for MQTT
      */
-    protected javax.net.ssl.HostnameVerifier createHostnameVerifier() {
+    /**
+     * Create custom hostname verifier for MQTT
+     * Can be disabled via configuration property 'disableHostnameValidation'
+     */
+    protected HostnameVerifier createHostnameVerifier() {
+        // Check if hostname validation should be disabled
+        Boolean disableHostnameValidation = (Boolean) connectorConfiguration.getProperties()
+                .getOrDefault("disableHostnameValidation", false);
+
+        if (disableHostnameValidation) {
+            log.warn(
+                    "{} - ⚠️  HOSTNAME VALIDATION DISABLED - This is insecure and should only be used for development/testing!",
+                    tenant);
+            return (hostname, session) -> {
+                log.warn("{} - Accepting hostname without validation: {}", tenant, hostname);
+                return true; // Accept any hostname
+            };
+        }
+
+        // Normal hostname verification
         return (hostname, session) -> {
             log.info("{} - Hostname verification: requested={}", tenant, hostname);
 
