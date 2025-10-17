@@ -946,39 +946,55 @@ public abstract class AConnectorClient {
      * @param customCertificates list of custom certificates to add
      * @return configured KeyStore
      */
-    protected KeyStore createTrustStore(boolean includeSystemCAs, List<X509Certificate> customCertificates)
-            throws Exception {
+/**
+ * Create truststore with system CA certificates and custom certificates
+ * 
+ * @param includeSystemCAs   if true, loads default Java cacerts; if false, creates empty truststore
+ * @param customCertificates list of custom certificates to add
+ * @param cert              the Certificate object containing certificate info (can be null if no custom certs)
+ * @return configured KeyStore
+ */
+protected KeyStore createTrustStore(boolean includeSystemCAs, List<X509Certificate> customCertificates, Certificate cert)
+        throws Exception {
 
-        KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
+    KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
 
-        int systemCertCount = 0;
-        if (includeSystemCAs) {
-            String cacertsPath = System.getProperty("java.home") + "/lib/security/cacerts";
-            try (java.io.FileInputStream fis = new java.io.FileInputStream(cacertsPath)) {
-                trustStore.load(fis, CACERTS_PASSWORD.toCharArray());
-                systemCertCount = trustStore.size();
-                log.info("{} - Loaded default cacerts from {} with {} system certificates",
-                        tenant, cacertsPath, systemCertCount);
-            } catch (Exception e) {
-                log.warn("{} - Could not load default cacerts: {}, creating empty truststore",
-                        tenant, e.getMessage());
-                trustStore.load(null, null);
-            }
-        } else {
+    int systemCertCount = 0;
+    if (includeSystemCAs) {
+        String cacertsPath = System.getProperty("java.home") + "/lib/security/cacerts";
+        try (java.io.FileInputStream fis = new java.io.FileInputStream(cacertsPath)) {
+            trustStore.load(fis, CACERTS_PASSWORD.toCharArray());
+            systemCertCount = trustStore.size();
+            log.info("{} - Loaded default cacerts from {} with {} system certificates",
+                    tenant, cacertsPath, systemCertCount);
+        } catch (Exception e) {
+            log.warn("{} - Could not load default cacerts: {}, creating empty truststore",
+                    tenant, e.getMessage());
             trustStore.load(null, null);
-            log.info("{} - Created empty truststore", tenant);
+        }
+    } else {
+        trustStore.load(null, null);
+        log.info("{} - Created empty truststore", tenant);
+    }
+
+    // Add custom certificates
+    if (customCertificates != null && !customCertificates.isEmpty()) {
+        // Get certificate info if available
+        List<Certificate.CertificateInfo> certInfos = null;
+        if (cert != null) {
+            certInfos = cert.getCertificateInfoList();
         }
 
-        // Add custom certificates
-        if (customCertificates != null && !customCertificates.isEmpty()) {
-            List<Certificate.CertificateInfo> certInfos = cert.getCertificateInfoList();
-
-            for (int i = 0; i < customCertificates.size(); i++) {
-                X509Certificate x509Cert = customCertificates.get(i);
+        for (int i = 0; i < customCertificates.size(); i++) {
+            X509Certificate x509Cert = customCertificates.get(i);
+            
+            // Use cert info if available, otherwise use basic info
+            String alias;
+            if (certInfos != null && i < certInfos.size()) {
                 Certificate.CertificateInfo info = certInfos.get(i);
-
-                String alias = String.format("custom-%s-%d",
+                alias = String.format("custom-%s-%d",
                         info.getCertificateType().toLowerCase().replace(" ", "-"), i);
+                
                 trustStore.setCertificateEntry(alias, x509Cert);
 
                 log.info("{} - Added certificate [{}] to truststore:", tenant, alias);
@@ -989,14 +1005,24 @@ public abstract class AConnectorClient {
                         cert.getAllFingerprints().get(i));
                 log.info("{}     Fingerprint (SHA-256): {}", tenant,
                         cert.getAllFingerprints("SHA-256").get(i));
+            } else {
+                // Fallback: use simple numbering and extract info from X509Certificate
+                alias = String.format("custom-cert-%d", i);
+                trustStore.setCertificateEntry(alias, x509Cert);
+                
+                log.info("{} - Added certificate [{}] to truststore:", tenant, alias);
+                log.info("{}     Subject: {}", tenant, x509Cert.getSubjectX500Principal().getName());
+                log.info("{}     Issuer: {}", tenant, x509Cert.getIssuerX500Principal().getName());
+                log.info("{}     Serial: {}", tenant, x509Cert.getSerialNumber().toString(16).toUpperCase());
             }
-
-            log.info("{} - Final truststore contains {} total certificates ({} system + {} custom)",
-                    tenant, trustStore.size(), systemCertCount, customCertificates.size());
         }
 
-        return trustStore;
+        log.info("{} - Final truststore contains {} total certificates ({} system + {} custom)",
+                tenant, trustStore.size(), systemCertCount, customCertificates.size());
     }
+
+    return trustStore;
+}
 
     /**
      * Create TrustManagerFactory from KeyStore

@@ -178,8 +178,8 @@ public class MQTT5Client extends AConnectorClient {
                 throw new ConnectorException("No valid X.509 certificates found in PEM");
             }
 
-            // Create truststore (include system CAs for compatibility)
-            KeyStore trustStore = createTrustStore(true, customCertificates);
+            // Create truststore (include system CAs for compatibility) - PASS cert
+            KeyStore trustStore = createTrustStore(true, customCertificates, cert);
 
             // Create TrustManagerFactory
             TrustManagerFactory tmf = createTrustManagerFactory(trustStore);

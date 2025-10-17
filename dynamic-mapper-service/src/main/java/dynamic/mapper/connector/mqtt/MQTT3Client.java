@@ -169,53 +169,53 @@ public class MQTT3Client extends AConnectorClient {
         }
     }
 
-    private void initializeSslConfiguration() throws Exception {
-        try {
-            // Load certificate using common method
-            cert = loadCertificateFromConfiguration();
-
-            // Log certificate information
-            logCertificateInfo(cert);
-
-            // Get X509 certificates
-            List<X509Certificate> customCertificates = cert.getX509Certificates();
-            if (customCertificates.isEmpty()) {
-                throw new ConnectorException("No valid X.509 certificates found in PEM");
-            }
-
-            log.info("{} - Successfully parsed {} X.509 certificate(s)", tenant, customCertificates.size());
-
-            // Create truststore (include system CAs)
-            KeyStore trustStore = createTrustStore(true, customCertificates);
-
-            // Create TrustManagerFactory
-            TrustManagerFactory tmf = createTrustManagerFactory(trustStore);
-
-            // Build SSL configuration
-            sslConfig = MqttClientSslConfig.builder()
-                    .trustManagerFactory(tmf)
-                    .protocols(DEFAULT_TLS_PROTOCOLS)
-                    .handshakeTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-                    .hostnameVerifier(createHostnameVerifier())
-                    .build();
-
-            log.info("{} - SSL configuration initialized successfully", tenant);
-            log.info("{}   Custom CAs: {}", tenant, customCertificates.size());
-            log.info("{}   Protocols: {}", tenant, DEFAULT_TLS_PROTOCOLS);
-
-            // Log chain structure
-            logChainStructure(cert);
-
-            // Optional: Print full summary at debug level
-            if (log.isDebugEnabled()) {
-                log.debug("{} - Full certificate chain summary:\n{}", tenant, cert.getSummary());
-            }
-
-        } catch (Exception e) {
-            log.error("{} - Error creating SSL configuration", tenant, e);
-            throw new ConnectorException("Failed to initialize SSL configuration: " + e.getMessage(), e);
+private void initializeSslConfiguration() throws Exception {
+    try {
+        // Load certificate using common method
+        cert = loadCertificateFromConfiguration();
+        
+        // Log certificate information
+        logCertificateInfo(cert);
+        
+        // Get X509 certificates
+        List<X509Certificate> customCertificates = cert.getX509Certificates();
+        if (customCertificates.isEmpty()) {
+            throw new ConnectorException("No valid X.509 certificates found in PEM");
         }
+        
+        log.info("{} - Successfully parsed {} X.509 certificate(s)", tenant, customCertificates.size());
+        
+        // Create truststore (include system CAs) - PASS cert as parameter
+        KeyStore trustStore = createTrustStore(true, customCertificates, cert);
+        
+        // Create TrustManagerFactory
+        TrustManagerFactory tmf = createTrustManagerFactory(trustStore);
+        
+        // Build SSL configuration
+        sslConfig = MqttClientSslConfig.builder()
+                .trustManagerFactory(tmf)
+                .protocols(DEFAULT_TLS_PROTOCOLS)
+                .handshakeTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+                .hostnameVerifier(createHostnameVerifier())
+                .build();
+        
+        log.info("{} - SSL configuration initialized successfully", tenant);
+        log.info("{}   Custom CAs: {}", tenant, customCertificates.size());
+        log.info("{}   Protocols: {}", tenant, DEFAULT_TLS_PROTOCOLS);
+        
+        // Log chain structure
+        logChainStructure(cert);
+        
+        // Optional: Print full summary at debug level
+        if (log.isDebugEnabled()) {
+            log.debug("{} - Full certificate chain summary:\n{}", tenant, cert.getSummary());
+        }
+        
+    } catch (Exception e) {
+        log.error("{} - Error creating SSL configuration", tenant, e);
+        throw new ConnectorException("Failed to initialize SSL configuration: " + e.getMessage(), e);
     }
+}
 
     @Override
     public void connect() {

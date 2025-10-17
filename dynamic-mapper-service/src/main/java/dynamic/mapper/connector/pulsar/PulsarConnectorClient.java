@@ -178,8 +178,8 @@ public class PulsarConnectorClient extends AConnectorClient {
                 throw new ConnectorException("No valid X.509 certificates found in PEM");
             }
 
-            // Create truststore (can choose whether to include system CAs)
-            KeyStore trustStore = createTrustStore(false, customCertificates);
+            // Create truststore (can choose whether to include system CAs) - PASS cert
+            KeyStore trustStore = createTrustStore(false, customCertificates, cert);
 
             // Create TrustManagerFactory
             TrustManagerFactory tmf = createTrustManagerFactory(trustStore);
