@@ -43,6 +43,7 @@ export interface ProcessingContext {
   payload?: JSON;
   requests?: DynamicMapperRequest[];
   errors?: string[];
+  warnings?:string[];
   processingType?: ProcessingType;
   mappingType: MappingType;
   processingCache: Map<string, SubstituteValue[]>;

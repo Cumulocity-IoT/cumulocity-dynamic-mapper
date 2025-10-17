@@ -42,7 +42,7 @@ import {
   EventRealtimeService,
   RealtimeSubjectService
 } from '@c8y/ngx-components';
-import { ProcessingContext, ProcessingType, SubstituteValue, TestContext } from './processor/processor.model';
+import { ProcessingContext, ProcessingType, SubstituteValue, TestContext, TestResult } from './processor/processor.model';
 
 @Injectable({
   providedIn: 'root'
@@ -113,7 +113,9 @@ export class TestingService {
     if (context.mapping.transformationType == TransformationType.SMART_FUNCTION) {
       const testingContext = { mapping: context.mapping, payload: JSON.stringify(message), send: false };
       const testingResult = await this.testMapping(testingContext);
-      context.requests = testingResult[0].requests;
+      context.requests = testingResult.requests;
+      context.errors = testingResult.errors;
+      context.warnings = testingResult.warnings;
       console.log(testingResult);
     } else {
       if (mapping.direction == Direction.INBOUND) {
@@ -146,7 +148,7 @@ export class TestingService {
     return context;
   }
 
-  async testMapping(testingContext: TestContext): Promise<ProcessingContext[]> {
+  async testMapping(testingContext: TestContext): Promise<TestResult> {
     const response = this.client.fetch(`${BASE_URL}/${PATH_TESTING_ENDPOINT}/mapping`, {
       headers: {
         'content-type': 'application/json'

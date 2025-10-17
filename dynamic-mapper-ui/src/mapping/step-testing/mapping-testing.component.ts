@@ -242,7 +242,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       true,
       true
     );
-    this.editorTestingRequest?.setSchema(schema);
+    // this.editorTestingRequest?.setSchema(schema);
     this.resetTestingModel();
   }
 
@@ -290,9 +290,9 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     this.testingModel.response = sortObjectKeys(response);
     this.testingModel.errorMsg = error;
 
-    this.editorTestingRequest?.setSchema(
-      getSchema(targetAPI, this.mapping.direction, true, true)
-    );
+    // this.editorTestingRequest?.setSchema(
+    //   getSchema(targetAPI, this.mapping.direction, true, true)
+    // );
   }
 
   private resetTestingModelProperties(): void {
@@ -330,6 +330,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     return {
       success: requestErrors.length === 0 && contextErrors.length === 0,
       errors: [...contextErrors, ...requestErrors],
+      warnings: this.testContext.warnings,
       requests: this.testContext.requests
     };
   }
@@ -349,7 +350,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     } else {
       if (result?.warnings) {
         this.handleTestWarning(result);
-       } else { this.handleTestSuccess(sendPayload); }
+      } else { this.handleTestSuccess(sendPayload); }
     }
   }
 
@@ -361,8 +362,8 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
   private handleTestWarning(result: TestResult): void {
 
-      this.alertService.warning(`Test completed with warning: ${result?.warnings[0]}.`);
-  
+    this.alertService.warning(`Test completed with warning: ${result?.warnings[0]}.`);
+
   }
 
   private handleTestSuccess(sendPayload: boolean): void {
