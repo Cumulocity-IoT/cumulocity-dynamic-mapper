@@ -731,7 +731,7 @@ public class MQTT3Client extends AConnectorClient {
                         false, null, tlsCondition));
 
         configProps.put("fingerprintSelfSignedCertificate",
-                new ConnectorProperty(null, false, 8, ConnectorPropertyType.STRING_PROPERTY, false, false,
+                new ConnectorProperty("SHA 1 fingerprint of CA or Self Signed Certificate", false, 8, ConnectorPropertyType.STRING_PROPERTY, false, false,
                         null, null, certCondition));
 
         configProps.put("nameCertificate",

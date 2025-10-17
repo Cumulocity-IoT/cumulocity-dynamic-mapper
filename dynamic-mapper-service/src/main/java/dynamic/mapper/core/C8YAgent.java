@@ -409,8 +409,14 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                             log.info("{} - Found certificate with fingerprint: {} with name: {}", tenant,
                                     certificateIterate.getFingerprint(),
                                     certificateIterate.getName());
+
+                            // Normalize both fingerprints for comparison
+                            String normalizedStoredFingerprint = normalizeFingerprint(
+                                    certificateIterate.getFingerprint());
+                            String normalizedInputFingerprint = normalizeFingerprint(fingerprint);
+
                             if (certificateIterate.getName().equals(certificateName)
-                                    && certificateIterate.getFingerprint().equals(fingerprint)) {
+                                    && normalizedStoredFingerprint.equals(normalizedInputFingerprint)) {
                                 certResult = certificateIterate;
                                 log.info("{} - Connector {} - Found certificate {} with fingerprint {} ", tenant,
                                         connectorName, certificateName, certificateIterate.getFingerprint());
@@ -1540,5 +1546,14 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     // }
     // }
     // }
+
+    // Helper method to normalize fingerprint format
+    private String normalizeFingerprint(String fingerprint) {
+        if (fingerprint == null) {
+            return null;
+        }
+        // Remove colons and convert to lowercase for comparison
+        return fingerprint.replace(":", "").toLowerCase();
+    }
 
 }
