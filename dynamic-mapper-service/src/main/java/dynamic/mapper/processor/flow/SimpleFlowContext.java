@@ -1,6 +1,8 @@
 package dynamic.mapper.processor.flow;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.graalvm.polyglot.Context;
@@ -21,7 +23,8 @@ public class SimpleFlowContext implements FlowContext {
     private final InventoryEnrichmentClient inventoryEnrichmentClient;
     private Boolean testing;
 
-    public SimpleFlowContext(Context graalContext, String tenant, InventoryEnrichmentClient inventoryEnrichmentClient, Boolean testing) {
+    public SimpleFlowContext(Context graalContext, String tenant, InventoryEnrichmentClient inventoryEnrichmentClient,
+            Boolean testing) {
         this.state = new HashMap<>();
         this.graalContext = graalContext;
         this.tenant = tenant != null ? tenant : "unknown";
@@ -222,12 +225,28 @@ public class SimpleFlowContext implements FlowContext {
     @Override
     public Value lookupDeviceByDeviceId(String deviceId) {
         Object javaValue = inventoryEnrichmentClient.getMOFromInventoryCache(tenant, deviceId, testing);
+        if (javaValue == null) {
+            addWarning(String.format("Device not found in inventory cache: %s", deviceId));
+        }
         return graalContext.asValue(javaValue);
     }
 
     @Override
     public Value lookupDeviceByExternalId(String externalId, String type) {
-        Object javaValue = inventoryEnrichmentClient.getMOFromInventoryCacheByExternalId(tenant, externalId, type, testing);
+        Object javaValue = inventoryEnrichmentClient.getMOFromInventoryCacheByExternalId(tenant, externalId, type,
+                testing);
+        if (javaValue == null) {
+            addWarning(String.format("ExternalId not found in inventory cache: %s", externalId));
+        }
         return graalContext.asValue(javaValue);
+    }
+
+    private void addWarning(String warning) {
+        List<String> warnings = (List<String>) state.get(FlowContext.WARNINGS);
+        if (warnings == null) {
+            warnings = new ArrayList<String>();
+        }
+        warnings.add(warning);
+        state.put(FlowContext.WARNINGS, warnings);
     }
 }

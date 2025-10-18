@@ -5,8 +5,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import org.apache.camel.Exchange;
+import org.graalvm.polyglot.Value;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -24,6 +24,7 @@ import dynamic.mapper.processor.util.ProcessingResultHelper;
 import dynamic.mapper.processor.flow.CumulocityMessage;
 import dynamic.mapper.processor.flow.CumulocitySource;
 import dynamic.mapper.processor.flow.ExternalSource;
+import dynamic.mapper.processor.flow.FlowContext;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
@@ -76,7 +77,7 @@ public class FlowResultInboundProcessor extends BaseProcessor {
                     tenant, mapping.getName(), e.getMessage(), lineNumber);
             log.error(errorMessage, e);
             context.addError(new ProcessingException(errorMessage, e));
-            
+
             if (!testing) {
                 MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
                 mappingStatus.errors++;
@@ -128,6 +129,7 @@ public class FlowResultInboundProcessor extends BaseProcessor {
         } else {
             log.info("{} - Generated {} C8Y requests from flow result", tenant, context.getRequests().size());
         }
+
     }
 
     private void processCumulocityMessage(CumulocityMessage cumulocityMessage, ProcessingContext<?> context,
@@ -145,7 +147,7 @@ public class FlowResultInboundProcessor extends BaseProcessor {
             List<ExternalSource> externalSources = convertToExternalSourceList(cumulocityMessage.getExternalSource());
             String externalId = null;
             String externalType = null;
-            if(externalSources != null && externalSources.size() > 0) {
+            if (externalSources != null && externalSources.size() > 0) {
                 ExternalSource externalSource = externalSources.get(0);
                 externalId = externalSource.getExternalId();
                 externalType = externalSource.getType();
@@ -263,7 +265,6 @@ public class FlowResultInboundProcessor extends BaseProcessor {
 
         // Use the first external source for resolution
         ExternalSource externalSource = externalSources.get(0);
-
 
         try {
             // Use C8YAgent to resolve external ID to global ID

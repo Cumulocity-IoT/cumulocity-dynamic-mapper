@@ -39,6 +39,7 @@ import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.flow.CumulocityMessage;
 import dynamic.mapper.processor.flow.DeviceMessage;
+import dynamic.mapper.processor.flow.FlowContext;
 import dynamic.mapper.processor.flow.JavaScriptInteropHelper;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.service.MappingService;
@@ -160,6 +161,19 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
     }
 
     private void processResult(Value result, ProcessingContext<?> context, String tenant) {
+                Value warnings = context.getFlowContext().getState(FlowContext.WARNINGS);
+
+        if (warnings != null && warnings.hasArrayElements()) {
+            List<String> warningList = new ArrayList<>();
+            long size = warnings.getArraySize();
+            for (long i = 0; i < size; i++) {
+                String warning = warnings.getArrayElement(i).asString();
+                warningList.add(warning);
+            }
+            context.setWarnings(warningList);
+            log.debug("{} - Collected {} warnings from flow execution", tenant, warningList.size());
+        }
+
         if (!result.hasArrayElements()) {
             log.warn("{} - onMessage function did not return any transformation result", tenant);
             context.getWarnings().add("onMessage function did not return any transformation result");

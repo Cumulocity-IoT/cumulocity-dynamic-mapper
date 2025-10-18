@@ -7,6 +7,8 @@ import org.graalvm.polyglot.Value;
  */
 public interface FlowContext {
 
+    String WARNINGS = "_WARNINGS_";
+
     /**
      * Sets a value in the context's state.
      * 
