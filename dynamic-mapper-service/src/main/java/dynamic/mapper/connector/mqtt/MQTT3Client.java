@@ -755,7 +755,7 @@ private void initializeSslConfiguration() throws Exception {
                         null, null, certCondition));
 
         configProps.put("certificateChainInPemFormat",
-                new ConnectorProperty(null, false, 10, ConnectorPropertyType.STRING_LARGE_PROPERTY, false, false,
+                new ConnectorProperty("Either enter certificate in PEM format or identify certificate by name and fingerprint (must be uploaded as Trusted Certificate in Device Management)", false, 10, ConnectorPropertyType.STRING_LARGE_PROPERTY, false, false,
                         null, null, certCondition));
 
         configProps.put("disableHostnameValidation",
