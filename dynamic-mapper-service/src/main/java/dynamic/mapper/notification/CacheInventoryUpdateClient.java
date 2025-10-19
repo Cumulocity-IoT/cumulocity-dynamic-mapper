@@ -21,6 +21,7 @@
 
 package dynamic.mapper.notification;
 
+import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.notification.websocket.NotificationCallback;
 import dynamic.mapper.processor.model.ProcessingResultWrapper;
@@ -97,5 +98,10 @@ public class CacheInventoryUpdateClient implements NotificationCallback {
     @Override
     public void onClose(int statusCode, String reason) {
         log.info("{} - WebSocket closed: status={}, reason={}", tenant, statusCode, reason);
+    }
+
+    @Override
+    public ProcessingResultWrapper<?> onTestNotification(Notification notification, Mapping mapping) {
+        throw new UnsupportedOperationException("Unimplemented method 'onTestNotification'");
     }
 }

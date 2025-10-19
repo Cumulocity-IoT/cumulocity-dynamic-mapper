@@ -415,7 +415,7 @@ public class BootstrapService {
         }
     }
 
-    private void createAndInitializeTestConnector(String tenant, ServiceConfiguration serviceConfig)
+    private void createAndInitializeTestConnector(String tenant, ServiceConfiguration serviceConfiguration)
             throws ConnectorRegistryException {
         ConnectorConfiguration testConnectorConfig = new ConnectorConfiguration();
         testConnectorConfig.setConnectorType(ConnectorType.TEST);
@@ -426,13 +426,16 @@ public class BootstrapService {
         TestClient initialTestClient = new TestClient();
         initialTestClient.getConnectorSpecification().getProperties()
                 .forEach((key, prop) -> testConnectorConfig.getProperties().put(key, prop.defaultValue));
-    
 
         try {
             connectorConfigurationService.saveConnectorConfiguration(testConnectorConfig);
-            initializeConnectorByConfiguration(testConnectorConfig, serviceConfig, tenant);
+            initializeConnectorByConfiguration(testConnectorConfig, serviceConfiguration, tenant);
         } catch (ConnectorException | JsonProcessingException e) {
             throw new ConnectorRegistryException(e.getMessage());
+        }
+
+        if (serviceConfiguration.isOutboundMappingEnabled()) {
+            configurationRegistry.initializeOutboundMapping(tenant, serviceConfiguration, initialTestClient);
         }
     }
 

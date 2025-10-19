@@ -55,7 +55,8 @@ public class Notification {
         }
         if (headers.isEmpty()) {
             return new Notification(null, Collections.emptyList(), message, API.EMPTY, null);
-        }        String apiString = headers.get(1).split("/")[2];
+        }
+        String apiString = headers.get(1).split("/")[2];
         String operation = headers.get(2);
         API api = API.EMPTY;
         switch (apiString) {
@@ -84,11 +85,32 @@ public class Notification {
                 break;
         }
         return new Notification(headers.get(0), Collections.unmodifiableList(headers.subList(1, headers.size())),
-                message, api,operation);
+                message, api, operation);
     }
 
     public String getTenantFromNotificationHeaders() {
         return notificationHeaders.get(0).split("/")[0];
+    }
+
+    public static String getApiPath(API api) {
+        switch (api) {
+            case ALARM:
+                return "alarms";
+            case ALARM_WITH_CHILDREN:
+                return "alarmsWithChildren";
+            case EVENT:
+                return "events";
+            case EVENT_WITH_CHILDREN:
+                return "eventsWithChildren";
+            case MEASUREMENT:
+                return "measurements";
+            case INVENTORY:
+                return "managedobjects";
+            case OPERATION:
+                return "operations";
+            default:
+                return "events";
+        }
     }
 
 }

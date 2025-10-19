@@ -22,6 +22,8 @@
 package dynamic.mapper.notification;
 
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
+
+import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.notification.websocket.NotificationCallback;
 import dynamic.mapper.processor.model.C8YMessage;
@@ -156,5 +158,10 @@ public class ManagementSubscriptionClient implements NotificationCallback {
         log.info("{} - Cleaning up ManagementSubscriptionClient", tenant);
         groupCacheManager.cleanup();
         log.info("{} - ManagementSubscriptionClient cleanup completed", tenant);
+    }
+
+    @Override
+    public ProcessingResultWrapper<?> onTestNotification(Notification notification, Mapping mapping) {
+        throw new UnsupportedOperationException("Unimplemented method 'onTestNotification'");
     }
 }

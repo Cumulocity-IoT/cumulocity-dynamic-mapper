@@ -103,7 +103,6 @@ export class JsonEditorComponent implements OnInit, OnDestroy, AfterViewInit {
   content: Content = {
     text: undefined,
     json: {
-      content: 'no content'
     }
   };
 

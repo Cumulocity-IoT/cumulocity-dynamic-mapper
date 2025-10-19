@@ -362,7 +362,10 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
   private handleTestWarning(result: TestResult): void {
 
-    this.alertService.warning(`Test completed with warning: ${result?.warnings[0]}.`);
+    result?.warnings.forEach( w => {
+      this.alertService.warning(`Test completed with warning: ${w}.`);
+
+    })
 
   }
 

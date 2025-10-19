@@ -36,14 +36,19 @@ import dynamic.mapper.connector.core.registry.ConnectorRegistryException;
 import dynamic.mapper.connector.test.TestClient;
 import dynamic.mapper.core.BootstrapService;
 import dynamic.mapper.core.C8YAgent;
+import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.model.API;
+import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.TestContext;
 import dynamic.mapper.model.TestResult;
+import dynamic.mapper.processor.model.C8YMessage;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingResultWrapper;
 import dynamic.mapper.service.ConnectorConfigurationService;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.service.ServiceConfigurationService;
+import dynamic.mapper.notification.websocket.Notification;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -69,6 +74,8 @@ import lombok.extern.slf4j.Slf4j;
 @RestController
 public class TestController {
 
+    private final ConfigurationRegistry configurationRegistry;
+
     @Autowired
     ConnectorRegistry connectorRegistry;
 
@@ -92,6 +99,10 @@ public class TestController {
 
     @Value("${APP.externalExtensionsEnabled}")
     private boolean externalExtensionsEnabled;
+
+    TestController(ConfigurationRegistry configurationRegistry) {
+        this.configurationRegistry = configurationRegistry;
+    }
 
     @RequestMapping(value = "/test/payload", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<? extends ProcessingContext<?>>> testPayload(@RequestParam boolean send,
@@ -136,12 +147,21 @@ public class TestController {
             AConnectorClient connectorClient = connectorRegistry
                     .getClientForTenant(tenant, TestClient.TEST_CONNECTOR_IDENTIFIER);
 
-            ConnectorMessage testMessage = createTestMessage(tenant, connectorClient,
-                    mapping.getMappingTopicSample(), send, payload);
-
-            ProcessingResultWrapper<?> processingResultWrapper = connectorClient.getDispatcher().onTestMessage(
-                    testMessage,
-                    mapping);
+            ProcessingResultWrapper<?> processingResultWrapper = null;
+            if (mapping.getDirection().equals(Direction.INBOUND)) {
+                ConnectorMessage testMessage = createTestMessage(tenant, connectorClient,
+                        mapping.getMappingTopicSample(), send, payload);
+                processingResultWrapper = connectorClient.getDispatcher().onTestMessage(
+                        testMessage,
+                        mapping);
+            } else if (mapping.getDirection().equals(Direction.OUTBOUND)) {
+                Notification testNotification = createTestNotification(tenant, connectorClient, mapping.getTargetAPI(),
+                        send, payload);
+                processingResultWrapper = connectorRegistry.getDispatcher(tenant, TestClient.TEST_CONNECTOR_IDENTIFIER)
+                        .onTestNotification(
+                                testNotification,
+                                mapping);
+            }
 
             if (processingResultWrapper != null && processingResultWrapper.getProcessingResult() != null) {
                 // Wait for the future to complete and get the result
@@ -185,6 +205,69 @@ public class TestController {
             log.error("{} - Error transforming payload: {}", tenant, ex.getMessage(), ex);
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getLocalizedMessage());
         }
+    }
+
+    /**
+     * Create a test notification for outbound mapping testing.
+     * 
+     * @param tenant          The tenant identifier
+     * @param connectorClient The connector client (for metadata)
+     * @param api             The API type for the notification
+     * @param send            Whether to actually send the payload to C8Y
+     * @param payload         The JSON payload as a string
+     * @return A test Notification object
+     */
+    private Notification createTestNotification(String tenant, AConnectorClient connectorClient,
+            API api, Boolean send, String payload) {
+
+        // Create notification headers
+        List<String> notificationHeaders = new ArrayList<>();
+
+        // Header format: /{tenant}/{api}/{operation}
+        // Example: /t12345/alarms/CREATE
+
+        // First header: tenant and API path
+        String apiPath = Notification.getApiPath(api);
+        String tenantApiHeader = String.format("/%s/%s", tenant, apiPath);
+        notificationHeaders.add(tenantApiHeader);
+
+        // Second header: operation (defaulting to CREATE for testing)
+        String operation = "CREATE";
+        notificationHeaders.add(operation);
+
+        // Optional: Add additional headers if needed for testing
+        // For example, subscription ID or message ID
+        notificationHeaders.add("subscription-test-" + System.currentTimeMillis());
+
+        // Create ack header (format: /{tenant}/{subscription-id}/{message-id})
+        String ackHeader = String.format("/%s/test-subscription/%d",
+                tenant,
+                System.currentTimeMillis());
+
+        log.debug("{} - Creating test notification: api={}, operation={}, send={}",
+                tenant, api, operation, send);
+
+        // Return new Notification using the private constructor via reflection-like
+        // approach
+        // Since Notification has a private constructor, we need to use the parse method
+        // or create a similar structure
+
+        // Build the raw notification message format that parse() expects
+        StringBuilder rawNotification = new StringBuilder();
+        rawNotification.append(ackHeader).append('\n');
+        for (String header : notificationHeaders) {
+            rawNotification.append(header).append('\n');
+        }
+        rawNotification.append('\n'); // Empty line separates headers from body
+        rawNotification.append(payload);
+
+        // Parse to create proper Notification object
+        Notification notification = Notification.parse(rawNotification.toString());
+
+        log.trace("{} - Test notification created with {} headers",
+                tenant, notificationHeaders.size());
+
+        return notification;
     }
 
     @PostMapping("/webhook/echo/**")
