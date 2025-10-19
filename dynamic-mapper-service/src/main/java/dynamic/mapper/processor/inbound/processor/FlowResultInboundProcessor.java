@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.camel.Exchange;
-import org.graalvm.polyglot.Value;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -24,7 +23,6 @@ import dynamic.mapper.processor.util.ProcessingResultHelper;
 import dynamic.mapper.processor.flow.CumulocityMessage;
 import dynamic.mapper.processor.flow.CumulocitySource;
 import dynamic.mapper.processor.flow.ExternalSource;
-import dynamic.mapper.processor.flow.FlowContext;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;

@@ -496,6 +496,13 @@ public class PulsarConnectorClient extends AConnectorClient {
         }
 
         DynamicMapperRequest request = context.getCurrentRequest();
+
+        if (context.getCurrentRequest() == null ||
+                context.getCurrentRequest().getRequest() == null) {
+            log.warn("{} - No payload to publish for mapping: {}", tenant, context.getMapping().getName());
+            return;
+        }
+
         String payload = request.getRequest();
         String topic = context.getResolvedPublishTopic();
         Qos qos = context.getQos();

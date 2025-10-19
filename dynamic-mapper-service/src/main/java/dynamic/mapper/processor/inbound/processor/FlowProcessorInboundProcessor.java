@@ -165,7 +165,9 @@ public class FlowProcessorInboundProcessor extends BaseProcessor {
             log.debug("{} - Collected {} warnings from flow execution", tenant, warningList.size());
         }
 
-        if (!result.hasArrayElements()) {
+        // if (result == null || (result != null && result.isNull()) ||
+        // (!result.hasArrayElements())) {
+        if (result == null || (result != null && result.isNull())) {
             log.warn("{} - onMessage function did not return any transformation result", tenant);
             context.getWarnings().add("onMessage function did not return any transformation result");
             context.setIgnoreFurtherProcessing(true);

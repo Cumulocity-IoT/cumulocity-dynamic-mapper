@@ -571,6 +571,12 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         }
 
         DynamicMapperRequest request = context.getCurrentRequest();
+
+        if (context.getCurrentRequest() == null ||
+                context.getCurrentRequest().getRequest() == null) {
+            log.warn("{} - No payload to publish for mapping: {}", tenant, context.getMapping().getName());
+            return;
+        }
         String payload = request.getRequest();
         String originalMqttTopic = context.getResolvedPublishTopic();
         Qos qos = Qos.AT_LEAST_ONCE; // MQTT Service uses AT_LEAST_ONCE

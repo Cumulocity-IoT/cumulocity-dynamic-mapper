@@ -67,7 +67,7 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
                 lineNumber = e.getStackTrace()[0].getLineNumber();
             }
             String errorMessage = String.format(
-                    "Tenant %s - Error in FlowProcessorInboundProcessor: %s for mapping: %s, line %s",
+                    "Tenant %s - Error in FlowProcessorOutboundProcessor: %s for mapping: %s, line %s",
                     tenant, mapping.getName(), e.getMessage(), lineNumber);
             log.error(errorMessage, e);
 
@@ -115,7 +115,7 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
 
             Value onMessageFunction = bindings.getMember(identifier);
 
-            // Create input message (DeviceMessage or CumulocityMessage)
+            // Create input message (CumulocityMessage for outbound)
             Value inputMessage = createInputMessage(graalContext, context);
 
             // Execute the JavaScript function
@@ -146,6 +146,10 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
         }
     }
 
+    /**
+     * Create input message for outbound processing.
+     * For outbound, the input is a CumulocityMessage containing the C8Y object.
+     */
     private Value createInputMessage(Context graalContext, ProcessingContext<?> context) {
         // Create a DeviceMessage from the current context
         DeviceMessage deviceMessage = new DeviceMessage();
@@ -160,40 +164,120 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
         return graalContext.asValue(deviceMessage);
     }
 
+    /**
+     * Process the result from the JavaScript function.
+     * Handles both single items and arrays.
+     */
     private void processResult(Value result, ProcessingContext<?> context, String tenant) {
-                Value warnings = context.getFlowContext().getState(FlowContext.WARNINGS);
+        // Extract warnings from flow context
+        extractWarnings(context, tenant);
+
+        // Check if result is empty or null
+        if (isEmptyResult(result)) {
+            log.warn("{} - onMessage function did not return any transformation result", tenant);
+            context.getWarnings().add("onMessage function did not return any transformation result");
+            context.setIgnoreFurtherProcessing(true);
+
+            // Create a placeholder request to avoid further processing
+            createDynamicMapperRequest(-1, context.getMapping().getTargetTemplate(), context, context.getMapping());
+            return;
+        }
+
+        // Process the result - handle both array and single item
+        List<Object> outputMessages = extractOutputMessages(result, tenant);
+
+        // Set the flow result
+        context.setFlowResult(outputMessages);
+
+        if (context.getMapping().getDebug() || context.getServiceConfiguration().isLogPayload()) {
+            log.info("{} - onMessage function returned {} complete message(s)", tenant, outputMessages.size());
+        }
+    }
+
+    /**
+     * Extract warnings from the flow context.
+     */
+    private void extractWarnings(ProcessingContext<?> context, String tenant) {
+        Value warnings = context.getFlowContext().getState(FlowContext.WARNINGS);
 
         if (warnings != null && warnings.hasArrayElements()) {
             List<String> warningList = new ArrayList<>();
             long size = warnings.getArraySize();
             for (long i = 0; i < size; i++) {
-                String warning = warnings.getArrayElement(i).asString();
-                warningList.add(warning);
+                Value warningElement = warnings.getArrayElement(i);
+                if (warningElement != null && warningElement.isString()) {
+                    warningList.add(warningElement.asString());
+                }
             }
             context.setWarnings(warningList);
-            log.debug("{} - Collected {} warnings from flow execution", tenant, warningList.size());
+            log.debug("{} - Collected {} warning(s) from flow execution", tenant, warningList.size());
+        }
+    }
+
+    /**
+     * Check if the result value is empty.
+     * Handles null, undefined, empty arrays, and empty objects.
+     */
+    private boolean isEmptyResult(Value result) {
+        // Null check
+        if (result == null || result.isNull()) {
+            return true;
         }
 
-        if (!result.hasArrayElements()) {
-            log.warn("{} - onMessage function did not return any transformation result", tenant);
-            context.getWarnings().add("onMessage function did not return any transformation result");
-            context.setIgnoreFurtherProcessing(true);
-            return;
+        // Check for JavaScript undefined
+        if (result.toString().equals("undefined")) {
+            return true;
         }
 
-        long arraySize = result.getArraySize();
-        if (arraySize == 0) {
-            log.info("{} - onMessage function did not return any transformation result", tenant);
-            context.getWarnings().add("onMessage function did not return any transformation result");
-            context.setIgnoreFurtherProcessing(true);
-            return;
+        // Empty array check
+        if (result.hasArrayElements() && result.getArraySize() == 0) {
+            return true;
         }
 
+        // Empty object check (if applicable)
+        if (result.hasMembers() && result.getMemberKeys().isEmpty()) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Extract output messages from the result.
+     * Handles both arrays and single items.
+     */
+    private List<Object> extractOutputMessages(Value result, String tenant) {
         List<Object> outputMessages = new ArrayList<>();
 
-        for (int i = 0; i < arraySize; i++) {
-            Value element = result.getArrayElement(i);
+        // Check if result is an array
+        if (result.hasArrayElements()) {
+            long arraySize = result.getArraySize();
+            log.debug("{} - Processing array result with {} element(s)", tenant, arraySize);
 
+            for (long i = 0; i < arraySize; i++) {
+                Value element = result.getArrayElement(i);
+                processMessageElement(element, outputMessages, tenant);
+            }
+        } else {
+            // Single item - process directly
+            log.debug("{} - Processing single item result", tenant);
+            processMessageElement(result, outputMessages, tenant);
+        }
+
+        return outputMessages;
+    }
+
+    /**
+     * Process a single message element and add it to the output list.
+     * Handles both DeviceMessage and CumulocityMessage types.
+     */
+    private void processMessageElement(Value element, List<Object> outputMessages, String tenant) {
+        if (element == null || element.isNull()) {
+            log.debug("{} - Skipping null element", tenant);
+            return;
+        }
+
+        try {
             if (JavaScriptInteropHelper.isDeviceMessage(element)) {
                 DeviceMessage deviceMsg = JavaScriptInteropHelper.convertToDeviceMessage(element);
                 outputMessages.add(deviceMsg);
@@ -204,16 +288,13 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
                 outputMessages.add(cumulocityMsg);
                 log.debug("{} - Processed CumulocityMessage: type={}, action={}",
                         tenant, cumulocityMsg.getCumulocityType(), cumulocityMsg.getAction());
+
             } else {
-                log.warn("{} - Unknown message type returned from onMessage function", tenant);
+                log.warn("{} - Unknown message type returned from onMessage function: {}",
+                        tenant, element.getClass().getName());
             }
-        }
-
-        context.setFlowResult(outputMessages);
-
-        if (context.getMapping().getDebug() || context.getServiceConfiguration().isLogPayload()) {
-            log.info("{} - onMessage function returned {} complete messages", tenant, outputMessages.size());
+        } catch (Exception e) {
+            log.error("{} - Error processing message element: {}", tenant, e.getMessage(), e);
         }
     }
-
 }

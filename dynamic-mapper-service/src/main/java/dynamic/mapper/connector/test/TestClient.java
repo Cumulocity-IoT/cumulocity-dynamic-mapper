@@ -44,7 +44,8 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Test Connector Client for simulating connector behavior without external connections.
+ * Test Connector Client for simulating connector behavior without external
+ * connections.
  * Used primarily for testing mappings in isolation.
  */
 @Slf4j
@@ -80,11 +81,11 @@ public class TestClient extends AConnectorClient {
      * Full constructor with dependencies
      */
     public TestClient(ConfigurationRegistry configurationRegistry,
-                        ConnectorRegistry connectorRegistry,
-                        ConnectorConfiguration connectorConfiguration,
-                        CamelDispatcherInbound dispatcher,
-                        String additionalSubscriptionIdTest,
-                        String tenant) {
+            ConnectorRegistry connectorRegistry,
+            ConnectorConfiguration connectorConfiguration,
+            CamelDispatcherInbound dispatcher,
+            String additionalSubscriptionIdTest,
+            String tenant) {
         this();
 
         this.configurationRegistry = configurationRegistry;
@@ -216,6 +217,13 @@ public class TestClient extends AConnectorClient {
     public void publishMEAO(ProcessingContext<?> context) {
         // Simulate publishing - just log the message
         String topic = context.getResolvedPublishTopic();
+
+        if (context.getCurrentRequest() == null ||
+                context.getCurrentRequest().getRequest() == null) {
+            log.warn("{} - No payload to publish for mapping: {}", tenant, context.getMapping().getName());
+            return;
+        }
+
         String payload = context.getCurrentRequest().getRequest();
         Qos qos = context.getQos();
 
@@ -291,7 +299,8 @@ public class TestClient extends AConnectorClient {
     private ConnectorSpecification createConnectorSpecification() {
         Map<String, ConnectorProperty> configProps = new LinkedHashMap<>();
 
-        // Minimal configuration - test connector doesn't need real connection properties
+        // Minimal configuration - test connector doesn't need real connection
+        // properties
         configProps.put("enabled",
                 new ConnectorProperty(null, false, 0, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false,
                         true, null, null));
@@ -338,7 +347,7 @@ public class TestClient extends AConnectorClient {
 
         log.info("{} - Test Connector simulating inbound message on topic: [{}], QoS: {}",
                 tenant, topic, qos);
-        
+
         // This would trigger the dispatcher to process the message
         // Implementation depends on your message processing architecture
     }

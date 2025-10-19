@@ -705,6 +705,12 @@ public class KafkaClientV2 extends AConnectorClient {
             return;
         }
 
+        if (context.getCurrentRequest() == null ||
+                context.getCurrentRequest().getRequest() == null) {
+            log.warn("{} - No payload to publish for mapping: {}", tenant, context.getMapping().getName());
+            return;
+        }
+
         String topic = context.getResolvedPublishTopic();
         String payload = context.getCurrentRequest().getRequest();
         String key = context.getKey();

@@ -91,7 +91,6 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
     private void substituteInTargetAndCreateRequests(ProcessingContext<Object> context, Exchange exchange)
             throws Exception {
         Mapping mapping = context.getMapping();
-        String tenant = context.getTenant();
 
         if (mapping.getTargetTemplate() == null || mapping.getTargetTemplate().trim().isEmpty()) {
             log.warn("No target template defined for mapping: {}", mapping.getName());
@@ -263,43 +262,6 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
         } else {
             SubstituteValue.substituteValueInPayload(substitute, payloadTarget, pathTarget);
         }
-    }
-
-    /**
-     * Create C8Y request with correct structure
-     */
-    private int createDynamicMapperRequest(int predecessor, String processedPayload, ProcessingContext<Object> context,
-            Mapping mapping) {
-        API api = context.getApi() != null ? context.getApi() : determineDefaultAPI(mapping);
-
-        DynamicMapperRequest request = DynamicMapperRequest.builder()
-                .predecessor(predecessor)
-                .api(api)
-                .method(context.getMapping().getUpdateExistingDevice() ? RequestMethod.POST : RequestMethod.PATCH)
-                .sourceId(context.getSourceId())
-                .externalIdType(mapping.getExternalIdType())
-                .externalId(context.getExternalId())
-                .request(processedPayload)
-                .build();
-
-        var newPredecessor = context.addRequest(request);
-        log.debug("Created C8Y request for API: {} with payload: {}", api, processedPayload);
-        return newPredecessor;
-    }
-
-    /**
-     * Determine default API from mapping
-     */
-    private API determineDefaultAPI(Mapping mapping) {
-        if (mapping.getTargetAPI() != null) {
-            try {
-                return mapping.getTargetAPI();
-            } catch (Exception e) {
-                log.warn("Unknown target API: {}, defaulting to MEASUREMENT", mapping.getTargetAPI());
-            }
-        }
-
-        return API.MEASUREMENT; // Default
     }
 
     private ProcessingContext<Object> getBuildProcessingContext(ProcessingContext<Object> context,

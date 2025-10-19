@@ -611,6 +611,13 @@ public class MQTT5Client extends AConnectorClient {
 
         try {
             DynamicMapperRequest request = context.getCurrentRequest();
+
+            if (context.getCurrentRequest() == null ||
+                    context.getCurrentRequest().getRequest() == null) {
+                log.warn("{} - No payload to publish for mapping: {}", tenant, context.getMapping().getName());
+                return;
+            }
+
             String payload = request.getRequest();
             String topic = context.getResolvedPublishTopic();
             MqttQos mqttQos = MqttQos.fromCode(context.getQos().ordinal());
@@ -766,7 +773,9 @@ public class MQTT5Client extends AConnectorClient {
                         null, null, certCondition));
 
         configProps.put("certificateChainInPemFormat",
-                new ConnectorProperty("Either enter certificate in PEM format or identify certificate by name and fingerprint (must be uploaded as Trusted Certificate in Device Management)", false, 10, ConnectorPropertyType.STRING_LARGE_PROPERTY, false, false,
+                new ConnectorProperty(
+                        "Either enter certificate in PEM format or identify certificate by name and fingerprint (must be uploaded as Trusted Certificate in Device Management)",
+                        false, 10, ConnectorPropertyType.STRING_LARGE_PROPERTY, false, false,
                         null, null, certCondition));
 
         configProps.put("supportsWildcardInTopicInbound",

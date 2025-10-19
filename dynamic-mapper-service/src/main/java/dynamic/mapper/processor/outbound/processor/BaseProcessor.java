@@ -24,10 +24,13 @@ import static com.dashjoin.jsonata.Jsonata.jsonata;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
+import org.springframework.web.bind.annotation.RequestMethod;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
+import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.model.C8YMessage;
+import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
@@ -75,5 +78,43 @@ public abstract class BaseProcessor implements Processor {
                 .qos(mapping.getQos())
                 .serviceConfiguration(serviceConfiguration)
                 .api(message.getApi()).build();
+    }
+
+    /**
+     * Create C8Y request with correct structure
+     */
+    protected int createDynamicMapperRequest(int predecessor, String processedPayload,
+            ProcessingContext<?> context,
+            Mapping mapping) {
+        API api = context.getApi() != null ? context.getApi() : determineDefaultAPI(mapping);
+
+        DynamicMapperRequest request = DynamicMapperRequest.builder()
+                .predecessor(predecessor)
+                .api(api)
+                .method(context.getMapping().getUpdateExistingDevice() ? RequestMethod.POST : RequestMethod.PATCH)
+                .sourceId(context.getSourceId())
+                .externalIdType(mapping.getExternalIdType())
+                .externalId(context.getExternalId())
+                .request(processedPayload)
+                .build();
+
+        var newPredecessor = context.addRequest(request);
+        log.debug("Created C8Y request for API: {} with payload: {}", api, processedPayload);
+        return newPredecessor;
+    }
+
+    /**
+     * Determine default API from mapping
+     */
+    private API determineDefaultAPI(Mapping mapping) {
+        if (mapping.getTargetAPI() != null) {
+            try {
+                return mapping.getTargetAPI();
+            } catch (Exception e) {
+                log.warn("Unknown target API: {}, defaulting to MEASUREMENT", mapping.getTargetAPI());
+            }
+        }
+
+        return API.MEASUREMENT; // Default
     }
 }
