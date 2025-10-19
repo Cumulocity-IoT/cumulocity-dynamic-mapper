@@ -287,7 +287,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   private updateTestingModelFromResult(result: DynamicMapperRequest): void {
     const { request, response, targetAPI, error } = result;
     this.testingModel.request = sortObjectKeys(request);
-    this.testingModel.response = sortObjectKeys(response);
+    if (response) { this.testingModel.response = sortObjectKeys(response); }
     this.testingModel.errorMsg = error;
 
     // this.editorTestingRequest?.setSchema(
@@ -348,7 +348,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
         this.testResult.emit(false);
       }
     } else {
-      if (result?.warnings) {
+      if (result?.warnings && result?.warnings.length > 0 ) {
         this.handleTestWarning(result);
       } else { this.handleTestSuccess(sendPayload); }
     }
@@ -362,7 +362,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
   private handleTestWarning(result: TestResult): void {
 
-    result?.warnings.forEach( w => {
+    result?.warnings.forEach(w => {
       this.alertService.warning(`Test completed with warning: ${w}.`);
 
     })
