@@ -113,10 +113,17 @@ export class TestingService {
     if (context.mapping.transformationType == TransformationType.SMART_FUNCTION) {
       const testingContext = { mapping: context.mapping, payload: JSON.stringify(message), send: false };
       const testingResult = await this.testMapping(testingContext);
-      context.requests = testingResult.requests;
+      // Convert request from JSON string to object for all items
+      context.requests = testingResult.requests.map(req => ({
+        ...req,
+        request: req.request && typeof req.request === 'string'
+          ? JSON.parse(req.request)
+          : req.request
+      }));
       context.errors = testingResult.errors;
       context.warnings = testingResult.warnings;
-      console.log(testingResult);
+      context.logs = testingResult.logs;
+      // console.log(testingResult);
     } else {
       if (mapping.direction == Direction.INBOUND) {
         if (isSubstitutionsAsCode(mapping)) {

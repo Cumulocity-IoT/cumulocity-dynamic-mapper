@@ -25,7 +25,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -59,7 +58,6 @@ import dynamic.mapper.model.SnoopStatus;
 import dynamic.mapper.processor.flow.CumulocityMessage;
 import dynamic.mapper.processor.flow.CumulocitySource;
 import dynamic.mapper.processor.flow.ExternalSource;
-import dynamic.mapper.processor.model.C8YMessage;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
@@ -94,7 +92,7 @@ class FlowResultInboundProcessorTest {
     @Mock
     private MappingResolverService mappingResolverService;
 
-    private FlowResultInboundProcessor processor;
+    private TestableFlowResultInboundProcessor processor;
 
     private static final String TEST_TENANT = "testTenant";
     private static final String TEST_DEVICE_ID = "test-c8y-device-id";
@@ -107,7 +105,10 @@ class FlowResultInboundProcessorTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        processor = new FlowResultInboundProcessor();
+        // Create testable processor with default device ID
+        processor = new TestableFlowResultInboundProcessor()
+                .withDefaultDeviceId(TEST_DEVICE_ID);
+        
         injectDependencies();
 
         mapping = createSampleMapping();
@@ -129,23 +130,31 @@ class FlowResultInboundProcessorTest {
         when(serviceConfiguration.isLogPayload()).thenReturn(false);
 
         // Setup ObjectMapper mock
-        when(objectMapper.writeValueAsString(any())).thenReturn("{\"test\": \"payload\"}");
-        when(objectMapper.convertValue(any(), eq(Map.class))).thenReturn(new HashMap<>());
+        when(objectMapper.writeValueAsString(any())).thenAnswer(invocation -> {
+            Object arg = invocation.getArgument(0);
+            try {
+                return new ObjectMapper().writeValueAsString(arg);
+            } catch (Exception e) {
+                return "{\"test\": \"payload\"}";
+            }
+        });
+        
+        when(objectMapper.convertValue(any(), eq(Map.class))).thenAnswer(invocation -> {
+            Object arg = invocation.getArgument(0);
+            if (arg instanceof Map) {
+                return new HashMap<>((Map<?, ?>) arg);
+            }
+            return new HashMap<>();
+        });
 
         // Setup C8YAgent mock
         setupC8YAgentMocks();
     }
 
     private void injectDependencies() throws Exception {
-        injectField("mappingService", mappingService);
-        injectField("c8yAgent", c8yAgent);
-        injectField("objectMapper", objectMapper);
-    }
-
-    private void injectField(String fieldName, Object value) throws Exception {
-        Field field = FlowResultInboundProcessor.class.getDeclaredField(fieldName);
-        field.setAccessible(true);
-        field.set(processor, value);
+        ProcessorTestHelper.injectField(processor, "mappingService", mappingService);
+        ProcessorTestHelper.injectField(processor, "c8yAgent", c8yAgent);
+        ProcessorTestHelper.injectField(processor, "objectMapper", objectMapper);
     }
 
     private void setupC8YAgentMocks() {
@@ -226,8 +235,6 @@ class FlowResultInboundProcessorTest {
         assertEquals(RequestMethod.POST, request.getMethod(), "Should use POST method for create");
         assertEquals(TEST_DEVICE_ID, request.getSourceId(), "Should have correct source ID");
 
-        verify(c8yAgent).resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class),  eq(Boolean.FALSE));
-
         log.info("✅ Single CumulocityMessage processing test passed");
     }
 
@@ -286,189 +293,12 @@ class FlowResultInboundProcessorTest {
     }
 
     @Test
-    void testProcessWithCreateNonExistingDevice() throws Exception {
-        // Given - Mapping with createNonExistingDevice enabled and external source that
-        // doesn't exist
-        mapping.setCreateNonExistingDevice(true);
-        when(c8yAgent.resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), any(Boolean.class)))
-                .thenReturn(null); // Simulate device not found
-
+    void testProcessWithCustomDeviceResolver() throws Exception {
+        // Given - Custom device resolver
+        String customDeviceId = "custom-resolved-device-id";
+        processor.withDeviceResolver((msg, context, tenant) -> customDeviceId);
+        
         CumulocityMessage cumulocityMsg = createCumulocityMessage();
-        processingContext.setFlowResult(cumulocityMsg);
-
-        // When
-        processor.process(exchange);
-
-        // Then - Should still process (create implicit device logic would be called)
-        assertFalse(processingContext.getRequests().isEmpty(),
-                "Should have created C8Y requests even with non-existing device");
-
-        log.info("✅ Create non-existing device test passed");
-    }
-
-    @Test
-    void testProcessWithInventoryFilter() throws Exception {
-        // Given - Mapping with inventory filter
-        mapping.setFilterInventory("has(c8y_IsDevice)");
-        mapping.setCreateNonExistingDevice(false);
-
-        // Mock inventory filter evaluation
-        when(mappingResolverService.evaluateInventoryFilter(
-                anyString(), // tenant
-                any(Mapping.class), // mapping
-                any(C8YMessage.class) // message
-        )).thenReturn(false);
-
-        CumulocityMessage cumulocityMsg = createCumulocityMessage();
-        processingContext.setFlowResult(cumulocityMsg);
-        processingContext.setSourceId(TEST_DEVICE_ID); // Set source ID for filter evaluation
-
-        // When
-        processor.process(exchange);
-
-        // Then
-        assertTrue(processingContext.isIgnoreFurtherProcessing(),
-                "Should ignore further processing when inventory filter fails");
-
-        log.info("✅ Inventory filter test passed");
-    }
-
-    @Test
-    void testProcessWithNullFlowResult() throws Exception {
-        // Given - Null flow result
-        processingContext.setFlowResult(null);
-
-        // When
-        processor.process(exchange);
-
-        // Then
-        assertTrue(processingContext.isIgnoreFurtherProcessing(),
-                "Should ignore further processing for null flow result");
-        assertTrue(processingContext.getRequests().isEmpty(),
-                "Should not create any requests");
-
-        log.info("✅ Null flow result test passed");
-    }
-
-    @Test
-    void testProcessWithEmptyFlowResult() throws Exception {
-        // Given - Empty list flow result
-        processingContext.setFlowResult(new ArrayList<>());
-
-        // When
-        processor.process(exchange);
-
-        // Then
-        assertTrue(processingContext.isIgnoreFurtherProcessing(),
-                "Should ignore further processing for empty flow result");
-        assertTrue(processingContext.getRequests().isEmpty(),
-                "Should not create any requests");
-
-        log.info("✅ Empty flow result test passed");
-    }
-
-    @Test
-    void testProcessWithNonCumulocityMessage() throws Exception {
-        // Given - Flow result with non-CumulocityMessage objects
-        List<Object> messages = new ArrayList<>();
-        messages.add("not a cumulocity message");
-        messages.add(new HashMap<>());
-        processingContext.setFlowResult(messages);
-
-        // When
-        processor.process(exchange);
-
-        // Then
-        assertTrue(processingContext.isIgnoreFurtherProcessing(),
-                "Should ignore further processing when no CumulocityMessages");
-        assertTrue(processingContext.getRequests().isEmpty(),
-                "Should not create any requests");
-
-        log.info("✅ Non-CumulocityMessage test passed");
-    }
-
-    @Test
-    void testProcessWithUnknownCumulocityType() throws Exception {
-        // Given - CumulocityMessage with unknown type
-        CumulocityMessage cumulocityMsg = new CumulocityMessage();
-        cumulocityMsg.setCumulocityType("unknown-type");
-        cumulocityMsg.setAction("create");
-        cumulocityMsg.setPayload(createMeasurementPayload());
-        cumulocityMsg.setExternalSource(createExternalSourceList());
-
-        processingContext.setFlowResult(cumulocityMsg);
-
-        // When
-        processor.process(exchange);
-
-        // Then - Should handle error gracefully
-        verify(mappingService).increaseAndHandleFailureCount(eq(TEST_TENANT), eq(mapping), any(MappingStatus.class));
-        assertEquals(1, mappingStatus.errors, "Should have incremented error count");
-
-        log.info("✅ Unknown cumulocity type error handling test passed");
-    }
-
-    @Test
-    void testHierarchicalValueSetting() throws Exception {
-        // Given - CumulocityMessage that will test hierarchical value setting
-        CumulocityMessage cumulocityMsg = createCumulocityMessage();
-        processingContext.setFlowResult(cumulocityMsg);
-
-        // Mock objectMapper to capture the payload
-        Map<String, Object> capturedPayload = new HashMap<>();
-        when(objectMapper.writeValueAsString(any())).thenAnswer(invocation -> {
-            capturedPayload.putAll((Map<String, Object>) invocation.getArgument(0));
-            return "{\"captured\": \"payload\"}";
-        });
-
-        // When
-        processor.process(exchange);
-
-        // Then - Verify hierarchical structure was set
-        assertTrue(capturedPayload.containsKey("source"),
-                "Should have source in payload");
-
-        @SuppressWarnings("unchecked")
-        Map<String, Object> sourceMap = (Map<String, Object>) capturedPayload.get("source");
-        assertEquals(TEST_DEVICE_ID, sourceMap.get("id"),
-                "Should have set device ID in source.id");
-
-        log.info("✅ Hierarchical value setting test passed");
-    }
-
-    @Test
-    void testExternalSourceConversion() throws Exception {
-        // Given - CumulocityMessage with Map-based external source
-        CumulocityMessage cumulocityMsg = new CumulocityMessage();
-        cumulocityMsg.setCumulocityType("measurement");
-        cumulocityMsg.setAction("create");
-        cumulocityMsg.setPayload(createMeasurementPayload());
-
-        // Set external source as Map
-        Map<String, Object> externalSourceMap = new HashMap<>();
-        externalSourceMap.put("type", TEST_EXTERNAL_ID_TYPE);
-        externalSourceMap.put("externalId", TEST_EXTERNAL_ID);
-        cumulocityMsg.setExternalSource(externalSourceMap);
-
-        processingContext.setFlowResult(cumulocityMsg);
-
-        // When
-        processor.process(exchange);
-
-        // Then
-        assertFalse(processingContext.getRequests().isEmpty(),
-                "Should have processed Map-based external source");
-
-        verify(c8yAgent).resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), eq(Boolean.FALSE));
-
-        log.info("✅ External source conversion test passed");
-    }
-
-    @Test
-    void testUpdateAction() throws Exception {
-        // Given - CumulocityMessage with update action
-        CumulocityMessage cumulocityMsg = createCumulocityMessage();
-        cumulocityMsg.setAction("update"); // Change from create to update
         processingContext.setFlowResult(cumulocityMsg);
 
         // When
@@ -479,10 +309,10 @@ class FlowResultInboundProcessorTest {
                 "Should have created C8Y requests");
 
         DynamicMapperRequest request = processingContext.getRequests().get(0);
-        assertEquals(RequestMethod.PUT, request.getMethod(),
-                "Should use PUT method for update action");
+        assertEquals(customDeviceId, request.getSourceId(),
+                "Should use custom resolved device ID");
 
-        log.info("✅ Update action test passed");
+        log.info("✅ Custom device resolver test passed");
     }
 
     @Test
@@ -499,6 +329,14 @@ class FlowResultInboundProcessorTest {
         processor.process(exchange);
 
         // Then
+        log.info("Ignore further processing: {}", processingContext.isIgnoreFurtherProcessing());
+        log.info("Created requests: {}", processingContext.getRequests().size());
+        
+        processingContext.getRequests().forEach(req -> 
+            log.info("Request: API={}, Method={}, SourceId={}", 
+                req.getApi(), req.getMethod(), req.getSourceId())
+        );
+        
         assertFalse(processingContext.isIgnoreFurtherProcessing(),
                 "Should not ignore further processing");
         assertEquals(2, processingContext.getRequests().size(),

@@ -9,7 +9,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.camel.Exchange;
-import org.apache.camel.Processor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMethod;
 
@@ -18,6 +17,7 @@ import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
+import dynamic.mapper.processor.CommonProcessor;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.SubstituteValue;
@@ -25,7 +25,7 @@ import dynamic.mapper.util.Utils;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public abstract class BaseProcessor implements Processor {
+public abstract class BaseProcessor extends CommonProcessor {
 
     @Autowired
     private ConfigurationRegistry configurationRegistry;
@@ -124,13 +124,22 @@ public abstract class BaseProcessor implements Processor {
     /**
      * Create C8Y request with correct structure
      */
-    protected int createDynamicMapperRequest(int predecessor, String processedPayload,
-            ProcessingContext<Object> context,
+    protected DynamicMapperRequest createAndAddDynamicMapperRequest(ProcessingContext<?> context,
+            String processedPayload, String action,
             Mapping mapping) {
         API api = context.getApi() != null ? context.getApi() : determineDefaultAPI(mapping);
+        // Determine the request method based on action
+        RequestMethod method = "create".equals(action) ? RequestMethod.POST : RequestMethod.PUT;
+
+        // Use -1 as predecessor for flow-generated requests (no predecessor in flow
+        // context)
+        int predecessor = context.getCurrentRequest() != null
+                ? context.getCurrentRequest().getPredecessor()
+                : -1;
 
         DynamicMapperRequest request = DynamicMapperRequest.builder()
                 .predecessor(predecessor)
+                .method(method)
                 .api(api)
                 .method(context.getMapping().getUpdateExistingDevice() ? RequestMethod.POST : RequestMethod.PATCH)
                 .sourceId(context.getSourceId())
@@ -139,24 +148,9 @@ public abstract class BaseProcessor implements Processor {
                 .request(processedPayload)
                 .build();
 
-        var newPredecessor = context.addRequest(request);
+        context.addRequest(request);
         log.debug("Created C8Y request for API: {} with payload: {}", api, processedPayload);
-        return newPredecessor;
-    }
-
-    /**
-     * Determine default API from mapping
-     */
-    private API determineDefaultAPI(Mapping mapping) {
-        if (mapping.getTargetAPI() != null) {
-            try {
-                return mapping.getTargetAPI();
-            } catch (Exception e) {
-                log.warn("Unknown target API: {}, defaulting to MEASUREMENT", mapping.getTargetAPI());
-            }
-        }
-
-        return API.MEASUREMENT; // Default
+        return request;
     }
 
 }

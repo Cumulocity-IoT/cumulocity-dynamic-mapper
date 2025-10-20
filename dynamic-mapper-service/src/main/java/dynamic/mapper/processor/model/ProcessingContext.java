@@ -89,6 +89,9 @@ public class ProcessingContext<O> {
     private List<String> warnings = new ArrayList<>();
 
     @Builder.Default
+    private List<String> logs = new ArrayList<>();
+
+    @Builder.Default
     private ProcessingType processingType = ProcessingType.UNDEFINED;
 
     private MappingType mappingType;

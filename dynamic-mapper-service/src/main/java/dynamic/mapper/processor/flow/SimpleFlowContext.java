@@ -95,6 +95,10 @@ public class SimpleFlowContext implements FlowContext {
         } else {
             log.info("{} - JS Log: {}", tenant, msg.toString());
         }
+
+        if (testing != null && testing) {
+            addLogMessage(msg.toString());
+        }
     }
 
     @Override
@@ -248,5 +252,14 @@ public class SimpleFlowContext implements FlowContext {
         }
         warnings.add(warning);
         state.put(FlowContext.WARNINGS, warnings);
+    }
+
+    private void addLogMessage(String message) {
+        List<String> logs = (List<String>) state.get(FlowContext.LOGS);
+        if (logs == null) {
+            logs = new ArrayList<String>();
+        }
+        logs.add(message);
+        state.put(FlowContext.LOGS, logs);
     }
 }

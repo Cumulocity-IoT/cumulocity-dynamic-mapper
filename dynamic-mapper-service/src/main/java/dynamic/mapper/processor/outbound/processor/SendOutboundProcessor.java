@@ -98,8 +98,8 @@ public class SendOutboundProcessor extends BaseProcessor {
             DynamicMapperRequest request = context.getCurrentRequest();
             if (request == null) {
                 // Create a placeholder request to avoid further processing
-                createDynamicMapperRequest(-1, context.getMapping().getTargetTemplate(), context, context.getMapping());
-                request = context.getCurrentRequest();
+                request = createAndAddDynamicMapperRequest(context, context.getMapping().getTargetTemplate(), null, null, null,
+                        context.getMapping());
             }
             if (connectorClient.isConnected() && context.isSendPayload()) {
                 connectorClient.publishMEAO(context);

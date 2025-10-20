@@ -65,6 +65,7 @@ export interface TestResult {
   requests: DynamicMapperRequest[];
   errors: string[];
   warnings?: string[];
+  logs?: string[];
 }
 
 export enum ProcessingType {

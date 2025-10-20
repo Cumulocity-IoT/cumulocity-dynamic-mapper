@@ -7,7 +7,6 @@ import java.util.Set;
 import org.apache.camel.Exchange;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.web.bind.annotation.RequestMethod;
 
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
@@ -17,7 +16,6 @@ import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.RepairStrategy;
 import dynamic.mapper.processor.model.SubstituteValue;
@@ -28,7 +26,6 @@ import lombok.extern.slf4j.Slf4j;
 
 import com.cumulocity.model.ID;
 import com.cumulocity.sdk.client.ProcessingMode;
-import com.cumulocity.sdk.client.SDKException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Slf4j
@@ -103,7 +100,7 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
         if (processingCache == null || processingCache.isEmpty()) {
             log.debug("Processing cache is empty for mapping: {}", mapping.getName());
             // Create single request with original template
-            createDynamicMapperRequest(-1, targetTemplate, context, mapping);
+            createAndAddDynamicMapperRequest(context, targetTemplate, null, mapping);
             return;
         }
 
@@ -297,8 +294,8 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
 
             prepareAndSubstituteInPayload(context, payloadTarget, pathTarget, substitute);
         }
-        var newPredecessor = createDynamicMapperRequest(predecessor, payloadTarget.jsonString(), context, mapping);
-        predecessor = newPredecessor;
+        var newRequest = createAndAddDynamicMapperRequest(context, payloadTarget.jsonString(),null, mapping);
+        predecessor = newRequest.getPredecessor();
         if (context.getMapping().getDebug() || context.getServiceConfiguration().isLogPayload()) {
             log.info("{} - Transformed message sent: API: {}, numberDevices: {}, message: {}", tenant,
                     context.getApi(),

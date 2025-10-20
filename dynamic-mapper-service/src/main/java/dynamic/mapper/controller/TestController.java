@@ -22,7 +22,6 @@
 package dynamic.mapper.controller;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -42,7 +41,6 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.TestContext;
 import dynamic.mapper.model.TestResult;
-import dynamic.mapper.processor.model.C8YMessage;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingResultWrapper;
 import dynamic.mapper.service.ConnectorConfigurationService;
@@ -172,10 +170,10 @@ public class TestController {
                     log.warn("{} - Test mapping produced {} result(s), only returning the first result", tenant,
                             processingResult.size());
                 } else if (processingResult != null && processingResult.size() == 1) {
-                    log.info("{} - Test mapping produced no results", tenant);
                     var firstResult = processingResult.get(0);
                     result.setRequests(firstResult.getRequests());
                     result.setWarnings(firstResult.getWarnings());
+                    result.setLogs(firstResult.getLogs());
                     result.setSuccess(firstResult.getErrors().isEmpty());
                     if (firstResult.getErrors() != null && !firstResult.getErrors().isEmpty()) {
                         firstResult.getErrors().forEach(e -> {

@@ -151,42 +151,119 @@ public class FlowProcessorInboundProcessor extends BaseProcessor {
     }
 
     private void processResult(Value result, ProcessingContext<?> context, String tenant) {
-
+        // Collect warnings
         Value warnings = context.getFlowContext().getState(FlowContext.WARNINGS);
-
         if (warnings != null && warnings.hasArrayElements()) {
             List<String> warningList = new ArrayList<>();
             long size = warnings.getArraySize();
             for (long i = 0; i < size; i++) {
-                String warning = warnings.getArrayElement(i).asString();
-                warningList.add(warning);
+                Value warningElement = warnings.getArrayElement(i);
+                if (warningElement != null && warningElement.isString()) {
+                    warningList.add(warningElement.asString());
+                }
             }
             context.setWarnings(warningList);
             log.debug("{} - Collected {} warnings from flow execution", tenant, warningList.size());
         }
 
-        // if (result == null || (result != null && result.isNull()) ||
-        // (!result.hasArrayElements())) {
-        if (result == null || (result != null && result.isNull())) {
-            log.warn("{} - onMessage function did not return any transformation result", tenant);
-            context.getWarnings().add("onMessage function did not return any transformation result");
-            context.setIgnoreFurtherProcessing(true);
-            return;
+        // Collect logs
+        Value logs = context.getFlowContext().getState(FlowContext.LOGS);
+        if (logs != null && logs.hasArrayElements()) {
+            List<String> logList = new ArrayList<>();
+            long size = logs.getArraySize();
+            for (long i = 0; i < size; i++) {
+                Value logElement = logs.getArrayElement(i);
+                if (logElement != null && logElement.isString()) {
+                    logList.add(logElement.asString());
+                }
+            }
+            context.setLogs(logList);
+            log.debug("{} - Collected {} logs from flow execution", tenant, logList.size());
         }
 
-        long arraySize = result.getArraySize();
-        if (arraySize == 0) {
-            log.info("{} - onMessage function did not return any transformation result", tenant);
+        // Check if result is null or undefined
+        if (result == null || result.isNull()) {
+            log.warn("{} - onMessage function did not return any transformation result (null)", tenant);
             context.getWarnings().add("onMessage function did not return any transformation result");
+            context.setFlowResult(new ArrayList<>()); // Set empty list
             context.setIgnoreFurtherProcessing(true);
             return;
         }
 
         List<Object> outputMessages = new ArrayList<>();
 
+        try {
+            // Handle both array and single object returns
+            if (result.hasArrayElements()) {
+                // Result is an array: [{...}, {...}]
+                processArrayResult(result, outputMessages, tenant);
+
+            } else if (result.hasMembers()) {
+                // Result is a single object: {...}
+                processSingleObjectResult(result, outputMessages, tenant);
+
+            } else {
+                // Unexpected type (primitive, function, etc.)
+                log.warn("{} - onMessage function returned unexpected result type: {} ({})",
+                        tenant, result.getClass().getSimpleName(), result.getMetaObject());
+                context.getWarnings()
+                        .add("onMessage function returned unexpected result type: " + result.getMetaObject());
+                context.setFlowResult(new ArrayList<>()); // Set empty list
+                context.setIgnoreFurtherProcessing(true);
+                return;
+            }
+
+        } catch (Exception e) {
+            log.error("{} - Error processing onMessage result: {}", tenant, e.getMessage(), e);
+            context.getWarnings().add("Error processing onMessage result: " + e.getMessage());
+            context.setFlowResult(new ArrayList<>()); // Set empty list
+            context.setIgnoreFurtherProcessing(true);
+            return;
+        }
+
+        // Always set flow result, even if empty
+        context.setFlowResult(outputMessages);
+
+        if (outputMessages.isEmpty()) {
+            log.info("{} - No valid messages produced from onMessage function", tenant);
+            context.getWarnings().add("No valid messages produced from onMessage function");
+            context.setIgnoreFurtherProcessing(true);
+            return;
+        }
+
+        if (context.getMapping().getDebug() || context.getServiceConfiguration().isLogPayload()) {
+            log.info("{} - onMessage function returned {} complete message(s)", tenant, outputMessages.size());
+        }
+    }
+
+    private void processArrayResult(Value result, List<Object> outputMessages, String tenant) {
+        long arraySize = result.getArraySize();
+
+        if (arraySize == 0) {
+            log.info("{} - onMessage function returned empty array", tenant);
+            return;
+        }
+
+        log.debug("{} - Processing array result with {} elements", tenant, arraySize);
+
         for (int i = 0; i < arraySize; i++) {
             Value element = result.getArrayElement(i);
+            processResultElement(element, outputMessages, tenant);
+        }
+    }
 
+    private void processSingleObjectResult(Value result, List<Object> outputMessages, String tenant) {
+        log.debug("{} - Processing single object result", tenant);
+        processResultElement(result, outputMessages, tenant);
+    }
+
+    private void processResultElement(Value element, List<Object> outputMessages, String tenant) {
+        if (element == null || element.isNull()) {
+            log.debug("{} - Skipping null element", tenant);
+            return;
+        }
+
+        try {
             if (JavaScriptInteropHelper.isDeviceMessage(element)) {
                 DeviceMessage deviceMsg = JavaScriptInteropHelper.convertToDeviceMessage(element);
                 outputMessages.add(deviceMsg);
@@ -197,15 +274,14 @@ public class FlowProcessorInboundProcessor extends BaseProcessor {
                 outputMessages.add(cumulocityMsg);
                 log.debug("{} - Processed CumulocityMessage: type={}, action={}",
                         tenant, cumulocityMsg.getCumulocityType(), cumulocityMsg.getAction());
+
             } else {
-                log.warn("{} - Unknown message type returned from onMessage function", tenant);
+                log.warn("{} - Unknown message type returned from onMessage: {} with members: {}",
+                        tenant, element.getMetaObject(),
+                        element.hasMembers() ? element.getMemberKeys() : "N/A");
             }
-        }
-
-        context.setFlowResult(outputMessages);
-
-        if (context.getMapping().getDebug() || context.getServiceConfiguration().isLogPayload()) {
-            log.info("{} - onMessage function returned {} complete messages", tenant, outputMessages.size());
+        } catch (Exception e) {
+            log.error("{} - Error processing result element: {}", tenant, e.getMessage(), e);
         }
     }
 

@@ -22,6 +22,9 @@ package dynamic.mapper.processor.outbound.processor;
 
 import static com.dashjoin.jsonata.Jsonata.jsonata;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -29,6 +32,8 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
+import dynamic.mapper.processor.CommonProcessor;
+import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.C8YMessage;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
@@ -36,7 +41,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public abstract class BaseProcessor implements Processor {
+public abstract class BaseProcessor extends CommonProcessor {
 
     protected static final String EXTERNAL_ID_TOKEN = "_externalId_";
 
@@ -81,40 +86,66 @@ public abstract class BaseProcessor implements Processor {
     }
 
     /**
-     * Create C8Y request with correct structure
+     * Sets a value hierarchically in a map using dot notation
+     * E.g., "source.id" will create nested maps: {"source": {"id": value}}
      */
-    protected int createDynamicMapperRequest(int predecessor, String processedPayload,
-            ProcessingContext<?> context,
-            Mapping mapping) {
-        API api = context.getApi() != null ? context.getApi() : determineDefaultAPI(mapping);
+    protected void setHierarchicalValue(Map<String, Object> map, String path, Object value) {
+        String[] keys = path.split("\\.");
+        Map<String, Object> current = map;
 
-        DynamicMapperRequest request = DynamicMapperRequest.builder()
-                .predecessor(predecessor)
-                .api(api)
-                .method(context.getMapping().getUpdateExistingDevice() ? RequestMethod.POST : RequestMethod.PATCH)
-                .sourceId(context.getSourceId())
-                .externalIdType(mapping.getExternalIdType())
-                .externalId(context.getExternalId())
-                .request(processedPayload)
-                .build();
+        // Navigate/create the hierarchy up to the last key
+        for (int i = 0; i < keys.length - 1; i++) {
+            String key = keys[i];
+            if (!current.containsKey(key) || !(current.get(key) instanceof Map)) {
+                current.put(key, new HashMap<String, Object>());
+            }
+            current = (Map<String, Object>) current.get(key);
+        }
 
-        var newPredecessor = context.addRequest(request);
-        log.debug("Created C8Y request for API: {} with payload: {}", api, processedPayload);
-        return newPredecessor;
+        // Set the value at the final key
+        current.put(keys[keys.length - 1], value);
     }
 
     /**
-     * Determine default API from mapping
+     * Creates a DynamicMapperRequest based on the reference implementation from
+     * BaseProcessorOutbound
+     * This follows the same pattern as substituteInTargetAndSend method
      */
-    private API determineDefaultAPI(Mapping mapping) {
-        if (mapping.getTargetAPI() != null) {
-            try {
-                return mapping.getTargetAPI();
-            } catch (Exception e) {
-                log.warn("Unknown target API: {}, defaulting to MEASUREMENT", mapping.getTargetAPI());
-            }
-        }
+    protected DynamicMapperRequest createAndAddDynamicMapperRequest(ProcessingContext<?> context, String payloadJson,
+            API targetAPI,
+            String sourceId, String action, Mapping mapping) throws ProcessingException {
+        try {
+            // Determine the request method based on action (from substituteInTargetAndSend)
+            RequestMethod method = "update".equals(action) ? RequestMethod.PUT : RequestMethod.POST; // Default from
+                                                                                                     // reference
 
-        return API.MEASUREMENT; // Default
+            if (targetAPI == null) {
+                targetAPI = determineDefaultAPI(mapping);
+            }
+
+            // Use -1 as predecessor for flow-generated requests (no predecessor in flow
+            // context)
+            int predecessor = context.getCurrentRequest() != null
+                    ? context.getCurrentRequest().getPredecessor()
+                    : -1;
+
+            // Create the request using the same pattern as BaseProcessorOutbound
+            DynamicMapperRequest request = DynamicMapperRequest.builder()
+                    .predecessor(predecessor)
+                    .method(method)
+                    .sourceId(sourceId) // Device/source identifier
+                    .externalIdType(mapping.getExternalIdType()) // External ID type from mapping
+                    .externalId(context.getExternalId())
+                    .api(targetAPI)
+                    .request(payloadJson) // JSON payload
+                    .build();
+
+            context.addRequest(request);
+            return request;
+
+        } catch (Exception e) {
+            throw new ProcessingException("Failed to create DynamicMapperRequest: " + e.getMessage(), e);
+        }
     }
+
 }

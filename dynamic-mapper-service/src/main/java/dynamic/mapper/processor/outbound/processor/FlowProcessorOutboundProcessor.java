@@ -167,10 +167,13 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
     /**
      * Process the result from the JavaScript function.
      * Handles both single items and arrays.
+     * 
+     * @throws ProcessingException
      */
-    private void processResult(Value result, ProcessingContext<?> context, String tenant) {
-        // Extract warnings from flow context
+    private void processResult(Value result, ProcessingContext<?> context, String tenant) throws ProcessingException {
+        // Extract warnings and logs from flow context
         extractWarnings(context, tenant);
+        extractLogs(context, tenant);
 
         // Check if result is empty or null
         if (isEmptyResult(result)) {
@@ -179,7 +182,8 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
             context.setIgnoreFurtherProcessing(true);
 
             // Create a placeholder request to avoid further processing
-            createDynamicMapperRequest(-1, context.getMapping().getTargetTemplate(), context, context.getMapping());
+            createAndAddDynamicMapperRequest(context, context.getMapping().getTargetTemplate(), null, null, null,
+                    context.getMapping());
             return;
         }
 
@@ -198,8 +202,8 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
      * Extract warnings from the flow context.
      */
     private void extractWarnings(ProcessingContext<?> context, String tenant) {
-        Value warnings = context.getFlowContext().getState(FlowContext.WARNINGS);
 
+        Value warnings = context.getFlowContext().getState(FlowContext.WARNINGS);
         if (warnings != null && warnings.hasArrayElements()) {
             List<String> warningList = new ArrayList<>();
             long size = warnings.getArraySize();
@@ -211,6 +215,26 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
             }
             context.setWarnings(warningList);
             log.debug("{} - Collected {} warning(s) from flow execution", tenant, warningList.size());
+        }
+    }
+
+    /**
+     * Extract warnings from the flow context.
+     */
+    private void extractLogs(ProcessingContext<?> context, String tenant) {
+
+        Value logs = context.getFlowContext().getState(FlowContext.LOGS);
+        if (logs != null && logs.hasArrayElements()) {
+            List<String> logList = new ArrayList<>();
+            long size = logs.getArraySize();
+            for (long i = 0; i < size; i++) {
+                Value logElement = logs.getArrayElement(i);
+                if (logElement != null && logElement.isString()) {
+                    logList.add(logElement.asString());
+                }
+            }
+            context.setLogs(logList);
+            log.debug("{} - Collected {} logs from flow execution", tenant, logList.size());
         }
     }
 

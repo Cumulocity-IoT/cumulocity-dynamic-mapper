@@ -42,11 +42,15 @@ public class TestResult {
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "List of errors")
     @NotNull
-    private List<String> errors= new ArrayList<>();
+    private List<String> errors = new ArrayList<>();
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "List of warnings")
     @NotNull
-    private List<String> warnings= new ArrayList<>();
+    private List<String> warnings = new ArrayList<>();
+
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "List of log messages")
+    @NotNull
+    private List<String> logs = new ArrayList<>();
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Was the test successful")
     @NotNull
