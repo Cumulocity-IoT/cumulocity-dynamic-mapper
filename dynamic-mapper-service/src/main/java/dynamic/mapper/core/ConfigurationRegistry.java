@@ -422,7 +422,7 @@ public class ConfigurationRegistry {
             CamelDispatcherOutbound dispatcherOutbound = new CamelDispatcherOutbound(
                     this, connectorClient);
             // Only initialize Connectors which are enabled
-            if (connectorClient.getConnectorConfiguration().isEnabled())
+            if (connectorClient.getConnectorConfiguration() != null && connectorClient.getConnectorConfiguration().isEnabled())
                 getNotificationSubscriber().addConnector(tenant,
                         connectorClient.getConnectorIdentifier(),
                         dispatcherOutbound);
