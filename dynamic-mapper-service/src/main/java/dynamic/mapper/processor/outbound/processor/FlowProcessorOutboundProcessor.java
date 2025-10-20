@@ -182,7 +182,7 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
             context.setIgnoreFurtherProcessing(true);
 
             // Create a placeholder request to avoid further processing
-            createAndAddDynamicMapperRequest(context, context.getMapping().getTargetTemplate(), null, null, null,
+            createAndAddDynamicMapperRequest(context, context.getMapping().getTargetTemplate(), null, null,
                     context.getMapping());
             return;
         }

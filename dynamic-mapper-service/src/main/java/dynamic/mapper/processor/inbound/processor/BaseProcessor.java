@@ -127,7 +127,7 @@ public abstract class BaseProcessor extends CommonProcessor {
     protected DynamicMapperRequest createAndAddDynamicMapperRequest(ProcessingContext<?> context,
             String processedPayload, String action,
             Mapping mapping) {
-        API api = context.getApi() != null ? context.getApi() : determineDefaultAPI(mapping);
+        API api = context.getApi() != null ? context.getApi() : mapping.getTargetAPI();
         // Determine the request method based on action
         RequestMethod method = "create".equals(action) ? RequestMethod.POST : RequestMethod.PUT;
 
@@ -141,7 +141,6 @@ public abstract class BaseProcessor extends CommonProcessor {
                 .predecessor(predecessor)
                 .method(method)
                 .api(api)
-                .method(context.getMapping().getUpdateExistingDevice() ? RequestMethod.POST : RequestMethod.PATCH)
                 .sourceId(context.getSourceId())
                 .externalIdType(mapping.getExternalIdType())
                 .externalId(context.getExternalId())

@@ -164,7 +164,6 @@ public class ProcessingResultHelper {
                 .predecessor(predecessor)
                 .method(context.getMapping().getUpdateExistingDevice() ? RequestMethod.POST : RequestMethod.PATCH)
                 .api(API.INVENTORY)
-                .sourceId(null)
                 .externalIdType(context.getMapping().getExternalIdType())
                 .externalId(context.getExternalId())
                 .request(requestString)

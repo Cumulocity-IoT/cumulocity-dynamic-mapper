@@ -112,16 +112,13 @@ public abstract class BaseProcessor extends CommonProcessor {
      * This follows the same pattern as substituteInTargetAndSend method
      */
     protected DynamicMapperRequest createAndAddDynamicMapperRequest(ProcessingContext<?> context, String payloadJson,
-            API targetAPI,
             String sourceId, String action, Mapping mapping) throws ProcessingException {
         try {
             // Determine the request method based on action (from substituteInTargetAndSend)
-            RequestMethod method = "update".equals(action) ? RequestMethod.PUT : RequestMethod.POST; // Default from
+            RequestMethod method = "update".equals(action) ? RequestMethod.PUT : RequestMethod.POST; // Default from //
                                                                                                      // reference
 
-            if (targetAPI == null) {
-                targetAPI = determineDefaultAPI(mapping);
-            }
+            API api = context.getApi() != null ? context.getApi() : mapping.getTargetAPI();
 
             // Use -1 as predecessor for flow-generated requests (no predecessor in flow
             // context)
@@ -136,7 +133,7 @@ public abstract class BaseProcessor extends CommonProcessor {
                     .sourceId(sourceId) // Device/source identifier
                     .externalIdType(mapping.getExternalIdType()) // External ID type from mapping
                     .externalId(context.getExternalId())
-                    .api(targetAPI)
+                    .api(api)
                     .request(payloadJson) // JSON payload
                     .build();
 

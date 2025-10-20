@@ -267,7 +267,6 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
         Set<String> pathTargets = context.getPathTargets();
         Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
-        int predecessor = -1;
         DocumentContext payloadTarget = JsonPath.parse(mapping.getTargetTemplate());
         for (String pathTarget : pathTargets) {
             SubstituteValue substitute = new SubstituteValue(
@@ -294,8 +293,7 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
 
             prepareAndSubstituteInPayload(context, payloadTarget, pathTarget, substitute);
         }
-        var newRequest = createAndAddDynamicMapperRequest(context, payloadTarget.jsonString(),null, mapping);
-        predecessor = newRequest.getPredecessor();
+        createAndAddDynamicMapperRequest(context, payloadTarget.jsonString(),null, mapping);
         if (context.getMapping().getDebug() || context.getServiceConfiguration().isLogPayload()) {
             log.info("{} - Transformed message sent: API: {}, numberDevices: {}, message: {}", tenant,
                     context.getApi(),

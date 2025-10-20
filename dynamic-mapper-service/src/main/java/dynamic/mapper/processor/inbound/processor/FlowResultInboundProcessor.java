@@ -198,12 +198,12 @@ public class FlowResultInboundProcessor extends BaseProcessor {
             // Convert payload to JSON string for the request
             String payloadJson = objectMapper.writeValueAsString(payload);
 
-            DynamicMapperRequest c8yRequest = createAndAddDynamicMapperRequest(context, payloadJson,
+            DynamicMapperRequest dynamicMapperRequest = createAndAddDynamicMapperRequest(context, payloadJson,
                     cumulocityMessage.getAction(), mapping);
-            c8yRequest.setApi(targetAPI);
-            c8yRequest.setSourceId(resolvedDeviceId);
-            c8yRequest.setExternalId(externalId);
-            c8yRequest.setExternalIdType(externalType);
+            dynamicMapperRequest.setApi(targetAPI);
+            dynamicMapperRequest.setSourceId(resolvedDeviceId);
+            dynamicMapperRequest.setExternalId(externalId);
+            dynamicMapperRequest.setExternalIdType(externalType);
 
             log.debug("{} - Created C8Y request: API={}, action={}, deviceId={}",
                     tenant, targetAPI.name, cumulocityMessage.getAction(), resolvedDeviceId);

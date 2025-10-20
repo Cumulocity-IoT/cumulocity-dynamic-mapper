@@ -101,21 +101,6 @@ public abstract class CommonProcessor implements Processor {
         }
     }
 
-    /**
-     * Determine default API from mapping
-     */
-    protected API determineDefaultAPI(Mapping mapping) {
-        if (mapping.getTargetAPI() != null) {
-            try {
-                return mapping.getTargetAPI();
-            } catch (Exception e) {
-                log.warn("Unknown target API: {}, defaulting to MEASUREMENT", mapping.getTargetAPI());
-            }
-        }
-
-        return API.MEASUREMENT; // Default
-    }
-
     protected String resolveDeviceIdentifier(CumulocityMessage cumulocityMessage, ProcessingContext<?> context,
             String tenant) throws ProcessingException {
 

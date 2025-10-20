@@ -145,7 +145,7 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
 
             // Create the request using the corrected method
             createAndAddDynamicMapperRequest(context,
-                    payloadJson, null, resolvedExternalId, null, mapping);
+                    payloadJson, null, resolvedExternalId, mapping);
 
             // Set resolvedPublishTopic topic in context
             String publishTopic = deviceMessage.getTopic();
@@ -160,7 +160,6 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
 
             }
             context.setResolvedPublishTopic(publishTopic);
-
 
             log.debug("{} - Created outbound request: deviceId={}, topic={}",
                     tenant, resolvedExternalId,
@@ -214,8 +213,9 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
             // Convert payload to JSON string for the request
             String payloadJson = objectMapper.writeValueAsString(payload);
 
-            DynamicMapperRequest c8yRequest = createAndAddDynamicMapperRequest(context, payloadJson, targetAPI, externalId,
+            DynamicMapperRequest c8yRequest = createAndAddDynamicMapperRequest(context, payloadJson, externalId,
                     cumulocityMessage.getAction(), mapping);
+            c8yRequest.setApi(targetAPI);
             c8yRequest.setSourceId(resolvedDeviceId);
             c8yRequest.setExternalIdType(externalType);
 

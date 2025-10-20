@@ -98,7 +98,7 @@ public class SendOutboundProcessor extends BaseProcessor {
             DynamicMapperRequest request = context.getCurrentRequest();
             if (request == null) {
                 // Create a placeholder request to avoid further processing
-                request = createAndAddDynamicMapperRequest(context, context.getMapping().getTargetTemplate(), null, null, null,
+                request = createAndAddDynamicMapperRequest(context, context.getMapping().getTargetTemplate(), null, null,
                         context.getMapping());
             }
             if (connectorClient.isConnected() && context.isSendPayload()) {
