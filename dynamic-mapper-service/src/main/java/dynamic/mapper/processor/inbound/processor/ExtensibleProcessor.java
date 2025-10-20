@@ -42,7 +42,10 @@ public class ExtensibleProcessor extends BaseProcessor {
         } catch (Exception e) {
             log.error("Error in extensible processor for mapping: {}",
                     context.getMapping().getName(), e);
-            context.addError(new ProcessingException("Extensible processing failed", e));
+            if(e instanceof ProcessingException)
+                context.addError((ProcessingException) e);
+            else
+                context.addError(new ProcessingException("Extensible processing failed", e));
             
             if (!testing) {
                 MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);

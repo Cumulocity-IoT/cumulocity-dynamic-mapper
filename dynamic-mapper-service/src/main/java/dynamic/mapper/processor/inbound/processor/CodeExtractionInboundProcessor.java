@@ -56,10 +56,13 @@ public class CodeExtractionInboundProcessor extends BaseProcessor {
                 lineNumber = e.getStackTrace()[0].getLineNumber();
             }
             String errorMessage = String.format(
-                    "Tenant %s - Error in CodeExtractionInboundProcessor: %s for mapping: %s, line %s",
+                    "%s - Error in CodeExtractionInboundProcessor: %s for mapping: %s, line %s",
                     tenant, mapping.getName(), e.getMessage(), lineNumber);
             log.error(errorMessage, e);
-            context.addError(new ProcessingException(errorMessage, e));
+            if(e instanceof ProcessingException)
+                context.addError((ProcessingException) e);
+            else
+                context.addError(new ProcessingException(errorMessage, e));
 
             if ( !testing) {
                 MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
