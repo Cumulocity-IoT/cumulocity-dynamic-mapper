@@ -88,19 +88,19 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
 
         Object payloadObject = context.getPayload();
         String payload = toPrettyJsonString(payloadObject);
-        
+
         if (serviceConfiguration.isLogPayload() || mapping.getDebug()) {
             log.info("{} - Processing payload: {}", tenant, payload);
         }
 
         if (mapping.getCode() != null) {
             Context graalContext = context.getGraalContext();
-            
+
             // Use try-finally to ensure cleanup
             Value onMessageFunction = null;
             Value inputMessage = null;
             Value result = null;
-            
+
             try {
                 // Task 1: Invoking JavaScript function
                 String identifier = Mapping.SMART_FUNCTION_NAME + "_" + mapping.getIdentifier();
@@ -127,13 +127,13 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
 
                 // Task 2: Extracting the result
                 processResult(result, context, tenant);
-                
+
             } finally {
                 // Explicitly null out GraalVM Value references
                 onMessageFunction = null;
                 inputMessage = null;
                 result = null;
-                
+
                 // Clear bindings if needed (depends on your Context lifecycle)
                 // bindings = null;
             }
@@ -145,22 +145,16 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
      */
     private void cleanupGraalVMReferences(ProcessingContext<?> context) {
         try {
-            // Clear flow result if it contains GraalVM Values
-            if (context.getFlowResult() != null) {
-                // If flowResult contains Value objects, clear them
-                context.setFlowResult(null);
-            }
-            
             // Clear flow context if it holds GraalVM references
             FlowContext flowContext = context.getFlowContext();
             if (flowContext != null) {
                 // Clear any cached Values in the flow context
                 flowContext.clearState(); // Implement this method
             }
-            
+
             // If context caches the GraalVM Context, clear it
             // context.clearGraalContext(); // Implement if applicable
-            
+
             log.debug("Cleaned up GraalVM references for tenant: {}", context.getTenant());
         } catch (Exception e) {
             log.warn("Error during GraalVM reference cleanup: {}", e.getMessage());
@@ -171,22 +165,41 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
         extractWarnings(context, tenant);
         extractLogs(context, tenant);
 
+        // Always initialize an empty list
+        List<Object> outputMessages = new ArrayList<>();
+
         if (isEmptyResult(result)) {
             log.warn("{} - onMessage function did not return any transformation result", tenant);
             context.getWarnings().add("onMessage function did not return any transformation result");
+            context.setFlowResult(outputMessages); // Set empty list
             context.setIgnoreFurtherProcessing(true);
-            ProcessingResultHelper.createAndAddDynamicMapperRequest(context, 
-                context.getMapping().getTargetTemplate(), null, context.getMapping());
+            ProcessingResultHelper.createAndAddDynamicMapperRequest(context,
+                    context.getMapping().getTargetTemplate(), null, context.getMapping());
             return;
         }
 
-        List<Object> outputMessages = extractOutputMessages(result, tenant);
+        try {
+            outputMessages = extractOutputMessages(result, tenant);
+        } catch (Exception e) {
+            log.error("{} - Error extracting output messages: {}", tenant, e.getMessage(), e);
+            context.getWarnings().add("Error extracting output messages: " + e.getMessage());
+            outputMessages = new ArrayList<>(); // Ensure it's empty
+        }
+
+        // Always set flow result (even if empty)
         context.setFlowResult(outputMessages);
+
+        if (outputMessages.isEmpty()) {
+            log.info("{} - No valid messages produced from onMessage function", tenant);
+            context.getWarnings().add("No valid messages produced from onMessage function");
+            context.setIgnoreFurtherProcessing(true);
+            return;
+        }
 
         if (context.getMapping().getDebug() || context.getServiceConfiguration().isLogPayload()) {
             log.info("{} - onMessage function returned {} complete message(s)", tenant, outputMessages.size());
         }
-        
+
         // IMPORTANT: Don't store the Value object itself, only extracted data
         // This ensures no GraalVM Value references leak
     }
