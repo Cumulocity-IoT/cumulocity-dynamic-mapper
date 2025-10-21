@@ -262,4 +262,9 @@ public class SimpleFlowContext implements FlowContext {
         logs.add(message);
         state.put(FlowContext.LOGS, logs);
     }
+
+    @Override
+    public void clearState() {
+        state.clear();
+    }
 }

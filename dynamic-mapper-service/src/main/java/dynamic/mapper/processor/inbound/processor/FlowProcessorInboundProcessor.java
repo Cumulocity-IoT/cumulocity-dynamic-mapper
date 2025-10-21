@@ -51,16 +51,20 @@ public class FlowProcessorInboundProcessor extends BaseProcessor {
                     "%s - Error in FlowProcessorInboundProcessor: %s for mapping: %s, line %s",
                     tenant, mapping.getName(), e.getMessage(), lineNumber);
             log.error(errorMessage, e);
+            
             if (e instanceof ProcessingException)
                 context.addError((ProcessingException) e);
             else
                 context.addError(new ProcessingException(errorMessage, e));
+            
             if (!testing) {
                 MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
                 mappingStatus.errors++;
                 mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
             }
-            return;
+        } finally {
+            // CRITICAL FIX: Clean up GraalVM references
+            cleanupGraalVMReferences(context);
         }
     }
 
@@ -70,64 +74,87 @@ public class FlowProcessorInboundProcessor extends BaseProcessor {
         ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();
 
         Object payloadObject = context.getPayload();
-
         String payload = toPrettyJsonString(payloadObject);
+        
         if (serviceConfiguration.isLogPayload() || mapping.getDebug()) {
             log.info("{} - Processing payload: {}", tenant, payload);
         }
 
         if (mapping.getCode() != null) {
             Context graalContext = context.getGraalContext();
+            
+            // CRITICAL FIX: Track all GraalVM Value objects for cleanup
+            Value bindings = null;
+            Value onMessageFunction = null;
+            Value inputMessage = null;
+            Value result = null;
 
-            // Task 1: Invoking JavaScript function
-            String identifier = Mapping.SMART_FUNCTION_NAME + "_" + mapping.getIdentifier();
-            Value bindings = graalContext.getBindings("js");
+            try {
+                // Task 1: Invoking JavaScript function
+                String identifier = Mapping.SMART_FUNCTION_NAME + "_" + mapping.getIdentifier();
+                bindings = graalContext.getBindings("js");
 
-            // Load and execute the JavaScript code
-            byte[] decodedBytes = Base64.getDecoder().decode(mapping.getCode());
-            String decodedCode = new String(decodedBytes);
-            String decodedCodeAdapted = decodedCode.replaceFirst(
-                    "onMessage",
-                    identifier);
+                // Load and execute the JavaScript code
+                byte[] decodedBytes = Base64.getDecoder().decode(mapping.getCode());
+                String decodedCode = new String(decodedBytes);
+                String decodedCodeAdapted = decodedCode.replaceFirst("onMessage", identifier);
 
-            Source source = Source.newBuilder("js", decodedCodeAdapted, identifier + ".js")
-                    .buildLiteral();
-            graalContext.eval(source);
+                Source source = Source.newBuilder("js", decodedCodeAdapted, identifier + ".js")
+                        .buildLiteral();
+                graalContext.eval(source);
 
-            // Load shared and system code if available
-            loadSharedCode(graalContext, context);
-            loadSystemCode(graalContext, context);
+                // Load shared and system code if available
+                loadSharedCode(graalContext, context);
+                loadSystemCode(graalContext, context);
 
-            Value onMessageFunction = bindings.getMember(identifier);
+                onMessageFunction = bindings.getMember(identifier);
+                inputMessage = createInputMessage(graalContext, context);
 
-            // Create input message (DeviceMessage or CumulocityMessage)
-            Value inputMessage = createInputMessage(graalContext, context);
+                // Execute the JavaScript function
+                result = onMessageFunction.execute(inputMessage, context.getFlowContext());
 
-            // Execute the JavaScript function
-            final Value result = onMessageFunction.execute(inputMessage, context.getFlowContext());
-
-            // Task 2: Extracting the result
-            processResult(result, context, tenant);
+                // Task 2: Extracting the result
+                processResult(result, context, tenant);
+                
+            } finally {
+                // CRITICAL FIX: Explicitly null out all GraalVM Value references
+                bindings = null;
+                onMessageFunction = null;
+                inputMessage = null;
+                result = null;
+            }
         }
     }
 
     private void loadSharedCode(Context graalContext, ProcessingContext<?> context) {
         if (context.getSharedCode() != null) {
-            byte[] decodedSharedCodeBytes = Base64.getDecoder().decode(context.getSharedCode());
-            String decodedSharedCode = new String(decodedSharedCodeBytes);
-            Source sharedSource = Source.newBuilder("js", decodedSharedCode, "sharedCode.js")
-                    .buildLiteral();
-            graalContext.eval(sharedSource);
+            Source sharedSource = null;
+            try {
+                byte[] decodedSharedCodeBytes = Base64.getDecoder().decode(context.getSharedCode());
+                String decodedSharedCode = new String(decodedSharedCodeBytes);
+                sharedSource = Source.newBuilder("js", decodedSharedCode, "sharedCode.js")
+                        .buildLiteral();
+                graalContext.eval(sharedSource);
+            } finally {
+                // CRITICAL FIX: Clear source reference
+                sharedSource = null;
+            }
         }
     }
 
     private void loadSystemCode(Context graalContext, ProcessingContext<?> context) {
         if (context.getSystemCode() != null) {
-            byte[] decodedSystemCodeBytes = Base64.getDecoder().decode(context.getSystemCode());
-            String decodedSystemCode = new String(decodedSystemCodeBytes);
-            Source systemSource = Source.newBuilder("js", decodedSystemCode, "systemCode.js")
-                    .buildLiteral();
-            graalContext.eval(systemSource);
+            Source systemSource = null;
+            try {
+                byte[] decodedSystemCodeBytes = Base64.getDecoder().decode(context.getSystemCode());
+                String decodedSystemCode = new String(decodedSystemCodeBytes);
+                systemSource = Source.newBuilder("js", decodedSystemCode, "systemCode.js")
+                        .buildLiteral();
+                graalContext.eval(systemSource);
+            } finally {
+                // CRITICAL FIX: Clear source reference
+                systemSource = null;
+            }
         }
     }
 
@@ -151,88 +178,124 @@ public class FlowProcessorInboundProcessor extends BaseProcessor {
     }
 
     private void processResult(Value result, ProcessingContext<?> context, String tenant) {
-        // Collect warnings
-        Value warnings = context.getFlowContext().getState(FlowContext.WARNINGS);
-        if (warnings != null && warnings.hasArrayElements()) {
-            List<String> warningList = new ArrayList<>();
-            long size = warnings.getArraySize();
-            for (long i = 0; i < size; i++) {
-                Value warningElement = warnings.getArrayElement(i);
-                if (warningElement != null && warningElement.isString()) {
-                    warningList.add(warningElement.asString());
-                }
-            }
-            context.setWarnings(warningList);
-            log.debug("{} - Collected {} warnings from flow execution", tenant, warningList.size());
-        }
-
-        // Collect logs
-        Value logs = context.getFlowContext().getState(FlowContext.LOGS);
-        if (logs != null && logs.hasArrayElements()) {
-            List<String> logList = new ArrayList<>();
-            long size = logs.getArraySize();
-            for (long i = 0; i < size; i++) {
-                Value logElement = logs.getArrayElement(i);
-                if (logElement != null && logElement.isString()) {
-                    logList.add(logElement.asString());
-                }
-            }
-            context.setLogs(logList);
-            log.debug("{} - Collected {} logs from flow execution", tenant, logList.size());
-        }
-
-        // Check if result is null or undefined
-        if (result == null || result.isNull()) {
-            log.warn("{} - onMessage function did not return any transformation result (null)", tenant);
-            context.getWarnings().add("onMessage function did not return any transformation result");
-            context.setFlowResult(new ArrayList<>()); // Set empty list
-            context.setIgnoreFurtherProcessing(true);
-            return;
-        }
-
-        List<Object> outputMessages = new ArrayList<>();
-
+        Value warnings = null;
+        Value logs = null;
+        
         try {
-            // Handle both array and single object returns
-            if (result.hasArrayElements()) {
-                // Result is an array: [{...}, {...}]
-                processArrayResult(result, outputMessages, tenant);
+            // CRITICAL FIX: Extract and immediately convert warnings
+            warnings = context.getFlowContext().getState(FlowContext.WARNINGS);
+            extractWarningsFromValue(warnings, context, tenant);
+            
+            // CRITICAL FIX: Extract and immediately convert logs
+            logs = context.getFlowContext().getState(FlowContext.LOGS);
+            extractLogsFromValue(logs, context, tenant);
 
-            } else if (result.hasMembers()) {
-                // Result is a single object: {...}
-                processSingleObjectResult(result, outputMessages, tenant);
-
-            } else {
-                // Unexpected type (primitive, function, etc.)
-                log.warn("{} - onMessage function returned unexpected result type: {} ({})",
-                        tenant, result.getClass().getSimpleName(), result.getMetaObject());
-                context.getWarnings()
-                        .add("onMessage function returned unexpected result type: " + result.getMetaObject());
-                context.setFlowResult(new ArrayList<>()); // Set empty list
+            // Check if result is null or undefined
+            if (result == null || result.isNull()) {
+                log.warn("{} - onMessage function did not return any transformation result (null)", tenant);
+                context.getWarnings().add("onMessage function did not return any transformation result");
+                context.setFlowResult(new ArrayList<>());
                 context.setIgnoreFurtherProcessing(true);
                 return;
             }
 
-        } catch (Exception e) {
-            log.error("{} - Error processing onMessage result: {}", tenant, e.getMessage(), e);
-            context.getWarnings().add("Error processing onMessage result: " + e.getMessage());
-            context.setFlowResult(new ArrayList<>()); // Set empty list
-            context.setIgnoreFurtherProcessing(true);
-            return;
+            List<Object> outputMessages = new ArrayList<>();
+
+            try {
+                // Handle both array and single object returns
+                if (result.hasArrayElements()) {
+                    processArrayResult(result, outputMessages, tenant);
+                } else if (result.hasMembers()) {
+                    processSingleObjectResult(result, outputMessages, tenant);
+                } else {
+                    log.warn("{} - onMessage function returned unexpected result type: {} ({})",
+                            tenant, result.getClass().getSimpleName(), result.getMetaObject());
+                    context.getWarnings()
+                            .add("onMessage function returned unexpected result type: " + result.getMetaObject());
+                    context.setFlowResult(new ArrayList<>());
+                    context.setIgnoreFurtherProcessing(true);
+                    return;
+                }
+            } catch (Exception e) {
+                log.error("{} - Error processing onMessage result: {}", tenant, e.getMessage(), e);
+                context.getWarnings().add("Error processing onMessage result: " + e.getMessage());
+                context.setFlowResult(new ArrayList<>());
+                context.setIgnoreFurtherProcessing(true);
+                return;
+            }
+
+            // Always set flow result, even if empty
+            context.setFlowResult(outputMessages);
+
+            if (outputMessages.isEmpty()) {
+                log.info("{} - No valid messages produced from onMessage function", tenant);
+                context.getWarnings().add("No valid messages produced from onMessage function");
+                context.setIgnoreFurtherProcessing(true);
+                return;
+            }
+
+            if (context.getMapping().getDebug() || context.getServiceConfiguration().isLogPayload()) {
+                log.info("{} - onMessage function returned {} complete message(s)", tenant, outputMessages.size());
+            }
+            
+        } finally {
+            // CRITICAL FIX: Null out Value references
+            warnings = null;
+            logs = null;
         }
+    }
 
-        // Always set flow result, even if empty
-        context.setFlowResult(outputMessages);
-
-        if (outputMessages.isEmpty()) {
-            log.info("{} - No valid messages produced from onMessage function", tenant);
-            context.getWarnings().add("No valid messages produced from onMessage function");
-            context.setIgnoreFurtherProcessing(true);
-            return;
+    /**
+     * CRITICAL FIX: Extract warnings and immediately convert to Java objects
+     */
+    private void extractWarningsFromValue(Value warnings, ProcessingContext<?> context, String tenant) {
+        if (warnings != null && warnings.hasArrayElements()) {
+            List<String> warningList = new ArrayList<>();
+            long size = warnings.getArraySize();
+            
+            for (long i = 0; i < size; i++) {
+                Value warningElement = null;
+                try {
+                    warningElement = warnings.getArrayElement(i);
+                    if (warningElement != null && warningElement.isString()) {
+                        // CRITICAL: Convert to Java String immediately
+                        warningList.add(warningElement.asString());
+                    }
+                } finally {
+                    // CRITICAL FIX: Clear element reference
+                    warningElement = null;
+                }
+            }
+            
+            context.setWarnings(warningList);
+            log.debug("{} - Collected {} warnings from flow execution", tenant, warningList.size());
         }
+    }
 
-        if (context.getMapping().getDebug() || context.getServiceConfiguration().isLogPayload()) {
-            log.info("{} - onMessage function returned {} complete message(s)", tenant, outputMessages.size());
+    /**
+     * CRITICAL FIX: Extract logs and immediately convert to Java objects
+     */
+    private void extractLogsFromValue(Value logs, ProcessingContext<?> context, String tenant) {
+        if (logs != null && logs.hasArrayElements()) {
+            List<String> logList = new ArrayList<>();
+            long size = logs.getArraySize();
+            
+            for (long i = 0; i < size; i++) {
+                Value logElement = null;
+                try {
+                    logElement = logs.getArrayElement(i);
+                    if (logElement != null && logElement.isString()) {
+                        // CRITICAL: Convert to Java String immediately
+                        logList.add(logElement.asString());
+                    }
+                } finally {
+                    // CRITICAL FIX: Clear element reference
+                    logElement = null;
+                }
+            }
+            
+            context.setLogs(logList);
+            log.debug("{} - Collected {} logs from flow execution", tenant, logList.size());
         }
     }
 
@@ -247,8 +310,14 @@ public class FlowProcessorInboundProcessor extends BaseProcessor {
         log.debug("{} - Processing array result with {} elements", tenant, arraySize);
 
         for (int i = 0; i < arraySize; i++) {
-            Value element = result.getArrayElement(i);
-            processResultElement(element, outputMessages, tenant);
+            Value element = null;
+            try {
+                element = result.getArrayElement(i);
+                processResultElement(element, outputMessages, tenant);
+            } finally {
+                // CRITICAL FIX: Clear element reference in each iteration
+                element = null;
+            }
         }
     }
 
@@ -264,6 +333,7 @@ public class FlowProcessorInboundProcessor extends BaseProcessor {
         }
 
         try {
+            // CRITICAL: Convert GraalVM Value to Java objects immediately
             if (JavaScriptInteropHelper.isDeviceMessage(element)) {
                 DeviceMessage deviceMsg = JavaScriptInteropHelper.convertToDeviceMessage(element);
                 outputMessages.add(deviceMsg);
@@ -283,6 +353,49 @@ public class FlowProcessorInboundProcessor extends BaseProcessor {
         } catch (Exception e) {
             log.error("{} - Error processing result element: {}", tenant, e.getMessage(), e);
         }
+        // Note: element is cleared by the caller in finally block
     }
 
+    /**
+     * CRITICAL FIX: Clean up all GraalVM references from the context
+     */
+    private void cleanupGraalVMReferences(ProcessingContext<?> context) {
+        if (context == null) {
+            return;
+        }
+        
+        try {
+            // Clear flow result if it somehow contains Value objects
+            // (it shouldn't if conversion was done correctly)
+            Object flowResult = context.getFlowResult();
+            if (flowResult != null) {
+                // Validate that flowResult contains only plain Java objects
+                if (flowResult instanceof List) {
+                    List<?> resultList = (List<?>) flowResult;
+                    for (Object item : resultList) {
+                        if (item instanceof Value) {
+                            log.warn("{} - MEMORY LEAK DETECTED: Value object in flowResult!", 
+                                    context.getTenant());
+                            // This should never happen if conversion is done correctly
+                        }
+                    }
+                }
+            }
+            
+            // Clear FlowContext state that might hold Value references
+            FlowContext flowContext = context.getFlowContext();
+            if (flowContext != null) {
+                // Remove GraalVM Value objects from state
+                flowContext.clearState();
+                flowContext.clearState();
+                // Clear any other state that might contain Value objects
+            }
+            
+            log.trace("{} - Cleaned up GraalVM references", context.getTenant());
+            
+        } catch (Exception e) {
+            log.warn("{} - Error during GraalVM reference cleanup: {}", 
+                    context.getTenant(), e.getMessage());
+        }
+    }
 }
