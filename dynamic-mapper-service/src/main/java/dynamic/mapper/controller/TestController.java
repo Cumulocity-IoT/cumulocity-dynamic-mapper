@@ -225,7 +225,7 @@ public class TestController {
         // Example: /t12345/alarms/CREATE
 
         // First header: tenant and API path
-        String apiPath = Notification.getApiPath(api);
+        String apiPath = Notification.convertAPItoResource(api);
         String tenantApiHeader = String.format("/%s/%s", tenant, apiPath);
         notificationHeaders.add(tenantApiHeader);
 

@@ -38,10 +38,12 @@ import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.util.ProcessingResultHelper;
 import dynamic.mapper.processor.flow.CumulocityMessage;
 import dynamic.mapper.processor.flow.DeviceMessage;
 import dynamic.mapper.processor.flow.ExternalSource;
 import dynamic.mapper.service.MappingService;
+import dynamic.mapper.notification.websocket.Notification;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -144,8 +146,9 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
             String payloadJson = objectMapper.writeValueAsString(payload);
 
             // Create the request using the corrected method
-            createAndAddDynamicMapperRequest(context,
-                    payloadJson, null, resolvedExternalId, mapping);
+            context.setSourceId(resolvedExternalId);
+            ProcessingResultHelper.createAndAddDynamicMapperRequest(context,
+                    payloadJson, null, mapping);
 
             // Set resolvedPublishTopic topic in context
             String publishTopic = deviceMessage.getTopic();
@@ -175,14 +178,14 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
 
         try {
             // Get the API from the cumulocityType
-            API targetAPI = getAPIFromCumulocityType(cumulocityMessage.getCumulocityType());
+            API targetAPI = Notification.convertResourceToAPI(cumulocityMessage.getCumulocityType());
 
             // Clone the payload to modify it
             Map<String, Object> payload = clonePayload(cumulocityMessage.getPayload());
 
             // Resolve device ID and set it hierarchically in the payload
             String resolvedDeviceId = resolveDeviceIdentifier(cumulocityMessage, context, tenant);
-            List<ExternalSource> externalSources = convertToExternalSourceList(cumulocityMessage.getExternalSource());
+            List<ExternalSource> externalSources = ProcessingResultHelper.convertToExternalSourceList(cumulocityMessage.getExternalSource());
             String externalId = null;
             String externalType = null;
 
@@ -194,7 +197,7 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
             }
 
             if (resolvedDeviceId != null) {
-                setHierarchicalValue(payload, targetAPI.identifier, resolvedDeviceId);
+                ProcessingResultHelper.setHierarchicalValue(payload, targetAPI.identifier, resolvedDeviceId);
                 context.setSourceId(resolvedDeviceId);
             } else if (externalSources != null && !externalSources.isEmpty()) {
 
@@ -213,11 +216,12 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
             // Convert payload to JSON string for the request
             String payloadJson = objectMapper.writeValueAsString(payload);
 
-            DynamicMapperRequest c8yRequest = createAndAddDynamicMapperRequest(context, payloadJson, externalId,
+            DynamicMapperRequest c8yRequest = ProcessingResultHelper.createAndAddDynamicMapperRequest(context, payloadJson,
                     cumulocityMessage.getAction(), mapping);
             c8yRequest.setApi(targetAPI);
             c8yRequest.setSourceId(resolvedDeviceId);
             c8yRequest.setExternalIdType(externalType);
+            c8yRequest.setExternalId(externalId);
 
             log.debug("{} - Created C8Y request: API={}, action={}, deviceId={}",
                     tenant, targetAPI.name, cumulocityMessage.getAction(), resolvedDeviceId);

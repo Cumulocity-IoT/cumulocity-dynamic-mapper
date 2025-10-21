@@ -25,6 +25,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import dynamic.mapper.model.API;
+import dynamic.mapper.processor.ProcessingException;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -92,7 +93,7 @@ public class Notification {
         return notificationHeaders.get(0).split("/")[0];
     }
 
-    public static String getApiPath(API api) {
+    public static String convertAPItoResource(API api) {
         switch (api) {
             case ALARM:
                 return "alarms";
@@ -110,6 +111,24 @@ public class Notification {
                 return "operations";
             default:
                 return "events";
+        }
+    }
+
+    public static API convertResourceToAPI(String cumulocityType) throws ProcessingException {
+        switch (cumulocityType.toLowerCase()) {
+            case "measurement":
+                return API.MEASUREMENT;
+            case "alarm":
+                return API.ALARM;
+            case "event":
+                return API.EVENT;
+            case "inventory":
+            case "managedobject":
+                return API.INVENTORY;
+            case "operation":
+                return API.OPERATION;
+            default:
+                throw new ProcessingException("Unknown cumulocity type: " + cumulocityType);
         }
     }
 

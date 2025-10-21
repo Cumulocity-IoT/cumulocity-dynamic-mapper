@@ -23,6 +23,7 @@ import dynamic.mapper.processor.flow.CumulocityMessage;
 import dynamic.mapper.processor.flow.ExternalSource;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.service.MappingService;
+import dynamic.mapper.notification.websocket.Notification;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -136,14 +137,14 @@ public class FlowResultInboundProcessor extends BaseProcessor {
 
         try {
             // Get the API from the cumulocityType
-            API targetAPI = getAPIFromCumulocityType(cumulocityMessage.getCumulocityType());
+            API targetAPI = Notification.convertResourceToAPI(cumulocityMessage.getCumulocityType());
 
             // Clone the payload to modify it
             Map<String, Object> payload = clonePayload(cumulocityMessage.getPayload());
 
             // Resolve device ID and set it hierarchically in the payload
             String resolvedDeviceId = resolveDeviceIdentifier(cumulocityMessage, context, tenant);
-            List<ExternalSource> externalSources = convertToExternalSourceList(cumulocityMessage.getExternalSource());
+            List<ExternalSource> externalSources = ProcessingResultHelper.convertToExternalSourceList(cumulocityMessage.getExternalSource());
             String externalId = null;
             String externalType = null;
 
@@ -155,7 +156,7 @@ public class FlowResultInboundProcessor extends BaseProcessor {
             }
 
             if (resolvedDeviceId != null) {
-                setHierarchicalValue(payload, targetAPI.identifier, resolvedDeviceId);
+                ProcessingResultHelper.setHierarchicalValue(payload, targetAPI.identifier, resolvedDeviceId);
                 context.setSourceId(resolvedDeviceId);
             } else if (externalSources != null && !externalSources.isEmpty()) {
                 // create implicitDevice if enabled
@@ -173,7 +174,7 @@ public class FlowResultInboundProcessor extends BaseProcessor {
                         externalType = externalSource.getType();
                         externalId = externalSource.getExternalId();
                         context.setExternalId(externalSource.getExternalId());
-                        setHierarchicalValue(payload, targetAPI.identifier, sourceId);
+                        ProcessingResultHelper.setHierarchicalValue(payload, targetAPI.identifier, sourceId);
                     }
                 } else {
                     // No device ID and not creating implicit devices - skip this message
@@ -198,7 +199,7 @@ public class FlowResultInboundProcessor extends BaseProcessor {
             // Convert payload to JSON string for the request
             String payloadJson = objectMapper.writeValueAsString(payload);
 
-            DynamicMapperRequest dynamicMapperRequest = createAndAddDynamicMapperRequest(context, payloadJson,
+            DynamicMapperRequest dynamicMapperRequest = ProcessingResultHelper.createAndAddDynamicMapperRequest(context, payloadJson,
                     cumulocityMessage.getAction(), mapping);
             dynamicMapperRequest.setApi(targetAPI);
             dynamicMapperRequest.setSourceId(resolvedDeviceId);

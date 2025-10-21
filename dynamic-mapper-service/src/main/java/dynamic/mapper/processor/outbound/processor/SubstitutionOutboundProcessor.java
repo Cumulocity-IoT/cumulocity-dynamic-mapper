@@ -47,6 +47,7 @@ import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.RepairStrategy;
 import dynamic.mapper.processor.model.SubstituteValue;
 import dynamic.mapper.processor.model.SubstituteValue.TYPE;
+import dynamic.mapper.processor.util.ProcessingResultHelper;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.util.Utils;
 import lombok.extern.slf4j.Slf4j;
@@ -204,8 +205,9 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
                 // remove TOKEN_CONTEXT_DATA
                 payloadTarget.delete("$." + Mapping.TOKEN_CONTEXT_DATA);
             }
-            DynamicMapperRequest dynamicMapperRequest = createAndAddDynamicMapperRequest(context, targetTemplate, deviceSource, null, mapping);
+            DynamicMapperRequest dynamicMapperRequest = ProcessingResultHelper.createAndAddDynamicMapperRequest(context, targetTemplate, null, mapping);
             dynamicMapperRequest.setMethod(method);
+            dynamicMapperRequest.setSourceId(deviceSource);
 
         } else {
             // FIXME Why are INVENTORY API messages ignored?! Needs to be implemented

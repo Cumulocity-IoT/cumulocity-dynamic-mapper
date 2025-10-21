@@ -35,6 +35,7 @@ import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.util.ProcessingResultHelper;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.util.Utils;
 import lombok.extern.slf4j.Slf4j;
@@ -98,7 +99,7 @@ public class SendOutboundProcessor extends BaseProcessor {
             DynamicMapperRequest request = context.getCurrentRequest();
             if (request == null) {
                 // Create a placeholder request to avoid further processing
-                request = createAndAddDynamicMapperRequest(context, context.getMapping().getTargetTemplate(), null, null,
+                request = ProcessingResultHelper.createAndAddDynamicMapperRequest(context, context.getMapping().getTargetTemplate(), null,
                         context.getMapping());
             }
             if (connectorClient.isConnected() && context.isSendPayload()) {

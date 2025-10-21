@@ -38,6 +38,7 @@ import dynamic.mapper.processor.flow.DeviceMessage;
 import dynamic.mapper.processor.flow.ExternalSource;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.util.ProcessingResultHelper;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -155,7 +156,7 @@ public class TestableFlowResultOutboundProcessor extends FlowResultOutboundProce
             Mapping mapping = context.getMapping();
             
             // Get external sources
-            List<ExternalSource> externalSources = convertToExternalSourceList(deviceMsg.getExternalSource());
+            List<ExternalSource> externalSources = ProcessingResultHelper.convertToExternalSourceList(deviceMsg.getExternalSource());
             
             if (externalSources == null || externalSources.isEmpty()) {
                 log.warn("No external sources found in DeviceMessage");
@@ -278,83 +279,7 @@ public class TestableFlowResultOutboundProcessor extends FlowResultOutboundProce
         return topic;
     }
     
-    @Override
-    protected List<ExternalSource> convertToExternalSourceList(Object externalSource) {
-        if (externalSourceConverter != null) {
-            return externalSourceConverter.convert(externalSource);
-        }
-        
-        if (externalSource == null) {
-            return null;
-        }
-        
-        if (externalSource instanceof List) {
-            @SuppressWarnings("unchecked")
-            List<ExternalSource> list = (List<ExternalSource>) externalSource;
-            return list;
-        }
-        
-        if (externalSource instanceof Map) {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> map = (Map<String, Object>) externalSource;
-            ExternalSource es = new ExternalSource();
-            es.setType((String) map.get("type"));
-            es.setExternalId((String) map.get("externalId"));
-            es.setClientId((String) map.get("clientId"));
-            
-            Object autoCreate = map.get("autoCreateDeviceMO");
-            if (autoCreate instanceof Boolean) {
-                es.setAutoCreateDeviceMO((Boolean) autoCreate);
-            }
-            
-            List<ExternalSource> list = new ArrayList<>();
-            list.add(es);
-            return list;
-        }
-        
-        if (externalSource instanceof ExternalSource) {
-            List<ExternalSource> list = new ArrayList<>();
-            list.add((ExternalSource) externalSource);
-            return list;
-        }
-        
-        return null;
-    }
-    
-    @Override
-    protected void setHierarchicalValue(Map<String, Object> payload, String path, Object value) {
-        if (path == null || payload == null) {
-            return;
-        }
-        
-        if (path.contains(".")) {
-            String[] parts = path.split("\\.");
-            Map<String, Object> current = payload;
-            
-            for (int i = 0; i < parts.length - 1; i++) {
-                String part = parts[i];
-                if (!current.containsKey(part)) {
-                    current.put(part, new HashMap<String, Object>());
-                }
-                
-                Object next = current.get(part);
-                if (next instanceof Map) {
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> nextMap = (Map<String, Object>) next;
-                    current = nextMap;
-                } else {
-                    Map<String, Object> newMap = new HashMap<>();
-                    current.put(part, newMap);
-                    current = newMap;
-                }
-            }
-            
-            current.put(parts[parts.length - 1], value);
-        } else {
-            payload.put(path, value);
-        }
-    }
-    
+
     public TestableFlowResultOutboundProcessor withDefaultDeviceId(String deviceId) {
         this.defaultDeviceId = deviceId;
         return this;

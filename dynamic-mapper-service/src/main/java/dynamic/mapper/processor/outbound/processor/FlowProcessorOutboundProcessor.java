@@ -42,6 +42,7 @@ import dynamic.mapper.processor.flow.DeviceMessage;
 import dynamic.mapper.processor.flow.FlowContext;
 import dynamic.mapper.processor.flow.JavaScriptInteropHelper;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.util.ProcessingResultHelper;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -182,7 +183,7 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
             context.setIgnoreFurtherProcessing(true);
 
             // Create a placeholder request to avoid further processing
-            createAndAddDynamicMapperRequest(context, context.getMapping().getTargetTemplate(), null, null,
+            ProcessingResultHelper.createAndAddDynamicMapperRequest(context, context.getMapping().getTargetTemplate(), null,
                     context.getMapping());
             return;
         }
