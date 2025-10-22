@@ -1,0 +1,88 @@
+spring:
+  application:
+    name: dynamic-mapper-service-memtest
+  
+  # Disable auto-configuration for components we don't need in memory tests
+  autoconfigure:
+    exclude:
+      - com.cumulocity.microservice.autoconfigure.MicroserviceSubscriptionAutoConfiguration
+      - com.cumulocity.microservice.notification.autoconfigure.MicroserviceSubscriptionNotificationAutoConfiguration
+
+# Dynamic Mapper Configuration
+dynamic-mapper:
+  service:
+    logPayload: true
+    logSubstitution: true
+  
+# Logging Configuration
+logging:
+  level:
+    root: INFO
+    '[dynamic.mapper]': DEBUG
+    '[dynamic.mapper.processor]': DEBUG
+    '[dynamic.mapper.processor.inbound]': DEBUG
+    '[dynamic.mapper.processor.outbound]': DEBUG
+    '[org.graalvm]': DEBUG
+    '[com.oracle.truffle]': WARN
+    '[com.cumulocity]': WARN
+    '[org.springframework.security]': WARN
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+# Application Configuration
+app:
+  externalExtensionsEnabled: false
+  inboundExternalIdCacheSize: 1000
+  inventoryCacheSize: 1000
+  mqttServiceUrl: mqtt://localhost:1883
+  mqttServicePulsarUrl: pulsar://localhost:6650
+  additionalSubscriptionIdTest: test123
+
+# Cumulocity Configuration (all lowercase for consistency)
+c8y:
+  baseurl:
+    mqtt: tcp://localhost:1883
+    pulsar: pulsar://localhost:6650
+  bootstrap:
+    user: test_user
+    password: test_password
+    tenant: test_tenant
+  microservice:
+    isolation: MULTI_TENANT
+
+# Spring Documentation
+springdoc:
+  writer-with-default-pretty-printer: true
+
+# Management Endpoints
+management:
+  server:
+    port: 8080  # Use same port as main application
+  
+  endpoints:
+    web:
+      base-path: /actuator
+      exposure:
+        include: "*"  # Expose all endpoints for testing
+  
+  endpoint:
+    health:
+      access: unrestricted
+      show-details: always
+    
+    heapdump:
+      access: unrestricted
+    
+    info:
+      access: unrestricted
+    
+    metrics:
+      access: unrestricted
+    
+    threaddump:
+      access: unrestricted
+
+# Server Configuration
+server:
+  port: 8080
+  shutdown: graceful

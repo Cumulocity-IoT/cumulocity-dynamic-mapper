@@ -19,7 +19,7 @@ public class HexPayloadDeserializer implements PayloadDeserializer<Object> {
         }
         
         try {
-            // EXACT copy of HexProcessorInbound.deserializePayload logic
+
             Object payloadObjectNode = new HashMap<>(
                 Map.of("payload", "0x" + Hex.encodeHexString(message.getPayload()))
             );

@@ -39,6 +39,7 @@ import dynamic.mapper.processor.flow.FlowContext;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Engine;
@@ -51,6 +52,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 @Getter
 @Setter
 @Builder
+@Slf4j
 /*
  * The class <code>ProcessingContext</code> collects all relevant information:
  * <code>mapping</code>, <code>topic</code>, <code>payload</code>,
@@ -58,7 +60,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
  * <code>cardinality</code>, <code>needsRepair</code>
  * when a <code>mapping</code> is applied to an inbound <code>payload</code>
  */
-public class ProcessingContext<O> {
+public class ProcessingContext<O> implements AutoCloseable {
 
     private Mapping mapping;
 
@@ -242,5 +244,43 @@ public class ProcessingContext<O> {
 
     public Integer getProcessingCacheSize() {
         return processingCache.size();
+    }
+
+    /**
+     * Clean up GraalVM resources
+     */
+    @Override
+    public void close() {
+        try {
+            // Close flow context first (if it holds GraalVM references)
+            if (flowContext != null) {
+                try {
+                    flowContext.clearState();
+                } catch (Exception e) {
+                    log.warn("{} - Error clearing flow context state: {}",  getTenant(), e.getMessage());
+                }
+                flowContext = null;
+            }
+
+            // Close GraalVM Context
+            if (graalContext != null) {
+                try {
+                    graalContext.close();
+                    log.debug("{} - Closed GraalVM Context in tenant {}", getTenant(),  getTenant());
+                } catch (Exception e) {
+                    log.warn("{} - Error closing GraalVM Context: {}",  getTenant(), e.getMessage());
+                }
+                graalContext = null;
+            }
+        } catch (Exception e) {
+            log.error("{} - Error during ProcessingContext cleanup: {}", getTenant(), e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Clear flow context state
+     */
+    public void clearGraalVMReferences() {
+        close();
     }
 }

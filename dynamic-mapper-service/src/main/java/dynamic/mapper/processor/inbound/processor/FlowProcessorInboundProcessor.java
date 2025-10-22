@@ -51,20 +51,26 @@ public class FlowProcessorInboundProcessor extends BaseProcessor {
                     "%s - Error in FlowProcessorInboundProcessor: %s for mapping: %s, line %s",
                     tenant, mapping.getName(), e.getMessage(), lineNumber);
             log.error(errorMessage, e);
-            
+
             if (e instanceof ProcessingException)
                 context.addError((ProcessingException) e);
             else
                 context.addError(new ProcessingException(errorMessage, e));
-            
+
             if (!testing) {
                 MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
                 mappingStatus.errors++;
                 mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
             }
         } finally {
-            // CRITICAL FIX: Clean up GraalVM references
-            cleanupGraalVMReferences(context);
+            // Close the Context completely
+            if (context != null) {
+                try {
+                    context.close();
+                } catch (Exception e) {
+                    log.warn("{} - Error closing context in finally block: {}", tenant, e.getMessage());
+                }
+            }
         }
     }
 
@@ -75,14 +81,14 @@ public class FlowProcessorInboundProcessor extends BaseProcessor {
 
         Object payloadObject = context.getPayload();
         String payload = toPrettyJsonString(payloadObject);
-        
+
         if (serviceConfiguration.isLogPayload() || mapping.getDebug()) {
             log.info("{} - Processing payload: {}", tenant, payload);
         }
 
         if (mapping.getCode() != null) {
             Context graalContext = context.getGraalContext();
-            
+
             // CRITICAL FIX: Track all GraalVM Value objects for cleanup
             Value bindings = null;
             Value onMessageFunction = null;
@@ -115,7 +121,7 @@ public class FlowProcessorInboundProcessor extends BaseProcessor {
 
                 // Task 2: Extracting the result
                 processResult(result, context, tenant);
-                
+
             } finally {
                 // CRITICAL FIX: Explicitly null out all GraalVM Value references
                 bindings = null;
@@ -180,12 +186,12 @@ public class FlowProcessorInboundProcessor extends BaseProcessor {
     private void processResult(Value result, ProcessingContext<?> context, String tenant) {
         Value warnings = null;
         Value logs = null;
-        
+
         try {
             // CRITICAL FIX: Extract and immediately convert warnings
             warnings = context.getFlowContext().getState(FlowContext.WARNINGS);
             extractWarningsFromValue(warnings, context, tenant);
-            
+
             // CRITICAL FIX: Extract and immediately convert logs
             logs = context.getFlowContext().getState(FlowContext.LOGS);
             extractLogsFromValue(logs, context, tenant);
@@ -237,7 +243,7 @@ public class FlowProcessorInboundProcessor extends BaseProcessor {
             if (context.getMapping().getDebug() || context.getServiceConfiguration().isLogPayload()) {
                 log.info("{} - onMessage function returned {} complete message(s)", tenant, outputMessages.size());
             }
-            
+
         } finally {
             // CRITICAL FIX: Null out Value references
             warnings = null;
@@ -252,7 +258,7 @@ public class FlowProcessorInboundProcessor extends BaseProcessor {
         if (warnings != null && warnings.hasArrayElements()) {
             List<String> warningList = new ArrayList<>();
             long size = warnings.getArraySize();
-            
+
             for (long i = 0; i < size; i++) {
                 Value warningElement = null;
                 try {
@@ -266,7 +272,7 @@ public class FlowProcessorInboundProcessor extends BaseProcessor {
                     warningElement = null;
                 }
             }
-            
+
             context.setWarnings(warningList);
             log.debug("{} - Collected {} warnings from flow execution", tenant, warningList.size());
         }
@@ -279,7 +285,7 @@ public class FlowProcessorInboundProcessor extends BaseProcessor {
         if (logs != null && logs.hasArrayElements()) {
             List<String> logList = new ArrayList<>();
             long size = logs.getArraySize();
-            
+
             for (long i = 0; i < size; i++) {
                 Value logElement = null;
                 try {
@@ -293,7 +299,7 @@ public class FlowProcessorInboundProcessor extends BaseProcessor {
                     logElement = null;
                 }
             }
-            
+
             context.setLogs(logList);
             log.debug("{} - Collected {} logs from flow execution", tenant, logList.size());
         }
@@ -354,48 +360,5 @@ public class FlowProcessorInboundProcessor extends BaseProcessor {
             log.error("{} - Error processing result element: {}", tenant, e.getMessage(), e);
         }
         // Note: element is cleared by the caller in finally block
-    }
-
-    /**
-     * CRITICAL FIX: Clean up all GraalVM references from the context
-     */
-    private void cleanupGraalVMReferences(ProcessingContext<?> context) {
-        if (context == null) {
-            return;
-        }
-        
-        try {
-            // Clear flow result if it somehow contains Value objects
-            // (it shouldn't if conversion was done correctly)
-            Object flowResult = context.getFlowResult();
-            if (flowResult != null) {
-                // Validate that flowResult contains only plain Java objects
-                if (flowResult instanceof List) {
-                    List<?> resultList = (List<?>) flowResult;
-                    for (Object item : resultList) {
-                        if (item instanceof Value) {
-                            log.warn("{} - MEMORY LEAK DETECTED: Value object in flowResult!", 
-                                    context.getTenant());
-                            // This should never happen if conversion is done correctly
-                        }
-                    }
-                }
-            }
-            
-            // Clear FlowContext state that might hold Value references
-            FlowContext flowContext = context.getFlowContext();
-            if (flowContext != null) {
-                // Remove GraalVM Value objects from state
-                flowContext.clearState();
-                flowContext.clearState();
-                // Clear any other state that might contain Value objects
-            }
-            
-            log.trace("{} - Cleaned up GraalVM references", context.getTenant());
-            
-        } catch (Exception e) {
-            log.warn("{} - Error during GraalVM reference cleanup: {}", 
-                    context.getTenant(), e.getMessage());
-        }
     }
 }

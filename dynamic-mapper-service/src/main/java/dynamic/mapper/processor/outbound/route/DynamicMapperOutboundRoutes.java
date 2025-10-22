@@ -49,7 +49,7 @@ import dynamic.mapper.processor.util.DynamicMapperBaseRoutes;
 
 @Component
 public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
-    
+
     @Autowired
     @Qualifier("virtualThreadPool")
     private ExecutorService virtualThreadPool;
@@ -196,6 +196,7 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
                 .otherwise()
                 .to("direct:processOutboundJSONataExtraction") // Default to JSONata
                 .end();
+
 
         // 1a. Snooping processing route
         from("direct:processOutboundSnooping")

@@ -76,8 +76,14 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
             mappingStatus.errors++;
             mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
         } finally {
-            // CRITICAL: Clean up GraalVM references
-            cleanupGraalVMReferences(context);
+            // Close the Context completely
+            if (context != null) {
+                try {
+                    context.close();
+                } catch (Exception e) {
+                    log.warn("{} - Error closing context in finally block: {}", tenant, e.getMessage());
+                }
+            }
         }
     }
 
@@ -137,27 +143,6 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
                 // Clear bindings if needed (depends on your Context lifecycle)
                 // bindings = null;
             }
-        }
-    }
-
-    /**
-     * Clean up any GraalVM references stored in the context
-     */
-    private void cleanupGraalVMReferences(ProcessingContext<?> context) {
-        try {
-            // Clear flow context if it holds GraalVM references
-            FlowContext flowContext = context.getFlowContext();
-            if (flowContext != null) {
-                // Clear any cached Values in the flow context
-                flowContext.clearState(); // Implement this method
-            }
-
-            // If context caches the GraalVM Context, clear it
-            // context.clearGraalContext(); // Implement if applicable
-
-            log.debug("Cleaned up GraalVM references for tenant: {}", context.getTenant());
-        } catch (Exception e) {
-            log.warn("Error during GraalVM reference cleanup: {}", e.getMessage());
         }
     }
 

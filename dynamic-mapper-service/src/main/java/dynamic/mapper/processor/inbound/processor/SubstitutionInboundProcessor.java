@@ -293,7 +293,7 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
 
             prepareAndSubstituteInPayload(context, payloadTarget, pathTarget, substitute);
         }
-        ProcessingResultHelper.createAndAddDynamicMapperRequest(context, payloadTarget.jsonString(),null, mapping);
+        ProcessingResultHelper.createAndAddDynamicMapperRequest(context, payloadTarget.jsonString(), null, mapping);
         if (context.getMapping().getDebug() || context.getServiceConfiguration().isLogPayload()) {
             log.info("{} - Transformed message sent: API: {}, numberDevices: {}, message: {}", tenant,
                     context.getApi(),

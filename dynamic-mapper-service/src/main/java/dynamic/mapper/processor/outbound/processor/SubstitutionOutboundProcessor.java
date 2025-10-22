@@ -82,7 +82,7 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
             context.addError(new ProcessingException(errorMessage, e));
             mappingStatus.errors++;
             mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
-        }
+        } 
 
     }
 
@@ -205,7 +205,8 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
                 // remove TOKEN_CONTEXT_DATA
                 payloadTarget.delete("$." + Mapping.TOKEN_CONTEXT_DATA);
             }
-            DynamicMapperRequest dynamicMapperRequest = ProcessingResultHelper.createAndAddDynamicMapperRequest(context, targetTemplate, null, mapping);
+            DynamicMapperRequest dynamicMapperRequest = ProcessingResultHelper.createAndAddDynamicMapperRequest(context,
+                    targetTemplate, null, mapping);
             dynamicMapperRequest.setMethod(method);
             dynamicMapperRequest.setSourceId(deviceSource);
 

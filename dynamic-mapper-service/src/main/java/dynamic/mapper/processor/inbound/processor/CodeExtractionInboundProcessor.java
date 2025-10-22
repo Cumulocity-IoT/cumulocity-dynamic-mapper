@@ -59,23 +59,30 @@ public class CodeExtractionInboundProcessor extends BaseProcessor {
                     "%s - Error in CodeExtractionInboundProcessor: %s for mapping: %s, line %s",
                     tenant, mapping.getName(), e.getMessage(), lineNumber);
             log.error(errorMessage, e);
-            if(e instanceof ProcessingException)
+            if (e instanceof ProcessingException)
                 context.addError((ProcessingException) e);
             else
                 context.addError(new ProcessingException(errorMessage, e));
 
-            if ( !testing) {
+            if (!testing) {
                 MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
                 mappingStatus.errors++;
                 mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
-            } 
+            }
             return;
+        } finally {
+            // Close the Context completely
+            if (context != null) {
+                try {
+                    context.close();
+                } catch (Exception e) {
+                    log.warn("{} - Error closing context in finally block: {}", tenant, e.getMessage());
+                }
+            }
         }
     }
 
-    /**
-     * EXACT copy of BaseProcessorInbound.extractFromSource - DO NOT MODIFY!
-     */
+
     public void extractFromSource(ProcessingContext<?> context)
             throws ProcessingException {
         String tenant = context.getTenant();

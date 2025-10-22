@@ -71,8 +71,9 @@ public class CodeExtractionOutboundProcessor extends BaseProcessor {
             if (e.getStackTrace().length > 0) {
                 lineNumber = e.getStackTrace()[0].getLineNumber();
             }
-            String errorMessage = String.format("Tenant %s - Error in CodeExtractionOutboundProcessor: %s for mapping: %s, line %s",
-            tenant, mapping.getName(), e.getMessage(), lineNumber);
+            String errorMessage = String.format(
+                    "Tenant %s - Error in CodeExtractionOutboundProcessor: %s for mapping: %s, line %s",
+                    tenant, mapping.getName(), e.getMessage(), lineNumber);
             log.error(errorMessage, e);
 
             MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
@@ -80,6 +81,15 @@ public class CodeExtractionOutboundProcessor extends BaseProcessor {
             mappingStatus.errors++;
             mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
             return;
+        } finally {
+            // Close the Context completely
+            if (context != null) {
+                try {
+                    context.close();
+                } catch (Exception e) {
+                    log.warn("{} - Error closing context in finally block: {}", tenant, e.getMessage());
+                }
+            }
         }
 
     }
