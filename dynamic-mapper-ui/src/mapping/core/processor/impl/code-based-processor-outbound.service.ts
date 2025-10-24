@@ -111,7 +111,7 @@ export class CodeBasedProcessorOutbound extends BaseProcessorOutbound {
           processingCache.set(key, processingCacheEntry);
         }
         context.sourceId = sourceId.toString();
-      } {
+      } else  {
         throw new Error ("Transformation returned no result (substitutions)!");
       }
 

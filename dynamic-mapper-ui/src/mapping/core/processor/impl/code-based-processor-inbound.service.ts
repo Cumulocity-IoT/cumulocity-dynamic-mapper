@@ -116,7 +116,7 @@ export class CodeBasedProcessorInbound extends BaseProcessorInbound {
             substitutionTimeExists = true;
           }
         }
-      } {
+      } else {
         throw new Error("Transformation returned no result (substitutions)!");
       }
 
