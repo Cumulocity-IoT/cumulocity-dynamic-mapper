@@ -18,6 +18,7 @@
  *  @authors Christof Strack, Stefan Witschel
  *
  */
+
 package dynamic.mapper.processor.outbound.processor;
 
 import java.util.Arrays;
@@ -82,7 +83,7 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
             context.addError(new ProcessingException(errorMessage, e));
             mappingStatus.errors++;
             mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
-        } 
+        }
 
     }
 
@@ -206,9 +207,10 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
                 payloadTarget.delete("$." + Mapping.TOKEN_CONTEXT_DATA);
             }
             DynamicMapperRequest dynamicMapperRequest = ProcessingResultHelper.createAndAddDynamicMapperRequest(context,
-                    targetTemplate, null, mapping);
+                    payloadTarget.jsonString(), null, mapping);
             dynamicMapperRequest.setMethod(method);
             dynamicMapperRequest.setSourceId(deviceSource);
+
 
         } else {
             // FIXME Why are INVENTORY API messages ignored?! Needs to be implemented
