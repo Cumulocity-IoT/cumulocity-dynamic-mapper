@@ -1,6 +1,8 @@
 package dynamic.mapper.processor.flow;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.graalvm.polyglot.Context;
@@ -19,12 +21,15 @@ public class SimpleFlowContext implements FlowContext {
     private final Context graalContext;
     private final String tenant;
     private final InventoryEnrichmentClient inventoryEnrichmentClient;
+    private Boolean testing;
 
-    public SimpleFlowContext(Context graalContext, String tenant, InventoryEnrichmentClient inventoryEnrichmentClient) {
+    public SimpleFlowContext(Context graalContext, String tenant, InventoryEnrichmentClient inventoryEnrichmentClient,
+            Boolean testing) {
         this.state = new HashMap<>();
         this.graalContext = graalContext;
         this.tenant = tenant != null ? tenant : "unknown";
         this.inventoryEnrichmentClient = inventoryEnrichmentClient;
+        this.testing = testing;
     }
 
     @Override
@@ -89,6 +94,10 @@ public class SimpleFlowContext implements FlowContext {
             log.info("{} - JS Log: {}", tenant, msg.asString());
         } else {
             log.info("{} - JS Log: {}", tenant, msg.toString());
+        }
+
+        if (testing != null && testing) {
+            addLogMessage(msg.toString());
         }
     }
 
@@ -219,13 +228,43 @@ public class SimpleFlowContext implements FlowContext {
 
     @Override
     public Value lookupDeviceByDeviceId(String deviceId) {
-        Object javaValue = inventoryEnrichmentClient.getMOFromInventoryCache(tenant, deviceId);
+        Object javaValue = inventoryEnrichmentClient.getMOFromInventoryCache(tenant, deviceId, testing);
+        if (javaValue == null) {
+            addWarning(String.format("Device not found in inventory cache: %s", deviceId));
+        }
         return graalContext.asValue(javaValue);
     }
 
     @Override
     public Value lookupDeviceByExternalId(String externalId, String type) {
-        Object javaValue = inventoryEnrichmentClient.getMOFromInventoryCacheByExternalId(tenant, externalId, type);
+        Object javaValue = inventoryEnrichmentClient.getMOFromInventoryCacheByExternalId(tenant, externalId, type,
+                testing);
+        if (javaValue == null) {
+            addWarning(String.format("ExternalId not found in inventory cache: %s", externalId));
+        }
         return graalContext.asValue(javaValue);
+    }
+
+    private void addWarning(String warning) {
+        List<String> warnings = (List<String>) state.get(FlowContext.WARNINGS);
+        if (warnings == null) {
+            warnings = new ArrayList<String>();
+        }
+        warnings.add(warning);
+        state.put(FlowContext.WARNINGS, warnings);
+    }
+
+    private void addLogMessage(String message) {
+        List<String> logs = (List<String>) state.get(FlowContext.LOGS);
+        if (logs == null) {
+            logs = new ArrayList<String>();
+        }
+        logs.add(message);
+        state.put(FlowContext.LOGS, logs);
+    }
+
+    @Override
+    public void clearState() {
+        state.clear();
     }
 }

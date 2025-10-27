@@ -47,9 +47,8 @@ import dynamic.mapper.notification.NotificationSubscriber;
 import dynamic.mapper.notification.websocket.Notification;
 import dynamic.mapper.notification.websocket.NotificationCallback;
 import dynamic.mapper.processor.model.C8YMessage;
-
 import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.ProcessingResult;
+import dynamic.mapper.processor.model.ProcessingResultWrapper;
 import dynamic.mapper.service.MappingService;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -90,47 +89,8 @@ public class CamelDispatcherOutbound implements NotificationCallback {
     }
 
     @Override
-    public ProcessingResult<?> onNotification(Notification notification) {
-        Qos consolidatedQos = Qos.AT_LEAST_ONCE;
-        ProcessingResult<?> result = ProcessingResult.builder().consolidatedQos(consolidatedQos).build();
-
-        // We don't care about UPDATES nor DELETES and ignore notifications if connector
-        // is not connected
-        String tenant = getTenantFromNotificationHeaders(notification.getNotificationHeaders());
-        if (!connectorClient.isConnected())
-            log.warn("{} - Notification message received but connector {} is not connected. Ignoring message..",
-                    tenant, connectorClient.getConnectorName());
-
-        if (("CREATE".equals(notification.getOperation()) || "UPDATE".equals(notification.getOperation()))
-                && connectorClient.isConnected()) {
-            if ("UPDATE".equals(notification.getOperation()) && notification.getApi().equals(API.OPERATION)) {
-                log.info("{} - Update Operation message for connector: {} is received, ignoring it",
-                        tenant, connectorClient.getConnectorName());
-                return result;
-            }
-            C8YMessage c8yMessage = new C8YMessage();
-            Map parsedPayload = (Map) Json.parseJson(notification.getMessage());
-            c8yMessage.setParsedPayload(parsedPayload);
-            c8yMessage.setApi(notification.getApi());
-            c8yMessage.setOperation(notification.getOperation());
-            String messageId = String.valueOf(parsedPayload.get("id"));
-            c8yMessage.setMessageId(messageId);
-            try {
-                var expression = jsonata(notification.getApi().identifier);
-                Object sourceIdResult = expression.evaluate(parsedPayload);
-                String sourceId = (sourceIdResult instanceof String) ? (String) sourceIdResult : null;
-                c8yMessage.setSourceId(sourceId);
-            } catch (Exception e) {
-                log.debug("Could not extract source.id: {}", e.getMessage());
-
-            }
-            c8yMessage.setPayload(notification.getMessage());
-            c8yMessage.setTenant(tenant);
-            c8yMessage.setSendPayload(true);
-            // TODO Return a future so it can be blocked for QoS 1 or 2
-            return processMessage(c8yMessage);
-        }
-        return result;
+    public ProcessingResultWrapper<?> onNotification(Notification notification) {
+        return processNotification(notification, null);
     }
 
     @Override
@@ -147,72 +107,169 @@ public class CamelDispatcherOutbound implements NotificationCallback {
             notificationSubscriber.setDeviceConnectionStatus(connectorClient.getTenant(), null);
     }
 
-    public String getTenantFromNotificationHeaders(List<String> notificationHeaders) {
-        return notificationHeaders.get(0).split("/")[1];
+    @Override
+    public ProcessingResultWrapper<?> onTestNotification(Notification notification, Mapping mapping) {
+        return processNotification(notification, mapping);
     }
 
     /**
-     * Process message using Camel routes - matches DispatcherInbound.processMessage
-     * signature
+     * Process notification with optional test mapping
      */
-    public ProcessingResult<?> processMessage(C8YMessage c8yMessage) {
+    private ProcessingResultWrapper<?> processNotification(Notification notification, Mapping testMapping) {
+        boolean testing = testMapping != null;
+        
+        Qos consolidatedQos = Qos.AT_LEAST_ONCE;
+        ProcessingResultWrapper<?> result = ProcessingResultWrapper.builder()
+                .consolidatedQos(consolidatedQos)
+                .build();
+
+        // Extract tenant from notification
+        String tenant = getTenantFromNotificationHeaders(notification.getNotificationHeaders());
+
+        // Check connector connection status (skip for testing)
+        if (!testing && !connectorClient.isConnected()) {
+            log.warn("{} - Notification message received but connector {} is not connected. Ignoring message..",
+                    tenant, connectorClient.getConnectorName());
+            return result;
+        }
+
+        // Filter operations - only process CREATE and UPDATE
+        if (!("CREATE".equals(notification.getOperation()) || "UPDATE".equals(notification.getOperation()))) {
+            log.debug("{} - Ignoring notification with operation: {}", tenant, notification.getOperation());
+            return result;
+        }
+
+        // Skip UPDATE operations for OPERATION API (unless testing)
+        if (!testing && "UPDATE".equals(notification.getOperation()) && notification.getApi().equals(API.OPERATION)) {
+            log.info("{} - Update Operation message for connector: {} is received, ignoring it",
+                    tenant, connectorClient.getConnectorName());
+            return result;
+        }
+
+        // Convert Notification to C8YMessage
+        C8YMessage c8yMessage = convertNotificationToC8YMessage(notification, tenant, !testing);
+        
+        // Process the message
+        return processMessage(c8yMessage, testMapping);
+    }
+
+    /**
+     * Convert Notification to C8YMessage
+     */
+    private C8YMessage convertNotificationToC8YMessage(Notification notification, String tenant, boolean sendPayload) {
+        C8YMessage c8yMessage = new C8YMessage();
+        
+        // Parse payload
+        Map parsedPayload = (Map) Json.parseJson(notification.getMessage());
+        c8yMessage.setParsedPayload(parsedPayload);
+        
+        // Set API and operation
+        c8yMessage.setApi(notification.getApi());
+        c8yMessage.setOperation(notification.getOperation());
+        
+        // Extract message ID
+        String messageId = String.valueOf(parsedPayload.get("id"));
+        c8yMessage.setMessageId(messageId);
+        
+        // Extract source ID
+        try {
+            var expression = jsonata(notification.getApi().identifier);
+            Object sourceIdResult = expression.evaluate(parsedPayload);
+            String sourceId = (sourceIdResult instanceof String) ? (String) sourceIdResult : null;
+            c8yMessage.setSourceId(sourceId);
+        } catch (Exception e) {
+            log.debug("{} - Could not extract source.id: {}", tenant, e.getMessage());
+        }
+        
+        // Set payload and tenant
+        c8yMessage.setPayload(notification.getMessage());
+        c8yMessage.setTenant(tenant);
+        c8yMessage.setSendPayload(sendPayload);
+        
+        return c8yMessage;
+    }
+
+    /**
+     * Process C8Y message using Camel routes
+     */
+    private ProcessingResultWrapper<?> processMessage(C8YMessage c8yMessage, Mapping testMapping) {
+        boolean testing = testMapping != null;
         String tenant = c8yMessage.getTenant();
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
 
         // Log incoming message if configured
         if (serviceConfiguration.isLogPayload()) {
-            log.info("{} - PROCESSING: C8Y message, API: {}, device: {}. connector: {}, message id: {}",
+            log.info("{} - PROCESSING: C8Y message, API: {}, device: {}, connector: {}, message id: {}",
                     tenant,
-                    c8yMessage.getApi(), c8yMessage.getSourceId(),
+                    c8yMessage.getApi(), 
+                    c8yMessage.getSourceId(),
                     connectorClient.getConnectorName(),
                     c8yMessage.getMessageId());
-
         }
 
         Qos consolidatedQos = Qos.AT_LEAST_ONCE;
-        ProcessingResult<?> result = ProcessingResult.builder()
+        ProcessingResultWrapper<?> result = ProcessingResultWrapper.builder()
                 .consolidatedQos(consolidatedQos)
                 .build();
 
+        // Validate payload
+        if (c8yMessage.getPayload() == null) {
+            log.warn("{} - C8Y message has null payload, skipping processing", tenant);
+            return result;
+        }
+
         // Declare final variables for use in lambda
         List<Mapping> resolvedMappings;
+        int maxCPUTime;
 
-        MappingStatus mappingStatusUnspecified = mappingService.getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
-
-        if (c8yMessage.getPayload() != null) {
-            try {
+        try {
+            // Resolve mappings
+            if (testMapping != null) {
+                resolvedMappings = new ArrayList<>();
+                resolvedMappings.add(testMapping);
+            } else {
                 resolvedMappings = mappingService.resolveMappingOutbound(tenant, c8yMessage, serviceConfiguration);
-                consolidatedQos = connectorClient.determineMaxQosOutbound(resolvedMappings);
-                result.setConsolidatedQos(consolidatedQos);
-
-                // Check if at least one Code based mappings exits, then we nee to timeout the
-                // execution
-                for (Mapping mapping : resolvedMappings) {
-                    if (mapping.isTransformationAsCode()) {
-                        result.setMaxCPUTimeMS(serviceConfiguration.getMaxCPUTimeMS());
-                    }
-                }
-            } catch (Exception e) {
-                log.warn(
-                        "{} - Error resolving appropriate map for topic {}. Could NOT be parsed. Ignoring this message!",
-                        tenant, e);
-                log.debug(e.getMessage(), e);
-                mappingStatusUnspecified.errors++;
-                return result;
             }
-        } else {
+
+            // Determine consolidated QoS
+            consolidatedQos = connectorClient.determineMaxQosOutbound(resolvedMappings);
+            result.setConsolidatedQos(consolidatedQos);
+
+            // Set max CPU time if code-based mappings exist
+            int tempMaxCPUTime = 0;
+            for (Mapping mapping : resolvedMappings) {
+                if (mapping.isTransformationAsCode()) {
+                    tempMaxCPUTime = serviceConfiguration.getMaxCPUTimeMS();
+                    break;
+                }
+            }
+            maxCPUTime = tempMaxCPUTime; // Now final
+            result.setMaxCPUTimeMS(maxCPUTime);
+
+        } catch (Exception e) {
+            log.warn("{} - Error resolving appropriate mapping for C8Y message. Could NOT be parsed. Ignoring this message!",
+                    tenant);
+            log.debug(e.getMessage(), e);
+            
+            // Update unspecified mapping status
+            MappingStatus mappingStatusUnspecified = mappingService.getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
+            if (mappingStatusUnspecified != null) {
+                mappingStatusUnspecified.errors++;
+            }
+            
             return result;
         }
 
         // Process using Camel routes asynchronously
         Future<List<ProcessingContext<Object>>> futureProcessingResult = virtualThreadPool.submit(() -> {
             try {
-                Exchange exchange = createExchange(c8yMessage, resolvedMappings); // Now can use final variable
+                Exchange exchange = createExchange(c8yMessage, resolvedMappings, testing);
                 Exchange resultExchange = producerTemplate.send("direct:processOutboundMessage", exchange);
 
                 @SuppressWarnings("unchecked")
                 List<ProcessingContext<Object>> contexts = resultExchange.getIn().getHeader("processedContexts",
                         List.class);
+                
                 return contexts != null ? contexts : new ArrayList<>();
 
             } catch (Exception e) {
@@ -226,19 +283,20 @@ public class CamelDispatcherOutbound implements NotificationCallback {
     }
 
     /**
-     * Create Camel Exchange from ConnectorMessage and resolved mappings
+     * Create Camel Exchange from C8YMessage and resolved mappings
      */
-    private Exchange createExchange(C8YMessage message, List<Mapping> resolvedMappings) {
+    private Exchange createExchange(C8YMessage message, List<Mapping> resolvedMappings, boolean testing) {
         Exchange exchange = new DefaultExchange(camelContext);
         Message camelMessage = exchange.getIn();
 
-        // Set the ConnectorMessage as the body
+        // Set the C8YMessage as the body
         camelMessage.setBody(message);
 
         // Set headers for processing
-        camelMessage.setHeader("connectorIdentifier", getConnectorClient().getConnectorIdentifier());
+        camelMessage.setHeader("connectorIdentifier", connectorClient.getConnectorIdentifier());
         camelMessage.setHeader("tenant", message.getTenant());
         camelMessage.setHeader("source", message.getSourceId());
+        camelMessage.setHeader("testing", testing);
         camelMessage.setHeader("mappings", resolvedMappings);
         camelMessage.setHeader("c8yMessage", message);
         camelMessage.setHeader("serviceConfiguration",
@@ -251,5 +309,19 @@ public class CamelDispatcherOutbound implements NotificationCallback {
         }
 
         return exchange;
+    }
+
+    /**
+     * Extract tenant from notification headers
+     */
+    public String getTenantFromNotificationHeaders(List<String> notificationHeaders) {
+        if (notificationHeaders != null && !notificationHeaders.isEmpty()) {
+            String firstHeader = notificationHeaders.get(0);
+            String[] parts = firstHeader.split("/");
+            if (parts.length > 1) {
+                return parts[1];
+            }
+        }
+        return connectorClient.getTenant(); // Fallback to connector's tenant
     }
 }

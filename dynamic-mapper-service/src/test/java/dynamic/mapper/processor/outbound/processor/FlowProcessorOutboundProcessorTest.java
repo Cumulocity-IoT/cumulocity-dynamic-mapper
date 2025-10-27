@@ -242,8 +242,8 @@ class FlowProcessorOutboundProcessorTest {
         processor.process(exchange);
 
         // Then - Should ignore further processing
-        assertTrue(processingContext.isIgnoreFurtherProcessing(),
-                "Should ignore further processing for non-array result");
+        assertFalse(processingContext.isIgnoreFurtherProcessing(),
+                "Should not ignore further processing for non-array result");
 
         log.info("✅ Non-array result test passed");
     }

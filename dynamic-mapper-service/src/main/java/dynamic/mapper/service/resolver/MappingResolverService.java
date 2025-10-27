@@ -21,7 +21,6 @@
 
 package dynamic.mapper.service.resolver;
 
-import com.dashjoin.jsonata.Jsonata;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
@@ -38,7 +37,6 @@ import java.util.List;
 import java.util.Map;
 
 import static com.dashjoin.jsonata.Jsonata.jsonata;
-import static dynamic.mapper.model.Substitution.toPrettyJsonString;
 
 /**
  * Service for resolving which mappings apply to messages
@@ -145,7 +143,7 @@ public class MappingResolverService {
 
         try {
             Map<String, Object> inventoryData = configurationRegistry.getC8yAgent()
-                .getMOFromInventoryCache(tenant, sourceId);
+                .getMOFromInventoryCache(tenant, sourceId, false);
 
             log.debug("{} - Evaluating inventory filter for source {} with fragments: {}", 
                 tenant, sourceId, inventoryData.keySet());

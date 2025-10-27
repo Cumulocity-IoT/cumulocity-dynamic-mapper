@@ -168,7 +168,7 @@ public class ProcessorExtensionCustomAlarm
             try {
                 ID identity = new ID(mapping.getExternalIdType(), device.value.toString());
                 ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId2GlobalId(tenant,
-                        identity, context);
+                        identity, context.isTesting());
                 context.setSourceId(sourceId.getManagedObject().getId().getValue());
                 ManagedObjectRepresentation implicitDevice = c8yAgent.upsertDevice(tenant,
                         identity, context, newPredecessor);
@@ -225,7 +225,7 @@ public class ProcessorExtensionCustomAlarm
             SubstituteValue sourceId = new SubstituteValue(substitute.value,
                     TYPE.TEXTUAL, RepairStrategy.CREATE_IF_MISSING, false);
             if (!mapping.getTargetAPI().equals(API.INVENTORY)) {
-                var resolvedSourceId = c8yAgent.resolveExternalId2GlobalId(tenant, identity, context);
+                var resolvedSourceId = c8yAgent.resolveExternalId2GlobalId(tenant, identity, context.isTesting());
                 if (resolvedSourceId == null) {
                     if (mapping.getCreateNonExistingDevice()) {
                         sourceId.value = createImplicitDevice(identity, context, c8yAgent);

@@ -34,7 +34,7 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.outbound.processor.FlowProcessorOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.FlowResultOutboundProcessor;
 import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.ProcessingResult;
+import dynamic.mapper.processor.model.ProcessingResultWrapper;
 import dynamic.mapper.processor.outbound.processor.CodeExtractionOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.DeserializationOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.EnrichmentOutboundProcessor;
@@ -49,7 +49,7 @@ import dynamic.mapper.processor.util.DynamicMapperBaseRoutes;
 
 @Component
 public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
-    
+
     @Autowired
     @Qualifier("virtualThreadPool")
     private ExecutorService virtualThreadPool;
@@ -117,7 +117,7 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
                     log.error("Exception Message: {}", cause.getMessage());
                     log.error("Full Stack Trace: ", cause);
 
-                    ProcessingResult<Object> result = ProcessingResult.builder()
+                    ProcessingResultWrapper<Object> result = ProcessingResultWrapper.builder()
                             .error(cause)
                             .maxCPUTimeMS(0)
                             .build();
@@ -196,6 +196,7 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
                 .otherwise()
                 .to("direct:processOutboundJSONataExtraction") // Default to JSONata
                 .end();
+
 
         // 1a. Snooping processing route
         from("direct:processOutboundSnooping")

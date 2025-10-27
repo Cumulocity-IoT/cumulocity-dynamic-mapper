@@ -39,6 +39,7 @@ import dynamic.mapper.processor.flow.FlowContext;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Engine;
@@ -46,10 +47,12 @@ import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
 
 import com.cumulocity.sdk.client.ProcessingMode;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Getter
 @Setter
 @Builder
+@Slf4j
 /*
  * The class <code>ProcessingContext</code> collects all relevant information:
  * <code>mapping</code>, <code>topic</code>, <code>payload</code>,
@@ -57,7 +60,7 @@ import com.cumulocity.sdk.client.ProcessingMode;
  * <code>cardinality</code>, <code>needsRepair</code>
  * when a <code>mapping</code> is applied to an inbound <code>payload</code>
  */
-public class ProcessingContext<O> {
+public class ProcessingContext<O> implements AutoCloseable {
 
     private Mapping mapping;
 
@@ -85,6 +88,12 @@ public class ProcessingContext<O> {
     private List<Exception> errors = new ArrayList<Exception>();
 
     @Builder.Default
+    private List<String> warnings = new ArrayList<>();
+
+    @Builder.Default
+    private List<String> logs = new ArrayList<>();
+
+    @Builder.Default
     private ProcessingType processingType = ProcessingType.UNDEFINED;
 
     private MappingType mappingType;
@@ -99,6 +108,9 @@ public class ProcessingContext<O> {
 
     @Builder.Default
     private boolean sendPayload = false;
+
+    @Builder.Default
+    private boolean testing = false;
 
     @Builder.Default
     private boolean needsRepair = false;
@@ -165,7 +177,17 @@ public class ProcessingContext<O> {
         return requests.size() - 1;
     }
 
+    /**
+     * Get the current (last) request from the requests list.
+     * This method is safe to call even when requests is empty.
+     * 
+     * @return the last request or null if no requests exist
+     */
+    @JsonIgnore
     public DynamicMapperRequest getCurrentRequest() {
+        if (requests == null || requests.isEmpty()) {
+            return null;
+        }
         return requests.get(requests.size() - 1);
     }
 
@@ -222,5 +244,43 @@ public class ProcessingContext<O> {
 
     public Integer getProcessingCacheSize() {
         return processingCache.size();
+    }
+
+    /**
+     * Clean up GraalVM resources
+     */
+    @Override
+    public void close() {
+        try {
+            // Close flow context first (if it holds GraalVM references)
+            if (flowContext != null) {
+                try {
+                    flowContext.clearState();
+                } catch (Exception e) {
+                    log.warn("{} - Error clearing flow context state: {}",  getTenant(), e.getMessage());
+                }
+                flowContext = null;
+            }
+
+            // Close GraalVM Context
+            if (graalContext != null) {
+                try {
+                    graalContext.close();
+                    log.debug("{} - Closed GraalVM Context in tenant {}", getTenant(),  getTenant());
+                } catch (Exception e) {
+                    log.warn("{} - Error closing GraalVM Context: {}",  getTenant(), e.getMessage());
+                }
+                graalContext = null;
+            }
+        } catch (Exception e) {
+            log.error("{} - Error during ProcessingContext cleanup: {}", getTenant(), e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Clear flow context state
+     */
+    public void clearGraalVMReferences() {
+        close();
     }
 }

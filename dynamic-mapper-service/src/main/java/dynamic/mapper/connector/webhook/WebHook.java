@@ -224,7 +224,9 @@ public class WebHook extends AConnectorClient {
                 checkHealth().block();
                 log.info("{} - Health check passed", tenant);
             } else {
-                log.warn("{} - No health endpoint configured for WebHook connector {}, skipping health check and assuming connection is valid", tenant, connectorName);
+                log.warn(
+                        "{} - No health endpoint configured for WebHook connector {}, skipping health check and assuming connection is valid",
+                        tenant, connectorName);
             }
 
             connectionStateManager.setConnected(true);
@@ -365,6 +367,13 @@ public class WebHook extends AConnectorClient {
         }
 
         DynamicMapperRequest currentRequest = context.getCurrentRequest();
+
+        if (context.getCurrentRequest() == null ||
+                context.getCurrentRequest().getRequest() == null) {
+            log.warn("{} - No payload to publish for mapping: {}", tenant, context.getMapping().getName());
+            return;
+        }
+
         String payload = currentRequest.getRequest();
         String contextPath = context.getResolvedPublishTopic();
         RequestMethod method = currentRequest.getMethod();

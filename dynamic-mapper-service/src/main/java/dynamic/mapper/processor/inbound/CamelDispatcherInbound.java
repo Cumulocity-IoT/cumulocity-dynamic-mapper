@@ -5,6 +5,9 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
+import com.cumulocity.model.ID;
+import com.cumulocity.sdk.client.SDKException;
+import dynamic.mapper.processor.ProcessingException;
 import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
 import org.apache.camel.Message;
@@ -19,7 +22,7 @@ import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.ProcessingResult;
+import dynamic.mapper.processor.model.ProcessingResultWrapper;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -50,8 +53,8 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
     }
 
     @Override
-    public ProcessingResult<?> onMessage(ConnectorMessage message) {
-        return processMessage(message);
+    public ProcessingResultWrapper<?> onMessage(ConnectorMessage message) {
+        return processMessage(message, null);
     }
 
     @Override
@@ -69,7 +72,8 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
      * Process message using Camel routes - matches DispatcherInbound.processMessage
      * signature
      */
-    public ProcessingResult<?> processMessage(ConnectorMessage connectorMessage) {
+    private ProcessingResultWrapper<?> processMessage(ConnectorMessage connectorMessage, Mapping testMapping) {
+        boolean testing = testMapping != null;
         String topic = connectorMessage.getTopic();
         String tenant = connectorMessage.getTenant();
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
@@ -83,7 +87,7 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
         }
 
         Qos consolidatedQos = Qos.AT_LEAST_ONCE;
-        ProcessingResult<?> result = ProcessingResult.builder()
+        ProcessingResultWrapper<?> result = ProcessingResultWrapper.builder()
                 .consolidatedQos(consolidatedQos)
                 .build();
 
@@ -98,7 +102,12 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
 
         try {
             // Resolve mappings for the topic
-            resolvedMappings = mappingService.resolveMappingInbound(tenant, topic);
+            if (testMapping != null) {
+                resolvedMappings = new ArrayList<>();
+                resolvedMappings.add(testMapping);
+            } else {
+                resolvedMappings = mappingService.resolveMappingInbound(tenant, topic);
+            }
 
             result.setConsolidatedQos(connectorClient.determineMaxQosInbound(resolvedMappings));
 
@@ -123,12 +132,49 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
         // Process using Camel routes asynchronously
         Future<List<ProcessingContext<Object>>> futureProcessingResult = virtualThreadPool.submit(() -> {
             try {
-                Exchange exchange = createExchange(connectorMessage, resolvedMappings); // Now can use final variable
+                Exchange exchange = createExchange(connectorMessage, resolvedMappings, testing); // Now can use final variable
                 Exchange resultExchange = producerTemplate.send("direct:processInboundMessage", exchange);
 
                 @SuppressWarnings("unchecked")
                 List<ProcessingContext<Object>> contexts = resultExchange.getIn().getHeader("processedContexts",
                         List.class);
+                boolean resend = false;
+                if (contexts != null) {
+                    for (ProcessingContext<?> context : contexts) {
+                        int httpStatus = 0;
+                        if (context.hasError()) {
+                            for (Exception error : context.getErrors()) {
+                                if (error instanceof ProcessingException) {
+                                    if (((ProcessingException) error)
+                                            .getOriginException() instanceof SDKException) {
+                                        if (((SDKException) ((ProcessingException) error).getOriginException())
+                                                .getHttpStatus() > httpStatus) {
+                                            httpStatus = ((SDKException) ((ProcessingException) error).getOriginException())
+                                                    .getHttpStatus();
+                                        }
+                                    }
+                                }
+                            }
+                            if(httpStatus == 422) {
+                                log.info("{} - Removing device from Identity Cache with external ID: {}",
+                                        tenant, context.getCurrentRequest().getExternalId());
+                                ID identity = new ID(context.getCurrentRequest().getExternalIdType(), context.getExternalId());
+                                this.connectorClient.getC8yAgent().removeDeviceFromInboundExternalIdCache(tenant, identity);
+                                resend = true;
+                            }
+                        }
+                    }
+                }
+                if(resend) {
+                    if (serviceConfiguration.isLogPayload())
+                        log.info("{} - Resending message to C8Y due to previous 422 error with payload {}", tenant, connectorMessage.getPayload());
+                    else
+                        log.info("{} - Resending message to C8Y due to previous 422 error", tenant);
+                    exchange = createExchange(connectorMessage, resolvedMappings, testing);
+                    resultExchange = producerTemplate.send("direct:processInboundMessage", exchange);
+                    contexts = resultExchange.getIn().getHeader("processedContexts",
+                            List.class);
+                }
                 return contexts != null ? contexts : new ArrayList<>();
 
             } catch (Exception e) {
@@ -138,13 +184,14 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
         });
 
         result.setProcessingResult((Future) futureProcessingResult);
+
         return result;
     }
 
     /**
      * Create Camel Exchange from ConnectorMessage and resolved mappings
      */
-    private Exchange createExchange(ConnectorMessage message, List<Mapping> resolvedMappings) {
+    private Exchange createExchange(ConnectorMessage message, List<Mapping> resolvedMappings, boolean testing) {
         Exchange exchange = new DefaultExchange(camelContext);
         Message camelMessage = exchange.getIn();
 
@@ -155,6 +202,7 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
         camelMessage.setHeader("connectorIdentifier", message.getConnectorIdentifier());
         camelMessage.setHeader("tenant", message.getTenant());
         camelMessage.setHeader("client", message.getClientId());
+        camelMessage.setHeader("testing", testing);
         camelMessage.setHeader("mappings", resolvedMappings);
         camelMessage.setHeader("connectorMessage", message);
         camelMessage.setHeader("serviceConfiguration",
@@ -167,5 +215,10 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
         }
 
         return exchange;
+    }
+
+    @Override
+    public ProcessingResultWrapper<?> onTestMessage(ConnectorMessage message, Mapping testMapping) {
+        return processMessage(message, testMapping);
     }
 }

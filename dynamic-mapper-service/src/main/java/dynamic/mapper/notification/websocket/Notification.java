@@ -25,6 +25,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import dynamic.mapper.model.API;
+import dynamic.mapper.processor.ProcessingException;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -55,7 +56,8 @@ public class Notification {
         }
         if (headers.isEmpty()) {
             return new Notification(null, Collections.emptyList(), message, API.EMPTY, null);
-        }        String apiString = headers.get(1).split("/")[2];
+        }
+        String apiString = headers.get(1).split("/")[2];
         String operation = headers.get(2);
         API api = API.EMPTY;
         switch (apiString) {
@@ -84,11 +86,50 @@ public class Notification {
                 break;
         }
         return new Notification(headers.get(0), Collections.unmodifiableList(headers.subList(1, headers.size())),
-                message, api,operation);
+                message, api, operation);
     }
 
     public String getTenantFromNotificationHeaders() {
         return notificationHeaders.get(0).split("/")[0];
+    }
+
+    public static String convertAPItoResource(API api) {
+        switch (api) {
+            case ALARM:
+                return "alarms";
+            case ALARM_WITH_CHILDREN:
+                return "alarmsWithChildren";
+            case EVENT:
+                return "events";
+            case EVENT_WITH_CHILDREN:
+                return "eventsWithChildren";
+            case MEASUREMENT:
+                return "measurements";
+            case INVENTORY:
+                return "managedobjects";
+            case OPERATION:
+                return "operations";
+            default:
+                return "events";
+        }
+    }
+
+    public static API convertResourceToAPI(String cumulocityType) throws ProcessingException {
+        switch (cumulocityType.toLowerCase()) {
+            case "measurement":
+                return API.MEASUREMENT;
+            case "alarm":
+                return API.ALARM;
+            case "event":
+                return API.EVENT;
+            case "inventory":
+            case "managedobject":
+                return API.INVENTORY;
+            case "operation":
+                return API.OPERATION;
+            default:
+                throw new ProcessingException("Unknown cumulocity type: " + cumulocityType);
+        }
     }
 
 }

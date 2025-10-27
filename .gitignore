@@ -53,4 +53,5 @@ dynamic-mapper-ui/node_modules_tmp/
 .vscode/launch.json
 .env
 setEnv.sh
+setup-env.sh
 USERGUIDE.html

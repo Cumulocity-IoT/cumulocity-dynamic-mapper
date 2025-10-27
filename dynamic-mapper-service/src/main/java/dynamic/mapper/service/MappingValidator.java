@@ -55,8 +55,6 @@ import org.springframework.stereotype.Component;
 
 import jakarta.validation.constraints.NotNull;
 import java.util.*;
-import java.util.stream.Collectors;
-
 /**
  * Validates mapping configurations against business rules
  * Consolidates all validation logic from the Mapping class

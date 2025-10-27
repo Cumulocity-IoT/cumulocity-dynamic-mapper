@@ -404,9 +404,9 @@ public class Mapping implements Serializable {
         if (!mapping.getMappingType().equals(MappingType.EXTENSION_SOURCE)
                 && !mapping.getMappingType().equals(MappingType.PROTOBUF_INTERNAL)) {
             try {
-                if(mapping.targetTemplate.startsWith("{"))
+                if (mapping.targetTemplate.startsWith("{"))
                     new JSONObject(mapping.targetTemplate);
-                if(mapping.targetTemplate.startsWith("["))
+                if (mapping.targetTemplate.startsWith("["))
                     new JSONArray(mapping.targetTemplate);
             } catch (JSONException e) {
                 result.add(ValidationError.Target_Template_Must_Be_Valid_JSON);
@@ -438,5 +438,10 @@ public class Mapping implements Serializable {
         return MappingType.CODE_BASED.equals(this.mappingType) ||
                 TransformationType.SUBSTITUTION_AS_CODE.equals(this.transformationType) ||
                 TransformationType.SMART_FUNCTION.equals(this.transformationType);
+    }
+
+    public Boolean isSubstitutionAsCode() {
+        return MappingType.CODE_BASED.equals(this.mappingType) ||
+                TransformationType.SUBSTITUTION_AS_CODE.equals(this.transformationType);
     }
 }

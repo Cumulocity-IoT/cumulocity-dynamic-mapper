@@ -42,6 +42,8 @@ import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.core.Operation;
 import dynamic.mapper.core.ServiceOperation;
+import dynamic.mapper.core.facade.IdentityFacade;
+import dynamic.mapper.core.facade.InventoryFacade;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -116,6 +118,12 @@ public class OperationController {
 
     @Autowired
     private MappingStatusService mappingStatusService;
+
+    @Autowired
+    private IdentityFacade identityFacade;
+
+    @Autowired
+    private InventoryFacade inventoryFacade;
 
     private ObjectMapper objectMapper;
 
@@ -549,6 +557,14 @@ public class OperationController {
             Integer cacheSize = serviceConfigurationService
                     .getServiceConfiguration(tenant).getInventoryCacheSize();
             configurationRegistry.getC8yAgent().clearInventoryCache(tenant, false, cacheSize);
+            log.info("{} - Cache cleared: {}", tenant, cacheId);
+            return ResponseEntity.status(HttpStatus.CREATED).build();
+        } else if ("MOCK_IDENTITY_CACHE".equals(cacheId)) {
+            identityFacade.clearMockIdentityCache();
+            log.info("{} - Cache cleared: {}", tenant, cacheId);
+            return ResponseEntity.status(HttpStatus.CREATED).build();
+        } else if ("MOCK_INVENTORY_CACHE".equals(cacheId)) {
+            inventoryFacade.clearInventoryCache();
             log.info("{} - Cache cleared: {}", tenant, cacheId);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         }

@@ -13,7 +13,7 @@ public class FlatFilePayloadDeserializer implements PayloadDeserializer<Object> 
     @Override
     public Object deserializePayload(Mapping mapping, ConnectorMessage message) throws IOException {
         try {
-            // EXACT copy of FlatFileProcessorInbound.deserializePayload logic
+
             String payloadMessage = (message.getPayload() != null
                     ? new String(message.getPayload(), Charset.defaultCharset())
                     : "");

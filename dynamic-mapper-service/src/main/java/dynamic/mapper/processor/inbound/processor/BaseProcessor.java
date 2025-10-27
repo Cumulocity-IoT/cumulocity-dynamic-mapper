@@ -9,20 +9,19 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.camel.Exchange;
-import org.apache.camel.Processor;
 import org.springframework.beans.factory.annotation.Autowired;
-
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.Mapping;
+import dynamic.mapper.processor.CommonProcessor;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.SubstituteValue;
 import dynamic.mapper.util.Utils;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public abstract class BaseProcessor implements Processor {
+public abstract class BaseProcessor extends CommonProcessor {
 
     @Autowired
     private ConfigurationRegistry configurationRegistry;
@@ -30,7 +29,7 @@ public abstract class BaseProcessor implements Processor {
     public abstract void process(Exchange exchange) throws Exception;
 
     protected ProcessingContext<Object> createProcessingContextAsObject(String tenant, Mapping mapping,
-            ConnectorMessage connectorMessage, ServiceConfiguration serviceConfiguration) {
+            ConnectorMessage connectorMessage, ServiceConfiguration serviceConfiguration, Boolean testing) {
         return ProcessingContext.<Object>builder()
                 .rawPayload(connectorMessage.getPayload())
                 .topic(connectorMessage.getTopic())
@@ -39,6 +38,7 @@ public abstract class BaseProcessor implements Processor {
                 .serviceConfiguration(serviceConfiguration)
                 .mapping(mapping)
                 .sendPayload(connectorMessage.isSendPayload())
+                .testing(testing)
                 .tenant(tenant)
                 .supportsMessageContext(
                         connectorMessage.isSupportsMessageContext() && mapping.getSupportsMessageContext())
@@ -47,7 +47,7 @@ public abstract class BaseProcessor implements Processor {
     }
 
     protected ProcessingContext<byte[]> createProcessingContextAsByteArray(String tenant, Mapping mapping,
-            ConnectorMessage connectorMessage, ServiceConfiguration serviceConfiguration) {
+            ConnectorMessage connectorMessage, ServiceConfiguration serviceConfiguration, Boolean testing) {
         return ProcessingContext.<byte[]>builder().rawPayload(connectorMessage.getPayload())
                 .topic(connectorMessage.getTopic())
                 .clientId(connectorMessage.getClientId())
@@ -55,6 +55,7 @@ public abstract class BaseProcessor implements Processor {
                 .serviceConfiguration(serviceConfiguration)
                 .mapping(mapping)
                 .sendPayload(connectorMessage.isSendPayload())
+                .testing(testing)
                 .tenant(tenant)
                 .supportsMessageContext(
                         connectorMessage.isSupportsMessageContext() && mapping.getSupportsMessageContext())
@@ -90,10 +91,11 @@ public abstract class BaseProcessor implements Processor {
     /**
      * Evaluates an inventory filter against cached inventory data
      */
-    protected boolean evaluateInventoryFilter(String tenant, String filterExpression, String sourceId) {
+    protected boolean evaluateInventoryFilter(String tenant, String filterExpression, String sourceId,
+            Boolean testing) {
         try {
             Map<String, Object> cachedInventoryContent = configurationRegistry.getC8yAgent()
-                    .getMOFromInventoryCache(tenant, sourceId);
+                    .getMOFromInventoryCache(tenant, sourceId, testing);
             List<String> keyList = new ArrayList<>(cachedInventoryContent.keySet());
             log.info("{} - For object {} found following fragments in inventory cache {}",
                     tenant, sourceId, keyList);

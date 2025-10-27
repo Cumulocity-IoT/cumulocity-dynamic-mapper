@@ -23,17 +23,17 @@ package dynamic.mapper.processor.outbound.processor;
 import static com.dashjoin.jsonata.Jsonata.jsonata;
 
 import org.apache.camel.Exchange;
-import org.apache.camel.Processor;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.Mapping;
+import dynamic.mapper.processor.CommonProcessor;
 import dynamic.mapper.processor.model.C8YMessage;
 import dynamic.mapper.processor.model.ProcessingContext;
 import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public abstract class BaseProcessor implements Processor {
+public abstract class BaseProcessor extends CommonProcessor {
 
     protected static final String EXTERNAL_ID_TOKEN = "_externalId_";
 
@@ -60,7 +60,7 @@ public abstract class BaseProcessor implements Processor {
     }
 
     protected ProcessingContext<Object> createProcessingContextAsObject(String tenant, Mapping mapping,
-            C8YMessage message, ServiceConfiguration serviceConfiguration) {
+            C8YMessage message, ServiceConfiguration serviceConfiguration, Boolean testing) {
         return ProcessingContext.<Object>builder()
                 .payload(message.getParsedPayload())
                 .topic(mapping.getPublishTopic())
@@ -68,6 +68,7 @@ public abstract class BaseProcessor implements Processor {
                 .mappingType(mapping.getMappingType())
                 .mapping(mapping)
                 .sendPayload(message.isSendPayload())
+                .testing(testing)
                 .tenant(tenant)
                 .supportsMessageContext(
                         mapping.getSupportsMessageContext())
@@ -75,4 +76,5 @@ public abstract class BaseProcessor implements Processor {
                 .serviceConfiguration(serviceConfiguration)
                 .api(message.getApi()).build();
     }
+
 }

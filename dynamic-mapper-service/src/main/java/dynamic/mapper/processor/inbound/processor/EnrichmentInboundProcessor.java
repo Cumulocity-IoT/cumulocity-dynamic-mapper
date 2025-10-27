@@ -41,7 +41,10 @@ public class EnrichmentInboundProcessor extends BaseProcessor {
             log.error(errorMessage, e);
             MappingStatus mappingStatus = mappingService
                     .getMappingStatus(tenant, mapping);
-            context.addError(new ProcessingException(errorMessage, e));
+            if(e instanceof ProcessingException)
+                context.addError((ProcessingException) e);
+            else
+                context.addError(new ProcessingException(errorMessage, e));
             mappingStatus.errors++;
             mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
             return;

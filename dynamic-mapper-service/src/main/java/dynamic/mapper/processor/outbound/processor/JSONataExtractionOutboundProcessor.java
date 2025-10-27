@@ -83,7 +83,7 @@ public class JSONataExtractionOutboundProcessor extends BaseProcessor {
             String payloadAsString = toPrettyJsonString(payloadObject);
 
             if (serviceConfiguration.isLogPayload() || mapping.getDebug()) {
-                log.info("{} - Incoming payload (patched) in extractFromSource(): {} {} {} {}", tenant,
+                log.info("{} - Incoming payload (patched): {} {} {} {}", tenant,
                         payloadAsString,
                         serviceConfiguration.isLogPayload(), mapping.getDebug(),
                         serviceConfiguration.isLogPayload() || mapping.getDebug());

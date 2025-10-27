@@ -24,6 +24,6 @@ package dynamic.mapper.core;
 import java.util.Map;
 
 public interface InventoryEnrichmentClient {
-    public Map<String, Object> getMOFromInventoryCache(String tenant, String sourceId);
-    public Map<String, Object> getMOFromInventoryCacheByExternalId(String tenant, String externalId, String type);
+    public Map<String, Object> getMOFromInventoryCache(String tenant, String sourceId, Boolean testing );
+    public Map<String, Object> getMOFromInventoryCacheByExternalId(String tenant, String externalId, String type, Boolean testing  );
 }

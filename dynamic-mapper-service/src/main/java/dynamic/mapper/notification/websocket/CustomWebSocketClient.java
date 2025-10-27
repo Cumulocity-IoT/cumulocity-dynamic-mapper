@@ -32,7 +32,7 @@ import dynamic.mapper.configuration.ConnectorId;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.ProcessingResult;
+import dynamic.mapper.processor.model.ProcessingResultWrapper;
 
 import java.net.URI;
 import java.util.List;
@@ -82,7 +82,7 @@ public class CustomWebSocketClient extends WebSocketClient {
                     "{} - INITIAL: message on connector InternalWebSocket (notification 2.0) for outbound connector {}, API: {}, Operation: {}",
                     tenant, connectorId.getName(), notification.getApi(), notification.getOperation());
         }
-        ProcessingResult<?> processedResults = this.callback.onNotification(notification);
+        ProcessingResultWrapper<?> processedResults = this.callback.onNotification(notification);
         int mappingQos = processedResults.getConsolidatedQos().ordinal();
         int timeout = processedResults.getMaxCPUTimeMS();
         if (serviceConfiguration.isLogPayload()) {

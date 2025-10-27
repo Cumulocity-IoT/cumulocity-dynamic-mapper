@@ -18,6 +18,7 @@
  *  @authors Christof Strack, Stefan Witschel
  *
  */
+
 package dynamic.mapper.processor.outbound.processor;
 
 import java.util.Arrays;
@@ -47,6 +48,7 @@ import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.RepairStrategy;
 import dynamic.mapper.processor.model.SubstituteValue;
 import dynamic.mapper.processor.model.SubstituteValue.TYPE;
+import dynamic.mapper.processor.util.ProcessingResultHelper;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.util.Utils;
 import lombok.extern.slf4j.Slf4j;
@@ -100,8 +102,7 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
         Map<String, List<SubstituteValue>> processingCache = context.getProcessingCache();
         Set<String> pathTargets = processingCache.keySet();
         String targetTemplate = mapping.getTargetTemplate();
-        int predecessor = -1;
-        if(mapping.getTargetTemplate().startsWith("[")) {
+        if (mapping.getTargetTemplate().startsWith("[")) {
             targetTemplate = "{ \"TempArray\": " + mapping.getTargetTemplate() + "}";
         }
         DocumentContext payloadTarget = JsonPath.parse(targetTemplate);
@@ -137,7 +138,7 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
             if (processingCache.get(pathTarget).size() > 0) {
                 substitute = processingCache.get(pathTarget).get(0).clone();
             }
-            if(pathTarget.startsWith("["))
+            if (pathTarget.startsWith("["))
                 pathTarget = "$.TempArray" + pathTarget;
             SubstituteValue.substituteValueInPayload(substitute, payloadTarget, pathTarget);
         }
@@ -162,7 +163,7 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
                     splitTopicInAsList[c.intValue()] = tl;
                     c.increment();
                 });
-                if (context.getMapping().getDebug() || context.getServiceConfiguration().isLogPayload()) {
+                if (mapping.getDebug() || context.getServiceConfiguration().isLogPayload()) {
                     log.info("{} - Resolved topic from {} to {}",
                             tenant, splitTopicInAsListOriginal, splitTopicInAsList);
                 }
@@ -173,7 +174,7 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
                 }
                 context.setResolvedPublishTopic(resolvedPublishTopic.toString());
             } else {
-                context.setResolvedPublishTopic(context.getMapping().getPublishTopic());
+                context.setResolvedPublishTopic(mapping.getPublishTopic());
             }
 
             // remove TOPIC_LEVEL
@@ -205,24 +206,18 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
                 // remove TOKEN_CONTEXT_DATA
                 payloadTarget.delete("$." + Mapping.TOKEN_CONTEXT_DATA);
             }
-            var newPredecessor = context.addRequest(
-                    DynamicMapperRequest.builder()
-                            .predecessor(predecessor)
-                            .method(method)
-                            .api(mapping.getTargetAPI()) // Set the api field
-                            .sourceId(deviceSource)
-                            .externalIdType(mapping.getExternalIdType())
-                            .externalId(context.getExternalId())
-                            .request(payloadTarget.jsonString())
-                            .build());
+            DynamicMapperRequest dynamicMapperRequest = ProcessingResultHelper.createAndAddDynamicMapperRequest(context,
+                    payloadTarget.jsonString(), null, mapping);
+            dynamicMapperRequest.setMethod(method);
+            dynamicMapperRequest.setSourceId(deviceSource);
 
-            predecessor = newPredecessor;
+
         } else {
             // FIXME Why are INVENTORY API messages ignored?! Needs to be implemented
             log.warn("{} - Ignoring payload: {}, {}, {}", tenant, payloadTarget, mapping.getTargetAPI(),
                     processingCache.size());
         }
-        if (context.getMapping().getDebug() || context.getServiceConfiguration().isLogPayload()) {
+        if (mapping.getDebug() || context.getServiceConfiguration().isLogPayload()) {
             log.info("{} - Transformed message sent: API: {}, numberDevices: {}, message: {}", tenant,
                     mapping.getTargetAPI(),
                     payloadTarget.jsonString(),

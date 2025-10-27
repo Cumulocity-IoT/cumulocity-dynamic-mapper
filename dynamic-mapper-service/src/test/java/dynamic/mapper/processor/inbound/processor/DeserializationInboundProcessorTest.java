@@ -94,6 +94,7 @@ class DeserializationInboundProcessorTest {
         when(message.getHeader("tenant", String.class)).thenReturn(TEST_TENANT);
         when(message.getHeader("serviceConfiguration", ServiceConfiguration.class)).thenReturn(serviceConfiguration);
         when(message.getHeader("connectorMessage", ConnectorMessage.class)).thenReturn(connectorMessage);
+        when(message.getHeader("testing", Boolean.class)).thenReturn(Boolean.FALSE);
 
         // Setup mapping status mocks
         when(mappingService.getMappingStatus(any(String.class), any(Mapping.class))).thenReturn(mappingStatus);
@@ -344,6 +345,7 @@ class DeserializationInboundProcessorTest {
             when(message.getHeader("serviceConfiguration", ServiceConfiguration.class))
                     .thenReturn(serviceConfiguration);
             when(message.getHeader("connectorMessage", ConnectorMessage.class)).thenReturn(connectorMessage);
+            when(message.getHeader("testing", Boolean.class)).thenReturn(Boolean.FALSE);
 
             // Given
             mapping.setMappingType(type);

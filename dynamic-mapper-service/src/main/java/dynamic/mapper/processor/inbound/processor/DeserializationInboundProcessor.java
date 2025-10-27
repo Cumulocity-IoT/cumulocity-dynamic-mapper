@@ -50,6 +50,7 @@ public class DeserializationInboundProcessor extends BaseProcessor {
     public void process(Exchange exchange) throws Exception {
         Mapping mapping = exchange.getIn().getBody(Mapping.class);
         String tenant = exchange.getIn().getHeader("tenant", String.class);
+        Boolean testing = exchange.getIn().getHeader("testing", Boolean.class);
         ServiceConfiguration serviceConfiguration = exchange.getIn().getHeader("serviceConfiguration",
                 ServiceConfiguration.class);
         ConnectorMessage connectorMessage = exchange.getIn().getHeader("connectorMessage", ConnectorMessage.class);
@@ -60,7 +61,7 @@ public class DeserializationInboundProcessor extends BaseProcessor {
                 || MappingType.EXTENSION_SOURCE.equals(mapping.getMappingType())
                 || MappingType.EXTENSION_SOURCE_TARGET.equals(mapping.getMappingType())) {
             ProcessingContext<byte[]> context = createProcessingContextAsByteArray(tenant, mapping, connectorMessage,
-                    serviceConfiguration);
+                    serviceConfiguration, testing);
 
             PayloadDeserializer<byte[]> deserializer = (PayloadDeserializer<byte[]>) deserializers
                     .get(mapping.getMappingType());
@@ -79,7 +80,7 @@ public class DeserializationInboundProcessor extends BaseProcessor {
             }
         } else {
             ProcessingContext<Object> context = createProcessingContextAsObject(tenant, mapping, connectorMessage,
-                    serviceConfiguration);
+                    serviceConfiguration, testing);
 
             PayloadDeserializer<Object> deserializer = (PayloadDeserializer<Object>) deserializers
                     .get(mapping.getMappingType());
@@ -106,7 +107,7 @@ public class DeserializationInboundProcessor extends BaseProcessor {
                 .getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
         MappingStatus mappingStatus = mappingService
                 .getMappingStatus(tenant, mapping);
-        String errorMessage = String.format("Tenant %s - No processor for MessageType: %s registered",
+        String errorMessage = String.format("%s - No processor for MessageType: %s registered",
                 tenant, mapping.getMappingType());
         log.error(errorMessage);
         context.addError(new ProcessingException(errorMessage));
@@ -119,7 +120,7 @@ public class DeserializationInboundProcessor extends BaseProcessor {
             ProcessingContext<?> context) {
         MappingStatus mappingStatus = mappingService
                 .getMappingStatus(tenant, mapping);
-        String errorMessage = String.format("Tenant %s - Failed to deserialize payload: %s",
+        String errorMessage = String.format("%s - Failed to deserialize payload: %s",
                 tenant, e.getMessage());
         log.warn(errorMessage);
         log.debug("{} - Deserialization error details:", tenant, e);

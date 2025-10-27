@@ -35,16 +35,23 @@ public class ExtensibleProcessor extends BaseProcessor {
         ProcessingContext<byte[]> context = getProcessingContextAsByteArray(exchange);
         Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
-        MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
+        Boolean testing = context.isTesting();
 
         try {
             processWithExtension(context);
         } catch (Exception e) {
             log.error("Error in extensible processor for mapping: {}",
                     context.getMapping().getName(), e);
-            context.addError(new ProcessingException("Extensible processing failed", e));
-            mappingStatus.errors++;
-            mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+            if(e instanceof ProcessingException)
+                context.addError((ProcessingException) e);
+            else
+                context.addError(new ProcessingException("Extensible processing failed", e));
+            
+            if (!testing) {
+                MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
+                mappingStatus.errors++;
+                mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+            }
         }
 
     }

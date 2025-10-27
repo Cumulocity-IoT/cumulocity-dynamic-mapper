@@ -7,6 +7,9 @@ import org.graalvm.polyglot.Value;
  */
 public interface FlowContext {
 
+    String WARNINGS = "_WARNINGS_";
+    String LOGS = "_LOGS_";
+
     /**
      * Sets a value in the context's state.
      * 
@@ -75,4 +78,6 @@ public interface FlowContext {
      * @return A Value containing the device properties as a JS object.
      */
     Value lookupDeviceByExternalId(String externalId, String type);
+
+    void clearState();
 }

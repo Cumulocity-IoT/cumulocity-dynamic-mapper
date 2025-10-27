@@ -28,13 +28,13 @@ import dynamic.mapper.connector.core.ConnectorPropertyCondition;
 import dynamic.mapper.connector.core.ConnectorPropertyType;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.client.AConnectorClient;
+import dynamic.mapper.connector.core.client.Certificate;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.core.ConnectorStatus;
 import dynamic.mapper.model.Direction;
-import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
@@ -46,13 +46,11 @@ import org.apache.pulsar.client.api.*;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.KeyStore;
-import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -147,7 +145,7 @@ public class PulsarConnectorClient extends AConnectorClient {
                     .getOrDefault("useSelfSignedCertificate", false);
 
             if (useSelfSignedCertificate) {
-                initializeSslContext();
+                initializeSslConfiguration();
             }
 
             log.info("{} - Pulsar connector initialized successfully", tenant);
@@ -166,37 +164,36 @@ public class PulsarConnectorClient extends AConnectorClient {
     /**
      * Initialize SSL context for self-signed certificates
      */
-    private void initializeSslContext() throws Exception {
-        String nameCertificate = (String) connectorConfiguration.getProperties().get("nameCertificate");
-        String fingerprint = (String) connectorConfiguration.getProperties()
-                .get("fingerprintSelfSignedCertificate");
+    private void initializeSslConfiguration() throws Exception {
+        try {
+            // Load certificate using common method
+            cert = loadCertificateFromConfiguration();
 
-        if (nameCertificate == null || fingerprint == null) {
-            throw new ConnectorException(
-                    "Required properties nameCertificate and fingerprint are not set");
+            // Log basic info
+            log.info("{} - Loaded {} certificate(s)", tenant, cert.getCertificateCount());
+
+            // Get X509 certificates
+            List<X509Certificate> customCertificates = cert.getX509Certificates();
+            if (customCertificates.isEmpty()) {
+                throw new ConnectorException("No valid X.509 certificates found in PEM");
+            }
+
+            // Create truststore (can choose whether to include system CAs) - PASS cert
+            KeyStore trustStore = createTrustStore(false, customCertificates, cert);
+
+            // Create TrustManagerFactory
+            TrustManagerFactory tmf = createTrustManagerFactory(trustStore);
+
+            // Create SSLContext for Pulsar
+            sslContext = SSLContext.getInstance("TLSv1.2");
+            sslContext.init(null, tmf.getTrustManagers(), null);
+
+            log.info("{} - SSL context initialized for Pulsar", tenant);
+
+        } catch (Exception e) {
+            log.error("{} - Error creating SSL context for Pulsar", tenant, e);
+            throw new ConnectorException("Failed to initialize SSL context: " + e.getMessage(), e);
         }
-
-        cert = c8yAgent.loadCertificateByName(nameCertificate, fingerprint, tenant, connectorName);
-        if (cert == null) {
-            throw new ConnectorException(
-                    String.format("Certificate %s with fingerprint %s not found",
-                            nameCertificate, fingerprint));
-        }
-
-        KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
-        trustStore.load(null, null);
-        trustStore.setCertificateEntry("Custom CA",
-                (X509Certificate) CertificateFactory.getInstance("X509")
-                        .generateCertificate(new ByteArrayInputStream(
-                                cert.getCertInPemFormat().getBytes(StandardCharsets.UTF_8))));
-
-        TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-        tmf.init(trustStore);
-
-        sslContext = SSLContext.getInstance("TLSv1.2");
-        sslContext.init(null, tmf.getTrustManagers(), null);
-
-        log.debug("{} - SSL context initialized", tenant);
     }
 
     @Override
@@ -499,6 +496,13 @@ public class PulsarConnectorClient extends AConnectorClient {
         }
 
         DynamicMapperRequest request = context.getCurrentRequest();
+
+        if (context.getCurrentRequest() == null ||
+                context.getCurrentRequest().getRequest() == null) {
+            log.warn("{} - No payload to publish for mapping: {}", tenant, context.getMapping().getName());
+            return;
+        }
+
         String payload = request.getRequest();
         String topic = context.getResolvedPublishTopic();
         Qos qos = context.getQos();

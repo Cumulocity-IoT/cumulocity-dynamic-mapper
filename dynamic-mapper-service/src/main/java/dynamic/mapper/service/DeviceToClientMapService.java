@@ -24,8 +24,8 @@ package dynamic.mapper.service;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
-import com.cumulocity.sdk.client.inventory.InventoryApi;
 import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.DeviceToClientMapRepresentation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,7 +42,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class DeviceToClientMapService {
 
-    private final InventoryApi inventoryApi;
+    private final InventoryFacade inventoryApi;
     private final ConfigurationRegistry configurationRegistry;
     private final MicroserviceSubscriptionsService subscriptionsService;
 
@@ -69,7 +69,7 @@ public class DeviceToClientMapService {
             updateMor.setId(GId.asGId(deviceToClientMapId));
             updateMor.setAttrs(fragment);
 
-            inventoryApi.update(updateMor);
+            inventoryApi.update(updateMor, false);
         });
     }
 }

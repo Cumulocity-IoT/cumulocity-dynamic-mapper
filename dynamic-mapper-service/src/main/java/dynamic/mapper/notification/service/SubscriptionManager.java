@@ -95,7 +95,7 @@ public class SubscriptionManager {
         }
 
         String deviceId = mor.getId().getValue();
-        
+
         // Prevent duplicate processing
         if (processingDevices.contains(deviceId)) {
             log.debug("{} - Device {} already being processed", tenant, deviceId);
@@ -303,9 +303,9 @@ public class SubscriptionManager {
 
                 // Create new subscription
                 String newTypeFilter = Utils.createChangedTypeFilter(types, existingTypeFilter);
-                NotificationSubscriptionResponse.NotificationSubscriptionResponseBuilder responseBuilder = 
-                        NotificationSubscriptionResponse.builder()
-                                .subscriptionName(MANAGEMENT_SUBSCRIPTION);
+                NotificationSubscriptionResponse.NotificationSubscriptionResponseBuilder responseBuilder = NotificationSubscriptionResponse
+                        .builder()
+                        .subscriptionName(MANAGEMENT_SUBSCRIPTION);
 
                 if (newTypeFilter != null && !newTypeFilter.trim().isEmpty()) {
                     NotificationSubscriptionRepresentation nsr = createTypeSubscription(newTypeFilter);
@@ -328,31 +328,14 @@ public class SubscriptionManager {
 
     // === Private Helper Methods ===
 
+    /**
+     * Creates a subscription for a managed object using optimistic approach.
+     * If subscription already exists (409), fetches and returns the existing one.
+     */
     private NotificationSubscriptionRepresentation createSubscriptionByMO(
             String tenant, ManagedObjectRepresentation mor, API api, String subscriptionName) {
 
-        // Check if already exists
-        try {
-            Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionAPI
-                    .getSubscriptionsByFilter(
-                            new NotificationSubscriptionFilter()
-                                    .bySubscription(subscriptionName)
-                                    .bySource(mor.getId()))
-                    .get().allPages().iterator();
-
-            while (subIt.hasNext()) {
-                NotificationSubscriptionRepresentation existing = subIt.next();
-                if (subscriptionName.equals(existing.getSubscription())) {
-                    log.debug("{} - Subscription already exists for source {}",
-                            tenant, mor.getId().getValue());
-                    return existing;
-                }
-            }
-        } catch (Exception e) {
-            log.warn("{} - Error checking existing subscriptions: {}", tenant, e.getMessage());
-        }
-
-        // Create new
+        // Try to create directly (optimistic approach)
         try {
             NotificationSubscriptionRepresentation nsr = new NotificationSubscriptionRepresentation();
             nsr.setSource(mor);
@@ -366,9 +349,52 @@ public class SubscriptionManager {
             NotificationSubscriptionRepresentation result = subscriptionAPI.subscribe(nsr);
             log.debug("{} - Created subscription for source {}", tenant, mor.getId().getValue());
             return result;
+
+        } catch (SDKException e) {
+            if (e.getHttpStatus() == 409) {
+                // Already exists, fetch it
+                log.debug("{} - Subscription already exists for source {}, fetching it",
+                        tenant, mor.getId().getValue());
+                return fetchExistingSubscription(tenant, mor, subscriptionName);
+            }
+            log.error("{} - Error creating subscription: {}", tenant, e.getMessage(), e);
+            throw new RuntimeException("Failed to create subscription: " + e.getMessage(), e);
         } catch (Exception e) {
             log.error("{} - Error creating subscription: {}", tenant, e.getMessage(), e);
             throw new RuntimeException("Failed to create subscription: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Fetches an existing subscription by source and subscription name.
+     */
+    private NotificationSubscriptionRepresentation fetchExistingSubscription(
+            String tenant, ManagedObjectRepresentation mor, String subscriptionName) {
+        try {
+            Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionAPI
+                    .getSubscriptionsByFilter(
+                            new NotificationSubscriptionFilter()
+                                    .bySubscription(subscriptionName)
+                                    .bySource(mor.getId()))
+                    .get().allPages().iterator();
+
+            while (subIt.hasNext()) {
+                NotificationSubscriptionRepresentation existing = subIt.next();
+                if (subscriptionName.equals(existing.getSubscription())) {
+                    log.debug("{} - Found existing subscription for source {}",
+                            tenant, mor.getId().getValue());
+                    return existing;
+                }
+            }
+
+            // Should not happen, but handle gracefully
+            log.warn("{} - Subscription not found after 409 error for source {}",
+                    tenant, mor.getId().getValue());
+            throw new RuntimeException("Subscription not found after duplicate error");
+
+        } catch (Exception e) {
+            log.error("{} - Failed to fetch existing subscription: {}", tenant, e.getMessage(), e);
+            throw new RuntimeException("Failed to fetch existing subscription: " + e.getMessage(), e);
         }
     }
 
@@ -435,6 +461,10 @@ public class SubscriptionManager {
         return null;
     }
 
+    /**
+     * Creates a type subscription using optimistic approach.
+     * If subscription already exists (409), fetches and returns the existing one.
+     */
     private NotificationSubscriptionRepresentation createTypeSubscription(String typeFilter) {
         try {
             NotificationSubscriptionRepresentation nsr = new NotificationSubscriptionRepresentation();
@@ -447,6 +477,19 @@ public class SubscriptionManager {
             nsr.setSubscriptionFilter(filter);
 
             return subscriptionAPI.subscribe(nsr);
+
+        } catch (SDKException e) {
+            if (e.getHttpStatus() == 409) {
+                // Already exists, fetch it
+                log.debug("Type subscription already exists, fetching it");
+                NotificationSubscriptionRepresentation existing = findExistingTypeSubscription();
+                if (existing != null) {
+                    return existing;
+                }
+                throw new RuntimeException("Type subscription not found after duplicate error");
+            }
+            log.error("Error creating type subscription: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to create type subscription: " + e.getMessage(), e);
         } catch (Exception e) {
             log.error("Error creating type subscription: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to create type subscription: " + e.getMessage(), e);

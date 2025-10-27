@@ -22,10 +22,12 @@
 package dynamic.mapper.notification;
 
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
+
+import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.notification.websocket.NotificationCallback;
 import dynamic.mapper.processor.model.C8YMessage;
-import dynamic.mapper.processor.model.ProcessingResult;
+import dynamic.mapper.processor.model.ProcessingResultWrapper;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.notification.task.UpdateSubscriptionDeviceGroupTask;
@@ -68,7 +70,7 @@ public class ManagementSubscriptionClient implements NotificationCallback {
     }
 
     @Override
-    public ProcessingResult<?> onNotification(Notification notification) {
+    public ProcessingResultWrapper<?> onNotification(Notification notification) {
         String notificationTenant = NotificationHelper.extractTenant(
             notification.getNotificationHeaders(), tenant);
         
@@ -81,20 +83,20 @@ public class ManagementSubscriptionClient implements NotificationCallback {
                 return handleDeviceCreation(notification, notificationTenant);
             } else {
                 log.debug("{} - Ignoring operation: {}", notificationTenant, operation);
-                return ProcessingResult.builder()
+                return ProcessingResultWrapper.builder()
                     .consolidatedQos(Qos.AT_LEAST_ONCE)
                     .build();
             }
         } catch (Exception e) {
             log.error("{} - Error processing notification: {}", notificationTenant, e.getMessage(), e);
-            return ProcessingResult.builder()
+            return ProcessingResultWrapper.builder()
                 .consolidatedQos(Qos.AT_LEAST_ONCE)
                 .error(e)
                 .build();
         }
     }
 
-    private ProcessingResult<?> handleGroupUpdate(Notification notification, String notificationTenant) {
+    private ProcessingResultWrapper<?> handleGroupUpdate(Notification notification, String notificationTenant) {
         C8YMessage message = NotificationHelper.createC8YMessage(notification, notificationTenant);
         log.debug("{} - Handling group update for: {}", notificationTenant, message.getSourceId());
         
@@ -106,13 +108,13 @@ public class ManagementSubscriptionClient implements NotificationCallback {
             )
         );
         
-        return ProcessingResult.builder()
+        return ProcessingResultWrapper.builder()
             .consolidatedQos(Qos.AT_LEAST_ONCE)
             .future(future)
             .build();
     }
 
-    private ProcessingResult<?> handleDeviceCreation(Notification notification, String notificationTenant) {
+    private ProcessingResultWrapper<?> handleDeviceCreation(Notification notification, String notificationTenant) {
         C8YMessage message = NotificationHelper.createC8YMessage(notification, notificationTenant);
         log.debug("{} - Handling device creation for: {}", notificationTenant, message.getSourceId());
         
@@ -120,7 +122,7 @@ public class ManagementSubscriptionClient implements NotificationCallback {
             new UpdateSubscriptionDeviceTypeTask(configurationRegistry, message)
         );
         
-        return ProcessingResult.builder()
+        return ProcessingResultWrapper.builder()
             .consolidatedQos(Qos.AT_LEAST_ONCE)
             .future(future)
             .build();
@@ -156,5 +158,10 @@ public class ManagementSubscriptionClient implements NotificationCallback {
         log.info("{} - Cleaning up ManagementSubscriptionClient", tenant);
         groupCacheManager.cleanup();
         log.info("{} - ManagementSubscriptionClient cleanup completed", tenant);
+    }
+
+    @Override
+    public ProcessingResultWrapper<?> onTestNotification(Notification notification, Mapping mapping) {
+        throw new UnsupportedOperationException("Unimplemented method 'onTestNotification'");
     }
 }

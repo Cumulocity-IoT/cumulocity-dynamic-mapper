@@ -163,7 +163,7 @@ public class MqttPushManager {
     public void activatePushConnectivityForDevice(String tenant, ManagedObjectRepresentation mor) {
         try {
             ExternalIDRepresentation extId = configurationRegistry.getC8yAgent()
-                    .resolveGlobalId2ExternalId(tenant, mor.getId(), null, null);
+                    .resolveGlobalId2ExternalId(tenant, mor.getId(), null, false);
 
             String deviceId = extId != null ? extId.getExternalId() : mor.getId().getValue();
             activatePushConnectivity(tenant, deviceId);
@@ -196,7 +196,7 @@ public class MqttPushManager {
     public void deactivatePushConnectivityForDevice(String tenant, ManagedObjectRepresentation mor) {
         try {
             ExternalIDRepresentation extId = configurationRegistry.getC8yAgent()
-                    .resolveGlobalId2ExternalId(tenant, mor.getId(), null, null);
+                    .resolveGlobalId2ExternalId(tenant, mor.getId(), null, false);
 
             String deviceId = extId != null ? extId.getExternalId() : mor.getId().getValue();
             deactivatePushConnectivity(tenant, deviceId);

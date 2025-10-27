@@ -42,6 +42,7 @@ export enum ConnectorType {
   WEB_HOOK = 'WEB_HOOK',
   PULSAR = 'PULSAR',
   CUMULOCITY_MQTT_SERVICE_PULSAR = 'CUMULOCITY_MQTT_SERVICE_PULSAR',
+  TEST = 'TEST',
 }
 
 export interface ConnectorPropertyCondition {

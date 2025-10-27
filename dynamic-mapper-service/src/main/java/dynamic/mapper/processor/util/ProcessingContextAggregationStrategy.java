@@ -28,14 +28,16 @@ import org.apache.camel.Exchange;
 import org.springframework.stereotype.Component;
 
 import dynamic.mapper.processor.model.ProcessingContext;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Component
 public class ProcessingContextAggregationStrategy implements AggregationStrategy {
-    
+
     @Override
     public Exchange aggregate(Exchange oldExchange, Exchange newExchange) {
         ProcessingContext<?> newContext = newExchange.getIn().getBody(ProcessingContext.class);
-        
+
         if (oldExchange == null) {
             // First result
             List<ProcessingContext<Object>> contexts = new ArrayList<>();
@@ -43,13 +45,23 @@ public class ProcessingContextAggregationStrategy implements AggregationStrategy
             newExchange.getIn().setHeader("processedContexts", contexts);
             return newExchange;
         }
-        
+
         // Aggregate contexts
         @SuppressWarnings("unchecked")
-        List<ProcessingContext<Object>> existingContexts = oldExchange.getIn().getHeader("processedContexts", List.class);
+        List<ProcessingContext<Object>> existingContexts = oldExchange.getIn().getHeader("processedContexts",
+                List.class);
         existingContexts.add((ProcessingContext<Object>) newContext);
-        
+
         oldExchange.getIn().setHeader("processedContexts", existingContexts);
+
+        // Clean up the new exchange's context after aggregation
+        if (newContext != null) {
+            try {
+                newContext.close();
+            } catch (Exception e) {
+                log.warn("{} - Error closing context during aggregation: {}", newContext.getTenant(), e.getMessage());
+            }
+        }
         return oldExchange;
     }
 }

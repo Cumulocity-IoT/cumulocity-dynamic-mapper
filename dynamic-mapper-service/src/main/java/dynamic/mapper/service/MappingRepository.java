@@ -24,10 +24,10 @@ package dynamic.mapper.service;
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.sdk.client.SDKException;
-import com.cumulocity.sdk.client.inventory.InventoryApi;
 import com.cumulocity.sdk.client.inventory.InventoryFilter;
 import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
 import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingRepresentation;
@@ -48,7 +48,7 @@ import java.util.stream.StreamSupport;
 @RequiredArgsConstructor
 public class MappingRepository {
 
-    private final InventoryApi inventoryApi;
+    private final InventoryFacade inventoryApi;
     private final ConfigurationRegistry configurationRegistry;
 
     /**
@@ -56,7 +56,7 @@ public class MappingRepository {
      */
     public Optional<Mapping> findById(String tenant, String id) {
         try {
-            ManagedObjectRepresentation mo = inventoryApi.get(GId.asGId(id));
+            ManagedObjectRepresentation mo = inventoryApi.get(GId.asGId(id), false);
             if (mo == null) {
                 return Optional.empty();
             }
@@ -84,7 +84,7 @@ public class MappingRepository {
         InventoryFilter inventoryFilter = new InventoryFilter();
         inventoryFilter.byType(MappingRepresentation.MAPPING_TYPE);
 
-        ManagedObjectCollection moc = inventoryApi.getManagedObjectsByFilter(inventoryFilter);
+        ManagedObjectCollection moc = inventoryApi.getManagedObjectsByFilter(inventoryFilter, false);
 
         List<Mapping> mappings = StreamSupport.stream(moc.get().allPages().spliterator(), true)
                 .map(mo -> convertToMapping(tenant, mo))
@@ -108,7 +108,7 @@ public class MappingRepository {
         mr.setC8yMQTTMapping(mapping);
 
         ManagedObjectRepresentation mor = toManagedObject(mr);
-        mor = inventoryApi.create(mor);
+        mor = inventoryApi.create(mor, false);
 
         mapping.setId(mor.getId().getValue());
         mr.getC8yMQTTMapping().setId(mapping.getId());
@@ -116,7 +116,7 @@ public class MappingRepository {
         mor = toManagedObject(mr);
         mor.setId(GId.asGId(mapping.getId()));
         mor.setName(mapping.getName());
-        inventoryApi.update(mor);
+        inventoryApi.update(mor, false);
 
         log.info("{} - Mapping created: {} [{}]", tenant, mapping.getName(), mapping.getId());
         return mapping;
@@ -140,7 +140,7 @@ public class MappingRepository {
         ManagedObjectRepresentation mor = toManagedObject(mr);
         mor.setId(GId.asGId(mapping.getId()));
         mor.setName(mapping.getName());
-        inventoryApi.update(mor);
+        inventoryApi.update(mor, false);
 
         log.info("{} - Mapping updated: {} [{}]", tenant, mapping.getName(), mapping.getId());
         return mapping;
@@ -162,7 +162,7 @@ public class MappingRepository {
                     String.format("Tenant %s - Mapping %s is active, deactivate before deleting!", tenant, id));
         }
 
-        inventoryApi.delete(GId.asGId(id));
+        inventoryApi.delete(GId.asGId(id), false);
         log.info("{} - Mapping deleted: {}", tenant, id);
     }
 
@@ -175,7 +175,7 @@ public class MappingRepository {
             mr.setC8yMQTTMapping(mapping);
             ManagedObjectRepresentation mor = toManagedObject(mr);
             mor.setId(GId.asGId(mapping.getId()));
-            inventoryApi.update(mor);
+            inventoryApi.update(mor, false);
         });
         log.debug("{} - Batch updated {} mappings", tenant, mappings.size());
     }
