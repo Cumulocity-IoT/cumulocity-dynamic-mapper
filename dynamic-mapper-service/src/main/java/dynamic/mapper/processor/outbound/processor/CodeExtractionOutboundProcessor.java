@@ -109,9 +109,12 @@ public class CodeExtractionOutboundProcessor extends BaseProcessor {
 
             Object payloadObject = context.getPayload();
 
-            String payload = toPrettyJsonString(payloadObject);
             if (serviceConfiguration.isLogPayload() || mapping.getDebug()) {
-                log.info("{} - Processing payload for extraction: {}", tenant, payload);
+                String payload = toPrettyJsonString(payloadObject);  // is this and this required?
+                log.info("{} - Incoming payload (patched) in extractFromSource(): {} {} {} {}", tenant,
+                        payload,
+                        serviceConfiguration.isLogPayload(), mapping.getDebug(),
+                        serviceConfiguration.isLogPayload() || mapping.getDebug());
             }
 
             if (mapping.getCode() != null) {
@@ -150,7 +153,7 @@ public class CodeExtractionOutboundProcessor extends BaseProcessor {
                 }
 
                 Map<?, ?> jsonObject = (Map<?, ?>) payloadObject;
-                String payloadAsString = Functions.string(payloadObject, false);
+                String payloadAsString = Functions.string(payloadObject, false); // is this and this required?
 
                 // Execute JavaScript function
                 result = sourceValue.execute(

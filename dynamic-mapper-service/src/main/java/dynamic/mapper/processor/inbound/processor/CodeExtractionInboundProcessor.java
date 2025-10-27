@@ -118,9 +118,12 @@ public class CodeExtractionInboundProcessor extends BaseProcessor {
             Object payloadObject = context.getPayload();
             Map<String, List<SubstituteValue>> processingCache = context.getProcessingCache();
 
-            String payload = toPrettyJsonString(payloadObject);
             if (serviceConfiguration.isLogPayload() || mapping.getDebug()) {
-                log.info("{} - Processing payload for extraction: {}", tenant, payload);
+                String payload = toPrettyJsonString(payloadObject);  // is this and this required?
+                log.info("{} - Incoming payload (patched) in extractFromSource(): {} {} {} {}", tenant,
+                        payload,
+                        serviceConfiguration.isLogPayload(), mapping.getDebug(),
+                        serviceConfiguration.isLogPayload() || mapping.getDebug());
             }
 
             boolean substitutionTimeExists = false;

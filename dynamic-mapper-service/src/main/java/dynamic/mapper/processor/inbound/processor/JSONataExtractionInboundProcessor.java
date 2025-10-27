@@ -76,7 +76,10 @@ public class JSONataExtractionInboundProcessor extends BaseProcessor {
 
             String payload = toPrettyJsonString(payloadObject);
             if (serviceConfiguration.isLogPayload() || mapping.getDebug()) {
-                log.info("{} - Patched payload: {}", tenant, payload);
+                log.info("{} - Incoming payload (patched): {} {} {} {}", tenant,
+                        payload,
+                        serviceConfiguration.isLogPayload(), mapping.getDebug(),
+                        serviceConfiguration.isLogPayload() || mapping.getDebug());
             }
 
             boolean substitutionTimeExists = false;

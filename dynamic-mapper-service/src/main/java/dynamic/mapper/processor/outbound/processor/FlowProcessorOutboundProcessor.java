@@ -93,10 +93,13 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
         ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();
 
         Object payloadObject = context.getPayload();
-        String payload = toPrettyJsonString(payloadObject);
-
+        
         if (serviceConfiguration.isLogPayload() || mapping.getDebug()) {
-            log.info("{} - Processing payload: {}", tenant, payload);
+            String payload = toPrettyJsonString(payloadObject); // is this and this required?
+            log.info("{} - Incoming payload (patched) in onMessage(): {} {} {} {}", tenant,
+                    payload,
+                    serviceConfiguration.isLogPayload(), mapping.getDebug(),
+                    serviceConfiguration.isLogPayload() || mapping.getDebug());
         }
 
         if (mapping.getCode() != null) {
