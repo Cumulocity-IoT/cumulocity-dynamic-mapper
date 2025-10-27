@@ -473,8 +473,9 @@ public class BootstrapService {
         if (!configurationRegistry.getNotificationSubscriber().isNotificationServiceAvailable(tenant)) {
             disableOutboundMapping(tenant, serviceConfig);
         } else {
-            configurationRegistry.getNotificationSubscriber().initializeDeviceClient(tenant);
-            configurationRegistry.getNotificationSubscriber().initializeManagementClient(tenant);
+            // configurationRegistry.getNotificationSubscriber().initializeDeviceClient(tenant);
+            // configurationRegistry.getNotificationSubscriber().initializeManagementClient(tenant);
+            configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
         }
     }
 
