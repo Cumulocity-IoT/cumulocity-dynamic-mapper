@@ -348,7 +348,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
         this.testResult.emit(false);
       }
     } else {
-      if (result?.warnings && result?.warnings.length > 0 ) {
+      if (result?.warnings && result?.warnings.length > 0) {
         this.handleTestWarning(result);
       } else { this.handleTestSuccess(sendPayload); }
     }
@@ -361,12 +361,9 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   }
 
   private handleTestWarning(result: TestResult): void {
-
     result?.warnings.forEach(w => {
-      this.alertService.warning(`Test completed with warning: ${w}.`);
-
+      this.alertService.warning(`Test completed with warning: ${w}`);
     })
-
   }
 
   private handleTestSuccess(sendPayload: boolean): void {
@@ -404,9 +401,19 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
         await this.executeTest(false);
       }
     } else {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      const m = message + (error ? `: ${errorMsg}` : '');
-      this.alertService.danger(`${m}`);
+      // Try to get error message from various sources
+      let errorMsg = '';
+
+      if (error instanceof Error && error.message) {
+        errorMsg = error.message;
+      } else if (this.testContext?.errors && this.testContext.errors.length > 0) {
+        // Get the last error from testContext.errors
+        const lastError = this.testContext.errors[this.testContext.errors.length - 1] as any;
+        errorMsg = (lastError instanceof Error) ? lastError.message : String(lastError);
+      }
+
+      const m = errorMsg ? `${message}: ${errorMsg}` : message;
+      this.alertService.danger(m);
     }
   }
 }

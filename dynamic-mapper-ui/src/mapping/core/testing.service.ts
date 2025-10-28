@@ -91,6 +91,7 @@ export class TestingService {
           : mapping.publishTopicSample,
       processingType: ProcessingType.UNDEFINED,
       errors: [],
+      warnings: [],
       mappingType: mapping.mappingType,
       processingCache: new Map<string, SubstituteValue[]>(),
       sendPayload: false,

@@ -79,7 +79,7 @@ export class CodeBasedProcessorOutbound extends BaseProcessorOutbound {
         context.errors.push(error.message);
         console.error("Error during testing", error);
         context.logs.push(error.message);
-        throw new Error(`Evaluation failed: ${error.message}`);
+        context.errors.push(`Evaluation failed: ${error.message}`);
       }
 
       if (evalResult.result) {     
@@ -112,11 +112,11 @@ export class CodeBasedProcessorOutbound extends BaseProcessorOutbound {
         }
         context.sourceId = sourceId.toString();
       } else  {
-        throw new Error ("Transformation returned no result (substitutions)!");
+        context.warnings.push("Transformation returned no result (substitutions)!");
       }
 
     } catch (error) {
-      throw error;
+        context.errors.push(error.message);
     }
   }
 }
