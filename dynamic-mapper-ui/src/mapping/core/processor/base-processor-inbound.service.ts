@@ -96,7 +96,8 @@ export abstract class BaseProcessorInbound {
         deviceEntries.push(toDouble);
       }
     } else {
-      throw new Error("Device Id not defined in substitutions!")
+      context.errors.push("Device Id not defined in substitutions!");
+      throw new Error();
     }
   }
 
@@ -115,8 +116,7 @@ export abstract class BaseProcessorInbound {
       try {
         payloadTarget = JSON.parse(mapping.targetTemplate);
       } catch (e) {
-        this.alert.warning('Target Payload is not a valid json object!');
-        throw e;
+        context.warnings.push('Target Payload is not a valid json object!');
       }
       for (const pathTarget of processingCache.keys()) {
         let substitute: SubstituteValue = {
@@ -174,6 +174,7 @@ export abstract class BaseProcessorInbound {
                 sourceId.value = await this.createImplicitDevice(identity, context);
               } else {
                 e['possibleIgnoreErrorNonExisting'] = true;
+                context.errors.push("The testing resulted in an error, that the referenced device does not exist! ");
                 throw e;
               }
             }
@@ -204,6 +205,7 @@ export abstract class BaseProcessorInbound {
                 } else {
                   const e = new Error(`Device with id: ${substitute.value} does not exist. Set option createNonExistingDevice!`);
                   e['possibleIgnoreErrorNonExisting'] = true;
+                  context.errors.push("The testing resulted in an error, that the referenced device does not exist! ");
                   throw e;
                 }
               }
@@ -213,6 +215,7 @@ export abstract class BaseProcessorInbound {
               } else {
                 const e = new Error(`Device with id: ${substitute.value} does not exist. Set option createNonExistingDevice!`);
                 e['possibleIgnoreErrorNonExisting'] = true;
+                context.errors.push("The testing resulted in an error, that the referenced device does not exist! ");
                 throw e;
               }
             }
