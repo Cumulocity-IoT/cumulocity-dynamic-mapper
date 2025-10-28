@@ -160,7 +160,8 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
                                         tenant, context.getCurrentRequest().getExternalId());
                                 ID identity = new ID(context.getCurrentRequest().getExternalIdType(), context.getExternalId());
                                 this.connectorClient.getC8yAgent().removeDeviceFromInboundExternalIdCache(tenant, identity);
-                                resend = true;
+                                if(context.getMapping().getCreateNonExistingDevice())
+                                    resend = true;
                             }
                         }
                     }
