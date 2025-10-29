@@ -638,12 +638,6 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
     }
 
     @Override
-    public Boolean supportsWildcardInTopic(Direction direction) {
-        // MQTT Service doesn't support wildcards
-        return false;
-    }
-
-    @Override
     protected void connectorSpecificHousekeeping(String tenant) {
         // Check consumer and producer health
         if (platformConsumer != null && !platformConsumer.isConnected()) {
@@ -762,7 +756,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
 
         configProps.put("supportsWildcardInTopicInbound",
                 new ConnectorProperty(null, false, 12, ConnectorPropertyType.BOOLEAN_PROPERTY,
-                        true, false, false, null, null));
+                        true, false, true, null, null));
 
         configProps.put("supportsWildcardInTopicOutbound",
                 new ConnectorProperty(null, false, 13, ConnectorPropertyType.BOOLEAN_PROPERTY,
