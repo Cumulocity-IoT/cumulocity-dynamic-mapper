@@ -25,6 +25,7 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectReferenceRepres
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionRepresentation;
 import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.notification.Utils;
 import dynamic.mapper.notification.GroupCacheManager.CachedGroup;
 import dynamic.mapper.processor.model.C8YMessage;
 import lombok.extern.slf4j.Slf4j;
@@ -217,7 +218,7 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
 
                 Future<NotificationSubscriptionRepresentation> future = configurationRegistry
                         .getNotificationSubscriber()
-                        .subscribeDeviceAndConnect(tenant, childMO, c8yMessage.getApi());
+                        .subscribeDeviceAndConnect(tenant, childMO, c8yMessage.getApi(), Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
 
                 resultBuilder.addSubscription(childId, future);
                 log.debug("{} - Subscribed child device {} to group {}", tenant, childId, groupId);

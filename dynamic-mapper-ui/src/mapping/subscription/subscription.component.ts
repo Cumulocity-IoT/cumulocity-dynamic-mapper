@@ -173,7 +173,8 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
   }
 
   async loadSubscriptionDevice(): Promise<void> {
-    this.subscriptionDevices = await this.subscriptionService.getSubscriptionDevice();
+    const subscription = this.path === "dynamic"? this.subscriptionService.DYNAMIC_DEVICE_SUBSCRIPTION: this.subscriptionService.STATIC_DEVICE_SUBSCRIPTION;
+    this.subscriptionDevices = await this.subscriptionService.getSubscriptionDevice(subscription);
     this.subscribedDevices = this.subscriptionDevices.devices;
     this.subscriptionGrid?.reload();
   }

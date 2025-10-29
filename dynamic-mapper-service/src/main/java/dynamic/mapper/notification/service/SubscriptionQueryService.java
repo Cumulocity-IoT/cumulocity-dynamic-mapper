@@ -31,7 +31,7 @@ import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Device;
 import dynamic.mapper.model.NotificationSubscriptionResponse;
-import dynamic.mapper.util.Utils;
+import dynamic.mapper.notification.Utils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -48,9 +48,6 @@ import java.util.concurrent.*;
 @Slf4j
 @Service
 public class SubscriptionQueryService {
-
-    private static final String DEVICE_SUBSCRIPTION = "DynamicMapperDeviceSubscription";
-    private static final String MANAGEMENT_SUBSCRIPTION = "DynamicMapperManagementSubscription";
 
     @Autowired
     private NotificationSubscriptionApi subscriptionAPI;
@@ -78,7 +75,7 @@ public class SubscriptionQueryService {
             String tenant, String deviceId, String deviceSubscription) {
 
         NotificationSubscriptionFilter filter = new NotificationSubscriptionFilter();
-        filter = filter.bySubscription(deviceSubscription != null ? deviceSubscription : DEVICE_SUBSCRIPTION);
+        filter = filter.bySubscription(deviceSubscription != null ? deviceSubscription : Utils.STATIC_DEVICE_SUBSCRIPTION);
 
         if (deviceId != null) {
             GId id = new GId();
@@ -117,7 +114,7 @@ public class SubscriptionQueryService {
             String tenant, String deviceId, String deviceSubscription) {
 
         NotificationSubscriptionFilter filter = new NotificationSubscriptionFilter();
-        filter = filter.bySubscription(deviceSubscription != null ? deviceSubscription : MANAGEMENT_SUBSCRIPTION);
+        filter = filter.bySubscription(deviceSubscription != null ? deviceSubscription : Utils.MANAGEMENT_SUBSCRIPTION);
 
         if (deviceId != null) {
             GId id = new GId();
@@ -155,7 +152,7 @@ public class SubscriptionQueryService {
     public Future<NotificationSubscriptionRepresentation> getNotificationSubscriptionForDeviceType(String tenant) {
 
         NotificationSubscriptionFilter filter = new NotificationSubscriptionFilter()
-                .bySubscription(MANAGEMENT_SUBSCRIPTION)
+                .bySubscription(Utils.MANAGEMENT_SUBSCRIPTION)
                 .byContext("tenant");
 
         return virtualThreadPool.submit(() -> subscriptionsService.callForTenant(tenant, () -> {
@@ -189,7 +186,7 @@ public class SubscriptionQueryService {
         }
 
         NotificationSubscriptionFilter filter = new NotificationSubscriptionFilter()
-                .bySubscription(deviceSubscription != null ? deviceSubscription : DEVICE_SUBSCRIPTION);
+                .bySubscription(deviceSubscription != null ? deviceSubscription : Utils.STATIC_DEVICE_SUBSCRIPTION);
 
         if (deviceId != null) {
             GId id = new GId();
@@ -231,7 +228,7 @@ public class SubscriptionQueryService {
         }
 
         NotificationSubscriptionFilter filter = new NotificationSubscriptionFilter()
-                .bySubscription(MANAGEMENT_SUBSCRIPTION)
+                .bySubscription(Utils.MANAGEMENT_SUBSCRIPTION)
                 .byContext("mo");
 
         NotificationSubscriptionResponse.NotificationSubscriptionResponseBuilder responseBuilder = 
@@ -276,7 +273,7 @@ public class SubscriptionQueryService {
                 log.debug("{} - Retrieved type subscription with filter: {}", tenant, filterString);
 
                 if (filterString != null) {
-                    List<String> types = new ArrayList<>(Utils.parseTypesFromFilter(filterString));
+                    List<String> types = new ArrayList<>(dynamic.mapper.notification.Utils.parseTypesFromFilter(filterString));
                     response = NotificationSubscriptionResponse.builder()
                             .types(types)
                             .subscriptionName(nsr.getSubscription())

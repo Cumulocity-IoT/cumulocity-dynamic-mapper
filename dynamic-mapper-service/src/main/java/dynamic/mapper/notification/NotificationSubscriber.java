@@ -76,7 +76,8 @@ public class NotificationSubscriber {
     }
 
     public void initializeDeviceClient(String tenant) {
-        connectionManager.initializeDeviceClient(tenant);
+        connectionManager.initializeDynamicDeviceClient(tenant);
+        connectionManager.initializeStaticDeviceClient(tenant);
     }
 
     public void initializeManagementClient(String tenant) {
@@ -101,8 +102,8 @@ public class NotificationSubscriber {
     // === Device Subscription Methods ===
 
     public Future<NotificationSubscriptionRepresentation> subscribeDeviceAndConnect(
-            String tenant, ManagedObjectRepresentation mor, API api) {
-        return subscriptionManager.subscribeDeviceAndConnect(tenant, mor, api);
+            String tenant, ManagedObjectRepresentation mor, API api, String subscriptionName) {
+        return subscriptionManager.subscribeDeviceAndConnect(tenant, mor, api, subscriptionName);
     }
 
     public Future<NotificationSubscriptionRepresentation> subscribeByDeviceGroup(
