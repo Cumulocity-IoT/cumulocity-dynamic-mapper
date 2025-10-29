@@ -78,6 +78,8 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
     const pathMatch = href.match(/c8y-pkg-dynamic-mapper\/node1\/mappings\/subscription\/(static|dynamic|deviceToClientMap)/);
     this.path = pathMatch ? pathMatch[1] : null;
 
+    this.titleSubscription = `Subscription (${this.path}) devices mapping outbound`;
+
     this.loadSubscriptionDevice();
     this.loadSubscriptionByDeviceGroup();
     this.loadSubscriptionByDeviceType();
@@ -109,7 +111,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
   static: boolean = false;
   path: string;
   titleMapping: string;
-  readonly titleSubscription: string = 'Subscription devices mapping outbound';
+  titleSubscription: string = 'Subscription devices mapping outbound';
   deploymentMapEntry: DeploymentMapEntry;
 
   readonly displayOptions: DisplayOptions = {
