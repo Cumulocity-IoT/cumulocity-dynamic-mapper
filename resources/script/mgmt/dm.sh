@@ -200,7 +200,7 @@ function subscriptions_cleanup() {
     echo "This subscription has been renamed to 'DynamicMapperStaticDeviceSubscription'"
     
     # Delete the deprecated subscription
-    c8y notification2 subscriptions delete --name DynamicMapperDeviceSubscription
+    c8y notification2 subscriptions list --subscription DynamicMapperDeviceSubscription | c8y notification2 subscriptions delete
     
     echo "Deprecated subscription deleted successfully."
   else

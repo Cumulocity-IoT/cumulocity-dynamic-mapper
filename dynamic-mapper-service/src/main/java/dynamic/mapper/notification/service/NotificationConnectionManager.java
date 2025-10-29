@@ -375,7 +375,7 @@ public class NotificationConnectionManager {
             String tokenSeedForDynamic = Utils.DYNAMIC_DEVICE_SUBSCRIBER + connectorId + additionalSubscriptionIdTest;
 
             try {
-                String token = tokenManager.createToken(Utils.DYNAMIC_DEVICE_SUBSCRIBER, tokenSeedForDynamic);
+                String token = tokenManager.createToken(Utils.DYNAMIC_DEVICE_SUBSCRIPTION, tokenSeedForDynamic);
                 tokenManager.storeDeviceToken(tenant, connectorId, token);
 
                 ConnectorId connectorInfo = new ConnectorId(

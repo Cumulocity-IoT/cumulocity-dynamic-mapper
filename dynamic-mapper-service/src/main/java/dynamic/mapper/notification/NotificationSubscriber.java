@@ -124,8 +124,8 @@ public class NotificationSubscriber {
         subscriptionManager.unsubscribeAllMOForInventoryCacheUpdates(tenant);
     }
 
-    public void unsubscribeDeviceAndDisconnect(String tenant, ManagedObjectRepresentation mor) {
-        subscriptionManager.unsubscribeDeviceAndDisconnect(tenant, mor);
+    public void unsubscribeDeviceAndDisconnect(String tenant, ManagedObjectRepresentation mor, String subscription) {
+        subscriptionManager.unsubscribeDeviceAndDisconnect(tenant, mor, subscription);
     }
 
     public void unsubscribeByDeviceGroup(String tenant, ManagedObjectRepresentation mor) {

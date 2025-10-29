@@ -242,7 +242,7 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
                 }
 
                 configurationRegistry.getNotificationSubscriber()
-                        .unsubscribeDeviceAndDisconnect(tenant, childMO);
+                        .unsubscribeDeviceAndDisconnect(tenant, childMO, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
 
                 resultBuilder.addUnsubscription(childId);
                 log.debug("{} - Unsubscribed child device {} from group {}", tenant, childId, groupId);

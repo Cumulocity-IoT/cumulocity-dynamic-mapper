@@ -210,7 +210,9 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
   async deleteSubscription(device: IIdentified): Promise<void> {
     // console.log('Delete device', device);
     try {
-      await this.subscriptionService.deleteSubscriptionDevice(device);
+    const subscription = this.path === "dynamic"? this.subscriptionService.DYNAMIC_DEVICE_SUBSCRIPTION: this.subscriptionService.STATIC_DEVICE_SUBSCRIPTION;
+
+      await this.subscriptionService.deleteSubscriptionDevice(device, subscription);
       this.alertService.success(
         gettext('Subscription for this device deleted successfully')
       );

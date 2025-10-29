@@ -219,7 +219,7 @@ export class SubscriptionService {
   /**
    * Deletes device notification subscription
    */
-  async deleteSubscriptionDevice(device: IIdentified): Promise<void> {
+  async deleteSubscriptionDevice(device: IIdentified, subscription: string): Promise<void> {
     if (!device?.id) {
       throw new ValidationError('Device ID is required for deletion');
     }
@@ -228,7 +228,7 @@ export class SubscriptionService {
       'deleteSubscriptionDevice',
       async () => {
         const response = await this.client.fetch(
-          `${BASE_URL}/${PATH_SUBSCRIPTION_ENDPOINT}/${device.id}`,
+          `${BASE_URL}/${PATH_SUBSCRIPTION_ENDPOINT}/${device.id}?subscription=${subscription}`,
           {
             headers: {
               'content-type': 'application/json'

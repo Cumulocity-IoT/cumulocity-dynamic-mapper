@@ -170,7 +170,7 @@ public class NotificationSubscriptionService {
                             ManagedObjectRepresentation deviceMor = c8yAgent.getManagedObjectForId(tenant,
                                     deviceToRemove.getId(), false);
                             configurationRegistry.getNotificationSubscriber().unsubscribeDeviceAndDisconnect(tenant,
-                                    deviceMor);
+                                    deviceMor, Utils.DYNAMIC_DEVICE_SUBSCRIBER);
                         }
                     } catch (Exception e) {
                         log.error("{} - Error removing group subscriptions: ", tenant, e);
@@ -206,7 +206,7 @@ public class NotificationSubscriptionService {
                     .getManagedObjectForId(tenant, device.getId(), false);
             if (deviceMor != null) {
                 configurationRegistry.getNotificationSubscriber()
-                        .unsubscribeDeviceAndDisconnect(tenant, deviceMor);
+                        .unsubscribeDeviceAndDisconnect(tenant, deviceMor, Utils.DYNAMIC_DEVICE_SUBSCRIBER);
             }
         }
 
@@ -237,7 +237,7 @@ public class NotificationSubscriptionService {
                     .getManagedObjectForId(tenant, device.getId(), false);
             if (mor != null) {
                 configurationRegistry.getNotificationSubscriber()
-                        .subscribeDeviceAndConnect(tenant, mor, api, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
+                        .subscribeDeviceAndConnect(tenant, mor, api, Utils.STATIC_DEVICE_SUBSCRIPTION);
             }
         }
     }
@@ -248,7 +248,7 @@ public class NotificationSubscriptionService {
                     .getManagedObjectForId(tenant, device.getId(), false);
             if (mor != null) {
                 configurationRegistry.getNotificationSubscriber()
-                        .unsubscribeDeviceAndDisconnect(tenant, mor);
+                        .unsubscribeDeviceAndDisconnect(tenant, mor, Utils.DYNAMIC_DEVICE_SUBSCRIBER);
             }
         }
     }

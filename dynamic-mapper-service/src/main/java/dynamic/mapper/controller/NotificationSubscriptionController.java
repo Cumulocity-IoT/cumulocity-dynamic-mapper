@@ -90,7 +90,8 @@ public class NotificationSubscriptionController {
         validateDeviceListNotEmpty(request.getDevices());
 
         try {
-            NotificationSubscriptionResponse response = subscriptionService.createDeviceSubscription(tenant, request, Utils.STATIC_DEVICE_SUBSCRIPTION);
+            NotificationSubscriptionResponse response = subscriptionService.createDeviceSubscription(tenant, request,
+                    Utils.STATIC_DEVICE_SUBSCRIPTION);
             log.info("{} - Successfully created subscription for {} devices", tenant,
                     response.getDevices() != null ? response.getDevices().size() : 0);
             return ResponseEntity.ok(response);
@@ -133,7 +134,8 @@ public class NotificationSubscriptionController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<NotificationSubscriptionResponse> getSubscriptions(@PathVariable("subscription") String subscription) {
+    public ResponseEntity<NotificationSubscriptionResponse> getSubscriptions(
+            @RequestParam("subscription") String subscription) {
         String tenant = getTenant();
         validateOutboundMappingEnabled(tenant);
 
@@ -150,7 +152,7 @@ public class NotificationSubscriptionController {
     @Operation(summary = "Delete device notification subscription")
     @PreAuthorize(ADMIN_CREATE_ROLES)
     @DeleteMapping(value = "/{deviceId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> deleteSubscription(@PathVariable String deviceId) {
+    public ResponseEntity<?> deleteSubscription(@PathVariable String deviceId, @RequestParam("subscription") String subscription) {
         String tenant = getTenant();
         validateOutboundMappingEnabled(tenant);
 
@@ -160,7 +162,7 @@ public class NotificationSubscriptionController {
                 throw new DeviceNotFoundException("Device with id " + deviceId + " not found");
             }
 
-            configurationRegistry.getNotificationSubscriber().unsubscribeDeviceAndDisconnect(tenant, mor);
+            configurationRegistry.getNotificationSubscriber().unsubscribeDeviceAndDisconnect(tenant, mor, subscription);
             log.info("{} - Successfully deleted subscription for device {}", tenant, deviceId);
             return ResponseEntity.ok().build();
         } catch (DeviceNotFoundException e) {

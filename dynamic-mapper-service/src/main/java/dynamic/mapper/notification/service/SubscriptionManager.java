@@ -219,7 +219,7 @@ public class SubscriptionManager {
         });
     }
 
-    public void unsubscribeDeviceAndDisconnect(String tenant, ManagedObjectRepresentation mor) {
+    public void unsubscribeDeviceAndDisconnect(String tenant, ManagedObjectRepresentation mor, String subscription) {
         if (!isValid(mor)) {
             log.warn("Cannot unsubscribe device: invalid ManagedObject");
             return;
@@ -231,7 +231,7 @@ public class SubscriptionManager {
         subscriptionsService.runForTenant(tenant, () -> {
             try {
                 // Delete subscriptions
-                int deletedCount = deleteSubscriptionsForDevice(tenant, deviceId, Utils.STATIC_DEVICE_SUBSCRIPTION);
+                int deletedCount = deleteSubscriptionsForDevice(tenant, deviceId, subscription);
                 log.info("{} - Deleted {} subscriptions for device {}", tenant, deletedCount, deviceId);
 
                 // Disconnect if no more subscriptions
