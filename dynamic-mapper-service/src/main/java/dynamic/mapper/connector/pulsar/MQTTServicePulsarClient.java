@@ -22,8 +22,6 @@
 package dynamic.mapper.connector.pulsar;
 
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
-import com.hivemq.client.mqtt.mqtt3.message.connect.connack.Mqtt3ConnAck;
-import com.hivemq.client.mqtt.mqtt3.message.connect.connack.Mqtt3ConnAckReturnCode;
 
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.configuration.ConnectorId;

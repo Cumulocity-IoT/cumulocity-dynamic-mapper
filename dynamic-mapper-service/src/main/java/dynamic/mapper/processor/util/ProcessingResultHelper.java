@@ -40,7 +40,6 @@ import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingRepresentation;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.flow.CumulocitySource;
 import dynamic.mapper.processor.flow.ExternalSource;
 import dynamic.mapper.processor.model.DynamicMapperRequest;

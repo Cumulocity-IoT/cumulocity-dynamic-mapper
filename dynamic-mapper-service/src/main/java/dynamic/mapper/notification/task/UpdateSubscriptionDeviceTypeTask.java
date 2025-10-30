@@ -25,7 +25,6 @@ import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionRepresentation;
 
-import ch.qos.logback.classic.pattern.Util;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.notification.Utils;
 import dynamic.mapper.processor.model.C8YMessage;

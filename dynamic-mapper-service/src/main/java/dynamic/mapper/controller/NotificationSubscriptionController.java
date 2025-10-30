@@ -48,7 +48,6 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.util.CollectionUtils;
 
 import jakarta.validation.Valid;
-import jakarta.ws.rs.QueryParam;
 
 import java.util.List;
 import io.swagger.v3.oas.annotations.Operation;
