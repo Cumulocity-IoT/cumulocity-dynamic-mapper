@@ -31,6 +31,8 @@ import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingRepresentation;
+import dynamic.mapper.processor.model.MappingType;
+import dynamic.mapper.processor.model.TransformationType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
@@ -64,6 +66,7 @@ public class MappingRepository {
             MappingRepresentation mappingMO = toMappingObject(mo);
             Mapping mapping = mappingMO.getC8yMQTTMapping();
             mapping.setId(mappingMO.getId());
+            migrateMapping(mapping);
 
             log.debug("{} - Found mapping: {}", tenant, mapping.getId());
             return Optional.of(mapping);
@@ -91,6 +94,7 @@ public class MappingRepository {
                 .filter(Optional::isPresent)
                 .map(Optional::get)
                 .filter(mapping -> shouldIncludeMapping(mapping, direction))
+                .map (mapping -> migrateMapping(mapping))
                 .collect(Collectors.toList());
 
         log.debug("{} - Loaded {} mappings for direction: {}", tenant, mappings.size(), direction);
@@ -213,5 +217,13 @@ public class MappingRepository {
 
     private MappingRepresentation toMappingObject(ManagedObjectRepresentation mor) {
         return configurationRegistry.getObjectMapper().convertValue(mor, MappingRepresentation.class);
+    }
+
+    private Mapping migrateMapping(Mapping mapping) {
+        if (mapping.getMappingType() == MappingType.CODE_BASED) {
+            mapping.setTransformationType(TransformationType.SUBSTITUTION_AS_CODE);
+            mapping.setMappingType(MappingType.JSON);
+        }
+        return mapping;
     }
 }

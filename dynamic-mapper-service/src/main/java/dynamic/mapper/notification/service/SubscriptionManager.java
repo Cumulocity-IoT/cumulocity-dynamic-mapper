@@ -29,7 +29,7 @@ import com.cumulocity.sdk.client.SDKException;
 import com.cumulocity.sdk.client.messaging.notifications.*;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.NotificationSubscriptionResponse;
-import dynamic.mapper.util.Utils;
+import dynamic.mapper.notification.Utils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -44,10 +44,6 @@ import java.util.concurrent.*;
 @Slf4j
 @Service
 public class SubscriptionManager {
-
-    private static final String DEVICE_SUBSCRIPTION = "DynamicMapperDeviceSubscription";
-    private static final String MANAGEMENT_SUBSCRIPTION = "DynamicMapperManagementSubscription";
-    private static final String CACHE_INVENTORY_SUBSCRIPTION = "DynamicMapperCacheInventorySubscription";
 
     @Autowired
     private NotificationSubscriptionApi subscriptionAPI;
@@ -88,7 +84,7 @@ public class SubscriptionManager {
     }
 
     public Future<NotificationSubscriptionRepresentation> subscribeDeviceAndConnect(
-            String tenant, ManagedObjectRepresentation mor, API api) {
+            String tenant, ManagedObjectRepresentation mor, API api, String subscription) {
 
         if (!isValid(mor) || tenant == null || api == null) {
             return CompletableFuture.failedFuture(new IllegalArgumentException("Invalid parameters"));
@@ -111,7 +107,7 @@ public class SubscriptionManager {
 
                     // Create subscription
                     NotificationSubscriptionRepresentation nsr = createSubscriptionByMO(
-                            tenant, mor, api, DEVICE_SUBSCRIPTION);
+                            tenant, mor, api, subscription);
 
                     // Initialize connections if needed
                     connectionManager.initializeConnectionsIfNeeded(tenant);
@@ -143,7 +139,7 @@ public class SubscriptionManager {
         return virtualThreadPool.submit(() -> subscriptionsService.callForTenant(tenant, () -> {
             try {
                 NotificationSubscriptionRepresentation nsr = createSubscriptionByMO(
-                        tenant, mor, API.INVENTORY, MANAGEMENT_SUBSCRIPTION);
+                        tenant, mor, API.INVENTORY, Utils.MANAGEMENT_SUBSCRIPTION);
                 log.info("{} - Successfully created group subscription", tenant);
                 return nsr;
             } catch (Exception e) {
@@ -165,7 +161,7 @@ public class SubscriptionManager {
         return virtualThreadPool.submit(() -> subscriptionsService.callForTenant(tenant, () -> {
             try {
                 NotificationSubscriptionRepresentation nsr = createSubscriptionByMO(
-                        tenant, mor, API.INVENTORY, CACHE_INVENTORY_SUBSCRIPTION);
+                        tenant, mor, API.INVENTORY, Utils.CACHE_INVENTORY_SUBSCRIPTION);
                 log.info("{} - Successfully created cache inventory subscription", tenant);
                 return nsr;
             } catch (Exception e) {
@@ -187,7 +183,7 @@ public class SubscriptionManager {
 
                 while (subIt.hasNext()) {
                     NotificationSubscriptionRepresentation nsr = subIt.next();
-                    if (CACHE_INVENTORY_SUBSCRIPTION.equals(nsr.getSubscription())) {
+                    if (Utils.CACHE_INVENTORY_SUBSCRIPTION.equals(nsr.getSubscription())) {
                         subscriptionAPI.delete(nsr);
                         log.info("{} - Unsubscribed MO {} from cache updates", tenant, mor.getId().getValue());
                         return true;
@@ -207,7 +203,7 @@ public class SubscriptionManager {
                 Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionAPI
                         .getSubscriptionsByFilter(
                                 new NotificationSubscriptionFilter()
-                                        .bySubscription(CACHE_INVENTORY_SUBSCRIPTION))
+                                        .bySubscription(Utils.CACHE_INVENTORY_SUBSCRIPTION))
                         .get().allPages().iterator();
 
                 int deletedCount = 0;
@@ -223,7 +219,7 @@ public class SubscriptionManager {
         });
     }
 
-    public void unsubscribeDeviceAndDisconnect(String tenant, ManagedObjectRepresentation mor) {
+    public void unsubscribeDeviceAndDisconnect(String tenant, ManagedObjectRepresentation mor, String subscription) {
         if (!isValid(mor)) {
             log.warn("Cannot unsubscribe device: invalid ManagedObject");
             return;
@@ -235,7 +231,7 @@ public class SubscriptionManager {
         subscriptionsService.runForTenant(tenant, () -> {
             try {
                 // Delete subscriptions
-                int deletedCount = deleteSubscriptionsForDevice(tenant, deviceId, DEVICE_SUBSCRIPTION);
+                int deletedCount = deleteSubscriptionsForDevice(tenant, deviceId, subscription);
                 log.info("{} - Deleted {} subscriptions for device {}", tenant, deletedCount, deviceId);
 
                 // Disconnect if no more subscriptions
@@ -263,7 +259,7 @@ public class SubscriptionManager {
 
         subscriptionsService.runForTenant(tenant, () -> {
             try {
-                int deletedCount = deleteSubscriptionsForDevice(tenant, groupId, MANAGEMENT_SUBSCRIPTION);
+                int deletedCount = deleteSubscriptionsForDevice(tenant, groupId, Utils.MANAGEMENT_SUBSCRIPTION);
                 log.info("{} - Deleted {} subscriptions for group {}", tenant, deletedCount, groupId);
 
                 // Remove from cache
@@ -281,7 +277,9 @@ public class SubscriptionManager {
         subscriptionsService.runForTenant(tenant, () -> {
             try {
                 subscriptionAPI.deleteByFilter(
-                        new NotificationSubscriptionFilter().bySubscription(DEVICE_SUBSCRIPTION));
+                        new NotificationSubscriptionFilter().bySubscription(Utils.STATIC_DEVICE_SUBSCRIPTION));
+                subscriptionAPI.deleteByFilter(
+                        new NotificationSubscriptionFilter().bySubscription(Utils.DYNAMIC_DEVICE_SUBSCRIPTION));
                 log.info("{} - Successfully unsubscribed all devices", tenant);
             } catch (Exception e) {
                 log.error("{} - Error unsubscribing all devices: {}", tenant, e.getMessage(), e);
@@ -305,7 +303,7 @@ public class SubscriptionManager {
                 String newTypeFilter = Utils.createChangedTypeFilter(types, existingTypeFilter);
                 NotificationSubscriptionResponse.NotificationSubscriptionResponseBuilder responseBuilder = NotificationSubscriptionResponse
                         .builder()
-                        .subscriptionName(MANAGEMENT_SUBSCRIPTION);
+                        .subscriptionName(Utils.MANAGEMENT_SUBSCRIPTION);
 
                 if (newTypeFilter != null && !newTypeFilter.trim().isEmpty()) {
                     NotificationSubscriptionRepresentation nsr = createTypeSubscription(newTypeFilter);
@@ -427,13 +425,19 @@ public class SubscriptionManager {
 
     private boolean shouldDisconnectAfterUnsubscribe(String tenant) {
         try {
-            Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionAPI
+            Iterator<NotificationSubscriptionRepresentation> staticSubIt = subscriptionAPI
                     .getSubscriptionsByFilter(
                             new NotificationSubscriptionFilter()
-                                    .bySubscription(DEVICE_SUBSCRIPTION))
+                                    .bySubscription(Utils.STATIC_DEVICE_SUBSCRIPTION))
                     .get().allPages().iterator();
 
-            return !subIt.hasNext(); // Disconnect if no more subscriptions
+            Iterator<NotificationSubscriptionRepresentation> dynamicSubIt = subscriptionAPI
+                    .getSubscriptionsByFilter(
+                            new NotificationSubscriptionFilter()
+                                    .bySubscription(Utils.DYNAMIC_DEVICE_SUBSCRIPTION))
+                    .get().allPages().iterator();
+
+            return !staticSubIt.hasNext() && !dynamicSubIt.hasNext(); // Disconnect if no more subscriptions
         } catch (Exception e) {
             log.warn("{} - Error checking remaining subscriptions: {}", tenant, e.getMessage());
             return false;
@@ -445,7 +449,7 @@ public class SubscriptionManager {
             Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionAPI
                     .getSubscriptionsByFilter(
                             new NotificationSubscriptionFilter()
-                                    .bySubscription(MANAGEMENT_SUBSCRIPTION)
+                                    .bySubscription(Utils.MANAGEMENT_SUBSCRIPTION)
                                     .byContext("tenant"))
                     .get().allPages().iterator();
 
@@ -469,7 +473,7 @@ public class SubscriptionManager {
         try {
             NotificationSubscriptionRepresentation nsr = new NotificationSubscriptionRepresentation();
             nsr.setContext("tenant");
-            nsr.setSubscription(MANAGEMENT_SUBSCRIPTION);
+            nsr.setSubscription(Utils.MANAGEMENT_SUBSCRIPTION);
 
             NotificationSubscriptionFilterRepresentation filter = new NotificationSubscriptionFilterRepresentation();
             filter.setApis(List.of(API.INVENTORY.notificationFilter));

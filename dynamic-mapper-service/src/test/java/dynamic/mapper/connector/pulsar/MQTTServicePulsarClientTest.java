@@ -75,7 +75,7 @@ class MQTTServicePulsarClientTest {
 
     @Mock
     private ConfigurationRegistry configurationRegistry;
-            @Mock
+    @Mock
     private ConnectorRegistry connectorRegistry;
     @Mock
     private ConnectorConfiguration connectorConfiguration;
@@ -110,65 +110,65 @@ class MQTTServicePulsarClientTest {
     private ObjectMapper objectMapper;
     private MQTTServicePulsarClient mqttServicePulsarClient;
 
-@BeforeEach
-void setUp() {
-    virtualThreadPool = Executors.newFixedThreadPool(2);
-    objectMapper = new ObjectMapper();
+    @BeforeEach
+    void setUp() {
+        virtualThreadPool = Executors.newFixedThreadPool(2);
+        objectMapper = new ObjectMapper();
 
-    // Setup configuration registry mocks
-    lenient().when(configurationRegistry.getMappingService()).thenReturn(mappingService);
-    lenient().when(configurationRegistry.getServiceConfigurationService()).thenReturn(serviceConfigurationService);
-    lenient().when(configurationRegistry.getConnectorConfigurationService())
-            .thenReturn(connectorConfigurationService);
-    lenient().when(configurationRegistry.getC8yAgent()).thenReturn(c8yAgent);
-    lenient().when(configurationRegistry.getVirtualThreadPool()).thenReturn(virtualThreadPool);
-    lenient().when(configurationRegistry.getObjectMapper()).thenReturn(objectMapper);
-    lenient().when(configurationRegistry.getServiceConfiguration(anyString())).thenReturn(serviceConfiguration);
-    lenient().when(configurationRegistry.getMqttServicePulsarUrl()).thenReturn(TEST_SERVICE_URL);
-    lenient().when(configurationRegistry.getMicroserviceCredential(anyString()))
-            .thenReturn(microserviceCredentials);
+        // Setup configuration registry mocks
+        lenient().when(configurationRegistry.getMappingService()).thenReturn(mappingService);
+        lenient().when(configurationRegistry.getServiceConfigurationService()).thenReturn(serviceConfigurationService);
+        lenient().when(configurationRegistry.getConnectorConfigurationService())
+                .thenReturn(connectorConfigurationService);
+        lenient().when(configurationRegistry.getC8yAgent()).thenReturn(c8yAgent);
+        lenient().when(configurationRegistry.getVirtualThreadPool()).thenReturn(virtualThreadPool);
+        lenient().when(configurationRegistry.getObjectMapper()).thenReturn(objectMapper);
+        lenient().when(configurationRegistry.getServiceConfiguration(anyString())).thenReturn(serviceConfiguration);
+        lenient().when(configurationRegistry.getMqttServicePulsarUrl()).thenReturn(TEST_SERVICE_URL);
+        lenient().when(configurationRegistry.getMicroserviceCredential(anyString()))
+                .thenReturn(microserviceCredentials);
 
-    // Setup credentials
-    lenient().when(microserviceCredentials.getUsername()).thenReturn(TEST_USERNAME);
-    lenient().when(microserviceCredentials.getPassword()).thenReturn(TEST_PASSWORD);
+        // Setup credentials
+        lenient().when(microserviceCredentials.getUsername()).thenReturn(TEST_USERNAME);
+        lenient().when(microserviceCredentials.getPassword()).thenReturn(TEST_PASSWORD);
 
-    // Setup connector configuration
-    lenient().when(connectorConfiguration.getName()).thenReturn(TEST_CONNECTOR_NAME);
-    lenient().when(connectorConfiguration.getIdentifier()).thenReturn(TEST_CONNECTOR_IDENTIFIER);
-    lenient().when(connectorConfiguration.isEnabled()).thenReturn(true);
+        // Setup connector configuration
+        lenient().when(connectorConfiguration.getName()).thenReturn(TEST_CONNECTOR_NAME);
+        lenient().when(connectorConfiguration.getIdentifier()).thenReturn(TEST_CONNECTOR_IDENTIFIER);
+        lenient().when(connectorConfiguration.isEnabled()).thenReturn(true);
 
-    Map<String, Object> properties = new HashMap<>();
-    properties.put("serviceUrl", TEST_SERVICE_URL);
-    properties.put("enableTls", false);
-    properties.put("authenticationMethod", "basic");
-    properties.put("authenticationParams",
-            String.format("{\"userId\":\"%s/%s\",\"password\":\"%s\"}",
-                    TEST_TENANT, TEST_USERNAME, TEST_PASSWORD));
-    properties.put("pulsarTenant", TEST_TENANT);
-    properties.put("pulsarNamespace", MQTTServicePulsarClient.PULSAR_NAMESPACE);
-    properties.put("connectionTimeoutSeconds", 30);
-    properties.put("operationTimeoutSeconds", 30);
-    properties.put("keepAliveIntervalSeconds", 30);
-    lenient().when(connectorConfiguration.getProperties()).thenReturn(properties);
+        Map<String, Object> properties = new HashMap<>();
+        properties.put("serviceUrl", TEST_SERVICE_URL);
+        properties.put("enableTls", false);
+        properties.put("authenticationMethod", "basic");
+        properties.put("authenticationParams",
+                String.format("{\"userId\":\"%s/%s\",\"password\":\"%s\"}",
+                        TEST_TENANT, TEST_USERNAME, TEST_PASSWORD));
+        properties.put("pulsarTenant", TEST_TENANT);
+        properties.put("pulsarNamespace", MQTTServicePulsarClient.PULSAR_NAMESPACE);
+        properties.put("connectionTimeoutSeconds", 30);
+        properties.put("operationTimeoutSeconds", 30);
+        properties.put("keepAliveIntervalSeconds", 30);
+        lenient().when(connectorConfiguration.getProperties()).thenReturn(properties);
 
-    // Setup service configuration
-    lenient().when(serviceConfiguration.isLogPayload()).thenReturn(false);
-    lenient().when(serviceConfiguration.isSendSubscriptionEvents()).thenReturn(false);
+        // Setup service configuration
+        lenient().when(serviceConfiguration.isLogPayload()).thenReturn(false);
+        lenient().when(serviceConfiguration.isSendSubscriptionEvents()).thenReturn(false);
 
-    // Setup mapping service - UPDATED for refactored service
-    // The new service uses void rebuildMappingCaches() instead of returning lists
-    lenient().doNothing().when(mappingService).rebuildMappingCaches(anyString(), any());
-    
-    // Mock the cache getter methods that return the mappings
-    lenient().when(mappingService.getCacheMappingInbound(anyString()))
-            .thenReturn(new ConcurrentHashMap<>());
-    lenient().when(mappingService.getCacheOutboundMappings(anyString()))
-            .thenReturn(new ConcurrentHashMap<>());
-    
-    // Mock getMappings if needed
-    lenient().when(mappingService.getMappings(anyString(), any(Direction.class)))
-            .thenReturn(new ArrayList<>());
-}
+        // Setup mapping service - UPDATED for refactored service
+        // The new service uses void rebuildMappingCaches() instead of returning lists
+        lenient().doNothing().when(mappingService).rebuildMappingCaches(anyString(), any());
+
+        // Mock the cache getter methods that return the mappings
+        lenient().when(mappingService.getCacheMappingInbound(anyString()))
+                .thenReturn(new ConcurrentHashMap<>());
+        lenient().when(mappingService.getCacheOutboundMappings(anyString()))
+                .thenReturn(new ConcurrentHashMap<>());
+
+        // Mock getMappings if needed
+        lenient().when(mappingService.getMappings(anyString(), any(Direction.class)))
+                .thenReturn(new ArrayList<>());
+    }
 
     @Test
     void testConstructor() {
@@ -438,9 +438,16 @@ void setUp() {
 
     @Test
     void testSupportsWildcardInTopic() {
-        mqttServicePulsarClient = new MQTTServicePulsarClient();
+        // Use the full constructor to initialize connectorConfiguration
+        mqttServicePulsarClient = new MQTTServicePulsarClient(
+                configurationRegistry,
+                connectorRegistry,
+                connectorConfiguration,
+                dispatcher,
+                TEST_SUBSCRIPTION_ID,
+                TEST_TENANT);
 
-        assertFalse(mqttServicePulsarClient.supportsWildcardInTopic(Direction.INBOUND));
+        assertTrue(mqttServicePulsarClient.supportsWildcardInTopic(Direction.INBOUND));
         assertFalse(mqttServicePulsarClient.supportsWildcardInTopic(Direction.OUTBOUND));
     }
 

@@ -72,7 +72,7 @@ interface SubscriptionServiceConfig {
 @Injectable({
   providedIn: 'root'
 })
-export class SubscriptionService  {
+export class SubscriptionService {
   // Configuration
   private readonly config: SubscriptionServiceConfig = {
     enableRetry: true,
@@ -82,6 +82,8 @@ export class SubscriptionService  {
 
   // Loading states
   private readonly loadingStates = new Map<string, BehaviorSubject<boolean>>();
+  public readonly STATIC_DEVICE_SUBSCRIPTION = "DynamicMapperStaticDeviceSubscription";
+  public readonly DYNAMIC_DEVICE_SUBSCRIPTION = "DynamicMapperDynamicDeviceSubscription";
 
   constructor(
     private readonly client: FetchClient,
@@ -217,7 +219,7 @@ export class SubscriptionService  {
   /**
    * Deletes device notification subscription
    */
-  async deleteSubscriptionDevice(device: IIdentified): Promise<void> {
+  async deleteSubscriptionDevice(device: IIdentified, subscription: string): Promise<void> {
     if (!device?.id) {
       throw new ValidationError('Device ID is required for deletion');
     }
@@ -226,7 +228,7 @@ export class SubscriptionService  {
       'deleteSubscriptionDevice',
       async () => {
         const response = await this.client.fetch(
-          `${BASE_URL}/${PATH_SUBSCRIPTION_ENDPOINT}/${device.id}`,
+          `${BASE_URL}/${PATH_SUBSCRIPTION_ENDPOINT}/${device.id}?subscription=${subscription}`,
           {
             headers: {
               'content-type': 'application/json'
@@ -279,7 +281,7 @@ export class SubscriptionService  {
   /**
    * Gets device-based notification subscription
    */
-  async getSubscriptionDevice(): Promise<NotificationSubscriptionResponse | null> {
+  async getSubscriptionDevice(subscription: string): Promise<NotificationSubscriptionResponse | null> {
     const features = await this.sharedService.getFeatures();
 
     if (!features?.outputMappingEnabled) {
@@ -290,7 +292,7 @@ export class SubscriptionService  {
       'getSubscriptionDevice',
       async () => {
         const response = await this.client.fetch(
-          `${BASE_URL}/${PATH_SUBSCRIPTION_ENDPOINT}`,
+          `${BASE_URL}/${PATH_SUBSCRIPTION_ENDPOINT}?subscription=${subscription}`,
           {
             headers: {
               'content-type': 'application/json'
@@ -381,7 +383,8 @@ export class SubscriptionService  {
     types: NotificationSubscriptionResponse | null;
   }> {
     const [devices, groups, types] = await Promise.allSettled([
-      this.getSubscriptionDevice(),
+      this.getSubscriptionDevice(this.STATIC_DEVICE_SUBSCRIPTION),
+      this.getSubscriptionDevice(this.DYNAMIC_DEVICE_SUBSCRIPTION),
       this.getSubscriptionByDeviceGroup(),
       this.getSubscriptionByDeviceType()
     ]);
