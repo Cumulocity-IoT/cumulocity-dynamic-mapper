@@ -64,6 +64,7 @@ function show_usage() {
   echo "  configurations delete                               : Delete service configurations"
   echo "  configurations list                                 : List service configurations"
   echo "  templates init                                      : Inits system code templates to default values"
+  echo "  subscriptions cleanup --deprecated                  : Delete subscription DynamicMapperDeviceSubscription, as this is renamed to DynamicMapperStaticDeviceSubscription"
   echo "  mappings migrate:    Migrate mappings from pre 4.7 format to new format. The migration consists of the following steps:"
   echo "     Step 0 save existing mappings to file ORIGINAL_MAPPINGS and only use the attribute d11r_mapping"
   echo "     Step 1 transform mappings to the new format except the substitutions"
@@ -172,6 +173,41 @@ function mappings_export() {
   echo "Exporting mappings to file '$filename'"
   c8y inventory list --type d11r_mapping --includeAll --select name,type,d11r_mapping > "$filename"
   echo "Mappings exported successfully to '$filename'"
+}
+
+function subscriptions_cleanup() {
+  check_prerequisites
+  
+  # Parse options
+  local deprecated=false
+  
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --deprecated)
+        deprecated=true
+        shift
+        ;;
+      *)
+        echo "Unknown option: $1"
+        show_usage
+        exit 1
+        ;;
+    esac
+  done
+
+  if [ "$deprecated" = true ]; then
+    echo "Deleting deprecated subscription 'DynamicMapperDeviceSubscription'..."
+    echo "This subscription has been renamed to 'DynamicMapperStaticDeviceSubscription'"
+    
+    # Delete the deprecated subscription
+    c8y notification2 subscriptions list --subscription DynamicMapperDeviceSubscription | c8y notification2 subscriptions delete
+    
+    echo "Deprecated subscription deleted successfully."
+  else
+    echo "Error: Please specify --deprecated flag to delete the deprecated subscription"
+    show_usage
+    exit 1
+  fi
 }
 
 function mappings_list() {
