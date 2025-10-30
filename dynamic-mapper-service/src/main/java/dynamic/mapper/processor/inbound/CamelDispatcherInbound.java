@@ -8,6 +8,9 @@ import java.util.concurrent.Future;
 import com.cumulocity.model.ID;
 import com.cumulocity.sdk.client.SDKException;
 import dynamic.mapper.processor.ProcessingException;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.Timer;
 import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
 import org.apache.camel.Message;
@@ -36,6 +39,9 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
 
     private final ProducerTemplate producerTemplate;
     private final CamelContext camelContext;
+    private final Timer inboundProcessingTimer;
+    private final Counter inboundProcessingCounter;
+
 
     /**
      * Constructor matching DispatcherInbound signature
@@ -47,9 +53,17 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
         this.mappingService = configurationRegistry.getMappingService();
         this.configurationRegistry = configurationRegistry;
 
+
         // Initialize Camel components
         this.camelContext = configurationRegistry.getCamelContext();
         this.producerTemplate = camelContext.createProducerTemplate();
+        this.inboundProcessingTimer = Timer.builder("dynmapper_inbound_processing_time")
+                .tag("tenant", connectorClient.getTenant())
+                .tag("connector", connectorClient.getConnectorIdentifier())
+                .description("Processing time of inbound messages").register(Metrics.globalRegistry);
+        this.inboundProcessingCounter = Counter.builder("dynmapper_inbound_message_total")
+                .tag("tenant", connectorClient.getTenant()).description("Total number of inbound messages")
+                .tag("connector", connectorClient.getTenant()).register(Metrics.globalRegistry);
     }
 
     @Override
@@ -73,6 +87,7 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
      * signature
      */
     private ProcessingResultWrapper<?> processMessage(ConnectorMessage connectorMessage, Mapping testMapping) {
+        Timer.Sample timer = Timer.start(Metrics.globalRegistry);
         boolean testing = testMapping != null;
         String topic = connectorMessage.getTopic();
         String tenant = connectorMessage.getTenant();
@@ -85,6 +100,7 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
                 log.info("{} - PROCESSING: message on topic: [{}], payload: {}", tenant, topic, payload);
             }
         }
+        this.inboundProcessingCounter.increment();
 
         Qos consolidatedQos = Qos.AT_LEAST_ONCE;
         ProcessingResultWrapper<?> result = ProcessingResultWrapper.builder()
@@ -176,6 +192,8 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
                     contexts = resultExchange.getIn().getHeader("processedContexts",
                             List.class);
                 }
+                // Stop the timer
+                timer.stop(inboundProcessingTimer);
                 return contexts != null ? contexts : new ArrayList<>();
 
             } catch (Exception e) {

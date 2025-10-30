@@ -78,13 +78,9 @@ ARRAY_MESSAGE = True
 QUEUE_SIZE = 5000  # the size of the queue
 
 # parameter to control load
-<<<<<<< develop
+
 TPS = 5# TPS represents the maximum number of allowed publish operations within a specified time period. It effectively controls the rate at which messages can be published to MQTT topics.
 WORKERS = 2
-=======
-TPS = 1000# TPS represents the maximum number of allowed publish operations within a specified time period. It effectively controls the rate at which messages can be published to MQTT topics.
-WORKERS = 20
->>>>>>> main
 SLEEP_BETWEEN_ITERATIONS = 0
 
 # functional parameter
@@ -198,7 +194,7 @@ def consume_tasks(client):
 
         payload = json.dumps(new_task)
 
-        topic = root_topic + geodict_topic_code
+        topic = root_topic + geodict_topic
         # just send first item form the new_task list
         payload = json.dumps(exa_payload)
         publish(client, payload, topic)
