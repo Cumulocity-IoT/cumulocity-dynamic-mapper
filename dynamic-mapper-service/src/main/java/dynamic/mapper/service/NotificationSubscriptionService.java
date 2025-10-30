@@ -170,7 +170,7 @@ public class NotificationSubscriptionService {
                             ManagedObjectRepresentation deviceMor = c8yAgent.getManagedObjectForId(tenant,
                                     deviceToRemove.getId(), false);
                             configurationRegistry.getNotificationSubscriber().unsubscribeDeviceAndDisconnect(tenant,
-                                    deviceMor, Utils.DYNAMIC_DEVICE_SUBSCRIBER);
+                                    deviceMor, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
                         }
                     } catch (Exception e) {
                         log.error("{} - Error removing group subscriptions: ", tenant, e);
@@ -206,7 +206,7 @@ public class NotificationSubscriptionService {
                     .getManagedObjectForId(tenant, device.getId(), false);
             if (deviceMor != null) {
                 configurationRegistry.getNotificationSubscriber()
-                        .unsubscribeDeviceAndDisconnect(tenant, deviceMor, Utils.DYNAMIC_DEVICE_SUBSCRIBER);
+                        .unsubscribeDeviceAndDisconnect(tenant, deviceMor, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
             }
         }
 
@@ -248,7 +248,7 @@ public class NotificationSubscriptionService {
                     .getManagedObjectForId(tenant, device.getId(), false);
             if (mor != null) {
                 configurationRegistry.getNotificationSubscriber()
-                        .unsubscribeDeviceAndDisconnect(tenant, mor, Utils.DYNAMIC_DEVICE_SUBSCRIBER);
+                        .unsubscribeDeviceAndDisconnect(tenant, mor, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
             }
         }
     }
