@@ -78,6 +78,8 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
     const pathMatch = href.match(/c8y-pkg-dynamic-mapper\/node1\/mappings\/subscription\/(static|dynamic|deviceToClientMap)/);
     this.path = pathMatch ? pathMatch[1] : null;
 
+    this.titleSubscription = `Subscription (${this.path}) devices mapping outbound`;
+
     this.loadSubscriptionDevice();
     this.loadSubscriptionByDeviceGroup();
     this.loadSubscriptionByDeviceType();
@@ -109,7 +111,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
   static: boolean = false;
   path: string;
   titleMapping: string;
-  readonly titleSubscription: string = 'Subscription devices mapping outbound';
+  titleSubscription: string = 'Subscription devices mapping outbound';
   deploymentMapEntry: DeploymentMapEntry;
 
   readonly displayOptions: DisplayOptions = {
@@ -173,7 +175,8 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
   }
 
   async loadSubscriptionDevice(): Promise<void> {
-    this.subscriptionDevices = await this.subscriptionService.getSubscriptionDevice();
+    const subscription = this.path === "dynamic"? this.subscriptionService.DYNAMIC_DEVICE_SUBSCRIPTION: this.subscriptionService.STATIC_DEVICE_SUBSCRIPTION;
+    this.subscriptionDevices = await this.subscriptionService.getSubscriptionDevice(subscription);
     this.subscribedDevices = this.subscriptionDevices.devices;
     this.subscriptionGrid?.reload();
   }
@@ -209,7 +212,9 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
   async deleteSubscription(device: IIdentified): Promise<void> {
     // console.log('Delete device', device);
     try {
-      await this.subscriptionService.deleteSubscriptionDevice(device);
+    const subscription = this.path === "dynamic"? this.subscriptionService.DYNAMIC_DEVICE_SUBSCRIPTION: this.subscriptionService.STATIC_DEVICE_SUBSCRIPTION;
+
+      await this.subscriptionService.deleteSubscriptionDevice(device, subscription);
       this.alertService.success(
         gettext('Subscription for this device deleted successfully')
       );
