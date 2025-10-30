@@ -28,7 +28,8 @@ public enum MappingType {
     PROTOBUF_INTERNAL("PROTOBUF_INTERNAL"),
     EXTENSION_SOURCE("EXTENSION_SOURCE"),
     EXTENSION_SOURCE_TARGET("EXTENSION_SOURCE_TARGET"),
-    CODE_BASED("CODE_BASED"), ;
+    CODE_BASED("CODE_BASED") // this value is deprecated and will be removed in future versions, instead set transformationType = TransformationType.CODE_BASED
+    ;
 
     public final String name;
 

@@ -248,7 +248,6 @@ public class MappingService {
         updateCacheAfterChange(tenant, mapping);
 
         if (active) {
-            MappingStatus status = statusService.getOrCreateStatus(tenant, mapping);
             statusService.resetFailureCount(tenant, mapping.getIdentifier());
         }
 
