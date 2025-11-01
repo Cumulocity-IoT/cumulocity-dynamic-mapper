@@ -1,17 +1,37 @@
 #!/bin/bash
-# File: resources/script/mem-test/load-test-outbound.sh
+# File: resources/script/mem-test/test-generat.sh
 
 BASE_URL="http://localhost:8080"
 ENDPOINT="/test/mapping"
-ITERATIONS=500
-REPORT_INTERVAL=50
-TEST_REQUEST_FILE="resources/script/mem-test/test-outbound-request.json"
+ITERATIONS=1
+REPORT_INTERVAL=1
+TEST_REQUEST_DIR="resources/script/mem-test"
+
+# Check if request file name is provided
+if [ -z "$1" ]; then
+    echo "ERROR: Test request file name not provided"
+    echo "Usage: $0 <request-file-name> [iterations] [report-interval]"
+    echo "Example: $0 test-inbound-request_01.json 1000 100"
+    exit 1
+fi
+
+TEST_REQUEST_FILE="${TEST_REQUEST_DIR}/$1"
+
+# Optional parameters
+if [ -n "$2" ]; then
+    ITERATIONS=$2
+fi
+
+if [ -n "$3" ]; then
+    REPORT_INTERVAL=$3
+fi
 
 echo "=========================================="
 echo "Load Test: FlowProcessorOutboundProcessor"
 echo "Service: dynamic-mapper-service-6.1.1-SNAPSHOT"
 echo "=========================================="
 echo "Endpoint: ${BASE_URL}${ENDPOINT}"
+echo "Request file: $1"
 echo "Total iterations: ${ITERATIONS}"
 echo "Report interval: ${REPORT_INTERVAL}"
 echo "=========================================="
@@ -108,6 +128,7 @@ echo ""
 echo "=========================================="
 echo "Load Test Complete"
 echo "=========================================="
+echo "Request file: $1"
 echo "Total iterations: ${ITERATIONS}"
 echo "Successful: ${success}"
 echo "Failed: ${failed}"

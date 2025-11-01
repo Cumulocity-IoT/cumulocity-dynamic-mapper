@@ -20,7 +20,7 @@
 
 import { NgModule } from '@angular/core';
 import { CoreModule, hookNavigator, hookRoute, hookTab } from '@c8y/ngx-components';
-import { MonitoringComponent } from './grid/monitoring.component';
+import { MonitoringComponent } from './statistic/monitoring.component';
 import { IdRendererComponent } from './renderer/id-cell.renderer.component';
 import { ServiceConfigurationModule } from '../configuration';
 import { NumberRendererComponent } from './renderer/number.renderer.component';
@@ -33,6 +33,7 @@ import { BsDatepickerModule } from 'ngx-bootstrap/datepicker';
 import { SharedModule } from '../shared';
 import { CollapseModule } from 'ngx-bootstrap/collapse';
 import { MonitoringNavigationFactory } from './monitoring-navigation.factory';
+import { StatisticTabFactory } from './statistic-tab.factory';
 
 @NgModule({
   declarations: [
@@ -56,7 +57,13 @@ import { MonitoringNavigationFactory } from './monitoring-navigation.factory';
   exports: [],
   providers: [
     hookRoute({
-      path: `c8y-pkg-dynamic-mapper/${NODE2}/monitoring/grid`,
+      path: `c8y-pkg-dynamic-mapper/${NODE2}/monitoring/statistic/inbound`,
+      component: MonitoringComponent, resolve: {
+        feature: featureResolver
+      }
+    }),
+    hookRoute({
+      path: `c8y-pkg-dynamic-mapper/${NODE2}/monitoring/statistic/outbound`,
       component: MonitoringComponent, resolve: {
         feature: featureResolver
       }
@@ -70,6 +77,7 @@ import { MonitoringNavigationFactory } from './monitoring-navigation.factory';
       component: MappingServiceEventComponent
     }),
     hookNavigator(MonitoringNavigationFactory),
+    hookTab(StatisticTabFactory),
   ]
 })
 export class MonitoringModule { }

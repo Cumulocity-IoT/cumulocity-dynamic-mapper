@@ -43,7 +43,7 @@ export class MonitoringNavigationFactory implements NavigatorNodeFactory {
       parent: gettext('Monitoring'),
       label: gettext('Statistic processed'),
       icon: 'monitoring',
-      path: `c8y-pkg-dynamic-mapper/${NODE2}/monitoring/grid`,
+      path: `c8y-pkg-dynamic-mapper/${NODE2}/monitoring/statistic/inbound`,
       priority: 500,
       preventDuplicates: true
     }),
