@@ -19,7 +19,7 @@
  */
 
 import { NgModule } from '@angular/core';
-import { CoreModule, hookNavigator, hookRoute, hookTab } from '@c8y/ngx-components';
+import { CommonModule, CoreModule, hookNavigator, hookRoute, hookTab } from '@c8y/ngx-components';
 import { MonitoringComponent } from './statistic/monitoring.component';
 import { IdRendererComponent } from './renderer/id-cell.renderer.component';
 import { ServiceConfigurationModule } from '../configuration';
@@ -34,6 +34,7 @@ import { SharedModule } from '../shared';
 import { CollapseModule } from 'ngx-bootstrap/collapse';
 import { MonitoringNavigationFactory } from './monitoring-navigation.factory';
 import { StatisticTabFactory } from './statistic-tab.factory';
+import { PopoverModule } from 'ngx-bootstrap/popover';
 
 @NgModule({
   declarations: [
@@ -46,6 +47,8 @@ import { StatisticTabFactory } from './statistic-tab.factory';
   ],
   imports: [
     CoreModule,
+    CommonModule,
+    PopoverModule,
     ServiceConfigurationModule,
     BsDatepickerModule,
     NgxEchartsModule.forRoot({

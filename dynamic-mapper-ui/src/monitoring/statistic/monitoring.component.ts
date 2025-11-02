@@ -24,7 +24,6 @@ import {
   Column,
   ColumnDataType,
   DisplayOptions,
-  gettext,
   Pagination
 } from '@c8y/ngx-components';
 import { BehaviorSubject, catchError, filter, map, of, Subject, takeUntil } from 'rxjs';
@@ -42,6 +41,7 @@ import { DirectionRendererComponent } from '../renderer/direction.renderer.compo
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { NameRendererComponent } from '../../mapping/renderer/name.renderer.component';
 import { ActivatedRoute, Router } from '@angular/router';
+import { gettext } from '@c8y/ngx-components/gettext';
 
 interface MonitoringComponentState {
   mappingStatuses: MappingStatus[];
@@ -88,7 +88,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
 
   readonly mappingStatus$ = this.state$.pipe(
     map(state => state.mappingStatuses),
-    map(statuses => statuses.filter(st => st.direction == this.direction)))
+    map(statuses => statuses.filter(st => (st.direction == this.direction || st.direction == null))))
   readonly isLoading$ = this.state$.pipe(map(state => state.isLoading));
   readonly error$ = this.state$.pipe(map(state => state.error));
 
@@ -112,15 +112,6 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       gridTrackSize: '15%',
       visible: true
     },
-    // {
-    //   name: 'direction',
-    //   header: 'Direction',
-    //   path: 'direction',
-    //   filterable: false,
-    //   dataType: ColumnDataType.Icon,
-    //   cellRendererComponent: DirectionRendererComponent,
-    //   visible: true
-    // },
     {
       name: 'mappingTopic',
       header: 'Mapping topic',
@@ -138,6 +129,33 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       //gridTrackSize: '20%'
     },
     {
+      header: '# Received',
+      name: 'messagesReceived',
+      path: 'messagesReceived',
+      filterable: true,
+      dataType: ColumnDataType.Numeric,
+      cellRendererComponent: NumberRendererComponent,
+      gridTrackSize: '12.5%'
+    },
+    {
+      header: '# Snooped total',
+      name: 'snoopedTemplatesTotal',
+      path: 'snoopedTemplatesTotal',
+      filterable: true,
+      dataType: ColumnDataType.Numeric,
+      cellRendererComponent: NumberRendererComponent,
+      gridTrackSize: '12.5%'
+    },
+    {
+      header: '# Snooped active',
+      name: 'snoopedTemplatesActive',
+      path: 'snoopedTemplatesActive',
+      filterable: true,
+      dataType: ColumnDataType.Numeric,
+      cellRendererComponent: NumberRendererComponent,
+      gridTrackSize: '12.5%'
+    },
+    {
       header: '# Errors',
       name: 'errors',
       path: 'errors',
@@ -147,34 +165,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       gridTrackSize: '12.5%'
     },
     {
-      header: '# Messages received',
-      name: 'messagesReceived',
-      path: 'messagesReceived',
-      filterable: true,
-      dataType: ColumnDataType.Numeric,
-      cellRendererComponent: NumberRendererComponent,
-      gridTrackSize: '12.5%'
-    },
-    {
-      header: '# Snooped templates total',
-      name: 'snoopedTemplatesTotal',
-      path: 'snoopedTemplatesTotal',
-      filterable: true,
-      dataType: ColumnDataType.Numeric,
-      cellRendererComponent: NumberRendererComponent,
-      gridTrackSize: '12.5%'
-    },
-    {
-      header: '# Snooped templates active',
-      name: 'snoopedTemplatesActive',
-      path: 'snoopedTemplatesActive',
-      filterable: true,
-      dataType: ColumnDataType.Numeric,
-      cellRendererComponent: NumberRendererComponent,
-      gridTrackSize: '12.5%'
-    },
-    {
-      header: '# Current failure count',
+      header: '# Current failures',
       name: 'currentFailureCount',
       path: 'currentFailureCount',
       filterable: true,

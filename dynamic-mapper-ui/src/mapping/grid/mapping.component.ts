@@ -35,8 +35,7 @@ import {
   ColumnDataType,
   DataGridComponent,
   DisplayOptions,
-  Pagination,
-  gettext
+  Pagination
 } from '@c8y/ngx-components';
 import { saveAs } from 'file-saver';
 import {
@@ -85,6 +84,7 @@ import { AdvisorAction, EditorMode } from '../shared/stepper.model';
 import { AdviceActionComponent } from './advisor/advice-action.component';
 import { SubscriptionService } from '../core/subscription.service';
 import { MappingTypeDrawerComponent } from '../mapping-create/mapping-type-drawer.component';
+import { gettext } from '@c8y/ngx-components/gettext';
 
 @Component({
   selector: 'd11r-mapping-mapping-grid',

@@ -24,7 +24,6 @@ import * as _ from 'lodash';
 import {
   AlertService,
   AppStateService,
-  gettext,
   NavigatorNode,
   NavigatorNodeFactory
 } from '@c8y/ngx-components';
@@ -33,6 +32,7 @@ import { NODE1, NODE2, NODE3 } from '../mapping/util';
 import { Router } from '@angular/router';
 import { ConnectorConfigurationService } from '../service/connector-configuration.service';
 import { ConnectorConfiguration } from '..';
+import { gettext } from '@c8y/ngx-components/gettext';
 
 @Injectable()
 export class MappingNavigationFactory implements NavigatorNodeFactory {

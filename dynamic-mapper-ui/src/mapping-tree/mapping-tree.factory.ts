@@ -23,12 +23,12 @@ import * as _ from 'lodash';
 import {
   AlertService,
   AppStateService,
-  gettext,
   NavigatorNode,
   NavigatorNodeFactory
 } from '@c8y/ngx-components';
 import { Router } from '@angular/router';
 import { NODE2, SharedService } from '../shared';
+import { gettext } from '@c8y/ngx-components/gettext';
 
 @Injectable()
 export class MappingTreeNavigationFactory implements NavigatorNodeFactory {
@@ -38,12 +38,12 @@ export class MappingTreeNavigationFactory implements NavigatorNodeFactory {
   appName: string;
   isStandaloneApp: boolean = false;
   staticNodesStandalone = {
-    treegMappingNode: new NavigatorNode({
+    treeMappingNode: new NavigatorNode({
       parent: gettext('Monitoring'),
       label: gettext('Hierarchy mapping'),
-      icon: 'monitoring',
+      icon: 'hierarchy',
       path: `c8y-pkg-dynamic-mapper/${NODE2}/tree`,
-      priority: 500,
+      priority: 450,
       preventDuplicates: true
     }),
   } as const;

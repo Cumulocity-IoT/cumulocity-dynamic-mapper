@@ -19,16 +19,19 @@
  */
 
 import { NgModule } from '@angular/core';
-import { CoreModule, hookRoute } from '@c8y/ngx-components';
+import { CommonModule, CoreModule, hookRoute } from '@c8y/ngx-components';
 import { connectorResolver, SharedModule, ConnectorDetailsComponent } from '../shared';
 import { ConnectorConfigurationComponent } from './connector-configuration.component';
 import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
 import { featureResolver, NODE3 } from '../shared/mapping/util';
+import { PopoverModule } from 'ngx-bootstrap/popover';
 
 @NgModule({
   declarations: [ConnectorConfigurationComponent],
   imports: [
     CoreModule,
+    CommonModule,
+    PopoverModule,
     SharedModule,
     BsDropdownModule.forRoot()
   ],

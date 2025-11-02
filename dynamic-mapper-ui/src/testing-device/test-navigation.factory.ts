@@ -24,12 +24,12 @@ import * as _ from 'lodash';
 import {
   AlertService,
   AppStateService,
-  gettext,
   NavigatorNode,
   NavigatorNodeFactory
 } from '@c8y/ngx-components';
 import { Router } from '@angular/router';
 import { NODE2, SharedService } from '../shared';
+import { gettext } from '@c8y/ngx-components/gettext';
 
 @Injectable()
 export class TestNavigationFactory implements NavigatorNodeFactory {

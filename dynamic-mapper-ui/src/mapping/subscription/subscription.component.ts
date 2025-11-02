@@ -34,8 +34,7 @@ import {
   ColumnDataType,
   DataGridComponent,
   DisplayOptions,
-  Pagination,
-  gettext
+  Pagination
 } from '@c8y/ngx-components';
 import {
   API,
@@ -54,6 +53,7 @@ import { DeploymentMapEntry, SharedService } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { Device, NotificationSubscriptionResponse } from '../shared/mapping.model';
 import { SubscriptionService } from '../core/subscription.service';
+import { gettext } from '@c8y/ngx-components/gettext';
 
 @Component({
   selector: 'd11r-mapping-subscription-grid',
