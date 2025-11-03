@@ -1,11 +1,11 @@
 #!/bin/bash
-# File: resources/script/mem-test/test-generat.sh
+# File: resources/script/performance/profiler/test-generator.sh
 
 BASE_URL="http://localhost:8080"
 ENDPOINT="/test/mapping"
 ITERATIONS=1
 REPORT_INTERVAL=1
-TEST_REQUEST_DIR="resources/script/mem-test"
+TEST_REQUEST_DIR="resources/script/performance/profiler"
 
 # Check if request file name is provided
 if [ -z "$1" ]; then
