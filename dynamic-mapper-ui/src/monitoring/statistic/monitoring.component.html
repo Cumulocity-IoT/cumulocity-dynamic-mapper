@@ -33,7 +33,7 @@
 <div class="card">
   <!-- <div class="card-block" style="max-height: 400px; overflow: auto"> -->
   <div class="card-block">
-    <c8y-data-grid [configureColumnsEnabled]="false" [title]="'Mapping monitoring' | translate" [columns]="columns"
+    <c8y-data-grid [configureColumnsEnabled]="false" [title]="titleStatistic | translate" [columns]="columns"
       [rows]="mappingStatus$ |async" [pagination]="pagination" [actionControls]="actionControls">
     </c8y-data-grid>
   </div>

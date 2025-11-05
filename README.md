@@ -86,7 +86,7 @@ You have to start it as follows:
 #python3 resources/script/mapping/import_mappings_01.py -p <YOUR_PASSWORD> -U <YOUR_TENANT> -u <YOUR_USER> -f resources/script/mapping/sampleMapping/sampleMappings_02.json
 ```
 
-The mappings with inputs and substitutions are explained in the [sample document](./resources/script/mapping/sampleMapping/sampleMappings_02.html).
+The mappings with inputs and substitutions are explained in the [sample document](./resources/samples/SampleMappings_19.xlsx).
 
 ## Security evaluation code-base mappings (JavaScript)
 

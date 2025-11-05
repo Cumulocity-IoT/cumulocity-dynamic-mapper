@@ -22,6 +22,7 @@
 package dynamic.mapper.connector.pulsar;
 
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
+
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.configuration.ConnectorId;
 import dynamic.mapper.connector.core.ConnectorProperty;
@@ -34,7 +35,6 @@ import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.core.ConnectorStatus;
 import dynamic.mapper.model.Direction;
-import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
@@ -269,44 +269,57 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
             return;
         }
 
-        try {
-            connectionStateManager.updateStatus(ConnectorStatus.CONNECTING, true, true);
+        connectWithRetry();
+    }
 
-            // Subscribe to platform topic (inbound)
-            subscribeToTowardsPlatformTopic();
+    private void connectWithRetry() {
+        int maxAttempts = 3;
+        int attempt = 0;
 
-            // Create producer for device topic (outbound)
-            createTowardsDeviceProducer();
-
-            // Verify connection
-            boolean consumerConnected = platformConsumer != null && platformConsumer.isConnected();
-            boolean producerConnected = deviceProducer != null && deviceProducer.isConnected();
-
-            if (!consumerConnected || !producerConnected) {
-                throw new ConnectorException(
-                        String.format("Connection incomplete - consumer: %s, producer: %s",
-                                consumerConnected, producerConnected));
+        while (attempt < maxAttempts && !isConnected() && shouldConnect()) {
+            if (Thread.currentThread().isInterrupted()) {
+                return;
             }
 
-            // Now set connected state
-            connectionStateManager.setConnected(true);
-            connectionStateManager.updateStatus(ConnectorStatus.CONNECTED, true, true);
+            try {
+                connectionStateManager.updateStatus(ConnectorStatus.CONNECTING, true, true);
 
-            log.info("{} - MQTT Service Pulsar connector connected successfully (consumer: {}, producer: {})",
-                    tenant, consumerConnected, producerConnected);
+                // Subscribe to platform topic (inbound)
+                subscribeToTowardsPlatformTopic();
 
-            // Initialize subscriptions after successful connection
-            if (isConnected()) {
-                initializeSubscriptionsAfterConnect();
+                // Create producer for device topic (outbound)
+                createTowardsDeviceProducer();
+
+                // Verify connection
+                boolean consumerConnected = platformConsumer != null && platformConsumer.isConnected();
+                boolean producerConnected = deviceProducer != null && deviceProducer.isConnected();
+
+                if (!consumerConnected || !producerConnected) {
+                    throw new ConnectorException(
+                            String.format("Connection incomplete - consumer: %s, producer: %s",
+                                    consumerConnected, producerConnected));
+                }
+
+                // Now set connected state
+                connectionStateManager.setConnected(true);
+                connectionStateManager.updateStatus(ConnectorStatus.CONNECTED, true, true);
+
+                log.info("{} - MQTT Service Pulsar connector connected successfully (consumer: {}, producer: {})",
+                        tenant, consumerConnected, producerConnected);
+
+                // Initialize subscriptions after successful connection
+                if (isConnected()) {
+                    initializeSubscriptionsAfterConnect();
+                }
+
+            } catch (Exception e) {
+                log.error("{} - Error connecting MQTT Service Pulsar connector: {}", tenant, e.getMessage(), e);
+                connectionStateManager.updateStatusWithError(e);
+                connectionStateManager.setConnected(false);
+
+                // Cleanup on failure
+                cleanupOnConnectionFailure();
             }
-
-        } catch (Exception e) {
-            log.error("{} - Error connecting MQTT Service Pulsar connector: {}", tenant, e.getMessage(), e);
-            connectionStateManager.updateStatusWithError(e);
-            connectionStateManager.setConnected(false);
-
-            // Cleanup on failure
-            cleanupOnConnectionFailure();
         }
     }
 
@@ -358,7 +371,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                     tenant, towardsPlatformTopic, subscriptionName);
             return;
 
-        } catch (PulsarClientException.FeatureNotSupportedException e) {
+        } catch (PulsarClientException e) {
             lastException = e;
             log.warn("{} - Standard subscription failed (PIP-344), trying async", tenant);
         }
@@ -572,6 +585,12 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         }
 
         DynamicMapperRequest request = context.getCurrentRequest();
+
+        if (context.getCurrentRequest() == null ||
+                context.getCurrentRequest().getRequest() == null) {
+            log.warn("{} - No payload to publish for mapping: {}", tenant, context.getMapping().getName());
+            return;
+        }
         String payload = request.getRequest();
         String originalMqttTopic = context.getResolvedPublishTopic();
         Qos qos = Qos.AT_LEAST_ONCE; // MQTT Service uses AT_LEAST_ONCE
@@ -630,12 +649,6 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
             log.info("{} - Published to MQTT Service: QoS={}, topic=[{}], pulsarTopic=[{}], mapping={}",
                     tenant, qos, mqttTopic, towardsDeviceTopic, context.getMapping().getName());
         }
-    }
-
-    @Override
-    public Boolean supportsWildcardInTopic(Direction direction) {
-        // MQTT Service doesn't support wildcards
-        return false;
     }
 
     @Override
@@ -757,7 +770,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
 
         configProps.put("supportsWildcardInTopicInbound",
                 new ConnectorProperty(null, false, 12, ConnectorPropertyType.BOOLEAN_PROPERTY,
-                        true, false, false, null, null));
+                        true, false, true, null, null));
 
         configProps.put("supportsWildcardInTopicOutbound",
                 new ConnectorProperty(null, false, 13, ConnectorPropertyType.BOOLEAN_PROPERTY,

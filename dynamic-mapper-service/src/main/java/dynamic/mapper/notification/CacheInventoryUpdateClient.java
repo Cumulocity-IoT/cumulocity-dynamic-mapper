@@ -21,9 +21,10 @@
 
 package dynamic.mapper.notification;
 
+import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.notification.websocket.NotificationCallback;
-import dynamic.mapper.processor.model.ProcessingResult;
+import dynamic.mapper.processor.model.ProcessingResultWrapper;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
@@ -56,10 +57,10 @@ public class CacheInventoryUpdateClient implements NotificationCallback {
     }
 
     @Override
-    public ProcessingResult<?> onNotification(Notification notification) {
+    public ProcessingResultWrapper<?> onNotification(Notification notification) {
         if (!"UPDATE".equals(notification.getOperation())) {
             log.debug("{} - Ignoring non-UPDATE notification", tenant);
-            return ProcessingResult.builder()
+            return ProcessingResultWrapper.builder()
                 .consolidatedQos(Qos.AT_LEAST_ONCE)
                 .build();
         }
@@ -72,17 +73,17 @@ public class CacheInventoryUpdateClient implements NotificationCallback {
             String sourceId = NotificationHelper.extractSourceId(update, notification.getApi());
             
             if (sourceId != null) {
-                c8yAgent.updateMOInInventoryCache(notificationTenant, sourceId, update);
+                c8yAgent.updateMOInInventoryCache(notificationTenant, sourceId, update, false);
                 log.debug("{} - Updated inventory cache for MO: {}", notificationTenant, sourceId);
             }
             
-            return ProcessingResult.builder()
+            return ProcessingResultWrapper.builder()
                 .consolidatedQos(Qos.AT_LEAST_ONCE)
                 .build();
                 
         } catch (Exception e) {
             log.error("{} - Error processing inventory cache update: {}", tenant, e.getMessage(), e);
-            return ProcessingResult.builder()
+            return ProcessingResultWrapper.builder()
                 .consolidatedQos(Qos.AT_LEAST_ONCE)
                 .error(e)
                 .build();
@@ -97,5 +98,10 @@ public class CacheInventoryUpdateClient implements NotificationCallback {
     @Override
     public void onClose(int statusCode, String reason) {
         log.info("{} - WebSocket closed: status={}, reason={}", tenant, statusCode, reason);
+    }
+
+    @Override
+    public ProcessingResultWrapper<?> onTestNotification(Notification notification, Mapping mapping) {
+        throw new UnsupportedOperationException("Unimplemented method 'onTestNotification'");
     }
 }

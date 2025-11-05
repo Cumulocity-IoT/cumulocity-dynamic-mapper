@@ -21,7 +21,6 @@
 
 package dynamic.mapper.core;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import io.swagger.v3.oas.annotations.media.Schema;

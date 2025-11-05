@@ -44,6 +44,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
+import dynamic.mapper.core.InventoryEnrichmentClient;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
@@ -53,6 +54,7 @@ import dynamic.mapper.model.SnoopStatus;
 import dynamic.mapper.processor.flow.CumulocityMessage;
 import dynamic.mapper.processor.flow.DeviceMessage;
 import dynamic.mapper.processor.flow.FlowContext;
+import dynamic.mapper.processor.flow.SimpleFlowContext;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.TransformationType;
@@ -75,6 +77,9 @@ class FlowProcessorInboundProcessorTest {
 
     @Mock
     private ServiceConfiguration serviceConfiguration;
+
+    @Mock
+    private InventoryEnrichmentClient inventoryEnrichmentClient;
 
     private FlowProcessorInboundProcessor processor;
 
@@ -215,6 +220,14 @@ class FlowProcessorInboundProcessorTest {
         sensorData.put("temp_val", 100);
         payload.put("sensorData", sensorData);
 
+        Context mockGraalContext = mock(Context.class);
+        SimpleFlowContext flowContext = new SimpleFlowContext(
+                mockGraalContext,
+                TEST_TENANT,
+                inventoryEnrichmentClient,
+                true // testing = true
+        );
+
         ProcessingContext<Object> context = ProcessingContext.<Object>builder()
                 .tenant(TEST_TENANT)
                 .mapping(mapping)
@@ -222,6 +235,7 @@ class FlowProcessorInboundProcessorTest {
                 .serviceConfiguration(serviceConfiguration)
                 .topic("flow/test")
                 .clientId("test-client")
+                .flowContext(flowContext)
                 .build();
 
         return context;

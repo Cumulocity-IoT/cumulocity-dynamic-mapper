@@ -55,6 +55,7 @@ import dynamic.mapper.connector.mqtt.MQTT5Client;
 import dynamic.mapper.connector.mqtt.MQTTServiceClient;
 import dynamic.mapper.connector.pulsar.MQTTServicePulsarClient;
 import dynamic.mapper.connector.pulsar.PulsarConnectorClient;
+import dynamic.mapper.connector.test.TestClient;
 import dynamic.mapper.connector.webhook.WebHook;
 import dynamic.mapper.model.DeviceToClientMapRepresentation;
 import dynamic.mapper.model.Direction;
@@ -257,6 +258,13 @@ public class ConfigurationRegistry {
                 log.info("{} - MQTTService Pulsar Connector created, identifier: {}", tenant,
                         connectorConfiguration.getIdentifier());
                 break;
+            case TEST:
+                connectorClient = new TestClient(this, connectorRegistry, connectorConfiguration,
+                        null,
+                        additionalSubscriptionIdTest, tenant);
+                log.info("{} - TestClient Connector created, identifier: {}", tenant,
+                        connectorConfiguration.getIdentifier());
+                break;
             default:
                 log.warn("{} - Unknown connector type: {}", tenant, connectorConfiguration.getConnectorType());
                 break;
@@ -414,7 +422,7 @@ public class ConfigurationRegistry {
             CamelDispatcherOutbound dispatcherOutbound = new CamelDispatcherOutbound(
                     this, connectorClient);
             // Only initialize Connectors which are enabled
-            if (connectorClient.getConnectorConfiguration().isEnabled())
+            if (connectorClient.getConnectorConfiguration() != null && connectorClient.getConnectorConfiguration().isEnabled())
                 getNotificationSubscriber().addConnector(tenant,
                         connectorClient.getConnectorIdentifier(),
                         dispatcherOutbound);

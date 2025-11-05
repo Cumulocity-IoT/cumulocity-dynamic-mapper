@@ -23,9 +23,11 @@ package dynamic.mapper.service;
 
 import dynamic.mapper.model.NotificationSubscriptionRequest;
 import dynamic.mapper.model.NotificationSubscriptionResponse;
+import dynamic.mapper.notification.Utils;
 import dynamic.mapper.model.Device;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
+
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -49,13 +51,13 @@ public class NotificationSubscriptionService {
     private final ConfigurationRegistry configurationRegistry;
 
     public NotificationSubscriptionResponse createDeviceSubscription(String tenant,
-            NotificationSubscriptionRequest request) {
+            NotificationSubscriptionRequest request, String subscription) {
 
         List<Device> allChildDevices = new ArrayList<>();
 
         for (Device device : request.getDevices()) {
             ManagedObjectRepresentation mor = configurationRegistry.getC8yAgent()
-                    .getManagedObjectForId(tenant, device.getId());
+                    .getManagedObjectForId(tenant, device.getId(), false);
 
             if (mor != null) {
                 allChildDevices = configurationRegistry.getNotificationSubscriber()
@@ -64,9 +66,9 @@ public class NotificationSubscriptionService {
                 // Subscribe each child device
                 for (Device childDevice : allChildDevices) {
                     ManagedObjectRepresentation childMor = configurationRegistry.getC8yAgent()
-                            .getManagedObjectForId(tenant, childDevice.getId());
+                            .getManagedObjectForId(tenant, childDevice.getId(), false);
                     configurationRegistry.getNotificationSubscriber()
-                            .subscribeDeviceAndConnect(tenant, childMor, request.getApi());
+                            .subscribeDeviceAndConnect(tenant, childMor, request.getApi(), subscription);
                 }
             } else {
                 log.warn("{} - Device with id {} does not exist", tenant, device.getId());
@@ -86,7 +88,7 @@ public class NotificationSubscriptionService {
 
         // Get current subscriptions
         NotificationSubscriptionResponse current = configurationRegistry.getNotificationSubscriber()
-                .getSubscriptionsDevices(tenant, null, null);
+                .getSubscriptionsDevices(tenant, null, Utils.STATIC_DEVICE_SUBSCRIPTION);
 
         // Calculate differences
         List<Device> toAdd = calculateDevicesToAdd(request.getDevices(), current.getDevices());
@@ -129,7 +131,7 @@ public class NotificationSubscriptionService {
 
             // Subscribe to new groups
             for (Device group : toBeCreatedGroups) {
-                ManagedObjectRepresentation groupMor = c8yAgent.getManagedObjectForId(tenant, group.getId());
+                ManagedObjectRepresentation groupMor = c8yAgent.getManagedObjectForId(tenant, group.getId(), false);
                 if (groupMor != null) {
                     // add subscription for deviceGroup
                     configurationRegistry.getNotificationSubscriber().subscribeByDeviceGroup(tenant, groupMor);
@@ -149,15 +151,15 @@ public class NotificationSubscriptionService {
             if (!allChildDevices.isEmpty()) {
                 for (Device childDevice : allChildDevices) {
                     ManagedObjectRepresentation childDeviceMor = c8yAgent.getManagedObjectForId(tenant,
-                            childDevice.getId());
+                            childDevice.getId(), false);
                     configurationRegistry.getNotificationSubscriber().subscribeDeviceAndConnect(tenant, childDeviceMor,
-                            request.getApi());
+                            request.getApi(), Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
                 }
             }
 
             // Unsubscribe from removed groups
             for (Device group : toBeRemovedGroups) {
-                ManagedObjectRepresentation groupMor = c8yAgent.getManagedObjectForId(tenant, group.getId());
+                ManagedObjectRepresentation groupMor = c8yAgent.getManagedObjectForId(tenant, group.getId(), false);
                 if (groupMor != null) {
                     // remove subscription for deviceGroup
                     configurationRegistry.getNotificationSubscriber().unsubscribeByDeviceGroup(tenant, groupMor);
@@ -166,9 +168,9 @@ public class NotificationSubscriptionService {
                                 .findAllRelatedDevicesByMO(tenant, groupMor, new ArrayList<>(), false);
                         for (Device deviceToRemove : devicesToRemove) {
                             ManagedObjectRepresentation deviceMor = c8yAgent.getManagedObjectForId(tenant,
-                                    deviceToRemove.getId());
+                                    deviceToRemove.getId(), false);
                             configurationRegistry.getNotificationSubscriber().unsubscribeDeviceAndDisconnect(tenant,
-                                    deviceMor);
+                                    deviceMor, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
                         }
                     } catch (Exception e) {
                         log.error("{} - Error removing group subscriptions: ", tenant, e);
@@ -201,10 +203,10 @@ public class NotificationSubscriptionService {
 
         for (Device device : devicesInGroup) {
             ManagedObjectRepresentation deviceMor = configurationRegistry.getC8yAgent()
-                    .getManagedObjectForId(tenant, device.getId());
+                    .getManagedObjectForId(tenant, device.getId(), false);
             if (deviceMor != null) {
                 configurationRegistry.getNotificationSubscriber()
-                        .unsubscribeDeviceAndDisconnect(tenant, deviceMor);
+                        .unsubscribeDeviceAndDisconnect(tenant, deviceMor, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
             }
         }
 
@@ -232,10 +234,10 @@ public class NotificationSubscriptionService {
     private void processDeviceAdditions(String tenant, List<Device> devices, dynamic.mapper.model.API api) {
         for (Device device : devices) {
             ManagedObjectRepresentation mor = configurationRegistry.getC8yAgent()
-                    .getManagedObjectForId(tenant, device.getId());
+                    .getManagedObjectForId(tenant, device.getId(), false);
             if (mor != null) {
                 configurationRegistry.getNotificationSubscriber()
-                        .subscribeDeviceAndConnect(tenant, mor, api);
+                        .subscribeDeviceAndConnect(tenant, mor, api, Utils.STATIC_DEVICE_SUBSCRIPTION);
             }
         }
     }
@@ -243,10 +245,10 @@ public class NotificationSubscriptionService {
     private void processDeviceRemovals(String tenant, List<Device> devices) {
         for (Device device : devices) {
             ManagedObjectRepresentation mor = configurationRegistry.getC8yAgent()
-                    .getManagedObjectForId(tenant, device.getId());
+                    .getManagedObjectForId(tenant, device.getId(), false);
             if (mor != null) {
                 configurationRegistry.getNotificationSubscriber()
-                        .unsubscribeDeviceAndDisconnect(tenant, mor);
+                        .unsubscribeDeviceAndDisconnect(tenant, mor, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
             }
         }
     }

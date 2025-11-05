@@ -23,7 +23,8 @@ package dynamic.mapper.notification.websocket;
 
 import java.net.URI;
 
-import dynamic.mapper.processor.model.ProcessingResult;
+import dynamic.mapper.model.Mapping;
+import dynamic.mapper.processor.model.ProcessingResultWrapper;
 
 /**
  * Implement this interface to handle notifications.
@@ -43,7 +44,17 @@ public interface NotificationCallback {
      * 
      * @param notification the notification received.
      */
-    ProcessingResult<?> onNotification(Notification notification);
+    ProcessingResultWrapper<?> onNotification(Notification notification);
+
+    /**
+     * Called on receiving a notification and testing this with the provided
+     * mapping. The notification will be acknowledged if
+     * no exception raised.
+     * 
+     * @param notification the notification received.
+     * @param mapping      the mapping to test.
+     */
+    ProcessingResultWrapper<?> onTestNotification(Notification notification, Mapping mapping);
 
     /**
      * Called on receiving an exception from the WebSocket connection. This may be

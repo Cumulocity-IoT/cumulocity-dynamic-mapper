@@ -26,6 +26,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
+import dynamic.mapper.connector.test.TestClient;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.SnoopStatus;
 import dynamic.mapper.processor.model.MappingType;
@@ -64,8 +65,8 @@ public abstract class DynamicMapperBaseRoutes extends RouteBuilder {
         try {
             ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
             if (context != null && context.getMapping() != null) {
-                TransformationType transformationType = context.getMapping().getTransformationType();
-                return TransformationType.SUBSTITUTION_AS_CODE.equals(transformationType);
+                Mapping mapping = context.getMapping();
+                return mapping.isSubstitutionAsCode();
             }
             return false; // Changed from true to false for better default
         } catch (Exception e) {
@@ -153,6 +154,11 @@ public abstract class DynamicMapperBaseRoutes extends RouteBuilder {
      */
     protected boolean isValidMapping(String tenant, Mapping mapping, String connectorIdentifier) {
         try {
+
+            if (TestClient.TEST_CONNECTOR_IDENTIFIER.equals(connectorIdentifier)) {
+                // Test connector processes all mappings
+                return true;
+            }
 
             if (mapping == null) {
                 log.debug("Mapping is null, skipping");

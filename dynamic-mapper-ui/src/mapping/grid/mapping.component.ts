@@ -35,8 +35,7 @@ import {
   ColumnDataType,
   DataGridComponent,
   DisplayOptions,
-  Pagination,
-  gettext
+  Pagination
 } from '@c8y/ngx-components';
 import { saveAs } from 'file-saver';
 import {
@@ -56,7 +55,6 @@ import {
   nextIdAndPad,
   DeploymentMapEntry,
   ExtensionType,
-  LabelRendererComponent,
   LabelTaggedRendererComponent,
   MappingTypeDescriptionMap,
   SharedService,
@@ -86,6 +84,7 @@ import { AdvisorAction, EditorMode } from '../shared/stepper.model';
 import { AdviceActionComponent } from './advisor/advice-action.component';
 import { SubscriptionService } from '../core/subscription.service';
 import { MappingTypeDrawerComponent } from '../mapping-create/mapping-type-drawer.component';
+import { gettext } from '@c8y/ngx-components/gettext';
 
 @Component({
   selector: 'd11r-mapping-mapping-grid',
@@ -179,32 +178,50 @@ export class MappingComponent implements OnInit, OnDestroy {
 
     this.feature = this.route.snapshot.data['feature'];
 
+    // Subscribe to mappings observable
     this.mappingService
       .getMappingsObservable(this.stepperConfiguration.direction)
       .subscribe(mappings => this.mappingsEnriched$.next(mappings));
 
+    // Track mappings count
     this.mappingsEnriched$.subscribe(maps => {
       this.mappingsCount = maps.length;
     });
 
+    // Start listening to mapping changes
     await this.mappingService.startChangedMappingEvents();
 
     this.mappingService.listenToUpdateMapping().subscribe((m: MappingEnriched) => {
       this.updateMapping(m);
     });
 
+    // Check outbound mapping subscriptions
     if (this.stepperConfiguration.direction === Direction.OUTBOUND) {
       try {
         const mappings = await this.mappingService.getMappings(Direction.OUTBOUND);
         const numberOutboundMappings = mappings.length;
-        const { devices } = await this.subscriptionService.getSubscriptionDevice();
-        if (devices.length === 0 && numberOutboundMappings > 0) {
+
+        // Get dynamic devices
+        const dynamicResult = await this.subscriptionService.getSubscriptionDevice(
+          this.subscriptionService.DYNAMIC_DEVICE_SUBSCRIPTION
+        );
+        const hasDynamicDevices = dynamicResult.devices.length > 0;
+
+        // Get static devices
+        const staticResult = await this.subscriptionService.getSubscriptionDevice(
+          this.subscriptionService.STATIC_DEVICE_SUBSCRIPTION
+        );
+        const hasStaticDevices = staticResult.devices.length > 0;
+
+        // Show warning if no devices are subscribed but mappings exist
+        if (!hasDynamicDevices && !hasStaticDevices && numberOutboundMappings > 0) {
           this.alertService.warning(
             "No device subscriptions found for your outbound mappings. " +
             "You need to subscribe your outbound mappings to at least one device to process data!"
           );
         }
       } catch (error) {
+        console.error('Error verifying outbound mapping subscriptions:', error);
         this.alertService.danger('Failed to verify outbound mapping subscriptions');
       }
     }
@@ -1034,7 +1051,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       ...((transformationType == TransformationType.SMART_FUNCTION) && {
         showEditorTarget: false,
         allowTestSending: false,
-        allowTestTransformation: false
+        allowTestTransformation: true
       })
     };
 

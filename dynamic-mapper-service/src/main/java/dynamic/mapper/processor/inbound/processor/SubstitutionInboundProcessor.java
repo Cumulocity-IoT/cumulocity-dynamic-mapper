@@ -1,4 +1,25 @@
-package dynamic.mapper.processor.inbound.processor;
+/*
+ * Copyright (c) 2022-2025 Cumulocity GmbH.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ *  @authors Christof Strack, Stefan Witschel
+ *
+ */
+
+ package dynamic.mapper.processor.inbound.processor;
 
 import java.util.List;
 import java.util.Map;
@@ -7,7 +28,6 @@ import java.util.Set;
 import org.apache.camel.Exchange;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.web.bind.annotation.RequestMethod;
 
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
@@ -17,7 +37,6 @@ import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.RepairStrategy;
 import dynamic.mapper.processor.model.SubstituteValue;
@@ -28,7 +47,6 @@ import lombok.extern.slf4j.Slf4j;
 
 import com.cumulocity.model.ID;
 import com.cumulocity.sdk.client.ProcessingMode;
-import com.cumulocity.sdk.client.SDKException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Slf4j
@@ -49,6 +67,7 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
         ProcessingContext<Object> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
         Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
+        Boolean testing = context.isTesting();
 
         try {
             validateProcessingCache(context);
@@ -57,7 +76,7 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
             // Check inventory filter condition if specified
             if (mapping.getFilterInventory() != null && !mapping.getCreateNonExistingDevice()) {
                 boolean filterInventory = evaluateInventoryFilter(tenant, mapping.getFilterInventory(),
-                        context.getSourceId());
+                        context.getSourceId(), context.isTesting());
                 if (context.getSourceId() == null
                         || !filterInventory) {
                     if (mapping.getDebug()) {
@@ -73,11 +92,13 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
             String errorMessage = String.format("Tenant %s - Error in substitution processor for mapping: %s",
                     tenant, mapping.getName());
             log.error(errorMessage, e);
-            context.addError(new ProcessingException("Substitution failed", e));
-            MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
             context.addError(new ProcessingException(errorMessage, e));
-            mappingStatus.errors++;
-            mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+
+            if (!testing) {
+                MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
+                mappingStatus.errors++;
+                mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+            }
         }
 
     }
@@ -88,7 +109,6 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
     private void substituteInTargetAndCreateRequests(ProcessingContext<Object> context, Exchange exchange)
             throws Exception {
         Mapping mapping = context.getMapping();
-        String tenant = context.getTenant();
 
         if (mapping.getTargetTemplate() == null || mapping.getTargetTemplate().trim().isEmpty()) {
             log.warn("No target template defined for mapping: {}", mapping.getName());
@@ -101,7 +121,7 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
         if (processingCache == null || processingCache.isEmpty()) {
             log.debug("Processing cache is empty for mapping: {}", mapping.getName());
             // Create single request with original template
-            createDynamicMapperRequest(-1, targetTemplate, context, mapping);
+            ProcessingResultHelper.createAndAddDynamicMapperRequest(context, targetTemplate, null, mapping);
             return;
         }
 
@@ -114,22 +134,7 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
             try {
                 getBuildProcessingContext(context, deviceEntries.get(i),
                         i, deviceEntries.size());
-                if (context.getCurrentRequest() != null && context.getCurrentRequest().hasError()) {
-                    Exception e = context.getCurrentRequest().getError();
-                    if (e instanceof ProcessingException &&
-                            e.getCause() != null &&
-                            e.getCause() instanceof SDKException &&
-                            ((SDKException) e.getCause()).getHttpStatus() == 422) {
-                        ID identity = new ID(mapping.getExternalIdType(), deviceEntries.get(i).value.toString());
-                        c8yAgent.removeDeviceFromInboundExternalIdCache(tenant, identity);
-                        context.setSourceId(null);
-                        getBuildProcessingContext(context, deviceEntries.get(i),
-                                i, deviceEntries.size());
-                    }
-                }
-
                 log.debug("Created request {} of {} for mapping: {}", i + 1, cardinality, mapping.getName());
-
             } catch (Exception e) {
                 log.error("Failed to create request {} for mapping: {}", i, mapping.getName(), e);
                 context.addError(new ProcessingException("Failed to create request " + i, e));
@@ -168,7 +173,7 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
             SubstituteValue sourceId = new SubstituteValue(substitute.getValue(),
                     TYPE.TEXTUAL, RepairStrategy.CREATE_IF_MISSING, false);
             if (!context.getApi().equals(API.INVENTORY)) {
-                var resolvedSourceId = c8yAgent.resolveExternalId2GlobalId(tenant, identity, context);
+                var resolvedSourceId = c8yAgent.resolveExternalId2GlobalId(tenant, identity, context.isTesting());
                 if (resolvedSourceId == null) {
                     if (mapping.getCreateNonExistingDevice()) {
                         sourceId.setValue(ProcessingResultHelper.createImplicitDevice(identity, context, log, c8yAgent,
@@ -277,50 +282,12 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
         }
     }
 
-    /**
-     * Create C8Y request with correct structure
-     */
-    private int createDynamicMapperRequest(int predecessor, String processedPayload, ProcessingContext<Object> context,
-            Mapping mapping) {
-        API api = context.getApi() != null ? context.getApi() : determineDefaultAPI(mapping);
-
-        DynamicMapperRequest request = DynamicMapperRequest.builder()
-                .predecessor(predecessor)
-                .api(api)
-                .method(context.getMapping().getUpdateExistingDevice() ? RequestMethod.POST : RequestMethod.PATCH)
-                .sourceId(context.getSourceId())
-                .externalIdType(mapping.getExternalIdType())
-                .externalId(context.getExternalId())
-                .request(processedPayload)
-                .build();
-
-        var newPredecessor = context.addRequest(request);
-        log.debug("Created C8Y request for API: {} with payload: {}", api, processedPayload);
-        return newPredecessor;
-    }
-
-    /**
-     * Determine default API from mapping
-     */
-    private API determineDefaultAPI(Mapping mapping) {
-        if (mapping.getTargetAPI() != null) {
-            try {
-                return mapping.getTargetAPI();
-            } catch (Exception e) {
-                log.warn("Unknown target API: {}, defaulting to MEASUREMENT", mapping.getTargetAPI());
-            }
-        }
-
-        return API.MEASUREMENT; // Default
-    }
-
     private ProcessingContext<Object> getBuildProcessingContext(ProcessingContext<Object> context,
             SubstituteValue device, int finalI,
             int size) {
         Set<String> pathTargets = context.getPathTargets();
         Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
-        int predecessor = -1;
         DocumentContext payloadTarget = JsonPath.parse(mapping.getTargetTemplate());
         for (String pathTarget : pathTargets) {
             SubstituteValue substitute = new SubstituteValue(
@@ -347,8 +314,7 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
 
             prepareAndSubstituteInPayload(context, payloadTarget, pathTarget, substitute);
         }
-        var newPredecessor = createDynamicMapperRequest(predecessor, payloadTarget.jsonString(), context, mapping);
-        predecessor = newPredecessor;
+        ProcessingResultHelper.createAndAddDynamicMapperRequest(context, payloadTarget.jsonString(), null, mapping);
         if (context.getMapping().getDebug() || context.getServiceConfiguration().isLogPayload()) {
             log.info("{} - Transformed message sent: API: {}, numberDevices: {}, message: {}", tenant,
                     context.getApi(),

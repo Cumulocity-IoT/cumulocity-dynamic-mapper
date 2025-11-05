@@ -31,13 +31,13 @@ import {
 import {
   AlertService,
   DropAreaComponent,
-  gettext,
   IFetchWithProgress,
   ModalLabels
 } from '@c8y/ngx-components';
 import { Observable, Subject } from 'rxjs';
 import { ERROR_MESSAGES } from '../share/extension.constants';
 import { ExtensionService } from '../extension.service';
+import { gettext } from '@c8y/ngx-components/gettext';
 
 @Component({
   selector: 'd11r-mapping-add-extension',

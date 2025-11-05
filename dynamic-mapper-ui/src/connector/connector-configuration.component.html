@@ -22,17 +22,22 @@
 <c8y-title>Connectors</c8y-title>
 
 <c8y-action-bar-item [placement]="'right'">
-  <button class="btn btn-link" title="{{ 'Add connector' | translate }}" (click)="onConfigurationAddOrUpdate(undefined)" [disabled]="!feature?.userHasMappingAdminRole">
-    <i c8yIcon="connected"></i>
+  <button class="btn btn-link" title="{{ 'Add connector' | translate }}" (click)="onConfigurationAddOrUpdate(undefined)"
+    [disabled]="!feature?.userHasMappingAdminRole">
+    <i c8yIcon="add"></i>
     {{ 'Add connector' | translate }}
   </button>
 </c8y-action-bar-item>
 <c8y-action-bar-item [placement]="'right'">
   <button class="btn btn-link" title="{{ 'Reconnect notification endpoint' | translate }}"
     (click)="clickedReconnect2NotificationEndpoint()" [disabled]="!feature?.userHasMappingAdminRole">
-    <i c8yIcon="disconnected"></i> 
-    {{ 'Reconnect notification endpoint' | translate }}
+    <i c8yIcon="reset"></i>
+    {{ 'Reconnect Subscription outbound' | translate }}
   </button>
+  <button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate" popover="{{
+      'Reconnect Subscription outbound endpoint.'
+        | translate
+    }}" placement="bottom" triggers="focus" type="button"></button>
 </c8y-action-bar-item>
 <c8y-action-bar-item [placement]="'right'">
   <button class="btn btn-link" title="{{ 'Refresh' | translate }}" (click)="refresh()">
@@ -53,8 +58,7 @@
 <div class="card content-fullpage d-grid">
   <div class="card card--grid card--grid__inner-scroll">
     <div class="p-l-16 p-r-16">
-      <d11r-mapping-connector-grid #connectorConfigurationBroker
-        [selectable]="false"></d11r-mapping-connector-grid>
+      <d11r-mapping-connector-grid #connectorConfigurationBroker [selectable]="false"></d11r-mapping-connector-grid>
     </div>
   </div>
 </div>

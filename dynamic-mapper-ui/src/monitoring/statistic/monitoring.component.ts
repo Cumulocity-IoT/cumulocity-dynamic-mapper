@@ -24,12 +24,12 @@ import {
   Column,
   ColumnDataType,
   DisplayOptions,
-  gettext,
   Pagination
 } from '@c8y/ngx-components';
-import { BehaviorSubject, catchError, map, of, Subject, takeUntil } from 'rxjs';
+import { BehaviorSubject, catchError, filter, map, of, Subject, takeUntil } from 'rxjs';
 import {
   ConfirmationModalComponent,
+  Direction,
   Feature,
   MappingStatus,
   Operation,
@@ -40,7 +40,8 @@ import { NumberRendererComponent } from '../renderer/number.renderer.component';
 import { DirectionRendererComponent } from '../renderer/direction.renderer.component';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { NameRendererComponent } from '../../mapping/renderer/name.renderer.component';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
+import { gettext } from '@c8y/ngx-components/gettext';
 
 interface MonitoringComponentState {
   mappingStatuses: MappingStatus[];
@@ -55,8 +56,18 @@ interface MonitoringComponentState {
   standalone: false
 })
 export class MonitoringComponent implements OnInit, OnDestroy {
+  constructor(
+  ) {
+    const href = this.router.url;
+    this.direction = href.includes('/monitoring/statistic/inbound')
+      ? Direction.INBOUND
+      : Direction.OUTBOUND;
+
+    this.titleStatistic = `Statistic ${this.direction.toLowerCase()}`;
+  }
 
   // Modern Angular dependency injection
+  private router = inject(Router);
   private readonly monitoringService = inject(MonitoringService);
   private readonly alertService = inject(AlertService);
   private readonly bsModalService = inject(BsModalService);
@@ -76,7 +87,8 @@ export class MonitoringComponent implements OnInit, OnDestroy {
 
 
   readonly mappingStatus$ = this.state$.pipe(
-    map(state => state.mappingStatuses))
+    map(state => state.mappingStatuses),
+    map(statuses => statuses.filter(st => (st.direction == this.direction || st.direction == null))))
   readonly isLoading$ = this.state$.pipe(map(state => state.isLoading));
   readonly error$ = this.state$.pipe(map(state => state.error));
 
@@ -88,7 +100,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
     hover: true
   };
 
-  readonly columns: Column[] = [
+  private readonly baseColumns: Column[] = [
     {
       name: 'name',
       header: 'Name',
@@ -97,15 +109,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       sortOrder: 'asc',
       dataType: ColumnDataType.TextShort,
       cellRendererComponent: NameRendererComponent,
-      visible: true
-    },
-    {
-      name: 'direction',
-      header: 'Direction',
-      path: 'direction',
-      filterable: false,
-      dataType: ColumnDataType.Icon,
-      cellRendererComponent: DirectionRendererComponent,
+      gridTrackSize: '15%',
       visible: true
     },
     {
@@ -114,7 +118,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       path: 'mappingTopic',
       filterable: false,
       dataType: ColumnDataType.TextLong,
-      gridTrackSize: '15%'
+      //gridTrackSize: '20%'
     },
     {
       name: 'publishTopic',
@@ -122,7 +126,34 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       path: 'publishTopic',
       filterable: false,
       dataType: ColumnDataType.TextLong,
-      gridTrackSize: '15%'
+      //gridTrackSize: '20%'
+    },
+    {
+      header: '# Received',
+      name: 'messagesReceived',
+      path: 'messagesReceived',
+      filterable: true,
+      dataType: ColumnDataType.Numeric,
+      cellRendererComponent: NumberRendererComponent,
+      gridTrackSize: '12.5%'
+    },
+    {
+      header: '# Snooped total',
+      name: 'snoopedTemplatesTotal',
+      path: 'snoopedTemplatesTotal',
+      filterable: true,
+      dataType: ColumnDataType.Numeric,
+      cellRendererComponent: NumberRendererComponent,
+      gridTrackSize: '12.5%'
+    },
+    {
+      header: '# Snooped active',
+      name: 'snoopedTemplatesActive',
+      path: 'snoopedTemplatesActive',
+      filterable: true,
+      dataType: ColumnDataType.Numeric,
+      cellRendererComponent: NumberRendererComponent,
+      gridTrackSize: '12.5%'
     },
     {
       header: '# Errors',
@@ -131,45 +162,20 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       filterable: true,
       dataType: ColumnDataType.Numeric,
       cellRendererComponent: NumberRendererComponent,
-      gridTrackSize: '10%'
+      gridTrackSize: '12.5%'
     },
     {
-      header: '# Messages received',
-      name: 'messagesReceived',
-      path: 'messagesReceived',
-      filterable: true,
-      dataType: ColumnDataType.Numeric,
-      cellRendererComponent: NumberRendererComponent,
-      gridTrackSize: '10%'
-    },
-    {
-      header: '# Snooped templates total',
-      name: 'snoopedTemplatesTotal',
-      path: 'snoopedTemplatesTotal',
-      filterable: true,
-      dataType: ColumnDataType.Numeric,
-      cellRendererComponent: NumberRendererComponent,
-      gridTrackSize: '10%'
-    },
-    {
-      header: '# Snooped templates active',
-      name: 'snoopedTemplatesActive',
-      path: 'snoopedTemplatesActive',
-      filterable: true,
-      dataType: ColumnDataType.Numeric,
-      cellRendererComponent: NumberRendererComponent,
-      gridTrackSize: '10%'
-    },
-    {
-      header: '# Current failure count',
+      header: '# Current failures',
       name: 'currentFailureCount',
       path: 'currentFailureCount',
       filterable: true,
       dataType: ColumnDataType.Numeric,
       cellRendererComponent: NumberRendererComponent,
-      gridTrackSize: '10%'
+      gridTrackSize: '12.5%'
     }
   ] as const;
+
+  columns: Column[] = [];
 
   readonly pagination: Pagination = {
     pageSize: 5,
@@ -178,6 +184,8 @@ export class MonitoringComponent implements OnInit, OnDestroy {
 
   feature: Feature;
   actionControls: ActionControl[] = [];
+  titleStatistic: string;
+  direction: Direction;
 
 
   async ngOnInit(): Promise<void> {
@@ -185,6 +193,10 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       this.updateState({ isLoading: true, error: null });
 
       this.feature = this.route.snapshot.data['feature'];
+      
+      // Initialize columns based on direction
+      this.initializeColumns();
+      
       await this.initializeMonitoringService();
 
       this.updateState({ isLoading: false });
@@ -228,6 +240,21 @@ export class MonitoringComponent implements OnInit, OnDestroy {
         }
         modalRef.hide();
       });
+  }
+
+  private initializeColumns(): void {
+    // Filter columns based on direction
+    this.columns = this.baseColumns.filter(column => {
+      // For INBOUND: remove publishTopic
+      if (this.direction === Direction.INBOUND && column.name === 'publishTopic') {
+        return false;
+      }
+      // For OUTBOUND: remove mappingTopic
+      if (this.direction === Direction.OUTBOUND && column.name === 'mappingTopic') {
+        return false;
+      }
+      return true;
+    });
   }
 
   private async initializeMonitoringService(): Promise<void> {

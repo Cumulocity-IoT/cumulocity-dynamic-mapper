@@ -140,7 +140,7 @@ public class ServiceConfigurationService {
                     boolean internal = Boolean.parseBoolean(extractAnnotation(content, "@internal"));
                     String templateTypeStr = extractAnnotation(content, "@templateType");
 
-                    // MIGRATION: derive direction from tmeplateType if not found in annotations
+                    // MIGRATION: derive direction from templateType if not found in annotations
                     String directionAsString = extractAnnotation(content, "@direction");
                     if (directionAsString == null || directionAsString.isEmpty()) {
                         directionAsString = templateTypeStr;
@@ -450,7 +450,7 @@ public class ServiceConfigurationService {
                 header = updateAnnotation(header, "@templateType", codeTemplate.templateType.name());
                 String templateTypeStr = codeTemplate.templateType.name();
 
-                // MIGRATION: derive direction from tmeplateType if not found in annotations
+                // MIGRATION: derive direction from templateType if not found in annotations
                 String directionAsString = extractAnnotation(header, "@direction");
                 if (directionAsString == null || directionAsString.isEmpty()) {
                     directionAsString = templateTypeStr;

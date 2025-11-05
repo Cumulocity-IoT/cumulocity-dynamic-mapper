@@ -40,7 +40,7 @@ import dynamic.mapper.connector.core.callback.GenericMessageCallback;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.ProcessingResult;
+import dynamic.mapper.processor.model.ProcessingResultWrapper;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -89,7 +89,7 @@ public class MQTTServicePulsarCallback implements MessageListener<byte[]> {
         }
 
         // Process the message
-        ProcessingResult<?> processedResults = genericMessageCallback.onMessage(connectorMessage);
+        ProcessingResultWrapper<?> processedResults = genericMessageCallback.onMessage(connectorMessage);
 
         int timeout = processedResults.getMaxCPUTimeMS();
 

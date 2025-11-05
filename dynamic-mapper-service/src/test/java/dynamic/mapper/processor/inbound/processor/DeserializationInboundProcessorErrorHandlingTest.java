@@ -85,7 +85,7 @@ class DeserializationInboundProcessorErrorHandlingTest {
     void setUp() {
         // Create real Mapping object
         mapping = Mapping.builder().build();
-        
+
         when(exchange.getIn()).thenReturn(message);
         when(message.getBody(Mapping.class)).thenReturn(mapping);
         when(message.getHeader("tenant", String.class)).thenReturn(TEST_TENANT);
@@ -99,11 +99,13 @@ class DeserializationInboundProcessorErrorHandlingTest {
         // Given
         mapping.setMappingType(MappingType.JSON);
         when(mappingService.getMappingStatus(TEST_TENANT, mapping)).thenReturn(mappingStatus);
-        
-        // Use reflection to replace the deserializer with a mock that throws IOException
+
+        // Use reflection to replace the deserializer with a mock that throws
+        // IOException
         replaceDeserializerWithMock(MappingType.JSON);
         when(mockDeserializer.deserializePayload(eq(mapping), eq(connectorMessage)))
                 .thenThrow(new IOException("Test IO Exception"));
+        when(message.getHeader("testing", Boolean.class)).thenReturn(Boolean.FALSE);
 
         // When
         processor.process(exchange);
@@ -120,11 +122,13 @@ class DeserializationInboundProcessorErrorHandlingTest {
         // Given
         mapping.setMappingType(MappingType.PROTOBUF_INTERNAL);
         when(mappingService.getMappingStatus(TEST_TENANT, mapping)).thenReturn(mappingStatus);
-        
-        // Use reflection to replace the deserializer with a mock that throws IOException
+
+        // Use reflection to replace the deserializer with a mock that throws
+        // IOException
         replaceDeserializerWithMock(MappingType.PROTOBUF_INTERNAL);
         when(mockDeserializer.deserializePayload(eq(mapping), eq(connectorMessage)))
                 .thenThrow(new IOException("Test IO Exception"));
+        when(message.getHeader("testing", Boolean.class)).thenReturn(Boolean.FALSE);
 
         // When
         processor.process(exchange);
@@ -140,8 +144,8 @@ class DeserializationInboundProcessorErrorHandlingTest {
     private void replaceDeserializerWithMock(MappingType mappingType) throws Exception {
         Field deserializersField = DeserializationInboundProcessor.class.getDeclaredField("deserializers");
         deserializersField.setAccessible(true);
-        Map<MappingType, PayloadDeserializer<?>> deserializers = 
-            (Map<MappingType, PayloadDeserializer<?>>) deserializersField.get(processor);
+        Map<MappingType, PayloadDeserializer<?>> deserializers = (Map<MappingType, PayloadDeserializer<?>>) deserializersField
+                .get(processor);
         deserializers.put(mappingType, mockDeserializer);
     }
 }

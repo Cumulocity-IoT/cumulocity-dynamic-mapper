@@ -99,7 +99,7 @@ import dynamic.mapper.App;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.configuration.TrustedCertificateCollectionRepresentation;
 import dynamic.mapper.configuration.TrustedCertificateRepresentation;
-import dynamic.mapper.connector.core.client.AConnectorClient;
+import dynamic.mapper.connector.core.client.Certificate;
 import dynamic.mapper.core.cache.InboundExternalIdCache;
 import dynamic.mapper.core.cache.InventoryCache;
 import dynamic.mapper.core.facade.IdentityFacade;
@@ -225,7 +225,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     }
 
     public ExternalIDRepresentation resolveExternalId2GlobalId(String tenant, ID identity,
-            ProcessingContext<?> context) {
+            Boolean testing) {
         if (identity.getType() == null) {
             identity.setType("c8y_Serial");
         }
@@ -236,7 +236,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                 Counter.builder("dynmapper_inbound_identity_requests_total").tag("tenant", tenant)
                         .register(Metrics.globalRegistry).increment();
                 if (resultInner == null) {
-                    resultInner = identityApi.resolveExternalId2GlobalId(identity, context, c8ySemaphore);
+                    resultInner = identityApi.resolveExternalId2GlobalId(identity, testing, c8ySemaphore);
                     inboundExternalIdCaches.get(tenant).putIdForExternalId(identity,
                             resultInner);
 
@@ -256,7 +256,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     }
 
     public ExternalIDRepresentation resolveGlobalId2ExternalId(String tenant, GId gid, String idType,
-            ProcessingContext<?> context) {
+            Boolean testing) {
         // TODO Use Cache
         if (idType == null) {
             idType = "c8y_Serial";
@@ -264,7 +264,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         final String idt = idType;
         ExternalIDRepresentation result = subscriptionsService.callForTenant(tenant, () -> {
             try {
-                return identityApi.resolveGlobalId2ExternalId(gid, idt, context, c8ySemaphore);
+                return identityApi.resolveGlobalId2ExternalId(gid, idt, testing, c8ySemaphore);
             } catch (SDKException e) {
                 log.warn("{} - External ID type {} for {} not found", tenant, idt, gid.getValue());
             }
@@ -380,7 +380,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         });
     }
 
-    public AConnectorClient.Certificate loadCertificateByName(String certificateName, String fingerprint,
+    public Certificate loadCertificateByName(String certificateName, String fingerprint,
             String tenant, String connectorName) {
         TrustedCertificateRepresentation result = subscriptionsService.callForTenant(tenant,
                 () -> {
@@ -389,54 +389,150 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                     TrustedCertificateRepresentation certResult = null;
                     try {
                         List<TrustedCertificateRepresentation> certificatesList = new ArrayList<>();
-                        boolean next = true;
                         String nextUrl = String.format("/tenant/tenants/%s/trusted-certificates", tenant);
-                        TrustedCertificateCollectionRepresentation certificatesResult;
-                        while (next) {
-                            certificatesResult = platform.rest().get(
+
+                        // Pagination with safety limit
+                        int pageCount = 0;
+                        int maxPages = 100; // Safety limit to prevent infinite loops
+
+                        while (nextUrl != null && !nextUrl.isEmpty() && pageCount < maxPages) {
+                            pageCount++;
+
+                            TrustedCertificateCollectionRepresentation certificatesResult = platform.rest().get(
                                     nextUrl,
                                     CumulocityMediaType.APPLICATION_JSON_TYPE,
                                     TrustedCertificateCollectionRepresentation.class);
-                            certificatesList.addAll(certificatesResult.getCertificates());
+
+                            List<TrustedCertificateRepresentation> pageCerts = certificatesResult.getCertificates();
+
+                            if (pageCerts != null && !pageCerts.isEmpty()) {
+                                certificatesList.addAll(pageCerts);
+                                log.debug("{} - Connector {} - Page {}: Retrieved {} certificates (total: {})",
+                                        tenant, connectorName, pageCount, pageCerts.size(), certificatesList.size());
+                            } else {
+                                log.debug("{} - Connector {} - Page {}: No more certificates",
+                                        tenant, connectorName, pageCount);
+                                break; // No more certificates
+                            }
+
+                            // Get next URL - THIS IS THE KEY FIX
                             nextUrl = certificatesResult.getNext();
-                            next = certificatesResult.getCertificates().size() > 0;
-                            log.info("{} - Connector {} - Retrieved certificates {} - next {} - nextUrl {}",
-                                    tenant,
-                                    connectorName, certificatesList.size(), next, nextUrl);
-                        }
-                        for (int index = 0; index < certificatesList.size(); index++) {
-                            TrustedCertificateRepresentation certificateIterate = certificatesList.get(index);
-                            log.info("{} - Found certificate with fingerprint: {} with name: {}", tenant,
-                                    certificateIterate.getFingerprint(),
-                                    certificateIterate.getName());
-                            if (certificateIterate.getName().equals(certificateName)
-                                    && certificateIterate.getFingerprint().equals(fingerprint)) {
-                                certResult = certificateIterate;
-                                log.info("{} - Connector {} - Found certificate {} with fingerprint {} ", tenant,
-                                        connectorName, certificateName, certificateIterate.getFingerprint());
+
+                            // Break if no next URL
+                            if (nextUrl == null || nextUrl.isEmpty()) {
+                                log.debug("{} - Connector {} - No more pages (nextUrl is null/empty)",
+                                        tenant, connectorName);
                                 break;
                             }
                         }
+
+                        if (pageCount >= maxPages) {
+                            log.warn("{} - Connector {} - Reached maximum page limit ({}), stopping pagination",
+                                    tenant, connectorName, maxPages);
+                        }
+
+                        log.info("{} - Connector {} - Retrieved total of {} certificates across {} pages",
+                                tenant, connectorName, certificatesList.size(), pageCount);
+
+                        // Search for matching certificate
+                        for (TrustedCertificateRepresentation certificateIterate : certificatesList) {
+                            log.debug("{} - Checking certificate: name='{}', fingerprint='{}'",
+                                    tenant,
+                                    certificateIterate.getName(),
+                                    certificateIterate.getFingerprint());
+
+                            // Normalize both fingerprints for comparison
+                            String normalizedStoredFingerprint = normalizeFingerprint(
+                                    certificateIterate.getFingerprint());
+                            String normalizedInputFingerprint = normalizeFingerprint(fingerprint);
+
+                            boolean nameMatches = certificateIterate.getName().equals(certificateName);
+                            boolean fingerprintMatches = normalizedStoredFingerprint.equals(normalizedInputFingerprint);
+
+                            if (nameMatches && fingerprintMatches) {
+                                certResult = certificateIterate;
+                                log.info("{} - Connector {} - Found matching certificate: name='{}', fingerprint='{}'",
+                                        tenant, connectorName, certificateName, certificateIterate.getFingerprint());
+                                break;
+                            } else if (nameMatches) {
+                                log.debug("{} - Name matches but fingerprint differs: expected='{}', got='{}'",
+                                        tenant, normalizedInputFingerprint, normalizedStoredFingerprint);
+                            }
+                        }
+
+                        if (certResult == null) {
+                            log.warn("{} - Connector {} - Certificate not found: name='{}', fingerprint='{}'",
+                                    tenant, connectorName, certificateName, fingerprint);
+                        }
+
                     } catch (Exception e) {
-                        log.error("{} - Connector {} - Error initializing connector: ", tenant,
+                        log.error("{} - Connector {} - Error retrieving certificate: ", tenant,
                                 connectorName, e);
                     }
                     return certResult;
                 });
+
         if (result != null) {
-            log.info("{} - Connector {} - Found certificate {} with fingerprint {} ", tenant,
-                    connectorName, certificateName, result.getFingerprint());
-            StringBuffer cert = new StringBuffer("-----BEGIN CERTIFICATE-----\n")
-                    .append(result.getCertInPemFormat())
-                    .append("\n").append("-----END CERTIFICATE-----");
-            return new AConnectorClient.Certificate(result.getFingerprint(), cert.toString());
+            log.info("{} - Connector {} - Found certificate '{}' with fingerprint '{}'",
+                    tenant, connectorName, certificateName, result.getFingerprint());
+
+            // Handle PEM format - check if markers already exist
+            String pemContent = result.getCertInPemFormat();
+            String fullPemCert;
+
+            if (pemContent != null && pemContent.contains("-----BEGIN CERTIFICATE-----")) {
+                // Already has PEM markers (might be a chain)
+                fullPemCert = pemContent;
+                log.debug("{} - Certificate already in PEM format with markers", tenant);
+            } else if (pemContent != null && !pemContent.isEmpty()) {
+                // Need to add PEM markers
+                fullPemCert = "-----BEGIN CERTIFICATE-----\n"
+                        + pemContent
+                        + "\n-----END CERTIFICATE-----";
+                log.debug("{} - Added PEM markers to certificate", tenant);
+            } else {
+                log.error("{} - Certificate PEM content is null or empty", tenant);
+                return null;
+            }
+
+            // Count certificates in chain
+            int certCount = countCertificatesInChain(fullPemCert);
+            log.info("{} - Certificate chain contains {} certificate(s)", tenant, certCount);
+
+            return new Certificate(result.getFingerprint(), fullPemCert);
         } else {
-            log.info("{} - Connector {} - No certificate found!", tenant, connectorName);
+            log.warn("{} - Connector {} - No certificate found with name='{}' and fingerprint='{}'",
+                    tenant, connectorName, certificateName, fingerprint);
             return null;
         }
     }
 
-    // TODO Change this to use ExecutorService + Virtual Threads when available
+    // Helper method to normalize fingerprints
+    private String normalizeFingerprint(String fingerprint) {
+        if (fingerprint == null || fingerprint.isEmpty()) {
+            return "";
+        }
+        // Remove colons, spaces, and convert to lowercase
+        return fingerprint.replace(":", "")
+                .replace(" ", "")
+                .trim()
+                .toLowerCase();
+    }
+
+    // Helper method to count certificates in a PEM chain
+    private int countCertificatesInChain(String pemContent) {
+        if (pemContent == null)
+            return 0;
+
+        int count = 0;
+        int index = 0;
+        while ((index = pemContent.indexOf("-----BEGIN CERTIFICATE-----", index)) != -1) {
+            count++;
+            index += 27; // Length of "-----BEGIN CERTIFICATE-----"
+        }
+        return count;
+    }
+
     public CompletableFuture<AbstractExtensibleRepresentation> createMEAOAsync(ProcessingContext<?> context,
             int requestIndex)
             throws ProcessingException {
@@ -697,8 +793,12 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                     log.error("{} - Could not sent payload to c8y: {} {}: ", tenant, targetAPI, payload,
                             s.getMessage());
                     pe.set(new ProcessingException("Could not sent payload to c8y: " + targetAPI + "/" + payload, s));
-                    // error.append("Could not sent payload to c8y: " + targetAPI + "/" + payload +
-                    // "/" + s);
+
+                    //Remove device from Cache
+                    if (s.getHttpStatus() == 422) {
+                        ID identity = new ID(currentRequest.getExternalId(), currentRequest.getExternalId());
+                        this.removeDeviceFromInboundExternalIdCache(tenant, identity);
+                    }
                 }
                 return rt;
             });
@@ -715,6 +815,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
             throws ProcessingException {
         // StringBuffer error = new StringBuffer("");
         DynamicMapperRequest currentRequest = context.getRequests().get(requestIndex);
+        Boolean testing = context.isTesting();
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         AtomicReference<ProcessingException> pe = new AtomicReference<>();
         API targetAPI = context.getMapping().getTargetAPI();
@@ -746,13 +847,13 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                         mor.setId(null);
                         try {
                             c8ySemaphore.acquire();
-                            mor = inventoryApi.create(mor, context);
+                            mor = inventoryApi.create(mor, testing);
                             // TODO Add/Update new managed object to IdentityCache
                             if (serviceConfiguration.isLogPayload())
                                 log.info("{} - New device created: {}", tenant, mor);
                             else
                                 log.info("{} - New device created with Id {}", tenant, mor.getId().getValue());
-                            identityApi.create(mor, identity, context);
+                            identityApi.create(mor, identity, testing);
                         } catch (InterruptedException e) {
                             log.error("{} - Failed to acquire semaphore for creating Device", tenant, e);
                         } finally {
@@ -763,7 +864,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                         mor.setId(new GId(currentRequest.getSourceId()));
                         try {
                             c8ySemaphore.acquire();
-                            mor = inventoryApi.update(mor, context);
+                            mor = inventoryApi.update(mor, testing);
                         } catch (InterruptedException e) {
                             log.error("{} - Failed to acquire semaphore for updating Device", tenant, e);
                         } finally {
@@ -985,10 +1086,10 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         loadProcessorExtensions(tenant);
     }
 
-    public ManagedObjectRepresentation getManagedObjectForId(String tenant, String deviceId) {
+    public ManagedObjectRepresentation getManagedObjectForId(String tenant, String deviceId, Boolean testing) {
         ManagedObjectRepresentation device = subscriptionsService.callForTenant(tenant, () -> {
             try {
-                return inventoryApi.get(GId.asGId(deviceId));
+                return inventoryApi.get(GId.asGId(deviceId), testing);
             } catch (SDKException exception) {
                 log.warn("{} - Device with id {} not found!", tenant, deviceId);
             }
@@ -1020,12 +1121,12 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     public ManagedObjectRepresentation initializeMapperServiceRepresentation(String tenant) {
         ExternalIDRepresentation mapperServiceIdRepresentation = resolveExternalId2GlobalId(tenant,
                 new ID(null, MapperServiceRepresentation.AGENT_ID),
-                null);
+                false);
         ;
         ManagedObjectRepresentation amo = new ManagedObjectRepresentation();
 
         if (mapperServiceIdRepresentation != null) {
-            amo = inventoryApi.get(mapperServiceIdRepresentation.getManagedObject().getId());
+            amo = inventoryApi.get(mapperServiceIdRepresentation.getManagedObject().getId(), false);
             log.info("{} - Agent with external ID [{}] already exists, sourceId: {}", tenant,
                     MapperServiceRepresentation.AGENT_ID,
                     amo.getId().getValue());
@@ -1048,7 +1149,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
             ExternalIDRepresentation externalAgentId = identityApi.create(amo,
                     new ID("c8y_Serial",
                             MapperServiceRepresentation.AGENT_ID),
-                    null);
+                    false);
             log.debug("{} - ExternalId created: {}", tenant, externalAgentId.getExternalId());
         }
         return amo;
@@ -1057,12 +1158,12 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     public ManagedObjectRepresentation initializeDeviceToClientMapRepresentation(String tenant) {
         ExternalIDRepresentation deviceToClientMapRepresentation = resolveExternalId2GlobalId(tenant,
                 new ID(null, DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_ID),
-                null);
+                false);
         ;
         ManagedObjectRepresentation amo = new ManagedObjectRepresentation();
 
         if (deviceToClientMapRepresentation != null) {
-            amo = inventoryApi.get(deviceToClientMapRepresentation.getManagedObject().getId());
+            amo = inventoryApi.get(deviceToClientMapRepresentation.getManagedObject().getId(), false);
             log.info("{} - Dynamic Mapper Device To Client Map with external ID [{}] already exists, sourceId: {}",
                     tenant,
                     DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_ID,
@@ -1222,16 +1323,22 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
             return 0;
     }
 
-    public Map<String, Object> getMOFromInventoryCacheByExternalId(String tenant, String externalId, String type) {
+    public Map<String, Object> getMOFromInventoryCacheByExternalId(String tenant, String externalId, String type,
+            Boolean testing) {
+
+        if (externalId == null || type == null) {
+            return null;
+        }
         ID identity = new ID(type, externalId);
-        ExternalIDRepresentation sourceId = this.resolveExternalId2GlobalId(tenant, identity, null);
+        ExternalIDRepresentation sourceId = this.resolveExternalId2GlobalId(tenant, identity, testing);
         if (sourceId != null) {
-            return getMOFromInventoryCache(tenant, sourceId.getManagedObject().getId().getValue());
+            return getMOFromInventoryCache(tenant, sourceId.getManagedObject().getId().getValue(), testing);
         }
         return null;
     }
 
-    public Map<String, Object> updateMOInInventoryCache(String tenant, String sourceId, Map<String, Object> updates) {
+    public Map<String, Object> updateMOInInventoryCache(String tenant, String sourceId, Map<String, Object> updates,
+            Boolean testing) {
         InventoryCache inventoryCache = getInventoryCache(tenant);
 
         // Create new managed object cache entry
@@ -1239,7 +1346,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         inventoryCache.putMO(sourceId, newMO);
 
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
-        ManagedObjectRepresentation device = getManagedObjectForId(tenant, sourceId);
+        ManagedObjectRepresentation device = getManagedObjectForId(tenant, sourceId, testing);
         Map<String, Object> attrs = device.getAttrs();
 
         // Process each fragment
@@ -1275,7 +1382,12 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         return newMO;
     }
 
-    public Map<String, Object> getMOFromInventoryCache(String tenant, String sourceId) {
+    public Map<String, Object> getMOFromInventoryCache(String tenant, String sourceId, Boolean testing) {
+
+        if (sourceId == null) {
+            return null;
+        }
+
         InventoryCache inventoryCache = getInventoryCache(tenant);
         Map<String, Object> result = inventoryCache.getMOBySource(sourceId);
         if (result != null) {
@@ -1293,38 +1405,40 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                 .subscribeMOForInventoryCacheUpdates(tenant, mor);
 
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
-        ManagedObjectRepresentation device = getManagedObjectForId(tenant, sourceId);
-        Map<String, Object> attrs = device.getAttrs();
+        ManagedObjectRepresentation device = getManagedObjectForId(tenant, sourceId, testing);
+        if (device != null) {
+            Map<String, Object> attrs = device.getAttrs();
 
-        // Process each fragment
-        serviceConfiguration.getInventoryFragmentsToCache().forEach(frag -> {
-            frag = frag.trim();
+            // Process each fragment
+            serviceConfiguration.getInventoryFragmentsToCache().forEach(frag -> {
+                frag = frag.trim();
 
-            // Handle special cases
-            if ("id".equals(frag)) {
-                newMO.put(frag, sourceId);
-                return; // using return in forEach as continue
-            }
-            if ("name".equals(frag)) {
-                newMO.put(frag, device.getName());
-                return;
-            }
-            if ("owner".equals(frag)) {
-                newMO.put(frag, device.getOwner());
-                return;
-            }
+                // Handle special cases
+                if ("id".equals(frag)) {
+                    newMO.put(frag, sourceId);
+                    return; // using return in forEach as continue
+                }
+                if ("name".equals(frag)) {
+                    newMO.put(frag, device.getName());
+                    return;
+                }
+                if ("owner".equals(frag)) {
+                    newMO.put(frag, device.getOwner());
+                    return;
+                }
 
-            if ("type".equals(frag)) {
-                newMO.put(frag, device.getType());
-                return;
-            }
+                if ("type".equals(frag)) {
+                    newMO.put(frag, device.getType());
+                    return;
+                }
 
-            // Handle nested attributes
-            Object value = resolveNestedAttribute(attrs, frag);
-            if (value != null) {
-                newMO.put(frag, value);
-            }
-        });
+                // Handle nested attributes
+                Object value = resolveNestedAttribute(attrs, frag);
+                if (value != null) {
+                    newMO.put(frag, value);
+                }
+            });
+        }
 
         return newMO;
     }
@@ -1526,5 +1640,4 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     // }
     // }
     // }
-
 }

@@ -21,12 +21,15 @@
 
 package dynamic.mapper.connector.core.callback;
 
-import dynamic.mapper.processor.model.ProcessingResult;
+import dynamic.mapper.model.Mapping;
+import dynamic.mapper.processor.model.ProcessingResultWrapper;
 
 public interface GenericMessageCallback {
     void onClose(String closeMessage, Throwable closeException);
 
-    ProcessingResult<?> onMessage(ConnectorMessage message);
+    ProcessingResultWrapper<?> onMessage(ConnectorMessage message);
+
+    ProcessingResultWrapper<?> onTestMessage(ConnectorMessage message, Mapping testMapping);
 
     void onError(Throwable errorException);
 }

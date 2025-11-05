@@ -34,7 +34,6 @@ import {
   ColumnDataType,
   DataGridComponent,
   DisplayOptions,
-  gettext,
   Pagination,
 } from '@c8y/ngx-components';
 import {
@@ -49,6 +48,7 @@ import { Subject } from 'rxjs';
 import { IIdentified } from '@c8y/client';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { ClientRelationService } from '../core/client-relation.service';
+import { gettext } from '@c8y/ngx-components/gettext';
 
 @Component({
   selector: 'd11r-mapping-device-client-map',

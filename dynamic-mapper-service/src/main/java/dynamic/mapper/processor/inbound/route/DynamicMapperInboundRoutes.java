@@ -26,7 +26,7 @@ import dynamic.mapper.processor.inbound.processor.MappingContextInboundProcessor
 import dynamic.mapper.processor.inbound.processor.SubstitutionInboundProcessor;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.ProcessingResult;
+import dynamic.mapper.processor.model.ProcessingResultWrapper;
 import dynamic.mapper.processor.util.ProcessingContextAggregationStrategy;
 import dynamic.mapper.processor.util.RequestAggregationStrategy;
 import dynamic.mapper.processor.util.ConsolidationProcessor;
@@ -114,7 +114,7 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
                     log.error("Exception Message: {}", cause.getMessage());
                     log.error("Full Stack Trace: ", cause);
 
-                    ProcessingResult<Object> result = ProcessingResult.builder()
+                    ProcessingResultWrapper<Object> result = ProcessingResultWrapper.builder()
                             .error(cause)
                             .maxCPUTimeMS(0)
                             .build();

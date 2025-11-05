@@ -37,6 +37,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.notification.Utils;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -88,7 +89,8 @@ public class NotificationSubscriptionController {
         validateDeviceListNotEmpty(request.getDevices());
 
         try {
-            NotificationSubscriptionResponse response = subscriptionService.createDeviceSubscription(tenant, request);
+            NotificationSubscriptionResponse response = subscriptionService.createDeviceSubscription(tenant, request,
+                    Utils.STATIC_DEVICE_SUBSCRIPTION);
             log.info("{} - Successfully created subscription for {} devices", tenant,
                     response.getDevices() != null ? response.getDevices().size() : 0);
             return ResponseEntity.ok(response);
@@ -98,7 +100,7 @@ public class NotificationSubscriptionController {
         }
     }
 
-    @Operation(summary = "Update device notification subscription")
+    @Operation(summary = "Update static device notification subscription")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Subscription updated successfully"),
             @ApiResponse(responseCode = "400", description = "Invalid request"),
@@ -131,13 +133,14 @@ public class NotificationSubscriptionController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<NotificationSubscriptionResponse> getSubscriptions() {
+    public ResponseEntity<NotificationSubscriptionResponse> getSubscriptions(
+            @RequestParam("subscription") String subscription) {
         String tenant = getTenant();
         validateOutboundMappingEnabled(tenant);
 
         try {
             NotificationSubscriptionResponse response = configurationRegistry.getNotificationSubscriber()
-                    .getSubscriptionsDevices(tenant, null, null);
+                    .getSubscriptionsDevices(tenant, null, subscription);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("{} - Error retrieving subscriptions: {}", tenant, e.getMessage(), e);
@@ -148,17 +151,17 @@ public class NotificationSubscriptionController {
     @Operation(summary = "Delete device notification subscription")
     @PreAuthorize(ADMIN_CREATE_ROLES)
     @DeleteMapping(value = "/{deviceId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> deleteSubscription(@PathVariable String deviceId) {
+    public ResponseEntity<?> deleteSubscription(@PathVariable String deviceId, @RequestParam("subscription") String subscription) {
         String tenant = getTenant();
         validateOutboundMappingEnabled(tenant);
 
         try {
-            ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(tenant, deviceId);
+            ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(tenant, deviceId, false);
             if (mor == null) {
                 throw new DeviceNotFoundException("Device with id " + deviceId + " not found");
             }
 
-            configurationRegistry.getNotificationSubscriber().unsubscribeDeviceAndDisconnect(tenant, mor);
+            configurationRegistry.getNotificationSubscriber().unsubscribeDeviceAndDisconnect(tenant, mor, subscription);
             log.info("{} - Successfully deleted subscription for device {}", tenant, deviceId);
             return ResponseEntity.ok().build();
         } catch (DeviceNotFoundException e) {
@@ -212,7 +215,7 @@ public class NotificationSubscriptionController {
         validateOutboundMappingEnabled(tenant);
 
         try {
-            ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(tenant, groupId);
+            ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(tenant, groupId, false);
             if (mor == null) {
                 throw new DeviceNotFoundException("Device group with id " + groupId + " not found");
             }

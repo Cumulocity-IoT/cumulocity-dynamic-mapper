@@ -67,7 +67,7 @@ export class CodeBasedProcessorInbound extends BaseProcessorInbound {
 
     try {
       const ctx = new SubstitutionContext(getGenericDeviceIdentifier(context.mapping), JSON.stringify(context.payload), context.topic);
-      
+
       // Call our modified evaluateWithArgs
       const evalResult = await evaluateWithArgsWebWorker(codeToRun, ctx) as any;
 
@@ -80,44 +80,48 @@ export class CodeBasedProcessorInbound extends BaseProcessorInbound {
         context.errors.push(error.message);
         console.error("Error during testing", error);
         context.logs.push(error.message);
-        throw new Error(`Evaluation failed: ${error.message}`);
+        context.errors.push(`Evaluation failed: ${error.message}`);
       }
 
-      // Continue with successful result
-      const result = evalResult.result;
-      //const substitutions = result.getSubstitutions();
-      const substitutions = result['substitutions']['map'];
-      const keys = Object.keys(substitutions);
+      if (evalResult.result) {
+        // Continue with successful result
+        const result = evalResult.result;
+        //const substitutions = result.getSubstitutions();
+        const substitutions = result['substitutions']['map'];
+        const keys = Object.keys(substitutions);
 
-      for (const key of keys) {
-        const values = substitutions[key];
-        // console.log(`Key: ${key}, Value: ${value}`);
-        const processingCacheEntry: SubstituteValue[] = _.get(
-          processingCache,
-          key,
-          []
-        );
-        if (values != null && values['items'] &&  values['items'].length > 0
-          && values['items'][0].expandArray) {
+        for (const key of keys) {
+          const values = substitutions[key];
+          // console.log(`Key: ${key}, Value: ${value}`);
+          const processingCacheEntry: SubstituteValue[] = _.get(
+            processingCache,
+            key,
+            []
+          );
+          if (values != null && values['items'] && values['items'].length > 0
+            && values['items'][0].expandArray) {
 
-          // extracted result from sourcePayload is an array, so we potentially have to
-          // iterate over the result, e.g. creating multiple devices
-          for (let i = 0; i < values['items'].length; i++) {
-            const substitution = values['items'][i];
-            processSubstitute(processingCacheEntry, substitution.value, substitution);
+            // extracted result from sourcePayload is an array, so we potentially have to
+            // iterate over the result, e.g. creating multiple devices
+            for (let i = 0; i < values['items'].length; i++) {
+              const substitution = values['items'][i];
+              processSubstitute(processingCacheEntry, substitution.value, substitution);
+            }
+          } else {
+            processSubstitute(processingCacheEntry, values['items'][0].value, values['items'][0]);
           }
-        } else {
-          processSubstitute(processingCacheEntry, values['items'][0].value, values['items'][0]);
-        }
 
-        processingCache.set(key, processingCacheEntry);
-        if (key === KEY_TIME) {
-          substitutionTimeExists = true;
+          processingCache.set(key, processingCacheEntry);
+          if (key === KEY_TIME) {
+            substitutionTimeExists = true;
+          }
         }
+      } else {
+        context.warnings.push("Transformation returned no result (substitutions)!");
       }
 
     } catch (error) {
-      throw error;
+      context.errors.push(error.message);
     }
 
     // no substitution for the time property exists, then use the system time

@@ -46,6 +46,7 @@ import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.client.AConnectorClient;
+import dynamic.mapper.connector.core.client.Certificate;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.C8YAgent;
@@ -271,7 +272,7 @@ class MQTT3ClientTest {
                 "AAOCAQEAYHLJ\n" +
                 "-----END CERTIFICATE-----";
 
-        AConnectorClient.Certificate mockCert = new AConnectorClient.Certificate(
+        Certificate mockCert = new Certificate(
                 "AA:BB:CC:DD",
                 validCertPem);
 

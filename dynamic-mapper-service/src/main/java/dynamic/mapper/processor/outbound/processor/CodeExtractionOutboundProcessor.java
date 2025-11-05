@@ -18,18 +18,19 @@
  *  @authors Christof Strack, Stefan Witschel
  *
  */
+
 package dynamic.mapper.processor.outbound.processor;
 
 import static dynamic.mapper.model.Substitution.toPrettyJsonString;
 
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import org.apache.camel.Exchange;
-
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
@@ -42,6 +43,7 @@ import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
+import dynamic.mapper.processor.flow.JavaScriptInteropHelper;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.SubstituteValue;
 import dynamic.mapper.processor.model.SubstitutionContext;
@@ -71,57 +73,73 @@ public class CodeExtractionOutboundProcessor extends BaseProcessor {
             if (e.getStackTrace().length > 0) {
                 lineNumber = e.getStackTrace()[0].getLineNumber();
             }
-            String errorMessage = String.format("Tenant %s - Error in CodeExtractionOutboundProcessor: %s for mapping: %s, line %s",
-            tenant, mapping.getName(), e.getMessage(), lineNumber);
+            String errorMessage = String.format(
+                    "Tenant %s - Error in CodeExtractionOutboundProcessor: %s for mapping: %s, line %s",
+                    tenant, mapping.getName(), e.getMessage(), lineNumber);
             log.error(errorMessage, e);
 
             MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
             context.addError(new ProcessingException("Extraction failed", e));
             mappingStatus.errors++;
             mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
-            return;
+        } finally {
+            // Close the Context completely
+            if (context != null && context.getGraalContext() != null) {
+                try {
+                    Context graalContext = context.getGraalContext();
+                    graalContext.close();
+                    context.setGraalContext(null);
+                    log.debug("{} - GraalVM Context closed successfully", tenant);
+                } catch (Exception e) {
+                    log.warn("{} - Error closing GraalVM context: {}", tenant, e.getMessage());
+                }
+            }
         }
-
     }
 
-    public void extractFromSource(ProcessingContext<Object> context)
-            throws ProcessingException {
+    public void extractFromSource(ProcessingContext<Object> context) throws ProcessingException {
+        Value result = null;
+        Value sourceValue = null;
+        Value bindings = null;
+
         try {
             Mapping mapping = context.getMapping();
             String tenant = context.getTenant();
             ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();
 
             Object payloadObject = context.getPayload();
-            Map<String, List<SubstituteValue>> processingCache = context.getProcessingCache();
 
-            String payload = toPrettyJsonString(payloadObject);
             if (serviceConfiguration.isLogPayload() || mapping.getDebug()) {
-                log.info("{} - Patched payload: {}", tenant, payload);
+                String payload = toPrettyJsonString(payloadObject);  // is this and this required?
+                log.info("{} - Incoming payload (patched) in extractFromSource(): {} {} {} {}", tenant,
+                        payload,
+                        serviceConfiguration.isLogPayload(), mapping.getDebug(),
+                        serviceConfiguration.isLogPayload() || mapping.getDebug());
             }
 
             if (mapping.getCode() != null) {
                 Context graalContext = context.getGraalContext();
 
                 String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.getIdentifier();
-                Value bindings = graalContext.getBindings("js");
+                bindings = graalContext.getBindings("js");
 
+                // Load main code
                 byte[] decodedBytes = Base64.getDecoder().decode(mapping.getCode());
                 String decodedCode = new String(decodedBytes);
                 String decodedCodeAdapted = decodedCode.replaceFirst(
                         Mapping.EXTRACT_FROM_SOURCE,
                         identifier);
-                Source source = Source.newBuilder("js", decodedCodeAdapted, identifier +
-                        ".js")
+                Source source = Source.newBuilder("js", decodedCodeAdapted, identifier + ".js")
                         .buildLiteral();
                 graalContext.eval(source);
-                Value sourceValue = bindings
-                        .getMember(identifier);
 
+                sourceValue = bindings.getMember(identifier);
+
+                // Load shared and system code if available
                 if (context.getSharedCode() != null) {
                     byte[] decodedSharedCodeBytes = Base64.getDecoder().decode(context.getSharedCode());
                     String decodedSharedCode = new String(decodedSharedCodeBytes);
-                    Source sharedSource = Source.newBuilder("js", decodedSharedCode,
-                            "sharedCode.js")
+                    Source sharedSource = Source.newBuilder("js", decodedSharedCode, "sharedCode.js")
                             .buildLiteral();
                     graalContext.eval(sharedSource);
                 }
@@ -129,67 +147,353 @@ public class CodeExtractionOutboundProcessor extends BaseProcessor {
                 if (context.getSystemCode() != null) {
                     byte[] decodedSystemCodeBytes = Base64.getDecoder().decode(context.getSystemCode());
                     String decodedSystemCode = new String(decodedSystemCodeBytes);
-                    Source systemSource = Source.newBuilder("js", decodedSystemCode,
-                            "systemCode.js")
+                    Source systemSource = Source.newBuilder("js", decodedSystemCode, "systemCode.js")
                             .buildLiteral();
                     graalContext.eval(systemSource);
                 }
 
-                Map jsonObject = (Map) payloadObject;
-                String payloadAsString = Functions.string(payloadObject, false);
+                Map<?, ?> jsonObject = (Map<?, ?>) payloadObject;
+                String payloadAsString = Functions.string(payloadObject, false); // is this and this required?
 
-                final Value result = sourceValue
-                        .execute(new SubstitutionContext(context.getMapping().getGenericDeviceIdentifier(),
-                                payloadAsString, context.getTopic()));
+                // Execute JavaScript function
+                result = sourceValue.execute(
+                        new SubstitutionContext(
+                                context.getMapping().getGenericDeviceIdentifier(),
+                                payloadAsString,
+                                context.getTopic()));
 
-                // Convert the JavaScript result to Java objects before closing the context
-                final SubstitutionResult typedResult = result.as(SubstitutionResult.class);
+                // CRITICAL: Convert with Context still open
+                SubstitutionResult javaResult = deepConvertSubstitutionResultWithContext(
+                        result,
+                        graalContext, // Pass the context
+                        tenant);
 
-                if (typedResult == null || typedResult.substitutions == null || typedResult.substitutions.size() == 0) {
-                    context.setIgnoreFurtherProcessing(true);
-                    log.info(
-                            "{} - Extraction of source in CodeBasedProcessorOutbound.extractFromSource returned no result, payload: {}",
-                            context.getTenant(),
-                            jsonObject);
-                } else { // Now use the copied objects
-                    Set<String> keySet = typedResult.getSubstitutions().keySet();
-                    for (String key : keySet) {
-                        List<SubstituteValue> processingCacheEntry = new ArrayList<>();
-                        List<SubstituteValue> values = typedResult.getSubstitutions().get(key);
-                        if (values != null && values.size() > 0
-                                && values.get(0).expandArray) {
-                            // extracted result from sourcePayload is an array, so we potentially have to
-                            // iterate over the result, e.g. creating multiple devices
-                            for (SubstituteValue substitutionValue : values) {
-                                SubstitutionEvaluation.processSubstitute(tenant, processingCacheEntry,
-                                        substitutionValue.value,
-                                        substitutionValue, mapping);
-                            }
-                        } else if (values != null) {
-                            SubstitutionEvaluation.processSubstitute(tenant, processingCacheEntry,
-                                    values.getFirst().value,
-                                    values.getFirst(), mapping);
-                        }
-                        processingCache.put(key, processingCacheEntry);
-                    }
-                    if (typedResult.alarms != null && !typedResult.alarms.isEmpty()) {
-                        for (String alarm : typedResult.alarms) {
-                            context.getAlarms().add(alarm);
-                            log.debug("{} - Alarm added: {}", context.getTenant(), alarm);
-                        }
-                    }
-                    if (context.getMapping().getDebug() || context.getServiceConfiguration().isLogPayload()) {
-                        log.info(
-                                "{} - Extraction of source in CodeBasedProcessorOutbound.extractFromSource returned {} results, payload: {} ",
-                                context.getTenant(),
-                                keySet == null ? 0 : keySet.size(), jsonObject);
-                    }
-                }
+                // Now we can safely close the context (will be done in finally block)
 
+                // Process the fully converted Java objects
+                processConvertedResult(javaResult, context, jsonObject, mapping, tenant);
             }
         } catch (Exception e) {
-            throw new ProcessingException(e.getMessage());
+            throw new ProcessingException("Extraction failed: " + e.getMessage(), e);
+        } finally {
+            // Explicitly null out GraalVM Value references
+            result = null;
+            sourceValue = null;
+            bindings = null;
         }
     }
 
+    /**
+     * CRITICAL: Deep convert SubstitutionResult WITH Context still open
+     */
+    private SubstitutionResult deepConvertSubstitutionResultWithContext(
+            Value result,
+            Context graalContext,
+            String tenant) {
+
+        if (result == null || result.isNull()) {
+            return new SubstitutionResult();
+        }
+
+        try {
+            if (result.isHostObject()) {
+                Object hostObj = result.asHostObject();
+
+                if (hostObj instanceof SubstitutionResult) {
+                    SubstitutionResult originalResult = (SubstitutionResult) hostObj;
+
+                    log.debug("{} - Converting SubstitutionResult with {} substitutions (context is open)",
+                            tenant, originalResult.substitutions.size());
+
+                    SubstitutionResult cleanResult = new SubstitutionResult();
+
+                    for (Map.Entry<String, List<SubstituteValue>> entry : originalResult.substitutions.entrySet()) {
+                        String key = entry.getKey();
+                        List<SubstituteValue> originalValues = entry.getValue();
+                        List<SubstituteValue> cleanValues = new ArrayList<>();
+
+                        for (SubstituteValue subValue : originalValues) {
+                            // Convert with context available
+                            SubstituteValue cleanSubValue = convertSubstituteValueWithContext(
+                                    subValue,
+                                    graalContext,
+                                    tenant);
+                            cleanValues.add(cleanSubValue);
+                        }
+
+                        cleanResult.substitutions.put(key, cleanValues);
+                    }
+
+                    if (originalResult.alarms != null) {
+                        cleanResult.alarms.addAll(originalResult.alarms);
+                    }
+
+                    log.info("{} - Successfully converted SubstitutionResult with {} substitutions",
+                            tenant, cleanResult.substitutions.size());
+
+                    return cleanResult;
+                }
+            }
+
+            log.warn("{} - Result is not a SubstitutionResult host object", tenant);
+            return new SubstitutionResult();
+
+        } catch (Exception e) {
+            log.error("{} - Error converting SubstitutionResult: {}", tenant, e.getMessage(), e);
+            throw new RuntimeException("Failed to convert substitution result", e);
+        }
+    }
+
+    /**
+     * Convert SubstituteValue WITH Context available
+     */
+    private SubstituteValue convertSubstituteValueWithContext(
+            SubstituteValue original,
+            Context graalContext,
+            String tenant) {
+
+        Object cleanValue = original.value;
+
+        if (cleanValue != null) {
+            String className = cleanValue.getClass().getName();
+
+            if (className.contains("org.graalvm.polyglot") ||
+                    className.contains("com.oracle.truffle.polyglot")) {
+
+                log.debug("{} - Converting GraalVM object: {}", tenant, className);
+
+                try {
+                    // Wrap it as a Value and convert
+                    Value valueWrapper = graalContext.asValue(cleanValue);
+                    cleanValue = JavaScriptInteropHelper.convertValueToJavaObject(valueWrapper);
+
+                    log.debug("{} - Converted to: {} (type: {})",
+                            tenant,
+                            cleanValue,
+                            cleanValue != null ? cleanValue.getClass().getName() : "null");
+
+                } catch (Exception e) {
+                    log.error("{} - Failed to convert GraalVM object: {}", tenant, e.getMessage());
+
+                    // Try direct cast to Value
+                    if (cleanValue instanceof Value) {
+                        Value val = (Value) cleanValue;
+                        cleanValue = JavaScriptInteropHelper.convertValueToJavaObject(val);
+                        log.debug("{} - Converted via direct cast", tenant);
+                    }
+                }
+            }
+        }
+
+        // Final validation
+        if (cleanValue != null) {
+            String finalClassName = cleanValue.getClass().getName();
+            if (finalClassName.contains("org.graalvm") || finalClassName.contains("com.oracle.truffle")) {
+                log.error("{} - CONVERSION FAILED! Still has GraalVM object: {}", tenant, finalClassName);
+                // Force to string as absolute last resort
+                cleanValue = cleanValue.toString();
+            }
+        }
+
+        return new SubstituteValue(
+                cleanValue,
+                original.type,
+                original.repairStrategy,
+                original.expandArray);
+    }
+
+    /**
+     * CRITICAL: Deep convert SubstitutionResult from GraalVM Values to Java objects
+     * This must be done BEFORE closing the GraalVM context
+     */
+    private SubstitutionResult deepConvertSubstitutionResult(Value result, String tenant) {
+        if (result == null || result.isNull()) {
+            return new SubstitutionResult();
+        }
+
+        try {
+            // Extract as host object (Java object wrapped by GraalVM)
+            if (result.isHostObject()) {
+                Object hostObj = result.asHostObject();
+
+                if (hostObj instanceof SubstitutionResult) {
+                    SubstitutionResult originalResult = (SubstitutionResult) hostObj;
+
+                    log.debug("{} - Converting SubstitutionResult with {} substitutions",
+                            tenant, originalResult.substitutions.size());
+
+                    // Deep convert all SubstituteValue objects to ensure no GraalVM Values remain
+                    SubstitutionResult cleanResult = new SubstitutionResult();
+
+                    for (Map.Entry<String, List<SubstituteValue>> entry : originalResult.substitutions.entrySet()) {
+                        String key = entry.getKey();
+                        List<SubstituteValue> originalValues = entry.getValue();
+                        List<SubstituteValue> cleanValues = new ArrayList<>();
+
+                        log.trace("{} - Processing key '{}' with {} values", tenant, key, originalValues.size());
+
+                        for (SubstituteValue subValue : originalValues) {
+                            SubstituteValue cleanSubValue = convertSubstituteValue(subValue, tenant);
+                            cleanValues.add(cleanSubValue);
+                        }
+
+                        cleanResult.substitutions.put(key, cleanValues);
+                    }
+
+                    // Copy alarms
+                    if (originalResult.alarms != null) {
+                        cleanResult.alarms.addAll(originalResult.alarms);
+                    }
+
+                    log.info("{} - Successfully converted SubstitutionResult with {} substitutions",
+                            tenant, cleanResult.substitutions.size());
+
+                    return cleanResult;
+                }
+            }
+
+            // Shouldn't reach here based on your logs, but keep as fallback
+            log.warn("{} - Result is not a SubstitutionResult host object, attempting manual extraction", tenant);
+            return new SubstitutionResult();
+
+        } catch (Exception e) {
+            log.error("{} - Error converting SubstitutionResult: {}", tenant, e.getMessage(), e);
+            throw new RuntimeException("Failed to convert substitution result", e);
+        }
+    }
+
+    /**
+     * Convert a single SubstituteValue, handling GraalVM Value objects
+     */
+    private SubstituteValue convertSubstituteValue(SubstituteValue original, String tenant) {
+        Object cleanValue = original.value;
+
+        // Check if the value is a GraalVM/Truffle object
+        if (cleanValue != null) {
+            String className = cleanValue.getClass().getName();
+
+            // Check for any GraalVM/Truffle class
+            if (className.contains("org.graalvm.polyglot") ||
+                    className.contains("com.oracle.truffle.polyglot")) {
+
+                log.debug("{} - Found GraalVM/Truffle object: {}, attempting conversion", tenant, className);
+
+                try {
+                    // Try to get the Value interface
+                    if (cleanValue instanceof Value) {
+                        Value graalValue = (Value) cleanValue;
+                        cleanValue = JavaScriptInteropHelper.convertValueToJavaObject(graalValue);
+                        log.debug("{} - Successfully converted via Value interface to: {} (type: {})",
+                                tenant,
+                                cleanValue,
+                                cleanValue != null ? cleanValue.getClass().getName() : "null");
+                    } else {
+                        // Fallback: Try reflection to access as Value
+                        try {
+                            // PolyglotMap and similar classes should implement Value methods
+                            java.lang.reflect.Method asMapMethod = cleanValue.getClass().getMethod("as", Class.class);
+                            @SuppressWarnings("unchecked")
+                            Map<String, Object> mapValue = (Map<String, Object>) asMapMethod.invoke(cleanValue,
+                                    Map.class);
+                            cleanValue = new HashMap<>(mapValue);
+                            log.debug("{} - Converted via reflection to Map with {} entries",
+                                    tenant, mapValue.size());
+                        } catch (Exception reflectionEx) {
+                            log.warn("{} - Failed to convert {} via reflection: {}",
+                                    tenant, className, reflectionEx.getMessage());
+
+                            // Last resort: convert to string
+                            cleanValue = cleanValue.toString();
+                            log.warn("{} - Converted to string as last resort: {}", tenant, cleanValue);
+                        }
+                    }
+                } catch (Exception e) {
+                    log.error("{} - Error converting GraalVM object: {}", tenant, e.getMessage(), e);
+                    // Keep original value, which will likely cause an error downstream
+                }
+            }
+        }
+
+        // Validate the converted value doesn't contain GraalVM objects
+        if (cleanValue != null) {
+            String cleanClassName = cleanValue.getClass().getName();
+            if (cleanClassName.contains("org.graalvm") || cleanClassName.contains("com.oracle.truffle")) {
+                log.error("{} - CONVERSION FAILED! Value still contains GraalVM object: {}",
+                        tenant, cleanClassName);
+            }
+        }
+
+        // Create new SubstituteValue with converted value
+        SubstituteValue cleanSubValue = new SubstituteValue(
+                cleanValue,
+                original.type,
+                original.repairStrategy,
+                original.expandArray);
+
+        return cleanSubValue;
+    }
+
+    /**
+     * Process the converted Java result (no more GraalVM Values)
+     */
+    private void processConvertedResult(
+            SubstitutionResult javaResult,
+            ProcessingContext<Object> context,
+            Map<?, ?> jsonObject,
+            Mapping mapping,
+            String tenant) {
+
+        Map<String, List<SubstituteValue>> processingCache = context.getProcessingCache();
+
+        if (javaResult == null || javaResult.substitutions == null || javaResult.substitutions.isEmpty()) {
+            context.setIgnoreFurtherProcessing(true);
+            log.info("{} - Extraction returned no results, payload: {}", tenant, jsonObject);
+            return;
+        }
+
+        // Process the converted Java objects
+        Set<String> keySet = javaResult.substitutions.keySet();
+
+        for (String key : keySet) {
+            List<SubstituteValue> processingCacheEntry = new ArrayList<>();
+            List<SubstituteValue> values = javaResult.substitutions.get(key);
+
+            if (values != null && !values.isEmpty() && values.get(0).expandArray) {
+                // Handle array expansion
+                for (SubstituteValue substitutionValue : values) {
+                    SubstitutionEvaluation.processSubstitute(
+                            tenant,
+                            processingCacheEntry,
+                            substitutionValue.value,
+                            substitutionValue,
+                            mapping);
+                }
+            } else if (values != null && !values.isEmpty()) {
+                SubstituteValue firstValue = values.get(0);
+                SubstitutionEvaluation.processSubstitute(
+                        tenant,
+                        processingCacheEntry,
+                        firstValue.value,
+                        firstValue,
+                        mapping);
+            }
+
+            processingCache.put(key, processingCacheEntry);
+        }
+
+        // Handle alarms
+        if (javaResult.alarms != null && !javaResult.alarms.isEmpty()) {
+            for (String alarm : javaResult.alarms) {
+                context.getAlarms().add(alarm);
+                log.debug("{} - Alarm added: {}", tenant, alarm);
+            }
+        }
+
+        if (context.getMapping().getDebug() || context.getServiceConfiguration().isLogPayload()) {
+            log.info("{} - Extraction returned {} results, payload: {}",
+                    tenant,
+                    keySet.size(),
+                    jsonObject);
+        }
+    }
 }

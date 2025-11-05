@@ -24,7 +24,9 @@ package dynamic.mapper.notification.task;
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionRepresentation;
+
 import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.notification.Utils;
 import dynamic.mapper.processor.model.C8YMessage;
 import lombok.extern.slf4j.Slf4j;
 
@@ -81,7 +83,7 @@ public class UpdateSubscriptionDeviceTypeTask implements Callable<SubscriptionUp
             // Subscribe the device
             Future<NotificationSubscriptionRepresentation> future = configurationRegistry
                     .getNotificationSubscriber()
-                    .subscribeDeviceAndConnect(tenant, newMO, c8yMessage.getApi());
+                    .subscribeDeviceAndConnect(tenant, newMO, c8yMessage.getApi(), Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
 
             log.info("{} - Successfully subscribed new device {} of type {}",
                     tenant, deviceId, typeInfo.getType());

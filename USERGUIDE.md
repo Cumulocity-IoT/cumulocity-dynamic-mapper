@@ -365,7 +365,7 @@ Otherwise an extracted array is treated as a single value, see [Different type o
 > 1.  Does another substitution for the same target property exist? If so, a modal dialog appears and asks the user for confirmation to overwrite the existing substitution.
 > 2.  If the new substitution defines the device identifier, it is checked if another substitution already withe the same property exists. If so, a modal dialog appears and asks for confirmation to overwrite the existing substitution.
 
-To avoid inconsistent JSON being sent to the Cumulocity API the defined target tmeplate are validated with schemas. These are defined for all target payloads (Measurement, Event, Alarm, Inventory). The schemas validate if required properties are defined and if the time is in the correct format.
+To avoid inconsistent JSON being sent to the Cumulocity API the defined target template are validated with schemas. These are defined for all target payloads (Measurement, Event, Alarm, Inventory). The schemas validate if required properties are defined and if the time is in the correct format.
 
 In the sample below, e.g. a warning is shown since the required property `source.id` is missing in the payload.
 

@@ -38,25 +38,20 @@ import {
   Mapping,
   getSchema
 } from '../../shared/';
-import { MappingService } from '../core/mapping.service';
-import { C8YRequest, ProcessingContext, TOKEN_TOPIC_LEVEL } from '../core/processor/processor.model';
+import { DynamicMapperRequest, ProcessingContext, TestResult, TOKEN_TOPIC_LEVEL } from '../core/processor/processor.model';
 import { isSubstitutionsAsCode, MappingType, StepperConfiguration } from '../../shared/mapping/mapping.model';
 import { patchC8YTemplateForTesting, sortObjectKeys } from '../shared/util';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { Content } from 'vanilla-jsoneditor';
+import { TestingService } from '../core/testing.service';
 
 interface TestingModel {
   payload?: any;
-  results: C8YRequest[];
+  results: DynamicMapperRequest[];
   errorMsg?: string;
   request?: any;
   response?: any;
   selectedResult: number;
-}
-
-interface TestResult {
-  success: boolean;
-  errors: string[];
 }
 
 @Component({
@@ -110,7 +105,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   ignoreErrorNonExisting = false;
 
   constructor(
-    private readonly mappingService: MappingService,
+    private readonly testingService: TestingService,
     private readonly alertService: AlertService,
     private readonly elementRef: ElementRef,
     private readonly bsModalService: BsModalService,
@@ -143,7 +138,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       this.resetTestingModel();
       this.updateEditors();
       await this.initializeTestContext(this.testMapping);
-      this.mappingService.initializeCache(this.mapping.direction);
+      this.testingService.initializeCache(this.mapping.direction);
     } catch (error) {
       await this.handleError('Failed to reset transformation', error);
     }
@@ -229,7 +224,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   }
 
   private async initializeTestContext(testMapping: Mapping): Promise<void> {
-    this.testContext = this.mappingService.initializeContext(testMapping);
+    this.testContext = this.testingService.initializeContext(testMapping);
 
     if (this.isEditorAvailable()) {
       await this.setupEditor();
@@ -247,7 +242,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       true,
       true
     );
-    this.editorTestingRequest?.setSchema(schema);
+    // this.editorTestingRequest?.setSchema(schema);
     this.resetTestingModel();
   }
 
@@ -289,15 +284,15 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     }
   }
 
-  private updateTestingModelFromResult(result: C8YRequest): void {
+  private updateTestingModelFromResult(result: DynamicMapperRequest): void {
     const { request, response, targetAPI, error } = result;
     this.testingModel.request = sortObjectKeys(request);
-    this.testingModel.response = sortObjectKeys(response);
+    if (response) { this.testingModel.response = sortObjectKeys(response); }
     this.testingModel.errorMsg = error;
 
-    this.editorTestingRequest?.setSchema(
-      getSchema(targetAPI, this.mapping.direction, true, true)
-    );
+    // this.editorTestingRequest?.setSchema(
+    //   getSchema(targetAPI, this.mapping.direction, true, true)
+    // );
   }
 
   private resetTestingModelProperties(): void {
@@ -320,7 +315,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     this.testContext.sendPayload = sendPayload;
 
     // Update test context
-    this.testContext = await this.mappingService.testResult(
+    this.testContext = await this.testingService.testResult(
       this.testContext,
       this.sourceTemplate
     );
@@ -334,7 +329,9 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
     return {
       success: requestErrors.length === 0 && contextErrors.length === 0,
-      errors: [...contextErrors, ...requestErrors]
+      errors: [...contextErrors, ...requestErrors],
+      warnings: this.testContext.warnings,
+      requests: this.testContext.requests
     };
   }
 
@@ -351,7 +348,9 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
         this.testResult.emit(false);
       }
     } else {
-      this.handleTestSuccess(sendPayload);
+      if (result?.warnings && result?.warnings.length > 0) {
+        this.handleTestWarning(result);
+      } else { this.handleTestSuccess(sendPayload); }
     }
   }
 
@@ -359,6 +358,12 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     errors.forEach(error => {
       this.alertService.danger(error);
     });
+  }
+
+  private handleTestWarning(result: TestResult): void {
+    result?.warnings.forEach(w => {
+      this.alertService.warning(`Test completed with warning: ${w}`);
+    })
   }
 
   private handleTestSuccess(sendPayload: boolean): void {
@@ -396,9 +401,19 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
         await this.executeTest(false);
       }
     } else {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      const m = message + (error ? `: ${errorMsg}` : '');
-      this.alertService.danger(`${m}`);
+      // Try to get error message from various sources
+      let errorMsg = '';
+
+      if (error instanceof Error && error.message) {
+        errorMsg = error.message;
+      } else if (this.testContext?.errors && this.testContext.errors.length > 0) {
+        // Get the last error from testContext.errors
+        const lastError = this.testContext.errors[this.testContext.errors.length - 1] as any;
+        errorMsg = (lastError instanceof Error) ? lastError.message : String(lastError);
+      }
+
+      const m = errorMsg ? `${message}: ${errorMsg}` : message;
+      this.alertService.danger(m);
     }
   }
 }

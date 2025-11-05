@@ -1,3 +1,24 @@
+/*
+ * Copyright (c) 2022-2025 Cumulocity GmbH.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ *  @authors Christof Strack, Stefan Witschel
+ *
+ */
+
 package dynamic.mapper.processor.model;
 
 import java.util.Map;
@@ -12,13 +33,14 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class SubstituteValue implements Cloneable{
+public class SubstituteValue implements Cloneable {
     public static enum TYPE {
-         ARRAY, //                       Extracted value is an array
-         IGNORE, //                      Extracted should be ignored
-         NUMBER, //                      Extracted value is a number
-         OBJECT, //                      Extracted value is an object, e.g.  {"c8y_ThreePhaseElectricityMeasurement": {"A+": { "value": 435, "unit": "kWh" }}}
-         TEXTUAL, //                     Extracted value is a text/ string
+        ARRAY, // Extracted value is an array
+        IGNORE, // Extracted should be ignored
+        NUMBER, // Extracted value is a number
+        OBJECT, // Extracted value is an object, e.g. {"c8y_ThreePhaseElectricityMeasurement":
+                // {"A+": { "value": 435, "unit": "kWh" }}}
+        TEXTUAL, // Extracted value is a text/ string
     }
 
     public Object value;
@@ -27,6 +49,11 @@ public class SubstituteValue implements Cloneable{
     public boolean expandArray;
 
     public SubstituteValue(Object value, TYPE type, RepairStrategy repair, boolean expandArray) {
+        // Make sure we're not storing a Value object
+        if (value != null && value.getClass().getName().contains("org.graalvm.polyglot.Value")) {
+            throw new IllegalArgumentException(
+                    "SubstituteValue cannot hold GraalVM Value objects. Convert to Java first!");
+        }
         this.type = type;
         this.value = value;
         this.repairStrategy = repair;
@@ -45,7 +72,8 @@ public class SubstituteValue implements Cloneable{
         // TODO fix this, we have to differentiate between {"nullField": null } and
         // "nonExisting"
         try {
-            if (substitute == null) return;
+            if (substitute == null)
+                return;
             if ("$".equals(pathTarget)) {
                 Object replacement = substitute.value;
                 if (replacement instanceof Map<?, ?> map) {
@@ -56,7 +84,8 @@ public class SubstituteValue implements Cloneable{
                     }
                 }
             } else {
-                if ((substitute.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING_OR_NULL) && subValueMissingOrNull)) {
+                if ((substitute.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING_OR_NULL)
+                        && subValueMissingOrNull)) {
                     payloadTarget.delete(pathTarget);
                 } else if (substitute.repairStrategy.equals(RepairStrategy.CREATE_IF_MISSING)) {
                     // jsonObject.put("$", keys, sub.value);

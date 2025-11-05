@@ -20,12 +20,12 @@
 import { ChangeDetectorRef, Component, OnInit, ViewEncapsulation } from '@angular/core';
 import {
   AlertService,
-  CellRendererContext,
-  gettext
+  CellRendererContext
 } from '@c8y/ngx-components';
 import { Direction, Feature, Operation, SharedService } from '../..';
 import { ConnectorConfigurationService } from '../../service/connector-configuration.service';
 import { HttpStatusCode } from '@angular/common/http';
+import { gettext } from '@c8y/ngx-components/gettext';
 
 /**
  * The example component for custom cell renderer.

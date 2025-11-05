@@ -24,12 +24,12 @@ import * as _ from 'lodash';
 import {
   AlertService,
   AppStateService,
-  gettext,
   NavigatorNode,
   NavigatorNodeFactory
 } from '@c8y/ngx-components';
 import { Router } from '@angular/router';
 import { NODE2, SharedService } from '../shared';
+import { gettext } from '@c8y/ngx-components/gettext';
 
 @Injectable()
 export class MonitoringNavigationFactory implements NavigatorNodeFactory {
@@ -43,8 +43,8 @@ export class MonitoringNavigationFactory implements NavigatorNodeFactory {
       parent: gettext('Monitoring'),
       label: gettext('Statistic processed'),
       icon: 'monitoring',
-      path: `c8y-pkg-dynamic-mapper/${NODE2}/monitoring/grid`,
-      priority: 500,
+      path: `c8y-pkg-dynamic-mapper/${NODE2}/monitoring/statistic/inbound`,
+      priority: 530,
       preventDuplicates: true
     }),
     monitoringChartNode: new NavigatorNode({
@@ -52,7 +52,7 @@ export class MonitoringNavigationFactory implements NavigatorNodeFactory {
       label: gettext('Chart processed'),
       icon: 'pie-chart',
       path: `c8y-pkg-dynamic-mapper/${NODE2}/monitoring/chart`,
-      priority: 500,
+      priority: 520,
       preventDuplicates: true
     }),
     monitoringMappingEventsNode: new NavigatorNode({
@@ -60,7 +60,7 @@ export class MonitoringNavigationFactory implements NavigatorNodeFactory {
       label: gettext('Service events'),
       icon: 'logs',
       path: `c8y-pkg-dynamic-mapper/${NODE2}/monitoring/serviceEvent`,
-      priority: 500,
+      priority: 510,
       preventDuplicates: true
     }),
 

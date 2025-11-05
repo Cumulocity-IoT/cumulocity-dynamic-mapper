@@ -65,7 +65,7 @@ export abstract class BaseProcessorOutbound {
     try {
       payloadTarget = JSON.parse(mapping.targetTemplate);
     } catch (e) {
-      this.alert.warning('Target payload is not a valid json object!');
+      context.warnings.push('Target payload is not a valid json object!');
       throw e;
     }
 
