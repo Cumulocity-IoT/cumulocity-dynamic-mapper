@@ -17,8 +17,9 @@
  *
  * @authors Christof Strack
  */
+import { gettext } from '@c8y/ngx-components/gettext';
 import { ERROR_TYPE } from './extension.model';
-import { gettext, PropertiesListItem } from '@c8y/ngx-components';
+import { PropertiesListItem } from '@c8y/ngx-components';
 
 export const ERROR_MESSAGES = {
   [ERROR_TYPE.TYPE_VALIDATION]: gettext(

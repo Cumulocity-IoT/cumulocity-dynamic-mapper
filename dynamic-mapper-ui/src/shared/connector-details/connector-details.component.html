@@ -29,8 +29,8 @@
   <!-- <c8y-breadcrumb-item [label]="configuration?.name"></c8y-breadcrumb-item> -->
   <c8y-breadcrumb-item [label]="'Details & logs'"></c8y-breadcrumb-item>
 </c8y-breadcrumb>
-<div class="card card--fullpage content-fullpage d-col">
-  <div class="p-24 separator-bottom">
+<div class="card card--fullpage content-fullpage">
+  <div class="p-l-24 p-r-24 separator-bottom">
     <div class="card-header separator">
       <p class="card-title">Connector configuration</p>
     </div>
@@ -61,7 +61,7 @@
           </c8y-form-group>
         </div>
       </div>
-      <div class="_text-center">
+      <div class="m-b-24">
         <button class="btn btn-primary" title="{{ 'Update connector' | translate }}" (click)="onConfigurationUpdate()"
           [disabled]="configuration?.enabled || !feature?.userHasMappingAdminRole">
           <i c8yIcon="pencil"></i>
@@ -75,15 +75,14 @@
       </div>
     </div>
   </div>
-  <div class="p-24 separator-bottom">
-
+  <div class="p-l-24 p-r-24 p-b-24 separator-bottom" style="position: relative; z-index: 1;">
     <div class="card-header separator">
       <p class="card-title">Connector logs</p>
     </div>
     <div class="card-block">
-      <div class="flex-auto p-24" style="overflow-y: hidden">
+      <div class="_p-24" style="display: flex; flex-direction: column; max-height: 60vh; position: relative;">
         <div class="c8y-list__item c8y-list--timeline m-b-8"
-          style="background: var(--c8y-page-sticky-header-background-default)!important;">
+          style="background: var(--c8y-page-sticky-header-background-default)!important; flex-shrink: 0;">
           <div class="d-flex">
             <div class="c8y-list__item__block flex-grow">
               <div class="c8y-list__item__body">
@@ -96,7 +95,8 @@
             </div>
           </div>
         </div>
-        <c8y-list-group class="inner-scroll m-r-8">
+        <c8y-list-group class="inner-scroll m-r-8 p-b-8"
+          style="flex: 1; overflow-y: auto; min-height: 0; position: relative; z-index: 0;">
           <c8y-li-timeline *ngFor="let event of statusLogs$ | async">
             {{ event.date | date: 'dd.MM.yy hh:mm:ss' }}
             <c8y-li>
@@ -120,4 +120,3 @@
       </div>
     </div>
   </div>
-</div>

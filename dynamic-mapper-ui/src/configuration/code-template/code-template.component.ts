@@ -22,7 +22,7 @@ import {
   OnInit, ViewEncapsulation
 } from '@angular/core';
 import { EditorComponent, loadMonacoEditor } from '@c8y/ngx-components/editor';
-import { AlertService, gettext } from '@c8y/ngx-components';
+import { AlertService } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { SharedService } from '../../shared/service/shared.service';
 import { base64ToString, stringToBase64 } from '../../mapping/shared/util';
@@ -33,6 +33,7 @@ import { BehaviorSubject } from 'rxjs';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpStatusCode } from '@angular/common/http';
 import { createCompletionProviderSubstitutionAsCode } from '../../mapping/shared/stepper.model';
+import { gettext } from '@c8y/ngx-components/gettext';
 
 let initializedMonaco = false;
 

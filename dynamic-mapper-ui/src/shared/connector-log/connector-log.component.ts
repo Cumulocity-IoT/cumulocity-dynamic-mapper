@@ -24,7 +24,6 @@ import { Observable, Subject, takeUntil } from 'rxjs';
 import packageJson from '../../../package.json';
 import {
   ConnectorConfiguration,
-  ConnectorSpecification,
   ConnectorStatus,
   LoggingEventType,
   LoggingEventTypeMap,

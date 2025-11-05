@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 import { Component, EventEmitter, Input, OnInit, Output, ViewChild, AfterViewInit, ViewEncapsulation, OnDestroy, inject } from '@angular/core';
-import { ActionControl, AlertService, BottomDrawerService, Column, CountdownIntervalComponent, DataGridComponent, gettext, Pagination } from '@c8y/ngx-components';
+import { ActionControl, AlertService, BottomDrawerService, Column, CountdownIntervalComponent, DataGridComponent, Pagination } from '@c8y/ngx-components';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, combineLatest, from, Observable, Subject, } from 'rxjs';
 import { filter, map, take, takeUntil } from 'rxjs/operators';
@@ -35,6 +35,7 @@ import { ActionVisibilityRule } from './types';
 import { SharedService } from '..';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { ConnectorConfigurationDrawerComponent } from './edit/connector-configuration-drawer.component';
+import { gettext } from '@c8y/ngx-components/gettext';
 
 @Component({
   selector: 'd11r-mapping-connector-grid',

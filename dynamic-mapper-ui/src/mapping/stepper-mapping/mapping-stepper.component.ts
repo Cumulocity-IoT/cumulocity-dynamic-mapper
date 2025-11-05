@@ -33,7 +33,7 @@ import {
 } from '@angular/core';
 import { FormControl, FormGroup } from '@angular/forms';
 import { EditorComponent, loadMonacoEditor } from '@c8y/ngx-components/editor';
-import { Alert, AlertService, BottomDrawerService, C8yStepper, gettext } from '@c8y/ngx-components';
+import { Alert, AlertService, BottomDrawerService, C8yStepper } from '@c8y/ngx-components';
 import { FormlyFieldConfig } from '@ngx-formly/core';
 import * as _ from 'lodash';
 import { BsModalService } from 'ngx-bootstrap/modal';
@@ -88,6 +88,7 @@ import { AIPromptComponent } from '../prompt/ai-prompt.component';
 import { AIAgentService } from '../core/ai-agent.service';
 import { AgentObjectDefinition, AgentTextDefinition } from '../shared/ai-prompt.model';
 import { MappingStepTestingComponent } from '../step-testing/mapping-testing.component';
+import { gettext } from '@c8y/ngx-components/gettext';
 
 let initializedMonaco = false;
 

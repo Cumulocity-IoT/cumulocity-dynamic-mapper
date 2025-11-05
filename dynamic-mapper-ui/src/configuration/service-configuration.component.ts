@@ -20,13 +20,14 @@
 import { HttpStatusCode } from '@angular/common/http';
 import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
-import { AlertService, gettext } from '@c8y/ngx-components';
+import { AlertService } from '@c8y/ngx-components';
 import packageJson from '../../package.json';
 import { Feature, Operation, SharedService } from '../shared';
 import { ServiceConfiguration } from './shared/configuration.model';
 import { ActivatedRoute } from '@angular/router';
 import { AIAgentService } from 'src/mapping/core/ai-agent.service';
 import { BehaviorSubject, from, map, Subject, takeUntil } from 'rxjs';
+import { gettext } from '@c8y/ngx-components/gettext';
 
 @Component({
   selector: 'd11r-mapping-service-configuration',
