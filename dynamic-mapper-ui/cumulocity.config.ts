@@ -75,7 +75,7 @@ export default {
         from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_JavaScript.png',
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_JavaScript.png'
       },
-            {
+      {
         from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_SmartFunction.png',
         to: 'image/Dynamic_Mapper_Mapping_Stepper_SmartFunction.png'
       },
@@ -88,10 +88,20 @@ export default {
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Snooping_Started.png'
       },
       {
+        from: '../resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_TransformationType.png',
+        to: 'image/Dynamic_Mapper_Mapping_Table_Add_Modal_TransformationType.png'
+      },
+
+      {
         from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Generate_JSONata.png',
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_Generate_JSONata.png'
       },
-            {
+      {
+        from: '../resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_Payload.png',
+        to: 'image/Dynamic_Mapper_Mapping_Table_Add_Modal_Payload.png'
+      },
+
+      {
         from: '../resources/image/Dynamic_Mapper_Mapping_Substitution_Outbound.png',
         to: 'image/Dynamic_Mapper_Mapping_Substitution_Outbound.png'
       },

@@ -218,14 +218,35 @@
     </h3>
   </div>
   <div class="card-block">
+
     <div class="p-b-8 text-16">
-      Mappings can use the JSON query and transformation language (JSONata) or JavaScript to define substitutions.<br />
-      Choose the approach that best fits your experience or existing code.<br /><br />
-      The Dynamic Mapper supports different mapping types: JSON, Hex, Processor Extension.<br />
-      Before defining a mapping, select the appropriate type. In most cases, use JSON to map your custom device payload
-      to the Cumulocity JSON format.<br />
-      Start by clicking <b>Add mapping</b> (Mapping -> Inbound Mapping -> Action Add mapping).<br />
-      In the <b>Add mapping</b> dialog, you can choose <b>Define substitutions as JavaScript</b> to use
+      When you start with a new mapping the first considerations are about the payload format and the transformation
+      type to use:
+      <ol class="text-16">
+        <li>
+          In which format is the inbound payload sent? This defines the payload type to choose: JSON, Flat File,
+          Hexadecimal, Protobuf
+        </li>
+        <li>
+          How to define the transformation of inbound to Cumulocity format? This defines the transformation type:
+          JSONata, Smart Functions, ...
+        </li>
+      </ol>
+      <img width="70%" class="m-l-48 m-b-48"
+        src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Table_Add_Modal_Payload.png"
+        alt="Payload type " />
+      <p class="image-description"><b>Description:</b> Screenshot showing available payload types.</p>
+      <br />
+      <img width="70%" class="m-l-48 m-b-48"
+        src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Table_Add_Modal_TransformationType.png"
+        alt="Transformation type" />
+      <p class="image-description"><b>Description:</b> Screenshot showing available transformation types.</p>
+    </div>
+
+
+    <div class="p-b-8 text-16">
+      Now you start adding a mapping by clicking <b>Add mapping</b> (Mapping -> Inbound Mapping -> Action Add mapping).<br />
+      In the <b>Add mapping</b> dialog, you can choose the payload type, e.g. <b>JSON</b> and the transformation type, e.g. <b>Define substitutions as JavaScript</b> to use
       JavaScript.<br /><br />
       <img width="70%" class="m-l-48 m-b-48"
         src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Topic_Definition.png"
