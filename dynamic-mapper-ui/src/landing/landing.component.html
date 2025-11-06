@@ -245,8 +245,10 @@
 
 
     <div class="p-b-8 text-16">
-      Now you start adding a mapping by clicking <b>Add mapping</b> (Mapping -> Inbound Mapping -> Action Add mapping).<br />
-      In the <b>Add mapping</b> dialog, you can choose the payload type, e.g. <b>JSON</b> and the transformation type, e.g. <b>Define substitutions as JavaScript</b> to use
+      Now you start adding a mapping by clicking <b>Add mapping</b> (Mapping -> Inbound Mapping -> Action Add
+      mapping).<br />
+      In the <b>Add mapping</b> dialog, you can choose the payload type, e.g. <b>JSON</b> and the transformation type,
+      e.g. <b>Define substitutions as JavaScript</b> to use
       JavaScript.<br /><br />
       <img width="70%" class="m-l-48 m-b-48"
         src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Topic_Definition.png"
@@ -434,6 +436,38 @@
           The JavaScript editor for Smart Function is only available if you select the <b>Smart Function</b> as a
           <b>Transformation Type</b> when
           creating the mapping.
+        </div>
+        <div class="p-b-8 text-16">
+          The signature and structure of a <b>Smart Function</b> has the form <br />
+          <pre><code>&nbsp;&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;function onMessage (inputMsg, context) {{ '{' }}
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;const msg = inputMsg; 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;var payload = msg.getPayload(); // contains payload 
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;context.logMessage("Context" + context.getStateAll());
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;context.logMessage("Payload Raw:" + msg.getPayload());
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;context.logMessage("Payload messageId" +  msg.getPayload().get('messageId'));
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;// insert transformation logic here
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;// then return result
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return [{{ '{' }}
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cumulocityType: "measurement",
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;action: "create",
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;payload: {{ '{' }}
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"time":  new Date().toISOString(),
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"type": "c8y_TemperatureMeasurement",
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"c8y_Steam": {{ '{' }}
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"Temperature": {{ '{' }}
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"unit": "C",
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"value": payload["sensorData"]["temp_val"]
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{{ '}' }}  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{{ '}' }}  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{{ '}' }},
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;externalSource: [{{ '{' }}"type":"c8y_Serial", "externalId": payload.get("clientId"){{ '}' }}]
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{{ '}' }}];
+
+&nbsp;&nbsp;&nbsp;&nbsp;{{ '}' }}   
+            </code></pre>
         </div>
         <div class="p-b-8 text-16">
           The <b>Smart Function</b> allows to enrich the payload with inventory data from the device e.g.: <br /> <br />
