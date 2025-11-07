@@ -94,7 +94,7 @@ The settings for the Webhook (outbound) are as follows
 </p>
 <br/>
 
-When you add or change a connection configuration, it happens very often that the parameters are incorrect and the connection fails. In this case, the conection to the MQTT broker cannot be established and the reason is not known. To identify the incorrect parameter, you can follow the error messages in the connections logs on the same UI:
+When you add or change a connection configuration, it happens very often that the parameters are incorrect and the connection fails. In this case, the connection to the MQTT broker cannot be established and the reason is not known. To identify the incorrect parameter, you can follow the error messages in the connections logs on the same UI:
 
 <p align="center">
 <img src="resources/image/Dynamic_Mapper_Connector_Details.png"  style="width: 70%;" />
