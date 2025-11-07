@@ -16,6 +16,7 @@
       - [Map Device Identifier](#map-device-identifier)
       - [Define templates and substitutions for source and target payload](#define-templates-and-substitutions-for-source-and-target-payload)
       - [Substitutions defined as code (javascript)](#substitutions-defined-as-code-javascript)
+      - [Defining the payload transformation using a Smart Function (JavaScript)](#defining-the-payload-transformation-using-a-smart-function-javascript)
       - [Different type of substitutions](#different-type-of-substitutions)
     - [Apply a filter for a mapping](#apply-a-filter-for-a-mapping)
     - [Test transformation from source to target format](#test-transformation-from-source-to-target-format)
@@ -89,14 +90,14 @@ The settings for the Default HTTP Connector (inbound) are as follows
 The settings for the Webhook (outbound) are as follows
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Connector_WebHook.png"  style="width: 50%;" />
+<img src="resources/image/Dynamic_Mapper_Connector_WebHook.png"  style="width: 70%;" />
 </p>
 <br/>
 
-When you add or change a connection configuration, it happens very often that the parameters are incorrect and the connection fails. In this case, the connection to the MQTT broker cannot be established and the reason is not known. To identify the incorrect parameter, you can follow the error messages in the connections logs on the same UI:
+When you add or change a connection configuration, it happens very often that the parameters are incorrect and the connection fails. In this case, the conection to the MQTT broker cannot be established and the reason is not known. To identify the incorrect parameter, you can follow the error messages in the connections logs on the same UI:
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Connector_Details.png"  style="width: 50%;" />
+<img src="resources/image/Dynamic_Mapper_Connector_Details.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -145,6 +146,23 @@ Further example for JSONata expressions are:
 
 ### Wizard to define a mapping
 
+When you start with a new mapping the first considerations are about the payload format and the transformation type to use:
+
+1. In which format is the inbound payload sent? This defines the payload type to choose: JSON, Flat File, Hexadecimal, Protobuf
+2. How to define the transformation of inbound to Cumulocity format? This defines the transformation type: JSONata, Smart Functions, ...
+
+<p align="center">
+<img src="resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_Payload.png"  style="width: 70%;" />
+</p>
+<p class="image-description"><b>Description:</b> Screenshot showing available payload types.</p>
+<br/>
+
+<p align="center">
+<img src="resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_TransformationType.png"  style="width: 70%;" />
+</p>
+<p class="image-description"><b>Description:</b> Screenshot showing available transformation types.</p>
+<br/>
+
 Creation of the new mapping starts by pressing `Add Mapping`. On the next modal UI you can choose the mapping type depending on the structure of your payload. Currently there is support for:
 
 1. `JSON`: if your payload is in JSON format
@@ -153,7 +171,7 @@ Creation of the new mapping starts by pressing `Add Mapping`. On the next modal 
 1. `Extension Source`: if you want to process the message yourself, by registering a processor extension
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal.png"  style="width: 50%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -379,7 +397,7 @@ In the sample below, e.g. a warning is shown since the required property `source
 When you choose to define the substitutions in javascript code, see following screenshot, then the flow in the stepper is different.
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_SubstitutionAsJavaScript.png"  style="width: 50%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_CodeBasedSubstitution.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -432,6 +450,61 @@ The code that you write in the web editor is evaluated together with the shared 
 </p>
 <br/>
 
+#### Defining the payload transformation using a Smart Function (JavaScript)
+
+When you select **Smart Function** as the **Transformation Type** in the modal dialog, you can define the entire payload directly in the editor using JavaScript syntax, rather than just substitutions. At runtime, this JavaScript code is evaluated and copies the value to the target payload path. This gives you the freedom to see the payload exactly as it is sent to the Cumulocity backend.
+
+**Note:** The JavaScript editor for Smart Function is only available if you select the **Smart Function** as a **Transformation Type** when creating the mapping.
+
+The signature and structure of a **Smart Function** has the form:
+
+```javascript
+function onMessage (inputMsg, context) {
+    const msg = inputMsg;
+    var payload = msg.getPayload(); // contains payload
+
+    context.logMessage("Context" + context.getStateAll());
+    context.logMessage("Payload Raw:" + msg.getPayload());
+    context.logMessage("Payload messageId" +  msg.getPayload().get('messageId'));
+    // insert transformation logic here
+
+    // then return result
+    return [{
+        cumulocityType: "measurement",
+        action: "create",
+        payload: {
+            "time":  new Date().toISOString(),
+            "type": "c8y_TemperatureMeasurement",
+            "c8y_Steam": {
+                "Temperature": {
+                    "unit": "C",
+                    "value": payload["sensorData"]["temp_val"]
+                }
+            }
+        },
+        externalSource: [{"type":"c8y_Serial", "externalId": payload.get("clientId")}]
+    }];
+}
+```
+
+The **Smart Function** allows to enrich the payload with inventory data from the device e.g.:
+
+```javascript
+// lookup device for enrichment
+var deviceByDeviceId = context.lookupDeviceByDeviceId(payload.get("deviceId"));
+context.logMessage("Device (by device id): " + deviceByDeviceId);
+
+var deviceByExternalId = context.lookupDeviceByExternalId(payload.get("clientId"), "c8y_Serial" );
+context.logMessage("Device (by external id): " + deviceByExternalId);
+```
+
+**Note:** Only device fragments configured in **Configuration > Service Configuration > Function > Fragments from inventory to cache** can be referenced and have to be defined in this list of fragments.
+
+<p align="center">
+<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_SmartFunction.png"  style="width: 70%;" />
+</p>
+<p class="image-description"><b>Description:</b> Screenshot showing step 4 for defining complete transformation using JavaScript.</p>
+<br/>
 
 #### Different type of substitutions
 

@@ -43,6 +43,111 @@ Please check the [Installation Guide](/INSTALLATION.md) to find out how you can 
 
 Please check the [User Guide](/USERGUIDE.md) to find comprehensive guidance on how to use the Dynamic Mapper.
 
+### Defining a mapping
+
+When you start with a new mapping the first considerations are about the payload format and the transformation type to use:
+
+1. In which format is the inbound payload sent? This defines the payload type to choose: JSON, Flat File, Hexadecimal, Protobuf
+2. How to define the transformation of inbound to Cumulocity format? This defines the transformation type: JSONata, Smart Functions, ...
+
+<br/>
+<p align="center">
+<img src="resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_Payload.png"  style="width: 70%;" />
+<br/>
+<b>Description:</b> Screenshot showing available payload types.
+</p>
+<br/>
+
+<br/>
+<p align="center">
+<img src="resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_TransformationType.png"  style="width: 70%;" />
+<br/>
+<b>Description:</b> Screenshot showing available transformation types.
+</p>
+<br/>
+
+Now you start adding a mapping by clicking **Add mapping** (Mapping -> Inbound Mapping -> Action Add mapping).
+
+In the **Add mapping** dialog, you can choose the payload type, e.g. **JSON** and the transformation type, e.g. **Define substitutions as JavaScript** to use JavaScript.
+
+<br/>
+<p align="center">
+<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_Topic_Definition.png"  style="width: 70%;" />
+</p>
+<br/>
+
+The stepper guides you through these steps to define a mapping using JSONata for substitutions:
+
+1. Add or select an existing connector for your mapping (where payloads come from).
+2. Define general settings, such as the topic name for this mapping.
+3. Select or enter the template for the expected source payload. This is used as the source path for substitutions.
+4. Define substitutions for copying content from the source to the target payload. These will be applied at runtime.
+5. Test the mapping by applying the substitutions and save the mapping.
+
+<br/>
+<p align="center">
+<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Basic.png"  style="width: 70%;" />
+</p>
+<br/>
+
+### Defining the payload transformation using a Smart Function (JavaScript)
+
+When you select **Smart Function** as the **Transformation Type** in the modal dialog, you can define the entire payload directly in the editor using JavaScript syntax, rather than just substitutions. At runtime, this JavaScript code is evaluated and copies the value to the target payload path. This gives you the freedom to see the payload exactly as it is sent to the Cumulocity backend.
+
+**Note:** The JavaScript editor for Smart Function is only available if you select the **Smart Function** as a **Transformation Type** when creating the mapping.
+
+The signature and structure of a **Smart Function** has the form:
+
+```javascript
+function onMessage (inputMsg, context) {
+    const msg = inputMsg;
+    var payload = msg.getPayload(); // contains payload
+
+    context.logMessage("Context" + context.getStateAll());
+    context.logMessage("Payload Raw:" + msg.getPayload());
+    context.logMessage("Payload messageId" +  msg.getPayload().get('messageId'));
+    // insert transformation logic here
+
+    // then return result
+    return [{
+        cumulocityType: "measurement",
+        action: "create",
+        payload: {
+            "time":  new Date().toISOString(),
+            "type": "c8y_TemperatureMeasurement",
+            "c8y_Steam": {
+                "Temperature": {
+                    "unit": "C",
+                    "value": payload["sensorData"]["temp_val"]
+                }
+            }
+        },
+        externalSource: [{"type":"c8y_Serial", "externalId": payload.get("clientId")}]
+    }];
+}
+```
+
+The **Smart Function** allows to enrich the payload with inventory data from the device e.g.:
+
+```javascript
+// lookup device for enrichment
+var deviceByDeviceId = context.lookupDeviceByDeviceId(payload.get("deviceId"));
+context.logMessage("Device (by device id): " + deviceByDeviceId);
+
+var deviceByExternalId = context.lookupDeviceByExternalId(payload.get("clientId"), "c8y_Serial" );
+context.logMessage("Device (by external id): " + deviceByExternalId);
+```
+
+**Note:** Only device fragments configured in **Configuration > Service Configuration > Function > Fragments from inventory to cache** can be referenced and have to be defined in this list of fragments.
+
+<br/>
+<p align="center">
+<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_SmartFunction.png"  style="width: 70%;" />
+<br/>
+<b>Description:</b> Screenshot showing step 4 for defining complete transformation using JavaScript.
+</p>
+<br/>
+
 ## Architecture
 
 Please check the [Architecture overview](/ARCHITECTURE.md) if you are eager to understand how it is implemented.
