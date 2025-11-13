@@ -62,6 +62,19 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
  */
 public class ProcessingContext<O> implements AutoCloseable {
 
+    public static final String CREATE_NON_EXISTING_DEVICE = "createNonExistingDevice";
+    public static final String SOURCE_ID = "source.id";
+    public static final String DEVICE_NAME = "deviceName";
+    public static final String DEVICE_TYPE = "deviceType";
+    public static final String EVENT_WITH_ATTACHMENT = "eventWithAttachment";
+    public static final String PROCESSING_MODE = "processingMode";
+    public static final String ATTACHMENT_DATA = "attachment_Data";
+    public static final String ATTACHMENT_TYPE = "attachment_Type";
+    public static final String ATTACHMENT_NAME = "attachment_Name";
+    public static final String RETAIN = "retain";
+    public static final String DEBUG = "debug";
+    public static final String GENERIC_DEVICE_IDENTIFIER = "genericDeviceIdentifier";
+
     private Mapping mapping;
 
     private String topic;
@@ -115,6 +128,9 @@ public class ProcessingContext<O> implements AutoCloseable {
     @Builder.Default
     private boolean needsRepair = false;
 
+    @Builder.Default
+    private boolean retain = false;
+
     private String tenant;
 
     private ServiceConfiguration serviceConfiguration;
@@ -165,8 +181,6 @@ public class ProcessingContext<O> implements AutoCloseable {
 
     @Builder.Default
     private BinaryInfo binaryInfo = new BinaryInfo();
-
-    public static final String SOURCE_ID = "source.id";
 
     public boolean hasError() {
         return errors != null && errors.size() > 0;
@@ -257,7 +271,7 @@ public class ProcessingContext<O> implements AutoCloseable {
                 try {
                     flowContext.clearState();
                 } catch (Exception e) {
-                    log.warn("{} - Error clearing flow context state: {}",  getTenant(), e.getMessage());
+                    log.warn("{} - Error clearing flow context state: {}", getTenant(), e.getMessage());
                 }
                 flowContext = null;
             }
@@ -266,9 +280,9 @@ public class ProcessingContext<O> implements AutoCloseable {
             if (graalContext != null) {
                 try {
                     graalContext.close();
-                    log.debug("{} - Closed GraalVM Context in tenant {}", getTenant(),  getTenant());
+                    log.debug("{} - Closed GraalVM Context in tenant {}", getTenant(), getTenant());
                 } catch (Exception e) {
-                    log.warn("{} - Error closing GraalVM Context: {}",  getTenant(), e.getMessage());
+                    log.warn("{} - Error closing GraalVM Context: {}", getTenant(), e.getMessage());
                 }
                 graalContext = null;
             }

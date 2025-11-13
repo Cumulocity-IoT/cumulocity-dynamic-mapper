@@ -19,7 +19,7 @@ public class DeviceMessage {
      */
     private Object payload;
 
-     /** External ID to lookup (and optionally create) */
+    /** External ID to lookup (and optionally create) */
     private Object externalSource; // ExternalSource[] | ExternalSource
 
     /** Identifier for the source/dest transport e.g. "mqtt", "opc-ua" etc. */
@@ -30,6 +30,9 @@ public class DeviceMessage {
 
     /** Transport/MQTT client ID */
     private String clientId;
+
+    /** Set retain flag */
+    private Boolean retain;
 
     /** Dictionary of transport/MQTT-specific fields/properties/headers */
     private Map<String, String> transportFields;

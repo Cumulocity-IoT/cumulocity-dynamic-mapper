@@ -11,13 +11,16 @@ import java.util.Map;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Value;
 
+import dynamic.mapper.processor.model.ProcessingContext;
+
 /**
  * Helper class for working with JavaScript union types and arrays in GraalJS
  */
 public class JavaScriptInteropHelper {
-    
+
     /**
      * Creates a JavaScript-compatible message object from Java objects
+     * 
      * @param context The GraalJS context
      * @param message Either DeviceMessage or CumulocityMessage
      * @return Value representing the message in JavaScript
@@ -25,27 +28,32 @@ public class JavaScriptInteropHelper {
     public static Value createJSMessage(Context context, Object message) {
         return context.getBindings("js").getMember("Object").newInstance(message);
     }
-    
+
     /**
-     * Checks if a Value represents a DeviceMessage (by checking for 'topic' property)
+     * Checks if a Value represents a DeviceMessage (by checking for 'topic'
+     * property)
+     * 
      * @param value The value to check
      * @return true if it's a DeviceMessage
      */
     public static boolean isDeviceMessage(Value value) {
         return value.hasMembers() && value.hasMember("topic");
     }
-    
+
     /**
-     * Checks if a Value represents a CumulocityMessage (by checking for 'cumulocityType' property)
+     * Checks if a Value represents a CumulocityMessage (by checking for
+     * 'cumulocityType' property)
+     * 
      * @param value The value to check
      * @return true if it's a CumulocityMessage
      */
     public static boolean isCumulocityMessage(Value value) {
         return value.hasMembers() && value.hasMember("cumulocityType");
     }
-    
+
     /**
      * Converts a JavaScript array result back to Java objects
+     * 
      * @param arrayValue The JavaScript array returned from onMessage
      * @return Array of converted Java objects
      */
@@ -53,13 +61,13 @@ public class JavaScriptInteropHelper {
         if (!arrayValue.hasArrayElements()) {
             throw new IllegalArgumentException("Value is not a JavaScript array");
         }
-        
+
         long arraySize = arrayValue.getArraySize();
         Object[] result = new Object[(int) arraySize];
-        
+
         for (int i = 0; i < arraySize; i++) {
             Value element = arrayValue.getArrayElement(i);
-            
+
             if (isDeviceMessage(element)) {
                 result[i] = convertToDeviceMessage(element);
             } else if (isCumulocityMessage(element)) {
@@ -68,13 +76,13 @@ public class JavaScriptInteropHelper {
                 result[i] = element; // Keep as Value for unknown types
             }
         }
-        
+
         return result;
     }
-    
+
     public static CumulocityMessage convertToCumulocityMessage(Value value) {
         CumulocityMessage msg = new CumulocityMessage();
-        
+
         // Convert Value to Java Object immediately
         if (value.hasMember("payload")) {
             msg.setPayload(convertValueToJavaObject(value.getMember("payload")));
@@ -94,13 +102,17 @@ public class JavaScriptInteropHelper {
         if (value.hasMember("destination")) {
             msg.setDestination(value.getMember("destination").asString());
         }
-        
+
+        if (value.hasMember(ProcessingContext.RETAIN)) {
+            msg.setRetain(value.getMember(ProcessingContext.RETAIN).asBoolean());
+        }
+
         return msg;
     }
 
     public static DeviceMessage convertToDeviceMessage(Value value) {
         DeviceMessage msg = new DeviceMessage();
-        
+
         if (value.hasMember("payload")) {
             msg.setPayload(convertValueToJavaObject(value.getMember("payload")));
         }
@@ -113,7 +125,11 @@ public class JavaScriptInteropHelper {
         if (value.hasMember("clientId")) {
             msg.setClientId(value.getMember("clientId").asString());
         }
-        
+
+        if (value.hasMember(ProcessingContext.RETAIN)) {
+            msg.setRetain(value.getMember(ProcessingContext.RETAIN).asBoolean());
+        }
+
         // Handle transportFields map
         if (value.hasMember("transportFields") && value.getMember("transportFields").hasMembers()) {
             Map<String, String> transportFields = new HashMap<>();
@@ -123,7 +139,7 @@ public class JavaScriptInteropHelper {
             }
             msg.setTransportFields(transportFields);
         }
-        
+
         // Handle time
         if (value.hasMember("time") && !value.getMember("time").isNull()) {
             // Convert JS Date to Java Instant
@@ -146,7 +162,7 @@ public class JavaScriptInteropHelper {
                 msg.setTime(Instant.ofEpochMilli(timestamp));
             }
         }
-        
+
         return msg;
     }
 
@@ -199,7 +215,7 @@ public class JavaScriptInteropHelper {
             return value.toString();
         }
     }
-    
+
     /**
      * Helper method to convert JavaScript Date objects to Instant
      * Handles multiple date formats that might come from JavaScript
@@ -208,7 +224,7 @@ public class JavaScriptInteropHelper {
         if (dateValue.isNull()) {
             return null;
         }
-        
+
         if (dateValue.isDate()) {
             // GraalJS Date objects
             LocalDate localDate = dateValue.asDate();

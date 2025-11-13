@@ -616,6 +616,7 @@ public class MQTT3Client extends AConnectorClient {
 
             Mqtt3Publish message = Mqtt3Publish.builder()
                     .topic(topic)
+                    .retain(context.isRetain())
                     .qos(mqttQos)
                     .payload(payload.getBytes(StandardCharsets.UTF_8))
                     .build();

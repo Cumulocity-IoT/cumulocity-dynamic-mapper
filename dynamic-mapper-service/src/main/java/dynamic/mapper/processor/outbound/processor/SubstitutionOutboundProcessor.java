@@ -194,6 +194,8 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
                 } catch (Exception e) {
                     // method is not defined or unknown, so we assume "POST"
                 }
+
+                // extract publishTopic
                 try {
                     String publishTopic = payloadTarget
                             .read(String.format("$.%s.%s", Mapping.TOKEN_CONTEXT_DATA, "publishTopic"));
@@ -203,6 +205,16 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
                     // publishTopic is not defined or unknown, so we continue using the value
                     // defined in the mapping
                 }
+
+                // extract retain
+                try {
+                    Boolean retain = payloadTarget
+                            .read(String.format("$.%s.%s", Mapping.TOKEN_CONTEXT_DATA, ProcessingContext.RETAIN));
+                    if (retain != null)
+                        context.setRetain(retain);
+                } catch (Exception e) {
+                    // ignore if not defined
+                }
                 // remove TOKEN_CONTEXT_DATA
                 payloadTarget.delete("$." + Mapping.TOKEN_CONTEXT_DATA);
             }
@@ -210,7 +222,6 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
                     payloadTarget.jsonString(), null, mapping);
             dynamicMapperRequest.setMethod(method);
             dynamicMapperRequest.setSourceId(deviceSource);
-
 
         } else {
             // FIXME Why are INVENTORY API messages ignored?! Needs to be implemented

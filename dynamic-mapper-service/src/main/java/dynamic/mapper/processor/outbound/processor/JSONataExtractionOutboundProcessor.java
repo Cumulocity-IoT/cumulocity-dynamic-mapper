@@ -38,6 +38,7 @@ import dynamic.mapper.model.Substitution;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.SubstituteValue;
+import dynamic.mapper.processor.model.SubstitutionEvaluation;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -104,18 +105,18 @@ public class JSONataExtractionOutboundProcessor extends BaseProcessor {
                         substitution.getPathTarget(),
                         new ArrayList<>());
 
-                if (dynamic.mapper.processor.model.SubstitutionEvaluation.isArray(extractedSourceContent)
+                if (SubstitutionEvaluation.isArray(extractedSourceContent)
                         && substitution.isExpandArray()) {
                     var extractedSourceContentCollection = (Collection) extractedSourceContent;
                     // extracted result from sourcePayload is an array, so we potentially have to
                     // iterate over the result, e.g. creating multiple devices
                     for (Object jn : extractedSourceContentCollection) {
-                        dynamic.mapper.processor.model.SubstitutionEvaluation.processSubstitute(tenant,
+                        SubstitutionEvaluation.processSubstitute(tenant,
                                 processingCacheEntry, jn,
                                 substitution, mapping);
                     }
                 } else {
-                    dynamic.mapper.processor.model.SubstitutionEvaluation.processSubstitute(tenant,
+                    SubstitutionEvaluation.processSubstitute(tenant,
                             processingCacheEntry, extractedSourceContent,
                             substitution, mapping);
                 }
