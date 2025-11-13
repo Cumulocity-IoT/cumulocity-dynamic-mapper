@@ -621,6 +621,7 @@ public class MQTT5Client extends AConnectorClient {
 
             Mqtt5PublishBuilder.Complete messageBuilder = Mqtt5Publish.builder()
                     .topic(topic)
+                    .retain(context.isRetain())
                     .qos(mqttQos)
                     .payload(payload.getBytes(StandardCharsets.UTF_8));
 

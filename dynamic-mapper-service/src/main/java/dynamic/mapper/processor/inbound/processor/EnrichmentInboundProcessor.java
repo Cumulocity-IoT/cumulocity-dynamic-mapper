@@ -79,19 +79,19 @@ public class EnrichmentInboundProcessor extends BaseProcessor {
             addToFlowContext(flowContext, context, "mappingName", mapping.getName());
             addToFlowContext(flowContext, context, "mappingId", mapping.getId());
             addToFlowContext(flowContext, context, "targetAPI", mapping.getTargetAPI().toString());
-            addToFlowContext(flowContext, context, "genericDeviceIdentifier", mapping.getGenericDeviceIdentifier());
-            addToFlowContext(flowContext, context, "debug", mapping.getDebug());
+            addToFlowContext(flowContext, context, ProcessingContext.GENERIC_DEVICE_IDENTIFIER, mapping.getGenericDeviceIdentifier());
+            addToFlowContext(flowContext, context, ProcessingContext.DEBUG, mapping.getDebug());
 
             if (context.getMapping().getEventWithAttachment()) {
-                addToFlowContext(flowContext, context, "attachment_Name", "");
-                addToFlowContext(flowContext, context, "attachment_Type", "");
-                addToFlowContext(flowContext, context, "attachment_Data", "");
-                addToFlowContext(flowContext, context, "eventWithAttachment", true);
+                addToFlowContext(flowContext, context, ProcessingContext.ATTACHMENT_TYPE, "");
+                addToFlowContext(flowContext, context, ProcessingContext.ATTACHMENT_NAME, "");
+                addToFlowContext(flowContext, context, ProcessingContext.ATTACHMENT_DATA, "");
+                addToFlowContext(flowContext, context, ProcessingContext.EVENT_WITH_ATTACHMENT, true);
             }
             if (context.getMapping().getCreateNonExistingDevice()) {
-                addToFlowContext(flowContext, context, "deviceName", context.getDeviceName());
-                addToFlowContext(flowContext, context, "deviceType", context.getDeviceType());
-                addToFlowContext(flowContext, context, "createNonExistingDevice", true);
+                addToFlowContext(flowContext, context, ProcessingContext.DEVICE_NAME, context.getDeviceName());
+                addToFlowContext(flowContext, context, ProcessingContext.DEVICE_TYPE, context.getDeviceType());
+                addToFlowContext(flowContext, context, ProcessingContext.CREATE_NON_EXISTING_DEVICE, true);
             }
 
         } else if (payloadObject instanceof Map) {
@@ -107,8 +107,8 @@ public class EnrichmentInboundProcessor extends BaseProcessor {
                         put("api", context.getMapping().getTargetAPI().toString());
                         put("processingMode", ProcessingMode.PERSISTENT.toString());
                         if (context.getMapping().getCreateNonExistingDevice()) {
-                            put("deviceName", context.getDeviceName());
-                            put("deviceType", context.getDeviceType());
+                            put(ProcessingContext.DEVICE_NAME, context.getDeviceName());
+                            put(ProcessingContext.DEVICE_TYPE, context.getDeviceType());
                         }
                     }
                 };
@@ -129,9 +129,9 @@ public class EnrichmentInboundProcessor extends BaseProcessor {
                 }
 
                 // Add attachment properties to payload context data
-                contextData.put("attachment_Name", "");
-                contextData.put("attachment_Type", "");
-                contextData.put("attachment_Data", "");
+                contextData.put(ProcessingContext.ATTACHMENT_NAME, "");
+                contextData.put(ProcessingContext.ATTACHMENT_NAME, "");
+                contextData.put(ProcessingContext.ATTACHMENT_DATA, "");
             }
 
         } else {

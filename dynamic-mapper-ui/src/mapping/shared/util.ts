@@ -29,7 +29,9 @@ import { ValidationFormlyError } from './mapping.model';
 import { TOKEN_CONTEXT_DATA, TOKEN_IDENTITY, TOKEN_TOPIC_LEVEL } from '../core/processor/processor.model';
 
 export const CONTEXT_DATA_KEY_NAME = 'key';
+export const CONTEXT_DATA_RETAIN = 'retain';
 export const CONTEXT_DATA_METHOD_NAME = 'method';
+export const CONTEXT_DATA_PUBLISH_TOPIC = 'publishTopic';
 
 export function splitTopicExcludingSeparator(topic: string, cutOffLeadingSlash: boolean): string[] {
   if (topic) {
@@ -407,12 +409,14 @@ export function expandExternalTemplate(
         contextData = {
           [CONTEXT_DATA_KEY_NAME]: `${CONTEXT_DATA_KEY_NAME}-sample`,
           [CONTEXT_DATA_METHOD_NAME]: "POST", // Set to "POST" instead of a generated value
+          [CONTEXT_DATA_RETAIN]: false,
         };
       } else {
         contextData = {
           [CONTEXT_DATA_KEY_NAME]: `${CONTEXT_DATA_KEY_NAME}-sample`,
           [CONTEXT_DATA_METHOD_NAME]: "POST", // Set to "POST" instead of a generated value
-          'publishTopic': mapping.publishTopic,
+          [CONTEXT_DATA_RETAIN]: false,
+          [CONTEXT_DATA_PUBLISH_TOPIC]: mapping.publishTopic,
         }
       };
       return {
@@ -544,6 +548,7 @@ export function getTypeOf(object) {
   const arrayConstructor = [].constructor;
   const objectConstructor = {}.constructor;
   const booleanConstructor = true.constructor;
+  // console.log("Object constructor", object, object.constructor);
   if (object === null) {
     return 'null';
   } else if (object === undefined) {

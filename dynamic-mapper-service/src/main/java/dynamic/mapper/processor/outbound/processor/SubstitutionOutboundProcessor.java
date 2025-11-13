@@ -113,17 +113,24 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
         List<String> splitTopicExAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
 
         payloadTarget.put("$", Mapping.TOKEN_TOPIC_LEVEL, splitTopicExAsList);
-
+        Map<String, String> cod;
         if (mapping.getSupportsMessageContext()) {
-            Map<String, String> cod = new HashMap<String, String>() {
+            cod = new HashMap<String, String>() {
                 {
+                    put(ProcessingContext.RETAIN, "false");
                     put(Mapping.CONTEXT_DATA_KEY_NAME, "dummy");
                     put(Mapping.CONTEXT_DATA_METHOD_NAME, "POST");
                     put("publishTopic", mapping.getPublishTopic());
                 }
             };
-            payloadTarget.put("$", Mapping.TOKEN_CONTEXT_DATA, cod);
+        } else {
+            cod = new HashMap<String, String>() {
+                {
+                    put(ProcessingContext.RETAIN, "false");
+                }
+            };
         }
+        payloadTarget.put("$", Mapping.TOKEN_CONTEXT_DATA, cod);
         if (serviceConfiguration.isLogPayload() || mapping.getDebug()) {
             String patchedPayloadTarget = payloadTarget.jsonString();
             log.info("{} - Patched payload: {}", tenant, patchedPayloadTarget);
@@ -194,6 +201,8 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
                 } catch (Exception e) {
                     // method is not defined or unknown, so we assume "POST"
                 }
+
+                // extract publishTopic
                 try {
                     String publishTopic = payloadTarget
                             .read(String.format("$.%s.%s", Mapping.TOKEN_CONTEXT_DATA, "publishTopic"));
@@ -203,6 +212,16 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
                     // publishTopic is not defined or unknown, so we continue using the value
                     // defined in the mapping
                 }
+
+                // extract retain
+                try {
+                    Boolean retain = payloadTarget
+                            .read(String.format("$.%s.%s", Mapping.TOKEN_CONTEXT_DATA, ProcessingContext.RETAIN));
+                    if (retain != null)
+                        context.setRetain(retain);
+                } catch (Exception e) {
+                    // ignore if not defined
+                }
                 // remove TOKEN_CONTEXT_DATA
                 payloadTarget.delete("$." + Mapping.TOKEN_CONTEXT_DATA);
             }
@@ -210,7 +229,6 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
                     payloadTarget.jsonString(), null, mapping);
             dynamicMapperRequest.setMethod(method);
             dynamicMapperRequest.setSourceId(deviceSource);
-
 
         } else {
             // FIXME Why are INVENTORY API messages ignored?! Needs to be implemented

@@ -104,9 +104,11 @@ public class EnrichmentOutboundProcessor extends BaseProcessor {
             addToFlowContext(flowContext, context, Mapping.TOKEN_IDENTITY, identityFragment);
             List<String> splitTopicExAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
             addToFlowContext(flowContext, context, Mapping.TOKEN_TOPIC_LEVEL, splitTopicExAsList);
+            addToFlowContext(flowContext, context, ProcessingContext.RETAIN, false);
         } else {
             if (payloadObject instanceof Map) {
                 ((Map) payloadObject).put(Mapping.TOKEN_IDENTITY, identityFragment);
+                ((Map) payloadObject).put(ProcessingContext.RETAIN, false);
                 List<String> splitTopicExAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
                 ((Map) payloadObject).put(Mapping.TOKEN_TOPIC_LEVEL, splitTopicExAsList);
             } else {

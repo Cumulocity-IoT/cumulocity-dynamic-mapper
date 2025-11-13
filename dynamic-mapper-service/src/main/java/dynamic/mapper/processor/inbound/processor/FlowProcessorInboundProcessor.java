@@ -364,4 +364,36 @@ public class FlowProcessorInboundProcessor extends BaseProcessor {
         }
         // Note: element is cleared by the caller in finally block
     }
+
+    /**
+     * Check if the result value is empty.
+     * Handles null, undefined, empty arrays, and empty objects.
+     */
+    private boolean isEmptyResult(Value result) {
+        // Null check
+        if (result == null || result.isNull()) {
+            return true;
+        }
+
+        // Check for JavaScript undefined
+        if (result.toString().equals("undefined")) {
+            return true;
+        }
+
+        // Empty array check
+        if (result.hasArrayElements()) {
+            if (result.getArraySize() == 0) {
+                return true;
+            } else {
+                return false;
+            }
+        }
+
+        // Empty object check (if applicable)
+        if (result.hasMembers() && result.getMemberKeys().isEmpty()) {
+            return true;
+        }
+
+        return false;
+    }
 }

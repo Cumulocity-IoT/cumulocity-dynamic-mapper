@@ -31,6 +31,9 @@ public class CumulocityMessage {
     /** Destination for the message */
     private String destination; // "cumulocity" | "iceflow" | "streaming-analytics"
 
+    /** Set retain flag */
+    private Boolean retain;
+
     // Constructors
     public CumulocityMessage() {
     }

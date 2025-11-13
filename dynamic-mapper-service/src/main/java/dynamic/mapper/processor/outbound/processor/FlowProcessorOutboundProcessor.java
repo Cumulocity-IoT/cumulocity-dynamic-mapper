@@ -93,7 +93,7 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
         ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();
 
         Object payloadObject = context.getPayload();
-        
+
         if (serviceConfiguration.isLogPayload() || mapping.getDebug()) {
             String payload = toPrettyJsonString(payloadObject); // is this and this required?
             log.info("{} - Incoming payload (patched) in onMessage(): {} {} {} {}", tenant,
@@ -286,8 +286,12 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
         }
 
         // Empty array check
-        if (result.hasArrayElements() && result.getArraySize() == 0) {
-            return true;
+        if (result.hasArrayElements()) {
+            if (result.getArraySize() == 0) {
+                return true;
+            } else {
+                return false;
+            }
         }
 
         // Empty object check (if applicable)

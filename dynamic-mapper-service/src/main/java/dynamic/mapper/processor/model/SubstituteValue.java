@@ -37,6 +37,7 @@ public class SubstituteValue implements Cloneable {
     public static enum TYPE {
         ARRAY, // Extracted value is an array
         IGNORE, // Extracted should be ignored
+        BOOLEAN, // Extracted value is a boolean
         NUMBER, // Extracted value is a number
         OBJECT, // Extracted value is an object, e.g. {"c8y_ThreePhaseElectricityMeasurement":
                 // {"A+": { "value": 435, "unit": "kWh" }}}

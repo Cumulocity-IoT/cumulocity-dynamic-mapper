@@ -19,7 +19,7 @@
  *
  */
 
- package dynamic.mapper.processor.inbound.processor;
+package dynamic.mapper.processor.inbound.processor;
 
 import java.util.List;
 import java.util.Map;
@@ -219,6 +219,8 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
             context.getBinaryInfo().setData((String) substitute.getValue());
         } else if ((Mapping.TOKEN_CONTEXT_DATA + ".processingMode").equals(pathTarget)) {
             context.setProcessingMode(ProcessingMode.parse((String) substitute.getValue()));
+        } else if ((Mapping.TOKEN_CONTEXT_DATA + ".retain").equals(pathTarget)) {
+            context.setRetain((boolean) substitute.getValue());
         } else if ((Mapping.TOKEN_CONTEXT_DATA + ".deviceName").equals(pathTarget)) {
             context.setDeviceName((String) substitute.getValue());
         } else if ((Mapping.TOKEN_CONTEXT_DATA + ".deviceType").equals(pathTarget)) {
