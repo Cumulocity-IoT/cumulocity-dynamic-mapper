@@ -24,7 +24,7 @@ public class SubstitutionEvaluation {
         this.key = key;
         this.value = value;
         this.type = type;
-        this.setRepairStrategy( repairStrategy);
+        this.setRepairStrategy(repairStrategy);
     }
 
     public String getKey() {
@@ -161,7 +161,8 @@ public class SubstitutionEvaluation {
                     substitution, mapping.getMappingTopic());
             processingCacheEntry
                     .add(new SubstituteValue(extractedSourceContent,
-                            SubstituteValue.TYPE.IGNORE, substitution.getRepairStrategy(), substitution.isExpandArray()));
+                            SubstituteValue.TYPE.IGNORE, substitution.getRepairStrategy(),
+                            substitution.isExpandArray()));
         } else if (SubstitutionEvaluation.isTextual(extractedSourceContent)) {
             processingCacheEntry.add(
                     new SubstituteValue(extractedSourceContent,
@@ -169,16 +170,25 @@ public class SubstitutionEvaluation {
         } else if (SubstitutionEvaluation.isNumber(extractedSourceContent)) {
             processingCacheEntry
                     .add(new SubstituteValue(extractedSourceContent,
-                            SubstituteValue.TYPE.NUMBER, substitution.getRepairStrategy(), substitution.isExpandArray()));
+                            SubstituteValue.TYPE.NUMBER, substitution.getRepairStrategy(),
+                            substitution.isExpandArray()));
         } else if (SubstitutionEvaluation.isArray(extractedSourceContent)) {
             processingCacheEntry
                     .add(new SubstituteValue(extractedSourceContent,
-                            SubstituteValue.TYPE.ARRAY, substitution.getRepairStrategy(), substitution.isExpandArray()));
+                            SubstituteValue.TYPE.ARRAY, substitution.getRepairStrategy(),
+                            substitution.isExpandArray()));
+        } else if (SubstitutionEvaluation.isBoolean(extractedSourceContent)) {
+            processingCacheEntry
+                    .add(new SubstituteValue(extractedSourceContent,
+                            SubstituteValue.TYPE.BOOLEAN, substitution.getRepairStrategy(),
+                            substitution.isExpandArray()));
         } else {
             processingCacheEntry
                     .add(new SubstituteValue(extractedSourceContent,
-                            SubstituteValue.TYPE.OBJECT, substitution.getRepairStrategy(), substitution.isExpandArray()));
+                            SubstituteValue.TYPE.OBJECT, substitution.getRepairStrategy(),
+                            substitution.isExpandArray()));
         }
+
     }
 
     public static void processSubstitute(String tenant,

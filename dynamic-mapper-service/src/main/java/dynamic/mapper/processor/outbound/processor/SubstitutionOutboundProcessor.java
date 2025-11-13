@@ -113,17 +113,24 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
         List<String> splitTopicExAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
 
         payloadTarget.put("$", Mapping.TOKEN_TOPIC_LEVEL, splitTopicExAsList);
-
+        Map<String, String> cod;
         if (mapping.getSupportsMessageContext()) {
-            Map<String, String> cod = new HashMap<String, String>() {
+            cod = new HashMap<String, String>() {
                 {
+                    put(ProcessingContext.RETAIN, "false");
                     put(Mapping.CONTEXT_DATA_KEY_NAME, "dummy");
                     put(Mapping.CONTEXT_DATA_METHOD_NAME, "POST");
                     put("publishTopic", mapping.getPublishTopic());
                 }
             };
-            payloadTarget.put("$", Mapping.TOKEN_CONTEXT_DATA, cod);
+        } else {
+            cod = new HashMap<String, String>() {
+                {
+                    put(ProcessingContext.RETAIN, "false");
+                }
+            };
         }
+        payloadTarget.put("$", Mapping.TOKEN_CONTEXT_DATA, cod);
         if (serviceConfiguration.isLogPayload() || mapping.getDebug()) {
             String patchedPayloadTarget = payloadTarget.jsonString();
             log.info("{} - Patched payload: {}", tenant, patchedPayloadTarget);

@@ -548,6 +548,7 @@ export function getTypeOf(object) {
   const arrayConstructor = [].constructor;
   const objectConstructor = {}.constructor;
   const booleanConstructor = true.constructor;
+  // console.log("Object constructor", object, object.constructor);
   if (object === null) {
     return 'null';
   } else if (object === undefined) {
