@@ -164,6 +164,8 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
             }
             context.setResolvedPublishTopic(publishTopic);
 
+            context.setRetain(deviceMessage.getRetain());
+
             log.debug("{} - Created outbound request: deviceId={}, topic={}",
                     tenant, resolvedExternalId,
                     context.getResolvedPublishTopic());
@@ -222,6 +224,8 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
             c8yRequest.setSourceId(resolvedDeviceId);
             c8yRequest.setExternalIdType(externalType);
             c8yRequest.setExternalId(externalId);
+
+            context.setRetain(c8yRequest.getRetain());
 
             log.debug("{} - Created C8Y request: API={}, action={}, deviceId={}",
                     tenant, targetAPI.name, cumulocityMessage.getAction(), resolvedDeviceId);

@@ -37,6 +37,7 @@ public class DynamicMapperRequest {
     private int predecessor = -1;;
     private RequestMethod method;
     private API api;
+    private Boolean retain;
     private String sourceId;
     private String externalId;
     private String externalIdType;
