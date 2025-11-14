@@ -111,8 +111,8 @@ public class SendOutboundProcessor extends BaseProcessor {
 
             // Log if debug is enabled
             if (mapping.getDebug() || context.getServiceConfiguration().getLogPayload()) {
-                log.info("{} - Transformed message sent: API: {}, message: {}",
-                        tenant, request.getApi(), request.getRequest());
+                log.info("{} - Transformed message sent: API {}, message {}, topic {}",
+                        tenant, request.getApi(), request.getRequest(), context.getResolvedPublishTopic());
             }
 
         } catch (Exception e) {

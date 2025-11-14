@@ -130,7 +130,7 @@ public abstract class CommonProcessor implements Processor {
             context.setExternalId(externalSource.getExternalId());
 
             if (externalId != null) {
-                return externalId.getManagedObject().getId().getValue();
+                return externalId.getExternalId();
             } else {
                 throw new ProcessingException("Could not resolve external ID: " + externalSource.getExternalId());
             }
