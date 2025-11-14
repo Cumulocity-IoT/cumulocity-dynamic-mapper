@@ -84,7 +84,7 @@ public class MappingResolverService {
 
     // ========== Private Helper Methods ==========
 
-    private boolean shouldProcessMapping(String tenant, Mapping mapping, C8YMessage message, API api) {
+    private Boolean shouldProcessMapping(String tenant, Mapping mapping, C8YMessage message, API api) {
         // Check if mapping is active and API matches
         if (!mapping.getActive() || !mapping.getTargetAPI().equals(api)) {
             logMappingSkipped(tenant, mapping, "inactive or API mismatch", 
@@ -110,7 +110,7 @@ public class MappingResolverService {
         return true;
     }
 
-    private boolean evaluateMessageFilter(String tenant, Mapping mapping, C8YMessage message) {
+    private Boolean evaluateMessageFilter(String tenant, Mapping mapping, C8YMessage message) {
         try {
             var expression = jsonata(mapping.getFilterMapping());
             Object result = expression.evaluate(message.getParsedPayload());

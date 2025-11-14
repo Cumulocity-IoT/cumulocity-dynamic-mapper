@@ -127,7 +127,7 @@ class FlowResultInboundProcessorTest {
         when(exchange.getIn()).thenReturn(message);
         when(message.getHeader("processingContext", ProcessingContext.class)).thenReturn(processingContext);
         when(mappingService.getMappingStatus(TEST_TENANT, mapping)).thenReturn(mappingStatus);
-        when(serviceConfiguration.isLogPayload()).thenReturn(false);
+        when(serviceConfiguration.getLogPayload()).thenReturn(false);
 
         // Setup ObjectMapper mock
         when(objectMapper.writeValueAsString(any())).thenAnswer(invocation -> {
@@ -223,7 +223,7 @@ class FlowResultInboundProcessorTest {
         processor.process(exchange);
 
         // Then
-        assertFalse(processingContext.isIgnoreFurtherProcessing(),
+        assertFalse(processingContext.getIgnoreFurtherProcessing(),
                 "Should not ignore further processing");
         assertFalse(processingContext.getRequests().isEmpty(),
                 "Should have created C8Y requests");
@@ -250,7 +250,7 @@ class FlowResultInboundProcessorTest {
         processor.process(exchange);
 
         // Then
-        assertFalse(processingContext.isIgnoreFurtherProcessing(),
+        assertFalse(processingContext.getIgnoreFurtherProcessing(),
                 "Should not ignore further processing");
         assertEquals(2, processingContext.getRequests().size(),
                 "Should have created two requests");
@@ -329,7 +329,7 @@ class FlowResultInboundProcessorTest {
         processor.process(exchange);
 
         // Then
-        log.info("Ignore further processing: {}", processingContext.isIgnoreFurtherProcessing());
+        log.info("Ignore further processing: {}", processingContext.getIgnoreFurtherProcessing());
         log.info("Created requests: {}", processingContext.getRequests().size());
         
         processingContext.getRequests().forEach(req -> 
@@ -337,7 +337,7 @@ class FlowResultInboundProcessorTest {
                 req.getApi(), req.getMethod(), req.getSourceId())
         );
         
-        assertFalse(processingContext.isIgnoreFurtherProcessing(),
+        assertFalse(processingContext.getIgnoreFurtherProcessing(),
                 "Should not ignore further processing");
         assertEquals(2, processingContext.getRequests().size(),
                 "Should have created two requests (ignoring non-CumulocityMessage)");

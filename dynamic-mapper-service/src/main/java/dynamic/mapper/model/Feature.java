@@ -36,17 +36,17 @@ import io.swagger.v3.oas.annotations.media.Schema;
 public class Feature {
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Flag to check if outbound mapping is enabled or not", example = "true")
     @NotNull
-    private boolean outputMappingEnabled;
+    private Boolean outputMappingEnabled;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Flag to check if external extensions are enabled or not", example = "true")
     @NotNull
-    private boolean externalExtensionsEnabled;
+    private Boolean externalExtensionsEnabled;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Flag to check if the logged in user has the CREATE Role", example = "true")
     @NotNull
-    private boolean userHasMappingCreateRole;
+    private Boolean userHasMappingCreateRole;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Flag to check if the logged in user has the ADMIN Role", example = "true")
     @NotNull
-    private boolean userHasMappingAdminRole;
+    private Boolean userHasMappingAdminRole;
 }

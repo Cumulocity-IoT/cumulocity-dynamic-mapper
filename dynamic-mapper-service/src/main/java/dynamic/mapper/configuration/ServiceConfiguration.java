@@ -66,47 +66,47 @@ public class ServiceConfiguration implements Cloneable {
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Enable logging of message payloads for debugging purposes. Caution: May expose sensitive data in logs.", example = "false")
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
-    private boolean logPayload;
+    private Boolean logPayload;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Enable logging of field substitutions during mapping transformation for debugging.", example = "false")
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
-    private boolean logSubstitution;
+    private Boolean logSubstitution;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Enable logging of connector errors in the backend system for monitoring and troubleshooting.", example = "false")
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
-    private boolean logConnectorErrorInBackend;
+    private Boolean logConnectorErrorInBackend;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Enable sending connector lifecycle events (connect/disconnect) to Cumulocity IoT.", example = "false")
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
-    private boolean sendConnectorLifecycle;
+    private Boolean sendConnectorLifecycle;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Enable sending mapping execution status and statistics to Cumulocity IoT.", example = "true")
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
-    private boolean sendMappingStatus;
+    private Boolean sendMappingStatus;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Enable sending subscription events when mappings are activated/deactivated.", example = "false")
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
-    private boolean sendSubscriptionEvents;
+    private Boolean sendSubscriptionEvents;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Enable sending notification lifecycle events for outbound mapping subscriptions.", example = "false")
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
-    private boolean sendNotificationLifecycle;
+    private Boolean sendNotificationLifecycle;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Enable support for external processor extensions that provide custom transformation capabilities.", example = "true")
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
-    private boolean externalExtensionEnabled;
+    private Boolean externalExtensionEnabled;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Enable outbound mapping functionality for sending data from Cumulocity IoT to external systems.", example = "true")
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
-    private boolean outboundMappingEnabled;
+    private Boolean outboundMappingEnabled;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Size of the cache for inbound external ID lookups. Set to 0 to disable caching.", example = "1000", minimum = "0")
     @NotNull

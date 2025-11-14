@@ -115,7 +115,7 @@ class FlowProcessorOutboundProcessorTest {
         when(exchange.getIn()).thenReturn(message);
         when(message.getHeader("processingContext", ProcessingContext.class)).thenReturn(processingContext);
         when(mappingService.getMappingStatus(TEST_TENANT, mapping)).thenReturn(mappingStatus);
-        when(serviceConfiguration.isLogPayload()).thenReturn(false);
+        when(serviceConfiguration.getLogPayload()).thenReturn(false);
 
         // Setup GraalVM mocks
         setupGraalVMMocks();
@@ -227,7 +227,7 @@ class FlowProcessorOutboundProcessorTest {
         processor.process(exchange);
 
         // Then - Should ignore further processing
-        assertTrue(processingContext.isIgnoreFurtherProcessing(),
+        assertTrue(processingContext.getIgnoreFurtherProcessing(),
                 "Should ignore further processing for empty result");
 
         log.info("✅ Empty result test passed");
@@ -242,7 +242,7 @@ class FlowProcessorOutboundProcessorTest {
         processor.process(exchange);
 
         // Then - Should ignore further processing
-        assertFalse(processingContext.isIgnoreFurtherProcessing(),
+        assertFalse(processingContext.getIgnoreFurtherProcessing(),
                 "Should not ignore further processing for non-array result");
 
         log.info("✅ Non-array result test passed");

@@ -314,7 +314,7 @@ public class MQTT5Client extends AConnectorClient {
                     synchronized (disconnectionLock) {
                         shouldReconnect = !intentionalDisconnect &&
                                 !isDisconnecting &&
-                                connectorConfiguration.isEnabled() &&
+                                connectorConfiguration.getEnabled() &&
                                 wasConnected;
                     }
 
@@ -336,7 +336,7 @@ public class MQTT5Client extends AConnectorClient {
                         log.debug(
                                 "{} - Intentional disconnect or not reconnecting (intentional={}, disconnecting={}, enabled={}, wasConnected={})",
                                 tenant, intentionalDisconnect, isDisconnecting,
-                                connectorConfiguration.isEnabled(), wasConnected);
+                                connectorConfiguration.getEnabled(), wasConnected);
                     }
                 })
                 .addConnectedListener(context -> {
@@ -621,7 +621,7 @@ public class MQTT5Client extends AConnectorClient {
 
             Mqtt5PublishBuilder.Complete messageBuilder = Mqtt5Publish.builder()
                     .topic(topic)
-                    .retain(context.isRetain())
+                    .retain(context.getRetain() == null ? false : context.getRetain())
                     .qos(mqttQos)
                     .payload(payload.getBytes(StandardCharsets.UTF_8));
 
@@ -632,7 +632,7 @@ public class MQTT5Client extends AConnectorClient {
 
             mqttClient.publish(message);
 
-            if (context.getMapping().getDebug() || context.getServiceConfiguration().isLogPayload()) {
+            if (context.getMapping().getDebug() || context.getServiceConfiguration().getLogPayload()) {
                 log.info("{} - Published message on topic: [{}], QoS: {}, payload: {}",
                         tenant, topic, mqttQos, payload);
             } else {

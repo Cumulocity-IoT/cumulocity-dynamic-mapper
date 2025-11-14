@@ -645,7 +645,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                     .send();
         }
 
-        if (context.getMapping().getDebug() || serviceConfiguration.isLogPayload()) {
+        if (context.getMapping().getDebug() || serviceConfiguration.getLogPayload()) {
             log.info("{} - Published to MQTT Service: QoS={}, topic=[{}], pulsarTopic=[{}], mapping={}",
                     tenant, qos, mqttTopic, towardsDeviceTopic, context.getMapping().getName());
         }
@@ -689,7 +689,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
     /**
      * Check if exception contains PIP-344 error
      */
-    private boolean containsPip344Error(Throwable throwable) {
+    private Boolean containsPip344Error(Throwable throwable) {
         Throwable current = throwable;
         while (current != null) {
             if (current instanceof PulsarClientException.FeatureNotSupportedException &&

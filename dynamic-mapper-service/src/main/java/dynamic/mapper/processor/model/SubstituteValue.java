@@ -47,7 +47,7 @@ public class SubstituteValue implements Cloneable {
     public Object value;
     public TYPE type;
     public RepairStrategy repairStrategy;
-    public boolean expandArray;
+    public Boolean expandArray;
 
     public SubstituteValue(Object value, TYPE type, RepairStrategy repair, boolean expandArray) {
         // Make sure we're not storing a Value object

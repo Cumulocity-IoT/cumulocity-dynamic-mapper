@@ -28,5 +28,5 @@ public class MCPServer {
     private String url;
     private String name;
     private String description;
-    private boolean isDefault;
+    private Boolean isDefault;
 }

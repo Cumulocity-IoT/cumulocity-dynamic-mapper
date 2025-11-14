@@ -67,7 +67,7 @@ public class CodeExtractionInboundProcessor extends BaseProcessor {
         ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
         Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
-        Boolean testing = context.isTesting();
+        Boolean testing = context.getTesting();
 
         try {
             extractFromSource(context);
@@ -118,12 +118,12 @@ public class CodeExtractionInboundProcessor extends BaseProcessor {
             Object payloadObject = context.getPayload();
             Map<String, List<SubstituteValue>> processingCache = context.getProcessingCache();
 
-            if (serviceConfiguration.isLogPayload() || mapping.getDebug()) {
+            if (serviceConfiguration.getLogPayload() || mapping.getDebug()) {
                 String payload = toPrettyJsonString(payloadObject);  // is this and this required?
                 log.info("{} - Incoming payload (patched) in extractFromSource(): {} {} {} {}", tenant,
                         payload,
-                        serviceConfiguration.isLogPayload(), mapping.getDebug(),
-                        serviceConfiguration.isLogPayload() || mapping.getDebug());
+                        serviceConfiguration.getLogPayload(), mapping.getDebug(),
+                        serviceConfiguration.getLogPayload() || mapping.getDebug());
             }
 
             boolean substitutionTimeExists = false;
@@ -240,7 +240,7 @@ public class CodeExtractionInboundProcessor extends BaseProcessor {
                         }
                     }
                     
-                    if (mapping.getDebug() || serviceConfiguration.isLogPayload()) {
+                    if (mapping.getDebug() || serviceConfiguration.getLogPayload()) {
                         log.info("{} - Extraction returned {} results, payload: {}", 
                             tenant, 
                             keySet.size(), 

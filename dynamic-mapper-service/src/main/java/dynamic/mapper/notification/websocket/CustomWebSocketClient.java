@@ -77,7 +77,7 @@ public class CustomWebSocketClient extends WebSocketClient {
     public void onMessage(String message) {
         Notification notification = Notification.parse(message);
 
-        if (serviceConfiguration.isLogPayload()) {
+        if (serviceConfiguration.getLogPayload()) {
             log.info(
                     "{} - INITIAL: message on connector InternalWebSocket (notification 2.0) for outbound connector {}, API: {}, Operation: {}",
                     tenant, connectorId.getName(), notification.getApi(), notification.getOperation());
@@ -85,7 +85,7 @@ public class CustomWebSocketClient extends WebSocketClient {
         ProcessingResultWrapper<?> processedResults = this.callback.onNotification(notification);
         int mappingQos = processedResults.getConsolidatedQos().ordinal();
         int timeout = processedResults.getMaxCPUTimeMS();
-        if (serviceConfiguration.isLogPayload()) {
+        if (serviceConfiguration.getLogPayload()) {
             log.info(
                     "{} - PREPARING_RESULTS: message on connector InternalWebSocket (notification 2.0) for outbound connector {}, API: {}, Operation: {}, QoS mappings: {}",
                     tenant, connectorId.getName(), notification.getApi(), notification.getOperation(), mappingQos);

@@ -86,7 +86,7 @@ public class ExtensionInboundRegistry {
         ext.setLoaded(ExtensionStatus.COMPLETE);
         long countDefined = ext.getExtensionEntries().size();
         long countLoaded = ext.getExtensionEntries().entrySet().stream()
-                .map(entry -> entry.getValue().isLoaded())
+                .map(entry -> entry.getValue().getLoaded())
                 .filter(entry -> entry).count();
         if (countLoaded == 0) {
             ext.setLoaded(ExtensionStatus.NOT_LOADED);

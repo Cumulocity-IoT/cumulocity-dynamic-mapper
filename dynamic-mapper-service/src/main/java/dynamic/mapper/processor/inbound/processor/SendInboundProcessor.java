@@ -45,7 +45,7 @@ public class SendInboundProcessor extends BaseProcessor {
         ProcessingContext<Object> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
         Boolean parallelProcessing = exchange.getIn().getHeader("parallelProcessing", Boolean.class);
         String tenant = context.getTenant();
-        Boolean testing = context.isTesting();
+        Boolean testing = context.getTesting();
         Mapping mapping = context.getMapping();
         try {
 
@@ -122,7 +122,7 @@ public class SendInboundProcessor extends BaseProcessor {
                 }
 
                 // Log if debug is enabled
-                if (mapping.getDebug() || context.getServiceConfiguration().isLogPayload()) {
+                if (mapping.getDebug() || context.getServiceConfiguration().getLogPayload()) {
                     log.info("{} - Sequential transformed message sent: API: {}, message: {}",
                             tenant, request.getApi(), request.getRequest());
                 }
@@ -158,7 +158,7 @@ public class SendInboundProcessor extends BaseProcessor {
             }
 
             // Log if debug is enabled
-            if (mapping.getDebug() || context.getServiceConfiguration().isLogPayload()) {
+            if (mapping.getDebug() || context.getServiceConfiguration().getLogPayload()) {
                 log.info("{} - Parallel transformed message sent: API: {}, message: {}",
                         tenant, request.getApi(), request.getRequest());
             }
@@ -186,7 +186,7 @@ public class SendInboundProcessor extends BaseProcessor {
             if (request.getExternalId() != null) {
                 identity = new ID(request.getExternalIdType(), request.getExternalId());
                 ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId2GlobalId(tenant, identity,
-                        context.isTesting());
+                        context.getTesting());
 
                 if (sourceId != null) {
                     request.setSourceId(sourceId.getManagedObject().getId().getValue());
@@ -219,7 +219,7 @@ public class SendInboundProcessor extends BaseProcessor {
     private void processNonInventoryRequest(ProcessingContext<Object> context, int requestIndex) throws Exception {
         DynamicMapperRequest request = context.getRequests().get(requestIndex);
         try {
-            if (context.isSendPayload()) {
+            if (context.getSendPayload()) {
                 // Send the request to C8Y
 
                 c8yAgent.createMEAO(context, requestIndex);

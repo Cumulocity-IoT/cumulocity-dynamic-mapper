@@ -49,7 +49,7 @@ public class MQTTServicePulsarCallback implements MessageListener<byte[]> {
     private String tenant;
     private String connectorIdentifier;
     private String connectorName;
-    private boolean supportsMessageContext;
+    private Boolean supportsMessageContext;
     private ServiceConfiguration serviceConfiguration;
     private ExecutorService virtualThreadPool;
 
@@ -82,7 +82,7 @@ public class MQTTServicePulsarCallback implements MessageListener<byte[]> {
                 .payload(payloadBytes)
                 .build();
 
-        if (serviceConfiguration.isLogPayload()) {
+        if (serviceConfiguration.getLogPayload()) {
             log.info(
                     "{} - INITIAL: message on topic: [{}], connector: {}, {}",
                     tenant, towardsDeviceTopic, connectorName, connectorIdentifier);
@@ -93,7 +93,7 @@ public class MQTTServicePulsarCallback implements MessageListener<byte[]> {
 
         int timeout = processedResults.getMaxCPUTimeMS();
 
-        if (serviceConfiguration.isLogPayload()) {
+        if (serviceConfiguration.getLogPayload()) {
             log.info(
                     "{} - PREPARING_RESULTS: message on topic: [{}], connector {}",
                     tenant, towardsDeviceTopic, connectorIdentifier);
@@ -136,7 +136,7 @@ public class MQTTServicePulsarCallback implements MessageListener<byte[]> {
 
                 if (!hasErrors) {
                     // No errors found, acknowledge based on original QoS requirements
-                    if (serviceConfiguration.isLogPayload()) {
+                    if (serviceConfiguration.getLogPayload()) {
                         log.debug("{} - END: Sending ack for Pulsar message: topic: [{}], connector: {}",
                                 tenant, towardsDeviceTopic, connectorIdentifier);
                     }

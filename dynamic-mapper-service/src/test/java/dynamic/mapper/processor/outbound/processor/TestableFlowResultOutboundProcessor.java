@@ -60,7 +60,7 @@ public class TestableFlowResultOutboundProcessor extends FlowResultOutboundProce
     
     // Flag to use simplified processing for tests
     @Setter
-    private boolean useSimplifiedProcessing = true;
+    private Boolean useSimplifiedProcessing = true;
     
     // Need access to objectMapper - it's injected in parent
     @Autowired

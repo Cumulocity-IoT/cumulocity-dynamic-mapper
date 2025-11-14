@@ -122,7 +122,7 @@ class MQTT3ClientTest {
         // Setup connector configuration COMPLETELY before any test
         when(connectorConfiguration.getName()).thenReturn(TEST_CONNECTOR_NAME);
         when(connectorConfiguration.getIdentifier()).thenReturn(TEST_CONNECTOR_IDENTIFIER);
-        when(connectorConfiguration.isEnabled()).thenReturn(true);
+        when(connectorConfiguration.getEnabled()).thenReturn(true);
         when(connectorConfiguration.getProperties()).thenReturn(createDefaultProperties());
 
         // THIS IS THE KEY - stub copyPredefinedValues to do NOTHING
@@ -151,9 +151,9 @@ class MQTT3ClientTest {
         when(connectorConfiguration.getCleanedConfig(any())).thenReturn(connectorConfiguration);
 
         // Setup service configuration
-        when(serviceConfiguration.isLogPayload()).thenReturn(false);
-        when(serviceConfiguration.isSendSubscriptionEvents()).thenReturn(false);
-        when(serviceConfiguration.isSendConnectorLifecycle()).thenReturn(false);
+        when(serviceConfiguration.getLogPayload()).thenReturn(false);
+        when(serviceConfiguration.getSendSubscriptionEvents()).thenReturn(false);
+        when(serviceConfiguration.getSendConnectorLifecycle()).thenReturn(false);
 
         // Setup connector registry
         when(connectorRegistry.getConnectorStatusMap(anyString())).thenReturn(new HashMap<>());

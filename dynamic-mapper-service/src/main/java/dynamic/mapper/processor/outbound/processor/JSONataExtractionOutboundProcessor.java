@@ -83,11 +83,11 @@ public class JSONataExtractionOutboundProcessor extends BaseProcessor {
             Map<String, List<SubstituteValue>> processingCache = context.getProcessingCache();
             String payloadAsString = toPrettyJsonString(payloadObject);
 
-            if (serviceConfiguration.isLogPayload() || mapping.getDebug()) {
+            if (serviceConfiguration.getLogPayload() || mapping.getDebug()) {
                 log.info("{} - Incoming payload (patched): {} {} {} {}", tenant,
                         payloadAsString,
-                        serviceConfiguration.isLogPayload(), mapping.getDebug(),
-                        serviceConfiguration.isLogPayload() || mapping.getDebug());
+                        serviceConfiguration.getLogPayload(), mapping.getDebug(),
+                        serviceConfiguration.getLogPayload() || mapping.getDebug());
             }
 
             for (Substitution substitution : mapping.getSubstitutions()) {
@@ -106,7 +106,7 @@ public class JSONataExtractionOutboundProcessor extends BaseProcessor {
                         new ArrayList<>());
 
                 if (SubstitutionEvaluation.isArray(extractedSourceContent)
-                        && substitution.isExpandArray()) {
+                        && substitution.getExpandArray()) {
                     var extractedSourceContentCollection = (Collection) extractedSourceContent;
                     // extracted result from sourcePayload is an array, so we potentially have to
                     // iterate over the result, e.g. creating multiple devices
@@ -122,7 +122,7 @@ public class JSONataExtractionOutboundProcessor extends BaseProcessor {
                 }
                 processingCache.put(substitution.getPathTarget(), processingCacheEntry);
 
-                if (context.getServiceConfiguration().isLogSubstitution() || mapping.getDebug()) {
+                if (context.getServiceConfiguration().getLogSubstitution() || mapping.getDebug()) {
                     String contentAsString = extractedSourceContent != null ? extractedSourceContent.toString()
                             : "null";
                     log.debug("{} - Evaluated substitution (pathSource:substitute)/({}: {}), (pathTarget)/({})",

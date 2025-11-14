@@ -120,26 +120,26 @@ public class ProcessingContext<O> implements AutoCloseable {
     private Map<String, List<SubstituteValue>> processingCache = new TreeMap<String, List<SubstituteValue>>();
 
     @Builder.Default
-    private boolean sendPayload = false;
+    private Boolean sendPayload = false;
 
     @Builder.Default
-    private boolean testing = false;
+    private Boolean testing = false;
 
     @Builder.Default
-    private boolean needsRepair = false;
+    private Boolean needsRepair = false;
 
     @Builder.Default
-    private boolean retain = false;
+    private Boolean retain = false;
 
     private String tenant;
 
     private ServiceConfiguration serviceConfiguration;
 
     @Builder.Default
-    private boolean supportsMessageContext = false;
+    private Boolean supportsMessageContext = false;
 
     @Builder.Default
-    private boolean ignoreFurtherProcessing = false;
+    private Boolean ignoreFurtherProcessing = false;
 
     private String key;
 

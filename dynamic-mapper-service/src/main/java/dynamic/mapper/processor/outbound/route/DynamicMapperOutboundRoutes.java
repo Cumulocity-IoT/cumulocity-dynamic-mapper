@@ -174,6 +174,14 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
                 .process(mappingContextProcessor)
                 .process(enrichmentOutboundProcessor)
 
+                // Check if further processing should be ignored after enrichment
+                .choice()
+                .when(exchange -> shouldIgnoreFurtherProcessing(exchange))
+                .to("log:outbound-enrichment-filtered-message?level=DEBUG")
+                .process(consolidationProcessor)
+                .stop()
+                .otherwise()
+
                 // 1. Branch based on processing type
                 .choice()
                 // 1a. Snooping path
@@ -196,7 +204,6 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
                 .otherwise()
                 .to("direct:processOutboundJSONataExtraction") // Default to JSONata
                 .end();
-
 
         // 1a. Snooping processing route
         from("direct:processOutboundSnooping")

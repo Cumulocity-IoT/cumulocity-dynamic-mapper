@@ -111,7 +111,7 @@ class FlowProcessorInboundProcessorTest {
         when(mappingService.getMappingStatus(TEST_TENANT, mapping)).thenReturn(mappingStatus);
 
         // Mock service configuration - avoid mocking fields directly
-        when(serviceConfiguration.isLogPayload()).thenReturn(false);
+        when(serviceConfiguration.getLogPayload()).thenReturn(false);
     }
 
     private void injectMappingService(FlowProcessorInboundProcessor processor, MappingService mappingService)
@@ -286,7 +286,7 @@ class FlowProcessorInboundProcessorTest {
     @Test
     void testProcessSmartFunctionMappingWithPayloadLogging() throws Exception {
         // Given - Enable payload logging
-        when(serviceConfiguration.isLogPayload()).thenReturn(true);
+        when(serviceConfiguration.getLogPayload()).thenReturn(true);
 
         try {
             // When
@@ -599,7 +599,7 @@ class FlowProcessorInboundProcessorTest {
         processResultMethod.invoke(processor, mockResult, processingContext, TEST_TENANT);
 
         // Then - Verify processing is ignored
-        assertTrue(processingContext.isIgnoreFurtherProcessing(),
+        assertTrue(processingContext.getIgnoreFurtherProcessing(),
                 "Should ignore further processing for empty array");
 
         log.info("Successfully validated empty array flow result handling");
@@ -622,7 +622,7 @@ class FlowProcessorInboundProcessorTest {
         processResultMethod.invoke(processor, mockResult, processingContext, TEST_TENANT);
 
         // Then - Verify processing is ignored
-        assertTrue(processingContext.isIgnoreFurtherProcessing(),
+        assertTrue(processingContext.getIgnoreFurtherProcessing(),
                 "Should ignore further processing for non-array result");
 
         log.info("Successfully validated non-array flow result handling");
@@ -851,7 +851,7 @@ class FlowProcessorInboundProcessorTest {
         // Verify no errors occurred during processing
         assertTrue(processingContext.getErrors().isEmpty(),
                 "Should have no processing errors");
-        assertFalse(processingContext.isIgnoreFurtherProcessing(),
+        assertFalse(processingContext.getIgnoreFurtherProcessing(),
                 "Should not ignore further processing for successful result");
 
         log.info("✅ Complete flow processing test passed:");

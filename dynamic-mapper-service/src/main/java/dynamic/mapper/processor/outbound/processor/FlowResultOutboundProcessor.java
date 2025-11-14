@@ -262,7 +262,7 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
                 c.increment();
             });
 
-            if (mapping.getDebug() || context.getServiceConfiguration().isLogPayload()) {
+            if (mapping.getDebug() || context.getServiceConfiguration().getLogPayload()) {
                 log.info("{} - Resolved topic from {} to {}",
                         tenant, splitTopicInAsListOriginal, splitTopicInAsList);
             }

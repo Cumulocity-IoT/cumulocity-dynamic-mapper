@@ -37,11 +37,11 @@ public abstract class BaseProcessor extends CommonProcessor {
                 .mappingType(mapping.getMappingType())
                 .serviceConfiguration(serviceConfiguration)
                 .mapping(mapping)
-                .sendPayload(connectorMessage.isSendPayload())
+                .sendPayload(connectorMessage.getSendPayload())
                 .testing(testing)
                 .tenant(tenant)
                 .supportsMessageContext(
-                        connectorMessage.isSupportsMessageContext() && mapping.getSupportsMessageContext())
+                        connectorMessage.getSupportsMessageContext() && mapping.getSupportsMessageContext())
                 .key(connectorMessage.getKey())
                 .api(mapping.getTargetAPI()).build();
     }
@@ -54,11 +54,11 @@ public abstract class BaseProcessor extends CommonProcessor {
                 .mappingType(mapping.getMappingType())
                 .serviceConfiguration(serviceConfiguration)
                 .mapping(mapping)
-                .sendPayload(connectorMessage.isSendPayload())
+                .sendPayload(connectorMessage.getSendPayload())
                 .testing(testing)
                 .tenant(tenant)
                 .supportsMessageContext(
-                        connectorMessage.isSupportsMessageContext() && mapping.getSupportsMessageContext())
+                        connectorMessage.getSupportsMessageContext() && mapping.getSupportsMessageContext())
                 .key(connectorMessage.getKey())
                 .api(mapping.getTargetAPI())
                 .build();

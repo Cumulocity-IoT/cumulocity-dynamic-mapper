@@ -344,7 +344,7 @@ public class SubscriptionQueryService {
         }
     }
 
-    private boolean isValidSubscription(NotificationSubscriptionRepresentation sub) {
+    private Boolean isValidSubscription(NotificationSubscriptionRepresentation sub) {
         return sub != null &&
                 sub.getSource() != null &&
                 sub.getSource().getId() != null;

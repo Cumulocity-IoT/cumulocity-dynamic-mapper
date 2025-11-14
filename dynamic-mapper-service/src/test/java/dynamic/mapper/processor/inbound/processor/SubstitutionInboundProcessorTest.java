@@ -121,8 +121,8 @@ class SubstitutionInboundProcessorTest {
         when(exchange.getIn()).thenReturn(message);
         when(message.getHeader("processingContext", ProcessingContext.class)).thenReturn(processingContext);
         when(mappingService.getMappingStatus(TEST_TENANT, mapping)).thenReturn(mappingStatus);
-        when(serviceConfiguration.isLogPayload()).thenReturn(false);
-        when(serviceConfiguration.isLogSubstitution()).thenReturn(false);
+        when(serviceConfiguration.getLogPayload()).thenReturn(false);
+        when(serviceConfiguration.getLogSubstitution()).thenReturn(false);
 
         // Setup C8YAgent mock
         setupC8YAgentMocks();

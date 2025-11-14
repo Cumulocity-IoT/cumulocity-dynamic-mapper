@@ -319,7 +319,7 @@ public class MockInventory {
      * @param filter The filter criteria
      * @return true if the object matches all filter criteria
      */
-    private boolean matchesFilter(ManagedObjectRepresentation mo, InventoryFilter filter) {
+    private Boolean matchesFilter(ManagedObjectRepresentation mo, InventoryFilter filter) {
         // Filter by type
         if (filter.getType() != null && !filter.getType().isEmpty()) {
             if (mo.getType() == null || !mo.getType().equals(filter.getType())) {
@@ -408,7 +408,7 @@ public class MockInventory {
      * @param childId             The child ID to find
      * @return true if the collection contains the child ID
      */
-    private boolean hasChildWithId(Object referenceCollection, String childId) {
+    private Boolean hasChildWithId(Object referenceCollection, String childId) {
         // In a real implementation, you would need to iterate through the reference
         // collection
         // For now, we'll return true if the collection is not null (simplified)

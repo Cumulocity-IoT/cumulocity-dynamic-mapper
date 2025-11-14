@@ -332,7 +332,7 @@ public class MappingValidator {
     /**
      * Checks if a string is valid JSON
      */
-    private boolean isValidJSON(String jsonString) {
+    private Boolean isValidJSON(String jsonString) {
         if (jsonString == null || jsonString.isEmpty()) {
             return false;
         }
@@ -349,7 +349,7 @@ public class MappingValidator {
     /**
      * Checks if target template is valid JSON object (not just any JSON value)
      */
-    private boolean isValidJSONObject(String jsonString) {
+    private Boolean isValidJSONObject(String jsonString) {
         if (jsonString == null || jsonString.isEmpty()) {
             return false;
         }

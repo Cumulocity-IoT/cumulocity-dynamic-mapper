@@ -93,7 +93,7 @@ public abstract class CommonProcessor implements Processor {
             // Use C8YAgent to resolve external ID to global ID
             var globalId = c8yAgent.resolveExternalId2GlobalId(tenant,
                     new ID(externalSource.getType(), externalSource.getExternalId()),
-                    context.isTesting());
+                    context.getTesting());
             context.setExternalId(externalSource.getExternalId());
 
             if (globalId != null) {

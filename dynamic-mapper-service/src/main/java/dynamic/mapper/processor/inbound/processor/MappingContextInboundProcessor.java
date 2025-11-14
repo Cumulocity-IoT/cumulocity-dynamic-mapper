@@ -76,7 +76,7 @@ public class MappingContextInboundProcessor extends BaseProcessor {
                 //         .get(TemplateType.SMART.name()).getCode());
                 processingContext.setGraalContext(graalContext);
                 processingContext.setFlowState(new HashMap<String, Object>());
-                processingContext.setFlowContext(new SimpleFlowContext(graalContext, tenant, (InventoryEnrichmentClient) configurationRegistry.getC8yAgent(), processingContext.isTesting()));
+                processingContext.setFlowContext(new SimpleFlowContext(graalContext, tenant, (InventoryEnrichmentClient) configurationRegistry.getC8yAgent(), processingContext.getTesting()));
             } catch (Exception e) {
                 handleGraalVMError(tenant, mapping, e, processingContext);
                 return;
@@ -126,7 +126,7 @@ public class MappingContextInboundProcessor extends BaseProcessor {
     private void logInboundMessageReceived(String tenant, Mapping mapping, String connectorIdentifier,
             ProcessingContext<?> context,
             ServiceConfiguration serviceConfiguration) {
-        if (serviceConfiguration.isLogPayload() || mapping.getDebug()) {
+        if (serviceConfiguration.getLogPayload() || mapping.getDebug()) {
             Object pp = context.getPayload();
             String ppLog = null;
 

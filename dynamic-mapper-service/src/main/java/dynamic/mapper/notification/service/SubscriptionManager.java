@@ -423,7 +423,7 @@ public class SubscriptionManager {
         }
     }
 
-    private boolean shouldDisconnectAfterUnsubscribe(String tenant) {
+    private Boolean shouldDisconnectAfterUnsubscribe(String tenant) {
         try {
             Iterator<NotificationSubscriptionRepresentation> staticSubIt = subscriptionAPI
                     .getSubscriptionsByFilter(
@@ -500,7 +500,7 @@ public class SubscriptionManager {
         }
     }
 
-    private boolean isValid(ManagedObjectRepresentation mor) {
+    private Boolean isValid(ManagedObjectRepresentation mor) {
         return mor != null && mor.getId() != null;
     }
 }
