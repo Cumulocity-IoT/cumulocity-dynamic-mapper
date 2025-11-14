@@ -21,6 +21,21 @@ function onMessage(inputMsg, context) {
     // use _externalId_ to reference the external id of the device.
     // it is resolved automatically using the externalId type from externalSource: [{"type":"c8y_Serial"}]
     // e.g. topic: `measurements/_externalId_`
+    // return [{  
+    //    topic: `measurements/_externalId_`,
+    //    payload: {
+    //        "time":  new Date().toISOString(),
+    //        "c8y_Steam": {
+    //            "Temperature": {
+    //            "unit": "C",
+    //            "value": payload["c8y_TemperatureMeasurement"]["T"]["value"]
+    //            }
+    //        }
+    //    },
+    //    transportFields: { "key": payload["source"]["id"]},  // define key to add to Kafka payload (record)
+    //    externalSource: [{"type":"c8y_Serial"}]
+    // }];
+
     return [{  
         topic: `measurements/${payload["source"]["id"]}`,
         payload: {
@@ -32,7 +47,6 @@ function onMessage(inputMsg, context) {
                 }
             }
         },
-        transportFields: { "key": payload["source"]["id"]},  // define key to add to Kafka payload (record)
-        externalSource: [{"type":"c8y_Serial"}]
+        transportFields: { "key": payload["source"]["id"]}  // define key to add to Kafka payload (record)
     }];
 }
