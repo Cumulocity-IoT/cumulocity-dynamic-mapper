@@ -58,7 +58,7 @@ For messages received by the flow this is not set.
 /** A (Pulsar) message received from a device or sent to a device */
 export interface DeviceMessage {
     /** Cloud IdP and first step of tedge always gets an ArrayBuffer, but might be a JS object if passing intermediate messages between steps in thin-edge */
-    payload: ArrayBuffer | object;
+    payload: Uint8Array;
 
     /** Identifier for the source/dest transport e.g. "mqtt", "opc-ua" etc.
     Mandatory unless in thin-edge (when it can be inferred from context)
@@ -74,7 +74,7 @@ export interface DeviceMessage {
     clientId?: string;
 
     /** Dictionary of transport/MQTT-specific fields/properties/headers */
-    transportFields?: { [key: string]: string };
+    transportFields?: { [key: string]: any };
 
     /** Timestamp of incoming Pulsar message; does nothing when sending */
     time?: Date;
@@ -145,7 +145,7 @@ For messages received by the flow this is not set.
 /** A (Pulsar) message received from a device or sent to a device */
 export interface DeviceMessage {
     /** Cloud IdP and first step of tedge always gets an ArrayBuffer, but might be a JS object if passing intermediate messages between steps in thin-edge */
-    payload: ArrayBuffer | object;
+    payload: Uint8Array;
 
     /** Identifier for the source/dest transport e.g. "mqtt", "opc-ua" etc.
     Mandatory unless in thin-edge (when it can be inferred from context)
@@ -161,7 +161,7 @@ export interface DeviceMessage {
     clientId?: string;
 
     /** Dictionary of transport/MQTT-specific fields/properties/headers */
-    transportFields?: { [key: string]: string };
+    transportFields?: { [key: string]: any };
 
     /** Timestamp of incoming Pulsar message; does nothing when sending */
     time?: Date;
