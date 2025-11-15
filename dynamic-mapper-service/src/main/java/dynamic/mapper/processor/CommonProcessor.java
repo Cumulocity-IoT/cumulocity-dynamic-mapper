@@ -13,12 +13,11 @@ import com.cumulocity.model.idtype.GId;
 
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
-import dynamic.mapper.processor.flow.CumulocityMessage;
-import dynamic.mapper.processor.flow.CumulocitySource;
+import dynamic.mapper.processor.flow.CumulocityObject;
 import dynamic.mapper.processor.flow.DeviceMessage;
-import dynamic.mapper.processor.flow.ExternalSource;
+import dynamic.mapper.processor.flow.ExternalId;
 import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.util.ProcessingResultHelper;
+import dynamic.mapper.processor.util.JavaScriptInteropHelper;
 import dynamic.mapper.util.Utils;
 import lombok.extern.slf4j.Slf4j;
 
@@ -62,17 +61,12 @@ public abstract class CommonProcessor implements Processor {
         }
     }
 
-    protected String resolveDeviceIdentifier(CumulocityMessage cumulocityMessage, ProcessingContext<?> context,
+    protected String resolveDeviceIdentifier(CumulocityObject cumulocityMessage, ProcessingContext<?> context,
             String tenant) throws ProcessingException {
 
         // First try externalSource
         if (cumulocityMessage.getExternalSource() != null) {
             return resolveFromExternalSource(cumulocityMessage.getExternalSource(), context, tenant);
-        }
-
-        // Then try internalSource
-        if (cumulocityMessage.getInternalSource() != null) {
-            return resolveFromInternalSource(cumulocityMessage.getInternalSource());
         }
 
         // Fallback to mapping's generic device identifier
@@ -82,14 +76,14 @@ public abstract class CommonProcessor implements Processor {
     protected String resolveFromExternalSource(Object externalSourceObj, ProcessingContext<?> context,
             String tenant) throws ProcessingException {
 
-        List<ExternalSource> externalSources = ProcessingResultHelper.convertToExternalSourceList(externalSourceObj);
+        List<ExternalId> externalSources = JavaScriptInteropHelper.convertToExternalIdList(externalSourceObj);
 
         if (externalSources.isEmpty()) {
             throw new ProcessingException("External source is empty");
         }
 
         // Use the first external source for resolution
-        ExternalSource externalSource = externalSources.get(0);
+        ExternalId externalSource = externalSources.get(0);
 
         try {
             // Use C8YAgent to resolve external ID to global ID
@@ -112,14 +106,14 @@ public abstract class CommonProcessor implements Processor {
     protected String resolveGlobalId2ExternalId(DeviceMessage deviceMessage, ProcessingContext<?> context,
             String tenant) throws ProcessingException {
 
-        List<ExternalSource> externalSources = ProcessingResultHelper.convertToExternalSourceList(deviceMessage.getExternalSource());
+        List<ExternalId> externalSources = JavaScriptInteropHelper.convertToExternalIdList(deviceMessage.getExternalSource());
 
         if (externalSources.isEmpty()) {
             throw new ProcessingException("External source is empty");
         }
 
         // Use the first external source for resolution
-        ExternalSource externalSource = externalSources.get(0);
+        ExternalId externalSource = externalSources.get(0);
 
         try {
             var gid = new GId(context.getSourceId());
@@ -138,17 +132,6 @@ public abstract class CommonProcessor implements Processor {
         } catch (Exception e) {
             throw new ProcessingException("Failed to resolve external ID: " + externalSource.getExternalId(), e);
         }
-    }
-
-    protected String resolveFromInternalSource(Object internalSourceObj) throws ProcessingException {
-        List<CumulocitySource> internalSources = ProcessingResultHelper.convertToInternalSourceList(internalSourceObj);
-
-        if (internalSources.isEmpty()) {
-            throw new ProcessingException("Internal source is empty");
-        }
-
-        // Use the first internal source directly
-        return internalSources.get(0).getInternalId();
     }
 
 }

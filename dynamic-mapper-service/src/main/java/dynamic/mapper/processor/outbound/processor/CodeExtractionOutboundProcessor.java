@@ -43,12 +43,12 @@ import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.flow.JavaScriptInteropHelper;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.SubstituteValue;
 import dynamic.mapper.processor.model.SubstitutionContext;
 import dynamic.mapper.processor.model.SubstitutionEvaluation;
 import dynamic.mapper.processor.model.SubstitutionResult;
+import dynamic.mapper.processor.util.JavaScriptInteropHelper;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 

@@ -37,11 +37,11 @@ import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.flow.CumulocityMessage;
+import dynamic.mapper.processor.flow.CumulocityObject;
 import dynamic.mapper.processor.flow.DeviceMessage;
 import dynamic.mapper.processor.flow.FlowContext;
-import dynamic.mapper.processor.flow.JavaScriptInteropHelper;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.util.JavaScriptInteropHelper;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
@@ -214,7 +214,7 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
 
     /**
      * Create input message for outbound processing.
-     * For outbound, the input is a CumulocityMessage containing the C8Y object.
+     * For outbound, the input is a CumulocityObject containing the C8Y object.
      */
     private Value createInputMessage(Context graalContext, ProcessingContext<?> context) {
         // Create a DeviceMessage from the current context
@@ -329,7 +329,7 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
 
     /**
      * Process a single message element and add it to the output list.
-     * Handles both DeviceMessage and CumulocityMessage types.
+     * Handles both DeviceMessage and CumulocityObject types.
      */
     private void processMessageElement(Value element, List<Object> outputMessages, String tenant) {
         if (element == null || element.isNull()) {
@@ -343,11 +343,11 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
                 outputMessages.add(deviceMsg);
                 log.debug("{} - Processed DeviceMessage: topic={}", tenant, deviceMsg.getTopic());
 
-            } else if (JavaScriptInteropHelper.isCumulocityMessage(element)) {
-                CumulocityMessage cumulocityMsg = JavaScriptInteropHelper.convertToCumulocityMessage(element);
-                outputMessages.add(cumulocityMsg);
-                log.debug("{} - Processed CumulocityMessage: type={}, action={}",
-                        tenant, cumulocityMsg.getCumulocityType(), cumulocityMsg.getAction());
+            } else if (JavaScriptInteropHelper.isCumulocityObject(element)) {
+                CumulocityObject cumulocityObj = JavaScriptInteropHelper.convertToCumulocityObject(element);
+                outputMessages.add(cumulocityObj);
+                log.debug("{} - Processed CumulocityObject: type={}, action={}",
+                        tenant, cumulocityObj.getCumulocityType(), cumulocityObj.getAction());
 
             } else {
                 log.warn("{} - Unknown message type returned from onMessage function: {}",

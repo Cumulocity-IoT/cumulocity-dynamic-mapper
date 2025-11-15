@@ -51,11 +51,13 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.model.SnoopStatus;
-import dynamic.mapper.processor.flow.CumulocityMessage;
+import dynamic.mapper.processor.flow.CumulocityObject;
+import dynamic.mapper.processor.flow.CumulocityType;
 import dynamic.mapper.processor.flow.DeviceMessage;
 import dynamic.mapper.processor.flow.FlowContext;
 import dynamic.mapper.processor.flow.SimpleFlowContext;
 import dynamic.mapper.processor.model.MappingType;
+import dynamic.mapper.processor.flow.ExternalId;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.TransformationType;
 import dynamic.mapper.service.MappingService;
@@ -141,8 +143,7 @@ class FlowProcessorInboundProcessorTest {
                  * topic 'testGraalsSingle/berlin_01'
                 */
 
-                function onMessage(inputMsg, context) {
-                    const msg = inputMsg;
+                function onMessage(msg, context) {
                     var payload = msg.getPayload();
 
                     context.logMessage("Context" + context.getStateAll());
@@ -392,8 +393,8 @@ class FlowProcessorInboundProcessorTest {
     }
 
     @Test
-    void testProcessResultWithCumulocityMessages() throws Exception {
-        // Given - Mock GraalVM context and create a result Value with CumulocityMessage
+    void testProcessResultWithCumulocityObjects() throws Exception {
+        // Given - Mock GraalVM context and create a result Value with CumulocityObject
         Context mockGraalContext = mock(Context.class);
         Value mockResult = mock(Value.class);
         Value mockElement = mock(Value.class);
@@ -403,7 +404,7 @@ class FlowProcessorInboundProcessorTest {
         when(mockResult.getArraySize()).thenReturn(1L);
         when(mockResult.getArrayElement(0)).thenReturn(mockElement);
 
-        // Setup element as CumulocityMessage
+        // Setup element as CumulocityObject
         when(mockElement.hasMembers()).thenReturn(true);
         when(mockElement.hasMember("cumulocityType")).thenReturn(true);
         when(mockElement.hasMember("action")).thenReturn(true);
@@ -448,15 +449,15 @@ class FlowProcessorInboundProcessorTest {
         assertEquals(1, ((List) processingContext.getFlowResult()).size(), "Should have one result message");
 
         Object resultMessage = ((List) processingContext.getFlowResult()).get(0);
-        assertTrue(resultMessage instanceof CumulocityMessage, "Result should be CumulocityMessage");
+        assertTrue(resultMessage instanceof CumulocityObject, "Result should be CumulocityObject");
 
-        CumulocityMessage cumulocityMsg = (CumulocityMessage) resultMessage;
-        assertEquals("measurement", cumulocityMsg.getCumulocityType(), "Should have correct cumulocity type");
-        assertEquals("create", cumulocityMsg.getAction(), "Should have correct action");
-        assertNotNull(cumulocityMsg.getPayload(), "Should have payload");
+        CumulocityObject cumulocityObj = (CumulocityObject) resultMessage;
+        assertEquals(CumulocityType.MEASUREMENT, cumulocityObj.getCumulocityType(), "Should have correct cumulocity type");
+        assertEquals("create", cumulocityObj.getAction(), "Should have correct action");
+        assertNotNull(cumulocityObj.getPayload(), "Should have payload");
 
-        log.info("Successfully validated CumulocityMessage flow result: type={}, action={}",
-                cumulocityMsg.getCumulocityType(), cumulocityMsg.getAction());
+        log.info("Successfully validated CumulocityObject flow result: type={}, action={}",
+                cumulocityObj.getCumulocityType(), cumulocityObj.getAction());
     }
 
     @Test
@@ -547,8 +548,8 @@ class FlowProcessorInboundProcessorTest {
         when(mockResult.getArrayElement(0)).thenReturn(mockCumulocityElement);
         when(mockResult.getArrayElement(1)).thenReturn(mockDeviceElement);
 
-        // Setup first element as CumulocityMessage
-        setupCumulocityMessageMock(mockCumulocityElement);
+        // Setup first element as CumulocityObject
+        setupCumulocityObjectMock(mockCumulocityElement);
 
         // Setup second element as DeviceMessage
         setupDeviceMessageMock(mockDeviceElement);
@@ -565,11 +566,11 @@ class FlowProcessorInboundProcessorTest {
         assertNotNull(processingContext.getFlowResult(), "Flow result should not be null");
         assertEquals(2, ((List) processingContext.getFlowResult()).size(), "Should have two result messages");
 
-        // Verify first message (CumulocityMessage)
+        // Verify first message (CumulocityObject)
         Object firstMessage = ((List) processingContext.getFlowResult()).get(0);
-        assertTrue(firstMessage instanceof CumulocityMessage, "First message should be CumulocityMessage");
-        CumulocityMessage cumulocityMsg = (CumulocityMessage) firstMessage;
-        assertEquals("measurement", cumulocityMsg.getCumulocityType(), "Should have correct cumulocity type");
+        assertTrue(firstMessage instanceof CumulocityObject, "First message should be CumulocityObject");
+        CumulocityObject cumulocityObj = (CumulocityObject) firstMessage;
+        assertEquals(CumulocityType.MEASUREMENT, cumulocityObj.getCumulocityType(), "Should have correct cumulocity type");
 
         // Verify second message (DeviceMessage)
         Object secondMessage = ((List) processingContext.getFlowResult()).get(1);
@@ -716,7 +717,7 @@ class FlowProcessorInboundProcessorTest {
         when(externalIdValue.asString()).thenReturn("C333646781");
     }
 
-    private void setupCumulocityMessageMock(Value mockElement) {
+    private void setupCumulocityObjectMock(Value mockElement) {
         when(mockElement.hasMembers()).thenReturn(true);
         when(mockElement.hasMember("cumulocityType")).thenReturn(true);
         when(mockElement.hasMember("action")).thenReturn(true);
@@ -788,7 +789,7 @@ class FlowProcessorInboundProcessorTest {
         // When - Process the exchange with the complete flow
         processor.process(exchange);
 
-        // Then - Verify the flow result contains the expected CumulocityMessage
+        // Then - Verify the flow result contains the expected CumulocityObject
         assertNotNull(processingContext.getFlowResult(),
                 "Flow result should not be null after processing");
         assertFalse(((List) processingContext.getFlowResult()).isEmpty(),
@@ -796,26 +797,26 @@ class FlowProcessorInboundProcessorTest {
         assertEquals(1, ((List) processingContext.getFlowResult()).size(),
                 "Should have exactly one result message from the sample code");
 
-        // Verify the message is a CumulocityMessage as expected from the sample code
+        // Verify the message is a CumulocityObject as expected from the sample code
         Object resultMessage = ((List) processingContext.getFlowResult()).get(0);
-        assertTrue(resultMessage instanceof CumulocityMessage,
-                "Result should be CumulocityMessage as defined in sample code");
+        assertTrue(resultMessage instanceof CumulocityObject,
+                "Result should be CumulocityObject as defined in sample code");
 
-        CumulocityMessage cumulocityMsg = (CumulocityMessage) resultMessage;
+        CumulocityObject cumulocityObj = (CumulocityObject) resultMessage;
 
         // Verify the message properties match the sample JavaScript code expectations
-        assertEquals("measurement", cumulocityMsg.getCumulocityType(),
+        assertEquals(CumulocityType.MEASUREMENT, cumulocityObj.getCumulocityType(),
                 "Should be measurement type as per sample code");
-        assertEquals("create", cumulocityMsg.getAction(),
+        assertEquals("create", cumulocityObj.getAction(),
                 "Should be create action as per sample code");
-        assertNotNull(cumulocityMsg.getPayload(),
+        assertNotNull(cumulocityObj.getPayload(),
                 "Should have payload as generated by sample code");
-        assertNotNull(cumulocityMsg.getExternalSource(),
+        assertNotNull(cumulocityObj.getExternalSource(),
                 "Should have external source as defined in sample code");
 
         // Verify payload structure matches what the sample JavaScript should produce
         @SuppressWarnings("unchecked")
-        Map<String, Object> payload = (Map<String, Object>) cumulocityMsg.getPayload();
+        Map<String, Object> payload = (Map<String, Object>) cumulocityObj.getPayload();
         assertEquals("c8y_TemperatureMeasurement", payload.get("type"),
                 "Should have correct measurement type from sample code");
         assertTrue(payload.containsKey("time"),
@@ -838,14 +839,14 @@ class FlowProcessorInboundProcessorTest {
 
         // Verify external source
         @SuppressWarnings("unchecked")
-        List<Map<String, Object>> externalSources = (List<Map<String, Object>>) cumulocityMsg.getExternalSource();
+        List<ExternalId> externalSources = (List<ExternalId>) cumulocityObj.getExternalSource();
         assertNotNull(externalSources, "Should have external sources");
         assertEquals(1, externalSources.size(), "Should have one external source");
 
-        Map<String, Object> externalSource = externalSources.get(0);
-        assertEquals("c8y_Serial", externalSource.get("type"),
+        ExternalId externalSource = externalSources.get(0);
+        assertEquals("c8y_Serial", externalSource.getType(),
                 "Should have c8y_Serial type as per sample code");
-        assertEquals("test-client", externalSource.get("externalId"),
+        assertEquals("test-client", externalSource.getExternalId(),
                 "Should use clientId as external ID per sample code");
 
         // Verify no errors occurred during processing
@@ -856,18 +857,17 @@ class FlowProcessorInboundProcessorTest {
 
         log.info("✅ Complete flow processing test passed:");
         log.info("   - Mapping: {} ({})", mapping.getName(), mapping.getIdentifier());
-        log.info("   - Result type: {}", cumulocityMsg.getCumulocityType());
-        log.info("   - Action: {}", cumulocityMsg.getAction());
+        log.info("   - Result type: {}", cumulocityObj.getCumulocityType());
+        log.info("   - Action: {}", cumulocityObj.getAction());
         log.info("   - Temperature value: {}", temperature.get("value"));
-        log.info("   - External ID: {}", externalSource.get("externalId"));
+        log.info("   - External ID: {}", externalSource.getExternalId());
     }
 
     @Test
     void testCompleteFlowProcessingWithMultipleResults() throws Exception {
         // Given - Modify the sample mapping to return multiple results
         String multiResultCode = """
-                function onMessage(inputMsg, context) {
-                    const msg = inputMsg;
+                function onMessage(msg, context) {
                     var payload = msg.getPayload();
                     console.log("Processing message with payload:", JSON.stringify(payload));
 
@@ -911,7 +911,7 @@ class FlowProcessorInboundProcessorTest {
         when(mockGraalContext.getBindings("js")).thenReturn(mockBindings);
         when(mockBindings.getMember("onMessage_nlzm75nv")).thenReturn(mockOnMessageFunction);
 
-        // Create result with both CumulocityMessage and DeviceMessage
+        // Create result with both CumulocityObject and DeviceMessage
         Value mockResult = createMultipleResultsJavaScriptResult();
         when(mockOnMessageFunction.execute(any(), any())).thenReturn(mockResult);
 
@@ -923,12 +923,12 @@ class FlowProcessorInboundProcessorTest {
         assertEquals(2, ((List) processingContext.getFlowResult()).size(),
                 "Should have two result messages");
 
-        // Verify first result (CumulocityMessage)
+        // Verify first result (CumulocityObject)
         Object firstMessage = ((List) processingContext.getFlowResult()).get(0);
-        assertTrue(firstMessage instanceof CumulocityMessage,
-                "First message should be CumulocityMessage");
-        CumulocityMessage cumulocityMsg = (CumulocityMessage) firstMessage;
-        assertEquals("measurement", cumulocityMsg.getCumulocityType());
+        assertTrue(firstMessage instanceof CumulocityObject,
+                "First message should be CumulocityObject");
+        CumulocityObject cumulocityObj = (CumulocityObject) firstMessage;
+        assertEquals(CumulocityType.MEASUREMENT, cumulocityObj.getCumulocityType());
 
         // Verify second result (DeviceMessage)
         Object secondMessage = ((List) processingContext.getFlowResult()).get(1);
@@ -955,7 +955,7 @@ class FlowProcessorInboundProcessorTest {
         }
 
         log.info("✅ Multiple results flow processing test passed:");
-        log.info("   - CumulocityMessage: {} {}", cumulocityMsg.getCumulocityType(), cumulocityMsg.getAction());
+        log.info("   - CumulocityObject: {} {}", cumulocityObj.getCumulocityType(), cumulocityObj.getAction());
         log.info("   - DeviceMessage: topic={}, clientId={}", deviceMsg.getTopic(), deviceMsg.getClientId());
     }
 
@@ -963,7 +963,7 @@ class FlowProcessorInboundProcessorTest {
     void testCompleteFlowProcessingWithError() throws Exception {
         // Given - Use invalid JavaScript code to trigger an error
         String errorCode = """
-                function onMessage(inputMsg, context) {
+                function onMessage(msg, context) {
                     // This will cause a JavaScript error
                     throw new Error("Test JavaScript error in onMessage function");
                 }
@@ -1011,7 +1011,7 @@ class FlowProcessorInboundProcessorTest {
         when(mockResult.getArraySize()).thenReturn(1L);
         when(mockResult.getArrayElement(0)).thenReturn(mockElement);
 
-        // Setup element as CumulocityMessage
+        // Setup element as CumulocityObject
         when(mockElement.hasMembers()).thenReturn(true);
         when(mockElement.hasMember("cumulocityType")).thenReturn(true);
         when(mockElement.hasMember("action")).thenReturn(true);
@@ -1046,8 +1046,8 @@ class FlowProcessorInboundProcessorTest {
         when(mockResult.getArrayElement(0)).thenReturn(mockCumulocityElement);
         when(mockResult.getArrayElement(1)).thenReturn(mockDeviceElement);
 
-        // Setup first element (CumulocityMessage)
-        setupCompleteCumulocityMessageMock(mockCumulocityElement);
+        // Setup first element (CumulocityObject)
+        setupCompleteCumulocityObjectMock(mockCumulocityElement);
 
         // Setup second element (DeviceMessage)
         setupCompleteDeviceMessageMock(mockDeviceElement);
@@ -1197,7 +1197,7 @@ class FlowProcessorInboundProcessorTest {
         setupStringValueMock(externalIdValue, "test-client");
     }
 
-    private void setupCompleteCumulocityMessageMock(Value mockElement) {
+    private void setupCompleteCumulocityObjectMock(Value mockElement) {
         when(mockElement.hasMembers()).thenReturn(true);
         when(mockElement.hasMember("cumulocityType")).thenReturn(true);
         when(mockElement.hasMember("action")).thenReturn(true);

@@ -50,14 +50,13 @@ export function createCompletionProviderFlowFunction(monaco) {
   // Register flow-specific classes and interfaces
   const customClasses = [
     {
-      name: 'CumulocityMessage',
+      name: 'CumulocityObject',
       isEnum: false,
       properties: [
         { name: 'payload', type: 'object', documentation: 'The same payload that would be used in the C8Y REST/SmartREST API.' },
         { name: 'cumulocityType', type: 'string', documentation: 'Which type in the C8Y api is being modified. e.g. "measurement".' },
         { name: 'action', type: '"create" | "update"', documentation: 'What kind of operation is being performed on this type.' },
         { name: 'externalSource', type: 'ExternalSource[] | ExternalSource', documentation: 'External Id to lookup and optionally create.' },
-        { name: 'internalSource', type: 'CumulocitySource[] | CumulocitySource', documentation: 'Internal Cumulocity source.' },
         { name: 'destination', type: '"cumulocity" | "iceflow" | "streaming-analytics"', documentation: 'Destination for the message.' }
       ],
       methods: [],
@@ -90,15 +89,6 @@ export function createCompletionProviderFlowFunction(monaco) {
       ],
       methods: [],
       documentation: 'Details of external Id (which will be looked up by IdP to get the C8Y id, and optionally used to create a device).'
-    },
-    {
-      name: 'CumulocitySource',
-      isEnum: false,
-      properties: [
-        { name: 'internalId', type: 'string', documentation: 'Cumulocity Id to be looked up and/or created to get C8Y "id".' }
-      ],
-      methods: [],
-      documentation: 'Details of internal Cumulocity source.'
     },
     {
       name: 'FlowContext',
@@ -183,10 +173,10 @@ export function createCompletionProviderFlowFunction(monaco) {
   // Add utility functions specific to flow functions
   const utilityFunctions = [
     {
-      name: 'createCumulocityMessage',
+      name: 'createCumulocityObject',
       parameters: ['payload', 'cumulocityType', 'action'],
-      returnType: 'CumulocityMessage',
-      documentation: 'Creates a new CumulocityMessage with the specified payload, type, and action.',
+      returnType: 'CumulocityObject',
+      documentation: 'Creates a new CumulocityObject with the specified payload, type, and action.',
       description: 'Create new Cumulocity message'
     },
     {
@@ -383,7 +373,7 @@ export function createCompletionProviderFlowFunction(monaco) {
         const matchedFunc = utilityFunctions.find(f => f.name === funcName);
 
         if (matchedFunc) {
-          if (matchedFunc.name === 'createCumulocityMessage') {
+          if (matchedFunc.name === 'createCumulocityObject') {
             suggestions.push({
               label: 'payload object',
               kind: monaco.languages.CompletionItemKind.Variable,
@@ -427,9 +417,9 @@ export function createCompletionProviderFlowFunction(monaco) {
       // Common variable name suggestions for flow functions
       if (textUntilPosition.match(/\b(let|const|var)\s+\w*$/)) {
         const commonVars = [
-          { name: 'inputMsg', type: 'InputMessage', desc: 'Input message variable' },
+          { name: 'msg', type: 'InputMessage', desc: 'Input message variable' },
           { name: 'outputMsg', type: 'OutputMessage', desc: 'Output message variable' },
-          { name: 'c8yMsg', type: 'CumulocityMessage', desc: 'Cumulocity message variable' },
+          { name: 'c8yMsg', type: 'CumulocityObject', desc: 'Cumulocity message variable' },
           { name: 'deviceMsg', type: 'DeviceMessage', desc: 'Device message variable' },
           { name: 'flowContext', type: 'FlowContext', desc: 'Flow context variable' }
         ];

@@ -51,7 +51,7 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.flow.DeviceMessage;
 import dynamic.mapper.processor.flow.FlowContext;
-import dynamic.mapper.processor.flow.JavaScriptInteropHelper;
+import dynamic.mapper.processor.util.JavaScriptInteropHelper;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.TransformationType;
@@ -139,7 +139,7 @@ class FlowProcessorOutboundProcessorTest {
     private void setupJavaScriptInteropHelperMocks() {
         mockJavaScriptInteropHelper.when(() -> JavaScriptInteropHelper.isDeviceMessage(any()))
                 .thenReturn(true);
-        mockJavaScriptInteropHelper.when(() -> JavaScriptInteropHelper.isCumulocityMessage(any()))
+        mockJavaScriptInteropHelper.when(() -> JavaScriptInteropHelper.isCumulocityObject(any()))
                 .thenReturn(false);
 
         // Default device message
@@ -265,7 +265,7 @@ class FlowProcessorOutboundProcessorTest {
         // Reset the static mock to handle multiple calls differently
         mockJavaScriptInteropHelper.reset();
         mockJavaScriptInteropHelper.when(() -> JavaScriptInteropHelper.isDeviceMessage(any())).thenReturn(true);
-        mockJavaScriptInteropHelper.when(() -> JavaScriptInteropHelper.isCumulocityMessage(any())).thenReturn(false);
+        mockJavaScriptInteropHelper.when(() -> JavaScriptInteropHelper.isCumulocityObject(any())).thenReturn(false);
         
         mockJavaScriptInteropHelper.when(() -> JavaScriptInteropHelper.convertToDeviceMessage(firstMessage))
                 .thenReturn(firstDeviceMsg);
@@ -357,8 +357,8 @@ class FlowProcessorOutboundProcessorTest {
 
     private Mapping createSmartFunctionOutboundMapping() {
         String smartFunctionCode = """
-                function onMessage(inputMsg, context) {
-                    var payload = inputMsg.getPayload();
+                function onMessage(msg, context) {
+                    var payload = msg.getPayload();
                     return [{
                         topic: `measurements/${payload["source"]["id"]}`,
                         payload: {

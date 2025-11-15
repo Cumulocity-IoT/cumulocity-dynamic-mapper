@@ -9,14 +9,12 @@
  * 
 */
 
-function onMessage(inputMsg, context) {
-    const msg = inputMsg; 
-
+function onMessage(msg, context) {
     var payload = msg.getPayload();
 
     context.logMessage("Context" + context.getStateAll());
-    context.logMessage("Payload Raw:" + msg.getPayload());
-    context.logMessage("Payload messageId" +  msg.getPayload().get("messageId"));
+    context.logMessage("Payload Raw:" + payload);
+    context.logMessage("Payload messageId" +  payload.get("messageId"));
 
     // lookup device for enrichment
     var deviceByDeviceId = context.lookupDeviceByDeviceId(payload.get("deviceId"));

@@ -166,8 +166,7 @@ void setUp() throws Exception {
 
     private Mapping createSmartFunctionOutboundMapping() {
         String smartFunctionCode = """
-                function onMessage(inputMsg, context) {
-                    const msg = inputMsg;
+                function onMessage(msg, context) {
                     var payload = msg.getPayload();
 
                     return [{

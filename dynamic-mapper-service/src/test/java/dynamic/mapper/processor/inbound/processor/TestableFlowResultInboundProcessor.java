@@ -22,15 +22,13 @@
 package dynamic.mapper.processor.inbound.processor;
 
 import java.util.List;
-import java.util.Map;
 
 import dynamic.mapper.model.API;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.flow.CumulocityMessage;
-import dynamic.mapper.processor.flow.CumulocitySource;
+import dynamic.mapper.processor.flow.CumulocityObject;
+import dynamic.mapper.processor.flow.ExternalId;
 import dynamic.mapper.processor.flow.ExternalSource;
 import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.util.ProcessingResultHelper;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -87,7 +85,7 @@ public class TestableFlowResultInboundProcessor extends FlowResultInboundProcess
      */
     @FunctionalInterface
     public interface DeviceResolverFunction {
-        String resolve(CumulocityMessage msg, ProcessingContext<?> context, String tenant) throws ProcessingException;
+        String resolve(CumulocityObject msg, ProcessingContext<?> context, String tenant) throws ProcessingException;
     }
     
     /**
@@ -107,7 +105,7 @@ public class TestableFlowResultInboundProcessor extends FlowResultInboundProcess
     }
     
     @Override
-    protected String resolveDeviceIdentifier(CumulocityMessage msg, ProcessingContext<?> context, String tenant) 
+    protected String resolveDeviceIdentifier(CumulocityObject msg, ProcessingContext<?> context, String tenant) 
             throws ProcessingException {
         log.debug("TestableFlowResultInboundProcessor.resolveDeviceIdentifier called");
         
@@ -118,32 +116,10 @@ public class TestableFlowResultInboundProcessor extends FlowResultInboundProcess
             return result;
         }
         
-        // Default implementation
-        // If internal source is set, use it
-        if (msg.getInternalSource() != null) {
-            Object internalSourceObj = msg.getInternalSource();
-            String internalId = null;
-            
-            // Handle different types of internal source
-            if (internalSourceObj instanceof CumulocitySource) {
-                internalId = ((CumulocitySource) internalSourceObj).getInternalId();
-            } else if (internalSourceObj instanceof String) {
-                internalId = (String) internalSourceObj;
-            } else if (internalSourceObj instanceof Map) {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> sourceMap = (Map<String, Object>) internalSourceObj;
-                internalId = (String) sourceMap.get("id");
-            }
-            
-            if (internalId != null) {
-                log.debug("Using internal source ID: {}", internalId);
-                return internalId;
-            }
-        }
-        
+
         // If external source is set, resolve it
         if (msg.getExternalSource() != null) {
-            List<ExternalSource> sources = ProcessingResultHelper.convertToExternalSourceList(msg.getExternalSource());
+            List<ExternalId> sources = msg.getExternalSource();
             if (sources != null && !sources.isEmpty()) {
                 log.debug("Resolved external source to device ID: {}", defaultDeviceId);
                 return defaultDeviceId;

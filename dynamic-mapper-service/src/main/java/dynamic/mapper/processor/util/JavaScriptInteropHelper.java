@@ -1,4 +1,4 @@
-package dynamic.mapper.processor.flow;
+package dynamic.mapper.processor.util;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -11,6 +11,12 @@ import java.util.Map;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Value;
 
+import dynamic.mapper.processor.flow.CumulocityObject;
+import dynamic.mapper.processor.flow.CumulocityType;
+import dynamic.mapper.processor.flow.Destination;
+import dynamic.mapper.processor.flow.DeviceMessage;
+import dynamic.mapper.processor.flow.ExternalId;
+import dynamic.mapper.processor.flow.ExternalSource;
 import dynamic.mapper.processor.model.ProcessingContext;
 
 /**
@@ -22,7 +28,7 @@ public class JavaScriptInteropHelper {
      * Creates a JavaScript-compatible message object from Java objects
      * 
      * @param context The GraalJS context
-     * @param message Either DeviceMessage or CumulocityMessage
+     * @param message Either DeviceMessage or CumulocityObject
      * @return Value representing the message in JavaScript
      */
     public static Value createJSMessage(Context context, Object message) {
@@ -41,13 +47,13 @@ public class JavaScriptInteropHelper {
     }
 
     /**
-     * Checks if a Value represents a CumulocityMessage (by checking for
+     * Checks if a Value represents a CumulocityObject (by checking for
      * 'cumulocityType' property)
      * 
      * @param value The value to check
-     * @return true if it's a CumulocityMessage
+     * @return true if it's a CumulocityObject
      */
-    public static boolean isCumulocityMessage(Value value) {
+    public static boolean isCumulocityObject(Value value) {
         return value.hasMembers() && value.hasMember("cumulocityType");
     }
 
@@ -70,8 +76,8 @@ public class JavaScriptInteropHelper {
 
             if (isDeviceMessage(element)) {
                 result[i] = convertToDeviceMessage(element);
-            } else if (isCumulocityMessage(element)) {
-                result[i] = convertToCumulocityMessage(element);
+            } else if (isCumulocityObject(element)) {
+                result[i] = convertToCumulocityObject(element);
             } else {
                 result[i] = element; // Keep as Value for unknown types
             }
@@ -80,29 +86,25 @@ public class JavaScriptInteropHelper {
         return result;
     }
 
-    public static CumulocityMessage convertToCumulocityMessage(Value value) {
-        CumulocityMessage msg = new CumulocityMessage();
+    public static CumulocityObject convertToCumulocityObject(Value value) {
+        CumulocityObject msg = new CumulocityObject();
 
         // Convert Value to Java Object immediately
         if (value.hasMember("payload")) {
             msg.setPayload(convertValueToJavaObject(value.getMember("payload")));
         }
         if (value.hasMember("cumulocityType")) {
-            msg.setCumulocityType(value.getMember("cumulocityType").asString());
+            msg.setCumulocityType(CumulocityType.fromValue(value.getMember("cumulocityType").asString()));
         }
         if (value.hasMember("action")) {
             msg.setAction(value.getMember("action").asString());
         }
-        // TODO: Handle union type for externalSource
         if (value.hasMember("externalSource")) {
-            // msg.setExternalSource(extractFirstElementOrValue(value.getMember("externalSource")));
-            msg.setExternalSource(convertValueToJavaObject(value.getMember("externalSource")));
+            msg.setExternalSource(convertToExternalIdList(convertValueToJavaObject(value.getMember("externalSource"))));
         }
-        if (value.hasMember("internalSource")) {
-            msg.setInternalSource(convertValueToJavaObject(value.getMember("internalSource")));
-        }
+
         if (value.hasMember("destination")) {
-            msg.setDestination(value.getMember("destination").asString());
+            msg.setDestination(Destination.fromValue(value.getMember("destination").asString()));
         }
 
         if (value.hasMember(ProcessingContext.RETAIN)) {
@@ -126,12 +128,6 @@ public class JavaScriptInteropHelper {
         }
         if (value.hasMember("clientId")) {
             msg.setClientId(value.getMember("clientId").asString());
-        }
-
-        // TODO: Handle union type for externalSource
-        if (value.hasMember("externalSource")) {
-            //msg.setExternalSource(extractFirstElementOrValue(value.getMember("externalSource")));
-            msg.setExternalSource(convertValueToJavaObject(value.getMember("externalSource")));
         }
 
         if (value.hasMember(ProcessingContext.RETAIN)) {
@@ -172,27 +168,6 @@ public class JavaScriptInteropHelper {
         }
 
         return msg;
-    }
-
-    /**
-     * Extracts the first element if the value is an array, otherwise returns the
-     * value as-is
-     * 
-     * @param value The GraalJS Value to extract from
-     * @return The first element if array, otherwise the converted value
-     */
-    private static Object extractFirstElementOrValue(Value value) {
-        if (value.isNull()) {
-            return null;
-        }
-
-        if (value.hasArrayElements() && value.getArraySize() > 0) {
-            // Extract first element if it's an array
-            return convertValueToJavaObject(value.getArrayElement(0));
-        }
-
-        // Not an array, convert normally
-        return convertValueToJavaObject(value);
     }
 
     /**
@@ -275,4 +250,98 @@ public class JavaScriptInteropHelper {
             return Instant.now();
         }
     }
+
+    // Keep all existing conversion methods unchanged
+    @SuppressWarnings("unchecked")
+    public static List<ExternalId> convertToExternalIdList(Object obj) {
+        // ... (keep existing implementation)
+        List<ExternalId> result = new ArrayList<>();
+
+        if (obj == null) {
+            return result;
+        }
+
+        if (obj instanceof ExternalId) {
+            result.add((ExternalId) obj);
+        } else if (obj instanceof List) {
+            List<?> list = (List<?>) obj;
+            for (Object item : list) {
+                if (item instanceof ExternalId) {
+                    result.add((ExternalId) item);
+                } else if (item instanceof Map) {
+                    ExternalId externalSource = JavaScriptInteropHelper
+                            .convertMapToExternalId((Map<String, Object>) item);
+                    if (externalSource != null) {
+                        result.add(externalSource);
+                    }
+                }
+            }
+        } else if (obj instanceof Map) {
+            ExternalId externalSource = JavaScriptInteropHelper
+                    .convertMapToExternalId((Map<String, Object>) obj);
+            if (externalSource != null) {
+                result.add(externalSource);
+            }
+        }
+
+        return result;
+    }
+
+    static ExternalSource convertMapToExternalSource(Map<String, Object> map) {
+        // ... (keep existing implementation)
+        if (map == null) {
+            return null;
+        }
+
+        ExternalSource externalSource = new ExternalSource();
+
+        if (map.containsKey("externalId")) {
+            externalSource.setExternalId(String.valueOf(map.get("externalId")));
+        }
+        if (map.containsKey("type")) {
+            externalSource.setType(String.valueOf(map.get("type")));
+        }
+        if (map.containsKey("autoCreateDeviceMO")) {
+            externalSource.setAutoCreateDeviceMO((Boolean) map.get("autoCreateDeviceMO"));
+        }
+        if (map.containsKey("parentId")) {
+            externalSource.setParentId(String.valueOf(map.get("parentId")));
+        }
+        if (map.containsKey("childReference")) {
+            externalSource.setChildReference(String.valueOf(map.get("childReference")));
+        }
+        if (map.containsKey("clientId")) {
+            externalSource.setClientId(String.valueOf(map.get("clientId")));
+        }
+
+        // Only return if we have the required fields
+        if (externalSource.getExternalId() != null && externalSource.getType() != null) {
+            return externalSource;
+        }
+
+        return null;
+    }
+
+    static ExternalId convertMapToExternalId(Map<String, Object> map) {
+        // ... (keep existing implementation)
+        if (map == null) {
+            return null;
+        }
+
+        ExternalId externalId = new ExternalId();
+
+        if (map.containsKey("externalId")) {
+            externalId.setExternalId(String.valueOf(map.get("externalId")));
+        }
+        if (map.containsKey("type")) {
+            externalId.setType(String.valueOf(map.get("type")));
+        }
+        // Only return if we have the required fields
+        if (externalId.getExternalId() != null && externalId.getType() != null) {
+            return externalId;
+        }
+
+        return null;
+    }
+
 }

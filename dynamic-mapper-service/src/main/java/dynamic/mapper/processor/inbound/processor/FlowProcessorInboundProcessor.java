@@ -17,11 +17,11 @@ import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.flow.CumulocityMessage;
+import dynamic.mapper.processor.flow.CumulocityObject;
 import dynamic.mapper.processor.flow.DeviceMessage;
 import dynamic.mapper.processor.flow.FlowContext;
-import dynamic.mapper.processor.flow.JavaScriptInteropHelper;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.util.JavaScriptInteropHelper;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -348,11 +348,11 @@ public class FlowProcessorInboundProcessor extends BaseProcessor {
                 outputMessages.add(deviceMsg);
                 log.debug("{} - Processed DeviceMessage: topic={}", tenant, deviceMsg.getTopic());
 
-            } else if (JavaScriptInteropHelper.isCumulocityMessage(element)) {
-                CumulocityMessage cumulocityMsg = JavaScriptInteropHelper.convertToCumulocityMessage(element);
-                outputMessages.add(cumulocityMsg);
-                log.debug("{} - Processed CumulocityMessage: type={}, action={}",
-                        tenant, cumulocityMsg.getCumulocityType(), cumulocityMsg.getAction());
+            } else if (JavaScriptInteropHelper.isCumulocityObject(element)) {
+                CumulocityObject cumulocityObj = JavaScriptInteropHelper.convertToCumulocityObject(element);
+                outputMessages.add(cumulocityObj);
+                log.debug("{} - Processed CumulocityObject: type={}",
+                        tenant, cumulocityObj.getCumulocityType());
 
             } else {
                 log.warn("{} - Unknown message type returned from onMessage: {} with members: {}",
