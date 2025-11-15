@@ -102,11 +102,9 @@ public class JavaScriptInteropHelper {
         if (value.hasMember("externalSource")) {
             msg.setExternalSource(convertToExternalIdList(convertValueToJavaObject(value.getMember("externalSource"))));
         }
-
         if (value.hasMember("destination")) {
             msg.setDestination(Destination.fromValue(value.getMember("destination").asString()));
         }
-
         if (value.hasMember(ProcessingContext.RETAIN)) {
             msg.setRetain(value.getMember(ProcessingContext.RETAIN).asBoolean());
         }
@@ -129,7 +127,9 @@ public class JavaScriptInteropHelper {
         if (value.hasMember("clientId")) {
             msg.setClientId(value.getMember("clientId").asString());
         }
-
+        if (value.hasMember("externalSource")) {
+            msg.setExternalSource(convertToExternalIdList(convertValueToJavaObject(value.getMember("externalSource"))));
+        }
         if (value.hasMember(ProcessingContext.RETAIN)) {
             msg.setRetain(value.getMember(ProcessingContext.RETAIN).asBoolean());
         }
@@ -337,7 +337,7 @@ public class JavaScriptInteropHelper {
             externalId.setType(String.valueOf(map.get("type")));
         }
         // Only return if we have the required fields
-        if (externalId.getExternalId() != null && externalId.getType() != null) {
+        if (externalId.getType() != null) {
             return externalId;
         }
 
