@@ -19,7 +19,7 @@
  */
 
 /** A request going to or coming from Cumulocity core (or IceFlow/offloading) */
-export interface CumulocityMessage {
+export interface CumulocityObject {
     /** The same payload that would be used in the C8Y REST/SmartREST API 
     Exceptions:
      - If providing an externalSource you don't need to provide an "id" as you would in those APIs. 
@@ -27,7 +27,7 @@ export interface CumulocityMessage {
 */
     payload: object;
 
-    /** Which type in the C8Y api is being modified. Singular not plural. e.g. "measurement". The presence of this field also serves as a discriminator to identify this JS object as CumulocityMessage */
+    /** Which type in the C8Y api is being modified. Singular not plural. e.g. "measurement". The presence of this field also serves as a discriminator to identify this JS object as CumulocityObject */
     cumulocityType: string;
     /** What kind of operation is being performed on this type */
     action: "create" | "update";
@@ -43,9 +43,7 @@ export interface CumulocityMessage {
     
     When a Cumulocity message (e.g. operation) is received, this will contain a list of all external ids for this Cumulocity id.
     */
-    externalSource?: ExternalSource[] | ExternalSource;
-
-    internalSource?: CumulocitySource[] | CumulocitySource;
+    externalSource?: ExternalId[] | ExternalId;
 
     // For advanced cases only:
 
@@ -104,9 +102,18 @@ export interface ExternalSource {
     clientId?: string;
 }
 
+/** Details of external Id (which will be looked up by IdP to get the C8Y id, and optionally used to create a device). */
+export interface ExternalId {
+    /** External Id to be looked up and/or created to get C8Y "id" */
+    externalId: string;
+
+    /** e.g. "c8y_Serial"  */
+    type: string;
+}
+
 
 /** A request going to or coming from Cumulocity core (or IceFlow/offloading) */
-export interface CumulocityMessage {
+export interface CumulocityObject {
     /** The same payload that would be used in the C8Y REST/SmartREST API 
     Exceptions:
      - If providing an externalSource you don't need to provide an "id" as you would in those APIs. 
@@ -114,7 +121,7 @@ export interface CumulocityMessage {
 */
     payload: object;
 
-    /** Which type in the C8Y api is being modified. Singular not plural. e.g. "measurement". The presence of this field also serves as a discriminator to identify this JS object as CumulocityMessage */
+    /** Which type in the C8Y api is being modified. Singular not plural. e.g. "measurement". The presence of this field also serves as a discriminator to identify this JS object as CumulocityObject */
     cumulocityType: string;
     /** What kind of operation is being performed on this type */
     action: "create" | "update";
@@ -130,9 +137,7 @@ export interface CumulocityMessage {
     
     When a Cumulocity message (e.g. operation) is received, this will contain a list of all external ids for this Cumulocity id.
     */
-    externalSource?: ExternalSource[] | ExternalSource;
-
-    internalSource?: CumulocitySource[] | CumulocitySource;
+    externalSource?: ExternalId[] | ExternalId;
 
     // For advanced cases only:
 
@@ -152,7 +157,7 @@ export interface DeviceMessage {
     */
     transportId?: string;
     /** The topic on the transport (e.g. MQTT topic). 
-    Unfortunately the DiM team decided to rename this to "channel" instead of "topic" (to avoid confusiong between MQTT and Pulsar "topics") but we think calling it topic is better here) */
+     */
     topic: string;
     /** Transport/MQTT client Id 
     DiM team just renamed this from clientId->client, but we feel clientId is clearer; will discuss with them when Scott is back
