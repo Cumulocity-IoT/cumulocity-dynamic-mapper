@@ -96,7 +96,7 @@ public class TestController {
     private ContextService<UserCredentials> contextService;
 
     @Value("${APP.externalExtensionsEnabled}")
-    private boolean externalExtensionsEnabled;
+    private Boolean externalExtensionsEnabled;
 
     TestController(ConfigurationRegistry configurationRegistry) {
         this.configurationRegistry = configurationRegistry;

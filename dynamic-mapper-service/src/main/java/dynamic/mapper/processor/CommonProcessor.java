@@ -9,11 +9,13 @@ import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.cumulocity.model.ID;
+import com.cumulocity.model.idtype.GId;
 
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.processor.flow.CumulocityMessage;
 import dynamic.mapper.processor.flow.CumulocitySource;
+import dynamic.mapper.processor.flow.DeviceMessage;
 import dynamic.mapper.processor.flow.ExternalSource;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
@@ -93,11 +95,42 @@ public abstract class CommonProcessor implements Processor {
             // Use C8YAgent to resolve external ID to global ID
             var globalId = c8yAgent.resolveExternalId2GlobalId(tenant,
                     new ID(externalSource.getType(), externalSource.getExternalId()),
-                    context.isTesting());
+                    context.getTesting());
             context.setExternalId(externalSource.getExternalId());
 
             if (globalId != null) {
                 return globalId.getManagedObject().getId().getValue();
+            } else {
+                throw new ProcessingException("Could not resolve external ID: " + externalSource.getExternalId());
+            }
+
+        } catch (Exception e) {
+            throw new ProcessingException("Failed to resolve external ID: " + externalSource.getExternalId(), e);
+        }
+    }
+
+    protected String resolveGlobalId2ExternalId(DeviceMessage deviceMessage, ProcessingContext<?> context,
+            String tenant) throws ProcessingException {
+
+        List<ExternalSource> externalSources = ProcessingResultHelper.convertToExternalSourceList(deviceMessage.getExternalSource());
+
+        if (externalSources.isEmpty()) {
+            throw new ProcessingException("External source is empty");
+        }
+
+        // Use the first external source for resolution
+        ExternalSource externalSource = externalSources.get(0);
+
+        try {
+            var gid = new GId(context.getSourceId());
+            // Use C8YAgent to resolve external ID to global ID
+            var externalId = c8yAgent.resolveGlobalId2ExternalId(tenant, gid,
+                    externalSource.getType(),
+                    context.getTesting());
+            context.setExternalId(externalSource.getExternalId());
+
+            if (externalId != null) {
+                return externalId.getExternalId();
             } else {
                 throw new ProcessingException("Could not resolve external ID: " + externalSource.getExternalId());
             }

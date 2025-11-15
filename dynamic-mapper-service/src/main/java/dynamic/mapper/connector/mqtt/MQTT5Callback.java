@@ -48,7 +48,7 @@ public class MQTT5Callback implements Consumer<Mqtt5Publish> {
     private String tenant;
     private String connectorIdentifier;
     private String connectorName;
-    private boolean supportsMessageContext;
+    private Boolean supportsMessageContext;
     private ServiceConfiguration serviceConfiguration;
     private ExecutorService virtualThreadPool;
 
@@ -82,7 +82,7 @@ public class MQTT5Callback implements Consumer<Mqtt5Publish> {
                 .connectorIdentifier(connectorIdentifier)
                 .payload(payloadBytes)
                 .build();
-        if (serviceConfiguration.isLogPayload()) {
+        if (serviceConfiguration.getLogPayload()) {
             log.info(
                     "{} - INITIAL: message on topic: [{}], QoS message: {}, connector: {},{}",
                     tenant, mqttMessage.getTopic(), mqttMessage.getQos().ordinal(),
@@ -96,7 +96,7 @@ public class MQTT5Callback implements Consumer<Mqtt5Publish> {
         int mappingQos = processedResults.getConsolidatedQos().ordinal();
         int timeout = processedResults.getMaxCPUTimeMS();
         int effectiveQos = Math.min(publishQos, mappingQos);
-        if (serviceConfiguration.isLogPayload()) {
+        if (serviceConfiguration.getLogPayload()) {
             log.info(
                     "{} - PREPARING_RESULTS: message on topic: [{}], QoS message: {}, QoS effective: {}, QoS mappings: {}, connector {}",
                     tenant, mqttMessage.getTopic(), mqttMessage.getQos().ordinal(), effectiveQos, mappingQos,
@@ -175,7 +175,7 @@ public class MQTT5Callback implements Consumer<Mqtt5Publish> {
             // For QoS 0 (or downgraded to 0), no need for special handling
 
             // Acknowledge message with QoS=0
-            if (serviceConfiguration.isLogPayload()) {
+            if (serviceConfiguration.getLogPayload()) {
                 log.info("{} - END: Sending manual ack for MQTT message: topic: [{}], QoS: {}, connector: {}",
                         tenant, mqttMessage.getTopic(), mqttMessage.getQos().ordinal(), connectorIdentifier);
             }

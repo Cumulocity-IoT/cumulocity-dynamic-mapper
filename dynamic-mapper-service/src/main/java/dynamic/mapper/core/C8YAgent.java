@@ -693,7 +693,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                             BinaryInfo binaryInfo = context.getBinaryInfo();
                             uploadEventAttachment(binaryInfo, eventId.getValue(), false);
                         }
-                        if (serviceConfiguration.isLogPayload())
+                        if (serviceConfiguration.getLogPayload())
                             log.info("{} - SEND: event posted: {}", tenant, rt);
                         else
                             log.info("{} - SEND: event posted with Id {}", tenant,
@@ -727,7 +727,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                         } finally {
                             c8ySemaphore.release();
                         }
-                        if (serviceConfiguration.isLogPayload())
+                        if (serviceConfiguration.getLogPayload())
                             log.info("{} - SEND: alarm posted: {}", tenant, rt);
                         else
                             log.info("{} - SEND: alarm posted with Id {}", tenant,
@@ -764,7 +764,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                         } finally {
                             c8ySemaphore.release();
                         }
-                        if (serviceConfiguration.isLogPayload())
+                        if (serviceConfiguration.getLogPayload())
                             log.info("{} - SEND: measurement posted: {}", tenant, rt);
                         else
                             log.info("{} - SEND: measurement posted with Id {}", tenant,
@@ -815,7 +815,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
             throws ProcessingException {
         // StringBuffer error = new StringBuffer("");
         DynamicMapperRequest currentRequest = context.getRequests().get(requestIndex);
-        Boolean testing = context.isTesting();
+        Boolean testing = context.getTesting();
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         AtomicReference<ProcessingException> pe = new AtomicReference<>();
         API targetAPI = context.getMapping().getTargetAPI();
@@ -849,7 +849,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                             c8ySemaphore.acquire();
                             mor = inventoryApi.create(mor, testing);
                             // TODO Add/Update new managed object to IdentityCache
-                            if (serviceConfiguration.isLogPayload())
+                            if (serviceConfiguration.getLogPayload())
                                 log.info("{} - New device created: {}", tenant, mor);
                             else
                                 log.info("{} - New device created with Id {}", tenant, mor.getId().getValue());
@@ -870,7 +870,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                         } finally {
                             c8ySemaphore.release();
                         }
-                        if (serviceConfiguration.isLogPayload())
+                        if (serviceConfiguration.getLogPayload())
                             log.info("{} - Device updated: {}", tenant, mor);
                         else
                             log.info("{} - Device {} updated.", tenant, mor.getId().getValue());
@@ -1207,7 +1207,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     }
 
     public void sendNotificationLifecycle(String tenant, ConnectorStatus connectorStatus, String message) {
-        if (configurationRegistry.getServiceConfiguration(tenant).isSendNotificationLifecycle()
+        if (configurationRegistry.getServiceConfiguration(tenant).getSendNotificationLifecycle()
                 && !(connectorStatus.equals(previousConnectorStatus))) {
             previousConnectorStatus = connectorStatus;
             DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");

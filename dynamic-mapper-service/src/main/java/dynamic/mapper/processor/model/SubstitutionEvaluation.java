@@ -162,31 +162,31 @@ public class SubstitutionEvaluation {
             processingCacheEntry
                     .add(new SubstituteValue(extractedSourceContent,
                             SubstituteValue.TYPE.IGNORE, substitution.getRepairStrategy(),
-                            substitution.isExpandArray()));
+                            substitution.getExpandArray()));
         } else if (SubstitutionEvaluation.isTextual(extractedSourceContent)) {
             processingCacheEntry.add(
                     new SubstituteValue(extractedSourceContent,
-                            TYPE.TEXTUAL, substitution.getRepairStrategy(), substitution.isExpandArray()));
+                            TYPE.TEXTUAL, substitution.getRepairStrategy(), substitution.getExpandArray()));
         } else if (SubstitutionEvaluation.isNumber(extractedSourceContent)) {
             processingCacheEntry
                     .add(new SubstituteValue(extractedSourceContent,
                             SubstituteValue.TYPE.NUMBER, substitution.getRepairStrategy(),
-                            substitution.isExpandArray()));
+                            substitution.getExpandArray()));
         } else if (SubstitutionEvaluation.isArray(extractedSourceContent)) {
             processingCacheEntry
                     .add(new SubstituteValue(extractedSourceContent,
                             SubstituteValue.TYPE.ARRAY, substitution.getRepairStrategy(),
-                            substitution.isExpandArray()));
+                            substitution.getExpandArray()));
         } else if (SubstitutionEvaluation.isBoolean(extractedSourceContent)) {
             processingCacheEntry
                     .add(new SubstituteValue(extractedSourceContent,
                             SubstituteValue.TYPE.BOOLEAN, substitution.getRepairStrategy(),
-                            substitution.isExpandArray()));
+                            substitution.getExpandArray()));
         } else {
             processingCacheEntry
                     .add(new SubstituteValue(extractedSourceContent,
                             SubstituteValue.TYPE.OBJECT, substitution.getRepairStrategy(),
-                            substitution.isExpandArray()));
+                            substitution.getExpandArray()));
         }
 
     }
@@ -201,26 +201,26 @@ public class SubstitutionEvaluation {
             processingCacheEntry
                     .add(new SubstituteValue(extractedSourceContent,
                             SubstituteValue.TYPE.IGNORE, substitutionValue.getRepairStrategy(),
-                            substitutionValue.isExpandArray()));
+                            substitutionValue.getExpandArray()));
         } else if (SubstitutionEvaluation.isTextual(extractedSourceContent)) {
             processingCacheEntry.add(
                     new SubstituteValue(extractedSourceContent,
-                            TYPE.TEXTUAL, substitutionValue.getRepairStrategy(), substitutionValue.isExpandArray()));
+                            TYPE.TEXTUAL, substitutionValue.getRepairStrategy(), substitutionValue.getExpandArray()));
         } else if (SubstitutionEvaluation.isNumber(extractedSourceContent)) {
             processingCacheEntry
                     .add(new SubstituteValue(extractedSourceContent,
                             SubstituteValue.TYPE.NUMBER, substitutionValue.getRepairStrategy(),
-                            substitutionValue.isExpandArray()));
+                            substitutionValue.getExpandArray()));
         } else if (SubstitutionEvaluation.isArray(extractedSourceContent)) {
             processingCacheEntry
                     .add(new SubstituteValue(extractedSourceContent,
                             SubstituteValue.TYPE.ARRAY, substitutionValue.getRepairStrategy(),
-                            substitutionValue.isExpandArray()));
+                            substitutionValue.getExpandArray()));
         } else {
             processingCacheEntry
                     .add(new SubstituteValue(extractedSourceContent,
                             SubstituteValue.TYPE.OBJECT, substitutionValue.getRepairStrategy(),
-                            substitutionValue.isExpandArray()));
+                            substitutionValue.getExpandArray()));
         }
     }
 

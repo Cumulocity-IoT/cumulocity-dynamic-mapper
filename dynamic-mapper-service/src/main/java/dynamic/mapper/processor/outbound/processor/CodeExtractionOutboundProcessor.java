@@ -109,12 +109,12 @@ public class CodeExtractionOutboundProcessor extends BaseProcessor {
 
             Object payloadObject = context.getPayload();
 
-            if (serviceConfiguration.isLogPayload() || mapping.getDebug()) {
+            if (serviceConfiguration.getLogPayload() || mapping.getDebug()) {
                 String payload = toPrettyJsonString(payloadObject);  // is this and this required?
                 log.info("{} - Incoming payload (patched) in extractFromSource(): {} {} {} {}", tenant,
                         payload,
-                        serviceConfiguration.isLogPayload(), mapping.getDebug(),
-                        serviceConfiguration.isLogPayload() || mapping.getDebug());
+                        serviceConfiguration.getLogPayload(), mapping.getDebug(),
+                        serviceConfiguration.getLogPayload() || mapping.getDebug());
             }
 
             if (mapping.getCode() != null) {
@@ -489,7 +489,7 @@ public class CodeExtractionOutboundProcessor extends BaseProcessor {
             }
         }
 
-        if (context.getMapping().getDebug() || context.getServiceConfiguration().isLogPayload()) {
+        if (context.getMapping().getDebug() || context.getServiceConfiguration().getLogPayload()) {
             log.info("{} - Extraction returned {} results, payload: {}",
                     tenant,
                     keySet.size(),

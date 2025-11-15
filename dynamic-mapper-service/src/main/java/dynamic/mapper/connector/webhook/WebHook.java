@@ -389,7 +389,7 @@ public class WebHook extends AConnectorClient {
             ResponseEntity<String> response = responseEntity.block();
 
             if (response != null && response.getStatusCode().is2xxSuccessful()) {
-                if (context.getMapping().getDebug() || serviceConfiguration.isLogPayload()) {
+                if (context.getMapping().getDebug() || serviceConfiguration.getLogPayload()) {
                     log.info("{} - Published message successfully: path: {}, method: {}, mapping: {}",
                             tenant, fullPath, method, context.getMapping().getName());
                 }

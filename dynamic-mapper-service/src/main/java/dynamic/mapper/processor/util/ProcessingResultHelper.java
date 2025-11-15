@@ -301,6 +301,9 @@ public class ProcessingResultHelper {
         if (map.containsKey("type")) {
             externalSource.setType(String.valueOf(map.get("type")));
         }
+        if (map.containsKey("value")) {
+            externalSource.setExternalId(String.valueOf(map.get("value")));
+        }
         if (map.containsKey("autoCreateDeviceMO")) {
             externalSource.setAutoCreateDeviceMO((Boolean) map.get("autoCreateDeviceMO"));
         }
@@ -315,7 +318,7 @@ public class ProcessingResultHelper {
         }
 
         // Only return if we have the required fields
-        if (externalSource.getExternalId() != null && externalSource.getType() != null) {
+        if (externalSource.getType() != null) {
             return externalSource;
         }
 

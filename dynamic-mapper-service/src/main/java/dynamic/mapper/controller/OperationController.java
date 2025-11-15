@@ -111,7 +111,7 @@ public class OperationController {
     private ConfigurationRegistry configurationRegistry;
 
     @Value("${APP.externalExtensionsEnabled}")
-    private boolean externalExtensionsEnabled;
+    private Boolean externalExtensionsEnabled;
 
     @Autowired
     private DeploymentMapService deploymentMapService;

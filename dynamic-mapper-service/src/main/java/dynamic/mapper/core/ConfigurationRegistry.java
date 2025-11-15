@@ -415,14 +415,14 @@ public class ConfigurationRegistry {
 
     public void initializeOutboundMapping(String tenant, ServiceConfiguration serviceConfiguration,
             AConnectorClient connectorClient) {
-        if (serviceConfiguration.isOutboundMappingEnabled()
+        if (serviceConfiguration.getOutboundMappingEnabled()
                 && connectorClient.supportedDirections().contains(Direction.OUTBOUND)) {
             // DispatcherOutbound dispatcherOutbound = new DispatcherOutbound(
             // this, connectorClient);
             CamelDispatcherOutbound dispatcherOutbound = new CamelDispatcherOutbound(
                     this, connectorClient);
             // Only initialize Connectors which are enabled
-            if (connectorClient.getConnectorConfiguration() != null && connectorClient.getConnectorConfiguration().isEnabled())
+            if (connectorClient.getConnectorConfiguration() != null && connectorClient.getConnectorConfiguration().getEnabled())
                 getNotificationSubscriber().addConnector(tenant,
                         connectorClient.getConnectorIdentifier(),
                         dispatcherOutbound);

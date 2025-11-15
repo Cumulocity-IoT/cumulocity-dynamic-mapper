@@ -97,7 +97,7 @@ public class MappingContextOutboundProcessor extends BaseProcessor {
                 processingContext.setFlowState(new HashMap<String, Object>());
                 processingContext.setFlowContext(new SimpleFlowContext(graalContext, tenant,
                         (InventoryEnrichmentClient) configurationRegistry.getC8yAgent(),
-                        processingContext.isTesting()));
+                        processingContext.getTesting()));
 
             } catch (Exception e) {
                 handleGraalVMError(tenant, mapping, e, processingContext);
@@ -137,7 +137,7 @@ public class MappingContextOutboundProcessor extends BaseProcessor {
     private void logOutboundMessageReceived(String tenant, Mapping mapping, String connectorIdentifier,
             ProcessingContext<?> context,
             ServiceConfiguration serviceConfiguration) {
-        if (serviceConfiguration.isLogPayload() || mapping.getDebug()) {
+        if (serviceConfiguration.getLogPayload() || mapping.getDebug()) {
             Object pp = context.getPayload();
             String ppLog = null;
 

@@ -35,7 +35,7 @@ public class ExtensibleProcessor extends BaseProcessor {
         ProcessingContext<byte[]> context = getProcessingContextAsByteArray(exchange);
         Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
-        Boolean testing = context.isTesting();
+        Boolean testing = context.getTesting();
 
         try {
             processWithExtension(context);

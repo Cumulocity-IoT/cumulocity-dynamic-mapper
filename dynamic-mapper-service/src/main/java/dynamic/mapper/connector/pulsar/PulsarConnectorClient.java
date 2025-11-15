@@ -297,7 +297,7 @@ public class PulsarConnectorClient extends AConnectorClient {
     /**
      * Check if URL uses TLS
      */
-    private boolean isUsingTls(String serviceUrl) {
+    private Boolean isUsingTls(String serviceUrl) {
         return serviceUrl.startsWith("pulsar+ssl://") || serviceUrl.startsWith("https://");
     }
 
@@ -620,7 +620,7 @@ public class PulsarConnectorClient extends AConnectorClient {
             producer.send(payloadBytes);
         }
 
-        if (context.getMapping().getDebug() || serviceConfiguration.isLogPayload()) {
+        if (context.getMapping().getDebug() || serviceConfiguration.getLogPayload()) {
             log.info("{} - Published message with QoS {}: topic: [{}], mapping: {}",
                     tenant, qos, context.getResolvedPublishTopic(), context.getMapping().getName());
         }
@@ -759,14 +759,14 @@ public class PulsarConnectorClient extends AConnectorClient {
     /**
      * Check if acknowledgment is required
      */
-    private boolean requiresAcknowledgment(Qos qos) {
+    private Boolean requiresAcknowledgment(Qos qos) {
         return qos != Qos.AT_MOST_ONCE;
     }
 
     /**
      * Check if topic contains MQTT wildcards
      */
-    private boolean containsMqttWildcards(String topic) {
+    private Boolean containsMqttWildcards(String topic) {
         return topic != null && (topic.contains("+") || topic.contains("#"));
     }
 

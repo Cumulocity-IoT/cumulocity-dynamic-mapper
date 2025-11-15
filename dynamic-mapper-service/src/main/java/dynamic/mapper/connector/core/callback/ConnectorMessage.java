@@ -46,7 +46,7 @@ public class ConnectorMessage {
     @NotNull
     private String connectorIdentifier;
 
-    private boolean sendPayload;
+    private Boolean sendPayload;
 
-    private boolean supportsMessageContext;
+    private Boolean supportsMessageContext;
 }

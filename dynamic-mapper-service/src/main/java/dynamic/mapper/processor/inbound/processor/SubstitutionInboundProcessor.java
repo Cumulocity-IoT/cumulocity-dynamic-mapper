@@ -67,7 +67,7 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
         ProcessingContext<Object> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
         Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
-        Boolean testing = context.isTesting();
+        Boolean testing = context.getTesting();
 
         try {
             validateProcessingCache(context);
@@ -76,7 +76,7 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
             // Check inventory filter condition if specified
             if (mapping.getFilterInventory() != null && !mapping.getCreateNonExistingDevice()) {
                 boolean filterInventory = evaluateInventoryFilter(tenant, mapping.getFilterInventory(),
-                        context.getSourceId(), context.isTesting());
+                        context.getSourceId(), context.getTesting());
                 if (context.getSourceId() == null
                         || !filterInventory) {
                     if (mapping.getDebug()) {
@@ -139,7 +139,7 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
                 log.error("Failed to create request {} for mapping: {}", i, mapping.getName(), e);
                 context.addError(new ProcessingException("Failed to create request " + i, e));
 
-                if (!context.isNeedsRepair()) {
+                if (!context.getNeedsRepair()) {
                     throw e;
                 }
             }
@@ -173,7 +173,7 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
             SubstituteValue sourceId = new SubstituteValue(substitute.getValue(),
                     TYPE.TEXTUAL, RepairStrategy.CREATE_IF_MISSING, false);
             if (!context.getApi().equals(API.INVENTORY)) {
-                var resolvedSourceId = c8yAgent.resolveExternalId2GlobalId(tenant, identity, context.isTesting());
+                var resolvedSourceId = c8yAgent.resolveExternalId2GlobalId(tenant, identity, context.getTesting());
                 if (resolvedSourceId == null) {
                     if (mapping.getCreateNonExistingDevice()) {
                         sourceId.setValue(ProcessingResultHelper.createImplicitDevice(identity, context, log, c8yAgent,
@@ -317,7 +317,7 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
             prepareAndSubstituteInPayload(context, payloadTarget, pathTarget, substitute);
         }
         ProcessingResultHelper.createAndAddDynamicMapperRequest(context, payloadTarget.jsonString(), null, mapping);
-        if (context.getMapping().getDebug() || context.getServiceConfiguration().isLogPayload()) {
+        if (context.getMapping().getDebug() || context.getServiceConfiguration().getLogPayload()) {
             log.info("{} - Transformed message sent: API: {}, numberDevices: {}, message: {}", tenant,
                     context.getApi(),
                     payloadTarget.jsonString(),

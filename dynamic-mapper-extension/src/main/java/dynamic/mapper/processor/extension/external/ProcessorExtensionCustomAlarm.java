@@ -168,7 +168,7 @@ public class ProcessorExtensionCustomAlarm
             try {
                 ID identity = new ID(mapping.getExternalIdType(), device.value.toString());
                 ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId2GlobalId(tenant,
-                        identity, context.isTesting());
+                        identity, context.getTesting());
                 context.setSourceId(sourceId.getManagedObject().getId().getValue());
                 ManagedObjectRepresentation implicitDevice = c8yAgent.upsertDevice(tenant,
                         identity, context, newPredecessor);
@@ -192,7 +192,7 @@ public class ProcessorExtensionCustomAlarm
                             .request(payloadTarget.jsonString())
                             .build());
             try {
-                if (context.isSendPayload()) {
+                if (context.getSendPayload()) {
                     c8yAgent.createMEAO(context, newPredecessor);
                     String response = objectMapper.writeValueAsString(implicitRequest);
                     context.getCurrentRequest().setResponse(response);
@@ -206,7 +206,7 @@ public class ProcessorExtensionCustomAlarm
             log.warn("{} - Ignoring payload: {}, {}, {}", tenant, payloadTarget, mapping.getTargetAPI(),
                     context.getProcessingCacheSize());
         }
-        if (context.getMapping().getDebug() || context.getServiceConfiguration().isLogPayload()) {
+        if (context.getMapping().getDebug() || context.getServiceConfiguration().getLogPayload()) {
             log.info("{} - Transformed message sent: API: {}, numberDevices: {}, message: {}", tenant,
                     mapping.getTargetAPI(),
                     payloadTarget.jsonString(),
@@ -225,7 +225,7 @@ public class ProcessorExtensionCustomAlarm
             SubstituteValue sourceId = new SubstituteValue(substitute.value,
                     TYPE.TEXTUAL, RepairStrategy.CREATE_IF_MISSING, false);
             if (!mapping.getTargetAPI().equals(API.INVENTORY)) {
-                var resolvedSourceId = c8yAgent.resolveExternalId2GlobalId(tenant, identity, context.isTesting());
+                var resolvedSourceId = c8yAgent.resolveExternalId2GlobalId(tenant, identity, context.getTesting());
                 if (resolvedSourceId == null) {
                     if (mapping.getCreateNonExistingDevice()) {
                         sourceId.value = createImplicitDevice(identity, context, c8yAgent);

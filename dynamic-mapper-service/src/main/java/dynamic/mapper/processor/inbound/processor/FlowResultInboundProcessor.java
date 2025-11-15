@@ -44,7 +44,7 @@ public class FlowResultInboundProcessor extends BaseProcessor {
         ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
         Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
-        Boolean testing = context.isTesting();
+        Boolean testing = context.getTesting();
 
         try {
             processFlowResults(context);
@@ -52,7 +52,7 @@ public class FlowResultInboundProcessor extends BaseProcessor {
             // Check inventory filter condition if specified
             if (mapping.getFilterInventory() != null && !mapping.getCreateNonExistingDevice()) {
                 boolean filterInventory = evaluateInventoryFilter(tenant, mapping.getFilterInventory(),
-                        context.getSourceId(), context.isTesting());
+                        context.getSourceId(), context.getTesting());
                 if (context.getSourceId() == null
                         || !filterInventory) {
                     if (mapping.getDebug()) {

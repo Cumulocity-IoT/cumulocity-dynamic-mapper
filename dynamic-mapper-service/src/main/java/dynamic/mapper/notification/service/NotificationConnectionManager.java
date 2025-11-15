@@ -678,7 +678,7 @@ public class NotificationConnectionManager {
         }
     }
 
-    private boolean shouldReconnectClient(String tenant, CustomWebSocketClient client) {
+    private Boolean shouldReconnectClient(String tenant, CustomWebSocketClient client) {
         if (client == null) {
             return false;
         }
@@ -693,14 +693,14 @@ public class NotificationConnectionManager {
                         (statusCode != null && statusCode == 401));
     }
 
-    private boolean isValidDispatcher(CamelDispatcherOutbound dispatcher) {
+    private Boolean isValidDispatcher(CamelDispatcherOutbound dispatcher) {
         return dispatcher != null &&
                 dispatcher.getConnectorClient() != null &&
                 dispatcher.getConnectorClient().getConnectorConfiguration() != null &&
-                dispatcher.getConnectorClient().getConnectorConfiguration().isEnabled();
+                dispatcher.getConnectorClient().getConnectorConfiguration().getEnabled();
     }
 
-    private boolean isValidSubscription(NotificationSubscriptionRepresentation sub) {
+    private Boolean isValidSubscription(NotificationSubscriptionRepresentation sub) {
         return sub != null &&
                 sub.getSource() != null &&
                 sub.getSource().getId() != null;

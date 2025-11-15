@@ -145,11 +145,11 @@ public class DeviceDiscoveryService {
 
     // === Private Helper Methods ===
 
-    private boolean isDevice(ManagedObjectRepresentation mor, boolean isChildDevice) {
+    private Boolean isDevice(ManagedObjectRepresentation mor, boolean isChildDevice) {
         return mor.hasProperty("c8y_IsDevice") || isChildDevice;
     }
 
-    private boolean isDeviceGroup(ManagedObjectRepresentation mor) {
+    private Boolean isDeviceGroup(ManagedObjectRepresentation mor) {
         return mor.hasProperty("c8y_IsDeviceGroup");
     }
 
@@ -218,7 +218,7 @@ public class DeviceDiscoveryService {
         }
     }
 
-    private boolean isValidManagedObjectRef(ManagedObjectReferenceRepresentation ref) {
+    private Boolean isValidManagedObjectRef(ManagedObjectReferenceRepresentation ref) {
         return ref != null &&
                 ref.getManagedObject() != null &&
                 ref.getManagedObject().getId() != null;

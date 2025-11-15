@@ -93,7 +93,9 @@ public class JavaScriptInteropHelper {
         if (value.hasMember("action")) {
             msg.setAction(value.getMember("action").asString());
         }
+        // TODO: Handle union type for externalSource
         if (value.hasMember("externalSource")) {
+            // msg.setExternalSource(extractFirstElementOrValue(value.getMember("externalSource")));
             msg.setExternalSource(convertValueToJavaObject(value.getMember("externalSource")));
         }
         if (value.hasMember("internalSource")) {
@@ -124,6 +126,12 @@ public class JavaScriptInteropHelper {
         }
         if (value.hasMember("clientId")) {
             msg.setClientId(value.getMember("clientId").asString());
+        }
+
+        // TODO: Handle union type for externalSource
+        if (value.hasMember("externalSource")) {
+            //msg.setExternalSource(extractFirstElementOrValue(value.getMember("externalSource")));
+            msg.setExternalSource(convertValueToJavaObject(value.getMember("externalSource")));
         }
 
         if (value.hasMember(ProcessingContext.RETAIN)) {
@@ -164,6 +172,27 @@ public class JavaScriptInteropHelper {
         }
 
         return msg;
+    }
+
+    /**
+     * Extracts the first element if the value is an array, otherwise returns the
+     * value as-is
+     * 
+     * @param value The GraalJS Value to extract from
+     * @return The first element if array, otherwise the converted value
+     */
+    private static Object extractFirstElementOrValue(Value value) {
+        if (value.isNull()) {
+            return null;
+        }
+
+        if (value.hasArrayElements() && value.getArraySize() > 0) {
+            // Extract first element if it's an array
+            return convertValueToJavaObject(value.getArrayElement(0));
+        }
+
+        // Not an array, convert normally
+        return convertValueToJavaObject(value);
     }
 
     /**

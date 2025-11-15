@@ -47,7 +47,7 @@ public class ExtensionEntry implements Serializable {
     private String fqnClassName;
     
     @NotNull
-    private boolean loaded;
+    private Boolean loaded;
     
     @NotNull
     private String message;

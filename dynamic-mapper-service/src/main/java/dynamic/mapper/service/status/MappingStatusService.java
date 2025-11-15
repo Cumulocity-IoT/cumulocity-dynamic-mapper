@@ -216,12 +216,12 @@ public class MappingStatusService {
         }
     }
 
-    private boolean shouldSendStatus(String tenant) {
+    private Boolean shouldSendStatus(String tenant) {
         ServiceConfiguration config = configurationRegistry.getServiceConfiguration(tenant);
-        return config.isSendMappingStatus() && initialized.getOrDefault(tenant, false);
+        return config.getSendMappingStatus() && initialized.getOrDefault(tenant, false);
     }
 
-    private boolean shouldDeactivateMapping(Mapping mapping, MappingStatus status) {
+    private Boolean shouldDeactivateMapping(Mapping mapping, MappingStatus status) {
         return mapping.getMaxFailureCount() > 0 &&
                 status.currentFailureCount >= mapping.getMaxFailureCount();
     }
@@ -248,7 +248,7 @@ public class MappingStatusService {
                 .toArray(MappingStatus[]::new);
     }
 
-    private boolean shouldIncludeStatus(String tenant, MappingStatus status) {
+    private Boolean shouldIncludeStatus(String tenant, MappingStatus status) {
         return "UNSPECIFIED".equals(status.id) ||
                 cacheManager.containsInboundMapping(tenant, status.id) ||
                 cacheManager.containsOutboundMapping(tenant, status.id);

@@ -67,7 +67,7 @@ public abstract class BaseProcessor extends CommonProcessor {
                 .rawPayload(message.getPayload())
                 .mappingType(mapping.getMappingType())
                 .mapping(mapping)
-                .sendPayload(message.isSendPayload())
+                .sendPayload(message.getSendPayload())
                 .testing(testing)
                 .tenant(tenant)
                 .supportsMessageContext(

@@ -120,9 +120,9 @@ public class EnrichmentOutboundProcessor extends BaseProcessor {
         if (mapping.getUseExternalId() && !("").equals(mapping.getExternalIdType())) {
             ExternalIDRepresentation externalId = c8yAgent.resolveGlobalId2ExternalId(context.getTenant(),
                     new GId(sourceId.toString()), mapping.getExternalIdType(),
-                    context.isTesting());
+                    context.getTesting());
             if (externalId == null) {
-                if (context.isSendPayload()) {
+                if (context.getSendPayload()) {
                     throw new RuntimeException(String.format("External id %s for type %s not found!",
                             sourceId.toString(), mapping.getExternalIdType()));
                 }

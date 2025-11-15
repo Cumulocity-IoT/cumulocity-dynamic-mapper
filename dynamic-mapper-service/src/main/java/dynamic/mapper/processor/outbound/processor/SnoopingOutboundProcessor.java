@@ -59,7 +59,7 @@ public class SnoopingOutboundProcessor extends BaseProcessor {
     }
     
 
-    private boolean isSnoopingEnabled(Mapping mapping) {
+    private Boolean isSnoopingEnabled(Mapping mapping) {
         return mapping.getSnoopStatus() == SnoopStatus.ENABLED || 
                mapping.getSnoopStatus() == SnoopStatus.STARTED;
     }

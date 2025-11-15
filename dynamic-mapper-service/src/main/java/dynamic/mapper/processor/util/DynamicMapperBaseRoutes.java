@@ -192,7 +192,7 @@ public abstract class DynamicMapperBaseRoutes extends RouteBuilder {
     protected boolean shouldIgnoreFurtherProcessing(Exchange exchange) {
         try {
             ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
-            return context != null && context.isIgnoreFurtherProcessing();
+            return context != null && context.getIgnoreFurtherProcessing();
         } catch (Exception e) {
             log.warn("Error checking ignore further processing: {}", e.getMessage());
             return false;

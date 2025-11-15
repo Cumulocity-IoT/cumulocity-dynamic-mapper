@@ -124,7 +124,7 @@ public class ConfigurationController {
     private ConfigurationRegistry configurationRegistry;
 
     @Value("${APP.externalExtensionsEnabled}")
-    private boolean externalExtensionsEnabled;
+    private Boolean externalExtensionsEnabled;
 
     @Operation(summary = "Get feature flags", description = """
             Returns feature flags indicating which functionality is available for the current tenant and user.
@@ -146,7 +146,7 @@ public class ConfigurationController {
         ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
         log.debug("{} - Get feature", tenant);
         Feature feature = new Feature();
-        feature.setOutputMappingEnabled(serviceConfiguration.isOutboundMappingEnabled());
+        feature.setOutputMappingEnabled(serviceConfiguration.getOutboundMappingEnabled());
         feature.setExternalExtensionsEnabled(externalExtensionsEnabled);
         feature.setUserHasMappingCreateRole(Utils.userHasMappingCreateRole());
         feature.setUserHasMappingAdminRole(Utils.userHasMappingAdminRole());
@@ -337,7 +337,7 @@ public class ConfigurationController {
         try {
             ConnectorConfiguration configuration = connectorConfigurationService.getConnectorConfiguration(identifier,
                     tenant);
-            if (configuration.isEnabled())
+            if (configuration.getEnabled())
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body("Can't delete an enabled connector! Disable connector first.");
             if (configuration.getConnectorType().equals(ConnectorType.HTTP)) {
@@ -477,7 +477,7 @@ public class ConfigurationController {
         try {
             serviceConfiguration.setCodeTemplates(codeTemplates);
             serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
-            if (!serviceConfiguration.isOutboundMappingEnabled()
+            if (!serviceConfiguration.getOutboundMappingEnabled()
                     && configurationRegistry.getNotificationSubscriber().getDeviceConnectionStatus(tenant) != null
                     && configurationRegistry.getNotificationSubscriber().getDeviceConnectionStatus(tenant) == 200) {
                 configurationRegistry.getNotificationSubscriber().disconnect(tenant);
@@ -487,8 +487,8 @@ public class ConfigurationController {
                                     .getDeviceConnectionStatus(tenant) != 200) {
 
                 // Test if OutboundMapping is switched on
-                if (serviceConfiguration.isOutboundMappingEnabled()
-                        && !currentServiceConfiguration.isOutboundMappingEnabled()) {
+                if (serviceConfiguration.getOutboundMappingEnabled()
+                        && !currentServiceConfiguration.getOutboundMappingEnabled()) {
                     List<ConnectorConfiguration> connectorConfigurationList = connectorConfigurationService
                             .getConnectorConfigurations(tenant);
                     for (ConnectorConfiguration connectorConfiguration : connectorConfigurationList) {

@@ -94,12 +94,12 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
 
         Object payloadObject = context.getPayload();
 
-        if (serviceConfiguration.isLogPayload() || mapping.getDebug()) {
+        if (serviceConfiguration.getLogPayload() || mapping.getDebug()) {
             String payload = toPrettyJsonString(payloadObject); // is this and this required?
             log.info("{} - Incoming payload (patched) in onMessage(): {} {} {} {}", tenant,
                     payload,
-                    serviceConfiguration.isLogPayload(), mapping.getDebug(),
-                    serviceConfiguration.isLogPayload() || mapping.getDebug());
+                    serviceConfiguration.getLogPayload(), mapping.getDebug(),
+                    serviceConfiguration.getLogPayload() || mapping.getDebug());
         }
 
         if (mapping.getCode() != null) {
@@ -184,7 +184,7 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
             return;
         }
 
-        if (context.getMapping().getDebug() || context.getServiceConfiguration().isLogPayload()) {
+        if (context.getMapping().getDebug() || context.getServiceConfiguration().getLogPayload()) {
             log.info("{} - onMessage function returned {} complete message(s)", tenant, outputMessages.size());
         }
 
@@ -274,7 +274,7 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
      * Check if the result value is empty.
      * Handles null, undefined, empty arrays, and empty objects.
      */
-    private boolean isEmptyResult(Value result) {
+    private Boolean isEmptyResult(Value result) {
         // Null check
         if (result == null || result.isNull()) {
             return true;

@@ -86,7 +86,7 @@ public class ExtensionController {
     private ConfigurationRegistry configurationRegistry;
 
     @Value("${APP.externalExtensionsEnabled}")
-    private boolean externalExtensionsEnabled;
+    private Boolean externalExtensionsEnabled;
 
     @Operation(
         summary = "Get all processor extensions",

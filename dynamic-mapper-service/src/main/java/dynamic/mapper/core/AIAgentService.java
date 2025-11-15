@@ -85,7 +85,7 @@ public class AIAgentService {
                     mcpServer.setUrl(clientProperties.getBaseURL() + MCP_SSE_ENDPOINT);
                     mcpServer.setName(MCP_SERVER_NAME);
                     mcpServer.setDescription("MCP Server for dynamic mapper service");
-                    mcpServer.setDefault(false);
+                    mcpServer.setIsDefault(false);
                     try {
                         ResponseEntity<String> response = createMCPServer(mcpServer);
                         if (response != null && !response.getStatusCode().is2xxSuccessful()) {
@@ -110,7 +110,7 @@ public class AIAgentService {
                         mcpServer.setUrl(clientProperties.getBaseURL() + MCP_SSE_ENDPOINT);
                         mcpServer.setName(MCP_SERVER_NAME);
                         mcpServer.setDescription("MCP Server for dynamic mapper service");
-                        mcpServer.setDefault(false);
+                        mcpServer.setIsDefault(false);
                         try {
                             ResponseEntity<String> response = createMCPServer(mcpServer);
                             if (response != null && !response.getStatusCode().is2xxSuccessful()) {

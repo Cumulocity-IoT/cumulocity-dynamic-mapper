@@ -137,7 +137,7 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
             Map<String, Object> payload = clonePayload(deviceMessage.getPayload());
 
             // Resolve device ID and set it hierarchically in the payload
-            String resolvedExternalId = resolveExternalIdentifier(deviceMessage, context, tenant);
+            String resolvedExternalId = resolveGlobalId2ExternalId(deviceMessage, context, tenant);
 
             // Set resolved publish topic (from substituteInTargetAndSend logic)
             setResolvedPublishTopic(context, payload);
@@ -262,7 +262,7 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
                 c.increment();
             });
 
-            if (mapping.getDebug() || context.getServiceConfiguration().isLogPayload()) {
+            if (mapping.getDebug() || context.getServiceConfiguration().getLogPayload()) {
                 log.info("{} - Resolved topic from {} to {}",
                         tenant, splitTopicInAsListOriginal, splitTopicInAsList);
             }

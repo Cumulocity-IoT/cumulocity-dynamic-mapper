@@ -547,7 +547,7 @@ public abstract class AConnectorClient {
     /**
      * Check if mapping is deployed in this connector
      */
-    private boolean isDeployedInConnector(Mapping mapping) {
+    private Boolean isDeployedInConnector(Mapping mapping) {
         List<String> deploymentMapEntry = mappingService.getDeploymentMapEntry(tenant, mapping.getIdentifier());
         return deploymentMapEntry != null && deploymentMapEntry.contains(getConnectorIdentifier());
     }
@@ -555,7 +555,7 @@ public abstract class AConnectorClient {
     /**
      * Check if mapping is valid for deployment
      */
-    private boolean isMappingValidForDeployment(Mapping mapping) {
+    private Boolean isMappingValidForDeployment(Mapping mapping) {
         // Check for unsupported wildcards only for inbound, ignore for outbound
         boolean containsWildcards = mapping.getDirection().equals(Direction.INBOUND)
                 ? mapping.getMappingTopic().matches(".*[#+].*")
@@ -692,14 +692,14 @@ public abstract class AConnectorClient {
      * Should the connector connect
      */
     public boolean shouldConnect() {
-        return isConfigValid(connectorConfiguration) && connectorConfiguration.isEnabled();
+        return isConfigValid(connectorConfiguration) && connectorConfiguration.getEnabled();
     }
 
     /**
      * Send connector lifecycle event
      */
     public void sendConnectorLifecycle(ConnectorStatusEvent status) {
-        if (serviceConfiguration.isSendConnectorLifecycle()) {
+        if (serviceConfiguration.getSendConnectorLifecycle()) {
             Map<String, String> statusMap = createStatusMap(status);
             String message = "Connector status: " + status;
             c8yAgent.createOperationEvent(
@@ -773,7 +773,7 @@ public abstract class AConnectorClient {
     }
 
     public void sendSubscriptionEvents(String topic, String action) {
-        if (!serviceConfiguration.isSendSubscriptionEvents()) {
+        if (!serviceConfiguration.getSendSubscriptionEvents()) {
             return;
         }
 
