@@ -491,10 +491,10 @@ The **Smart Function** allows to enrich the payload with inventory data from the
 
 ```javascript
 // lookup device for enrichment
-var deviceByDeviceId = context.lookupDeviceByDeviceId(payload.get("deviceId"));
+var deviceByDeviceId = context.getManagedObjectByDeviceId(payload.get("deviceId"));
 context.logMessage("Device (by device id): " + deviceByDeviceId);
 
-var deviceByExternalId = context.lookupDeviceByExternalId(payload.get("clientId"), "c8y_Serial" );
+var deviceByExternalId = context.getManagedObject({externalId: payload.get("clientId"),externalId:"c8y_Serial"} );
 context.logMessage("Device (by external id): " + deviceByExternalId);
 ```
 

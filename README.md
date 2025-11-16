@@ -1,5 +1,29 @@
 # Dynamic Mapper Service for Cumulocity
 
+>NOTE: Breaking changes 
+Due to the approach to sync the JS7TS API offer Smart Functions with the new Cumulocity Product IDP (Intelligent Data Preparation) the followinf JS APi where changed in this release:
+
+
+**Obsolete**
+```
+    // lookup device for enrichment
+    var deviceByDeviceId = context.getManagedObjectByDeviceId(payload.get("deviceId"));
+    context.logMessage("Device (by device id): " + deviceByDeviceId);
+
+    var deviceByExternalId = context.getManagedObject({ externalId: payload.get("clientId"), type: "c8y_Serial" } );
+    c
+
+
+**New**
+```
+    // lookup device for enrichment
+    var deviceByDeviceId = context.getManagedObjectByDeviceId(payload.get("deviceId"));
+    context.logMessage("Device (by device id): " + deviceByDeviceId);
+
+    var deviceByExternalId = context.getManagedObject({ externalId: payload.get("clientId"), type: "c8y_Serial" } );
+    context.logMessage("Device (by external id): " + deviceByExternalId);
+```
+
 ## Overview
 
 The Cumulocity Dynamic Mapper addresses the need to get **any** data provided by a message broker mapped to the Cumulocity IoT Domain model in a zero-code approach powered by AI agents.
@@ -131,10 +155,10 @@ The **Smart Function** allows to enrich the payload with inventory data from the
 
 ```javascript
 // lookup device for enrichment
-var deviceByDeviceId = context.lookupDeviceByDeviceId(payload.get("deviceId"));
+var deviceByDeviceId = context.getManagedObjectByDeviceId(payload.get("deviceId"));
 context.logMessage("Device (by device id): " + deviceByDeviceId);
 
-var deviceByExternalId = context.lookupDeviceByExternalId(payload.get("clientId"), "c8y_Serial" );
+var deviceByExternalId = context.getManagedObject({ externalId: payload.get("clientId"), type:"c8y_Serial" } );
 context.logMessage("Device (by external id): " + deviceByExternalId);
 ```
 

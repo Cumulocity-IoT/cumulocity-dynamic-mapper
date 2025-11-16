@@ -5,7 +5,7 @@ import org.graalvm.polyglot.Value;
 /**
  * Flow context for JavaScript execution
  */
-public interface FlowContext {
+public interface DataPrepContext {
 
     String WARNINGS = "_WARNINGS_";
     String LOGS = "_LOGS_";
@@ -60,7 +60,7 @@ public interface FlowContext {
      * @param assetId The asset ID to lookup.
      * @return A Value containing the asset properties as a JS object.
      */
-    Value lookupDTMAssetProperties(String assetId);
+    Value getDTMAsset(String assetId);
 
     /**
      * Lookup Inventory Device properties
@@ -68,16 +68,15 @@ public interface FlowContext {
      * @param deviceId The device ID to lookup.
      * @return A Value containing the device properties as a JS object.
      */
-    Value lookupDeviceByDeviceId(String deviceId);
+    Value getManagedObjectByDeviceId(String deviceId);
 
     /**
      * Lookup Inventory Device properties by external id
      * 
      * @param externalId The externalId Id to lookup.
-     * @param type       The externalId Id type to use.
      * @return A Value containing the device properties as a JS object.
      */
-    Value lookupDeviceByExternalId(String externalId, String type);
+    Value getManagedObject(ExternalId externalId);
 
     void clearState();
 }

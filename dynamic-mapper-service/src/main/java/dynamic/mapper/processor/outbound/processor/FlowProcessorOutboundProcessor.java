@@ -39,7 +39,7 @@ import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.flow.CumulocityObject;
 import dynamic.mapper.processor.flow.DeviceMessage;
-import dynamic.mapper.processor.flow.FlowContext;
+import dynamic.mapper.processor.flow.DataPrepContext;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.util.JavaScriptInteropHelper;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
@@ -235,7 +235,7 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
      */
     private void extractWarnings(ProcessingContext<?> context, String tenant) {
 
-        Value warnings = context.getFlowContext().getState(FlowContext.WARNINGS);
+        Value warnings = context.getFlowContext().getState(DataPrepContext.WARNINGS);
         if (warnings != null && warnings.hasArrayElements()) {
             List<String> warningList = new ArrayList<>();
             long size = warnings.getArraySize();
@@ -255,7 +255,7 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
      */
     private void extractLogs(ProcessingContext<?> context, String tenant) {
 
-        Value logs = context.getFlowContext().getState(FlowContext.LOGS);
+        Value logs = context.getFlowContext().getState(DataPrepContext.LOGS);
         if (logs != null && logs.hasArrayElements()) {
             List<String> logList = new ArrayList<>();
             long size = logs.getArraySize();

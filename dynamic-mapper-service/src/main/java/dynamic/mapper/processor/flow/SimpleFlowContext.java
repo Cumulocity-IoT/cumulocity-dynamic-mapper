@@ -15,7 +15,7 @@ import lombok.extern.slf4j.Slf4j;
  * Simple implementation of FlowContext for JavaScript execution
  */
 @Slf4j
-public class SimpleFlowContext implements FlowContext {
+public class SimpleFlowContext implements DataPrepContext {
 
     private final Map<String, Object> state;
     private final Context graalContext;
@@ -102,7 +102,7 @@ public class SimpleFlowContext implements FlowContext {
     }
 
     @Override
-    public Value lookupDTMAssetProperties(String assetId) {
+    public Value getDTMAsset(String assetId) {
         if (graalContext == null) {
             return null;
         }
@@ -227,7 +227,7 @@ public class SimpleFlowContext implements FlowContext {
     }
 
     @Override
-    public Value lookupDeviceByDeviceId(String deviceId) {
+    public Value getManagedObjectByDeviceId(String deviceId) {
         Object javaValue = inventoryEnrichmentClient.getMOFromInventoryCache(tenant, deviceId, testing);
         if (javaValue == null) {
             addWarning(String.format("Device not found in inventory cache: %s", deviceId));
@@ -236,8 +236,8 @@ public class SimpleFlowContext implements FlowContext {
     }
 
     @Override
-    public Value lookupDeviceByExternalId(String externalId, String type) {
-        Object javaValue = inventoryEnrichmentClient.getMOFromInventoryCacheByExternalId(tenant, externalId, type,
+    public Value getManagedObject(ExternalId externalId) {
+        Object javaValue = inventoryEnrichmentClient.getMOFromInventoryCacheByExternalId(tenant, externalId,
                 testing);
         if (javaValue == null) {
             addWarning(String.format("ExternalId not found in inventory cache: %s", externalId));
@@ -246,21 +246,21 @@ public class SimpleFlowContext implements FlowContext {
     }
 
     private void addWarning(String warning) {
-        List<String> warnings = (List<String>) state.get(FlowContext.WARNINGS);
+        List<String> warnings = (List<String>) state.get(DataPrepContext.WARNINGS);
         if (warnings == null) {
             warnings = new ArrayList<String>();
         }
         warnings.add(warning);
-        state.put(FlowContext.WARNINGS, warnings);
+        state.put(DataPrepContext.WARNINGS, warnings);
     }
 
     private void addLogMessage(String message) {
-        List<String> logs = (List<String>) state.get(FlowContext.LOGS);
+        List<String> logs = (List<String>) state.get(DataPrepContext.LOGS);
         if (logs == null) {
             logs = new ArrayList<String>();
         }
         logs.add(message);
-        state.put(FlowContext.LOGS, logs);
+        state.put(DataPrepContext.LOGS, logs);
     }
 
     @Override

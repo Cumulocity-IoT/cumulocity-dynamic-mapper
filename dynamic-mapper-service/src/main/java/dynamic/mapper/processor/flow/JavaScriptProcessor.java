@@ -13,5 +13,5 @@ public interface JavaScriptProcessor {
      * @param context The flow context
      * @return Array of DeviceMessage or CumulocityObject objects as a Value
      */
-    Value onMessage(Value msg, FlowContext context);
+    Value onMessage(Value msg, DataPrepContext context);
 }

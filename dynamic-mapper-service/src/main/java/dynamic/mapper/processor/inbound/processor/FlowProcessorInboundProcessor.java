@@ -19,7 +19,7 @@ import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.flow.CumulocityObject;
 import dynamic.mapper.processor.flow.DeviceMessage;
-import dynamic.mapper.processor.flow.FlowContext;
+import dynamic.mapper.processor.flow.DataPrepContext;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.util.JavaScriptInteropHelper;
 import dynamic.mapper.service.MappingService;
@@ -192,11 +192,11 @@ public class FlowProcessorInboundProcessor extends BaseProcessor {
 
         try {
             // CRITICAL FIX: Extract and immediately convert warnings
-            warnings = context.getFlowContext().getState(FlowContext.WARNINGS);
+            warnings = context.getFlowContext().getState(DataPrepContext.WARNINGS);
             extractWarningsFromValue(warnings, context, tenant);
 
             // CRITICAL FIX: Extract and immediately convert logs
-            logs = context.getFlowContext().getState(FlowContext.LOGS);
+            logs = context.getFlowContext().getState(DataPrepContext.LOGS);
             extractLogsFromValue(logs, context, tenant);
 
             // Check if result is null or undefined

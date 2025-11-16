@@ -180,7 +180,7 @@ export interface DeviceMessage {
     externalSource?: Array<{ type: string }>;
 }
 
-export interface FlowContext {
+export interface DataPrepContext {
     /**
     * Sets a value in the context's state.
     * @param {string} key - The key for the state item.
@@ -212,22 +212,21 @@ export interface FlowContext {
      * @param {string} assetId - The ID of the asset to look up.
      * @returns {Record<string, any>} A record containing the asset properties.
      */
-    lookupDTMAssetProperties(assetId: string): Record<string, any>;
+    getDTMAsset(assetId: string): Record<string, any>;
 
     /**
      * Lookup a device from the inventory cache by device ID.
      * @param {string} deviceId - The internal device ID to look up.
      * @returns {any} The managed object from inventory, or null if not found.
      */
-    lookupDeviceByDeviceId(deviceId: string): any;
+    getManagedObjectByDeviceId(deviceId: string): any;
 
     /**
      * Lookup a device from the inventory cache by external ID.
      * @param {string} externalId - The external ID to look up.
-     * @param {string} type - The type of the external ID.
      * @returns {any} The managed object from inventory, or null if not found.
      */
-    lookupDeviceByExternalId(externalId: string, type: string): any;
+    getManagedObject(externalId: ExternalId): any;
 }
 
 export interface InputMessage {
