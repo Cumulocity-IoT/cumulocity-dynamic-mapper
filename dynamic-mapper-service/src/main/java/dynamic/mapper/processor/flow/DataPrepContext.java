@@ -47,12 +47,6 @@ public interface DataPrepContext {
      */
     Value getConfig();
 
-    /**
-     * Log a message.
-     * 
-     * @param msg The message to log.
-     */
-    void logMessage(Value msg);
 
     /**
      * Lookup DTM Asset properties

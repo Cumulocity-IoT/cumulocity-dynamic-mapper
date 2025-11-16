@@ -50,7 +50,7 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.flow.DeviceMessage;
-import dynamic.mapper.processor.flow.FlowContext;
+import dynamic.mapper.processor.flow.DataPrepContext;
 import dynamic.mapper.processor.util.JavaScriptInteropHelper;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
@@ -178,7 +178,7 @@ class FlowProcessorOutboundProcessorTest {
 
         // Set up the GraalVM context
         context.setGraalContext(graalContext);
-        context.setFlowContext(mock(FlowContext.class));
+        context.setFlowContext(mock(DataPrepContext.class));
 
         return context;
     }

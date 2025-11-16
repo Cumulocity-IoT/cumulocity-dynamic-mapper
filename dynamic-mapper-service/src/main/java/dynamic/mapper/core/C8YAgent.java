@@ -117,6 +117,7 @@ import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.extension.ExtensionsComponent;
 import dynamic.mapper.processor.extension.ProcessorExtensionSource;
 import dynamic.mapper.processor.extension.ProcessorExtensionTarget;
+import dynamic.mapper.processor.flow.ExternalId;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.service.ExtensionInboundRegistry;
@@ -1323,13 +1324,13 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
             return 0;
     }
 
-    public Map<String, Object> getMOFromInventoryCacheByExternalId(String tenant, String externalId, String type,
+    public Map<String, Object> getMOFromInventoryCacheByExternalId(String tenant, ExternalId externalId,
             Boolean testing) {
 
-        if (externalId == null || type == null) {
+        if (externalId == null || externalId.getExternalId() == null || externalId.getType() == null) {
             return null;
         }
-        ID identity = new ID(type, externalId);
+        ID identity = new ID(externalId.getType(), externalId.getExternalId());
         ExternalIDRepresentation sourceId = this.resolveExternalId2GlobalId(tenant, identity, testing);
         if (sourceId != null) {
             return getMOFromInventoryCache(tenant, sourceId.getManagedObject().getId().getValue(), testing);

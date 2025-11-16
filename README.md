@@ -7,21 +7,21 @@ Due to the approach to sync the JS7TS API offer Smart Functions with the new Cum
 **Obsolete**
 ```
     // lookup device for enrichment
-    var deviceByDeviceId = context.getManagedObjectByDeviceId(payload.get("deviceId"));
-    context.logMessage("Device (by device id): " + deviceByDeviceId);
+    var deviceByDeviceId = context.lookupDeviceByDeviceId(payload.get("deviceId"));
+    var deviceByDeviceId = context.lookupDeviceByDeviceId(payload.get("deviceId")); 
 
-    var deviceByExternalId = context.getManagedObject({ externalId: payload.get("clientId"), type: "c8y_Serial" } );
-    c
-
+    // removed context.logMessage
+    context.logMessage("Payload Raw:" + payload);
+```
 
 **New**
 ```
     // lookup device for enrichment
     var deviceByDeviceId = context.getManagedObjectByDeviceId(payload.get("deviceId"));
-    context.logMessage("Device (by device id): " + deviceByDeviceId);
-
     var deviceByExternalId = context.getManagedObject({ externalId: payload.get("clientId"), type: "c8y_Serial" } );
-    context.logMessage("Device (by external id): " + deviceByExternalId);
+
+    // use instead
+    console.log("Payload Raw:" + payload);
 ```
 
 ## Overview
@@ -127,9 +127,9 @@ function onMessage (inputMsg, context) {
     const msg = inputMsg;
     var payload = msg.getPayload(); // contains payload
 
-    context.logMessage("Context" + context.getStateAll());
-    context.logMessage("Payload Raw:" + msg.getPayload());
-    context.logMessage("Payload messageId" +  msg.getPayload().get('messageId'));
+    console.log("Context" + context.getStateAll());
+    console.log("Payload Raw:" + msg.getPayload());
+    console.log("Payload messageId" +  msg.getPayload().get('messageId'));
     // insert transformation logic here
 
     // then return result
@@ -156,10 +156,10 @@ The **Smart Function** allows to enrich the payload with inventory data from the
 ```javascript
 // lookup device for enrichment
 var deviceByDeviceId = context.getManagedObjectByDeviceId(payload.get("deviceId"));
-context.logMessage("Device (by device id): " + deviceByDeviceId);
+console.log("Device (by device id): " + deviceByDeviceId);
 
 var deviceByExternalId = context.getManagedObject({ externalId: payload.get("clientId"), type:"c8y_Serial" } );
-context.logMessage("Device (by external id): " + deviceByExternalId);
+console.log("Device (by external id): " + deviceByExternalId);
 ```
 
 **Note:** Only device fragments configured in **Configuration > Service Configuration > Function > Fragments from inventory to cache** can be referenced and have to be defined in this list of fragments.

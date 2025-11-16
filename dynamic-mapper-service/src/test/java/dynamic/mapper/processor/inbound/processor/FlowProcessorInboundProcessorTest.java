@@ -54,10 +54,10 @@ import dynamic.mapper.model.SnoopStatus;
 import dynamic.mapper.processor.flow.CumulocityObject;
 import dynamic.mapper.processor.flow.CumulocityType;
 import dynamic.mapper.processor.flow.DeviceMessage;
-import dynamic.mapper.processor.flow.FlowContext;
 import dynamic.mapper.processor.flow.SimpleFlowContext;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.flow.ExternalId;
+import dynamic.mapper.processor.flow.DataPrepContext;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.TransformationType;
 import dynamic.mapper.service.MappingService;
@@ -146,9 +146,9 @@ class FlowProcessorInboundProcessorTest {
                 function onMessage(msg, context) {
                     var payload = msg.getPayload();
 
-                    context.logMessage("Context" + context.getStateAll());
-                    context.logMessage("Payload Raw:" + msg.getPayload());
-                    context.logMessage("Payload messageId" +  msg.getPayload().get('messageId'));
+                    console.log("Context" + context.getStateAll());
+                    console.log("Payload Raw:" + msg.getPayload());
+                    console.log("Payload messageId" +  msg.getPayload().get('messageId'));
 
                     return [{
                         cumulocityType: "measurement",
@@ -770,7 +770,7 @@ class FlowProcessorInboundProcessorTest {
         Value mockBindings = mock(Value.class);
         Value mockOnMessageFunction = mock(Value.class);
         Value mockInputMessage = mock(Value.class);
-        FlowContext mockFlowContext = mock(FlowContext.class);
+        DataPrepContext mockFlowContext = mock(DataPrepContext.class);
 
         // Setup GraalContext in processing context
         processingContext.setGraalContext(mockGraalContext);
@@ -903,7 +903,7 @@ class FlowProcessorInboundProcessorTest {
         Context mockGraalContext = mock(Context.class);
         Value mockBindings = mock(Value.class);
         Value mockOnMessageFunction = mock(Value.class);
-        FlowContext mockFlowContext = mock(FlowContext.class);
+        DataPrepContext mockFlowContext = mock(DataPrepContext.class);
 
         processingContext.setGraalContext(mockGraalContext);
         processingContext.setFlowContext(mockFlowContext);

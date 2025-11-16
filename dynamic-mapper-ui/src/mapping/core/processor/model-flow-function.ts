@@ -202,12 +202,6 @@ export interface DataPrepContext {
     getConfig(): Record<string, any>;
 
     /**
-     * Log a message.
-     * @param {any} msg - The message to log.
-     */
-    logMessage(msg: any): void;
-
-    /**
      * Lookup DTM Asset properties by asset ID.
      * @param {string} assetId - The ID of the asset to look up.
      * @returns {Record<string, any>} A record containing the asset properties.

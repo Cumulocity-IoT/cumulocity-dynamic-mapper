@@ -72,33 +72,7 @@ public class SimpleFlowContext implements DataPrepContext {
         config.put("tenant", tenant);
         config.put("timestamp", System.currentTimeMillis());
 
-        // Add logger
-        Map<String, Object> logger = new HashMap<>();
-        logger.put("info", new LogFunction("info"));
-        logger.put("debug", new LogFunction("debug"));
-        logger.put("warn", new LogFunction("warn"));
-        logger.put("error", new LogFunction("error"));
-        config.put("logger", logger);
-
         return graalContext.asValue(config);
-    }
-
-    @Override
-    public void logMessage(Value msg) {
-        if (msg == null) {
-            log.info("{} - JS Log: null", tenant);
-            return;
-        }
-
-        if (msg.isString()) {
-            log.info("{} - JS Log: {}", tenant, msg.asString());
-        } else {
-            log.info("{} - JS Log: {}", tenant, msg.toString());
-        }
-
-        if (testing != null && testing) {
-            addLogMessage(msg.toString());
-        }
     }
 
     @Override
@@ -154,45 +128,6 @@ public class SimpleFlowContext implements DataPrepContext {
         } else {
             // Fallback to string representation
             return value.toString();
-        }
-    }
-
-    /**
-     * Helper class for JavaScript-callable logging functions
-     */
-    private class LogFunction {
-        private final String level;
-
-        public LogFunction(String level) {
-            this.level = level;
-        }
-
-        public void apply(Object... args) {
-            StringBuilder message = new StringBuilder();
-            for (Object arg : args) {
-                if (message.length() > 0) {
-                    message.append(" ");
-                }
-                message.append(arg != null ? arg.toString() : "null");
-            }
-
-            switch (level) {
-                case "info":
-                    log.info("{} - JS: {}", tenant, message.toString());
-                    break;
-                case "debug":
-                    log.debug("{} - JS: {}", tenant, message.toString());
-                    break;
-                case "warn":
-                    log.warn("{} - JS: {}", tenant, message.toString());
-                    break;
-                case "error":
-                    log.error("{} - JS: {}", tenant, message.toString());
-                    break;
-                default:
-                    log.info("{} - JS: {}", tenant, message.toString());
-                    break;
-            }
         }
     }
 
@@ -252,15 +187,6 @@ public class SimpleFlowContext implements DataPrepContext {
         }
         warnings.add(warning);
         state.put(DataPrepContext.WARNINGS, warnings);
-    }
-
-    private void addLogMessage(String message) {
-        List<String> logs = (List<String>) state.get(DataPrepContext.LOGS);
-        if (logs == null) {
-            logs = new ArrayList<String>();
-        }
-        logs.add(message);
-        state.put(DataPrepContext.LOGS, logs);
     }
 
     @Override

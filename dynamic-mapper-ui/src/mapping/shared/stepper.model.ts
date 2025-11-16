@@ -98,7 +98,6 @@ export function createCompletionProviderFlowFunction(monaco) {
         { name: 'setState', parameters: ['key', 'value'], returnType: 'void', documentation: 'Sets a value in the context\'s state.' },
         { name: 'getState', parameters: ['key'], returnType: 'any', documentation: 'Retrieves a value from the context\'s state.' },
         { name: 'getConfig', parameters: [], returnType: 'Record<string, any>', documentation: 'Retrieves the entire configuration map for the context.' },
-        { name: 'logMessage', parameters: ['msg'], returnType: 'void', documentation: 'Log a message.' },
         { name: 'lookupDTMAssetProperties', parameters: ['assetId'], returnType: 'Record<string, any>', documentation: 'Lookup DTM Asset properties.' }
       ],
       documentation: 'Context object providing state management and configuration access for flow functions.'
