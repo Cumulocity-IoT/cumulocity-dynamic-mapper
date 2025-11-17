@@ -19,7 +19,7 @@
  */
 import { Component, Inject } from '@angular/core';
 import { CellRendererContext } from '@c8y/ngx-components';
-import { TestingDeviceService } from '../testing.service';
+import { TestingDeviceService } from '../../testing.service';
 
 /**
  * The example component for custom cell renderer.

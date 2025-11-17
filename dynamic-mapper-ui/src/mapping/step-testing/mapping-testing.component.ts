@@ -39,7 +39,7 @@ import {
   getSchema
 } from '../../shared/';
 import { DynamicMapperRequest, ProcessingContext, TestResult, TOKEN_TOPIC_LEVEL } from '../core/processor/processor.model';
-import { isSubstitutionsAsCode, MappingType, StepperConfiguration } from '../../shared/mapping/mapping.model';
+import { isSubstitutionsAsCode, MappingType, StepperConfiguration, TransformationType } from '../../shared/mapping/mapping.model';
 import { patchC8YTemplateForTesting, sortObjectKeys } from '../shared/util';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { Content } from 'vanilla-jsoneditor';
@@ -139,6 +139,9 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       this.updateEditors();
       await this.initializeTestContext(this.testMapping);
       this.testingService.initializeCache(this.mapping.direction);
+      if (this.mapping.transformationType == TransformationType.SMART_FUNCTION){
+        await this.testingService.resetMockCache();
+      }
     } catch (error) {
       await this.handleError('Failed to reset transformation', error);
     }

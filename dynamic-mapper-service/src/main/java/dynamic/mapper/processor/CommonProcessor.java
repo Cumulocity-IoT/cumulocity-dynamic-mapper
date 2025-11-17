@@ -18,6 +18,7 @@ import dynamic.mapper.processor.flow.DeviceMessage;
 import dynamic.mapper.processor.flow.ExternalId;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.util.JavaScriptInteropHelper;
+import dynamic.mapper.processor.util.ProcessingResultHelper;
 import dynamic.mapper.util.Utils;
 import lombok.extern.slf4j.Slf4j;
 
@@ -107,13 +108,28 @@ public abstract class CommonProcessor implements Processor {
             String tenant) throws ProcessingException {
 
         List<ExternalId> externalSources = JavaScriptInteropHelper.convertToExternalIdList(deviceMessage.getExternalSource());
+        // Use the first external source for resolution
+        ExternalId externalSource = externalSources.get(0);
 
+        // check if setup of externalId is required
+        if(context.getTesting() && context.getSourceId() != null){
+            if (externalSource.getExternalId() == null || externalSource.getExternalId().isEmpty()){
+                externalSource.setExternalId ( "implicit-device-" + Utils.createCustomUuid());
+            }
+            String externalIdValue = externalSource.getExternalId();
+            String type = externalSources.get(0).getType();
+            var adHocDeviceid = ProcessingResultHelper.createImplicitDevice(
+                    new ID(type, externalIdValue),
+                    context,
+                    log,
+                    c8yAgent,
+                    configurationRegistry.getObjectMapper()
+            );
+        }
         if (externalSources.isEmpty()) {
             throw new ProcessingException("External source is empty");
         }
 
-        // Use the first external source for resolution
-        ExternalId externalSource = externalSources.get(0);
 
         try {
             var gid = new GId(context.getSourceId());

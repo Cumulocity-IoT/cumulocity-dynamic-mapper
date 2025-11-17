@@ -36,8 +36,8 @@ import {
 } from '@c8y/ngx-components';
 
 import { Subject } from 'rxjs';
-import { DeviceIdCellRendererComponent } from './type-data-grid-column/device-id.cell-renderer.component';
-import { MAPPING_TEST_DEVICE_TYPE } from '../../shared';
+import { DeviceIdCellRendererComponent } from './grid/type-data-grid-column/device-id.cell-renderer.component';
+import { MAPPING_TEST_DEVICE_TYPE, SharedService } from '../shared';
 
 /** Model for custom type filtering form. */
 export interface TypeFilteringModel {
@@ -57,6 +57,7 @@ export class TestingDeviceService {
 
   constructor(
     protected inventoryService: InventoryService,
+    protected sharedService: SharedService,
     public alert: AlertService
   ) {
     this.queriesUtil = new QueriesUtil();

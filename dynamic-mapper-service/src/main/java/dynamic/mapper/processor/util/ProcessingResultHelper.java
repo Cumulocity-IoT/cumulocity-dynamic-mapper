@@ -123,6 +123,11 @@ public class ProcessingResultHelper {
             request.put("type", "c8y_GeneratedDeviceType");
         }
 
+        // update context with values from identity
+        context.setExternalId(identity.getValue());
+        String externalIdType = identity.getType() != null ? identity.getType(): context.getMapping().getExternalIdType();
+    
+
         // Set device properties
         request.put(MappingRepresentation.MAPPING_GENERATED_TEST_DEVICE, null);
         request.put("c8y_IsDevice", null);
@@ -137,7 +142,7 @@ public class ProcessingResultHelper {
                     .predecessor(predecessor)
                     .method(context.getMapping().getUpdateExistingDevice() ? RequestMethod.POST : RequestMethod.PATCH)
                     .api(API.INVENTORY)
-                    .externalIdType(context.getMapping().getExternalIdType())
+                    .externalIdType(externalIdType)
                     .externalId(context.getExternalId())
                     .request(requestString)
                     .build();

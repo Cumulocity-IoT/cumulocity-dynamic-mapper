@@ -795,7 +795,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                             s.getMessage());
                     pe.set(new ProcessingException("Could not sent payload to c8y: " + targetAPI + "/" + payload, s));
 
-                    //Remove device from Cache
+                    // Remove device from Cache
                     if (s.getHttpStatus() == 422) {
                         ID identity = new ID(currentRequest.getExternalId(), currentRequest.getExternalId());
                         this.removeDeviceFromInboundExternalIdCache(tenant, identity);
@@ -844,8 +844,13 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                          * mor.set(agentFragments, "c8y_Agent");
                          */
                         mor.set(new IsDevice());
-                        // remove id
-                        mor.setId(null);
+                        // remove id only if not testing
+                        if (!testing) {
+                            mor.setId(null);
+                        } else {
+                            // when creating a mock inventory object for testing set a predefined source id
+                            mor.setId(new GId(context.getSourceId()));
+                        }
                         try {
                             c8ySemaphore.acquire();
                             mor = inventoryApi.create(mor, testing);
