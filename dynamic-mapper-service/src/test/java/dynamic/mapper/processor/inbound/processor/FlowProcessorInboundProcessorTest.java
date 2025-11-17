@@ -44,6 +44,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
+import dynamic.mapper.controller.ConfigurationController;
 import dynamic.mapper.core.InventoryEnrichmentClient;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Direction;
@@ -83,6 +84,9 @@ class FlowProcessorInboundProcessorTest {
     @Mock
     private InventoryEnrichmentClient inventoryEnrichmentClient;
 
+    @Mock
+    private ConfigurationController configurationController;  // ADD THIS
+
     private FlowProcessorInboundProcessor processor;
 
     private static final String TEST_TENANT = "testTenant";
@@ -92,7 +96,8 @@ class FlowProcessorInboundProcessorTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        processor = new FlowProcessorInboundProcessor();
+        // FIX: Pass the mocked ConfigurationController to the constructor
+        processor = new FlowProcessorInboundProcessor(configurationController);
         injectMappingService(processor, mappingService);
 
         mapping = createSampleMapping();
