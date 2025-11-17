@@ -12,16 +12,16 @@
 function onMessage(msg, context) {
     var payload = msg.getPayload();
 
-    context.logMessage("Context" + context.getStateAll());
-    context.logMessage("Payload Raw:" + payload);
-    context.logMessage("Payload messageId" +  payload.get("messageId"));
+    console.log("Context" + context.getStateAll());
+    console.log("Payload Raw:" + payload);
+    console.log("Payload messageId" +  payload.get("messageId"));
 
     // lookup device for enrichment
-    var deviceByDeviceId = context.lookupDeviceByDeviceId(payload.get("deviceId"));
-    context.logMessage("Device (by device id): " + deviceByDeviceId);
+    var deviceByDeviceId = context.getManagedObjectByDeviceId(payload.get("deviceId"));
+    console.log("Device (by device id): " + deviceByDeviceId);
 
-    var deviceByExternalId = context.lookupDeviceByExternalId(payload.get("clientId"), "c8y_Serial" );
-    context.logMessage("Device (by external id): " + deviceByExternalId);
+    var deviceByExternalId = context.getManagedObject({ externalId: payload.get("clientId"), type: "c8y_Serial" } );
+    console.log("Device (by external id): " + deviceByExternalId);
 
     // Determine measurement type based on device configuration
     var isVoltage = deviceByExternalId?.c8y_Sensor?.type?.voltage === true;
@@ -40,7 +40,7 @@ function onMessage(msg, context) {
                 }
             }
         };
-        context.logMessage("Creating c8y_VoltageMeasurement");
+        console.log("Creating c8y_VoltageMeasurement");
     } else if (isCurrent) {
         measurementPayload = {
             "time": new Date().toISOString(),
@@ -52,9 +52,9 @@ function onMessage(msg, context) {
                 }
             }
         };
-        context.logMessage("Creating c8y_CurrentMeasurement");
+        console.log("Creating c8y_CurrentMeasurement");
     } else {
-        context.logMessage("Warning: No valid sensor type configuration found");
+        console.log("Warning: No valid sensor type configuration found");
         return []; // Return empty array if no valid configuration
     }
 

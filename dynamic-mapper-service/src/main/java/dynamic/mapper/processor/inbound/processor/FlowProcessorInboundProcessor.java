@@ -14,12 +14,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
+import dynamic.mapper.controller.ConfigurationController;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.flow.CumulocityObject;
 import dynamic.mapper.processor.flow.DeviceMessage;
-import dynamic.mapper.processor.flow.FlowContext;
+import dynamic.mapper.processor.flow.JavaScriptConsole;
+import dynamic.mapper.processor.flow.DataPrepContext;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.util.JavaScriptInteropHelper;
 import dynamic.mapper.service.MappingService;
@@ -29,8 +31,14 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class FlowProcessorInboundProcessor extends BaseProcessor {
 
+    private final ConfigurationController configurationController;
+
     @Autowired
     private MappingService mappingService;
+
+    FlowProcessorInboundProcessor(ConfigurationController configurationController) {
+        this.configurationController = configurationController;
+    }
 
     @Override
     public void process(Exchange exchange) throws Exception {
@@ -92,7 +100,7 @@ public class FlowProcessorInboundProcessor extends BaseProcessor {
         if (mapping.getCode() != null) {
             Context graalContext = context.getGraalContext();
 
-            // CRITICAL FIX: Track all GraalVM Value objects for cleanup
+            // Explicitly null out GraalVM Value references
             Value bindings = null;
             Value onMessageFunction = null;
             Value inputMessage = null;
@@ -102,6 +110,11 @@ public class FlowProcessorInboundProcessor extends BaseProcessor {
                 // Task 1: Invoking JavaScript function
                 String identifier = Mapping.SMART_FUNCTION_NAME + "_" + mapping.getIdentifier();
                 bindings = graalContext.getBindings("js");
+
+                if (context.getFlowContext() != null && context.getFlowContext().getTesting()) {
+                    JavaScriptConsole console = new JavaScriptConsole(context.getFlowContext(), tenant);
+                    bindings.putMember("console", console);
+                }
 
                 // Load and execute the JavaScript code
                 byte[] decodedBytes = Base64.getDecoder().decode(mapping.getCode());
@@ -126,7 +139,7 @@ public class FlowProcessorInboundProcessor extends BaseProcessor {
                 processResult(result, context, tenant);
 
             } finally {
-                // CRITICAL FIX: Explicitly null out all GraalVM Value references
+                // Explicitly null out GraalVM Value references
                 bindings = null;
                 onMessageFunction = null;
                 inputMessage = null;
@@ -192,11 +205,11 @@ public class FlowProcessorInboundProcessor extends BaseProcessor {
 
         try {
             // CRITICAL FIX: Extract and immediately convert warnings
-            warnings = context.getFlowContext().getState(FlowContext.WARNINGS);
+            warnings = context.getFlowContext().getState(DataPrepContext.WARNINGS);
             extractWarningsFromValue(warnings, context, tenant);
 
             // CRITICAL FIX: Extract and immediately convert logs
-            logs = context.getFlowContext().getState(FlowContext.LOGS);
+            logs = context.getFlowContext().getState(DataPrepContext.LOGS);
             extractLogsFromValue(logs, context, tenant);
 
             // Check if result is null or undefined

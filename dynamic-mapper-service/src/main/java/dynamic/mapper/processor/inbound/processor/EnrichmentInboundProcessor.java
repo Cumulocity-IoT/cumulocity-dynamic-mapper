@@ -16,7 +16,7 @@ import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.TransformationType;
-import dynamic.mapper.processor.flow.FlowContext;
+import dynamic.mapper.processor.flow.DataPrepContext;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -67,7 +67,7 @@ public class EnrichmentInboundProcessor extends BaseProcessor {
         List<String> splitTopicAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
 
         // Add topic levels to FlowContext if available
-        FlowContext flowContext = context.getFlowContext();
+        DataPrepContext flowContext = context.getFlowContext();
         if (flowContext != null && context.getGraalContext() != null
                 && TransformationType.SMART_FUNCTION.equals(context.getMapping().getTransformationType())) {
             addToFlowContext(flowContext, context, Mapping.TOKEN_TOPIC_LEVEL, splitTopicAsList);
@@ -148,7 +148,7 @@ public class EnrichmentInboundProcessor extends BaseProcessor {
     /**
      * Helper method to safely add values to FlowContext
      */
-    private void addToFlowContext(FlowContext flowContext, ProcessingContext<Object> context, String key,
+    private void addToFlowContext(DataPrepContext flowContext, ProcessingContext<Object> context, String key,
             Object value) {
         try {
             if (context.getGraalContext() != null && value != null) {

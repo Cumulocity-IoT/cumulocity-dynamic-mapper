@@ -1,3 +1,23 @@
+/*
+ * Copyright (c) 2022-2025 Cumulocity GmbH.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ *  @authors Christof Strack, Stefan Witschel
+ *
+ */
 package dynamic.mapper.processor.flow;
 
 import java.util.ArrayList;
@@ -15,7 +35,7 @@ import lombok.extern.slf4j.Slf4j;
  * Simple implementation of FlowContext for JavaScript execution
  */
 @Slf4j
-public class SimpleFlowContext implements FlowContext {
+public class SimpleFlowContext implements DataPrepContext {
 
     private final Map<String, Object> state;
     private final Context graalContext;
@@ -72,37 +92,11 @@ public class SimpleFlowContext implements FlowContext {
         config.put("tenant", tenant);
         config.put("timestamp", System.currentTimeMillis());
 
-        // Add logger
-        Map<String, Object> logger = new HashMap<>();
-        logger.put("info", new LogFunction("info"));
-        logger.put("debug", new LogFunction("debug"));
-        logger.put("warn", new LogFunction("warn"));
-        logger.put("error", new LogFunction("error"));
-        config.put("logger", logger);
-
         return graalContext.asValue(config);
     }
 
     @Override
-    public void logMessage(Value msg) {
-        if (msg == null) {
-            log.info("{} - JS Log: null", tenant);
-            return;
-        }
-
-        if (msg.isString()) {
-            log.info("{} - JS Log: {}", tenant, msg.asString());
-        } else {
-            log.info("{} - JS Log: {}", tenant, msg.toString());
-        }
-
-        if (testing != null && testing) {
-            addLogMessage(msg.toString());
-        }
-    }
-
-    @Override
-    public Value lookupDTMAssetProperties(String assetId) {
+    public Value getDTMAsset(String assetId) {
         if (graalContext == null) {
             return null;
         }
@@ -157,45 +151,6 @@ public class SimpleFlowContext implements FlowContext {
         }
     }
 
-    /**
-     * Helper class for JavaScript-callable logging functions
-     */
-    private class LogFunction {
-        private final String level;
-
-        public LogFunction(String level) {
-            this.level = level;
-        }
-
-        public void apply(Object... args) {
-            StringBuilder message = new StringBuilder();
-            for (Object arg : args) {
-                if (message.length() > 0) {
-                    message.append(" ");
-                }
-                message.append(arg != null ? arg.toString() : "null");
-            }
-
-            switch (level) {
-                case "info":
-                    log.info("{} - JS: {}", tenant, message.toString());
-                    break;
-                case "debug":
-                    log.debug("{} - JS: {}", tenant, message.toString());
-                    break;
-                case "warn":
-                    log.warn("{} - JS: {}", tenant, message.toString());
-                    break;
-                case "error":
-                    log.error("{} - JS: {}", tenant, message.toString());
-                    break;
-                default:
-                    log.info("{} - JS: {}", tenant, message.toString());
-                    break;
-            }
-        }
-    }
-
     @Override
     public Value getStateAll() {
         if (graalContext == null) {
@@ -227,7 +182,7 @@ public class SimpleFlowContext implements FlowContext {
     }
 
     @Override
-    public Value lookupDeviceByDeviceId(String deviceId) {
+    public Value getManagedObjectByDeviceId(String deviceId) {
         Object javaValue = inventoryEnrichmentClient.getMOFromInventoryCache(tenant, deviceId, testing);
         if (javaValue == null) {
             addWarning(String.format("Device not found in inventory cache: %s", deviceId));
@@ -236,8 +191,8 @@ public class SimpleFlowContext implements FlowContext {
     }
 
     @Override
-    public Value lookupDeviceByExternalId(String externalId, String type) {
-        Object javaValue = inventoryEnrichmentClient.getMOFromInventoryCacheByExternalId(tenant, externalId, type,
+    public Value getManagedObject(ExternalId externalId) {
+        Object javaValue = inventoryEnrichmentClient.getMOFromInventoryCacheByExternalId(tenant, externalId,
                 testing);
         if (javaValue == null) {
             addWarning(String.format("ExternalId not found in inventory cache: %s", externalId));
@@ -246,25 +201,31 @@ public class SimpleFlowContext implements FlowContext {
     }
 
     private void addWarning(String warning) {
-        List<String> warnings = (List<String>) state.get(FlowContext.WARNINGS);
+        List<String> warnings = (List<String>) state.get(DataPrepContext.WARNINGS);
         if (warnings == null) {
             warnings = new ArrayList<String>();
         }
         warnings.add(warning);
-        state.put(FlowContext.WARNINGS, warnings);
+        state.put(DataPrepContext.WARNINGS, warnings);
     }
 
-    private void addLogMessage(String message) {
-        List<String> logs = (List<String>) state.get(FlowContext.LOGS);
+    @Override
+    public void addLogMessage(String message) {
+        List<String> logs = (List<String>) state.get(DataPrepContext.LOGS);
         if (logs == null) {
             logs = new ArrayList<String>();
         }
         logs.add(message);
-        state.put(FlowContext.LOGS, logs);
+        state.put(DataPrepContext.LOGS, logs);
     }
 
     @Override
     public void clearState() {
         state.clear();
+    }
+
+    @Override
+    public Boolean getTesting() {
+        return testing;
     }
 }

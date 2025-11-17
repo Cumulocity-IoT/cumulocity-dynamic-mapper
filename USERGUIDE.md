@@ -463,9 +463,9 @@ function onMessage (inputMsg, context) {
     const msg = inputMsg;
     var payload = msg.getPayload(); // contains payload
 
-    context.logMessage("Context" + context.getStateAll());
-    context.logMessage("Payload Raw:" + msg.getPayload());
-    context.logMessage("Payload messageId" +  msg.getPayload().get('messageId'));
+    console.log("Context" + context.getStateAll());
+    console.log("Payload Raw:" + msg.getPayload());
+    console.log("Payload messageId" +  msg.getPayload().get('messageId'));
     // insert transformation logic here
 
     // then return result
@@ -491,11 +491,11 @@ The **Smart Function** allows to enrich the payload with inventory data from the
 
 ```javascript
 // lookup device for enrichment
-var deviceByDeviceId = context.lookupDeviceByDeviceId(payload.get("deviceId"));
-context.logMessage("Device (by device id): " + deviceByDeviceId);
+var deviceByDeviceId = context.getManagedObjectByDeviceId(payload.get("deviceId"));
+console.log("Device (by device id): " + deviceByDeviceId);
 
-var deviceByExternalId = context.lookupDeviceByExternalId(payload.get("clientId"), "c8y_Serial" );
-context.logMessage("Device (by external id): " + deviceByExternalId);
+var deviceByExternalId = context.getManagedObject({externalId: payload.get("clientId"),externalId:"c8y_Serial"} );
+console.log("Device (by external id): " + deviceByExternalId);
 ```
 
 **Note:** Only device fragments configured in **Configuration > Service Configuration > Function > Fragments from inventory to cache** can be referenced and have to be defined in this list of fragments.

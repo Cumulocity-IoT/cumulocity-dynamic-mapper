@@ -38,7 +38,7 @@ import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.flow.FlowContext;
+import dynamic.mapper.processor.flow.DataPrepContext;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.TransformationType;
 import dynamic.mapper.service.MappingService;
@@ -98,7 +98,7 @@ public class EnrichmentOutboundProcessor extends BaseProcessor {
         identityFragment.put("externalIdType", mapping.getExternalIdType());
 
         // Add topic levels to FlowContext if available
-        FlowContext flowContext = context.getFlowContext();
+        DataPrepContext flowContext = context.getFlowContext();
         if (flowContext != null && context.getGraalContext() != null
                 && TransformationType.SMART_FUNCTION.equals(context.getMapping().getTransformationType())) {
             addToFlowContext(flowContext, context, Mapping.TOKEN_IDENTITY, identityFragment);
@@ -159,7 +159,7 @@ public class EnrichmentOutboundProcessor extends BaseProcessor {
     /**
      * Helper method to safely add values to FlowContext
      */
-    private void addToFlowContext(FlowContext flowContext, ProcessingContext<Object> context, String key,
+    private void addToFlowContext(DataPrepContext flowContext, ProcessingContext<Object> context, String key,
             Object value) {
         try {
             if (context.getGraalContext() != null && value != null) {
