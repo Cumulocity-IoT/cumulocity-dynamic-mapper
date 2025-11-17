@@ -39,6 +39,7 @@ import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.flow.CumulocityObject;
 import dynamic.mapper.processor.flow.DeviceMessage;
+import dynamic.mapper.processor.flow.JavaScriptConsole;
 import dynamic.mapper.processor.flow.DataPrepContext;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.util.JavaScriptInteropHelper;
@@ -106,6 +107,7 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
             Context graalContext = context.getGraalContext();
 
             // Use try-finally to ensure cleanup
+            Value bindings = null;
             Value onMessageFunction = null;
             Value inputMessage = null;
             Value result = null;
@@ -113,7 +115,12 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
             try {
                 // Task 1: Invoking JavaScript function
                 String identifier = Mapping.SMART_FUNCTION_NAME + "_" + mapping.getIdentifier();
-                Value bindings = graalContext.getBindings("js");
+                bindings = graalContext.getBindings("js");
+
+                if (context.getFlowContext() != null && context.getFlowContext().getTesting() ) {
+                    JavaScriptConsole console = new JavaScriptConsole(context.getFlowContext(), tenant);
+                    bindings.putMember("console", console);
+                } 
 
                 // Load and execute the JavaScript code
                 byte[] decodedBytes = Base64.getDecoder().decode(mapping.getCode());
