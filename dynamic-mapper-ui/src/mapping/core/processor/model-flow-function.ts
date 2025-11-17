@@ -18,7 +18,89 @@
  * @authors Christof Strack
  */
 
-/** Details of external Id (which will be looked up by IdP to get the C8Y id, and optionally used to create a device). */
+// ============================================================================
+// DEPRECATED INTERFACES - Use new versions below
+// ============================================================================
+
+/**
+ * @deprecated Use {@link CumulocityObject} instead. Will be removed in version 6.2.0.
+ * CumulocityMessage has been renamed to CumulocityObject for clarity.
+ */
+export interface CumulocityMessage extends CumulocityObject {
+    // Interface kept for backward compatibility
+}
+
+/**
+ * @deprecated Use {@link DataPrepContext} instead. Will be removed in version 6.2.0.
+ * FlowContext has been renamed to DataPrepContext and includes new methods.
+ */
+export interface FlowContext {
+    /**
+    * Sets a value in the context's state.
+    * @param {string} key - The key for the state item.
+    * @param {any} value - The value to set for the given key.
+    * @deprecated Use DataPrepContext.setState() instead
+    */
+    setState(key: string, value: any): void;
+
+    /**
+     * Retrieves a value from the context's state.
+     * @param {string} key - The key of the state item to retrieve.
+     * @returns {any} The value associated with the key, or undefined if not found.
+     * @deprecated Use DataPrepContext.getState() instead
+     */
+    getState(key: string): any;
+
+    /**
+     * Retrieves the entire configuration map for the context.
+     * @returns {Record<string, any>} A Map containing the context's configuration.
+     * @deprecated Use DataPrepContext.getConfig() instead
+     */
+    getConfig(): Record<string, any>;
+
+    /**
+      * Log a message.
+      * @deprecated This method has been removed. Use console.log() instead.
+      */
+    logMessage(msg: any): void;
+
+    /**
+     * Lookup DTM Asset properties
+     * @deprecated Use {@link DataPrepContext.getDTMAsset} instead
+     */
+    lookupDTMAssetProperties(assetId: string): Record<string, any>;
+}
+
+/**
+ * @deprecated Use {@link ExternalId} instead for simple external ID references.
+ * ExternalSource is now only used for advanced device creation scenarios.
+ * Will be removed in version 6.2.0.
+ */
+export interface CumulocitySource {
+    /** 
+     * Cumulocity Id to be looked up and/or created to get C8Y "id" 
+     * @deprecated Use internalId in the payload directly or externalSource array
+     */
+    internalId: string;
+}
+
+// ============================================================================
+// CURRENT INTERFACES
+// ============================================================================
+
+/** Details of external Id (simple lookup/reference only). */
+export interface ExternalId {
+    /** External Id to be looked up and/or created to get C8Y "id" */
+    externalId: string;
+
+    /** e.g. "c8y_Serial"  */
+    type: string;
+}
+
+/** 
+ * Details of external Id for advanced device creation scenarios.
+ * For simple lookups, use {@link ExternalId} instead.
+ */
 export interface ExternalSource {
     /** External Id to be looked up and/or created to get C8Y "id" */
     externalId: string;
@@ -41,16 +123,6 @@ export interface ExternalSource {
     clientId?: string;
 }
 
-/** Details of external Id (which will be looked up by IdP to get the C8Y id, and optionally used to create a device). */
-export interface ExternalId {
-    /** External Id to be looked up and/or created to get C8Y "id" */
-    externalId: string;
-
-    /** e.g. "c8y_Serial"  */
-    type: string;
-}
-
-
 /** A request going to or coming from Cumulocity core (or IceFlow/offloading) */
 export interface CumulocityObject {
     /** The same payload that would be used in the C8Y REST/SmartREST API 
@@ -65,18 +137,22 @@ export interface CumulocityObject {
     /** What kind of operation is being performed on this type */
     action: "create" | "update";
 
-    // nb: we also considered using the JSON via MQTT SmartREST format 
-    // e.g. request='measurement/measurements/create' but it's a bit too
-    // unintuitive, or to use the tedge topic/channel concept but 
-    // since there is no topic really involved that's also undesirable
-
-    /** Since we usually don't know the C8Y Id to put in the payload, 
-    the flow can specify a single external Id to lookup (and optionally create). 
-    Mandatory to include one item when sending this from cloud. Optional for thin-edge. 
-    
-    When a Cumulocity message (e.g. operation) is received, this will contain a list of all external ids for this Cumulocity id.
-    */
+    /** 
+     * Since we usually don't know the C8Y Id to put in the payload, 
+     * the flow can specify a single external Id to lookup (and optionally create). 
+     * Mandatory to include one item when sending this from cloud. Optional for thin-edge. 
+     * 
+     * When a Cumulocity message (e.g. operation) is received, this will contain a list of all external ids for this Cumulocity id.
+     * 
+     * @since 6.1.2 Changed from ExternalSource to ExternalId for simple lookups
+     */
     externalSource?: ExternalId[] | ExternalId;
+
+    /**
+     * @deprecated Use externalSource with ExternalId instead. Will be removed in version 3.0.0.
+     * InternalSource is no longer needed as you can specify the id directly in the payload.
+     */
+    internalSource?: CumulocitySource[] | CumulocitySource;
 
     // For advanced cases only:
 
@@ -93,7 +169,7 @@ For messages received by the flow this is not set.
  * // Basic usage with device ID in topic
  * return [{  
  *     topic: `measurements/${payload["source"]["id"]}`,
- *     payload: {
+ *     payload: new TextEncoder().encode(JSON.stringify({
  *         "time": new Date().toISOString(),
  *         "c8y_Steam": {
  *             "Temperature": {
@@ -101,7 +177,7 @@ For messages received by the flow this is not set.
  *                 "value": 25.5
  *             }
  *         }
- *     },
+ *     })),
  *     transportFields: { "key": payload["source"]["id"] }
  * }];
  * 
@@ -111,7 +187,7 @@ For messages received by the flow this is not set.
  * // from the externalSource array
  * return [{  
  *     topic: `measurements/_externalId_`,
- *     payload: {
+ *     payload: new TextEncoder().encode(JSON.stringify({
  *         "time": new Date().toISOString(),
  *         "c8y_Steam": {
  *             "Temperature": {
@@ -119,15 +195,25 @@ For messages received by the flow this is not set.
  *                 "value": 25.5
  *             }
  *         }
- *     },
+ *     })),
  *     transportFields: { "key": payload["source"]["id"] },
  *     externalSource: [{"type": "c8y_Serial"}]  // Defines which externalId type to use
  * }];
  */
 export interface DeviceMessage {
     /** 
-     * Cloud IdP and first step of tedge always gets an ArrayBuffer, but might be a JS object 
+     * Cloud IdP and first step of tedge always gets a Uint8Array, but might be a JS object 
      * if passing intermediate messages between steps in thin-edge.
+     * 
+     * @since 6.1.2 Changed from ArrayBuffer|object to Uint8Array for consistency
+     * 
+     * @example
+     * // Convert string to Uint8Array
+     * payload: new TextEncoder().encode(JSON.stringify(myObject))
+     * 
+     * @example
+     * // Convert Uint8Array to string
+     * const text = new TextDecoder().decode(message.payload)
      */
     payload: Uint8Array;
 
@@ -161,6 +247,8 @@ export interface DeviceMessage {
      * Dictionary of transport/MQTT-specific fields/properties/headers.
      * For Kafka, use "key" to define the record key.
      * 
+     * @since 6.1.2 Changed from { [key: string]: string } to { [key: string]: any }
+     * 
      * @example { "key": "device-123" }
      */
     transportFields?: { [key: string]: any };
@@ -174,12 +262,20 @@ export interface DeviceMessage {
      * External source configuration for resolving the `_externalId_` placeholder in the topic.
      * Defines which external ID type should be used to lookup the device.
      * 
+     * @since 6.1.2 New field to support _externalId_ placeholder resolution
+     * 
      * @example [{"type": "c8y_Serial"}]
      * @example [{"type": "c8y_DeviceId"}]
      */
     externalSource?: Array<{ type: string }>;
 }
 
+/**
+ * Context object providing access to state, configuration, and device lookup capabilities
+ * during data preparation/mapping operations.
+ * 
+ * @since 6.1.2 Renamed from FlowContext with additional methods
+ */
 export interface DataPrepContext {
     /**
     * Sets a value in the context's state.
@@ -205,20 +301,41 @@ export interface DataPrepContext {
      * Lookup DTM Asset properties by asset ID.
      * @param {string} assetId - The ID of the asset to look up.
      * @returns {Record<string, any>} A record containing the asset properties.
+     * 
+     * @since 6.1.2 Renamed from lookupDTMAssetProperties
      */
     getDTMAsset(assetId: string): Record<string, any>;
 
     /**
-     * Lookup a device from the inventory cache by device ID.
+     * Lookup a device from the inventory cache by internal device ID.
      * @param {string} deviceId - The internal device ID to look up.
      * @returns {any} The managed object from inventory, or null if not found.
+     * 
+     * @since 6.1.2 New method
+     * 
+     * @example
+     * const device = context.getManagedObjectByDeviceId("12345");
+     * if (device) {
+     *     console.log("Device name:", device.name);
+     * }
      */
     getManagedObjectByDeviceId(deviceId: string): any;
 
     /**
      * Lookup a device from the inventory cache by external ID.
-     * @param {string} externalId - The external ID to look up.
+     * @param {ExternalId} externalId - The external ID to look up.
      * @returns {any} The managed object from inventory, or null if not found.
+     * 
+     * @since 6.1.2 New method
+     * 
+     * @example
+     * const device = context.getManagedObject({
+     *     externalId: "DEVICE-001",
+     *     type: "c8y_Serial"
+     * });
+     * if (device) {
+     *     console.log("Device name:", device.name);
+     * }
      */
     getManagedObject(externalId: ExternalId): any;
 }
@@ -274,7 +391,6 @@ export interface OutputMessage {
      */
     properties: Record<string, any>;
 }
-
 
 export interface MappingError {
     errorDetails: string[];

@@ -1,14 +1,14 @@
 # Dynamic Mapper Service for Cumulocity
 
 >NOTE: Breaking changes 
-Due to the approach to sync the JS7TS API offer Smart Functions with the new Cumulocity Product IDP (Intelligent Data Preparation) the followinf JS APi where changed in this release:
+Due to the approach to sync the JS7TS API offer Smart Functions with the new Cumulocity Product IDP (Intelligent Data Preparation) the following JS APi where changed in this release:
 
 
 **Obsolete**
 ```
     // lookup device for enrichment
     var deviceByDeviceId = context.lookupDeviceByDeviceId(payload.get("deviceId"));
-    var deviceByDeviceId = context.lookupDeviceByDeviceId(payload.get("deviceId")); 
+    var deviceByExternalId = context.lookupDeviceByExternalId(payload.get("clientId"), "c8y_Serial"); 
 
     // removed context.logMessage
     context.logMessage("Payload Raw:" + payload);
