@@ -36,11 +36,9 @@ import {
 import {
   JsonEditor,
   createJSONEditor,
-  stringifyJSONPath,
   Content,
   MenuItem,
   createAjvValidator,
-  parseJSONPath,
   JSONEditorSelection,
   isKeySelection,
   isJSONContent,
@@ -54,6 +52,11 @@ import {
 
 import type { JSONPath } from 'immutable-json-patch'
 import { parseJSONPathCustom, stringifyJSONPathCustom } from './utils';
+
+export interface ContentChanges {
+  previousContent: Content,
+  updatedContent: Content,
+}
 
 @Component({
   selector: 'd11r-mapping-json-editor2',
@@ -80,7 +83,7 @@ export class JsonEditorComponent implements OnInit, OnDestroy, AfterViewInit {
   class: string;
 
   @Output()
-  contentChanged: EventEmitter<Content> = new EventEmitter<Content>();
+  contentChanged: EventEmitter<ContentChanges> = new EventEmitter<ContentChanges>();
   @Output()
   pathChanged: EventEmitter<string> = new EventEmitter<string>();
   @Output()
@@ -143,7 +146,7 @@ export class JsonEditorComponent implements OnInit, OnDestroy, AfterViewInit {
           { contentErrors, patchResult }
         ) => {
           this.content = updatedContent;
-          this.contentChanged.emit(updatedContent);
+          this.contentChanged.emit({previousContent,updatedContent});
         },
         onSelect: this.onSelect.bind(this),
         onRenderMenu: this.onRenderMenu.bind(this),

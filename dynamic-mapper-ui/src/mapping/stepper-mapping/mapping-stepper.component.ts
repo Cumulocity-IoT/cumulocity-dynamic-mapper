@@ -38,7 +38,7 @@ import { FormlyFieldConfig } from '@ngx-formly/core';
 import * as _ from 'lodash';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, debounceTime, distinctUntilChanged, filter, from, map, Subject, take, takeUntil } from 'rxjs';
-import { Content, Mode } from 'vanilla-jsoneditor';
+import { Mode } from 'vanilla-jsoneditor';
 import { ExtensionService } from '../../extension';
 import {
   API,
@@ -65,7 +65,9 @@ import {
   Feature,
   isSubstitutionsAsCode,
   TransformationType,
-  MappingTypeLabels
+  MappingTypeLabels,
+  ContentChanges,
+  MappingTypeDescriptions
 } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { ValidationError } from '../shared/mapping.model';
@@ -89,6 +91,7 @@ import { AIAgentService } from '../core/ai-agent.service';
 import { AgentObjectDefinition, AgentTextDefinition } from '../shared/ai-prompt.model';
 import { MappingStepTestingComponent } from '../step-testing/mapping-testing.component';
 import { gettext } from '@c8y/ngx-components/gettext';
+import { contentChangeAllowed } from '../core/processor/processor.model';
 
 let initializedMonaco = false;
 
@@ -154,6 +157,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   readonly TransformationType = TransformationType;
   readonly EditorMode = EditorMode;
   readonly SnoopStatus = SnoopStatus;
+  readonly MappingTypeDescriptions = MappingTypeDescriptions;
 
   updateTestingTemplate = new EventEmitter<any>();
   updateSourceEditor: EventEmitter<any> = new EventEmitter<any>();
@@ -813,16 +817,18 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  onSourceTemplateChanged(content: Content) {
+  onSourceTemplateChanged(contentChanges: ContentChanges) {
+    const { previousContent, updatedContent } = contentChanges;
+    console.log("Content changes:", contentChangeAllowed(contentChanges));
     let contentAsJson;
-    if (_.has(content, 'text') && content['text']) {
+    if (_.has(updatedContent, 'text') && updatedContent['text']) {
       try {
-        contentAsJson = JSON.parse(content['text']);
+        contentAsJson = JSON.parse(updatedContent['text']);
       } catch (error) {
         // ignore parsing error
       }
     } else {
-      contentAsJson = content['json'];
+      contentAsJson = updatedContent['json'];
     }
     this.sourceTemplateUpdated = contentAsJson;
 
@@ -830,16 +836,18 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  onTargetTemplateChanged(content: Content): void {
+  onTargetTemplateChanged(contentChanges: ContentChanges): void {
+    const { previousContent, updatedContent } = contentChanges;
+    console.log("Content changes:", contentChangeAllowed(contentChanges));
     let contentAsJson;
-    if (_.has(content, 'text') && content['text']) {
+    if (_.has(updatedContent, 'text') && updatedContent['text']) {
       try {
 
       } catch (error) {
         // ignore parsing error
-      } contentAsJson = JSON.parse(content['text']);
+      } contentAsJson = JSON.parse(updatedContent['text']);
     } else {
-      contentAsJson = content['json'];
+      contentAsJson = updatedContent['json'];
     }
     this.targetTemplateUpdated = contentAsJson;
 
