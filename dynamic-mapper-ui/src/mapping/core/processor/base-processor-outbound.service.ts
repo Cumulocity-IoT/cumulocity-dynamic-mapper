@@ -20,7 +20,7 @@
 import { Injectable } from '@angular/core';
 import { AlertService } from '@c8y/ngx-components';
 import * as _ from 'lodash';
-import { API, Mapping, MappingType, RepairStrategy, SharedService } from '../../../shared';
+import { API, Mapping, RepairStrategy, SharedService } from '../../../shared';
 import {
   splitTopicExcludingSeparator,
   splitTopicIncludingSeparator
@@ -32,7 +32,6 @@ import {
   SubstituteValue,
   SubstituteValueType,
   TOKEN_TOPIC_LEVEL,
-  getTypedValue,
   prepareAndSubstituteInPayload
 } from './processor.model';
 

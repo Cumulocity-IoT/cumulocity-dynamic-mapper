@@ -218,7 +218,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       this.sourceTemplate = JSON.parse(testMapping.sourceTemplate);
 
       if (testMapping.direction === Direction.OUTBOUND) {
-        patchC8YTemplateForTesting(this.sourceTemplate, this.testMapping);
+        // patchC8YTemplateForTesting(this.sourceTemplate, this.testMapping);
         sortObjectKeys(this.sourceTemplate);
       }
 

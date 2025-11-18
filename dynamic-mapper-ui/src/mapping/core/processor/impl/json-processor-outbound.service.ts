@@ -19,7 +19,7 @@
  */
 import * as _ from 'lodash';
 import { BaseProcessorOutbound } from '../base-processor-outbound.service';
-import { API, Mapping } from '../../../../shared';
+import { API, getGenericDeviceIdentifier, Mapping } from '../../../../shared';
 import {
   ProcessingContext,
   SubstituteValue} from '../processor.model';
@@ -43,9 +43,14 @@ export class JSONProcessorOutbound extends BaseProcessorOutbound {
   async extractFromSource(context: ProcessingContext) {
     const { mapping, processingCache, payload } = context;
 
+    // let sourceId: any  = await this.evaluateExpression(
+    //   payload,
+    //   API[mapping.targetAPI].identifier
+    // );
+
     let sourceId: any  = await this.evaluateExpression(
       payload,
-      API[mapping.targetAPI].identifier
+      getGenericDeviceIdentifier(mapping)
     );
 
     context.sourceId = sourceId.toString();

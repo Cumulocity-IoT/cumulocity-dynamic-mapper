@@ -803,7 +803,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.substitutionFormly.get('pathTarget').setValue(path);
     this.substitutionModel.pathTarget = path;
 
-    if (path == API[this.mapping.targetAPI].identifier) {
+    if (path == API[this.mapping.targetAPI].identifier && this.mapping.direction == Direction.INBOUND) {
       const gi = getGenericDeviceIdentifier(this.mapping);
       await this.editorTargetStepSubstitution.setSelectionToPath(
         gi
