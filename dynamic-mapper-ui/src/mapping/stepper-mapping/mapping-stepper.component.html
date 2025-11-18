@@ -190,6 +190,14 @@
                 <formly-form [form]="filterFormly" [fields]="filterFormlyFields" [model]="filterModel"></formly-form>
               </div>
             </div>
+            <div class="d-flex" *ngIf="!(isContentChangeValid$ | async)">
+              <div class="col-lg-5 col-lg-offset-1">
+                <span class="text-warning text-12 p-l-8">You can't change <code>_IDENTITY_</code>,
+                  <code>_TOPIC_LEVEL_ </code> or <code>_CONTEXT_DATA_ </code> in the templates. Use substitutions
+                  instead.</span>
+
+              </div>
+            </div>
             <div class="d-flex">
               <div class="col-lg-5 col-lg-offset-1">
                 <div class="form-group m-b-4" style="margin-left: 0px">

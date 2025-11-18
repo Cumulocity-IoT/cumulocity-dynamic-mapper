@@ -196,6 +196,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     new BehaviorSubject<number>(0);
   isSubstitutionValid$: BehaviorSubject<boolean> =
     new BehaviorSubject<boolean>(false);
+  isContentChangeValid$: BehaviorSubject<boolean> =
+    new BehaviorSubject<boolean>(true);
   labels: any = {
     next: 'Next',
     cancel: 'Cancel'
@@ -835,11 +837,13 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       updatedContentAsJson = updatedContent['json'];
       previousContentAsJson = previousContent['json'];
     }
-    if (allowed){
+    if (allowed) {
       this.sourceTemplateUpdated = updatedContentAsJson;
+      this.isContentChangeValid$.next(true);
     } else {
+      this.isContentChangeValid$.next(false);
       this.sourceTemplateUpdated = previousContentAsJson;
-      this.sourceTemplate= previousContentAsJson;
+      this.sourceTemplate = previousContentAsJson;
     }
 
     // console.log("Step onSourceTemplateChanged", this.mapping.sourceTemplate, this.mapping.targetTemplate);
@@ -863,11 +867,13 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       updatedContentAsJson = updatedContent['json'];
       previousContentAsJson = previousContent['json'];
     }
-    if (allowed){
+    if (allowed) {
       this.targetTemplateUpdated = updatedContentAsJson;
+      this.isContentChangeValid$.next(true);
     } else {
+      this.isContentChangeValid$.next(false);
       this.targetTemplateUpdated = previousContentAsJson;
-      this.targetTemplate= previousContentAsJson;
+      this.targetTemplate = previousContentAsJson;
 
     }
 
