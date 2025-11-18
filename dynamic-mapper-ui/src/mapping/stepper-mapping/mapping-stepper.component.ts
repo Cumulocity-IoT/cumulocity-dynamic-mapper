@@ -843,7 +843,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     } else {
       this.isContentChangeValid$.next(false);
       this.sourceTemplateUpdated = previousContentAsJson;
-      this.sourceTemplate = previousContentAsJson;
+      // this.sourceTemplate = previousContentAsJson;
+      this.editorSourceStepTemplate.set(this.sourceTemplate);
     }
 
     // console.log("Step onSourceTemplateChanged", this.mapping.sourceTemplate, this.mapping.targetTemplate);
@@ -873,7 +874,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     } else {
       this.isContentChangeValid$.next(false);
       this.targetTemplateUpdated = previousContentAsJson;
-      this.targetTemplate = previousContentAsJson;
+      // this.targetTemplate = previousContentAsJson;
+      this.editorTargetStepTemplate.set(this.targetTemplate);
 
     }
 
