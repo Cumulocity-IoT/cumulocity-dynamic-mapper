@@ -92,6 +92,7 @@ import { AgentObjectDefinition, AgentTextDefinition } from '../shared/ai-prompt.
 import { MappingStepTestingComponent } from '../step-testing/mapping-testing.component';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { contentChangeAllowed } from '../core/processor/processor.model';
+import { all } from 'cypress/types/bluebird';
 
 let initializedMonaco = false;
 
@@ -819,18 +820,27 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onSourceTemplateChanged(contentChanges: ContentChanges) {
     const { previousContent, updatedContent } = contentChanges;
-    console.log("Content changes:", contentChangeAllowed(contentChanges));
-    let contentAsJson;
+    const allowed = contentChangeAllowed(contentChanges);
+    console.log("Content changes:", allowed);
+    let updatedContentAsJson;
+    let previousContentAsJson;
     if (_.has(updatedContent, 'text') && updatedContent['text']) {
       try {
-        contentAsJson = JSON.parse(updatedContent['text']);
+        updatedContentAsJson = JSON.parse(updatedContent['text']);
+        previousContentAsJson = JSON.parse(previousContent['text']);
       } catch (error) {
         // ignore parsing error
       }
     } else {
-      contentAsJson = updatedContent['json'];
+      updatedContentAsJson = updatedContent['json'];
+      previousContentAsJson = previousContent['json'];
     }
-    this.sourceTemplateUpdated = contentAsJson;
+    if (allowed){
+      this.sourceTemplateUpdated = updatedContentAsJson;
+    } else {
+      this.sourceTemplateUpdated = previousContentAsJson;
+      this.sourceTemplate= previousContentAsJson;
+    }
 
     // console.log("Step onSourceTemplateChanged", this.mapping.sourceTemplate, this.mapping.targetTemplate);
   }
@@ -838,18 +848,28 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onTargetTemplateChanged(contentChanges: ContentChanges): void {
     const { previousContent, updatedContent } = contentChanges;
-    console.log("Content changes:", contentChangeAllowed(contentChanges));
-    let contentAsJson;
+    const allowed = contentChangeAllowed(contentChanges);
+    console.log("Content changes:", allowed);
+    let updatedContentAsJson;
+    let previousContentAsJson;
     if (_.has(updatedContent, 'text') && updatedContent['text']) {
       try {
-
+        updatedContentAsJson = JSON.parse(updatedContent['text']);
+        previousContentAsJson = JSON.parse(previousContent['text']);
       } catch (error) {
         // ignore parsing error
-      } contentAsJson = JSON.parse(updatedContent['text']);
+      }
     } else {
-      contentAsJson = updatedContent['json'];
+      updatedContentAsJson = updatedContent['json'];
+      previousContentAsJson = previousContent['json'];
     }
-    this.targetTemplateUpdated = contentAsJson;
+    if (allowed){
+      this.targetTemplateUpdated = updatedContentAsJson;
+    } else {
+      this.targetTemplateUpdated = previousContentAsJson;
+      this.targetTemplate= previousContentAsJson;
+
+    }
 
     // console.log("Step onTargetTemplateChanged",this.mapping.sourceTemplate,  this.mapping.targetTemplate);
   }
