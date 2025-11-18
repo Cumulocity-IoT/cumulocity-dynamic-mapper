@@ -114,7 +114,7 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
 
         payloadTarget.put("$", Mapping.TOKEN_TOPIC_LEVEL, splitTopicExAsList);
         Map<String, String> cod;
-        if (mapping.getSupportsMessageContext()) {
+        if (mapping.getSupportsMessageContext() ||context.getSupportsMessageContext()) {
             cod = new HashMap<String, String>() {
                 {
                     put(ProcessingContext.RETAIN, "false");
@@ -187,7 +187,7 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
             // remove TOPIC_LEVEL
             payloadTarget.delete("$." + Mapping.TOKEN_TOPIC_LEVEL);
             RequestMethod method = RequestMethod.POST;
-            if (mapping.getSupportsMessageContext()) {
+            if (mapping.getSupportsMessageContext() ||context.getSupportsMessageContext()) {
                 String key = payloadTarget
                         .read(String.format("$.%s.%s", Mapping.TOKEN_CONTEXT_DATA, Mapping.CONTEXT_DATA_KEY_NAME));
                 context.setKey(key);

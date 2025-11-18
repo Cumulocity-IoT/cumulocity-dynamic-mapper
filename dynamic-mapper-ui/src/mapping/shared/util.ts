@@ -397,12 +397,13 @@ export function checkTopicsOutboundAreValid(control: AbstractControl) {
 export function expandExternalTemplate(
   template: object,
   mapping: Mapping,
+  supportsMessageContext: boolean,
   levels: string[]
 ): object {
   if (Array.isArray(template)) {
     return template;
   } else {
-    if (mapping.supportsMessageContext) {
+    if (mapping.supportsMessageContext || supportsMessageContext) {
       // Define the context data with specific values
       let contextData;
       if (mapping.direction == Direction.INBOUND) {

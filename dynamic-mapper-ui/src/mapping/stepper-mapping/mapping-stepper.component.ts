@@ -635,7 +635,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.isButtonDisabled$.next(isDisabled);
       this.supportsMessageContext =
         this.deploymentMapEntry.connectorsDetailed?.some(
-          (con) => con.connectorType == ConnectorType.KAFKA || con.connectorType == ConnectorType.WEB_HOOK || isSubstitutionsAsCode(this.mapping)
+          (con) => con.connectorType == ConnectorType.KAFKA || con.connectorType == ConnectorType.WEB_HOOK || con.connectorType == ConnectorType.MQTT || isSubstitutionsAsCode(this.mapping)
         );
     });
   }
@@ -885,6 +885,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.targetTemplate = expandExternalTemplate(
         JSON.parse(getExternalTemplate(this.mapping)),
         this.mapping,
+        this.supportsMessageContext,
         levels
       );
     }
@@ -1041,13 +1042,13 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     // Helper functions for template expansion
     const expandSource = (template: any) =>
       this.mapping.direction === Direction.INBOUND
-        ? expandExternalTemplate(template, this.mapping, levels)
+        ? expandExternalTemplate(template, this.mapping, this.supportsMessageContext, levels)
         : expandC8YTemplate(template, this.mapping);
 
     const expandTarget = (template: any) =>
       this.mapping.direction === Direction.INBOUND
         ? expandC8YTemplate(template, this.mapping)
-        : expandExternalTemplate(template, this.mapping, levels);
+        : expandExternalTemplate(template, this.mapping, this.supportsMessageContext, levels);
 
     // Initialize templates if in CREATE mode and not yet initialized
     if (
@@ -1102,7 +1103,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     if (this.stepperConfiguration.direction == Direction.INBOUND) {
       this.sourceTemplate = expandExternalTemplate(
         this.sourceTemplate,
-        this.mapping,
+        this.mapping, this.supportsMessageContext,
         splitTopicExcludingSeparator(this.mapping.mappingTopicSample, false)
       );
     } else {
@@ -1131,7 +1132,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     if (this.stepperConfiguration.direction == Direction.INBOUND) {
       this.sourceTemplate = expandExternalTemplate(
         this.sourceTemplate,
-        this.mapping,
+        this.mapping, this.supportsMessageContext,
         splitTopicExcludingSeparator(this.mapping.mappingTopicSample, false)
       );
     } else {
