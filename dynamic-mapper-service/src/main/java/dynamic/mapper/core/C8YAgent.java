@@ -833,16 +833,13 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                         // Device does not exist
                         // append external id to name
                         mor.setName(mor.getName());
-                        /*
-                         * mor.set(new Agent());
-                         * HashMap<String, String> agentFragments = new HashMap<>();
-                         * agentFragments.put("name", "Dynamic Mapper");
-                         * agentFragments.put("version", version);
-                         * agentFragments.put("url",
-                         * "https://github.com/Cumulocity-IoT/cumulocity-dynamic-mapper");
-                         * agentFragments.put("maintainer", "Open-Source");
-                         * mor.set(agentFragments, "c8y_Agent");
-                         */
+                        mor.set(new Agent());
+                        HashMap<String, String> agentFragments = new HashMap<>();
+                        agentFragments.put("name", "Dynamic Mapper");
+                        agentFragments.put("version", version);
+                        agentFragments.put("url", "https://github.com/Cumulocity-IoT/cumulocity-dynamic-mapper");
+                        agentFragments.put("maintainer", "Open-Source");
+                        mor.set(agentFragments, "c8y_Agent");
                         mor.set(new IsDevice());
                         // remove id only if not testing
                         if (!testing) {
