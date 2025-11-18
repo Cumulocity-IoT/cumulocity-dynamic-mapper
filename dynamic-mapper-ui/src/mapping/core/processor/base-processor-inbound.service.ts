@@ -248,7 +248,7 @@ export abstract class BaseProcessorInbound {
           sourceId: device.value,
           externalIdType: mapping.externalIdType,
           request: payloadTarget,
-          targetAPI: API.INVENTORY.name
+          api: API.INVENTORY.name
         });
         try {
           const identity: IExternalIdentity = mapping.useExternalId ? {
@@ -270,7 +270,7 @@ export abstract class BaseProcessorInbound {
           sourceId: device.value,
           externalIdType: mapping.externalIdType,
           request: payloadTarget,
-          targetAPI: API[mapping.targetAPI].name
+          api: API[mapping.targetAPI].name
         });
         try {
           const response = await this.c8yClient.createMEAO(context);
@@ -324,7 +324,7 @@ export abstract class BaseProcessorInbound {
       method: context.mapping.updateExistingDevice ? 'POST' : 'PATCH',
       externalIdType: identity?.externalId,
       request,
-      targetAPI: API.INVENTORY.name,
+      api: API.INVENTORY.name,
       hidden: !context.mapping.createNonExistingDevice
     });
 

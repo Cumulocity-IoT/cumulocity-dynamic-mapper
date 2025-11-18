@@ -55,8 +55,13 @@
                 selectedResult$ | async
                 }}</span>
             </h6>
-          </div>
 
+            <div>
+              <span class="tag tag--success" *ngIf="testingModel?.api">{{
+                testingModel.api
+                }}</span>
+            </div>
+          </div>
           <d11r-mapping-json-editor2 [options]="editorOptionsDefault" [data]="testingModel.request"
             [class]="'jse-main-tiny'" #editorTestingRequest id="editorTestingRequest">
           </d11r-mapping-json-editor2>
@@ -68,13 +73,11 @@
         </div>
       </div>
     </div>
-    <div class="d-flex"
-      *ngIf="mapping.direction !== Direction.OUTBOUND && !isSubstitutionsAsCode(mapping)">
+    <div class="d-flex" *ngIf="mapping.direction !== Direction.OUTBOUND && !isSubstitutionsAsCode(mapping)">
       <div class="form-block legend col-lg-10 col-lg-offset-1 col-md-10 col-md-offset-1">
       </div>
     </div>
-    <div class="d-flex"
-      *ngIf="mapping.direction !== Direction.OUTBOUND && !isSubstitutionsAsCode(mapping)">
+    <div class="d-flex" *ngIf="mapping.direction !== Direction.OUTBOUND && !isSubstitutionsAsCode(mapping)">
       <div class="col-lg-5 col-lg-offset-1 col-md-5 col-md-offset-1 column-right-border"></div>
       <div class="col-lg-5 column-left-border">
         <div class="form-group">

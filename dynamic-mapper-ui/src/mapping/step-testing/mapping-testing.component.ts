@@ -52,6 +52,7 @@ interface TestingModel {
   request?: any;
   response?: any;
   selectedResult: number;
+  api?: any;
 }
 
 @Component({
@@ -72,6 +73,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   @ViewChild('editorTestingResponse') editorTestingResponse!: JsonEditorComponent;
 
   readonly Direction = Direction;
+  readonly JSON = JSON;
   readonly MappingType = MappingType;
   readonly isSubstitutionsAsCode = isSubstitutionsAsCode;
 
@@ -288,8 +290,9 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   }
 
   private updateTestingModelFromResult(result: DynamicMapperRequest): void {
-    const { request, response, targetAPI, error } = result;
+    const { request, response, api, error } = result;
     this.testingModel.request = sortObjectKeys(request);
+    this.testingModel.api = api;
     if (response) { this.testingModel.response = sortObjectKeys(response); }
     this.testingModel.errorMsg = error;
 

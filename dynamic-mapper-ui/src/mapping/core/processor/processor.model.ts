@@ -26,7 +26,7 @@ import { SubstitutionContext } from './processor-js.model';
 export interface DynamicMapperRequest {
   predecessor?: number;
   method?: string;
-  targetAPI?: string;
+  api?: string;
   sourceId?: any;
   externalId?: string;
   externalIdType?: string;

@@ -137,7 +137,7 @@ export abstract class BaseProcessorOutbound {
         sourceId: deviceSource,
         externalIdType: mapping.externalIdType,
         request: payloadTarget,
-        targetAPI: API[mapping.targetAPI].name
+        api: API[mapping.targetAPI].name
       });
       try {
         const response = await this.mqttClient.createMEAO(context);
