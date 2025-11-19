@@ -434,12 +434,14 @@ public class Mapping implements Serializable {
         return mp;
     }
 
+    @JsonIgnore
     public Boolean isTransformationAsCode() {
         return MappingType.CODE_BASED.equals(this.mappingType) ||
                 TransformationType.SUBSTITUTION_AS_CODE.equals(this.transformationType) ||
                 TransformationType.SMART_FUNCTION.equals(this.transformationType);
     }
 
+    @JsonIgnore
     public Boolean isSubstitutionAsCode() {
         return MappingType.CODE_BASED.equals(this.mappingType) ||
                 TransformationType.SUBSTITUTION_AS_CODE.equals(this.transformationType);

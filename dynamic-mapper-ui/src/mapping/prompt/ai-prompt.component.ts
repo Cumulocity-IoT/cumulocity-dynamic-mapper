@@ -276,7 +276,7 @@ export class AIPromptComponent implements OnInit, OnDestroy, AfterViewChecked {
         const jsContent = match[1].trim();
 
         // Validate that it contains a function (basic validation)
-        if (jsContent.includes('function') && jsContent.includes('extractFromSource')) {
+        if (jsContent.includes('function') && (jsContent.includes('function extractFromSource') || jsContent.includes('function onMessage'))) {
           this.generatedCode = jsContent;
           this.valid = true;
           this.alertService.success('JavaScript code extracted successfully!');
