@@ -47,7 +47,8 @@ import {
   createMultiSelection,
   TextContent,
   isValueSelection,
-  ContextMenuItem
+  ContextMenuItem,
+  OnChangeStatus // Add this import
 } from 'vanilla-jsoneditor';
 
 import type { JSONPath } from 'immutable-json-patch'
@@ -94,6 +95,7 @@ export class JsonEditorComponent implements OnInit, OnDestroy, AfterViewInit {
 
   initRan: boolean = true;
   identifier: string;
+  private isReverting: boolean = false; // Flag to prevent emission during revert
 
   constructor(
     private cdr: ChangeDetectorRef
@@ -105,8 +107,7 @@ export class JsonEditorComponent implements OnInit, OnDestroy, AfterViewInit {
   id = `angjsoneditor${Math.floor(Math.random() * 1000000)}`;
   content: Content = {
     text: undefined,
-    json: {
-    }
+    json: {}
   };
 
   ngOnInit() {
@@ -145,8 +146,14 @@ export class JsonEditorComponent implements OnInit, OnDestroy, AfterViewInit {
           previousContent,
           { contentErrors, patchResult }
         ) => {
+          // Skip emission if we're reverting
+          if (this.isReverting) {
+            this.isReverting = false;
+            return;
+          }
+
           this.content = updatedContent;
-          this.contentChanged.emit({previousContent,updatedContent});
+          this.contentChanged.emit({ previousContent, updatedContent });
         },
         onSelect: this.onSelect.bind(this),
         onRenderMenu: this.onRenderMenu.bind(this),
@@ -169,14 +176,10 @@ export class JsonEditorComponent implements OnInit, OnDestroy, AfterViewInit {
 
   onClassName(path: JSONPath, value: any): string | undefined {
     let result = undefined;
-    // if (path.join('.') == this.identifier || path.join('.') == `${TOKEN_IDENTITY}.externalId` || path.join('.') == '_IDENTITY_.c8ySourceId') result = 'id-node';
-    // if (path.join('.') == `${TOKEN_IDENTITY}.externalId` || path.join('.') == '_IDENTITY_.c8ySourceId') result = 'id-node';
     return result;
   }
 
   onRenderMenu(items: MenuItem[]): MenuItem[] | undefined {
-    // console.log("MenuItems:", items);
-    // remove buttons for table-mode, transform, sort
     items.splice(
       items.findIndex((i) => i['className'] === 'jse-transform'),
       1
@@ -193,21 +196,16 @@ export class JsonEditorComponent implements OnInit, OnDestroy, AfterViewInit {
       const item = items[i];
       if (item.type === 'button') {
         if (item.text === textToRemove) {
-          // Remove the item with name 'NotUsed'
           items.splice(i, 1);
         }
       } else if (item.type === 'row' || item.type === ('column' as any)) {
-        // Recursively remove items with name 'NotUsed' from the nested array
         this.removeItem(item['items'] as any, textToRemove);
-        // Remove the entire parent item if it becomes empty after removal
         if (item['items'].length === 0) {
           items.splice(i, 1);
         }
       } else if (item.type === 'dropdown-button') {
-        // Recursively remove items with name 'NotUsed' from the nested array
         this.removeItem(item['items'] as any, textToRemove);
         this.removeItem([item['main']] as any, textToRemove);
-        // Remove the entire parent item if it becomes empty after removal
         if (item.items.length === 0) {
           items.splice(i, 1);
         }
@@ -219,28 +217,20 @@ export class JsonEditorComponent implements OnInit, OnDestroy, AfterViewInit {
     items: ContextMenuItem[],
     context: { mode: 'tree' | 'text' | 'table'; modal: boolean }
   ): ContextMenuItem[] | undefined {
-    // ('ContextMenü', items, context);
     this.removeItem(items, 'Transform');
     return items;
   }
 
   private onSelect(selection: JSONEditorSelection | undefined) {
     const c: any = selection;
-    // ignore emitting change events when the path was set programmatically to avoid circles
     if (!c?.triggeredSelection) {
       if (isKeySelection(selection) || isValueSelection(selection)) {
-        // const st = stringifyJSONPath((selection as any).path);
         const st = stringifyJSONPathCustom((selection as any).path);
         this.pathChanged.emit(st);
-        // console.log('Selected path:', st);
       } else if (isMultiSelection(selection)) {
-        // const st = stringifyJSONPath((selection as any).anchorPath);
         const st = stringifyJSONPathCustom((selection as any).anchorPath);
         this.pathChanged.emit(st);
-        // console.log('Selected anchorPath:', st);
       }
-    } else {
-      // console.log('Ignoring selection as is was triggered:', selection);
     }
   }
 
@@ -251,18 +241,12 @@ export class JsonEditorComponent implements OnInit, OnDestroy, AfterViewInit {
 
   async setSelectionToPath(pathString: string) {
     const containsSpecialChars = (str: string): boolean => {
-      // IMPORTANT: here all special characters that are part of an expression must be listed, as they cause the editor to crash 
-      // when the path is used in a selection, e.g. 2 * c8yTemperature.T.value
       const regex = /[\$\(\)&\s\+\-\/\*\=]/;
       return regex.test(str);
     }
     if (pathString && !containsSpecialChars(pathString)) {
-      //const path = parseJSONPath(pathString);
       const path = parseJSONPathCustom(pathString);
-      // console.log('Set selection to path:', pathString, path);
       const selection: any = createMultiSelection(path, path);
-      // const selection: any = createKeySelection(path, false);
-      // marker to ignore emitting change events when the path was set programmatically
       selection.triggeredSelection = false;
 
       try {
@@ -293,8 +277,26 @@ export class JsonEditorComponent implements OnInit, OnDestroy, AfterViewInit {
     this.editor.set(value);
   }
 
+  /**
+   * Revert content without triggering onChange event and preserving expansion state
+   */
+  revertContent(json: any) {
+    this.isReverting = true;
+    const value: JSONContent = {
+      json: json
+    };
+    // Use patch instead of set to maintain the expansion state
+    try {
+      this.editor.update(value);
+    } catch (error) {
+      // If update fails, fall back to set
+      console.warn('Update failed, falling back to set:', error);
+      this.editor.set(value);
+    }
+    this.content = value;
+  }
+
   updateOptions(opts) {
     this.editor?.updateProps(opts)
   }
-
 }

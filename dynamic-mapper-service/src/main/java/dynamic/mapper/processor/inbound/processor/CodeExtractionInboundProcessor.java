@@ -65,8 +65,8 @@ public class CodeExtractionInboundProcessor extends BaseProcessor {
     @Override
     public void process(Exchange exchange) throws Exception {
         ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
-        Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
+        Mapping mapping = context.getMapping();
         Boolean testing = context.getTesting();
 
         try {
@@ -77,18 +77,21 @@ public class CodeExtractionInboundProcessor extends BaseProcessor {
                 lineNumber = e.getStackTrace()[0].getLineNumber();
             }
             String errorMessage = String.format(
-                    "%s - Error in CodeExtractionInboundProcessor: %s for mapping: %s, line %s",
+                    "Tenant %s - Error in CodeExtractionInboundProcessor: %s for mapping: %s, line %s",
                     tenant, mapping.getName(), e.getMessage(), lineNumber);
             log.error(errorMessage, e);
-            if (e instanceof ProcessingException)
+
+            if (e instanceof ProcessingException) {
                 context.addError((ProcessingException) e);
-            else
+            } else {
                 context.addError(new ProcessingException(errorMessage, e));
+            }
 
             if (!testing) {
                 MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
                 mappingStatus.errors++;
                 mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+                context.setIgnoreFurtherProcessing(true);
             }
         } finally {
             // Close the Context completely
@@ -109,7 +112,7 @@ public class CodeExtractionInboundProcessor extends BaseProcessor {
         Value result = null;
         Value sourceValue = null;
         Value bindings = null;
-        
+
         try {
             String tenant = context.getTenant();
             Mapping mapping = context.getMapping();
@@ -119,7 +122,7 @@ public class CodeExtractionInboundProcessor extends BaseProcessor {
             Map<String, List<SubstituteValue>> processingCache = context.getProcessingCache();
 
             if (serviceConfiguration.getLogPayload() || mapping.getDebug()) {
-                String payload = toPrettyJsonString(payloadObject);  // is this and this required?
+                String payload = toPrettyJsonString(payloadObject); // is this and this required?
                 log.info("{} - Incoming payload (patched) in extractFromSource(): {} {} {} {}", tenant,
                         payload,
                         serviceConfiguration.getLogPayload(), mapping.getDebug(),
@@ -170,27 +173,26 @@ public class CodeExtractionInboundProcessor extends BaseProcessor {
                 // Add topic levels as metadata
                 List<String> splitTopicAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
                 jsonObject.put(Mapping.TOKEN_TOPIC_LEVEL, splitTopicAsList);
-                
-                Map<String, String> contextData = new HashMap<String, String>() {{
-                    put("api", mapping.getTargetAPI().toString());
-                }};
+
+                Map<String, String> contextData = new HashMap<String, String>() {
+                    {
+                        put("api", mapping.getTargetAPI().toString());
+                    }
+                };
                 jsonObject.put(Mapping.TOKEN_CONTEXT_DATA, contextData);
 
                 // Execute JavaScript function
                 result = sourceValue.execute(
-                    new SubstitutionContext(
-                        context.getMapping().getGenericDeviceIdentifier(),
-                        payloadAsString, 
-                        context.getTopic()
-                    )
-                );
+                        new SubstitutionContext(
+                                context.getMapping().getGenericDeviceIdentifier(),
+                                payloadAsString,
+                                context.getTopic()));
 
                 // CRITICAL: Convert with Context still open
                 SubstitutionResult typedResult = deepConvertSubstitutionResultWithContext(
-                    result, 
-                    graalContext,
-                    tenant
-                );
+                        result,
+                        graalContext,
+                        tenant);
 
                 // Process the converted result
                 if (typedResult == null || typedResult.substitutions == null || typedResult.substitutions.isEmpty()) {
@@ -198,40 +200,38 @@ public class CodeExtractionInboundProcessor extends BaseProcessor {
                     log.info("{} - Extraction returned no result, payload: {}", tenant, jsonObject);
                 } else {
                     Set<String> keySet = typedResult.getSubstitutions().keySet();
-                    
+
                     for (String key : keySet) {
                         List<SubstituteValue> processingCacheEntry = new ArrayList<>();
                         List<SubstituteValue> values = typedResult.getSubstitutions().get(key);
-                        
+
                         if (values != null && !values.isEmpty() && values.get(0).expandArray) {
                             // Handle array expansion
                             for (SubstituteValue substitutionValue : values) {
                                 SubstitutionEvaluation.processSubstitute(
-                                    tenant, 
-                                    processingCacheEntry,
-                                    substitutionValue.value,
-                                    substitutionValue, 
-                                    mapping
-                                );
+                                        tenant,
+                                        processingCacheEntry,
+                                        substitutionValue.value,
+                                        substitutionValue,
+                                        mapping);
                             }
                         } else if (values != null && !values.isEmpty()) {
                             SubstituteValue firstValue = values.get(0);
                             SubstitutionEvaluation.processSubstitute(
-                                tenant, 
-                                processingCacheEntry, 
-                                firstValue.value,
-                                firstValue, 
-                                mapping
-                            );
+                                    tenant,
+                                    processingCacheEntry,
+                                    firstValue.value,
+                                    firstValue,
+                                    mapping);
                         }
-                        
+
                         processingCache.put(key, processingCacheEntry);
 
                         if (key.equals(Mapping.KEY_TIME)) {
                             substitutionTimeExists = true;
                         }
                     }
-                    
+
                     // Handle alarms
                     if (typedResult.alarms != null && !typedResult.alarms.isEmpty()) {
                         for (String alarm : typedResult.alarms) {
@@ -239,36 +239,33 @@ public class CodeExtractionInboundProcessor extends BaseProcessor {
                             log.debug("{} - Alarm added: {}", tenant, alarm);
                         }
                     }
-                    
+
                     if (mapping.getDebug() || serviceConfiguration.getLogPayload()) {
-                        log.info("{} - Extraction returned {} results, payload: {}", 
-                            tenant, 
-                            keySet.size(), 
-                            jsonObject);
+                        log.info("{} - Extraction returned {} results, payload: {}",
+                                tenant,
+                                keySet.size(),
+                                jsonObject);
                     }
                 }
             }
 
             // Add default time if not exists
-            if (!substitutionTimeExists && 
-                mapping.getTargetAPI() != API.INVENTORY &&
-                mapping.getTargetAPI() != API.OPERATION) {
-                
+            if (!substitutionTimeExists &&
+                    mapping.getTargetAPI() != API.INVENTORY &&
+                    mapping.getTargetAPI() != API.OPERATION) {
+
                 List<SubstituteValue> processingCacheEntry = processingCache.getOrDefault(
-                    Mapping.KEY_TIME,
-                    new ArrayList<>()
-                );
+                        Mapping.KEY_TIME,
+                        new ArrayList<>());
                 processingCacheEntry.add(
-                    new SubstituteValue(
-                        new DateTime().toString(),
-                        TYPE.TEXTUAL, 
-                        RepairStrategy.CREATE_IF_MISSING, 
-                        false
-                    )
-                );
+                        new SubstituteValue(
+                                new DateTime().toString(),
+                                TYPE.TEXTUAL,
+                                RepairStrategy.CREATE_IF_MISSING,
+                                false));
                 processingCache.put(Mapping.KEY_TIME, processingCacheEntry);
             }
-            
+
         } catch (Exception e) {
             throw new ProcessingException("Extraction failed: " + e.getMessage(), e);
         } finally {
@@ -283,10 +280,10 @@ public class CodeExtractionInboundProcessor extends BaseProcessor {
      * CRITICAL: Deep convert SubstitutionResult WITH Context still open
      */
     private SubstitutionResult deepConvertSubstitutionResultWithContext(
-            Value result, 
+            Value result,
             Context graalContext,
             String tenant) {
-        
+
         if (result == null || result.isNull()) {
             return new SubstitutionResult();
         }
@@ -294,46 +291,45 @@ public class CodeExtractionInboundProcessor extends BaseProcessor {
         try {
             if (result.isHostObject()) {
                 Object hostObj = result.asHostObject();
-                
+
                 if (hostObj instanceof SubstitutionResult) {
                     SubstitutionResult originalResult = (SubstitutionResult) hostObj;
-                    
-                    log.debug("{} - Converting SubstitutionResult with {} substitutions (context is open)", 
-                        tenant, originalResult.substitutions.size());
-                    
+
+                    log.debug("{} - Converting SubstitutionResult with {} substitutions (context is open)",
+                            tenant, originalResult.substitutions.size());
+
                     SubstitutionResult cleanResult = new SubstitutionResult();
-                    
+
                     for (Map.Entry<String, List<SubstituteValue>> entry : originalResult.substitutions.entrySet()) {
                         String key = entry.getKey();
                         List<SubstituteValue> originalValues = entry.getValue();
                         List<SubstituteValue> cleanValues = new ArrayList<>();
-                        
+
                         for (SubstituteValue subValue : originalValues) {
                             SubstituteValue cleanSubValue = convertSubstituteValueWithContext(
-                                subValue, 
-                                graalContext,
-                                tenant
-                            );
+                                    subValue,
+                                    graalContext,
+                                    tenant);
                             cleanValues.add(cleanSubValue);
                         }
-                        
+
                         cleanResult.substitutions.put(key, cleanValues);
                     }
-                    
+
                     if (originalResult.alarms != null) {
                         cleanResult.alarms.addAll(originalResult.alarms);
                     }
-                    
-                    log.debug("{} - Successfully converted SubstitutionResult with {} substitutions", 
-                        tenant, cleanResult.substitutions.size());
-                    
+
+                    log.debug("{} - Successfully converted SubstitutionResult with {} substitutions",
+                            tenant, cleanResult.substitutions.size());
+
                     return cleanResult;
                 }
             }
-            
+
             log.warn("{} - Result is not a SubstitutionResult host object", tenant);
             return new SubstitutionResult();
-            
+
         } catch (Exception e) {
             log.error("{} - Error converting SubstitutionResult: {}", tenant, e.getMessage(), e);
             throw new RuntimeException("Failed to convert substitution result", e);
@@ -344,33 +340,33 @@ public class CodeExtractionInboundProcessor extends BaseProcessor {
      * Convert SubstituteValue WITH Context available
      */
     private SubstituteValue convertSubstituteValueWithContext(
-            SubstituteValue original, 
+            SubstituteValue original,
             Context graalContext,
             String tenant) {
-        
+
         Object cleanValue = original.value;
-        
+
         if (cleanValue != null) {
             String className = cleanValue.getClass().getName();
-            
-            if (className.contains("org.graalvm.polyglot") || 
-                className.contains("com.oracle.truffle.polyglot")) {
-                
+
+            if (className.contains("org.graalvm.polyglot") ||
+                    className.contains("com.oracle.truffle.polyglot")) {
+
                 log.debug("{} - Converting GraalVM/Truffle object: {}", tenant, className);
-                
+
                 try {
                     // Wrap it as a Value and convert
                     Value valueWrapper = graalContext.asValue(cleanValue);
                     cleanValue = JavaScriptInteropHelper.convertValueToJavaObject(valueWrapper);
-                    
-                    log.debug("{} - Converted to: {} (type: {})", 
-                        tenant, 
-                        cleanValue,
-                        cleanValue != null ? cleanValue.getClass().getName() : "null");
-                    
+
+                    log.debug("{} - Converted to: {} (type: {})",
+                            tenant,
+                            cleanValue,
+                            cleanValue != null ? cleanValue.getClass().getName() : "null");
+
                 } catch (Exception e) {
                     log.error("{} - Failed to convert via asValue: {}", tenant, e.getMessage());
-                    
+
                     // Try direct cast to Value
                     try {
                         if (cleanValue instanceof Value) {
@@ -385,7 +381,7 @@ public class CodeExtractionInboundProcessor extends BaseProcessor {
                 }
             }
         }
-        
+
         // Final validation
         if (cleanValue != null) {
             String finalClassName = cleanValue.getClass().getName();
@@ -395,12 +391,11 @@ public class CodeExtractionInboundProcessor extends BaseProcessor {
                 cleanValue = cleanValue.toString();
             }
         }
-        
+
         return new SubstituteValue(
-            cleanValue,
-            original.type,
-            original.repairStrategy,
-            original.expandArray
-        );
+                cleanValue,
+                original.type,
+                original.repairStrategy,
+                original.expandArray);
     }
 }

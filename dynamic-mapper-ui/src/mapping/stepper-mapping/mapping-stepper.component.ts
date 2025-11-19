@@ -600,60 +600,112 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   onSourceTemplateChanged(contentChanges: ContentChanges): void {
     const { previousContent, updatedContent } = contentChanges;
-    const allowed = contentChangeAllowed(contentChanges);
 
+    // Always allow the change during editing
     let updatedContentAsJson;
-    let previousContentAsJson;
 
     if (_.has(updatedContent, 'text') && updatedContent['text']) {
       try {
         updatedContentAsJson = JSON.parse(updatedContent['text']);
-        previousContentAsJson = JSON.parse(previousContent['text']);
       } catch (error) {
-        // ignore parsing error
+        // Syntax error - allow it, user is still typing
+        this.sourceTemplateUpdated = updatedContent;
+        this.isContentChangeValid$.next(true);
+        return;
       }
     } else {
       updatedContentAsJson = updatedContent['json'];
-      previousContentAsJson = previousContent['json'];
     }
 
-    if (allowed) {
-      this.sourceTemplateUpdated = updatedContentAsJson;
-      this.isContentChangeValid$.next(true);
-    } else {
-      this.isContentChangeValid$.next(false);
-      this.sourceTemplateUpdated = previousContentAsJson;
-      this.editorSourceStepTemplate.set(this.sourceTemplate);
+    this.sourceTemplateUpdated = updatedContentAsJson;
+
+    // Just validate and show warning, don't block
+    const hasProtectedChanges = !this.validateProtectedFields(
+      this.sourceTemplate,
+      updatedContentAsJson
+    );
+
+    this.isContentChangeValid$.next(!hasProtectedChanges);
+
+    if (hasProtectedChanges) {
+      this.raiseAlert({
+        type: 'warning',
+        text: "Warning: Changes to _IDENTITY_, _TOPIC_LEVEL_, or _CONTEXT_DATA_ will be reverted when saving."
+      });
     }
   }
 
   onTargetTemplateChanged(contentChanges: ContentChanges): void {
     const { previousContent, updatedContent } = contentChanges;
-    const allowed = contentChangeAllowed(contentChanges);
 
+    // Always allow the change during editing
     let updatedContentAsJson;
-    let previousContentAsJson;
 
     if (_.has(updatedContent, 'text') && updatedContent['text']) {
       try {
         updatedContentAsJson = JSON.parse(updatedContent['text']);
-        previousContentAsJson = JSON.parse(previousContent['text']);
       } catch (error) {
-        // ignore parsing error
+        // Syntax error - allow it, user is still typing
+        this.targetTemplateUpdated = updatedContent;
+        this.isContentChangeValid$.next(true);
+        return;
       }
     } else {
       updatedContentAsJson = updatedContent['json'];
-      previousContentAsJson = previousContent['json'];
     }
 
-    if (allowed) {
-      this.targetTemplateUpdated = updatedContentAsJson;
-      this.isContentChangeValid$.next(true);
-    } else {
-      this.isContentChangeValid$.next(false);
-      this.targetTemplateUpdated = previousContentAsJson;
-      this.editorTargetStepTemplate.set(this.targetTemplate);
+    this.targetTemplateUpdated = updatedContentAsJson;
+
+    // Just validate and show warning, don't block
+    const hasProtectedChanges = !this.validateProtectedFields(
+      this.targetTemplate,
+      updatedContentAsJson
+    );
+
+    this.isContentChangeValid$.next(!hasProtectedChanges);
+
+    if (hasProtectedChanges) {
+      this.raiseAlert({
+        type: 'warning',
+        text: "Warning: Changes to _IDENTITY_, _TOPIC_LEVEL_, or _CONTEXT_DATA_ will be reverted when saving."
+      });
     }
+  }
+
+  private validateProtectedFields(original: any, updated: any): boolean {
+    const protectedFields = ['_IDENTITY_', '_TOPIC_LEVEL_', '_CONTEXT_DATA_'];
+
+    for (const field of protectedFields) {
+      const originalValue = this.findFieldInObject(original, field);
+      const updatedValue = this.findFieldInObject(updated, field);
+
+      if (originalValue !== undefined && !_.isEqual(originalValue, updatedValue)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  private findFieldInObject(obj: any, fieldName: string): any {
+    if (!obj || typeof obj !== 'object') {
+      return undefined;
+    }
+
+    if (obj.hasOwnProperty(fieldName)) {
+      return obj[fieldName];
+    }
+
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key) && typeof obj[key] === 'object') {
+        const result = this.findFieldInObject(obj[key], fieldName);
+        if (result !== undefined) {
+          return result;
+        }
+      }
+    }
+
+    return undefined;
   }
 
   raiseAlert(alert: Alert): void {
