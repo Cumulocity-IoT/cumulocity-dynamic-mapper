@@ -266,9 +266,16 @@ export class MappingStepperService {
             .pipe(
                 map(agents => {
                     const agentNames = agents.map(agent => agent.name);
-                    const requiredAgentName = mapping.mappingType === MappingType.JSON
-                        ? serviceConfiguration?.jsonataAgent
-                        : serviceConfiguration?.javaScriptAgent;
+                    const requiredAgentName = (() => {
+                        switch (mapping.transformationType) {
+                            case TransformationType.JSONATA:
+                                return serviceConfiguration?.jsonataAgent;
+                            case TransformationType.SMART_FUNCTION:
+                                return serviceConfiguration?.smartFunctionAgent;
+                            default:
+                                return serviceConfiguration?.javaScriptAgent;
+                        }
+                    })();
 
                     const hasRequiredAgent = requiredAgentName && agentNames.includes(requiredAgentName);
                     const selectedAgent = hasRequiredAgent

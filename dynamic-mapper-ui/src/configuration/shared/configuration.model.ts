@@ -38,6 +38,7 @@ export interface ServiceConfiguration {
   maxCPUTimeMS: number;
   jsonataAgent: string;
   javaScriptAgent: string;
+  smartFunctionAgent: string;
 }
 
 export enum TemplateType {

@@ -79,6 +79,7 @@ export class ServiceConfigurationTraceComponent implements OnInit, OnDestroy {
     maxCPUTimeMS: 5000,  // 5 seconds
     jsonataAgent: undefined,
     javaScriptAgent: undefined,
+    smartFunctionAgent: undefined,
   };
 
   async ngOnInit() {

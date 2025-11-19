@@ -39,16 +39,13 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
-
 import static com.dashjoin.jsonata.Jsonata.jsonata;
 import static dynamic.mapper.model.Substitution.toPrettyJsonString;
-
 
 @Service
 @Slf4j
@@ -68,19 +65,21 @@ public class AIAgentService {
 
     private static final String DEFAULT_JSONATA_AGENT_NAME = "dynamic-mapper-jsonata-agent";
     private static final String DEFAULT_JAVASCRIPT_AGENT_NAME = "dynamic-mapper-javascript-agent";
+    private static final String DEFAULT_SMART_FUNCTION_AGENT_NAME = "dynamic-mapper-smart-function-agent";
     private static final String MCP_SSE_ENDPOINT = "/service/dynamic-mapper-service/sse";
     private static final String JSONATA_TOOL_NAME = "evaluate_jsonata_expression";
     private static final String MCP_SERVER_NAME = "Dynamic Mapper MCP Server";
-
 
     public void initializeAIAgents() {
         if (checkAIAgentAvailable()) {
             MCPServer mcpServer = null;
             ResponseEntity<MCPServers> mcpServerResponse = getMCPServer();
-            if (mcpServerResponse != null && mcpServerResponse.getStatusCode().is2xxSuccessful() && mcpServerResponse.getBody() != null) {
+            if (mcpServerResponse != null && mcpServerResponse.getStatusCode().is2xxSuccessful()
+                    && mcpServerResponse.getBody() != null) {
                 MCPServers mcpServers = mcpServerResponse.getBody();
                 if (mcpServers.getServers().isEmpty()) {
-                    log.info("{} - No MCP Servers found in AI Agent Manager, creating MCP Server...", contextService.getContext().getTenant());
+                    log.info("{} - No MCP Servers found in AI Agent Manager, creating MCP Server...",
+                            contextService.getContext().getTenant());
                     mcpServer = new MCPServer();
                     mcpServer.setUrl(clientProperties.getBaseURL() + MCP_SSE_ENDPOINT);
                     mcpServer.setName(MCP_SERVER_NAME);
@@ -89,7 +88,8 @@ public class AIAgentService {
                     try {
                         ResponseEntity<String> response = createMCPServer(mcpServer);
                         if (response != null && !response.getStatusCode().is2xxSuccessful()) {
-                            log.error("{} - Failed to create MCP Server: {}", contextService.getContext().getTenant(), response.getBody());
+                            log.error("{} - Failed to create MCP Server: {}", contextService.getContext().getTenant(),
+                                    response.getBody());
                         } else {
                             log.info("{} - MCP Server created successfully", contextService.getContext().getTenant());
                         }
@@ -98,14 +98,20 @@ public class AIAgentService {
                     }
 
                 } else {
-                    if (mcpServers.getServers().stream().anyMatch(server -> server.getUrl().equals(clientProperties.getBaseURL() + MCP_SSE_ENDPOINT) || server.getName().equals(MCP_SERVER_NAME))) {
-                        log.info("{} - MCP Server already exists, not re-creating it", contextService.getContext().getTenant());
+                    if (mcpServers.getServers().stream()
+                            .anyMatch(server -> server.getUrl().equals(clientProperties.getBaseURL() + MCP_SSE_ENDPOINT)
+                                    || server.getName().equals(MCP_SERVER_NAME))) {
+                        log.info("{} - MCP Server already exists, not re-creating it",
+                                contextService.getContext().getTenant());
                         mcpServer = mcpServers.getServers().stream()
-                                .filter(server -> server.getUrl().equals(clientProperties.getBaseURL() + MCP_SSE_ENDPOINT) || server.getName().equals(MCP_SERVER_NAME))
+                                .filter(server -> server.getUrl()
+                                        .equals(clientProperties.getBaseURL() + MCP_SSE_ENDPOINT)
+                                        || server.getName().equals(MCP_SERVER_NAME))
                                 .findFirst()
                                 .orElse(null);
                     } else {
-                        log.info("{} - MCP Server not found, creating MCP Server...", contextService.getContext().getTenant());
+                        log.info("{} - MCP Server not found, creating MCP Server...",
+                                contextService.getContext().getTenant());
                         mcpServer = new MCPServer();
                         mcpServer.setUrl(clientProperties.getBaseURL() + MCP_SSE_ENDPOINT);
                         mcpServer.setName(MCP_SERVER_NAME);
@@ -114,9 +120,11 @@ public class AIAgentService {
                         try {
                             ResponseEntity<String> response = createMCPServer(mcpServer);
                             if (response != null && !response.getStatusCode().is2xxSuccessful()) {
-                                log.error("{} - Failed to create MCP Server: {}", contextService.getContext().getTenant(), response.getBody());
+                                log.error("{} - Failed to create MCP Server: {}",
+                                        contextService.getContext().getTenant(), response.getBody());
                             } else {
-                                log.info("{} - MCP Server created successfully", contextService.getContext().getTenant());
+                                log.info("{} - MCP Server created successfully",
+                                        contextService.getContext().getTenant());
                             }
                         } catch (Exception e) {
                             log.error("{} - Failed to create MCP Server", contextService.getContext().getTenant(), e);
@@ -131,13 +139,17 @@ public class AIAgentService {
             if (response != null && response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 List<AIAgent> agents = Arrays.asList(response.getBody());
                 if (agents.isEmpty()) {
-                    log.info("{} - No AIAgents found, creating default agents", contextService.getContext().getTenant());
+                    log.info("{} - No AIAgents found, creating default agents",
+                            contextService.getContext().getTenant());
                     createDefaultAIAgents(mcpServer);
                 } else {
-                    if (agents.stream().anyMatch(agent -> agent.getName().equals(DEFAULT_JSONATA_AGENT_NAME) || agent.getName().equals(DEFAULT_JAVASCRIPT_AGENT_NAME))) {
-                        log.info("{} - AIAgents already exists, not re-creating them", contextService.getContext().getTenant());
+                    if (agents.stream().anyMatch(agent -> agent.getName().equals(DEFAULT_JSONATA_AGENT_NAME)
+                            || agent.getName().equals(DEFAULT_JAVASCRIPT_AGENT_NAME))) {
+                        log.info("{} - AIAgents already exists, not re-creating them",
+                                contextService.getContext().getTenant());
                     } else {
-                        log.info("{} - AIAgents not found, creating AI agents...", contextService.getContext().getTenant());
+                        log.info("{} - AIAgents not found, creating AI agents...",
+                                contextService.getContext().getTenant());
                         createDefaultAIAgents(mcpServer);
                     }
                 }
@@ -174,31 +186,33 @@ public class AIAgentService {
     }
 
     /*
-    public boolean checkMCPServerAvailable() {
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization",
-                contextService.getContext().toCumulocityCredentials().getAuthenticationString());
-        headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
-        String tenant = contextService.getContext().toCumulocityCredentials().getTenantId();
-        ResponseEntity<String> response = null;
-        try {
-            String serverUrl = clientProperties.getBaseURL() + MCP_HEALTH_ENDPOINT;
-            RestTemplate restTemplate = new RestTemplate();
-            HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
-            response = restTemplate.exchange(serverUrl, HttpMethod.GET, requestEntity, String.class);
-        } catch (Exception e) {
-            log.info("{} - MCP-Server is not available", tenant);
-        }
-        if (response != null && response.getStatusCode().is2xxSuccessful()) {
-            log.info("{} - MCP-Server is available", tenant);
-            return true;
-        } else {
-            log.info("{} - MCP-Server is not available", tenant);
-            return false;
-        }
-    }
-    */
-
+     * public boolean checkMCPServerAvailable() {
+     * HttpHeaders headers = new HttpHeaders();
+     * headers.set("Authorization",
+     * contextService.getContext().toCumulocityCredentials().getAuthenticationString
+     * ());
+     * headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
+     * String tenant =
+     * contextService.getContext().toCumulocityCredentials().getTenantId();
+     * ResponseEntity<String> response = null;
+     * try {
+     * String serverUrl = clientProperties.getBaseURL() + MCP_HEALTH_ENDPOINT;
+     * RestTemplate restTemplate = new RestTemplate();
+     * HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
+     * response = restTemplate.exchange(serverUrl, HttpMethod.GET, requestEntity,
+     * String.class);
+     * } catch (Exception e) {
+     * log.info("{} - MCP-Server is not available", tenant);
+     * }
+     * if (response != null && response.getStatusCode().is2xxSuccessful()) {
+     * log.info("{} - MCP-Server is available", tenant);
+     * return true;
+     * } else {
+     * log.info("{} - MCP-Server is not available", tenant);
+     * return false;
+     * }
+     * }
+     */
 
     public void createDefaultAIAgents(MCPServer mcpServer) {
         HashMap<String, String> prompts = getAgentPrompts();
@@ -209,6 +223,8 @@ public class AIAgentService {
                 aiAgent.setName(DEFAULT_JSONATA_AGENT_NAME);
             if (file.equals("javascript"))
                 aiAgent.setName(DEFAULT_JAVASCRIPT_AGENT_NAME);
+            if (file.equals("smartfunction"))
+                aiAgent.setName(DEFAULT_SMART_FUNCTION_AGENT_NAME);
 
             Agent agent = new Agent();
             agent.setMaxSteps(50);
@@ -218,12 +234,13 @@ public class AIAgentService {
             if (mcpServer != null && aiAgent.getName().equals(DEFAULT_JSONATA_AGENT_NAME)) {
                 MCPUsage tools = new MCPUsage();
                 tools.setServerName(mcpServer.getName());
-                tools.setTools(new String[]{JSONATA_TOOL_NAME});
+                tools.setTools(new String[] { JSONATA_TOOL_NAME });
                 aiAgent.setMcp(List.of(tools));
             }
             ResponseEntity<String> response = createAIAgent(aiAgent);
             if (!response.getStatusCode().is2xxSuccessful())
-                log.error("{} - Failed to create AIAgent: {}", contextService.getContext().getTenant(), response.getBody());
+                log.error("{} - Failed to create AIAgent: {}", contextService.getContext().getTenant(),
+                        response.getBody());
         });
     }
 
@@ -236,9 +253,15 @@ public class AIAgentService {
             for (Resource resource : resources) {
                 String fileName = resource.getFilename();
                 if (fileName.startsWith("jsonata"))
-                    prompts.put("jsonata", new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8));
+                    prompts.put("jsonata",
+                            new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8));
                 if (fileName.startsWith("javascript"))
-                    prompts.put("javascript", new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8));
+                    prompts.put("javascript",
+                            new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8));
+                if (fileName.startsWith("smartfunction"))
+                    prompts.put("smartfunction",
+                            new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8));
+
             }
         } catch (Exception e) {
             log.error("{} - Failed to load template resources", contextService.getContext().getTenant(), e);
@@ -319,17 +342,21 @@ public class AIAgentService {
 
     /**
      * Test a JSONata expression against a JSON string.
+     * 
      * @param expression JSONata expression to be evaluated against the source JSON
-     * @param sourceJSON JSON string to be used as source for the JSONata expression evaluation
-     * @return The result of the JSONata expression evaluation as a pretty-printed JSON string
-     * @throws RuntimeException if the evaluation fails
-     * @throws IllegalArgumentException if the expression or source JSON is null or empty
+     * @param sourceJSON JSON string to be used as source for the JSONata expression
+     *                   evaluation
+     * @return The result of the JSONata expression evaluation as a pretty-printed
+     *         JSON string
+     * @throws RuntimeException         if the evaluation fails
+     * @throws IllegalArgumentException if the expression or source JSON is null or
+     *                                  empty
      */
     @Tool(description = "Evaluate a JSONata expression against a JSON object")
     public String evaluateJsonataExpression(String expression, String sourceJSON) {
-        if(expression == null || expression.isEmpty())
+        if (expression == null || expression.isEmpty())
             throw new IllegalArgumentException("JSONata expression cannot be null");
-        if(sourceJSON == null || sourceJSON.isEmpty())
+        if (sourceJSON == null || sourceJSON.isEmpty())
             throw new IllegalArgumentException("Source JSON cannot be null");
         try {
             var expr = jsonata(expression);

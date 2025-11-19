@@ -64,6 +64,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     maxCPUTimeMS: 5000,  // 5 seconds
     jsonataAgent: undefined,
     javaScriptAgent: undefined,
+    smartFunctionAgent: undefined,
   };
   editable2updated: boolean = false;
 
@@ -92,6 +93,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
       maxCPUTimeMS: new FormControl(''),
       jsonataAgent: new FormControl({ value: '', disabled: true }),
       javaScriptAgent: new FormControl({ value: '', disabled: true }),
+      smartFunctionAgent: new FormControl({ value: '', disabled: true }),
     });
     await this.loadData();
     from(this.aiAgentService.getAIAgents())
@@ -104,9 +106,11 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
         if (this.aiAgentDeployed) {
           this.serviceForm.get('javaScriptAgent')?.enable();
           this.serviceForm.get('jsonataAgent')?.enable();
+          this.serviceForm.get('smartFunctionAgent')?.enable();
         } else {
           this.serviceForm.get('javaScriptAgent')?.disable();
           this.serviceForm.get('jsonataAgent')?.disable();
+          this.serviceForm.get('smartFunctionAgent')?.disable();
         }
       });
   }
@@ -146,6 +150,8 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
         this.serviceConfiguration.jsonataAgent,
       javaScriptAgent:
         this.serviceConfiguration.javaScriptAgent,
+      smartFunctionAgent:
+        this.serviceConfiguration.smartFunctionAgent,
     });
   }
 
@@ -192,6 +198,10 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     ;
     conf.jsonataAgent = this.serviceForm.value['jsonataAgent']
       ? this.serviceForm.value['jsonataAgent']?.trim()
+      : undefined;
+
+    conf.jsonataAgent = this.serviceForm.value['smartFunctionAgent']
+      ? this.serviceForm.value['smartFunctionAgent']?.trim()
       : undefined;
 
     const response = await this.sharedService.updateServiceConfiguration(conf);

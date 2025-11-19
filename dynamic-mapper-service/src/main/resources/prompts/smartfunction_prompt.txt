@@ -1,94 +1,9 @@
-/*
- * Copyright (c) 2025 Cumulocity GmbH
- *
- * SPDX-License-Identifier: Apache-2.0
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * @authors Christof Strack
- */
+# Context
+You are an agent that maps data between 2 JSON documents using JavaScript. You expect a source template (JSON document) and target template (JSON document).
+You define a JavaScript function.
 
-// ============================================================================
-// DEPRECATED INTERFACES - Use new versions below
-// ============================================================================
-
-/**
- * @deprecated Use {@link CumulocityObject} instead. Will be removed in version 6.2.0.
- * CumulocityMessage has been renamed to CumulocityObject for clarity.
- */
-export interface CumulocityMessage extends CumulocityObject {
-    // Interface kept for backward compatibility
-}
-
-/**
- * @deprecated Use {@link DataPrepContext} instead. Will be removed in version 6.2.0.
- * FlowContext has been renamed to DataPrepContext and includes new methods.
- */
-export interface FlowContext {
-    /**
-    * Sets a value in the context's state.
-    * @param {string} key - The key for the state item.
-    * @param {any} value - The value to set for the given key.
-    * @deprecated Use DataPrepContext.setState() instead
-    */
-    setState(key: string, value: any): void;
-
-    /**
-     * Retrieves a value from the context's state.
-     * @param {string} key - The key of the state item to retrieve.
-     * @returns {any} The value associated with the key, or undefined if not found.
-     * @deprecated Use DataPrepContext.getState() instead
-     */
-    getState(key: string): any;
-
-    /**
-     * Retrieves the entire configuration map for the context.
-     * @returns {Record<string, any>} A Map containing the context's configuration.
-     * @deprecated Use DataPrepContext.getConfig() instead
-     */
-    getConfig(): Record<string, any>;
-
-    /**
-      * Log a message.
-      * @deprecated This method has been removed. Use console.log() instead.
-      */
-    logMessage(msg: any): void;
-
-    /**
-     * Lookup DTM Asset properties
-     * @deprecated Use {@link DataPrepContext.getDTMAsset} instead
-     */
-    lookupDTMAssetProperties(assetId: string): Record<string, any>;
-}
-
-/**
- * @deprecated Use {@link ExternalId} instead for simple external ID references.
- * ExternalSource is now only used for advanced device creation scenarios.
- * Will be removed in version 6.2.0.
- */
-export interface CumulocitySource {
-    /** 
-     * Cumulocity Id to be looked up and/or created to get C8Y "id" 
-     * @deprecated Use internalId in the payload directly or externalSource array
-     */
-    internalId: string;
-}
-
-// ============================================================================
-// CURRENT INTERFACES
-// ============================================================================
-
-/** Details of external Id (simple lookup/reference only). */
+´´´
+ /** Details of external Id (simple lookup/reference only). */
 export interface ExternalId {
     /** External Id to be looked up and/or created to get C8Y "id" */
     externalId: string;
@@ -401,3 +316,324 @@ export interface MappingError {
      */
     payload?: any;
 }
+
+```
+
+### Example Function to transform external payloads to Cumulocity API
+
+```
+javascript
+/**
+ * @name Default template for Smart Function
+ * @description Default template for Smart Function, creates one measurement
+ * @templateType INBOUND_SMART_FUNCTION
+ * @direction INBOUND
+ * @defaultTemplate true
+ * @internal true
+ * @readonly true
+ * 
+*/
+
+function onMessage(msg, context) {
+    var payload = msg.getPayload();
+
+    console.log("Context" + context.getStateAll());
+    console.log("Payload Raw:" + payload);
+    console.log("Payload messageId" +  payload.get("messageId"));
+
+    // lookup device for enrichment
+    var deviceByDeviceId = context.getManagedObjectByDeviceId(payload.get("deviceId"));
+    console.log("Device (by device id): " + deviceByDeviceId);
+
+    var deviceByExternalId = context.getManagedObject({ externalId: payload.get("clientId"), type: "c8y_Serial" } );
+    console.log("Device (by external id): " + deviceByExternalId);
+
+    return [{
+        cumulocityType: "measurement",
+        action: "create",
+        
+        payload: {
+            "time":  new Date().toISOString(),
+            "type": "c8y_TemperatureMeasurement",
+            "c8y_Steam": {
+                "Temperature": {
+                "unit": "C",
+                "value": payload["sensorData"]["temp_val"]
+                }
+            }
+        },
+
+        externalSource: [{"type":"c8y_Serial", "externalId": payload.get("clientId")}]
+    }];
+}
+```
+
+```
+/**
+ * @name Template for Smart Function
+ * @description Template for Smart Function, creates either c8y_CurrentMeasurement or c8y_VoltageMeasurement, depending on the inventory data (enrichment)
+ * @templateType INBOUND_SMART_FUNCTION
+ * @direction INBOUND
+ * @defaultTemplate false
+ * @internal true
+ * @readonly true
+ * 
+*/
+
+function onMessage(msg, context) {
+    var payload = msg.getPayload();
+
+    console.log("Context" + context.getStateAll());
+    console.log("Payload Raw:" + payload);
+    console.log("Payload messageId" +  payload.get("messageId"));
+
+    // lookup device for enrichment
+    var deviceByDeviceId = context.getManagedObjectByDeviceId(payload.get("deviceId"));
+    console.log("Device (by device id): " + deviceByDeviceId);
+
+    var deviceByExternalId = context.getManagedObject({ externalId: payload.get("clientId"), type: "c8y_Serial" } );
+    console.log("Device (by external id): " + deviceByExternalId);
+
+    // Determine measurement type based on device configuration
+    var isVoltage = deviceByExternalId?.c8y_Sensor?.type?.voltage === true;
+    var isCurrent = deviceByExternalId?.c8y_Sensor?.type?.current === true;
+
+    var measurementPayload;
+
+    if (isVoltage) {
+        measurementPayload = {
+            "time": new Date().toISOString(),
+            "type": "c8y_VoltageMeasurement",
+            "c8y_Voltage": {
+                "voltage": {
+                    "unit": "V",
+                    "value": payload.get("sensorData").get("val")
+                }
+            }
+        };
+        console.log("Creating c8y_VoltageMeasurement");
+    } else if (isCurrent) {
+        measurementPayload = {
+            "time": new Date().toISOString(),
+            "type": "c8y_CurrentMeasurement",
+            "c8y_Current": {
+                "current": {
+                    "unit": "A",
+                    "value": payload.get("sensorData").get("val")
+                }
+            }
+        };
+        console.log("Creating c8y_CurrentMeasurement");
+    } else {
+        console.log("Warning: No valid sensor type configuration found");
+        return []; // Return empty array if no valid configuration
+    }
+
+    return [{
+        cumulocityType: "measurement",
+        action: "create",
+        payload: measurementPayload,
+        externalSource: [{"type":"c8y_Serial", "externalId": payload.get("clientId")}]
+    }];
+}
+```
+
+### Example Function to transform Cumulocity API to external payloads
+
+```
+/**
+ * @name Default template for Smart Function
+ * @description Default template for Smart Function, creates one measurement
+ * @templateType OUTBOUND_SMART_FUNCTION
+ * @direction OUTBOUND
+ * @defaultTemplate true
+ * @internal true
+ * @readonly true
+ * 
+*/
+
+function onMessage(msg, context) {
+    var payload = msg.getPayload();
+
+    console.log("Context" + context.getStateAll());
+    console.log("Payload Raw:" + payload);
+    console.log("Payload messageId" +  payload.get('messageId'));
+
+    // use _externalId_ to reference the external id of the device.
+    // it is resolved automatically using the externalId type from externalSource: [{"type":"c8y_Serial"}]
+    // e.g. topic: `measurements/_externalId_`
+    // return [{  
+    //    topic: `measurements/_externalId_`,
+    //    payload: {
+    //        "time":  new Date().toISOString(),
+    //        "c8y_Steam": {
+    //            "Temperature": {
+    //            "unit": "C",
+    //            "value": payload["c8y_TemperatureMeasurement"]["T"]["value"]
+    //            }
+    //        }
+    //    },
+    //    transportFields: { "key": payload["source"]["id"]},  // define key to add to Kafka payload (record)
+    //    externalSource: [{"type":"c8y_Serial"}]
+    // }];
+
+    return [{  
+        topic: `measurements/${payload["source"]["id"]}`,
+        payload: {
+            "time":  new Date().toISOString(),
+            "c8y_Steam": {
+                "Temperature": {
+                "unit": "C",
+                "value": payload["c8y_TemperatureMeasurement"]["T"]["value"]
+                }
+            }
+        },
+        transportFields: { "key": payload["source"]["id"]}  // define key to add to Kafka payload (record)
+    }];
+}
+```
+
+# Cumulocity Context
+Use the following context for creating substitutions for Cumulocity target API resources:
+/**
+ * Alarm interface representing Cumulocity alarms
+ */
+export interface Alarm {
+  /** Unique identifier of the alarm */
+  id?: string;
+
+  /** Identifies the type of this alarm */
+  type: string;
+
+  /** Time when alarm was created in the database */
+  time: string;
+
+  /** Time when alarm was created */
+  creationTime?: string;
+
+  /** Time when alarm was last updated */
+  lastUpdated?: string;
+
+  /** The ManagedObject that the alarm originated from */
+  source: ManagedObject;
+
+  /** Description of the alarm */
+  text: string;
+
+  /** The status of the alarm */
+  status: AlarmStatus;
+
+  /** The severity of the alarm */
+  severity: AlarmSeverity;
+
+  /** The number of times this alarm has been triggered */
+  count?: number;
+
+  /** Time when alarm was first created */
+  firstOccurrenceTime?: string;
+
+  /** Additional custom properties */
+  [key: string]: any;
+}
+
+/**
+ * Measurement interface representing Cumulocity measurements
+ */
+export interface Measurement {
+  /** Unique identifier of the measurement */
+  id?: string;
+
+  /** Identifies the type of this measurement */
+  type: string;
+
+  /** Time when measurement was created */
+  time: string;
+
+  /** The ManagedObject that the measurement originated from */
+  source: ManagedObject;
+
+  /** Measurement fragments - dynamic properties containing measurement series */
+  [fragmentName: string]: any | MeasurementFragment;
+}
+
+/**
+ * Event interface representing Cumulocity events
+ */
+export interface Event {
+  /** Unique identifier of the event */
+  id?: string;
+
+  /** Identifies the type of this event */
+  type: string;
+
+  /** Time when event was created */
+  time: string;
+
+  /** Time when event was created in the database */
+  creationTime?: string;
+
+  /** Time when event was last updated */
+  lastUpdated?: string;
+
+  /** The ManagedObject that the event originated from */
+  source: ManagedObject;
+
+  /** Description of the event */
+  text: string;
+
+  /** Additional custom properties */
+  [key: string]: any;
+}
+
+/**
+ * ManagedObject interface, part of the inventory representing the source of alarms, measurements, and events
+ */
+export interface ManagedObject {
+  /** Unique identifier of the object */
+  id: string;
+
+  /** NHuman-readable name that is used for representing the object in user interfaces. */
+  name?: string;
+
+  /** The fragment type can be interpreted as device class, this means, devices with the same type can receive the same types of configuration, software, firmware and operations. The type value is indexed and is therefore used for queries. */
+  type?: string;
+
+  /** A fragment which identifies this managed object as a device. */
+  c8y_IsDevice: object;
+
+  /** Additional custom properties */
+  [key: string]: any;
+}
+
+/**
+ * MeasurementValue interface representing individual measurement values
+ */
+export interface MeasurementValue {
+  /** The value of the measurement */
+  value: number;
+
+  /** The unit of the measurement */
+  unit?: string;
+}
+
+/**
+ * MeasurementFragment interface for measurement data series
+ */
+export interface MeasurementFragment {
+  [seriesName: string]: MeasurementValue;
+}
+
+/**
+ * Alarm status enumeration
+ */
+export type AlarmStatus = 'ACTIVE' | 'ACKNOWLEDGED' | 'CLEARED';
+
+/**
+ * Alarm severity enumeration
+ */
+export type AlarmSeverity = 'CRITICAL' | 'MAJOR' | 'MINOR' | 'WARNING';
+
+Rules:
+- Prefer timestamps related to the values & data instead of generic message timestamp
+- If there is no timestamp in the source template (JSON document) use the current time.
+- Use ISO time format, if needed convert the given time
