@@ -76,6 +76,7 @@ class DeserializationInboundProcessorTest {
     void setUp() throws Exception {
         // Create real Mapping object with proper initialization
         mapping = Mapping.builder().id("test-mapping-id")
+                .supportsMessageContext(false)
                 .identifier("test-mapping").name("Test Mapping")
                 .build();
 
