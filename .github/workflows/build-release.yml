@@ -151,7 +151,7 @@ jobs:
           asset_content_type: application/zip
       - name: Upload Release Asset Backend
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-        id: upload-release-asset-max
+        id: upload-release-asset-starter-wo-mqtt
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -162,7 +162,7 @@ jobs:
           asset_content_type: application/zip
       - name: Upload Release Asset Backend
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-        id: upload-release-asset-max
+        id: upload-release-asset-standard-wo-mqtt
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -173,7 +173,7 @@ jobs:
           asset_content_type: application/zip
       - name: Upload Release Asset Backend
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-        id: upload-release-asset-max
+        id: upload-release-asset-performance-wo-mqtt
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -184,7 +184,7 @@ jobs:
           asset_content_type: application/zip
       - name: Upload Release Asset Backend
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-        id: upload-release-asset-max
+        id: upload-release-asset-max-wo-mqtt
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
