@@ -222,7 +222,7 @@ public class MQTTServiceClient extends MQTT3Client {
                 new ConnectorProperty(null, false, 12, ConnectorPropertyType.BOOLEAN_PROPERTY,
                         true, false, true, null, null));
 
-        String name = "Cumulocity MQTT-Service (MQTT Version, deprecated)";
+        String name = "Cumulocity MQTT-Service (deprecated)";
         String description = "Connector for connecting to Cumulocity MQTT Service. " +
                 "The MQTT Service does not support wildcards, i.e. '+', '#'. " +
                 "The QoS 'exactly once' is reduced to 'at least once'.";
