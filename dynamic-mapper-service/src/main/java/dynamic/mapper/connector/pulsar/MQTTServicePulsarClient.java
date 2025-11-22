@@ -225,8 +225,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                     configurationRegistry,
                     dispatcher,
                     connectorIdentifier,
-                    connectorName,
-                    false);
+                    connectorName);
 
             // Build topic names
             String namespace = (String) connectorConfiguration.getProperties()

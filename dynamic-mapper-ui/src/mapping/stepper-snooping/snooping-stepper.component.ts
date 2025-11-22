@@ -68,7 +68,6 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy, AfterViewIni
 
   propertyFormly = new FormGroup({});
   isButtonDisabled$ = new BehaviorSubject<boolean>(true);
-  supportsMessageContext: boolean;
   private readonly destroy$ = new Subject<void>();
 
   snoopedTemplateCounter = 0;
@@ -121,13 +120,6 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy, AfterViewIni
       !this.deploymentMapEntry?.connectors ||
       this.deploymentMapEntry?.connectors?.length == 0
     );
-
-    setTimeout(() => {
-      this.supportsMessageContext =
-        this.deploymentMapEntry.connectorsDetailed?.some(
-          (con) => con.connectorType == ConnectorType.KAFKA || con.connectorType == ConnectorType.WEB_HOOK
-        );
-    });
   }
 
   getCurrentMapping(): Mapping {

@@ -128,7 +128,7 @@ export class MappingStepperService {
         this.isSubstitutionValid$.next(isValid);
     }
 
-    expandTemplates(mapping: Mapping, direction: Direction, supportsMessageContext: boolean): {
+    expandTemplates(mapping: Mapping, direction: Direction): {
         sourceTemplate: any;
         targetTemplate: any;
     } {
@@ -141,13 +141,13 @@ export class MappingStepperService {
 
         const expandSource = (template: any) =>
             direction === Direction.INBOUND
-                ? expandExternalTemplate(template, mapping, supportsMessageContext, levels)
+                ? expandExternalTemplate(template, mapping, levels)
                 : expandC8YTemplate(template, mapping);
 
         const expandTarget = (template: any) =>
             direction === Direction.INBOUND
                 ? expandC8YTemplate(template, mapping)
-                : expandExternalTemplate(template, mapping, supportsMessageContext, levels);
+                : expandExternalTemplate(template, mapping, levels);
 
         if (direction === Direction.INBOUND) {
             return {
@@ -162,7 +162,7 @@ export class MappingStepperService {
         }
     }
 
-    expandExistingTemplates(mapping: Mapping, direction: Direction, supportsMessageContext: boolean): {
+    expandExistingTemplates(mapping: Mapping, direction: Direction): {
         sourceTemplate: any;
         targetTemplate: any;
     } {
@@ -175,13 +175,13 @@ export class MappingStepperService {
 
         const expandSource = (template: any) =>
             direction === Direction.INBOUND
-                ? expandExternalTemplate(template, mapping, supportsMessageContext, levels)
+                ? expandExternalTemplate(template, mapping, levels)
                 : expandC8YTemplate(template, mapping);
 
         const expandTarget = (template: any) =>
             direction === Direction.INBOUND
                 ? expandC8YTemplate(template, mapping)
-                : expandExternalTemplate(template, mapping, supportsMessageContext, levels);
+                : expandExternalTemplate(template, mapping, levels);
 
         return {
             sourceTemplate: expandSource(JSON.parse(mapping.sourceTemplate)),

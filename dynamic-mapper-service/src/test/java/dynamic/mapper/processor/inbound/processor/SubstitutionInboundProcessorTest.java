@@ -174,7 +174,6 @@ class SubstitutionInboundProcessorTest {
                 .debug(true)
                 .active(true)
                 .tested(false)
-                .supportsMessageContext(false)
                 .snoopStatus(SnoopStatus.NONE)
                 .snoopedTemplates(new ArrayList<>())
                 .qos(Qos.AT_MOST_ONCE)

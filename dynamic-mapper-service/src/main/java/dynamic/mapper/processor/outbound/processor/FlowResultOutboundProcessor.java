@@ -158,9 +158,7 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
             }
 
             // set key for Kafka messages
-            if ((mapping.getSupportsMessageContext() ||context.getSupportsMessageContext()) && deviceMessage.getTransportFields() != null) {
-                context.setKey(deviceMessage.getTransportFields().get(Mapping.CONTEXT_DATA_KEY_NAME));
-            }
+            context.setKey(deviceMessage.getTransportFields().get(Mapping.CONTEXT_DATA_KEY_NAME));
             context.setResolvedPublishTopic(publishTopic);
 
             context.setRetain(deviceMessage.getRetain());
@@ -217,7 +215,8 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
             // Convert payload to JSON string for the request
             String payloadJson = objectMapper.writeValueAsString(payload);
 
-            DynamicMapperRequest c8yRequest = ProcessingResultHelper.createAndAddDynamicMapperRequest(context, payloadJson,
+            DynamicMapperRequest c8yRequest = ProcessingResultHelper.createAndAddDynamicMapperRequest(context,
+                    payloadJson,
                     cumulocityMessage.getAction(), mapping);
             c8yRequest.setApi(targetAPI);
             c8yRequest.setSourceId(resolvedDeviceId);
@@ -280,27 +279,25 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
         }
 
         // Handle context data for message context support
-        if (mapping.getSupportsMessageContext() ||context.getSupportsMessageContext()) {
-            @SuppressWarnings("unchecked")
-            Map<String, String> contextData = (Map<String, String>) payload.get(Mapping.TOKEN_CONTEXT_DATA);
+        @SuppressWarnings("unchecked")
+        Map<String, String> contextData = (Map<String, String>) payload.get(Mapping.TOKEN_CONTEXT_DATA);
 
-            if (contextData != null) {
-                // Extract key for message context
-                String key = contextData.get(Mapping.CONTEXT_DATA_KEY_NAME);
-                if (key != null && !key.equals("dummy")) {
-                    context.setKey(key);
-                }
-
-                // Extract publish topic override
-                String publishTopic = contextData.get("publishTopic");
-                if (publishTopic != null && !publishTopic.equals("")) {
-                    context.setTopic(publishTopic);
-                    context.setResolvedPublishTopic(publishTopic);
-                }
-
-                // Remove TOKEN_CONTEXT_DATA from payload
-                payload.remove(Mapping.TOKEN_CONTEXT_DATA);
+        if (contextData != null) {
+            // Extract key for message context
+            String key = contextData.get(Mapping.CONTEXT_DATA_KEY_NAME);
+            if (key != null && !key.equals("dummy")) {
+                context.setKey(key);
             }
+
+            // Extract publish topic override
+            String publishTopic = contextData.get("publishTopic");
+            if (publishTopic != null && !publishTopic.equals("")) {
+                context.setTopic(publishTopic);
+                context.setResolvedPublishTopic(publishTopic);
+            }
+
+            // Remove TOKEN_CONTEXT_DATA from payload
+            payload.remove(Mapping.TOKEN_CONTEXT_DATA);
         }
     }
 

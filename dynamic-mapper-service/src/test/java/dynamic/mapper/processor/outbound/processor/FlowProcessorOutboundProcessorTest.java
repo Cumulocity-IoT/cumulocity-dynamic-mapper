@@ -391,7 +391,6 @@ class FlowProcessorOutboundProcessorTest {
                 .debug(false)
                 .active(true)
                 .tested(false)
-                .supportsMessageContext(true)
                 .code(encodedCode)
                 .build();
     }

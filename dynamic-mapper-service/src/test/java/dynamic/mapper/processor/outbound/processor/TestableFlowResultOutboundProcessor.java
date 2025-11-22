@@ -219,7 +219,7 @@ public class TestableFlowResultOutboundProcessor extends FlowResultOutboundProce
             context.setResolvedPublishTopic(resolvedTopic);
 
             // Handle transport fields (message context)
-            if (mapping.getSupportsMessageContext() && deviceMsg.getTransportFields() != null) {
+            if (deviceMsg.getTransportFields() != null) {
                 String key = deviceMsg.getTransportFields().get(Mapping.CONTEXT_DATA_KEY_NAME);
                 if (key != null) {
                     context.setKey(key);

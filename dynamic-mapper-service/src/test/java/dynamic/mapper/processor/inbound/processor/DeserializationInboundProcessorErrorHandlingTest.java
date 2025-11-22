@@ -85,7 +85,6 @@ class DeserializationInboundProcessorErrorHandlingTest {
     void setUp() {
         // Create real Mapping object with supportsMessageContext initialized
         mapping = Mapping.builder()
-                .supportsMessageContext(false) // Add this line
                 .build();
 
         when(exchange.getIn()).thenReturn(message);

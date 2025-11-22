@@ -311,7 +311,6 @@ public class TestController {
             String payloadMessage) {
         return ConnectorMessage.builder()
                 .tenant(tenant)
-                .supportsMessageContext(connectorClient.getSupportsMessageContext())
                 .topic(topic)
                 .sendPayload(sendPayload)
                 .connectorIdentifier(connectorClient.getConnectorIdentifier())

@@ -176,7 +176,6 @@ class DeserializationOutboundProcessorTest {
                 .debug(false)
                 .active(true)
                 .tested(false)
-                .supportsMessageContext(true)
                 .eventWithAttachment(false)
                 .createNonExistingDevice(false)
                 .updateExistingDevice(false)

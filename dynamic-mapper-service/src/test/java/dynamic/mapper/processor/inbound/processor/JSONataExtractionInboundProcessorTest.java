@@ -168,7 +168,6 @@ class JSONataExtractionInboundProcessorTest {
                 .debug(false)
                 .active(true)
                 .tested(false)
-                .supportsMessageContext(false)
                 .snoopStatus(SnoopStatus.NONE)
                 .snoopedTemplates(new ArrayList<>())
                 .qos(Qos.AT_MOST_ONCE)
@@ -277,7 +276,6 @@ class JSONataExtractionInboundProcessorTest {
                 .debug(true) // Enable debug
                 .active(true)
                 .tested(false)
-                .supportsMessageContext(false)
                 .snoopStatus(SnoopStatus.NONE)
                 .snoopedTemplates(new ArrayList<>())
                 .qos(Qos.AT_MOST_ONCE)

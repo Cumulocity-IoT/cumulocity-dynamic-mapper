@@ -166,7 +166,6 @@ class MappingContextOutboundProcessorTest {
                 .debug(false)
                 .active(true)
                 .tested(false)
-                .supportsMessageContext(true)
                 .snoopStatus(SnoopStatus.NONE)
                 .qos(Qos.AT_MOST_ONCE)
                 .lastUpdate(System.currentTimeMillis())
