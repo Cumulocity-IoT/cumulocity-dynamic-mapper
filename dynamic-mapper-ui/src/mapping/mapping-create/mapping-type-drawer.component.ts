@@ -161,7 +161,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
       description: MappingTypeDescriptions[defaultMappingType]
     };
 
-        // Create the initial mapping type option object
+    // Create the initial mapping type option object
     const initialTransformationTypeOption: TransformationTypeOption = {
       label: TransformationTypeLabels[this.direction][defaultTransformationType],
       value: defaultTransformationType,
@@ -172,7 +172,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
       expertMode: [false],
       mappingType: [initialMappingTypeOption],
       transformationType: [initialTransformationTypeOption],
-      mappingTypeDescription: [initialConfig.description],
+      mappingTypeDescription: [{ value: initialConfig.description, disabled: true }],
       snoop: [{ value: false, disabled: !initialConfig.snoopSupported }]
     });
 
