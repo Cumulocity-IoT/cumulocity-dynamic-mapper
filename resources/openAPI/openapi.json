@@ -2078,16 +2078,6 @@
             "description" : "Whether debug mode is enabled for this mapping",
             "example" : false
           },
-          "tested" : {
-            "type" : "boolean",
-            "description" : "Whether the mapping has been tested",
-            "example" : true
-          },
-          "supportsMessageContext" : {
-            "type" : "boolean",
-            "description" : "Whether the mapping supports message context",
-            "example" : false
-          },
           "eventWithAttachment" : {
             "type" : "boolean",
             "description" : "Whether events can have attachments",
@@ -2168,7 +2158,7 @@
             "example" : 1640995200000
           }
         },
-        "required" : [ "active", "debug", "direction", "id", "identifier", "lastUpdate", "mappingType", "maxFailureCount", "name", "qos", "snoopStatus", "snoopedTemplates", "sourceTemplate", "substitutions", "supportsMessageContext", "targetAPI", "targetTemplate", "tested", "useExternalId" ]
+        "required" : [ "active", "debug", "direction", "id", "identifier", "lastUpdate", "mappingType", "maxFailureCount", "name", "qos", "snoopStatus", "snoopedTemplates", "sourceTemplate", "substitutions", "targetAPI", "targetTemplate", "useExternalId" ]
       },
       "Substitution" : {
         "type" : "object",
@@ -2846,9 +2836,6 @@
           "serviceConfiguration" : {
             "$ref" : "#/components/schemas/ServiceConfiguration"
           },
-          "supportsMessageContext" : {
-            "type" : "boolean"
-          },
           "ignoreFurtherProcessing" : {
             "type" : "boolean"
           },
@@ -3472,11 +3459,6 @@
                 "readonly" : false
               }
             }
-          },
-          "supportsMessageContext" : {
-            "type" : "boolean",
-            "description" : "A flag to define if the connector supports message context. If true, the connector can handle additional metadata in messages.",
-            "example" : true
           },
           "supportedDirections" : {
             "type" : "array",

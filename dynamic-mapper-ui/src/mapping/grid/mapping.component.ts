@@ -462,7 +462,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       },
       {
         header: 'Status',
-        name: 'tested',
+        name: 'status',
         path: 'mapping',
         filterable: false,
         sortable: false,
