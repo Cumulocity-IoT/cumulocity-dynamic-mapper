@@ -407,8 +407,8 @@ export function expandExternalTemplate(
     if (mapping.direction == Direction.INBOUND) {
       contextData = {
         [CONTEXT_DATA_KEY_NAME]: `${CONTEXT_DATA_KEY_NAME}-sample`,
-        [CONTEXT_DATA_METHOD_NAME]: "POST", // Set to "POST" instead of a generated value
-        [CONTEXT_DATA_RETAIN]: false,
+        // [CONTEXT_DATA_METHOD_NAME]: "POST"
+        // [CONTEXT_DATA_RETAIN]: false,
       };
     } else {
       contextData = {
