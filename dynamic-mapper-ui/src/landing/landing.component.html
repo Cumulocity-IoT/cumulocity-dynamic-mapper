@@ -503,8 +503,9 @@
       </h3>
     </div>
     <div class="card-block">
-      <div class="p-b-8 text-16"> The mapper provides metadata in source- and target-templates. All JSON nodes that are
-        added as metadata to the templates are marked with are enclosed with <code>_</code>, e.g.
+      <div class="p-b-8 text-16"> The mapper adds metadata in source and target templates to control the processing
+        of the mapping. All JSON nodes that are
+        added as metadata to the templates are enclosed in <code>_</code>, e.g.
         <code>_CONTEXT_DATA_</code>, <code>_IDENTITY_</code> and <code>_TOPIC_LEVEL_</code>
         <br />
       </div>
@@ -513,22 +514,29 @@
         All metadata nodes including sub-nodes are note meant to be changes directly. To overwrite e.g. the API for a
         mappings at runtime you have to add a substitution: <code>'EVENT' -> _CONTEXT_DATA_.api</code>. All metadata
         nodes are generated before the processing of a mapping and removed form the target payload before it is sent.
-        Therefore the metadata is not saved in the mapping itself and can not carry individual information.
+        Therefore the metadata is not saved in the mapping itself and can not store individual information.
       </div>
       <div class="p-b-8 text-16"> The following table lists all metadata nodes for inbound mappings:
         <br />
       </div>
       <div class="table-responsive table-width-80">
-        <table class="table _table-striped">
+        <table class="table _table-striped" style="table-layout: fixed;">
           <thead class="thead-light">
             <tr>
-              <th style="width: 20%;">Template</th>
-              <th style="width: 10%;">Direction</th>
-              <th style="width: 30%;">Node</th>
-              <th style="width: 40%;">Description</th>
+              <th style="width: 15%;">Template</th>
+              <th style="width: 8%;">Direction</th>
+              <th style="width: 25%;">Node</th>
+              <th style="width: 52%;">Description</th>
             </tr>
           </thead>
           <tbody>
+            <tr>
+              <td>Source template <small class="text-muted">(external broker)</small></td>
+              <td>map-from</td>
+              <td><code>_TOPIC_LEVEL_[.]</code></td>
+              <td>Topic of the inbound MQTT message. Can be used to identify an device if he topic contains external
+                identifiers, e.g. serial number</td>
+            </tr>
             <tr>
               <td>Source template <small class="text-muted">(external broker)</small></td>
               <td>map-from</td>
@@ -564,7 +572,7 @@
             <tr>
               <td>Target template <small class="text-muted">(Cumulocity)</small></td>
               <td>map-to</td>
-              <td><code>_CONTEXT_DATA_.devicetype</code></td>
+              <td><code>_CONTEXT_DATA_.deviceType</code></td>
               <td>Defines the device type of a device that is created implicitly when the mapping uses
                 <code>Create non-existing devices</code>
               </td>
@@ -583,13 +591,13 @@
         <br />
       </div>
       <div class="table-responsive table-width-80">
-        <table class="table _table-striped">
+        <table class="table _table-striped" style="table-layout: fixed;">
           <thead class="thead-light">
             <tr>
-              <th style="width: 20%;">Template</th>
-              <th style="width: 20%;">Direction</th>
-              <th style="width: 30%;">Node</th>
-              <th style="width: 40%;">Description</th>
+              <th style="width: 15%;">Template</th>
+              <th style="width: 8%;">Direction</th>
+              <th style="width: 25%;">Node</th>
+              <th style="width: 52%;">Description</th>
             </tr>
           </thead>
           <tbody>
@@ -604,6 +612,17 @@
               <td>map-from</td>
               <td><code>_IDENTITY_.c8ySourceId</code></td>
               <td>Cumulocity source id of the device</td>
+            </tr>
+            <tr>
+              <td>Target template <small class="text-muted">(Cumulocity)</small></td>
+              <td>map-to</td>
+              <td><code>_TOPIC_LEVEL_[.]</code></td>
+              <td>Topic to be used when sending messages. For a WebHook this defines the context path. The context path
+                is then
+                appended to the URL that is defined in the WebHook connector properties. This property has to be used
+                for all
+                transformation types other than Smart Functions.i.e. Substitution as JSONata Expression, Substitution as
+                JavaScript code.</td>
             </tr>
             <tr>
               <td>Target template <small class="text-muted">(external broker)</small></td>
@@ -623,19 +642,15 @@
               <td><code>_CONTEXT_DATA_.retain</code></td>
               <td>Defines to send MQTT message as retained</td>
             </tr>
-                        <tr>
-              <td>Target template <small class="text-muted">(Cumulocity)</small></td>
-              <td>map-to</td>
-              <td><code>_TOPIC_LEVEL_[.]</code></td>
-              <td>Topic to be used when sending messages. For a WebHook this is applied to the context path that is
-                appended to the URL in the WebHook connector properties. This property has to be used for all transformation types other than Smart Functions.i.e. Substitution as JSONata Expression, Substitution as JavaScript code.</td>
-            </tr>
             <tr>
               <td>Target template <small class="text-muted">(Cumulocity)</small></td>
               <td>map-to</td>
               <td><code>_CONTEXT_DATA_.publishTopic</code></td>
-              <td>Topic to be used when sending messages. For a WebHook this is applied to the context path that is
-                appended to the URL in the WebHook connector properties. This property can only be used for Smart Functions</td>
+              <td>Topic to be used when sending messages. For a WebHook this defines the context path. The context path
+                is then
+                appended to the URL that is defined in the WebHook connector properties. This property can only be used
+                for Smart
+                Functions</td>
             </tr>
           </tbody>
         </table>
