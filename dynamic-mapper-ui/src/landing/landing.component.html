@@ -523,56 +523,56 @@
         <table class="table _table-striped" style="table-layout: fixed;">
           <thead class="thead-light">
             <tr>
-              <th style="width: 15%;">Template</th>
-              <th style="width: 8%;">Role</th>
+              <th style="width: 15%;">Defined in template</th>
               <th style="width: 25%;">Node</th>
+              <th style="width: 8%;">Role</th>
               <th style="width: 52%;">Description</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td>Source template <small class="text-muted">(external broker)</small></td>
-              <td>map-from</td>
               <td><code>_TOPIC_LEVEL_[.]</code></td>
+              <td>map-from</td>
               <td>Topic of the inbound MQTT message. Can be used to identify an device if he topic contains external
                 identifiers, e.g. serial number</td>
             </tr>
             <tr>
               <td>Source template <small class="text-muted">(external broker)</small></td>
-              <td>map-from</td>
               <td><code>_CONTEXT_DATA_.key</code></td>
+              <td>map-from</td>
               <td>Key from Kafka message header</td>
             </tr>
             <tr>
               <td>Target template <small class="text-muted">(Cumulocity)</small></td>
-              <td>map-to</td>
               <td><code>_IDENTITY_.externalId</code></td>
+              <td>map-to</td>
               <td>Map node from external template that identifies the device to this node</td>
             </tr>
             <tr>
               <td>Target template <small class="text-muted">(Cumulocity)</small></td>
-              <td>map-to</td>
               <td><code>_CONTEXT_DATA_.api</code></td>
+              <td>map-to</td>
               <td>Overwrite target API to send payload to, e.g. <code>ALARM</code></td>
             </tr>
             <tr>
               <td>Target template <small class="text-muted">(Cumulocity)</small></td>
-              <td>map-to</td>
               <td><code>_CONTEXT_DATA_.processingMode</code></td>
+              <td>map-to</td>
               <td>Define processing mode for payload<code>persistent</code> or <code>transient</code></td>
             </tr>
             <tr>
               <td>Target template <small class="text-muted">(Cumulocity)</small></td>
-              <td>map-to</td>
               <td><code>_CONTEXT_DATA_.deviceName</code></td>
+              <td>map-to</td>
               <td>Defines the device name of a device that is created implicitly when the mapping uses
                 <code>Create non-existing devices</code>
               </td>
             </tr>
             <tr>
               <td>Target template <small class="text-muted">(Cumulocity)</small></td>
-              <td>map-to</td>
               <td><code>_CONTEXT_DATA_.deviceType</code></td>
+              <td>map-to</td>
               <td>Defines the device type of a device that is created implicitly when the mapping uses
                 <code>Create non-existing devices</code>
               </td>
@@ -594,29 +594,29 @@
         <table class="table _table-striped" style="table-layout: fixed;">
           <thead class="thead-light">
             <tr>
-              <th style="width: 15%;">Template</th>
-              <th style="width: 8%;">Role</th>
+              <th style="width: 15%;">Defined in template</th>
               <th style="width: 25%;">Node</th>
+              <th style="width: 8%;">Role</th>
               <th style="width: 52%;">Description</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td>Source template <small class="text-muted">(Cumulocity)</small></td>
-              <td>map-from</td>
               <td><code>_IDENTITY_.externalId</code></td>
+              <td>map-from</td>
               <td>External Id to identify the external device</td>
             </tr>
             <tr>
               <td>Source template <small class="text-muted">(Cumulocity)</small></td>
-              <td>map-from</td>
               <td><code>_IDENTITY_.c8ySourceId</code></td>
+              <td>map-from</td>
               <td>Cumulocity source id of the device</td>
             </tr>
             <tr>
               <td>Target template <small class="text-muted">(Cumulocity)</small></td>
-              <td>map-to</td>
               <td><code>_TOPIC_LEVEL_[.]</code></td>
+              <td>map-to</td>
               <td>Topic to be used when sending messages. For a WebHook this defines the context path. The context path
                 is then
                 appended to the URL that is defined in the WebHook connector properties. This property has to be used
@@ -626,26 +626,26 @@
             </tr>
             <tr>
               <td>Target template <small class="text-muted">(external broker)</small></td>
-              <td>map-to</td>
               <td><code>_CONTEXT_DATA_.key</code></td>
+              <td>map-to</td>
               <td>Key to be set in Kafka message header</td>
             </tr>
             <tr>
               <td>Target template <small class="text-muted">(external broker)</small></td>
-              <td>map-to</td>
               <td><code>_CONTEXT_DATA_.method</code></td>
+              <td>map-to</td>
               <td>REST methods to be set when using a WebHook connector</td>
             </tr>
             <tr>
               <td>Target template <small class="text-muted">(Cumulocity)</small></td>
-              <td>map-to</td>
               <td><code>_CONTEXT_DATA_.retain</code></td>
+              <td>map-to</td>
               <td>Defines to send MQTT message as retained</td>
             </tr>
             <tr>
               <td>Target template <small class="text-muted">(Cumulocity)</small></td>
-              <td>map-to</td>
               <td><code>_CONTEXT_DATA_.publishTopic</code></td>
+              <td>map-to</td>
               <td>Topic to be used when sending messages. For a WebHook this defines the context path. The context path
                 is then
                 appended to the URL that is defined in the WebHook connector properties. This property can only be used
