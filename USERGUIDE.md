@@ -638,7 +638,7 @@ To allow updating an activated mapping it has to be deactivated in the list of a
 
 ### Import & Export Mappings
 
-On the tag with `Ìnbound Mappings` and `Outbound Mappings` you can import mappings from a JSON file. A Sample cane be found [here - Inbound](resources/script/mapping/sampleMapping/mappings-INBOUND.json) and [here - Outbound](resources/script/mapping/sampleMapping/mappings-OUTBOUND.json).
+On the tag with `Ìnbound Mappings` and `Outbound Mappings` you can import mappings from a JSON file. A Sample can be found [here - Inbound](resources/samples/mappings-INBOUND.json) and [here - Outbound](resources/samples/mappings-OUTBOUND.json).
 You can as well export all or a single mapping.
 The import dialog can be seen on the following screenshot:
 
