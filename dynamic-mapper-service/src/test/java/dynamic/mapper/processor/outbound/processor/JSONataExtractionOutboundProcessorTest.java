@@ -140,7 +140,6 @@ class JSONataExtractionOutboundProcessorTest {
                 .transformationType(TransformationType.DEFAULT)
                 .debug(false)
                 .active(false)
-                .tested(false)
                 .eventWithAttachment(false)
                 .createNonExistingDevice(false)
                 .updateExistingDevice(false)

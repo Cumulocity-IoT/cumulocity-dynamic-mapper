@@ -150,6 +150,7 @@ public class ConfigurationController {
         feature.setExternalExtensionsEnabled(externalExtensionsEnabled);
         feature.setUserHasMappingCreateRole(Utils.userHasMappingCreateRole());
         feature.setUserHasMappingAdminRole(Utils.userHasMappingAdminRole());
+        // TODO pulsarAvailable
         return new ResponseEntity<Feature>(feature, HttpStatus.OK);
     }
 

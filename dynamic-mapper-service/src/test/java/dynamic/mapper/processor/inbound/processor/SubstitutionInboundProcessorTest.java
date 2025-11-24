@@ -173,7 +173,6 @@ class SubstitutionInboundProcessorTest {
                 .direction(Direction.INBOUND)
                 .debug(true)
                 .active(true)
-                .tested(false)
                 .snoopStatus(SnoopStatus.NONE)
                 .snoopedTemplates(new ArrayList<>())
                 .qos(Qos.AT_MOST_ONCE)

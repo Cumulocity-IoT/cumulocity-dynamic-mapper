@@ -390,7 +390,6 @@ class FlowProcessorOutboundProcessorTest {
                 .transformationType(TransformationType.SMART_FUNCTION)
                 .debug(false)
                 .active(true)
-                .tested(false)
                 .code(encodedCode)
                 .build();
     }

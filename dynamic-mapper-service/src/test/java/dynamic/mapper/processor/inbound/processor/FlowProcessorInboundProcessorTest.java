@@ -194,7 +194,6 @@ class FlowProcessorInboundProcessorTest {
                 .substitutions(new dynamic.mapper.model.Substitution[0])
                 .active(false)
                 .debug(false)
-                .tested(false)
                 .eventWithAttachment(false)
                 .createNonExistingDevice(true)
                 .updateExistingDevice(false)

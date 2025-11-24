@@ -49,4 +49,8 @@ public class Feature {
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Flag to check if the logged in user has the ADMIN Role", example = "true")
     @NotNull
     private Boolean userHasMappingAdminRole;
+
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Flag to check if pulsar is available", example = "true")
+    @NotNull
+    private Boolean pulsarAvailable;
 }

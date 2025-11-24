@@ -165,7 +165,6 @@ class MappingContextOutboundProcessorTest {
                 .transformationType(TransformationType.DEFAULT)
                 .debug(false)
                 .active(true)
-                .tested(false)
                 .snoopStatus(SnoopStatus.NONE)
                 .qos(Qos.AT_MOST_ONCE)
                 .lastUpdate(System.currentTimeMillis())

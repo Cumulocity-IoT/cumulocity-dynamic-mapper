@@ -175,7 +175,6 @@ class DeserializationOutboundProcessorTest {
                 .transformationType(TransformationType.DEFAULT)
                 .debug(false)
                 .active(true)
-                .tested(false)
                 .eventWithAttachment(false)
                 .createNonExistingDevice(false)
                 .updateExistingDevice(false)
