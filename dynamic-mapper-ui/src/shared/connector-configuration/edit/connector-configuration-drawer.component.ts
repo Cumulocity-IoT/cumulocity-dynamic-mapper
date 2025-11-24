@@ -86,7 +86,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
 
   async ngOnInit() {
     this.feature = await this.sharedService.getFeatures();
-    this.mode = this.add ? 'Create': 'Update';
+    this.mode = this.add ? 'Add': 'Update';
     this.setConnectorDescription();
     this.initializeBrokerFormFields();
     this.readOnly = this.configuration.enabled;

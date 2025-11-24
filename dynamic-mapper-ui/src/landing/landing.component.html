@@ -149,6 +149,32 @@
         </thead>
         <tbody>
           <tr>
+            <td><strong>Cumulocity MQTT Service </strong><small class="text-muted">(device
+                isolation, only one instance per tenant exists)</small></td>
+            <td class="text-center"><strong>X</strong></td>
+            <td class="text-center"><strong>X</strong></td>
+            <td class="text-center"><strong>X</strong></td>
+            <td class="text-center"><strong>X</strong><br></td>
+            <td>JSON, Hex, Protobuf, Extension</td>
+          </tr>
+          <tr>
+            <td><strong>Cumulocity MQTT Service - deprecated </strong><small class="text-muted">(tenant
+                isolation, only one instance per tenant exists)</small></td>
+            <td class="text-center"><strong>X</strong></td>
+            <td class="text-center"><strong>X</strong></td>
+            <td class="text-center"><strong>X</strong></td>
+            <td class="text-center"><strong>X</strong><br></td>
+            <td>JSON, Hex, Protobuf, Extension</td>
+          </tr>
+          <tr class="table-light">
+            <td><strong>Generic MQTT</strong></td>
+            <td class="text-center"><strong>X</strong></td>
+            <td class="text-center"><strong>X</strong></td>
+            <td class="text-center"><strong>X</strong></td>
+            <td class="text-center"><strong>X</strong><br></td>
+            <td>JSON, Hex, Protobuf, Extension</td>
+          </tr>
+          <tr>
             <td><strong>HTTP Connector</strong><br><small class="text-muted">(only one instance per tenant
                 exists)</small></td>
             <td class="text-center"><strong>X</strong></td>
@@ -166,33 +192,7 @@
             <td>JSON, Hex</td>
           </tr>
           <tr>
-            <td><strong>Cumulocity MQTT Service ( deprecated ) </strong><small class="text-muted">(tenant
-                isolation, only one instance per tenant exists)</small></td>
-            <td class="text-center"><strong>X</strong></td>
-            <td class="text-center"><strong>X</strong></td>
-            <td class="text-center"><strong>X</strong></td>
-            <td class="text-center"><strong>X</strong><br></td>
-            <td>JSON, Hex, Protobuf, Extension</td>
-          </tr>
-          <tr>
-            <td><strong>Cumulocity MQTT Service </strong><small class="text-muted">(device
-                isolation, only one instance per tenant exists)</small></td>
-            <td class="text-center"><strong>X</strong></td>
-            <td class="text-center"><strong>X</strong></td>
-            <td class="text-center"><strong>X</strong></td>
-            <td class="text-center"><strong>X</strong><br></td>
-            <td>JSON, Hex, Protobuf, Extension</td>
-          </tr>
-          <tr>
             <td><strong>Apache Pulsar </strong><small class="text-muted"></small></td>
-            <td class="text-center"><strong>X</strong></td>
-            <td class="text-center"><strong>X</strong></td>
-            <td class="text-center"><strong>X</strong></td>
-            <td class="text-center"><strong>X</strong><br></td>
-            <td>JSON, Hex, Protobuf, Extension</td>
-          </tr>
-          <tr class="table-light">
-            <td><strong>Generic MQTT</strong></td>
             <td class="text-center"><strong>X</strong></td>
             <td class="text-center"><strong>X</strong></td>
             <td class="text-center"><strong>X</strong></td>
@@ -211,12 +211,12 @@
       </table>
     </div>
 
-    <div class="p-b-8 text-16"> A new connector is created using the following wizard. The wizard is part of the Configuration -> Connectors UI.</div>
-      <img width="70%" class="m-l-48 m-b-48"
-        src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Connector_New.png"
-        alt="Payload type " />
-      <p class="image-description"><b>Description:</b> Creating a new connector.</p>
-      <br />
+    <div class="p-b-8 text-16"> A new connector is added using the following wizard. The wizard is part of the
+      Configuration -> Connectors UI -> Add connector.</div>
+    <img width="70%" class="m-l-48 m-b-48" src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Connector_New.png"
+      alt="Payload type " />
+    <p class="image-description"><b>Description:</b> Creating a new connector.</p>
+    <br />
   </div>
 
   <div class="card-header" id="define-mapping">
