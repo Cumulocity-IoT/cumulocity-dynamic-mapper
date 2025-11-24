@@ -508,10 +508,20 @@
       </div>
       <div class="p-b-8 text-16">
         <span class="text-primary">Note:</span>
-        All metadata nodes including sub-nodes are note meant to be changes directly. To overwrite e.g. the API for a
-        mappings at runtime you have to add a substitution: <code>'EVENT' -> _CONTEXT_DATA_.api</code>. All metadata
+        All metadata nodes including sub-nodes are note meant to be changes directly. All metadata
         nodes are generated before the processing of a mapping and removed form the target payload before it is sent.
         Therefore the metadata is not saved in the mapping itself and can not store individual information.
+        <br />
+        To overwrite e.g. the API for a
+        mappings at runtime you have to add a substitution: <code>'EVENT' -> _CONTEXT_DATA_.api</code>. similar to the
+        substitution on the screenshot below:
+        <br />
+        <img width="70%" class="m-l-48 m-b-48"
+          src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Change_Metadata.png"
+          alt="Change metadata" />
+        <p class="image-description"><b>Description:</b> Screenshot showing additional substitution changing the target
+          API to <code>'EVENT'</code> </p>
+
       </div>
       <div class="p-b-8 text-16"> The following table lists all metadata nodes for inbound mappings:
         <br />
