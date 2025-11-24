@@ -27,9 +27,9 @@
   - [Configuration](#configuration)
     - [Microservice configuration](#microservice-configuration)
     - [Processing Extensions](#processing-extensions)
-  - [Different type of substitutions](#different-type-of-substitutions)
   - [Monitoring](#monitoring)
     - [Mapping Tree Inbound](#mapping-tree-inbound)
+  - [Different type of substitutions](#different-type-of-substitutions)
 
 ## Connector configuration to broker and http endpoint
 
@@ -47,17 +47,90 @@ The table of configured connectors to different brokers can be:
 - updated / copied
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Connector_Overview.png"  style="width: 100%;" />
+<img src="resources/image/Dynamic_Mapper_Connector_Overview.png"  style="width: 70%;" />
 </p>
 
 <br/>
 
 The mapper supports the following connectors:
 
-<p align="center">
-<img src="resources/image/Dynamic_Mapper_Connector_Matrix.png"  style="width: 70%;" />
-</p>
-<br/>
+<div class="card-block">
+  <div class="table-responsive table-width-80">
+    <table class="table _table-striped">
+      <thead class="thead-light">
+        <tr>
+          <th style="width: 26%;">Connector</th>
+          <th class="text-center" style="width: 12%;">Direction: Inbound</th>
+          <th class="text-center" style="width: 12%;">Direction: Outbound</th>
+          <th class="text-center" style="width: 12%;">Supports Snoop</th>
+          <th class="text-center" style="width: 12%;">Supports JavaScript</th>
+          <th style="width: 26%;">Supported Mapping Types</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>HTTP Connector</strong><br><small class="text-muted">(only one instance per tenant
+              exists)</small></td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center text-muted">-</td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong><br></td>
+          <td>JSON, Hex, Protobuf, Extension</td>
+        </tr>
+        <tr class="table-light">
+          <td><strong>Webhook</strong><br><small class="text-muted">(including Cumulocity Rest API)</small></td>
+          <td class="text-center text-muted">-</td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong><br></td>
+          <td>JSON, Hex</td>
+        </tr>
+        <tr>
+          <td><strong>Cumulocity MQTT Service ( deprecated ) </strong><small class="text-muted">(tenant
+              isolation, only one instance per tenant exists)</small></td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong><br></td>
+          <td>JSON, Hex, Protobuf, Extension</td>
+        </tr>
+        <tr>
+          <td><strong>Cumulocity MQTT Service </strong><small class="text-muted">(device
+              isolation, only one instance per tenant exists)</small></td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong><br></td>
+          <td>JSON, Hex, Protobuf, Extension</td>
+        </tr>
+        <tr>
+          <td><strong>Apache Pulsar </strong><small class="text-muted"></small></td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong><br></td>
+          <td>JSON, Hex, Protobuf, Extension</td>
+        </tr>
+        <tr class="table-light">
+          <td><strong>Generic MQTT</strong></td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong><br></td>
+          <td>JSON, Hex, Protobuf, Extension</td>
+        </tr>
+        <tr>
+          <td><strong>Kafka</strong></td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong><br></td>
+          <td>JSON, Hex, Protobuf, Extension</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
 
 Furthermore, new connectors can be added. The UI is shown on the following screenshot. In the modal dialog, you have to first select the type of connector. Currently, we support the following connectors:
 
@@ -70,21 +143,21 @@ Furthermore, new connectors can be added. The UI is shown on the following scree
 The configuration properties are dynamically adapted to the configuration parameter for the chosen connector type:
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Connector_Edit.png"  style="width: 50%;" />
+<img src="resources/image/Dynamic_Mapper_Connector_New.png"  style="width: 70%;" />
 </p>
 <br/>
 
 The settings for the Kafka connector can be seen on the following screenshot:
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Connector_Kafka.png"  style="width: 50%;" />
+<img src="resources/image/Dynamic_Mapper_Connector_Kafka.png"  style="width: 70%;" />
 </p>
 <br/>
 
 The settings for the Default HTTP Connector (inbound) are as follows
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Connector_Http.png"  style="width: 50%;" />
+<img src="resources/image/Dynamic_Mapper_Connector_Http.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -232,7 +305,7 @@ Also you can decide if you want to start with snooping messages on specific topi
 As a next step you need to create or select the connectors the mapping should be deployed to.
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Connector_Select.png"  style="width: 80%;" />
+<img src="resources/image/Dynamic_Mapper_Connector_Select.png"  style="width: 70%;" />
 </p>
 
 Make sure to select at least one connector before you proceed to the next step. You can select multiple connectors if your mapping should be deployed to all of them.
@@ -609,10 +682,11 @@ Important is that in the end the response of the AI agent should either contain 
     </table>
 
   <br />
+  <p align="center">
   <img width="70%" class="m-l-48 m-b-48"
     src="resources/image/Dynamic_Mapper_Mapping_Stepper_Mapping_Metadata_Inbound.png"
     alt="Metadata inbound" />
-
+  </p>
 
   </div>
   <div class="p-b-8 text-16"> The following table lists all metadata nodes for outbound mappings:
@@ -683,10 +757,11 @@ Important is that in the end the response of the AI agent should either contain 
       </tbody>
     </table>
     <br />
+    <p align="center">
     <img width="70%" class="m-l-48 m-b-48"
       src="resources/image/Dynamic_Mapper_Mapping_Stepper_Mapping_Metadata_Outbound.png"
       alt="Metadata outbound" />
-
+    </p>
   </div>
 </div>
 
@@ -741,7 +816,7 @@ In order to use a previously snooped payload click the button
 `Snooped templates`. Multiples activation of this button iterates over all the recorded templates.
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_Snooping.png"  style="width: 50%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_Snooping.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -807,6 +882,31 @@ The following guide lays out the steps to create and use a processor extension:
 </p>
 <br/>
 
+## Monitoring
+
+On the monitoring tab `Monitoring` you can see how a specific MQTT mapping performs since the last activation in the microservice.
+
+<p align="center">
+<img src="resources/image/Dynamic_Mapper_Monitoring.png"  style="width: 70%;" />
+</p>
+<br/>
+
+A chart shows a summary with numbers of all successfully processed messages and those raising errors.
+
+<p align="center">
+<img src="resources/image/Dynamic_Mapper_Monitoring_Chart.png"  style="width: 70%;" />
+</p>
+<br/>
+
+### Mapping Tree Inbound
+
+On the tab `Mapping Tree` you can see how the registered mappings are organised in a tree. This can be very helpful in case of tracing any errors.
+
+<p align="center">
+<img src="resources/image/Dynamic_Mapper_Monitoring_Tree.png"  style="width: 70%;" />
+</p>
+<br/>
+
 # Different type of substitutions
 
 When you define an expression or a path in the source payload for a substitution the result can be one of the following cases:
@@ -842,30 +942,5 @@ This is illustrated on the following diagram:
 
 <p align="center">
 <img src="resources/image/Dynamic_Mapper_Diagram_SubstitutionType.png"  style="width: 70%;" />
-</p>
-<br/>
-
-## Monitoring
-
-On the monitoring tab `Monitoring` you can see how a specific MQTT mapping performs since the last activation in the microservice.
-
-<p align="center">
-<img src="resources/image/Dynamic_Mapper_Monitoring.png"  style="width: 70%;" />
-</p>
-<br/>
-
-A chart shows a summary with numbers of all successfully processed messages and those raising errors.
-
-<p align="center">
-<img src="resources/image/Dynamic_Mapper_Monitoring_Chart.png"  style="width: 70%;" />
-</p>
-<br/>
-
-### Mapping Tree Inbound
-
-On the tab `Mapping Tree` you can see how the registered mappings are organised in a tree. This can be very helpful in case of tracing any errors.
-
-<p align="center">
-<img src="resources/image/Dynamic_Mapper_Monitoring_Tree.png"  style="width: 70%;" />
 </p>
 <br/>
