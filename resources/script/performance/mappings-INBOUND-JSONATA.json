@@ -85,8 +85,6 @@
     "snoopedTemplates": [],
     "maxFailureCount": 0,
     "qos": "AT_MOST_ONCE",
-    "lastUpdate": 1761752628421,
-    "transformationAsCode": false,
-    "substitutionAsCode": false
+    "lastUpdate": 1761752628421
   }
 ]
