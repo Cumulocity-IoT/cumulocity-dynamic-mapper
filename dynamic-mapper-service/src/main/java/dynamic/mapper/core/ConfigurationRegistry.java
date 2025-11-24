@@ -188,8 +188,9 @@ public class ConfigurationRegistry {
         return source;
     }
 
-    @Getter
-    private boolean isPulsarAvailable = true;
+    public boolean isPulsarAvailable() {
+        return !(mqttServicePulsarUrl == null || mqttServicePulsarUrl.trim().isEmpty());
+    }
 
     public AConnectorClient createConnectorClient(ConnectorConfiguration connectorConfiguration,
                                                   String additionalSubscriptionIdTest, String tenant) throws ConnectorException {
@@ -254,16 +255,12 @@ public class ConfigurationRegistry {
                         connectorConfiguration.getIdentifier());
                 break;
             case CUMULOCITY_MQTT_SERVICE_PULSAR:
-                if (mqttServicePulsarUrl == null || mqttServicePulsarUrl.trim().isEmpty()) {
-                    log.warn("{} - C8Y_BASEURL_PULSAR is not configured for Pulsar connector. Disabling MQTT Service.", tenant);
-                    //throw new ConnectorException("Pulsar URL not configured. Please set C8Y_BASEURL_PULSAR environment variable.");+
-                    this.isPulsarAvailable = false;
+                if (isPulsarAvailable()) {
+                    connectorClient = new MQTTServicePulsarClient(this, connectorRegistry, connectorConfiguration,
+                            null, additionalSubscriptionIdTest, tenant);
+                    log.info("{} - MQTTService Pulsar Connector created, identifier: {}", tenant,
+                            connectorConfiguration.getIdentifier());
                 }
-                connectorClient = new MQTTServicePulsarClient(this, connectorRegistry, connectorConfiguration,
-                        null, additionalSubscriptionIdTest, tenant);
-                this.isPulsarAvailable = true;
-                log.info("{} - MQTTService Pulsar Connector created, identifier: {}", tenant,
-                        connectorConfiguration.getIdentifier());
                 break;
             case TEST:
                 connectorClient = new TestClient(this, connectorRegistry, connectorConfiguration,
