@@ -117,6 +117,10 @@ export default {
         from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Change_Metadata.png',
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_Change_Metadata.png'
       },
+            {
+        from: '../resources/image/Dynamic_Mapper_Connector_New.png',
+        to: 'image/Dynamic_Mapper_Connector_New.png'
+      },
       {
         from: '../LICENSE',
         to: 'LICENSE.txt'
