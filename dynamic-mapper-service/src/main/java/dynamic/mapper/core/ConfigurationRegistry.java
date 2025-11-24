@@ -188,8 +188,12 @@ public class ConfigurationRegistry {
         return source;
     }
 
-    public boolean isPulsarAvailable() {
-        return !(mqttServicePulsarUrl == null || mqttServicePulsarUrl.trim().isEmpty());
+    public boolean isPulsarAvailable(String tenant) {
+        if( mqttServicePulsarUrl == null || mqttServicePulsarUrl.trim().isEmpty()) {
+            log.warn("{} - C8Y_BASEURL_PULSAR is not configured for Pulsar connector. Disabling MQTT Service.", tenant);
+            return false;
+        }
+        return true;
     }
 
     public AConnectorClient createConnectorClient(ConnectorConfiguration connectorConfiguration,
@@ -255,7 +259,7 @@ public class ConfigurationRegistry {
                         connectorConfiguration.getIdentifier());
                 break;
             case CUMULOCITY_MQTT_SERVICE_PULSAR:
-                if (isPulsarAvailable()) {
+                if (isPulsarAvailable(tenant)) {
                     connectorClient = new MQTTServicePulsarClient(this, connectorRegistry, connectorConfiguration,
                             null, additionalSubscriptionIdTest, tenant);
                     log.info("{} - MQTTService Pulsar Connector created, identifier: {}", tenant,

@@ -150,7 +150,7 @@ public class ConfigurationController {
         feature.setExternalExtensionsEnabled(externalExtensionsEnabled);
         feature.setUserHasMappingCreateRole(Utils.userHasMappingCreateRole());
         feature.setUserHasMappingAdminRole(Utils.userHasMappingAdminRole());
-        feature.setPulsarAvailable(configurationRegistry.isPulsarAvailable());
+        feature.setPulsarAvailable(configurationRegistry.isPulsarAvailable(tenant));
         return new ResponseEntity<Feature>(feature, HttpStatus.OK);
     }
 
