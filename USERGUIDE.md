@@ -17,7 +17,7 @@
       - [Define templates and substitutions for source and target payload](#define-templates-and-substitutions-for-source-and-target-payload)
       - [Substitutions defined as code (javascript)](#substitutions-defined-as-code-javascript)
       - [Defining the payload transformation using a Smart Function (JavaScript)](#defining-the-payload-transformation-using-a-smart-function-javascript)
-      - [Different type of substitutions](#different-type-of-substitutions)
+    - [Using metadata in source templates and target templates](#using-metadata-in-source-templates-and-target-templates)
     - [Apply a filter for a mapping](#apply-a-filter-for-a-mapping)
     - [Test transformation from source to target format](#test-transformation-from-source-to-target-format)
     - [Send transformed test message to test device in Cumulocity](#send-transformed-test-message-to-test-device-in-cumulocity)
@@ -27,6 +27,7 @@
   - [Configuration](#configuration)
     - [Microservice configuration](#microservice-configuration)
     - [Processing Extensions](#processing-extensions)
+  - [Different type of substitutions](#different-type-of-substitutions)
   - [Monitoring](#monitoring)
     - [Mapping Tree Inbound](#mapping-tree-inbound)
 
@@ -506,44 +507,6 @@ console.log("Device (by external id): " + deviceByExternalId);
 <p class="image-description"><b>Description:</b> Screenshot showing step 4 for defining complete transformation using JavaScript.</p>
 <br/>
 
-#### Different type of substitutions
-
-When you define an expression or a path in the source payload for a substitution the result can be one of the following cases:
-
-1. **if** the result is a scalar value, e.g. `10.4` for a single value **and**
-   - **if** only one device is identified in the payload \
-     **then** only one Cumulocity MEA-request is generated from this payload.\
-     This is a **single-device-single-value** mapping.
-   - **if** multiple devices are identified, e.g. `["device_101023", "device_101024"]` in the payload \
-     **then** multiple Cumulocity MEA-requests or inventory requests - depending on the used targetAPI in the mapping - are generated from this payload. This only makes sense for creating multiple devices.\
-     This is a **multi-device-single-value** mapping.
-2. **if** the result is an array, e.g. `[10.4, 20.9]` for multiple measurements values **and**
-
-   - **if** multiple devices are identified , e.g. `["device_101023","device_101024"]` \
-     **then** multiple Cumulocity MEA-requests are generated from this single payload. In this case two requests:
-
-     1. request: for device `"device_101023"` and value `10.4`
-     2. request: for device `"device_101024"` and value `20.9`
-
-     This is a **multi-device-multi-value** mapping.
-
-   - **if** a single devices is identified , e.g. `"device_101023"` \
-     **then** multiple Cumulocity MEA-requests are generated from this single payload. In this case two requests:
-
-     1. request: for device `"device_101023"` and value `10.4`
-     2. request: for device `"device_101023"` and value `20.9`
-
-     This is a **single-device-multi-value** mapping.
-
-3. the result is an object: this is not supported.
-
-This is illustrated on the following diagram:
-
-<p align="center">
-<img src="resources/image/Dynamic_Mapper_Diagram_SubstitutionType.png"  style="width: 70%;" />
-</p>
-<br/>
-
 ---
 
 **NOTE:** If the size of all extracted arrays do not match, then the first values in the array with less items is taken to fill the missing values.\
@@ -564,6 +527,169 @@ then three requests are generated:
 
 When AI features are enabled of Dynamic Mapper, you can use the button `Generate Substitutions` to generate the substitutions or the code for the mapping automatically based on the provided source and target template. If the suggested output is not as expected, you can re-prompt the AI agent to re-fine the substitutions or code.
 Important is that in the end the response of the AI agent should either contain a valid JSON Array of substitutions or a valid JavaScript code that returns a `SubstitutionResult` object and can be `Saved` to the Mapping.
+
+### Using metadata in source templates and target templates
+
+<div class="card-block">
+  <div class="p-b-8 text-16"> The mapper adds metadata in source and target templates to control the processing
+    of the mapping. All JSON nodes that are
+    added as metadata to the templates are enclosed in <code>_</code>, e.g.
+    <code>_CONTEXT_DATA_</code>, <code>_IDENTITY_</code> and <code>_TOPIC_LEVEL_</code>
+    <br />
+  </div>
+  <div class="p-b-8 text-16">
+    <span class="text-primary">Note:</span>
+    All metadata nodes including sub-nodes are note meant to be changes directly. To overwrite e.g. the API for a
+    mappings at runtime you have to add a substitution: <code>'EVENT' -> _CONTEXT_DATA_.api</code>. All metadata
+    nodes are generated before the processing of a mapping and removed form the target payload before it is sent.
+    Therefore the metadata is not saved in the mapping itself and can not store individual information.
+  </div>
+  <div class="p-b-8 text-16"> The following table lists all metadata nodes for inbound mappings:
+    <br />
+  </div>
+  <div class="table-responsive table-width-80">
+    <table class="table _table-striped" style="table-layout: fixed;">
+      <thead class="thead-light">
+        <tr>
+          <th style="width: 15%;">Defined in template</th>
+          <th style="width: 25%;">Node</th>
+          <th style="width: 8%;">Role</th>
+          <th style="width: 52%;">Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Source template <small class="text-muted">(external broker)</small></td>
+          <td><code>_TOPIC_LEVEL_[.]</code></td>
+          <td>map-from</td>
+          <td>Topic of the inbound MQTT message. Can be used to identify an device if he topic contains external
+            identifiers, e.g. serial number</td>
+        </tr>
+        <tr>
+          <td>Source template <small class="text-muted">(external broker)</small></td>
+          <td><code>_CONTEXT_DATA_.key</code></td>
+          <td>map-from</td>
+          <td>Key from Kafka message header</td>
+        </tr>
+        <tr>
+          <td>Target template <small class="text-muted">(Cumulocity)</small></td>
+          <td><code>_IDENTITY_.externalId</code></td>
+          <td>map-to</td>
+          <td>Map node from external template that identifies the device to this node</td>
+        </tr>
+        <tr>
+          <td>Target template <small class="text-muted">(Cumulocity)</small></td>
+          <td><code>_CONTEXT_DATA_.api</code></td>
+          <td>map-to</td>
+          <td>Overwrite target API to send payload to, e.g. <code>ALARM</code></td>
+        </tr>
+        <tr>
+          <td>Target template <small class="text-muted">(Cumulocity)</small></td>
+          <td><code>_CONTEXT_DATA_.processingMode</code></td>
+          <td>map-to</td>
+          <td>Define processing mode for payload<code>persistent</code> or <code>transient</code></td>
+        </tr>
+        <tr>
+          <td>Target template <small class="text-muted">(Cumulocity)</small></td>
+          <td><code>_CONTEXT_DATA_.deviceName</code></td>
+          <td>map-to</td>
+          <td>Defines the device name of a device that is created implicitly when the mapping uses
+            <code>Create non-existing devices</code>
+          </td>
+        </tr>
+        <tr>
+          <td>Target template <small class="text-muted">(Cumulocity)</small></td>
+          <td><code>_CONTEXT_DATA_.deviceType</code></td>
+          <td>map-to</td>
+          <td>Defines the device type of a device that is created implicitly when the mapping uses
+            <code>Create non-existing devices</code>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+  <br />
+  <img width="70%" class="m-l-48 m-b-48"
+    src="resources/image/Dynamic_Mapper_Mapping_Stepper_Mapping_Metadata_Inbound.png"
+    alt="Metadata inbound" />
+
+
+  </div>
+  <div class="p-b-8 text-16"> The following table lists all metadata nodes for outbound mappings:
+    <br />
+  </div>
+  <div class="table-responsive table-width-80">
+    <table class="table _table-striped" style="table-layout: fixed;">
+      <thead class="thead-light">
+        <tr>
+          <th style="width: 15%;">Defined in template</th>
+          <th style="width: 25%;">Node</th>
+          <th style="width: 8%;">Role</th>
+          <th style="width: 52%;">Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Source template <small class="text-muted">(Cumulocity)</small></td>
+          <td><code>_IDENTITY_.externalId</code></td>
+          <td>map-from</td>
+          <td>External Id to identify the external device</td>
+        </tr>
+        <tr>
+          <td>Source template <small class="text-muted">(Cumulocity)</small></td>
+          <td><code>_IDENTITY_.c8ySourceId</code></td>
+          <td>map-from</td>
+          <td>Cumulocity source id of the device</td>
+        </tr>
+        <tr>
+          <td>Target template <small class="text-muted">(Cumulocity)</small></td>
+          <td><code>_TOPIC_LEVEL_[.]</code></td>
+          <td>map-to</td>
+          <td>Topic to be used when sending messages. For a WebHook this defines the context path. The context path
+            is then
+            appended to the URL that is defined in the WebHook connector properties. This property has to be used
+            for all
+            transformation types other than Smart Functions.i.e. Substitution as JSONata Expression, Substitution as
+            JavaScript code.</td>
+        </tr>
+        <tr>
+          <td>Target template <small class="text-muted">(external broker)</small></td>
+          <td><code>_CONTEXT_DATA_.key</code></td>
+          <td>map-to</td>
+          <td>Key to be set in Kafka message header</td>
+        </tr>
+        <tr>
+          <td>Target template <small class="text-muted">(external broker)</small></td>
+          <td><code>_CONTEXT_DATA_.method</code></td>
+          <td>map-to</td>
+          <td>REST methods to be set when using a WebHook connector</td>
+        </tr>
+        <tr>
+          <td>Target template <small class="text-muted">(Cumulocity)</small></td>
+          <td><code>_CONTEXT_DATA_.retain</code></td>
+          <td>map-to</td>
+          <td>Defines to send MQTT message as retained</td>
+        </tr>
+        <tr>
+          <td>Target template <small class="text-muted">(Cumulocity)</small></td>
+          <td><code>_CONTEXT_DATA_.publishTopic</code></td>
+          <td>map-to</td>
+          <td>Topic to be used when sending messages. For a WebHook this defines the context path. The context path
+            is then
+            appended to the URL that is defined in the WebHook connector properties. This property can only be used
+            for Smart
+            Functions</td>
+        </tr>
+      </tbody>
+    </table>
+    <br />
+    <img width="70%" class="m-l-48 m-b-48"
+      src="resources/image/Dynamic_Mapper_Mapping_Stepper_Mapping_Metadata_Outbound.png"
+      alt="Metadata outbound" />
+
+  </div>
+</div>
+
 
 ### Apply a filter for a mapping
 
@@ -678,6 +804,44 @@ The following guide lays out the steps to create and use a processor extension:
 
 <p align="center">
 <img src="resources/image/Dynamic_Mapper_Diagram_ProcessorExtensionSource_Guide.png"  style="width: 70%;" />
+</p>
+<br/>
+
+# Different type of substitutions
+
+When you define an expression or a path in the source payload for a substitution the result can be one of the following cases:
+
+1. **if** the result is a scalar value, e.g. `10.4` for a single value **and**
+   - **if** only one device is identified in the payload \
+     **then** only one Cumulocity MEA-request is generated from this payload.\
+     This is a **single-device-single-value** mapping.
+   - **if** multiple devices are identified, e.g. `["device_101023", "device_101024"]` in the payload \
+     **then** multiple Cumulocity MEA-requests or inventory requests - depending on the used targetAPI in the mapping - are generated from this payload. This only makes sense for creating multiple devices.\
+     This is a **multi-device-single-value** mapping.
+2. **if** the result is an array, e.g. `[10.4, 20.9]` for multiple measurements values **and**
+
+   - **if** multiple devices are identified , e.g. `["device_101023","device_101024"]` \
+     **then** multiple Cumulocity MEA-requests are generated from this single payload. In this case two requests:
+
+     1. request: for device `"device_101023"` and value `10.4`
+     2. request: for device `"device_101024"` and value `20.9`
+
+     This is a **multi-device-multi-value** mapping.
+
+   - **if** a single devices is identified , e.g. `"device_101023"` \
+     **then** multiple Cumulocity MEA-requests are generated from this single payload. In this case two requests:
+
+     1. request: for device `"device_101023"` and value `10.4`
+     2. request: for device `"device_101023"` and value `20.9`
+
+     This is a **single-device-multi-value** mapping.
+
+3. the result is an object: this is not supported.
+
+This is illustrated on the following diagram:
+
+<p align="center">
+<img src="resources/image/Dynamic_Mapper_Diagram_SubstitutionType.png"  style="width: 70%;" />
 </p>
 <br/>
 
