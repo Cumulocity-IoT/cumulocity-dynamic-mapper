@@ -75,8 +75,6 @@
     ],
     "active": false,
     "debug": false,
-    "tested": true,
-    "supportsMessageContext": false,
     "eventWithAttachment": false,
     "createNonExistingDevice": true,
     "updateExistingDevice": false,

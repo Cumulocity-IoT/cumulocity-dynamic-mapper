@@ -106,6 +106,18 @@ export default {
         to: 'image/Dynamic_Mapper_Mapping_Substitution_Outbound.png'
       },
       {
+        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Mapping_Metadata_Inbound.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Mapping_Metadata_Inbound.png'
+      },
+      {
+        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Mapping_Metadata_Outbound.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Mapping_Metadata_Outbound.png'
+      },
+      {
+        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Change_Metadata.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_Change_Metadata.png'
+      },
+      {
         from: '../LICENSE',
         to: 'LICENSE.txt'
       },

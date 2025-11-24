@@ -197,8 +197,6 @@ void setUp() throws Exception {
                 .transformationType(TransformationType.SMART_FUNCTION)
                 .debug(false)
                 .active(false)
-                .tested(false)
-                .supportsMessageContext(true)
                 .eventWithAttachment(false)
                 .createNonExistingDevice(false)
                 .updateExistingDevice(false)

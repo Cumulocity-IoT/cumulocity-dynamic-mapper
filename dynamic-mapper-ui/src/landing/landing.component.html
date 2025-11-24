@@ -50,6 +50,8 @@
           using JavaScript' | translate }}</a></li>
       <li><a (click)="scrollToElement('javascript-smart-function')" style="cursor: pointer;">{{ 'Defining the payload
           transformation using a Smart Function (JavaScript)' | translate }}</a></li>
+      <li><a (click)="scrollToElement('metadata')" style="cursor: pointer;">{{ 'Using metadata in
+          source templates and target templates' | translate }}</a></li>
       <li><a (click)="scrollToElement('unknown-payload')" style="cursor: pointer;">{{ 'Getting started without knowing
           your source payload' | translate }}</a></li>
       <li><a (click)="scrollToElement('reliability-settings')" style="cursor: pointer;">{{ 'Using reliability settings
@@ -131,9 +133,6 @@
   </div>
   <div class="card-block">
     <div class="p-b-8 text-16"> The mapper supports the following connectors and mappings:</div>
-    <!-- <br />
-    <img width="70%" class="m-l-48 m-b-48"
-      src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Connector_Matrix.png" alt="Connector matrix" /> -->
 
     <div class="table-responsive table-width-80">
       <table class="table _table-striped">
@@ -175,7 +174,7 @@
             <td>JSON, Hex, Protobuf, Extension</td>
           </tr>
           <tr>
-            <td><strong>Cumulocity MQTT Service  </strong><small class="text-muted">(device
+            <td><strong>Cumulocity MQTT Service </strong><small class="text-muted">(device
                 isolation, only one instance per tenant exists)</small></td>
             <td class="text-center"><strong>X</strong></td>
             <td class="text-center"><strong>X</strong></td>
@@ -494,6 +493,182 @@
         <div class="p-b-8"></div>
       </div>
     </div>
+
+    <div class="card-header" id="metadata">
+      <h3>
+        {{ 'Using metadata in source templates and target templates' | translate }}
+      </h3>
+    </div>
+    <div class="card-block">
+      <div class="p-b-8 text-16"> The mapper adds metadata in source and target templates to control the processing
+        of the mapping. All JSON nodes that are
+        added as metadata to the templates are enclosed in <code>_</code>, e.g.
+        <code>_CONTEXT_DATA_</code>, <code>_IDENTITY_</code> and <code>_TOPIC_LEVEL_</code>
+        <br />
+      </div>
+      <div class="p-b-8 text-16">
+        <span class="text-primary">Note:</span>
+        All metadata nodes including sub-nodes are note meant to be changes directly. All metadata
+        nodes are generated before the processing of a mapping and removed form the target payload before it is sent.
+        Therefore the metadata is not saved in the mapping itself and can not store individual information.
+        <br />
+        To overwrite e.g. the API for a
+        mappings at runtime you have to add a substitution: <code>'EVENT' -> _CONTEXT_DATA_.api</code>. similar to the
+        substitution on the screenshot below:
+        <br />
+        <img width="70%" class="m-l-48 m-b-48"
+          src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Change_Metadata.png"
+          alt="Change metadata" />
+        <p class="image-description"><b>Description:</b> Screenshot showing additional substitution changing the target
+          API to <code>'EVENT'</code> </p>
+
+      </div>
+      <div class="p-b-8 text-16"> The following table lists all metadata nodes for inbound mappings:
+        <br />
+      </div>
+      <div class="table-responsive table-width-80">
+        <table class="table _table-striped" style="table-layout: fixed;">
+          <thead class="thead-light">
+            <tr>
+              <th style="width: 15%;">Defined in template</th>
+              <th style="width: 25%;">Node</th>
+              <th style="width: 8%;">Role</th>
+              <th style="width: 52%;">Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Source template <small class="text-muted">(external broker)</small></td>
+              <td><code>_TOPIC_LEVEL_[.]</code></td>
+              <td>map-from</td>
+              <td>Topic of the inbound MQTT message. Can be used to identify an device if he topic contains external
+                identifiers, e.g. serial number</td>
+            </tr>
+            <tr>
+              <td>Source template <small class="text-muted">(external broker)</small></td>
+              <td><code>_CONTEXT_DATA_.key</code></td>
+              <td>map-from</td>
+              <td>Key from Kafka message header</td>
+            </tr>
+            <tr>
+              <td>Target template <small class="text-muted">(Cumulocity)</small></td>
+              <td><code>_IDENTITY_.externalId</code></td>
+              <td>map-to</td>
+              <td>Map node from external template that identifies the device to this node</td>
+            </tr>
+            <tr>
+              <td>Target template <small class="text-muted">(Cumulocity)</small></td>
+              <td><code>_CONTEXT_DATA_.api</code></td>
+              <td>map-to</td>
+              <td>Overwrite target API to send payload to, e.g. <code>ALARM</code></td>
+            </tr>
+            <tr>
+              <td>Target template <small class="text-muted">(Cumulocity)</small></td>
+              <td><code>_CONTEXT_DATA_.processingMode</code></td>
+              <td>map-to</td>
+              <td>Define processing mode for payload<code>persistent</code> or <code>transient</code></td>
+            </tr>
+            <tr>
+              <td>Target template <small class="text-muted">(Cumulocity)</small></td>
+              <td><code>_CONTEXT_DATA_.deviceName</code></td>
+              <td>map-to</td>
+              <td>Defines the device name of a device that is created implicitly when the mapping uses
+                <code>Create non-existing devices</code>
+              </td>
+            </tr>
+            <tr>
+              <td>Target template <small class="text-muted">(Cumulocity)</small></td>
+              <td><code>_CONTEXT_DATA_.deviceType</code></td>
+              <td>map-to</td>
+              <td>Defines the device type of a device that is created implicitly when the mapping uses
+                <code>Create non-existing devices</code>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <br />
+        <img width="70%" class="m-l-48 m-b-48"
+          src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Mapping_Metadata_Inbound.png"
+          alt="Metadata inbound" />
+
+
+      </div>
+      <div class="p-b-8 text-16"> The following table lists all metadata nodes for outbound mappings:
+        <br />
+      </div>
+      <div class="table-responsive table-width-80">
+        <table class="table _table-striped" style="table-layout: fixed;">
+          <thead class="thead-light">
+            <tr>
+              <th style="width: 15%;">Defined in template</th>
+              <th style="width: 25%;">Node</th>
+              <th style="width: 8%;">Role</th>
+              <th style="width: 52%;">Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Source template <small class="text-muted">(Cumulocity)</small></td>
+              <td><code>_IDENTITY_.externalId</code></td>
+              <td>map-from</td>
+              <td>External Id to identify the external device</td>
+            </tr>
+            <tr>
+              <td>Source template <small class="text-muted">(Cumulocity)</small></td>
+              <td><code>_IDENTITY_.c8ySourceId</code></td>
+              <td>map-from</td>
+              <td>Cumulocity source id of the device</td>
+            </tr>
+            <tr>
+              <td>Target template <small class="text-muted">(Cumulocity)</small></td>
+              <td><code>_TOPIC_LEVEL_[.]</code></td>
+              <td>map-to</td>
+              <td>Topic to be used when sending messages. For a WebHook this defines the context path. The context path
+                is then
+                appended to the URL that is defined in the WebHook connector properties. This property has to be used
+                for all
+                transformation types other than Smart Functions.i.e. Substitution as JSONata Expression, Substitution as
+                JavaScript code.</td>
+            </tr>
+            <tr>
+              <td>Target template <small class="text-muted">(external broker)</small></td>
+              <td><code>_CONTEXT_DATA_.key</code></td>
+              <td>map-to</td>
+              <td>Key to be set in Kafka message header</td>
+            </tr>
+            <tr>
+              <td>Target template <small class="text-muted">(external broker)</small></td>
+              <td><code>_CONTEXT_DATA_.method</code></td>
+              <td>map-to</td>
+              <td>REST methods to be set when using a WebHook connector</td>
+            </tr>
+            <tr>
+              <td>Target template <small class="text-muted">(Cumulocity)</small></td>
+              <td><code>_CONTEXT_DATA_.retain</code></td>
+              <td>map-to</td>
+              <td>Defines to send MQTT message as retained</td>
+            </tr>
+            <tr>
+              <td>Target template <small class="text-muted">(Cumulocity)</small></td>
+              <td><code>_CONTEXT_DATA_.publishTopic</code></td>
+              <td>map-to</td>
+              <td>Topic to be used when sending messages. For a WebHook this defines the context path. The context path
+                is then
+                appended to the URL that is defined in the WebHook connector properties. This property can only be used
+                for Smart
+                Functions</td>
+            </tr>
+          </tbody>
+        </table>
+        <br />
+        <img width="70%" class="m-l-48 m-b-48"
+          src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Mapping_Metadata_Outbound.png"
+          alt="Metadata outbound" />
+
+      </div>
+    </div>
+
 
     <div class="card-header" id="unknown-payload">
       <h3>

@@ -107,7 +107,6 @@ public class KafkaClientV2 extends AConnectorClient {
     public KafkaClientV2() {
         this.connectorType = ConnectorType.KAFKA;
         this.singleton = false;
-        this.supportsMessageContext = true; // Supports context for HTTP methods
         this.supportedQOS = Arrays.asList(Qos.AT_MOST_ONCE); // Kafka doesn't have MQTT-like QoS
         loadDefaultProperties();
         this.connectorSpecification = createConnectorSpecification();
@@ -906,7 +905,7 @@ public class KafkaClientV2 extends AConnectorClient {
                 ConnectorType.KAFKA,
                 false,
                 configProps,
-                true, // supportsMessageContext
+                true,
                 supportedDirections());
     }
 

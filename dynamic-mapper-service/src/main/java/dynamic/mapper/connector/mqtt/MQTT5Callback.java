@@ -48,18 +48,15 @@ public class MQTT5Callback implements Consumer<Mqtt5Publish> {
     private String tenant;
     private String connectorIdentifier;
     private String connectorName;
-    private Boolean supportsMessageContext;
     private ServiceConfiguration serviceConfiguration;
     private ExecutorService virtualThreadPool;
 
     MQTT5Callback(String tenant, ConfigurationRegistry configurationRegistry, GenericMessageCallback callback,
-            String connectorIdentifier, String connectorName,
-            boolean supportsMessageContext) {
+            String connectorIdentifier, String connectorName) {
         this.genericMessageCallback = callback;
         this.tenant = tenant;
         this.connectorIdentifier = connectorIdentifier;
         this.connectorName = connectorName;
-        this.supportsMessageContext = supportsMessageContext;
         this.serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
     }
@@ -76,7 +73,6 @@ public class MQTT5Callback implements Consumer<Mqtt5Publish> {
                 .orElse(null);
         ConnectorMessage connectorMessage = ConnectorMessage.builder()
                 .tenant(tenant)
-                .supportsMessageContext(supportsMessageContext)
                 .topic(topic)
                 .sendPayload(true)
                 .connectorIdentifier(connectorIdentifier)

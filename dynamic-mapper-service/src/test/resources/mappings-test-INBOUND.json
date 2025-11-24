@@ -4,7 +4,6 @@
     "name": "Mapping - 00",
     "mappingTopic": "device/test",
     "mappingTopicSample": "device/test",
-    "tested": false,
     "autoAckOperation": true,
     "sourceTemplate": "{\"Temperature\":{\"value\":110,\"unit\":\"C\"},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"deviceId\":\"909090\"}",
     "targetTemplate": "{\"c8y_TemperatureMeasurement\":{\"T\":{\"value\":110,\"unit\":\"C\"}},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"source\":{\"id\":\"909090\"},\"type\":\"c8y_TemperatureMeasurement\"}",
@@ -40,15 +39,13 @@
     "targetAPI": "MEASUREMENT",
     "updateExistingDevice": false,
     "mappingType": "JSON",
-    "lastUpdate": 1728564487231,
-    "supportsMessageContext": false
+    "lastUpdate": 1728564487231
   },
   {
     "id": "000000001",
     "name": "Mapping - 01",
     "mappingTopic": "device/test/sub",
     "mappingTopicSample": "device/test/sub",
-    "tested": false,
     "autoAckOperation": true,
     "targetTemplate": "{\"c8y_TemperatureMeasurement\":{\"T\":{\"value\":110,\"unit\":\"C\"}},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"source\":{\"id\":\"909090\"},\"type\":\"c8y_TemperatureMeasurement\"}",
     "sourceTemplate": "{\"Temperature\":{\"value\":110,\"unit\":\"C\"},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"deviceId\":\"909090\"}",
@@ -84,15 +81,13 @@
     "targetAPI": "MEASUREMENT",
     "updateExistingDevice": false,
     "mappingType": "JSON",
-    "lastUpdate": 1728564332182,
-    "supportsMessageContext": false
+    "lastUpdate": 1728564332182
   },
   {
     "id": "000000002",
     "name": "Mapping - 02",
     "mappingTopic": "device/test/sub/subsub",
     "mappingTopicSample": "device/test/sub/subsub",
-    "tested": false,
     "autoAckOperation": true,
     "sourceTemplate": "{\"Temperature\":{\"value\":110,\"unit\":\"C\"},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"deviceId\":\"909090\"}",
     "targetTemplate": "{\"c8y_TemperatureMeasurement\":{\"T\":{\"value\":110,\"unit\":\"C\"}},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"source\":{\"id\":\"909090\"},\"type\":\"c8y_TemperatureMeasurement\"}",
@@ -128,15 +123,13 @@
     "targetAPI": "MEASUREMENT",
     "updateExistingDevice": false,
     "mappingType": "JSON",
-    "lastUpdate": 1728564332182,
-    "supportsMessageContext": false
+    "lastUpdate": 1728564332182
   },
   {
     "id": "000000003",
     "name": "Mapping - 03",
     "mappingTopic": "asset",
     "mappingTopicSample": "asset",
-    "tested": false,
     "autoAckOperation": true,
     "sourceTemplate": "{\"Temperature\":{\"value\":110,\"unit\":\"C\"},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"deviceId\":\"909090\"}",
     "targetTemplate": "{\"c8y_TemperatureMeasurement\":{\"T\":{\"value\":110,\"unit\":\"C\"}},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"source\":{\"id\":\"909090\"},\"type\":\"c8y_TemperatureMeasurement\"}",
@@ -172,15 +165,13 @@
     "targetAPI": "MEASUREMENT",
     "updateExistingDevice": false,
     "mappingType": "JSON",
-    "lastUpdate": 1728564332182,
-    "supportsMessageContext": false
+    "lastUpdate": 1728564332182
   },
   {
     "id": "000000004",
     "name": "Mapping - 04",
     "mappingTopic": "device/test1/sub",
     "mappingTopicSample": "device/test/sub",
-    "tested": false,
     "autoAckOperation": true,
     "targetTemplate": "{\"c8y_TemperatureMeasurement\":{\"T\":{\"value\":110,\"unit\":\"C\"}},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"source\":{\"id\":\"909090\"},\"type\":\"c8y_TemperatureMeasurement\"}",
     "sourceTemplate": "{\"Temperature\":{\"value\":110,\"unit\":\"C\"},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"deviceId\":\"909090\"}",
@@ -216,15 +207,13 @@
     "targetAPI": "MEASUREMENT",
     "updateExistingDevice": false,
     "mappingType": "JSON",
-    "lastUpdate": 1728564332182,
-    "supportsMessageContext": false
+    "lastUpdate": 1728564332182
   },
   {
     "id": "000000005",
     "name": "Mapping - 05",
     "mappingTopic": "device/test1/+",
     "mappingTopicSample": "device/test1/sub",
-    "tested": false,
     "autoAckOperation": true,
     "targetTemplate": "{\"c8y_TemperatureMeasurement\":{\"T\":{\"value\":110,\"unit\":\"C\"}},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"source\":{\"id\":\"909090\"},\"type\":\"c8y_TemperatureMeasurement\"}",
     "sourceTemplate": "{\"Temperature\":{\"value\":110,\"unit\":\"C\"},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"deviceId\":\"909090\"}",
@@ -260,15 +249,13 @@
     "targetAPI": "MEASUREMENT",
     "updateExistingDevice": false,
     "mappingType": "JSON",
-    "lastUpdate": 1728564332182,
-    "supportsMessageContext": false
+    "lastUpdate": 1728564332182
   },
   {
     "id": "000000006",
     "name": "Mapping - 06",
     "mappingTopic": "device/test1/+/special/sub",
     "mappingTopicSample": "device/test1/some/special/sub",
-    "tested": false,
     "autoAckOperation": true,
     "targetTemplate": "{\"c8y_TemperatureMeasurement\":{\"T\":{\"value\":110,\"unit\":\"C\"}},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"source\":{\"id\":\"909090\"},\"type\":\"c8y_TemperatureMeasurement\"}",
     "sourceTemplate": "{\"Temperature\":{\"value\":110,\"unit\":\"C\"},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"deviceId\":\"909090\"}",
@@ -304,15 +291,13 @@
     "targetAPI": "MEASUREMENT",
     "updateExistingDevice": false,
     "mappingType": "JSON",
-    "lastUpdate": 1728564332182,
-    "supportsMessageContext": false
+    "lastUpdate": 1728564332182
   },
   {
     "id": "000000007",
     "name": "Mapping - 07",
     "mappingTopic": "device/test1/#",
     "mappingTopicSample": "device/test1/some/special/sub",
-    "tested": false,
     "autoAckOperation": true,
     "targetTemplate": "{\"c8y_TemperatureMeasurement\":{\"T\":{\"value\":110,\"unit\":\"C\"}},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"source\":{\"id\":\"909090\"},\"type\":\"c8y_TemperatureMeasurement\"}",
     "sourceTemplate": "{\"Temperature\":{\"value\":110,\"unit\":\"C\"},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"deviceId\":\"909090\"}",
@@ -348,15 +333,13 @@
     "targetAPI": "MEASUREMENT",
     "updateExistingDevice": false,
     "mappingType": "JSON",
-    "lastUpdate": 1728564332182,
-    "supportsMessageContext": false
+    "lastUpdate": 1728564332182
   },
   {
     "id": "000000008",
     "name": "Mapping - 08",
     "mappingTopic": "device/test",
     "mappingTopicSample": "device/test",
-    "tested": false,
     "autoAckOperation": true,
     "sourceTemplate": "{\"Temperature\":{\"value\":110,\"unit\":\"C\"},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"deviceId\":\"909090\"}",
     "targetTemplate": "{\"c8y_TemperatureMeasurement\":{\"T\":{\"value\":110,\"unit\":\"C\"}},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"source\":{\"id\":\"909090\"},\"type\":\"c8y_TemperatureMeasurement\"}",
@@ -392,7 +375,6 @@
     "targetAPI": "MEASUREMENT",
     "updateExistingDevice": false,
     "mappingType": "JSON",
-    "lastUpdate": 1728564487231,
-    "supportsMessageContext": false
+    "lastUpdate": 1728564487231
   }
 ]

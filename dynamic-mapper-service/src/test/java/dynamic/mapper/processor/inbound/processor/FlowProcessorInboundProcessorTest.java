@@ -195,7 +195,6 @@ class FlowProcessorInboundProcessorTest {
                 .active(false)
                 .debug(false)
                 .tested(false)
-                .supportsMessageContext(true)
                 .eventWithAttachment(false)
                 .createNonExistingDevice(true)
                 .updateExistingDevice(false)
@@ -342,7 +341,6 @@ class FlowProcessorInboundProcessorTest {
         assertEquals(TransformationType.SMART_FUNCTION, mapping.getTransformationType(),
                 "Should be SMART_FUNCTION type");
         assertEquals("nlzm75nv", mapping.getIdentifier(), "Should have correct identifier");
-        assertTrue(mapping.getSupportsMessageContext(), "Should support message context");
 
         log.info("Mapping configuration validated successfully");
     }

@@ -227,7 +227,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   templatesInitialized: boolean = false;
   extensions: Map<string, Extension> = new Map();
   destroy$ = new Subject<void>();
-  supportsMessageContext: boolean;
   editorOptions: EditorComponent['editorOptions'];
   stepperForward: boolean = true;
   currentStepIndex: number;
@@ -454,12 +453,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     const isDisabled = !this.deploymentMapEntry?.connectors || this.deploymentMapEntry?.connectors?.length == 0;
     setTimeout(() => {
       this.isButtonDisabled$.next(isDisabled);
-      this.supportsMessageContext = this.deploymentMapEntry.connectorsDetailed?.some(
-        (con) => con.connectorType == ConnectorType.KAFKA ||
-          con.connectorType == ConnectorType.WEB_HOOK ||
-          con.connectorType == ConnectorType.MQTT ||
-          isSubstitutionsAsCode(this.mapping)
-      );
     });
   }
 
@@ -746,7 +739,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.targetTemplate = expandExternalTemplate(
         JSON.parse(getExternalTemplate(this.mapping)),
         this.mapping,
-        this.supportsMessageContext,
         levels
       );
     }
@@ -892,7 +884,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       const templates = this.stepperService.expandTemplates(
         this.mapping,
         this.stepperConfiguration.direction,
-        this.supportsMessageContext
       );
       this.sourceTemplate = templates.sourceTemplate;
       this.targetTemplate = templates.targetTemplate;
@@ -902,7 +893,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     const templates = this.stepperService.expandExistingTemplates(
       this.mapping,
       this.stepperConfiguration.direction,
-      this.supportsMessageContext
     );
     this.sourceTemplate = templates.sourceTemplate;
     this.targetTemplate = templates.targetTemplate;
@@ -920,9 +910,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     if (this.stepperConfiguration.direction == Direction.INBOUND) {
       this.sourceTemplate = expandExternalTemplate(
         this.sourceTemplate,
-        this.mapping,
-        this.supportsMessageContext,
-        splitTopicExcludingSeparator(this.mapping.mappingTopicSample, false)
+        this.mapping,        splitTopicExcludingSeparator(this.mapping.mappingTopicSample, false)
       );
     } else {
       this.sourceTemplate = expandC8YTemplate(this.sourceTemplate, this.mapping);
@@ -942,7 +930,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.sourceTemplate = expandExternalTemplate(
         this.sourceTemplate,
         this.mapping,
-        this.supportsMessageContext,
         splitTopicExcludingSeparator(this.mapping.mappingTopicSample, false)
       );
     } else {
@@ -964,10 +951,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       const schemaSource = getSchema(this.mapping.targetAPI, this.mapping.direction, false, false);
       this.updateSourceEditor.emit({ schema: schemaSource });
     }
-  }
-
-  async updateTestResult(result: any): Promise<void> {
-    this.mapping.tested = result;
   }
 
   onAddSubstitution(): void {

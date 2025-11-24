@@ -222,8 +222,7 @@ public class PulsarConnectorClient extends AConnectorClient {
                     configurationRegistry,
                     dispatcher,
                     connectorIdentifier,
-                    connectorName,
-                    false);
+                    connectorName);
 
             connectionStateManager.setConnected(true);
             connectionStateManager.updateStatus(ConnectorStatus.CONNECTED, true, true);

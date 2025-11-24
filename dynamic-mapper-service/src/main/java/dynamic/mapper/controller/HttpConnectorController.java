@@ -237,7 +237,6 @@ public class HttpConnectorController {
             // build connectorMessage
             ConnectorMessage connectorMessage = ConnectorMessage.builder()
                     .tenant(tenant)
-                    .supportsMessageContext(true)
                     .topic(subPath)
                     .sendPayload(true)
                     .connectorIdentifier(HttpClient.HTTP_CONNECTOR_IDENTIFIER)

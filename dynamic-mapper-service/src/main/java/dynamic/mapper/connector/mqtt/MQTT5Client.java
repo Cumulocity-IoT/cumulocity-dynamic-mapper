@@ -233,8 +233,7 @@ public class MQTT5Client extends AConnectorClient {
                     configurationRegistry,
                     dispatcher,
                     connectorIdentifier,
-                    connectorName,
-                    false);
+                    connectorName);
 
             // Connect with retry logic
             connectWithRetry();

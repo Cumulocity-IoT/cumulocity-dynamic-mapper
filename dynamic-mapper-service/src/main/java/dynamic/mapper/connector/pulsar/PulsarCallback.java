@@ -49,18 +49,15 @@ public class PulsarCallback implements MessageListener<byte[]> {
     private String tenant;
     private String connectorIdentifier;
     private String connectorName;
-    private Boolean supportsMessageContext;
     private ServiceConfiguration serviceConfiguration;
     private ExecutorService virtualThreadPool;
 
     public PulsarCallback(String tenant, ConfigurationRegistry configurationRegistry,
-            GenericMessageCallback callback, String connectorIdentifier, String connectorName,
-            boolean supportsMessageContext) {
+            GenericMessageCallback callback, String connectorIdentifier, String connectorName) {
         this.genericMessageCallback = callback;
         this.tenant = tenant;
         this.connectorIdentifier = connectorIdentifier;
         this.connectorName = connectorName;
-        this.supportsMessageContext = supportsMessageContext;
         this.serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
     }
@@ -73,7 +70,6 @@ public class PulsarCallback implements MessageListener<byte[]> {
 
         ConnectorMessage connectorMessage = ConnectorMessage.builder()
                 .tenant(tenant)
-                .supportsMessageContext(supportsMessageContext)
                 .topic(topic)
                 .clientId(client)
                 .sendPayload(true)

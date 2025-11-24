@@ -83,7 +83,6 @@ public class WebHook extends AConnectorClient {
     public WebHook() {
         this.connectorType = ConnectorType.WEB_HOOK;
         this.singleton = false;
-        this.supportsMessageContext = true; // Supports context for HTTP methods
         this.supportedQOS = Arrays.asList(Qos.AT_LEAST_ONCE);
         this.connectorSpecification = createConnectorSpecification();
     }
@@ -777,7 +776,7 @@ public class WebHook extends AConnectorClient {
                 ConnectorType.WEB_HOOK,
                 false,
                 configProps,
-                true, // supportsMessageContext
+                true,
                 supportedDirections());
     }
 

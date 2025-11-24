@@ -136,9 +136,6 @@ public class ProcessingContext<O> implements AutoCloseable {
     private ServiceConfiguration serviceConfiguration;
 
     @Builder.Default
-    private Boolean supportsMessageContext = false;
-
-    @Builder.Default
     private Boolean ignoreFurtherProcessing = false;
 
     private String key;

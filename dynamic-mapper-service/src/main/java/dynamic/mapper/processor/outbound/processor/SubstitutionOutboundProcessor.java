@@ -114,22 +114,15 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
 
         payloadTarget.put("$", Mapping.TOKEN_TOPIC_LEVEL, splitTopicExAsList);
         Map<String, String> cod;
-        if (mapping.getSupportsMessageContext() ||context.getSupportsMessageContext()) {
-            cod = new HashMap<String, String>() {
-                {
-                    put(ProcessingContext.RETAIN, "false");
-                    put(Mapping.CONTEXT_DATA_KEY_NAME, "dummy");
-                    put(Mapping.CONTEXT_DATA_METHOD_NAME, "POST");
-                    put("publishTopic", mapping.getPublishTopic());
-                }
-            };
-        } else {
-            cod = new HashMap<String, String>() {
-                {
-                    put(ProcessingContext.RETAIN, "false");
-                }
-            };
-        }
+        cod = new HashMap<String, String>() {
+            {
+                put(ProcessingContext.RETAIN, "false");
+                put(Mapping.CONTEXT_DATA_KEY_NAME, "dummy");
+                put(Mapping.CONTEXT_DATA_METHOD_NAME, "POST");
+                put("publishTopic", mapping.getPublishTopic());
+            }
+        };
+
         payloadTarget.put("$", Mapping.TOKEN_CONTEXT_DATA, cod);
         if (serviceConfiguration.getLogPayload() || mapping.getDebug()) {
             String patchedPayloadTarget = payloadTarget.jsonString();
@@ -187,44 +180,42 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
             // remove TOPIC_LEVEL
             payloadTarget.delete("$." + Mapping.TOKEN_TOPIC_LEVEL);
             RequestMethod method = RequestMethod.POST;
-            if (mapping.getSupportsMessageContext() ||context.getSupportsMessageContext()) {
-                String key = payloadTarget
-                        .read(String.format("$.%s.%s", Mapping.TOKEN_CONTEXT_DATA, Mapping.CONTEXT_DATA_KEY_NAME));
-                context.setKey(key);
+            String key = payloadTarget
+                    .read(String.format("$.%s.%s", Mapping.TOKEN_CONTEXT_DATA, Mapping.CONTEXT_DATA_KEY_NAME));
+            context.setKey(key);
 
-                // extract method
-                try {
-                    String methodString = payloadTarget
-                            .read(String.format("$.%s.%s", Mapping.TOKEN_CONTEXT_DATA,
-                                    Mapping.CONTEXT_DATA_METHOD_NAME));
-                    method = RequestMethod.resolve(methodString.toUpperCase());
-                } catch (Exception e) {
-                    // method is not defined or unknown, so we assume "POST"
-                }
-
-                // extract publishTopic
-                try {
-                    String publishTopic = payloadTarget
-                            .read(String.format("$.%s.%s", Mapping.TOKEN_CONTEXT_DATA, "publishTopic"));
-                    if (publishTopic != null && !publishTopic.equals(""))
-                        context.setTopic(publishTopic);
-                } catch (Exception e) {
-                    // publishTopic is not defined or unknown, so we continue using the value
-                    // defined in the mapping
-                }
-
-                // extract retain
-                try {
-                    Boolean retain = payloadTarget
-                            .read(String.format("$.%s.%s", Mapping.TOKEN_CONTEXT_DATA, ProcessingContext.RETAIN));
-                    if (retain != null)
-                        context.setRetain(retain);
-                } catch (Exception e) {
-                    // ignore if not defined
-                }
-                // remove TOKEN_CONTEXT_DATA
-                payloadTarget.delete("$." + Mapping.TOKEN_CONTEXT_DATA);
+            // extract method
+            try {
+                String methodString = payloadTarget
+                        .read(String.format("$.%s.%s", Mapping.TOKEN_CONTEXT_DATA,
+                                Mapping.CONTEXT_DATA_METHOD_NAME));
+                method = RequestMethod.resolve(methodString.toUpperCase());
+            } catch (Exception e) {
+                // method is not defined or unknown, so we assume "POST"
             }
+
+            // extract publishTopic
+            try {
+                String publishTopic = payloadTarget
+                        .read(String.format("$.%s.%s", Mapping.TOKEN_CONTEXT_DATA, "publishTopic"));
+                if (publishTopic != null && !publishTopic.equals(""))
+                    context.setTopic(publishTopic);
+            } catch (Exception e) {
+                // publishTopic is not defined or unknown, so we continue using the value
+                // defined in the mapping
+            }
+
+            // extract retain
+            try {
+                Boolean retain = payloadTarget
+                        .read(String.format("$.%s.%s", Mapping.TOKEN_CONTEXT_DATA, ProcessingContext.RETAIN));
+                if (retain != null)
+                    context.setRetain(retain);
+            } catch (Exception e) {
+                // ignore if not defined
+            }
+            // remove TOKEN_CONTEXT_DATA
+            payloadTarget.delete("$." + Mapping.TOKEN_CONTEXT_DATA);
             DynamicMapperRequest dynamicMapperRequest = ProcessingResultHelper.createAndAddDynamicMapperRequest(context,
                     payloadTarget.jsonString(), null, mapping);
             dynamicMapperRequest.setMethod(method);

@@ -182,7 +182,6 @@ class FlowResultInboundProcessorTest {
                 .debug(true)
                 .active(true)
                 .tested(false)
-                .supportsMessageContext(true)
                 .snoopStatus(SnoopStatus.NONE)
                 .snoopedTemplates(new ArrayList<>())
                 .qos(Qos.AT_MOST_ONCE)

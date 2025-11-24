@@ -99,7 +99,7 @@ public class EnrichmentInboundProcessor extends BaseProcessor {
             ((Map) payloadObject).put(Mapping.TOKEN_TOPIC_LEVEL, splitTopicAsList);
 
             // Process message context
-            if (context.getSupportsMessageContext() && context.getKey() != null) {
+            if (context.getKey() != null) {
                 String keyString = context.getKey();
                 Map<String, String> contextData = new HashMap<String, String>() {
                     {

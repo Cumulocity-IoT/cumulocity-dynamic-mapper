@@ -70,9 +70,6 @@ public abstract class BaseProcessor extends CommonProcessor {
                 .sendPayload(message.getSendPayload())
                 .testing(testing)
                 .tenant(tenant)
-                // .supportsMessageContext(
-                //         mapping.getSupportsMessageContext())
-                .supportsMessageContext(true)
                 .qos(mapping.getQos())
                 .serviceConfiguration(serviceConfiguration)
                 .api(message.getApi()).build();

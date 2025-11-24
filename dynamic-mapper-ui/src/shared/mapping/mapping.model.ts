@@ -146,7 +146,7 @@ export interface Mapping {
   debug: boolean;
 
   /** Whether the mapping has been tested */
-  tested: boolean;
+  tested?: boolean;
 
   /** Whether the mapping supports message context */
   supportsMessageContext?: boolean;

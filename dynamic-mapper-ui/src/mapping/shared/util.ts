@@ -397,40 +397,33 @@ export function checkTopicsOutboundAreValid(control: AbstractControl) {
 export function expandExternalTemplate(
   template: object,
   mapping: Mapping,
-  supportsMessageContext: boolean,
   levels: string[]
 ): object {
   if (Array.isArray(template)) {
     return template;
   } else {
-    if (mapping.supportsMessageContext || supportsMessageContext) {
-      // Define the context data with specific values
-      let contextData;
-      if (mapping.direction == Direction.INBOUND) {
-        contextData = {
-          [CONTEXT_DATA_KEY_NAME]: `${CONTEXT_DATA_KEY_NAME}-sample`,
-          [CONTEXT_DATA_METHOD_NAME]: "POST", // Set to "POST" instead of a generated value
-          [CONTEXT_DATA_RETAIN]: false,
-        };
-      } else {
-        contextData = {
-          [CONTEXT_DATA_KEY_NAME]: `${CONTEXT_DATA_KEY_NAME}-sample`,
-          [CONTEXT_DATA_METHOD_NAME]: "POST", // Set to "POST" instead of a generated value
-          [CONTEXT_DATA_RETAIN]: false,
-          [CONTEXT_DATA_PUBLISH_TOPIC]: mapping.publishTopic,
-        }
-      };
-      return {
-        ...template,
-        _TOPIC_LEVEL_: levels,
-        _CONTEXT_DATA_: contextData
+    // Define the context data with specific values
+    let contextData;
+    if (mapping.direction == Direction.INBOUND) {
+      contextData = {
+        [CONTEXT_DATA_KEY_NAME]: `${CONTEXT_DATA_KEY_NAME}-sample`,
+        // [CONTEXT_DATA_METHOD_NAME]: "POST"
+        // [CONTEXT_DATA_RETAIN]: false,
       };
     } else {
-      return {
-        ...template,
-        _TOPIC_LEVEL_: levels
-      };
-    }
+      contextData = {
+        [CONTEXT_DATA_KEY_NAME]: `${CONTEXT_DATA_KEY_NAME}-sample`,
+        [CONTEXT_DATA_METHOD_NAME]: "POST", // Set to "POST" instead of a generated value
+        [CONTEXT_DATA_RETAIN]: false,
+        [CONTEXT_DATA_PUBLISH_TOPIC]: mapping.publishTopic,
+      }
+    };
+    return {
+      ...template,
+      _TOPIC_LEVEL_: levels,
+      _CONTEXT_DATA_: contextData
+    };
+
   }
 }
 
@@ -454,16 +447,13 @@ export function expandC8YTemplate(template: object, mapping: Mapping): object {
     };
   }
   if (mapping.direction == Direction.INBOUND) {
-    // Handle message context if supported
-    if (mapping.supportsMessageContext) {
-      result = {
-        ...result,
-        [TOKEN_CONTEXT_DATA]: {
-          'api': mapping.targetAPI,
-          'processingMode': 'PERSISTENT'
-        }
-      };
-    }
+    result = {
+      ...result,
+      [TOKEN_CONTEXT_DATA]: {
+        'api': mapping.targetAPI,
+        'processingMode': 'PERSISTENT'
+      }
+    };
 
     if (mapping.createNonExistingDevice) {
       result = {
