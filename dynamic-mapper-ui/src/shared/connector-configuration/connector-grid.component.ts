@@ -302,7 +302,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
       types.add(config.connectorType);
       return types;
     }, new Set());
-    const allowedConnectors = this.specifications.filter(sp => !sp.singleton || (!configuredConnectorType.has(sp.connectorType))).map(sp => sp.connectorType);
+    const allowedConnectors = this.specifications.filter(sp => (!sp.singleton || (!configuredConnectorType.has(sp.connectorType))) && (sp.connectorType !== ConnectorType.CUMULOCITY_MQTT_SERVICE_PULSAR || this.feature.pulsarAvailable)).map(sp => sp.connectorType);
 
     this.initialStateDrawer = {
       add,

@@ -27,7 +27,6 @@ import {
   ConnectorPropertyType,
   ConnectorSpecification,
   ConnectorType,
-  Feature,
   FormatStringPipe,
   nextIdAndPad,
   SharedService
@@ -76,7 +75,6 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
     [ConnectorPropertyType.STRING_LARGE_PROPERTY, this.createLargeStringField.bind(this)],
     [ConnectorPropertyType.MAP_PROPERTY, this.createMapField.bind(this)]
   ]);
-  feature: Feature;
 
   bottomDrawerRef = inject(BottomDrawerRef);
   sharedService = inject(SharedService);
@@ -84,7 +82,6 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
   cd = inject(ChangeDetectorRef);
 
   async ngOnInit() {
-    this.feature = await this.sharedService.getFeatures();
     this.setConnectorDescription();
     this.initializeBrokerFormFields();
     this.readOnly = this.configuration.enabled;
