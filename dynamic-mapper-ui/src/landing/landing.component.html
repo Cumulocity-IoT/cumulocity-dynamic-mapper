@@ -37,7 +37,7 @@
     <ul class="text-16" style="list-style-type: decimal;">
       <li><a (click)="scrollToElement('overview')" style="cursor: pointer;">{{ 'Overview of Dynamic Mapper' | translate
           }}</a></li>
-      <li><a (click)="scrollToElement('supported-connectors')" style="cursor: pointer;">{{ 'Supported connectors' |
+      <li><a (click)="scrollToElement('managing-connectors')" style="cursor: pointer;">{{ 'Managing connectors' |
           translate }}</a></li>
       <li><a (click)="scrollToElement('define-mapping')" style="cursor: pointer;">{{ 'Defining a mapping' | translate
           }}</a></li>
@@ -126,13 +126,14 @@
       (mapping rules).</p>
   </div>
 
-  <div class="card-header" id="supported-connectors">
+  <div class="card-header" id="managing-connectors">
     <h3>
-      {{ 'Supported connectors' | translate }}
+      {{ 'Managing connectors' | translate }}
     </h3>
   </div>
   <div class="card-block">
-    <div class="p-b-8 text-16"> The mapper supports the following connectors and mappings:</div>
+    <div class="p-b-8 text-16"> The first step when working with the dynamic mapper is to create a connector. The mapper
+      supports the following connectors and mappings:</div>
 
     <div class="table-responsive table-width-80">
       <table class="table _table-striped">
@@ -209,6 +210,13 @@
         </tbody>
       </table>
     </div>
+
+    <div class="p-b-8 text-16"> A new connector is created using the following wizard. Ths is part of the Configuration -> Connectors UI.</div>
+      <img width="70%" class="m-l-48 m-b-48"
+        src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Connector_New.png"
+        alt="Payload type " />
+      <p class="image-description"><b>Description:</b> Creating a new connector.</p>
+      <br />
   </div>
 
   <div class="card-header" id="define-mapping">
