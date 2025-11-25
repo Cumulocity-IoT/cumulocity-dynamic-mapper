@@ -90,7 +90,7 @@
       </li>
     </ul>
 
-    <div class="alert alert-info  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
+    <div class="alert alert-info m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-info-circle m-r-4"></i>
       <strong>What is Dynamic Mapper?</strong> It acts as a bridge between your devices/systems and Cumulocity IoT,
       translating custom data formats into Cumulocity's standardized domain model. This eliminates the need for custom
@@ -129,7 +129,7 @@
       The following screenshot shows a prompt to generate a list of substitutions (mapping rules):
     </div>
 
-    <div class="alert alert-success  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
+    <div class="alert alert-success m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-lightbulb-o m-r-4"></i>
       <strong>AI-Powered Development:</strong> The Dynamic Mapper can leverage AI to automatically generate mapping
       rules from your payload examples. Simply describe what you want to achieve in natural language, and the AI
@@ -137,7 +137,7 @@
     </div>
 
     <br />
-    <img width="70%" class="m-l-48 m-b-48"
+    <img width="70%" class="m-l-48 m-b-48 m-b-16"
       src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Generate_JSONata.png"
       alt="Substitution annotation" />
     <p class="image-description"><b>Description:</b> Screenshot showing a prompt to generate a list of substitutions
@@ -233,7 +233,7 @@
       The intuitive stepper wizard will guide you through the mapping configuration process.
     </div>
 
-    <div class="alert alert-info  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
+    <div class="alert alert-info m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-info-circle m-r-4"></i>
       <strong>Tip:</strong> If you're unsure about your device's payload structure, enable <b>Snooping Mode</b> when
       creating a mapping.
@@ -272,9 +272,9 @@
     <div class="p-b-8 text-16">The first step when working with the Dynamic Mapper is to create a connector. The mapper
       supports the following connectors and mappings:</div>
 
-    <div class="alert alert-info  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
+    <div class="alert alert-info m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-info-circle m-r-4"></i>
-      <strong>Choosing the Right Connector:</strong> Select based on your message broker or integration requirements.
+      <strong>Choosing the right Connector:</strong> Select based on your message broker or integration requirements.
       For IoT devices, MQTT connectors are most common. For enterprise integrations, consider Kafka or HTTP connectors.
       Webhooks are ideal for outbound integrations to external systems.
     </div>
@@ -364,8 +364,8 @@
 
     <div class="p-b-8 text-16">A new connector is added using the following wizard. The wizard is part of the
       Configuration → Connectors UI → Add connector.</div>
-    <img width="70%" class="m-l-48 m-b-48" src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Connector_New.png"
-      alt="Payload type " />
+    <img width="70%" class="m-l-48 m-b-48 m-b-16"
+      src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Connector_New.png" alt="Payload type " />
     <p class="image-description"><b>Description:</b> Creating a new connector.</p>
     <br />
   </div>
@@ -390,37 +390,36 @@
           JSONata, Smart Functions, ...
         </li>
       </ol>
-
-      <div class="alert alert-info  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-        <i class="fa fa-info-circle m-r-4"></i>
-        <strong>Which Transformation Type Should I Use?</strong>
-        <ul class="m-t-8 m-b-0">
-          <li><strong>JSONata:</strong> Best for straightforward field mappings and simple transformations</li>
-          <li><strong>JavaScript Substitutions:</strong> When you need more control but still use a substitution-based
-            approach</li>
-          <li><strong>Smart Functions:</strong> For complex business logic, calculations, or when you need to access
-            device inventory data</li>
-        </ul>
-      </div>
-
-      <img width="70%" class="m-l-48 m-b-48"
-        src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Table_Add_Modal_Payload.png"
-        alt="Payload type " />
-      <p class="image-description"><b>Description:</b> Screenshot showing available payload types.</p>
-      <br />
-      <img width="70%" class="m-l-48 m-b-48"
-        src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Table_Add_Modal_TransformationType.png"
-        alt="Transformation type" />
-      <p class="image-description"><b>Description:</b> Screenshot showing available transformation types.</p>
     </div>
 
+    <div class="alert alert-info m-t-16 m-b-16" role="alert" style="max-width: 90%;">
+      <i class="fa fa-info-circle m-r-4"></i>
+      <strong>Choosing the right Transformation Type:</strong>
+      <ul class="m-t-0 m-b-0">
+        <li>JSONata: Best for straightforward field mappings and simple transformations</li>
+        <li>JavaScript Substitutions: When you need more control but still use a substitution-based
+          approach</li>
+        <li>Smart Functions:For complex business logic, calculations, or when you need to access
+          device inventory data</li>
+      </ul>
+    </div>
+
+    <img width="70%" class="m-l-48 m-b-48 m-b-16"
+      src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Table_Add_Modal_Payload.png" alt="Payload type " />
+    <p class="image-description"><b>Description:</b> Screenshot showing available payload types.</p>
+    <br />
+    <img width="70%" class="m-l-48 m-b-48 m-b-16"
+      src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Table_Add_Modal_TransformationType.png"
+      alt="Transformation type" />
+    <p class="image-description"><b>Description:</b> Screenshot showing available transformation types.</p>
+    <br />
 
     <div class="p-b-8 text-16">
       Now you start adding a mapping by clicking <b>Add mapping</b> (Mapping → Inbound Mapping → Action Add
       mapping).<br />
       In the <b>Add mapping</b> dialog, you can choose the payload type, e.g. <b>JSON</b> and the transformation type,
       e.g. <b>Define substitutions as JavaScript</b> to use JavaScript.<br /><br />
-      <img width="70%" class="m-l-48 m-b-48"
+      <img width="70%" class="m-l-48 m-b-48 m-b-16"
         src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Topic_Definition.png"
         alt="Mapping stepper properties" />
     </div>
@@ -454,7 +453,7 @@
     </div>
 
     <br />
-    <img width="70%" class="m-l-48 m-b-48"
+    <img width="70%" class="m-l-48 m-b-48 m-b-16"
       src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Basic.png"
       alt="Substitution stepper" />
     <div class="p-b-8"></div>
@@ -514,7 +513,7 @@
       </li>
     </ol>
 
-    <div class="alert alert-info  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
+    <div class="alert alert-info m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-info-circle m-r-4"></i>
       <strong>Tip:</strong> Use <b>dynamic subscriptions</b> with device types when you have many devices of the same
       type. This automatically creates subscriptions for new devices as they're added to the system, reducing manual
@@ -522,7 +521,7 @@
     </div>
 
     <br />
-    <img width="70%" class="m-l-48 m-b-48"
+    <img width="70%" class="m-l-48 m-b-48 m-b-16"
       src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Substitution_Outbound.png"
       alt="Substitution mapping outbound" />
   </div>
@@ -551,7 +550,7 @@
       <li>The substitution is added to the table of existing substitutions.</li>
     </ol>
 
-    <div class="alert alert-info  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
+    <div class="alert alert-info m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-info-circle m-r-4"></i>
       <strong>Understanding JSONata:</strong> JSONata is a powerful query and transformation language for JSON. It
       supports path expressions, predicates, functions, and aggregations. For simple mappings, you can use dot notation
@@ -564,7 +563,7 @@
       the target payload.<br />
     </p>
     <br />
-    <img width="70%" class="m-l-48 m-b-48"
+    <img width="70%" class="m-l-48 m-b-48 m-b-16"
       src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Basic_Annotated.png"
       alt="Substitution annotation" />
     <p class="image-description"><b>Description:</b> Screenshot showing step 4 for defining substitutions using
@@ -592,7 +591,7 @@
     </div>
 
     <br />
-    <img width="70%" class="m-l-48 m-b-48"
+    <img width="70%" class="m-l-48 m-b-48 m-b-16"
       src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Substitution_ExpertMode.png"
       alt="Defining Substitutions in ExpertMode" />
     <p class="image-description"><b>Description:</b> Screenshot showing the definition of substitutions in ExpertMode
@@ -618,7 +617,7 @@
       mapping.
     </div>
 
-    <div class="alert alert-info  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
+    <div class="alert alert-info m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-info-circle m-r-4"></i>
       <strong>When to Use JavaScript Substitutions:</strong> Choose JavaScript substitutions when you need:
       <ul class="m-t-8 m-b-0">
@@ -631,7 +630,7 @@
     </div>
 
     <br />
-    <img width="70%" class="m-l-48 m-b-48"
+    <img width="70%" class="m-l-48 m-b-48 m-b-16"
       src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Substitution_JavaScript.png"
       alt="JavaScript substitution" />
     <p class="image-description"><b>Description:</b> Screenshot showing step 4 for defining substitutions using
@@ -665,8 +664,6 @@
         <li>State management across messages using context</li>
       </ul>
     </div>
-
-    <br />
     <div class="alert alert-warning  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-exclamation-triangle m-r-4"></i>
       <strong>Note:</strong> The JavaScript editor for Smart Function is only available if you select <b>Smart
@@ -723,7 +720,7 @@
     </div>
 
     <br />
-    <img width="70%" class="m-l-48 m-b-48"
+    <img width="70%" class="m-l-48 m-b-48 m-b-16"
       src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_SmartFunction.png"
       alt="JavaScript substitution" />
     <p class="image-description"><b>Description:</b> Screenshot showing step 4 for defining complete transformation
@@ -743,7 +740,7 @@
       <br />
     </div>
 
-    <div class="alert alert-info  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
+    <div class="alert alert-info m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-info-circle m-r-4"></i>
       <strong>What is Metadata?</strong> Metadata nodes are special fields that provide additional context and control
       over mapping execution. They are automatically generated at runtime and removed before sending to Cumulocity.
@@ -765,7 +762,7 @@
     </div>
 
     <br />
-    <img width="70%" class="m-l-48 m-b-48"
+    <img width="70%" class="m-l-48 m-b-48 m-b-16"
       src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Change_Metadata.png"
       alt="Change metadata" />
     <p class="image-description"><b>Description:</b> Screenshot showing additional substitution changing the target
@@ -836,7 +833,7 @@
       </table>
 
       <br />
-      <img width="70%" class="m-l-48 m-b-48"
+      <img width="70%" class="m-l-48 m-b-48 m-b-16"
         src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Mapping_Metadata_Inbound.png"
         alt="Metadata inbound" />
     </div>
@@ -905,7 +902,7 @@
         </tbody>
       </table>
 
-      <div class="alert alert-info  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
+      <div class="alert alert-info m-t-16 m-b-16" role="alert" style="max-width: 90%;">
         <i class="fa fa-info-circle m-r-4"></i>
         <strong>Outbound Metadata Tips:</strong>
         <ul class="m-t-8 m-b-0">
@@ -918,7 +915,7 @@
       </div>
 
       <br />
-      <img width="70%" class="m-l-48 m-b-48"
+      <img width="70%" class="m-l-48 m-b-48 m-b-16"
         src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Mapping_Metadata_Outbound.png"
         alt="Metadata outbound" />
     </div>
@@ -960,7 +957,7 @@
       </li>
     </ol>
 
-    <div class="alert alert-info  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
+    <div class="alert alert-info m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-info-circle m-r-4"></i>
       <strong>Tip:</strong> Snooping works with all connector types that support inbound communication. The captured
       messages are stored temporarily and can be viewed in the mapping editor. Use wildcards in topic patterns to
@@ -969,7 +966,7 @@
 
     <br>
     <div>
-      <img width="30%" class="m-l-48 m-b-48"
+      <img width="30%" class="m-l-48 m-b-48 m-b-16"
         src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Table_Add_Modal_Snooping.png"
         alt="Snooping modal" />
       <p class="image-description"><b>Description:</b> Modal dialog to create a mapping in snooping mode.</p>
@@ -978,7 +975,7 @@
     <br />
     <p>The following screenshot shows a mapping that uses snoop and for which snooped messages have already arrived.</p>
     <div>
-      <img width="70%" class="m-l-48 m-b-48"
+      <img width="70%" class="m-l-48 m-b-48 m-b-16"
         src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Snooping_Started.png"
         alt="Snooping stepper" />
     </div>
@@ -997,7 +994,7 @@
       processing mappings, depending on the connector (message source):
     </div>
 
-    <div class="alert alert-info  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
+    <div class="alert alert-info m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-info-circle m-r-4"></i>
       <strong>Understanding QoS Levels:</strong>
       <ul class="m-t-8 m-b-0">
@@ -1165,7 +1162,7 @@
       Dynamic Mapper uses role-based access control. The table below shows the permissions for each role:
     </div>
 
-    <div class="alert alert-info  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
+    <div class="alert alert-info m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-info-circle m-r-4"></i>
       <strong>Role-Based Access Control:</strong> The Dynamic Mapper implements a three-tier permission model:
       <ul class="m-t-8 m-b-0">
