@@ -363,7 +363,7 @@
     </div>
 
     <div class="p-b-8 text-16">A new connector is added using the following wizard. The wizard is part of the
-      Configuration → Connectors UI → Add connector.</div>
+      <strong>Configuration → Connectors UI → Add connector</strong>.</div>
     <img width="70%" class="m-l-48 m-b-48 m-b-16"
       src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Connector_New.png" alt="Payload type " />
     <p class="image-description"><b>Description:</b> Creating a new connector.</p>
@@ -670,7 +670,7 @@
         Function</b> as a <b>Transformation Type</b> when creating the mapping.
     </div>
 
-    <div class="p-b-8 text-16">
+    <div class="p-b-8 text-14">
       The signature and structure of a <b>Smart Function</b> has the form: <br /> <br />
       <pre><code>&nbsp;&nbsp;&nbsp;&nbsp;
 &nbsp;&nbsp;&nbsp;&nbsp;function onMessage (inputMsg, context) {{ '{' }}
@@ -698,11 +698,10 @@
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{{ '}' }},
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;externalSource: [{{ '{' }}"type":"c8y_Serial", "externalId": payload.get("clientId"){{ '}' }}]
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{{ '}' }}];
-
 &nbsp;&nbsp;&nbsp;&nbsp;{{ '}' }}   
             </code></pre>
     </div>
-    <div class="p-b-8 text-16">
+    <div class="p-b-8 text-14">
       The <b>Smart Function</b> allows enriching the payload with inventory data from the device, e.g.: <br /> <br />
       <pre><code>&nbsp;&nbsp;&nbsp;&nbsp;// lookup device for enrichment
 &nbsp;&nbsp;&nbsp;&nbsp;var deviceByDeviceId = context.getManagedObjectByDeviceId(payload.get("deviceId"));
