@@ -90,7 +90,7 @@
       </li>
     </ul>
 
-    <div class="alert alert-info" role="alert" style="max-width: 90%;">
+    <div class="alert alert-info  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-info-circle m-r-4"></i>
       <strong>What is Dynamic Mapper?</strong> It acts as a bridge between your devices/systems and Cumulocity IoT,
       translating custom data formats into Cumulocity's standardized domain model. This eliminates the need for custom
@@ -129,7 +129,7 @@
       The following screenshot shows a prompt to generate a list of substitutions (mapping rules):
     </div>
 
-    <div class="alert alert-success" role="alert" style="max-width: 90%;">
+    <div class="alert alert-success  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-lightbulb-o m-r-4"></i>
       <strong>AI-Powered Development:</strong> The Dynamic Mapper can leverage AI to automatically generate mapping
       rules from your payload examples. Simply describe what you want to achieve in natural language, and the AI
@@ -233,7 +233,7 @@
       The intuitive stepper wizard will guide you through the mapping configuration process.
     </div>
 
-    <div class="alert alert-info" role="alert" style="max-width: 90%;">
+    <div class="alert alert-info  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-info-circle m-r-4"></i>
       <strong>Tip:</strong> If you're unsure about your device's payload structure, enable <b>Snooping Mode</b> when
       creating a mapping.
@@ -242,7 +242,7 @@
         source payload</a> for details.
     </div>
 
-    <div class="alert alert-success" role="alert" style="max-width: 90%;">
+    <div class="alert alert-success  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-lightbulb-o m-r-4"></i>
       <strong>AI-Powered Assistance:</strong> Configure an AI provider (Anthropic, ChatGPT, etc.) in the service
       configuration
@@ -272,7 +272,7 @@
     <div class="p-b-8 text-16">The first step when working with the Dynamic Mapper is to create a connector. The mapper
       supports the following connectors and mappings:</div>
 
-    <div class="alert alert-info" role="alert" style="max-width: 90%;">
+    <div class="alert alert-info  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-info-circle m-r-4"></i>
       <strong>Choosing the Right Connector:</strong> Select based on your message broker or integration requirements.
       For IoT devices, MQTT connectors are most common. For enterprise integrations, consider Kafka or HTTP connectors.
@@ -355,7 +355,7 @@
       </table>
     </div>
 
-    <div class="alert alert-warning" role="alert" style="max-width: 90%;">
+    <div class="alert alert-warning  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-exclamation-triangle m-r-4"></i>
       <strong>Note:</strong> Some connectors like HTTP Connector and Cumulocity MQTT Service have only one instance per
       tenant. Multiple mappings can share the same connector instance. Configure the connector properties carefully as
@@ -391,7 +391,7 @@
         </li>
       </ol>
 
-      <div class="alert alert-info" role="alert" style="max-width: 90%;">
+      <div class="alert alert-info  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
         <i class="fa fa-info-circle m-r-4"></i>
         <strong>Which Transformation Type Should I Use?</strong>
         <ul class="m-t-8 m-b-0">
@@ -446,7 +446,7 @@
       </li>
     </ol>
 
-    <div class="alert alert-success" role="alert" style="max-width: 90%;">
+    <div class="alert alert-success  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-lightbulb-o m-r-4"></i>
       <strong>Best Practice:</strong> Always test your mapping with sample payloads before activating it. Use the test
       feature in step 5 to verify that your substitutions produce the expected Cumulocity format. This helps catch
@@ -473,7 +473,7 @@
       An outbound mapping is processed only if all of the following conditions apply:<br />
     </div>
 
-    <div class="alert alert-warning" role="alert" style="max-width: 90%;">
+    <div class="alert alert-warning  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-exclamation-triangle m-r-4"></i>
       <strong>Important:</strong> Outbound mappings require active subscriptions. Without a subscription, the mapping
       will not be triggered even if it's enabled. Make sure to configure subscriptions properly for your device groups
@@ -514,7 +514,7 @@
       </li>
     </ol>
 
-    <div class="alert alert-info" role="alert" style="max-width: 90%;">
+    <div class="alert alert-info  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-info-circle m-r-4"></i>
       <strong>Tip:</strong> Use <b>dynamic subscriptions</b> with device types when you have many devices of the same
       type. This automatically creates subscriptions for new devices as they're added to the system, reducing manual
@@ -551,7 +551,7 @@
       <li>The substitution is added to the table of existing substitutions.</li>
     </ol>
 
-    <div class="alert alert-info" role="alert" style="max-width: 90%;">
+    <div class="alert alert-info  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-info-circle m-r-4"></i>
       <strong>Understanding JSONata:</strong> JSONata is a powerful query and transformation language for JSON. It
       supports path expressions, predicates, functions, and aggregations. For simple mappings, you can use dot notation
@@ -579,7 +579,7 @@
       To use this option you have to toggle the button <b>Toggle expert mode</b>.<br />
     </div>
 
-    <div class="alert alert-success" role="alert" style="max-width: 90%;">
+    <div class="alert alert-success  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-lightbulb-o m-r-4"></i>
       <strong>Expert Mode Examples:</strong>
       <ul class="m-t-8 m-b-0">
@@ -611,14 +611,14 @@
       At runtime, the JavaScript code is evaluated and copies the value to the target payload path.
     </div>
 
-    <div class="alert alert-warning" role="alert" style="max-width: 90%;">
+    <div class="alert alert-warning  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-exclamation-triangle m-r-4"></i>
       <strong>Note:</strong> The JavaScript editor is only available if you select <code>Define substitutions as
         JavaScript</code> when creating the mapping. You cannot switch between transformation types after creating the
       mapping.
     </div>
 
-    <div class="alert alert-info" role="alert" style="max-width: 90%;">
+    <div class="alert alert-info  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-info-circle m-r-4"></i>
       <strong>When to Use JavaScript Substitutions:</strong> Choose JavaScript substitutions when you need:
       <ul class="m-t-8 m-b-0">
@@ -654,7 +654,7 @@
       see the payload exactly as it is sent to the Cumulocity backend.
     </div>
 
-    <div class="alert alert-success" role="alert" style="max-width: 90%;">
+    <div class="alert alert-success  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-lightbulb-o m-r-4"></i>
       <strong>Power of Smart Functions:</strong> Smart Functions offer maximum flexibility:
       <ul class="m-t-8 m-b-0">
@@ -667,7 +667,7 @@
     </div>
 
     <br />
-    <div class="alert alert-warning" role="alert" style="max-width: 90%;">
+    <div class="alert alert-warning  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-exclamation-triangle m-r-4"></i>
       <strong>Note:</strong> The JavaScript editor for Smart Function is only available if you select <b>Smart
         Function</b> as a <b>Transformation Type</b> when creating the mapping.
@@ -715,7 +715,7 @@
 &nbsp;&nbsp;&nbsp;&nbsp;console.log("Device (by external id): " + deviceByExternalId);</code></pre>
     </div>
 
-    <div class="alert alert-warning" role="alert" style="max-width: 90%;">
+    <div class="alert alert-warning  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-exclamation-triangle m-r-4"></i>
       <strong>Important Configuration:</strong> Only device fragments configured in <b>Configuration → Service
         Configuration → Function → Fragments from inventory to cache</b> can be referenced in Smart Functions. Make
@@ -743,7 +743,7 @@
       <br />
     </div>
 
-    <div class="alert alert-info" role="alert" style="max-width: 90%;">
+    <div class="alert alert-info  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-info-circle m-r-4"></i>
       <strong>What is Metadata?</strong> Metadata nodes are special fields that provide additional context and control
       over mapping execution. They are automatically generated at runtime and removed before sending to Cumulocity.
@@ -755,7 +755,7 @@
       </ul>
     </div>
 
-    <div class="alert alert-warning" role="alert" style="max-width: 90%;">
+    <div class="alert alert-warning  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-exclamation-triangle m-r-4"></i>
       <strong>Note:</strong> All metadata nodes including sub-nodes are not meant to be changed directly. All metadata
       nodes are generated before the processing of a mapping and removed from the target payload before it is sent.
@@ -905,7 +905,7 @@
         </tbody>
       </table>
 
-      <div class="alert alert-info" role="alert" style="max-width: 90%;">
+      <div class="alert alert-info  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
         <i class="fa fa-info-circle m-r-4"></i>
         <strong>Outbound Metadata Tips:</strong>
         <ul class="m-t-8 m-b-0">
@@ -939,7 +939,7 @@
       The stepper guides you through these steps:
     </div>
 
-    <div class="alert alert-success" role="alert" style="max-width: 90%;">
+    <div class="alert alert-success  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-lightbulb-o m-r-4"></i>
       <strong>Snooping Best Practices:</strong>
       <ul class="m-t-8 m-b-0">
@@ -960,7 +960,7 @@
       </li>
     </ol>
 
-    <div class="alert alert-info" role="alert" style="max-width: 90%;">
+    <div class="alert alert-info  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-info-circle m-r-4"></i>
       <strong>Tip:</strong> Snooping works with all connector types that support inbound communication. The captured
       messages are stored temporarily and can be viewed in the mapping editor. Use wildcards in topic patterns to
@@ -997,7 +997,7 @@
       processing mappings, depending on the connector (message source):
     </div>
 
-    <div class="alert alert-info" role="alert" style="max-width: 90%;">
+    <div class="alert alert-info  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-info-circle m-r-4"></i>
       <strong>Understanding QoS Levels:</strong>
       <ul class="m-t-8 m-b-0">
@@ -1019,7 +1019,7 @@
       <li><strong>Kafka</strong>: Limited to QoS 0 for outbound operations.</li>
     </ul>
 
-    <div class="alert alert-warning" role="alert" style="max-width: 90%;">
+    <div class="alert alert-warning  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-exclamation-triangle m-r-4"></i>
       <strong>Performance Considerations:</strong> Higher QoS levels (1-2) provide better delivery guarantees but
       impact performance. QoS 2 requires a four-way handshake and is significantly slower. Choose the lowest QoS level
@@ -1165,7 +1165,7 @@
       Dynamic Mapper uses role-based access control. The table below shows the permissions for each role:
     </div>
 
-    <div class="alert alert-info" role="alert" style="max-width: 90%;">
+    <div class="alert alert-info  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-info-circle m-r-4"></i>
       <strong>Role-Based Access Control:</strong> The Dynamic Mapper implements a three-tier permission model:
       <ul class="m-t-8 m-b-0">
@@ -1184,7 +1184,7 @@
         service configuration editing.</li>
     </ul>
 
-    <div class="alert alert-warning" role="alert" style="max-width: 90%;">
+    <div class="alert alert-warning  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-exclamation-triangle m-r-4"></i>
       <strong>Security Best Practice:</strong> Assign the minimum required role to users. Regular users typically need
       only <strong>Create role</strong> to work with mappings. Reserve <strong>Admin role</strong> for system
@@ -1279,7 +1279,7 @@
       </table>
     </div>
 
-    <div class="alert alert-success" role="alert" style="max-width: 90%;">
+    <div class="alert alert-success  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-lightbulb-o m-r-4"></i>
       <strong>Tip:</strong> To configure roles, navigate to <b>Administration → Role Management</b> in Cumulocity. Look
       for "Dynamic Mapper" permissions and assign them to global roles or specific user groups based on your
