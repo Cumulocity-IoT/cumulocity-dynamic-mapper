@@ -134,6 +134,11 @@
       <strong>AI-Powered Development:</strong> The Dynamic Mapper can leverage AI to automatically generate mapping
       rules from your payload examples. Simply describe what you want to achieve in natural language, and the AI
       generates the corresponding JSONata expressions or JavaScript code.
+      <br/>
+      Configure an AI provider (Anthropic, ChatGPT, etc.) in the service
+      configuration
+      to automatically generate substitutions and transformation code. This significantly accelerates the integration
+      process.
     </div>
 
     <br />
@@ -240,14 +245,6 @@
       This captures incoming messages that you can analyze and use as templates.
       See <a (click)="scrollToElement('unknown-payload')" style="cursor: pointer;">Getting started without knowing your
         source payload</a> for details.
-    </div>
-
-    <div class="alert alert-success  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-      <i class="fa fa-lightbulb-o m-r-4"></i>
-      <strong>AI-Powered Assistance:</strong> Configure an AI provider (Anthropic, ChatGPT, etc.) in the service
-      configuration
-      to automatically generate substitutions and transformation code. This significantly accelerates the integration
-      process.
     </div>
 
     <div class="p-t-16 text-16">
@@ -948,6 +945,10 @@
         <li>Review captured payloads to understand data patterns</li>
         <li>Use captured payloads as templates for your mapping</li>
         <li>Disable snooping once you've finalized the mapping to improve performance</li>
+        <li>
+          Use wildcards in topic patterns to
+          capture messages from multiple devices.
+        </li>
       </ul>
     </div>
 
@@ -959,13 +960,6 @@
         Define general settings, such as the topic name for this mapping.
       </li>
     </ol>
-
-    <div class="alert alert-info m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-      <i class="fa fa-info-circle m-r-4"></i>
-      <strong>Tip:</strong> Snooping works with all connector types that support inbound communication. The captured
-      messages are stored temporarily and can be viewed in the mapping editor. Use wildcards in topic patterns to
-      capture messages from multiple devices.
-    </div>
 
     <br>
     <div>
@@ -1163,17 +1157,6 @@
   <div class="card-block">
     <div class="p-b-8 text-16">
       Dynamic Mapper uses role-based access control. The table below shows the permissions for each role:
-    </div>
-
-    <div class="alert alert-info m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-      <i class="fa fa-info-circle m-r-4"></i>
-      <strong>Role-Based Access Control:</strong> The Dynamic Mapper implements a three-tier permission model:
-      <ul class="m-t-8 m-b-0">
-        <li><strong>No Role (Read-Only):</strong> View mappings, connectors, and configurations</li>
-        <li><strong>Create Role (Mapper User):</strong> Manage mappings including create, edit, delete, and debug</li>
-        <li><strong>Admin Role (Mapper Administrator):</strong> Full control including connector and service
-          configuration management</li>
-      </ul>
     </div>
 
     <ul class="p-b-8 text-16">
