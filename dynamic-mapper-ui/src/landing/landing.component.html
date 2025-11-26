@@ -134,7 +134,7 @@
       <strong>AI-Powered Development:</strong> The Dynamic Mapper can leverage AI to automatically generate mapping
       rules from your payload examples. Simply describe what you want to achieve in natural language, and the AI
       generates the corresponding JSONata expressions or JavaScript code.
-      <br/>
+      <br />
       Configure an AI provider (Anthropic, ChatGPT, etc.) in the service
       configuration
       to automatically generate substitutions and transformation code. This significantly accelerates the integration
@@ -397,9 +397,18 @@
         <li>JSONata: Best for straightforward field mappings and simple transformations</li>
         <li>JavaScript Substitutions: When you need more control but still use a substitution-based
           approach</li>
-        <li>Smart Functions:For complex business logic, calculations, or when you need to access
+        <li>Smart Functions: For complex business logic, calculations, or when you need to access
           device inventory data</li>
       </ul>
+    </div>
+
+    <div class="alert alert-warning  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
+      <i class="fa fa-exclamation-triangle m-r-4"></i>
+      <strong>Important:</strong> If any of the templates: source or target is a JSON array - instead of a JSON object -
+      then you have to choose <strong>Smart Function</strong> as a transformation tape.
+      <br />
+      This is due to the internal handling of metadata, e.g. <code>_IDENTITY_.externalId</code> that is added to the
+      template. This is not possible for JSON arrays.
     </div>
 
     <img width="70%" class="m-l-48 m-b-48 m-b-16"
