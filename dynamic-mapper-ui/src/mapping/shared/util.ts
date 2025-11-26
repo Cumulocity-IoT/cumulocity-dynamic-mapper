@@ -23,7 +23,8 @@ import {
   API,
   Direction,
   Mapping,
-  SnoopStatus
+  SnoopStatus,
+  TransformationType
 } from '../../shared';
 import { ValidationFormlyError } from './mapping.model';
 import { TOKEN_CONTEXT_DATA, TOKEN_IDENTITY, TOKEN_TOPIC_LEVEL } from '../core/processor/processor.model';
@@ -273,6 +274,44 @@ export function checkTopicsInboundAreValid(control: AbstractControl) {
   return Object.keys(errors).length > 0 ? errors : null;
 }
 
+export function checkTransformationType(transformationType: TransformationType, template: any): boolean {
+  // Check if template is JSONArray - in this case transformationType must be TransformationType.SMART_FUNCTION
+
+  if (isJSONArray(template)) {
+    return transformationType === TransformationType.SMART_FUNCTION;
+  }
+
+  return true;
+}
+
+/**
+ * Checks if a value is a valid JSON array (either parsed or string format)
+ */
+function isJSONArray(value: any): boolean {
+  // Check if already a parsed array
+  if (Array.isArray(value)) {
+    return true;
+  }
+
+  // Check if it's a string representation of a JSON array
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+
+    if (!trimmed || !trimmed.startsWith('[')) {
+      return false;
+    }
+
+    try {
+      const parsed = JSON.parse(trimmed);
+      return Array.isArray(parsed);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  return false;
+}
+
 export function checkTopicsOutboundAreValid(control: AbstractControl) {
   let errors = {};
   const { publishTopic, publishTopicSample } = control['controls'];
@@ -393,6 +432,43 @@ export function checkTopicsOutboundAreValid(control: AbstractControl) {
 
   return Object.keys(errors).length > 0 ? errors : null;
 }
+
+export function validateProtectedFields(original: any, updated: any): boolean {
+  const protectedFields = ['_IDENTITY_', '_TOPIC_LEVEL_', '_CONTEXT_DATA_'];
+
+  for (const field of protectedFields) {
+    const originalValue = findFieldInObject(original, field);
+    const updatedValue = findFieldInObject(updated, field);
+
+    if (originalValue !== undefined && !_.isEqual(originalValue, updatedValue)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function findFieldInObject(obj: any, fieldName: string): any {
+  if (!obj || typeof obj !== 'object') {
+    return undefined;
+  }
+
+  if (obj.hasOwnProperty(fieldName)) {
+    return obj[fieldName];
+  }
+
+  for (const key in obj) {
+    if (obj.hasOwnProperty(key) && typeof obj[key] === 'object') {
+      const result = findFieldInObject(obj[key], fieldName);
+      if (result !== undefined) {
+        return result;
+      }
+    }
+  }
+
+  return undefined;
+}
+
 
 export function expandExternalTemplate(
   template: object,

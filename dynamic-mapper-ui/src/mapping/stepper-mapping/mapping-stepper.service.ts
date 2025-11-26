@@ -23,12 +23,10 @@ import { BehaviorSubject, Subject, from } from 'rxjs';
 import { map } from 'rxjs/operators';
 import * as _ from 'lodash';
 import {
-    API,
     Direction,
     Extension,
     ExtensionEntry,
     Mapping,
-    MappingType,
     SAMPLE_TEMPLATES_C8Y,
     TransformationType,
     countDeviceIdentifiers,
@@ -307,4 +305,5 @@ export class MappingStepperService {
         this.sourceCustomMessage$.complete();
         this.targetCustomMessage$.complete();
     }
+
 }

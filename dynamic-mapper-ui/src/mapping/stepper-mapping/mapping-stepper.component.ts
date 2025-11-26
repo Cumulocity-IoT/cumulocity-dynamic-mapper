@@ -69,12 +69,14 @@ import { ValidationError } from '../shared/mapping.model';
 import { createCompletionProviderFlowFunction, createCompletionProviderSubstitutionAsCode, EditorMode, STEP_DEFINE_SUBSTITUTIONS, STEP_GENERAL_SETTINGS, STEP_SELECT_TEMPLATES, STEP_TEST_MAPPING } from '../shared/stepper.model';
 import {
   base64ToString,
+  checkTransformationType,
   expandC8YTemplate,
   expandExternalTemplate,
   isExpression,
   reduceSourceTemplate,
   splitTopicExcludingSeparator,
-  stringToBase64
+  stringToBase64,
+  validateProtectedFields
 } from '../shared/util';
 import { SubstitutionRendererComponent } from '../substitution/substitution-grid.component';
 import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType } from '../../configuration/shared/configuration.model';
@@ -83,7 +85,6 @@ import { AIPromptComponent } from '../prompt/ai-prompt.component';
 import { AgentObjectDefinition, AgentTextDefinition } from '../shared/ai-prompt.model';
 import { MappingStepTestingComponent } from '../step-testing/mapping-testing.component';
 import { gettext } from '@c8y/ngx-components/gettext';
-import { contentChangeAllowed } from '../core/processor/processor.model';
 import { MappingStepperService } from './mapping-stepper.service';
 import { SubstitutionManagementService } from './substitution-management.service';
 
@@ -131,6 +132,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   private substitutionService = inject(SubstitutionManagementService);
 
   readonly ValidationError = ValidationError;
+  readonly checkTransformationType = checkTransformationType;
+  readonly validateProtectedFields = validateProtectedFields;
   readonly MappingTypeLabels = MappingTypeLabels;
   readonly Direction = Direction;
   readonly COLOR_HIGHLIGHTED = COLOR_HIGHLIGHTED;
@@ -613,12 +616,27 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.sourceTemplateUpdated = updatedContentAsJson;
 
     // Just validate and show warning, don't block
-    const hasProtectedChanges = !this.validateProtectedFields(
+    const hasProtectedChanges = !validateProtectedFields(
       this.sourceTemplate,
       updatedContentAsJson
     );
 
-    this.isContentChangeValid$.next(!hasProtectedChanges);
+    const isTransformationTypeValid = checkTransformationType(
+      this.mapping.transformationType,
+      updatedContentAsJson
+    );
+
+    // Show error message if transformation type is invalid
+    // if (!isTransformationTypeValid) {
+    //   this.raiseAlert({
+    //     type: 'warning',
+    //     text: 'Wrong Transformation Type: an Array in Source Template or Target Template requires Transformation Type Smart Function'
+    //   });
+    // }
+
+    // Consider both validations
+    const isValid = !hasProtectedChanges && isTransformationTypeValid;
+    this.isContentChangeValid$.next(isValid);
 
     if (hasProtectedChanges) {
       this.raiseAlert({
@@ -650,12 +668,27 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.targetTemplateUpdated = updatedContentAsJson;
 
     // Just validate and show warning, don't block
-    const hasProtectedChanges = !this.validateProtectedFields(
+    const hasProtectedChanges = !validateProtectedFields(
       this.targetTemplate,
       updatedContentAsJson
     );
 
-    this.isContentChangeValid$.next(!hasProtectedChanges);
+    const isTransformationTypeValid = checkTransformationType(
+      this.mapping.transformationType,
+      updatedContentAsJson
+    );
+
+    // Show error message if transformation type is invalid
+    // if (!isTransformationTypeValid) {
+    //   this.raiseAlert({
+    //     type: 'warning',
+    //     text: 'Wrong Transformation Type: an Array in Source Template or Target Template requires Transformation Type Smart Function'
+    //   });
+    // }
+
+    // Consider both validations
+    const isValid = !hasProtectedChanges && isTransformationTypeValid;
+    this.isContentChangeValid$.next(isValid);
 
     if (hasProtectedChanges) {
       this.raiseAlert({
@@ -665,41 +698,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     }
   }
 
-  private validateProtectedFields(original: any, updated: any): boolean {
-    const protectedFields = ['_IDENTITY_', '_TOPIC_LEVEL_', '_CONTEXT_DATA_'];
 
-    for (const field of protectedFields) {
-      const originalValue = this.findFieldInObject(original, field);
-      const updatedValue = this.findFieldInObject(updated, field);
-
-      if (originalValue !== undefined && !_.isEqual(originalValue, updatedValue)) {
-        return false;
-      }
-    }
-
-    return true;
-  }
-
-  private findFieldInObject(obj: any, fieldName: string): any {
-    if (!obj || typeof obj !== 'object') {
-      return undefined;
-    }
-
-    if (obj.hasOwnProperty(fieldName)) {
-      return obj[fieldName];
-    }
-
-    for (const key in obj) {
-      if (obj.hasOwnProperty(key) && typeof obj[key] === 'object') {
-        const result = this.findFieldInObject(obj[key], fieldName);
-        if (result !== undefined) {
-          return result;
-        }
-      }
-    }
-
-    return undefined;
-  }
 
   raiseAlert(alert: Alert): void {
     this.alertService.state.forEach(a => {
@@ -910,7 +909,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     if (this.stepperConfiguration.direction == Direction.INBOUND) {
       this.sourceTemplate = expandExternalTemplate(
         this.sourceTemplate,
-        this.mapping,        splitTopicExcludingSeparator(this.mapping.mappingTopicSample, false)
+        this.mapping, splitTopicExcludingSeparator(this.mapping.mappingTopicSample, false)
       );
     } else {
       this.sourceTemplate = expandC8YTemplate(this.sourceTemplate, this.mapping);

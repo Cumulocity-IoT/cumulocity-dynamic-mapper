@@ -62,9 +62,8 @@
 
   <cdk-step label="General settings" [stepControl]="propertyFormly">
     <div class="col-xs-12 flex-grow no-gutter">
-      <d11r-mapping-properties [mapping]="mapping"
-        [stepperConfiguration]="stepperConfiguration" [propertyFormly]="propertyFormly" [codeFormly]="codeFormly"
-        (targetAPIChanged)="onTargetAPIChanged($event)">
+      <d11r-mapping-properties [mapping]="mapping" [stepperConfiguration]="stepperConfiguration"
+        [propertyFormly]="propertyFormly" [codeFormly]="codeFormly" (targetAPIChanged)="onTargetAPIChanged($event)">
       </d11r-mapping-properties>
     </div>
 
@@ -178,10 +177,26 @@
           <div>
             <div class="d-flex" *ngIf="!(isContentChangeValid$ | async)">
               <div class="col-lg-10 col-lg-offset-1 p-b-16">
-                <span class="text-warning text-12 p-l-8 p-b-12">Changing <code>_IDENTITY_</code>,
-                  <code>_TOPIC_LEVEL_ </code> or <code>_CONTEXT_DATA_ </code> directly in templates is not supported. Use substitutions in the next step
-                  instead. Changes are reverted!</span>
+                <span class="text-warning text-12 p-l-8 p-b-12">
+                  <!-- Protected fields warning -->
+                  <ng-container
+                    *ngIf="sourceTemplateUpdated && !validateProtectedFields(sourceTemplate, sourceTemplateUpdated)">
+                    Changing <code>_IDENTITY_</code>, <code>_TOPIC_LEVEL_</code> or <code>_CONTEXT_DATA_</code>
+                    directly in templates is not supported. Use substitutions in the next step instead. Changes are
+                    reverted!
+                  </ng-container>
 
+                  <!-- Transformation type warning -->
+                  <ng-container
+                    *ngIf="sourceTemplateUpdated && !checkTransformationType(mapping.transformationType, sourceTemplateUpdated)">
+                    <span
+                      *ngIf="sourceTemplateUpdated && !validateProtectedFields(sourceTemplate, sourceTemplateUpdated)">
+                      <br />
+                    </span>
+                    Array templates require transformation type <code>SMART_FUNCTION</code>.
+                    Please change the transformation type or modify the template structure.
+                  </ng-container>
+                </span>
               </div>
             </div>
             <div class="d-flex">
@@ -411,8 +426,7 @@
     <div class="col-xs-12 flex-grow no-gutter">
       <d11r-mapping-testing #mappingTestingStep [updateTestingTemplate]="
               updateTestingTemplate
-            " [mapping]="mapping"
-        [stepperConfiguration]="stepperConfiguration"></d11r-mapping-testing>
+            " [mapping]="mapping" [stepperConfiguration]="stepperConfiguration"></d11r-mapping-testing>
     </div>
     <c8y-stepper-buttons class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0"
       (onCustom)="onCommitButton()" (onCancel)="cancel.emit()" (onBack)="onBackStep($event)"

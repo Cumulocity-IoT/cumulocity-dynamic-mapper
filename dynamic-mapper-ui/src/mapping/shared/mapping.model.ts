@@ -42,7 +42,8 @@ export enum ValidationError {
   MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name,
   PublishTopic_And_MappingTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name,
   PublishTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name,
-  FilterOutbound_Must_Be_Unique
+  FilterOutbound_Must_Be_Unique,
+  Wrong_Transformation_Type_Array_In_Source_Template_Or_Target_Template_Requires_Transformation_Type_Smart_Function
 }
 
 export const ValidationFormlyError = {
