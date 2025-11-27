@@ -70,7 +70,7 @@ public class FlowResultInboundProcessor extends BaseProcessor {
                 lineNumber = e.getStackTrace()[0].getLineNumber();
             }
             String errorMessage = String.format(
-                    "s - Error in FlowSubstitutionInboundProcessor: %s for mapping: %s, line %s",
+                    "%s - Error in FlowResultInboundProcessor: %s for mapping: %s, line %s",
                     tenant, mapping.getName(), e.getMessage(), lineNumber);
             log.error(errorMessage, e);
             if(e instanceof ProcessingException)

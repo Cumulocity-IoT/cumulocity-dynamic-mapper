@@ -96,7 +96,8 @@ public abstract class CommonProcessor implements Processor {
             if (globalId != null) {
                 return globalId.getManagedObject().getId().getValue();
             } else {
-                throw new ProcessingException("Could not resolve external ID: " + externalSource.getExternalId());
+                return null;
+                // throw new ProcessingException("Could not resolve external ID: " + externalSource.getExternalId());
             }
 
         } catch (Exception e) {
@@ -142,7 +143,8 @@ public abstract class CommonProcessor implements Processor {
             if (externalId != null) {
                 return externalId.getExternalId();
             } else {
-                throw new ProcessingException("Could not resolve external ID: " + externalSource.getExternalId());
+                return null;
+                // throw new ProcessingException("Could not resolve external ID: " + externalSource.getExternalId());
             }
 
         } catch (Exception e) {
