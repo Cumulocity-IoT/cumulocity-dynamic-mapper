@@ -117,7 +117,7 @@ public class MockInventory {
         ManagedObjectRepresentation mockObject = deepCopy(mor);
 
         // Generate ID if not present
-        if (mockObject.getId() == null) {
+        if (mockObject.getId() == null || mockObject.getId().getValue() == null || mockObject.getId().getValue().isEmpty()) {
             String mockId = generateId(tenant);
             mockObject.setId(GId.asGId(mockId));
             log.trace("{} - Mock: Generated new ID: {}", tenant, mockId);
