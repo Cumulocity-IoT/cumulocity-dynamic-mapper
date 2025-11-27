@@ -91,6 +91,15 @@ public interface DataPrepContext {
      */
     Value getManagedObject(ExternalId externalId);
 
+
+        /**
+     * Lookup Inventory Device properties by external id
+     * 
+     * @param externalIdValue A Value object containing externalId and type properties
+     * @return A Value containing the device properties as a JS object.
+     */
+    Value getManagedObject(Value externalIdValue);
+
     /**
      * Log message
      * 

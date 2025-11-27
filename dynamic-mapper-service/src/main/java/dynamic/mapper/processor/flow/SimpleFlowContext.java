@@ -200,6 +200,43 @@ public class SimpleFlowContext implements DataPrepContext {
         return graalContext.asValue(javaValue);
     }
 
+    @Override
+    public Value getManagedObject(Value externalIdValue) {
+        if (externalIdValue == null) {
+            addWarning("ExternalId parameter is null");
+            return graalContext.asValue(null);
+        }
+
+        try {
+            ExternalId extId;
+
+            // Handle if a proper ExternalId Java object is passed
+            if (externalIdValue.isHostObject() && externalIdValue.asHostObject() instanceof ExternalId) {
+                extId = externalIdValue.asHostObject();
+            }
+            // Handle JavaScript object with externalId and type properties
+            else if (externalIdValue.hasMembers()) {
+                String externalId = externalIdValue.getMember("externalId").asString();
+                String type = externalIdValue.getMember("type").asString();
+                extId = new ExternalId(externalId, type); // Adjust based on your ExternalId constructor
+            } else {
+                addWarning("Invalid externalId parameter format");
+                return graalContext.asValue(null);
+            }
+
+            Object javaValue = inventoryEnrichmentClient.getMOFromInventoryCacheByExternalId(tenant, extId, testing);
+            if (javaValue == null) {
+                addWarning(String.format("ExternalId not found in inventory cache: %s", extId));
+            }
+            return graalContext.asValue(javaValue);
+
+        } catch (Exception e) {
+            addWarning("Failed to process externalId: " + e.getMessage());
+            log.error("{} - Error processing externalId", tenant, e);
+            return graalContext.asValue(null);
+        }
+    }
+
     private void addWarning(String warning) {
         List<String> warnings = (List<String>) state.get(DataPrepContext.WARNINGS);
         if (warnings == null) {
