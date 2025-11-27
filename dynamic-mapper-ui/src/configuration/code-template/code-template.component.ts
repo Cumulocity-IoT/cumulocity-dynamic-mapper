@@ -19,10 +19,10 @@
  */
 import {
   Component,
-  OnInit, ViewEncapsulation
+  OnInit, ViewChild, ViewEncapsulation
 } from '@angular/core';
-import { EditorComponent, loadMonacoEditor } from '@c8y/ngx-components/editor';
-import { AlertService } from '@c8y/ngx-components';
+import { EditorComponent, MonacoEditorMarkerValidatorDirective, loadMonacoEditor } from '@c8y/ngx-components/editor';
+import { AlertService, CommonModule, CoreModule } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { SharedService } from '../../shared/service/shared.service';
 import { base64ToString, stringToBase64 } from '../../mapping/shared/util';
@@ -34,6 +34,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { HttpStatusCode } from '@angular/common/http';
 import { createCompletionProviderSubstitutionAsCode } from '../../mapping/shared/stepper.model';
 import { gettext } from '@c8y/ngx-components/gettext';
+import { PopoverModule } from 'ngx-bootstrap/popover';
 
 let initializedMonaco = false;
 
@@ -42,9 +43,16 @@ let initializedMonaco = false;
   templateUrl: 'code-template.component.html',
   styleUrls: ['./code-template.component.css'],
   encapsulation: ViewEncapsulation.None,
-  standalone: false
+  standalone: true,
+  imports: [
+    CoreModule, CommonModule, PopoverModule,
+    EditorComponent,
+    MonacoEditorMarkerValidatorDirective
+  ]
 })
 export class CodeComponent implements OnInit {
+  @ViewChild(EditorComponent) editorComponent!: EditorComponent;
+
   codeTemplateDecoded: CodeTemplate;
   codeTemplatesDecoded: Map<string, CodeTemplate> = new Map<string, CodeTemplate>();
   codeTemplates: CodeTemplateMap;
@@ -131,13 +139,15 @@ export class CodeComponent implements OnInit {
   }
 
   async ngAfterViewInit(): Promise<void> {
-    if (!initializedMonaco) {
-      const monaco = await loadMonacoEditor();
-      monaco.languages.registerCompletionItemProvider('javascript', createCompletionProviderSubstitutionAsCode(monaco));
-      if (monaco) {
-        initializedMonaco = true;
-      }
-    }
+    // if (!initializedMonaco) {
+    //   // const monaco = await loadMonacoEditor();
+    //   // monaco.languages.registerCompletionItemProvider('javascript', createCompletionProviderSubstitutionAsCode(monaco));
+    //   const monaco = this.editorComponent?.monaco;
+    //   if (monaco) {
+    //     monaco.languages.registerCompletionItemProvider('javascript', createCompletionProviderSubstitutionAsCode(monaco));
+    //     initializedMonaco = true;
+    //   }
+    // }
   }
 
   async updateCodeTemplateEntries(): Promise<void> {

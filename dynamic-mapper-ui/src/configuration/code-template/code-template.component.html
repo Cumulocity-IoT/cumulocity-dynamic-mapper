@@ -46,7 +46,8 @@
     <i c8yIcon="duplicate"></i>
     {{ 'Duplicate' | translate }}
   </button>
-  <button class="btn btn-link" title="{{ 'Reset' | translate }}" (click)="onInitSystemCodeTemplate()" [disabled]="!feature?.userHasMappingAdminRole">
+  <button class="btn btn-link" title="{{ 'Reset' | translate }}" (click)="onInitSystemCodeTemplate()"
+    [disabled]="!feature?.userHasMappingAdminRole">
     <i c8yIcon="reset"></i>
     {{ 'Init system templates' | translate }}
   </button>
@@ -68,8 +69,11 @@
             containerClass="wide-popover" aria-label="Help content"></button>
         </span>
       </div>
-      <c8y-editor [editorOptions]="editorOptions" monacoEditorMarkerValidator [ngModel]="codeTemplateDecoded?.code"
+      <!-- <c8y-editor [editorOptions]="editorOptions" monacoEditorMarkerValidator [ngModel]="codeTemplateDecoded?.code"
         (ngModelChange)="onValueCodeChange($event)" class="form-control fit-h">
+      </c8y-editor> -->
+
+      <c8y-editor monacoEditorMarkerValidator>
       </c8y-editor>
     </c8y-form-group>
   </div>

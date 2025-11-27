@@ -60,7 +60,7 @@ import { gettext } from '@c8y/ngx-components/gettext';
 export class DeviceClientMapComponent implements OnInit, OnDestroy {
 
 
-  @ViewChild('deviceToClientGrid') deviceToClientGrid: DataGridComponent;
+  @ViewChild('deviceToClientGrid') deviceToClientGrid!: DataGridComponent;
 
   constructor(
   ) {
@@ -76,10 +76,10 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
   private alertService = inject(AlertService);
 
   clientRelations: any;
-  mapEntries: any[];
+  mapEntries: any[] = [];
   Direction = Direction;
 
-  titleMapping: string;
+  titleMapping: string = 'Device to Client Map';
 
   readonly titleRelation: string = 'Device to Client Map';
 
@@ -97,7 +97,6 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
       header: 'Device ID',
       path: 'id',
       filterable: false,
-      dataType: ColumnDataType.TextShort,
       visible: true
     },
     {
@@ -109,7 +108,7 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
   ];
 
   value: string;
-  mappingType: MappingType;
+  mappingType: MappingType = MappingType.JSON;
   destroy$: Subject<boolean> = new Subject<boolean>();
 
   readonly pagination: Pagination = {
@@ -119,7 +118,7 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
 
   actionControlRelation: ActionControl[] = [];
   bulkActionControlRelation: BulkActionControl[] = [];
-  feature: Feature;
+  feature: Feature = {} as Feature;
   showAddRelation: Boolean = false;
 
   async ngOnInit(): Promise<void> {
@@ -217,7 +216,7 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
     let continueDelete: boolean = false;
     for (let index = 0; index < ids.length; index++) {
       const device2Delete = this.clientRelations?.relations.find(
-        (de) => de.id == ids[index]
+        (de: any) => de.id == ids[index]
       );
       if (index == 0) {
         continueDelete = await this.deleteRelationWithConfirmation(

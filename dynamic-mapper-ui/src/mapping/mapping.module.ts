@@ -113,11 +113,11 @@ import { MappingStepperService } from './stepper-mapping/mapping-stepper.service
     ModalModule,
     SharedModule,
     ServiceConfigurationModule,
-    EditorComponent,
+    //EditorComponent,
     DeviceGridModule,
     BrowserAnimationsModule,
     CollapseModule.forRoot(),
-    MonacoEditorMarkerValidatorDirective
+    //MonacoEditorMarkerValidatorDirective
   ],
   exports: [],
   providers: [
