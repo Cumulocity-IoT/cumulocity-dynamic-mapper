@@ -30,7 +30,8 @@ import { CodeTemplateTabFactory } from './code-template-tab.factory';
 import { ServiceConfigurationTraceComponent } from './service-configuration-trace.component';
 
 @NgModule({
-  declarations: [ServiceConfigurationComponent, ServiceConfigurationTraceComponent, CodeComponent],
+  //declarations: [ServiceConfigurationComponent, ServiceConfigurationTraceComponent, CodeComponent],
+  declarations: [ServiceConfigurationComponent, ServiceConfigurationTraceComponent],
   imports: [
     EditorComponent,
     MonacoEditorMarkerValidatorDirective,

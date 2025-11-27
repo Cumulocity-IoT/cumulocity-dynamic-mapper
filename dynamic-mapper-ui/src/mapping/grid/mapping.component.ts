@@ -128,7 +128,6 @@ export class MappingComponent implements OnInit, OnDestroy {
       header: 'System ID',
       path: 'id',
       filterable: false,
-      dataType: ColumnDataType.TextShort,
       visible: true
     },
     {
@@ -411,7 +410,6 @@ export class MappingComponent implements OnInit, OnDestroy {
         header: 'Name',
         path: 'mapping.name',
         filterable: false,
-        dataType: ColumnDataType.TextShort,
         cellRendererComponent: MappingIdCellRendererComponent,
         sortOrder: 'asc',
         visible: true,
@@ -422,7 +420,6 @@ export class MappingComponent implements OnInit, OnDestroy {
         header: 'Identifier',
         path: 'mapping.identifier',
         filterable: false,
-        dataType: ColumnDataType.TextShort,
         visible: false,
         gridTrackSize: '0%'
       },
@@ -448,7 +445,6 @@ export class MappingComponent implements OnInit, OnDestroy {
         path: 'mapping.targetAPI',
         filterable: true,
         sortable: true,
-        dataType: ColumnDataType.TextShort,
         cellRendererComponent: LabelTaggedRendererComponent,
         gridTrackSize: '8%'
       },
