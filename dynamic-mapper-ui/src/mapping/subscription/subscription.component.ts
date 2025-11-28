@@ -80,9 +80,9 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
 
     this.titleSubscription = `Subscription (${this.path}) devices mapping outbound`;
 
-    this.loadSubscriptionDevice();
-    this.loadSubscriptionByDeviceGroup();
-    this.loadSubscriptionByDeviceType();
+    // this.loadSubscriptionDevice();
+    // this.loadSubscriptionByDeviceGroup();
+    // this.loadSubscriptionByDeviceType();
   }
 
   private mappingService = inject(MappingService);
@@ -160,7 +160,13 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
 
 
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
+    await Promise.all([
+      this.loadSubscriptionDevice(),
+      this.loadSubscriptionByDeviceGroup(),
+      this.loadSubscriptionByDeviceType()
+    ]);
+    
     this.feature = this.route.snapshot.data['feature'];
     if (this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole) {
       this.bulkActionControlSubscription.push({

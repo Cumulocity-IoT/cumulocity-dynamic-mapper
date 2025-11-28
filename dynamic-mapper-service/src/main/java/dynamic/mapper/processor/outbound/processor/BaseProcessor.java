@@ -44,7 +44,7 @@ public abstract class BaseProcessor extends CommonProcessor {
         return exchange.getIn().getHeader("processingContext", ProcessingContext.class);
     }
 
-    protected Object extractContent(ProcessingContext<Object> context, Mapping mapping, Object payloadJsonNode,
+    protected Object extractContent(ProcessingContext<Object> context, Object payloadJsonNode,
             String payloadAsString, @NotNull String ps) {
         Object extractedSourceContent = null;
         try {

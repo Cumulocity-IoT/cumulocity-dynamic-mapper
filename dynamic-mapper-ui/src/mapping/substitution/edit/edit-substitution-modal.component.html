@@ -37,7 +37,7 @@
       </div>
     </div>
     <form [formGroup]="substitutionForm">
-      <c8y-form-group>
+      <!-- <c8y-form-group>
         <label>
           <span>
             {{ 'Path source' | translate }}
@@ -52,6 +52,15 @@
           </span>
         </label>
         <input type="text" readOnly formControlName="pathTarget" class="form-control" />
+      </c8y-form-group> -->
+
+      <c8y-form-group>
+        <label>
+          <span>
+            {{ 'Substitution [ pathSource —> pathTarget ]' | translate }}
+          </span>
+        </label>
+        <input type="text" readOnly formControlName="substitution" class="form-control" />
       </c8y-form-group>
       <c8y-form-group>
         <label class="c8y-switch d-inline" title="Expand as array" style="padding-top: 6px">

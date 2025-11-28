@@ -42,6 +42,7 @@ import dynamic.mapper.processor.flow.DataPrepContext;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.TransformationType;
 import dynamic.mapper.service.MappingService;
+import lombok.experimental.var;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -71,7 +72,7 @@ public class EnrichmentOutboundProcessor extends BaseProcessor {
             MappingStatus mappingStatus = mappingService
                     .getMappingStatus(tenant, mapping);
             context.addError(new ProcessingException(errorMessage, e));
-            context.setIgnoreFurtherProcessing(true);   
+            context.setIgnoreFurtherProcessing(true);
             mappingStatus.errors++;
             mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
             return;
@@ -88,9 +89,10 @@ public class EnrichmentOutboundProcessor extends BaseProcessor {
         Object payloadObject = context.getPayload();
         Mapping mapping = context.getMapping();
 
+        String identifier = context.getTesting() ? "_IDENTITY_.c8ySourceId" : context.getApi().identifier;
         String payloadAsString = toPrettyJsonString(payloadObject);
-        var sourceId = extractContent(context, mapping, payloadObject, payloadAsString,
-                mapping.getTargetAPI().identifier);
+        Object sourceId = extractContent(context, payloadObject, payloadAsString,
+                identifier);
         context.setSourceId(sourceId.toString());
 
         Map<String, String> identityFragment = new HashMap<>();

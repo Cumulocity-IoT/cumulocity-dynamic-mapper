@@ -885,8 +885,11 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.showConfigMapping = false;
     this.showSnoopingMapping = false;
 
+
     if (this.stepperConfiguration.direction == Direction.OUTBOUND) {
-      this.alertService.info("For your outbound mapping to work, it requires an active subscription. Please create a subscription for this outbound mapping.");
+      const result = await Promise.all([this.subscriptionService.getSubscriptionDevice(this.subscriptionService.DYNAMIC_DEVICE_SUBSCRIPTION), this.subscriptionService.getSubscriptionDevice(this.subscriptionService.STATIC_DEVICE_SUBSCRIPTION)])
+      if (result[0].devices?.length == 0 && result[1].devices?.length)
+        this.alertService.info("For your outbound mapping to work, it requires an active subscription. Please create a subscription for this outbound mapping.");
     }
   }
 

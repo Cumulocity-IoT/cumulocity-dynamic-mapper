@@ -94,6 +94,7 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
     this.substitutionForm.patchValue({
       pathSource: this.editedSubstitution.pathSource,
       pathTarget: this.editedSubstitution.pathTarget,
+      substitution: `[ ${this.editedSubstitution.pathSource} -> ${this.editedSubstitution.pathTarget}]`,
       expandArray: this.editedSubstitution.expandArray,
       repairStrategy: this.editedSubstitution.repairStrategy
     });
@@ -105,6 +106,7 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
     this.substitutionForm = this.fb.group({
       pathSource: [{ value: '', disabled: true }],
       pathTarget: [{ value: '', disabled: true }],
+      substitution: [{ value: '', disabled: true }],
       expandArray: [{ value: false, disabled: this.isExpandToArrayDisabled() }],
       repairStrategy: ['']
     });

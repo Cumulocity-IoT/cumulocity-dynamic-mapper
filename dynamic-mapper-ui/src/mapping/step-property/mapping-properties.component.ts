@@ -178,36 +178,36 @@ export class MappingStepPropertiesComponent
             hideExpression:
               this.stepperConfiguration.direction == Direction.INBOUND
           },
-          {
-            className: 'col-lg-6',
-            key: 'filterMapping',
-            type: 'input',
-            templateOptions: {
-              label: 'Filter Mapping',
-              placeholder: 'custom_OperationFragment',
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
-              description:
-                'The filter has to be defined as boolean expression (JSONata), e.g. <code>$exists(<C8Y_FRAGMENT>)</code>',
-              required:
-                this.stepperConfiguration.direction == Direction.OUTBOUND
-            },
-            hideExpression:
-              this.stepperConfiguration.direction == Direction.INBOUND || (this.stepperConfiguration.direction == Direction.OUTBOUND && (this.mapping.snoopStatus == SnoopStatus.NONE || this.mapping.snoopStatus == SnoopStatus.STOPPED)),
-            hooks: {
-              onInit: (field: FormlyFieldConfig) => {
-                field.formControl.valueChanges.pipe(
-                  // Wait for 1500ms pause in typing before processing
-                  debounceTime(1500),
+          // {
+          //   className: 'col-lg-6',
+          //   key: 'filterMapping',
+          //   type: 'input',
+          //   templateOptions: {
+          //     label: 'Filter Mapping',
+          //     placeholder: 'custom_OperationFragment',
+          //     disabled:
+          //       this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
+          //     description:
+          //       'The filter has to be defined as boolean expression (JSONata), e.g. <code>$exists(<C8Y_FRAGMENT>)</code>',
+          //     required:
+          //       this.stepperConfiguration.direction == Direction.OUTBOUND
+          //   },
+          //   hideExpression:
+          //     this.stepperConfiguration.direction == Direction.INBOUND || (this.stepperConfiguration.direction == Direction.OUTBOUND && (this.mapping.snoopStatus == SnoopStatus.NONE || this.mapping.snoopStatus == SnoopStatus.STOPPED)),
+          //   hooks: {
+          //     onInit: (field: FormlyFieldConfig) => {
+          //       field.formControl.valueChanges.pipe(
+          //         // Wait for 1500ms pause in typing before processing
+          //         debounceTime(1500),
 
-                  // Only trigger if the value has actually changed
-                  distinctUntilChanged()
-                ).subscribe(path => {
-                  this.updateFilterMappingExpressionResult(path);
-                });
-              }
-            }
-          },
+          //         // Only trigger if the value has actually changed
+          //         distinctUntilChanged()
+          //       ).subscribe(path => {
+          //         this.updateFilterMappingExpressionResult(path);
+          //       });
+          //     }
+          //   }
+          // },
           {
             className: 'col-lg-6',
             key: 'filterInventory',
