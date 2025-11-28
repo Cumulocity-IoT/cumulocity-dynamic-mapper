@@ -197,8 +197,8 @@ export class MappingStepPropertiesComponent
             hooks: {
               onInit: (field: FormlyFieldConfig) => {
                 field.formControl.valueChanges.pipe(
-                  // Wait for 500ms pause in typing before processing
-                  debounceTime(500),
+                  // Wait for 1500ms pause in typing before processing
+                  debounceTime(1500),
 
                   // Only trigger if the value has actually changed
                   distinctUntilChanged()
@@ -227,8 +227,8 @@ export class MappingStepPropertiesComponent
             hooks: {
               onInit: (field: FormlyFieldConfig) => {
                 field.formControl.valueChanges.pipe(
-                  // Wait for 500ms pause in typing before processing
-                  debounceTime(500),
+                  // Wait for 1500ms pause in typing before processing
+                  debounceTime(1500),
 
                   // Only trigger if the value has actually changed
                   distinctUntilChanged()

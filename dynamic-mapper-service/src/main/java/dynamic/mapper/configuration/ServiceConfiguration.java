@@ -56,7 +56,8 @@ public class ServiceConfiguration implements Cloneable {
         this.inboundExternalIdCacheRetention = 1;
         this.inventoryCacheSize = 0;
         this.inventoryCacheRetention = 1;
-        this.inventoryFragmentsToCache = new ArrayList<>(Arrays.asList("type"));
+        // Default fragments to cache: type, name, id
+        this.inventoryFragmentsToCache = new ArrayList<>(Arrays.asList("type", "name", "id"));
         this.maxCPUTimeMS = 5000; // 5 seconds
         this.jsonataAgent = null;
         this.javaScriptAgent = null;

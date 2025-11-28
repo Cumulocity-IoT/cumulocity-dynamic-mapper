@@ -50,7 +50,8 @@ public class FlowResultInboundProcessor extends BaseProcessor {
             processFlowResults(context);
 
             // Check inventory filter condition if specified
-            if (mapping.getFilterInventory() != null && !mapping.getCreateNonExistingDevice()) {
+            // if (mapping.getFilterInventory() != null && !mapping.getCreateNonExistingDevice()) {
+            if (mapping.getFilterInventory() != null) {
                 boolean filterInventory = evaluateInventoryFilter(tenant, mapping.getFilterInventory(),
                         context.getSourceId(), context.getTesting());
                 if (context.getSourceId() == null

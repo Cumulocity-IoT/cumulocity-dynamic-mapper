@@ -74,7 +74,8 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
             substituteInTargetAndCreateRequests(context, exchange);
 
             // Check inventory filter condition if specified
-            if (mapping.getFilterInventory() != null && !mapping.getCreateNonExistingDevice()) {
+            // if (mapping.getFilterInventory() != null && !mapping.getCreateNonExistingDevice()) {
+            if (mapping.getFilterInventory() != null) {
                 boolean filterInventory = evaluateInventoryFilter(tenant, mapping.getFilterInventory(),
                         context.getSourceId(), context.getTesting());
                 if (context.getSourceId() == null
