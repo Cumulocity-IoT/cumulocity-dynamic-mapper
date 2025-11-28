@@ -57,8 +57,6 @@ public class ProcessorExtensionCustomMeasurement implements ProcessorExtensionSo
                     RepairStrategy.REMOVE_IF_MISSING_OR_NULL, false);
             context.addSubstitution("c8y_Temperature",
                     fragmentTemperature, TYPE.OBJECT, RepairStrategy.DEFAULT,false);
-            context.addSubstitution("c8y_Temperature",
-                    fragmentTemperature, TYPE.OBJECT, RepairStrategy.DEFAULT,false);
             // as the mapping uses useExternalId we have to map the id to
             // _IDENTITY_.externalId
             context.addSubstitution(context.getMapping().getGenericDeviceIdentifier(),

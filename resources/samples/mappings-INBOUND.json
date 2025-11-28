@@ -498,7 +498,7 @@
     "mappingType": "HEX",
     "substitutions": [
       {
-        "pathSource": "\"Temp: \"&$number($substring(message,0,4))&\" C\"",
+        "pathSource": "\"Temp: \"&$number($substring(payload,0,4))&\" C\"",
         "pathTarget": "text",
         "repairStrategy": "DEFAULT",
         "expandArray": false

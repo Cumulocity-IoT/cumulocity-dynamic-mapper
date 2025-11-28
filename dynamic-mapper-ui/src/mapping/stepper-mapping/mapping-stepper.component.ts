@@ -356,7 +356,19 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
               disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
                 !this.stepperConfiguration.allowDefiningSubstitutions,
               placeholder: '$join([$substring(txt,5), id]) or $number(id)/10',
-              description: 'Use JSONata...',
+              description: `Use <a href="https://jsonata.org" target="_blank">JSONata</a>
+              in your expressions:
+              <ol>
+                <li>to convert a UNIX timestamp to ISO date format use:
+                  <code>$fromMillis($number(deviceTimestamp))</code>
+                </li>
+                <li>to join substring starting at position 5 of property <code>txt</code> with
+                  device
+                  identifier use: <code>$join([$substring(txt,5), "-", id])</code></li>
+                <li>function chaining using <code>~</code> is not supported, instead use function
+                  notation. The expression <code>Account.Product.(Price * Quantity) ~> $sum()</code>
+                  becomes <code>$sum(Account.Product.(Price * Quantity))</code></li>
+              </ol>`,
               required: true,
               customMessage: this.sourceCustomMessage$
             },
@@ -379,7 +391,19 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
               customWrapperClass: 'm-b-24',
               disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
                 !this.stepperConfiguration.allowDefiningSubstitutions,
-              description: 'Use the same JSONata expressions...',
+              description: `Use <a href="https://jsonata.org" target="_blank">JSONata</a>
+              in your expressions:
+              <ol>
+                <li>to convert a UNIX timestamp to ISO date format use:
+                  <code>$fromMillis($number(deviceTimestamp))</code>
+                </li>
+                <li>to join substring starting at position 5 of property <code>txt</code> with
+                  device
+                  identifier use: <code>$join([$substring(txt,5), "-", id])</code></li>
+                <li>function chaining using <code>~</code> is not supported, instead use function
+                  notation. The expression <code>Account.Product.(Price * Quantity) ~> $sum()</code>
+                  becomes <code>$sum(Account.Product.(Price * Quantity))</code></li>
+              </ol>`,
               required: true,
               customMessage: this.targetCustomMessage$
             },
