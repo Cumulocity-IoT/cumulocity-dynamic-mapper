@@ -144,7 +144,7 @@ public class AIAgentService {
                     createDefaultAIAgents(mcpServer);
                 } else {
                     if (agents.stream().anyMatch(agent -> agent.getName().equals(DEFAULT_JSONATA_AGENT_NAME)
-                            || agent.getName().equals(DEFAULT_JAVASCRIPT_AGENT_NAME))) {
+                            || agent.getName().equals(DEFAULT_JAVASCRIPT_AGENT_NAME) || agent.getName().equals(DEFAULT_SMART_FUNCTION_AGENT_NAME))) {
                         log.info("{} - AIAgents already exists, not re-creating them",
                                 contextService.getContext().getTenant());
                     } else {
