@@ -158,7 +158,9 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
             }
 
             // set key for Kafka messages
-            context.setKey(deviceMessage.getTransportFields().get(Mapping.CONTEXT_DATA_KEY_NAME));
+            if (deviceMessage.getTransportFields() != null) {
+                context.setKey(deviceMessage.getTransportFields().get(Mapping.CONTEXT_DATA_KEY_NAME));
+            }
             context.setResolvedPublishTopic(publishTopic);
 
             context.setRetain(deviceMessage.getRetain());
