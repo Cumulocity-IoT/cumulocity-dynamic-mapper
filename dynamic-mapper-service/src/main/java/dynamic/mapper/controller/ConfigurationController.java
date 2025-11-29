@@ -135,6 +135,8 @@ public class ConfigurationController {
             - `externalExtensionsEnabled`: Whether external processor extensions are supported
             - `userHasMappingCreateRole`: Whether user can create/modify mappings
             - `userHasMappingAdminRole`: Whether user has administrative privileges
+            - `pulsarAvailable`: Whether pulsar is available
+            - `deviceIsolationMQTTServiceEnabled`: Whether device siolation for Cumulocity MQTT Service is enabled
             """)
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Feature flags retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Feature.class))),
@@ -151,6 +153,7 @@ public class ConfigurationController {
         feature.setUserHasMappingCreateRole(Utils.userHasMappingCreateRole());
         feature.setUserHasMappingAdminRole(Utils.userHasMappingAdminRole());
         feature.setPulsarAvailable(configurationRegistry.isPulsarAvailable(tenant));
+        feature.setDeviceIsolationMQTTServiceEnabled(serviceConfiguration.getDeviceIsolationMQTTServiceEnabled());
         return new ResponseEntity<Feature>(feature, HttpStatus.OK);
     }
 

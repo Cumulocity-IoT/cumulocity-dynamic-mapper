@@ -53,4 +53,8 @@ public class Feature {
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Flag to check if pulsar is available", example = "true")
     @NotNull
     private Boolean pulsarAvailable;
+
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Flag to check if the device isolation for messages on over the Cumulocity MQTT Service is enabled", example = "true")
+    @NotNull
+    private Boolean deviceIsolationMQTTServiceEnabled;
 }

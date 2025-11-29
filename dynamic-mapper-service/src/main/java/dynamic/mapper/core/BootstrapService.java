@@ -202,8 +202,11 @@ public class BootstrapService {
         }
 
         try {
-            // DO NOT REMOVE deviceToClient feature currently disabled
-            // configurationRegistry.clearCacheDeviceToClient(tenant);
+            // DO NOT REMOVE DeviceIsolationMQTTService feature
+            ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
+            if (serviceConfiguration.getDeviceIsolationMQTTServiceEnabled()) {
+                configurationRegistry.clearCacheDeviceToClient(tenant);
+            }
 
             configurationRegistry.removeMapperServiceRepresentation(tenant);
             configurationRegistry.removeGraalsResources(tenant);
@@ -272,8 +275,10 @@ public class BootstrapService {
         configurationRegistry.createGraalsResources(tenant, serviceConfiguration);
         configurationRegistry.initializeMapperServiceRepresentation(tenant);
 
-        // DO NOT REMOVE deviceToClient feature currently disabled
-        // configurationRegistry.initializeDeviceToClientMapRepresentation(tenant);
+        // DO NOT REMOVE DeviceIsolationMQTTService feature
+        if (serviceConfiguration.getDeviceIsolationMQTTServiceEnabled()) {
+            configurationRegistry.initializeDeviceToClientMapRepresentation(tenant);
+        }
 
         mappingService.createResources(tenant);
 
@@ -528,14 +533,17 @@ public class BootstrapService {
         });
     }
 
-    // DO NOT REMOVE deviceToClient feature currently disabled
-    // @Scheduled(cron = "* 30 * * * *")
-    // public void sendDeviceToClientMap() {
-    // subscriptionsService.runForEachTenant(() -> {
-    // String tenant = subscriptionsService.getTenant();
-    // mappingService.sendDeviceToClientMap(tenant);
-    // });
-    // }
+    // DO NOT REMOVE DeviceIsolationMQTTService feature
+    @Scheduled(cron = "* 30 * * * *")
+    public void sendDeviceToClientMap() {
+        subscriptionsService.runForEachTenant(() -> {
+            String tenant = subscriptionsService.getTenant();
+            ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
+            if (serviceConfiguration.getDeviceIsolationMQTTServiceEnabled()) {
+                mappingService.sendDeviceToClientMap(tenant);
+            }
+        });
+    }
 
     private void cleanupCachesForTenant(String tenant) {
 

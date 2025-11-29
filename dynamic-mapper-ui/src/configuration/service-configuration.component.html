@@ -168,7 +168,23 @@
                 </p>
               </div>
               <label class="c8y-switch c8y-switch--inline m-l-auto" title="{{ 'Outbound mappings' | translate }}">
-                <input name="sendNotificationLifecycle" type="checkbox" formControlName="outboundMappingEnabled" />
+                <input name="outboundMappingEnabled" type="checkbox" formControlName="outboundMappingEnabled" />
+                <span></span>
+              </label>
+            </div>
+          </c8y-li>
+
+          <c8y-li>
+            <c8y-li-icon icon="relay-home-automation"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'Device Isolation Cumulocity MQTT Service' | translate }}</p>
+                <p>
+                  <small translate>When device isolation for Cumulocity MQTT Service is enabled only registered MQTT clients receive outbound MQTT messages</small>
+                </p>
+              </div>
+              <label class="c8y-switch c8y-switch--inline m-l-auto" title="{{ 'Device Isolation Cumulocity MQTT Service' | translate }}">
+                <input name="deviceIsolationMQTTServiceEnabled" type="checkbox" formControlName="deviceIsolationMQTTServiceEnabled" />
                 <span></span>
               </label>
             </div>
@@ -353,14 +369,15 @@
             </div>
           </c8y-li>
 
-                    <c8y-li>
+          <c8y-li>
             <c8y-li-icon icon="bot"></c8y-li-icon>
             <div class="d-flex a-i-center">
               <div>
                 <p>{{ 'SmartFunction AI Agent' |
                   translate }}</p>
                 <p>
-                  <small translate>Name of smartFunction agent to be used when generating Cumulocity API payloads as JavaScript code.
+                  <small translate>Name of smartFunction agent to be used when generating Cumulocity API payloads as
+                    JavaScript code.
                     The needs to be
                     defined in the AI Agent Manager.</small>
                 </p>

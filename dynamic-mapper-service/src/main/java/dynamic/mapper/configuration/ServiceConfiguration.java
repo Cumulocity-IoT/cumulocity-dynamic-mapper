@@ -52,6 +52,7 @@ public class ServiceConfiguration implements Cloneable {
         this.sendNotificationLifecycle = false;
         this.externalExtensionEnabled = true;
         this.outboundMappingEnabled = true;
+        this.deviceIsolationMQTTServiceEnabled = false;
         this.inboundExternalIdCacheSize = 0;
         this.inboundExternalIdCacheRetention = 1;
         this.inventoryCacheSize = 0;
@@ -108,6 +109,10 @@ public class ServiceConfiguration implements Cloneable {
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     private Boolean outboundMappingEnabled;
+
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Flag to check if the device isolation for messages on over the Cumulocity MQTT Service is enabled", example = "true")
+    @NotNull
+    private Boolean deviceIsolationMQTTServiceEnabled;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Size of the cache for inbound external ID lookups. Set to 0 to disable caching.", example = "1000", minimum = "0")
     @NotNull

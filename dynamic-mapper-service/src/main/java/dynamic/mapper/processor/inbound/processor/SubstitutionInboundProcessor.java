@@ -33,6 +33,7 @@ import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 
 import dynamic.mapper.core.C8YAgent;
+import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
@@ -60,6 +61,9 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
     private MappingService mappingService;
 
     @Autowired
+    private ConfigurationRegistry configurationRegistry;
+
+    @Autowired
     private ObjectMapper objectMapper;
 
     @Override
@@ -74,7 +78,8 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
             substituteInTargetAndCreateRequests(context, exchange);
 
             // Check inventory filter condition if specified
-            // if (mapping.getFilterInventory() != null && !mapping.getCreateNonExistingDevice()) {
+            // if (mapping.getFilterInventory() != null &&
+            // !mapping.getCreateNonExistingDevice()) {
             if (mapping.getFilterInventory() != null) {
                 boolean filterInventory = evaluateInventoryFilter(tenant, mapping.getFilterInventory(),
                         context.getSourceId(), context.getTesting());
@@ -186,13 +191,14 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
                 SubstituteValue.substituteValueInPayload(sourceId, payloadTarget,
                         mapping.transformGenericPath2C8YPath(pathTarget));
                 context.setSourceId(sourceId.getValue().toString());
-                // DO NOT REMOVE deviceToClient feature currently disabled
+                // DO NOT REMOVE DeviceIsolationMQTTService feature
                 // cache the mapping of device to client ID
-                // if (context.getClientId() != null) {
-                // configurationRegistry.addOrUpdateClientRelation(tenant,
-                // context.getClientId(),
-                // sourceId.getValue().toString());
-                // }
+                if (context.getClientId() != null
+                        && context.getServiceConfiguration().getDeviceIsolationMQTTServiceEnabled()) {
+                    configurationRegistry.addOrUpdateClientRelation(tenant,
+                            context.getClientId(),
+                            sourceId.getValue().toString());
+                }
                 substitute.setRepairStrategy(RepairStrategy.CREATE_IF_MISSING);
             }
         } else if ((Mapping.TOKEN_IDENTITY + ".c8ySourceId").equals(pathTarget)) {
@@ -202,13 +208,13 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
             SubstituteValue.substituteValueInPayload(sourceId, payloadTarget,
                     mapping.transformGenericPath2C8YPath(pathTarget));
             context.setSourceId(sourceId.getValue().toString());
-            // DO NOT REMOVE deviceToClient feature currently disabled
+            // DO NOT REMOVE DeviceIsolationMQTTService feature
             // cache the mapping of device to client ID
-            // if (context.getClientId() != null) {
-            // configurationRegistry.addOrUpdateClientRelation(tenant,
-            // context.getClientId(),
-            // sourceId.getValue().toString());
-            // }
+            if (context.getClientId() != null && context.getServiceConfiguration().getDeviceIsolationMQTTServiceEnabled()) {
+                configurationRegistry.addOrUpdateClientRelation(tenant,
+                        context.getClientId(),
+                        sourceId.getValue().toString());
+            }
             substitute.setRepairStrategy(RepairStrategy.CREATE_IF_MISSING);
         } else if ((Mapping.TOKEN_CONTEXT_DATA + ".api").equals(pathTarget)) {
             context.setApi(API.fromString((String) substitute.getValue()));

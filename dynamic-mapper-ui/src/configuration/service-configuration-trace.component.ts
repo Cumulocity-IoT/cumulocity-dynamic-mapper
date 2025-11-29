@@ -72,6 +72,7 @@ export class ServiceConfigurationTraceComponent implements OnInit, OnDestroy {
     sendSubscriptionEvents: false,
     sendNotificationLifecycle: false,
     outboundMappingEnabled: true,
+    deviceIsolationMQTTServiceEnabled: false,
     inboundExternalIdCacheSize: 0,
     inboundExternalIdCacheRetention: 0,
     inventoryCacheSize: 0,

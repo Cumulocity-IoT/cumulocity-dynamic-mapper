@@ -96,7 +96,7 @@ public class JSONataExtractionOutboundProcessor extends BaseProcessor {
                 /*
                  * step 1 extract content from inbound payload
                  */
-                extractedSourceContent = extractContent(context, mapping, payloadObject, payloadAsString,
+                extractedSourceContent = extractContent(context, payloadObject, payloadAsString,
                         substitution.getPathSource());
                 /*
                  * step 2 analyse extracted content: textual, array

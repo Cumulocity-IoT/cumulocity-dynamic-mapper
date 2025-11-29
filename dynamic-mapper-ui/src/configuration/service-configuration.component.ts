@@ -56,6 +56,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     sendSubscriptionEvents: false,
     sendNotificationLifecycle: false,
     outboundMappingEnabled: true,
+    deviceIsolationMQTTServiceEnabled: false,
     inboundExternalIdCacheSize: 0,
     inboundExternalIdCacheRetention: 0,
     inventoryCacheSize: 0,
@@ -85,6 +86,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
       sendSubscriptionEvents: new FormControl(''),
       sendNotificationLifecycle: new FormControl(''),
       outboundMappingEnabled: new FormControl(''),
+      deviceIsolationMQTTServiceEnabled: new FormControl(''),
       inboundExternalIdCacheSize: new FormControl(''),
       inboundExternalIdCacheRetention: new FormControl(''),
       inventoryCacheRetention: new FormControl(''),
@@ -134,6 +136,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
       sendNotificationLifecycle:
         this.serviceConfiguration.sendNotificationLifecycle,
       outboundMappingEnabled: this.serviceConfiguration.outboundMappingEnabled,
+      deviceIsolationMQTTServiceEnabled: this.serviceConfiguration.deviceIsolationMQTTServiceEnabled,
       inboundExternalIdCacheSize:
         this.serviceConfiguration.inboundExternalIdCacheSize,
       inboundExternalIdCacheRetention:
