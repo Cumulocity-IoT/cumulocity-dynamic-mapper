@@ -298,15 +298,6 @@
             <td class="text-center"><strong>X</strong><br></td>
             <td>JSON, Hex, Protobuf, Extension</td>
           </tr>
-          <tr>
-            <td><strong>Cumulocity MQTT Service - deprecated </strong><small class="text-muted">(tenant
-                isolation, only one instance per tenant exists)</small></td>
-            <td class="text-center"><strong>X</strong></td>
-            <td class="text-center"><strong>X</strong></td>
-            <td class="text-center"><strong>X</strong></td>
-            <td class="text-center"><strong>X</strong><br></td>
-            <td>JSON, Hex, Protobuf, Extension</td>
-          </tr>
           <tr class="table-light">
             <td><strong>Generic MQTT</strong></td>
             <td class="text-center"><strong>X</strong></td>
@@ -348,6 +339,15 @@
             <td class="text-center"><strong>X</strong><br></td>
             <td>JSON, Hex, Protobuf, Extension</td>
           </tr>
+          <tr>
+            <td><strong>Cumulocity MQTT Service - deprecated </strong><small class="text-muted">(tenant
+                isolation, only one instance per tenant exists)</small></td>
+            <td class="text-center"><strong>X</strong></td>
+            <td class="text-center"><strong>X</strong></td>
+            <td class="text-center"><strong>X</strong></td>
+            <td class="text-center"><strong>X</strong><br></td>
+            <td>JSON, Hex, Protobuf, Extension</td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -368,9 +368,11 @@
     <br />
 
     <div class="p-b-8 text-16">The <strong>WebHook</strong> connector has a setting
-      <strong>Cumulocity Internal</strong> which can be used e.g. when Cumulocity MEA should be processed and send back to Cumulocity Core as transformed MEA: receive an <code>EVENT</code> of type <code>c8y_Uplink</code> and use a <strong>SMART_FUNCTION</strong> to decode the payload and transform it into a <code>MEASUREMENT</code>.
+      <strong>Cumulocity Internal</strong> which can be used e.g. when Cumulocity MEA should be processed and send back
+      to Cumulocity Core as transformed MEA: receive an <code>EVENT</code> of type <code>c8y_Uplink</code> and use a
+      <strong>SMART_FUNCTION</strong> to decode the payload and transform it into a <code>MEASUREMENT</code>.
     </div>
-    <br/>
+    <br />
   </div>
 
   <div class="card-header" id="define-mapping">

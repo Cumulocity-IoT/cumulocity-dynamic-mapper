@@ -28,6 +28,84 @@ Mappings are defined in a graphical editor using JSONata expressions:
 ![Define mappings](image/Dynamic_Mapper_Mapping_Stepper_Substitution_Basic.png)
 <br>
 <br>
+The Dynamic Mapper supports the following connectors:
+<div class="table-responsive table-width-80">
+    <table class="table _table-striped">
+    <thead class="thead-light">
+        <tr>
+        <th style="width: 26%;">Connector</th>
+        <th class="text-center" style="width: 12%;">Direction: Inbound</th>
+        <th class="text-center" style="width: 12%;">Direction: Outbound</th>
+        <th class="text-center" style="width: 12%;">Supports Snoop</th>
+        <th class="text-center" style="width: 12%;">Supports JavaScript</th>
+        <th style="width: 26%;">Supported Mapping Types</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+        <td><strong>Cumulocity MQTT Service </strong><small class="text-muted">(device
+            isolation, only one instance per tenant exists)</small></td>
+        <td class="text-center"><strong>X</strong></td>
+        <td class="text-center"><strong>X</strong></td>
+        <td class="text-center"><strong>X</strong></td>
+        <td class="text-center"><strong>X</strong><br></td>
+        <td>JSON, Hex, Protobuf, Extension</td>
+        </tr>
+        <tr class="table-light">
+        <td><strong>Generic MQTT</strong></td>
+        <td class="text-center"><strong>X</strong></td>
+        <td class="text-center"><strong>X</strong></td>
+        <td class="text-center"><strong>X</strong></td>
+        <td class="text-center"><strong>X</strong><br></td>
+        <td>JSON, Hex, Protobuf, Extension</td>
+        </tr>
+        <tr>
+        <td><strong>HTTP Connector</strong><br><small class="text-muted">(only one instance per tenant
+            exists)</small></td>
+        <td class="text-center"><strong>X</strong></td>
+        <td class="text-center text-muted">-</td>
+        <td class="text-center"><strong>X</strong></td>
+        <td class="text-center"><strong>X</strong><br></td>
+        <td>JSON, Hex, Protobuf, Extension</td>
+        </tr>
+        <tr class="table-light">
+        <td><strong>Webhook</strong><br><small class="text-muted">(including Cumulocity Rest API)</small></td>
+        <td class="text-center text-muted">-</td>
+        <td class="text-center"><strong>X</strong></td>
+        <td class="text-center"><strong>X</strong></td>
+        <td class="text-center"><strong>X</strong><br></td>
+        <td>JSON, Hex</td>
+        </tr>
+        <tr>
+        <td><strong>Apache Pulsar </strong><small class="text-muted"></small></td>
+        <td class="text-center"><strong>X</strong></td>
+        <td class="text-center"><strong>X</strong></td>
+        <td class="text-center"><strong>X</strong></td>
+        <td class="text-center"><strong>X</strong><br></td>
+        <td>JSON, Hex, Protobuf, Extension</td>
+        </tr>
+        <tr>
+        <td><strong>Kafka</strong></td>
+        <td class="text-center"><strong>X</strong></td>
+        <td class="text-center"><strong>X</strong></td>
+        <td class="text-center"><strong>X</strong></td>
+        <td class="text-center"><strong>X</strong><br></td>
+        <td>JSON, Hex, Protobuf, Extension</td>
+        </tr>
+        <tr>
+        <td><strong>Cumulocity MQTT Service - deprecated </strong><small class="text-muted">(tenant
+            isolation, only one instance per tenant exists)</small></td>
+        <td class="text-center"><strong>X</strong></td>
+        <td class="text-center"><strong>X</strong></td>
+        <td class="text-center"><strong>X</strong></td>
+        <td class="text-center"><strong>X</strong><br></td>
+        <td>JSON, Hex, Protobuf, Extension</td>
+        </tr>
+    </tbody>
+    </table>
+</div>
+<br>
+<br>
 For the complete documentation please check the GitHub project [cumulocity-dynamic-mqtt-mapper](https://github.com/Cumulocity-IoT/cumulocity-dynamic-mapper).
 
 **NOTE:** 
