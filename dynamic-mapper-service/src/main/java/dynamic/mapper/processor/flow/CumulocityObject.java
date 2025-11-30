@@ -25,6 +25,7 @@ import lombok.Setter;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import java.util.List;
+import java.util.Map;
 
 /**
  * A create/update to a Cumulocity domain object, sent to/from core or
@@ -85,13 +86,15 @@ public class CumulocityObject {
      */
     private Destination destination;
 
-    /** Set retain flag */
-    private Boolean retain;
+    /** Dictionary of contextData: deviceName, deviceType */
+    private Map<String, String> contextData;
 
     // Convenience constructor
-    public CumulocityObject(Object payload, CumulocityType cumulocityType, List<ExternalId> externalSource) {
+    public CumulocityObject(Object payload, CumulocityType cumulocityType, List<ExternalId> externalSource,
+            Map<String, String> contextData) {
         this.payload = payload;
         this.cumulocityType = cumulocityType;
         this.externalSource = externalSource;
+        this.contextData = contextData;
     }
 }

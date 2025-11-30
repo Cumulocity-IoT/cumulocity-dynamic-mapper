@@ -105,8 +105,13 @@ public class JavaScriptInteropHelper {
         if (value.hasMember("destination")) {
             msg.setDestination(Destination.fromValue(value.getMember("destination").asString()));
         }
-        if (value.hasMember(ProcessingContext.RETAIN)) {
-            msg.setRetain(value.getMember(ProcessingContext.RETAIN).asBoolean());
+        if (value.hasMember("contextData")) {
+            Object contextDataObj = convertValueToJavaObject(value.getMember("contextData"));
+            if (contextDataObj instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, String> contextDataMap = convertToStringMap((Map<String, Object>) contextDataObj);
+                msg.setContextData(contextDataMap);
+            }
         }
 
         return msg;
@@ -342,6 +347,24 @@ public class JavaScriptInteropHelper {
         }
 
         return null;
+    }
+
+    /**
+     * Converts a Map<String, Object> to Map<String, String>
+     */
+    private static Map<String, String> convertToStringMap(Map<String, Object> map) {
+        if (map == null) {
+            return null;
+        }
+        Map<String, String> result = new HashMap<>();
+        for (Map.Entry<String, Object> entry : map.entrySet()) {
+            if (entry.getValue() != null) {
+                result.put(entry.getKey(), String.valueOf(entry.getValue()));
+            } else {
+                result.put(entry.getKey(), null);
+            }
+        }
+        return result;
     }
 
 }

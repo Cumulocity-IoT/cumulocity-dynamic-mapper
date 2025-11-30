@@ -143,6 +143,17 @@ public class FlowResultInboundProcessor extends BaseProcessor {
             // Clone the payload to modify it
             Map<String, Object> payload = clonePayload(cumulocityMessage.getPayload());
 
+            // contextData for generating device with defined name/type
+            Map<String, String> contextData = cumulocityMessage.getContextData();
+            if (contextData != null) {
+                if (contextData.get("deviceName") != null) {
+                    context.setDeviceName(contextData.get("deviceName"));
+                }
+                if (contextData.get("deviceType") != null) {
+                    context.setDeviceType(contextData.get("deviceType"));
+                }
+            }
+
             // Resolve device ID and set it hierarchically in the payload
             String resolvedDeviceId = resolveDeviceIdentifier(cumulocityMessage, context, tenant);
             List<ExternalId> externalSources = cumulocityMessage.getExternalSource();
