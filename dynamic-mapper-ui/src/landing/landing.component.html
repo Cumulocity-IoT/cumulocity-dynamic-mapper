@@ -233,17 +233,18 @@
       </li>
     </ul>
 
-    <div class="alert alert-info m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-      <i class="fa fa-info-circle m-r-4"></i>
-      <strong>Tip:</strong> If you're using <strong>JavaScript Substitutions</strong> or <strong>Smart Function
-        (JavaScript)</strong> as Transformation Type, navigate to <a [routerLink]="ROUTE_CODE_TEMPLATES"> Code Templates </a> to see
+    <div class="p-b-8 text-16">
+      If you're using <strong>JavaScript Substitutions</strong> or <strong>Smart Function
+        (JavaScript)</strong> as Transformation Type, navigate to <a [routerLink]="ROUTE_CODE_TEMPLATES"> Code Templates
+      </a> to see
       JavaScript codes samples
       of transformations.
     </div>
 
     <div class="p-b-8 text-16">
-      Navigate to <a [routerLink]="ROUTE_INBOUND"> Inbound </a> <b>Add Mapping</b> (or <a [routerLink]="ROUTE_OUTBOUND"> Outbound
-      </a> <b>Add Mapping</b>) to add a mapping.
+      To add a mapping navigate to <a [routerLink]="ROUTE_INBOUND">  <b> Inbound → Add Mapping</b> </a> (or <a [routerLink]="ROUTE_OUTBOUND">
+        <b> Outbound → Add Mapping</b> 
+      </a> ) .
       The intuitive stepper wizard will guide you through the mapping configuration process.
     </div>
 
@@ -368,8 +369,8 @@
       they affect all associated mappings.
     </div>
 
-    <div class="p-b-8 text-16">A new connector is added using the following wizard. The wizard is part of the
-      <a [routerLink]="ROUTE_CONNECTORS"> <strong>Configuration → Connectors UI → Add connector</strong> </a> .
+    <div class="p-b-8 text-16">A new connector using the following wizard
+      <a [routerLink]="ROUTE_CONNECTORS"> <strong>Configuration → Connectors → Add connector</strong> </a> .
     </div>
     <img width="70%" class="m-l-48 m-b-48 m-b-16"
       src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Connector_New.png" alt="Payload type " />
@@ -736,8 +737,10 @@
 
     <div class="alert alert-warning  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-exclamation-triangle m-r-4"></i>
-      <strong>Important Configuration:</strong> Only device fragments configured in  <a [routerLink]="ROUTE_SERVICE_CONFIGURATION"> <b>Configuration → Service
-        Configuration → Function → Fragments from inventory to cache</b></a> can be referenced in Smart Functions. Make
+      <strong>Important Configuration:</strong> Only device fragments configured in <a
+        [routerLink]="ROUTE_SERVICE_CONFIGURATION"> <b>Configuration → Service
+          Configuration → Function → Fragments from inventory to cache</b></a> can be referenced in Smart Functions.
+      Make
       sure to add all required fragments to this list before using them in your code.
     </div>
 
@@ -758,14 +761,9 @@
   <div class="card-block">
     <div class="p-b-8 text-16">The mapper adds metadata in source and target templates to control the processing
       of the mapping. All JSON nodes that are added as metadata to the templates are enclosed in <code>_</code>, e.g.
-      <code>_CONTEXT_DATA_</code>, <code>_IDENTITY_</code> and <code>_TOPIC_LEVEL_</code>
+      <code>_CONTEXT_DATA_</code>, <code>_IDENTITY_</code> and <code>_TOPIC_LEVEL_</code>.
       <br />
-    </div>
-
-    <div class="alert alert-info m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-      <i class="fa fa-info-circle m-r-4"></i>
-      <strong>What is Metadata?</strong> Metadata nodes are special fields that provide additional context and control
-      over mapping execution. They are automatically generated at runtime and removed before sending to Cumulocity.
+      They are automatically generated at runtime and removed before sending to Cumulocity.
       Common uses include:
       <ul class="m-t-8 m-b-0">
         <li>Extracting device identifiers from MQTT topics (<code>_TOPIC_LEVEL_</code>)</li>
@@ -779,8 +777,8 @@
       <strong>Note:</strong> All metadata nodes including sub-nodes are not meant to be changed directly. All metadata
       nodes are generated before the processing of a mapping and removed from the target payload before it is sent.
       Therefore, the metadata is not saved in the mapping itself and cannot store individual information. To overwrite
-      e.g. the API for a mapping at runtime, you have to add a substitution: <code>'EVENT' →
-        _CONTEXT_DATA_.api</code>.
+      e.g. the API for a mapping at runtime, you have to add a substitution: <code>[ 'EVENT' →
+        _CONTEXT_DATA_.api ]</code>.
     </div>
 
     <br />
