@@ -20,8 +20,9 @@
 import { ChangeDetectorRef, Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { AlertService, CellRendererContext } from '@c8y/ngx-components';
 import { MappingService } from '../core/mapping.service';
-import { Direction, Feature, SharedService } from '../../shared';
+import { Direction, Feature, Mapping, SharedService } from '../../shared';
 import { HttpStatusCode } from '@angular/common/http';
+import { SubscriptionService } from '../core/subscription.service';
 
 /**
  * The example component for custom cell renderer.
@@ -38,13 +39,15 @@ import { HttpStatusCode } from '@angular/common/http';
         title="{{ 'Toggle mapping activation' | translate }}"
         class="c8y-switch"
       >
-        <input
-          type="checkbox"
-          [checked]="context.value"
-          (change)="activateMapping()"
-          [disabled]="!(feature?.userHasMappingAdminRole || feature?.userHasMappingCreateRole)"
-
-        />
+      <input
+        type="checkbox"
+        [checked]="context.value"
+        (click)="onToggleClick($event)"
+        [disabled]="
+          !(feature?.userHasMappingAdminRole || feature?.userHasMappingCreateRole) ||
+          isCheckingValidity
+        "
+      />
         <span></span>
         <span
           class="text-capitalize"
@@ -66,12 +69,14 @@ export class MappingStatusActivationRendererComponent implements OnInit {
     public alertService: AlertService,
     public mappingService: MappingService,
     public sharedService: SharedService,
+    public subscriptionService: SubscriptionService,
     private cdr: ChangeDetectorRef
   ) {
     // console.log('Status', context, context.value);
   }
 
   feature: Feature;
+  isCheckingValidity: boolean = false;
 
   async ngOnInit() {
     try {
@@ -82,13 +87,48 @@ export class MappingStatusActivationRendererComponent implements OnInit {
     }
   }
 
+  async onToggleClick(event: Event) {
+    event.preventDefault(); // Prevent the checkbox from toggling visually
+    await this.activateMapping();
+  }
+
+  isValidToToggle(): boolean {
+    const { mapping } = this.context.item;
+
+    // If toggling to active for outbound mapping, check subscriptions
+    if (mapping.direction === Direction.OUTBOUND && !mapping.active) {
+      // You might want to cache this check or make it synchronous
+      // For now, allow the click and validate in activateMapping
+      return true;
+    }
+
+    return true;
+  }
   async activateMapping() {
     const { mapping } = this.context.item;
     const newActive = !mapping.active;
+
+    // Prevent multiple simultaneous clicks
+    if (this.isCheckingValidity) {
+      return;
+    }
+
+    this.isCheckingValidity = true;
+
+    // Validate BEFORE changing state
+    if (mapping.direction === Direction.OUTBOUND && newActive) {
+      const valid = await this.validateSubscriptionOutbound(mapping);
+      if (!valid) {
+        this.isCheckingValidity = false;
+        this.cdr.detectChanges();
+        return; // Exit without toggling - checkbox won't toggle because we prevented default
+      }
+    }
+
     const action = newActive ? 'Activated' : 'Deactivated';
     const parameter = { id: mapping.id, active: newActive };
-    const response =
-      await this.mappingService.changeActivationMapping(parameter);
+
+    const response = await this.mappingService.changeActivationMapping(parameter);
     if (response.status != HttpStatusCode.Created) {
       const failedMap = await response.json();
       const failedList = Object.values(failedMap).join(',');
@@ -98,7 +138,26 @@ export class MappingStatusActivationRendererComponent implements OnInit {
     } else {
       this.alertService.success(`${action} for mapping: ${mapping.name} was successful`);
     }
+
+    this.isCheckingValidity = false;
     this.mappingService.refreshMappings(Direction.INBOUND);
     this.mappingService.refreshMappings(Direction.OUTBOUND);
+  }
+
+  private async validateSubscriptionOutbound(mapping: Mapping): Promise<boolean> {
+    if (mapping.direction === Direction.OUTBOUND) {
+      const result = await Promise.all([
+        this.subscriptionService.getSubscriptionDevice(this.subscriptionService.DYNAMIC_DEVICE_SUBSCRIPTION),
+        this.subscriptionService.getSubscriptionDevice(this.subscriptionService.STATIC_DEVICE_SUBSCRIPTION)
+      ]);
+
+      if (result[0].devices?.length === 0 && result[1].devices?.length === 0) {
+        this.alertService.info(
+          "For your outbound mapping to work, it requires an active subscription. Please create a subscription for this outbound mapping."
+        );
+        return false;
+      }
+    }
+    return true;
   }
 }

@@ -234,7 +234,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       if (result[0].devices?.length == 0 && result[1].devices?.length == 0)
         this.alertService.info("For your outbound mapping to work, it requires an active subscription. Please create a subscription for this outbound mapping.");
       valid = false;
-    } 
+    }
     return valid;
   }
 
@@ -766,7 +766,10 @@ export class MappingComponent implements OnInit, OnDestroy {
       this.alertService.success(`${action} for mapping: ${mapping.name} was successful`);
     }
     this.mappingService.refreshMappings(this.stepperConfiguration.direction);
-    // return this.mappingService.
+
+    if (this.stepperConfiguration.direction == Direction.OUTBOUND) {
+      this.validateSubscriptionOutbound();
+    }
   }
 
   async toggleDebugMapping(m: MappingEnriched) {
@@ -938,6 +941,10 @@ export class MappingComponent implements OnInit, OnDestroy {
       this.mappingService.refreshMappings(this.stepperConfiguration.direction);
     });
     this.mappingGrid.setAllItemsSelected(false);
+
+    if (this.stepperConfiguration.direction == Direction.OUTBOUND) {
+      this.validateSubscriptionOutbound();
+    }
   }
 
   private deactivateMappingBulk(ids: string[]) {
