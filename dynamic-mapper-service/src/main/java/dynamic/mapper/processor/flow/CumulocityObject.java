@@ -86,7 +86,7 @@ public class CumulocityObject {
      */
     private Destination destination;
 
-    /** Dictionary of contextData: deviceName, deviceType */
+    /** Dictionary of contextData: for creating a new device specify deviceName, deviceType */
     private Map<String, String> contextData;
 
     // Convenience constructor

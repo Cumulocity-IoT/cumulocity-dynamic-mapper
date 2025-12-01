@@ -160,6 +160,9 @@ export interface CumulocityObject {
 For messages received by the flow this is not set.
 (nb: no need for a "processingMode" option due to having this) */
     destination?: "cumulocity" | "iceflow" | "streaming-analytics";
+
+    /** Dictionary of contextData: for creating a new device specify deviceName, deviceType */
+    contextData?: object;
 }
 
 /** 

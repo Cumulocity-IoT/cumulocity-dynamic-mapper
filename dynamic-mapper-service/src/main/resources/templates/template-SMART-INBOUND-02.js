@@ -1,6 +1,6 @@
 /**
- * @name Template for Smart Function
- * @description Template for Smart Function, creates either c8y_CurrentMeasurement or c8y_VoltageMeasurement, depending on the inventory data (enrichment)
+ * @name Smart Function using device data for enrichment
+ * @description Creates either c8y_CurrentMeasurement or c8y_VoltageMeasurement, depending on the inventory data (enrichment)
  * @templateType INBOUND_SMART_FUNCTION
  * @direction INBOUND
  * @defaultTemplate false
@@ -16,12 +16,21 @@ function onMessage(msg, context) {
     console.log("Payload Raw:" + payload);
     console.log("Payload messageId" +  payload.get("messageId"));
 
-    // lookup device for enrichment
-    var deviceByDeviceId = context.getManagedObjectByDeviceId(payload.get("deviceId"));
-    console.log("Device (by device id): " + deviceByDeviceId);
+    // testing lookup device by deviceId for enrichment
+    try {
+        var deviceByDeviceId = context.getManagedObjectByDeviceId(payload.get("deviceId"));
+        console.log("Device (by device id): " + deviceByDeviceId);
+    } catch (e) {
+        console.log(e);
+    }
 
-    var deviceByExternalId = context.getManagedObject({ externalId: payload.get("clientId"), type: "c8y_Serial" } );
-    console.log("Device (by external id): " + deviceByExternalId);
+    // testing lookup device by externalId for enrichment
+    try {
+        var deviceByExternalId = context.getManagedObject({ externalId: clientId, type: "c8y_Serial" });
+        console.log("Device (by external id): " + deviceByExternalId);
+    } catch (e) {
+        console.log(e);
+    }
 
     // Determine measurement type based on device configuration
     var isVoltage = deviceByExternalId?.c8y_Sensor?.type?.voltage === true;

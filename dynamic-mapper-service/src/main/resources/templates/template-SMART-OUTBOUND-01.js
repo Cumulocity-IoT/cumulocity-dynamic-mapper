@@ -1,6 +1,6 @@
 /**
  * @name Default template for Smart Function
- * @description Default template for Smart Function, creates one measurement
+ * @description Creates one measurement
  * @templateType OUTBOUND_SMART_FUNCTION
  * @direction OUTBOUND
  * @defaultTemplate true
@@ -44,7 +44,6 @@ function onMessage(msg, context) {
                 "value": payload["c8y_TemperatureMeasurement"]["T"]["value"]
                 }
             }
-        },
-        transportFields: { "key": payload["source"]["id"]}  // define key to add to Kafka payload (record)
+        }
     }];
 }
