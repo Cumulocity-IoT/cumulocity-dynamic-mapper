@@ -355,23 +355,32 @@ public class FlowProcessorInboundProcessor extends BaseProcessor {
         }
 
         try {
-            // CRITICAL: Convert GraalVM Value to Java objects immediately
-            if (JavaScriptInteropHelper.isDeviceMessage(element)) {
-                DeviceMessage deviceMsg = JavaScriptInteropHelper.convertToDeviceMessage(element);
-                outputMessages.add(deviceMsg);
-                log.debug("{} - Processed DeviceMessage: topic={}", tenant, deviceMsg.getTopic());
+            // if (JavaScriptInteropHelper.isDeviceMessage(element)) {
+            // DeviceMessage deviceMsg =
+            // JavaScriptInteropHelper.convertToDeviceMessage(element);
+            // outputMessages.add(deviceMsg);
+            // log.debug("{} - Processed DeviceMessage: topic={}", tenant,
+            // deviceMsg.getTopic());
 
-            } else if (JavaScriptInteropHelper.isCumulocityObject(element)) {
-                CumulocityObject cumulocityObj = JavaScriptInteropHelper.convertToCumulocityObject(element);
-                outputMessages.add(cumulocityObj);
-                log.debug("{} - Processed CumulocityObject: type={}",
-                        tenant, cumulocityObj.getCumulocityType());
+            // } else if (JavaScriptInteropHelper.isCumulocityObject(element)) {
+            // CumulocityObject cumulocityObj =
+            // JavaScriptInteropHelper.convertToCumulocityObject(element);
+            // outputMessages.add(cumulocityObj);
+            // log.debug("{} - Processed CumulocityObject: type={}",
+            // tenant, cumulocityObj.getCumulocityType());
 
-            } else {
-                log.warn("{} - Unknown message type returned from onMessage: {} with members: {}",
-                        tenant, element.getMetaObject(),
-                        element.hasMembers() ? element.getMemberKeys() : "N/A");
-            }
+            // } else {
+            // log.warn("{} - Unknown message type returned from onMessage: {} with members:
+            // {}",
+            // tenant, element.getMetaObject(),
+            // element.hasMembers() ? element.getMemberKeys() : "N/A");
+            // }
+
+            //
+            CumulocityObject cumulocityObj = JavaScriptInteropHelper.convertToCumulocityObject(element);
+            outputMessages.add(cumulocityObj);
+            log.debug("{} - Processed CumulocityObject: type={}",
+                    tenant, cumulocityObj.getCumulocityType());
         } catch (Exception e) {
             log.error("{} - Error processing result element: {}", tenant, e.getMessage(), e);
         }

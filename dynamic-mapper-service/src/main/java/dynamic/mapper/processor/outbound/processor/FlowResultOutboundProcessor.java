@@ -137,7 +137,14 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
             Map<String, Object> payload = clonePayload(deviceMessage.getPayload());
 
             // Resolve device ID and set it hierarchically in the payload
-            String resolvedExternalId = resolveGlobalId2ExternalId(deviceMessage, context, tenant);
+            String resolvedExternalId = null;
+            try {
+                resolvedExternalId = resolveGlobalId2ExternalId(deviceMessage, context, tenant);
+                context.setSourceId(resolvedExternalId);
+            } catch (ProcessingException e) {
+                log.warn("{} - Could not resolve external ID for device message: {}", tenant, e.getMessage());
+                // Continue processing without resolved external ID
+            }
 
             // Set resolved publish topic (from substituteInTargetAndSend logic)
             setResolvedPublishTopic(context, payload);
@@ -146,7 +153,6 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
             String payloadJson = objectMapper.writeValueAsString(payload);
 
             // Create the request using the corrected method
-            context.setSourceId(resolvedExternalId);
             ProcessingResultHelper.createAndAddDynamicMapperRequest(context,
                     payloadJson, null, mapping);
 
@@ -154,7 +160,14 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
             String publishTopic = deviceMessage.getTopic();
 
             if (publishTopic != null && !publishTopic.isEmpty() && publishTopic.contains(EXTERNAL_ID_TOKEN)) {
-                publishTopic = publishTopic.replace(EXTERNAL_ID_TOKEN, resolvedExternalId);
+                if (resolvedExternalId != null) {
+                    publishTopic = publishTopic.replace(EXTERNAL_ID_TOKEN, resolvedExternalId);
+                } else {
+                    log.warn("{} - Publish topic contains {} token but external ID could not be resolved",
+                            tenant, EXTERNAL_ID_TOKEN);
+                    // Optionally: skip processing or use a default value
+                    // return; // Uncomment to skip processing if external ID is required
+                }
             }
 
             // set key for Kafka messages
@@ -166,11 +179,11 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
             context.setRetain(deviceMessage.getRetain());
 
             log.debug("{} - Created outbound request: deviceId={}, topic={}",
-                    tenant, resolvedExternalId,
+                    tenant, resolvedExternalId != null ? resolvedExternalId : "unresolved",
                     context.getResolvedPublishTopic());
 
         } catch (Exception e) {
-            throw new ProcessingException("Failed to process CumulocityObject: " + e.getMessage(), e);
+            throw new ProcessingException("Failed to process DeviceMessage: " + e.getMessage(), e);
         }
     }
 

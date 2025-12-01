@@ -39,7 +39,7 @@ public class DeviceMessage {
      */
     private Object payload;
 
-    /** External ID to lookup (and optionally create) */
+    /** External ID to lookup (and optionally create), optional */
     private Object externalSource; // ExternalSource[] | ExternalSource
 
     /** Identifier for the source/dest transport e.g. "mqtt", "opc-ua" etc. */

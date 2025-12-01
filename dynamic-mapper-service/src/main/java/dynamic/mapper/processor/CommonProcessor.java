@@ -79,8 +79,9 @@ public abstract class CommonProcessor implements Processor {
 
         List<ExternalId> externalSources = JavaScriptInteropHelper.convertToExternalIdList(externalSourceObj);
 
-        if (externalSources.isEmpty()) {
-            throw new ProcessingException("External source is empty");
+        if (externalSourceObj == null || externalSources.isEmpty()) {
+            throw new ProcessingException(
+                    "External source is empty, cannot resolve device identifier. Define externalSource in the message or use a generic device identifier in the mapping.");
         }
 
         // Use the first external source for resolution
@@ -97,7 +98,8 @@ public abstract class CommonProcessor implements Processor {
                 return globalId.getManagedObject().getId().getValue();
             } else {
                 return null;
-                // throw new ProcessingException("Could not resolve external ID: " + externalSource.getExternalId());
+                // throw new ProcessingException("Could not resolve external ID: " +
+                // externalSource.getExternalId());
             }
 
         } catch (Exception e) {
@@ -108,14 +110,21 @@ public abstract class CommonProcessor implements Processor {
     protected String resolveGlobalId2ExternalId(DeviceMessage deviceMessage, ProcessingContext<?> context,
             String tenant) throws ProcessingException {
 
-        List<ExternalId> externalSources = JavaScriptInteropHelper.convertToExternalIdList(deviceMessage.getExternalSource());
+        List<ExternalId> externalSources = JavaScriptInteropHelper
+                .convertToExternalIdList(deviceMessage.getExternalSource());
+
+        if (externalSources == null || externalSources.isEmpty()) {
+            throw new ProcessingException(
+                    "External source is empty, cannot resolve device identifier. Define externalSource in the message or use a generic device identifier in the mapping.");
+
+        }
         // Use the first external source for resolution
         ExternalId externalSource = externalSources.get(0);
 
         // check if setup of externalId is required
-        if(context.getTesting() && context.getSourceId() != null){
-            if (externalSource.getExternalId() == null || externalSource.getExternalId().isEmpty()){
-                externalSource.setExternalId ( "implicit-device-" + Utils.createCustomUuid());
+        if (context.getTesting() && context.getSourceId() != null) {
+            if (externalSource.getExternalId() == null || externalSource.getExternalId().isEmpty()) {
+                externalSource.setExternalId("implicit-device-" + Utils.createCustomUuid());
             }
             String externalIdValue = externalSource.getExternalId();
             String type = externalSources.get(0).getType();
@@ -124,13 +133,8 @@ public abstract class CommonProcessor implements Processor {
                     context,
                     log,
                     c8yAgent,
-                    configurationRegistry.getObjectMapper()
-            );
+                    configurationRegistry.getObjectMapper());
         }
-        if (externalSources.isEmpty()) {
-            throw new ProcessingException("External source is empty");
-        }
-
 
         try {
             var gid = new GId(context.getSourceId());
@@ -144,7 +148,8 @@ public abstract class CommonProcessor implements Processor {
                 return externalId.getExternalId();
             } else {
                 return null;
-                // throw new ProcessingException("Could not resolve external ID: " + externalSource.getExternalId());
+                // throw new ProcessingException("Could not resolve external ID: " +
+                // externalSource.getExternalId());
             }
 
         } catch (Exception e) {

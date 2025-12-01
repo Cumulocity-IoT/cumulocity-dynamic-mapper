@@ -37,7 +37,6 @@ import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.flow.CumulocityObject;
 import dynamic.mapper.processor.flow.DeviceMessage;
 import dynamic.mapper.processor.flow.JavaScriptConsole;
 import dynamic.mapper.processor.flow.DataPrepContext;
@@ -117,10 +116,10 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
                 String identifier = Mapping.SMART_FUNCTION_NAME + "_" + mapping.getIdentifier();
                 bindings = graalContext.getBindings("js");
 
-                if (context.getFlowContext() != null && context.getFlowContext().getTesting() ) {
+                if (context.getFlowContext() != null && context.getFlowContext().getTesting()) {
                     JavaScriptConsole console = new JavaScriptConsole(context.getFlowContext(), tenant);
                     bindings.putMember("console", console);
-                } 
+                }
 
                 // Load and execute the JavaScript code
                 byte[] decodedBytes = Base64.getDecoder().decode(mapping.getCode());
@@ -345,21 +344,29 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
         }
 
         try {
-            if (JavaScriptInteropHelper.isDeviceMessage(element)) {
-                DeviceMessage deviceMsg = JavaScriptInteropHelper.convertToDeviceMessage(element);
-                outputMessages.add(deviceMsg);
-                log.debug("{} - Processed DeviceMessage: topic={}", tenant, deviceMsg.getTopic());
+            // if (JavaScriptInteropHelper.isDeviceMessage(element)) {
+            // DeviceMessage deviceMsg =
+            // JavaScriptInteropHelper.convertToDeviceMessage(element);
+            // outputMessages.add(deviceMsg);
+            // log.debug("{} - Processed DeviceMessage: topic={}", tenant,
+            // deviceMsg.getTopic());
 
-            } else if (JavaScriptInteropHelper.isCumulocityObject(element)) {
-                CumulocityObject cumulocityObj = JavaScriptInteropHelper.convertToCumulocityObject(element);
-                outputMessages.add(cumulocityObj);
-                log.debug("{} - Processed CumulocityObject: type={}, action={}",
-                        tenant, cumulocityObj.getCumulocityType(), cumulocityObj.getAction());
+            // } else if (JavaScriptInteropHelper.isCumulocityObject(element)) {
+            // CumulocityObject cumulocityObj =
+            // JavaScriptInteropHelper.convertToCumulocityObject(element);
+            // outputMessages.add(cumulocityObj);
+            // log.debug("{} - Processed CumulocityObject: type={}, action={}",
+            // tenant, cumulocityObj.getCumulocityType(), cumulocityObj.getAction());
 
-            } else {
-                log.warn("{} - Unknown message type returned from onMessage function: {}",
-                        tenant, element.getClass().getName());
-            }
+            // } else {
+            // log.warn("{} - Unknown message type returned from onMessage function: {}",
+            // tenant, element.getClass().getName());
+            // }
+
+            // always use DeviceMessage for outbound
+            DeviceMessage deviceMsg = JavaScriptInteropHelper.convertToDeviceMessage(element);
+            outputMessages.add(deviceMsg);
+            log.debug("{} - Processed DeviceMessage: topic={}", tenant, deviceMsg.getTopic());
         } catch (Exception e) {
             log.error("{} - Error processing message element: {}", tenant, e.getMessage(), e);
         }
