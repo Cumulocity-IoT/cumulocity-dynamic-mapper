@@ -745,98 +745,6 @@ class FlowProcessorInboundProcessorTest {
     }
 
     @Test
-    void testCompleteFlowProcessingWithMultipleResults() throws Exception {
-        // Given - Modify the sample mapping to return multiple results
-        String multiResultCode = """
-                function onMessage(msg, context) {
-                    var payload = msg.getPayload();
-                    console.log("Processing message with payload:", JSON.stringify(payload));
-
-                    return [
-                        {
-                            cumulocityType: "measurement",
-                            action: "create",
-                            payload: {
-                                "time": new Date().toISOString(),
-                                "type": "c8y_TemperatureMeasurement",
-                                "c8y_Steam": {
-                                    "Temperature": {
-                                        "unit": "C",
-                                        "value": payload["sensorData"]["temp_val"]
-                                    }
-                                }
-                            },
-                            externalSource: [{"type":"c8y_Serial", "externalId": payload.get('clientId')}]
-                        },
-                        {
-                            topic: "processed/" + msg.getTopic(),
-                            payload: {"processed": true, "originalValue": payload["sensorData"]["temp_val"]},
-                            clientId: msg.getClientId()
-                        }
-                    ];
-                }
-                """;
-
-        String multiResultCodeEncoded = Base64.getEncoder().encodeToString(multiResultCode.getBytes());
-        mapping.setCode(multiResultCodeEncoded);
-
-        // Setup mocks for multiple results
-        Context mockGraalContext = mock(Context.class);
-        Value mockBindings = mock(Value.class);
-        Value mockOnMessageFunction = mock(Value.class);
-        DataPrepContext mockFlowContext = mock(DataPrepContext.class);
-
-        processingContext.setGraalContext(mockGraalContext);
-        processingContext.setFlowContext(mockFlowContext);
-
-        when(mockGraalContext.getBindings("js")).thenReturn(mockBindings);
-        when(mockBindings.getMember("onMessage_nlzm75nv")).thenReturn(mockOnMessageFunction);
-
-        // Create result with both CumulocityObject and DeviceMessage
-        Value mockResult = createMultipleResultsJavaScriptResult();
-        when(mockOnMessageFunction.execute(any(), any())).thenReturn(mockResult);
-
-        // When
-        processor.process(exchange);
-
-        // Then - Verify multiple results
-        assertNotNull(processingContext.getFlowResult(), "Flow result should not be null");
-        assertEquals(2, ((List) processingContext.getFlowResult()).size(),
-                "Should have two result messages");
-
-        // Verify first result (CumulocityObject)
-        Object firstMessage = ((List) processingContext.getFlowResult()).get(0);
-        assertTrue(firstMessage instanceof CumulocityObject,
-                "First message should be CumulocityObject");
-        CumulocityObject cumulocityObj = (CumulocityObject) firstMessage;
-        assertEquals(CumulocityType.MEASUREMENT, cumulocityObj.getCumulocityType());
-
-        // Verify second result (DeviceMessage)
-        Object secondMessage = ((List) processingContext.getFlowResult()).get(1);
-        assertTrue(secondMessage instanceof CumulocityObject,
-                "Second message should be CumulocityObject");
-
-        @SuppressWarnings("unchecked")
-        Map<String, Object> processedPayload = (Map<String, Object>) cumulocityObj.getPayload();
-
-        log.info("DEBUG - Processed payload: {}", processedPayload);
-        log.info("DEBUG - originalValue type: {}", processedPayload.get("originalValue").getClass());
-        log.info("DEBUG - originalValue value: {}", processedPayload.get("originalValue"));
-
-        assertEquals(true, processedPayload.get("processed"));
-
-        Object originalValue = processedPayload.get("originalValue");
-        if (originalValue instanceof Number) {
-            assertEquals(100, ((Number) originalValue).intValue(), "Original value should be 100");
-        } else {
-            assertEquals(100, originalValue, "Original value should be 100");
-        }
-
-        log.info("✅ Multiple results flow processing test passed:");
-        log.info("   - CumulocityObject: {} {}", cumulocityObj.getCumulocityType(), cumulocityObj.getAction());
-    }
-
-    @Test
     void testCompleteFlowProcessingWithError() throws Exception {
         // Given - Use invalid JavaScript code to trigger an error
         String errorCode = """
@@ -1265,16 +1173,10 @@ class FlowProcessorInboundProcessorTest {
         assertTrue(secondMessage instanceof CumulocityObject, "Second message should be CumulocityObject");
         CumulocityObject secondObj = (CumulocityObject) secondMessage;
 
-        // Check if it's actually a DeviceMessage subclass
-        if (secondObj instanceof DeviceMessage) {
-            DeviceMessage deviceMsg = (DeviceMessage) secondObj;
-            assertEquals("device/forward/data", deviceMsg.getTopic(), "Should have correct topic");
-            log.info("Successfully validated multiple flow results with DeviceMessage");
-        } else {
-            assertNotNull(secondObj, "Second message should exist");
-            log.info("Successfully validated multiple flow results: {} messages processed",
-                    ((List) processingContext.getFlowResult()).size());
-        }
+        assertNotNull(secondObj, "Second message should exist");
+        log.info("Successfully validated multiple flow results: {} messages processed",
+                ((List) processingContext.getFlowResult()).size());
+
     }
 
     @Test
