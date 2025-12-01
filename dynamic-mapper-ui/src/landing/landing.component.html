@@ -189,7 +189,7 @@
       </li>
     </ul>
     <div class="p-b-8 text-16">
-      Navigate to <b>Configuration → Connectors → Add Connector</b> to create your connector.
+      Use the <a [routerLink]="ROUTE_ADD_CONNECTOR"> wizard</a> and <b> Add Connector</b> to create your connector.
       Refer to the <a (click)="scrollToElement('managing-connectors')" style="cursor: pointer;">Managing Connectors</a>
       section for detailed guidance.
     </div>
@@ -236,12 +236,14 @@
     <div class="alert alert-info m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-info-circle m-r-4"></i>
       <strong>Tip:</strong> If you're using <strong>JavaScript Substitutions</strong> or <strong>Smart Function
-        (JavaScript)</strong> as Transformation Type, navigate to <b>Configuration → Code Templates </b> to see JavaScript codes samples
+        (JavaScript)</strong> as Transformation Type, navigate to <a [routerLink]="ROUTE_CODE_TEMPLATES"> Code Templates </a> to see
+      JavaScript codes samples
       of transformations.
     </div>
 
     <div class="p-b-8 text-16">
-      Navigate to <b>Mappings → Inbound Mappings → Add Mapping</b> (or <b>Outbound Mappings</b>) to begin.
+      Navigate to <a [routerLink]="ROUTE_INBOUND"> Inbound </a> <b>Add Mapping</b> (or <a [routerLink]="ROUTE_OUTBOUND"> Outbound
+      </a> <b>Add Mapping</b>) to add a mapping.
       The intuitive stepper wizard will guide you through the mapping configuration process.
     </div>
 
@@ -367,7 +369,7 @@
     </div>
 
     <div class="p-b-8 text-16">A new connector is added using the following wizard. The wizard is part of the
-      <strong>Configuration → Connectors UI → Add connector</strong>.
+      <a [routerLink]="ROUTE_CONNECTORS"> <strong>Configuration → Connectors UI → Add connector</strong> </a> .
     </div>
     <img width="70%" class="m-l-48 m-b-48 m-b-16"
       src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Connector_New.png" alt="Payload type " />
@@ -436,8 +438,8 @@
     <br />
 
     <div class="p-b-8 text-16">
-      Now you start adding a mapping by clicking <b>Add mapping</b> (Mapping → Inbound Mapping → Action Add
-      mapping).<br />
+      Now you start adding a mapping by clicking <a [routerLink]="ROUTE_INBOUND"> Inbound </a> <b>Add Mapping</b>.
+      <br />
       In the <b>Add mapping</b> dialog, you can choose the payload type, e.g. <b>JSON</b> and the transformation type,
       e.g. <b>Define substitutions as JavaScript</b> to use JavaScript.<br /><br />
       <img width="70%" class="m-l-48 m-b-48 m-b-16"
@@ -734,8 +736,8 @@
 
     <div class="alert alert-warning  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-exclamation-triangle m-r-4"></i>
-      <strong>Important Configuration:</strong> Only device fragments configured in <b>Configuration → Service
-        Configuration → Function → Fragments from inventory to cache</b> can be referenced in Smart Functions. Make
+      <strong>Important Configuration:</strong> Only device fragments configured in  <a [routerLink]="ROUTE_SERVICE_CONFIGURATION"> <b>Configuration → Service
+        Configuration → Function → Fragments from inventory to cache</b></a> can be referenced in Smart Functions. Make
       sure to add all required fragments to this list before using them in your code.
     </div>
 

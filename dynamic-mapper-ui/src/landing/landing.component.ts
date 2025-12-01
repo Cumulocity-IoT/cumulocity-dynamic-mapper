@@ -48,6 +48,9 @@ export class LandingComponent implements OnInit {
   @ViewChild('editorTest', { static: false }) editorTest: JsonEditorComponent;
 
   ROUTE_INBOUND: string = `/c8y-pkg-dynamic-mapper/${NODE1}/mappings/inbound`;
+  ROUTE_ADD_CONNECTOR: string = `/c8y-pkg-dynamic-mapper/${NODE3}/connectorConfiguration`;
+  ROUTE_SERVICE_CONFIGURATION: string = `/c8y-pkg-dynamic-mapper/${NODE3}/serviceConfiguration`;
+  ROUTE_CODE_TEMPLATES: string = `/c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/INBOUND_SUBSTITUTION_AS_CODE`;
   ROUTE_OUTBOUND: string =
     `/c8y-pkg-dynamic-mapper/${NODE1}/mappings/outbound`;
   ROUTE_CONNECTORS: string = `/c8y-pkg-dynamic-mapper/${NODE3}/connectorConfiguration`;
