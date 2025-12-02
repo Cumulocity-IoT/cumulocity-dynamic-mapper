@@ -19,72 +19,6 @@
  */
 
 // ============================================================================
-// DEPRECATED INTERFACES - Use new versions below
-// ============================================================================
-
-/**
- * @deprecated Use {@link CumulocityObject} instead. Will be removed in version 6.2.0.
- * CumulocityMessage has been renamed to CumulocityObject for clarity.
- */
-export interface CumulocityMessage extends CumulocityObject {
-    // Interface kept for backward compatibility
-}
-
-/**
- * @deprecated Use {@link DataPrepContext} instead. Will be removed in version 6.2.0.
- * FlowContext has been renamed to DataPrepContext and includes new methods.
- */
-export interface FlowContext {
-    /**
-    * Sets a value in the context's state.
-    * @param {string} key - The key for the state item.
-    * @param {any} value - The value to set for the given key.
-    * @deprecated Use DataPrepContext.setState() instead
-    */
-    setState(key: string, value: any): void;
-
-    /**
-     * Retrieves a value from the context's state.
-     * @param {string} key - The key of the state item to retrieve.
-     * @returns {any} The value associated with the key, or undefined if not found.
-     * @deprecated Use DataPrepContext.getState() instead
-     */
-    getState(key: string): any;
-
-    /**
-     * Retrieves the entire configuration map for the context.
-     * @returns {Record<string, any>} A Map containing the context's configuration.
-     * @deprecated Use DataPrepContext.getConfig() instead
-     */
-    getConfig(): Record<string, any>;
-
-    /**
-      * Log a message.
-      * @deprecated This method has been removed. Use console.log() instead.
-      */
-    logMessage(msg: any): void;
-
-    /**
-     * Lookup DTM Asset properties
-     * @deprecated Use {@link DataPrepContext.getDTMAsset} instead
-     */
-    lookupDTMAssetProperties(assetId: string): Record<string, any>;
-}
-
-/**
- * @deprecated Use {@link ExternalId} instead for simple external ID references.
- * ExternalSource is now only used for advanced device creation scenarios.
- * Will be removed in version 6.2.0.
- */
-export interface CumulocitySource {
-    /** 
-     * Cumulocity Id to be looked up and/or created to get C8Y "id" 
-     * @deprecated Use internalId in the payload directly or externalSource array
-     */
-    internalId: string;
-}
-
-// ============================================================================
 // CURRENT INTERFACES
 // ============================================================================
 
@@ -147,12 +81,6 @@ export interface CumulocityObject {
      * @since 6.1.2 Changed from ExternalSource to ExternalId for simple lookups
      */
     externalSource?: ExternalId[] | ExternalId;
-
-    /**
-     * @deprecated Use externalSource with ExternalId instead. Will be removed in version 3.0.0.
-     * InternalSource is no longer needed as you can specify the id directly in the payload.
-     */
-    internalSource?: CumulocitySource[] | CumulocitySource;
 
     // For advanced cases only:
 
