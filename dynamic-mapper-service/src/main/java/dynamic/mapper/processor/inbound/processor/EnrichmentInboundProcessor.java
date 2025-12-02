@@ -16,7 +16,7 @@ import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.TransformationType;
-import dynamic.mapper.processor.flow.FlowContext;
+import dynamic.mapper.processor.flow.DataPrepContext;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -57,7 +57,7 @@ public class EnrichmentInboundProcessor extends BaseProcessor {
          * step 0 patch payload with dummy property _TOPIC_LEVEL_ in case the content
          * is required in the payload for a substitution
          * 
-         * Also add enrichment data to FlowContext for JavaScript Flow Functions
+         * Also add enrichment data to DataPrepContext for JavaScript Flow Functions
          */
         String tenant = context.getTenant();
         Object payloadObject = context.getPayload();
@@ -66,8 +66,8 @@ public class EnrichmentInboundProcessor extends BaseProcessor {
         // Process topic levels
         List<String> splitTopicAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
 
-        // Add topic levels to FlowContext if available
-        FlowContext flowContext = context.getFlowContext();
+        // Add topic levels to DataPrepContext if available
+        DataPrepContext flowContext = context.getFlowContext();
         if (flowContext != null && context.getGraalContext() != null
                 && TransformationType.SMART_FUNCTION.equals(context.getMapping().getTransformationType())) {
             addToFlowContext(flowContext, context, Mapping.TOKEN_TOPIC_LEVEL, splitTopicAsList);
@@ -79,19 +79,19 @@ public class EnrichmentInboundProcessor extends BaseProcessor {
             addToFlowContext(flowContext, context, "mappingName", mapping.getName());
             addToFlowContext(flowContext, context, "mappingId", mapping.getId());
             addToFlowContext(flowContext, context, "targetAPI", mapping.getTargetAPI().toString());
-            addToFlowContext(flowContext, context, "genericDeviceIdentifier", mapping.getGenericDeviceIdentifier());
-            addToFlowContext(flowContext, context, "debug", mapping.getDebug());
+            addToFlowContext(flowContext, context, ProcessingContext.GENERIC_DEVICE_IDENTIFIER, mapping.getGenericDeviceIdentifier());
+            addToFlowContext(flowContext, context, ProcessingContext.DEBUG, mapping.getDebug());
 
             if (context.getMapping().getEventWithAttachment()) {
-                addToFlowContext(flowContext, context, "attachment_Name", "");
-                addToFlowContext(flowContext, context, "attachment_Type", "");
-                addToFlowContext(flowContext, context, "attachment_Data", "");
-                addToFlowContext(flowContext, context, "eventWithAttachment", true);
+                addToFlowContext(flowContext, context, ProcessingContext.ATTACHMENT_TYPE, "");
+                addToFlowContext(flowContext, context, ProcessingContext.ATTACHMENT_NAME, "");
+                addToFlowContext(flowContext, context, ProcessingContext.ATTACHMENT_DATA, "");
+                addToFlowContext(flowContext, context, ProcessingContext.EVENT_WITH_ATTACHMENT, true);
             }
             if (context.getMapping().getCreateNonExistingDevice()) {
-                addToFlowContext(flowContext, context, "deviceName", context.getDeviceName());
-                addToFlowContext(flowContext, context, "deviceType", context.getDeviceType());
-                addToFlowContext(flowContext, context, "createNonExistingDevice", true);
+                addToFlowContext(flowContext, context, ProcessingContext.DEVICE_NAME, context.getDeviceName());
+                addToFlowContext(flowContext, context, ProcessingContext.DEVICE_TYPE, context.getDeviceType());
+                addToFlowContext(flowContext, context, ProcessingContext.CREATE_NON_EXISTING_DEVICE, true);
             }
 
         } else if (payloadObject instanceof Map) {
@@ -99,7 +99,7 @@ public class EnrichmentInboundProcessor extends BaseProcessor {
             ((Map) payloadObject).put(Mapping.TOKEN_TOPIC_LEVEL, splitTopicAsList);
 
             // Process message context
-            if (context.isSupportsMessageContext() && context.getKey() != null) {
+            if (context.getKey() != null) {
                 String keyString = context.getKey();
                 Map<String, String> contextData = new HashMap<String, String>() {
                     {
@@ -107,8 +107,8 @@ public class EnrichmentInboundProcessor extends BaseProcessor {
                         put("api", context.getMapping().getTargetAPI().toString());
                         put("processingMode", ProcessingMode.PERSISTENT.toString());
                         if (context.getMapping().getCreateNonExistingDevice()) {
-                            put("deviceName", context.getDeviceName());
-                            put("deviceType", context.getDeviceType());
+                            put(ProcessingContext.DEVICE_NAME, context.getDeviceName());
+                            put(ProcessingContext.DEVICE_TYPE, context.getDeviceType());
                         }
                     }
                 };
@@ -129,9 +129,9 @@ public class EnrichmentInboundProcessor extends BaseProcessor {
                 }
 
                 // Add attachment properties to payload context data
-                contextData.put("attachment_Name", "");
-                contextData.put("attachment_Type", "");
-                contextData.put("attachment_Data", "");
+                contextData.put(ProcessingContext.ATTACHMENT_NAME, "");
+                contextData.put(ProcessingContext.ATTACHMENT_NAME, "");
+                contextData.put(ProcessingContext.ATTACHMENT_DATA, "");
             }
 
         } else {
@@ -141,14 +141,14 @@ public class EnrichmentInboundProcessor extends BaseProcessor {
         }
 
         if (flowContext != null) {
-            log.debug("{} - Enriched FlowContext with payload enrichment data", tenant);
+            log.debug("{} - Enriched DataPrepContext with payload enrichment data", tenant);
         }
     }
 
     /**
-     * Helper method to safely add values to FlowContext
+     * Helper method to safely add values to DataPrepContext
      */
-    private void addToFlowContext(FlowContext flowContext, ProcessingContext<Object> context, String key,
+    private void addToFlowContext(DataPrepContext flowContext, ProcessingContext<Object> context, String key,
             Object value) {
         try {
             if (context.getGraalContext() != null && value != null) {
@@ -156,7 +156,7 @@ public class EnrichmentInboundProcessor extends BaseProcessor {
                 flowContext.setState(key, graalValue);
             }
         } catch (Exception e) {
-            log.warn("{} - Failed to add '{}' to FlowContext: {}", context.getTenant(), key, e.getMessage());
+            log.warn("{} - Failed to add '{}' to DataPrepContext: {}", context.getTenant(), key, e.getMessage());
         }
     }
 }

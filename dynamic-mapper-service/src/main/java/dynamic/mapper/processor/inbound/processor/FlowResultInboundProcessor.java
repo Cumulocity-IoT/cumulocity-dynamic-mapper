@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.cumulocity.model.ID;
+import com.cumulocity.sdk.client.ProcessingMode;
 
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
@@ -19,8 +20,8 @@ import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
-import dynamic.mapper.processor.flow.CumulocityMessage;
-import dynamic.mapper.processor.flow.ExternalSource;
+import dynamic.mapper.processor.flow.CumulocityObject;
+import dynamic.mapper.processor.flow.ExternalId;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.notification.websocket.Notification;
@@ -44,15 +45,17 @@ public class FlowResultInboundProcessor extends BaseProcessor {
         ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
         Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
-        Boolean testing = context.isTesting();
+        Boolean testing = context.getTesting();
 
         try {
             processFlowResults(context);
 
             // Check inventory filter condition if specified
-            if (mapping.getFilterInventory() != null && !mapping.getCreateNonExistingDevice()) {
+            // if (mapping.getFilterInventory() != null &&
+            // !mapping.getCreateNonExistingDevice()) {
+            if (mapping.getFilterInventory() != null) {
                 boolean filterInventory = evaluateInventoryFilter(tenant, mapping.getFilterInventory(),
-                        context.getSourceId(), context.isTesting());
+                        context.getSourceId(), context.getTesting());
                 if (context.getSourceId() == null
                         || !filterInventory) {
                     if (mapping.getDebug()) {
@@ -70,10 +73,10 @@ public class FlowResultInboundProcessor extends BaseProcessor {
                 lineNumber = e.getStackTrace()[0].getLineNumber();
             }
             String errorMessage = String.format(
-                    "s - Error in FlowSubstitutionInboundProcessor: %s for mapping: %s, line %s",
+                    "%s - Error in FlowResultInboundProcessor: %s for mapping: %s, line %s",
                     tenant, mapping.getName(), e.getMessage(), lineNumber);
             log.error(errorMessage, e);
-            if(e instanceof ProcessingException)
+            if (e instanceof ProcessingException)
                 context.addError((ProcessingException) e);
             else
                 context.addError(new ProcessingException(errorMessage, e));
@@ -115,10 +118,10 @@ public class FlowResultInboundProcessor extends BaseProcessor {
 
         // Process each message
         for (Object message : messagesToProcess) {
-            if (message instanceof CumulocityMessage) {
-                processCumulocityMessage((CumulocityMessage) message, context, tenant, mapping);
+            if (message instanceof CumulocityObject) {
+                processCumulocityObject((CumulocityObject) message, context, tenant, mapping);
             } else {
-                log.debug("{} - Message is not a CumulocityMessage, skipping: {}", tenant,
+                log.debug("{} - Message is not a CumulocityObject, skipping: {}", tenant,
                         message.getClass().getSimpleName());
             }
         }
@@ -132,24 +135,47 @@ public class FlowResultInboundProcessor extends BaseProcessor {
 
     }
 
-    private void processCumulocityMessage(CumulocityMessage cumulocityMessage, ProcessingContext<?> context,
+    private void processCumulocityObject(CumulocityObject cumulocityMessage, ProcessingContext<?> context,
             String tenant, Mapping mapping) throws ProcessingException {
 
         try {
             // Get the API from the cumulocityType
-            API targetAPI = Notification.convertResourceToAPI(cumulocityMessage.getCumulocityType());
+            API targetAPI = Notification.convertResourceToAPI(cumulocityMessage.getCumulocityType().name());
 
             // Clone the payload to modify it
             Map<String, Object> payload = clonePayload(cumulocityMessage.getPayload());
 
+            // contextData for generating device with defined name/type
+            Map<String, String> contextData = cumulocityMessage.getContextData();
+            if (contextData != null) {
+                if (contextData.get("deviceName") != null) {
+                    context.setDeviceName(contextData.get("deviceName"));
+                }
+                if (contextData.get("deviceType") != null) {
+                    context.setDeviceType(contextData.get("deviceType"));
+                }
+                if (contextData.get("processingMode") != null) {
+                    context.setProcessingMode(ProcessingMode.parse(contextData.get("processingMode")));
+                }
+                if (contextData.get("attachmentName") != null) {
+                    context.getBinaryInfo().setName((String) (contextData.get("attachmentName")));
+                }
+                if (contextData.get("attachmentType") != null) {
+                    context.getBinaryInfo().setType((String) (contextData.get("attachmentType")));
+                }
+                if (contextData.get("attachmentData") != null) {
+                    context.getBinaryInfo().setData((String) (contextData.get("attachmentData")));
+                }
+            }
+
             // Resolve device ID and set it hierarchically in the payload
             String resolvedDeviceId = resolveDeviceIdentifier(cumulocityMessage, context, tenant);
-            List<ExternalSource> externalSources = ProcessingResultHelper.convertToExternalSourceList(cumulocityMessage.getExternalSource());
+            List<ExternalId> externalSources = cumulocityMessage.getExternalSource();
             String externalId = null;
             String externalType = null;
 
             if (externalSources != null && !externalSources.isEmpty()) {
-                ExternalSource externalSource = externalSources.get(0);
+                ExternalId externalSource = externalSources.get(0);
                 externalId = externalSource.getExternalId();
                 externalType = externalSource.getType();
                 context.setExternalId(externalId);
@@ -161,7 +187,7 @@ public class FlowResultInboundProcessor extends BaseProcessor {
             } else if (externalSources != null && !externalSources.isEmpty()) {
                 // create implicitDevice if enabled
                 if (mapping.getCreateNonExistingDevice()) {
-                    ExternalSource externalSource = externalSources.get(0);
+                    ExternalId externalSource = externalSources.get(0);
                     if (externalSource != null && externalSource.getType() != null
                             && externalSource.getExternalId() != null) {
                         ID identity = new ID(externalSource.getType(),
@@ -199,7 +225,8 @@ public class FlowResultInboundProcessor extends BaseProcessor {
             // Convert payload to JSON string for the request
             String payloadJson = objectMapper.writeValueAsString(payload);
 
-            DynamicMapperRequest dynamicMapperRequest = ProcessingResultHelper.createAndAddDynamicMapperRequest(context, payloadJson,
+            DynamicMapperRequest dynamicMapperRequest = ProcessingResultHelper.createAndAddDynamicMapperRequest(context,
+                    payloadJson,
                     cumulocityMessage.getAction(), mapping);
             dynamicMapperRequest.setApi(targetAPI);
             dynamicMapperRequest.setSourceId(resolvedDeviceId);
@@ -210,7 +237,7 @@ public class FlowResultInboundProcessor extends BaseProcessor {
                     tenant, targetAPI.name, cumulocityMessage.getAction(), resolvedDeviceId);
 
         } catch (Exception e) {
-            throw new ProcessingException("Failed to process CumulocityMessage: " + e.getMessage(), e);
+            throw new ProcessingException("Failed to process CumulocityObject: " + e.getMessage(), e);
         }
     }
 

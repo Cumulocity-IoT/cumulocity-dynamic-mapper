@@ -225,8 +225,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                     configurationRegistry,
                     dispatcher,
                     connectorIdentifier,
-                    connectorName,
-                    false);
+                    connectorName);
 
             // Build topic names
             String namespace = (String) connectorConfiguration.getProperties()
@@ -645,7 +644,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                     .send();
         }
 
-        if (context.getMapping().getDebug() || serviceConfiguration.isLogPayload()) {
+        if (context.getMapping().getDebug() || serviceConfiguration.getLogPayload()) {
             log.info("{} - Published to MQTT Service: QoS={}, topic=[{}], pulsarTopic=[{}], mapping={}",
                     tenant, qos, mqttTopic, towardsDeviceTopic, context.getMapping().getName());
         }
@@ -689,7 +688,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
     /**
      * Check if exception contains PIP-344 error
      */
-    private boolean containsPip344Error(Throwable throwable) {
+    private Boolean containsPip344Error(Throwable throwable) {
         Throwable current = throwable;
         while (current != null) {
             if (current instanceof PulsarClientException.FeatureNotSupportedException &&
@@ -784,7 +783,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                 new ConnectorProperty(null, false, 15, ConnectorPropertyType.STRING_PROPERTY,
                         false, true, PULSAR_NAMESPACE, null, null));
 
-        String name = "Cumulocity MQTT Service - (Device Isolation)";
+        String name = "Cumulocity MQTT-Service";
         String description = "Connector for connecting to Cumulocity MQTT Service using Pulsar protocol. " +
                 "The MQTT Service does not support wildcards. " +
                 "The QoS 'exactly once' is reduced to 'at least once'.";

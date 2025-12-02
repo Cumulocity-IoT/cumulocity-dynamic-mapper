@@ -34,7 +34,6 @@ import org.apache.camel.Message;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -50,8 +49,8 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.flow.DeviceMessage;
-import dynamic.mapper.processor.flow.FlowContext;
-import dynamic.mapper.processor.flow.JavaScriptInteropHelper;
+import dynamic.mapper.processor.flow.DataPrepContext;
+import dynamic.mapper.processor.util.JavaScriptInteropHelper;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.TransformationType;
@@ -92,15 +91,11 @@ class FlowProcessorOutboundProcessorTest {
 
     private static final String TEST_TENANT = "testTenant";
     private static final String TEST_DEVICE_ID = "6926746";
-    private static final String TEST_EXTERNAL_ID_TYPE = "c8y_Serial";
     private static final String TEST_CLIENT_ID = "test-client-123";
 
     private Mapping mapping;
     private MappingStatus mappingStatus;
     private ProcessingContext<Object> processingContext;
-    
-    // Make this a class-level field so it can be properly managed
-    private MockedStatic<JavaScriptInteropHelper> mockJavaScriptInteropHelper;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -115,40 +110,11 @@ class FlowProcessorOutboundProcessorTest {
         when(exchange.getIn()).thenReturn(message);
         when(message.getHeader("processingContext", ProcessingContext.class)).thenReturn(processingContext);
         when(mappingService.getMappingStatus(TEST_TENANT, mapping)).thenReturn(mappingStatus);
-        when(serviceConfiguration.isLogPayload()).thenReturn(false);
+        when(serviceConfiguration.getLogPayload()).thenReturn(false);
 
         // Setup GraalVM mocks
         setupGraalVMMocks();
 
-        // Setup static mock - only if not already created
-        if (mockJavaScriptInteropHelper == null) {
-            mockJavaScriptInteropHelper = mockStatic(JavaScriptInteropHelper.class);
-        }
-        setupJavaScriptInteropHelperMocks();
-    }
-
-    @AfterEach
-    void tearDown() {
-        // Properly close the static mock after each test
-        if (mockJavaScriptInteropHelper != null) {
-            mockJavaScriptInteropHelper.close();
-            mockJavaScriptInteropHelper = null;
-        }
-    }
-
-    private void setupJavaScriptInteropHelperMocks() {
-        mockJavaScriptInteropHelper.when(() -> JavaScriptInteropHelper.isDeviceMessage(any()))
-                .thenReturn(true);
-        mockJavaScriptInteropHelper.when(() -> JavaScriptInteropHelper.isCumulocityMessage(any()))
-                .thenReturn(false);
-
-        // Default device message
-        DeviceMessage defaultDeviceMessage = new DeviceMessage();
-        defaultDeviceMessage.setTopic("measurements/" + TEST_DEVICE_ID);
-        defaultDeviceMessage.setClientId(TEST_CLIENT_ID);
-
-        mockJavaScriptInteropHelper.when(() -> JavaScriptInteropHelper.convertToDeviceMessage(any()))
-                .thenReturn(defaultDeviceMessage);
     }
 
     private void setupGraalVMMocks() {
@@ -178,7 +144,7 @@ class FlowProcessorOutboundProcessorTest {
 
         // Set up the GraalVM context
         context.setGraalContext(graalContext);
-        context.setFlowContext(mock(FlowContext.class));
+        context.setFlowContext(mock(DataPrepContext.class));
 
         return context;
     }
@@ -203,19 +169,28 @@ class FlowProcessorOutboundProcessorTest {
 
     @Test
     void testProcessSmartFunctionExecution() throws Exception {
-        // When
-        processor.process(exchange);
+        try (MockedStatic<JavaScriptInteropHelper> mockHelper = mockStatic(JavaScriptInteropHelper.class)) {
+            // Setup mock behavior
+            DeviceMessage expectedMessage = new DeviceMessage();
+            expectedMessage.setTopic("measurements/" + TEST_DEVICE_ID);
+            expectedMessage.setClientId(TEST_CLIENT_ID);
 
-        // Then - Verify JavaScript function was called and result was processed
-        verify(graalContext).eval(any(Source.class));
-        verify(onMessageFunction).execute(any(), any());
+            mockHelper.when(() -> JavaScriptInteropHelper.convertToDeviceMessage(any()))
+                    .thenReturn(expectedMessage);
 
-        // Verify that flow result was set
-        List<Object> flowResult = (List<Object>) processingContext.getFlowResult();
-        assertNotNull(flowResult, "Should have set flow result");
-        assertEquals(1, flowResult.size(), "Should have one result");
+            // When
+            processor.process(exchange);
 
-        log.info("✅ Smart function execution test passed");
+            // Then
+            List<Object> flowResult = (List<Object>) processingContext.getFlowResult();
+            assertNotNull(flowResult, "Should have set flow result");
+            assertEquals(1, flowResult.size(), "Should have one result");
+
+            DeviceMessage result = (DeviceMessage) flowResult.get(0);
+            assertEquals("measurements/" + TEST_DEVICE_ID, result.getTopic());
+
+            log.info("✅ Smart function execution test passed");
+        }
     }
 
     @Test
@@ -227,7 +202,7 @@ class FlowProcessorOutboundProcessorTest {
         processor.process(exchange);
 
         // Then - Should ignore further processing
-        assertTrue(processingContext.isIgnoreFurtherProcessing(),
+        assertTrue(processingContext.getIgnoreFurtherProcessing(),
                 "Should ignore further processing for empty result");
 
         log.info("✅ Empty result test passed");
@@ -242,7 +217,7 @@ class FlowProcessorOutboundProcessorTest {
         processor.process(exchange);
 
         // Then - Should ignore further processing
-        assertFalse(processingContext.isIgnoreFurtherProcessing(),
+        assertFalse(processingContext.getIgnoreFurtherProcessing(),
                 "Should not ignore further processing for non-array result");
 
         log.info("✅ Non-array result test passed");
@@ -250,42 +225,41 @@ class FlowProcessorOutboundProcessorTest {
 
     @Test
     void testProcessWithMultipleResults() throws Exception {
-        // Given - JavaScript function returns multiple messages
-        when(resultValue.getArraySize()).thenReturn(2L);
+        // Create test using try-with-resources
+        try (MockedStatic<JavaScriptInteropHelper> mockHelper = mockStatic(JavaScriptInteropHelper.class)) {
+            // Given - JavaScript function returns multiple messages
+            when(resultValue.getArraySize()).thenReturn(2L);
 
-        Value firstMessage = mock(Value.class);
-        Value secondMessage = mock(Value.class);
-        when(resultValue.getArrayElement(0)).thenReturn(firstMessage);
-        when(resultValue.getArrayElement(1)).thenReturn(secondMessage);
+            Value firstMessage = mock(Value.class);
+            Value secondMessage = mock(Value.class);
+            when(resultValue.getArrayElement(0)).thenReturn(firstMessage);
+            when(resultValue.getArrayElement(1)).thenReturn(secondMessage);
 
-        // Setup different responses for different calls
-        DeviceMessage firstDeviceMsg = createDeviceMessage("device1", "client1");
-        DeviceMessage secondDeviceMsg = createDeviceMessage("device2", "client2");
+            // Setup different responses for different calls
+            DeviceMessage firstDeviceMsg = createDeviceMessage("device1", "client1");
+            DeviceMessage secondDeviceMsg = createDeviceMessage("device2", "client2");
 
-        // Reset the static mock to handle multiple calls differently
-        mockJavaScriptInteropHelper.reset();
-        mockJavaScriptInteropHelper.when(() -> JavaScriptInteropHelper.isDeviceMessage(any())).thenReturn(true);
-        mockJavaScriptInteropHelper.when(() -> JavaScriptInteropHelper.isCumulocityMessage(any())).thenReturn(false);
-        
-        mockJavaScriptInteropHelper.when(() -> JavaScriptInteropHelper.convertToDeviceMessage(firstMessage))
-                .thenReturn(firstDeviceMsg);
-        mockJavaScriptInteropHelper.when(() -> JavaScriptInteropHelper.convertToDeviceMessage(secondMessage))
-                .thenReturn(secondDeviceMsg);
+            // Setup mock to return different messages based on input
+            mockHelper.when(() -> JavaScriptInteropHelper.convertToDeviceMessage(firstMessage))
+                    .thenReturn(firstDeviceMsg);
+            mockHelper.when(() -> JavaScriptInteropHelper.convertToDeviceMessage(secondMessage))
+                    .thenReturn(secondDeviceMsg);
 
-        // When
-        processor.process(exchange);
+            // When
+            processor.process(exchange);
 
-        // Then - Should process all messages
-        List<Object> flowResult = (List<Object>) processingContext.getFlowResult();
-        assertNotNull(flowResult, "Flow result should not be null");
-        assertEquals(2, flowResult.size(), "Should have processed two messages");
+            // Then - Should process all messages
+            List<Object> flowResult = (List<Object>) processingContext.getFlowResult();
+            assertNotNull(flowResult, "Flow result should not be null");
+            assertEquals(2, flowResult.size(), "Should have processed two messages");
 
-        DeviceMessage result1 = (DeviceMessage) flowResult.get(0);
-        DeviceMessage result2 = (DeviceMessage) flowResult.get(1);
-        assertEquals("measurements/device1", result1.getTopic());
-        assertEquals("measurements/device2", result2.getTopic());
+            DeviceMessage result1 = (DeviceMessage) flowResult.get(0);
+            DeviceMessage result2 = (DeviceMessage) flowResult.get(1);
+            assertEquals("measurements/device1", result1.getTopic());
+            assertEquals("measurements/device2", result2.getTopic());
 
-        log.info("✅ Multiple results test passed");
+            log.info("✅ Multiple results test passed");
+        }
     }
 
     @Test
@@ -357,8 +331,8 @@ class FlowProcessorOutboundProcessorTest {
 
     private Mapping createSmartFunctionOutboundMapping() {
         String smartFunctionCode = """
-                function onMessage(inputMsg, context) {
-                    var payload = inputMsg.getPayload();
+                function onMessage(msg, context) {
+                    var payload = msg.getPayload();
                     return [{
                         topic: `measurements/${payload["source"]["id"]}`,
                         payload: {
@@ -390,9 +364,148 @@ class FlowProcessorOutboundProcessorTest {
                 .transformationType(TransformationType.SMART_FUNCTION)
                 .debug(false)
                 .active(true)
-                .tested(false)
-                .supportsMessageContext(true)
                 .code(encodedCode)
                 .build();
+    }
+
+    @Test
+    void testProcessWithNullResult() throws Exception {
+        try (MockedStatic<JavaScriptInteropHelper> mockHelper = mockStatic(JavaScriptInteropHelper.class)) {
+            // Given - JavaScript function returns null
+            when(resultValue.isNull()).thenReturn(true);
+
+            // When
+            processor.process(exchange);
+
+            // Then - Should handle null gracefully
+            assertTrue(processingContext.getIgnoreFurtherProcessing(),
+                    "Should ignore further processing for null result");
+            assertFalse(processingContext.getWarnings().isEmpty(),
+                    "Should have warning about null result");
+
+            log.info("✅ Null result test passed");
+        }
+    }
+
+    @Test
+    void testProcessWithUndefinedResult() throws Exception {
+        try (MockedStatic<JavaScriptInteropHelper> mockHelper = mockStatic(JavaScriptInteropHelper.class)) {
+            // Given - JavaScript function returns undefined
+            when(resultValue.toString()).thenReturn("undefined");
+
+            // When
+            processor.process(exchange);
+
+            // Then - Should handle undefined gracefully
+            assertTrue(processingContext.getIgnoreFurtherProcessing(),
+                    "Should ignore further processing for undefined result");
+
+            log.info("✅ Undefined result test passed");
+        }
+    }
+
+    @Test
+    void testProcessWithEmptyObject() throws Exception {
+        try (MockedStatic<JavaScriptInteropHelper> mockHelper = mockStatic(JavaScriptInteropHelper.class)) {
+            // Given - JavaScript function returns empty object
+            when(resultValue.hasArrayElements()).thenReturn(false);
+            when(resultValue.hasMembers()).thenReturn(true);
+            when(resultValue.getMemberKeys()).thenReturn(java.util.Set.of());
+
+            // When
+            processor.process(exchange);
+
+            // Then - Should handle empty object gracefully
+            assertTrue(processingContext.getIgnoreFurtherProcessing(),
+                    "Should ignore further processing for empty object");
+
+            log.info("✅ Empty object test passed");
+        }
+    }
+
+    @Test
+    void testProcessWithBothSharedAndSystemCode() throws Exception {
+        try (MockedStatic<JavaScriptInteropHelper> mockHelper = mockStatic(JavaScriptInteropHelper.class)) {
+            // Given - Context with both shared and system code
+            String sharedCodeBase64 = Base64.getEncoder().encodeToString("var sharedFn = function() {};".getBytes());
+            String systemCodeBase64 = Base64.getEncoder().encodeToString("var systemFn = function() {};".getBytes());
+            processingContext.setSharedCode(sharedCodeBase64);
+            processingContext.setSystemCode(systemCodeBase64);
+
+            DeviceMessage expectedMessage = new DeviceMessage();
+            expectedMessage.setTopic("test/topic");
+            mockHelper.when(() -> JavaScriptInteropHelper.convertToDeviceMessage(any()))
+                    .thenReturn(expectedMessage);
+
+            // When
+            processor.process(exchange);
+
+            // Then - Should load both codes
+            verify(graalContext, times(3)).eval(any(Source.class)); // Main + shared + system
+
+            log.info("✅ Both shared and system code test passed");
+        }
+    }
+
+    @Test
+    void testProcessElementWithNullValue() throws Exception {
+        try (MockedStatic<JavaScriptInteropHelper> mockHelper = mockStatic(JavaScriptInteropHelper.class)) {
+            // Given - Result array with null element
+            when(resultValue.getArraySize()).thenReturn(2L);
+            when(resultValue.getArrayElement(0)).thenReturn(null);
+
+            Value validMessage = mock(Value.class);
+            when(resultValue.getArrayElement(1)).thenReturn(validMessage);
+
+            DeviceMessage validDeviceMsg = createDeviceMessage("device1", "client1");
+            mockHelper.when(() -> JavaScriptInteropHelper.convertToDeviceMessage(validMessage))
+                    .thenReturn(validDeviceMsg);
+
+            // When
+            processor.process(exchange);
+
+            // Then - Should skip null and process valid message
+            List<Object> flowResult = (List<Object>) processingContext.getFlowResult();
+            assertEquals(1, flowResult.size(), "Should have processed only one valid message");
+
+            log.info("✅ Null element handling test passed");
+        }
+    }
+
+    @Test
+    void testExtractWarningsFromFlowContext() throws Exception {
+        try (MockedStatic<JavaScriptInteropHelper> mockHelper = mockStatic(JavaScriptInteropHelper.class)) {
+            // Given - Flow context with warnings
+            DataPrepContext flowContext = mock(DataPrepContext.class);
+            processingContext.setFlowContext(flowContext);
+
+            Value warningsValue = mock(Value.class);
+            when(flowContext.getState(DataPrepContext.WARNINGS)).thenReturn(warningsValue);
+            when(warningsValue.hasArrayElements()).thenReturn(true);
+            when(warningsValue.getArraySize()).thenReturn(2L);
+
+            Value warning1 = mock(Value.class);
+            Value warning2 = mock(Value.class);
+            when(warningsValue.getArrayElement(0)).thenReturn(warning1);
+            when(warningsValue.getArrayElement(1)).thenReturn(warning2);
+            when(warning1.isString()).thenReturn(true);
+            when(warning2.isString()).thenReturn(true);
+            when(warning1.asString()).thenReturn("Warning 1");
+            when(warning2.asString()).thenReturn("Warning 2");
+
+            DeviceMessage expectedMessage = new DeviceMessage();
+            mockHelper.when(() -> JavaScriptInteropHelper.convertToDeviceMessage(any()))
+                    .thenReturn(expectedMessage);
+
+            // When
+            processor.process(exchange);
+
+            // Then - Should extract warnings
+            List<String> warnings = processingContext.getWarnings();
+            assertNotNull(warnings, "Warnings should be extracted");
+            assertTrue(warnings.size() >= 2, "Should have at least 2 warnings");
+
+            log.info("✅ Warning extraction test passed");
+        }
     }
 }

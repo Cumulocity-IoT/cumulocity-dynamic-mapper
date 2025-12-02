@@ -38,7 +38,7 @@ import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.flow.FlowContext;
+import dynamic.mapper.processor.flow.DataPrepContext;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.TransformationType;
 import dynamic.mapper.service.MappingService;
@@ -71,7 +71,7 @@ public class EnrichmentOutboundProcessor extends BaseProcessor {
             MappingStatus mappingStatus = mappingService
                     .getMappingStatus(tenant, mapping);
             context.addError(new ProcessingException(errorMessage, e));
-            context.setIgnoreFurtherProcessing(true);   
+            context.setIgnoreFurtherProcessing(true);
             mappingStatus.errors++;
             mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
             return;
@@ -88,25 +88,28 @@ public class EnrichmentOutboundProcessor extends BaseProcessor {
         Object payloadObject = context.getPayload();
         Mapping mapping = context.getMapping();
 
+        String identifier = context.getTesting() ? "_IDENTITY_.c8ySourceId" : context.getApi().identifier;
         String payloadAsString = toPrettyJsonString(payloadObject);
-        var sourceId = extractContent(context, mapping, payloadObject, payloadAsString,
-                mapping.getTargetAPI().identifier);
+        Object sourceId = extractContent(context, payloadObject, payloadAsString,
+                identifier);
         context.setSourceId(sourceId.toString());
 
         Map<String, String> identityFragment = new HashMap<>();
         identityFragment.put("c8ySourceId", sourceId.toString());
         identityFragment.put("externalIdType", mapping.getExternalIdType());
 
-        // Add topic levels to FlowContext if available
-        FlowContext flowContext = context.getFlowContext();
+        // Add topic levels to DataPrepContext if available
+        DataPrepContext flowContext = context.getFlowContext();
         if (flowContext != null && context.getGraalContext() != null
                 && TransformationType.SMART_FUNCTION.equals(context.getMapping().getTransformationType())) {
             addToFlowContext(flowContext, context, Mapping.TOKEN_IDENTITY, identityFragment);
             List<String> splitTopicExAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
             addToFlowContext(flowContext, context, Mapping.TOKEN_TOPIC_LEVEL, splitTopicExAsList);
+            addToFlowContext(flowContext, context, ProcessingContext.RETAIN, false);
         } else {
             if (payloadObject instanceof Map) {
                 ((Map) payloadObject).put(Mapping.TOKEN_IDENTITY, identityFragment);
+                ((Map) payloadObject).put(ProcessingContext.RETAIN, false);
                 List<String> splitTopicExAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
                 ((Map) payloadObject).put(Mapping.TOKEN_TOPIC_LEVEL, splitTopicExAsList);
             } else {
@@ -118,9 +121,9 @@ public class EnrichmentOutboundProcessor extends BaseProcessor {
         if (mapping.getUseExternalId() && !("").equals(mapping.getExternalIdType())) {
             ExternalIDRepresentation externalId = c8yAgent.resolveGlobalId2ExternalId(context.getTenant(),
                     new GId(sourceId.toString()), mapping.getExternalIdType(),
-                    context.isTesting());
+                    context.getTesting());
             if (externalId == null) {
-                if (context.isSendPayload()) {
+                if (context.getSendPayload()) {
                     throw new RuntimeException(String.format("External id %s for type %s not found!",
                             sourceId.toString(), mapping.getExternalIdType()));
                 }
@@ -155,9 +158,9 @@ public class EnrichmentOutboundProcessor extends BaseProcessor {
     }
 
     /**
-     * Helper method to safely add values to FlowContext
+     * Helper method to safely add values to DataPrepContext
      */
-    private void addToFlowContext(FlowContext flowContext, ProcessingContext<Object> context, String key,
+    private void addToFlowContext(DataPrepContext flowContext, ProcessingContext<Object> context, String key,
             Object value) {
         try {
             if (context.getGraalContext() != null && value != null) {
@@ -165,7 +168,7 @@ public class EnrichmentOutboundProcessor extends BaseProcessor {
                 flowContext.setState(key, graalValue);
             }
         } catch (Exception e) {
-            log.warn("{} - Failed to add '{}' to FlowContext: {}", context.getTenant(), key, e.getMessage());
+            log.warn("{} - Failed to add '{}' to DataPrepContext: {}", context.getTenant(), key, e.getMessage());
         }
     }
 

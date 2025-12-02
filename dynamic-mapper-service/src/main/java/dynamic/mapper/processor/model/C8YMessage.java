@@ -59,7 +59,7 @@ public class C8YMessage {
     private String tenant; 
 
     @NotNull
-    private boolean sendPayload;
+    private Boolean sendPayload;
 
     @NotNull
     private String operation;

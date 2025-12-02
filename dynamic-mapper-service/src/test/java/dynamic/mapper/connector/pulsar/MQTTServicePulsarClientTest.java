@@ -135,7 +135,7 @@ class MQTTServicePulsarClientTest {
         // Setup connector configuration
         lenient().when(connectorConfiguration.getName()).thenReturn(TEST_CONNECTOR_NAME);
         lenient().when(connectorConfiguration.getIdentifier()).thenReturn(TEST_CONNECTOR_IDENTIFIER);
-        lenient().when(connectorConfiguration.isEnabled()).thenReturn(true);
+        lenient().when(connectorConfiguration.getEnabled()).thenReturn(true);
 
         Map<String, Object> properties = new HashMap<>();
         properties.put("serviceUrl", TEST_SERVICE_URL);
@@ -152,8 +152,8 @@ class MQTTServicePulsarClientTest {
         lenient().when(connectorConfiguration.getProperties()).thenReturn(properties);
 
         // Setup service configuration
-        lenient().when(serviceConfiguration.isLogPayload()).thenReturn(false);
-        lenient().when(serviceConfiguration.isSendSubscriptionEvents()).thenReturn(false);
+        lenient().when(serviceConfiguration.getLogPayload()).thenReturn(false);
+        lenient().when(serviceConfiguration.getSendSubscriptionEvents()).thenReturn(false);
 
         // Setup mapping service - UPDATED for refactored service
         // The new service uses void rebuildMappingCaches() instead of returning lists
@@ -337,7 +337,7 @@ class MQTTServicePulsarClientTest {
 
     @Test
     void testConnectWhenDisabled() {
-        when(connectorConfiguration.isEnabled()).thenReturn(false);
+        when(connectorConfiguration.getEnabled()).thenReturn(false);
 
         mqttServicePulsarClient = spy(new MQTTServicePulsarClient(
                 configurationRegistry,

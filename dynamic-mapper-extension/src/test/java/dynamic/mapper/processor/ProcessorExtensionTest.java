@@ -96,8 +96,8 @@ public class ProcessorExtensionTest {
   // void testMQTTConfigurationIsEnabled() {
   //   ConfigurationConnection conf = null;
 
-  //   log.info("My configuration is active: {}", ConfigurationConnection.isEnabled(conf));
-  //   assertEquals(false, ConfigurationConnection.isEnabled(conf));
+  //   log.info("My configuration is active: {}", ConfigurationConnection.getEnabled(conf));
+  //   assertEquals(false, ConfigurationConnection.getEnabled(conf));
   // }
 
   // @Test

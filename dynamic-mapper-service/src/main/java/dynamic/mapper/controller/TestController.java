@@ -96,7 +96,7 @@ public class TestController {
     private ContextService<UserCredentials> contextService;
 
     @Value("${APP.externalExtensionsEnabled}")
-    private boolean externalExtensionsEnabled;
+    private Boolean externalExtensionsEnabled;
 
     TestController(ConfigurationRegistry configurationRegistry) {
         this.configurationRegistry = configurationRegistry;
@@ -311,7 +311,6 @@ public class TestController {
             String payloadMessage) {
         return ConnectorMessage.builder()
                 .tenant(tenant)
-                .supportsMessageContext(connectorClient.getSupportsMessageContext())
                 .topic(topic)
                 .sendPayload(sendPayload)
                 .connectorIdentifier(connectorClient.getConnectorIdentifier())

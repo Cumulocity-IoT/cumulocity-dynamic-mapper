@@ -58,6 +58,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
   labels: ModalLabels = { ok: 'Save', cancel: 'Cancel' };
   description: string;
   readOnly: boolean;
+  feature: Feature;
 
   private _save: (value: ConnectorConfiguration) => void;
   private _cancel: (reason?: any) => void;
@@ -76,15 +77,16 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
     [ConnectorPropertyType.STRING_LARGE_PROPERTY, this.createLargeStringField.bind(this)],
     [ConnectorPropertyType.MAP_PROPERTY, this.createMapField.bind(this)]
   ]);
-  feature: Feature;
 
   bottomDrawerRef = inject(BottomDrawerRef);
   sharedService = inject(SharedService);
   formatStringPipe = inject(FormatStringPipe);
   cd = inject(ChangeDetectorRef);
+  mode: string;
 
   async ngOnInit() {
     this.feature = await this.sharedService.getFeatures();
+    this.mode = this.add ? 'Add': 'Update';
     this.setConnectorDescription();
     this.initializeBrokerFormFields();
     this.readOnly = this.configuration.enabled;

@@ -29,6 +29,7 @@ export interface ServiceConfiguration {
   sendNotificationLifecycle: boolean;
   externalExtensionEnabled?: boolean;
   outboundMappingEnabled: boolean;
+  deviceIsolationMQTTServiceEnabled: boolean;
   inboundExternalIdCacheSize: number;
   inboundExternalIdCacheRetention: number;
   inventoryCacheSize: number;
@@ -38,6 +39,7 @@ export interface ServiceConfiguration {
   maxCPUTimeMS: number;
   jsonataAgent: string;
   javaScriptAgent: string;
+  smartFunctionAgent: string;
 }
 
 export enum TemplateType {

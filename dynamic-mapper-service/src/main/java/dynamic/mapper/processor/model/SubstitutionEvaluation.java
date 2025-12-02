@@ -24,7 +24,7 @@ public class SubstitutionEvaluation {
         this.key = key;
         this.value = value;
         this.type = type;
-        this.setRepairStrategy( repairStrategy);
+        this.setRepairStrategy(repairStrategy);
     }
 
     public String getKey() {
@@ -161,24 +161,34 @@ public class SubstitutionEvaluation {
                     substitution, mapping.getMappingTopic());
             processingCacheEntry
                     .add(new SubstituteValue(extractedSourceContent,
-                            SubstituteValue.TYPE.IGNORE, substitution.getRepairStrategy(), substitution.isExpandArray()));
+                            SubstituteValue.TYPE.IGNORE, substitution.getRepairStrategy(),
+                            substitution.getExpandArray()));
         } else if (SubstitutionEvaluation.isTextual(extractedSourceContent)) {
             processingCacheEntry.add(
                     new SubstituteValue(extractedSourceContent,
-                            TYPE.TEXTUAL, substitution.getRepairStrategy(), substitution.isExpandArray()));
+                            TYPE.TEXTUAL, substitution.getRepairStrategy(), substitution.getExpandArray()));
         } else if (SubstitutionEvaluation.isNumber(extractedSourceContent)) {
             processingCacheEntry
                     .add(new SubstituteValue(extractedSourceContent,
-                            SubstituteValue.TYPE.NUMBER, substitution.getRepairStrategy(), substitution.isExpandArray()));
+                            SubstituteValue.TYPE.NUMBER, substitution.getRepairStrategy(),
+                            substitution.getExpandArray()));
         } else if (SubstitutionEvaluation.isArray(extractedSourceContent)) {
             processingCacheEntry
                     .add(new SubstituteValue(extractedSourceContent,
-                            SubstituteValue.TYPE.ARRAY, substitution.getRepairStrategy(), substitution.isExpandArray()));
+                            SubstituteValue.TYPE.ARRAY, substitution.getRepairStrategy(),
+                            substitution.getExpandArray()));
+        } else if (SubstitutionEvaluation.isBoolean(extractedSourceContent)) {
+            processingCacheEntry
+                    .add(new SubstituteValue(extractedSourceContent,
+                            SubstituteValue.TYPE.BOOLEAN, substitution.getRepairStrategy(),
+                            substitution.getExpandArray()));
         } else {
             processingCacheEntry
                     .add(new SubstituteValue(extractedSourceContent,
-                            SubstituteValue.TYPE.OBJECT, substitution.getRepairStrategy(), substitution.isExpandArray()));
+                            SubstituteValue.TYPE.OBJECT, substitution.getRepairStrategy(),
+                            substitution.getExpandArray()));
         }
+
     }
 
     public static void processSubstitute(String tenant,
@@ -191,26 +201,26 @@ public class SubstitutionEvaluation {
             processingCacheEntry
                     .add(new SubstituteValue(extractedSourceContent,
                             SubstituteValue.TYPE.IGNORE, substitutionValue.getRepairStrategy(),
-                            substitutionValue.isExpandArray()));
+                            substitutionValue.getExpandArray()));
         } else if (SubstitutionEvaluation.isTextual(extractedSourceContent)) {
             processingCacheEntry.add(
                     new SubstituteValue(extractedSourceContent,
-                            TYPE.TEXTUAL, substitutionValue.getRepairStrategy(), substitutionValue.isExpandArray()));
+                            TYPE.TEXTUAL, substitutionValue.getRepairStrategy(), substitutionValue.getExpandArray()));
         } else if (SubstitutionEvaluation.isNumber(extractedSourceContent)) {
             processingCacheEntry
                     .add(new SubstituteValue(extractedSourceContent,
                             SubstituteValue.TYPE.NUMBER, substitutionValue.getRepairStrategy(),
-                            substitutionValue.isExpandArray()));
+                            substitutionValue.getExpandArray()));
         } else if (SubstitutionEvaluation.isArray(extractedSourceContent)) {
             processingCacheEntry
                     .add(new SubstituteValue(extractedSourceContent,
                             SubstituteValue.TYPE.ARRAY, substitutionValue.getRepairStrategy(),
-                            substitutionValue.isExpandArray()));
+                            substitutionValue.getExpandArray()));
         } else {
             processingCacheEntry
                     .add(new SubstituteValue(extractedSourceContent,
                             SubstituteValue.TYPE.OBJECT, substitutionValue.getRepairStrategy(),
-                            substitutionValue.isExpandArray()));
+                            substitutionValue.getExpandArray()));
         }
     }
 

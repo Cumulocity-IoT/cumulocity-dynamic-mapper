@@ -190,7 +190,7 @@ class ConnectorConfigurationServiceTest {
 
         // Assert
         assertNotNull(result);
-        assertTrue(result.isEnabled());
+        assertTrue(result.getEnabled());
         verify(tenantOptionApi).save(any(OptionRepresentation.class));
     }
 

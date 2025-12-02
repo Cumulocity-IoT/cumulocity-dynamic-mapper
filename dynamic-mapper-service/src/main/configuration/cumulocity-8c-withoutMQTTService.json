@@ -1,0 +1,62 @@
+{
+  "apiVersion": "2",
+  "version": "@project.version@",
+  "name": "dynamic-mapper-service",
+  "settingsCategory": "dynMappingService",
+  "provider": {
+    "name": "Cumulocity GmbH"
+  },
+  "buildSpec": {
+    "targetBuildArchitectures": [
+      "linux/amd64"
+    ]
+  },
+  "isolation": "MULTI_TENANT",
+  "resources": {
+    "cpu": "8",
+    "memory": "8G"
+  },
+  "requiredRoles": [
+    "ROLE_INVENTORY_READ",
+    "ROLE_INVENTORY_ADMIN",
+    "ROLE_INVENTORY_CREATE",
+    "ROLE_EVENT_READ",
+    "ROLE_EVENT_ADMIN",
+    "ROLE_ALARM_READ",
+    "ROLE_ALARM_ADMIN",
+    "ROLE_IDENTITY_READ",
+    "ROLE_IDENTITY_ADMIN",
+    "ROLE_DEVICE_CONTROL_READ",
+    "ROLE_DEVICE_CONTROL_ADMIN",
+    "ROLE_OPTION_MANAGEMENT_READ",
+    "ROLE_OPTION_MANAGEMENT_ADMIN",
+    "ROLE_TENANT_ADMIN",
+    "ROLE_MEASUREMENT_ADMIN",
+    "ROLE_MEASUREMENT_READ",
+    "ROLE_NOTIFICATION_2_ADMIN",
+    "ROLE_AI_AGENT_ADMIN",
+    "ROLE_AI_AGENT_READ"
+  ],
+  "roles": [
+    "ROLE_DYNAMIC_MAPPER_ADMIN",
+    "ROLE_DYNAMIC_MAPPER_CREATE",
+    "ROLE_DYNAMIC_MAPPER_HTTP_CONNECTOR_CREATE",
+    "ROLE_AI_AGENT_ADMIN",
+    "ROLE_AI_AGENT_READ"
+  ],
+  "livenessProbe": {
+    "httpGet": {
+      "path": "/health"
+    },
+    "initialDelaySeconds": 90,
+    "periodSeconds": 10
+  },
+  "readinessProbe": {
+    "httpGet": {
+      "path": "/health",
+      "port": 80
+    },
+    "initialDelaySeconds": 90,
+    "periodSeconds": 10
+  }
+}

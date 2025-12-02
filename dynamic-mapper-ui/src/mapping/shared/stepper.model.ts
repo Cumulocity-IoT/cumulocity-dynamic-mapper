@@ -40,6 +40,25 @@ export const STEP_SELECT_TEMPLATES = 2;
 export const STEP_DEFINE_SUBSTITUTIONS = 3;
 export const STEP_TEST_MAPPING = 4;
 
+// Type definitions for better type safety
+interface BaseClass {
+  name: string;
+  documentation: string;
+  deprecated?: boolean;
+}
+
+interface ClassDefinition extends BaseClass {
+  isEnum: false;
+  properties: Array<{ name: string; type: string; documentation: string }>;
+  methods: Array<{ name: string; parameters: string[]; returnType: string; documentation: string }>;
+}
+
+interface EnumDefinition extends BaseClass {
+  isEnum: true;
+  values: string[];
+}
+
+type ClassOrEnum = ClassDefinition | EnumDefinition;
 
 /**
  * Creates a completion provider for custom JavaScript classes in Monaco Editor for Flow Functions
@@ -48,16 +67,15 @@ export const STEP_TEST_MAPPING = 4;
  */
 export function createCompletionProviderFlowFunction(monaco) {
   // Register flow-specific classes and interfaces
-  const customClasses = [
+  const customClasses: ClassOrEnum[] = [
     {
-      name: 'CumulocityMessage',
+      name: 'CumulocityObject',
       isEnum: false,
       properties: [
         { name: 'payload', type: 'object', documentation: 'The same payload that would be used in the C8Y REST/SmartREST API.' },
         { name: 'cumulocityType', type: 'string', documentation: 'Which type in the C8Y api is being modified. e.g. "measurement".' },
         { name: 'action', type: '"create" | "update"', documentation: 'What kind of operation is being performed on this type.' },
-        { name: 'externalSource', type: 'ExternalSource[] | ExternalSource', documentation: 'External Id to lookup and optionally create.' },
-        { name: 'internalSource', type: 'CumulocitySource[] | CumulocitySource', documentation: 'Internal Cumulocity source.' },
+        { name: 'externalSource', type: 'ExternalId[] | ExternalId', documentation: 'External Id to lookup and optionally create. Use ExternalId for simple lookups.' },
         { name: 'destination', type: '"cumulocity" | "iceflow" | "streaming-analytics"', documentation: 'Destination for the message.' }
       ],
       methods: [],
@@ -67,15 +85,26 @@ export function createCompletionProviderFlowFunction(monaco) {
       name: 'DeviceMessage',
       isEnum: false,
       properties: [
-        { name: 'payload', type: 'ArrayBuffer | object', documentation: 'Message payload - ArrayBuffer from transport or JS object for intermediate processing.' },
+        { name: 'payload', type: 'Uint8Array', documentation: 'Message payload as Uint8Array. Use TextEncoder/TextDecoder for string conversion. (Changed from ArrayBuffer in v2.0)' },
         { name: 'transportId', type: 'string', documentation: 'Identifier for the source/dest transport e.g. "mqtt", "opc-ua".' },
-        { name: 'topic', type: 'string', documentation: 'The topic on the transport (e.g. MQTT topic).' },
+        { name: 'topic', type: 'string', documentation: 'The topic on the transport. Use _externalId_ placeholder to auto-reference device external ID.' },
         { name: 'clientId', type: 'string', documentation: 'Transport/MQTT client Id.' },
-        { name: 'transportFields', type: 'Record<string, string>', documentation: 'Dictionary of transport/MQTT-specific fields/properties/headers.' },
-        { name: 'time', type: 'Date', documentation: 'Timestamp of incoming Pulsar message; does nothing when sending.' }
+        { name: 'transportFields', type: 'Record<string, any>', documentation: 'Dictionary of transport-specific fields/properties/headers. For Kafka, use "key" to define record key.' },
+        { name: 'time', type: 'Date', documentation: 'Timestamp of incoming message; does nothing when sending.' },
+        { name: 'externalSource', type: 'Array<{type: string}>', documentation: 'External source config for resolving _externalId_ placeholder. Defines which external ID type to use.' }
       ],
       methods: [],
-      documentation: 'A (Pulsar) message received from a device or sent to a device.'
+      documentation: 'A message received from a device or sent to a device. Payload is now Uint8Array (changed in v2.0).'
+    },
+    {
+      name: 'ExternalId',
+      isEnum: false,
+      properties: [
+        { name: 'externalId', type: 'string', documentation: 'External Id to be looked up.' },
+        { name: 'type', type: 'string', documentation: 'External ID type, e.g. "c8y_Serial".' }
+      ],
+      methods: [],
+      documentation: 'Simple external ID reference for lookups (introduced in v2.0). Use this for basic external ID references.'
     },
     {
       name: 'ExternalSource',
@@ -89,29 +118,31 @@ export function createCompletionProviderFlowFunction(monaco) {
         { name: 'clientId', type: 'string', documentation: 'Transport/MQTT client Id, stored on the MO for outbound messages.' }
       ],
       methods: [],
-      documentation: 'Details of external Id (which will be looked up by IdP to get the C8Y id, and optionally used to create a device).'
+      documentation: 'Advanced external ID with device creation capabilities. For simple lookups, use ExternalId instead.'
     },
     {
       name: 'CumulocitySource',
       isEnum: false,
+      deprecated: true,
       properties: [
-        { name: 'internalId', type: 'string', documentation: 'Cumulocity Id to be looked up and/or created to get C8Y "id".' }
+        { name: 'internalId', type: 'string', documentation: '**DEPRECATED** - Use externalSource with ExternalId or specify id in payload directly. Will be removed in v6.2.0.' }
       ],
       methods: [],
-      documentation: 'Details of internal Cumulocity source.'
+      documentation: '**DEPRECATED** - Use externalSource with ExternalId instead, or specify the id directly in the payload. Will be removed in version 6.2.0.'
     },
     {
-      name: 'FlowContext',
+      name: 'DataPrepContext',
       isEnum: false,
       properties: [],
       methods: [
         { name: 'setState', parameters: ['key', 'value'], returnType: 'void', documentation: 'Sets a value in the context\'s state.' },
         { name: 'getState', parameters: ['key'], returnType: 'any', documentation: 'Retrieves a value from the context\'s state.' },
         { name: 'getConfig', parameters: [], returnType: 'Record<string, any>', documentation: 'Retrieves the entire configuration map for the context.' },
-        { name: 'logMessage', parameters: ['msg'], returnType: 'void', documentation: 'Log a message.' },
-        { name: 'lookupDTMAssetProperties', parameters: ['assetId'], returnType: 'Record<string, any>', documentation: 'Lookup DTM Asset properties.' }
+        { name: 'getDTMAsset', parameters: ['assetId'], returnType: 'Record<string, any>', documentation: 'Lookup DTM Asset properties by asset ID.' },
+        { name: 'getManagedObjectByDeviceId', parameters: ['deviceId'], returnType: 'any', documentation: 'Lookup a device from inventory cache by internal device ID.' },
+        { name: 'getManagedObject', parameters: ['externalId'], returnType: 'any', documentation: 'Lookup a device from inventory cache by external ID.' }
       ],
-      documentation: 'Context object providing state management and configuration access for flow functions.'
+      documentation: 'Context object providing state management, configuration access, and device lookup capabilities'
     },
     {
       name: 'InputMessage',
@@ -150,7 +181,7 @@ export function createCompletionProviderFlowFunction(monaco) {
   ];
 
   // Add enums for specific values
-  const enums = [
+  const enums: ClassOrEnum[] = [
     {
       name: 'CumulocityAction',
       isEnum: true,
@@ -178,30 +209,37 @@ export function createCompletionProviderFlowFunction(monaco) {
   ];
 
   // Combine classes and enums
-  const allClasses = [...customClasses, ...enums];
+  const allClasses: ClassOrEnum[] = [...customClasses, ...enums];
 
   // Add utility functions specific to flow functions
   const utilityFunctions = [
     {
-      name: 'createCumulocityMessage',
+      name: 'createCumulocityObject',
       parameters: ['payload', 'cumulocityType', 'action'],
-      returnType: 'CumulocityMessage',
-      documentation: 'Creates a new CumulocityMessage with the specified payload, type, and action.',
+      returnType: 'CumulocityObject',
+      documentation: 'Creates a new CumulocityObject with the specified payload, type, and action.',
       description: 'Create new Cumulocity message'
     },
     {
       name: 'createDeviceMessage',
       parameters: ['payload', 'topic'],
       returnType: 'DeviceMessage',
-      documentation: 'Creates a new DeviceMessage with the specified payload and topic.',
+      documentation: 'Creates a new DeviceMessage with Uint8Array payload and topic. Use TextEncoder for string conversion.',
       description: 'Create new device message'
+    },
+    {
+      name: 'createExternalId',
+      parameters: ['externalId', 'type'],
+      returnType: 'ExternalId',
+      documentation: 'Creates a new ExternalId for simple device lookup (v2.0+).',
+      description: 'Create external ID reference'
     },
     {
       name: 'createExternalSource',
       parameters: ['externalId', 'type'],
       returnType: 'ExternalSource',
-      documentation: 'Creates a new ExternalSource with the specified external ID and type.',
-      description: 'Create external source identifier'
+      documentation: 'Creates a new ExternalSource for advanced device creation scenarios.',
+      description: 'Create external source with creation capabilities'
     },
     {
       name: 'createMappingError',
@@ -209,6 +247,20 @@ export function createCompletionProviderFlowFunction(monaco) {
       returnType: 'MappingError',
       documentation: 'Creates a new MappingError with the specified error details.',
       description: 'Create mapping error'
+    },
+    {
+      name: 'encodePayload',
+      parameters: ['obj'],
+      returnType: 'Uint8Array',
+      documentation: 'Converts a JavaScript object to Uint8Array using TextEncoder (for DeviceMessage payload).',
+      description: 'Encode object to Uint8Array'
+    },
+    {
+      name: 'decodePayload',
+      parameters: ['uint8Array'],
+      returnType: 'string',
+      documentation: 'Converts Uint8Array to string using TextDecoder (for reading DeviceMessage payload).',
+      description: 'Decode Uint8Array to string'
     }
   ];
 
@@ -243,60 +295,66 @@ export function createCompletionProviderFlowFunction(monaco) {
         if (matchedClass) {
           if (matchedClass.isEnum) {
             // Enum value completion - use type guard
-            const enumClass = matchedClass;
-            if ('values' in enumClass) {
-              enumClass.values.forEach((value, index) => {
-                suggestions.push({
-                  label: value,
-                  kind: monaco.languages.CompletionItemKind.EnumMember,
-                  documentation: {
-                    value: `${enumClass.name}.${value}`
-                  },
-                  insertText: value,
-                  range: range,
-                  sortText: `00-${index.toString().padStart(2, '0')}`
-                });
+            const enumClass = matchedClass as EnumDefinition;
+            enumClass.values.forEach((value, index) => {
+              suggestions.push({
+                label: value,
+                kind: monaco.languages.CompletionItemKind.EnumMember,
+                documentation: {
+                  value: `${enumClass.name}.${value}`
+                },
+                insertText: value,
+                range: range,
+                sortText: `00-${index.toString().padStart(2, '0')}`
               });
-            }
+            });
           } else {
             // Class property and method completion - use type guard
-            const classObject = matchedClass;
-            if ('properties' in classObject && classObject.properties) {
-              classObject.properties.forEach((prop, index) => {
-                suggestions.push({
-                  label: prop.name,
-                  kind: monaco.languages.CompletionItemKind.Field,
-                  documentation: {
-                    value: `**${prop.type}**\n\n${prop.documentation}`
-                  },
-                  insertText: prop.name,
-                  range: range,
-                  sortText: `01-${index.toString().padStart(2, '0')}`
-                });
-              });
-            }
+            const classObject = matchedClass as ClassDefinition;
+            
+            // Add deprecation warning if class is deprecated
+            const deprecationWarning = classObject.deprecated 
+              ? '⚠️ **DEPRECATED** - ' 
+              : '';
 
-            if ('methods' in classObject && classObject.methods) {
-              classObject.methods.forEach((method, index) => {
-                const params = method.parameters.join(', ');
-                suggestions.push({
-                  label: {
-                    label: `${method.name}(${params})`,
-                    description: method.returnType
-                  },
-                  kind: monaco.languages.CompletionItemKind.Method,
-                  documentation: {
-                    value: `**${method.returnType}** ${method.name}(${params})\n\n${method.documentation}`
-                  },
-                  insertText: method.parameters.length > 0
-                    ? `${method.name}(${method.parameters.map((_, i) => `\${${i + 1}}`).join(', ')})`
-                    : `${method.name}()`,
-                  insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-                  range: range,
-                  sortText: `02-${index.toString().padStart(2, '0')}`
-                });
+            classObject.properties.forEach((prop, index) => {
+              suggestions.push({
+                label: prop.name,
+                kind: monaco.languages.CompletionItemKind.Field,
+                documentation: {
+                  value: `${deprecationWarning}**${prop.type}**\n\n${prop.documentation}`
+                },
+                insertText: prop.name,
+                range: range,
+                sortText: classObject.deprecated 
+                  ? `99-${index.toString().padStart(2, '0')}` // Lower priority for deprecated
+                  : `01-${index.toString().padStart(2, '0')}`,
+                tags: classObject.deprecated ? [monaco.languages.CompletionItemTag.Deprecated] : undefined
               });
-            }
+            });
+
+            classObject.methods.forEach((method, index) => {
+              const params = method.parameters.join(', ');
+              suggestions.push({
+                label: {
+                  label: `${method.name}(${params})`,
+                  description: method.returnType
+                },
+                kind: monaco.languages.CompletionItemKind.Method,
+                documentation: {
+                  value: `${deprecationWarning}**${method.returnType}** ${method.name}(${params})\n\n${method.documentation}`
+                },
+                insertText: method.parameters.length > 0
+                  ? `${method.name}(${method.parameters.map((_, i) => `\${${i + 1}}`).join(', ')})`
+                  : `${method.name}()`,
+                insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                range: range,
+                sortText: classObject.deprecated 
+                  ? `99-${index.toString().padStart(2, '0')}` // Lower priority for deprecated
+                  : `02-${index.toString().padStart(2, '0')}`,
+                tags: classObject.deprecated ? [monaco.languages.CompletionItemTag.Deprecated] : undefined
+              });
+            });
           }
           return {
             suggestions,
@@ -307,17 +365,22 @@ export function createCompletionProviderFlowFunction(monaco) {
 
       // Global class/enum completion
       allClasses.forEach((cls, index) => {
+        const deprecationWarning = cls.deprecated ? '⚠️ **DEPRECATED** - ' : '';
+        
         suggestions.push({
           label: cls.name,
           kind: cls.isEnum
             ? monaco.languages.CompletionItemKind.Enum
             : monaco.languages.CompletionItemKind.Class,
           documentation: {
-            value: cls.documentation
+            value: `${deprecationWarning}${cls.documentation}`
           },
           insertText: cls.name,
           range: range,
-          sortText: `03-${index.toString().padStart(2, '0')}`
+          sortText: cls.deprecated 
+            ? `99-${index.toString().padStart(2, '0')}` // Lower priority for deprecated
+            : `03-${index.toString().padStart(2, '0')}`,
+          tags: cls.deprecated ? [monaco.languages.CompletionItemTag.Deprecated] : undefined
         });
       });
 
@@ -344,10 +407,13 @@ export function createCompletionProviderFlowFunction(monaco) {
       if (newMatch) {
         allClasses.forEach((cls, index) => {
           if (!cls.isEnum) {
-            const classObject = cls;
-            const constructorParams = ('properties' in classObject && classObject.properties)
-              ? classObject.properties.filter(p => p.name !== 'time').map(p => p.name).join(', ')
-              : '';
+            const classObject = cls as ClassDefinition;
+            const constructorParams = classObject.properties
+              .filter(p => p.name !== 'time')
+              .map(p => p.name)
+              .join(', ');
+
+            const deprecationWarning = classObject.deprecated ? '⚠️ **DEPRECATED** - ' : '';
 
             suggestions.push({
               label: {
@@ -356,16 +422,19 @@ export function createCompletionProviderFlowFunction(monaco) {
               },
               kind: monaco.languages.CompletionItemKind.Constructor,
               documentation: {
-                value: `Create a new ${cls.name} instance:\n\n\`\`\`javascript\nnew ${cls.name}(${constructorParams})\n\`\`\``
+                value: `${deprecationWarning}Create a new ${cls.name} instance:\n\n\`\`\`javascript\nnew ${cls.name}(${constructorParams})\n\`\`\``
               },
               insertText: cls.name + (
-                ('properties' in classObject && classObject.properties && classObject.properties.length > 0)
+                classObject.properties.length > 0
                   ? `(${classObject.properties.filter(p => p.name !== 'time').map((_, i) => `\${${i + 1}}`).join(', ')})`
                   : '()'
               ),
               insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
               range: range,
-              sortText: `05-${index.toString().padStart(2, '0')}`
+              sortText: classObject.deprecated 
+                ? `99-${index.toString().padStart(2, '0')}` // Lower priority for deprecated
+                : `05-${index.toString().padStart(2, '0')}`,
+              tags: classObject.deprecated ? [monaco.languages.CompletionItemTag.Deprecated] : undefined
             });
           }
         });
@@ -383,7 +452,7 @@ export function createCompletionProviderFlowFunction(monaco) {
         const matchedFunc = utilityFunctions.find(f => f.name === funcName);
 
         if (matchedFunc) {
-          if (matchedFunc.name === 'createCumulocityMessage') {
+          if (matchedFunc.name === 'createCumulocityObject') {
             suggestions.push({
               label: 'payload object',
               kind: monaco.languages.CompletionItemKind.Variable,
@@ -395,20 +464,48 @@ export function createCompletionProviderFlowFunction(monaco) {
             });
           } else if (matchedFunc.name === 'createDeviceMessage') {
             suggestions.push({
-              label: 'payload',
+              label: 'Uint8Array payload',
               kind: monaco.languages.CompletionItemKind.Variable,
-              documentation: 'The message payload',
-              insertText: '${1:payload}',
+              documentation: 'The message payload as Uint8Array. Use new TextEncoder().encode(JSON.stringify(obj))',
+              insertText: 'new TextEncoder().encode(JSON.stringify(${1:payload}))',
               insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
               range: range,
               sortText: '00-01'
             });
-          } else if (matchedFunc.name === 'createExternalSource') {
+          } else if (matchedFunc.name === 'createExternalId' || matchedFunc.name === 'createExternalSource') {
             suggestions.push({
               label: '"externalId"',
               kind: monaco.languages.CompletionItemKind.Value,
               documentation: 'External ID string',
               insertText: '"${1:deviceId}"',
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              range: range,
+              sortText: '00-01'
+            });
+            suggestions.push({
+              label: '"c8y_Serial"',
+              kind: monaco.languages.CompletionItemKind.Value,
+              documentation: 'Common external ID type',
+              insertText: ', "c8y_Serial"',
+              range: range,
+              sortText: '00-02'
+            });
+          } else if (matchedFunc.name === 'encodePayload') {
+            suggestions.push({
+              label: 'object to encode',
+              kind: monaco.languages.CompletionItemKind.Variable,
+              documentation: 'JavaScript object to convert to Uint8Array',
+              insertText: '${1:obj}',
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              range: range,
+              sortText: '00-01'
+            });
+          } else if (matchedFunc.name === 'decodePayload') {
+            suggestions.push({
+              label: 'Uint8Array to decode',
+              kind: monaco.languages.CompletionItemKind.Variable,
+              documentation: 'Uint8Array to convert to string',
+              insertText: '${1:uint8Array}',
               insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
               range: range,
               sortText: '00-01'
@@ -427,11 +524,12 @@ export function createCompletionProviderFlowFunction(monaco) {
       // Common variable name suggestions for flow functions
       if (textUntilPosition.match(/\b(let|const|var)\s+\w*$/)) {
         const commonVars = [
-          { name: 'inputMsg', type: 'InputMessage', desc: 'Input message variable' },
+          { name: 'msg', type: 'InputMessage', desc: 'Input message variable' },
           { name: 'outputMsg', type: 'OutputMessage', desc: 'Output message variable' },
-          { name: 'c8yMsg', type: 'CumulocityMessage', desc: 'Cumulocity message variable' },
+          { name: 'c8yMsg', type: 'CumulocityObject', desc: 'Cumulocity message variable' },
           { name: 'deviceMsg', type: 'DeviceMessage', desc: 'Device message variable' },
-          { name: 'flowContext', type: 'FlowContext', desc: 'Flow context variable' }
+          { name: 'dataPrepContext', type: 'DataPrepContext', desc: 'Data preparation context variable' },
+          { name: 'externalId', type: 'ExternalId', desc: 'External ID reference variable (v2.0+)' }
         ];
 
         commonVars.forEach((variable, index) => {
@@ -470,7 +568,7 @@ export function createCompletionProviderFlowFunction(monaco) {
  */
 export function createCompletionProviderSubstitutionAsCode(monaco) {
   // Register our custom classes and enums
-  const customClasses = [
+  const customClasses: ClassOrEnum[] = [
     {
       name: 'RepairStrategy',
       isEnum: true,
@@ -600,7 +698,7 @@ export function createCompletionProviderSubstitutionAsCode(monaco) {
       name: 'addError',
       parameters: ['result', 'message'],
       returnType: 'void',
-      documentation: 'Adds an error to the set of error messages. Creates a new HasSet for the key if it doesn\'t exist yet.',
+      documentation: 'Adds an error to the set of error messages. Creates a new HashSet for the key if it doesn\'t exist yet.',
       description: 'Add error message to substitution result'
     }
   ];
@@ -636,12 +734,13 @@ export function createCompletionProviderSubstitutionAsCode(monaco) {
         if (matchedClass) {
           if (matchedClass.isEnum) {
             // Enum value completion
-            matchedClass.values.forEach((value, index) => {
+            const enumClass = matchedClass as EnumDefinition;
+            enumClass.values.forEach((value, index) => {
               suggestions.push({
                 label: value,
                 kind: monaco.languages.CompletionItemKind.EnumMember,
                 documentation: {
-                  value: `${matchedClass.name}.${value}`
+                  value: `${enumClass.name}.${value}`
                 },
                 insertText: value,
                 range: range,
@@ -650,42 +749,40 @@ export function createCompletionProviderSubstitutionAsCode(monaco) {
             });
           } else {
             // Class property and method completion
-            if (matchedClass.properties) {
-              matchedClass.properties.forEach((prop, index) => {
-                suggestions.push({
-                  label: prop.name,
-                  kind: monaco.languages.CompletionItemKind.Field,
-                  documentation: {
-                    value: `**${prop.type}**\n\n${prop.documentation}`
-                  },
-                  insertText: prop.name,
-                  range: range,
-                  sortText: `01-${index.toString().padStart(2, '0')}` // High priority sorting
-                });
+            const classObject = matchedClass as ClassDefinition;
+            
+            classObject.properties.forEach((prop, index) => {
+              suggestions.push({
+                label: prop.name,
+                kind: monaco.languages.CompletionItemKind.Field,
+                documentation: {
+                  value: `**${prop.type}**\n\n${prop.documentation}`
+                },
+                insertText: prop.name,
+                range: range,
+                sortText: `01-${index.toString().padStart(2, '0')}` // High priority sorting
               });
-            }
+            });
 
-            if (matchedClass.methods) {
-              matchedClass.methods.forEach((method, index) => {
-                const params = method.parameters.join(', ');
-                suggestions.push({
-                  label: {
-                    label: `${method.name}(${params})`,
-                    description: method.returnType
-                  },
-                  kind: monaco.languages.CompletionItemKind.Method,
-                  documentation: {
-                    value: `**${method.returnType}** ${method.name}(${params})\n\n${method.documentation}`
-                  },
-                  insertText: method.parameters.length > 0
-                    ? `${method.name}(${method.parameters.map((_, i) => `\${${i + 1}}`).join(', ')})`
-                    : `${method.name}()`,
-                  insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-                  range: range,
-                  sortText: `02-${index.toString().padStart(2, '0')}` // High priority sorting
-                });
+            classObject.methods.forEach((method, index) => {
+              const params = method.parameters.join(', ');
+              suggestions.push({
+                label: {
+                  label: `${method.name}(${params})`,
+                  description: method.returnType
+                },
+                kind: monaco.languages.CompletionItemKind.Method,
+                documentation: {
+                  value: `**${method.returnType}** ${method.name}(${params})\n\n${method.documentation}`
+                },
+                insertText: method.parameters.length > 0
+                  ? `${method.name}(${method.parameters.map((_, i) => `\${${i + 1}}`).join(', ')})`
+                  : `${method.name}()`,
+                insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                range: range,
+                sortText: `02-${index.toString().padStart(2, '0')}` // High priority sorting
               });
-            }
+            });
           }
           return {
             suggestions,
@@ -696,12 +793,13 @@ export function createCompletionProviderSubstitutionAsCode(monaco) {
         // For enum value access (e.g. RepairStrategy.DEFAULT)
         const enumClass = customClasses.find(cls => cls.isEnum && cls.name === objectName);
         if (enumClass) {
-          enumClass.values.forEach((value, index) => {
+          const enumDef = enumClass as EnumDefinition;
+          enumDef.values.forEach((value, index) => {
             suggestions.push({
               label: value,
               kind: monaco.languages.CompletionItemKind.EnumMember,
               documentation: {
-                value: `${enumClass.name}.${value}`
+                value: `${enumDef.name}.${value}`
               },
               insertText: value,
               range: range,
@@ -754,9 +852,10 @@ export function createCompletionProviderSubstitutionAsCode(monaco) {
       if (newMatch) {
         customClasses.forEach((cls, index) => {
           if (!cls.isEnum) {
-            const constructorParams = cls.properties
-              ? cls.properties.map(p => p.name).join(', ')
-              : '';
+            const classObject = cls as ClassDefinition;
+            const constructorParams = classObject.properties
+              .map(p => p.name)
+              .join(', ');
 
             suggestions.push({
               label: {
@@ -768,8 +867,8 @@ export function createCompletionProviderSubstitutionAsCode(monaco) {
                 value: `Create a new ${cls.name} instance:\n\n\`\`\`javascript\nnew ${cls.name}(${constructorParams})\n\`\`\``
               },
               insertText: cls.name + (
-                cls.properties && cls.properties.length > 0
-                  ? `(${cls.properties.map((_, i) => `\${${i + 1}}`).join(', ')})`
+                classObject.properties.length > 0
+                  ? `(${classObject.properties.map((_, i) => `\${${i + 1}}`).join(', ')})`
                   : '()'
               ),
               insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
@@ -815,7 +914,7 @@ export function createCompletionProviderSubstitutionAsCode(monaco) {
               label: 'message',
               kind: monaco.languages.CompletionItemKind.Variable,
               documentation: 'The error message',
-              insertText: '"${1:keyName}"',
+              insertText: '"${1:errorMessage}"',
               insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
               range: range,
               sortText: '00-02' // High priority sorting
@@ -873,4 +972,3 @@ export function createCompletionProviderSubstitutionAsCode(monaco) {
     }
   };
 }
-

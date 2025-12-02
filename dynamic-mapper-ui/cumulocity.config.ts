@@ -75,7 +75,7 @@ export default {
         from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_JavaScript.png',
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_JavaScript.png'
       },
-            {
+      {
         from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_SmartFunction.png',
         to: 'image/Dynamic_Mapper_Mapping_Stepper_SmartFunction.png'
       },
@@ -88,12 +88,38 @@ export default {
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Snooping_Started.png'
       },
       {
+        from: '../resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_TransformationType.png',
+        to: 'image/Dynamic_Mapper_Mapping_Table_Add_Modal_TransformationType.png'
+      },
+
+      {
         from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Generate_JSONata.png',
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_Generate_JSONata.png'
       },
-            {
+      {
+        from: '../resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_Payload.png',
+        to: 'image/Dynamic_Mapper_Mapping_Table_Add_Modal_Payload.png'
+      },
+
+      {
         from: '../resources/image/Dynamic_Mapper_Mapping_Substitution_Outbound.png',
         to: 'image/Dynamic_Mapper_Mapping_Substitution_Outbound.png'
+      },
+      {
+        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Mapping_Metadata_Inbound.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Mapping_Metadata_Inbound.png'
+      },
+      {
+        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Mapping_Metadata_Outbound.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Mapping_Metadata_Outbound.png'
+      },
+      {
+        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Change_Metadata.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_Change_Metadata.png'
+      },
+            {
+        from: '../resources/image/Dynamic_Mapper_Connector_New.png',
+        to: 'image/Dynamic_Mapper_Connector_New.png'
       },
       {
         from: '../LICENSE',

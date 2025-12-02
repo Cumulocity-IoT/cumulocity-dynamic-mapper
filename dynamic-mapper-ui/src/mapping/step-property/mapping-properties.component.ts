@@ -26,7 +26,6 @@ import {
   OnDestroy,
   OnInit,
   Output,
-  SimpleChanges,
   ViewEncapsulation
 } from '@angular/core';
 import { FormGroup } from '@angular/forms';
@@ -47,9 +46,8 @@ import { Alert, AlertService } from '@c8y/ngx-components';
   standalone: false
 })
 export class MappingStepPropertiesComponent
-  implements OnInit, OnChanges, OnDestroy {
+  implements OnInit, OnDestroy {
   @Input() mapping: Mapping;
-  @Input() supportsMessageContext: boolean;
 
   @Input() stepperConfiguration: StepperConfiguration;
   @Input() propertyFormly: FormGroup;
@@ -77,15 +75,6 @@ export class MappingStepPropertiesComponent
   private sharedService = inject(SharedService);
   private mappingService = inject(MappingService);
   private formatStringPipe = inject(FormatStringPipe);
-
-  ngOnChanges(changes: SimpleChanges) {
-    if (changes['supportsMessageContext']) {
-      this.supportsMessageContext =
-        changes['supportsMessageContext'].currentValue;
-      this.propertyFormlyFields = [...this.propertyFormlyFields];
-      // console.log('Changes', changes);
-    }
-  }
 
   async ngOnInit() {
     this.feature = await this.sharedService.getFeatures();
@@ -189,36 +178,36 @@ export class MappingStepPropertiesComponent
             hideExpression:
               this.stepperConfiguration.direction == Direction.INBOUND
           },
-          {
-            className: 'col-lg-6',
-            key: 'filterMapping',
-            type: 'input',
-            templateOptions: {
-              label: 'Filter Mapping',
-              placeholder: 'custom_OperationFragment',
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
-              description:
-                'The filter has to be defined as boolean expression (JSONata), e.g. <code>$exists(<C8Y_FRAGMENT>)</code>',
-              required:
-                this.stepperConfiguration.direction == Direction.OUTBOUND
-            },
-            hideExpression:
-              this.stepperConfiguration.direction == Direction.INBOUND || (this.stepperConfiguration.direction == Direction.OUTBOUND && (this.mapping.snoopStatus == SnoopStatus.NONE || this.mapping.snoopStatus == SnoopStatus.STOPPED)),
-            hooks: {
-              onInit: (field: FormlyFieldConfig) => {
-                field.formControl.valueChanges.pipe(
-                  // Wait for 500ms pause in typing before processing
-                  debounceTime(500),
+          // {
+          //   className: 'col-lg-6',
+          //   key: 'filterMapping',
+          //   type: 'input',
+          //   templateOptions: {
+          //     label: 'Filter Mapping',
+          //     placeholder: 'custom_OperationFragment',
+          //     disabled:
+          //       this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
+          //     description:
+          //       'The filter has to be defined as boolean expression (JSONata), e.g. <code>$exists(<C8Y_FRAGMENT>)</code>',
+          //     required:
+          //       this.stepperConfiguration.direction == Direction.OUTBOUND
+          //   },
+          //   hideExpression:
+          //     this.stepperConfiguration.direction == Direction.INBOUND || (this.stepperConfiguration.direction == Direction.OUTBOUND && (this.mapping.snoopStatus == SnoopStatus.NONE || this.mapping.snoopStatus == SnoopStatus.STOPPED)),
+          //   hooks: {
+          //     onInit: (field: FormlyFieldConfig) => {
+          //       field.formControl.valueChanges.pipe(
+          //         // Wait for 1500ms pause in typing before processing
+          //         debounceTime(1500),
 
-                  // Only trigger if the value has actually changed
-                  distinctUntilChanged()
-                ).subscribe(path => {
-                  this.updateFilterMappingExpressionResult(path);
-                });
-              }
-            }
-          },
+          //         // Only trigger if the value has actually changed
+          //         distinctUntilChanged()
+          //       ).subscribe(path => {
+          //         this.updateFilterMappingExpressionResult(path);
+          //       });
+          //     }
+          //   }
+          // },
           {
             className: 'col-lg-6',
             key: 'filterInventory',
@@ -238,8 +227,8 @@ export class MappingStepPropertiesComponent
             hooks: {
               onInit: (field: FormlyFieldConfig) => {
                 field.formControl.valueChanges.pipe(
-                  // Wait for 500ms pause in typing before processing
-                  debounceTime(500),
+                  // Wait for 1500ms pause in typing before processing
+                  debounceTime(1500),
 
                   // Only trigger if the value has actually changed
                   distinctUntilChanged()
@@ -494,27 +483,6 @@ export class MappingStepPropertiesComponent
                 'Max failure count, if this is exceeded the mapping is automatically deactivated. A value of 0 means no limit. The failure count is reset to 0 if the mapping is reactivated.',
             },
           }
-        ]
-      },
-      {
-        fieldGroupClassName: 'row',
-        fieldGroup: [
-          {
-            className: 'col-lg-6',
-            key: 'supportsMessageContext',
-            type: 'switch',
-            wrappers: ['custom-form-field-wrapper'],
-            templateOptions: {
-              switchMode: true,
-              label: 'Use message context',
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
-              description:
-                'Supports key from message context, e.g. partition keys for Kafka. This property only applies to certain connectors.',
-              hideLabel: true
-            },
-            hideExpression: () => !this.supportsMessageContext
-          },
         ]
       }
     ];

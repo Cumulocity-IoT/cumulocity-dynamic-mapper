@@ -113,8 +113,8 @@ class JSONataExtractionOutboundProcessorTest {
         // FIX: Use eq() for specific tenant, any() for mapping
         when(mappingService.getMappingStatus(eq(TEST_TENANT), any(Mapping.class))).thenReturn(mappingStatus);
 
-        when(serviceConfiguration.isLogPayload()).thenReturn(false);
-        when(serviceConfiguration.isLogSubstitution()).thenReturn(false);
+        when(serviceConfiguration.getLogPayload()).thenReturn(false);
+        when(serviceConfiguration.getLogSubstitution()).thenReturn(false);
     }
 
     private void injectDependencies() throws Exception {
@@ -140,8 +140,6 @@ class JSONataExtractionOutboundProcessorTest {
                 .transformationType(TransformationType.DEFAULT)
                 .debug(false)
                 .active(false)
-                .tested(false)
-                .supportsMessageContext(true)
                 .eventWithAttachment(false)
                 .createNonExistingDevice(false)
                 .updateExistingDevice(false)
@@ -292,8 +290,8 @@ class JSONataExtractionOutboundProcessorTest {
     void testExtractFromSourceWithDebugLogging() throws Exception {
         // Given - Enable debug logging
         mapping.setDebug(true);
-        when(serviceConfiguration.isLogPayload()).thenReturn(true);
-        when(serviceConfiguration.isLogSubstitution()).thenReturn(true);
+        when(serviceConfiguration.getLogPayload()).thenReturn(true);
+        when(serviceConfiguration.getLogSubstitution()).thenReturn(true);
 
         // When
         processor.process(exchange);

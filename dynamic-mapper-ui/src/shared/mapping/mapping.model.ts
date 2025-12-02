@@ -146,7 +146,7 @@ export interface Mapping {
   debug: boolean;
 
   /** Whether the mapping has been tested */
-  tested: boolean;
+  tested?: boolean;
 
   /** Whether the mapping supports message context */
   supportsMessageContext?: boolean;
@@ -291,14 +291,18 @@ export enum MappingType {
 }
 
 export const TransformationTypeLabels = {
-[Direction.INBOUND]:{  [TransformationType.DEFAULT]: 'Default Transformation',
-  [TransformationType.SUBSTITUTION_AS_CODE]: 'Substitution as JavaScript Code',
-  [TransformationType.SMART_FUNCTION]: 'Smart Function (JavaScript) to create Cumulocity API calls',
-  [TransformationType.JSONATA]: 'Substitution as JSONata Expression'},
-  [Direction.OUTBOUND]:{  [TransformationType.DEFAULT]: 'Default Transformation',
-  [TransformationType.SUBSTITUTION_AS_CODE]: 'Substitution as JavaScript Code',
-  [TransformationType.SMART_FUNCTION]: 'Smart Function (JavaScript) to create Broker Payload',
-  [TransformationType.JSONATA]: 'Substitution as JSONata Expression'}
+  [Direction.INBOUND]: {
+    [TransformationType.DEFAULT]: 'Default Transformation',
+    [TransformationType.SUBSTITUTION_AS_CODE]: 'Substitution as JavaScript Code',
+    [TransformationType.SMART_FUNCTION]: 'Smart Function (JavaScript) to create Cumulocity API calls',
+    [TransformationType.JSONATA]: 'Substitution as JSONata Expression'
+  },
+  [Direction.OUTBOUND]: {
+    [TransformationType.DEFAULT]: 'Default Transformation',
+    [TransformationType.SUBSTITUTION_AS_CODE]: 'Substitution as JavaScript Code',
+    [TransformationType.SMART_FUNCTION]: 'Smart Function (JavaScript) to create Broker Payload',
+    [TransformationType.JSONATA]: 'Substitution as JSONata Expression'
+  }
 } as const;
 
 export const TransformationTypeDescriptions = {
@@ -656,7 +660,11 @@ export interface Feature {
   externalExtensionsEnabled: boolean;
   userHasMappingCreateRole: boolean;
   userHasMappingAdminRole: boolean;
-}export function getDeviceIdentifiers(mapping: Mapping): Substitution[] {
+  pulsarAvailable: boolean;
+  deviceIsolationMQTTServiceEnabled: boolean;
+}
+
+export function getDeviceIdentifiers(mapping: Mapping): Substitution[] {
   const mp: Substitution[] = mapping.substitutions
     .filter(sub => definesDeviceIdentifier(mapping, sub));
   return mp;
@@ -748,5 +756,5 @@ export function getGenericDeviceIdentifier(mapping: Mapping): string {
 }
 
 export function isSubstitutionsAsCode(mapping: Mapping): boolean {
-  return  MappingType.CODE_BASED === mapping.mappingType || mapping.transformationType == TransformationType.SUBSTITUTION_AS_CODE || mapping.transformationType == TransformationType.SMART_FUNCTION;
+  return MappingType.CODE_BASED === mapping.mappingType || mapping.transformationType == TransformationType.SUBSTITUTION_AS_CODE || mapping.transformationType == TransformationType.SMART_FUNCTION;
 }

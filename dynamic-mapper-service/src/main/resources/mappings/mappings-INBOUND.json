@@ -39,8 +39,6 @@
     ],
     "active": true,
     "debug": false,
-    "tested": false,
-    "supportsMessageContext": false,
     "createNonExistingDevice": true,
     "updateExistingDevice": false,
     "autoAckOperation": true,
@@ -86,8 +84,6 @@
     ],
     "active": false,
     "debug": false,
-    "tested": false,
-    "supportsMessageContext": false,
     "createNonExistingDevice": true,
     "updateExistingDevice": false,
     "autoAckOperation": true,
@@ -113,8 +109,6 @@
     "substitutions": [],
     "active": false,
     "debug": false,
-    "tested": false,
-    "supportsMessageContext": true,
     "createNonExistingDevice": true,
     "updateExistingDevice": false,
     "autoAckOperation": true,
@@ -141,8 +135,6 @@
     "substitutions": [],
     "active": false,
     "debug": false,
-    "tested": false,
-    "supportsMessageContext": true,
     "eventWithAttachment": false,
     "createNonExistingDevice": true,
     "updateExistingDevice": false,
@@ -155,7 +147,6 @@
     "maxFailureCount": 0,
     "qos": "AT_LEAST_ONCE",
     "code": "LyoqDQogKiBAbmFtZSBEZWZhdWx0IHRlbXBsYXRlIGZvciBTbWFydCBGdW5jdGlvbg0KICogQGRlc2NyaXB0aW9uIERlZmF1bHQgdGVtcGxhdGUgZm9yIFNtYXJ0IEZ1bmN0aW9uLCBjcmVhdGVzIG9uZSBtZWFzdXJlbWVudA0KICogQHRlbXBsYXRlVHlwZSBJTkJPVU5EX1NNQVJUX0ZVTkNUSU9ODQogKiBAZGlyZWN0aW9uIElOQk9VTkQNCiAqIEBkZWZhdWx0VGVtcGxhdGUgdHJ1ZQ0KICogQGludGVybmFsIHRydWUNCiAqIEByZWFkb25seSB0cnVlDQogKiANCiovDQoNCmZ1bmN0aW9uIG9uTWVzc2FnZShpbnB1dE1zZywgY29udGV4dCkgew0KICAgIGNvbnN0IG1zZyA9IGlucHV0TXNnOw0KICAgIGNvbnN0IGN0eCA9IGNvbnRleHQuZ2V0U3RhdGVBbGwoKTsNCg0KICAgIHZhciBwYXlsb2FkID0gbXNnLmdldFBheWxvYWQoKTsNCiAgICBjb250ZXh0LmxvZ01lc3NhZ2UoIkNvbnRleHQ6ICIgKyBjdHgpOw0KICAgIGNvbnRleHQubG9nTWVzc2FnZSgiUGF5bG9hZCBSYXc6IiArIG1zZy5nZXRQYXlsb2FkKCkpOw0KICAgIGNvbnRleHQubG9nTWVzc2FnZSgiUGF5bG9hZCBtZXNzYWdlSWQiICsgIG1zZy5nZXRQYXlsb2FkKCkuZ2V0KCJtZXNzYWdlSWQiKSk7DQoNCiAgICB2YXIgZGV2aWNlQnlFeHRlcm5hbElkID0gY29udGV4dC5sb29rdXBEZXZpY2VCeUV4dGVybmFsSWQoY3R4WyJfVE9QSUNfTEVWRUxfIl1bMV0sICJjOHlfU2VyaWFsIiApOw0KICAgIGNvbnRleHQubG9nTWVzc2FnZSgiRGV2aWNlIChieSBleHRlcm5hbCBpZCk6ICIgKyBkZXZpY2VCeUV4dGVybmFsSWQpOw0KDQogICAgcmV0dXJuIFt7DQogICAgICAgIGN1bXVsb2NpdHlUeXBlOiAibWVhc3VyZW1lbnQiLA0KICAgICAgICBhY3Rpb246ICJjcmVhdGUiLA0KICAgICAgICANCiAgICAgICAgcGF5bG9hZDogew0KICAgICAgICAgICAgInRpbWUiOiAgbmV3IERhdGUoKS50b0lTT1N0cmluZygpLA0KICAgICAgICAgICAgInR5cGUiOiAiYzh5X1RlbXBlcmF0dXJlTWVhc3VyZW1lbnQiLA0KICAgICAgICAgICAgImM4eV9UZW1wZXJhdHVyZU1lYXN1cmVtZW50Ijogew0KICAgICAgICAgICAgICAgICJUIjogew0KICAgICAgICAgICAgICAgICAgICAidW5pdCI6IHBheWxvYWRbIlRlbXBlcmF0dXJlIl1bInVuaXQiXSwNCiAgICAgICAgICAgICAgICAgICAgInZhbHVlIjogcGF5bG9hZFsiVGVtcGVyYXR1cmUiXVsidmFsdWUiXQ0KICAgICAgICAgICAgICAgIH0NCiAgICAgICAgICAgIH0NCiAgICAgICAgfSwNCg0KICAgICAgICBleHRlcm5hbFNvdXJjZTogW3sidHlwZSI6ImM4eV9TZXJpYWwiLCAiZXh0ZXJuYWxJZCI6IGN0eFsiX1RPUElDX0xFVkVMXyJdWzFdfV0NCiAgICB9XTsNCn0=",
-    "lastUpdate": 1759917840151,
-    "transformationAsCode": true
+    "lastUpdate": 1759917840151
   }
 ]

@@ -58,7 +58,7 @@ public class SendOutboundProcessor extends BaseProcessor {
     public void process(Exchange exchange) throws Exception {
         ProcessingContext<Object> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
         String tenant = context.getTenant();
-        Boolean testing = context.isTesting();
+        Boolean testing = context.getTesting();
         Mapping mapping = context.getMapping();
 
         try {
@@ -102,17 +102,17 @@ public class SendOutboundProcessor extends BaseProcessor {
                 request = ProcessingResultHelper.createAndAddDynamicMapperRequest(context, context.getMapping().getTargetTemplate(), null,
                         context.getMapping());
             }
-            if (connectorClient.isConnected() && context.isSendPayload()) {
+            if (connectorClient.isConnected() && context.getSendPayload()) {
                 connectorClient.publishMEAO(context);
             } else {
                 log.warn("{} - Not sending message: connected {}, sendPayload {}", tenant,
-                        connectorClient.isConnected(), context.isSendPayload());
+                        connectorClient.isConnected(), context.getSendPayload());
             }
 
             // Log if debug is enabled
-            if (mapping.getDebug() || context.getServiceConfiguration().isLogPayload()) {
-                log.info("{} - Transformed message sent: API: {}, message: {}",
-                        tenant, request.getApi(), request.getRequest());
+            if (mapping.getDebug() || context.getServiceConfiguration().getLogPayload()) {
+                log.info("{} - Transformed message sent: API {}, message {}, topic {}",
+                        tenant, request.getApi(), request.getRequest(), context.getResolvedPublishTopic());
             }
 
         } catch (Exception e) {

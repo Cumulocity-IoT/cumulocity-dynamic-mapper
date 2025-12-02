@@ -37,11 +37,11 @@ import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.flow.CumulocityMessage;
 import dynamic.mapper.processor.flow.DeviceMessage;
-import dynamic.mapper.processor.flow.FlowContext;
-import dynamic.mapper.processor.flow.JavaScriptInteropHelper;
+import dynamic.mapper.processor.flow.JavaScriptConsole;
+import dynamic.mapper.processor.flow.DataPrepContext;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.util.JavaScriptInteropHelper;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
@@ -93,19 +93,20 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
         ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();
 
         Object payloadObject = context.getPayload();
-        
-        if (serviceConfiguration.isLogPayload() || mapping.getDebug()) {
+
+        if (serviceConfiguration.getLogPayload() || mapping.getDebug()) {
             String payload = toPrettyJsonString(payloadObject); // is this and this required?
             log.info("{} - Incoming payload (patched) in onMessage(): {} {} {} {}", tenant,
                     payload,
-                    serviceConfiguration.isLogPayload(), mapping.getDebug(),
-                    serviceConfiguration.isLogPayload() || mapping.getDebug());
+                    serviceConfiguration.getLogPayload(), mapping.getDebug(),
+                    serviceConfiguration.getLogPayload() || mapping.getDebug());
         }
 
         if (mapping.getCode() != null) {
             Context graalContext = context.getGraalContext();
 
             // Use try-finally to ensure cleanup
+            Value bindings = null;
             Value onMessageFunction = null;
             Value inputMessage = null;
             Value result = null;
@@ -113,7 +114,12 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
             try {
                 // Task 1: Invoking JavaScript function
                 String identifier = Mapping.SMART_FUNCTION_NAME + "_" + mapping.getIdentifier();
-                Value bindings = graalContext.getBindings("js");
+                bindings = graalContext.getBindings("js");
+
+                if (context.getFlowContext() != null && context.getFlowContext().getTesting()) {
+                    JavaScriptConsole console = new JavaScriptConsole(context.getFlowContext(), tenant);
+                    bindings.putMember("console", console);
+                }
 
                 // Load and execute the JavaScript code
                 byte[] decodedBytes = Base64.getDecoder().decode(mapping.getCode());
@@ -184,7 +190,7 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
             return;
         }
 
-        if (context.getMapping().getDebug() || context.getServiceConfiguration().isLogPayload()) {
+        if (context.getMapping().getDebug() || context.getServiceConfiguration().getLogPayload()) {
             log.info("{} - onMessage function returned {} complete message(s)", tenant, outputMessages.size());
         }
 
@@ -194,27 +200,37 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
 
     private void loadSharedCode(Context graalContext, ProcessingContext<?> context) {
         if (context.getSharedCode() != null) {
-            byte[] decodedSharedCodeBytes = Base64.getDecoder().decode(context.getSharedCode());
-            String decodedSharedCode = new String(decodedSharedCodeBytes);
-            Source sharedSource = Source.newBuilder("js", decodedSharedCode, "sharedCode.js")
-                    .buildLiteral();
-            graalContext.eval(sharedSource);
+            Source sharedSource = null;
+            try {
+                byte[] decodedSharedCodeBytes = Base64.getDecoder().decode(context.getSharedCode());
+                String decodedSharedCode = new String(decodedSharedCodeBytes);
+                sharedSource = Source.newBuilder("js", decodedSharedCode, "sharedCode.js")
+                        .buildLiteral();
+                graalContext.eval(sharedSource);
+            } finally {
+                sharedSource = null;
+            }
         }
     }
 
     private void loadSystemCode(Context graalContext, ProcessingContext<?> context) {
         if (context.getSystemCode() != null) {
-            byte[] decodedSystemCodeBytes = Base64.getDecoder().decode(context.getSystemCode());
-            String decodedSystemCode = new String(decodedSystemCodeBytes);
-            Source systemSource = Source.newBuilder("js", decodedSystemCode, "systemCode.js")
-                    .buildLiteral();
-            graalContext.eval(systemSource);
+            Source systemSource = null;
+            try {
+                byte[] decodedSystemCodeBytes = Base64.getDecoder().decode(context.getSystemCode());
+                String decodedSystemCode = new String(decodedSystemCodeBytes);
+                systemSource = Source.newBuilder("js", decodedSystemCode, "systemCode.js")
+                        .buildLiteral();
+                graalContext.eval(systemSource);
+            } finally {
+                systemSource = null;
+            }
         }
     }
 
     /**
      * Create input message for outbound processing.
-     * For outbound, the input is a CumulocityMessage containing the C8Y object.
+     * For outbound, the input is a CumulocityObject containing the C8Y object.
      */
     private Value createInputMessage(Context graalContext, ProcessingContext<?> context) {
         // Create a DeviceMessage from the current context
@@ -234,19 +250,30 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
      * Extract warnings from the flow context.
      */
     private void extractWarnings(ProcessingContext<?> context, String tenant) {
+        Value warnings = null;
+        try {
+            warnings = context.getFlowContext().getState(DataPrepContext.WARNINGS);
+            if (warnings != null && warnings.hasArrayElements()) {
+                List<String> warningList = new ArrayList<>();
+                long size = warnings.getArraySize();
 
-        Value warnings = context.getFlowContext().getState(FlowContext.WARNINGS);
-        if (warnings != null && warnings.hasArrayElements()) {
-            List<String> warningList = new ArrayList<>();
-            long size = warnings.getArraySize();
-            for (long i = 0; i < size; i++) {
-                Value warningElement = warnings.getArrayElement(i);
-                if (warningElement != null && warningElement.isString()) {
-                    warningList.add(warningElement.asString());
+                for (long i = 0; i < size; i++) {
+                    Value warningElement = null;
+                    try {
+                        warningElement = warnings.getArrayElement(i);
+                        if (warningElement != null && warningElement.isString()) {
+                            warningList.add(warningElement.asString());
+                        }
+                    } finally {
+                        warningElement = null;
+                    }
                 }
+
+                context.setWarnings(warningList);
+                log.debug("{} - Collected {} warning(s) from flow execution", tenant, warningList.size());
             }
-            context.setWarnings(warningList);
-            log.debug("{} - Collected {} warning(s) from flow execution", tenant, warningList.size());
+        } finally {
+            warnings = null;
         }
     }
 
@@ -254,19 +281,30 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
      * Extract warnings from the flow context.
      */
     private void extractLogs(ProcessingContext<?> context, String tenant) {
+        Value logs = null;
+        try {
+            logs = context.getFlowContext().getState(DataPrepContext.LOGS);
+            if (logs != null && logs.hasArrayElements()) {
+                List<String> logList = new ArrayList<>();
+                long size = logs.getArraySize();
 
-        Value logs = context.getFlowContext().getState(FlowContext.LOGS);
-        if (logs != null && logs.hasArrayElements()) {
-            List<String> logList = new ArrayList<>();
-            long size = logs.getArraySize();
-            for (long i = 0; i < size; i++) {
-                Value logElement = logs.getArrayElement(i);
-                if (logElement != null && logElement.isString()) {
-                    logList.add(logElement.asString());
+                for (long i = 0; i < size; i++) {
+                    Value logElement = null;
+                    try {
+                        logElement = logs.getArrayElement(i);
+                        if (logElement != null && logElement.isString()) {
+                            logList.add(logElement.asString());
+                        }
+                    } finally {
+                        logElement = null;
+                    }
                 }
+
+                context.setLogs(logList);
+                log.debug("{} - Collected {} logs from flow execution", tenant, logList.size());
             }
-            context.setLogs(logList);
-            log.debug("{} - Collected {} logs from flow execution", tenant, logList.size());
+        } finally {
+            logs = null;
         }
     }
 
@@ -274,7 +312,7 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
      * Check if the result value is empty.
      * Handles null, undefined, empty arrays, and empty objects.
      */
-    private boolean isEmptyResult(Value result) {
+    private Boolean isEmptyResult(Value result) {
         // Null check
         if (result == null || result.isNull()) {
             return true;
@@ -286,8 +324,12 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
         }
 
         // Empty array check
-        if (result.hasArrayElements() && result.getArraySize() == 0) {
-            return true;
+        if (result.hasArrayElements()) {
+            if (result.getArraySize() == 0) {
+                return true;
+            } else {
+                return false;
+            }
         }
 
         // Empty object check (if applicable)
@@ -325,7 +367,7 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
 
     /**
      * Process a single message element and add it to the output list.
-     * Handles both DeviceMessage and CumulocityMessage types.
+     * Handles both DeviceMessage and CumulocityObject types.
      */
     private void processMessageElement(Value element, List<Object> outputMessages, String tenant) {
         if (element == null || element.isNull()) {
@@ -334,21 +376,10 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
         }
 
         try {
-            if (JavaScriptInteropHelper.isDeviceMessage(element)) {
-                DeviceMessage deviceMsg = JavaScriptInteropHelper.convertToDeviceMessage(element);
-                outputMessages.add(deviceMsg);
-                log.debug("{} - Processed DeviceMessage: topic={}", tenant, deviceMsg.getTopic());
-
-            } else if (JavaScriptInteropHelper.isCumulocityMessage(element)) {
-                CumulocityMessage cumulocityMsg = JavaScriptInteropHelper.convertToCumulocityMessage(element);
-                outputMessages.add(cumulocityMsg);
-                log.debug("{} - Processed CumulocityMessage: type={}, action={}",
-                        tenant, cumulocityMsg.getCumulocityType(), cumulocityMsg.getAction());
-
-            } else {
-                log.warn("{} - Unknown message type returned from onMessage function: {}",
-                        tenant, element.getClass().getName());
-            }
+            // always use DeviceMessage for outbound
+            DeviceMessage deviceMsg = JavaScriptInteropHelper.convertToDeviceMessage(element);
+            outputMessages.add(deviceMsg);
+            log.debug("{} - Processed DeviceMessage: topic={}", tenant, deviceMsg.getTopic());
         } catch (Exception e) {
             log.error("{} - Error processing message element: {}", tenant, e.getMessage(), e);
         }

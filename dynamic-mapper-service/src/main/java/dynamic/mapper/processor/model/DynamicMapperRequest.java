@@ -37,6 +37,7 @@ public class DynamicMapperRequest {
     private int predecessor = -1;;
     private RequestMethod method;
     private API api;
+    private Boolean retain;
     private String sourceId;
     private String externalId;
     private String externalIdType;
@@ -45,7 +46,7 @@ public class DynamicMapperRequest {
     private Exception error;
     // this property documents if a C8Y request was already submitted and is created only for documentation/testing purpose.
     // this happens when a device is created implicitly with mapping.createNonExistingDevice == true
-    // private boolean alreadySubmitted;
+    // private Boolean alreadySubmitted;
     public boolean hasError() {
         return error != null;
     }

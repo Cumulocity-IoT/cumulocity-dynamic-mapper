@@ -92,7 +92,7 @@ public class MonitoringController {
     private ContextService<UserCredentials> contextService;
 
     @Value("${APP.externalExtensionsEnabled}")
-    private boolean externalExtensionsEnabled;
+    private Boolean externalExtensionsEnabled;
 
     @Operation(summary = "Get connector status", description = "Retrieves the current status of a specific connector including connection state, last update time, and any error messages.", parameters = {
             @Parameter(name = "connectorIdentifier", description = "The unique identifier of the connector", required = true, example = "l19zjk", schema = @Schema(type = "string"))

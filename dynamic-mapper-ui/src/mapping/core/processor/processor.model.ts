@@ -20,13 +20,14 @@
 import { AlertService } from '@c8y/ngx-components';
 import * as _ from 'lodash';
 import { getTypeOf, randomIdAsString } from '../../../mapping/shared/util';
-import { API, getPathTargetForDeviceIdentifiers, Mapping, Substitution, MappingType, RepairStrategy } from '../../../shared';
+import { API, getPathTargetForDeviceIdentifiers, Mapping, Substitution, MappingType, RepairStrategy, ContentChanges } from '../../../shared';
 import { SubstitutionContext } from './processor-js.model';
+import { Content } from 'vanilla-jsoneditor';
 
 export interface DynamicMapperRequest {
   predecessor?: number;
   method?: string;
-  targetAPI?: string;
+  api?: string;
   sourceId?: any;
   externalId?: string;
   externalIdType?: string;
@@ -43,7 +44,7 @@ export interface ProcessingContext {
   payload?: JSON;
   requests?: DynamicMapperRequest[];
   errors?: string[];
-  warnings?:string[];
+  warnings?: string[];
   processingType?: ProcessingType;
   mappingType: MappingType;
   processingCache: Map<string, SubstituteValue[]>;
@@ -78,6 +79,7 @@ export enum ProcessingType {
 export enum SubstituteValueType {
   NUMBER,
   TEXTUAL,
+  BOOLEAN,
   OBJECT,
   IGNORE,
   ARRAY
@@ -134,6 +136,12 @@ export function processSubstitute(processingCacheEntry: SubstituteValue[], extra
     processingCacheEntry.push({
       value: extractedSourceContent,
       type: SubstituteValueType.OBJECT,
+      repairStrategy: substitution.repairStrategy
+    });
+  } else if (getTypeOf(extractedSourceContent) == 'Boolean') {
+    processingCacheEntry.push({
+      value: extractedSourceContent,
+      type: SubstituteValueType.BOOLEAN,
       repairStrategy: substitution.repairStrategy
     });
   } else {
@@ -606,3 +614,111 @@ export function evaluateWithArgsWebWorker(codeString: string, ctx: SubstitutionC
     })
   ]);
 }
+
+const PROTECTED_TOKENS = [TOKEN_IDENTITY, TOKEN_TOPIC_LEVEL, TOKEN_CONTEXT_DATA];
+
+function contentChangeAllowed(contentChanges: ContentChanges): boolean {
+  // Convert both contents to JSON
+  const previousJSON = contentToJSON(contentChanges.previousContent);
+  const updatedJSON = contentToJSON(contentChanges.updatedContent);
+
+  // Check if any protected token has changed
+  return !hasProtectedTokenChanges(previousJSON, updatedJSON);
+}
+
+function contentToJSON(content: Content): unknown {
+  if ('json' in content) {
+    return content.json;
+  }
+  // TextContent - try to parse as JSON
+  try {
+    return JSON.parse(content.text);
+  } catch {
+    // If not valid JSON, return as-is wrapped in an object
+    return { text: content.text };
+  }
+}
+
+function hasProtectedTokenChanges(previous: unknown, updated: unknown): boolean {
+  // Check each protected token
+  for (const token of PROTECTED_TOKENS) {
+    const previousValue = findTokenValue(previous, token);
+    const updatedValue = findTokenValue(updated, token);
+
+    // If token exists in either version, check if they differ
+    if (previousValue !== undefined || updatedValue !== undefined) {
+      if (!deepEqual(previousValue, updatedValue)) {
+        return true; // Protected token has changed
+      }
+    }
+  }
+  return false;
+}
+
+function findTokenValue(obj: unknown, token: string): unknown {
+  if (obj === null || obj === undefined) {
+    return undefined;
+  }
+
+  if (typeof obj !== 'object') {
+    return undefined;
+  }
+
+  // Check if current object has the token as a key
+  if (Object.prototype.hasOwnProperty.call(obj, token)) {
+    return (obj as Record<string, unknown>)[token];
+  }
+
+  // Recursively search in nested objects and arrays
+  if (Array.isArray(obj)) {
+    for (const item of obj) {
+      const found = findTokenValue(item, token);
+      if (found !== undefined) {
+        return found;
+      }
+    }
+  } else {
+    for (const value of Object.values(obj as Record<string, unknown>)) {
+      const found = findTokenValue(value, token);
+      if (found !== undefined) {
+        return found;
+      }
+    }
+  }
+
+  return undefined;
+}
+
+function deepEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+
+  if (a === null || b === null || a === undefined || b === undefined) {
+    return a === b;
+  }
+
+  if (typeof a !== typeof b) return false;
+
+  if (typeof a !== 'object') return a === b;
+
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length !== b.length) return false;
+    return a.every((item, index) => deepEqual(item, b[index]));
+  }
+
+  if (Array.isArray(a) || Array.isArray(b)) return false;
+
+  const aObj = a as Record<string, unknown>;
+  const bObj = b as Record<string, unknown>;
+
+  const aKeys = Object.keys(aObj);
+  const bKeys = Object.keys(bObj);
+
+  if (aKeys.length !== bKeys.length) return false;
+
+  return aKeys.every(key =>
+    Object.prototype.hasOwnProperty.call(bObj, key) &&
+    deepEqual(aObj[key], bObj[key])
+  );
+}
+
+export { contentChangeAllowed };

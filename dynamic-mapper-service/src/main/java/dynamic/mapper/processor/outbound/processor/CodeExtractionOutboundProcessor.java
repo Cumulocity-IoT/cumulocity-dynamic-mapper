@@ -43,12 +43,12 @@ import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.flow.JavaScriptInteropHelper;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.SubstituteValue;
 import dynamic.mapper.processor.model.SubstitutionContext;
 import dynamic.mapper.processor.model.SubstitutionEvaluation;
 import dynamic.mapper.processor.model.SubstitutionResult;
+import dynamic.mapper.processor.util.JavaScriptInteropHelper;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -62,9 +62,9 @@ public class CodeExtractionOutboundProcessor extends BaseProcessor {
     @Override
     public void process(Exchange exchange) throws Exception {
         ProcessingContext<Object> context = getProcessingContextAsObject(exchange);
-
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
+        Boolean testing = context.getTesting();
 
         try {
             extractFromSource(context);
@@ -78,10 +78,18 @@ public class CodeExtractionOutboundProcessor extends BaseProcessor {
                     tenant, mapping.getName(), e.getMessage(), lineNumber);
             log.error(errorMessage, e);
 
-            MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
-            context.addError(new ProcessingException("Extraction failed", e));
-            mappingStatus.errors++;
-            mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+            if (e instanceof ProcessingException) {
+                context.addError((ProcessingException) e);
+            } else {
+                context.addError(new ProcessingException(errorMessage, e));
+            }
+
+            if (!testing) {
+                MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
+                mappingStatus.errors++;
+                mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+                context.setIgnoreFurtherProcessing(true);
+            }
         } finally {
             // Close the Context completely
             if (context != null && context.getGraalContext() != null) {
@@ -109,12 +117,12 @@ public class CodeExtractionOutboundProcessor extends BaseProcessor {
 
             Object payloadObject = context.getPayload();
 
-            if (serviceConfiguration.isLogPayload() || mapping.getDebug()) {
-                String payload = toPrettyJsonString(payloadObject);  // is this and this required?
+            if (serviceConfiguration.getLogPayload() || mapping.getDebug()) {
+                String payload = toPrettyJsonString(payloadObject); // is this and this required?
                 log.info("{} - Incoming payload (patched) in extractFromSource(): {} {} {} {}", tenant,
                         payload,
-                        serviceConfiguration.isLogPayload(), mapping.getDebug(),
-                        serviceConfiguration.isLogPayload() || mapping.getDebug());
+                        serviceConfiguration.getLogPayload(), mapping.getDebug(),
+                        serviceConfiguration.getLogPayload() || mapping.getDebug());
             }
 
             if (mapping.getCode() != null) {
@@ -489,7 +497,7 @@ public class CodeExtractionOutboundProcessor extends BaseProcessor {
             }
         }
 
-        if (context.getMapping().getDebug() || context.getServiceConfiguration().isLogPayload()) {
+        if (context.getMapping().getDebug() || context.getServiceConfiguration().getLogPayload()) {
             log.info("{} - Extraction returned {} results, payload: {}",
                     tenant,
                     keySet.size(),

@@ -130,7 +130,7 @@ class MappingContextOutboundProcessorTest {
         when(mappingService.getMappingStatus(anyString(), any(Mapping.class))).thenReturn(mappingStatus);
 
         // Setup service configuration defaults
-        when(serviceConfiguration.isLogPayload()).thenReturn(false);
+        when(serviceConfiguration.getLogPayload()).thenReturn(false);
         when(serviceConfiguration.getCodeTemplates()).thenReturn(createCodeTemplates());
 
         // Setup configuration registry defaults
@@ -165,8 +165,6 @@ class MappingContextOutboundProcessorTest {
                 .transformationType(TransformationType.DEFAULT)
                 .debug(false)
                 .active(true)
-                .tested(false)
-                .supportsMessageContext(true)
                 .snoopStatus(SnoopStatus.NONE)
                 .qos(Qos.AT_MOST_ONCE)
                 .lastUpdate(System.currentTimeMillis())
@@ -254,7 +252,7 @@ class MappingContextOutboundProcessorTest {
     void testProcessWithDebugLogging() throws Exception {
         // Given - Debug enabled
         mapping.setDebug(true);
-        when(serviceConfiguration.isLogPayload()).thenReturn(true);
+        when(serviceConfiguration.getLogPayload()).thenReturn(true);
 
         // When
         processor.process(exchange);
@@ -304,7 +302,7 @@ class MappingContextOutboundProcessorTest {
         byte[] payloadBytes = "test payload bytes".getBytes();
         when(processingContext.getPayload()).thenReturn(payloadBytes);
         mapping.setDebug(true);
-        when(serviceConfiguration.isLogPayload()).thenReturn(true);
+        when(serviceConfiguration.getLogPayload()).thenReturn(true);
 
         // When
         processor.process(exchange);
@@ -320,7 +318,7 @@ class MappingContextOutboundProcessorTest {
         // Given - Null payload
         when(processingContext.getPayload()).thenReturn(null);
         mapping.setDebug(true);
-        when(serviceConfiguration.isLogPayload()).thenReturn(true);
+        when(serviceConfiguration.getLogPayload()).thenReturn(true);
 
         // When
         processor.process(exchange);
@@ -470,7 +468,7 @@ void testCompleteOutboundFlowWithGraalVMHandling() throws Exception {
     mapping.setTransformationType(TransformationType.SMART_FUNCTION);
     mapping.setCode("function onMessage(message, context) { return {transformed: message}; }");
     mapping.setDebug(true);
-    when(serviceConfiguration.isLogPayload()).thenReturn(true);
+    when(serviceConfiguration.getLogPayload()).thenReturn(true);
 
     // GraalVM Engine mock will cause context creation to fail
     when(configurationRegistry.getGraalEngine(TEST_TENANT)).thenReturn(graalEngine);
@@ -549,7 +547,7 @@ void testCompleteOutboundFlowWithGraalVMHandling() throws Exception {
         mapping.setTransformationType(TransformationType.DEFAULT);
         mapping.setCode(null); // No code to ensure clean processing
         mapping.setDebug(true);
-        when(serviceConfiguration.isLogPayload()).thenReturn(true);
+        when(serviceConfiguration.getLogPayload()).thenReturn(true);
 
         // When
         processor.process(exchange);

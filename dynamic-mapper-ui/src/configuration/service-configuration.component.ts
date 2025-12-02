@@ -20,13 +20,14 @@
 import { HttpStatusCode } from '@angular/common/http';
 import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
-import { AlertService, gettext } from '@c8y/ngx-components';
+import { AlertService } from '@c8y/ngx-components';
 import packageJson from '../../package.json';
 import { Feature, Operation, SharedService } from '../shared';
 import { ServiceConfiguration } from './shared/configuration.model';
 import { ActivatedRoute } from '@angular/router';
 import { AIAgentService } from 'src/mapping/core/ai-agent.service';
 import { BehaviorSubject, from, map, Subject, takeUntil } from 'rxjs';
+import { gettext } from '@c8y/ngx-components/gettext';
 
 @Component({
   selector: 'd11r-mapping-service-configuration',
@@ -55,6 +56,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     sendSubscriptionEvents: false,
     sendNotificationLifecycle: false,
     outboundMappingEnabled: true,
+    deviceIsolationMQTTServiceEnabled: false,
     inboundExternalIdCacheSize: 0,
     inboundExternalIdCacheRetention: 0,
     inventoryCacheSize: 0,
@@ -63,6 +65,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     maxCPUTimeMS: 5000,  // 5 seconds
     jsonataAgent: undefined,
     javaScriptAgent: undefined,
+    smartFunctionAgent: undefined,
   };
   editable2updated: boolean = false;
 
@@ -83,6 +86,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
       sendSubscriptionEvents: new FormControl(''),
       sendNotificationLifecycle: new FormControl(''),
       outboundMappingEnabled: new FormControl(''),
+      deviceIsolationMQTTServiceEnabled: new FormControl(''),
       inboundExternalIdCacheSize: new FormControl(''),
       inboundExternalIdCacheRetention: new FormControl(''),
       inventoryCacheRetention: new FormControl(''),
@@ -91,6 +95,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
       maxCPUTimeMS: new FormControl(''),
       jsonataAgent: new FormControl({ value: '', disabled: true }),
       javaScriptAgent: new FormControl({ value: '', disabled: true }),
+      smartFunctionAgent: new FormControl({ value: '', disabled: true }),
     });
     await this.loadData();
     from(this.aiAgentService.getAIAgents())
@@ -103,9 +108,11 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
         if (this.aiAgentDeployed) {
           this.serviceForm.get('javaScriptAgent')?.enable();
           this.serviceForm.get('jsonataAgent')?.enable();
+          this.serviceForm.get('smartFunctionAgent')?.enable();
         } else {
           this.serviceForm.get('javaScriptAgent')?.disable();
           this.serviceForm.get('jsonataAgent')?.disable();
+          this.serviceForm.get('smartFunctionAgent')?.disable();
         }
       });
   }
@@ -129,6 +136,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
       sendNotificationLifecycle:
         this.serviceConfiguration.sendNotificationLifecycle,
       outboundMappingEnabled: this.serviceConfiguration.outboundMappingEnabled,
+      deviceIsolationMQTTServiceEnabled: this.serviceConfiguration.deviceIsolationMQTTServiceEnabled,
       inboundExternalIdCacheSize:
         this.serviceConfiguration.inboundExternalIdCacheSize,
       inboundExternalIdCacheRetention:
@@ -145,6 +153,8 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
         this.serviceConfiguration.jsonataAgent,
       javaScriptAgent:
         this.serviceConfiguration.javaScriptAgent,
+      smartFunctionAgent:
+        this.serviceConfiguration.smartFunctionAgent,
     });
   }
 
@@ -191,6 +201,10 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     ;
     conf.jsonataAgent = this.serviceForm.value['jsonataAgent']
       ? this.serviceForm.value['jsonataAgent']?.trim()
+      : undefined;
+
+    conf.jsonataAgent = this.serviceForm.value['smartFunctionAgent']
+      ? this.serviceForm.value['smartFunctionAgent']?.trim()
       : undefined;
 
     const response = await this.sharedService.updateServiceConfiguration(conf);

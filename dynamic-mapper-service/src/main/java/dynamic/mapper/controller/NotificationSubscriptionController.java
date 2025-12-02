@@ -273,7 +273,7 @@ public class NotificationSubscriptionController {
 
     private void validateOutboundMappingEnabled(String tenant) {
         ServiceConfiguration config = serviceConfigurationService.getServiceConfiguration(tenant);
-        if (!config.isOutboundMappingEnabled()) {
+        if (!config.getOutboundMappingEnabled()) {
             throw new OutboundMappingDisabledException(OUTBOUND_MAPPING_DISABLED_MESSAGE);
         }
     }

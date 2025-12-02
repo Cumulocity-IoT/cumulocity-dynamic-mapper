@@ -205,7 +205,7 @@ public class MappingRepository {
         }
     }
 
-    private boolean shouldIncludeMapping(Mapping mapping, Direction direction) {
+    private Boolean shouldIncludeMapping(Mapping mapping, Direction direction) {
         return direction == null ||
                 Direction.UNSPECIFIED.equals(direction) ||
                 mapping.getDirection().equals(direction);

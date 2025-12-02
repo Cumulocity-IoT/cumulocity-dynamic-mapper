@@ -164,11 +164,27 @@
               <div>
                 <p>{{ 'Outbound mappings' | translate }}</p>
                 <p>
-                  <small translate>Outbound mappings</small>
+                  <small translate>Outbound mappings enabled. Changing this property require unsubscribing/subscribing the Dynamic Mapper microservice to this tenant.</small>
                 </p>
               </div>
               <label class="c8y-switch c8y-switch--inline m-l-auto" title="{{ 'Outbound mappings' | translate }}">
-                <input name="sendNotificationLifecycle" type="checkbox" formControlName="outboundMappingEnabled" />
+                <input name="outboundMappingEnabled" type="checkbox" formControlName="outboundMappingEnabled" />
+                <span></span>
+              </label>
+            </div>
+          </c8y-li>
+
+          <c8y-li>
+            <c8y-li-icon icon="relay-home-automation"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'Device Isolation Cumulocity MQTT Service' | translate }}</p>
+                <p>
+                  <small translate>When device isolation for Cumulocity MQTT Service is enabled only registered MQTT clients receive outbound MQTT messages. Changing this property require unsubscribing/subscribing the Dynamic Mapper microservice to this tenant.</small>
+                </p>
+              </div>
+              <label class="c8y-switch c8y-switch--inline m-l-auto" title="{{ 'Device Isolation Cumulocity MQTT Service' | translate }}">
+                <input name="deviceIsolationMQTTServiceEnabled" type="checkbox" formControlName="deviceIsolationMQTTServiceEnabled" />
                 <span></span>
               </label>
             </div>
@@ -302,9 +318,6 @@
               </div>
               <label class="m-l-auto" title="{{ ' Name of jsonata agent' | translate }}"
                 [ngClass]="{ updated: editable2updated }">
-                <!-- <c8y-select formControlName="jsonataAgent" name="jsonataAgent" style="width:200px"
-                  [items]="agents$ | async" [placeholder]="'Select agent'"></c8y-select> -->
-
                 <div class="c8y-select-wrapper p-r-4" style="width:200px">
                   <select class="form-control" formControlName="jsonataAgent" name="jsonataAgent">
                     <option value="" disabled selected>
@@ -338,10 +351,41 @@
               </div>
               <label class="m-l-auto" title="{{ ' Name of javaScript agent' | translate }}"
                 [ngClass]="{ updated: editable2updated }">
-                <!-- <c8y-select formControlName="javaScriptAgent" name="javaScriptAgent" style="width:200px"
-                  [items]="agents$ | async" [placeholder]="'Select agent'"></c8y-select> -->
                 <div class="c8y-select-wrapper" style="width:200px">
                   <select class="form-control" formControlName="javaScriptAgent" name="javaScriptAgent">
+                    <option value="" disabled selected>
+                      Select agent
+                    </option>
+                    <option *ngFor="let agent of (agents$| async)" [value]="agent">
+                      {{ agent }}
+                    </option>
+                  </select>
+                </div>
+                <span></span>
+                <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
+                  popover="{{'Select box is disabled if AI Agent is not deployed in this tenant or no agent is defined.'| translate}}"
+                  placement="bottom" triggers="focus" type="button" *ngIf="!aiAgentDeployed" container="body"></button>
+              </label>
+            </div>
+          </c8y-li>
+
+          <c8y-li>
+            <c8y-li-icon icon="bot"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'SmartFunction AI Agent' |
+                  translate }}</p>
+                <p>
+                  <small translate>Name of smartFunction agent to be used when generating Cumulocity API payloads as
+                    JavaScript code.
+                    The needs to be
+                    defined in the AI Agent Manager.</small>
+                </p>
+              </div>
+              <label class="m-l-auto" title="{{ ' Name of smartFunction agent' | translate }}"
+                [ngClass]="{ updated: editable2updated }">
+                <div class="c8y-select-wrapper" style="width:200px">
+                  <select class="form-control" formControlName="smartFunctionAgent" name="smartFunctionAgent">
                     <option value="" disabled selected>
                       Select agent
                     </option>

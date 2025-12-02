@@ -28,41 +28,49 @@ jobs:
         with:
           java-version: 21
           distribution: zulu
+      - name: Getting version of pom.xml
+        run: echo "version=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec)" >> $GITHUB_OUTPUT
+        id: project
       #Building Starter backend
       - name: Build Starter Backend
         run: mvn -B package --file pom.xml
-      - name: Rename file
+      - name: Packaging Starter Backend
         run: |
           mv ./dynamic-mapper-service/target/dynamic-mapper-service.zip ./dynamic-mapper-service/target/dynamic-mapper-service-starter.zip
-      #Building Standard backend
-      - name: Rename cumulocity file
+          cp ./dynamic-mapper-service/target/dynamic-mapper-service-starter.zip ./dynamic-mapper-service/target/dynamic-mapper-service-starter-withoutMQTTService.zip
+          mv ./dynamic-mapper-service/src/main/configuration/cumulocity-withoutMQTTService.json ./dynamic-mapper-service/src/main/configuration/cumulocity.json
+          sed -i 's/@project.version@/${{ steps.project.outputs.version }}/g' ./dynamic-mapper-service/src/main/configuration/cumulocity.json
+          zip ./dynamic-mapper-service/target/dynamic-mapper-service-starter-withoutMQTTService.zip ./dynamic-mapper-service/src/main/configuration/cumulocity.json -j
+      #Packaging Standard backend
+      - name: Packaging Standard Backend
         run: |
+          cp ./dynamic-mapper-service/target/dynamic-mapper-service-starter.zip ./dynamic-mapper-service/target/dynamic-mapper-service-standard.zip
           mv ./dynamic-mapper-service/src/main/configuration/cumulocity-2c.json ./dynamic-mapper-service/src/main/configuration/cumulocity.json
-      - name: Build Standard Backend
-        run: mvn -B package --file pom.xml
-        working-directory: ./
-      - name: Rename file
+          zip ./dynamic-mapper-service/target/dynamic-mapper-service-standard.zip ./dynamic-mapper-service/src/main/configuration/cumulocity.json -j
+          cp ./dynamic-mapper-service/target/dynamic-mapper-service-standard.zip ./dynamic-mapper-service/target/dynamic-mapper-service-standard-withoutMQTTService.zip
+          mv ./dynamic-mapper-service/src/main/configuration/cumulocity-2c-withoutMQTTService.json ./dynamic-mapper-service/src/main/configuration/cumulocity.json
+          sed -i 's/@project.version@/${{ steps.project.outputs.version }}/g' ./dynamic-mapper-service/src/main/configuration/cumulocity.json
+          zip ./dynamic-mapper-service/target/dynamic-mapper-service-standard-withoutMQTTService.zip ./dynamic-mapper-service/src/main/configuration/cumulocity.json -j
+      #Packaging performance backend
+      - name: Packaging Performance Backend
         run: |
-          mv ./dynamic-mapper-service/target/dynamic-mapper-service.zip ./dynamic-mapper-service/target/dynamic-mapper-service-standard.zip
-      #Building performance backend
-      - name: Rename cumulocity file
-        run: |
+          cp ./dynamic-mapper-service/target/dynamic-mapper-service-standard.zip ./dynamic-mapper-service/target/dynamic-mapper-service-performance.zip
           mv ./dynamic-mapper-service/src/main/configuration/cumulocity-8c.json ./dynamic-mapper-service/src/main/configuration/cumulocity.json
-      - name: Build Performance Backend
-        run: mvn -B package --file pom.xml
-      - name: Rename file
+          zip ./dynamic-mapper-service/target/dynamic-mapper-service-performance.zip ./dynamic-mapper-service/src/main/configuration/cumulocity.json -j
+          cp ./dynamic-mapper-service/target/dynamic-mapper-service-performance.zip ./dynamic-mapper-service/target/dynamic-mapper-service-performance-withoutMQTTService.zip
+          mv ./dynamic-mapper-service/src/main/configuration/cumulocity-8c-withoutMQTTService.json ./dynamic-mapper-service/src/main/configuration/cumulocity.json
+          sed -i 's/@project.version@/${{ steps.project.outputs.version }}/g' ./dynamic-mapper-service/src/main/configuration/cumulocity.json
+          zip ./dynamic-mapper-service/target/dynamic-mapper-service-performance-withoutMQTTService.zip ./dynamic-mapper-service/src/main/configuration/cumulocity.json -j
+      #Packaging max backend
+      - name: Packaging Max Backend
         run: |
-          mv ./dynamic-mapper-service/target/dynamic-mapper-service.zip ./dynamic-mapper-service/target/dynamic-mapper-service-performance.zip
-      #Building max backend
-      - name: Rename cumulocity file
-        run: |
+          cp ./dynamic-mapper-service/target/dynamic-mapper-service-performance.zip ./dynamic-mapper-service/target/dynamic-mapper-service-max.zip
           mv ./dynamic-mapper-service/src/main/configuration/cumulocity-16c.json ./dynamic-mapper-service/src/main/configuration/cumulocity.json
-      - name: Build Max Backend
-        run: mvn -B package --file pom.xml
-      - name: Rename file
-        run: |
-          mv ./dynamic-mapper-service/target/dynamic-mapper-service.zip ./dynamic-mapper-service/target/dynamic-mapper-service-max.zip
-
+          zip ./dynamic-mapper-service/target/dynamic-mapper-service-max.zip ./dynamic-mapper-service/src/main/configuration/cumulocity.json -j
+          cp ./dynamic-mapper-service/target/dynamic-mapper-service-max.zip ./dynamic-mapper-service/target/dynamic-mapper-service-max-withoutMQTTService.zip
+          mv ./dynamic-mapper-service/src/main/configuration/cumulocity-16c-withoutMQTTService.json ./dynamic-mapper-service/src/main/configuration/cumulocity.json
+          sed -i 's/@project.version@/${{ steps.project.outputs.version }}/g' ./dynamic-mapper-service/src/main/configuration/cumulocity.json
+          zip ./dynamic-mapper-service/target/dynamic-mapper-service-max-withoutMQTTService.zip ./dynamic-mapper-service/src/main/configuration/cumulocity.json -j
       #Deployment
       - name: deploy
         uses: actions/setup-node@v2
@@ -147,5 +155,49 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
           asset_path: ./dynamic-mapper-service/target/dynamic-mapper-service-max.zip
           asset_name: dynamic-mapper-service-max.zip
+          asset_content_type: application/zip
+      - name: Upload Release Asset Backend
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        id: upload-release-asset-starter-wo-mqtt
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          asset_path: ./dynamic-mapper-service/target/dynamic-mapper-service-starter-withoutMQTTService.zip
+          asset_name: dynamic-mapper-service-starter-withoutMQTTService.zip
+          asset_content_type: application/zip
+      - name: Upload Release Asset Backend
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        id: upload-release-asset-standard-wo-mqtt
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          asset_path: ./dynamic-mapper-service/target/dynamic-mapper-service-standard-withoutMQTTService.zip
+          asset_name: dynamic-mapper-service-standard-withoutMQTTService.zip
+          asset_content_type: application/zip
+      - name: Upload Release Asset Backend
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        id: upload-release-asset-performance-wo-mqtt
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          asset_path: ./dynamic-mapper-service/target/dynamic-mapper-service-performance-withoutMQTTService.zip
+          asset_name: dynamic-mapper-service-performance-withoutMQTTService.zip
+          asset_content_type: application/zip
+      - name: Upload Release Asset Backend
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        id: upload-release-asset-max-wo-mqtt
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          asset_path: ./dynamic-mapper-service/target/dynamic-mapper-service-max-withoutMQTTService.zip
+          asset_name: dynamic-mapper-service-max-withoutMQTTService.zip
           asset_content_type: application/zip
 

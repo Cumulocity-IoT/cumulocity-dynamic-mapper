@@ -119,7 +119,7 @@ void setUp() throws Exception {
     when(exchange.getIn()).thenReturn(message);
     when(message.getHeader("processingContext", ProcessingContext.class)).thenReturn(processingContext);
     when(mappingService.getMappingStatus(TEST_TENANT, mapping)).thenReturn(mappingStatus);
-    when(serviceConfiguration.isLogPayload()).thenReturn(false);
+    when(serviceConfiguration.getLogPayload()).thenReturn(false);
 
     // Setup ObjectMapper mock - IMPORTANT: We need this for payload conversion
     when(objectMapper.writeValueAsString(any())).thenAnswer(invocation -> {
@@ -166,8 +166,7 @@ void setUp() throws Exception {
 
     private Mapping createSmartFunctionOutboundMapping() {
         String smartFunctionCode = """
-                function onMessage(inputMsg, context) {
-                    const msg = inputMsg;
+                function onMessage(msg, context) {
                     var payload = msg.getPayload();
 
                     return [{
@@ -198,8 +197,6 @@ void setUp() throws Exception {
                 .transformationType(TransformationType.SMART_FUNCTION)
                 .debug(false)
                 .active(false)
-                .tested(false)
-                .supportsMessageContext(true)
                 .eventWithAttachment(false)
                 .createNonExistingDevice(false)
                 .updateExistingDevice(false)
@@ -253,7 +250,7 @@ void setUp() throws Exception {
         processingContext.getRequests().forEach(req -> log.info("Request: sourceId={}, externalId={}, method={}",
                 req.getSourceId(), req.getExternalId(), req.getMethod()));
 
-        assertFalse(processingContext.isIgnoreFurtherProcessing(),
+        assertFalse(processingContext.getIgnoreFurtherProcessing(),
                 "Should not ignore further processing");
         assertFalse(processingContext.getRequests().isEmpty(),
                 "Should have created requests");
@@ -282,7 +279,7 @@ void setUp() throws Exception {
         processor.process(exchange);
 
         // Then
-        assertFalse(processingContext.isIgnoreFurtherProcessing(),
+        assertFalse(processingContext.getIgnoreFurtherProcessing(),
                 "Should not ignore further processing");
         assertEquals(2, processingContext.getRequests().size(),
                 "Should have created two requests");
@@ -308,7 +305,7 @@ void setUp() throws Exception {
         processor.process(exchange);
 
         // Then
-        assertTrue(processingContext.isIgnoreFurtherProcessing(),
+        assertTrue(processingContext.getIgnoreFurtherProcessing(),
                 "Should ignore further processing for null flow result");
         assertTrue(processingContext.getRequests().isEmpty(),
                 "Should not create any requests");
@@ -325,7 +322,7 @@ void setUp() throws Exception {
         processor.process(exchange);
 
         // Then
-        assertTrue(processingContext.isIgnoreFurtherProcessing(),
+        assertTrue(processingContext.getIgnoreFurtherProcessing(),
                 "Should ignore further processing for empty flow result");
         assertTrue(processingContext.getRequests().isEmpty(),
                 "Should not create any requests");
@@ -346,7 +343,7 @@ void setUp() throws Exception {
         processor.process(exchange);
 
         // Then
-        assertTrue(processingContext.isIgnoreFurtherProcessing(),
+        assertTrue(processingContext.getIgnoreFurtherProcessing(),
                 "Should ignore further processing when no DeviceMessages");
         assertTrue(processingContext.getRequests().isEmpty(),
                 "Should not create any requests");

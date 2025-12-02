@@ -83,15 +83,15 @@ class DeserializationInboundProcessorErrorHandlingTest {
 
     @BeforeEach
     void setUp() {
-        // Create real Mapping object
-        mapping = Mapping.builder().build();
+        // Create real Mapping object with supportsMessageContext initialized
+        mapping = Mapping.builder()
+                .build();
 
         when(exchange.getIn()).thenReturn(message);
         when(message.getBody(Mapping.class)).thenReturn(mapping);
         when(message.getHeader("tenant", String.class)).thenReturn(TEST_TENANT);
         when(message.getHeader("serviceConfiguration", ServiceConfiguration.class)).thenReturn(serviceConfiguration);
         when(message.getHeader("connectorMessage", ConnectorMessage.class)).thenReturn(connectorMessage);
-
     }
 
     @Test

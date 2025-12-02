@@ -44,7 +44,7 @@ public abstract class BaseProcessor extends CommonProcessor {
         return exchange.getIn().getHeader("processingContext", ProcessingContext.class);
     }
 
-    protected Object extractContent(ProcessingContext<Object> context, Mapping mapping, Object payloadJsonNode,
+    protected Object extractContent(ProcessingContext<Object> context, Object payloadJsonNode,
             String payloadAsString, @NotNull String ps) {
         Object extractedSourceContent = null;
         try {
@@ -67,11 +67,9 @@ public abstract class BaseProcessor extends CommonProcessor {
                 .rawPayload(message.getPayload())
                 .mappingType(mapping.getMappingType())
                 .mapping(mapping)
-                .sendPayload(message.isSendPayload())
+                .sendPayload(message.getSendPayload())
                 .testing(testing)
                 .tenant(tenant)
-                .supportsMessageContext(
-                        mapping.getSupportsMessageContext())
                 .qos(mapping.getQos())
                 .serviceConfiguration(serviceConfiguration)
                 .api(message.getApi()).build();

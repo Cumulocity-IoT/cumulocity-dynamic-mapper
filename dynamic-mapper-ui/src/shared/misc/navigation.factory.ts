@@ -120,15 +120,15 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
       preventDuplicates: true
     }),
 
-    // DO NOT REMOVE deviceToClient feature currently disabled 
-    // relationNode: new NavigatorNode({
-    //   parent: gettext('Mapping'),
-    //   label: gettext('Client relation outbound'),
-    //   icon: 'relay-home-automation',
-    //   path: `/c8y-pkg-dynamic-mapper/${NODE1}/mappings/relation/deviceToClientMap`,
-    //   priority: 370,
-    //   preventDuplicates: true
-    // }),
+    // DO NOT REMOVE DeviceIsolationMQTTService feature 
+    clientRelationNode: new NavigatorNode({
+      parent: gettext('Mapping'),
+      label: gettext('Client relation outbound'),
+      icon: 'relay-home-automation',
+      path: `/c8y-pkg-dynamic-mapper/${NODE1}/mappings/relation/deviceToClientMap`,
+      priority: 370,
+      preventDuplicates: true
+    }),
     
     monitoringNode: new NavigatorNode({
       label: gettext('Monitoring'),
@@ -190,6 +190,12 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
         delete copyStaticNodesPlugin.mappingOutboundNode;
         delete copyStaticNodesPlugin.subscriptionOutboundNode;
       }
+      
+      // Only include clientRelationNode if deviceIsolationMQTTServiceEnabled is true
+      if (!feature?.deviceIsolationMQTTServiceEnabled) {
+        delete copyStaticNodesPlugin.clientRelationNode;
+      }
+      
       navs = Object.values(copyStaticNodesPlugin) as NavigatorNode[];
 
       return this.applicationService

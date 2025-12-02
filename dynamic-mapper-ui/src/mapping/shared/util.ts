@@ -23,13 +23,16 @@ import {
   API,
   Direction,
   Mapping,
-  SnoopStatus
+  SnoopStatus,
+  TransformationType
 } from '../../shared';
 import { ValidationFormlyError } from './mapping.model';
 import { TOKEN_CONTEXT_DATA, TOKEN_IDENTITY, TOKEN_TOPIC_LEVEL } from '../core/processor/processor.model';
 
 export const CONTEXT_DATA_KEY_NAME = 'key';
+export const CONTEXT_DATA_RETAIN = 'retain';
 export const CONTEXT_DATA_METHOD_NAME = 'method';
+export const CONTEXT_DATA_PUBLISH_TOPIC = 'publishTopic';
 
 export function splitTopicExcludingSeparator(topic: string, cutOffLeadingSlash: boolean): string[] {
   if (topic) {
@@ -271,6 +274,44 @@ export function checkTopicsInboundAreValid(control: AbstractControl) {
   return Object.keys(errors).length > 0 ? errors : null;
 }
 
+export function checkTransformationType(transformationType: TransformationType, template: any): boolean {
+  // Check if template is JSONArray - in this case transformationType must be TransformationType.SMART_FUNCTION
+
+  if (isJSONArray(template)) {
+    return transformationType === TransformationType.SMART_FUNCTION;
+  }
+
+  return true;
+}
+
+/**
+ * Checks if a value is a valid JSON array (either parsed or string format)
+ */
+function isJSONArray(value: any): boolean {
+  // Check if already a parsed array
+  if (Array.isArray(value)) {
+    return true;
+  }
+
+  // Check if it's a string representation of a JSON array
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+
+    if (!trimmed || !trimmed.startsWith('[')) {
+      return false;
+    }
+
+    try {
+      const parsed = JSON.parse(trimmed);
+      return Array.isArray(parsed);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  return false;
+}
+
 export function checkTopicsOutboundAreValid(control: AbstractControl) {
   let errors = {};
   const { publishTopic, publishTopicSample } = control['controls'];
@@ -392,6 +433,43 @@ export function checkTopicsOutboundAreValid(control: AbstractControl) {
   return Object.keys(errors).length > 0 ? errors : null;
 }
 
+export function validateProtectedFields(original: any, updated: any): boolean {
+  const protectedFields = ['_IDENTITY_', '_TOPIC_LEVEL_', '_CONTEXT_DATA_'];
+
+  for (const field of protectedFields) {
+    const originalValue = findFieldInObject(original, field);
+    const updatedValue = findFieldInObject(updated, field);
+
+    if (originalValue !== undefined && !_.isEqual(originalValue, updatedValue)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function findFieldInObject(obj: any, fieldName: string): any {
+  if (!obj || typeof obj !== 'object') {
+    return undefined;
+  }
+
+  if (obj.hasOwnProperty(fieldName)) {
+    return obj[fieldName];
+  }
+
+  for (const key in obj) {
+    if (obj.hasOwnProperty(key) && typeof obj[key] === 'object') {
+      const result = findFieldInObject(obj[key], fieldName);
+      if (result !== undefined) {
+        return result;
+      }
+    }
+  }
+
+  return undefined;
+}
+
+
 export function expandExternalTemplate(
   template: object,
   mapping: Mapping,
@@ -400,32 +478,28 @@ export function expandExternalTemplate(
   if (Array.isArray(template)) {
     return template;
   } else {
-    if (mapping.supportsMessageContext) {
-      // Define the context data with specific values
-      let contextData;
-      if (mapping.direction == Direction.INBOUND) {
-        contextData = {
-          [CONTEXT_DATA_KEY_NAME]: `${CONTEXT_DATA_KEY_NAME}-sample`,
-          [CONTEXT_DATA_METHOD_NAME]: "POST", // Set to "POST" instead of a generated value
-        };
-      } else {
-        contextData = {
-          [CONTEXT_DATA_KEY_NAME]: `${CONTEXT_DATA_KEY_NAME}-sample`,
-          [CONTEXT_DATA_METHOD_NAME]: "POST", // Set to "POST" instead of a generated value
-          'publishTopic': mapping.publishTopic,
-        }
-      };
-      return {
-        ...template,
-        _TOPIC_LEVEL_: levels,
-        _CONTEXT_DATA_: contextData
+    // Define the context data with specific values
+    let contextData;
+    if (mapping.direction == Direction.INBOUND) {
+      contextData = {
+        [CONTEXT_DATA_KEY_NAME]: `${CONTEXT_DATA_KEY_NAME}-sample`,
+        // [CONTEXT_DATA_METHOD_NAME]: "POST"
+        // [CONTEXT_DATA_RETAIN]: false,
       };
     } else {
-      return {
-        ...template,
-        _TOPIC_LEVEL_: levels
-      };
-    }
+      contextData = {
+        [CONTEXT_DATA_KEY_NAME]: `${CONTEXT_DATA_KEY_NAME}-sample`,
+        [CONTEXT_DATA_METHOD_NAME]: "POST", // Set to "POST" instead of a generated value
+        [CONTEXT_DATA_RETAIN]: false,
+        [CONTEXT_DATA_PUBLISH_TOPIC]: mapping.publishTopic,
+      }
+    };
+    return {
+      ...template,
+      _TOPIC_LEVEL_: levels,
+      _CONTEXT_DATA_: contextData
+    };
+
   }
 }
 
@@ -449,16 +523,13 @@ export function expandC8YTemplate(template: object, mapping: Mapping): object {
     };
   }
   if (mapping.direction == Direction.INBOUND) {
-    // Handle message context if supported
-    if (mapping.supportsMessageContext) {
-      result = {
-        ...result,
-        [TOKEN_CONTEXT_DATA]: {
-          'api': mapping.targetAPI,
-          'processingMode': 'PERSISTENT'
-        }
-      };
-    }
+    result = {
+      ...result,
+      [TOKEN_CONTEXT_DATA]: {
+        'api': mapping.targetAPI,
+        'processingMode': 'PERSISTENT'
+      }
+    };
 
     if (mapping.createNonExistingDevice) {
       result = {
@@ -479,9 +550,9 @@ export function expandC8YTemplate(template: object, mapping: Mapping): object {
       }
 
       // Add attachment properties
-      result[TOKEN_CONTEXT_DATA].attachment_Name = 'TestImage.jpeg';
-      result[TOKEN_CONTEXT_DATA].attachment_Type = 'image/jpeg';
-      result[TOKEN_CONTEXT_DATA].attachment_Data = '';
+      result[TOKEN_CONTEXT_DATA].attachmentName = 'TestImage.jpeg';
+      result[TOKEN_CONTEXT_DATA].attachmentType = 'image/jpeg';
+      result[TOKEN_CONTEXT_DATA].attachmentData = '';
     }
   }
 
@@ -544,6 +615,7 @@ export function getTypeOf(object) {
   const arrayConstructor = [].constructor;
   const objectConstructor = {}.constructor;
   const booleanConstructor = true.constructor;
+  // console.log("Object constructor", object, object.constructor);
   if (object === null) {
     return 'null';
   } else if (object === undefined) {

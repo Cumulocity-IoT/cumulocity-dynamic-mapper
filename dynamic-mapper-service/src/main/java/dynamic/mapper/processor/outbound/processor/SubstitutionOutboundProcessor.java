@@ -113,18 +113,18 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
         List<String> splitTopicExAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
 
         payloadTarget.put("$", Mapping.TOKEN_TOPIC_LEVEL, splitTopicExAsList);
+        Map<String, String> cod;
+        cod = new HashMap<String, String>() {
+            {
+                put(ProcessingContext.RETAIN, "false");
+                put(Mapping.CONTEXT_DATA_KEY_NAME, "dummy");
+                put(Mapping.CONTEXT_DATA_METHOD_NAME, "POST");
+                put("publishTopic", mapping.getPublishTopic());
+            }
+        };
 
-        if (mapping.getSupportsMessageContext()) {
-            Map<String, String> cod = new HashMap<String, String>() {
-                {
-                    put(Mapping.CONTEXT_DATA_KEY_NAME, "dummy");
-                    put(Mapping.CONTEXT_DATA_METHOD_NAME, "POST");
-                    put("publishTopic", mapping.getPublishTopic());
-                }
-            };
-            payloadTarget.put("$", Mapping.TOKEN_CONTEXT_DATA, cod);
-        }
-        if (serviceConfiguration.isLogPayload() || mapping.getDebug()) {
+        payloadTarget.put("$", Mapping.TOKEN_CONTEXT_DATA, cod);
+        if (serviceConfiguration.getLogPayload() || mapping.getDebug()) {
             String patchedPayloadTarget = payloadTarget.jsonString();
             log.info("{} - Patched payload: {}", tenant, patchedPayloadTarget);
         }
@@ -163,7 +163,7 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
                     splitTopicInAsList[c.intValue()] = tl;
                     c.increment();
                 });
-                if (mapping.getDebug() || context.getServiceConfiguration().isLogPayload()) {
+                if (mapping.getDebug() || context.getServiceConfiguration().getLogPayload()) {
                     log.info("{} - Resolved topic from {} to {}",
                             tenant, splitTopicInAsListOriginal, splitTopicInAsList);
                 }
@@ -180,44 +180,53 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
             // remove TOPIC_LEVEL
             payloadTarget.delete("$." + Mapping.TOKEN_TOPIC_LEVEL);
             RequestMethod method = RequestMethod.POST;
-            if (mapping.getSupportsMessageContext()) {
-                String key = payloadTarget
-                        .read(String.format("$.%s.%s", Mapping.TOKEN_CONTEXT_DATA, Mapping.CONTEXT_DATA_KEY_NAME));
-                context.setKey(key);
+            String key = payloadTarget
+                    .read(String.format("$.%s.%s", Mapping.TOKEN_CONTEXT_DATA, Mapping.CONTEXT_DATA_KEY_NAME));
+            context.setKey(key);
 
-                // extract method
-                try {
-                    String methodString = payloadTarget
-                            .read(String.format("$.%s.%s", Mapping.TOKEN_CONTEXT_DATA,
-                                    Mapping.CONTEXT_DATA_METHOD_NAME));
-                    method = RequestMethod.resolve(methodString.toUpperCase());
-                } catch (Exception e) {
-                    // method is not defined or unknown, so we assume "POST"
-                }
-                try {
-                    String publishTopic = payloadTarget
-                            .read(String.format("$.%s.%s", Mapping.TOKEN_CONTEXT_DATA, "publishTopic"));
-                    if (publishTopic != null && !publishTopic.equals(""))
-                        context.setTopic(publishTopic);
-                } catch (Exception e) {
-                    // publishTopic is not defined or unknown, so we continue using the value
-                    // defined in the mapping
-                }
-                // remove TOKEN_CONTEXT_DATA
-                payloadTarget.delete("$." + Mapping.TOKEN_CONTEXT_DATA);
+            // extract method
+            try {
+                String methodString = payloadTarget
+                        .read(String.format("$.%s.%s", Mapping.TOKEN_CONTEXT_DATA,
+                                Mapping.CONTEXT_DATA_METHOD_NAME));
+                method = RequestMethod.resolve(methodString.toUpperCase());
+            } catch (Exception e) {
+                // method is not defined or unknown, so we assume "POST"
             }
+
+            // extract publishTopic
+            try {
+                String publishTopic = payloadTarget
+                        .read(String.format("$.%s.%s", Mapping.TOKEN_CONTEXT_DATA, "publishTopic"));
+                if (publishTopic != null && !publishTopic.equals(""))
+                    context.setTopic(publishTopic);
+            } catch (Exception e) {
+                // publishTopic is not defined or unknown, so we continue using the value
+                // defined in the mapping
+            }
+
+            // extract retain
+            try {
+                Boolean retain = payloadTarget
+                        .read(String.format("$.%s.%s", Mapping.TOKEN_CONTEXT_DATA, ProcessingContext.RETAIN));
+                if (retain != null)
+                    context.setRetain(retain);
+            } catch (Exception e) {
+                // ignore if not defined
+            }
+            // remove TOKEN_CONTEXT_DATA
+            payloadTarget.delete("$." + Mapping.TOKEN_CONTEXT_DATA);
             DynamicMapperRequest dynamicMapperRequest = ProcessingResultHelper.createAndAddDynamicMapperRequest(context,
                     payloadTarget.jsonString(), null, mapping);
             dynamicMapperRequest.setMethod(method);
             dynamicMapperRequest.setSourceId(deviceSource);
-
 
         } else {
             // FIXME Why are INVENTORY API messages ignored?! Needs to be implemented
             log.warn("{} - Ignoring payload: {}, {}, {}", tenant, payloadTarget, mapping.getTargetAPI(),
                     processingCache.size());
         }
-        if (mapping.getDebug() || context.getServiceConfiguration().isLogPayload()) {
+        if (mapping.getDebug() || context.getServiceConfiguration().getLogPayload()) {
             log.info("{} - Transformed message sent: API: {}, numberDevices: {}, message: {}", tenant,
                     mapping.getTargetAPI(),
                     payloadTarget.jsonString(),

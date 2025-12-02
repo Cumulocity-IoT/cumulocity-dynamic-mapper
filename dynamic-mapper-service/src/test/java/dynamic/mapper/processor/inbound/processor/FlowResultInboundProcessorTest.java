@@ -55,8 +55,9 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.model.SnoopStatus;
-import dynamic.mapper.processor.flow.CumulocityMessage;
-import dynamic.mapper.processor.flow.CumulocitySource;
+import dynamic.mapper.processor.flow.CumulocityObject;
+import dynamic.mapper.processor.flow.CumulocityType;
+import dynamic.mapper.processor.flow.ExternalId;
 import dynamic.mapper.processor.flow.ExternalSource;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.MappingType;
@@ -127,7 +128,7 @@ class FlowResultInboundProcessorTest {
         when(exchange.getIn()).thenReturn(message);
         when(message.getHeader("processingContext", ProcessingContext.class)).thenReturn(processingContext);
         when(mappingService.getMappingStatus(TEST_TENANT, mapping)).thenReturn(mappingStatus);
-        when(serviceConfiguration.isLogPayload()).thenReturn(false);
+        when(serviceConfiguration.getLogPayload()).thenReturn(false);
 
         // Setup ObjectMapper mock
         when(objectMapper.writeValueAsString(any())).thenAnswer(invocation -> {
@@ -180,8 +181,6 @@ class FlowResultInboundProcessorTest {
                 .direction(Direction.INBOUND)
                 .debug(true)
                 .active(true)
-                .tested(false)
-                .supportsMessageContext(true)
                 .snoopStatus(SnoopStatus.NONE)
                 .snoopedTemplates(new ArrayList<>())
                 .qos(Qos.AT_MOST_ONCE)
@@ -214,16 +213,16 @@ class FlowResultInboundProcessorTest {
     }
 
     @Test
-    void testProcessSingleCumulocityMessage() throws Exception {
-        // Given - Single CumulocityMessage in flow result
-        CumulocityMessage cumulocityMsg = createCumulocityMessage();
-        processingContext.setFlowResult(cumulocityMsg);
+    void testProcessSingleCumulocityObject() throws Exception {
+        // Given - Single CumulocityObject in flow result
+        CumulocityObject cumulocityObj = createCumulocityObject();
+        processingContext.setFlowResult(cumulocityObj);
 
         // When
         processor.process(exchange);
 
         // Then
-        assertFalse(processingContext.isIgnoreFurtherProcessing(),
+        assertFalse(processingContext.getIgnoreFurtherProcessing(),
                 "Should not ignore further processing");
         assertFalse(processingContext.getRequests().isEmpty(),
                 "Should have created C8Y requests");
@@ -235,22 +234,22 @@ class FlowResultInboundProcessorTest {
         assertEquals(RequestMethod.POST, request.getMethod(), "Should use POST method for create");
         assertEquals(TEST_DEVICE_ID, request.getSourceId(), "Should have correct source ID");
 
-        log.info("✅ Single CumulocityMessage processing test passed");
+        log.info("✅ Single CumulocityObject processing test passed");
     }
 
     @Test
-    void testProcessMultipleCumulocityMessages() throws Exception {
-        // Given - List of CumulocityMessages
-        List<CumulocityMessage> messages = new ArrayList<>();
-        messages.add(createCumulocityMessage());
-        messages.add(createEventCumulocityMessage());
+    void testProcessMultipleCumulocityObjects() throws Exception {
+        // Given - List of CumulocityObjects
+        List<CumulocityObject> messages = new ArrayList<>();
+        messages.add(createCumulocityObject());
+        messages.add(createEventCumulocityObject());
         processingContext.setFlowResult(messages);
 
         // When
         processor.process(exchange);
 
         // Then
-        assertFalse(processingContext.isIgnoreFurtherProcessing(),
+        assertFalse(processingContext.getIgnoreFurtherProcessing(),
                 "Should not ignore further processing");
         assertEquals(2, processingContext.getRequests().size(),
                 "Should have created two requests");
@@ -261,35 +260,7 @@ class FlowResultInboundProcessorTest {
         DynamicMapperRequest eventRequest = processingContext.getRequests().get(1);
         assertEquals(API.EVENT, eventRequest.getApi(), "Second request should be EVENT");
 
-        log.info("✅ Multiple CumulocityMessages processing test passed");
-    }
-
-    @Test
-    void testProcessWithInternalSource() throws Exception {
-        // Given - CumulocityMessage with internal source instead of external
-        CumulocityMessage cumulocityMsg = new CumulocityMessage();
-        cumulocityMsg.setCumulocityType("measurement");
-        cumulocityMsg.setAction("create");
-        cumulocityMsg.setPayload(createMeasurementPayload());
-
-        // Set internal source
-        CumulocitySource internalSource = new CumulocitySource("internal-device-123");
-        cumulocityMsg.setInternalSource(internalSource);
-
-        processingContext.setFlowResult(cumulocityMsg);
-
-        // When
-        processor.process(exchange);
-
-        // Then
-        assertFalse(processingContext.getRequests().isEmpty(),
-                "Should have created C8Y requests");
-
-        DynamicMapperRequest request = processingContext.getRequests().get(0);
-        assertEquals("internal-device-123", request.getSourceId(),
-                "Should use internal source ID");
-
-        log.info("✅ Internal source processing test passed");
+        log.info("✅ Multiple CumulocityObjects processing test passed");
     }
 
     @Test
@@ -298,8 +269,8 @@ class FlowResultInboundProcessorTest {
         String customDeviceId = "custom-resolved-device-id";
         processor.withDeviceResolver((msg, context, tenant) -> customDeviceId);
         
-        CumulocityMessage cumulocityMsg = createCumulocityMessage();
-        processingContext.setFlowResult(cumulocityMsg);
+        CumulocityObject cumulocityObj = createCumulocityObject();
+        processingContext.setFlowResult(cumulocityObj);
 
         // When
         processor.process(exchange);
@@ -319,8 +290,8 @@ class FlowResultInboundProcessorTest {
     void testCompleteFlowProcessing() throws Exception {
         // Given - Complete flow with multiple message types
         List<Object> flowResult = new ArrayList<>();
-        flowResult.add(createCumulocityMessage()); // Measurement
-        flowResult.add(createAlarmCumulocityMessage()); // Alarm
+        flowResult.add(createCumulocityObject()); // Measurement
+        flowResult.add(createAlarmCumulocityObject()); // Alarm
         flowResult.add("ignored non-cumulocity message"); // Should be ignored
 
         processingContext.setFlowResult(flowResult);
@@ -329,7 +300,7 @@ class FlowResultInboundProcessorTest {
         processor.process(exchange);
 
         // Then
-        log.info("Ignore further processing: {}", processingContext.isIgnoreFurtherProcessing());
+        log.info("Ignore further processing: {}", processingContext.getIgnoreFurtherProcessing());
         log.info("Created requests: {}", processingContext.getRequests().size());
         
         processingContext.getRequests().forEach(req -> 
@@ -337,10 +308,10 @@ class FlowResultInboundProcessorTest {
                 req.getApi(), req.getMethod(), req.getSourceId())
         );
         
-        assertFalse(processingContext.isIgnoreFurtherProcessing(),
+        assertFalse(processingContext.getIgnoreFurtherProcessing(),
                 "Should not ignore further processing");
         assertEquals(2, processingContext.getRequests().size(),
-                "Should have created two requests (ignoring non-CumulocityMessage)");
+                "Should have created two requests (ignoring non-CumulocityObject)");
 
         // Verify different API types
         boolean hasMeasurement = processingContext.getRequests().stream()
@@ -357,27 +328,27 @@ class FlowResultInboundProcessorTest {
 
     // Helper methods for creating test data
 
-    private CumulocityMessage createCumulocityMessage() {
-        CumulocityMessage msg = new CumulocityMessage();
-        msg.setCumulocityType("measurement");
+    private CumulocityObject createCumulocityObject() {
+        CumulocityObject msg = new CumulocityObject();
+        msg.setCumulocityType(CumulocityType.MEASUREMENT);
         msg.setAction("create");
         msg.setPayload(createMeasurementPayload());
         msg.setExternalSource(createExternalSourceList());
         return msg;
     }
 
-    private CumulocityMessage createEventCumulocityMessage() {
-        CumulocityMessage msg = new CumulocityMessage();
-        msg.setCumulocityType("event");
+    private CumulocityObject createEventCumulocityObject() {
+        CumulocityObject msg = new CumulocityObject();
+        msg.setCumulocityType(CumulocityType.EVENT);
         msg.setAction("create");
         msg.setPayload(createEventPayload());
         msg.setExternalSource(createExternalSourceList());
         return msg;
     }
 
-    private CumulocityMessage createAlarmCumulocityMessage() {
-        CumulocityMessage msg = new CumulocityMessage();
-        msg.setCumulocityType("alarm");
+    private CumulocityObject createAlarmCumulocityObject() {
+        CumulocityObject msg = new CumulocityObject();
+        msg.setCumulocityType(CumulocityType.ALARM);
         msg.setAction("create");
         msg.setPayload(createAlarmPayload());
         msg.setExternalSource(createExternalSourceList());
@@ -417,12 +388,12 @@ class FlowResultInboundProcessorTest {
         return payload;
     }
 
-    private List<ExternalSource> createExternalSourceList() {
-        ExternalSource externalSource = new ExternalSource();
+    private List<ExternalId> createExternalSourceList() {
+        ExternalId externalSource = new ExternalId();
         externalSource.setType(TEST_EXTERNAL_ID_TYPE);
         externalSource.setExternalId(TEST_EXTERNAL_ID);
 
-        List<ExternalSource> sources = new ArrayList<>();
+        List<ExternalId> sources = new ArrayList<>();
         sources.add(externalSource);
         return sources;
     }

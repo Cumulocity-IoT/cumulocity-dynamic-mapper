@@ -96,8 +96,8 @@ class DeserializationOutboundProcessorTest {
         when(message.getHeader("testing", Boolean.class)).thenReturn(Boolean.FALSE);
 
         // Setup service configuration defaults
-        when(serviceConfiguration.isLogPayload()).thenReturn(false);
-        when(serviceConfiguration.isLogSubstitution()).thenReturn(false);
+        when(serviceConfiguration.getLogPayload()).thenReturn(false);
+        when(serviceConfiguration.getLogSubstitution()).thenReturn(false);
     }
 
     private C8YMessage createC8YMessage() {
@@ -175,8 +175,6 @@ class DeserializationOutboundProcessorTest {
                 .transformationType(TransformationType.DEFAULT)
                 .debug(false)
                 .active(true)
-                .tested(false)
-                .supportsMessageContext(true)
                 .eventWithAttachment(false)
                 .createNonExistingDevice(false)
                 .updateExistingDevice(false)
@@ -518,7 +516,7 @@ class DeserializationOutboundProcessorTest {
         log.info("   - Message ID: {}", c8yMessage.getMessageId());
         log.info("   - API: {}", c8yMessage.getApi());
         log.info("   - Operation: {}", c8yMessage.getOperation());
-        log.info("   - Send Payload: {}", c8yMessage.isSendPayload());
+        log.info("   - Send Payload: {}", c8yMessage.getSendPayload());
     }
 
     // Helper methods for creating test payloads

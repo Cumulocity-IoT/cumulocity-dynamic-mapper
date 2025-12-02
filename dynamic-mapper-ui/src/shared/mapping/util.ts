@@ -358,7 +358,7 @@ export function getSchema(
   targetAPI: string,
   direction: Direction,
   isTarget: boolean,
-  isTesting: boolean
+  getTesting: boolean
 ): any {
   if (
     (isTarget && direction == Direction.INBOUND) ||

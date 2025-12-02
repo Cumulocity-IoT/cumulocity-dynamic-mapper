@@ -39,9 +39,9 @@ import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
-import dynamic.mapper.processor.flow.CumulocityMessage;
+import dynamic.mapper.processor.flow.CumulocityObject;
 import dynamic.mapper.processor.flow.DeviceMessage;
-import dynamic.mapper.processor.flow.ExternalSource;
+import dynamic.mapper.processor.flow.ExternalId;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.notification.websocket.Notification;
 import lombok.extern.slf4j.Slf4j;
@@ -112,10 +112,10 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
         for (Object message : messagesToProcess) {
             if (message instanceof DeviceMessage) {
                 processDeviceMessage((DeviceMessage) message, context, tenant, mapping);
-            } else if (message instanceof CumulocityMessage) {
-                processCumulocityMessage((CumulocityMessage) message, context, tenant, mapping);
+            } else if (message instanceof CumulocityObject) {
+                processCumulocityObject((CumulocityObject) message, context, tenant, mapping);
             } else {
-                log.debug("{} - Message is not a CumulocityMessage, skipping: {}", tenant,
+                log.debug("{} - Message is not a CumulocityObject, skipping: {}", tenant,
                         message.getClass().getSimpleName());
             }
         }
@@ -137,7 +137,14 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
             Map<String, Object> payload = clonePayload(deviceMessage.getPayload());
 
             // Resolve device ID and set it hierarchically in the payload
-            String resolvedExternalId = resolveExternalIdentifier(deviceMessage, context, tenant);
+            String resolvedExternalId = null;
+            try {
+                resolvedExternalId = resolveGlobalId2ExternalId(deviceMessage, context, tenant);
+                context.setSourceId(resolvedExternalId);
+            } catch (ProcessingException e) {
+                log.warn("{} - Could not resolve external ID for device message: {}", tenant, e.getMessage());
+                // Continue processing without resolved external ID
+            }
 
             // Set resolved publish topic (from substituteInTargetAndSend logic)
             setResolvedPublishTopic(context, payload);
@@ -146,7 +153,6 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
             String payloadJson = objectMapper.writeValueAsString(payload);
 
             // Create the request using the corrected method
-            context.setSourceId(resolvedExternalId);
             ProcessingResultHelper.createAndAddDynamicMapperRequest(context,
                     payloadJson, null, mapping);
 
@@ -154,43 +160,51 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
             String publishTopic = deviceMessage.getTopic();
 
             if (publishTopic != null && !publishTopic.isEmpty() && publishTopic.contains(EXTERNAL_ID_TOKEN)) {
-                publishTopic = publishTopic.replace(EXTERNAL_ID_TOKEN, resolvedExternalId);
+                if (resolvedExternalId != null) {
+                    publishTopic = publishTopic.replace(EXTERNAL_ID_TOKEN, resolvedExternalId);
+                } else {
+                    log.warn("{} - Publish topic contains {} token but external ID could not be resolved",
+                            tenant, EXTERNAL_ID_TOKEN);
+                    // Optionally: skip processing or use a default value
+                    // return; // Uncomment to skip processing if external ID is required
+                }
             }
 
             // set key for Kafka messages
-            if (mapping.getSupportsMessageContext() && deviceMessage.getTransportFields() != null) {
+            if (deviceMessage.getTransportFields() != null) {
                 context.setKey(deviceMessage.getTransportFields().get(Mapping.CONTEXT_DATA_KEY_NAME));
-
             }
             context.setResolvedPublishTopic(publishTopic);
 
+            context.setRetain(deviceMessage.getRetain());
+
             log.debug("{} - Created outbound request: deviceId={}, topic={}",
-                    tenant, resolvedExternalId,
+                    tenant, resolvedExternalId != null ? resolvedExternalId : "unresolved",
                     context.getResolvedPublishTopic());
 
         } catch (Exception e) {
-            throw new ProcessingException("Failed to process CumulocityMessage: " + e.getMessage(), e);
+            throw new ProcessingException("Failed to process DeviceMessage: " + e.getMessage(), e);
         }
     }
 
-    private void processCumulocityMessage(CumulocityMessage cumulocityMessage, ProcessingContext<?> context,
+    private void processCumulocityObject(CumulocityObject cumulocityMessage, ProcessingContext<?> context,
             String tenant, Mapping mapping) throws ProcessingException {
 
         try {
             // Get the API from the cumulocityType
-            API targetAPI = Notification.convertResourceToAPI(cumulocityMessage.getCumulocityType());
+            API targetAPI = Notification.convertResourceToAPI(cumulocityMessage.getCumulocityType().name());
 
             // Clone the payload to modify it
             Map<String, Object> payload = clonePayload(cumulocityMessage.getPayload());
 
             // Resolve device ID and set it hierarchically in the payload
             String resolvedDeviceId = resolveDeviceIdentifier(cumulocityMessage, context, tenant);
-            List<ExternalSource> externalSources = ProcessingResultHelper.convertToExternalSourceList(cumulocityMessage.getExternalSource());
+            List<ExternalId> externalSources = cumulocityMessage.getExternalSource();
             String externalId = null;
             String externalType = null;
 
             if (externalSources != null && !externalSources.isEmpty()) {
-                ExternalSource externalSource = externalSources.get(0);
+                ExternalId externalSource = externalSources.get(0);
                 externalId = externalSource.getExternalId();
                 externalType = externalSource.getType();
                 context.setExternalId(externalId);
@@ -216,18 +230,21 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
             // Convert payload to JSON string for the request
             String payloadJson = objectMapper.writeValueAsString(payload);
 
-            DynamicMapperRequest c8yRequest = ProcessingResultHelper.createAndAddDynamicMapperRequest(context, payloadJson,
+            DynamicMapperRequest c8yRequest = ProcessingResultHelper.createAndAddDynamicMapperRequest(context,
+                    payloadJson,
                     cumulocityMessage.getAction(), mapping);
             c8yRequest.setApi(targetAPI);
             c8yRequest.setSourceId(resolvedDeviceId);
             c8yRequest.setExternalIdType(externalType);
             c8yRequest.setExternalId(externalId);
 
+            context.setRetain(c8yRequest.getRetain());
+
             log.debug("{} - Created C8Y request: API={}, action={}, deviceId={}",
                     tenant, targetAPI.name, cumulocityMessage.getAction(), resolvedDeviceId);
 
         } catch (Exception e) {
-            throw new ProcessingException("Failed to process CumulocityMessage: " + e.getMessage(), e);
+            throw new ProcessingException("Failed to process CumulocityObject: " + e.getMessage(), e);
         }
     }
 
@@ -258,7 +275,7 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
                 c.increment();
             });
 
-            if (mapping.getDebug() || context.getServiceConfiguration().isLogPayload()) {
+            if (mapping.getDebug() || context.getServiceConfiguration().getLogPayload()) {
                 log.info("{} - Resolved topic from {} to {}",
                         tenant, splitTopicInAsListOriginal, splitTopicInAsList);
             }
@@ -277,44 +294,26 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
         }
 
         // Handle context data for message context support
-        if (mapping.getSupportsMessageContext()) {
-            @SuppressWarnings("unchecked")
-            Map<String, String> contextData = (Map<String, String>) payload.get(Mapping.TOKEN_CONTEXT_DATA);
+        @SuppressWarnings("unchecked")
+        Map<String, String> contextData = (Map<String, String>) payload.get(Mapping.TOKEN_CONTEXT_DATA);
 
-            if (contextData != null) {
-                // Extract key for message context
-                String key = contextData.get(Mapping.CONTEXT_DATA_KEY_NAME);
-                if (key != null && !key.equals("dummy")) {
-                    context.setKey(key);
-                }
-
-                // Extract publish topic override
-                String publishTopic = contextData.get("publishTopic");
-                if (publishTopic != null && !publishTopic.equals("")) {
-                    context.setTopic(publishTopic);
-                    context.setResolvedPublishTopic(publishTopic);
-                }
-
-                // Remove TOKEN_CONTEXT_DATA from payload
-                payload.remove(Mapping.TOKEN_CONTEXT_DATA);
+        if (contextData != null) {
+            // Extract key for message context
+            String key = contextData.get(Mapping.CONTEXT_DATA_KEY_NAME);
+            if (key != null && !key.equals("dummy")) {
+                context.setKey(key);
             }
+
+            // Extract publish topic override
+            String publishTopic = contextData.get("publishTopic");
+            if (publishTopic != null && !publishTopic.equals("")) {
+                context.setTopic(publishTopic);
+                context.setResolvedPublishTopic(publishTopic);
+            }
+
+            // Remove TOKEN_CONTEXT_DATA from payload
+            payload.remove(Mapping.TOKEN_CONTEXT_DATA);
         }
-    }
-
-    private String resolveExternalIdentifier(DeviceMessage deviceMessage, ProcessingContext<?> context,
-            String tenant) throws ProcessingException {
-
-        // First try externalSource
-        if (deviceMessage.getExternalSource() != null) {
-            return resolveFromExternalSource(deviceMessage.getExternalSource(), context, tenant);
-        }
-
-        // Fallback to mapping's generic device identifier or context source ID
-        if (context.getSourceId() != null) {
-            return context.getSourceId();
-        }
-
-        return context.getMapping().getGenericDeviceIdentifier();
     }
 
     @SuppressWarnings("unchecked")

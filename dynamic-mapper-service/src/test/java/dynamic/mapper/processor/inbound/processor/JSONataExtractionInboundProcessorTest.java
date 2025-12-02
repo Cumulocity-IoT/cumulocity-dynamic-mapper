@@ -105,8 +105,8 @@ class JSONataExtractionInboundProcessorTest {
         when(exchange.getIn()).thenReturn(message);
         when(message.getHeader("processingContext", ProcessingContext.class)).thenReturn(processingContext);
         when(mappingService.getMappingStatus(TEST_TENANT, mapping)).thenReturn(mappingStatus);
-        when(serviceConfiguration.isLogPayload()).thenReturn(false);
-        when(serviceConfiguration.isLogSubstitution()).thenReturn(false);
+        when(serviceConfiguration.getLogPayload()).thenReturn(false);
+        when(serviceConfiguration.getLogSubstitution()).thenReturn(false);
     }
 
     private Map<String, Object> createTestPayloadAsMap() {
@@ -167,8 +167,6 @@ class JSONataExtractionInboundProcessorTest {
                 .direction(Direction.INBOUND)
                 .debug(false)
                 .active(true)
-                .tested(false)
-                .supportsMessageContext(false)
                 .snoopStatus(SnoopStatus.NONE)
                 .snoopedTemplates(new ArrayList<>())
                 .qos(Qos.AT_MOST_ONCE)
@@ -276,8 +274,6 @@ class JSONataExtractionInboundProcessorTest {
                 .direction(Direction.INBOUND)
                 .debug(true) // Enable debug
                 .active(true)
-                .tested(false)
-                .supportsMessageContext(false)
                 .snoopStatus(SnoopStatus.NONE)
                 .snoopedTemplates(new ArrayList<>())
                 .qos(Qos.AT_MOST_ONCE)

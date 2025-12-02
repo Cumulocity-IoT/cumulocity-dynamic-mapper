@@ -39,7 +39,7 @@ import {
   getSchema
 } from '../../shared/';
 import { DynamicMapperRequest, ProcessingContext, TestResult, TOKEN_TOPIC_LEVEL } from '../core/processor/processor.model';
-import { isSubstitutionsAsCode, MappingType, StepperConfiguration } from '../../shared/mapping/mapping.model';
+import { isSubstitutionsAsCode, MappingType, StepperConfiguration, TransformationType } from '../../shared/mapping/mapping.model';
 import { patchC8YTemplateForTesting, sortObjectKeys } from '../shared/util';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { Content } from 'vanilla-jsoneditor';
@@ -52,6 +52,7 @@ interface TestingModel {
   request?: any;
   response?: any;
   selectedResult: number;
+  api?: any;
 }
 
 @Component({
@@ -72,6 +73,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   @ViewChild('editorTestingResponse') editorTestingResponse!: JsonEditorComponent;
 
   readonly Direction = Direction;
+  readonly JSON = JSON;
   readonly MappingType = MappingType;
   readonly isSubstitutionsAsCode = isSubstitutionsAsCode;
 
@@ -139,6 +141,9 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       this.updateEditors();
       await this.initializeTestContext(this.testMapping);
       this.testingService.initializeCache(this.mapping.direction);
+      if (this.mapping.transformationType == TransformationType.SMART_FUNCTION){
+        await this.testingService.resetMockCache();
+      }
     } catch (error) {
       await this.handleError('Failed to reset transformation', error);
     }
@@ -213,7 +218,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       this.sourceTemplate = JSON.parse(testMapping.sourceTemplate);
 
       if (testMapping.direction === Direction.OUTBOUND) {
-        patchC8YTemplateForTesting(this.sourceTemplate, this.testMapping);
+        // patchC8YTemplateForTesting(this.sourceTemplate, this.testMapping);
         sortObjectKeys(this.sourceTemplate);
       }
 
@@ -285,8 +290,9 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   }
 
   private updateTestingModelFromResult(result: DynamicMapperRequest): void {
-    const { request, response, targetAPI, error } = result;
+    const { request, response, api, error } = result;
     this.testingModel.request = sortObjectKeys(request);
+    this.testingModel.api = api;
     if (response) { this.testingModel.response = sortObjectKeys(response); }
     this.testingModel.errorMsg = error;
 

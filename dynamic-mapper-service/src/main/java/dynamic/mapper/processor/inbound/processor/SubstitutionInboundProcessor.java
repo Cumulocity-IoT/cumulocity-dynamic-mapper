@@ -19,7 +19,7 @@
  *
  */
 
- package dynamic.mapper.processor.inbound.processor;
+package dynamic.mapper.processor.inbound.processor;
 
 import java.util.List;
 import java.util.Map;
@@ -33,6 +33,7 @@ import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 
 import dynamic.mapper.core.C8YAgent;
+import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
@@ -60,6 +61,9 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
     private MappingService mappingService;
 
     @Autowired
+    private ConfigurationRegistry configurationRegistry;
+
+    @Autowired
     private ObjectMapper objectMapper;
 
     @Override
@@ -67,16 +71,18 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
         ProcessingContext<Object> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
         Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
-        Boolean testing = context.isTesting();
+        Boolean testing = context.getTesting();
 
         try {
             validateProcessingCache(context);
             substituteInTargetAndCreateRequests(context, exchange);
 
             // Check inventory filter condition if specified
-            if (mapping.getFilterInventory() != null && !mapping.getCreateNonExistingDevice()) {
+            // if (mapping.getFilterInventory() != null &&
+            // !mapping.getCreateNonExistingDevice()) {
+            if (mapping.getFilterInventory() != null) {
                 boolean filterInventory = evaluateInventoryFilter(tenant, mapping.getFilterInventory(),
-                        context.getSourceId(), context.isTesting());
+                        context.getSourceId(), context.getTesting());
                 if (context.getSourceId() == null
                         || !filterInventory) {
                     if (mapping.getDebug()) {
@@ -139,7 +145,7 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
                 log.error("Failed to create request {} for mapping: {}", i, mapping.getName(), e);
                 context.addError(new ProcessingException("Failed to create request " + i, e));
 
-                if (!context.isNeedsRepair()) {
+                if (!context.getNeedsRepair()) {
                     throw e;
                 }
             }
@@ -173,7 +179,7 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
             SubstituteValue sourceId = new SubstituteValue(substitute.getValue(),
                     TYPE.TEXTUAL, RepairStrategy.CREATE_IF_MISSING, false);
             if (!context.getApi().equals(API.INVENTORY)) {
-                var resolvedSourceId = c8yAgent.resolveExternalId2GlobalId(tenant, identity, context.isTesting());
+                var resolvedSourceId = c8yAgent.resolveExternalId2GlobalId(tenant, identity, context.getTesting());
                 if (resolvedSourceId == null) {
                     if (mapping.getCreateNonExistingDevice()) {
                         sourceId.setValue(ProcessingResultHelper.createImplicitDevice(identity, context, log, c8yAgent,
@@ -185,13 +191,14 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
                 SubstituteValue.substituteValueInPayload(sourceId, payloadTarget,
                         mapping.transformGenericPath2C8YPath(pathTarget));
                 context.setSourceId(sourceId.getValue().toString());
-                // DO NOT REMOVE deviceToClient feature currently disabled
+                // DO NOT REMOVE DeviceIsolationMQTTService feature
                 // cache the mapping of device to client ID
-                // if (context.getClientId() != null) {
-                // configurationRegistry.addOrUpdateClientRelation(tenant,
-                // context.getClientId(),
-                // sourceId.getValue().toString());
-                // }
+                if (context.getClientId() != null
+                        && context.getServiceConfiguration().getDeviceIsolationMQTTServiceEnabled()) {
+                    configurationRegistry.addOrUpdateClientRelation(tenant,
+                            context.getClientId(),
+                            sourceId.getValue().toString());
+                }
                 substitute.setRepairStrategy(RepairStrategy.CREATE_IF_MISSING);
             }
         } else if ((Mapping.TOKEN_IDENTITY + ".c8ySourceId").equals(pathTarget)) {
@@ -201,24 +208,26 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
             SubstituteValue.substituteValueInPayload(sourceId, payloadTarget,
                     mapping.transformGenericPath2C8YPath(pathTarget));
             context.setSourceId(sourceId.getValue().toString());
-            // DO NOT REMOVE deviceToClient feature currently disabled
+            // DO NOT REMOVE DeviceIsolationMQTTService feature
             // cache the mapping of device to client ID
-            // if (context.getClientId() != null) {
-            // configurationRegistry.addOrUpdateClientRelation(tenant,
-            // context.getClientId(),
-            // sourceId.getValue().toString());
-            // }
+            if (context.getClientId() != null && context.getServiceConfiguration().getDeviceIsolationMQTTServiceEnabled()) {
+                configurationRegistry.addOrUpdateClientRelation(tenant,
+                        context.getClientId(),
+                        sourceId.getValue().toString());
+            }
             substitute.setRepairStrategy(RepairStrategy.CREATE_IF_MISSING);
         } else if ((Mapping.TOKEN_CONTEXT_DATA + ".api").equals(pathTarget)) {
             context.setApi(API.fromString((String) substitute.getValue()));
-        } else if ((Mapping.TOKEN_CONTEXT_DATA + ".attachment_Name").equals(pathTarget)) {
+        } else if ((Mapping.TOKEN_CONTEXT_DATA + ".attachmentName").equals(pathTarget)) {
             context.getBinaryInfo().setName((String) substitute.getValue());
-        } else if ((Mapping.TOKEN_CONTEXT_DATA + ".attachment_Type").equals(pathTarget)) {
+        } else if ((Mapping.TOKEN_CONTEXT_DATA + ".attachmentType").equals(pathTarget)) {
             context.getBinaryInfo().setType((String) substitute.getValue());
-        } else if ((Mapping.TOKEN_CONTEXT_DATA + ".attachment_Data").equals(pathTarget)) {
+        } else if ((Mapping.TOKEN_CONTEXT_DATA + ".attachmentData").equals(pathTarget)) {
             context.getBinaryInfo().setData((String) substitute.getValue());
         } else if ((Mapping.TOKEN_CONTEXT_DATA + ".processingMode").equals(pathTarget)) {
             context.setProcessingMode(ProcessingMode.parse((String) substitute.getValue()));
+        } else if ((Mapping.TOKEN_CONTEXT_DATA + ".retain").equals(pathTarget)) {
+            context.setRetain((boolean) substitute.getValue());
         } else if ((Mapping.TOKEN_CONTEXT_DATA + ".deviceName").equals(pathTarget)) {
             context.setDeviceName((String) substitute.getValue());
         } else if ((Mapping.TOKEN_CONTEXT_DATA + ".deviceType").equals(pathTarget)) {
@@ -240,17 +249,17 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
                                 context.setApi(API.fromString((String) value));
                             }
                             break;
-                        case "attachment_Name":
+                        case "attachmentName":
                             if (value instanceof String) {
                                 context.getBinaryInfo().setName((String) value);
                             }
                             break;
-                        case "attachment_Type":
+                        case "attachmentType":
                             if (value instanceof String) {
                                 context.getBinaryInfo().setType((String) value);
                             }
                             break;
-                        case "attachment_Data":
+                        case "attachmentData":
                             if (value instanceof String) {
                                 context.getBinaryInfo().setData((String) value);
                             }
@@ -315,7 +324,7 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
             prepareAndSubstituteInPayload(context, payloadTarget, pathTarget, substitute);
         }
         ProcessingResultHelper.createAndAddDynamicMapperRequest(context, payloadTarget.jsonString(), null, mapping);
-        if (context.getMapping().getDebug() || context.getServiceConfiguration().isLogPayload()) {
+        if (context.getMapping().getDebug() || context.getServiceConfiguration().getLogPayload()) {
             log.info("{} - Transformed message sent: API: {}, numberDevices: {}, message: {}", tenant,
                     context.getApi(),
                     payloadTarget.jsonString(),

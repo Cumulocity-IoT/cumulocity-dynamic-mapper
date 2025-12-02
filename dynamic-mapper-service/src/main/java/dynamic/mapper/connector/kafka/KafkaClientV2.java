@@ -107,7 +107,6 @@ public class KafkaClientV2 extends AConnectorClient {
     public KafkaClientV2() {
         this.connectorType = ConnectorType.KAFKA;
         this.singleton = false;
-        this.supportsMessageContext = true; // Supports context for HTTP methods
         this.supportedQOS = Arrays.asList(Qos.AT_MOST_ONCE); // Kafka doesn't have MQTT-like QoS
         loadDefaultProperties();
         this.connectorSpecification = createConnectorSpecification();
@@ -461,7 +460,7 @@ public class KafkaClientV2 extends AConnectorClient {
                 .key(key)
                 .build();
 
-        if (serviceConfiguration.isLogPayload()) {
+        if (serviceConfiguration.getLogPayload()) {
             log.info("{} - INITIAL: Kafka message on topic: [{}], partition: {}, offset: {}, key: {}, connector: {}",
                     tenant, topic, record.partition(), record.offset(), key, connectorName);
         }
@@ -554,7 +553,7 @@ public class KafkaClientV2 extends AConnectorClient {
                             new OffsetAndMetadata(record.offset() + 1));
                     wrapper.getConsumer().commitSync(offsetsToCommit);
 
-                    if (serviceConfiguration.isLogPayload()) {
+                    if (serviceConfiguration.getLogPayload()) {
                         log.debug("{} - Committed offset for topic: [{}], partition: {}, offset: {}",
                                 tenant, record.topic(), record.partition(), record.offset() + 1);
                     }
@@ -721,7 +720,7 @@ public class KafkaClientV2 extends AConnectorClient {
             Future<RecordMetadata> future = kafkaProducer.send(record);
             RecordMetadata metadata = future.get(10, TimeUnit.SECONDS);
 
-            if (context.getMapping().getDebug() || serviceConfiguration.isLogPayload()) {
+            if (context.getMapping().getDebug() || serviceConfiguration.getLogPayload()) {
                 log.info("{} - Published to Kafka topic: [{}], partition: {}, offset: {}, mapping: {}",
                         tenant, topic, metadata.partition(), metadata.offset(), context.getMapping().getName());
             }
@@ -906,7 +905,7 @@ public class KafkaClientV2 extends AConnectorClient {
                 ConnectorType.KAFKA,
                 false,
                 configProps,
-                true, // supportsMessageContext
+                true,
                 supportedDirections());
     }
 

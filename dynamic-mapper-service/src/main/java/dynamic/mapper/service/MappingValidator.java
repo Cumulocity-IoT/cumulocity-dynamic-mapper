@@ -48,6 +48,8 @@ import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.TransformationType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
@@ -55,6 +57,7 @@ import org.springframework.stereotype.Component;
 
 import jakarta.validation.constraints.NotNull;
 import java.util.*;
+
 /**
  * Validates mapping configurations against business rules
  * Consolidates all validation logic from the Mapping class
@@ -73,34 +76,50 @@ public class MappingValidator {
     /**
      * Main validation method - validates a mapping against all business rules
      * 
-     * @param tenant The tenant context
-     * @param mapping The mapping to validate
+     * @param tenant           The tenant context
+     * @param mapping          The mapping to validate
      * @param excludeMappingId ID to exclude from duplicate checks (for updates)
      * @return List of validation errors (empty if valid)
      */
     public List<ValidationError> validate(String tenant, Mapping mapping, String excludeMappingId) {
         return subscriptionsService.callForTenant(tenant, () -> {
             List<ValidationError> errors = new ArrayList<>();
-            
+
             // Get existing mappings for duplicate checks
-            // List<Mapping> existingMappings = mappingRepository.findAll(tenant, Direction.UNSPECIFIED)
-            //     .stream()
-            //     .filter(m -> excludeMappingId == null || !m.getId().equals(excludeMappingId))
-            //     .collect(Collectors.toList());
+            // List<Mapping> existingMappings = mappingRepository.findAll(tenant,
+            // Direction.UNSPECIFIED)
+            // .stream()
+            // .filter(m -> excludeMappingId == null || !m.getId().equals(excludeMappingId))
+            // .collect(Collectors.toList());
 
             // Run all validation checks
             errors.addAll(validateSubstitutions(mapping));
+            errors.addAll(validateTransformationType(mapping));
             errors.addAll(validateTopics(mapping));
             errors.addAll(validateJSONTemplates(mapping));
-            //errors.addAll(validateFilterOutboundUniqueness(existingMappings, mapping));
+            // errors.addAll(validateFilterOutboundUniqueness(existingMappings, mapping));
 
             if (!errors.isEmpty()) {
-                log.debug("{} - Validation failed for mapping {}: {}", 
-                    tenant, mapping.getIdentifier(), errors);
+                log.debug("{} - Validation failed for mapping {}: {}",
+                        tenant, mapping.getIdentifier(), errors);
             }
 
             return errors;
         });
+    }
+
+    private Collection<? extends ValidationError> validateTransformationType(Mapping mapping) {
+        // Validate that if source or target template contains an array at the root
+        // level,
+        // the transformation type must be SMART_FUNCTION
+        List<ValidationError> errors = new ArrayList<>();
+        boolean sourceIsArray = isJSONArray(mapping.getSourceTemplate());
+        boolean targetIsArray = isJSONArray(mapping.getTargetTemplate());
+        if ((sourceIsArray || targetIsArray) &&
+                !TransformationType.SMART_FUNCTION.equals(mapping.getTransformationType())) {
+            errors.add(ValidationError.Wrong_Transformation_Type_Array_In_Source_Template_Or_Target_Template_Requires_Transformation_Type_Smart_Function);
+        }
+        return errors;
     }
 
     /**
@@ -110,20 +129,19 @@ public class MappingValidator {
         List<ValidationError> errors = new ArrayList<>();
 
         long deviceIdentifierCount = Arrays.stream(mapping.getSubstitutions())
-            .filter(mapping::definesDeviceIdentifier)
-            .count();
+                .filter(mapping::definesDeviceIdentifier)
+                .count();
 
         // Skip device identifier validation for certain mapping types and conditions
-        boolean skipDeviceIdentifierValidation = 
-            mapping.getSnoopStatus() == SnoopStatus.ENABLED ||
-            mapping.getSnoopStatus() == SnoopStatus.STARTED ||
-            mapping.getMappingType() == MappingType.EXTENSION_SOURCE ||
-            mapping.getMappingType() == MappingType.EXTENSION_SOURCE_TARGET ||
-            mapping.getMappingType() == MappingType.PROTOBUF_INTERNAL ||
-            mapping.getMappingType() == MappingType.CODE_BASED ||
-            mapping.getTransformationType() == TransformationType.SMART_FUNCTION ||
-            mapping.getTransformationType() == TransformationType.SUBSTITUTION_AS_CODE ||
-            mapping.getDirection() == Direction.OUTBOUND;
+        boolean skipDeviceIdentifierValidation = mapping.getSnoopStatus() == SnoopStatus.ENABLED ||
+                mapping.getSnoopStatus() == SnoopStatus.STARTED ||
+                mapping.getMappingType() == MappingType.EXTENSION_SOURCE ||
+                mapping.getMappingType() == MappingType.EXTENSION_SOURCE_TARGET ||
+                mapping.getMappingType() == MappingType.PROTOBUF_INTERNAL ||
+                mapping.getMappingType() == MappingType.CODE_BASED ||
+                mapping.getTransformationType() == TransformationType.SMART_FUNCTION ||
+                mapping.getTransformationType() == TransformationType.SUBSTITUTION_AS_CODE ||
+                mapping.getDirection() == Direction.OUTBOUND;
 
         if (!skipDeviceIdentifierValidation) {
             if (deviceIdentifierCount > 1) {
@@ -146,21 +164,19 @@ public class MappingValidator {
         if (mapping.getDirection() == Direction.INBOUND) {
             // Validate inbound mapping topic
             errors.addAll(validateMappingTopic(mapping.getMappingTopic()));
-            
+
             // Validate mapping topic and sample consistency
             if (mapping.getMappingTopicSample() != null && !mapping.getMappingTopicSample().isEmpty()) {
                 errors.addAll(validateMappingTopicAndSampleConsistency(
-                    mapping.getMappingTopic(), 
-                    mapping.getMappingTopicSample()
-                ));
+                        mapping.getMappingTopic(),
+                        mapping.getMappingTopicSample()));
             }
         } else {
             // Validate outbound publish topics
             if (mapping.getPublishTopic() != null && mapping.getPublishTopicSample() != null) {
                 errors.addAll(validatePublishTopicAndSampleConsistency(
-                    mapping.getPublishTopic(),
-                    mapping.getPublishTopicSample()
-                ));
+                        mapping.getPublishTopic(),
+                        mapping.getPublishTopicSample()));
             }
         }
 
@@ -194,7 +210,7 @@ public class MappingValidator {
      */
     public List<ValidationError> validateMappingTopicAndSampleConsistency(
             String mappingTopic, String mappingTopicSample) {
-        
+
         List<ValidationError> errors = new ArrayList<>();
 
         String[] topicParts = Mapping.splitTopicIncludingSeparatorAsArray(mappingTopic);
@@ -202,7 +218,8 @@ public class MappingValidator {
 
         // Check same number of levels
         if (topicParts.length != sampleParts.length) {
-            errors.add(ValidationError.MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name);
+            errors.add(
+                    ValidationError.MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name);
             return errors;
         }
 
@@ -213,13 +230,15 @@ public class MappingValidator {
 
             // Both should be separators or both should not be
             if ("/".equals(topicPart) != "/".equals(samplePart)) {
-                errors.add(ValidationError.MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name);
+                errors.add(
+                        ValidationError.MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name);
                 break;
             }
 
             // If not a separator or wildcard, values must match
             if (!"/".equals(topicPart) && !"+".equals(topicPart) && !topicPart.equals(samplePart)) {
-                errors.add(ValidationError.MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name);
+                errors.add(
+                        ValidationError.MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name);
                 break;
             }
         }
@@ -232,7 +251,7 @@ public class MappingValidator {
      */
     public List<ValidationError> validatePublishTopicAndSampleConsistency(
             @NotNull String publishTopic, @NotNull String publishTopicSample) {
-        
+
         List<ValidationError> errors = new ArrayList<>();
 
         String[] topicParts = Mapping.splitTopicIncludingSeparatorAsArray(publishTopic);
@@ -240,7 +259,8 @@ public class MappingValidator {
 
         // Check same number of levels
         if (topicParts.length != sampleParts.length) {
-            errors.add(ValidationError.PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name);
+            errors.add(
+                    ValidationError.PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name);
             return errors;
         }
 
@@ -251,14 +271,16 @@ public class MappingValidator {
 
             // Both should be separators or both should not be
             if ("/".equals(topicPart) != "/".equals(samplePart)) {
-                errors.add(ValidationError.PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name);
+                errors.add(
+                        ValidationError.PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name);
                 break;
             }
 
             // If not a separator or wildcard, values must match
-            if (!"/".equals(topicPart) && !"+".equals(topicPart) && !"#".equals(topicPart) 
+            if (!"/".equals(topicPart) && !"+".equals(topicPart) && !"#".equals(topicPart)
                     && !topicPart.equals(samplePart)) {
-                errors.add(ValidationError.PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name);
+                errors.add(
+                        ValidationError.PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name);
                 break;
             }
         }
@@ -278,9 +300,8 @@ public class MappingValidator {
         }
 
         // Validate target template (skip for certain mapping types)
-        boolean skipTargetValidation = 
-            mapping.getMappingType() == MappingType.EXTENSION_SOURCE ||
-            mapping.getMappingType() == MappingType.PROTOBUF_INTERNAL;
+        boolean skipTargetValidation = mapping.getMappingType() == MappingType.EXTENSION_SOURCE ||
+                mapping.getMappingType() == MappingType.PROTOBUF_INTERNAL;
 
         if (!skipTargetValidation && !isValidJSON(mapping.getTargetTemplate())) {
             errors.add(ValidationError.Target_Template_Must_Be_Valid_JSON);
@@ -294,13 +315,13 @@ public class MappingValidator {
      */
     public List<ValidationError> validateFilterOutboundUniqueness(
             List<Mapping> existingMappings, Mapping mapping) {
-        
+
         List<ValidationError> errors = new ArrayList<>();
 
         // Only validate for outbound mappings with filters
-        if (mapping.getDirection() != Direction.OUTBOUND || 
-            mapping.getFilterMapping() == null || 
-            mapping.getFilterMapping().isEmpty()) {
+        if (mapping.getDirection() != Direction.OUTBOUND ||
+                mapping.getFilterMapping() == null ||
+                mapping.getFilterMapping().isEmpty()) {
             return errors;
         }
 
@@ -308,9 +329,9 @@ public class MappingValidator {
 
         // Check if any other mapping has the same filter
         boolean hasDuplicate = existingMappings.stream()
-            .filter(m -> m.getDirection() == Direction.OUTBOUND)
-            .filter(m -> !m.getId().equals(mapping.getId()))
-            .anyMatch(m -> filterMapping.equals(m.getFilterMapping()));
+                .filter(m -> m.getDirection() == Direction.OUTBOUND)
+                .filter(m -> !m.getId().equals(mapping.getId()))
+                .anyMatch(m -> filterMapping.equals(m.getFilterMapping()));
 
         if (hasDuplicate) {
             errors.add(ValidationError.FilterOutbound_Must_Be_Unique);
@@ -332,7 +353,7 @@ public class MappingValidator {
     /**
      * Checks if a string is valid JSON
      */
-    private boolean isValidJSON(String jsonString) {
+    private Boolean isValidJSON(String jsonString) {
         if (jsonString == null || jsonString.isEmpty()) {
             return false;
         }
@@ -347,9 +368,26 @@ public class MappingValidator {
     }
 
     /**
+     * Checks if a string is valid JSONArray
+     */
+    private Boolean isJSONArray(String jsonString) {
+        if (jsonString == null || jsonString.trim().isEmpty()) {
+            return false;
+        }
+
+        try {
+            new JSONArray(jsonString);
+            return true;
+        } catch (JSONException e) {
+            log.debug("Not JSONArray JSON: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    /**
      * Checks if target template is valid JSON object (not just any JSON value)
      */
-    private boolean isValidJSONObject(String jsonString) {
+    private Boolean isValidJSONObject(String jsonString) {
         if (jsonString == null || jsonString.isEmpty()) {
             return false;
         }
@@ -378,11 +416,11 @@ public class MappingValidator {
      */
     public boolean hasRequiredFields(Mapping mapping) {
         return mapping.getIdentifier() != null &&
-               mapping.getName() != null &&
-               mapping.getTargetAPI() != null &&
-               mapping.getDirection() != null &&
-               mapping.getSourceTemplate() != null &&
-               mapping.getTargetTemplate() != null;
+                mapping.getName() != null &&
+                mapping.getTargetAPI() != null &&
+                mapping.getDirection() != null &&
+                mapping.getSourceTemplate() != null &&
+                mapping.getTargetTemplate() != null;
     }
 
     /**

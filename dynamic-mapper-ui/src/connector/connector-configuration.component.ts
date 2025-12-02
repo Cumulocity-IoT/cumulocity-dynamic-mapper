@@ -19,7 +19,7 @@
  */
 import { HttpStatusCode } from '@angular/common/http';
 import { Component, ViewChild } from '@angular/core';
-import { AlertService, gettext } from '@c8y/ngx-components';
+import { AlertService } from '@c8y/ngx-components';
 import { Observable } from 'rxjs';
 import packageJson from '../../package.json';
 import {
@@ -32,6 +32,7 @@ import {
 } from '../shared';
 import { ConnectorGridComponent } from '../shared/connector-configuration/connector-grid.component';
 import { ActivatedRoute } from '@angular/router';
+import { gettext } from '@c8y/ngx-components/gettext';
 
 @Component({
   selector: 'd11r-mapping-broker-connector',

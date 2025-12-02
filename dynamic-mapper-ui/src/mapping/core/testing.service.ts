@@ -32,7 +32,8 @@ import {
   Mapping,
   isSubstitutionsAsCode,
   PATH_TESTING_ENDPOINT,
-  TransformationType
+  TransformationType,
+  Operation
 } from '../../shared';
 import { JSONProcessorInbound } from './processor/impl/json-processor-inbound.service';
 import { JSONProcessorOutbound } from './processor/impl/json-processor-outbound.service';
@@ -43,6 +44,8 @@ import {
   RealtimeSubjectService
 } from '@c8y/ngx-components';
 import { ProcessingContext, ProcessingType, SubstituteValue, TestContext, TestResult } from './processor/processor.model';
+import { HttpStatusCode } from '@angular/common/http';
+import { gettext } from '@c8y/ngx-components/gettext';
 
 @Injectable({
   providedIn: 'root'
@@ -171,6 +174,29 @@ export class TestingService {
     }
     const m = await data.json();
     return m;
+  }
+
+
+  async resetMockCache() {
+    const [response1, response2] = await Promise.all([
+      this.sharedService.runOperation({
+        operation: Operation.CLEAR_CACHE,
+        parameter: { cacheId: 'MOCK_IDENTITY_CACHE' }
+      }),
+      this.sharedService.runOperation({
+        operation: Operation.CLEAR_CACHE,
+        parameter: { cacheId: 'MOCK_INVENTORY_CACHE' }
+      })
+    ]);
+
+    if (response1.status !== HttpStatusCode.Created) {
+      throw new Error('Failed to clear cache!');
+    }
+
+    // You might also want to check response2
+    if (response2.status !== HttpStatusCode.Created) {
+      throw new Error('Failed to clear cache!');
+    }
   }
 
 }

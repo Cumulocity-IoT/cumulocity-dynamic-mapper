@@ -40,7 +40,7 @@ public class JSONataExtractionInboundProcessor extends BaseProcessor {
 
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
-        Boolean testing = context.isTesting();
+        Boolean testing = context.getTesting();
 
         try {
             extractFromSource(context);
@@ -75,11 +75,11 @@ public class JSONataExtractionInboundProcessor extends BaseProcessor {
             Map<String, List<SubstituteValue>> processingCache = context.getProcessingCache();
 
             String payload = toPrettyJsonString(payloadObject);
-            if (serviceConfiguration.isLogPayload() || mapping.getDebug()) {
+            if (serviceConfiguration.getLogPayload() || mapping.getDebug()) {
                 log.info("{} - Incoming payload (patched): {} {} {} {}", tenant,
                         payload,
-                        serviceConfiguration.isLogPayload(), mapping.getDebug(),
-                        serviceConfiguration.isLogPayload() || mapping.getDebug());
+                        serviceConfiguration.getLogPayload(), mapping.getDebug(),
+                        serviceConfiguration.getLogPayload() || mapping.getDebug());
             }
 
             boolean substitutionTimeExists = false;
@@ -103,7 +103,7 @@ public class JSONataExtractionInboundProcessor extends BaseProcessor {
                         new ArrayList<>());
 
                 if (extractedSourceContent != null && SubstitutionEvaluation.isArray(extractedSourceContent)
-                        && substitution.isExpandArray()) {
+                        && substitution.getExpandArray()) {
                     // extracted result from sourcePayload is an array, so we potentially have to
                     // iterate over the result, e.g. creating multiple devices
                     for (Object jn : (Collection) extractedSourceContent) {
@@ -115,7 +115,7 @@ public class JSONataExtractionInboundProcessor extends BaseProcessor {
                             substitution, mapping);
                 }
                 processingCache.put(substitution.getPathTarget(), processingCacheEntry);
-                if (serviceConfiguration.isLogSubstitution() || mapping.getDebug()) {
+                if (serviceConfiguration.getLogSubstitution() || mapping.getDebug()) {
                     log.debug("{} - Evaluated substitution (pathSource:substitute)/({}: {}), (pathTarget)/({})",
                             tenant,
                             substitution.getPathSource(),

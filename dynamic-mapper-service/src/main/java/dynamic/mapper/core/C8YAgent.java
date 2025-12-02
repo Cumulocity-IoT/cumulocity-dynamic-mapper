@@ -117,6 +117,7 @@ import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.extension.ExtensionsComponent;
 import dynamic.mapper.processor.extension.ProcessorExtensionSource;
 import dynamic.mapper.processor.extension.ProcessorExtensionTarget;
+import dynamic.mapper.processor.flow.ExternalId;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.service.ExtensionInboundRegistry;
@@ -693,7 +694,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                             BinaryInfo binaryInfo = context.getBinaryInfo();
                             uploadEventAttachment(binaryInfo, eventId.getValue(), false);
                         }
-                        if (serviceConfiguration.isLogPayload())
+                        if (serviceConfiguration.getLogPayload())
                             log.info("{} - SEND: event posted: {}", tenant, rt);
                         else
                             log.info("{} - SEND: event posted with Id {}", tenant,
@@ -727,7 +728,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                         } finally {
                             c8ySemaphore.release();
                         }
-                        if (serviceConfiguration.isLogPayload())
+                        if (serviceConfiguration.getLogPayload())
                             log.info("{} - SEND: alarm posted: {}", tenant, rt);
                         else
                             log.info("{} - SEND: alarm posted with Id {}", tenant,
@@ -764,7 +765,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                         } finally {
                             c8ySemaphore.release();
                         }
-                        if (serviceConfiguration.isLogPayload())
+                        if (serviceConfiguration.getLogPayload())
                             log.info("{} - SEND: measurement posted: {}", tenant, rt);
                         else
                             log.info("{} - SEND: measurement posted with Id {}", tenant,
@@ -794,7 +795,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                             s.getMessage());
                     pe.set(new ProcessingException("Could not sent payload to c8y: " + targetAPI + "/" + payload, s));
 
-                    //Remove device from Cache
+                    // Remove device from Cache
                     if (s.getHttpStatus() == 422) {
                         ID identity = new ID(currentRequest.getExternalId(), currentRequest.getExternalId());
                         this.removeDeviceFromInboundExternalIdCache(tenant, identity);
@@ -815,7 +816,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
             throws ProcessingException {
         // StringBuffer error = new StringBuffer("");
         DynamicMapperRequest currentRequest = context.getRequests().get(requestIndex);
-        Boolean testing = context.isTesting();
+        Boolean testing = context.getTesting();
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         AtomicReference<ProcessingException> pe = new AtomicReference<>();
         API targetAPI = context.getMapping().getTargetAPI();
@@ -832,24 +833,26 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                         // Device does not exist
                         // append external id to name
                         mor.setName(mor.getName());
-                        /*
-                         * mor.set(new Agent());
-                         * HashMap<String, String> agentFragments = new HashMap<>();
-                         * agentFragments.put("name", "Dynamic Mapper");
-                         * agentFragments.put("version", version);
-                         * agentFragments.put("url",
-                         * "https://github.com/Cumulocity-IoT/cumulocity-dynamic-mapper");
-                         * agentFragments.put("maintainer", "Open-Source");
-                         * mor.set(agentFragments, "c8y_Agent");
-                         */
+                        mor.set(new Agent());
+                        HashMap<String, String> agentFragments = new HashMap<>();
+                        agentFragments.put("name", "Dynamic Mapper");
+                        agentFragments.put("version", version);
+                        agentFragments.put("url", "https://github.com/Cumulocity-IoT/cumulocity-dynamic-mapper");
+                        agentFragments.put("maintainer", "Open-Source");
+                        mor.set(agentFragments, "c8y_Agent");
                         mor.set(new IsDevice());
-                        // remove id
-                        mor.setId(null);
+                        // remove id only if not testing
+                        if (!testing) {
+                            mor.setId(null);
+                        } else {
+                            // when creating a mock inventory object for testing set a predefined source id
+                            mor.setId(new GId(context.getSourceId()));
+                        }
                         try {
                             c8ySemaphore.acquire();
                             mor = inventoryApi.create(mor, testing);
                             // TODO Add/Update new managed object to IdentityCache
-                            if (serviceConfiguration.isLogPayload())
+                            if (serviceConfiguration.getLogPayload())
                                 log.info("{} - New device created: {}", tenant, mor);
                             else
                                 log.info("{} - New device created with Id {}", tenant, mor.getId().getValue());
@@ -870,7 +873,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                         } finally {
                             c8ySemaphore.release();
                         }
-                        if (serviceConfiguration.isLogPayload())
+                        if (serviceConfiguration.getLogPayload())
                             log.info("{} - Device updated: {}", tenant, mor);
                         else
                             log.info("{} - Device {} updated.", tenant, mor.getId().getValue());
@@ -1207,7 +1210,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     }
 
     public void sendNotificationLifecycle(String tenant, ConnectorStatus connectorStatus, String message) {
-        if (configurationRegistry.getServiceConfiguration(tenant).isSendNotificationLifecycle()
+        if (configurationRegistry.getServiceConfiguration(tenant).getSendNotificationLifecycle()
                 && !(connectorStatus.equals(previousConnectorStatus))) {
             previousConnectorStatus = connectorStatus;
             DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -1323,13 +1326,13 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
             return 0;
     }
 
-    public Map<String, Object> getMOFromInventoryCacheByExternalId(String tenant, String externalId, String type,
+    public Map<String, Object> getMOFromInventoryCacheByExternalId(String tenant, ExternalId externalId,
             Boolean testing) {
 
-        if (externalId == null || type == null) {
+        if (externalId == null || externalId.getExternalId() == null || externalId.getType() == null) {
             return null;
         }
-        ID identity = new ID(type, externalId);
+        ID identity = new ID(externalId.getType(), externalId.getExternalId());
         ExternalIDRepresentation sourceId = this.resolveExternalId2GlobalId(tenant, identity, testing);
         if (sourceId != null) {
             return getMOFromInventoryCache(tenant, sourceId.getManagedObject().getId().getValue(), testing);

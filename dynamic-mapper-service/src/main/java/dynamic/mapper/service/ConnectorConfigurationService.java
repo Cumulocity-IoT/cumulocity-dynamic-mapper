@@ -184,7 +184,7 @@ public class ConnectorConfigurationService {
                     ConnectorConfiguration.class);
 
             configuration.setEnabled(enabled);
-            log.debug("{} - Setting connection: {}:", tenant, configuration.isEnabled());
+            log.debug("{} - Setting connection: {}:", tenant, configuration.getEnabled());
             final String configurationJson = objectMapper.writeValueAsString(configuration);
             optionRepresentation.setCategory(Utils.OPTION_CATEGORY_CONFIGURATION);
             optionRepresentation.setKey(getConnectorOptionKey(identifier));

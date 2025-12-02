@@ -82,7 +82,7 @@ public class Substitution implements Serializable {
     @Builder.Default
     @Schema(description = "Whether to expand arrays by creating multiple target objects (one for each array element) instead of copying the entire array", example = "false")
     @JsonSetter(nulls = Nulls.SKIP)
-    private boolean expandArray = false;
+    private Boolean expandArray = false;
 
     // Add the builder configuration
     @JsonPOJOBuilder(withPrefix = "", buildMethodName = "build")

@@ -94,7 +94,7 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
 
         // Log incoming message if configured
-        if (serviceConfiguration.isLogPayload()) {
+        if (serviceConfiguration.getLogPayload()) {
             if (connectorMessage.getPayload() != null) {
                 String payload = new String(connectorMessage.getPayload(), java.nio.charset.StandardCharsets.UTF_8);
                 log.info("{} - PROCESSING: message on topic: [{}], payload: {}", tenant, topic, payload);
@@ -183,7 +183,7 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
                     }
                 }
                 if(resend) {
-                    if (serviceConfiguration.isLogPayload())
+                    if (serviceConfiguration.getLogPayload())
                         log.info("{} - Resending message to C8Y due to previous 422 error with payload {}", tenant, connectorMessage.getPayload());
                     else
                         log.info("{} - Resending message to C8Y due to previous 422 error", tenant);

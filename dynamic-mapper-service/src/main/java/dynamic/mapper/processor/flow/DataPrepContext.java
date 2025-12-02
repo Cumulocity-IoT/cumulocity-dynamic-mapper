@@ -1,3 +1,23 @@
+/*
+ * Copyright (c) 2022-2025 Cumulocity GmbH.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ *  @authors Christof Strack, Stefan Witschel
+ *
+ */
 package dynamic.mapper.processor.flow;
 
 import org.graalvm.polyglot.Value;
@@ -5,7 +25,7 @@ import org.graalvm.polyglot.Value;
 /**
  * Flow context for JavaScript execution
  */
-public interface FlowContext {
+public interface DataPrepContext {
 
     String WARNINGS = "_WARNINGS_";
     String LOGS = "_LOGS_";
@@ -48,19 +68,12 @@ public interface FlowContext {
     Value getConfig();
 
     /**
-     * Log a message.
-     * 
-     * @param msg The message to log.
-     */
-    void logMessage(Value msg);
-
-    /**
      * Lookup DTM Asset properties
      * 
      * @param assetId The asset ID to lookup.
      * @return A Value containing the asset properties as a JS object.
      */
-    Value lookupDTMAssetProperties(String assetId);
+    Value getDTMAsset(String assetId);
 
     /**
      * Lookup Inventory Device properties
@@ -68,16 +81,40 @@ public interface FlowContext {
      * @param deviceId The device ID to lookup.
      * @return A Value containing the device properties as a JS object.
      */
-    Value lookupDeviceByDeviceId(String deviceId);
+    Value getManagedObjectByDeviceId(String deviceId);
 
     /**
      * Lookup Inventory Device properties by external id
      * 
      * @param externalId The externalId Id to lookup.
-     * @param type       The externalId Id type to use.
      * @return A Value containing the device properties as a JS object.
      */
-    Value lookupDeviceByExternalId(String externalId, String type);
+    Value getManagedObject(ExternalId externalId);
+
+
+        /**
+     * Lookup Inventory Device properties by external id
+     * 
+     * @param externalIdValue A Value object containing externalId and type properties
+     * @return A Value containing the device properties as a JS object.
+     */
+    Value getManagedObject(Value externalIdValue);
+
+    /**
+     * Log message
+     * 
+     * @param message Message to log
+     * 
+     */
+    public void addLogMessage(String message);
+
+    /**
+     * Testing cycle indicator
+     * 
+     * @return Is context used in a testing cycle
+     * 
+     */
+    public Boolean getTesting();
 
     void clearState();
 }

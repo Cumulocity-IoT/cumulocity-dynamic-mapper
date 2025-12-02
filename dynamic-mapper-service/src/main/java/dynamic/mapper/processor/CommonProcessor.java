@@ -9,13 +9,15 @@ import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.cumulocity.model.ID;
+import com.cumulocity.model.idtype.GId;
 
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
-import dynamic.mapper.processor.flow.CumulocityMessage;
-import dynamic.mapper.processor.flow.CumulocitySource;
-import dynamic.mapper.processor.flow.ExternalSource;
+import dynamic.mapper.processor.flow.CumulocityObject;
+import dynamic.mapper.processor.flow.DeviceMessage;
+import dynamic.mapper.processor.flow.ExternalId;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.util.JavaScriptInteropHelper;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
 import dynamic.mapper.util.Utils;
 import lombok.extern.slf4j.Slf4j;
@@ -60,17 +62,12 @@ public abstract class CommonProcessor implements Processor {
         }
     }
 
-    protected String resolveDeviceIdentifier(CumulocityMessage cumulocityMessage, ProcessingContext<?> context,
+    protected String resolveDeviceIdentifier(CumulocityObject cumulocityMessage, ProcessingContext<?> context,
             String tenant) throws ProcessingException {
 
         // First try externalSource
         if (cumulocityMessage.getExternalSource() != null) {
             return resolveFromExternalSource(cumulocityMessage.getExternalSource(), context, tenant);
-        }
-
-        // Then try internalSource
-        if (cumulocityMessage.getInternalSource() != null) {
-            return resolveFromInternalSource(cumulocityMessage.getInternalSource());
         }
 
         // Fallback to mapping's generic device identifier
@@ -80,26 +77,29 @@ public abstract class CommonProcessor implements Processor {
     protected String resolveFromExternalSource(Object externalSourceObj, ProcessingContext<?> context,
             String tenant) throws ProcessingException {
 
-        List<ExternalSource> externalSources = ProcessingResultHelper.convertToExternalSourceList(externalSourceObj);
+        List<ExternalId> externalSources = JavaScriptInteropHelper.convertToExternalIdList(externalSourceObj);
 
-        if (externalSources.isEmpty()) {
-            throw new ProcessingException("External source is empty");
+        if (externalSourceObj == null || externalSources.isEmpty()) {
+            throw new ProcessingException(
+                    "External source is empty, cannot resolve device identifier. Define externalSource in the message or use a generic device identifier in the mapping.");
         }
 
         // Use the first external source for resolution
-        ExternalSource externalSource = externalSources.get(0);
+        ExternalId externalSource = externalSources.get(0);
 
         try {
             // Use C8YAgent to resolve external ID to global ID
             var globalId = c8yAgent.resolveExternalId2GlobalId(tenant,
                     new ID(externalSource.getType(), externalSource.getExternalId()),
-                    context.isTesting());
+                    context.getTesting());
             context.setExternalId(externalSource.getExternalId());
 
             if (globalId != null) {
                 return globalId.getManagedObject().getId().getValue();
             } else {
-                throw new ProcessingException("Could not resolve external ID: " + externalSource.getExternalId());
+                return null;
+                // throw new ProcessingException("Could not resolve external ID: " +
+                // externalSource.getExternalId());
             }
 
         } catch (Exception e) {
@@ -107,15 +107,54 @@ public abstract class CommonProcessor implements Processor {
         }
     }
 
-    protected String resolveFromInternalSource(Object internalSourceObj) throws ProcessingException {
-        List<CumulocitySource> internalSources = ProcessingResultHelper.convertToInternalSourceList(internalSourceObj);
+    protected String resolveGlobalId2ExternalId(DeviceMessage deviceMessage, ProcessingContext<?> context,
+            String tenant) throws ProcessingException {
 
-        if (internalSources.isEmpty()) {
-            throw new ProcessingException("Internal source is empty");
+        List<ExternalId> externalSources = JavaScriptInteropHelper
+                .convertToExternalIdList(deviceMessage.getExternalSource());
+
+        if (externalSources == null || externalSources.isEmpty()) {
+            throw new ProcessingException(
+                    "External source is empty, cannot resolve device identifier. Define externalSource in the message or use a generic device identifier in the mapping.");
+
+        }
+        // Use the first external source for resolution
+        ExternalId externalSource = externalSources.get(0);
+
+        // check if setup of externalId is required
+        if (context.getTesting() && context.getSourceId() != null) {
+            if (externalSource.getExternalId() == null || externalSource.getExternalId().isEmpty()) {
+                externalSource.setExternalId("implicit-device-" + Utils.createCustomUuid());
+            }
+            String externalIdValue = externalSource.getExternalId();
+            String type = externalSources.get(0).getType();
+            var adHocDeviceid = ProcessingResultHelper.createImplicitDevice(
+                    new ID(type, externalIdValue),
+                    context,
+                    log,
+                    c8yAgent,
+                    configurationRegistry.getObjectMapper());
         }
 
-        // Use the first internal source directly
-        return internalSources.get(0).getInternalId();
+        try {
+            var gid = new GId(context.getSourceId());
+            // Use C8YAgent to resolve external ID to global ID
+            var externalId = c8yAgent.resolveGlobalId2ExternalId(tenant, gid,
+                    externalSource.getType(),
+                    context.getTesting());
+            context.setExternalId(externalSource.getExternalId());
+
+            if (externalId != null) {
+                return externalId.getExternalId();
+            } else {
+                return null;
+                // throw new ProcessingException("Could not resolve external ID: " +
+                // externalSource.getExternalId());
+            }
+
+        } catch (Exception e) {
+            throw new ProcessingException("Failed to resolve external ID: " + externalSource.getExternalId(), e);
+        }
     }
 
 }

@@ -154,13 +154,39 @@ public class Mapping implements Serializable {
     @NotNull
     private Boolean debug;
 
-    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Whether the mapping has been tested", example = "true")
-    @NotNull
+    @Schema(description = "Whether the mapping has been tested - DEPRECATED: This property is no longer used and will be removed in a future version", example = "true", deprecated = true)
+    @Deprecated(since = "6.1.2", forRemoval = true)
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY) // Only accept on input, don't serialize on output
     private Boolean tested;
 
-    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Whether the mapping supports message context", example = "false")
-    @NotNull
+    // Add a custom setter to handle migration
+    @JsonSetter("tested")
+    @Deprecated
+    public void setTested(Boolean tested) {
+        // Log warning if value is being set
+        if (tested != null) {
+            // Optionally log: "tested is deprecated and will be ignored"
+        }
+        // Don't actually store the value, or set to null
+        this.tested = null;
+    }
+
+    @Schema(description = "Whether the mapping supports message context - DEPRECATED: This property is no longer used and will be removed in a future version", example = "false", deprecated = true)
+    @Deprecated(since = "6.1..2", forRemoval = true)
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY) // Only accept on input, don't serialize on output
     private Boolean supportsMessageContext;
+
+    // Add a custom setter to handle migration
+    @JsonSetter("supportsMessageContext")
+    @Deprecated
+    public void setSupportsMessageContext(Boolean supportsMessageContext) {
+        // Log warning if value is being set
+        if (supportsMessageContext != null) {
+            // Optionally log: "supportsMessageContext is deprecated and will be ignored"
+        }
+        // Don't actually store the value, or set to null
+        this.supportsMessageContext = null;
+    }
 
     @Builder.Default
     @Schema(description = "Whether events can have attachments", example = "false")
@@ -434,12 +460,14 @@ public class Mapping implements Serializable {
         return mp;
     }
 
+    @JsonIgnore
     public Boolean isTransformationAsCode() {
         return MappingType.CODE_BASED.equals(this.mappingType) ||
                 TransformationType.SUBSTITUTION_AS_CODE.equals(this.transformationType) ||
                 TransformationType.SMART_FUNCTION.equals(this.transformationType);
     }
 
+    @JsonIgnore
     public Boolean isSubstitutionAsCode() {
         return MappingType.CODE_BASED.equals(this.mappingType) ||
                 TransformationType.SUBSTITUTION_AS_CODE.equals(this.transformationType);

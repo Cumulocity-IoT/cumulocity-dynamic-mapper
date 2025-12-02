@@ -40,8 +40,6 @@ import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingRepresentation;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.processor.flow.CumulocitySource;
-import dynamic.mapper.processor.flow.ExternalSource;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingResultWrapper;
@@ -125,6 +123,11 @@ public class ProcessingResultHelper {
             request.put("type", "c8y_GeneratedDeviceType");
         }
 
+        // update context with values from identity
+        context.setExternalId(identity.getValue());
+        String externalIdType = identity.getType() != null ? identity.getType(): context.getMapping().getExternalIdType();
+    
+
         // Set device properties
         request.put(MappingRepresentation.MAPPING_GENERATED_TEST_DEVICE, null);
         request.put("c8y_IsDevice", null);
@@ -139,7 +142,7 @@ public class ProcessingResultHelper {
                     .predecessor(predecessor)
                     .method(context.getMapping().getUpdateExistingDevice() ? RequestMethod.POST : RequestMethod.PATCH)
                     .api(API.INVENTORY)
-                    .externalIdType(context.getMapping().getExternalIdType())
+                    .externalIdType(externalIdType)
                     .externalId(context.getExternalId())
                     .request(requestString)
                     .build();
@@ -218,116 +221,6 @@ public class ProcessingResultHelper {
 
         // Set the value at the final key
         current.put(keys[keys.length - 1], value);
-    }
-
-    // Keep all existing conversion methods unchanged
-    @SuppressWarnings("unchecked")
-    public static List<ExternalSource> convertToExternalSourceList(Object obj) {
-        // ... (keep existing implementation)
-        List<ExternalSource> result = new ArrayList<>();
-
-        if (obj == null) {
-            return result;
-        }
-
-        if (obj instanceof ExternalSource) {
-            result.add((ExternalSource) obj);
-        } else if (obj instanceof List) {
-            List<?> list = (List<?>) obj;
-            for (Object item : list) {
-                if (item instanceof ExternalSource) {
-                    result.add((ExternalSource) item);
-                } else if (item instanceof Map) {
-                    ExternalSource externalSource = convertMapToExternalSource((Map<String, Object>) item);
-                    if (externalSource != null) {
-                        result.add(externalSource);
-                    }
-                }
-            }
-        } else if (obj instanceof Map) {
-            ExternalSource externalSource = convertMapToExternalSource((Map<String, Object>) obj);
-            if (externalSource != null) {
-                result.add(externalSource);
-            }
-        }
-
-        return result;
-    }
-
-    @SuppressWarnings("unchecked")
-    public static List<CumulocitySource> convertToInternalSourceList(Object obj) {
-        List<CumulocitySource> result = new ArrayList<>();
-
-        if (obj == null) {
-            return result;
-        }
-
-        if (obj instanceof CumulocitySource) {
-            result.add((CumulocitySource) obj);
-        } else if (obj instanceof List) {
-            List<?> list = (List<?>) obj;
-            for (Object item : list) {
-                if (item instanceof CumulocitySource) {
-                    result.add((CumulocitySource) item);
-                } else if (item instanceof Map) {
-                    // Convert Map to CumulocitySource
-                    CumulocitySource cumulocitySource = convertMapToCumulocitySource((Map<String, Object>) item);
-                    if (cumulocitySource != null) {
-                        result.add(cumulocitySource);
-                    }
-                }
-            }
-        } else if (obj instanceof Map) {
-            CumulocitySource cumulocitySource = convertMapToCumulocitySource((Map<String, Object>) obj);
-            if (cumulocitySource != null) {
-                result.add(cumulocitySource);
-            }
-        }
-
-        return result;
-    }
-
-    private static ExternalSource convertMapToExternalSource(Map<String, Object> map) {
-        // ... (keep existing implementation)
-        if (map == null) {
-            return null;
-        }
-
-        ExternalSource externalSource = new ExternalSource();
-
-        if (map.containsKey("externalId")) {
-            externalSource.setExternalId(String.valueOf(map.get("externalId")));
-        }
-        if (map.containsKey("type")) {
-            externalSource.setType(String.valueOf(map.get("type")));
-        }
-        if (map.containsKey("autoCreateDeviceMO")) {
-            externalSource.setAutoCreateDeviceMO((Boolean) map.get("autoCreateDeviceMO"));
-        }
-        if (map.containsKey("parentId")) {
-            externalSource.setParentId(String.valueOf(map.get("parentId")));
-        }
-        if (map.containsKey("childReference")) {
-            externalSource.setChildReference(String.valueOf(map.get("childReference")));
-        }
-        if (map.containsKey("clientId")) {
-            externalSource.setClientId(String.valueOf(map.get("clientId")));
-        }
-
-        // Only return if we have the required fields
-        if (externalSource.getExternalId() != null && externalSource.getType() != null) {
-            return externalSource;
-        }
-
-        return null;
-    }
-
-    private static CumulocitySource convertMapToCumulocitySource(Map<String, Object> map) {
-        if (map == null || !map.containsKey("internalId")) {
-            return null;
-        }
-
-        return new CumulocitySource(String.valueOf(map.get("internalId")));
     }
 
     private static Qos getHigherQos(Qos q1, Qos q2) {

@@ -61,7 +61,7 @@ public class ConnectorConfiguration implements Cloneable, Serializable {
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Flag if the connector is enabled or not", example = "false")
     @NotNull
     @JsonProperty("enabled")
-    private boolean enabled;
+    private Boolean enabled;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "A meaningful name of the connector", example = "MQTT Connector")
     @NotNull

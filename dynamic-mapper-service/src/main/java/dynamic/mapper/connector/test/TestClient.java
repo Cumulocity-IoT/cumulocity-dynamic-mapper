@@ -74,7 +74,6 @@ public class TestClient extends AConnectorClient {
         this.connectorType = ConnectorType.TEST; // Use MQTT type for compatibility
         this.connectorSpecification = createConnectorSpecification();
         this.singleton = true; // Test connector is singleton
-        this.supportsMessageContext = false;
     }
 
     /**
@@ -109,7 +108,6 @@ public class TestClient extends AConnectorClient {
         this.objectMapper = configurationRegistry.getObjectMapper();
         this.serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         this.dispatcher = dispatcher;
-        this.supportsMessageContext = false;
 
         // Initialize managers
         initializeManagers();

@@ -255,8 +255,7 @@ public class MQTT3Client extends AConnectorClient {
                     configurationRegistry,
                     dispatcher,
                     connectorIdentifier,
-                    connectorName,
-                    false);
+                    connectorName);
 
             // Connect with retry logic
             connectWithRetry();
@@ -336,7 +335,7 @@ public class MQTT3Client extends AConnectorClient {
                     synchronized (disconnectionLock) {
                         shouldReconnect = !intentionalDisconnect &&
                                 !isDisconnecting &&
-                                connectorConfiguration.isEnabled() &&
+                                connectorConfiguration.getEnabled() &&
                                 wasConnected;
                         // Mark as connecting if we're going to reconnect
                         if (shouldReconnect) {
@@ -362,7 +361,7 @@ public class MQTT3Client extends AConnectorClient {
                         log.debug(
                                 "{} - Intentional disconnect or not reconnecting (intentional={}, disconnecting={}, enabled={}, wasConnected={})",
                                 tenant, intentionalDisconnect, isDisconnecting,
-                                connectorConfiguration.isEnabled(), wasConnected);
+                                connectorConfiguration.getEnabled(), wasConnected);
                     }
                 })
                 .addConnectedListener(context -> {
@@ -616,13 +615,14 @@ public class MQTT3Client extends AConnectorClient {
 
             Mqtt3Publish message = Mqtt3Publish.builder()
                     .topic(topic)
+                    .retain(context.getRetain() == null ? false : context.getRetain())
                     .qos(mqttQos)
                     .payload(payload.getBytes(StandardCharsets.UTF_8))
                     .build();
 
             mqttClient.publish(message);
 
-            if (context.getMapping().getDebug() || context.getServiceConfiguration().isLogPayload()) {
+            if (context.getMapping().getDebug() || context.getServiceConfiguration().getLogPayload()) {
                 log.info("{} - Published message on topic: [{}], QoS: {}, payload: {}",
                         tenant, topic, mqttQos, payload);
             } else {

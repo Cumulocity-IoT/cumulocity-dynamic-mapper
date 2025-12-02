@@ -66,6 +66,8 @@ import { CollapseModule } from 'ngx-bootstrap/collapse';
 import { DeviceClientMapComponent } from './client-relation/device-client-map.component';
 import { ClientRelationStepperComponent } from './client-relation/client-relation-stepper.component';
 import { MappingTabFactory } from './mapping-tab.factory';
+import { SubstitutionManagementService } from './stepper-mapping/substitution-management.service';
+import { MappingStepperService } from './stepper-mapping/mapping-stepper.service';
 
 @NgModule({
   declarations: [
@@ -120,6 +122,9 @@ import { MappingTabFactory } from './mapping-tab.factory';
   exports: [],
   providers: [
     DeviceGridService,
+    SubstitutionManagementService,
+    MappingStepperService,
+    
     hookRoute({
       path: `c8y-pkg-dynamic-mapper/${NODE1}/mappings/inbound`,
       component: MappingComponent,

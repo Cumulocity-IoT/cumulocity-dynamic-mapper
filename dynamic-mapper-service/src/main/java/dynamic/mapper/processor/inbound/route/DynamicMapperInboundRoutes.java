@@ -172,6 +172,14 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
                 .process(enrichmentInboundProcessor)
                 .process(filterInboundProcessor)
 
+                // Check if further processing should be ignored after enrichment
+                .choice()
+                .when(exchange -> shouldIgnoreFurtherProcessing(exchange))
+                .to("log:outbound-enrichment-filtered-message?level=DEBUG")
+                .process(consolidationProcessor)
+                .stop()
+                .otherwise()
+
                 // 1. Branch based on processing type
                 .choice()
                 // 1a. Snooping path

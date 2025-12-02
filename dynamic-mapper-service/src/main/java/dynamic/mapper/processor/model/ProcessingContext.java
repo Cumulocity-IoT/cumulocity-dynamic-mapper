@@ -35,7 +35,7 @@ import dynamic.mapper.model.BinaryInfo;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.flow.FlowContext;
+import dynamic.mapper.processor.flow.DataPrepContext;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
@@ -61,6 +61,19 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
  * when a <code>mapping</code> is applied to an inbound <code>payload</code>
  */
 public class ProcessingContext<O> implements AutoCloseable {
+
+    public static final String CREATE_NON_EXISTING_DEVICE = "createNonExistingDevice";
+    public static final String SOURCE_ID = "source.id";
+    public static final String DEVICE_NAME = "deviceName";
+    public static final String DEVICE_TYPE = "deviceType";
+    public static final String EVENT_WITH_ATTACHMENT = "eventWithAttachment";
+    public static final String PROCESSING_MODE = "processingMode";
+    public static final String ATTACHMENT_DATA = "attachmentData";
+    public static final String ATTACHMENT_TYPE = "attachmentType";
+    public static final String ATTACHMENT_NAME = "attachmentName";
+    public static final String RETAIN = "retain";
+    public static final String DEBUG = "debug";
+    public static final String GENERIC_DEVICE_IDENTIFIER = "genericDeviceIdentifier";
 
     private Mapping mapping;
 
@@ -107,23 +120,23 @@ public class ProcessingContext<O> implements AutoCloseable {
     private Map<String, List<SubstituteValue>> processingCache = new TreeMap<String, List<SubstituteValue>>();
 
     @Builder.Default
-    private boolean sendPayload = false;
+    private Boolean sendPayload = false;
 
     @Builder.Default
-    private boolean testing = false;
+    private Boolean testing = false;
 
     @Builder.Default
-    private boolean needsRepair = false;
+    private Boolean needsRepair = false;
+
+    @Builder.Default
+    private Boolean retain = false;
 
     private String tenant;
 
     private ServiceConfiguration serviceConfiguration;
 
     @Builder.Default
-    private boolean supportsMessageContext = false;
-
-    @Builder.Default
-    private boolean ignoreFurtherProcessing = false;
+    private Boolean ignoreFurtherProcessing = false;
 
     private String key;
 
@@ -159,14 +172,12 @@ public class ProcessingContext<O> implements AutoCloseable {
 
     private Object flowResult;
 
-    private FlowContext flowContext;
+    private DataPrepContext flowContext;
 
     private Map<String, Object> flowState;
 
     @Builder.Default
     private BinaryInfo binaryInfo = new BinaryInfo();
-
-    public static final String SOURCE_ID = "source.id";
 
     public boolean hasError() {
         return errors != null && errors.size() > 0;
@@ -257,7 +268,7 @@ public class ProcessingContext<O> implements AutoCloseable {
                 try {
                     flowContext.clearState();
                 } catch (Exception e) {
-                    log.warn("{} - Error clearing flow context state: {}",  getTenant(), e.getMessage());
+                    log.warn("{} - Error clearing flow context state: {}", getTenant(), e.getMessage());
                 }
                 flowContext = null;
             }
@@ -266,9 +277,9 @@ public class ProcessingContext<O> implements AutoCloseable {
             if (graalContext != null) {
                 try {
                     graalContext.close();
-                    log.debug("{} - Closed GraalVM Context in tenant {}", getTenant(),  getTenant());
+                    log.debug("{} - Closed GraalVM Context in tenant {}", getTenant(), getTenant());
                 } catch (Exception e) {
-                    log.warn("{} - Error closing GraalVM Context: {}",  getTenant(), e.getMessage());
+                    log.warn("{} - Error closing GraalVM Context: {}", getTenant(), e.getMessage());
                 }
                 graalContext = null;
             }

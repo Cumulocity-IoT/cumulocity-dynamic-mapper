@@ -196,35 +196,46 @@ export class MappingComponent implements OnInit, OnDestroy {
     });
 
     // Check outbound mapping subscriptions
-    if (this.stepperConfiguration.direction === Direction.OUTBOUND) {
-      try {
-        const mappings = await this.mappingService.getMappings(Direction.OUTBOUND);
-        const numberOutboundMappings = mappings.length;
+    // if (this.stepperConfiguration.direction === Direction.OUTBOUND) {
+    //   try {
+    //     const mappings = await this.mappingService.getMappings(Direction.OUTBOUND);
+    //     const numberOutboundMappings = mappings.length;
 
-        // Get dynamic devices
-        const dynamicResult = await this.subscriptionService.getSubscriptionDevice(
-          this.subscriptionService.DYNAMIC_DEVICE_SUBSCRIPTION
-        );
-        const hasDynamicDevices = dynamicResult.devices.length > 0;
+    //     // Get dynamic devices
+    //     const dynamicResult = await this.subscriptionService.getSubscriptionDevice(
+    //       this.subscriptionService.DYNAMIC_DEVICE_SUBSCRIPTION
+    //     );
+    //     const hasDynamicDevices = dynamicResult.devices.length > 0;
 
-        // Get static devices
-        const staticResult = await this.subscriptionService.getSubscriptionDevice(
-          this.subscriptionService.STATIC_DEVICE_SUBSCRIPTION
-        );
-        const hasStaticDevices = staticResult.devices.length > 0;
+    //     // Get static devices
+    //     const staticResult = await this.subscriptionService.getSubscriptionDevice(
+    //       this.subscriptionService.STATIC_DEVICE_SUBSCRIPTION
+    //     );
+    //     const hasStaticDevices = staticResult.devices.length > 0;
 
-        // Show warning if no devices are subscribed but mappings exist
-        if (!hasDynamicDevices && !hasStaticDevices && numberOutboundMappings > 0) {
-          this.alertService.warning(
-            "No device subscriptions found for your outbound mappings. " +
-            "You need to subscribe your outbound mappings to at least one device to process data!"
-          );
-        }
-      } catch (error) {
-        console.error('Error verifying outbound mapping subscriptions:', error);
-        this.alertService.danger('Failed to verify outbound mapping subscriptions');
-      }
+    //     // Show warning if no devices are subscribed but mappings exist
+    //     if (!hasDynamicDevices && !hasStaticDevices && numberOutboundMappings > 0) {
+    //       this.alertService.warning(
+    //         "No device subscriptions found for your outbound mappings. " +
+    //         "You need to subscribe your outbound mappings to at least one device to process data!"
+    //       );
+    //     }
+    //   } catch (error) {
+    //     console.error('Error verifying outbound mapping subscriptions:', error);
+    //     this.alertService.danger('Failed to verify outbound mapping subscriptions');
+    //   }
+    // }
+  }
+
+  private async validateSubscriptionOutbound(): Promise<boolean> {
+    let valid = true;
+    if (this.stepperConfiguration.direction == Direction.OUTBOUND) {
+      const result = await Promise.all([this.subscriptionService.getSubscriptionDevice(this.subscriptionService.DYNAMIC_DEVICE_SUBSCRIPTION), this.subscriptionService.getSubscriptionDevice(this.subscriptionService.STATIC_DEVICE_SUBSCRIPTION)])
+      if (result[0].devices?.length == 0 && result[1].devices?.length == 0)
+        this.alertService.info("For your outbound mapping to work, it requires an active subscription. Please create a subscription for this outbound mapping.");
+      valid = false;
     }
+    return valid;
   }
 
   private setupActionControls() {
@@ -462,7 +473,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       },
       {
         header: 'Status',
-        name: 'tested',
+        name: 'status',
         path: 'mapping',
         filterable: false,
         sortable: false,
@@ -538,7 +549,6 @@ export class MappingComponent implements OnInit, OnDestroy {
         sourceTemplate: '{}',
         targetTemplate: SAMPLE_TEMPLATES_C8Y[API.MEASUREMENT.name],
         active: false,
-        tested: false,
         maxFailureCount: 0,
         qos: Qos.AT_LEAST_ONCE,
         substitutions: sub,
@@ -550,7 +560,6 @@ export class MappingComponent implements OnInit, OnDestroy {
         externalIdType: 'c8y_Serial',
         code,
         snoopStatus: this.snoopStatus,
-        supportsMessageContext: true,
         snoopedTemplates: [],
         direction: this.stepperConfiguration.direction,
         autoAckOperation: true,
@@ -570,7 +579,6 @@ export class MappingComponent implements OnInit, OnDestroy {
         sourceTemplate: '{}',
         targetTemplate: SAMPLE_TEMPLATES_C8Y[API.MEASUREMENT.name],
         active: false,
-        tested: false,
         maxFailureCount: 0,
         qos: Qos.AT_LEAST_ONCE,
         filterMapping: this.snoopEnabled ? ' $exists(C8Y_FRAGMENT)' : undefined,
@@ -583,7 +591,6 @@ export class MappingComponent implements OnInit, OnDestroy {
         externalIdType: 'c8y_Serial',
         code,
         snoopStatus: this.snoopStatus,
-        supportsMessageContext: true,
         snoopedTemplates: [],
         direction: this.stepperConfiguration.direction,
         autoAckOperation: true,
@@ -759,7 +766,10 @@ export class MappingComponent implements OnInit, OnDestroy {
       this.alertService.success(`${action} for mapping: ${mapping.name} was successful`);
     }
     this.mappingService.refreshMappings(this.stepperConfiguration.direction);
-    // return this.mappingService.
+
+    if (this.stepperConfiguration.direction == Direction.OUTBOUND) {
+      this.validateSubscriptionOutbound();
+    }
   }
 
   async toggleDebugMapping(m: MappingEnriched) {
@@ -889,8 +899,9 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.showConfigMapping = false;
     this.showSnoopingMapping = false;
 
+
     if (this.stepperConfiguration.direction == Direction.OUTBOUND) {
-      this.alertService.info("For your outbound mapping to work, it requires an active subscription. Please create a subscription for this outbound mapping.");
+      this.validateSubscriptionOutbound();
     }
   }
 
@@ -930,6 +941,10 @@ export class MappingComponent implements OnInit, OnDestroy {
       this.mappingService.refreshMappings(this.stepperConfiguration.direction);
     });
     this.mappingGrid.setAllItemsSelected(false);
+
+    if (this.stepperConfiguration.direction == Direction.OUTBOUND) {
+      this.validateSubscriptionOutbound();
+    }
   }
 
   private deactivateMappingBulk(ids: string[]) {

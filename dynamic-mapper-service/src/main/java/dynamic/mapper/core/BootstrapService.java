@@ -202,8 +202,11 @@ public class BootstrapService {
         }
 
         try {
-            // DO NOT REMOVE deviceToClient feature currently disabled
-            // configurationRegistry.clearCacheDeviceToClient(tenant);
+            // DO NOT REMOVE DeviceIsolationMQTTService feature
+            ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
+            if (serviceConfiguration.getDeviceIsolationMQTTServiceEnabled()) {
+                configurationRegistry.clearCacheDeviceToClient(tenant);
+            }
 
             configurationRegistry.removeMapperServiceRepresentation(tenant);
             configurationRegistry.removeGraalsResources(tenant);
@@ -272,8 +275,10 @@ public class BootstrapService {
         configurationRegistry.createGraalsResources(tenant, serviceConfiguration);
         configurationRegistry.initializeMapperServiceRepresentation(tenant);
 
-        // DO NOT REMOVE deviceToClient feature currently disabled
-        // configurationRegistry.initializeDeviceToClientMapRepresentation(tenant);
+        // DO NOT REMOVE DeviceIsolationMQTTService feature
+        if (serviceConfiguration.getDeviceIsolationMQTTServiceEnabled()) {
+            configurationRegistry.initializeDeviceToClientMapRepresentation(tenant);
+        }
 
         mappingService.createResources(tenant);
 
@@ -435,7 +440,7 @@ public class BootstrapService {
             throw new ConnectorRegistryException(e.getMessage());
         }
 
-        if (serviceConfiguration.isOutboundMappingEnabled()) {
+        if (serviceConfiguration.getOutboundMappingEnabled()) {
             configurationRegistry.initializeOutboundMapping(tenant, serviceConfiguration, initialTestClient);
         }
     }
@@ -446,7 +451,7 @@ public class BootstrapService {
             throws ConnectorRegistryException {
         // connectorRegistry.unregisterClient(tenant, connectorIdentifier);
         ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
-        if (serviceConfiguration.isOutboundMappingEnabled()) {
+        if (serviceConfiguration.getOutboundMappingEnabled()) {
             configurationRegistry.getNotificationSubscriber().unsubscribeDeviceSubscriberByConnector(tenant,
                     connectorIdentifier);
             configurationRegistry.getNotificationSubscriber().removeConnector(tenant, connectorIdentifier);
@@ -458,15 +463,15 @@ public class BootstrapService {
     public void disableConnector(String tenant, String connectorIdentifier) throws ConnectorRegistryException {
         connectorRegistry.unregisterClient(tenant, connectorIdentifier);
         ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
-        if (serviceConfiguration.isOutboundMappingEnabled()) {
+        if (serviceConfiguration.getOutboundMappingEnabled()) {
             configurationRegistry.getNotificationSubscriber().removeConnector(tenant, connectorIdentifier);
         }
     }
 
     private void initResourcesForOutbound(String tenant, ServiceConfiguration serviceConfig) {
-        log.info("{} - Config mappingOutbound enabled: {}", tenant, serviceConfig.isOutboundMappingEnabled());
+        log.info("{} - Config mappingOutbound enabled: {}", tenant, serviceConfig.getOutboundMappingEnabled());
 
-        if (!serviceConfig.isOutboundMappingEnabled()) {
+        if (!serviceConfig.getOutboundMappingEnabled()) {
             return;
         }
 
@@ -493,7 +498,7 @@ public class BootstrapService {
             throws ConnectorRegistryException, ConnectorException {
         AConnectorClient connectorClient = null;
         Future<?> future = null;
-        if (connectorConfiguration.isEnabled()) {
+        if (connectorConfiguration.getEnabled()) {
             try {
                 connectorClient = configurationRegistry.createConnectorClient(connectorConfiguration,
                         additionalSubscriptionIdTest, tenant);
@@ -528,14 +533,17 @@ public class BootstrapService {
         });
     }
 
-    // DO NOT REMOVE deviceToClient feature currently disabled
-    // @Scheduled(cron = "* 30 * * * *")
-    // public void sendDeviceToClientMap() {
-    // subscriptionsService.runForEachTenant(() -> {
-    // String tenant = subscriptionsService.getTenant();
-    // mappingService.sendDeviceToClientMap(tenant);
-    // });
-    // }
+    // DO NOT REMOVE DeviceIsolationMQTTService feature
+    @Scheduled(cron = "* 30 * * * *")
+    public void sendDeviceToClientMap() {
+        subscriptionsService.runForEachTenant(() -> {
+            String tenant = subscriptionsService.getTenant();
+            ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
+            if (serviceConfiguration.getDeviceIsolationMQTTServiceEnabled()) {
+                mappingService.sendDeviceToClientMap(tenant);
+            }
+        });
+    }
 
     private void cleanupCachesForTenant(String tenant) {
 
@@ -572,7 +580,7 @@ public class BootstrapService {
         }
     }
 
-    private boolean shouldClearCache(Instant cacheRetentionStart, int retentionDays) {
+    private Boolean shouldClearCache(Instant cacheRetentionStart, int retentionDays) {
         return retentionDays > 0 &&
                 Duration.between(cacheRetentionStart, Instant.now()).compareTo(Duration.ofDays(retentionDays)) >= 0;
     }

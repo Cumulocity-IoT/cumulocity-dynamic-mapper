@@ -20,7 +20,7 @@
 import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
-import { BehaviorSubject, Observable, of, Subject } from 'rxjs';
+import { Observable, of, Subject } from 'rxjs';
 import { Feature, SharedService } from '../shared';
 import { ServiceConfiguration } from './shared/configuration.model';
 
@@ -72,6 +72,7 @@ export class ServiceConfigurationTraceComponent implements OnInit, OnDestroy {
     sendSubscriptionEvents: false,
     sendNotificationLifecycle: false,
     outboundMappingEnabled: true,
+    deviceIsolationMQTTServiceEnabled: false,
     inboundExternalIdCacheSize: 0,
     inboundExternalIdCacheRetention: 0,
     inventoryCacheSize: 0,
@@ -79,6 +80,7 @@ export class ServiceConfigurationTraceComponent implements OnInit, OnDestroy {
     maxCPUTimeMS: 5000,  // 5 seconds
     jsonataAgent: undefined,
     javaScriptAgent: undefined,
+    smartFunctionAgent: undefined,
   };
 
   async ngOnInit() {

@@ -110,7 +110,7 @@ public class ConfigurationRegistry {
     @Getter
     String mqttServiceUrl;
 
-    @Value("${C8Y_BASEURL_PULSAR}")
+    @Value("${C8Y_BASEURL_PULSAR:}")
     @Getter
     String mqttServicePulsarUrl;
 
@@ -188,8 +188,16 @@ public class ConfigurationRegistry {
         return source;
     }
 
+    public boolean isPulsarAvailable(String tenant) {
+        if( mqttServicePulsarUrl == null || mqttServicePulsarUrl.trim().isEmpty()) {
+            log.warn("{} - C8Y_BASEURL_PULSAR is not configured for Pulsar connector. Disabling MQTT Service.", tenant);
+            return false;
+        }
+        return true;
+    }
+
     public AConnectorClient createConnectorClient(ConnectorConfiguration connectorConfiguration,
-            String additionalSubscriptionIdTest, String tenant) throws ConnectorException {
+                                                  String additionalSubscriptionIdTest, String tenant) throws ConnectorException {
         AConnectorClient connectorClient = null;
 
         switch (connectorConfiguration.getConnectorType()) {
@@ -250,13 +258,13 @@ public class ConfigurationRegistry {
                 log.info("{} - Pulsar Connector created, identifier: {}", tenant,
                         connectorConfiguration.getIdentifier());
                 break;
-
             case CUMULOCITY_MQTT_SERVICE_PULSAR:
-                connectorClient = new MQTTServicePulsarClient(this, connectorRegistry, connectorConfiguration,
-                        null,
-                        additionalSubscriptionIdTest, tenant);
-                log.info("{} - MQTTService Pulsar Connector created, identifier: {}", tenant,
-                        connectorConfiguration.getIdentifier());
+                if (isPulsarAvailable(tenant)) {
+                    connectorClient = new MQTTServicePulsarClient(this, connectorRegistry, connectorConfiguration,
+                            null, additionalSubscriptionIdTest, tenant);
+                    log.info("{} - MQTTService Pulsar Connector created, identifier: {}", tenant,
+                            connectorConfiguration.getIdentifier());
+                }
                 break;
             case TEST:
                 connectorClient = new TestClient(this, connectorRegistry, connectorConfiguration,
@@ -415,14 +423,14 @@ public class ConfigurationRegistry {
 
     public void initializeOutboundMapping(String tenant, ServiceConfiguration serviceConfiguration,
             AConnectorClient connectorClient) {
-        if (serviceConfiguration.isOutboundMappingEnabled()
+        if (serviceConfiguration.getOutboundMappingEnabled()
                 && connectorClient.supportedDirections().contains(Direction.OUTBOUND)) {
             // DispatcherOutbound dispatcherOutbound = new DispatcherOutbound(
             // this, connectorClient);
             CamelDispatcherOutbound dispatcherOutbound = new CamelDispatcherOutbound(
                     this, connectorClient);
             // Only initialize Connectors which are enabled
-            if (connectorClient.getConnectorConfiguration() != null && connectorClient.getConnectorConfiguration().isEnabled())
+            if (connectorClient.getConnectorConfiguration() != null && connectorClient.getConnectorConfiguration().getEnabled())
                 getNotificationSubscriber().addConnector(tenant,
                         connectorClient.getConnectorIdentifier(),
                         dispatcherOutbound);
