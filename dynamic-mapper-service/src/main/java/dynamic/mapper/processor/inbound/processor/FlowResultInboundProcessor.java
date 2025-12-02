@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.cumulocity.model.ID;
+import com.cumulocity.sdk.client.ProcessingMode;
 
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
@@ -50,7 +51,8 @@ public class FlowResultInboundProcessor extends BaseProcessor {
             processFlowResults(context);
 
             // Check inventory filter condition if specified
-            // if (mapping.getFilterInventory() != null && !mapping.getCreateNonExistingDevice()) {
+            // if (mapping.getFilterInventory() != null &&
+            // !mapping.getCreateNonExistingDevice()) {
             if (mapping.getFilterInventory() != null) {
                 boolean filterInventory = evaluateInventoryFilter(tenant, mapping.getFilterInventory(),
                         context.getSourceId(), context.getTesting());
@@ -74,7 +76,7 @@ public class FlowResultInboundProcessor extends BaseProcessor {
                     "%s - Error in FlowResultInboundProcessor: %s for mapping: %s, line %s",
                     tenant, mapping.getName(), e.getMessage(), lineNumber);
             log.error(errorMessage, e);
-            if(e instanceof ProcessingException)
+            if (e instanceof ProcessingException)
                 context.addError((ProcessingException) e);
             else
                 context.addError(new ProcessingException(errorMessage, e));
@@ -152,6 +154,18 @@ public class FlowResultInboundProcessor extends BaseProcessor {
                 if (contextData.get("deviceType") != null) {
                     context.setDeviceType(contextData.get("deviceType"));
                 }
+                if (contextData.get("processingMode") != null) {
+                    context.setProcessingMode(ProcessingMode.parse(contextData.get("processingMode")));
+                }
+                if (contextData.get("attachmentName") != null) {
+                    context.getBinaryInfo().setName((String) (contextData.get("attachmentName")));
+                }
+                if (contextData.get("attachmentType") != null) {
+                    context.getBinaryInfo().setType((String) (contextData.get("attachmentType")));
+                }
+                if (contextData.get("attachmentData") != null) {
+                    context.getBinaryInfo().setData((String) (contextData.get("attachmentData")));
+                }
             }
 
             // Resolve device ID and set it hierarchically in the payload
@@ -211,7 +225,8 @@ public class FlowResultInboundProcessor extends BaseProcessor {
             // Convert payload to JSON string for the request
             String payloadJson = objectMapper.writeValueAsString(payload);
 
-            DynamicMapperRequest dynamicMapperRequest = ProcessingResultHelper.createAndAddDynamicMapperRequest(context, payloadJson,
+            DynamicMapperRequest dynamicMapperRequest = ProcessingResultHelper.createAndAddDynamicMapperRequest(context,
+                    payloadJson,
                     cumulocityMessage.getAction(), mapping);
             dynamicMapperRequest.setApi(targetAPI);
             dynamicMapperRequest.setSourceId(resolvedDeviceId);

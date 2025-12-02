@@ -218,11 +218,11 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
             substitute.setRepairStrategy(RepairStrategy.CREATE_IF_MISSING);
         } else if ((Mapping.TOKEN_CONTEXT_DATA + ".api").equals(pathTarget)) {
             context.setApi(API.fromString((String) substitute.getValue()));
-        } else if ((Mapping.TOKEN_CONTEXT_DATA + ".attachment_Name").equals(pathTarget)) {
+        } else if ((Mapping.TOKEN_CONTEXT_DATA + ".attachmentName").equals(pathTarget)) {
             context.getBinaryInfo().setName((String) substitute.getValue());
-        } else if ((Mapping.TOKEN_CONTEXT_DATA + ".attachment_Type").equals(pathTarget)) {
+        } else if ((Mapping.TOKEN_CONTEXT_DATA + ".attachmentType").equals(pathTarget)) {
             context.getBinaryInfo().setType((String) substitute.getValue());
-        } else if ((Mapping.TOKEN_CONTEXT_DATA + ".attachment_Data").equals(pathTarget)) {
+        } else if ((Mapping.TOKEN_CONTEXT_DATA + ".attachmentData").equals(pathTarget)) {
             context.getBinaryInfo().setData((String) substitute.getValue());
         } else if ((Mapping.TOKEN_CONTEXT_DATA + ".processingMode").equals(pathTarget)) {
             context.setProcessingMode(ProcessingMode.parse((String) substitute.getValue()));
@@ -249,17 +249,17 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
                                 context.setApi(API.fromString((String) value));
                             }
                             break;
-                        case "attachment_Name":
+                        case "attachmentName":
                             if (value instanceof String) {
                                 context.getBinaryInfo().setName((String) value);
                             }
                             break;
-                        case "attachment_Type":
+                        case "attachmentType":
                             if (value instanceof String) {
                                 context.getBinaryInfo().setType((String) value);
                             }
                             break;
-                        case "attachment_Data":
+                        case "attachmentData":
                             if (value instanceof String) {
                                 context.getBinaryInfo().setData((String) value);
                             }

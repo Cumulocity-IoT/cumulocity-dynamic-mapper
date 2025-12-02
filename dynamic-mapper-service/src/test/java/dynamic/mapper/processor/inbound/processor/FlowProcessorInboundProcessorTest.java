@@ -44,7 +44,6 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
-import dynamic.mapper.controller.ConfigurationController;
 import dynamic.mapper.core.InventoryEnrichmentClient;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Direction;
@@ -54,7 +53,6 @@ import dynamic.mapper.model.Qos;
 import dynamic.mapper.model.SnoopStatus;
 import dynamic.mapper.processor.flow.CumulocityObject;
 import dynamic.mapper.processor.flow.CumulocityType;
-import dynamic.mapper.processor.flow.DeviceMessage;
 import dynamic.mapper.processor.flow.SimpleFlowContext;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.flow.ExternalId;
@@ -84,9 +82,6 @@ class FlowProcessorInboundProcessorTest {
     @Mock
     private InventoryEnrichmentClient inventoryEnrichmentClient;
 
-    @Mock
-    private ConfigurationController configurationController; // ADD THIS
-
     private FlowProcessorInboundProcessor processor;
 
     private static final String TEST_TENANT = "testTenant";
@@ -97,7 +92,7 @@ class FlowProcessorInboundProcessorTest {
     @BeforeEach
     void setUp() throws Exception {
         // FIX: Pass the mocked ConfigurationController to the constructor
-        processor = new FlowProcessorInboundProcessor(configurationController);
+        processor = new FlowProcessorInboundProcessor();
         injectMappingService(processor, mappingService);
 
         mapping = createSampleMapping();
@@ -618,27 +613,6 @@ class FlowProcessorInboundProcessorTest {
         when(payloadValue.asString()).thenReturn("{\"type\":\"c8y_TemperatureMeasurement\"}");
     }
 
-    private void setupDeviceMessageMock(Value mockElement) {
-        when(mockElement.hasMembers()).thenReturn(true);
-        when(mockElement.hasMember("cumulocityType")).thenReturn(false);
-        when(mockElement.hasMember("topic")).thenReturn(true);
-        when(mockElement.hasMember("payload")).thenReturn(true);
-        when(mockElement.hasMember("clientId")).thenReturn(true);
-
-        Value topicValue = mock(Value.class);
-        Value payloadValue = mock(Value.class);
-        Value clientIdValue = mock(Value.class);
-
-        when(mockElement.getMember("topic")).thenReturn(topicValue);
-        when(mockElement.getMember("payload")).thenReturn(payloadValue);
-        when(mockElement.getMember("clientId")).thenReturn(clientIdValue);
-
-        when(topicValue.asString()).thenReturn("device/forward/data");
-        when(clientIdValue.asString()).thenReturn("forwarding-client");
-        when(payloadValue.isString()).thenReturn(true);
-        when(payloadValue.asString()).thenReturn("{\"forwarded\": true}");
-    }
-
     @Test
     void testCompleteFlowProcessingWithSampleMapping() throws Exception {
         // Given - Use the actual sample mapping and enable debug for better visibility
@@ -822,20 +796,18 @@ class FlowProcessorInboundProcessorTest {
 
     private Value createMultipleResultsJavaScriptResult() {
         Value mockResult = mock(Value.class);
-        Value mockCumulocityElement = mock(Value.class);
-        Value mockDeviceElement = mock(Value.class);
+        Value mockFirstElement = mock(Value.class);
+        Value mockSecondElement = mock(Value.class);
 
         // Setup result array with two elements
         when(mockResult.hasArrayElements()).thenReturn(true);
         when(mockResult.getArraySize()).thenReturn(2L);
-        when(mockResult.getArrayElement(0)).thenReturn(mockCumulocityElement);
-        when(mockResult.getArrayElement(1)).thenReturn(mockDeviceElement);
+        when(mockResult.getArrayElement(0)).thenReturn(mockFirstElement);
+        when(mockResult.getArrayElement(1)).thenReturn(mockSecondElement);
 
-        // Setup first element (CumulocityObject)
-        setupCompleteCumulocityObjectMock(mockCumulocityElement);
-
-        // Setup second element (DeviceMessage)
-        setupCompleteDeviceMessageMock(mockDeviceElement);
+        // Setup BOTH elements as CumulocityObjects (not DeviceMessage)
+        setupCompleteCumulocityObjectMock(mockFirstElement);
+        setupCompleteCumulocityObjectMock(mockSecondElement); // Changed from setupCompleteDeviceMessageMock
 
         return mockResult;
     }
@@ -997,157 +969,23 @@ class FlowProcessorInboundProcessorTest {
         when(payloadValue.asString()).thenReturn("{\"type\":\"c8y_TemperatureMeasurement\"}");
     }
 
-    private void setupCompleteDeviceMessageMock(Value mockElement) {
-        when(mockElement.hasMembers()).thenReturn(true);
-        when(mockElement.hasMember("cumulocityType")).thenReturn(false);
-        when(mockElement.hasMember("topic")).thenReturn(true);
-        when(mockElement.hasMember("payload")).thenReturn(true);
-        when(mockElement.hasMember("clientId")).thenReturn(true);
-
-        mockStringMember(mockElement, "topic", "processed/flow/test");
-        mockStringMember(mockElement, "clientId", "test-client");
-
-        // Setup payload as map - this needs to be more detailed for proper conversion
-        Value payloadValue = mock(Value.class);
-        when(mockElement.getMember("payload")).thenReturn(payloadValue);
-
-        // Make the payload conversion work properly
-        when(payloadValue.isNull()).thenReturn(false);
-        when(payloadValue.isString()).thenReturn(false);
-        when(payloadValue.isNumber()).thenReturn(false);
-        when(payloadValue.isBoolean()).thenReturn(false);
-        when(payloadValue.isDate()).thenReturn(false);
-        when(payloadValue.hasArrayElements()).thenReturn(false);
-        when(payloadValue.hasMembers()).thenReturn(true);
-        when(payloadValue.hasBufferElements()).thenReturn(false);
-
-        // Setup member keys for the payload
-        when(payloadValue.getMemberKeys()).thenReturn(java.util.Set.of("processed", "originalValue"));
-
-        // Setup processed member
-        Value processedValue = mock(Value.class);
-        when(payloadValue.getMember("processed")).thenReturn(processedValue);
-        when(processedValue.isNull()).thenReturn(false);
-        when(processedValue.isString()).thenReturn(false);
-        when(processedValue.isNumber()).thenReturn(false);
-        when(processedValue.isBoolean()).thenReturn(true);
-        when(processedValue.asBoolean()).thenReturn(true);
-        when(processedValue.isDate()).thenReturn(false);
-        when(processedValue.hasArrayElements()).thenReturn(false);
-        when(processedValue.hasMembers()).thenReturn(false);
-        when(processedValue.hasBufferElements()).thenReturn(false);
-
-        // Setup originalValue member - FIX: Make sure all number conversion paths work
-        Value originalValueValue = mock(Value.class);
-        when(payloadValue.getMember("originalValue")).thenReturn(originalValueValue);
-        when(originalValueValue.isNull()).thenReturn(false);
-        when(originalValueValue.isString()).thenReturn(false);
-        when(originalValueValue.isNumber()).thenReturn(true); // This is key!
-        when(originalValueValue.isBoolean()).thenReturn(false);
-        when(originalValueValue.isDate()).thenReturn(false);
-        when(originalValueValue.hasArrayElements()).thenReturn(false);
-        when(originalValueValue.hasMembers()).thenReturn(false);
-        when(originalValueValue.hasBufferElements()).thenReturn(false);
-
-        // Setup all the number conversion methods
-        when(originalValueValue.fitsInInt()).thenReturn(true);
-        when(originalValueValue.fitsInLong()).thenReturn(true);
-        when(originalValueValue.asInt()).thenReturn(100);
-        when(originalValueValue.asLong()).thenReturn(100L);
-        when(originalValueValue.asDouble()).thenReturn(100.0);
-    }
-
-    @Test
-    void testProcessResultWithDeviceMessages() throws Exception {
-        // Given - Mock GraalVM context and create a result Value with DeviceMessage
-        Context mockGraalContext = mock(Context.class);
-        Value mockResult = mock(Value.class);
-        Value mockElement = mock(Value.class);
-
-        // Setup result array
-        when(mockResult.hasArrayElements()).thenReturn(true);
-        when(mockResult.getArraySize()).thenReturn(1L);
-        when(mockResult.getArrayElement(0)).thenReturn(mockElement);
-
-        // Setup element as DeviceMessage (has topic, not cumulocityType)
-        when(mockElement.hasMembers()).thenReturn(true);
-        when(mockElement.hasMember("cumulocityType")).thenReturn(false);
-        when(mockElement.hasMember("topic")).thenReturn(true);
-        when(mockElement.hasMember("payload")).thenReturn(true);
-        when(mockElement.hasMember("clientId")).thenReturn(true);
-        when(mockElement.hasMember("transportFields")).thenReturn(true);
-
-        // Setup member values
-        Value topicValue = mock(Value.class);
-        Value payloadValue = mock(Value.class);
-        Value clientIdValue = mock(Value.class);
-        Value transportFieldsValue = mock(Value.class);
-
-        when(mockElement.getMember("topic")).thenReturn(topicValue);
-        when(mockElement.getMember("payload")).thenReturn(payloadValue);
-        when(mockElement.getMember("clientId")).thenReturn(clientIdValue);
-        when(mockElement.getMember("transportFields")).thenReturn(transportFieldsValue);
-
-        when(topicValue.asString()).thenReturn("device/test/measurement");
-        when(clientIdValue.asString()).thenReturn("test-device-01");
-
-        // Setup payload
-        when(payloadValue.isString()).thenReturn(true);
-        when(payloadValue.asString()).thenReturn("{\"temperature\": 25.5}");
-
-        // Setup transport fields
-        when(transportFieldsValue.hasMembers()).thenReturn(true);
-        when(transportFieldsValue.getMemberKeys()).thenReturn(java.util.Set.of("qos", "retain"));
-        Value qosValue = mock(Value.class);
-        Value retainValue = mock(Value.class);
-        when(transportFieldsValue.getMember("qos")).thenReturn(qosValue);
-        when(transportFieldsValue.getMember("retain")).thenReturn(retainValue);
-        when(qosValue.asString()).thenReturn("1");
-        when(retainValue.asString()).thenReturn("false");
-
-        processingContext.setGraalContext(mockGraalContext);
-
-        // When - Call processResult directly using reflection
-        java.lang.reflect.Method processResultMethod = FlowProcessorInboundProcessor.class
-                .getDeclaredMethod("processResult", Value.class, ProcessingContext.class, String.class);
-        processResultMethod.setAccessible(true);
-        processResultMethod.invoke(processor, mockResult, processingContext, TEST_TENANT);
-
-        // Then - Verify flow result
-        assertNotNull(processingContext.getFlowResult(), "Flow result should not be null");
-        assertEquals(1, ((List) processingContext.getFlowResult()).size(), "Should have one result message");
-
-        Object resultMessage = ((List) processingContext.getFlowResult()).get(0);
-        assertTrue(resultMessage instanceof CumulocityObject, "Result should be CumulocityObject");
-
-        // FIX: Cast to CumulocityObject instead of DeviceMessage
-        CumulocityObject cumulocityObj = (CumulocityObject) resultMessage;
-
-        // If implementation changed to always return base CumulocityObject
-        assertNotNull(cumulocityObj, "Should have CumulocityObject");
-        log.info("Successfully validated CumulocityObject flow result");
-
-    }
-
     @Test
     void testProcessResultWithMultipleMessages() throws Exception {
         // Given - Mock GraalVM context with multiple result messages
         Context mockGraalContext = mock(Context.class);
         Value mockResult = mock(Value.class);
         Value mockCumulocityElement = mock(Value.class);
-        Value mockDeviceElement = mock(Value.class);
+        Value mockSecondElement = mock(Value.class);
 
         // Setup result array with 2 elements
         when(mockResult.hasArrayElements()).thenReturn(true);
         when(mockResult.getArraySize()).thenReturn(2L);
         when(mockResult.getArrayElement(0)).thenReturn(mockCumulocityElement);
-        when(mockResult.getArrayElement(1)).thenReturn(mockDeviceElement);
+        when(mockResult.getArrayElement(1)).thenReturn(mockSecondElement);
 
-        // Setup first element as CumulocityObject
+       // Setup BOTH elements as CumulocityObject
         setupCumulocityObjectMock(mockCumulocityElement);
-
-        // Setup second element as DeviceMessage
-        setupDeviceMessageMock(mockDeviceElement);
+        setupCumulocityObjectMock(mockSecondElement); 
 
         processingContext.setGraalContext(mockGraalContext);
 
@@ -1204,9 +1042,15 @@ class FlowProcessorInboundProcessorTest {
                             externalSource: [{"type":"c8y_Serial", "externalId": payload.get('clientId')}]
                         },
                         {
-                            topic: "processed/" + msg.getTopic(),
-                            payload: {"processed": true, "originalValue": payload["sensorData"]["temp_val"]},
-                            clientId: msg.getClientId()
+                            cumulocityType: "event",
+                            action: "create",
+                            payload: {
+                                "type": "c8y_ProcessedEvent",
+                                "text": "Temperature processed",
+                                "processed": true,
+                                "originalValue": payload["sensorData"]["temp_val"]
+                            },
+                            externalSource: [{"type":"c8y_Serial", "externalId": payload.get('clientId')}]
                         }
                     ];
                 }
@@ -1227,7 +1071,7 @@ class FlowProcessorInboundProcessorTest {
         when(mockGraalContext.getBindings("js")).thenReturn(mockBindings);
         when(mockBindings.getMember("onMessage_nlzm75nv")).thenReturn(mockOnMessageFunction);
 
-        // Create result with both CumulocityObject and DeviceMessage
+        // Create result with both CumulocityObject
         Value mockResult = createMultipleResultsJavaScriptResult();
         when(mockOnMessageFunction.execute(any(), any())).thenReturn(mockResult);
 

@@ -86,15 +86,19 @@ public class CumulocityObject {
      */
     private Destination destination;
 
-    /** Dictionary of contextData: for creating a new device specify deviceName, deviceType */
+    /**
+     * Dictionary of contextData, contains additional properties for processing a
+     * mapping
+     * deviceName, deviceType: specify deviceName, deviceType for creating a new
+     * device
+     * processingMode: specify processing mode, either 'PERSISTENT', 'TRANSIENT'
+     * attachmentName: specify name of attachment, when processing an EVENT with
+     * attachment
+     * attachmentType: specify type of attachment, when processing an EVENT with
+     * attachment
+     * attachmentData: specify data of attachment, when processing an EVENT with
+     * attachment
+     * 
+     */
     private Map<String, String> contextData;
-
-    // Convenience constructor
-    public CumulocityObject(Object payload, CumulocityType cumulocityType, List<ExternalId> externalSource,
-            Map<String, String> contextData) {
-        this.payload = payload;
-        this.cumulocityType = cumulocityType;
-        this.externalSource = externalSource;
-        this.contextData = contextData;
-    }
 }

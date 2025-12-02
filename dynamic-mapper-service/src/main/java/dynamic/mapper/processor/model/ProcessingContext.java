@@ -68,9 +68,9 @@ public class ProcessingContext<O> implements AutoCloseable {
     public static final String DEVICE_TYPE = "deviceType";
     public static final String EVENT_WITH_ATTACHMENT = "eventWithAttachment";
     public static final String PROCESSING_MODE = "processingMode";
-    public static final String ATTACHMENT_DATA = "attachment_Data";
-    public static final String ATTACHMENT_TYPE = "attachment_Type";
-    public static final String ATTACHMENT_NAME = "attachment_Name";
+    public static final String ATTACHMENT_DATA = "attachmentData";
+    public static final String ATTACHMENT_TYPE = "attachmentType";
+    public static final String ATTACHMENT_NAME = "attachmentName";
     public static final String RETAIN = "retain";
     public static final String DEBUG = "debug";
     public static final String GENERIC_DEVICE_IDENTIFIER = "genericDeviceIdentifier";

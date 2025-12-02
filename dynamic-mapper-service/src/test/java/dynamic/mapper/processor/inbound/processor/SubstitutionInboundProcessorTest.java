@@ -334,12 +334,12 @@ class SubstitutionInboundProcessorTest {
     void testProcessWithAttachmentData() throws Exception {
         // Add attachment data to processing cache
         Map<String, List<SubstituteValue>> cache = processingContext.getProcessingCache();
-        cache.put("_CONTEXT_DATA_.attachment_Name",
+        cache.put("_CONTEXT_DATA_.attachmentName",
                 List.of(new SubstituteValue("sensor-data.csv", SubstituteValue.TYPE.TEXTUAL, RepairStrategy.DEFAULT,
                         false)));
-        cache.put("_CONTEXT_DATA_.attachment_Type",
+        cache.put("_CONTEXT_DATA_.attachmentType",
                 List.of(new SubstituteValue("text/csv", SubstituteValue.TYPE.TEXTUAL, RepairStrategy.DEFAULT, false)));
-        cache.put("_CONTEXT_DATA_.attachment_Data",
+        cache.put("_CONTEXT_DATA_.attachmentData",
                 List.of(new SubstituteValue("base64encodeddata", SubstituteValue.TYPE.TEXTUAL, RepairStrategy.DEFAULT,
                         false)));
 

@@ -550,9 +550,9 @@ export function expandC8YTemplate(template: object, mapping: Mapping): object {
       }
 
       // Add attachment properties
-      result[TOKEN_CONTEXT_DATA].attachment_Name = 'TestImage.jpeg';
-      result[TOKEN_CONTEXT_DATA].attachment_Type = 'image/jpeg';
-      result[TOKEN_CONTEXT_DATA].attachment_Data = '';
+      result[TOKEN_CONTEXT_DATA].attachmentName = 'TestImage.jpeg';
+      result[TOKEN_CONTEXT_DATA].attachmentType = 'image/jpeg';
+      result[TOKEN_CONTEXT_DATA].attachmentData = '';
     }
   }
 
