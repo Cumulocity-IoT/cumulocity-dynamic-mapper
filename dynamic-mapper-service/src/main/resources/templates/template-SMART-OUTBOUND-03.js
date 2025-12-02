@@ -1,5 +1,5 @@
 /**
- * @name Creates one measurement as array
+ * @name Creates one measurement and key for messages to Kafka connectors
  * @description Creates one measurement as array, set key for messages to Kafka connectors
  * @templateType OUTBOUND_SMART_FUNCTION
  * @direction OUTBOUND
@@ -16,7 +16,7 @@ function onMessage(msg, context) {
     console.log("Payload Raw:" + payload);
     console.log("Payload messageId" +  payload.get('messageId'));
 
-    return [{  
+    return {  
         topic: `measurements/${payload["source"]["id"]}`,
         payload:[{
             "time":  new Date().toISOString(),
@@ -26,7 +26,7 @@ function onMessage(msg, context) {
                 "value": payload["c8y_TemperatureMeasurement"]["T"]["value"]
                 }
             }
-        }],
+        },
         transportFields: { "key": payload["source"]["id"]}  // define key to add to Kafka payload (record)
     }];
 }

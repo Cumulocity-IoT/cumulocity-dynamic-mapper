@@ -32,7 +32,7 @@ import dynamic.mapper.core.InventoryEnrichmentClient;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Simple implementation of FlowContext for JavaScript execution
+ * Simple implementation of DataPrepContext for JavaScript execution
  */
 @Slf4j
 public class SimpleFlowContext implements DataPrepContext {

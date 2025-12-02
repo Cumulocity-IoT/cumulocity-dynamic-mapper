@@ -183,12 +183,6 @@ export interface CumulocityObject {
      */
     externalSource?: ExternalId[] | ExternalId;
 
-    /**
-     * @deprecated Use externalSource with ExternalId instead. Will be removed in version 3.0.0.
-     * InternalSource is no longer needed as you can specify the id directly in the payload.
-     */
-    internalSource?: CumulocitySource[] | CumulocitySource;
-
     // For advanced cases only:
 
     /** For messages sent by the flow, this is "cumulocity" by default, but can be set to other options for other destinations.
@@ -271,7 +265,6 @@ export interface DeviceMessage {
  * Context object providing access to state, configuration, and device lookup capabilities
  * during data preparation/mapping operations.
  *
- * @since 6.1.2 Renamed from FlowContext with additional methods
  */
 export interface DataPrepContext {
     /**

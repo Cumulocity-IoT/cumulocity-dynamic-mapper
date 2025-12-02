@@ -205,7 +205,6 @@ export interface DeviceMessage {
  * Context object providing access to state, configuration, and device lookup capabilities
  * during data preparation/mapping operations.
  * 
- * @since 6.1.2 Renamed from FlowContext with additional methods
  */
 export interface DataPrepContext {
     /**

@@ -82,21 +82,6 @@ export function createCompletionProviderFlowFunction(monaco) {
       documentation: 'A request going to or coming from Cumulocity core (or IceFlow/offloading).'
     },
     {
-      name: 'CumulocityMessage',
-      isEnum: false,
-      deprecated: true,
-      properties: [
-        { name: 'payload', type: 'object', documentation: '**DEPRECATED** - Use CumulocityObject instead.' },
-        { name: 'cumulocityType', type: 'string', documentation: '**DEPRECATED** - Use CumulocityObject instead.' },
-        { name: 'action', type: '"create" | "update"', documentation: '**DEPRECATED** - Use CumulocityObject instead.' },
-        { name: 'externalSource', type: 'ExternalSource[] | ExternalSource', documentation: '**DEPRECATED** - Use CumulocityObject with ExternalId instead.' },
-        { name: 'internalSource', type: 'CumulocitySource[] | CumulocitySource', documentation: '**DEPRECATED** - Use externalSource or specify id in payload directly.' },
-        { name: 'destination', type: '"cumulocity" | "iceflow" | "streaming-analytics"', documentation: '**DEPRECATED** - Use CumulocityObject instead.' }
-      ],
-      methods: [],
-      documentation: '**DEPRECATED** - Use CumulocityObject instead. Will be removed in version 6.2.0.'
-    },
-    {
       name: 'DeviceMessage',
       isEnum: false,
       properties: [
@@ -157,21 +142,7 @@ export function createCompletionProviderFlowFunction(monaco) {
         { name: 'getManagedObjectByDeviceId', parameters: ['deviceId'], returnType: 'any', documentation: 'Lookup a device from inventory cache by internal device ID.' },
         { name: 'getManagedObject', parameters: ['externalId'], returnType: 'any', documentation: 'Lookup a device from inventory cache by external ID.' }
       ],
-      documentation: 'Context object providing state management, configuration access, and device lookup capabilities (renamed from FlowContext in v2.0).'
-    },
-    {
-      name: 'FlowContext',
-      isEnum: false,
-      deprecated: true,
-      properties: [],
-      methods: [
-        { name: 'setState', parameters: ['key', 'value'], returnType: 'void', documentation: '**DEPRECATED** - Use DataPrepContext.setState() instead.' },
-        { name: 'getState', parameters: ['key'], returnType: 'any', documentation: '**DEPRECATED** - Use DataPrepContext.getState() instead.' },
-        { name: 'getConfig', parameters: [], returnType: 'Record<string, any>', documentation: '**DEPRECATED** - Use DataPrepContext.getConfig() instead.' },
-        { name: 'logMessage', parameters: ['msg'], returnType: 'void', documentation: '**DEPRECATED** - This method has been removed. Use console.log() instead.' },
-        { name: 'lookupDTMAssetProperties', parameters: ['assetId'], returnType: 'Record<string, any>', documentation: '**DEPRECATED** - Use DataPrepContext.getDTMAsset() instead.' }
-      ],
-      documentation: '**DEPRECATED** - Use DataPrepContext instead. Will be removed in version 6.2.0.'
+      documentation: 'Context object providing state management, configuration access, and device lookup capabilities'
     },
     {
       name: 'InputMessage',
@@ -555,9 +526,9 @@ export function createCompletionProviderFlowFunction(monaco) {
         const commonVars = [
           { name: 'msg', type: 'InputMessage', desc: 'Input message variable' },
           { name: 'outputMsg', type: 'OutputMessage', desc: 'Output message variable' },
-          { name: 'c8yMsg', type: 'CumulocityObject', desc: 'Cumulocity message variable (use CumulocityObject, not deprecated CumulocityMessage)' },
+          { name: 'c8yMsg', type: 'CumulocityObject', desc: 'Cumulocity message variable' },
           { name: 'deviceMsg', type: 'DeviceMessage', desc: 'Device message variable' },
-          { name: 'dataPrepContext', type: 'DataPrepContext', desc: 'Data preparation context variable (renamed from FlowContext)' },
+          { name: 'dataPrepContext', type: 'DataPrepContext', desc: 'Data preparation context variable' },
           { name: 'externalId', type: 'ExternalId', desc: 'External ID reference variable (v2.0+)' }
         ];
 

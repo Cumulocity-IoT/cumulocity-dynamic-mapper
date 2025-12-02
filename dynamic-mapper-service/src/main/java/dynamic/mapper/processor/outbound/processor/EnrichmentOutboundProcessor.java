@@ -98,7 +98,7 @@ public class EnrichmentOutboundProcessor extends BaseProcessor {
         identityFragment.put("c8ySourceId", sourceId.toString());
         identityFragment.put("externalIdType", mapping.getExternalIdType());
 
-        // Add topic levels to FlowContext if available
+        // Add topic levels to DataPrepContext if available
         DataPrepContext flowContext = context.getFlowContext();
         if (flowContext != null && context.getGraalContext() != null
                 && TransformationType.SMART_FUNCTION.equals(context.getMapping().getTransformationType())) {
@@ -158,7 +158,7 @@ public class EnrichmentOutboundProcessor extends BaseProcessor {
     }
 
     /**
-     * Helper method to safely add values to FlowContext
+     * Helper method to safely add values to DataPrepContext
      */
     private void addToFlowContext(DataPrepContext flowContext, ProcessingContext<Object> context, String key,
             Object value) {
@@ -168,7 +168,7 @@ public class EnrichmentOutboundProcessor extends BaseProcessor {
                 flowContext.setState(key, graalValue);
             }
         } catch (Exception e) {
-            log.warn("{} - Failed to add '{}' to FlowContext: {}", context.getTenant(), key, e.getMessage());
+            log.warn("{} - Failed to add '{}' to DataPrepContext: {}", context.getTenant(), key, e.getMessage());
         }
     }
 

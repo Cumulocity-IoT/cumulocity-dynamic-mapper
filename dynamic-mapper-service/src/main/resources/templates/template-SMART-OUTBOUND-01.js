@@ -34,7 +34,7 @@ function onMessage(msg, context) {
     //    externalSource: [{"type":"c8y_Serial"}]
     // }];
 
-    return [{  
+    return {  
         topic: `measurements/${payload["source"]["id"]}`,
         payload: {
             "time":  new Date().toISOString(),
@@ -45,5 +45,5 @@ function onMessage(msg, context) {
                 }
             }
         }
-    }];
+    };
 }
