@@ -29,7 +29,7 @@ jobs:
           java-version: 21
           distribution: zulu
       - name: Getting version of pom.xml
-        run:  echo ::set-output name=version::$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec)
+        run: echo "version=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec)" >> $GITHUB_OUTPUT
         id: project
       #Building Starter backend
       - name: Build Starter Backend
