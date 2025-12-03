@@ -66,8 +66,9 @@ import { CollapseModule } from 'ngx-bootstrap/collapse';
 import { DeviceClientMapComponent } from './client-relation/device-client-map.component';
 import { ClientRelationStepperComponent } from './client-relation/client-relation-stepper.component';
 import { MappingTabFactory } from './mapping-tab.factory';
-import { SubstitutionManagementService } from './stepper-mapping/substitution-management.service';
-import { MappingStepperService } from './stepper-mapping/mapping-stepper.service';
+import { SubstitutionManagementService } from './service/substitution-management.service';
+import { MappingStepperService } from './service/mapping-stepper.service';
+import { MappingSubstitutionStepComponent } from './step-substitution/mapping-substitution-step.component';
 
 @NgModule({
   declarations: [
@@ -75,6 +76,7 @@ import { MappingStepperService } from './stepper-mapping/mapping-stepper.service
     MappingStepperComponent,
     SnoopingStepperComponent,
     ClientRelationStepperComponent,
+    MappingSubstitutionStepComponent,
     MappingStepTestingComponent,
     MappingStepPropertiesComponent,
     DeviceSelectorSubscriptionComponent,
