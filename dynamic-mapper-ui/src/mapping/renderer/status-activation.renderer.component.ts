@@ -153,7 +153,7 @@ export class MappingStatusActivationRendererComponent implements OnInit {
 
       if (result[0].devices?.length === 0 && result[1].devices?.length === 0) {
         this.alertService.info(
-          "To enable the functionality of your outbound mapping, a subscription is required. Please proceed with creating the necessary 'Subscription outbound'."
+          "To enable the outbound mapping, a subscription is required. Please proceed with creating the necessary 'Subscription outbound'."
         );
         return false;
       }
