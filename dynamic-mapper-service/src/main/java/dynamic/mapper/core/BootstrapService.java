@@ -532,7 +532,11 @@ public class BootstrapService {
     public void cleanUpCaches() {
         subscriptionsService.runForEachTenant(() -> {
             String tenant = subscriptionsService.getTenant();
-            cleanupCachesForTenant(tenant);
+            try {
+                cleanupCachesForTenant(tenant);
+            } catch (Exception e) {
+                log.error("{} - Error executing Cache Cleanup Scheduler", tenant, e);
+            }
         });
     }
 
@@ -541,9 +545,13 @@ public class BootstrapService {
     public void sendDeviceToClientMap() {
         subscriptionsService.runForEachTenant(() -> {
             String tenant = subscriptionsService.getTenant();
-            ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
-            if (serviceConfiguration.getDeviceIsolationMQTTServiceEnabled()) {
-                mappingService.sendDeviceToClientMap(tenant);
+            try {
+                ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
+                if (serviceConfiguration.getDeviceIsolationMQTTServiceEnabled()) {
+                    mappingService.sendDeviceToClientMap(tenant);
+                }
+            } catch (Exception e) {
+                log.error("{} - Error executing sendDeviceToClientMaP", tenant, e);
             }
         });
     }
