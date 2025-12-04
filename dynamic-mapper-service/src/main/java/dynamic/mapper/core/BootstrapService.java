@@ -91,6 +91,9 @@ public class BootstrapService {
     @Autowired
     private AIAgentService aiAgentService;
 
+    @Autowired
+    private ExtensionManager extensionManager;
+
     public BootstrapService(
             ConnectorRegistry connectorRegistry,
             ConfigurationRegistry configurationRegistry,
@@ -265,7 +268,7 @@ public class BootstrapService {
         extensionInboundRegistry.initializeExtensions(tenant);
 
         c8YAgent.createExtensibleProcessor(tenant);
-        c8YAgent.loadProcessorExtensions(tenant);
+        extensionManager.loadProcessorExtensions(tenant);
 
         ServiceConfiguration serviceConfiguration = initializeServiceConfiguration(tenant);
         initializeCaches(tenant, serviceConfiguration);

@@ -92,18 +92,6 @@ export class MappingStatusActivationRendererComponent implements OnInit {
     await this.activateMapping();
   }
 
-  isValidToToggle(): boolean {
-    const { mapping } = this.context.item;
-
-    // If toggling to active for outbound mapping, check subscriptions
-    if (mapping.direction === Direction.OUTBOUND && !mapping.active) {
-      // You might want to cache this check or make it synchronous
-      // For now, allow the click and validate in activateMapping
-      return true;
-    }
-
-    return true;
-  }
   async activateMapping() {
     const { mapping } = this.context.item;
     const newActive = !mapping.active;
@@ -115,13 +103,13 @@ export class MappingStatusActivationRendererComponent implements OnInit {
 
     this.isCheckingValidity = true;
 
-    // Validate BEFORE changing state
+    // Validate subscription ONLY for OUTBOUND mappings BEFORE activating
     if (mapping.direction === Direction.OUTBOUND && newActive) {
       const valid = await this.validateSubscriptionOutbound(mapping);
       if (!valid) {
         this.isCheckingValidity = false;
         this.cdr.detectChanges();
-        return; // Exit without toggling - checkbox won't toggle because we prevented default
+        return; // Exit without toggling
       }
     }
 
@@ -145,18 +133,16 @@ export class MappingStatusActivationRendererComponent implements OnInit {
   }
 
   private async validateSubscriptionOutbound(mapping: Mapping): Promise<boolean> {
-    if (mapping.direction === Direction.OUTBOUND) {
-      const result = await Promise.all([
-        this.subscriptionService.getSubscriptionDevice(this.subscriptionService.DYNAMIC_DEVICE_SUBSCRIPTION),
-        this.subscriptionService.getSubscriptionDevice(this.subscriptionService.STATIC_DEVICE_SUBSCRIPTION)
-      ]);
+    const result = await Promise.all([
+      this.subscriptionService.getSubscriptionDevice(this.subscriptionService.DYNAMIC_DEVICE_SUBSCRIPTION),
+      this.subscriptionService.getSubscriptionDevice(this.subscriptionService.STATIC_DEVICE_SUBSCRIPTION)
+    ]);
 
-      if (result[0].devices?.length === 0 && result[1].devices?.length === 0) {
-        this.alertService.info(
-          "To enable the outbound mapping, a subscription is required. Please proceed with creating the necessary 'Subscription outbound'."
-        );
-        return false;
-      }
+    if (result[0].devices?.length === 0 && result[1].devices?.length === 0) {
+      this.alertService.info(
+        "To enable the outbound mapping, a subscription is required. Please proceed with creating the necessary 'Subscription outbound'."
+      );
+      return false;
     }
     return true;
   }
