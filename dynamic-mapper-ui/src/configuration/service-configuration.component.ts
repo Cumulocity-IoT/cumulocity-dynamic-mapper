@@ -203,7 +203,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
       ? this.serviceForm.value['jsonataAgent']?.trim()
       : undefined;
 
-    conf.jsonataAgent = this.serviceForm.value['smartFunctionAgent']
+    conf.smartFunctionAgent = this.serviceForm.value['smartFunctionAgent']
       ? this.serviceForm.value['smartFunctionAgent']?.trim()
       : undefined;
 

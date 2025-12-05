@@ -23,49 +23,22 @@ package dynamic.mapper.core;
 
 import static java.util.Map.entry;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.URL;
-import java.net.URLClassLoader;
-import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Base64;
 import java.util.Date;
-import java.util.Enumeration;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.commons.io.IOUtils;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.http.ContentDisposition;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Component;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.client.RestTemplate;
-
 import com.cumulocity.microservice.api.CumulocityClientProperties;
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
@@ -76,29 +49,23 @@ import com.cumulocity.model.idtype.GId;
 import com.cumulocity.model.measurement.MeasurementValue;
 import com.cumulocity.model.operation.OperationStatus;
 import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
-import com.cumulocity.rest.representation.CumulocityMediaType;
 import com.cumulocity.rest.representation.alarm.AlarmRepresentation;
 import com.cumulocity.rest.representation.event.EventRepresentation;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.measurement.MeasurementRepresentation;
 import com.cumulocity.rest.representation.operation.OperationRepresentation;
-import com.cumulocity.sdk.client.Platform;
 import com.cumulocity.sdk.client.ProcessingMode;
 import com.cumulocity.sdk.client.SDKException;
 import com.cumulocity.sdk.client.alarm.AlarmApi;
 import com.cumulocity.sdk.client.buffering.Future;
 import com.cumulocity.sdk.client.devicecontrol.DeviceControlApi;
 import com.cumulocity.sdk.client.event.EventApi;
-import com.cumulocity.sdk.client.inventory.BinariesApi;
 import com.cumulocity.sdk.client.measurement.MeasurementApi;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 import c8y.IsDevice;
-import dynamic.mapper.App;
 import dynamic.mapper.configuration.ServiceConfiguration;
-import dynamic.mapper.configuration.TrustedCertificateCollectionRepresentation;
-import dynamic.mapper.configuration.TrustedCertificateRepresentation;
 import dynamic.mapper.connector.core.client.Certificate;
 import dynamic.mapper.core.cache.InboundExternalIdCache;
 import dynamic.mapper.core.cache.InventoryCache;
@@ -106,17 +73,10 @@ import dynamic.mapper.core.facade.IdentityFacade;
 import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.BinaryInfo;
-import dynamic.mapper.model.DeviceToClientMapRepresentation;
-import dynamic.mapper.model.EventBinary;
-import dynamic.mapper.model.Extension;
-import dynamic.mapper.model.ExtensionEntry;
-import dynamic.mapper.model.ExtensionType;
+import dynamic.mapper.model.ConnectorStatus;
 import dynamic.mapper.model.LoggingEventType;
 import dynamic.mapper.model.MapperServiceRepresentation;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.extension.ExtensionsComponent;
-import dynamic.mapper.processor.extension.ProcessorExtensionSource;
-import dynamic.mapper.processor.extension.ProcessorExtensionTarget;
 import dynamic.mapper.processor.flow.ExternalId;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
@@ -134,7 +94,7 @@ import static com.cumulocity.rest.representation.alarm.AlarmMediaType.ALARM;;
 
 @Slf4j
 @Component
-public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichmentClient {
+public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichmentClient, IdentityResolver {
 
     ConnectorStatus previousConnectorStatus = ConnectorStatus.UNKNOWN;
 
@@ -145,16 +105,10 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     private InventoryFacade inventoryApi;
 
     @Autowired
-    private BinariesApi binaryApi;
-
-    @Autowired
     private IdentityFacade identityApi;
 
     @Autowired
     private MeasurementApi measurementApi;
-
-    @Autowired
-    private Platform platform;
 
     @Autowired
     private AlarmApi alarmApi;
@@ -171,17 +125,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     @Autowired
     private ContextService<MicroserviceCredentials> contextService;
 
-    private ExtensionsComponent extensionsComponent;
-
-    @Autowired
-    public void setExtensionsComponent(ExtensionsComponent extensionsComponent) {
-        this.extensionsComponent = extensionsComponent;
-    }
-
-    private Map<String, InboundExternalIdCache> inboundExternalIdCaches = new ConcurrentHashMap<>();
-
-    private Map<String, InventoryCache> inventoryCaches = new ConcurrentHashMap<>();
-
     @Getter
     private ConfigurationRegistry configurationRegistry;
 
@@ -192,17 +135,32 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     @Autowired
     CumulocityClientProperties clientProperties;
 
+    private Semaphore c8ySemaphore;
+
+    @Autowired
+    private ExtensionManager extensionManager;
+
+    @Autowired
+    private CacheManager cacheManager;
+
+    @Autowired
+    private CertificateService certificateService;
+
+    @Autowired
+    private BinaryAttachmentService binaryAttachmentService;
+
+    @Autowired
+    private DeviceBootstrapService deviceBootstrapService;
+
+    @Autowired
+    private InventoryCacheEnrichmentService inventoryCacheEnrichmentService;
+
     @Autowired
     public void setConfigurationRegistry(@Lazy ConfigurationRegistry configurationRegistry) {
         this.configurationRegistry = configurationRegistry;
     }
 
-    private static final String EXTENSION_INTERNAL_FILE = "extension-internal.properties";
-    private static final String EXTENSION_EXTERNAL_FILE = "extension-external.properties";
-
     private static final String C8Y_NOTIFICATION_CONNECTOR = "C8YNotificationConnector";
-
-    private static final String PACKAGE_MAPPING_PROCESSOR_EXTENSION_EXTERNAL = "dynamic.mapper.processor.extension.external";
 
     public static final String MEASUREMENT_COLLECTION_PATH = "/measurement/measurements";
 
@@ -210,7 +168,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     private String version;
 
     private Integer maxConnections = 100;
-    private Semaphore c8ySemaphore;
+
     private Timer c8yRequestTimer = Timer.builder("dynmapper_c8y_request_processing_time")
             .description("C8Y Request Processing time").register(Metrics.globalRegistry);
 
@@ -225,6 +183,14 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                 .register(Metrics.globalRegistry);
     }
 
+    public Semaphore getC8ySemaphore() {
+        return c8ySemaphore;
+    }
+
+    public void createExtensibleProcessor(String tenant) {
+        extensionManager.createExtensibleProcessor(tenant, inventoryApi);
+    }
+
     public ExternalIDRepresentation resolveExternalId2GlobalId(String tenant, ID identity,
             Boolean testing) {
         if (identity.getType() == null) {
@@ -232,14 +198,16 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         }
         ExternalIDRepresentation result = subscriptionsService.callForTenant(tenant, () -> {
             try {
-                ExternalIDRepresentation resultInner = inboundExternalIdCaches.get(tenant)
+                ExternalIDRepresentation resultInner = cacheManager.getInboundExternalIdCache(tenant)
                         .getIdByExternalId(identity);
                 Counter.builder("dynmapper_inbound_identity_requests_total").tag("tenant", tenant)
                         .register(Metrics.globalRegistry).increment();
                 if (resultInner == null) {
                     resultInner = identityApi.resolveExternalId2GlobalId(identity, testing, c8ySemaphore);
-                    inboundExternalIdCaches.get(tenant).putIdForExternalId(identity,
-                            resultInner);
+                    if (!testing) {
+                        cacheManager.getInboundExternalIdCache(tenant).putIdForExternalId(identity,
+                                resultInner);
+                    }
 
                 } else {
                     log.debug("{} - Cache hit for external ID {} -> {}", tenant, identity.getValue(),
@@ -383,155 +351,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
 
     public Certificate loadCertificateByName(String certificateName, String fingerprint,
             String tenant, String connectorName) {
-        TrustedCertificateRepresentation result = subscriptionsService.callForTenant(tenant,
-                () -> {
-                    log.info("{} - Connector {} - Retrieving certificate {} ", tenant, connectorName,
-                            certificateName);
-                    TrustedCertificateRepresentation certResult = null;
-                    try {
-                        List<TrustedCertificateRepresentation> certificatesList = new ArrayList<>();
-                        String nextUrl = String.format("/tenant/tenants/%s/trusted-certificates", tenant);
-
-                        // Pagination with safety limit
-                        int pageCount = 0;
-                        int maxPages = 100; // Safety limit to prevent infinite loops
-
-                        while (nextUrl != null && !nextUrl.isEmpty() && pageCount < maxPages) {
-                            pageCount++;
-
-                            TrustedCertificateCollectionRepresentation certificatesResult = platform.rest().get(
-                                    nextUrl,
-                                    CumulocityMediaType.APPLICATION_JSON_TYPE,
-                                    TrustedCertificateCollectionRepresentation.class);
-
-                            List<TrustedCertificateRepresentation> pageCerts = certificatesResult.getCertificates();
-
-                            if (pageCerts != null && !pageCerts.isEmpty()) {
-                                certificatesList.addAll(pageCerts);
-                                log.debug("{} - Connector {} - Page {}: Retrieved {} certificates (total: {})",
-                                        tenant, connectorName, pageCount, pageCerts.size(), certificatesList.size());
-                            } else {
-                                log.debug("{} - Connector {} - Page {}: No more certificates",
-                                        tenant, connectorName, pageCount);
-                                break; // No more certificates
-                            }
-
-                            // Get next URL - THIS IS THE KEY FIX
-                            nextUrl = certificatesResult.getNext();
-
-                            // Break if no next URL
-                            if (nextUrl == null || nextUrl.isEmpty()) {
-                                log.debug("{} - Connector {} - No more pages (nextUrl is null/empty)",
-                                        tenant, connectorName);
-                                break;
-                            }
-                        }
-
-                        if (pageCount >= maxPages) {
-                            log.warn("{} - Connector {} - Reached maximum page limit ({}), stopping pagination",
-                                    tenant, connectorName, maxPages);
-                        }
-
-                        log.info("{} - Connector {} - Retrieved total of {} certificates across {} pages",
-                                tenant, connectorName, certificatesList.size(), pageCount);
-
-                        // Search for matching certificate
-                        for (TrustedCertificateRepresentation certificateIterate : certificatesList) {
-                            log.debug("{} - Checking certificate: name='{}', fingerprint='{}'",
-                                    tenant,
-                                    certificateIterate.getName(),
-                                    certificateIterate.getFingerprint());
-
-                            // Normalize both fingerprints for comparison
-                            String normalizedStoredFingerprint = normalizeFingerprint(
-                                    certificateIterate.getFingerprint());
-                            String normalizedInputFingerprint = normalizeFingerprint(fingerprint);
-
-                            boolean nameMatches = certificateIterate.getName().equals(certificateName);
-                            boolean fingerprintMatches = normalizedStoredFingerprint.equals(normalizedInputFingerprint);
-
-                            if (nameMatches && fingerprintMatches) {
-                                certResult = certificateIterate;
-                                log.info("{} - Connector {} - Found matching certificate: name='{}', fingerprint='{}'",
-                                        tenant, connectorName, certificateName, certificateIterate.getFingerprint());
-                                break;
-                            } else if (nameMatches) {
-                                log.debug("{} - Name matches but fingerprint differs: expected='{}', got='{}'",
-                                        tenant, normalizedInputFingerprint, normalizedStoredFingerprint);
-                            }
-                        }
-
-                        if (certResult == null) {
-                            log.warn("{} - Connector {} - Certificate not found: name='{}', fingerprint='{}'",
-                                    tenant, connectorName, certificateName, fingerprint);
-                        }
-
-                    } catch (Exception e) {
-                        log.error("{} - Connector {} - Error retrieving certificate: ", tenant,
-                                connectorName, e);
-                    }
-                    return certResult;
-                });
-
-        if (result != null) {
-            log.info("{} - Connector {} - Found certificate '{}' with fingerprint '{}'",
-                    tenant, connectorName, certificateName, result.getFingerprint());
-
-            // Handle PEM format - check if markers already exist
-            String pemContent = result.getCertInPemFormat();
-            String fullPemCert;
-
-            if (pemContent != null && pemContent.contains("-----BEGIN CERTIFICATE-----")) {
-                // Already has PEM markers (might be a chain)
-                fullPemCert = pemContent;
-                log.debug("{} - Certificate already in PEM format with markers", tenant);
-            } else if (pemContent != null && !pemContent.isEmpty()) {
-                // Need to add PEM markers
-                fullPemCert = "-----BEGIN CERTIFICATE-----\n"
-                        + pemContent
-                        + "\n-----END CERTIFICATE-----";
-                log.debug("{} - Added PEM markers to certificate", tenant);
-            } else {
-                log.error("{} - Certificate PEM content is null or empty", tenant);
-                return null;
-            }
-
-            // Count certificates in chain
-            int certCount = countCertificatesInChain(fullPemCert);
-            log.info("{} - Certificate chain contains {} certificate(s)", tenant, certCount);
-
-            return new Certificate(result.getFingerprint(), fullPemCert);
-        } else {
-            log.warn("{} - Connector {} - No certificate found with name='{}' and fingerprint='{}'",
-                    tenant, connectorName, certificateName, fingerprint);
-            return null;
-        }
-    }
-
-    // Helper method to normalize fingerprints
-    private String normalizeFingerprint(String fingerprint) {
-        if (fingerprint == null || fingerprint.isEmpty()) {
-            return "";
-        }
-        // Remove colons, spaces, and convert to lowercase
-        return fingerprint.replace(":", "")
-                .replace(" ", "")
-                .trim()
-                .toLowerCase();
-    }
-
-    // Helper method to count certificates in a PEM chain
-    private int countCertificatesInChain(String pemContent) {
-        if (pemContent == null)
-            return 0;
-
-        int count = 0;
-        int index = 0;
-        while ((index = pemContent.indexOf("-----BEGIN CERTIFICATE-----", index)) != -1) {
-            count++;
-            index += 27; // Length of "-----BEGIN CERTIFICATE-----"
-        }
-        return count;
+        return certificateService.loadCertificateByName(certificateName, fingerprint, tenant, connectorName);
     }
 
     public CompletableFuture<AbstractExtensibleRepresentation> createMEAOAsync(ProcessingContext<?> context,
@@ -898,197 +718,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         return device;
     }
 
-    public void loadProcessorExtensions(String tenant) {
-        ClassLoader internalClassloader = C8YAgent.class.getClassLoader();
-        ClassLoader externalClassLoader = null;
-
-        for (ManagedObjectRepresentation extension : extensionsComponent.get()) {
-            Map<?, ?> props = (Map<?, ?>) (extension.get(ExtensionsComponent.PROCESSOR_EXTENSION_TYPE));
-            String extName = props.get("name").toString();
-            boolean external = (Boolean) props.get("external");
-            log.debug("{} - Trying to load extension id: {}, name: {}", tenant, extension.getId().getValue(),
-                    extName);
-            InputStream downloadInputStream = null;
-            FileOutputStream outputStream = null;
-            try {
-                if (external) {
-                    // step 1 download extension for binary repository
-                    downloadInputStream = binaryApi.downloadFile(extension.getId());
-
-                    // step 2 create temporary file,because classloader needs a url resource
-                    File tempFile = File.createTempFile(extName, "jar");
-                    tempFile.deleteOnExit();
-                    String canonicalPath = tempFile.getCanonicalPath();
-                    String path = tempFile.getPath();
-                    String pathWithProtocol = "file://".concat(tempFile.getPath());
-                    log.debug("{} - CanonicalPath: {}, Path: {}, PathWithProtocol: {}", tenant, canonicalPath,
-                            path,
-                            pathWithProtocol);
-                    outputStream = new FileOutputStream(tempFile);
-                    IOUtils.copy(downloadInputStream, outputStream);
-
-                    // step 3 parse list of extensions
-                    URL[] urls = { tempFile.toURI().toURL() };
-                    externalClassLoader = new URLClassLoader(urls, App.class.getClassLoader());
-                    registerExtensionInProcessor(tenant, extension.getId().getValue(), extName, externalClassLoader,
-                            external);
-                } else {
-                    registerExtensionInProcessor(tenant, extension.getId().getValue(), extName, internalClassloader,
-                            external);
-                }
-            } catch (IOException e) {
-                log.error("{} - IO Exception occurred when loading extension: ", tenant, e);
-            } catch (SecurityException e) {
-                log.error("{} - Security Exception occurred when loading extension: ", tenant, e);
-            } catch (IllegalArgumentException e) {
-                log.error("{} - Invalid argument Exception occurred when loading extension: ", tenant, e);
-            } finally {
-                // Consider cleaning up resources here
-                if (downloadInputStream != null) {
-                    try {
-                        downloadInputStream.close();
-                    } catch (IOException e) {
-                        log.warn("{} - Failed to close download stream", tenant, e);
-                    }
-                }
-                if (outputStream != null) {
-                    try {
-                        outputStream.close();
-                    } catch (IOException e) {
-                        log.warn("{} - Failed to close output stream", tenant, e);
-                    }
-                }
-            }
-        }
-    }
-
-    private void registerExtensionInProcessor(String tenant, String id, String extensionName, ClassLoader dynamicLoader,
-            boolean external)
-            throws IOException {
-        // manage extensions for Camel routes
-        extensionInboundRegistry.addExtension(tenant, new Extension(id, extensionName, external));
-
-        String resource = external ? EXTENSION_EXTERNAL_FILE : EXTENSION_INTERNAL_FILE;
-        InputStream resourceAsStream = dynamicLoader.getResourceAsStream(resource);
-        InputStreamReader in = null;
-        try {
-            in = new InputStreamReader(resourceAsStream);
-        } catch (Exception e) {
-            log.error("{} - Registration file: {} missing, ignoring to load extensions from: {}", tenant,
-                    resource,
-                    (external ? "EXTERNAL" : "INTERNAL"));
-            throw new IOException("Registration file: " + resource + " missing, ignoring to load extensions from:"
-                    + (external ? "EXTERNAL" : "INTERNAL"));
-        }
-        BufferedReader buffered = new BufferedReader(in);
-        Properties newExtensions = new Properties();
-
-        if (buffered != null)
-            newExtensions.load(buffered);
-        log.debug("{} - Preparing to load extensions:" + newExtensions.toString(), tenant);
-
-        Enumeration<?> extensionEntries = newExtensions.propertyNames();
-        while (extensionEntries.hasMoreElements()) {
-            String key = (String) extensionEntries.nextElement();
-            Class<?> clazz;
-            ExtensionEntry extensionEntry = ExtensionEntry.builder().eventName(key).extensionName(extensionName)
-                    .fqnClassName(newExtensions.getProperty(key)).loaded(true).message("OK").build();
-
-            // manage extensions for Camel routes
-            extensionInboundRegistry.addExtensionEntry(tenant, extensionName, extensionEntry);
-
-            try {
-                clazz = dynamicLoader.loadClass(newExtensions.getProperty(key));
-
-                if (external && !clazz.getPackageName().startsWith(PACKAGE_MAPPING_PROCESSOR_EXTENSION_EXTERNAL)) {
-                    extensionEntry.setMessage(
-                            "Implementation must be in package: 'dynamic.mapper.processor.extension.external' instead of: "
-                                    + clazz.getPackageName());
-                    extensionEntry.setLoaded(false);
-                } else {
-                    Object object = clazz.getDeclaredConstructor().newInstance();
-                    if (object instanceof ProcessorExtensionSource) {
-                        ProcessorExtensionSource<?> extensionImpl = (ProcessorExtensionSource<?>) clazz
-                                .getDeclaredConstructor()
-                                .newInstance();
-                        // springUtil.registerBean(key, clazz);
-                        extensionEntry.setExtensionImplSource(extensionImpl);
-                        extensionEntry.setExtensionType(ExtensionType.EXTENSION_SOURCE);
-                        log.debug("{} - Successfully registered extensionImplSource : {} for key: {}",
-                                tenant,
-                                newExtensions.getProperty(key),
-                                key);
-                    }
-                    if (object instanceof ProcessorExtensionTarget) {
-                        ProcessorExtensionTarget<?> extensionImpl = (ProcessorExtensionTarget<?>) clazz
-                                .getDeclaredConstructor()
-                                .newInstance();
-                        // springUtil.registerBean(key, clazz);
-                        extensionEntry.setExtensionImplTarget(extensionImpl);
-                        // overwrite type since it implements both
-                        extensionEntry.setExtensionType(ExtensionType.EXTENSION_SOURCE_TARGET);
-                        log.debug("{} - Successfully registered extensionImplTarget : {} for key: {}",
-                                tenant,
-                                newExtensions.getProperty(key),
-                                key);
-                    }
-                    if (!(object instanceof ProcessorExtensionSource)
-                            && !(object instanceof ProcessorExtensionTarget)) {
-                        String msg = String.format(
-                                "Extension: %s=%s is not instance of ProcessorExtension, does not extend ProcessorExtensionSource!",
-                                key,
-                                newExtensions.getProperty(key));
-                        log.warn(msg);
-                        extensionEntry.setMessage(msg);
-                        extensionEntry.setLoaded(false);
-                    }
-                }
-            } catch (Exception e) {
-                String exceptionMsg = e.getCause() == null ? e.getMessage() : e.getCause().getMessage();
-                String msg = String.format("Could not load extension: %s:%s: %s!", key,
-                        newExtensions.getProperty(key), exceptionMsg);
-                log.warn(msg);
-                e.printStackTrace();
-                extensionEntry.setMessage(msg);
-                extensionEntry.setLoaded(false);
-            } catch (Error e) {
-                String msg = String.format("Could not load extension: %s:%s: %s!", key,
-                        newExtensions.getProperty(key), e.getMessage());
-                log.warn(msg);
-                e.printStackTrace();
-                extensionEntry.setMessage(msg);
-                extensionEntry.setLoaded(false);
-            }
-        }
-        // manage extensions for Camel routes
-        extensionInboundRegistry.updateStatusExtension(tenant, extensionName);
-    }
-
-    public Map<String, Extension> getProcessorExtensions(String tenant) {
-        return extensionInboundRegistry.getExtensions(tenant);
-    }
-
-    public Extension getProcessorExtension(String tenant, String extension) {
-        return extensionInboundRegistry.getExtension(tenant, extension);
-    }
-
-    public Extension deleteProcessorExtension(String tenant, String extensionName) {
-        for (ManagedObjectRepresentation extensionRepresentation : extensionsComponent.get()) {
-            if (extensionName.equals(extensionRepresentation.getName())) {
-                binaryApi.deleteFile(extensionRepresentation.getId());
-                log.info("{} - Deleted extension: {} permanently!", tenant, extensionName);
-            }
-        }
-        // manage extensions for Camel routes
-        return extensionInboundRegistry.deleteExtension(tenant, extensionName);
-    }
-
-    public void reloadExtensions(String tenant) {
-        // manage extensions for Camel routes
-        extensionInboundRegistry.deleteExtensions(tenant);
-        loadProcessorExtensions(tenant);
-    }
-
     public ManagedObjectRepresentation getManagedObjectForId(String tenant, String deviceId, Boolean testing) {
         ManagedObjectRepresentation device = subscriptionsService.callForTenant(tenant, () -> {
             try {
@@ -1122,91 +751,11 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     }
 
     public ManagedObjectRepresentation initializeMapperServiceRepresentation(String tenant) {
-        ExternalIDRepresentation mapperServiceIdRepresentation = resolveExternalId2GlobalId(tenant,
-                new ID(null, MapperServiceRepresentation.AGENT_ID),
-                false);
-        ;
-        ManagedObjectRepresentation amo = new ManagedObjectRepresentation();
-
-        if (mapperServiceIdRepresentation != null) {
-            amo = inventoryApi.get(mapperServiceIdRepresentation.getManagedObject().getId(), false);
-            log.info("{} - Agent with external ID [{}] already exists, sourceId: {}", tenant,
-                    MapperServiceRepresentation.AGENT_ID,
-                    amo.getId().getValue());
-        } else {
-            amo.setName(MapperServiceRepresentation.AGENT_NAME);
-            amo.setType(MapperServiceRepresentation.AGENT_TYPE);
-            amo.set(new Agent());
-            HashMap<String, String> agentFragments = new HashMap<>();
-            agentFragments.put("name", "Dynamic Mapper");
-            agentFragments.put("version", version);
-            agentFragments.put("url", "https://github.com/Cumulocity-IoT/cumulocity-dynamic-mapper");
-            agentFragments.put("maintainer", "Open-Source");
-            amo.set(agentFragments, "c8y_Agent");
-            // avoid that Dynamic Mapper appears as device and can be accidentally deleted
-            // amo.set(new IsDevice());
-            amo.setProperty(MapperServiceRepresentation.MAPPING_FRAGMENT,
-                    new ArrayList<>());
-            amo = inventoryApi.create(amo, null);
-            log.info("{} - Agent has been created with ID {}", tenant, amo.getId());
-            ExternalIDRepresentation externalAgentId = identityApi.create(amo,
-                    new ID("c8y_Serial",
-                            MapperServiceRepresentation.AGENT_ID),
-                    false);
-            log.debug("{} - ExternalId created: {}", tenant, externalAgentId.getExternalId());
-        }
-        return amo;
+        return deviceBootstrapService.initializeMapperServiceRepresentation(tenant, this);
     }
 
     public ManagedObjectRepresentation initializeDeviceToClientMapRepresentation(String tenant) {
-        ExternalIDRepresentation deviceToClientMapRepresentation = resolveExternalId2GlobalId(tenant,
-                new ID(null, DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_ID),
-                false);
-        ;
-        ManagedObjectRepresentation amo = new ManagedObjectRepresentation();
-
-        if (deviceToClientMapRepresentation != null) {
-            amo = inventoryApi.get(deviceToClientMapRepresentation.getManagedObject().getId(), false);
-            log.info("{} - Dynamic Mapper Device To Client Map with external ID [{}] already exists, sourceId: {}",
-                    tenant,
-                    DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_ID,
-                    amo.getId().getValue());
-        } else {
-            amo.setName(DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_NAME);
-            amo.setType(DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_TYPE);
-            amo.setProperty(DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_FRAGMENT,
-                    new HashMap<>());
-            amo = inventoryApi.create(amo, null);
-            log.info("{} - Dynamic Mapper Device To Client Map has been created with ID {}", tenant, amo.getId());
-            ExternalIDRepresentation externalAgentId = identityApi.create(amo,
-                    new ID("c8y_Serial",
-                            DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_ID),
-                    null);
-            log.debug("{} - ExternalId created: {}", tenant, externalAgentId.getExternalId());
-        }
-        return amo;
-    }
-
-    public void createExtensibleProcessor(String tenant) {
-        log.debug("{} - Create ExtensibleProcessor", tenant);
-
-        // check if managedObject for internal mapping extension exists
-        List<ManagedObjectRepresentation> internalExtension = extensionsComponent.getInternal();
-        ManagedObjectRepresentation ie = new ManagedObjectRepresentation();
-        if (internalExtension == null || internalExtension.size() == 0) {
-            Map<String, ?> props = Map.of("name",
-                    ExtensionsComponent.PROCESSOR_EXTENSION_INTERNAL_NAME,
-                    "external", false);
-            ie.setProperty(ExtensionsComponent.PROCESSOR_EXTENSION_TYPE,
-                    props);
-            ie.setName(ExtensionsComponent.PROCESSOR_EXTENSION_INTERNAL_NAME);
-            ie = inventoryApi.create(ie, null);
-        } else {
-            ie = internalExtension.get(0);
-        }
-        log.debug("{} - Internal extension: {} registered: {}", tenant,
-                ExtensionsComponent.PROCESSOR_EXTENSION_INTERNAL_NAME,
-                ie.getId().getValue(), ie);
+        return deviceBootstrapService.initializeDeviceToClientMapRepresentation(tenant, this);
     }
 
     public void sendNotificationLifecycle(String tenant, ConnectorStatus connectorStatus, String message) {
@@ -1239,242 +788,64 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         return clonedContext;
     }
 
-    public void initializeInboundExternalIdCache(String tenant, int inboundExternalIdCacheSize) {
-        log.info("{} - Initialize inboundExternalIdCache {}", tenant, inboundExternalIdCacheSize);
-        inboundExternalIdCaches.put(tenant, new InboundExternalIdCache(inboundExternalIdCacheSize, tenant));
+    public void initializeInboundExternalIdCache(String tenant, int size) {
+        cacheManager.initializeInboundExternalIdCache(tenant, size);
     }
 
-    public void initializeInventoryCache(String tenant, int inventoryCacheSize) {
-        log.info("{} - Initialize inventoryCache {}", tenant, inventoryCacheSize);
-        InventoryCache inventoryCache = new InventoryCache(inventoryCacheSize, tenant);
-        // Set up eviction listener
-        inventoryCache.setEvictionListener(evictedSourceId -> {
-            ManagedObjectRepresentation moRep = new ManagedObjectRepresentation();
-            moRep.setId(new GId(evictedSourceId));
-            configurationRegistry.getNotificationSubscriber().unsubscribeMOForInventoryCacheUpdates(tenant, moRep);
-        });
-        inventoryCaches.put(tenant, inventoryCache);
+    public void initializeInventoryCache(String tenant, int size) {
+        cacheManager.initializeInventoryCache(tenant, size, configurationRegistry);
     }
 
     public InboundExternalIdCache removeInboundExternalIdCache(String tenant) {
-        return inboundExternalIdCaches.remove(tenant);
+        return cacheManager.removeInboundExternalIdCache(tenant);
     }
 
     public Integer getInboundExternalIdCacheSize(String tenant) {
-        return (inboundExternalIdCaches.get(tenant) != null ? inboundExternalIdCaches.get(tenant).getCacheSize()
-                : 0);
+        return cacheManager.getInboundExternalIdCacheSize(tenant);
     }
 
     public InventoryCache removeInventoryCache(String tenant) {
-        return inventoryCaches.remove(tenant);
+        return cacheManager.removeInventoryCache(tenant);
     }
 
     public InventoryCache getInventoryCache(String tenant) {
-        return inventoryCaches.get(tenant);
+        return cacheManager.getInventoryCache(tenant);
     }
 
     public void clearInboundExternalIdCache(String tenant, boolean recreate, int inboundExternalIdCacheSize) {
-        InboundExternalIdCache inboundExternalIdCache = inboundExternalIdCaches.get(tenant);
-        if (inboundExternalIdCache != null) {
-            // FIXME Recreating the cache creates a new instance of InboundExternalIdCache
-            // which causes issues with Metering
-            if (recreate) {
-                inboundExternalIdCaches.put(tenant, new InboundExternalIdCache(inboundExternalIdCacheSize, tenant));
-            } else {
-                inboundExternalIdCache.clearCache();
-            }
-        }
+        cacheManager.clearInboundExternalIdCache(tenant, recreate, inboundExternalIdCacheSize);
     }
 
     public void removeDeviceFromInboundExternalIdCache(String tenant, ID identity) {
-        InboundExternalIdCache inboundExternalIdCache = inboundExternalIdCaches.get(tenant);
-        if (inboundExternalIdCache != null) {
-            inboundExternalIdCache.removeIdForExternalId(identity);
-        }
-        log.info("{} - Removed device {} from InboundExternalIdCache", tenant, identity.getValue());
+        cacheManager.removeDeviceFromInboundExternalIdCache(tenant, identity);
     }
 
     public int getSizeInboundExternalIdCache(String tenant) {
-        InboundExternalIdCache inboundExternalIdCache = inboundExternalIdCaches.get(tenant);
-        if (inboundExternalIdCache != null) {
-            return inboundExternalIdCache.getCacheSize();
-        } else
-            return 0;
+        return cacheManager.getSizeInboundExternalIdCache(tenant);
     }
 
     public void clearInventoryCache(String tenant, boolean recreate, int inventoryCacheSize) {
-        InventoryCache inventoryCache = inventoryCaches.get(tenant);
-        if (inventoryCache != null) {
-            // FIXME Recreating the cache creates a new instance of InventoryCache
-            // which causes issues with Metering
-            if (recreate) {
-                // this is required to unregister all subscriptions for inventory updates
-                configurationRegistry.getNotificationSubscriber().unsubscribeAllMOForInventoryCacheUpdates(tenant);
-                inventoryCaches.put(tenant, new InventoryCache(inventoryCacheSize, tenant));
-            } else {
-                configurationRegistry.getNotificationSubscriber().unsubscribeAllMOForInventoryCacheUpdates(tenant);
-                inventoryCache.clearCache();
-            }
-        }
+        cacheManager.clearInventoryCache(tenant, recreate, inventoryCacheSize, configurationRegistry);
     }
 
     public int getSizeInventoryCache(String tenant) {
-        InventoryCache inventoryCache = inventoryCaches.get(tenant);
-        if (inventoryCache != null) {
-            return inventoryCache.getCacheSize();
-        } else
-            return 0;
+        return cacheManager.getSizeInventoryCache(tenant);
     }
 
     public Map<String, Object> getMOFromInventoryCacheByExternalId(String tenant, ExternalId externalId,
             Boolean testing) {
 
-        if (externalId == null || externalId.getExternalId() == null || externalId.getType() == null) {
-            return null;
-        }
-        ID identity = new ID(externalId.getType(), externalId.getExternalId());
-        ExternalIDRepresentation sourceId = this.resolveExternalId2GlobalId(tenant, identity, testing);
-        if (sourceId != null) {
-            return getMOFromInventoryCache(tenant, sourceId.getManagedObject().getId().getValue(), testing);
-        }
-        return null;
+        return inventoryCacheEnrichmentService.getMOFromInventoryCacheByExternalId(tenant, externalId, testing, this, configurationRegistry);
     }
 
     public Map<String, Object> updateMOInInventoryCache(String tenant, String sourceId, Map<String, Object> updates,
             Boolean testing) {
-        InventoryCache inventoryCache = getInventoryCache(tenant);
-
-        // Create new managed object cache entry
-        final Map<String, Object> newMO = new HashMap<>();
-        inventoryCache.putMO(sourceId, newMO);
-
-        ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
-        ManagedObjectRepresentation device = getManagedObjectForId(tenant, sourceId, testing);
-        Map<String, Object> attrs = device.getAttrs();
-
-        // Process each fragment
-        serviceConfiguration.getInventoryFragmentsToCache().forEach(frag -> {
-            frag = frag.trim();
-
-            // Handle special cases
-            if ("id".equals(frag)) {
-                newMO.put(frag, sourceId);
-                return; // using return in forEach as continue
-            }
-            if ("name".equals(frag)) {
-                newMO.put(frag, device.getName());
-                return;
-            }
-            if ("owner".equals(frag)) {
-                newMO.put(frag, device.getOwner());
-                return;
-            }
-
-            if ("type".equals(frag)) {
-                newMO.put(frag, device.getType());
-                return;
-            }
-
-            // Handle nested attributes
-            Object value = resolveNestedAttribute(attrs, frag);
-            if (value != null) {
-                newMO.put(frag, value);
-            }
-        });
-
-        return newMO;
+        return inventoryCacheEnrichmentService.updateMOInInventoryCache(tenant, sourceId, updates, testing, this, configurationRegistry);
     }
 
     public Map<String, Object> getMOFromInventoryCache(String tenant, String sourceId, Boolean testing) {
 
-        if (sourceId == null) {
-            return null;
-        }
-
-        InventoryCache inventoryCache = getInventoryCache(tenant);
-        Map<String, Object> result = inventoryCache.getMOBySource(sourceId);
-        if (result != null) {
-            return result;
-        }
-
-        // Create new managed object cache entry
-        final Map<String, Object> newMO = new HashMap<>();
-        inventoryCache.putMO(sourceId, newMO);
-        ManagedObjectRepresentation mor = new ManagedObjectRepresentation();
-        mor.setId(new GId(sourceId));
-
-        // register for updates
-        configurationRegistry.getNotificationSubscriber()
-                .subscribeMOForInventoryCacheUpdates(tenant, mor);
-
-        ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
-        ManagedObjectRepresentation device = getManagedObjectForId(tenant, sourceId, testing);
-        if (device != null) {
-            Map<String, Object> attrs = device.getAttrs();
-
-            // Process each fragment
-            serviceConfiguration.getInventoryFragmentsToCache().forEach(frag -> {
-                frag = frag.trim();
-
-                // Handle special cases
-                if ("id".equals(frag)) {
-                    newMO.put(frag, sourceId);
-                    return; // using return in forEach as continue
-                }
-                if ("name".equals(frag)) {
-                    newMO.put(frag, device.getName());
-                    return;
-                }
-                if ("owner".equals(frag)) {
-                    newMO.put(frag, device.getOwner());
-                    return;
-                }
-
-                if ("type".equals(frag)) {
-                    newMO.put(frag, device.getType());
-                    return;
-                }
-
-                // Handle nested attributes
-                Object value = resolveNestedAttribute(attrs, frag);
-                if (value != null) {
-                    newMO.put(frag, value);
-                }
-            });
-        }
-
-        return newMO;
-    }
-
-    /**
-     * Resolves a nested attribute from a map using dot notation.
-     * 
-     * @param attrs The source attributes map
-     * @param path  The attribute path using dot notation (e.g., "a.b.c")
-     * @return The resolved value or null if path cannot be resolved
-     */
-    private Object resolveNestedAttribute(Map<String, Object> attrs, String path) {
-        if (path == null || attrs == null) {
-            return null;
-        }
-
-        String[] pathParts = path.split("\\.");
-        Object current = attrs;
-
-        for (String part : pathParts) {
-            if (!(current instanceof Map)) {
-                return null;
-            }
-
-            Map<?, ?> currentMap = (Map<?, ?>) current;
-            if (!currentMap.containsKey(part)) {
-                return null;
-            }
-
-            current = currentMap.get(part);
-        }
-
-        return current;
+        return inventoryCacheEnrichmentService.getMOFromInventoryCache(tenant, sourceId, testing, this, configurationRegistry);
     }
 
     /**
@@ -1485,162 +856,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
      * @param overwrites
      * @return response status code
      */
-    public int uploadEventAttachment(final BinaryInfo binaryInfo, final String eventId, boolean overwrites)
-            throws ProcessingException {
-        try {
-            HttpHeaders headers = new HttpHeaders();
-            headers.set("Authorization",
-                    contextService.getContext().toCumulocityCredentials().getAuthenticationString());
-            headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
-            String tenant = contextService.getContext().toCumulocityCredentials().getTenantId();
-
-            String serverUrl = clientProperties.getBaseURL() + "/event/events/" + eventId + "/binaries";
-            RestTemplate restTemplate = new RestTemplate();
-
-            ResponseEntity<EventBinary> response = null;
-            byte[] attDataBytes = null;
-            if (!binaryInfo.getData().isEmpty()) {
-                if (binaryInfo.getData().startsWith("data:") && binaryInfo.getType() == null
-                        || binaryInfo.getType().isEmpty()) {
-                    // Base64 File Header
-                    int pos = binaryInfo.getData().indexOf(";");
-                    String type = binaryInfo.getData().substring(5, pos - 1);
-                    binaryInfo.setType(type);
-
-                    attDataBytes = Base64.getDecoder()
-                            .decode(binaryInfo.getData().substring(pos + 8).getBytes(StandardCharsets.UTF_8));
-                } else
-                    attDataBytes = Base64.getDecoder().decode(binaryInfo.getData().getBytes(StandardCharsets.UTF_8));
-            }
-            if (binaryInfo.getType() == null || binaryInfo.getType().isEmpty()) {
-                binaryInfo.setType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
-            }
-            if (binaryInfo.getName() == null || binaryInfo.getName().isEmpty()) {
-                if (binaryInfo.getType() != null && !binaryInfo.getType().isEmpty()) {
-                    if (binaryInfo.getType().contains("image/")) {
-                        binaryInfo.setName("file.png");
-                    } else if (binaryInfo.getType().contains("text/")) {
-                        binaryInfo.setName("file.txt");
-                    } else if (binaryInfo.getType().contains("application/pdf")) {
-                        binaryInfo.setName("file.pdf");
-                    } else if (binaryInfo.getType().contains("application/json")) {
-                        binaryInfo.setName("file.json");
-                    } else if (binaryInfo.getType().contains("application/xml")) {
-                        binaryInfo.setName("file.xml");
-                    } else if (binaryInfo.getType().contains("application/octet-stream")) {
-                        binaryInfo.setName("file.bin");
-                    } else {
-                        binaryInfo.setName("file.bin");
-                    }
-                } else
-                    binaryInfo.setName("file");
-            }
-            log.info("{} - Uploading attachment with name {} and type {} to event {}", tenant,
-                    binaryInfo.getName(), binaryInfo.getType(), eventId);
-            if (overwrites) {
-                headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-                headers.setContentDisposition(
-                        ContentDisposition.builder("attachment").filename(binaryInfo.getName()).build());
-                HttpEntity<byte[]> requestEntity = new HttpEntity<>(attDataBytes, headers);
-                response = restTemplate.exchange(serverUrl, HttpMethod.PUT, requestEntity, EventBinary.class);
-            } else {
-                headers.setContentType(MediaType.MULTIPART_FORM_DATA);
-                MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
-                multipartBodyBuilder.part("object", binaryInfo, MediaType.APPLICATION_JSON);
-                multipartBodyBuilder.part("file", attDataBytes, MediaType.valueOf(binaryInfo.getType()))
-                        .filename(binaryInfo.getName());
-                MultiValueMap<String, HttpEntity<?>> body = multipartBodyBuilder.build();
-                HttpEntity<MultiValueMap<String, HttpEntity<?>>> requestEntity = new HttpEntity<>(body, headers);
-                try {
-                    c8ySemaphore.acquire();
-                    response = restTemplate.postForEntity(serverUrl, requestEntity, EventBinary.class);
-                } catch (InterruptedException e) {
-                    log.error("{} - Failed to acquire semaphore for uploading attachment to event {}: ", tenant,
-                            eventId, e);
-                } finally {
-                    c8ySemaphore.release();
-                }
-            }
-
-            if (response.getStatusCode().value() >= 300) {
-                throw new ProcessingException("Failed to create binary: " + response.toString(),
-                        response.getStatusCode().value());
-            }
-            return response.getStatusCode().value();
-        } catch (Exception e) {
-            log.error("{} - Failed to upload attachment to event {}: ", contextService.getContext().getTenant(),
-                    eventId, e);
-            throw new ProcessingException("Failed to upload attachment to event: " + e.getMessage(), e);
-        }
+    public int uploadEventAttachment(final BinaryInfo binaryInfo, final String eventId,
+            boolean overwrites) throws ProcessingException {
+        return binaryAttachmentService.uploadEventAttachment(binaryInfo, eventId, overwrites, c8ySemaphore);
     }
 
-    // private synchronized void initializeTransientApis() {
-    // if (!transientApisInitialized) {
-    // try {
-    // // Method 1
-    // // // Use reflection to call registerInterceptor
-    // // Method registerMethod =
-    // // transientPlatform.getClass().getMethod("registerInterceptor",
-    // // HttpClientInterceptor.class);
-    // // registerMethod.invoke(transientPlatform, new HttpClientInterceptor() {
-    // // @Override
-    // // public Invocation.Builder apply(Invocation.Builder builder) {
-    // // return builder.header("X-Cumulocity-Processing-Mode", "TRANSIENT");
-    // // }
-    // // });
-    // // log.info("Successfully registered interceptor via reflection");
-    // // } catch (Exception e) {
-    // // log.warn("Could not register interceptor via reflection: ", e);
-    // // }
-
-    // // Method 2
-    // // if (transientPlatform instanceof PlatformParameters) {
-
-    // // // Register the transient interceptor
-    // // ((PlatformParameters) transientPlatform).registerInterceptor(new
-    // // HttpClientInterceptor() {
-    // // @Override
-    // // public Invocation.Builder apply(Invocation.Builder builder) {
-    // // return builder.header("X-Cumulocity-Processing-Mode", "TRANSIENT");
-    // // }
-    // // });
-
-    // // // Initialize transient APIs
-    // // measurementApiTransient = transientPlatform.getMeasurementApi();
-
-    // // transientApisInitialized = true;
-    // // log.info("Transient APIs initialized successfully");
-    // // } else {
-    // // log.warn("Platform is not PlatformImpl, falling back to header-based
-    // // approach");
-    // // }
-
-    // // Method 3
-    // Class<?> targetClass = AopUtils.getTargetClass(transientPlatform);
-    // log.info("Target class: {}", targetClass.getName());
-    // log.info("Is PlatformImpl: {}",
-    // PlatformImpl.class.isAssignableFrom(targetClass));
-    // if (PlatformImpl.class.isAssignableFrom(targetClass)) {
-    // try {
-    // // Try to get the actual target object
-    // Object target = ((Advised) transientPlatform).getTargetSource().getTarget();
-    // if (target instanceof PlatformImpl) {
-    // ((PlatformImpl) target).registerInterceptor(new HttpClientInterceptor() {
-    // @Override
-    // public Invocation.Builder apply(Invocation.Builder builder) {
-    // return builder.header("X-Cumulocity-Processing-Mode", "TRANSIENT");
-    // }
-    // });
-    // log.info("Successfully registered interceptor on target PlatformImpl");
-    // }
-    // } catch (Exception e) {
-    // log.warn("Could not access target PlatformImpl: ", e);
-    // }
-    // }
-
-    // } catch (Exception e) {
-    // log.warn("Could not initialize transient APIs: ", e);
-    // }
-    // }
-    // }
 }

@@ -54,7 +54,7 @@ public class IdentityFacade {
         externalIDRepresentation.setType(id.getType());
         externalIDRepresentation.setExternalId(id.getValue());
         externalIDRepresentation.setManagedObject(mor);
-        if (!testing) {
+        if (testing == null || !testing) {
             return identityApi.create(externalIDRepresentation);
         } else {
             return identityMock.create(externalIDRepresentation);

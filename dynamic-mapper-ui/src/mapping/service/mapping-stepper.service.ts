@@ -267,6 +267,7 @@ export class MappingStepperService {
                     const requiredAgentName = (() => {
                         switch (mapping.transformationType) {
                             case TransformationType.JSONATA:
+                            case TransformationType.DEFAULT:
                                 return serviceConfiguration?.jsonataAgent;
                             case TransformationType.SMART_FUNCTION:
                                 return serviceConfiguration?.smartFunctionAgent;

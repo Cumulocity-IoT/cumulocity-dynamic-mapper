@@ -43,12 +43,10 @@ import { Mode } from 'vanilla-jsoneditor';
 import {
   API,
   COLOR_HIGHLIGHTED,
-  ConnectorType,
   DeploymentMapEntry,
   Direction,
   Extension,
   getExternalTemplate,
-  getGenericDeviceIdentifier,
   getSchema,
   JsonEditorComponent,
   Mapping,
@@ -85,8 +83,8 @@ import { AIPromptComponent } from '../prompt/ai-prompt.component';
 import { AgentObjectDefinition, AgentTextDefinition } from '../shared/ai-prompt.model';
 import { MappingStepTestingComponent } from '../step-testing/mapping-testing.component';
 import { gettext } from '@c8y/ngx-components/gettext';
-import { MappingStepperService } from './mapping-stepper.service';
-import { SubstitutionManagementService } from './substitution-management.service';
+import { MappingStepperService } from '../service/mapping-stepper.service';
+import { SubstitutionManagementService } from '../service/substitution-management.service';
 
 let initializedMonaco = false;
 interface StepperStepChange {
@@ -150,7 +148,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   templateModel: any = {};
   substitutionFormly: FormGroup = new FormGroup({});
   filterFormly: FormGroup = new FormGroup({});
-  substitutionFormlyFields: FormlyFieldConfig[];
   filterFormlyFields: FormlyFieldConfig[];
   filterModel: any = {};
   selectedPathFilterFilterMapping: any;
@@ -340,85 +337,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       }
     ];
 
-    // Substitution fields initialization
-    this.substitutionFormlyFields = [
-      {
-        fieldGroup: [
-          {
-            className: 'col-lg-5 col-lg-offset-1',
-            key: 'pathSource',
-            type: 'input-custom',
-            wrappers: ['custom-form-field-wrapper'],
-            templateOptions: {
-              label: 'Source Expression',
-              class: 'input-sm',
-              customWrapperClass: 'm-b-24',
-              disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
-                !this.stepperConfiguration.allowDefiningSubstitutions,
-              placeholder: '$join([$substring(txt,5), id]) or $number(id)/10',
-              description: `Use <a href="https://jsonata.org" target="_blank">JSONata</a>
-              in your expressions:
-              <ol>
-                <li>to convert a UNIX timestamp to ISO date format use:
-                  <code>$fromMillis($number(deviceTimestamp))</code>
-                </li>
-                <li>to join substring starting at position 5 of property <code>txt</code> with
-                  device
-                  identifier use: <code>$join([$substring(txt,5), "-", id])</code></li>
-                <li>function chaining using <code>~</code> is not supported, instead use function
-                  notation. The expression <code>Account.Product.(Price * Quantity) ~> $sum()</code>
-                  becomes <code>$sum(Account.Product.(Price * Quantity))</code></li>
-              </ol>`,
-              required: true,
-              customMessage: this.sourceCustomMessage$
-            },
-            hooks: {
-              onInit: (field: FormlyFieldConfig) => {
-                field.formControl.valueChanges.pipe(
-                  debounceTime(500),
-                  distinctUntilChanged()
-                ).subscribe(path => this.updateSourceExpressionResult(path));
-              }
-            }
-          },
-          {
-            className: 'col-lg-5',
-            key: 'pathTarget',
-            type: 'input-custom',
-            wrappers: ['custom-form-field-wrapper'],
-            templateOptions: {
-              label: 'Target Expression',
-              customWrapperClass: 'm-b-24',
-              disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
-                !this.stepperConfiguration.allowDefiningSubstitutions,
-              description: `Use <a href="https://jsonata.org" target="_blank">JSONata</a>
-              in your expressions:
-              <ol>
-                <li>to convert a UNIX timestamp to ISO date format use:
-                  <code>$fromMillis($number(deviceTimestamp))</code>
-                </li>
-                <li>to join substring starting at position 5 of property <code>txt</code> with
-                  device
-                  identifier use: <code>$join([$substring(txt,5), "-", id])</code></li>
-                <li>function chaining using <code>~</code> is not supported, instead use function
-                  notation. The expression <code>Account.Product.(Price * Quantity) ~> $sum()</code>
-                  becomes <code>$sum(Account.Product.(Price * Quantity))</code></li>
-              </ol>`,
-              required: true,
-              customMessage: this.targetCustomMessage$
-            },
-            hooks: {
-              onInit: (field: FormlyFieldConfig) => {
-                field.formControl.valueChanges.pipe(
-                  debounceTime(500),
-                  distinctUntilChanged()
-                ).subscribe(path => this.updateTargetExpressionResult(path));
-              }
-            }
-          }
-        ]
-      }
-    ];
   }
 
   async initializeCodeTemplates(): Promise<void> {
@@ -497,34 +415,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     });
   }
 
-  async updateSourceExpressionResult(path: string): Promise<void> {
-    this.clearAlerts();
-    this.sourceCustomMessage$.next(undefined);
-
-    try {
-      const result = await this.stepperService.evaluateSourceExpression(
-        this.editorSourceStepTemplate?.get(),
-        path
-      );
-
-      this.substitutionModel.sourceExpression = result;
-      this.substitutionModel.pathSourceIsExpression = isExpression(this.substitutionModel.pathSource);
-      this.substitutionFormly.get('pathSource').setErrors(null);
-
-      if (result.resultType == 'Array' && !this.substitutionModel.expandArray) {
-        const txt = 'Current expression extracts an array. Consider to use the option "Expand as array"...';
-        this.raiseAlert({ type: 'info', text: txt });
-      }
-    } catch (error) {
-      this.substitutionModel.sourceExpression.valid = false;
-      this.substitutionFormly.get('pathSource').setErrors({
-        validationError: { message: error.message }
-      });
-    }
-
-    this.substitutionModel = { ...this.substitutionModel };
-    setTimeout(() => this.manualResize('substitutionModelSourceExpression'), 0);
-  }
 
   async updateFilterExpressionResult(path: string): Promise<void> {
     this.clearAlerts();
@@ -549,51 +439,10 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     setTimeout(() => this.manualResize('filterModelFilterExpression'), 0);
   }
 
-  async updateTargetExpressionResult(path: string): Promise<void> {
-    this.clearAlerts();
-
-    try {
-      const result = await this.stepperService.evaluateTargetExpression(
-        this.editorTargetStepTemplate?.get(),
-        path
-      );
-
-      this.substitutionModel.targetExpression = result;
-      this.substitutionFormly.get('pathTarget').setErrors(null);
-
-      if (path == '$') {
-        const txt = 'By specifying "$" you selected the root of the target template...';
-        this.targetCustomMessage$.next(txt);
-      }
-    } catch (error) {
-      this.substitutionModel.targetExpression.valid = false;
-      this.substitutionFormly.get('pathTarget').setErrors({
-        validationError: { message: error.message }
-      });
-    }
-
-    this.substitutionModel = { ...this.substitutionModel };
-    setTimeout(() => this.manualResize('substitutionModelTargetExpression'), 0);
-  }
-
   isSubstitutionValid(): boolean {
     return this.substitutionService.isSubstitutionValid(this.substitutionModel);
   }
 
-  async onSelectedPathSourceChanged(path: string): Promise<void> {
-    this.substitutionFormly.get('pathSource').setValue(path);
-    this.substitutionModel.pathSource = path;
-    this.substitutionModel.pathSourceIsExpression = isExpression(this.substitutionModel.pathSource);
-
-    if (path == API[this.mapping.targetAPI].identifier) {
-      const gi = getGenericDeviceIdentifier(this.mapping);
-      await this.editorSourceStepSubstitution.setSelectionToPath(gi);
-      this.raiseAlert({
-        type: 'info',
-        text: `Please use the selected node ${gi} to map the identity from the source`
-      });
-    }
-  }
 
   async onSelectedPathFilterMappingChanged(path: string): Promise<void> {
     this.selectedPathFilterFilterMapping = path;
@@ -602,20 +451,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   async onOverwriteFilterMapping(): Promise<void> {
     this.filterModel.filterMapping = this.selectedPathFilterFilterMapping;
     this.updateFilterExpressionResult(this.selectedPathFilterFilterMapping);
-  }
-
-  async onSelectedPathTargetChanged(path: string): Promise<void> {
-    this.substitutionFormly.get('pathTarget').setValue(path);
-    this.substitutionModel.pathTarget = path;
-
-    if (path == API[this.mapping.targetAPI].identifier && this.mapping.direction == Direction.INBOUND) {
-      const gi = getGenericDeviceIdentifier(this.mapping);
-      await this.editorTargetStepSubstitution.setSelectionToPath(gi);
-      this.raiseAlert({
-        type: 'info',
-        text: `Please use the selected node ${gi} to map the identity from the source`
-      });
-    }
   }
 
   onSourceTemplateChanged(contentChanges: ContentChanges): void {
@@ -976,85 +811,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     }
   }
 
-  onAddSubstitution(): void {
-    if (!this.isSubstitutionValid()) {
-      this.raiseAlert({
-        type: 'warning',
-        text: 'Please select two nodes: one node in the template source, one node in the template target to define a substitution.'
-      });
-      return;
-    }
-
-    this.substitutionModel.expandArray = false;
-    this.substitutionModel.repairStrategy = RepairStrategy.DEFAULT;
-
-    this.substitutionService.addSubstitution(
-      this.substitutionModel,
-      this.mapping,
-      this.stepperConfiguration,
-      this.expertMode,
-      () => {
-        this.stepperService.updateSubstitutionValidity(
-          this.mapping,
-          this.stepperConfiguration.allowNoDefinedIdentifier,
-          this.currentStepIndex,
-          this.stepperConfiguration.showCodeEditor
-        );
-      }
-    );
-
-    this.selectedSubstitution = -1;
-  }
-
-  onDeleteSubstitution(selected: number): void {
-    this.substitutionService.deleteSubstitution(
-      selected,
-      this.mapping,
-      () => {
-        this.stepperService.updateSubstitutionValidity(
-          this.mapping,
-          this.stepperConfiguration.allowNoDefinedIdentifier,
-          this.currentStepIndex,
-          this.stepperConfiguration.showCodeEditor
-        );
-      }
-    );
-  }
-
-  toggleExpertMode(): void {
-    this.expertMode = !this.expertMode;
-  }
-
-  onUpdateSubstitution(): void {
-    this.substitutionService.updateSubstitution(
-      this.selectedSubstitution,
-      this.substitutionModel,
-      this.mapping,
-      this.stepperConfiguration,
-      () => {
-        this.stepperService.updateSubstitutionValidity(
-          this.mapping,
-          this.stepperConfiguration.allowNoDefinedIdentifier,
-          this.currentStepIndex,
-          this.stepperConfiguration.showCodeEditor
-        );
-      }
-    );
-  }
-
-  addSubstitutionDisabled(): boolean {
-    return !this.stepperConfiguration.showEditorSource ||
-      this.stepperConfiguration.editorMode === EditorMode.READ_ONLY ||
-      !this.isSubstitutionValid();
-  }
-
-  updateSubstitutionDisabled(): boolean {
-    return !this.stepperConfiguration.showEditorSource ||
-      this.stepperConfiguration.editorMode === EditorMode.READ_ONLY ||
-      this.selectedSubstitution === -1 ||
-      !this.isSubstitutionValid();
-  }
-
   onValueCodeChange(value: string): void {
     this.mappingCode = value;
   }
@@ -1178,6 +934,15 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.editorSourceStepSubstitution.setSelectionToPath(this.substitutionModel.pathSource),
       this.editorTargetStepSubstitution.setSelectionToPath(this.substitutionModel.pathTarget)
     ]);
+  }
+
+  onUpdateSubstitutionValidity(): void {
+    this.stepperService.updateSubstitutionValidity(
+      this.mapping,
+      this.stepperConfiguration.allowNoDefinedIdentifier,
+      this.currentStepIndex,
+      this.stepperConfiguration.showCodeEditor
+    );
   }
 
   private manualResize(source: string): void {

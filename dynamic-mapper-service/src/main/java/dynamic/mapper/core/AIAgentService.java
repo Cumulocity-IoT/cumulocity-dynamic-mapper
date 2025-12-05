@@ -67,7 +67,7 @@ public class AIAgentService {
     private static final String DEFAULT_JAVASCRIPT_AGENT_NAME = "dynamic-mapper-javascript-agent";
     private static final String DEFAULT_SMART_FUNCTION_AGENT_NAME = "dynamic-mapper-smart-function-agent";
     private static final String MCP_SSE_ENDPOINT = "/service/dynamic-mapper-service/sse";
-    private static final String JSONATA_TOOL_NAME = "evaluate_jsonata_expression";
+    private static final String JSONATA_TOOL_NAME = "evaluateJsonataExpression";
     private static final String MCP_SERVER_NAME = "Dynamic Mapper MCP Server";
 
     public void initializeAIAgents() {

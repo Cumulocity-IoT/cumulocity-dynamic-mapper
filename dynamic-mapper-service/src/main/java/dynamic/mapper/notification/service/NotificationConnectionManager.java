@@ -28,7 +28,7 @@ import com.cumulocity.rest.representation.reliable.notification.NotificationSubs
 import dynamic.mapper.configuration.ConnectorId;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.ConfigurationRegistry;
-import dynamic.mapper.core.ConnectorStatus;
+import dynamic.mapper.model.ConnectorStatus;
 import dynamic.mapper.notification.CacheInventoryUpdateClient;
 import dynamic.mapper.notification.ManagementSubscriptionClient;
 import dynamic.mapper.notification.Utils;

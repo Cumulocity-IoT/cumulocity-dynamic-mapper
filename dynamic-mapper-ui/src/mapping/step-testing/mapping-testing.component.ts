@@ -141,7 +141,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       this.updateEditors();
       await this.initializeTestContext(this.testMapping);
       this.testingService.initializeCache(this.mapping.direction);
-      if (this.mapping.transformationType == TransformationType.SMART_FUNCTION){
+      if (this.mapping.transformationType == TransformationType.SMART_FUNCTION) {
         await this.testingService.resetMockCache();
       }
     } catch (error) {
@@ -319,6 +319,10 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
   private async performTestExecution(sendPayload: boolean): Promise<TestResult> {
     this.testContext.sendPayload = sendPayload;
+
+    if (this.testContext.mapping.mappingType == MappingType.HEX || this.testContext.mapping.mappingType == MappingType.FLAT_FILE) {
+      this.alertService.info("Validate the mapping logic with real payloads. The specific parsing of whitespace and line terminators (CR/LF) may differ from the test environment, potentially altering the results.");
+    }
 
     // Update test context
     this.testContext = await this.testingService.testResult(

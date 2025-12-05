@@ -91,6 +91,9 @@ public class BootstrapService {
     @Autowired
     private AIAgentService aiAgentService;
 
+    @Autowired
+    private ExtensionManager extensionManager;
+
     public BootstrapService(
             ConnectorRegistry connectorRegistry,
             ConfigurationRegistry configurationRegistry,
@@ -265,7 +268,7 @@ public class BootstrapService {
         extensionInboundRegistry.initializeExtensions(tenant);
 
         c8YAgent.createExtensibleProcessor(tenant);
-        c8YAgent.loadProcessorExtensions(tenant);
+        extensionManager.loadProcessorExtensions(tenant);
 
         ServiceConfiguration serviceConfiguration = initializeServiceConfiguration(tenant);
         initializeCaches(tenant, serviceConfiguration);
@@ -529,7 +532,11 @@ public class BootstrapService {
     public void cleanUpCaches() {
         subscriptionsService.runForEachTenant(() -> {
             String tenant = subscriptionsService.getTenant();
-            cleanupCachesForTenant(tenant);
+            try {
+                cleanupCachesForTenant(tenant);
+            } catch (Exception e) {
+                log.error("{} - Error executing Cache Cleanup Scheduler", tenant, e);
+            }
         });
     }
 
@@ -538,9 +545,13 @@ public class BootstrapService {
     public void sendDeviceToClientMap() {
         subscriptionsService.runForEachTenant(() -> {
             String tenant = subscriptionsService.getTenant();
-            ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
-            if (serviceConfiguration.getDeviceIsolationMQTTServiceEnabled()) {
-                mappingService.sendDeviceToClientMap(tenant);
+            try {
+                ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
+                if (serviceConfiguration.getDeviceIsolationMQTTServiceEnabled()) {
+                    mappingService.sendDeviceToClientMap(tenant);
+                }
+            } catch (Exception e) {
+                log.error("{} - Error executing sendDeviceToClientMaP", tenant, e);
             }
         });
     }

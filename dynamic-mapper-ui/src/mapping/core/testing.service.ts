@@ -33,7 +33,8 @@ import {
   isSubstitutionsAsCode,
   PATH_TESTING_ENDPOINT,
   TransformationType,
-  Operation
+  Operation,
+  MappingType
 } from '../../shared';
 import { JSONProcessorInbound } from './processor/impl/json-processor-inbound.service';
 import { JSONProcessorOutbound } from './processor/impl/json-processor-outbound.service';
@@ -115,7 +116,11 @@ export class TestingService {
   ): Promise<ProcessingContext> {
     const { mapping } = context;
     if (context.mapping.transformationType == TransformationType.SMART_FUNCTION) {
-      const testingContext = { mapping: context.mapping, payload: JSON.stringify(message), send: false };
+      let extractedPayload;
+      if (context.mapping.mappingType == MappingType.HEX || context.mapping.mappingType == MappingType.FLAT_FILE) {
+        extractedPayload = message['payload'];
+      } else { extractedPayload = JSON.stringify(message); }
+      const testingContext = { mapping: context.mapping, payload: extractedPayload, send: false };
       const testingResult = await this.testMapping(testingContext);
       // Convert request from JSON string to object for all items
       context.requests = testingResult.requests.map(req => ({

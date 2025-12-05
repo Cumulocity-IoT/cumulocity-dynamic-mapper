@@ -85,129 +85,61 @@ public class ExtensionController {
     @Autowired
     private ConfigurationRegistry configurationRegistry;
 
+    @Autowired
+    private ExtensionManager extensionManager;
+
     @Value("${APP.externalExtensionsEnabled}")
     private Boolean externalExtensionsEnabled;
 
-    @Operation(
-        summary = "Get all processor extensions",
-        description = "Retrieves all available processor extensions for the current tenant. Extensions provide custom data transformation and processing capabilities that can be used in mappings."
-    )
+    @Operation(summary = "Get all processor extensions", description = "Retrieves all available processor extensions for the current tenant. Extensions provide custom data transformation and processing capabilities that can be used in mappings.")
     @ApiResponses(value = {
-        @ApiResponse(
-            responseCode = "200",
-            description = "Extensions retrieved successfully",
-            content = @Content(
-                mediaType = "application/json",
-                schema = @Schema(
-                    type = "object",
-                    description = "Map of extension names to their configurations"
-                )
-            )
-        ),
-        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
+            @ApiResponse(responseCode = "200", description = "Extensions retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(type = "object", description = "Map of extension names to their configurations"))),
+            @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
     @GetMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, Extension>> getProcessorExtensions() {
         String tenant = contextService.getContext().getTenant();
-        Map<String, Extension> result = configurationRegistry.getC8yAgent().getProcessorExtensions(tenant);
+        Map<String, Extension> result = extensionManager.getProcessorExtensions(tenant);
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
-    @Operation(
-        summary = "Get a specific processor extension",
-        description = "Retrieves detailed information about a specific processor extension including its configuration, status, and available entry points.",
-        parameters = {
-            @Parameter(
-                name = "extensionName",
-                description = "The unique name of the extension to retrieve",
-                required = true,
-                example = "custom-json-processor",
-                schema = @Schema(type = "string")
-            )
-        }
-    )
+    @Operation(summary = "Get a specific processor extension", description = "Retrieves detailed information about a specific processor extension including its configuration, status, and available entry points.", parameters = {
+            @Parameter(name = "extensionName", description = "The unique name of the extension to retrieve", required = true, example = "custom-json-processor", schema = @Schema(type = "string"))
+    })
     @ApiResponses(value = {
-        @ApiResponse(
-            responseCode = "200",
-            description = "Extension found and retrieved successfully",
-            content = @Content(
-                mediaType = "application/json",
-                schema = @Schema(implementation = Extension.class)
-            )
-        ),
-        @ApiResponse(
-            responseCode = "404",
-            description = "Extension not found",
-            content = @Content(
-                mediaType = "application/json",
-                schema = @Schema(
-                    type = "object",
-                    description = "Error details indicating the extension was not found"
-                )
-            )
-        ),
-        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
+            @ApiResponse(responseCode = "200", description = "Extension found and retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Extension.class))),
+            @ApiResponse(responseCode = "404", description = "Extension not found", content = @Content(mediaType = "application/json", schema = @Schema(type = "object", description = "Error details indicating the extension was not found"))),
+            @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
     @GetMapping(value = "/{extensionName}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Extension> getProcessorExtension(
             @PathVariable @NotBlank String extensionName) {
         String tenant = contextService.getContext().getTenant();
-        Extension result = configurationRegistry.getC8yAgent().getProcessorExtension(tenant, extensionName);
+        Extension result = extensionManager.getProcessorExtension(tenant, extensionName);
         if (result == null)
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                     "Extension with id " + extensionName + " could not be found.");
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
-    @Operation(
-        summary = "Delete a processor extension",
-        description = """
-        Deletes a processor extension from the system. This will remove the extension and make it unavailable for use in mappings. Only external extensions can be deleted - built-in extensions cannot be removed.
-        
-        **Security:** Requires ROLE_DYNAMIC_MAPPER_ADMIN role.
-        """,
-        parameters = {
-            @Parameter(
-                name = "extensionName",
-                description = "The unique name of the extension to delete",
-                required = true,
-                example = "custom-json-processor",
-                schema = @Schema(type = "string")
-            )
-        }
-    )
+    @Operation(summary = "Delete a processor extension", description = """
+            Deletes a processor extension from the system. This will remove the extension and make it unavailable for use in mappings. Only external extensions can be deleted - built-in extensions cannot be removed.
+
+            **Security:** Requires ROLE_DYNAMIC_MAPPER_ADMIN role.
+            """, parameters = {
+            @Parameter(name = "extensionName", description = "The unique name of the extension to delete", required = true, example = "custom-json-processor", schema = @Schema(type = "string"))
+    })
     @ApiResponses(value = {
-        @ApiResponse(
-            responseCode = "200",
-            description = "Extension deleted successfully",
-            content = @Content(
-                mediaType = "application/json",
-                schema = @Schema(implementation = Extension.class)
-            )
-        ),
-        @ApiResponse(
-            responseCode = "403",
-            description = "Forbidden - insufficient permissions to delete extensions",
-            content = @Content
-        ),
-        @ApiResponse(
-            responseCode = "404",
-            description = "Extension not found",
-            content = @Content(
-                mediaType = "application/json",
-                schema = @Schema(
-                    type = "object",
-                    description = "Error details indicating the extension was not found"
-                )
-            )
-        ),
-        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
+            @ApiResponse(responseCode = "200", description = "Extension deleted successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Extension.class))),
+            @ApiResponse(responseCode = "403", description = "Forbidden - insufficient permissions to delete extensions", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Extension not found", content = @Content(mediaType = "application/json", schema = @Schema(type = "object", description = "Error details indicating the extension was not found"))),
+            @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
     @PreAuthorize("hasRole('ROLE_DYNAMIC_MAPPER_ADMIN')")
     @DeleteMapping(value = "/{extensionName}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Extension> deleteProcessorExtension(@PathVariable String extensionName) {
         String tenant = contextService.getContext().getTenant();
-        Extension result = configurationRegistry.getC8yAgent().deleteProcessorExtension(tenant, extensionName);
+        Extension result = extensionManager.deleteProcessorExtension(tenant, extensionName);
         if (result == null)
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                     "Extension with id " + extensionName + " could not be found.");
