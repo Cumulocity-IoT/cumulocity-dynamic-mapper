@@ -21,24 +21,11 @@
 
 package dynamic.mapper.core;
 
-public enum Operation {
-	ACTIVATE_MAPPING,
-	CONNECT,
-	DISCONNECT,
-	REFRESH_STATUS_MAPPING,
-	RELOAD_EXTENSIONS,
-	RELOAD_MAPPINGS,
-	RESET_STATISTICS_MAPPING,
-	REFRESH_NOTIFICATIONS_SUBSCRIPTIONS,
-	DEBUG_MAPPING,
-	SNOOP_MAPPING,
-	SNOOP_RESET,
-	RESET_DEPLOYMENT_MAP,
-	CLEAR_CACHE,
-	APPLY_MAPPING_FILTER,
-    COPY_SNOOPED_SOURCE_TEMPLATE,
-    INIT_CODE_TEMPLATES,
-    ADD_SAMPLE_MAPPINGS,
-	CLEAR_CACHE_DEVICE_TO_CLIENT,
+import com.cumulocity.model.ID;
+import com.cumulocity.model.idtype.GId;
+import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 
+public interface IdentityResolver {
+    ExternalIDRepresentation resolveExternalId2GlobalId(String tenant, ID identity, Boolean testing);
+    ExternalIDRepresentation resolveGlobalId2ExternalId(String tenant, GId gid, String idType, Boolean testing);
 }

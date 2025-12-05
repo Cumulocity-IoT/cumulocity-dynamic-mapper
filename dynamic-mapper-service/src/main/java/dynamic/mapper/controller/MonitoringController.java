@@ -54,6 +54,8 @@ import dynamic.mapper.model.MappingTreeNode;
 import dynamic.mapper.service.ConnectorConfigurationService;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.service.ServiceConfigurationService;
+import dynamic.mapper.model.ConnectorStatus;
+import dynamic.mapper.model.ConnectorStatusEvent;
 import dynamic.mapper.model.MappingStatus;
 
 import io.swagger.v3.oas.annotations.Operation;

@@ -41,7 +41,7 @@ public class JsonataDashJoinLibTest {
                     "mea": [
                         {
                         "tid": "uuid_01",
-                        "iniialized": true,
+                        "initialized": true,
                         "psid": "Crest",
                         "devicePath": "path01_80_X03_VVB001StatusB_Crest",
                         "values": [
@@ -53,7 +53,7 @@ public class JsonataDashJoinLibTest {
                         },
                         {
                         "tid": "uuid_02",
-                        "iniialized": false,
+                        "initialized": false,
                         "psid": "Crest",
                         "devicePath": "path01_80_X03_VVB001StatusB_Crest",
                         "values": [
@@ -94,6 +94,12 @@ public class JsonataDashJoinLibTest {
             }
             """;
 
+    String jsonString03 = """
+            {
+            "payload": "351144440855493\\n01/12/2025 15:49:38,0,+021.63,+00002045,+000139.3,-088.7,+000.2,00\\n01/12/2025 15:54:38,0,+021.63,+00002041,+000139.3,-088.7,+000.3,00\\n01/12/2025 15:59:38,0,+021.63,+00002042,+000139.3,-088.7,+000.2,00"
+            }
+            """;
+
     @Test
     void testExtractArray() {
         String expString = "mea";
@@ -127,7 +133,7 @@ public class JsonataDashJoinLibTest {
 
     @Test
     void testExtractBoolean() {
-        String expString = "mea[0].iniialized";
+        String expString = "mea[0].initialized";
         try {
             Object payloadJsonNode = Json.parseJson(jsonString01);
             var expression = jsonata(expString);
@@ -230,6 +236,31 @@ public class JsonataDashJoinLibTest {
             assertEquals("1234567890", extractedContent);
         } catch (Exception e) {
             log.error("Exception in test testSplit()", e);
+        }
+    }
+
+    @Test
+    void testChainOperatorWithDateConversion() {
+        String expString = "payload ~> $split('\n') ~> $filter(function($v) { $contains($v, ',') }) ~> $map(function($v) { $split($v, ',')[0] ~> $toMillis('[M01]/[D01]/[Y0001] [H01]:[m01]:[s01]') ~> $fromMillis() })";
+        try {
+            Object payloadJsonNode = Json.parseJson(jsonString03);
+            var expression = jsonata(expString);
+            Object extractedContent = expression.evaluate(payloadJsonNode);
+            log.info("Result in test testChainOperatorWithDateConversion(): {} is type: {}",
+                    toPrettyJsonString(extractedContent),
+                    extractedContent == null ? "null" : extractedContent.getClass().getName());
+
+            assertEquals(true, extractedContent instanceof Collection);
+            Collection<?> timestamps = (Collection<?>) extractedContent;
+            assertEquals(3, timestamps.size());
+
+            // Verify the timestamps are correct
+            Object[] timestampArray = timestamps.toArray();
+            assertEquals("2025-01-12T15:49:38.000Z", timestampArray[0]);
+            assertEquals("2025-01-12T15:54:38.000Z", timestampArray[1]);
+            assertEquals("2025-01-12T15:59:38.000Z", timestampArray[2]);
+        } catch (Exception e) {
+            log.error("Exception in test testChainOperatorWithDateConversion()", e);
         }
     }
 

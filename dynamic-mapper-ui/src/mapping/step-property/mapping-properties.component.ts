@@ -22,7 +22,6 @@ import {
   EventEmitter,
   inject,
   Input,
-  OnChanges,
   OnDestroy,
   OnInit,
   Output,
@@ -34,7 +33,7 @@ import { BehaviorSubject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { EditorMode } from '../shared/stepper.model';
 import { ValidationError } from '../shared/mapping.model';
 import { deriveSampleTopicFromTopic, getTypeOf } from '../shared/util';
-import { StepperConfiguration, API, Direction, Mapping, Qos, SnoopStatus, FormatStringPipe, MappingType, ExtensionType, SharedService, MappingTypeDescriptions, MappingTypeLabels } from '../../shared';
+import { StepperConfiguration, API, Direction, Mapping, Qos, SnoopStatus, FormatStringPipe, SharedService, MappingTypeLabels } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { Alert, AlertService } from '@c8y/ngx-components';
 
@@ -466,10 +465,6 @@ export class MappingStepPropertiesComponent
             template: '<div class="form-group row" style="height:80px"></div>',
             hideExpression: (model) => model.useExternalId
           },
-          // {
-          //   className: 'col-lg-6',
-          //   template: '<div class="form-group row" style="height:80px"></div>'
-          // },
           {
             className: 'col-lg-6',
             key: 'maxFailureCount',

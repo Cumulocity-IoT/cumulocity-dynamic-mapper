@@ -22,8 +22,8 @@
 package dynamic.mapper.connector.core.client;
 
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
-import dynamic.mapper.core.ConnectorStatus;
-import dynamic.mapper.core.ConnectorStatusEvent;
+import dynamic.mapper.model.ConnectorStatus;
+import dynamic.mapper.model.ConnectorStatusEvent;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.mutable.MutableBoolean;
