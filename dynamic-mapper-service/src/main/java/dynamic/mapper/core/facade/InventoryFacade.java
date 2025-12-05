@@ -62,7 +62,7 @@ public class InventoryFacade {
      * @return The created managed object representation
      */
     public ManagedObjectRepresentation create(ManagedObjectRepresentation mor, Boolean testing) {
-        if (Boolean.FALSE.equals(testing)) {
+        if (testing == null || Boolean.FALSE.equals(testing)) {
             log.debug("Creating managed object via real C8Y API (testing mode): {}", mor.getName());
             return inventoryApi.create(mor);
         } else {

@@ -83,7 +83,7 @@ public class DeviceBootstrapService {
         amo.set(agentFragments, "c8y_Agent");
         
         amo.setProperty(MapperServiceRepresentation.MAPPING_FRAGMENT, new ArrayList<>());
-        amo = inventoryApi.create(amo, null);
+        amo = inventoryApi.create(amo, false);
         
         log.info("{} - Agent has been created with ID {}", tenant, amo.getId());
         
@@ -117,11 +117,11 @@ public class DeviceBootstrapService {
         amo.setType(DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_TYPE);
         amo.setProperty(DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_FRAGMENT, new HashMap<>());
         
-        amo = inventoryApi.create(amo, null);
+        amo = inventoryApi.create(amo, false);
         log.info("{} - Dynamic Mapper Device To Client Map has been created with ID {}", tenant, amo.getId());
         
         ExternalIDRepresentation externalAgentId = identityApi.create(amo,
-                new ID("c8y_Serial", DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_ID), null);
+                new ID("c8y_Serial", DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_ID), false);
         log.debug("{} - ExternalId created: {}", tenant, externalAgentId.getExternalId());
         
         return amo;

@@ -275,7 +275,7 @@ public class ExtensionManager {
             ie.setProperty(ExtensionsComponent.PROCESSOR_EXTENSION_TYPE,
                     props);
             ie.setName(ExtensionsComponent.PROCESSOR_EXTENSION_INTERNAL_NAME);
-            ie = inventoryApi.create(ie, null);
+            ie = inventoryApi.create(ie, false);
         } else {
             ie = internalExtension.get(0);
         }
