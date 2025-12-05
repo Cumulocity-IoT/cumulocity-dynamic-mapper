@@ -23,19 +23,13 @@ package dynamic.mapper.core;
 
 import static java.util.Map.entry;
 
-import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -44,17 +38,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.http.ContentDisposition;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Component;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.client.RestTemplate;
-
 import com.cumulocity.microservice.api.CumulocityClientProperties;
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
@@ -65,7 +49,6 @@ import com.cumulocity.model.idtype.GId;
 import com.cumulocity.model.measurement.MeasurementValue;
 import com.cumulocity.model.operation.OperationStatus;
 import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
-import com.cumulocity.rest.representation.CumulocityMediaType;
 import com.cumulocity.rest.representation.alarm.AlarmRepresentation;
 import com.cumulocity.rest.representation.event.EventRepresentation;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
@@ -84,8 +67,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 
 import c8y.IsDevice;
 import dynamic.mapper.configuration.ServiceConfiguration;
-import dynamic.mapper.configuration.TrustedCertificateCollectionRepresentation;
-import dynamic.mapper.configuration.TrustedCertificateRepresentation;
 import dynamic.mapper.connector.core.client.Certificate;
 import dynamic.mapper.core.cache.InboundExternalIdCache;
 import dynamic.mapper.core.cache.InventoryCache;
@@ -93,8 +74,7 @@ import dynamic.mapper.core.facade.IdentityFacade;
 import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.BinaryInfo;
-import dynamic.mapper.model.DeviceToClientMapRepresentation;
-import dynamic.mapper.model.EventBinary;
+import dynamic.mapper.model.ConnectorStatus;
 import dynamic.mapper.model.LoggingEventType;
 import dynamic.mapper.model.MapperServiceRepresentation;
 import dynamic.mapper.processor.ProcessingException;
@@ -115,7 +95,7 @@ import static com.cumulocity.rest.representation.alarm.AlarmMediaType.ALARM;;
 
 @Slf4j
 @Component
-public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichmentClient {
+public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichmentClient, IdentityResolver {
 
     ConnectorStatus previousConnectorStatus = ConnectorStatus.UNKNOWN;
 
@@ -132,9 +112,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     private MeasurementApi measurementApi;
 
     @Autowired
-    private Platform platform;
-
-    @Autowired
     private AlarmApi alarmApi;
 
     @Autowired
@@ -149,10 +126,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     @Autowired
     private ContextService<MicroserviceCredentials> contextService;
 
-    private Map<String, InboundExternalIdCache> inboundExternalIdCaches = new ConcurrentHashMap<>();
-
-    private Map<String, InventoryCache> inventoryCaches = new ConcurrentHashMap<>();
-
     @Getter
     private ConfigurationRegistry configurationRegistry;
 
@@ -163,8 +136,25 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     @Autowired
     CumulocityClientProperties clientProperties;
 
+    private Semaphore c8ySemaphore;
+
     @Autowired
     private ExtensionManager extensionManager;
+
+    @Autowired
+    private CacheManager cacheManager;
+
+    @Autowired
+    private CertificateService certificateService;
+
+    @Autowired
+    private BinaryAttachmentService binaryAttachmentService;
+
+    @Autowired
+    private DeviceBootstrapService deviceBootstrapService;
+
+    @Autowired
+    private InventoryCacheEnrichmentService inventoryCacheEnrichmentService;
 
     @Autowired
     public void setConfigurationRegistry(@Lazy ConfigurationRegistry configurationRegistry) {
@@ -179,7 +169,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     private String version;
 
     private Integer maxConnections = 100;
-    private Semaphore c8ySemaphore;
+
     private Timer c8yRequestTimer = Timer.builder("dynmapper_c8y_request_processing_time")
             .description("C8Y Request Processing time").register(Metrics.globalRegistry);
 
@@ -194,6 +184,10 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                 .register(Metrics.globalRegistry);
     }
 
+    public Semaphore getC8ySemaphore() {
+        return c8ySemaphore;
+    }
+
     public void createExtensibleProcessor(String tenant) {
         extensionManager.createExtensibleProcessor(tenant, inventoryApi);
     }
@@ -205,14 +199,14 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         }
         ExternalIDRepresentation result = subscriptionsService.callForTenant(tenant, () -> {
             try {
-                ExternalIDRepresentation resultInner = inboundExternalIdCaches.get(tenant)
+                ExternalIDRepresentation resultInner = cacheManager.getInboundExternalIdCache(tenant)
                         .getIdByExternalId(identity);
                 Counter.builder("dynmapper_inbound_identity_requests_total").tag("tenant", tenant)
                         .register(Metrics.globalRegistry).increment();
                 if (resultInner == null) {
                     resultInner = identityApi.resolveExternalId2GlobalId(identity, testing, c8ySemaphore);
                     if (!testing) {
-                        inboundExternalIdCaches.get(tenant).putIdForExternalId(identity,
+                        cacheManager.getInboundExternalIdCache(tenant).putIdForExternalId(identity,
                                 resultInner);
                     }
 
@@ -358,155 +352,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
 
     public Certificate loadCertificateByName(String certificateName, String fingerprint,
             String tenant, String connectorName) {
-        TrustedCertificateRepresentation result = subscriptionsService.callForTenant(tenant,
-                () -> {
-                    log.info("{} - Connector {} - Retrieving certificate {} ", tenant, connectorName,
-                            certificateName);
-                    TrustedCertificateRepresentation certResult = null;
-                    try {
-                        List<TrustedCertificateRepresentation> certificatesList = new ArrayList<>();
-                        String nextUrl = String.format("/tenant/tenants/%s/trusted-certificates", tenant);
-
-                        // Pagination with safety limit
-                        int pageCount = 0;
-                        int maxPages = 100; // Safety limit to prevent infinite loops
-
-                        while (nextUrl != null && !nextUrl.isEmpty() && pageCount < maxPages) {
-                            pageCount++;
-
-                            TrustedCertificateCollectionRepresentation certificatesResult = platform.rest().get(
-                                    nextUrl,
-                                    CumulocityMediaType.APPLICATION_JSON_TYPE,
-                                    TrustedCertificateCollectionRepresentation.class);
-
-                            List<TrustedCertificateRepresentation> pageCerts = certificatesResult.getCertificates();
-
-                            if (pageCerts != null && !pageCerts.isEmpty()) {
-                                certificatesList.addAll(pageCerts);
-                                log.debug("{} - Connector {} - Page {}: Retrieved {} certificates (total: {})",
-                                        tenant, connectorName, pageCount, pageCerts.size(), certificatesList.size());
-                            } else {
-                                log.debug("{} - Connector {} - Page {}: No more certificates",
-                                        tenant, connectorName, pageCount);
-                                break; // No more certificates
-                            }
-
-                            // Get next URL - THIS IS THE KEY FIX
-                            nextUrl = certificatesResult.getNext();
-
-                            // Break if no next URL
-                            if (nextUrl == null || nextUrl.isEmpty()) {
-                                log.debug("{} - Connector {} - No more pages (nextUrl is null/empty)",
-                                        tenant, connectorName);
-                                break;
-                            }
-                        }
-
-                        if (pageCount >= maxPages) {
-                            log.warn("{} - Connector {} - Reached maximum page limit ({}), stopping pagination",
-                                    tenant, connectorName, maxPages);
-                        }
-
-                        log.info("{} - Connector {} - Retrieved total of {} certificates across {} pages",
-                                tenant, connectorName, certificatesList.size(), pageCount);
-
-                        // Search for matching certificate
-                        for (TrustedCertificateRepresentation certificateIterate : certificatesList) {
-                            log.debug("{} - Checking certificate: name='{}', fingerprint='{}'",
-                                    tenant,
-                                    certificateIterate.getName(),
-                                    certificateIterate.getFingerprint());
-
-                            // Normalize both fingerprints for comparison
-                            String normalizedStoredFingerprint = normalizeFingerprint(
-                                    certificateIterate.getFingerprint());
-                            String normalizedInputFingerprint = normalizeFingerprint(fingerprint);
-
-                            boolean nameMatches = certificateIterate.getName().equals(certificateName);
-                            boolean fingerprintMatches = normalizedStoredFingerprint.equals(normalizedInputFingerprint);
-
-                            if (nameMatches && fingerprintMatches) {
-                                certResult = certificateIterate;
-                                log.info("{} - Connector {} - Found matching certificate: name='{}', fingerprint='{}'",
-                                        tenant, connectorName, certificateName, certificateIterate.getFingerprint());
-                                break;
-                            } else if (nameMatches) {
-                                log.debug("{} - Name matches but fingerprint differs: expected='{}', got='{}'",
-                                        tenant, normalizedInputFingerprint, normalizedStoredFingerprint);
-                            }
-                        }
-
-                        if (certResult == null) {
-                            log.warn("{} - Connector {} - Certificate not found: name='{}', fingerprint='{}'",
-                                    tenant, connectorName, certificateName, fingerprint);
-                        }
-
-                    } catch (Exception e) {
-                        log.error("{} - Connector {} - Error retrieving certificate: ", tenant,
-                                connectorName, e);
-                    }
-                    return certResult;
-                });
-
-        if (result != null) {
-            log.info("{} - Connector {} - Found certificate '{}' with fingerprint '{}'",
-                    tenant, connectorName, certificateName, result.getFingerprint());
-
-            // Handle PEM format - check if markers already exist
-            String pemContent = result.getCertInPemFormat();
-            String fullPemCert;
-
-            if (pemContent != null && pemContent.contains("-----BEGIN CERTIFICATE-----")) {
-                // Already has PEM markers (might be a chain)
-                fullPemCert = pemContent;
-                log.debug("{} - Certificate already in PEM format with markers", tenant);
-            } else if (pemContent != null && !pemContent.isEmpty()) {
-                // Need to add PEM markers
-                fullPemCert = "-----BEGIN CERTIFICATE-----\n"
-                        + pemContent
-                        + "\n-----END CERTIFICATE-----";
-                log.debug("{} - Added PEM markers to certificate", tenant);
-            } else {
-                log.error("{} - Certificate PEM content is null or empty", tenant);
-                return null;
-            }
-
-            // Count certificates in chain
-            int certCount = countCertificatesInChain(fullPemCert);
-            log.info("{} - Certificate chain contains {} certificate(s)", tenant, certCount);
-
-            return new Certificate(result.getFingerprint(), fullPemCert);
-        } else {
-            log.warn("{} - Connector {} - No certificate found with name='{}' and fingerprint='{}'",
-                    tenant, connectorName, certificateName, fingerprint);
-            return null;
-        }
-    }
-
-    // Helper method to normalize fingerprints
-    private String normalizeFingerprint(String fingerprint) {
-        if (fingerprint == null || fingerprint.isEmpty()) {
-            return "";
-        }
-        // Remove colons, spaces, and convert to lowercase
-        return fingerprint.replace(":", "")
-                .replace(" ", "")
-                .trim()
-                .toLowerCase();
-    }
-
-    // Helper method to count certificates in a PEM chain
-    private int countCertificatesInChain(String pemContent) {
-        if (pemContent == null)
-            return 0;
-
-        int count = 0;
-        int index = 0;
-        while ((index = pemContent.indexOf("-----BEGIN CERTIFICATE-----", index)) != -1) {
-            count++;
-            index += 27; // Length of "-----BEGIN CERTIFICATE-----"
-        }
-        return count;
+        return certificateService.loadCertificateByName(certificateName, fingerprint, tenant, connectorName);
     }
 
     public CompletableFuture<AbstractExtensibleRepresentation> createMEAOAsync(ProcessingContext<?> context,
@@ -906,69 +752,11 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     }
 
     public ManagedObjectRepresentation initializeMapperServiceRepresentation(String tenant) {
-        ExternalIDRepresentation mapperServiceIdRepresentation = resolveExternalId2GlobalId(tenant,
-                new ID(null, MapperServiceRepresentation.AGENT_ID),
-                false);
-        ;
-        ManagedObjectRepresentation amo = new ManagedObjectRepresentation();
-
-        if (mapperServiceIdRepresentation != null) {
-            amo = inventoryApi.get(mapperServiceIdRepresentation.getManagedObject().getId(), false);
-            log.info("{} - Agent with external ID [{}] already exists, sourceId: {}", tenant,
-                    MapperServiceRepresentation.AGENT_ID,
-                    amo.getId().getValue());
-        } else {
-            amo.setName(MapperServiceRepresentation.AGENT_NAME);
-            amo.setType(MapperServiceRepresentation.AGENT_TYPE);
-            amo.set(new Agent());
-            HashMap<String, String> agentFragments = new HashMap<>();
-            agentFragments.put("name", "Dynamic Mapper");
-            agentFragments.put("version", version);
-            agentFragments.put("url", "https://github.com/Cumulocity-IoT/cumulocity-dynamic-mapper");
-            agentFragments.put("maintainer", "Open-Source");
-            amo.set(agentFragments, "c8y_Agent");
-            // avoid that Dynamic Mapper appears as device and can be accidentally deleted
-            // amo.set(new IsDevice());
-            amo.setProperty(MapperServiceRepresentation.MAPPING_FRAGMENT,
-                    new ArrayList<>());
-            amo = inventoryApi.create(amo, null);
-            log.info("{} - Agent has been created with ID {}", tenant, amo.getId());
-            ExternalIDRepresentation externalAgentId = identityApi.create(amo,
-                    new ID("c8y_Serial",
-                            MapperServiceRepresentation.AGENT_ID),
-                    false);
-            log.debug("{} - ExternalId created: {}", tenant, externalAgentId.getExternalId());
-        }
-        return amo;
+        return deviceBootstrapService.initializeMapperServiceRepresentation(tenant, this);
     }
 
     public ManagedObjectRepresentation initializeDeviceToClientMapRepresentation(String tenant) {
-        ExternalIDRepresentation deviceToClientMapRepresentation = resolveExternalId2GlobalId(tenant,
-                new ID(null, DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_ID),
-                false);
-        ;
-        ManagedObjectRepresentation amo = new ManagedObjectRepresentation();
-
-        if (deviceToClientMapRepresentation != null) {
-            amo = inventoryApi.get(deviceToClientMapRepresentation.getManagedObject().getId(), false);
-            log.info("{} - Dynamic Mapper Device To Client Map with external ID [{}] already exists, sourceId: {}",
-                    tenant,
-                    DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_ID,
-                    amo.getId().getValue());
-        } else {
-            amo.setName(DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_NAME);
-            amo.setType(DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_TYPE);
-            amo.setProperty(DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_FRAGMENT,
-                    new HashMap<>());
-            amo = inventoryApi.create(amo, null);
-            log.info("{} - Dynamic Mapper Device To Client Map has been created with ID {}", tenant, amo.getId());
-            ExternalIDRepresentation externalAgentId = identityApi.create(amo,
-                    new ID("c8y_Serial",
-                            DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_ID),
-                    null);
-            log.debug("{} - ExternalId created: {}", tenant, externalAgentId.getExternalId());
-        }
-        return amo;
+        return deviceBootstrapService.initializeDeviceToClientMapRepresentation(tenant, this);
     }
 
     public void sendNotificationLifecycle(String tenant, ConnectorStatus connectorStatus, String message) {
@@ -1001,242 +789,64 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         return clonedContext;
     }
 
-    public void initializeInboundExternalIdCache(String tenant, int inboundExternalIdCacheSize) {
-        log.info("{} - Initialize inboundExternalIdCache {}", tenant, inboundExternalIdCacheSize);
-        inboundExternalIdCaches.put(tenant, new InboundExternalIdCache(inboundExternalIdCacheSize, tenant));
+    public void initializeInboundExternalIdCache(String tenant, int size) {
+        cacheManager.initializeInboundExternalIdCache(tenant, size);
     }
 
-    public void initializeInventoryCache(String tenant, int inventoryCacheSize) {
-        log.info("{} - Initialize inventoryCache {}", tenant, inventoryCacheSize);
-        InventoryCache inventoryCache = new InventoryCache(inventoryCacheSize, tenant);
-        // Set up eviction listener
-        inventoryCache.setEvictionListener(evictedSourceId -> {
-            ManagedObjectRepresentation moRep = new ManagedObjectRepresentation();
-            moRep.setId(new GId(evictedSourceId));
-            configurationRegistry.getNotificationSubscriber().unsubscribeMOForInventoryCacheUpdates(tenant, moRep);
-        });
-        inventoryCaches.put(tenant, inventoryCache);
+    public void initializeInventoryCache(String tenant, int size) {
+        cacheManager.initializeInventoryCache(tenant, size, configurationRegistry);
     }
 
     public InboundExternalIdCache removeInboundExternalIdCache(String tenant) {
-        return inboundExternalIdCaches.remove(tenant);
+        return cacheManager.removeInboundExternalIdCache(tenant);
     }
 
     public Integer getInboundExternalIdCacheSize(String tenant) {
-        return (inboundExternalIdCaches.get(tenant) != null ? inboundExternalIdCaches.get(tenant).getCacheSize()
-                : 0);
+        return cacheManager.getInboundExternalIdCacheSize(tenant);
     }
 
     public InventoryCache removeInventoryCache(String tenant) {
-        return inventoryCaches.remove(tenant);
+        return cacheManager.removeInventoryCache(tenant);
     }
 
     public InventoryCache getInventoryCache(String tenant) {
-        return inventoryCaches.get(tenant);
+        return cacheManager.getInventoryCache(tenant);
     }
 
     public void clearInboundExternalIdCache(String tenant, boolean recreate, int inboundExternalIdCacheSize) {
-        InboundExternalIdCache inboundExternalIdCache = inboundExternalIdCaches.get(tenant);
-        if (inboundExternalIdCache != null) {
-            // FIXME Recreating the cache creates a new instance of InboundExternalIdCache
-            // which causes issues with Metering
-            if (recreate) {
-                inboundExternalIdCaches.put(tenant, new InboundExternalIdCache(inboundExternalIdCacheSize, tenant));
-            } else {
-                inboundExternalIdCache.clearCache();
-            }
-        }
+        cacheManager.clearInboundExternalIdCache(tenant, recreate, inboundExternalIdCacheSize);
     }
 
     public void removeDeviceFromInboundExternalIdCache(String tenant, ID identity) {
-        InboundExternalIdCache inboundExternalIdCache = inboundExternalIdCaches.get(tenant);
-        if (inboundExternalIdCache != null) {
-            inboundExternalIdCache.removeIdForExternalId(identity);
-        }
-        log.info("{} - Removed device {} from InboundExternalIdCache", tenant, identity.getValue());
+        cacheManager.removeDeviceFromInboundExternalIdCache(tenant, identity);
     }
 
     public int getSizeInboundExternalIdCache(String tenant) {
-        InboundExternalIdCache inboundExternalIdCache = inboundExternalIdCaches.get(tenant);
-        if (inboundExternalIdCache != null) {
-            return inboundExternalIdCache.getCacheSize();
-        } else
-            return 0;
+        return cacheManager.getSizeInboundExternalIdCache(tenant);
     }
 
     public void clearInventoryCache(String tenant, boolean recreate, int inventoryCacheSize) {
-        InventoryCache inventoryCache = inventoryCaches.get(tenant);
-        if (inventoryCache != null) {
-            // FIXME Recreating the cache creates a new instance of InventoryCache
-            // which causes issues with Metering
-            if (recreate) {
-                // this is required to unregister all subscriptions for inventory updates
-                configurationRegistry.getNotificationSubscriber().unsubscribeAllMOForInventoryCacheUpdates(tenant);
-                inventoryCaches.put(tenant, new InventoryCache(inventoryCacheSize, tenant));
-            } else {
-                configurationRegistry.getNotificationSubscriber().unsubscribeAllMOForInventoryCacheUpdates(tenant);
-                inventoryCache.clearCache();
-            }
-        }
+        cacheManager.clearInventoryCache(tenant, recreate, inventoryCacheSize, configurationRegistry);
     }
 
     public int getSizeInventoryCache(String tenant) {
-        InventoryCache inventoryCache = inventoryCaches.get(tenant);
-        if (inventoryCache != null) {
-            return inventoryCache.getCacheSize();
-        } else
-            return 0;
+        return cacheManager.getSizeInventoryCache(tenant);
     }
 
     public Map<String, Object> getMOFromInventoryCacheByExternalId(String tenant, ExternalId externalId,
             Boolean testing) {
 
-        if (externalId == null || externalId.getExternalId() == null || externalId.getType() == null) {
-            return null;
-        }
-        ID identity = new ID(externalId.getType(), externalId.getExternalId());
-        ExternalIDRepresentation sourceId = this.resolveExternalId2GlobalId(tenant, identity, testing);
-        if (sourceId != null) {
-            return getMOFromInventoryCache(tenant, sourceId.getManagedObject().getId().getValue(), testing);
-        }
-        return null;
+        return inventoryCacheEnrichmentService.getMOFromInventoryCacheByExternalId(tenant, externalId, testing, this, configurationRegistry);
     }
 
     public Map<String, Object> updateMOInInventoryCache(String tenant, String sourceId, Map<String, Object> updates,
             Boolean testing) {
-        InventoryCache inventoryCache = getInventoryCache(tenant);
-
-        // Create new managed object cache entry
-        final Map<String, Object> newMO = new HashMap<>();
-        inventoryCache.putMO(sourceId, newMO);
-
-        ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
-        ManagedObjectRepresentation device = getManagedObjectForId(tenant, sourceId, testing);
-        Map<String, Object> attrs = device.getAttrs();
-
-        // Process each fragment
-        serviceConfiguration.getInventoryFragmentsToCache().forEach(frag -> {
-            frag = frag.trim();
-
-            // Handle special cases
-            if ("id".equals(frag)) {
-                newMO.put(frag, sourceId);
-                return; // using return in forEach as continue
-            }
-            if ("name".equals(frag)) {
-                newMO.put(frag, device.getName());
-                return;
-            }
-            if ("owner".equals(frag)) {
-                newMO.put(frag, device.getOwner());
-                return;
-            }
-
-            if ("type".equals(frag)) {
-                newMO.put(frag, device.getType());
-                return;
-            }
-
-            // Handle nested attributes
-            Object value = resolveNestedAttribute(attrs, frag);
-            if (value != null) {
-                newMO.put(frag, value);
-            }
-        });
-
-        return newMO;
+        return inventoryCacheEnrichmentService.updateMOInInventoryCache(tenant, sourceId, updates, testing, this, configurationRegistry);
     }
 
     public Map<String, Object> getMOFromInventoryCache(String tenant, String sourceId, Boolean testing) {
 
-        if (sourceId == null) {
-            return null;
-        }
-
-        InventoryCache inventoryCache = getInventoryCache(tenant);
-        Map<String, Object> result = inventoryCache.getMOBySource(sourceId);
-        if (result != null) {
-            return result;
-        }
-
-        // Create new managed object cache entry
-        final Map<String, Object> newMO = new HashMap<>();
-        inventoryCache.putMO(sourceId, newMO);
-        ManagedObjectRepresentation mor = new ManagedObjectRepresentation();
-        mor.setId(new GId(sourceId));
-
-        // register for updates
-        configurationRegistry.getNotificationSubscriber()
-                .subscribeMOForInventoryCacheUpdates(tenant, mor);
-
-        ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
-        ManagedObjectRepresentation device = getManagedObjectForId(tenant, sourceId, testing);
-        if (device != null) {
-            Map<String, Object> attrs = device.getAttrs();
-
-            // Process each fragment
-            serviceConfiguration.getInventoryFragmentsToCache().forEach(frag -> {
-                frag = frag.trim();
-
-                // Handle special cases
-                if ("id".equals(frag)) {
-                    newMO.put(frag, sourceId);
-                    return; // using return in forEach as continue
-                }
-                if ("name".equals(frag)) {
-                    newMO.put(frag, device.getName());
-                    return;
-                }
-                if ("owner".equals(frag)) {
-                    newMO.put(frag, device.getOwner());
-                    return;
-                }
-
-                if ("type".equals(frag)) {
-                    newMO.put(frag, device.getType());
-                    return;
-                }
-
-                // Handle nested attributes
-                Object value = resolveNestedAttribute(attrs, frag);
-                if (value != null) {
-                    newMO.put(frag, value);
-                }
-            });
-        }
-
-        return newMO;
-    }
-
-    /**
-     * Resolves a nested attribute from a map using dot notation.
-     * 
-     * @param attrs The source attributes map
-     * @param path  The attribute path using dot notation (e.g., "a.b.c")
-     * @return The resolved value or null if path cannot be resolved
-     */
-    private Object resolveNestedAttribute(Map<String, Object> attrs, String path) {
-        if (path == null || attrs == null) {
-            return null;
-        }
-
-        String[] pathParts = path.split("\\.");
-        Object current = attrs;
-
-        for (String part : pathParts) {
-            if (!(current instanceof Map)) {
-                return null;
-            }
-
-            Map<?, ?> currentMap = (Map<?, ?>) current;
-            if (!currentMap.containsKey(part)) {
-                return null;
-            }
-
-            current = currentMap.get(part);
-        }
-
-        return current;
+        return inventoryCacheEnrichmentService.getMOFromInventoryCache(tenant, sourceId, testing, this, configurationRegistry);
     }
 
     /**
@@ -1247,93 +857,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
      * @param overwrites
      * @return response status code
      */
-    public int uploadEventAttachment(final BinaryInfo binaryInfo, final String eventId, boolean overwrites)
-            throws ProcessingException {
-        try {
-            HttpHeaders headers = new HttpHeaders();
-            headers.set("Authorization",
-                    contextService.getContext().toCumulocityCredentials().getAuthenticationString());
-            headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
-            String tenant = contextService.getContext().toCumulocityCredentials().getTenantId();
-
-            String serverUrl = clientProperties.getBaseURL() + "/event/events/" + eventId + "/binaries";
-            RestTemplate restTemplate = new RestTemplate();
-
-            ResponseEntity<EventBinary> response = null;
-            byte[] attDataBytes = null;
-            if (!binaryInfo.getData().isEmpty()) {
-                if (binaryInfo.getData().startsWith("data:") && binaryInfo.getType() == null
-                        || binaryInfo.getType().isEmpty()) {
-                    // Base64 File Header
-                    int pos = binaryInfo.getData().indexOf(";");
-                    String type = binaryInfo.getData().substring(5, pos - 1);
-                    binaryInfo.setType(type);
-
-                    attDataBytes = Base64.getDecoder()
-                            .decode(binaryInfo.getData().substring(pos + 8).getBytes(StandardCharsets.UTF_8));
-                } else
-                    attDataBytes = Base64.getDecoder().decode(binaryInfo.getData().getBytes(StandardCharsets.UTF_8));
-            }
-            if (binaryInfo.getType() == null || binaryInfo.getType().isEmpty()) {
-                binaryInfo.setType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
-            }
-            if (binaryInfo.getName() == null || binaryInfo.getName().isEmpty()) {
-                if (binaryInfo.getType() != null && !binaryInfo.getType().isEmpty()) {
-                    if (binaryInfo.getType().contains("image/")) {
-                        binaryInfo.setName("file.png");
-                    } else if (binaryInfo.getType().contains("text/")) {
-                        binaryInfo.setName("file.txt");
-                    } else if (binaryInfo.getType().contains("application/pdf")) {
-                        binaryInfo.setName("file.pdf");
-                    } else if (binaryInfo.getType().contains("application/json")) {
-                        binaryInfo.setName("file.json");
-                    } else if (binaryInfo.getType().contains("application/xml")) {
-                        binaryInfo.setName("file.xml");
-                    } else if (binaryInfo.getType().contains("application/octet-stream")) {
-                        binaryInfo.setName("file.bin");
-                    } else {
-                        binaryInfo.setName("file.bin");
-                    }
-                } else
-                    binaryInfo.setName("file");
-            }
-            log.info("{} - Uploading attachment with name {} and type {} to event {}", tenant,
-                    binaryInfo.getName(), binaryInfo.getType(), eventId);
-            if (overwrites) {
-                headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-                headers.setContentDisposition(
-                        ContentDisposition.builder("attachment").filename(binaryInfo.getName()).build());
-                HttpEntity<byte[]> requestEntity = new HttpEntity<>(attDataBytes, headers);
-                response = restTemplate.exchange(serverUrl, HttpMethod.PUT, requestEntity, EventBinary.class);
-            } else {
-                headers.setContentType(MediaType.MULTIPART_FORM_DATA);
-                MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
-                multipartBodyBuilder.part("object", binaryInfo, MediaType.APPLICATION_JSON);
-                multipartBodyBuilder.part("file", attDataBytes, MediaType.valueOf(binaryInfo.getType()))
-                        .filename(binaryInfo.getName());
-                MultiValueMap<String, HttpEntity<?>> body = multipartBodyBuilder.build();
-                HttpEntity<MultiValueMap<String, HttpEntity<?>>> requestEntity = new HttpEntity<>(body, headers);
-                try {
-                    c8ySemaphore.acquire();
-                    response = restTemplate.postForEntity(serverUrl, requestEntity, EventBinary.class);
-                } catch (InterruptedException e) {
-                    log.error("{} - Failed to acquire semaphore for uploading attachment to event {}: ", tenant,
-                            eventId, e);
-                } finally {
-                    c8ySemaphore.release();
-                }
-            }
-
-            if (response.getStatusCode().value() >= 300) {
-                throw new ProcessingException("Failed to create binary: " + response.toString(),
-                        response.getStatusCode().value());
-            }
-            return response.getStatusCode().value();
-        } catch (Exception e) {
-            log.error("{} - Failed to upload attachment to event {}: ", contextService.getContext().getTenant(),
-                    eventId, e);
-            throw new ProcessingException("Failed to upload attachment to event: " + e.getMessage(), e);
-        }
+    public int uploadEventAttachment(final BinaryInfo binaryInfo, final String eventId,
+            boolean overwrites) throws ProcessingException {
+        return binaryAttachmentService.uploadEventAttachment(binaryInfo, eventId, overwrites, c8ySemaphore);
     }
 
     // private synchronized void initializeTransientApis() {

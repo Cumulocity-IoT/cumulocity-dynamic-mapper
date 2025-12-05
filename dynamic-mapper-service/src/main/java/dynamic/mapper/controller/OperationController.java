@@ -41,8 +41,6 @@ import dynamic.mapper.core.BootstrapService;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.core.ExtensionManager;
-import dynamic.mapper.core.Operation;
-import dynamic.mapper.core.ServiceOperation;
 import dynamic.mapper.core.facade.IdentityFacade;
 import dynamic.mapper.core.facade.InventoryFacade;
 
@@ -72,7 +70,8 @@ import dynamic.mapper.service.ServiceConfigurationService;
 import dynamic.mapper.service.deployment.DeploymentMapService;
 import dynamic.mapper.service.status.MappingStatusService;
 import dynamic.mapper.model.Mapping;
-
+import dynamic.mapper.model.Operation;
+import dynamic.mapper.model.ServiceOperation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;

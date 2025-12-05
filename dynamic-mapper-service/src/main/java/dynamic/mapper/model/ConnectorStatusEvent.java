@@ -19,7 +19,7 @@
  *
  */
 
-package dynamic.mapper.core;
+package dynamic.mapper.model;
 
 import java.io.Serializable;
 import java.text.DateFormat;
