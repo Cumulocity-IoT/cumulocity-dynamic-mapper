@@ -46,6 +46,7 @@ jobs:
         run: |
           cp ./dynamic-mapper-service/target/dynamic-mapper-service-starter.zip ./dynamic-mapper-service/target/dynamic-mapper-service-standard.zip
           mv ./dynamic-mapper-service/src/main/configuration/cumulocity-2c.json ./dynamic-mapper-service/src/main/configuration/cumulocity.json
+          sed -i 's/@project.version@/${{ steps.project.outputs.version }}/g' ./dynamic-mapper-service/src/main/configuration/cumulocity.json
           zip ./dynamic-mapper-service/target/dynamic-mapper-service-standard.zip ./dynamic-mapper-service/src/main/configuration/cumulocity.json -j
           cp ./dynamic-mapper-service/target/dynamic-mapper-service-standard.zip ./dynamic-mapper-service/target/dynamic-mapper-service-standard-withoutMQTTService.zip
           mv ./dynamic-mapper-service/src/main/configuration/cumulocity-2c-withoutMQTTService.json ./dynamic-mapper-service/src/main/configuration/cumulocity.json
@@ -56,6 +57,7 @@ jobs:
         run: |
           cp ./dynamic-mapper-service/target/dynamic-mapper-service-standard.zip ./dynamic-mapper-service/target/dynamic-mapper-service-performance.zip
           mv ./dynamic-mapper-service/src/main/configuration/cumulocity-8c.json ./dynamic-mapper-service/src/main/configuration/cumulocity.json
+          sed -i 's/@project.version@/${{ steps.project.outputs.version }}/g' ./dynamic-mapper-service/src/main/configuration/cumulocity.json
           zip ./dynamic-mapper-service/target/dynamic-mapper-service-performance.zip ./dynamic-mapper-service/src/main/configuration/cumulocity.json -j
           cp ./dynamic-mapper-service/target/dynamic-mapper-service-performance.zip ./dynamic-mapper-service/target/dynamic-mapper-service-performance-withoutMQTTService.zip
           mv ./dynamic-mapper-service/src/main/configuration/cumulocity-8c-withoutMQTTService.json ./dynamic-mapper-service/src/main/configuration/cumulocity.json
@@ -66,6 +68,7 @@ jobs:
         run: |
           cp ./dynamic-mapper-service/target/dynamic-mapper-service-performance.zip ./dynamic-mapper-service/target/dynamic-mapper-service-max.zip
           mv ./dynamic-mapper-service/src/main/configuration/cumulocity-16c.json ./dynamic-mapper-service/src/main/configuration/cumulocity.json
+          sed -i 's/@project.version@/${{ steps.project.outputs.version }}/g' ./dynamic-mapper-service/src/main/configuration/cumulocity.json
           zip ./dynamic-mapper-service/target/dynamic-mapper-service-max.zip ./dynamic-mapper-service/src/main/configuration/cumulocity.json -j
           cp ./dynamic-mapper-service/target/dynamic-mapper-service-max.zip ./dynamic-mapper-service/target/dynamic-mapper-service-max-withoutMQTTService.zip
           mv ./dynamic-mapper-service/src/main/configuration/cumulocity-16c-withoutMQTTService.json ./dynamic-mapper-service/src/main/configuration/cumulocity.json
