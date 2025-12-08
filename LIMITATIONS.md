@@ -17,5 +17,3 @@ A mapping is defined of mapping properties and substitutions. The substitutions 
    Please be aware that slight in differences in the evaluation of these expressions exist.
 
 Differences in more advanced expressions can occur. Please test your expressions before you use advanced elements.
-
-For Cumulocity MQTT Service currently no wildcard topics (e.g. `topic/#` or `topic/+` ) for Inbound Mappings / Subscriptions are allowed.

@@ -773,7 +773,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
 
         configProps.put("supportsWildcardInTopicOutbound",
                 new ConnectorProperty(null, false, 13, ConnectorPropertyType.BOOLEAN_PROPERTY,
-                        true, false, false, null, null));
+                        true, false, true, null, null));
 
         configProps.put("pulsarTenant",
                 new ConnectorProperty(null, false, 14, ConnectorPropertyType.STRING_PROPERTY,
@@ -785,7 +785,6 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
 
         String name = "Cumulocity MQTT-Service";
         String description = "Connector for connecting to Cumulocity MQTT Service using Pulsar protocol. " +
-                "The MQTT Service does not support wildcards. " +
                 "The QoS 'exactly once' is reduced to 'at least once'.";
 
         return new ConnectorSpecification(
