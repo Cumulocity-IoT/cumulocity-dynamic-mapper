@@ -80,10 +80,10 @@
 
           <c8y-form-group class="p-l-16 p-r-16"
             *ngIf="shouldShowSelectCodeTemplate() && codeTemplateOptions.length > 0">
-            <label>{{ 'Code Template' | translate }}</label>
+            <label>{{ 'JavaScript Code Template' | translate }}</label>
             <div class="input-group">
               <c8y-select [items]="codeTemplateOptions" formControlName="codeTemplate" labelProperty="label" style="width: 100%"
-                [insideClick]="false" [autoClose]="true" aria-label="Code Template">
+                [insideClick]="false" [autoClose]="true" aria-label="JavaScript Code Template">
               </c8y-select>
               <span class="input-group-btn">
                 <button class="btn btn-primary" type="button" aria-label="View Code" (click)="viewCode()">
