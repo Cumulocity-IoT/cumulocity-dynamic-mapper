@@ -43,6 +43,9 @@ import {
   TransformationTypeLabels
 } from '../../shared';
 import { CodeTemplate } from 'src/configuration';
+import { CodeExplorerComponent } from '../code-explorer/code-explorer-modal.component';
+import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
+import { base64ToString } from '../shared/util';
 
 interface MappingTypeOption {
   label: string;
@@ -77,6 +80,7 @@ interface SaveResult {
   standalone: false
 })
 export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
+
   @Input() direction: Direction;
 
   @ViewChild('descriptionTextarea') descriptionTextarea: ElementRef<HTMLTextAreaElement>;
@@ -114,6 +118,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   private readonly bottomDrawerRef = inject(BottomDrawerRef);
   private readonly sharedService = inject(SharedService);
   private readonly fb = inject(FormBuilder);
+  private readonly bsModalService = inject(BsModalService);
 
   // Promise resolvers
   private _save: (value: SaveResult) => void;
@@ -499,4 +504,24 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
       supportedTransformationTypes: config?.supportedTransformationTypes || []
     };
   }
+
+  viewCode() {
+    const formValue = this.formGroup.getRawValue();
+    const selectedCodeTemplateOption = formValue.codeTemplate as CodeTemplateOption;
+    const code = base64ToString(selectedCodeTemplateOption.value.code);
+
+    const initialState = {
+      templateCode: code,
+      templateName: selectedCodeTemplateOption.description,
+      labels: {
+        ok: 'Cancel',
+        cancel: 'Cancel'
+      }
+    };
+    const confirmDeletionModalRef: BsModalRef = this.bsModalService.show(
+      CodeExplorerComponent,
+      { initialState, class: 'modal-lg' }
+    );
+  }
+
 }

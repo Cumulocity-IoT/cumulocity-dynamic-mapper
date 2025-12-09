@@ -69,6 +69,7 @@ import { MappingTabFactory } from './mapping-tab.factory';
 import { SubstitutionManagementService } from './service/substitution-management.service';
 import { MappingStepperService } from './service/mapping-stepper.service';
 import { MappingSubstitutionStepComponent } from './step-substitution/mapping-substitution-step.component';
+import { CodeExplorerComponent } from './code-explorer/code-explorer-modal.component';
 
 @NgModule({
   declarations: [
@@ -101,6 +102,7 @@ import { MappingSubstitutionStepComponent } from './step-substitution/mapping-su
     MappingSubscriptionComponent,
     MappingIdCellRendererComponent,
     SnoopExplorerComponent,
+    CodeExplorerComponent,
     AdviceActionComponent,
     MappingFilterComponent,
     ManageTemplateComponent,
