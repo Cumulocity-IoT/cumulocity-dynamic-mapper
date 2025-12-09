@@ -13,7 +13,6 @@ import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.inbound.processor.CodeExtractionInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.DeserializationInboundProcessor;
-import dynamic.mapper.processor.inbound.processor.EnrichmentInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.ExtensibleProcessor;
 import dynamic.mapper.processor.inbound.processor.FilterInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.FlowProcessorInboundProcessor;
@@ -62,9 +61,6 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
 
     @Autowired
     private DeserializationInboundProcessor deserializationInboundProcessor;
-
-    @Autowired
-    private EnrichmentInboundProcessor enrichmentInboundProcessor;
 
     @Autowired
     private JSONataExtractionInboundProcessor jsonataExtractionInboundProcessor;
@@ -169,7 +165,6 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
                 // 0. Common processing for all
                 .process(deserializationInboundProcessor)
                 .process(mappingContextProcessor)
-                .process(enrichmentInboundProcessor)
                 .process(filterInboundProcessor)
 
                 // Check if further processing should be ignored after enrichment
