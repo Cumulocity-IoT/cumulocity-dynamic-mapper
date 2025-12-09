@@ -56,8 +56,9 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
     @Override
     public void process(Exchange exchange) throws Exception {
         ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
-        Mapping mapping = context.getMapping();
+
         String tenant = context.getTenant();
+        Mapping mapping = context.getMapping();
 
         try {
             processSmartMapping(context);

@@ -44,7 +44,7 @@ public class SnoopingOutboundProcessor extends BaseProcessor {
 
     @Override
     public void process(Exchange exchange) throws Exception {
-        ProcessingContext<Object> context = getProcessingContext(exchange);
+        ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
         Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
 
@@ -78,8 +78,4 @@ public class SnoopingOutboundProcessor extends BaseProcessor {
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private ProcessingContext<Object> getProcessingContext(Exchange exchange) {
-        return exchange.getIn().getHeader("processingContext", ProcessingContext.class);
-    }
 }

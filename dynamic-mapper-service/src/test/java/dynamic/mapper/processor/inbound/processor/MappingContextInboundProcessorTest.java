@@ -48,7 +48,6 @@ import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
-
 @Slf4j
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -83,7 +82,6 @@ class MappingContextInboundProcessorTest {
         // Create real Mapping object
         mapping = Mapping.builder().identifier("test-mapping").name("Test Mapping").debug(false).qos(Qos.AT_LEAST_ONCE)
                 .build();
-
 
         // Create real MappingStatus object with all required fields initialized
         mappingStatus = new MappingStatus(
@@ -215,10 +213,16 @@ class MappingContextInboundProcessorTest {
     @Test
     void testProcessWithNullMapping() throws Exception {
         // Given
-        when(message.getBody(Mapping.class)).thenReturn(null);
+        when(processingContext.getMapping()).thenReturn(null);
 
-        // When & Then
-        assertThrows(Exception.class, () -> processor.process(exchange));
+        // When & Then - if the processor should handle null gracefully
+        try {
+            processor.process(exchange);
+            fail("Should have thrown NullPointerException");
+        } catch (NullPointerException e) {
+            // Expected - verify it's the mapping that's null
+            assertTrue(true, "Correctly threw NPE for null mapping");
+        }
     }
 
     @Test

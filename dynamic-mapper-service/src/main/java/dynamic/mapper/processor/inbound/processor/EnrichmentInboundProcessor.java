@@ -30,6 +30,7 @@ public class EnrichmentInboundProcessor extends BaseProcessor {
     @Override
     public void process(Exchange exchange) throws Exception {
         ProcessingContext<Object> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+        
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
 

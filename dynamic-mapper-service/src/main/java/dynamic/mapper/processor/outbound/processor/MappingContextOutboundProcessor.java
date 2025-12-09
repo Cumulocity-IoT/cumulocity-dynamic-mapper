@@ -58,13 +58,13 @@ public class MappingContextOutboundProcessor extends BaseProcessor {
 
     @Override
     public void process(Exchange exchange) throws Exception {
-        C8YMessage message = exchange.getIn().getHeader("c8yMessage", C8YMessage.class);
-        Mapping mapping = exchange.getIn().getBody(Mapping.class);
-        ProcessingContext<?> processingContext = exchange.getIn().getHeader("processingContext",
+        ProcessingContext<?> context = exchange.getIn().getHeader("processingContext",
                 ProcessingContext.class);
 
-        ServiceConfiguration serviceConfiguration = processingContext.getServiceConfiguration();
-        String tenant = message.getTenant();
+        String tenant = context.getTenant();
+        Mapping mapping = context.getMapping();
+
+        ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();
         MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
 
         // Extract additional info from headers if available
@@ -75,38 +75,38 @@ public class MappingContextOutboundProcessor extends BaseProcessor {
                 && mapping.isSubstitutionAsCode()) {
             try {
                 // contextSemaphore.acquire();
-                var graalEngine = configurationRegistry.getGraalEngine(message.getTenant());
+                var graalEngine = configurationRegistry.getGraalEngine(tenant);
                 var graalContext = createGraalContext(graalEngine);
-                processingContext.setGraalContext(graalContext);
-                processingContext.setSharedCode(serviceConfiguration.getCodeTemplates()
+                context.setGraalContext(graalContext);
+                context.setSharedCode(serviceConfiguration.getCodeTemplates()
                         .get(TemplateType.SHARED.name()).getCode());
-                processingContext.setSystemCode(serviceConfiguration.getCodeTemplates()
+                context.setSystemCode(serviceConfiguration.getCodeTemplates()
                         .get(TemplateType.SYSTEM.name()).getCode());
             } catch (Exception e) {
-                handleGraalVMError(tenant, mapping, e, processingContext);
+                handleGraalVMError(tenant, mapping, e, context);
                 return;
             }
         } else if (mapping.getCode() != null &&
                 TransformationType.SMART_FUNCTION.equals(mapping.getTransformationType())) {
             try {
-                var graalEngine = configurationRegistry.getGraalEngine(message.getTenant());
+                var graalEngine = configurationRegistry.getGraalEngine(tenant);
                 var graalContext = createGraalContext(graalEngine);
                 // processingContext.setSystemCode(serviceConfiguration.getCodeTemplates()
                 // .get(TemplateType.SMART.name()).getCode());
-                processingContext.setGraalContext(graalContext);
-                processingContext.setFlowState(new HashMap<String, Object>());
-                processingContext.setFlowContext(new SimpleFlowContext(graalContext, tenant,
+                context.setGraalContext(graalContext);
+                context.setFlowState(new HashMap<String, Object>());
+                context.setFlowContext(new SimpleFlowContext(graalContext, tenant,
                         (InventoryEnrichmentClient) configurationRegistry.getC8yAgent(),
-                        processingContext.getTesting()));
+                        context.getTesting()));
 
             } catch (Exception e) {
-                handleGraalVMError(tenant, mapping, e, processingContext);
+                handleGraalVMError(tenant, mapping, e, context);
                 return;
             }
         }
 
         mappingStatus.messagesReceived++;
-        logOutboundMessageReceived(tenant, mapping, connectorIdentifier, processingContext, serviceConfiguration);
+        logOutboundMessageReceived(tenant, mapping, connectorIdentifier, context, serviceConfiguration);
 
     }
 

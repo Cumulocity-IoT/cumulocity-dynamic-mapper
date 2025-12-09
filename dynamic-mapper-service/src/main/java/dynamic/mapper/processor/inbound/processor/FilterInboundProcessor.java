@@ -32,6 +32,7 @@ public class FilterInboundProcessor extends BaseProcessor {
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
         String mappingFilter = mapping.getFilterMapping();
+
         if (mappingFilter != null && !("").equals(mappingFilter)) {
             Object payloadObjectNode = context.getPayload();
             String payload = toPrettyJsonString(payloadObjectNode);
@@ -50,6 +51,5 @@ public class FilterInboundProcessor extends BaseProcessor {
         }
 
     }
-
 
 }

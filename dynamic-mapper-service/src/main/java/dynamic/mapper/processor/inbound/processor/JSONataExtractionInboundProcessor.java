@@ -36,7 +36,7 @@ public class JSONataExtractionInboundProcessor extends BaseProcessor {
 
     @Override
     public void process(Exchange exchange) throws Exception {
-        ProcessingContext<Object> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+        ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
 
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
@@ -64,7 +64,7 @@ public class JSONataExtractionInboundProcessor extends BaseProcessor {
 
     }
 
-    public void extractFromSource(ProcessingContext<Object> context)
+    public void extractFromSource(ProcessingContext<?> context)
             throws ProcessingException {
         try {
             Mapping mapping = context.getMapping();

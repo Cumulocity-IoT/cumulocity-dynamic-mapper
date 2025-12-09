@@ -49,8 +49,9 @@ public class InternalProtobufProcessor extends BaseProcessor {
     @Override
     public void process(Exchange exchange) throws Exception {
         ProcessingContext<byte[]> context = getProcessingContextAsByteArray(exchange);
-        Mapping mapping = context.getMapping();
+
         String tenant = context.getTenant();
+        Mapping mapping = context.getMapping();
 
         try {
             extractFromSource(context);

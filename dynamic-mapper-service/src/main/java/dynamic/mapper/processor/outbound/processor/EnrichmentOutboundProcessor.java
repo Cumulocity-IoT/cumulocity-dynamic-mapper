@@ -58,7 +58,8 @@ public class EnrichmentOutboundProcessor extends BaseProcessor {
 
     @Override
     public void process(Exchange exchange) throws Exception {
-        ProcessingContext<Object> context = getProcessingContextAsObject(exchange);
+        ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
 
@@ -78,7 +79,7 @@ public class EnrichmentOutboundProcessor extends BaseProcessor {
         }
     }
 
-    public void enrichPayload(ProcessingContext<Object> context) {
+    public void enrichPayload(ProcessingContext<?> context) {
 
         /*
          * step 0 patch payload with dummy property _IDENTITY_ in case the content
@@ -160,7 +161,7 @@ public class EnrichmentOutboundProcessor extends BaseProcessor {
     /**
      * Helper method to safely add values to DataPrepContext
      */
-    private void addToFlowContext(DataPrepContext flowContext, ProcessingContext<Object> context, String key,
+    private void addToFlowContext(DataPrepContext flowContext, ProcessingContext<?> context, String key,
             Object value) {
         try {
             if (context.getGraalContext() != null && value != null) {

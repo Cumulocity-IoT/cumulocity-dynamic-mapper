@@ -57,9 +57,10 @@ public class SendOutboundProcessor extends BaseProcessor {
     @SuppressWarnings("unchecked")
     public void process(Exchange exchange) throws Exception {
         ProcessingContext<Object> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+
         String tenant = context.getTenant();
-        Boolean testing = context.getTesting();
         Mapping mapping = context.getMapping();
+        Boolean testing = context.getTesting();
 
         try {
             // Process all C8Y requests that were created by SubstitutionProcessor

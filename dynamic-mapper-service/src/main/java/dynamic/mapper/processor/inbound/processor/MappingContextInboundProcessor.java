@@ -39,52 +39,57 @@ public class MappingContextInboundProcessor extends BaseProcessor {
 
     @Override
     public void process(Exchange exchange) throws Exception {
-        ConnectorMessage message = exchange.getIn().getHeader("connectorMessage", ConnectorMessage.class);
-        Mapping mapping = exchange.getIn().getBody(Mapping.class);
-        ProcessingContext<?> processingContext = exchange.getIn().getHeader("processingContext",
+        ProcessingContext<?> context = exchange.getIn().getHeader("processingContext",
                 ProcessingContext.class);
 
-        ServiceConfiguration serviceConfiguration = processingContext.getServiceConfiguration();
-        String tenant = message.getTenant();
+        String tenant = context.getTenant();
+        Mapping mapping = context.getMapping();
+
+        ConnectorMessage message = exchange.getIn().getHeader("connectorMessage", ConnectorMessage.class);
+
+        ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();
         MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
 
         // Extract additional info from headers if available
         String connectorIdentifier = exchange.getIn().getHeader("connectorIdentifier", String.class);
 
-        processingContext.setQos(determineQos(connectorIdentifier));
+        context.setQos(determineQos(connectorIdentifier));
 
         // Prepare GraalVM context if code exists
-        if (mapping.getCode() != null && TransformationType.SUBSTITUTION_AS_CODE.equals(mapping.getTransformationType())) {
+        if (mapping.getCode() != null
+                && TransformationType.SUBSTITUTION_AS_CODE.equals(mapping.getTransformationType())) {
             try {
-                var graalEngine = configurationRegistry.getGraalEngine(message.getTenant());
+                var graalEngine = configurationRegistry.getGraalEngine(tenant);
                 var graalContext = createGraalContext(graalEngine);
-                processingContext.setGraalContext(graalContext);
-                processingContext.setSharedCode(serviceConfiguration.getCodeTemplates()
+                context.setGraalContext(graalContext);
+                context.setSharedCode(serviceConfiguration.getCodeTemplates()
                         .get(TemplateType.SHARED.name()).getCode());
-                processingContext.setSystemCode(serviceConfiguration.getCodeTemplates()
+                context.setSystemCode(serviceConfiguration.getCodeTemplates()
                         .get(TemplateType.SYSTEM.name()).getCode());
             } catch (Exception e) {
-                handleGraalVMError(tenant, mapping, e, processingContext);
+                handleGraalVMError(tenant, mapping, e, context);
                 return;
             }
-        } else if (mapping.getCode() != null && 
-                 TransformationType.SMART_FUNCTION.equals(mapping.getTransformationType())) {
+        } else if (mapping.getCode() != null &&
+                TransformationType.SMART_FUNCTION.equals(mapping.getTransformationType())) {
             try {
-                var graalEngine = configurationRegistry.getGraalEngine(message.getTenant());
+                var graalEngine = configurationRegistry.getGraalEngine(tenant);
                 var graalContext = createGraalContext(graalEngine);
                 // processingContext.setSystemCode(serviceConfiguration.getCodeTemplates()
-                //         .get(TemplateType.SMART.name()).getCode());
-                processingContext.setGraalContext(graalContext);
-                processingContext.setFlowState(new HashMap<String, Object>());
-                processingContext.setFlowContext(new SimpleFlowContext(graalContext, tenant, (InventoryEnrichmentClient) configurationRegistry.getC8yAgent(), processingContext.getTesting()));
+                // .get(TemplateType.SMART.name()).getCode());
+                context.setGraalContext(graalContext);
+                context.setFlowState(new HashMap<String, Object>());
+                context.setFlowContext(new SimpleFlowContext(graalContext, tenant,
+                        (InventoryEnrichmentClient) configurationRegistry.getC8yAgent(),
+                        context.getTesting()));
             } catch (Exception e) {
-                handleGraalVMError(tenant, mapping, e, processingContext);
+                handleGraalVMError(tenant, mapping, e, context);
                 return;
             }
         }
-        
+
         mappingStatus.messagesReceived++;
-        logInboundMessageReceived(tenant, mapping, connectorIdentifier, processingContext, serviceConfiguration);
+        logInboundMessageReceived(tenant, mapping, connectorIdentifier, context, serviceConfiguration);
 
     }
 

@@ -43,10 +43,12 @@ public class SendInboundProcessor extends BaseProcessor {
     @SuppressWarnings("unchecked")
     public void process(Exchange exchange) throws Exception {
         ProcessingContext<Object> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
-        Boolean parallelProcessing = exchange.getIn().getHeader("parallelProcessing", Boolean.class);
+
         String tenant = context.getTenant();
-        Boolean testing = context.getTesting();
         Mapping mapping = context.getMapping();
+        Boolean testing = context.getTesting();
+        
+        Boolean parallelProcessing = exchange.getIn().getHeader("parallelProcessing", Boolean.class);
         try {
 
             // Check if we have a single request from parallel processing

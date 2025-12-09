@@ -58,7 +58,6 @@ import dynamic.mapper.model.SnoopStatus;
 import dynamic.mapper.processor.flow.CumulocityObject;
 import dynamic.mapper.processor.flow.CumulocityType;
 import dynamic.mapper.processor.flow.ExternalId;
-import dynamic.mapper.processor.flow.ExternalSource;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;

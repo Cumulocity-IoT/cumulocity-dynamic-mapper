@@ -69,8 +69,9 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
     @Override
     public void process(Exchange exchange) throws Exception {
         ProcessingContext<Object> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
-        Mapping mapping = context.getMapping();
+        
         String tenant = context.getTenant();
+        Mapping mapping = context.getMapping();
         Boolean testing = context.getTesting();
 
         try {
