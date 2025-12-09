@@ -18,14 +18,23 @@
   ~  @authors Christof Strack, Stefan Witschel
   ~
   -->
-<div class="flex-col flex-nowrap no-align-items p-48 fit-h col-md-12 col-md-offset-0 c8y-stepper--no-btns">
+<div class="flex-col flex-nowrap no-align-items p-48 fit-h col-md-12 col-md-offset-0 c8y-stepper--no-btns"
+  *ngIf="isLoading">
+  <div class="card card--fullpage">
+    <div class="card-block text-center">
+      <c8y-loading></c8y-loading>
+    </div>
+  </div>
+</div>
+
+<div class="flex-col flex-nowrap no-align-items p-48 fit-h col-md-12 col-md-offset-0 c8y-stepper--no-btns"
+  *ngIf="!isLoading && formGroup">
   <div class="card card--fullpage">
     <div class="card-header separator" style="justify-content: center">
       <h4 class="card-title d-flex">
         <i [c8yIcon]="'plus-circle'" class="icon-32 m-r-16"></i>
         <span class="m-t-8">
-          {{ 'Select Payload Format and Transformation Type' |
-          translate }}
+          {{ 'Select Payload Format and Transformation Type' | translate }}
         </span>
       </h4>
     </div>
@@ -45,7 +54,7 @@
           <c8y-form-group class="p-l-16 p-r-16">
             <label>{{ 'Payload Format' | translate }}</label>
             <c8y-select [items]="filteredMappingTypeOptions" formControlName="mappingType" labelProperty="label"
-              valueProperty="value" [insideClick]="false" [autoClose]="true" aria-label="Payload Format">
+              [insideClick]="false" [autoClose]="true" aria-label="Payload Format">
             </c8y-select>
             <small class="text-muted" *ngIf="formGroup.get('mappingType')?.value">
               {{ getMappingTypeDescription() }}
@@ -55,7 +64,7 @@
           <c8y-form-group class="p-l-16 p-r-16" *ngIf="shouldShowTransformationType()">
             <label>{{ 'Transformation Type' | translate }}</label>
             <c8y-select [items]="transformationTypeOptions" formControlName="transformationType" labelProperty="label"
-              valueProperty="value" [insideClick]="false" [autoClose]="true" aria-label="Transformation Type">
+              [insideClick]="false" [autoClose]="true" aria-label="Transformation Type">
             </c8y-select>
             <small class="text-muted">
               {{ getTransformationTypeDescription() }}
@@ -67,6 +76,34 @@
             <textarea #descriptionTextarea readonly c8y-textarea-autoresize formControlName="mappingTypeDescription"
               class="form-control">
             </textarea>
+          </c8y-form-group>
+
+          <c8y-form-group class="p-l-16 p-r-16"
+            *ngIf="shouldShowSelectCodeTemplate() && codeTemplateOptions.length > 0">
+            <label>{{ 'Code Template' | translate }}</label>
+            <div class="input-group">
+              <c8y-select [items]="codeTemplateOptions" formControlName="codeTemplate" labelProperty="label" style="width: 100%"
+                [insideClick]="false" [autoClose]="true" aria-label="Code Template">
+              </c8y-select>
+              <span class="input-group-btn">
+                <button class="btn btn-primary" type="button" aria-label="View Code" (click)="viewCode()">
+                  View Code
+                </button>
+              </span>
+            </div>
+            <small class="text-muted">
+              {{ getCodeTemplateDescription() }}
+            </small>
+          </c8y-form-group>
+
+          <!-- Show a message when no templates are available -->
+          <c8y-form-group class="p-l-16 p-r-16"
+            *ngIf="shouldShowSelectCodeTemplate() && codeTemplateOptions.length === 0">
+            <label>{{ 'Code Template' | translate }}</label>
+            <div class="alert alert-info">
+              <i c8yIcon="info"></i>
+              {{ 'No code templates available for this transformation type' | translate }}
+            </div>
           </c8y-form-group>
 
           <c8y-form-group class="p-l-16 p-r-16">

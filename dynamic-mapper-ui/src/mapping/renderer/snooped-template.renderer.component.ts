@@ -46,7 +46,7 @@ export class SnoopedTemplateRendererComponent {
   constructor(
     public context: CellRendererContext,
     public bsModalService: BsModalService
-  ) {}
+  ) { }
   exploreSnoopedTemplates() {
     const initialState = {
       enrichedMapping: this.context.item,

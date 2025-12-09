@@ -17,6 +17,7 @@
  *
  * @authors Christof Strack
  */
+
 import {
   Component,
   ElementRef,
@@ -30,7 +31,21 @@ import {
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { BottomDrawerRef, ModalLabels } from '@c8y/ngx-components';
 import { Subject, takeUntil } from 'rxjs';
-import { Direction, MappingType, MappingTypeDescriptionMap, MappingTypeDescriptions, MappingTypeLabels, TransformationType, TransformationTypeDescriptions, TransformationTypeLabels } from '../../shared';
+import {
+  Direction,
+  MappingType,
+  MappingTypeDescriptionMap,
+  MappingTypeDescriptions,
+  MappingTypeLabels,
+  SharedService,
+  TransformationType,
+  TransformationTypeDescriptions,
+  TransformationTypeLabels
+} from '../../shared';
+import { CodeTemplate } from 'src/configuration';
+import { CodeExplorerComponent } from '../code-explorer/code-explorer-modal.component';
+import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
+import { base64ToString } from '../shared/util';
 
 interface MappingTypeOption {
   label: string;
@@ -44,10 +59,18 @@ interface TransformationTypeOption {
   description?: string;
 }
 
+interface CodeTemplateOption {
+  label: string;
+  value: CodeTemplate;
+  description?: string;
+  id?: string;
+}
+
 interface SaveResult {
   mappingType: MappingType;
   transformationType: TransformationType;
   snoop: boolean;
+  codeTemplate?: CodeTemplate;
 }
 
 @Component({
@@ -57,6 +80,7 @@ interface SaveResult {
   standalone: false
 })
 export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
+
   @Input() direction: Direction;
 
   @ViewChild('descriptionTextarea') descriptionTextarea: ElementRef<HTMLTextAreaElement>;
@@ -70,10 +94,12 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   formGroup: FormGroup;
   filteredMappingTypeOptions: MappingTypeOption[] = [];
   transformationTypeOptions: TransformationTypeOption[] = [];
+  codeTemplateOptions: CodeTemplateOption[] = [];
 
   // State
   showTransformationType = false;
   valid = true;
+  isLoading = true; // Add loading state
 
   // Constants
   private readonly DEFAULT_MAPPING_TYPE = MappingType.JSON;
@@ -83,10 +109,16 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     MappingType.PROTOBUF_INTERNAL,
     MappingType.EXTENSION_SOURCE_TARGET
   ];
+  private readonly CODE_TEMPLATE_TRANSFORMATION_TYPES = [
+    TransformationType.SUBSTITUTION_AS_CODE,
+    TransformationType.SMART_FUNCTION
+  ];
 
   private readonly destroy$ = new Subject<void>();
   private readonly bottomDrawerRef = inject(BottomDrawerRef);
+  private readonly sharedService = inject(SharedService);
   private readonly fb = inject(FormBuilder);
+  private readonly bsModalService = inject(BsModalService);
 
   // Promise resolvers
   private _save: (value: SaveResult) => void;
@@ -97,9 +129,13 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     this._cancel = reject;
   });
 
-  ngOnInit(): void {
-    this.initializeForm();
-    this.setupFormSubscriptions();
+  async ngOnInit(): Promise<void> {
+    try {
+      await this.initializeForm();
+      this.setupFormSubscriptions();
+    } finally {
+      this.isLoading = false;
+    }
   }
 
   ngOnDestroy(): void {
@@ -112,7 +148,6 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     this.bottomDrawerRef.close();
   }
 
-  // Update the onSave method to extract the enum value
   onSave(): void {
     if (!this.formGroup.valid) return;
 
@@ -121,20 +156,36 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     const selectedMappingType = selectedMappingTypeOption.value;
     const snoopSupported = this.getMappingTypeConfig(selectedMappingType).snoopSupported;
 
+    const selectedTransformationTypeOption = formValue.transformationType as TransformationTypeOption;
+    const selectedTransformationType = selectedTransformationTypeOption?.value || TransformationType.DEFAULT;
+
+    const selectedCodeTemplateOption = formValue.codeTemplate as CodeTemplateOption;
+    const selectedCodeTemplate = selectedCodeTemplateOption?.value;
+
     this._save({
       mappingType: selectedMappingType,
-      transformationType: formValue.transformationType.value || TransformationType.DEFAULT,
-      snoop: formValue.snoop && snoopSupported
+      transformationType: selectedTransformationType,
+      snoop: formValue.snoop && snoopSupported,
+      codeTemplate: selectedCodeTemplate
     });
     this.bottomDrawerRef.close();
   }
 
   getTransformationTypeDescription(): string {
-    const currentType = this.formGroup.get('transformationType')?.value;
+    const currentOption = this.formGroup?.get('transformationType')?.value as TransformationTypeOption;
+    const currentType = currentOption?.value;
     return currentType ? TransformationTypeDescriptions[currentType] : '';
   }
 
-  private initializeForm(): void {
+  getCodeTemplateDescription(): string {
+    const currentOption = this.formGroup?.get('codeTemplate')?.value as CodeTemplateOption;
+    if (!currentOption) {
+      return 'Select a code template to use as a starting point for your transformation';
+    }
+    return currentOption.description || 'Select a code template to use as a starting point for your transformation';
+  }
+
+  private async initializeForm(): Promise<void> {
     // Find the first enabled mapping type for the current direction as default
     const enabledMappingTypes = Object.values(MappingType).filter(type => {
       const mappingTypeConfig = MappingTypeDescriptionMap[type];
@@ -161,25 +212,30 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
       description: MappingTypeDescriptions[defaultMappingType]
     };
 
-    // Create the initial mapping type option object
+    // Create the initial transformation type option object
     const initialTransformationTypeOption: TransformationTypeOption = {
       label: TransformationTypeLabels[this.direction][defaultTransformationType],
       value: defaultTransformationType,
       description: TransformationTypeDescriptions[defaultTransformationType]
     };
 
+    // Load code templates for initial transformation type
+    await this.loadCodeTemplates(defaultTransformationType);
+    const initialCodeTemplateOption = this.codeTemplateOptions[0] || null;
+
+    // Create form group
     this.formGroup = this.fb.group({
       expertMode: [false],
       mappingType: [initialMappingTypeOption],
       transformationType: [initialTransformationTypeOption],
       mappingTypeDescription: [{ value: initialConfig.description, disabled: true }],
-      snoop: [{ value: false, disabled: !initialConfig.snoopSupported }]
+      snoop: [{ value: false, disabled: !initialConfig.snoopSupported }],
+      codeTemplate: [initialCodeTemplateOption]
     });
 
+    // Initialize derived state and options
     this.updateDerivedState();
-
-    // Initialize transformation type options
-    this.updateTransformationTypeOptions(initialConfig.substitutionsAsCodeSupported);
+    this.updateTransformationTypeOptions();
   }
 
   private setupFormSubscriptions(): void {
@@ -190,6 +246,10 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     this.formGroup.get('expertMode')?.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(expertMode => this.onExpertModeChange(expertMode));
+
+    this.formGroup.get('transformationType')?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(type => this.onTransformationTypeChange(type));
   }
 
   private updateDerivedState(): void {
@@ -215,7 +275,6 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   }
 
   private onMappingTypeChange(selectedOption: MappingTypeOption): void {
-    // The selectedOption is always a MappingTypeOption object
     const mappingType = selectedOption.value;
     const config = this.getMappingTypeConfig(mappingType);
     const snoopControl = this.formGroup.get('snoop');
@@ -237,7 +296,25 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     }
 
     // Update transformation type options based on the new mapping type
-    this.updateTransformationTypeOptions(config.substitutionsAsCodeSupported);
+    this.updateTransformationTypeOptions();
+  }
+
+  private async onTransformationTypeChange(selectedOption: TransformationTypeOption): Promise<void> {
+    const transformationType = selectedOption?.value;
+    if (!transformationType) {
+      return;
+    }
+
+    await this.loadCodeTemplates(transformationType);
+
+    // Only set a default template if we have options available
+    if (this.codeTemplateOptions.length > 0) {
+      const firstTemplate = this.codeTemplateOptions[0];
+      this.formGroup.patchValue({ codeTemplate: firstTemplate }, { emitEvent: false });
+    } else {
+      // Clear the code template if no options are available
+      this.formGroup.patchValue({ codeTemplate: null }, { emitEvent: false });
+    }
   }
 
   private onExpertModeChange(expertMode: boolean): void {
@@ -246,7 +323,6 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     const transformationTypeControl = this.formGroup.get('transformationType');
     const mappingTypeControl = this.formGroup.get('mappingType');
 
-    // The form control value is always a MappingTypeOption object
     const currentMappingTypeOption = mappingTypeControl?.value as MappingTypeOption;
     const currentMappingType = currentMappingTypeOption?.value;
 
@@ -259,7 +335,6 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
 
       // Reset mapping type if current selection is not available in non-expert mode
       if (currentMappingType && this.EXPERT_MODE_EXCLUDED_TYPES.includes(currentMappingType)) {
-        // Find the first available mapping type for non-expert mode
         const availableMappingTypes = this.getFilteredMappingTypes();
         const defaultOption = availableMappingTypes.find(
           option => option.value === this.DEFAULT_MAPPING_TYPE
@@ -279,7 +354,11 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
           ? this.DEFAULT_TRANSFORMATION_TYPE
           : supportedTypes[0] || this.DEFAULT_TRANSFORMATION_TYPE;
 
-        patchValues.transformationType = defaultTransformationType;
+        patchValues.transformationType = {
+          label: TransformationTypeLabels[this.direction][defaultTransformationType],
+          value: defaultTransformationType,
+          description: TransformationTypeDescriptions[defaultTransformationType]
+        };
       }
 
       this.formGroup.patchValue(patchValues);
@@ -292,13 +371,12 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     const finalMappingType = finalMappingTypeOption?.value;
     if (finalMappingType) {
       const config = this.getMappingTypeConfig(finalMappingType);
-      this.updateTransformationTypeOptions(config.substitutionsAsCodeSupported);
+      this.updateTransformationTypeOptions();
     }
   }
 
-  // Update these methods to handle the object properly
   getMappingTypeDescription(): string {
-    const currentOption = this.formGroup.get('mappingType')?.value as MappingTypeOption;
+    const currentOption = this.formGroup?.get('mappingType')?.value as MappingTypeOption;
     const currentType = currentOption?.value;
     return currentType ? MappingTypeDescriptionMap[currentType]?.description : '';
   }
@@ -308,7 +386,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
       return false;
     }
 
-    const currentMappingTypeOption = this.formGroup.get('mappingType')?.value as MappingTypeOption;
+    const currentMappingTypeOption = this.formGroup?.get('mappingType')?.value as MappingTypeOption;
     if (!currentMappingTypeOption?.value) {
       return false;
     }
@@ -317,20 +395,30 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     return config.supportedTransformationTypes.length > 0;
   }
 
+  shouldShowSelectCodeTemplate(): boolean {
+    if (!this.showTransformationType) {
+      return false;
+    }
+
+    const currentTransformationTypeOption = this.formGroup?.get('transformationType')?.value as TransformationTypeOption;
+    if (!currentTransformationTypeOption?.value) {
+      return false;
+    }
+
+    return this.CODE_TEMPLATE_TRANSFORMATION_TYPES.includes(currentTransformationTypeOption.value);
+  }
+
   private shouldIncludeMappingType(type: MappingType): boolean {
-    // Check if the mapping type is enabled
     const mappingTypeConfig = MappingTypeDescriptionMap[type];
     if (!mappingTypeConfig?.enabled) {
       return false;
     }
 
-    // Check direction support
     const config = this.getMappingTypeConfig(type);
     if (!config.directionSupported) {
       return false;
     }
 
-    // In non-expert mode, exclude advanced types
     if (!this.showTransformationType && this.EXPERT_MODE_EXCLUDED_TYPES.includes(type)) {
       return false;
     }
@@ -338,8 +426,8 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     return true;
   }
 
-  private updateTransformationTypeOptions(substitutionsAsCodeSupported: boolean): void {
-    const currentMappingTypeOption = this.formGroup.get('mappingType')?.value as MappingTypeOption;
+  private updateTransformationTypeOptions(): void {
+    const currentMappingTypeOption = this.formGroup?.get('mappingType')?.value as MappingTypeOption;
     const currentMappingType = currentMappingTypeOption?.value;
 
     if (!currentMappingType) {
@@ -356,15 +444,50 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
       description: TransformationTypeDescriptions[type]
     }));
 
-    // Reset if current selection is not available
-    const currentValue = this.formGroup.get('transformationType')?.value;
-    if (!supportedTypes.includes(currentValue)) {
-      // Set to the first available type or DEFAULT if available
+    const currentValue = this.formGroup?.get('transformationType')?.value as TransformationTypeOption;
+    if (!supportedTypes.includes(currentValue?.value)) {
       const defaultType = supportedTypes.includes(TransformationType.DEFAULT)
         ? TransformationType.DEFAULT
         : supportedTypes[0] || TransformationType.DEFAULT;
 
-      this.formGroup.patchValue({ transformationType: defaultType });
+      this.formGroup.patchValue({
+        transformationType: {
+          label: TransformationTypeLabels[this.direction][defaultType],
+          value: defaultType,
+          description: TransformationTypeDescriptions[defaultType]
+        }
+      });
+    }
+  }
+
+  private async loadCodeTemplates(transformationType: TransformationType): Promise<void> {
+    // Only load templates for types that support them
+    if (!this.CODE_TEMPLATE_TRANSFORMATION_TYPES.includes(transformationType)) {
+      this.codeTemplateOptions = [];
+      return;
+    }
+
+    try {
+      const codeTemplates = await this.sharedService.getCodeTemplatesByType(
+        this.direction,
+        transformationType
+      );
+
+      console.log(`Loaded ${codeTemplates.length} code templates for ${this.direction}/${transformationType}`);
+
+      this.codeTemplateOptions = codeTemplates.map(template => ({
+        id: template.id,
+        label: template.name || template.id,
+        value: template,
+        description: template.description || `Code template for ${transformationType}`
+      }));
+
+      // Log for debugging
+      console.log('Code template options:', this.codeTemplateOptions);
+
+    } catch (error) {
+      console.error('Failed to load code templates:', error);
+      this.codeTemplateOptions = [];
     }
   }
 
@@ -380,6 +503,25 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
       directionSupported: config?.directionSupported || false,
       supportedTransformationTypes: config?.supportedTransformationTypes || []
     };
+  }
+
+  viewCode() {
+    const formValue = this.formGroup.getRawValue();
+    const selectedCodeTemplateOption = formValue.codeTemplate as CodeTemplateOption;
+    const code = base64ToString(selectedCodeTemplateOption.value.code);
+
+    const initialState = {
+      templateCode: code,
+      templateName: selectedCodeTemplateOption.description,
+      labels: {
+        ok: 'Cancel',
+        cancel: 'Cancel'
+      }
+    };
+    const confirmDeletionModalRef: BsModalRef = this.bsModalService.show(
+      CodeExplorerComponent,
+      { initialState, class: 'modal-lg' }
+    );
   }
 
 }

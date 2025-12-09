@@ -182,8 +182,8 @@ export class SharedService {
     return this._serviceConfiguration;
   }
 
-  async getCodeTemplate(direction: Direction,templateType: string): Promise<CodeTemplate> {
-    const id = direction ? `${direction}_${templateType}`: templateType;
+  async getCodeTemplate(direction: Direction, templateType: string): Promise<CodeTemplate> {
+    const id = direction ? `${direction}_${templateType}` : templateType;
     const response = await this.client.fetch(
       `${BASE_URL}/${PATH_CONFIGURATION_CODE_TEMPLATE_ENDPOINT}/${id}`,
       {
@@ -194,6 +194,44 @@ export class SharedService {
       }
     );
     return await response.json();
+  }
+
+  /**
+ * Get code templates filtered by direction and transformation type
+ * @param direction The direction (INBOUND/OUTBOUND)
+ * @param transformationType The transformation type
+ * @returns Array of code templates matching the criteria
+ */
+  /**
+   * Get code templates filtered by direction and transformation type
+   * @param direction The direction (INBOUND/OUTBOUND)
+   * @param transformationType The transformation type
+   * @returns Array of code templates matching the criteria
+   */
+  async getCodeTemplatesByType(direction: Direction, transformationType: string): Promise<CodeTemplate[]> {
+    const codeTemplateMap = await this.getCodeTemplates();
+    const templates: CodeTemplate[] = [];
+
+    // The transformationType in the API uses this pattern for keys
+    const searchPattern = `${direction}_${transformationType}`;
+
+    for (const [key, template] of Object.entries(codeTemplateMap)) {
+      // Match templates where:
+      // 1. The key starts with the pattern (e.g., "INBOUND_SUBSTITUTION_AS_CODE")
+      // 2. The template's templateType matches
+      // 3. The template's direction matches (if defined)
+      const keyMatches = key.startsWith(searchPattern) || template.templateType === searchPattern;
+      const directionMatches = !template.direction || template.direction === direction;
+
+      if (keyMatches && directionMatches) {
+        templates.push({
+          ...template,
+          id: key // Ensure ID is set from the map key
+        });
+      }
+    }
+
+    return templates;
   }
 
   async getCodeTemplates(): Promise<CodeTemplateMap> {
