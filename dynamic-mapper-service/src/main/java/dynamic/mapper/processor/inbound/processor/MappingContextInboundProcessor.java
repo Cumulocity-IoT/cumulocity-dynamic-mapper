@@ -9,7 +9,6 @@ import org.springframework.stereotype.Component;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.configuration.TemplateType;
-import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.core.InventoryEnrichmentClient;
 import dynamic.mapper.model.Mapping;
@@ -44,8 +43,6 @@ public class MappingContextInboundProcessor extends BaseProcessor {
 
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
-
-        ConnectorMessage message = exchange.getIn().getHeader("connectorMessage", ConnectorMessage.class);
 
         ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();
         MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
