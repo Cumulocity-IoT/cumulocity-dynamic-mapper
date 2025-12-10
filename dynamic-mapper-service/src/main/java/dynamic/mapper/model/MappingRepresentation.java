@@ -37,7 +37,7 @@ public class MappingRepresentation implements Serializable {
 
     public static final String MAPPING_TYPE = "d11r_mapping";
     public static final String MAPPING_FRAGMENT = "d11r_mapping";
-    public static final String MAPPING_GENERATED_TEST_DEVICE = "d11r_device_generatedType";
+    public static final String MAPPING_GENERATED_DEVICE = "d11r_device_generatedType";
 
     @JsonProperty("id")
     private String id;

@@ -20,24 +20,27 @@
 import { Component, OnInit } from '@angular/core';
 import { FormGroup } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
-import { NODE3 } from '../../shared';
+import { NODE3, SharedModule } from '../../shared';
 import { IManagedObject } from '@c8y/client';
+import { CoreModule } from '@c8y/ngx-components';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'd11r-mapping-extension-properties',
   templateUrl: './extension-properties.component.html',
-  standalone: false
+  standalone: true,
+  imports: [CoreModule, CommonModule, SharedModule]
 })
 export class ExtensionPropertiesComponent implements OnInit {
   extensionsEntryForm: FormGroup;
   extension: IManagedObject;
-  LINK = `c8y-pkg-dynamic-mapper/${NODE3}/extension`;
+  LINK = `c8y-pkg-dynamic-mapper/${NODE3}/processorExtension`;
   breadcrumbConfig: { icon: string; label: string; path: string };
 
-  constructor(private route: ActivatedRoute) {}
+  constructor(private route: ActivatedRoute) { }
 
   ngOnInit() {
-    const {extensions} = this.route.snapshot.data;
+    const { extensions } = this.route.snapshot.data;
     this.extension = extensions[0];
   }
 }

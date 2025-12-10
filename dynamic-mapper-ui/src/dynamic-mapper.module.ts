@@ -64,7 +64,6 @@ import { LandingModule } from './landing/landing.module';
     RealtimeModule
   ],
   exports: [],
-  declarations: [],
   providers: [
     OverviewGuard,
     BsModalService,

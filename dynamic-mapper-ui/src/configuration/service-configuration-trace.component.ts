@@ -29,7 +29,7 @@ import { ServiceConfiguration } from './shared/configuration.model';
   selector: 'd11r-mapping-service-trace-configuration',
   styleUrls: ['./service-configuration.component.style.css'],
   templateUrl: 'service-configuration-trace.component.html',
-  standalone: false
+  standalone: true
 })
 export class ServiceConfigurationTraceComponent implements OnInit, OnDestroy {
 

@@ -36,9 +36,9 @@
           <div style="display: flex">
             <label for="testResult" translate>{{ sourceSystem }} Payload&nbsp;</label>
           </div>
-          <d11r-mapping-json-editor2 [options]="editorOptionsSource" (contentChanged)="onSourceTemplateChanged($event)"
+          <d11r-mapping-json-editor [options]="editorOptionsSource" (contentChanged)="onSourceTemplateChanged($event)"
             [data]="testingModel.payload" [class]="'jse-main-tiny'" #editorTestingPayload id="editorTestingPayload">
-          </d11r-mapping-json-editor2>
+          </d11r-mapping-json-editor>
           <c8y-messages>
             <c8y-message *ngIf="testingModel.errorMsg" translate><span class="text-warning">{{ testingModel.errorMsg
                 }}</span>
@@ -62,9 +62,9 @@
                 }}</span>
             </div>
           </div>
-          <d11r-mapping-json-editor2 [options]="editorOptionsDefault" [data]="testingModel.request"
+          <d11r-mapping-json-editor [options]="editorOptionsDefault" [data]="testingModel.request"
             [class]="'jse-main-tiny'" #editorTestingRequest id="editorTestingRequest">
-          </d11r-mapping-json-editor2>
+          </d11r-mapping-json-editor>
           <c8y-messages>
             <c8y-message *ngIf="testingModel.errorMsg" translate><span class="text-warning">{{ testingModel.errorMsg
                 }}</span>
@@ -89,9 +89,9 @@
                 }}</span>
             </h6>
           </div>
-          <d11r-mapping-json-editor2 [options]="editorOptionsDefault" [class]="'jse-main-tiny'"
+          <d11r-mapping-json-editor [options]="editorOptionsDefault" [class]="'jse-main-tiny'"
             [data]="testingModel.response" #editorTestingResponse id="editorTestingResponse">
-          </d11r-mapping-json-editor2>
+          </d11r-mapping-json-editor>
         </div>
       </div>
     </div>

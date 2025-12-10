@@ -33,7 +33,7 @@ import { EditorMode } from '../../shared/stepper.model';
 @Component({
   selector: 'd11r-edit-substitution-modal',
   templateUrl: './edit-substitution-modal.component.html',
-  standalone: false
+  standalone: true
 })
 export class EditSubstitutionComponent implements OnInit, OnDestroy {
   @Input() substitution: Substitution;

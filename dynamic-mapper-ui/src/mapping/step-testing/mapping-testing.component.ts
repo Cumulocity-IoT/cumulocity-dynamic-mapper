@@ -30,14 +30,14 @@ import {
   ViewChild,
   ViewEncapsulation
 } from '@angular/core';
-import { AlertService } from '@c8y/ngx-components';
+import { AlertService, CoreModule } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, Subject, takeUntil } from 'rxjs';
 import { Content } from 'vanilla-jsoneditor';
 import {
   ConfirmationModalComponent,
+  ContentChanges,
   Direction,
-  getSchema,
   JsonEditorComponent,
   Mapping,
   MappingType,
@@ -48,6 +48,9 @@ import {
 import { DynamicMapperRequest, ProcessingContext, TestResult, TOKEN_TOPIC_LEVEL } from '../core/processor/processor.model';
 import { TestingService } from '../core/testing.service';
 import { patchC8YTemplateForTesting, sortObjectKeys } from '../shared/util';
+import { CollapseModule } from 'ngx-bootstrap/collapse';
+import { PopoverModule } from 'ngx-bootstrap/popover';
+import { CommonModule } from '@angular/common';
 
 interface TestingModel {
   payload?: any;
@@ -64,7 +67,10 @@ interface TestingModel {
   templateUrl: 'mapping-testing.component.html',
   styleUrls: ['../shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
-  standalone: false
+  standalone: true,
+  imports: [CoreModule, CommonModule, PopoverModule, CollapseModule, JsonEditorComponent]
+
+
 })
 export class MappingStepTestingComponent implements OnInit, OnDestroy {
   @Input() mapping!: Mapping;
@@ -158,8 +164,8 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     this.displayTestResult(nextIndex);
   }
 
-  onSourceTemplateChanged(content: Content): void {
-    const contentAsJson = this.parseJsonContent(content);
+  onSourceTemplateChanged(content: ContentChanges): void {
+    const contentAsJson = this.parseJsonContent(content.updatedContent);
     const topicSample = this.extractTopicSample(contentAsJson);
 
     this.updateTestMapping({

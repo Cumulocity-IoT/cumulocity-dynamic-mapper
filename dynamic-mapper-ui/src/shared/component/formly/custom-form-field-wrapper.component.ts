@@ -21,8 +21,8 @@ import { Component, OnInit } from '@angular/core';
 import { CoreModule } from '@c8y/ngx-components';
 import { FieldWrapper } from '@ngx-formly/core';
 import { PopoverModule } from 'ngx-bootstrap/popover';
-import { FormatStringPipe } from '../../misc/format-string.pipe';
-
+import { FormatStringPipe } from 'src/shared/misc/format-string.pipe';
+import { SharedModule } from 'src/shared/shared.module';
 
 @Component({
   selector: 'd11r-wrapper-form-field',

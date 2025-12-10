@@ -18,8 +18,9 @@
  * @authors Christof Strack
  */
 import { Component } from '@angular/core';
-import { CellRendererContext } from '@c8y/ngx-components';
+import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
 import { SnoopStatus } from '../../shared';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'd11r-mapping-renderer-status',
@@ -33,7 +34,8 @@ import { SnoopStatus } from '../../shared';
   <span *ngSwitchCase="'ENABLED'" class="text-10 label label-primary">snoop: pending</span>
 </ng-container>
   `,
-  standalone: false
+  standalone: true,
+  imports: [CoreModule, CommonModule]
 })
 export class StatusRendererComponent {
   constructor(public context: CellRendererContext) {

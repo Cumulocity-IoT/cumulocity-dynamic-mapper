@@ -19,28 +19,14 @@
  */
 
 import { NgModule } from '@angular/core';
-import { CoreModule, hookRoute } from '@c8y/ngx-components';
-import { CollapseModule } from 'ngx-bootstrap/collapse';
-import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
-import { NODE3, SharedModule } from '../shared';
-import { ExtensionCardComponent } from './card/extension-card.component';
-import { AddExtensionComponent } from './add/add-extension-modal.component';
-import { ExtensionGridComponent } from './grid/extension-grid.component';
+import { hookRoute } from '@c8y/ngx-components';
+import { NODE3 } from '../shared';
 import { ExtensionPropertiesComponent } from './properties/extension-properties.component';
 import { extensionResolver } from './share/extension.model';
+import { ExtensionGridComponent } from './grid/extension-grid.component';
 
 @NgModule({
-  declarations: [
-    ExtensionGridComponent,
-    AddExtensionComponent,
-    ExtensionCardComponent,
-    ExtensionPropertiesComponent
-  ],
   imports: [
-    CoreModule,
-    BsDropdownModule.forRoot(),
-    CollapseModule.forRoot(),
-    SharedModule
   ],
   exports: [],
   providers: [
@@ -61,11 +47,4 @@ import { extensionResolver } from './share/extension.model';
     })
   ]
 })
-export class ExtensionModule {}
-
-export enum ExtensionStatus {
-  COMPLETE = 'COMPLETE',
-  PARTIALLY = 'PARTIALLY',
-  NOT_LOADED = 'NOT_LOADED',
-  UNKNOWN = 'UNKNOWN'
-}
+export class ExtensionModule { }

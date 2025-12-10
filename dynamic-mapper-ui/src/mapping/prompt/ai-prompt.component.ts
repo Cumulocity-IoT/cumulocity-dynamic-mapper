@@ -30,7 +30,7 @@ import {
 } from '@angular/core';
 import { DeviceGridService, } from '@c8y/ngx-components/device-grid';
 import { Mapping, Substitution, MappingType, SharedService, isSubstitutionsAsCode } from '../../shared';
-import { AlertService, BottomDrawerRef } from '@c8y/ngx-components';
+import { AlertService, BottomDrawerRef, CoreModule } from '@c8y/ngx-components';
 import { AIAgentService } from '../core/ai-agent.service';
 import { AgentObjectDefinition, AgentTextDefinition } from '../shared/ai-prompt.model';
 import { ServiceConfiguration } from '../../configuration';
@@ -43,7 +43,8 @@ import { base64ToBytes } from '../shared/util';
   templateUrl: 'ai-prompt.component.html',
   styleUrls: ['./ai-prompt.component.css'],
   encapsulation: ViewEncapsulation.None,
-  standalone: false
+  standalone: true,
+  imports:[CoreModule]
 })
 export class AIPromptComponent implements OnInit, OnDestroy, AfterViewChecked {
 

@@ -21,7 +21,7 @@ import { Pipe, PipeTransform } from '@angular/core';
 
 @Pipe({
   name: 'formatStringAsWords',
-  standalone: true
+  standalone: true,
 })
 export class FormatStringPipe implements PipeTransform {
   transform(value: string, removeLastWords: number = 0): string {

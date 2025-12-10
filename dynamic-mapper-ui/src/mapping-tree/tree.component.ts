@@ -22,13 +22,16 @@ import { ActivatedRoute } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 import { JsonEditorComponent } from '../shared';
 import { MappingTreeService } from './tree.service';
+import { CoreModule } from '@c8y/ngx-components';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'd11r-mapping-tree-grid',
   templateUrl: 'tree.component.html',
   styleUrls: ['./tree.style.css'],
   encapsulation: ViewEncapsulation.None,
-  standalone: false
+  standalone: true,
+  imports: [CoreModule, CommonModule, JsonEditorComponent]
 })
 export class MappingTreeComponent implements OnInit {
   constructor(

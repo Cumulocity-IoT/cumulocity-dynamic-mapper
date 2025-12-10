@@ -24,7 +24,7 @@ import { CellRendererContext } from '@c8y/ngx-components';
   template: `<span>{{
     context.item.id === -1 ? 'UNSPECIFIED' : context.item.id
   }}</span>`,
-  standalone: false
+  standalone: true
 })
 export class IdRendererComponent {
   constructor(public context: CellRendererContext) {}

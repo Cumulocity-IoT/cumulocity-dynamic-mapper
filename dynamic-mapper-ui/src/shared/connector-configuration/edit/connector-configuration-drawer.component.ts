@@ -49,7 +49,7 @@ interface PropertyEntry {
     CommonModule,
     FormsModule,
     FormlyModule,
-  ]
+  ],
 })
 export class ConnectorConfigurationDrawerComponent implements OnInit {
   @Input() add: boolean;

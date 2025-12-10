@@ -20,13 +20,15 @@
 
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { IManagedObject } from '@c8y/client';
-import { AlertService } from '@c8y/ngx-components';
+import { AlertService, CommonModule, CoreModule } from '@c8y/ngx-components';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, Observable, Subject } from 'rxjs';
 import { catchError, retry, shareReplay, switchMap, takeUntil, tap, timeout } from 'rxjs/operators';
 import { Feature, Operation, SharedService } from '../../shared';
 import { AddExtensionComponent } from '../add/add-extension-modal.component';
 import { ExtensionService } from '../extension.service';
+import { ExtensionCardComponent } from '../card/extension-card.component';
+import { RouterLink } from '@angular/router';
 
 interface ExtensionState {
   reloading: boolean;
@@ -38,7 +40,8 @@ interface ExtensionState {
   selector: 'd11r-mapping-extension',
   templateUrl: './extension-grid.component.html',
   styleUrls: ['../share/extension.component.css'],
-  standalone: false
+  standalone: true,
+  imports: [CoreModule, CommonModule, ExtensionCardComponent]
 })
 export class ExtensionGridComponent implements OnInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();
@@ -48,9 +51,10 @@ export class ExtensionGridComponent implements OnInit, OnDestroy {
     externalExtensionEnabled: true
   });
 
-  
+
   readonly state$ = this.state.asObservable();
   extensions$: Observable<IManagedObject[]>;
+  listClass: any;
 
   get reloading(): boolean {
     return this.state.value.reloading;

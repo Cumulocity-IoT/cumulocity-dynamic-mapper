@@ -26,14 +26,16 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 import { IIdentified } from '@c8y/client';
-import { AssetSelectionChangeEvent } from '@c8y/ngx-components/assets-navigator';
+import { CoreModule } from '@c8y/ngx-components';
+import { AssetSelectionChangeEvent, AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
 
 @Component({
   selector: 'd11r-device-selector-subscription',
   templateUrl: 'device-selector-subscription.component.html',
   styleUrls: ['../../shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
-  standalone: false
+  standalone: true,
+  imports:[CoreModule, AssetSelectorModule]
 })
 export class DeviceSelectorSubscriptionComponent implements OnInit {
   @Input() deviceList: IIdentified[];

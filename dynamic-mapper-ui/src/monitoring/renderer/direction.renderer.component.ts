@@ -31,7 +31,7 @@ import { Direction } from '../../shared';
       ></i>
     </span>
   `,
-  standalone: false
+  standalone: true
 })
 export class DirectionRendererComponent {
   Direction = Direction;

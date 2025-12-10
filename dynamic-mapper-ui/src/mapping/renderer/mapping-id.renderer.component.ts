@@ -38,7 +38,7 @@ import { MappingService } from '../core/mapping.service';
       {{ context.value }}
     </button>
   `,
-  standalone: false
+  standalone: true
 })
 export class MappingIdCellRendererComponent {
   constructor(

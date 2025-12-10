@@ -35,14 +35,18 @@ import { ValidationError } from '../shared/mapping.model';
 import { deriveSampleTopicFromTopic, getTypeOf } from '../shared/util';
 import { StepperConfiguration, API, Direction, Mapping, Qos, SnoopStatus, FormatStringPipe, SharedService, MappingTypeLabels } from '../../shared';
 import { MappingService } from '../core/mapping.service';
-import { Alert, AlertService } from '@c8y/ngx-components';
+import { Alert, AlertService, CoreModule } from '@c8y/ngx-components';
+import { PopoverModule } from 'ngx-bootstrap/popover';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'd11r-mapping-properties',
   templateUrl: 'mapping-properties.component.html',
   styleUrls: ['../shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
-  standalone: false
+  standalone: true,
+  imports: [CoreModule, CommonModule, PopoverModule]
+
 })
 export class MappingStepPropertiesComponent
   implements OnInit, OnDestroy {

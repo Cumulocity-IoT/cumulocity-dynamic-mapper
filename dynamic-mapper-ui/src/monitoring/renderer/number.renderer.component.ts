@@ -22,7 +22,7 @@ import { CellRendererContext } from '@c8y/ngx-components';
 
 @Component({
   template: ' <span title="{{ context.value }}">{{ context.value }}</span> ',
-  standalone: false
+  standalone: true
 })
 export class NumberRendererComponent {
   constructor(public context: CellRendererContext) {

@@ -24,7 +24,7 @@ import {
   OnInit,
   ViewEncapsulation
 } from '@angular/core';
-import { ModalLabels } from '@c8y/ngx-components';
+import { CoreModule, ModalLabels } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
 import { Feature, Mapping, MappingEnriched, SharedService } from '../../../shared';
 import { AdvisorAction } from '../../shared/stepper.model';
@@ -33,7 +33,8 @@ import { AdvisorAction } from '../../shared/stepper.model';
   selector: 'd11r-advice-action',
   templateUrl: './advice-action.component.html',
   encapsulation: ViewEncapsulation.None,
-  standalone: false
+  standalone: true,
+  imports: [CoreModule]
 })
 export class AdviceActionComponent implements OnInit, OnDestroy {
   @Input() enrichedMapping: MappingEnriched;
