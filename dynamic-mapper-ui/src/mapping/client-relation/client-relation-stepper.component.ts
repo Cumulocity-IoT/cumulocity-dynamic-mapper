@@ -19,7 +19,7 @@
  */
 import { CdkStep } from '@angular/cdk/stepper';
 import { AfterViewInit, ChangeDetectorRef, Component, EventEmitter, inject, OnDestroy, OnInit, Output, ViewChild, ViewEncapsulation } from '@angular/core';
-import { AlertService, C8yStepper } from '@c8y/ngx-components';
+import { AlertService, C8yStepper, CoreModule } from '@c8y/ngx-components';
 import { ChangeDetectionStrategy } from '@angular/core';
 
 import {
@@ -27,7 +27,7 @@ import {
   SharedService,
 } from '../../shared';
 import { IIdentified } from '@c8y/client';
-import { AssetSelectionChangeEvent } from '@c8y/ngx-components/assets-navigator';
+import { AssetSelectionChangeEvent, AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
 import { ClientRelationService } from '../core/client-relation.service';
 import { Subject } from 'rxjs';
 
@@ -48,7 +48,8 @@ const CONSTANTS = {
   styleUrls: ['client-relation-stepper.component.css'],
   encapsulation: ViewEncapsulation.None,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  standalone: false
+  standalone: true,
+  imports:[CoreModule,AssetSelectorModule]
 })
 export class ClientRelationStepperComponent implements OnInit, OnDestroy, AfterViewInit {
   clients: string[] = [];

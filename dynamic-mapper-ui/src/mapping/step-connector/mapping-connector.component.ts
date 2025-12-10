@@ -45,7 +45,8 @@ import { ConnectorConfigurationService } from '../../connector';
   templateUrl: 'mapping-connector.component.html',
   styleUrls: ['../shared/mapping.style.css', './mapping-connector.style.css'],
   encapsulation: ViewEncapsulation.None,
-  standalone: false
+  standalone: true,
+  imports:[ConnectorGridComponent]
 })
 export class MappingConnectorComponent implements OnInit, OnDestroy {
   @ViewChild(ConnectorGridComponent)

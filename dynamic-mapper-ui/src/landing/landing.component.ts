@@ -25,13 +25,15 @@ import { Direction, Feature, JsonEditorComponent, NODE1, NODE3 } from '../shared
 import { BehaviorSubject, from, Subject } from 'rxjs';
 import { ConnectorConfigurationService } from '../connector';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
-import { AlertService } from '@c8y/ngx-components';
-import { ActivatedRoute } from '@angular/router';
+import { AlertService, CoreModule } from '@c8y/ngx-components';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { CommonModule } from '@angular/common';
 @Component({
   selector: 'd11r-landing',
   templateUrl: './landing.component.html',
   styleUrl: './landing.component.css',
-  standalone: false
+  standalone: true,
+  imports: [CoreModule, CommonModule, RouterLink]
 })
 export class LandingComponent implements OnInit {
   constructor(

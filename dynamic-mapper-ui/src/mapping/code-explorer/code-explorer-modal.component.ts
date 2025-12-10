@@ -19,7 +19,7 @@
  */
 
 import { Component, Input, OnDestroy, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
-import { ModalLabels } from '@c8y/ngx-components';
+import { CoreModule, ModalLabels } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
 import { Substitution } from '../../shared';
 import { EditorComponent } from '@c8y/ngx-components/editor';
@@ -29,7 +29,8 @@ import { EditorComponent } from '@c8y/ngx-components/editor';
   templateUrl: './code-explorer-modal.component.html',
   styleUrls: ['../shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
-  standalone: false
+  standalone: true,
+  imports:[CoreModule, EditorComponent]
 })
 export class CodeExplorerComponent implements OnInit, OnDestroy {
 

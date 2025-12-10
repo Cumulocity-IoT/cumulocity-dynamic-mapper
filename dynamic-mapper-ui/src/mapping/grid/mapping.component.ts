@@ -33,6 +33,7 @@ import {
   BulkActionControl,
   Column,
   ColumnDataType,
+  CoreModule,
   DataGridComponent,
   DisplayOptions,
   Pagination
@@ -46,6 +47,7 @@ import {
   Direction,
   ExtensionType,
   Feature,
+  FormatStringPipe,
   getExternalTemplate,
   isSubstitutionsAsCode,
   LabelTaggedRendererComponent,
@@ -57,6 +59,7 @@ import {
   Operation,
   Qos,
   SAMPLE_TEMPLATES_C8Y,
+  SharedModule,
   SharedService,
   SnoopStatus,
   StepperConfiguration,
@@ -86,13 +89,17 @@ import {
 } from '../shared/mapping.model';
 import { AdvisorAction, EditorMode } from '../shared/stepper.model';
 import { AdviceActionComponent } from './advisor/advice-action.component';
+import { CommonModule } from '@angular/common';
+import { MappingStepperComponent } from '../stepper-mapping/mapping-stepper.component';
+import { SnoopingStepperComponent } from '../stepper-snooping/snooping-stepper.component';
 
 @Component({
   selector: 'd11r-mapping-mapping-grid',
   templateUrl: 'mapping.component.html',
   styleUrls: ['../shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
-  standalone: false
+  standalone: true,
+  imports: [CoreModule, CommonModule, SharedModule, MappingStepperComponent, SnoopingStepperComponent],
 })
 export class MappingComponent implements OnInit, OnDestroy {
   @ViewChild('mappingGrid') mappingGrid: DataGridComponent;
@@ -374,7 +381,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     const initialState = { mapping, sourceSystem };
     try {
       const modalRef = this.bsModalService.show(MappingFilterComponent, {
-        initialState
+        initialState, class: 'modal-lg'
       });
       await new Promise((resolve) => {
         modalRef.content.closeSubject

@@ -18,16 +18,13 @@
  * @authors Christof Strack
  */
 import { NgModule } from '@angular/core';
-import { CoreModule, hookNavigator, hookRoute } from '@c8y/ngx-components';
+import { hookNavigator, hookRoute } from '@c8y/ngx-components';
 import { MappingTreeComponent } from './tree.component';
-import { NODE2, SharedModule } from '../shared';
+import { NODE2 } from '../shared';
 import { treeResolver } from './utils';
 import { MappingTreeNavigationFactory } from './mapping-tree.factory';
 
 @NgModule({
-  declarations: [MappingTreeComponent],
-  imports: [CoreModule, SharedModule],
-  exports: [],
   providers: [
     hookRoute({
       path: `c8y-pkg-dynamic-mapper/${NODE2}/tree`,

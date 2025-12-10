@@ -19,45 +19,15 @@
  */
 
 import { NgModule } from '@angular/core';
-import { CommonModule, CoreModule, hookNavigator, hookRoute, hookTab } from '@c8y/ngx-components';
+import { hookNavigator, hookRoute, hookTab } from '@c8y/ngx-components';
 import { MonitoringComponent } from './statistic/monitoring.component';
-import { IdRendererComponent } from './renderer/id-cell.renderer.component';
-import { ServiceConfigurationModule } from '../configuration';
-import { NumberRendererComponent } from './renderer/number.renderer.component';
-import { DirectionRendererComponent } from './renderer/direction.renderer.component';
 import { MonitoringChartComponent } from './chart/chart.component';
 import { featureResolver, NODE2 } from '../shared/mapping/util';
-import { NgxEchartsModule } from 'ngx-echarts';
 import { MappingServiceEventComponent } from './event/mapping-service-event.component';
-import { BsDatepickerModule } from 'ngx-bootstrap/datepicker';
-import { SharedModule } from '../shared';
-import { CollapseModule } from 'ngx-bootstrap/collapse';
 import { MonitoringNavigationFactory } from './monitoring-navigation.factory';
 import { StatisticTabFactory } from './statistic-tab.factory';
-import { PopoverModule } from 'ngx-bootstrap/popover';
 
 @NgModule({
-  declarations: [
-    MonitoringComponent,
-    MappingServiceEventComponent,
-    IdRendererComponent,
-    NumberRendererComponent,
-    DirectionRendererComponent,
-    MonitoringChartComponent
-  ],
-  imports: [
-    CoreModule,
-    CommonModule,
-    PopoverModule,
-    ServiceConfigurationModule,
-    BsDatepickerModule,
-    NgxEchartsModule.forRoot({
-      echarts: () => import('echarts')
-    }),
-    CollapseModule,
-    SharedModule
-  ],
-  exports: [],
   providers: [
     hookRoute({
       path: `c8y-pkg-dynamic-mapper/${NODE2}/monitoring/statistic/inbound`,

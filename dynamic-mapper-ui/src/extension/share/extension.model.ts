@@ -36,3 +36,10 @@ export const extensionResolver: ResolveFn<IManagedObject[]> = (route) => {
   const id = route.paramMap.get('id');
   return extensionService.getEnrichedProcessorExtensions(id);
 };
+
+export enum ExtensionStatus {
+  COMPLETE = 'COMPLETE',
+  PARTIALLY = 'PARTIALLY',
+  NOT_LOADED = 'NOT_LOADED',
+  UNKNOWN = 'UNKNOWN'
+}

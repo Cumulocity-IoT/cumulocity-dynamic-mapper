@@ -25,7 +25,7 @@
 
 import { Component, inject, Input, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
 import { FormBuilder, FormGroup } from '@angular/forms';
-import { BottomDrawerRef, ModalLabels } from '@c8y/ngx-components';
+import { BottomDrawerRef, CoreModule, ModalLabels } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { Subject, takeUntil } from 'rxjs';
 import {
@@ -42,6 +42,8 @@ import {
 import { CodeTemplate } from 'src/configuration';
 import { CodeExplorerComponent } from '../code-explorer/code-explorer-modal.component';
 import { base64ToString } from '../shared/util';
+import { CommonModule } from '@angular/common';
+import { CustomSelectComponent } from 'src/shared/component/select/custom-select.component';
 
 // Types
 interface SelectOption<T> {
@@ -66,7 +68,8 @@ interface SaveResult {
   selector: 'd11r-mapping-type-drawer',
   templateUrl: './mapping-type-drawer.component.html',
   encapsulation: ViewEncapsulation.None,
-  standalone: false
+  standalone: true,
+  imports: [CoreModule, CommonModule, CustomSelectComponent]
 })
 export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   @Input() direction: Direction;

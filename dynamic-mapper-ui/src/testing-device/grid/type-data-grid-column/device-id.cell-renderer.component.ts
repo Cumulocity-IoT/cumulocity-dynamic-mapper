@@ -41,7 +41,7 @@ import { TestingDeviceService } from '../../testing.service';
       >
     </span>
   `,
-  standalone: false
+  standalone: true
 })
 export class DeviceIdCellRendererComponent {
   constructor(

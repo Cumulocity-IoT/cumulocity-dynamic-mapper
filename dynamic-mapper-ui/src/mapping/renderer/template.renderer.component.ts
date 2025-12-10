@@ -33,7 +33,7 @@ import { CellRendererContext } from '@c8y/ngx-components';
       >{{ json }}</textarea
     >
   `,
-  standalone: false
+  standalone: true
 })
 export class TemplateRendererComponent {
   json: string;

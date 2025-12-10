@@ -19,25 +19,14 @@
  */
 
 import { NgModule } from '@angular/core';
-import { RouterModule } from '@angular/router';
-import { CoreModule, hookRoute } from '@c8y/ngx-components';
-import { CollapseModule } from 'ngx-bootstrap/collapse';
-import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
-import { MappingModule } from '../mapping/mapping.module';
-import { featureResolver, SharedModule } from '../shared';
+import { hookRoute } from '@c8y/ngx-components';
+import { featureResolver } from '../shared';
 import { LandingComponent } from './landing.component';
 
 @NgModule({
-  declarations: [LandingComponent],
   imports: [
-    CoreModule,
-    BsDropdownModule.forRoot(),
-    CollapseModule.forRoot(),
-    MappingModule,
-    SharedModule,
-    RouterModule
+    LandingComponent,
   ],
-  exports: [],
   providers: [
     hookRoute({
       path: 'c8y-pkg-dynamic-mapper/landing',

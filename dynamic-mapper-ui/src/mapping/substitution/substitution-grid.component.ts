@@ -30,16 +30,20 @@ import {
   ConfirmationModalComponent,
   definesDeviceIdentifier,
   Mapping,
+  SharedModule,
   Substitution
 } from '../../shared';
 import { EditorMode } from '../shared/stepper.model';
+import { CoreModule } from '@c8y/ngx-components';
+import { PopoverModule } from 'ngx-bootstrap/popover';
 
 @Component({
   selector: 'd11r-mapping-substitution-grid',
   templateUrl: 'substitution-grid.component.html',
   styleUrls: ['./substitution-grid.style.css'],
   encapsulation: ViewEncapsulation.None,
-  standalone: false
+  standalone: true,
+  imports:[CoreModule, PopoverModule, SharedModule]
 })
 export class SubstitutionRendererComponent {
   @Input()

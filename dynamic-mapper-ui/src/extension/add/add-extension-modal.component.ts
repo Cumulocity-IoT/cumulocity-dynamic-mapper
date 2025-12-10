@@ -30,6 +30,7 @@ import {
 } from '@c8y/client';
 import {
   AlertService,
+  CoreModule,
   DropAreaComponent,
   IFetchWithProgress,
   ModalLabels
@@ -44,7 +45,8 @@ import { gettext } from '@c8y/ngx-components/gettext';
   templateUrl: './add-extension-modal.component.html',
   styleUrls: ['./add-extension-modal.component.style.css'],
   encapsulation: ViewEncapsulation.None,
-  standalone: false
+  standalone: true,
+  imports:[CoreModule]
 })
 export class AddExtensionComponent implements OnDestroy {
   @ViewChild(DropAreaComponent) dropAreaComponent;

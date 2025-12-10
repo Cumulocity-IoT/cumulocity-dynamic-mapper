@@ -19,7 +19,7 @@
  */
 import { HttpStatusCode } from '@angular/common/http';
 import { Component, ViewChild } from '@angular/core';
-import { AlertService } from '@c8y/ngx-components';
+import { AlertService, CoreModule } from '@c8y/ngx-components';
 import { Observable } from 'rxjs';
 import packageJson from '../../package.json';
 import {
@@ -33,12 +33,15 @@ import {
 import { ConnectorGridComponent } from '../shared/connector-configuration/connector-grid.component';
 import { ActivatedRoute } from '@angular/router';
 import { gettext } from '@c8y/ngx-components/gettext';
+import { CommonModule } from '@angular/common';
+import { PopoverModule } from 'ngx-bootstrap/popover';
 
 @Component({
   selector: 'd11r-mapping-broker-connector',
   styleUrls: ['./connector-configuration.component.style.css'],
   templateUrl: 'connector-configuration.component.html',
-  standalone: false
+  standalone: true,
+  imports: [CoreModule, CommonModule, PopoverModule, ConnectorGridComponent]
 })
 export class ConnectorConfigurationComponent {
   @ViewChild(ConnectorGridComponent) connectorGridComponent!: ConnectorGridComponent;

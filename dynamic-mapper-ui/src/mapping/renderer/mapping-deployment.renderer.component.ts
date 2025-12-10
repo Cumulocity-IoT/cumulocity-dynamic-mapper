@@ -17,8 +17,9 @@
  *
  * @authors Christof Strack
  */
+import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
-import { CellRendererContext } from '@c8y/ngx-components';
+import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
 
 @Component({
   selector: 'd11r-mapping-renderer-deployment',
@@ -30,7 +31,9 @@ import { CellRendererContext } from '@c8y/ngx-components';
       <span class="text-12 tag tag--danger">{{ 'No active connector' }}</span>
     </div>
   `,
-  standalone: false
+  standalone: true,
+  imports: [CoreModule, CommonModule]
+
 })
 export class MappingDeploymentRendererComponent {
   constructor(public context: CellRendererContext) {

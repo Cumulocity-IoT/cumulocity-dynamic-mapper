@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { AlertService } from '@c8y/ngx-components';
+import { AlertService, CoreModule } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { Observable, Subject, takeUntil } from 'rxjs';
 import packageJson from '../../../package.json';
@@ -28,14 +28,17 @@ import {
   LoggingEventType,
   LoggingEventTypeMap,
 } from '..';
+import { FormatStringPipe } from '../misc/format-string.pipe'; 
 import { ConnectorLogService } from '../service/connector-log.service';
 import { ConnectorConfigurationService } from '../service/connector-configuration.service';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'd11r-mapping-connector-log',
   styleUrls: ['./connector-log.component.style.css'],
   templateUrl: 'connector-log.component.html',
-  standalone: true
+  standalone: true,
+  imports:[CoreModule, CommonModule, FormatStringPipe]
 })
 export class ConnectorStatusComponent implements OnInit, OnDestroy {
   version: string = packageJson.version;

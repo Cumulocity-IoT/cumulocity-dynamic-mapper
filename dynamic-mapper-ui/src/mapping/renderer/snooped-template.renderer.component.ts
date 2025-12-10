@@ -21,6 +21,7 @@ import { Component } from '@angular/core';
 import { CellRendererContext } from '@c8y/ngx-components';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { SnoopExplorerComponent } from '../snoop-explorer/snoop-explorer-modal.component';
+import { NgIf } from '@angular/common';
 
 @Component({
   selector: 'd11r-mapping-renderer-snooped',
@@ -40,7 +41,8 @@ import { SnoopExplorerComponent } from '../snoop-explorer/snoop-explorer-modal.c
       </button>
     </div>
   `,
-  standalone: false
+  standalone: true,
+  imports:[NgIf]
 })
 export class SnoopedTemplateRendererComponent {
   constructor(

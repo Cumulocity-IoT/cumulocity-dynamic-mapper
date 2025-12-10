@@ -20,11 +20,10 @@
 import { CdkStep } from '@angular/cdk/stepper';
 import { AfterViewInit, Component, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild, ViewEncapsulation } from '@angular/core';
 import { FormGroup } from '@angular/forms';
-import { AlertService, C8yStepper } from '@c8y/ngx-components';
+import { AlertService, C8yStepper, CoreModule } from '@c8y/ngx-components';
 import { BehaviorSubject, Subject } from 'rxjs';
 
 import {
-  ConnectorType,
   DeploymentMapEntry,
   Direction,
   Feature,
@@ -34,6 +33,9 @@ import {
 } from '../../shared';
 import { STEP_STATE } from '@angular/cdk/stepper';
 import { EditorMode } from '../shared/stepper.model';
+import { CommonModule } from '@angular/common';
+import { MappingConnectorComponent } from '../step-connector/mapping-connector.component';
+import { MappingStepPropertiesComponent } from '../step-property/mapping-properties.component';
 
 interface StepperLabels {
   next: string;
@@ -50,7 +52,9 @@ const CONSTANTS = {
   templateUrl: 'snooping-stepper.component.html',
   styleUrls: ['../shared/mapping.style.css', 'snooping-stepper.component.css'],
   encapsulation: ViewEncapsulation.None,
-  standalone: false
+  standalone: true,
+  imports: [CoreModule, CommonModule, MappingConnectorComponent, MappingStepPropertiesComponent]
+
 })
 export class SnoopingStepperComponent implements OnInit, OnDestroy, AfterViewInit {
   getState(): any {

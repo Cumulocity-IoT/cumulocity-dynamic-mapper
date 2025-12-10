@@ -34,7 +34,7 @@ import {
 } from '@angular/core';
 import { FormControl, FormGroup } from '@angular/forms';
 import { EditorComponent, loadMonacoEditor } from '@c8y/ngx-components/editor';
-import { Alert, AlertService, BottomDrawerService, C8yStepper } from '@c8y/ngx-components';
+import { Alert, AlertService, BottomDrawerService, C8yStepper, CoreModule } from '@c8y/ngx-components';
 import { FormlyFieldConfig } from '@ngx-formly/core';
 import * as _ from 'lodash';
 import { BsModalService } from 'ngx-bootstrap/modal';
@@ -61,7 +61,8 @@ import {
   TransformationType,
   MappingTypeLabels,
   ContentChanges,
-  MappingTypeDescriptions
+  MappingTypeDescriptions,
+  CapitalizeCasePipe
 } from '../../shared';
 import { ValidationError } from '../shared/mapping.model';
 import { createCompletionProviderFlowFunction, createCompletionProviderSubstitutionAsCode, EditorMode, STEP_DEFINE_SUBSTITUTIONS, STEP_GENERAL_SETTINGS, STEP_SELECT_TEMPLATES, STEP_TEST_MAPPING } from '../shared/stepper.model';
@@ -85,6 +86,11 @@ import { MappingStepTestingComponent } from '../step-testing/mapping-testing.com
 import { gettext } from '@c8y/ngx-components/gettext';
 import { MappingStepperService } from '../service/mapping-stepper.service';
 import { SubstitutionManagementService } from '../service/substitution-management.service';
+import { CommonModule } from '@angular/common';
+import { MappingStepPropertiesComponent } from '../step-property/mapping-properties.component';
+import { MappingConnectorComponent } from '../step-connector/mapping-connector.component';
+import { MappingSubstitutionStepComponent } from '../step-substitution/mapping-substitution-step.component';
+import { PopoverModule } from 'ngx-bootstrap/popover';
 
 let initializedMonaco = false;
 interface StepperStepChange {
@@ -97,8 +103,9 @@ interface StepperStepChange {
   templateUrl: 'mapping-stepper.component.html',
   styleUrls: ['../shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
-  standalone: false,
-  providers: [MappingStepperService, SubstitutionManagementService]
+  standalone: true,
+  providers: [MappingStepperService, SubstitutionManagementService],
+  imports: [CoreModule, CommonModule, EditorComponent, CapitalizeCasePipe, PopoverModule, MappingStepPropertiesComponent, MappingConnectorComponent, MappingSubstitutionStepComponent, MappingStepTestingComponent, JsonEditorComponent]
 })
 export class MappingStepperComponent implements OnInit, OnDestroy {
   @Input() mapping: Mapping;
@@ -931,8 +938,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.substitutionModel.pathSourceIsExpression = isExpression(this.substitutionModel.pathSource);
 
     await Promise.all([
-      this.editorSourceStepSubstitution.setSelectionToPath(this.substitutionModel.pathSource),
-      this.editorTargetStepSubstitution.setSelectionToPath(this.substitutionModel.pathTarget)
+      this.editorSourceStepSubstitution?.setSelectionToPath(this.substitutionModel.pathSource),
+      this.editorTargetStepSubstitution?.setSelectionToPath(this.substitutionModel.pathTarget)
     ]);
   }
 

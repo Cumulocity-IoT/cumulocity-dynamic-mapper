@@ -24,12 +24,17 @@ import { Direction, MappingStatus } from '../../shared';
 import { map } from 'rxjs/operators';
 import { MonitoringService } from '../shared/monitoring.service';
 import { ECharts, EChartsOption } from 'echarts';
+import { CoreModule } from '@c8y/ngx-components';
+import { CommonModule } from '@angular/common';
+import { NgxEchartsModule } from 'ngx-echarts';
 
 @Component({
   selector: 'd11r-monitoring-chart',
   templateUrl: './chart.component.html',
   styleUrls: ['./chart.component.css'],
-  standalone: false
+  standalone: true,
+  imports: [CoreModule, CommonModule, NgxEchartsModule]
+
 })
 export class MonitoringChartComponent implements OnInit, OnDestroy {
   constructor(

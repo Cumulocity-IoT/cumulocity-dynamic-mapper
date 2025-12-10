@@ -29,7 +29,7 @@ selector: 'd11r-mapping-renderer-qos',
         ? 'At least once'
         : 'Exactly once'
   }}</span>`,
-  standalone: false
+  standalone: true
 })
 export class QOSRendererComponent {
   constructor(public context: CellRendererContext) {}

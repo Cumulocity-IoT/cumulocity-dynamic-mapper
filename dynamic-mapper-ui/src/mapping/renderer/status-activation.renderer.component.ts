@@ -18,11 +18,12 @@
  * @authors Christof Strack
  */
 import { ChangeDetectorRef, Component, OnInit, ViewEncapsulation } from '@angular/core';
-import { AlertService, CellRendererContext } from '@c8y/ngx-components';
+import { AlertService, CellRendererContext, CoreModule } from '@c8y/ngx-components';
 import { MappingService } from '../core/mapping.service';
 import { Direction, Feature, Mapping, SharedService } from '../../shared';
 import { HttpStatusCode } from '@angular/common/http';
 import { SubscriptionService } from '../core/subscription.service';
+import { CommonModule } from '@angular/common';
 
 /**
  * The example component for custom cell renderer.
@@ -60,7 +61,9 @@ import { SubscriptionService } from '../core/subscription.service';
       </label>
     </div>
   `,
-  standalone: false
+  standalone: true,
+  imports: [CoreModule, CommonModule]
+
 })
 
 export class MappingStatusActivationRendererComponent implements OnInit {

@@ -39,12 +39,12 @@
 
   <div class="card-block">
     <div class="col-lg-12">
-      <d11r-mapping-json-editor2
+      <d11r-mapping-json-editor
         [options]="editorOptionsTree"
         [data]="mappingTree$ | async"
         [class]="'jse-main-large'"
         #editorTree
-      ></d11r-mapping-json-editor2>
+      ></d11r-mapping-json-editor>
       <c8y-messages class="text-left">
         <c8y-message *ngIf="false"
           ><span class="text-warning">Dummy message!</span>

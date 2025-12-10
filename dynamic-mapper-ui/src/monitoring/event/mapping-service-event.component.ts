@@ -20,21 +20,27 @@
 import { Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
 import { FormBuilder, FormGroup, FormControl } from '@angular/forms';
 import {
+  CoreModule,
   Pagination
 } from '@c8y/ngx-components';
 import { BehaviorSubject, from, Observable, Subject, switchMap, takeUntil } from 'rxjs';
 import {
   LoggingEventTypeMap,
+  SharedModule,
   SharedService
 } from '../../shared';
 import { EventService, IEvent, IResultList } from '@c8y/client';
+import { CommonModule } from '@angular/common';
+import { BsDatepickerModule } from 'ngx-bootstrap/datepicker';
 
 @Component({
   selector: 'd11r-mapping-service-event',
   templateUrl: 'mapping-service-event.component.html',
   styleUrls: ['../../mapping/shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
-  standalone: false
+  standalone: true,
+  imports: [CoreModule, CommonModule, SharedModule, BsDatepickerModule]
+
 })
 export class MappingServiceEventComponent implements OnInit, OnDestroy {
 
@@ -59,7 +65,7 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
 
   // Reactive Form
   filterForm: FormGroup;
-  
+
   events$: Observable<IResultList<IEvent>>;
   LoggingEventTypeMap = LoggingEventTypeMap;
   filterSubject$ = new BehaviorSubject<void>(null);

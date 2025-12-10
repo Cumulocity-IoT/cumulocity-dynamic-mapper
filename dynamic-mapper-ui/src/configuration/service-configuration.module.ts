@@ -19,25 +19,17 @@
  */
 
 import { NgModule } from '@angular/core';
-import { CoreModule, hookRoute, hookTab } from '@c8y/ngx-components';
-import { featureResolver, NODE3, SharedModule } from '../shared';
+import { hookRoute, hookTab } from '@c8y/ngx-components';
+import { featureResolver, NODE3 } from '../shared';
 import { ServiceConfigurationComponent } from './service-configuration.component';
-import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
 import { CodeComponent } from './code-template/code-template.component';
-import { EditorComponent, MonacoEditorMarkerValidatorDirective } from '@c8y/ngx-components/editor';
-import { PopoverModule } from 'ngx-bootstrap/popover';
 import { CodeTemplateTabFactory } from './code-template-tab.factory';
 import { ServiceConfigurationTraceComponent } from './service-configuration-trace.component';
 
 @NgModule({
-  declarations: [ServiceConfigurationComponent, ServiceConfigurationTraceComponent, CodeComponent],
   imports: [
-    EditorComponent,
-    MonacoEditorMarkerValidatorDirective,
-    CoreModule,
-    PopoverModule,
-    SharedModule,
-    BsDropdownModule.forRoot()
+    ServiceConfigurationComponent, 
+    ServiceConfigurationTraceComponent, 
   ],
   exports: [],
   providers: [
