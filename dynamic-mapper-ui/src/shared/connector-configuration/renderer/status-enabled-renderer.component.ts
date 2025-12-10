@@ -20,12 +20,14 @@
 import { ChangeDetectorRef, Component, OnInit, ViewEncapsulation } from '@angular/core';
 import {
   AlertService,
-  CellRendererContext
+  CellRendererContext,
+  CoreModule
 } from '@c8y/ngx-components';
 import { Direction, Feature, Operation, SharedService } from '../..';
 import { ConnectorConfigurationService } from '../../service/connector-configuration.service';
 import { HttpStatusCode } from '@angular/common/http';
 import { gettext } from '@c8y/ngx-components/gettext';
+import { TranslatePipe } from '@ngx-translate/core';
 
 /**
  * The example component for custom cell renderer.
@@ -51,7 +53,11 @@ import { gettext } from '@c8y/ngx-components/gettext';
       </label>
     </div>
   `,
-  standalone: false
+  standalone: true,
+  imports: [
+    CoreModule
+  ]
+
 })
 export class ConnectorStatusEnabledRendererComponent implements OnInit {
   constructor(

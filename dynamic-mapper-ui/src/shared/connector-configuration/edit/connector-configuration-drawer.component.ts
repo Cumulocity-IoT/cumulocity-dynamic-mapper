@@ -18,9 +18,9 @@
  * @authors Christof Strack
  */
 import { ChangeDetectorRef, Component, inject, Input, OnInit } from '@angular/core';
-import { BottomDrawerRef, ModalLabels } from '@c8y/ngx-components';
-import { FormlyFieldConfig } from '@ngx-formly/core';
-import { FormGroup } from '@angular/forms';
+import { BottomDrawerRef, CoreModule, ModalLabels } from '@c8y/ngx-components';
+import { FormlyFieldConfig, FormlyModule } from '@ngx-formly/core';
+import { FormGroup, FormsModule } from '@angular/forms';
 import {
   ConnectorConfiguration,
   ConnectorProperty,
@@ -32,6 +32,7 @@ import {
   nextIdAndPad,
   SharedService
 } from '../..';
+import { CommonModule } from '@angular/common';
 
 interface PropertyEntry {
   key: string;
@@ -42,7 +43,13 @@ interface PropertyEntry {
   selector: 'd11r-edit-connector-drawer',
   templateUrl: 'connector-configuration-drawer.component.html',
   styleUrls: ['./connector-configuration-drawer.component.css'],
-  standalone: false
+  standalone: true,
+  imports: [
+    CoreModule,
+    CommonModule,
+    FormsModule,
+    FormlyModule,
+  ]
 })
 export class ConnectorConfigurationDrawerComponent implements OnInit {
   @Input() add: boolean;
@@ -86,7 +93,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
 
   async ngOnInit() {
     this.feature = await this.sharedService.getFeatures();
-    this.mode = this.add ? 'Add': 'Update';
+    this.mode = this.add ? 'Add' : 'Update';
     this.setConnectorDescription();
     this.initializeBrokerFormFields();
     this.readOnly = this.configuration.enabled;
@@ -106,7 +113,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
       props: {
         label: 'Connector type',
         options: this.specifications.map(sp => ({
-          label: !this.allowedConnectors.includes(sp.connectorType) ? sp.name + '-  Only one instance per tenant allowed': sp.name ,
+          label: !this.allowedConnectors.includes(sp.connectorType) ? sp.name + '-  Only one instance per tenant allowed' : sp.name,
           value: sp.connectorType,
           disabled: !this.allowedConnectors.includes(sp.connectorType) // Disable if not allowed
         })),

@@ -17,6 +17,7 @@
  *
  * @authors Christof Strack
  */
+import { NgIf } from '@angular/common';
 import { Component } from '@angular/core';
 import { CellRendererContext } from '@c8y/ngx-components';
 
@@ -38,7 +39,10 @@ import { CellRendererContext } from '@c8y/ngx-components';
     </ng-container>
 </div>
   `,
-  standalone: false
+  standalone: true,
+  imports: [
+    NgIf,
+  ]
 })
 export class LabelTaggedRendererComponent {
   constructor(public context: CellRendererContext) {
@@ -46,5 +50,5 @@ export class LabelTaggedRendererComponent {
   }
   isArray(value: any): boolean {
     return Array.isArray(value);
-}
+  }
 }

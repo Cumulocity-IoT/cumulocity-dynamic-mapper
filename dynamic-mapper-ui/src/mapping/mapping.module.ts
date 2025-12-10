@@ -94,8 +94,6 @@ import { CodeExplorerComponent } from './code-explorer/code-explorer-modal.compo
     SnoopedTemplateRendererComponent,
     SubstitutionRendererComponent,
     MappingStatusActivationRendererComponent,
-    LabelRendererComponent,
-    LabelTaggedRendererComponent,
     NameRendererComponent,
     MappingTypeDrawerComponent,
     MappingConnectorComponent,
@@ -105,7 +103,6 @@ import { CodeExplorerComponent } from './code-explorer/code-explorer-modal.compo
     CodeExplorerComponent,
     AdviceActionComponent,
     MappingFilterComponent,
-    ManageTemplateComponent,
     AIPromptComponent,
   ],
   imports: [
@@ -121,7 +118,10 @@ import { CodeExplorerComponent } from './code-explorer/code-explorer-modal.compo
     DeviceGridModule,
     BrowserAnimationsModule,
     CollapseModule.forRoot(),
-    MonacoEditorMarkerValidatorDirective
+    MonacoEditorMarkerValidatorDirective,
+    LabelRendererComponent,
+    LabelTaggedRendererComponent,
+    ManageTemplateComponent,
   ],
   exports: [],
   providers: [

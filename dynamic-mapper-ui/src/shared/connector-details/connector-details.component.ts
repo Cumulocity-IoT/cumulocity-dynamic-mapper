@@ -19,7 +19,7 @@
  */
 import * as _ from 'lodash';
 import { ChangeDetectorRef, Component, inject, OnDestroy, OnInit } from '@angular/core';
-import { AlertService, BottomDrawerService } from '@c8y/ngx-components';
+import { AlertService, BottomDrawerService, CoreModule } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { firstValueFrom, Observable, Subject, Subscription, takeUntil, tap } from 'rxjs';
 import packageJson from '../../../package.json';
@@ -46,7 +46,10 @@ import { gettext } from '@c8y/ngx-components/gettext';
   selector: 'd11r-mapping-connector-details',
   styleUrls: ['./connector-details.component.style.css'],
   templateUrl: 'connector-details.component.html',
-  standalone: false
+  standalone: true,
+  imports: [
+    CoreModule,
+  ]
 })
 export class ConnectorDetailsComponent implements OnInit, OnDestroy {
   version: string = packageJson.version;

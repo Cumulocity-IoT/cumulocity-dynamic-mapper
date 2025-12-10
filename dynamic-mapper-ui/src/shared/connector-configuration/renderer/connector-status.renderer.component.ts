@@ -46,7 +46,7 @@ import { CellRendererContext } from '@c8y/ngx-components';
     "
     >{{ context.item?.status }}
   </span> `,
-  standalone: false
+  standalone: true
 })
 export class ConnectorStatusRendererComponent {
   constructor(public context: CellRendererContext) {

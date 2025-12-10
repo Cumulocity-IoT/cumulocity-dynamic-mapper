@@ -59,12 +59,12 @@
           <!-- Payload Format Selection -->
           <c8y-form-group class="p-l-16 p-r-16">
             <label>{{ 'Payload Format' | translate }}</label>
-            <c8y-select 
+            <d11r-select 
               [items]="mappingTypeOptions" 
               formControlName="mappingType" 
               labelProperty="label"
               aria-label="Payload Format">
-            </c8y-select>
+            </d11r-select>
             <small class="text-muted" *ngIf="formGroup.get('mappingType')?.value">
               {{ getMappingTypeDescription() }}
             </small>
@@ -73,12 +73,12 @@
           <!-- Transformation Type Selection (Expert Mode Only) -->
           <c8y-form-group class="p-l-16 p-r-16" *ngIf="shouldShowTransformationType()">
             <label>{{ 'Transformation Type' | translate }}</label>
-            <c8y-select 
+            <d11r-select 
               [items]="transformationTypeOptions" 
               formControlName="transformationType" 
               labelProperty="label"
               aria-label="Transformation Type">
-            </c8y-select>
+            </d11r-select>
             <small class="text-muted">
               {{ getTransformationTypeDescription() }}
             </small>
@@ -98,7 +98,7 @@
             *ngIf="shouldShowCodeTemplate() && !isLoadingCodeTemplates && codeTemplateOptions.length > 0">
             <label>{{ 'JavaScript Code Template' | translate }}</label>
             <div class="input-group">
-              <c8y-select 
+              <d11r-select 
                 [items]="codeTemplateOptions" 
                 formControlName="codeTemplate" 
                 labelProperty="label"
@@ -106,7 +106,7 @@
                 [insideClick]="false" 
                 [autoClose]="true" 
                 aria-label="JavaScript Code Template">
-              </c8y-select>
+              </d11r-select>
               <span class="input-group-btn">
                 <button 
                   class="btn btn-primary" 

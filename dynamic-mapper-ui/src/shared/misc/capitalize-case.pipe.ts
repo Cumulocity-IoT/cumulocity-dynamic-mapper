@@ -22,7 +22,7 @@ import { Pipe, PipeTransform } from '@angular/core';
 
 @Pipe({
   name: 'capitalCase',
-  standalone: false
+  standalone: true
 })
 export class CapitalizeCasePipe implements PipeTransform {
   transform(value: string): string {

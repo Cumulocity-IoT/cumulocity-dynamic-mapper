@@ -33,7 +33,7 @@ import { CodeTemplate } from './../../../configuration';
   selector: 'd11r-manage-template',
   templateUrl: './manage-template.component.html',
   encapsulation: ViewEncapsulation.None,
-  standalone: false
+  standalone: true
 })
 export class ManageTemplateComponent implements OnInit, OnDestroy {
   @Input() action: string = 'CREATE';

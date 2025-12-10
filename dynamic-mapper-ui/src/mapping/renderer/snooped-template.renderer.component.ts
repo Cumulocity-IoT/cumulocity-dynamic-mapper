@@ -57,7 +57,10 @@ export class SnoopedTemplateRendererComponent {
     };
     const confirmDeletionModalRef: BsModalRef = this.bsModalService.show(
       SnoopExplorerComponent,
-      { initialState }
+      {
+        initialState,
+        class: '_modal-lg'
+      }
     );
   }
 }

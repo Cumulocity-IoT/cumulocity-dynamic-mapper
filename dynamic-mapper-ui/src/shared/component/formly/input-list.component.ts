@@ -5,7 +5,7 @@ import { debounceTime, Subject } from 'rxjs';
 @Component({
   selector: 'd11r-input-list',
   templateUrl: './input-list.component.html',
-  standalone: false,
+  standalone: true,
 })
 export class InputListComponent implements OnInit, OnDestroy {
   @Input()

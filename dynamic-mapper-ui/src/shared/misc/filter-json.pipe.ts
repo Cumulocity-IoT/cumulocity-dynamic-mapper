@@ -23,7 +23,7 @@ import { Pipe, PipeTransform } from "@angular/core";
 // filter-json.pipe.ts
 @Pipe({
   name: 'filterJson',
-  standalone: false
+  standalone: true
 })
 export class FilterJsonPipe implements PipeTransform {
   transform(value: any, excludedProperties: string[] = [], exclude: boolean = false): any {

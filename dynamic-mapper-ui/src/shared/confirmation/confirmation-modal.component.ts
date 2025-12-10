@@ -38,7 +38,7 @@ import { Subject } from 'rxjs';
 @Component({
   selector: 'd11r-confirmation-modal',
   templateUrl: 'confirmation-modal.component.html',
-  standalone: false
+  standalone: true
 })
 export class ConfirmationModalComponent
   implements OnInit, AfterViewInit, OnDestroy

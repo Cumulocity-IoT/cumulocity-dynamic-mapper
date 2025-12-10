@@ -31,7 +31,7 @@ import { SharedService } from '../service/shared.service';
 import { NODE1, NODE2, NODE3 } from '../mapping/util';
 import { Router } from '@angular/router';
 import { ConnectorConfigurationService } from '../service/connector-configuration.service';
-import { ConnectorConfiguration } from '..';
+import { ConnectorConfiguration, ConnectorType } from '..';
 import { gettext } from '@c8y/ngx-components/gettext';
 
 @Injectable()
@@ -129,7 +129,7 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
       priority: 370,
       preventDuplicates: true
     }),
-    
+
     monitoringNode: new NavigatorNode({
       label: gettext('Monitoring'),
       icon: 'pie-chart',
@@ -167,14 +167,16 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
       // lets clear the array
       connectorsNavNode.children.length = 0;
       configs.forEach(config => {
-        connectorsNavNode.add(new NavigatorNode({
-          parent: gettext('Connectors'),
-          label: gettext(config.name),
-          icon: 'connected',
-          path: `/c8y-pkg-dynamic-mapper/${NODE3}/connectorConfiguration/details/${config.identifier}`,
-          priority: 500,
-          preventDuplicates: true
-        }));
+        if (config.connectorType != ConnectorType.TEST) {
+          connectorsNavNode.add(new NavigatorNode({
+            parent: gettext('Connectors'),
+            label: gettext(config.name),
+            icon: 'connected',
+            path: `/c8y-pkg-dynamic-mapper/${NODE3}/connectorConfiguration/details/${config.identifier}`,
+            priority: 500,
+            preventDuplicates: true
+          }));
+        }
       });
     });
   }
@@ -190,12 +192,12 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
         delete copyStaticNodesPlugin.mappingOutboundNode;
         delete copyStaticNodesPlugin.subscriptionOutboundNode;
       }
-      
+
       // Only include clientRelationNode if deviceIsolationMQTTServiceEnabled is true
       if (!feature?.deviceIsolationMQTTServiceEnabled) {
         delete copyStaticNodesPlugin.clientRelationNode;
       }
-      
+
       navs = Object.values(copyStaticNodesPlugin) as NavigatorNode[];
 
       return this.applicationService

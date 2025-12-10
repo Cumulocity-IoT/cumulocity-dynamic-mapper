@@ -18,12 +18,21 @@
  * @authors Christof Strack
  */
 import { Component, OnInit } from '@angular/core';
+import { CoreModule } from '@c8y/ngx-components';
 import { FieldWrapper } from '@ngx-formly/core';
+import { PopoverModule } from 'ngx-bootstrap/popover';
+import { FormatStringPipe } from '../../misc/format-string.pipe';
+
 
 @Component({
   selector: 'd11r-wrapper-form-field',
   templateUrl: './custom-form-field-wrapper.component.html',
-  standalone: false
+  standalone: true,
+    imports: [
+    CoreModule,
+    PopoverModule,
+    FormatStringPipe
+  ]
   // changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class WrapperCustomFormField extends FieldWrapper implements OnInit {

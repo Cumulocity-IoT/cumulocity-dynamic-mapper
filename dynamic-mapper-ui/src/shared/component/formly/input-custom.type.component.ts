@@ -19,6 +19,8 @@
  */
 
 import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { CoreModule } from '@c8y/ngx-components';
 import { FieldType } from '@ngx-formly/core';
 
 @Component({
@@ -45,7 +47,11 @@ import { FieldType } from '@ngx-formly/core';
       />
     </ng-template>`,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  standalone: false
+  standalone: true,
+      imports: [
+      CoreModule,
+      FormsModule,
+    ]
 })
 export class FieldInputCustom extends FieldType {
   get type() {

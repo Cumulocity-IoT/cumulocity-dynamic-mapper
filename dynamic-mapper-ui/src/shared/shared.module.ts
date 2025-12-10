@@ -45,9 +45,17 @@ import { Base64DecodePipe } from './misc/base64-decode.pipe';
 import { InputListComponent } from './component/formly/input-list.component';
 import { InputListFormlyComponent } from './component/formly/input-list-formly.component';
 import { ConnectorConfigurationDrawerComponent } from './connector-configuration/edit/connector-configuration-drawer.component';
+import { CustomSelectComponent } from './component/select/custom-select.component';
 
 @NgModule({
-  declarations: [
+  imports: [
+    CoreModule,
+    BsDatepickerModule,
+    PaginationModule,
+    PopoverModule,
+    RouterModule,
+    BsDropdownModule.forRoot(),
+    CustomSelectComponent,
     CheckedRendererComponent,
     JsonEditorComponent,
     ConfirmationModalComponent,
@@ -67,15 +75,7 @@ import { ConnectorConfigurationDrawerComponent } from './connector-configuration
     FieldTextareaCustom,
     FieldInputCustom,
     InputListComponent,
-    InputListFormlyComponent
-  ],
-  imports: [
-    CoreModule,
-    BsDatepickerModule,
-    PaginationModule,
-    PopoverModule,
-    RouterModule,
-    BsDropdownModule.forRoot()
+    InputListFormlyComponent,
   ],
   exports: [
     JsonEditorComponent,
@@ -92,6 +92,7 @@ import { ConnectorConfigurationDrawerComponent } from './connector-configuration
     WrapperCustomFormField,
     FieldTextareaCustom,
     FieldInputCustom,
+    CustomSelectComponent
   ],
   providers: [FormatStringPipe,
     {

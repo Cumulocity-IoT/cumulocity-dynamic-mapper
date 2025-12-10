@@ -19,7 +19,8 @@
  */
 
 import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { FieldType } from '@ngx-formly/core';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { FieldType, FormlyModule } from '@ngx-formly/core';
 
 @Component({
   selector: 'd11r-formly-field-textarea',
@@ -40,7 +41,8 @@ import { FieldType } from '@ngx-formly/core';
   `,
   styleUrls: ['./textarea.type.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  standalone: false
+  standalone: true,
+  imports: [FormsModule, ReactiveFormsModule, FormlyModule]
 })
 export class FieldTextareaCustom extends FieldType {
   get class() {

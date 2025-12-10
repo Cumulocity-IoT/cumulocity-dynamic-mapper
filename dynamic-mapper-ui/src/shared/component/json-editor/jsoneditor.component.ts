@@ -66,7 +66,7 @@ export interface ContentChanges {
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrls: ['./jsoneditor.style.css'],
   encapsulation: ViewEncapsulation.None,
-  standalone: false
+  standalone: true
 })
 export class JsonEditorComponent implements OnInit, OnDestroy, AfterViewInit {
   @Input() options;

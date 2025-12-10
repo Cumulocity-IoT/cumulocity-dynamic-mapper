@@ -1,6 +1,7 @@
 // input-list-formly.component.ts
 import { Component } from '@angular/core';
 import { FieldType, FieldTypeConfig } from '@ngx-formly/core';
+import { InputListComponent } from './input-list.component';
 
 @Component({
   selector: 'd11r-input-list-formly',
@@ -11,33 +12,34 @@ import { FieldType, FieldTypeConfig } from '@ngx-formly/core';
       [disabled]="props.disabled">
     </d11r-input-list>
   `,
-  standalone: false,
+  standalone: true,
+  imports: [InputListComponent]
 })
 export class InputListFormlyComponent extends FieldType<FieldTypeConfig> {
   private isUpdating = false;
-  
+
   getCurrentData(): Record<string, string> | null {
     return this.formControl.value || {};
   }
-  
+
   onDataChange(arrayData: Array<{ key: string; value: string | undefined }>) {
     // Prevent recursive updates
     if (this.isUpdating) {
       return;
     }
-    
+
     this.isUpdating = true;
-    
+
     try {
       // Convert array back to object format for storage
       const objectData: Record<string, string> = {};
-      
+
       arrayData.forEach(item => {
         if (item.key && item.key.trim() !== '') {
           objectData[item.key] = item.value || '';
         }
       });
-      
+
       // Only update if the data actually changed
       const currentValue = this.formControl.value || {};
       if (JSON.stringify(currentValue) !== JSON.stringify(objectData)) {
