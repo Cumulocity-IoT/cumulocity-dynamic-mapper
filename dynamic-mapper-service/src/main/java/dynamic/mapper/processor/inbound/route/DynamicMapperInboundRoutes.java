@@ -21,7 +21,7 @@ import dynamic.mapper.processor.inbound.processor.InternalProtobufProcessor;
 import dynamic.mapper.processor.inbound.processor.SendInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.SnoopingInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.JSONataExtractionInboundProcessor;
-import dynamic.mapper.processor.inbound.processor.MappingContextInboundProcessor;
+import dynamic.mapper.processor.inbound.processor.EnrichmentInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.SubstitutionInboundProcessor;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
@@ -45,7 +45,7 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
     private InternalProtobufProcessor internalProtobufProcessor;
 
     @Autowired
-    private MappingContextInboundProcessor mappingContextProcessor;
+    private EnrichmentInboundProcessor enrichmentProcessor;
 
     @Autowired
     private CodeExtractionInboundProcessor codeExtractionInboundProcessor;
@@ -164,7 +164,7 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
                 .routeId("single-filtered-inbound-mapping-processor")
                 // 0. Common processing for all
                 .process(deserializationInboundProcessor)
-                .process(mappingContextProcessor)
+                .process(enrichmentProcessor)
                 .process(filterInboundProcessor)
 
                 // Check if further processing should be ignored after enrichment

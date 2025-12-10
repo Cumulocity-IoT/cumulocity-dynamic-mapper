@@ -61,7 +61,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-class MappingContextOutboundProcessorTest {
+class EnrichmentOutboundProcessorTest {
 
     @Mock
     private ConfigurationRegistry configurationRegistry;
@@ -87,7 +87,7 @@ class MappingContextOutboundProcessorTest {
     @Mock
     private HostAccess hostAccess;
 
-    private MappingContextOutboundProcessor processor;
+    private EnrichmentOutboundProcessor processor;
 
     private static final String TEST_TENANT = "testTenant";
     private static final String TEST_DEVICE_ID = "test-device-id-123";
@@ -107,7 +107,7 @@ class MappingContextOutboundProcessorTest {
         mappingStatus = createMappingStatus();
 
         // Create the processor
-        processor = new MappingContextOutboundProcessor();
+        processor = new EnrichmentOutboundProcessor();
 
         // Inject dependencies
         injectDependencies();

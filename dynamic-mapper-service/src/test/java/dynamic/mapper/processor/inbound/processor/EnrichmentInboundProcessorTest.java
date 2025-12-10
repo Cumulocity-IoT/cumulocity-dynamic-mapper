@@ -51,7 +51,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-class MappingContextInboundProcessorTest {
+class EnrichmentInboundProcessorTest {
 
     @Mock
     private MappingService mappingService;
@@ -71,7 +71,7 @@ class MappingContextInboundProcessorTest {
     @Mock
     private ProcessingContext<Object> processingContext;
 
-    private MappingContextInboundProcessor processor;
+    private EnrichmentInboundProcessor processor;
 
     private static final String TEST_TENANT = "testTenant";
     private Mapping mapping;
@@ -100,7 +100,7 @@ class MappingContextInboundProcessorTest {
         );
 
         // Create the processor
-        processor = new MappingContextInboundProcessor();
+        processor = new EnrichmentInboundProcessor();
 
         // Use reflection to inject the mocked mappingService
         injectMappingServiceIfExists(processor, mappingService);
@@ -129,7 +129,7 @@ class MappingContextInboundProcessorTest {
         when(connectorMessage.getPayload()).thenReturn("test payload".getBytes());
     }
 
-    private void injectMappingServiceIfExists(MappingContextInboundProcessor processor, MappingService mappingService) {
+    private void injectMappingServiceIfExists(EnrichmentInboundProcessor processor, MappingService mappingService) {
         try {
             Field field = findMappingServiceField(processor.getClass());
             if (field != null) {
@@ -228,7 +228,7 @@ class MappingContextInboundProcessorTest {
     @Test
     void testConstructorInitialization() {
         // Given & When
-        MappingContextInboundProcessor newProcessor = new MappingContextInboundProcessor();
+        EnrichmentInboundProcessor newProcessor = new EnrichmentInboundProcessor();
 
         // Then
         assertNotNull(newProcessor);
@@ -287,7 +287,7 @@ class MappingContextInboundProcessorTest {
     @Test
     void testWithMinimalMocking() throws Exception {
         // Create a completely fresh processor with minimal mocking
-        MappingContextInboundProcessor freshProcessor = new MappingContextInboundProcessor();
+        EnrichmentInboundProcessor freshProcessor = new EnrichmentInboundProcessor();
 
         // Only inject mappingService if the field exists
         try {

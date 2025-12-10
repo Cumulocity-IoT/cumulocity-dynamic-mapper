@@ -54,7 +54,7 @@ import org.graalvm.polyglot.Value;
 
 @Component
 @Slf4j
-public class MappingContextOutboundProcessor extends BaseProcessor {
+public class EnrichmentOutboundProcessor extends BaseProcessor {
 
     @Autowired
     private ConfigurationRegistry configurationRegistry;
