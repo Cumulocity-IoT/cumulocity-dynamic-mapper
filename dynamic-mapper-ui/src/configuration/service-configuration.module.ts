@@ -27,11 +27,6 @@ import { CodeTemplateTabFactory } from './code-template-tab.factory';
 import { ServiceConfigurationTraceComponent } from './service-configuration-trace.component';
 
 @NgModule({
-  imports: [
-    ServiceConfigurationComponent, 
-    ServiceConfigurationTraceComponent, 
-  ],
-  exports: [],
   providers: [
     hookRoute({
       path: `c8y-pkg-dynamic-mapper/${NODE3}/serviceConfiguration`,

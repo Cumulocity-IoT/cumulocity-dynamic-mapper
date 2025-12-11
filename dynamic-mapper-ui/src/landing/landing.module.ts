@@ -24,9 +24,6 @@ import { featureResolver } from '../shared';
 import { LandingComponent } from './landing.component';
 
 @NgModule({
-  imports: [
-    LandingComponent,
-  ],
   providers: [
     hookRoute({
       path: 'c8y-pkg-dynamic-mapper/landing',

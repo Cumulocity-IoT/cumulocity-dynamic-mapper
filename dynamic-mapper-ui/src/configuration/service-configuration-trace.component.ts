@@ -18,8 +18,10 @@
  * @authors Christof Strack
  */
 import { Component, inject, OnDestroy, OnInit } from '@angular/core';
-import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
+import { CommonModule } from '@angular/common';
+import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
+import { CoreModule } from '@c8y/ngx-components';
 import { Observable, of, Subject } from 'rxjs';
 import { Feature, SharedService } from '../shared';
 import { ServiceConfiguration } from './shared/configuration.model';
@@ -29,7 +31,8 @@ import { ServiceConfiguration } from './shared/configuration.model';
   selector: 'd11r-mapping-service-trace-configuration',
   styleUrls: ['./service-configuration.component.style.css'],
   templateUrl: 'service-configuration-trace.component.html',
-  standalone: true
+  standalone: true,
+  imports: [CommonModule, ReactiveFormsModule, CoreModule]
 })
 export class ServiceConfigurationTraceComponent implements OnInit, OnDestroy {
 

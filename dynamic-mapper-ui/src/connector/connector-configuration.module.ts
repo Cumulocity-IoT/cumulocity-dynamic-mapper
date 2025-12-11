@@ -25,10 +25,6 @@ import { ConnectorConfigurationComponent } from './connector-configuration.compo
 import { featureResolver, NODE3 } from '../shared/mapping/util';
 
 @NgModule({
-  imports: [
-    SharedModule
-  ],
-  exports: [],
   providers: [
     hookRoute({
       path: `c8y-pkg-dynamic-mapper/${NODE3}/connectorConfiguration`,

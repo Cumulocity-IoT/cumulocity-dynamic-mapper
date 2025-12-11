@@ -18,12 +18,13 @@
  * @authors Christof Strack
  */
 import { Component } from '@angular/core';
-import { CellRendererContext } from '@c8y/ngx-components';
+import { CellRendererContext, CommonModule } from '@c8y/ngx-components';
 
 @Component({
 	selector: 'd11r-mapping-renderer-name',
   template: ` <span [class]="context.value == 'Unspecified' ? 'text-bold': 'text-normal' " title="{{ context.item.id }}">{{ context.value }}</span> `,
-  standalone: true
+  standalone: true,
+  imports: [CommonModule]
 })
 export class NameRendererComponent {
   constructor(public context: CellRendererContext) {

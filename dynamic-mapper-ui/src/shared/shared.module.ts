@@ -32,8 +32,30 @@ import { Base64DecodePipe } from './misc/base64-decode.pipe';
 import { CamelCasePipe } from './misc/camel-case.pipe';
 
 @NgModule({
-  imports: [ConnectorConfigurationDrawerComponent, CamelCasePipe, FormatStringPipe, CapitalizeCasePipe, Base64DecodePipe, FilterJsonPipe],
-  exports: [ConnectorConfigurationDrawerComponent, CamelCasePipe, FormatStringPipe, CapitalizeCasePipe, Base64DecodePipe, FilterJsonPipe],
+  imports: [
+    ConnectorConfigurationDrawerComponent,
+    CamelCasePipe,
+    FormatStringPipe,
+    CapitalizeCasePipe,
+    Base64DecodePipe,
+    FilterJsonPipe,
+    FieldInputCustom,
+    FieldTextareaCustom,
+    WrapperCustomFormField,
+    InputListFormlyComponent
+  ],
+  exports: [
+    ConnectorConfigurationDrawerComponent,
+    CamelCasePipe,
+    FormatStringPipe,
+    CapitalizeCasePipe,
+    Base64DecodePipe,
+    FilterJsonPipe,
+    FieldInputCustom,
+    FieldTextareaCustom,
+    WrapperCustomFormField,
+    InputListFormlyComponent
+  ],
   providers: [CamelCasePipe, FormatStringPipe, CapitalizeCasePipe, Base64DecodePipe, FilterJsonPipe,
     provideEcharts(),
     {

@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 import { Component } from '@angular/core';
-import { CellRendererContext } from '@c8y/ngx-components';
+import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
 import { Direction } from '../../shared';
 
 @Component({
@@ -31,7 +31,8 @@ import { Direction } from '../../shared';
       ></i>
     </span>
   `,
-  standalone: true
+  standalone: true,
+  imports: [CoreModule]
 })
 export class DirectionRendererComponent {
   Direction = Direction;

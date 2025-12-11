@@ -26,9 +26,6 @@ import { extensionResolver } from './share/extension.model';
 import { ExtensionGridComponent } from './grid/extension-grid.component';
 
 @NgModule({
-  imports: [
-  ],
-  exports: [],
   providers: [
     hookRoute({
       path: `c8y-pkg-dynamic-mapper/${NODE3}/processorExtension`,

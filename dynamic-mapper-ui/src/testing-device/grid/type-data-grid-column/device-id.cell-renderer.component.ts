@@ -18,6 +18,7 @@
  * @authors Christof Strack
  */
 import { Component, Inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { CellRendererContext } from '@c8y/ngx-components';
 import { TestingDeviceService } from '../../testing.service';
 
@@ -41,7 +42,8 @@ import { TestingDeviceService } from '../../testing.service';
       >
     </span>
   `,
-  standalone: true
+  standalone: true,
+  imports: [CommonModule]
 })
 export class DeviceIdCellRendererComponent {
   constructor(

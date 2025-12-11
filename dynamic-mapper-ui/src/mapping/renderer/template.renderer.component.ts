@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 import { Component } from '@angular/core';
-import { CellRendererContext } from '@c8y/ngx-components';
+import { CellRendererContext, CommonModule } from '@c8y/ngx-components';
 
 @Component({
   selector: 'd11r-mapping-renderer-template',
@@ -33,7 +33,8 @@ import { CellRendererContext } from '@c8y/ngx-components';
       >{{ json }}</textarea
     >
   `,
-  standalone: true
+  standalone: true,
+  imports: [CommonModule]
 })
 export class TemplateRendererComponent {
   json: string;

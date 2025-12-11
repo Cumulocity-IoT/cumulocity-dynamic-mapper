@@ -19,57 +19,18 @@
  */
 import { NgModule } from '@angular/core';
 import {
-  CommonModule,
-  CoreModule,
-  DynamicFormsModule,
   hookRoute,
-  hookTab,
-  ModalModule
-} from '@c8y/ngx-components';
-import { DeviceGridModule, DeviceGridService } from '@c8y/ngx-components/device-grid';
-import { AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
-import { EditorComponent, MonacoEditorMarkerValidatorDirective } from '@c8y/ngx-components/editor';
+  hookTab} from '@c8y/ngx-components';
+import { DeviceGridService } from '@c8y/ngx-components/device-grid';
 import { FORMLY_CONFIG } from '@ngx-formly/core';
-import { PopoverModule } from 'ngx-bootstrap/popover';
-import { ServiceConfigurationModule } from '../configuration';
-import { ManageTemplateComponent, LabelRendererComponent, NODE1, SharedModule, featureResolver, LabelTaggedRendererComponent } from '../shared';
-import { MappingFilterComponent } from './filter/mapping-filter.component';
-import { AdviceActionComponent } from './grid/advisor/advice-action.component';
+import { NODE1, featureResolver } from '../shared';
 import { MappingComponent } from './grid/mapping.component';
-import { ImportMappingsComponent } from './import/import-modal.component';
-import { MappingTypeDrawerComponent } from './mapping-create/mapping-type-drawer.component';
-import { MappingDeploymentRendererComponent } from './renderer/mapping-deployment.renderer.component';
-import { MappingIdCellRendererComponent } from './renderer/mapping-id.renderer.component';
-import { NameRendererComponent } from './renderer/name.renderer.component';
-import { QOSRendererComponent } from './renderer/qos.renderer.component';
-import { SnoopedTemplateRendererComponent } from './renderer/snooped-template.renderer.component';
-import { MappingStatusActivationRendererComponent } from './renderer/status-activation.renderer.component';
-import { StatusRendererComponent } from './renderer/status.renderer.component';
-import { TemplateRendererComponent } from './renderer/template.renderer.component';
 import { checkTopicsInboundAreValid, checkTopicsOutboundAreValid } from './shared/util';
-import { SnoopExplorerComponent } from './snoop-explorer/snoop-explorer-modal.component';
-import { MappingConnectorComponent } from './step-connector/mapping-connector.component';
-import { MappingStepPropertiesComponent } from './step-property/mapping-properties.component';
-import { MappingStepTestingComponent } from './step-testing/mapping-testing.component';
-import { MappingStepperComponent } from './stepper-mapping/mapping-stepper.component';
-import { SnoopingStepperComponent } from './stepper-snooping/snooping-stepper.component';
-import { DeviceSelectorSubscriptionComponent } from './subscription/device-selector/device-selector-subscription.component';
 import { MappingSubscriptionComponent } from './subscription/subscription.component';
-import { EditSubstitutionComponent } from './substitution/edit/edit-substitution-modal.component';
-import { SubstitutionRendererComponent } from './substitution/substitution-grid.component';
-import { DeviceSelectorSubscription2Component } from './subscription/device-selector2/device-selector-subscription2.component';
-import { AIPromptComponent } from './prompt/ai-prompt.component';
-import { DeviceSelectorSubscription3Component } from './subscription/device-selector3/device-selector-subscription3.component';
-import { DeviceSelectorSubscription4Component } from './subscription/device-selector4/device-selector-subscription4.component';
-import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
-import { CollapseModule } from 'ngx-bootstrap/collapse';
 import { DeviceClientMapComponent } from './client-relation/device-client-map.component';
-import { ClientRelationStepperComponent } from './client-relation/client-relation-stepper.component';
 import { MappingTabFactory } from './mapping-tab.factory';
 import { SubstitutionManagementService } from './service/substitution-management.service';
 import { MappingStepperService } from './service/mapping-stepper.service';
-import { MappingSubstitutionStepComponent } from './step-substitution/mapping-substitution-step.component';
-import { CodeExplorerComponent } from './code-explorer/code-explorer-modal.component';
 
 @NgModule({
   providers: [

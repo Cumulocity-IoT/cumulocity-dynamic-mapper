@@ -27,6 +27,7 @@ import {
   ViewChild,
   ViewEncapsulation
 } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { BehaviorSubject } from 'rxjs';
 import {
   ConnectorConfiguration,
@@ -46,7 +47,7 @@ import { ConnectorConfigurationService } from '../../connector';
   styleUrls: ['../shared/mapping.style.css', './mapping-connector.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
-  imports:[ConnectorGridComponent]
+  imports: [ConnectorGridComponent, CommonModule]
 })
 export class MappingConnectorComponent implements OnInit, OnDestroy {
   @ViewChild(ConnectorGridComponent)

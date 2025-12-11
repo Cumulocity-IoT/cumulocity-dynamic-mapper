@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 import { Component } from '@angular/core';
-import { CellRendererContext } from '@c8y/ngx-components';
+import { CellRendererContext, CommonModule } from '@c8y/ngx-components';
 import { MappingService } from '../core/mapping.service';
 
 /**
@@ -38,7 +38,8 @@ import { MappingService } from '../core/mapping.service';
       {{ context.value }}
     </button>
   `,
-  standalone: true
+  standalone: true,
+  imports: [CommonModule]
 })
 export class MappingIdCellRendererComponent {
   constructor(

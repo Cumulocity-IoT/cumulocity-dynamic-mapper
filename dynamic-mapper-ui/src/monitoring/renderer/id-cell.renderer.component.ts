@@ -18,13 +18,14 @@
  * @authors Christof Strack
  */
 import { Component } from '@angular/core';
-import { CellRendererContext } from '@c8y/ngx-components';
+import { CellRendererContext, CommonModule } from '@c8y/ngx-components';
 
 @Component({
   template: `<span>{{
     context.item.id === -1 ? 'UNSPECIFIED' : context.item.id
   }}</span>`,
-  standalone: true
+  standalone: true,
+  imports: [CommonModule]
 })
 export class IdRendererComponent {
   constructor(public context: CellRendererContext) {}
