@@ -24,7 +24,6 @@ import { featureResolver, NODE3 } from '../shared';
 import { ServiceConfigurationComponent } from './service-configuration.component';
 import { CodeComponent } from './code-template/code-template.component';
 import { CodeTemplateTabFactory } from './code-template-tab.factory';
-import { ServiceConfigurationTraceComponent } from './service-configuration-trace.component';
 
 @NgModule({
   providers: [
@@ -66,13 +65,6 @@ import { ServiceConfigurationTraceComponent } from './service-configuration-trac
     hookRoute({
       path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/others`,
       component: CodeComponent,
-      resolve: {
-        feature: featureResolver
-      }
-    }),
-    hookRoute({
-      path: `c8y-pkg-dynamic-mapper/${NODE3}/c8ySelect`,
-      component: ServiceConfigurationTraceComponent,
       resolve: {
         feature: featureResolver
       }
