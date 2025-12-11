@@ -34,14 +34,14 @@ export class CodeTemplateTabFactory implements TabFactory {
     if (this.router.url.match(/c8y-pkg-dynamic-mapper\/node3\/codeTemplate/g)) {
       tabs.push({
         path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/INBOUND_SMART_FUNCTION`,
-        priority: 970,
+        priority: 980,
         label: 'Inbound (Smart Function JavaScript)',
         icon: 'swipe-right',
         orientation: 'horizontal'
       } as Tab);
       tabs.push({
         path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/OUTBOUND_SMART_FUNCTION`,
-        priority: 960,
+        priority: 970,
         label: 'Outbound (Smart Function JavaScript)',
         icon: 'swipe-left',
         orientation: 'horizontal'
