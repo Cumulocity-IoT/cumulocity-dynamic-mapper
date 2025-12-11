@@ -16,9 +16,9 @@ function onMessage(msg, context) {
     console.log("Payload Raw:" + payload);
     console.log("Payload messageId" +  payload.get('messageId'));
 
-    return {  
+    return [{  
         topic: `measurements/${payload["source"]["id"]}`,
-        payload:[{
+        payload:{
             "time":  new Date().toISOString(),
             "c8y_Steam": {
                 "Temperature": {
