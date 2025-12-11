@@ -68,7 +68,7 @@ export class ClientRelationService {
   constructor(
     private readonly client: FetchClient,
     private readonly sharedService: SharedService
-  ) { }
+  ) {}
 
 
 
@@ -206,7 +206,7 @@ export class ClientRelationService {
   async deleteClientRelationForDevice(device: string | IIdentified): Promise<any | null> {
     const features = await this.sharedService.getFeatures();
     let deviceId = device;
-    if (typeof (device) == 'object') {
+    if (typeof device === 'object') {
       deviceId = device.id as string;
     }
 

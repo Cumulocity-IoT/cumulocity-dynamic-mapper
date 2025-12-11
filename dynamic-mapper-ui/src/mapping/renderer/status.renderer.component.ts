@@ -17,29 +17,25 @@
  *
  * @authors Christof Strack
  */
+import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
-import { SnoopStatus } from '../../shared';
-import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'd11r-mapping-renderer-status',
   template: `
-<ng-container *ngIf="context.value.debug">
-  <span class="text-10 label label-primary">debug</span>
-</ng-container>
-<ng-container [ngSwitch]="context.value.snoopStatus">
-  <span *ngSwitchCase="'STARTED'" class="text-10 label label-primary">snoop: started</span>
-  <span *ngSwitchCase="'STOPPED'" class="text-10 label label-primary">snoop: stopped</span>
-  <span *ngSwitchCase="'ENABLED'" class="text-10 label label-primary">snoop: pending</span>
-</ng-container>
+    <ng-container *ngIf="context.value.debug">
+      <span class="text-10 label label-primary">debug</span>
+    </ng-container>
+    <ng-container [ngSwitch]="context.value.snoopStatus">
+      <span *ngSwitchCase="'STARTED'" class="text-10 label label-primary">snoop: started</span>
+      <span *ngSwitchCase="'STOPPED'" class="text-10 label label-primary">snoop: stopped</span>
+      <span *ngSwitchCase="'ENABLED'" class="text-10 label label-primary">snoop: pending</span>
+    </ng-container>
   `,
   standalone: true,
   imports: [CoreModule, CommonModule]
 })
 export class StatusRendererComponent {
-  constructor(public context: CellRendererContext) {
-    // console.log('StatusRenderer:', context.item, context.value);
-  }
-  SnoopStatus: SnoopStatus;
+  constructor(public readonly context: CellRendererContext) {}
 }

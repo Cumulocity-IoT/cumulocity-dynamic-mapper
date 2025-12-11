@@ -22,13 +22,12 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { IManagedObject } from '@c8y/client';
 import { AlertService, CommonModule, CoreModule } from '@c8y/ngx-components';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
-import { BehaviorSubject, Observable, Subject } from 'rxjs';
+import { BehaviorSubject, Observable, of, Subject } from 'rxjs';
 import { catchError, retry, shareReplay, switchMap, takeUntil, tap, timeout } from 'rxjs/operators';
 import { Feature, Operation, SharedService } from '../../shared';
 import { AddExtensionComponent } from '../add/add-extension-modal.component';
 import { ExtensionService } from '../extension.service';
 import { ExtensionCardComponent } from '../card/extension-card.component';
-import { RouterLink } from '@angular/router';
 
 interface ExtensionState {
   reloading: boolean;

@@ -95,7 +95,7 @@ export class CodeBasedProcessorOutbound extends BaseProcessorOutbound {
             key,
             []
           );
-          if (values != null && values['items'] && values['items'].length > 0
+          if (values !== null && values['items'] && values['items'].length > 0
             && values['items'][0].expandArray) {
 
             // extracted result from sourcePayload is an array, so we potentially have to

@@ -17,28 +17,13 @@
  *
  * @authors Christof Strack
  */
-import {
-  Component,
-  OnDestroy,
-  ViewChild,
-  ViewEncapsulation
-} from '@angular/core';
-import {
-  ApplicationService,
-  IApplication,
-  IManagedObject,
-} from '@c8y/client';
-import {
-  AlertService,
-  CoreModule,
-  DropAreaComponent,
-  IFetchWithProgress,
-  ModalLabels
-} from '@c8y/ngx-components';
-import { Observable, Subject } from 'rxjs';
+import { Component, OnDestroy, ViewChild, ViewEncapsulation } from '@angular/core';
+import { ApplicationService, IApplication, IManagedObject } from '@c8y/client';
+import { AlertService, CoreModule, DropAreaComponent, ModalLabels } from '@c8y/ngx-components';
+import { gettext } from '@c8y/ngx-components/gettext';
+import { Observable, Subject, Subscription } from 'rxjs';
 import { ERROR_MESSAGES } from '../share/extension.constants';
 import { ExtensionService } from '../extension.service';
-import { gettext } from '@c8y/ngx-components/gettext';
 
 @Component({
   selector: 'd11r-mapping-add-extension',
@@ -46,18 +31,20 @@ import { gettext } from '@c8y/ngx-components/gettext';
   styleUrls: ['./add-extension-modal.component.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
-  imports:[CoreModule]
+  imports: [CoreModule]
 })
 export class AddExtensionComponent implements OnDestroy {
   @ViewChild(DropAreaComponent) dropAreaComponent;
 
-  isLoading: boolean;
-  isAppCreated: boolean;
+  isLoading = false;
+  isAppCreated = false;
   app: Partial<IManagedObject>;
-  uploadProgress: IFetchWithProgress | null = null;
   progress$: Subject<number> = new Subject<number>();
   errorMessage: string;
-  private uploadCanceled: boolean = false;
+  successText = gettext('Processor extension uploaded successfully.');
+
+  private uploadCanceled = false;
+  private uploadSubscription: Subscription;
   closeSubject: Subject<boolean> = new Subject();
   labels: ModalLabels = { cancel: 'Cancel', ok: 'Done' };
 
@@ -65,83 +52,81 @@ export class AddExtensionComponent implements OnDestroy {
     private extensionService: ExtensionService,
     private alertService: AlertService,
     private applicationService: ApplicationService
-  ) { }
+  ) {}
 
   ngOnDestroy(): void {
+    this.uploadSubscription?.unsubscribe();
+    this.progress$.complete();
     this.closeSubject.complete();
   }
 
 
-  onFileDroppedEvent(event) {
-    if (event && event.length > 0) {
-      // eslint-disable-next-line prefer-destructuring
-      const file = event[0].file;
-      this.onFile(file);
+  onFileDroppedEvent(event: any[]): void {
+    if (event?.[0]?.file) {
+      this.onFile(event[0].file);
     }
   }
 
-  async onFile(file: File) {
-    this.isLoading = true;
-    this.errorMessage = null;
-    this.progress$.next(0); // Reset progress
-    const nameUpload = file.name.split('.').slice(0, -1).join('.');
+  async onFile(file: File): Promise<void> {
+    this.resetUploadState();
+    const nameUpload = this.extractFileName(file.name);
 
     try {
-      this.app = {
-        d11r_processorExtension: {
-          name: nameUpload,
-          external: true
-        },
-        name: nameUpload
-      };
-
-      const progress: Observable<IFetchWithProgress> = this.extensionService.uploadProcessorExtensionWithProgress$(file, this.app);
+      this.app = this.createAppObject(nameUpload);
+      const progress$ = this.extensionService.uploadProcessorExtensionWithProgress$(file, this.app);
       this.isAppCreated = true;
 
-      // Subscribe to the progress Observable
-      progress.subscribe(
-        {
-          next: (uploadProgress) => {
-            // Only emit the percentage to progress$ Subject
-            this.progress$.next(Math.round(uploadProgress.percentage));
-          },
-          error: (error) => {
-            // Handle errors
-            this.isLoading = false;
-            this.progress$.next(0); // Reset progress on error
-            this.extensionService.cancelProcessorExtensionCreation(this.app);
-            this.app = null;
-            this.dropAreaComponent.onDelete();
-
-            this.errorMessage = ERROR_MESSAGES[error.message];
-            if (!this.errorMessage && !this.uploadCanceled) {
-              this.alertService.addServerFailure(error);
-            }
-          },
-          complete: () => {
-            // Handle successful completion
-            this.isLoading = false;
-            this.progress$.next(100); // Set to 100% on completion
-            this.alertService.success(gettext('Processor extension uploaded successfully.'));
-
-            // Optional: Reset progress after a delay
-            setTimeout(() => this.progress$.next(0), 2000);
-          }
-        }
-      );
-
+      this.uploadSubscription = progress$.subscribe({
+        next: (uploadProgress) => {
+          this.progress$.next(Math.round(uploadProgress.percentage));
+        },
+        error: (error) => this.handleUploadError(error),
+        complete: () => this.handleUploadComplete()
+      });
     } catch (ex) {
-      // Handle synchronous errors
-      this.isLoading = false;
-      this.progress$.next(0); // Reset progress on error
-      this.extensionService.cancelProcessorExtensionCreation(this.app);
-      this.app = null;
-      this.dropAreaComponent.onDelete();
-      this.errorMessage = ERROR_MESSAGES[ex.message];
-      if (!this.errorMessage && !this.uploadCanceled) {
-        this.alertService.addServerFailure(ex);
-      }
+      this.handleUploadError(ex);
     }
+  }
+
+  private resetUploadState(): void {
+    this.isLoading = true;
+    this.errorMessage = null;
+    this.progress$.next(0);
+  }
+
+  private extractFileName(fullName: string): string {
+    return fullName.split('.').slice(0, -1).join('.');
+  }
+
+  private createAppObject(name: string): Partial<IManagedObject> {
+    return {
+      d11r_processorExtension: {
+        name,
+        external: true
+      },
+      name
+    };
+  }
+
+  private handleUploadError(error: any): void {
+    this.isLoading = false;
+    this.progress$.next(0);
+    this.extensionService.cancelProcessorExtensionCreation(this.app);
+    this.app = null;
+    this.dropAreaComponent?.onDelete();
+
+    this.errorMessage = ERROR_MESSAGES[error.message];
+    if (!this.errorMessage && !this.uploadCanceled) {
+      this.alertService.addServerFailure(error);
+    }
+  }
+
+  private handleUploadComplete(): void {
+    this.isLoading = false;
+    this.progress$.next(100);
+    this.alertService.success(this.successText);
+
+    setTimeout(() => this.progress$.next(0), 2000);
   }
 
   getHref(app: IApplication): string {

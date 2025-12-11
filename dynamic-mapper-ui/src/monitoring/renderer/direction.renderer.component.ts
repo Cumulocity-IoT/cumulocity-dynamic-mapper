@@ -25,8 +25,8 @@ import { Direction } from '../../shared';
   template: `
     <span [title]="context.value">
       <i
-        [style]="context.value === 'OUTBOUND' ? 'width: 100%; color: orange' : 'width: 100%; color: green'"
-        [c8yIcon]="context.value === 'OUTBOUND' ? 'swipe-left' : 'swipe-right'"
+        [style]="iconStyle"
+        [c8yIcon]="iconName"
         class="m-r-5"
       ></i>
     </span>
@@ -35,8 +35,17 @@ import { Direction } from '../../shared';
   imports: [CoreModule]
 })
 export class DirectionRendererComponent {
-  Direction = Direction;
-  constructor(public context: CellRendererContext) {
-   //  console.log('Item', context.value);
+  constructor(public readonly context: CellRendererContext) {}
+
+  get isOutbound(): boolean {
+    return this.context.value === Direction.OUTBOUND;
+  }
+
+  get iconStyle(): string {
+    return this.isOutbound ? 'width: 100%; color: orange' : 'width: 100%; color: green';
+  }
+
+  get iconName(): string {
+    return this.isOutbound ? 'swipe-left' : 'swipe-right';
   }
 }

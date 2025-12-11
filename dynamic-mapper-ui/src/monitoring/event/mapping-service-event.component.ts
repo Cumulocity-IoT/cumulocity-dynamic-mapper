@@ -17,21 +17,18 @@
  *
  * @authors Christof Strack
  */
+import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
-import { FormBuilder, FormGroup, FormControl } from '@angular/forms';
-import {
-  CoreModule,
-  Pagination
-} from '@c8y/ngx-components';
+import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { EventService, IEvent, IResultList } from '@c8y/client';
+import { CoreModule, Pagination } from '@c8y/ngx-components';
+import { BsDatepickerModule } from 'ngx-bootstrap/datepicker';
 import { BehaviorSubject, from, Observable, Subject, switchMap, takeUntil } from 'rxjs';
 import {
   LoggingEventTypeMap,
   SharedModule,
   SharedService
 } from '../../shared';
-import { EventService, IEvent, IResultList } from '@c8y/client';
-import { CommonModule } from '@angular/common';
-import { BsDatepickerModule } from 'ngx-bootstrap/datepicker';
 
 @Component({
   selector: 'd11r-mapping-service-event',
@@ -39,8 +36,7 @@ import { BsDatepickerModule } from 'ngx-bootstrap/datepicker';
   styleUrls: ['../../mapping/shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
-  imports: [CoreModule, CommonModule, SharedModule, BsDatepickerModule]
-
+  imports: [CoreModule, CommonModule, SharedModule, BsDatepickerModule, ReactiveFormsModule]
 })
 export class MappingServiceEventComponent implements OnInit, OnDestroy {
 
@@ -86,28 +82,25 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
   }
 
   private setupFormSubscriptions(): void {
-    // Subscribe to type changes
     this.filterForm.get('type')?.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(type => {
         this.onFilterMappingServiceEventSelect(type);
       });
 
-    // Subscribe to dateFrom changes
     this.filterForm.get('dateFrom')?.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(date => {
         if (date) {
-          this.onDateFromChange(date);
+          this.onDateChange('dateFrom', date);
         }
       });
 
-    // Subscribe to dateTo changes
     this.filterForm.get('dateTo')?.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(date => {
         if (date) {
-          this.onDateToChange(date);
+          this.onDateChange('dateTo', date);
         }
       });
   }
@@ -140,13 +133,8 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
     this.filterSubject$.next();
   }
 
-  onDateFromChange(date: Date): void {
-    this.baseFilter['dateFrom'] = date.toISOString();
-    this.filterSubject$.next();
-  }
-
-  onDateToChange(date: Date): void {
-    this.baseFilter['dateTo'] = date.toISOString();
+  private onDateChange(field: 'dateFrom' | 'dateTo', date: Date): void {
+    this.baseFilter[field] = date.toISOString();
     this.filterSubject$.next();
   }
 }

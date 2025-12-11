@@ -93,7 +93,7 @@ export class JSONProcessorInbound extends BaseProcessorInbound {
     }
 
     // no substitution for the time property exists, then use the system time
-    if (!substitutionTimeExists && mapping.targetAPI != API.INVENTORY.name && mapping.targetAPI != API.OPERATION.name) {
+    if (!substitutionTimeExists && mapping.targetAPI !== API.INVENTORY.name && mapping.targetAPI !== API.OPERATION.name) {
       const processingCacheEntry: SubstituteValue[] = _.get(
         processingCache,
         KEY_TIME,

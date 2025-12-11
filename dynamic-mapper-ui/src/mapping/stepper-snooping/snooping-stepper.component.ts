@@ -17,23 +17,33 @@
  *
  * @authors Christof Strack
  */
-import { CdkStep } from '@angular/cdk/stepper';
-import { AfterViewInit, Component, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild, ViewEncapsulation } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { CdkStep, STEP_STATE } from '@angular/cdk/stepper';
+import {
+  AfterViewInit,
+  Component,
+  EventEmitter,
+  Input,
+  OnDestroy,
+  OnInit,
+  Output,
+  ViewChild,
+  ViewEncapsulation
+} from '@angular/core';
 import { FormGroup } from '@angular/forms';
 import { AlertService, C8yStepper, CoreModule } from '@c8y/ngx-components';
 import { BehaviorSubject, Subject } from 'rxjs';
-
 import {
   DeploymentMapEntry,
   Direction,
   Feature,
   Mapping,
-  SAMPLE_TEMPLATES_C8Y, SharedService, SnoopStatus,
+  SAMPLE_TEMPLATES_C8Y,
+  SharedService,
+  SnoopStatus,
   StepperConfiguration
 } from '../../shared';
-import { STEP_STATE } from '@angular/cdk/stepper';
 import { EditorMode } from '../shared/stepper.model';
-import { CommonModule } from '@angular/common';
 import { MappingConnectorComponent } from '../step-connector/mapping-connector.component';
 import { MappingStepPropertiesComponent } from '../step-property/mapping-properties.component';
 
@@ -54,49 +64,54 @@ const CONSTANTS = {
   encapsulation: ViewEncapsulation.None,
   standalone: true,
   imports: [CoreModule, CommonModule, MappingConnectorComponent, MappingStepPropertiesComponent]
-
 })
 export class SnoopingStepperComponent implements OnInit, OnDestroy, AfterViewInit {
-  getState(): any {
-    return STEP_STATE.ERROR
-  }
+  @ViewChild('stepper', { static: false }) stepper: C8yStepper;
   @Input() mapping: Mapping;
   @Input() stepperConfiguration: StepperConfiguration;
   @Input() deploymentMapEntry: DeploymentMapEntry;
   @Output() cancel = new EventEmitter<void>();
   @Output() commit = new EventEmitter<Mapping>();
 
-  Direction = Direction;
-  EditorMode = EditorMode;
-  SnoopStatus = SnoopStatus;
-
-  propertyFormly = new FormGroup({});
-  isButtonDisabled$ = new BehaviorSubject<boolean>(true);
-  private readonly destroy$ = new Subject<void>();
-
-  snoopedTemplateCounter = 0;
-
-  @ViewChild('stepper', { static: false })
-  stepper: C8yStepper;
-
-  stepLabel: any;
-  labels: StepperLabels = {
+  readonly Direction = Direction;
+  readonly EditorMode = EditorMode;
+  readonly SnoopStatus = SnoopStatus;
+  readonly propertyFormly = new FormGroup({});
+  readonly isButtonDisabled$ = new BehaviorSubject<boolean>(true);
+  readonly labels: StepperLabels = {
     next: 'Next',
     cancel: 'Cancel'
   };
-  stepperForward: boolean = true;
+
+  stepLabel: any;
+  stepperForward = true;
   currentStepIndex: number;
   feature: Feature;
+  snoopedTemplateCounter = 0;
+
+  private readonly destroy$ = new Subject<void>();
 
   constructor(
-    private alertService: AlertService,
-    public sharedService: SharedService,
-  ) { }
+    private readonly alertService: AlertService,
+    public readonly sharedService: SharedService
+  ) {}
 
+  getState(): any {
+    return STEP_STATE.ERROR;
+  }
+
+
+  async ngOnInit(): Promise<void> {
+    this.feature = await this.sharedService.getFeatures();
+    this.propertyFormly.setErrors({
+      validationError: { message: 'You do not have permission to change this mapping.' }
+    });
+  }
 
   ngAfterViewInit(): void {
     this.currentStepIndex = 0;
-    if (!this.stepperConfiguration.advanceFromStepToEndStep && (this.stepperConfiguration.advanceFromStepToEndStep == this.currentStepIndex)) {
+    if (!this.stepperConfiguration.advanceFromStepToEndStep &&
+        this.stepperConfiguration.advanceFromStepToEndStep === this.currentStepIndex) {
       // Wrap changes in setTimeout to avoid ExpressionChangedAfterItHasBeenCheckedError
       setTimeout(() => {
         this.goToLastStep();
@@ -105,24 +120,16 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy, AfterViewIni
     }
   }
 
-  async ngOnInit(): Promise<void> {
-    this.feature = await this.sharedService.getFeatures();
-    this.propertyFormly.setErrors({ validationError: { message: 'You do not have permission to change this mapping.' } });
-
-  }
-
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
     this.isButtonDisabled$.complete();
   }
 
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  deploymentMapEntryChange(e) {
+  deploymentMapEntryChange(): void {
     this.isButtonDisabled$.next(
       !this.deploymentMapEntry?.connectors ||
-      this.deploymentMapEntry?.connectors?.length == 0
+      this.deploymentMapEntry?.connectors?.length === 0
     );
   }
 
@@ -169,7 +176,7 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy, AfterViewIni
     }
   }
 
-  private goToLastStep() {
+  private goToLastStep(): void {
     // Mark all previous steps as completed
     this.stepper.steps.forEach((step, index) => {
       if (index < this.stepper.steps.length - 1) {
@@ -181,7 +188,8 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy, AfterViewIni
   }
 
   private showSnoopingInfo(): void {
-    const message = `Wait ${CONSTANTS.HOUSEKEEPING_INTERVAL_SECONDS} seconds before snooped messages are visible. ` +
+    const message =
+      `Wait ${CONSTANTS.HOUSEKEEPING_INTERVAL_SECONDS} seconds before snooped messages are visible. ` +
       `Only the last ${CONSTANTS.SNOOP_TEMPLATES_MAX} messages are visible!`;
     this.alertService.info(message);
   }

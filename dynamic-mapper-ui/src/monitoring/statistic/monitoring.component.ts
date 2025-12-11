@@ -58,27 +58,16 @@ interface MonitoringComponentState {
   imports: [CoreModule, CommonModule]
 })
 export class MonitoringComponent implements OnInit, OnDestroy {
-  constructor(
-  ) {
-    const href = this.router.url;
-    this.direction = href.includes('/monitoring/statistic/inbound')
-      ? Direction.INBOUND
-      : Direction.OUTBOUND;
-
-    this.titleStatistic = `Statistic ${this.direction.toLowerCase()}`;
-  }
-
   // Modern Angular dependency injection
-  private router = inject(Router);
+  private readonly router = inject(Router);
   private readonly monitoringService = inject(MonitoringService);
   private readonly alertService = inject(AlertService);
   private readonly bsModalService = inject(BsModalService);
   private readonly sharedService = inject(SharedService);
   private readonly route = inject(ActivatedRoute);
 
-
   // Subscription management
-  private destroy$;
+  private readonly destroy$ = new Subject<void>();
 
   // State management
   readonly state$ = new BehaviorSubject<MonitoringComponentState>({
@@ -194,9 +183,8 @@ export class MonitoringComponent implements OnInit, OnDestroy {
     try {
       this.updateState({ isLoading: true, error: null });
 
+      this.initializeDirection();
       this.feature = this.route.snapshot.data['feature'];
-
-      // Initialize columns based on direction
       this.initializeColumns();
 
       await this.initializeMonitoringService();
@@ -244,14 +232,19 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       });
   }
 
+  private initializeDirection(): void {
+    const href = this.router.url;
+    this.direction = href.includes('/monitoring/statistic/inbound')
+      ? Direction.INBOUND
+      : Direction.OUTBOUND;
+    this.titleStatistic = `Statistic ${this.direction.toLowerCase()}`;
+  }
+
   private initializeColumns(): void {
-    // Filter columns based on direction
     this.columns = this.baseColumns.filter(column => {
-      // For INBOUND: remove publishTopic
       if (this.direction === Direction.INBOUND && column.name === 'publishTopic') {
         return false;
       }
-      // For OUTBOUND: remove mappingTopic
       if (this.direction === Direction.OUTBOUND && column.name === 'mappingTopic') {
         return false;
       }
@@ -261,7 +254,6 @@ export class MonitoringComponent implements OnInit, OnDestroy {
 
   private async initializeMonitoringService(): Promise<void> {
     await this.monitoringService.startMonitoring();
-    this.destroy$ = new Subject<void>();
 
     this.monitoringService
       .getMappingStatus()

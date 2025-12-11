@@ -126,15 +126,13 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   @ViewChild('substitutionModelSourceExpression') substitutionModelSourceExpression: ElementRef<HTMLTextAreaElement>;
   @ViewChild('substitutionModelTargetExpression') substitutionModelTargetExpression: ElementRef<HTMLTextAreaElement>;
 
-  private cdr = inject(ChangeDetectorRef);
-  private bsModalService = inject(BsModalService);
-  private sharedService = inject(SharedService);
-  private alertService = inject(AlertService);
-  private bottomDrawerService = inject(BottomDrawerService);
-
-  // Inject new services
-  private stepperService = inject(MappingStepperService);
-  private substitutionService = inject(SubstitutionManagementService);
+  private readonly cdr = inject(ChangeDetectorRef);
+  private readonly bsModalService = inject(BsModalService);
+  private readonly sharedService = inject(SharedService);
+  private readonly alertService = inject(AlertService);
+  private readonly bottomDrawerService = inject(BottomDrawerService);
+  private readonly stepperService = inject(MappingStepperService);
+  private readonly substitutionService = inject(SubstitutionManagementService);
 
   readonly ValidationError = ValidationError;
   readonly checkTransformationType = checkTransformationType;
@@ -175,7 +173,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   targetTemplate: any;
   targetTemplateUpdated: any;
   targetSystem: string;
-  aiAgentDeployed: boolean = false;
+  aiAgentDeployed = false;
   aiAgent: AgentObjectDefinition | AgentTextDefinition | null = null;
 
   // Use service observables
@@ -227,16 +225,17 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     statusBar: true
   };
 
-  selectedSubstitution: number = -1;
-  snoopedTemplateCounter: number = -1;
+  selectedSubstitution = -1;
+  snoopedTemplateCounter = -1;
   step: any;
-  expertMode: boolean = false;
-  templatesInitialized: boolean = false;
+  expertMode = false;
+  templatesInitialized = false;
   extensions: Map<string, Extension> = new Map();
-  destroy$ = new Subject<void>();
   editorOptions: EditorComponent['editorOptions'];
-  stepperForward: boolean = true;
+  stepperForward = true;
   currentStepIndex: number;
+
+  private readonly destroy$ = new Subject<void>();
   codeEditorHelp: string;
   codeEditorLabel: string;
   targetTemplateHelp = 'The template contains the dummy field <code>_TOPIC_LEVEL_</code> for outbound to map device identifiers.';
@@ -248,8 +247,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.labels = { ...this.labels, custom: 'Start snooping' } as const;
     }
 
-    this.targetSystem = this.mapping.direction == Direction.INBOUND ? 'Cumulocity' : 'Broker';
-    this.sourceSystem = this.mapping.direction == Direction.OUTBOUND ? 'Cumulocity' : 'Broker';
+    this.targetSystem = this.mapping.direction === Direction.INBOUND ? 'Cumulocity' : 'Broker';
+    this.sourceSystem = this.mapping.direction === Direction.OUTBOUND ? 'Cumulocity' : 'Broker';
     this.templateModel = {
       stepperConfiguration: this.stepperConfiguration,
       mapping: this.mapping
@@ -260,7 +259,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       language: 'javascript',
       renderWhitespace: 'none',
       tabSize: 4,
-      readOnly: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY
+      readOnly: this.stepperConfiguration.editorMode === EditorMode.READ_ONLY
     };
 
     this.substitutionModel = {
@@ -299,19 +298,18 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.initializeFormlyFields();
     await this.initializeCodeTemplates();
 
-    this.codeEditorHelp = this.mapping.transformationType == TransformationType.SUBSTITUTION_AS_CODE ||
-      this.mapping.mappingType == MappingType.CODE_BASED ?
+    this.codeEditorHelp = this.mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE ||
+      this.mapping.mappingType === MappingType.CODE_BASED ?
       'JavaScript for creating substitutions...' :
       'JavaScript for creating complete payloads as Smart Functions.';
 
-    this.codeEditorLabel = this.mapping.transformationType == TransformationType.SUBSTITUTION_AS_CODE ||
-      this.mapping.mappingType == MappingType.CODE_BASED ?
+    this.codeEditorLabel = this.mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE ||
+      this.mapping.mappingType === MappingType.CODE_BASED ?
       'JavaScript callback for creating substitutions' :
       'JavaScript callback for Smart functions';
   }
 
   private initializeFormlyFields(): void {
-    // Filter fields initialization
     this.filterFormlyFields = [
       {
         fieldGroup: [
@@ -323,12 +321,12 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
               label: 'Filter execution mapping',
               class: 'input-sm',
               customWrapperClass: 'm-b-24',
-              disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
+              disabled: this.stepperConfiguration.editorMode === EditorMode.READ_ONLY ||
                 !this.stepperConfiguration.allowDefiningSubstitutions ||
                 (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
               placeholder: '$exists(c8y_TemperatureMeasurement)',
               description: 'This expression is required...',
-              required: this.mapping.direction == Direction.OUTBOUND,
+              required: this.mapping.direction === Direction.OUTBOUND,
               customMessage: this.sourceCustomMessage$
             },
             hooks: {
@@ -343,7 +341,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         ]
       }
     ];
-
   }
 
   async initializeCodeTemplates(): Promise<void> {
@@ -355,7 +352,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   async ngAfterViewInit(): Promise<void> {
     if (!initializedMonaco) {
       const monaco = await loadMonacoEditor();
-      if (this.mapping.transformationType == TransformationType.SMART_FUNCTION) {
+      if (this.mapping.transformationType === TransformationType.SMART_FUNCTION) {
         monaco.languages.registerCompletionItemProvider('javascript', createCompletionProviderFlowFunction(monaco));
       } else {
         monaco.languages.registerCompletionItemProvider('javascript', createCompletionProviderSubstitutionAsCode(monaco));
@@ -373,11 +370,11 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.templateForm = new FormGroup({
       extensionName: new FormControl({
         value: this.mapping?.extension?.extensionName,
-        disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY
+        disabled: this.stepperConfiguration.editorMode === EditorMode.READ_ONLY
       }),
       eventName: new FormControl({
         value: this.mapping?.extension?.eventName,
-        disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY
+        disabled: this.stepperConfiguration.editorMode === EditorMode.READ_ONLY
       }),
       snoopedTemplateIndex: new FormControl({
         value: -1,
@@ -402,7 +399,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   deploymentMapEntryChange(deploymentMapEntry: DeploymentMapEntry): void {
-    const isDisabled = !this.deploymentMapEntry?.connectors || this.deploymentMapEntry?.connectors?.length == 0;
+    const isDisabled = !this.deploymentMapEntry?.connectors || this.deploymentMapEntry?.connectors?.length === 0;
     setTimeout(() => {
       this.isButtonDisabled$.next(isDisabled);
     });
@@ -568,7 +565,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   raiseAlert(alert: Alert): void {
     this.alertService.state.forEach(a => {
-      if (a.type == 'info') this.alertService.remove(a);
+      if (a.type === 'info') this.alertService.remove(a);
     });
     this.alertService.add(alert);
   }
@@ -585,7 +582,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.mapping.code = stringToBase64(this.mappingCode);
     }
 
-    if (isSubstitutionsAsCode(this.mapping) && (!this.mapping.code || this.mapping.code == null || this.mapping.code == '')) {
+    if (isSubstitutionsAsCode(this.mapping) && (!this.mapping.code || this.mapping.code === null || this.mapping.code === '')) {
       this.raiseAlert({ type: 'warning', text: "Internal error in editor. Try again!" });
       this.commit.emit();
     }
@@ -594,7 +591,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   async onSampleTargetTemplatesButton(): Promise<void> {
-    if (this.stepperConfiguration.direction == Direction.INBOUND) {
+    if (this.stepperConfiguration.direction === Direction.INBOUND) {
       this.targetTemplate = expandC8YTemplate(
         JSON.parse(SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI]),
         this.mapping
@@ -712,7 +709,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   onNextStep(event: StepperStepChange): void {
     this.stepperForward = true;
     if (this.stepperConfiguration.advanceFromStepToEndStep &&
-      this.stepperConfiguration.advanceFromStepToEndStep == this.currentStepIndex) {
+      this.stepperConfiguration.advanceFromStepToEndStep === this.currentStepIndex) {
       this.goToLastStep();
       this.raiseAlert({ type: 'info', text: 'The other steps have been skipped for this mapping type!' });
     } else {
@@ -734,9 +731,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.step = event.step.label;
     this.stepperForward = false;
 
-    if (this.step == 'Test mapping') {
+    if (this.step === 'Test mapping') {
       this.mappingTestingStep.editorTestingRequest.setSchema({});
-    } else if (this.step == 'General settings' || this.step == 'Select templates') {
+    } else if (this.step === 'General settings' || this.step === 'Select templates') {
       this.templatesInitialized = false;
     }
 
@@ -772,7 +769,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.mapping.snoopedTemplates[this.snoopedTemplateCounter]
     );
 
-    if (this.stepperConfiguration.direction == Direction.INBOUND) {
+    if (this.stepperConfiguration.direction === Direction.INBOUND) {
       this.sourceTemplate = expandExternalTemplate(
         this.sourceTemplate,
         this.mapping, splitTopicExcludingSeparator(this.mapping.mappingTopicSample, false)
@@ -791,7 +788,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.mapping.snoopedTemplates[index]
     );
 
-    if (this.stepperConfiguration.direction == Direction.INBOUND) {
+    if (this.stepperConfiguration.direction === Direction.INBOUND) {
       this.sourceTemplate = expandExternalTemplate(
         this.sourceTemplate,
         this.mapping,
@@ -805,7 +802,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   async onTargetAPIChanged(changedTargetAPI: string): Promise<void> {
-    if (this.stepperConfiguration.direction == Direction.INBOUND) {
+    if (this.stepperConfiguration.direction === Direction.INBOUND) {
       this.mapping.targetTemplate = SAMPLE_TEMPLATES_C8Y[changedTargetAPI];
       this.mapping.sourceTemplate = getExternalTemplate(this.mapping);
       const schemaTarget = getSchema(this.mapping.targetAPI, this.mapping.direction, true, false);
@@ -955,11 +952,11 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   private manualResize(source: string): void {
     let element;
 
-    if (source == 'filterModelFilterExpression' && this.filterModelFilterExpression?.nativeElement) {
+    if (source === 'filterModelFilterExpression' && this.filterModelFilterExpression?.nativeElement) {
       element = this.filterModelFilterExpression.nativeElement;
-    } else if (source == 'substitutionModelSourceExpression' && this.substitutionModelSourceExpression?.nativeElement) {
+    } else if (source === 'substitutionModelSourceExpression' && this.substitutionModelSourceExpression?.nativeElement) {
       element = this.substitutionModelSourceExpression.nativeElement;
-    } else if (source == 'substitutionModelTargetExpression' && this.substitutionModelTargetExpression?.nativeElement) {
+    } else if (source === 'substitutionModelTargetExpression' && this.substitutionModelTargetExpression?.nativeElement) {
       element = this.substitutionModelTargetExpression.nativeElement;
     }
 

@@ -24,20 +24,24 @@ import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
 @Component({
   selector: 'd11r-mapping-renderer-deployment',
   template: `
-    <div *ngFor="let con of context.value?.connectors">
+    <div *ngFor="let con of connectors">
       <span class="text-12 tag tag--success">{{ con.name }}</span>
     </div>
-    <div *ngIf="context.item.mapping.active && !context.value?.connectors">
-      <span class="text-12 tag tag--danger">{{ 'No active connector' }}</span>
+    <div *ngIf="showNoConnectorWarning">
+      <span class="text-12 tag tag--danger">No active connector</span>
     </div>
   `,
   standalone: true,
   imports: [CoreModule, CommonModule]
-
 })
 export class MappingDeploymentRendererComponent {
-  constructor(public context: CellRendererContext) {
-    // console.log('Connectors', context, context.value);
-    context.item.mapping.active;
+  constructor(public readonly context: CellRendererContext) {}
+
+  get connectors() {
+    return this.context.value?.connectors;
+  }
+
+  get showNoConnectorWarning(): boolean {
+    return this.context.item.mapping.active && !this.connectors;
   }
 }

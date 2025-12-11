@@ -55,7 +55,7 @@ export class JSONProcessorOutbound extends BaseProcessorOutbound {
 
     context.sourceId = sourceId.toString();
 
-    if (mapping.useExternalId &&  "" != mapping.externalIdType) {
+    if (mapping.useExternalId &&  "" !== mapping.externalIdType) {
       let externalId: IExternalIdentity;
       try {
           externalId = await this.c8yAgent.resolveGlobalId2ExternalId(

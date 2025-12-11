@@ -42,14 +42,14 @@ import { HttpStatusCode } from '@angular/common/http';
 @Injectable({ providedIn: 'root' })
 export class C8YAgent {
   constructor(
-    private inventory: FacadeInventoryService,
-    private identity: FacadeIdentityService,
-    private event: FacadeEventService,
-    private alarm: FacadeAlarmService,
-    private measurement: FacadeMeasurementService,
-    private operation: FacadeOperationService,
-    private alert: AlertService
-  ) { }
+    private readonly inventory: FacadeInventoryService,
+    private readonly identity: FacadeIdentityService,
+    private readonly event: FacadeEventService,
+    private readonly alarm: FacadeAlarmService,
+    private readonly measurement: FacadeMeasurementService,
+    private readonly operation: FacadeOperationService,
+    private readonly alert: AlertService
+  ) {}
 
   initializeCache(): void {
     this.inventory.initializeCache();
@@ -58,31 +58,31 @@ export class C8YAgent {
 
   async createMEAO(context: ProcessingContext) {
     let result: Promise<any>;
-    let error: string = '';
+    let error = '';
     const currentRequest =
       context.requests[context.requests.length - 1].request;
-    if (context.mapping.targetAPI == API.EVENT.name) {
+    if (context.mapping.targetAPI === API.EVENT.name) {
       const p: IEvent = currentRequest as any;
       if (p != null) {
         result = this.event.create(p, context);
       } else {
         error = `Payload is not a valid:${context.mapping.targetAPI}`;
       }
-    } else if (context.mapping.targetAPI == API.ALARM.name) {
+    } else if (context.mapping.targetAPI === API.ALARM.name) {
       const p: IAlarm = currentRequest as any;
       if (p != null) {
         result = this.alarm.create(p, context);
       } else {
         error = `Payload is not a valid:${context.mapping.targetAPI}`;
       }
-    } else if (context.mapping.targetAPI == API.MEASUREMENT.name) {
+    } else if (context.mapping.targetAPI === API.MEASUREMENT.name) {
       const p: IMeasurement = currentRequest as any;
       if (p != null) {
         result = this.measurement.create(p, context);
       } else {
         error = `Payload is not a valid:${context.mapping.targetAPI}`;
       }
-    } else if (context.mapping.targetAPI == API.OPERATION.name) {
+    } else if (context.mapping.targetAPI === API.OPERATION.name) {
       const p: IOperation = currentRequest as any;
       if (p != null) {
         result = this.operation.create(p, context);
@@ -102,10 +102,7 @@ export class C8YAgent {
       }
     }
 
-
-    if (error != '') {
-      // throw new Error(error);
-      // this.alert.danger(`Failed to test mapping: ${error}`);
+    if (error !== '') {
       context.requests[context.requests.length - 1].error = error;
       return '';
     }
@@ -113,20 +110,17 @@ export class C8YAgent {
     try {
       const { data, res } = await result;
       if (
-        res.status == HttpStatusCode.Ok ||
-        res.status == HttpStatusCode.Created
+        res.status === HttpStatusCode.Ok ||
+        res.status === HttpStatusCode.Created
       ) {
-        // this.alert.success("Successfully tested mapping!");
         return data;
       } else {
         const e = await res.text();
-        //this.alert.danger(`Failed to test mapping: ${e}`);
         context.requests[context.requests.length - 1].error = e;
         return '';
       }
     } catch (e) {
       const { res } = await e;
-      // this.alert.danger(`Failed to test mapping: ${res.statusText}`);
       context.requests[context.requests.length - 1].error = res.statusText;
       return '';
     }
@@ -134,12 +128,12 @@ export class C8YAgent {
 
   async upsertDevice(
     identity: IExternalIdentity,
-    context: ProcessingContext,
+    context: ProcessingContext
   ): Promise<IManagedObject> {
     let sourceId: string;
     try {
       if (identity) {
-        sourceId = await this.resolveExternalId2GlobalId(identity, context)
+        sourceId = await this.resolveExternalId2GlobalId(identity, context);
       } else {
         const { data } = await this.detail(context.sourceId, context);
         sourceId = data?.id;
@@ -147,14 +141,10 @@ export class C8YAgent {
     } catch (e) {
       const { res, data } = e;
       // enrich error message
-      if (res?.status == HttpStatusCode.NotFound) {
+      if (res?.status === HttpStatusCode.NotFound) {
         e.message = `Device with ${context.sourceId} not found!`;
       }
-      // throw e;
       console.error(e);
-      // console.log(
-      //  `External id ${identity.externalId} doesn't exist! Just return original id ${identity.externalId} `
-      // );
     }
 
     const currentRequest = context.requests?.slice(-1)[0] ?? null;

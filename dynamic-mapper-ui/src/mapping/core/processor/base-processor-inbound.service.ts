@@ -45,13 +45,13 @@ import {
 
 @Injectable({ providedIn: 'root' })
 export abstract class BaseProcessorInbound {
-  constructor(
-    private alert: AlertService,
-    private c8yClient: C8YAgent,
-    public sharedService: SharedService,
-  ) { }
+  protected readonly JSONATA = require('jsonata');
 
-  protected JSONATA = require('jsonata');
+  constructor(
+    private readonly alert: AlertService,
+    private readonly c8yClient: C8YAgent,
+    public readonly sharedService: SharedService
+  ) {}
 
   abstract deserializePayload(
     mapping: Mapping,
@@ -127,17 +127,17 @@ export abstract class BaseProcessorInbound {
         const pathTargetSubstitute = processingCache.get(pathTarget);
         if (i < pathTargetSubstitute.length) {
           substitute = _.clone(pathTargetSubstitute[i]);
-        } else if (pathTargetSubstitute.length == 1) {
+        } else if (pathTargetSubstitute.length === 1) {
           // this is an indication that the substitution is the same for all
           // events/alarms/measurements/inventory
           if (
-            substitute.repairStrategy ==
+            substitute.repairStrategy ===
             RepairStrategy.USE_FIRST_VALUE_OF_ARRAY ||
-            substitute.repairStrategy == RepairStrategy.DEFAULT
+            substitute.repairStrategy === RepairStrategy.DEFAULT
           ) {
             substitute = _.clone(pathTargetSubstitute[0]);
           } else if (
-            substitute.repairStrategy ==
+            substitute.repairStrategy ===
             RepairStrategy.USE_LAST_VALUE_OF_ARRAY
           ) {
             const last: number = pathTargetSubstitute.length - 1;
@@ -151,9 +151,9 @@ export abstract class BaseProcessorInbound {
         }
         let identity;
 
-        // check if the targetPath == externalId and  we need to resolve an external id
+        // check if the targetPath === externalId and  we need to resolve an external id
         if (
-          `${TOKEN_IDENTITY}.externalId` == pathTarget && mapping.useExternalId
+          `${TOKEN_IDENTITY}.externalId` === pathTarget && mapping.useExternalId
         ) {
           identity = {
             externalId: substitute.value.toString(),
@@ -164,7 +164,7 @@ export abstract class BaseProcessorInbound {
             repairStrategy: RepairStrategy.CREATE_IF_MISSING,
             type: SubstituteValueType.TEXTUAL
           };
-          if (mapping.targetAPI != API.INVENTORY.name) {
+          if (mapping.targetAPI !== API.INVENTORY.name) {
             try {
               sourceId.value = await this.c8yClient.resolveExternalId2GlobalId(
                 identity,
@@ -187,7 +187,7 @@ export abstract class BaseProcessorInbound {
             context.sourceId = sourceId.value;
             substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
           }
-        } else if (`${TOKEN_IDENTITY}.c8ySourceId` == pathTarget) {
+        } else if (`${TOKEN_IDENTITY}.c8ySourceId` === pathTarget) {
           let sourceId = {
             value: substitute.value,
             repairStrategy: RepairStrategy.CREATE_IF_MISSING,
@@ -195,11 +195,11 @@ export abstract class BaseProcessorInbound {
           };
           context.sourceId = substitute.value;
 
-          if (mapping.targetAPI != API.INVENTORY.name) {
+          if (mapping.targetAPI !== API.INVENTORY.name) {
             // check if we need to create an implicit device
             try {
               const { res } = await this.c8yClient.detail(substitute.value, context);
-              if (res.status == HttpStatusCode.NotFound) {
+              if (res.status === HttpStatusCode.NotFound) {
                 if (mapping.createNonExistingDevice) {
                   sourceId.value = await this.createImplicitDevice(undefined, context);
                 } else {
@@ -241,7 +241,7 @@ export abstract class BaseProcessorInbound {
        * step 4 prepare target payload for sending to c8y
        */
       const predecessor = context.requests.length;
-      if (mapping.targetAPI == API.INVENTORY.name) {
+      if (mapping.targetAPI === API.INVENTORY.name) {
         context.requests.push({
           predecessor,
           method: context.mapping.updateExistingDevice ? 'POST' : 'PATCH',
@@ -263,7 +263,7 @@ export abstract class BaseProcessorInbound {
         } catch (e) {
           context.requests[predecessor].error = e.message;
         }
-      } else if (mapping.targetAPI != API.INVENTORY.name) {
+      } else if (mapping.targetAPI !== API.INVENTORY.name) {
         context.requests.push({
           predecessor,
           method: 'POST',
@@ -338,7 +338,7 @@ export abstract class BaseProcessorInbound {
       sourceId = response.id;
     } catch (e) {
       const { res, data } = e;
-      if (res?.status == HttpStatusCode.NotFound) {
+      if (res?.status === HttpStatusCode.NotFound) {
         e.message = `Device with ${context.sourceId} not found!`;
         context.requests[predecessor].error = e.message;
       } else {
@@ -350,7 +350,7 @@ export abstract class BaseProcessorInbound {
 
   async evaluateExpression(json: JSON, path: string): Promise<JSON> {
     let result: any = '';
-    if (path != undefined && path != '' && json != undefined) {
+    if (path !== undefined && path !== '' && json !== undefined) {
       const expression = this.JSONATA(path);
       result = expression.evaluate(json) as JSON;
     }

@@ -17,6 +17,7 @@
  *
  * @authors Christof Strack
  */
+import { CommonModule } from '@angular/common';
 import {
   Component,
   EventEmitter,
@@ -28,16 +29,34 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 import { FormGroup } from '@angular/forms';
-import { FormlyFieldConfig } from '@ngx-formly/core';
-import { BehaviorSubject, debounceTime, distinctUntilChanged } from 'rxjs';
-import { EditorMode } from '../shared/stepper.model';
-import { ValidationError } from '../shared/mapping.model';
-import { deriveSampleTopicFromTopic, getTypeOf } from '../shared/util';
-import { StepperConfiguration, API, Direction, Mapping, Qos, SnoopStatus, FormatStringPipe, SharedService, MappingTypeLabels } from '../../shared';
-import { MappingService } from '../core/mapping.service';
 import { Alert, AlertService, CoreModule } from '@c8y/ngx-components';
+import { FormlyFieldConfig } from '@ngx-formly/core';
 import { PopoverModule } from 'ngx-bootstrap/popover';
-import { CommonModule } from '@angular/common';
+import { BehaviorSubject, debounceTime, distinctUntilChanged } from 'rxjs';
+import {
+  API,
+  Direction,
+  Feature,
+  FormatStringPipe,
+  Mapping,
+  MappingTypeLabels,
+  Qos,
+  SharedService,
+  SnoopStatus,
+  StepperConfiguration
+} from '../../shared';
+import { MappingService } from '../core/mapping.service';
+import { ValidationError } from '../shared/mapping.model';
+import { EditorMode } from '../shared/stepper.model';
+import { deriveSampleTopicFromTopic, getTypeOf } from '../shared/util';
+
+interface FilterExpressionModel {
+  filterExpression: {
+    result: string;
+    resultType: string;
+    valid: boolean;
+  };
+}
 
 @Component({
   selector: 'd11r-mapping-properties',
@@ -46,63 +65,39 @@ import { CommonModule } from '@angular/common';
   encapsulation: ViewEncapsulation.None,
   standalone: true,
   imports: [CoreModule, CommonModule, PopoverModule]
-
 })
-export class MappingStepPropertiesComponent
-  implements OnInit, OnDestroy {
+export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
   @Input() mapping: Mapping;
-
   @Input() stepperConfiguration: StepperConfiguration;
   @Input() propertyFormly: FormGroup;
   @Input() codeFormly: FormGroup;
-
   @Output() targetAPIChanged = new EventEmitter<string>();
   @Output() snoopStatusChanged = new EventEmitter<SnoopStatus>();
 
-  ValidationError = ValidationError;
-  MappingTypeLabels = MappingTypeLabels;
-  Direction = Direction;
-  EditorMode = EditorMode;
+  readonly ValidationError = ValidationError;
+  readonly MappingTypeLabels = MappingTypeLabels;
+  readonly Direction = Direction;
+  readonly EditorMode = EditorMode;
+  readonly readOnlyHelp = ' To edit this mapping deactivate the mapping first in mapping list.';
+  readonly selectedResult$ = new BehaviorSubject<number>(0);
 
   propertyFormlyFields: FormlyFieldConfig[] = [];
-  selectedResult$: BehaviorSubject<number> = new BehaviorSubject<number>(0);
   sourceSystem: string;
   targetSystem: string;
-  filterMappingModel: any;
-  filterInventoryModel: any;
-  readOnlyHelp = ' To edit this mapping deactivate the mapping first in mapping list.';
-  feature: any;
+  filterMappingModel: FilterExpressionModel;
+  filterInventoryModel: FilterExpressionModel;
+  feature: Feature;
 
+  private readonly alertService = inject(AlertService);
+  private readonly sharedService = inject(SharedService);
+  private readonly mappingService = inject(MappingService);
+  private readonly formatStringPipe = inject(FormatStringPipe);
 
-  private alertService = inject(AlertService);
-  private sharedService = inject(SharedService);
-  private mappingService = inject(MappingService);
-  private formatStringPipe = inject(FormatStringPipe);
-
-  async ngOnInit() {
+  async ngOnInit(): Promise<void> {
     this.feature = await this.sharedService.getFeatures();
-    // console.log('EditorMode', this.stepperConfiguration.editorMode, this.stepperConfiguration.editorMode !== EditorMode.CREATE);
-    // set value for backward compatibility
-    if (!this.mapping.direction) this.mapping.direction = Direction.INBOUND;
-    this.targetSystem =
-      this.mapping.direction == Direction.INBOUND ? 'Cumulocity' : 'Broker';
-    this.sourceSystem =
-      this.mapping.direction == Direction.OUTBOUND ? 'Cumulocity' : 'Broker';
 
-    this.filterMappingModel = {
-      filterExpression: {
-        result: '',
-        resultType: 'empty',
-        valid: false,
-      },
-    };
-    this.filterInventoryModel = {
-      filterExpression: {
-        result: '',
-        resultType: 'empty',
-        valid: false,
-      },
-    };
+    this.initializeDirection();
+    this.initializeFilterModels();
 
     this.propertyFormlyFields = [
       {
@@ -545,20 +540,58 @@ export class MappingStepPropertiesComponent
     this.filterInventoryModel = { ...this.filterInventoryModel };
   }
 
-  onTargetAPIChanged(targetAPI) {
+  onTargetAPIChanged(targetAPI: string): void {
     this.mapping.targetAPI = targetAPI;
     this.targetAPIChanged.emit(targetAPI);
   }
 
-  clearAlerts() {
+  clearAlerts(): void {
     this.alertService.clearAll();
   }
 
-  raiseAlert(alert: Alert) {
-    // clear all info alert
+  raiseAlert(alert: Alert): void {
     this.alertService.state.forEach(a => {
-      if (a.type == 'info') { this.alertService.remove(a) }
-    })
+      if (a.type === 'info') {
+        this.alertService.remove(a);
+      }
+    });
     this.alertService.add(alert);
+  }
+
+  private initializeDirection(): void {
+    if (!this.mapping.direction) {
+      this.mapping.direction = Direction.INBOUND;
+    }
+
+    this.targetSystem = this.mapping.direction === Direction.INBOUND ? 'Cumulocity' : 'Broker';
+    this.sourceSystem = this.mapping.direction === Direction.OUTBOUND ? 'Cumulocity' : 'Broker';
+  }
+
+  private initializeFilterModels(): void {
+    const emptyFilterExpression = {
+      result: '',
+      resultType: 'empty',
+      valid: false
+    };
+
+    this.filterMappingModel = {
+      filterExpression: { ...emptyFilterExpression }
+    };
+
+    this.filterInventoryModel = {
+      filterExpression: { ...emptyFilterExpression }
+    };
+  }
+
+  private get isReadOnly(): boolean {
+    return this.stepperConfiguration.editorMode === EditorMode.READ_ONLY;
+  }
+
+  private get canEdit(): boolean {
+    return this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole;
+  }
+
+  private get isFieldDisabled(): boolean {
+    return this.isReadOnly || !this.canEdit;
   }
 }

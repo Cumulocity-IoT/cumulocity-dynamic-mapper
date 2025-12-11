@@ -98,7 +98,7 @@ export class CodeBasedProcessorInbound extends BaseProcessorInbound {
             key,
             []
           );
-          if (values != null && values['items'] && values['items'].length > 0
+          if (values !== null && values['items'] && values['items'].length > 0
             && values['items'][0].expandArray) {
 
             // extracted result from sourcePayload is an array, so we potentially have to
@@ -125,7 +125,7 @@ export class CodeBasedProcessorInbound extends BaseProcessorInbound {
     }
 
     // no substitution for the time property exists, then use the system time
-    if (!substitutionTimeExists && mapping.targetAPI != API.INVENTORY.name && mapping.targetAPI != API.OPERATION.name) {
+    if (!substitutionTimeExists && mapping.targetAPI !== API.INVENTORY.name && mapping.targetAPI !== API.OPERATION.name) {
       const processingCacheEntry: SubstituteValue[] = _.get(
         processingCache,
         KEY_TIME,

@@ -17,52 +17,50 @@
  *
  * @authors Christof Strack
  */
+import { NgIf } from '@angular/common';
 import { Component } from '@angular/core';
 import { CellRendererContext } from '@c8y/ngx-components';
-import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
+import { BsModalService } from 'ngx-bootstrap/modal';
 import { SnoopExplorerComponent } from '../snoop-explorer/snoop-explorer-modal.component';
-import { NgIf } from '@angular/common';
 
 @Component({
   selector: 'd11r-mapping-renderer-snooped',
   template: `
-    <div *ngIf="context.value.snoopedTemplates?.length > 0">
+    <div *ngIf="hasSnoopedTemplates">
       <button
         class="btn btn-link"
-        title="{{ context.item.id }}"
+        [title]="context.item.id"
         (click)="exploreSnoopedTemplates()"
         style="padding-top: 0px; padding-bottom: 10px;"
       >
-        <span>{{
-          context.value.snoopedTemplates
-            ? context.value.snoopedTemplates?.length
-            : ''
-        }}</span>
+        <span>{{ snoopedTemplatesCount }}</span>
       </button>
     </div>
   `,
   standalone: true,
-  imports:[NgIf]
+  imports: [NgIf]
 })
 export class SnoopedTemplateRendererComponent {
   constructor(
-    public context: CellRendererContext,
-    public bsModalService: BsModalService
-  ) { }
-  exploreSnoopedTemplates() {
-    const initialState = {
-      enrichedMapping: this.context.item,
-      labels: {
-        ok: 'Cancel',
-        cancel: 'Cancel'
-      }
-    };
-    const confirmDeletionModalRef: BsModalRef = this.bsModalService.show(
-      SnoopExplorerComponent,
-      {
-        initialState,
-        class: '_modal-lg'
-      }
-    );
+    public readonly context: CellRendererContext,
+    private readonly bsModalService: BsModalService
+  ) {}
+
+  get hasSnoopedTemplates(): boolean {
+    return (this.context.value.snoopedTemplates?.length ?? 0) > 0;
+  }
+
+  get snoopedTemplatesCount(): number {
+    return this.context.value.snoopedTemplates?.length ?? 0;
+  }
+
+  exploreSnoopedTemplates(): void {
+    this.bsModalService.show(SnoopExplorerComponent, {
+      initialState: {
+        enrichedMapping: this.context.item,
+        labels: { ok: 'Cancel', cancel: 'Cancel' }
+      },
+      class: '_modal-lg'
+    });
   }
 }

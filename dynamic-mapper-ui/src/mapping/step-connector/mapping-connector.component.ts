@@ -17,6 +17,7 @@
  *
  * @authors Christof Strack
  */
+import { CommonModule } from '@angular/common';
 import {
   Component,
   EventEmitter,
@@ -27,19 +28,19 @@ import {
   ViewChild,
   ViewEncapsulation
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject } from 'rxjs';
+import { ConnectorConfigurationService } from '../../connector';
 import {
   ConnectorConfiguration,
+  ConnectorGridComponent,
   DeploymentMapEntry,
   Direction,
   Feature,
+  SharedService,
   StepperConfiguration
 } from '../../shared';
 import { EditorMode } from '../shared/stepper.model';
-import { ConnectorGridComponent, SharedService } from '../../shared';
-import { BsModalService } from 'ngx-bootstrap/modal';
-import { ConnectorConfigurationService } from '../../connector';
 
 @Component({
   selector: 'd11r-mapping-connector',
@@ -50,48 +51,50 @@ import { ConnectorConfigurationService } from '../../connector';
   imports: [ConnectorGridComponent, CommonModule]
 })
 export class MappingConnectorComponent implements OnInit, OnDestroy {
-  @ViewChild(ConnectorGridComponent)
-  connectorGrid!: ConnectorGridComponent;
+  @ViewChild(ConnectorGridComponent) connectorGrid!: ConnectorGridComponent;
   @Input() stepperConfiguration: StepperConfiguration;
   @Input() directions: Direction[] = [Direction.INBOUND, Direction.OUTBOUND];
+  @Output() deploymentMapEntryChange = new EventEmitter<DeploymentMapEntry>();
+
+  readonly Direction = Direction;
+  readonly EditorMode = EditorMode;
+  readonly selectedResult$ = new BehaviorSubject<number>(0);
+
+  feature: Feature;
+  readOnly: boolean;
+
   private _deploymentMapEntry: DeploymentMapEntry;
+
+  constructor(
+    private readonly sharedService: SharedService,
+    public readonly bsModalService: BsModalService,
+    public readonly connectorConfigurationService: ConnectorConfigurationService
+  ) {}
+
   @Input()
   get deploymentMapEntry(): DeploymentMapEntry {
     return this._deploymentMapEntry;
   }
+
   set deploymentMapEntry(value: DeploymentMapEntry) {
     this._deploymentMapEntry = value;
     this.deploymentMapEntryChange.emit(value);
   }
-  @Output() deploymentMapEntryChange = new EventEmitter<any>();
-  Direction = Direction;
-  EditorMode = EditorMode;
-  feature: Feature;
-  readOnly: boolean;
 
-  selectedResult$: BehaviorSubject<number> = new BehaviorSubject<number>(0);
-
-  constructor(
-    private sharedService: SharedService,
-    public bsModalService: BsModalService,
-    public connectorConfigurationService: ConnectorConfigurationService
-  ) { }
-
-  async ngOnInit() {
-    this.readOnly =
-      this.stepperConfiguration.editorMode == EditorMode.READ_ONLY;
+  async ngOnInit(): Promise<void> {
+    this.readOnly = this.stepperConfiguration.editorMode === EditorMode.READ_ONLY;
     this.feature = await this.sharedService.getFeatures();
   }
 
-  async onConfigurationAddOrUpdate(config:ConnectorConfiguration) {
+  ngOnDestroy(): void {
+    this.selectedResult$.complete();
+  }
+
+  async onConfigurationAddOrUpdate(config: ConnectorConfiguration): Promise<void> {
     this.connectorGrid.onConfigurationAddOrUpdate(config);
   }
 
-  refresh() {
+  refresh(): void {
     this.connectorGrid.refresh();
-  }
-
-  ngOnDestroy() {
-    this.selectedResult$.complete();
   }
 }
