@@ -616,7 +616,7 @@ export enum ExtensionStatus {
 }
 
 export interface MappingStatus {
-  id: number;
+  id: string;
   name: string;
   identifier: string;
   direction: Direction;

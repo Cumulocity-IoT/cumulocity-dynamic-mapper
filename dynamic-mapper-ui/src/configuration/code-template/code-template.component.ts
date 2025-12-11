@@ -35,6 +35,7 @@ import { HttpStatusCode } from '@angular/common/http';
 import { createCompletionProviderSubstitutionAsCode } from '../../mapping/shared/stepper.model';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { CommonModule } from '@angular/common';
+import { PopoverModule } from 'ngx-bootstrap/popover';
 
 let initializedMonaco = false;
 
@@ -44,7 +45,7 @@ let initializedMonaco = false;
   styleUrls: ['./code-template.component.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
-  imports: [CoreModule, CommonModule, EditorComponent]
+  imports: [CoreModule, CommonModule, PopoverModule, EditorComponent]
 })
 export class CodeComponent implements OnInit {
   codeTemplateDecoded: CodeTemplate;

@@ -29,13 +29,14 @@ import { AIAgentService } from 'src/mapping/core/ai-agent.service';
 import { BehaviorSubject, from, map, Subject, takeUntil } from 'rxjs';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { CommonModule } from '@angular/common';
+import { PopoverModule } from 'ngx-bootstrap/popover';
 
 @Component({
   selector: 'd11r-mapping-service-configuration',
   styleUrls: ['./service-configuration.component.style.css'],
   templateUrl: 'service-configuration.component.html',
   standalone: true,
-  imports:[CoreModule, CommonModule]
+  imports:[CoreModule, CommonModule, PopoverModule]
 })
 export class ServiceConfigurationComponent implements OnInit, OnDestroy {
 
