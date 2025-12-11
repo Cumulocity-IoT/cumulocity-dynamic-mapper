@@ -27,7 +27,7 @@
           <select class="form-control" style="width: 280px" [(ngModel)]="filterStatusLog.type" name="type">
             <ng-container *ngFor="let lt of LoggingEventTypeMap | keyvalue">
               <option [ngValue]="lt.key"
-                *ngIf="lt.value['component'] == 'd11r_connector' || lt.value['component'] == LoggingEventTypeMap[LoggingEventType.ALL].component">
+                *ngIf="lt.value['component'] === 'd11r_connector' || lt.value['component'] === LoggingEventTypeMap[LoggingEventType.ALL].component">
                 {{ lt.key | formatStringAsWords }}
               </option>
             </ng-container>
@@ -72,12 +72,12 @@
           <div class="d-flex">
             <div class="col-md-1">
               <div class="label label-primary">
-                {{ event.status ? event.status : '-' }}
+                {{ event.status ?? '-' }}
               </div>
             </div>
             <div class="col-md-2">{{ event.connectorName }}</div>
             <div class="col-md-9">
-              <div>{{ event.message ? event.message : '-' }}</div>
+              <div>{{ event.message ?? '-' }}</div>
             </div>
           </div>
         </c8y-li-body>

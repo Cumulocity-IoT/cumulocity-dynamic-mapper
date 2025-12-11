@@ -86,18 +86,17 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
   private featurePromise: Promise<Feature>;
   initialStateDrawer: any;
 
-  constructor(
-  ) {
+  private readonly alertService = inject(AlertService);
+  private readonly sharedService = inject(SharedService);
+  private readonly bsModalService = inject(BsModalService);
+  private readonly bottomDrawerService = inject(BottomDrawerService);
+  readonly connectorConfigurationService = inject(ConnectorConfigurationService);
+  private readonly fb = inject(FormBuilder);
+
+  constructor() {
     this.toggleIntervalForm = this.initForm();
     this.featurePromise = this.sharedService.getFeatures();
   }
-
-  alertService = inject(AlertService);
-  sharedService = inject(SharedService);
-  bsModalService = inject(BsModalService);
-  bottomDrawerService = inject(BottomDrawerService);
-  connectorConfigurationService = inject(ConnectorConfigurationService);
-  fb = inject(FormBuilder);
 
   async ngOnInit(): Promise<void> {
     this.initializeColumns();
@@ -371,9 +370,9 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
     return rules.every(rule => {
       switch (rule.type) {
         case 'enabled':
-          return (item.enabled === rule.value);
+          return item.enabled === rule.value;
         case 'readOnly':
-          return (this.readOnly === rule.value);
+          return this.readOnly === rule.value;
         case 'connectorType':
           return item.connectorType !== ConnectorType.HTTP;
         case 'userRole':

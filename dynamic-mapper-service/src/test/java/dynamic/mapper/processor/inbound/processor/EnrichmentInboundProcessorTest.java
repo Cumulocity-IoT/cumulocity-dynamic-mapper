@@ -39,6 +39,7 @@ import org.mockito.quality.Strictness;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
+import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
@@ -52,6 +53,9 @@ import lombok.extern.slf4j.Slf4j;
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class EnrichmentInboundProcessorTest {
+
+    @Mock
+    private ConfigurationRegistry configurationRegistry;
 
     @Mock
     private MappingService mappingService;
@@ -100,10 +104,7 @@ class EnrichmentInboundProcessorTest {
         );
 
         // Create the processor
-        processor = new EnrichmentInboundProcessor();
-
-        // Use reflection to inject the mocked mappingService
-        injectMappingServiceIfExists(processor, mappingService);
+        processor = new EnrichmentInboundProcessor(configurationRegistry, mappingService);
 
         // Setup basic exchange and message mocks
         when(exchange.getIn()).thenReturn(message);
@@ -228,7 +229,7 @@ class EnrichmentInboundProcessorTest {
     @Test
     void testConstructorInitialization() {
         // Given & When
-        EnrichmentInboundProcessor newProcessor = new EnrichmentInboundProcessor();
+        EnrichmentInboundProcessor newProcessor = new EnrichmentInboundProcessor(configurationRegistry, mappingService);
 
         // Then
         assertNotNull(newProcessor);
@@ -287,7 +288,7 @@ class EnrichmentInboundProcessorTest {
     @Test
     void testWithMinimalMocking() throws Exception {
         // Create a completely fresh processor with minimal mocking
-        EnrichmentInboundProcessor freshProcessor = new EnrichmentInboundProcessor();
+        EnrichmentInboundProcessor freshProcessor = new EnrichmentInboundProcessor(configurationRegistry, mappingService);
 
         // Only inject mappingService if the field exists
         try {

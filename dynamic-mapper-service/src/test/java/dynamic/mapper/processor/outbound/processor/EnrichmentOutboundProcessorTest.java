@@ -70,6 +70,9 @@ class EnrichmentOutboundProcessorTest {
     private MappingService mappingService;
 
     @Mock
+    private dynamic.mapper.core.C8YAgent c8yAgent;
+
+    @Mock
     private Exchange exchange;
 
     @Mock
@@ -107,10 +110,7 @@ class EnrichmentOutboundProcessorTest {
         mappingStatus = createMappingStatus();
 
         // Create the processor
-        processor = new EnrichmentOutboundProcessor();
-
-        // Inject dependencies
-        injectDependencies();
+        processor = new EnrichmentOutboundProcessor(configurationRegistry, mappingService, c8yAgent);
 
         // Setup basic exchange and message mocks
         when(exchange.getIn()).thenReturn(message);

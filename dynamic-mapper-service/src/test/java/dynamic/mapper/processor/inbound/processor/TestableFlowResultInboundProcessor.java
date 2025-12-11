@@ -23,12 +23,16 @@ package dynamic.mapper.processor.inbound.processor;
 
 import java.util.List;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.model.API;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.flow.CumulocityObject;
 import dynamic.mapper.processor.flow.ExternalId;
 import dynamic.mapper.processor.flow.ExternalSource;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.service.MappingService;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -52,7 +56,14 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 public class TestableFlowResultInboundProcessor extends FlowResultInboundProcessor {
-    
+
+    public TestableFlowResultInboundProcessor(
+            MappingService mappingService,
+            C8YAgent c8yAgent,
+            ObjectMapper objectMapper) {
+        super(mappingService, c8yAgent, objectMapper);
+    }
+
     /**
      * Custom function to resolve device identifiers.
      * If not set, uses default implementation.

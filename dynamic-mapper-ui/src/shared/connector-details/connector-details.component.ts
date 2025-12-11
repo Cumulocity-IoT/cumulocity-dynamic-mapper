@@ -68,16 +68,16 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
   contextSubscription: Subscription;
   initialStateDrawer: any;
 
-  private destroy$ = new Subject<void>();
+  private readonly destroy$ = new Subject<void>();
 
-  connectorStatusService = inject(ConnectorLogService);
-  route = inject(ActivatedRoute);
-  alertService = inject(AlertService);
-  sharedService = inject(SharedService);
-  bsModalService = inject(BsModalService);
-  bottomDrawerService = inject(BottomDrawerService);
-  connectorConfigurationService = inject(ConnectorConfigurationService);
-  cdr = inject(ChangeDetectorRef);
+  private readonly connectorStatusService = inject(ConnectorLogService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly alertService = inject(AlertService);
+  private readonly sharedService = inject(SharedService);
+  private readonly bsModalService = inject(BsModalService);
+  private readonly bottomDrawerService = inject(BottomDrawerService);
+  private readonly connectorConfigurationService = inject(ConnectorConfigurationService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   async ngOnInit() {
     // console.log('Running version', this.version);

@@ -106,10 +106,8 @@ class FlowResultInboundProcessorTest {
     @BeforeEach
     void setUp() throws Exception {
         // Create testable processor with default device ID
-        processor = new TestableFlowResultInboundProcessor()
+        processor = new TestableFlowResultInboundProcessor(mappingService, c8yAgent, objectMapper)
                 .withDefaultDeviceId(TEST_DEVICE_ID);
-        
-        injectDependencies();
 
         mapping = createSampleMapping();
         mappingStatus = new MappingStatus(

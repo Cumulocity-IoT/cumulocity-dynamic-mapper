@@ -30,7 +30,7 @@
           class="btn btn-default btn-sm m-b-24"
           (click)="onConfigurationAddOrUpdate(undefined)"
           translate
-          [disabled]="stepperConfiguration.editorMode == EditorMode.READ_ONLY"
+          [disabled]="stepperConfiguration.editorMode === EditorMode.READ_ONLY"
           title="Add connector"
         >
           <i c8yIcon="plus-circle-o"></i>&nbsp;Add connector

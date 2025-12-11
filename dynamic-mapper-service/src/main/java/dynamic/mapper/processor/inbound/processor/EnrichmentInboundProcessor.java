@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.camel.Exchange;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.cumulocity.sdk.client.ProcessingMode;
@@ -34,13 +33,17 @@ import org.graalvm.polyglot.Value;
 @Slf4j
 public class EnrichmentInboundProcessor extends BaseProcessor {
 
-    @Autowired
-    private ConfigurationRegistry configurationRegistry;
-
-    @Autowired
-    private MappingService mappingService;
+    private final ConfigurationRegistry configurationRegistry;
+    private final MappingService mappingService;
 
     private Context.Builder graalContextBuilder;
+
+    public EnrichmentInboundProcessor(
+            ConfigurationRegistry configurationRegistry,
+            MappingService mappingService) {
+        this.configurationRegistry = configurationRegistry;
+        this.mappingService = mappingService;
+    }
 
     @Override
     public void process(Exchange exchange) throws Exception {
@@ -101,10 +104,11 @@ public class EnrichmentInboundProcessor extends BaseProcessor {
             String errorMessage = String.format("%s - Error in enrichment phase for mapping: %s", tenant,
                     mapping.getName());
             log.error(errorMessage, e);
-            if(e instanceof ProcessingException)
+            if (e instanceof ProcessingException) {
                 context.addError((ProcessingException) e);
-            else
+            } else {
                 context.addError(new ProcessingException(errorMessage, e));
+            }
             mappingStatus.errors++;
             mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
             return;
@@ -124,8 +128,9 @@ public class EnrichmentInboundProcessor extends BaseProcessor {
 
     private Context createGraalContext(Engine graalEngine)
             throws Exception {
-        if (graalContextBuilder == null)
+        if (graalContextBuilder == null) {
             graalContextBuilder = Context.newBuilder("js");
+        }
 
         Context graalContext = graalContextBuilder
                 .engine(graalEngine)
@@ -184,7 +189,7 @@ public class EnrichmentInboundProcessor extends BaseProcessor {
 
     // ========== ENRICHMENT LOGIC (from EnrichmentInboundProcessor) ==========
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @SuppressWarnings("unchecked")
     public void enrichPayload(ProcessingContext<?> context) {
         /*
          * step 0 patch payload with dummy property _TOPIC_LEVEL_ in case the content
@@ -228,41 +233,40 @@ public class EnrichmentInboundProcessor extends BaseProcessor {
             }
 
         } else if (payloadObject instanceof Map) {
+            Map<String, Object> payloadMap = (Map<String, Object>) payloadObject;
+
             // Keep original behavior - add to payload
-            ((Map) payloadObject).put(Mapping.TOKEN_TOPIC_LEVEL, splitTopicAsList);
+            payloadMap.put(Mapping.TOKEN_TOPIC_LEVEL, splitTopicAsList);
 
             // Process message context
             if (context.getKey() != null) {
                 String keyString = context.getKey();
-                Map<String, String> contextData = new HashMap<String, String>() {
-                    {
-                        put(Mapping.CONTEXT_DATA_KEY_NAME, keyString);
-                        put("api", context.getMapping().getTargetAPI().toString());
-                        put("processingMode", ProcessingMode.PERSISTENT.toString());
-                        if (context.getMapping().getCreateNonExistingDevice()) {
-                            put(ProcessingContext.DEVICE_NAME, context.getDeviceName());
-                            put(ProcessingContext.DEVICE_TYPE, context.getDeviceType());
-                        }
-                    }
-                };
+                Map<String, String> contextData = new HashMap<>();
+                contextData.put(Mapping.CONTEXT_DATA_KEY_NAME, keyString);
+                contextData.put("api", context.getMapping().getTargetAPI().toString());
+                contextData.put("processingMode", ProcessingMode.PERSISTENT.toString());
+                if (context.getMapping().getCreateNonExistingDevice()) {
+                    contextData.put(ProcessingContext.DEVICE_NAME, context.getDeviceName());
+                    contextData.put(ProcessingContext.DEVICE_TYPE, context.getDeviceType());
+                }
 
                 // Add to payload (original behavior)
-                ((Map) payloadObject).put(Mapping.TOKEN_CONTEXT_DATA, contextData);
+                payloadMap.put(Mapping.TOKEN_CONTEXT_DATA, contextData);
             }
 
             // Handle attachment properties independently
             if (context.getMapping().getEventWithAttachment()) {
                 // Get or create the context data map from payload
                 Map<String, String> contextData;
-                if (((Map) payloadObject).containsKey(Mapping.TOKEN_CONTEXT_DATA)) {
-                    contextData = (Map<String, String>) ((Map) payloadObject).get(Mapping.TOKEN_CONTEXT_DATA);
+                if (payloadMap.containsKey(Mapping.TOKEN_CONTEXT_DATA)) {
+                    contextData = (Map<String, String>) payloadMap.get(Mapping.TOKEN_CONTEXT_DATA);
                 } else {
                     contextData = new HashMap<>();
-                    ((Map) payloadObject).put(Mapping.TOKEN_CONTEXT_DATA, contextData);
+                    payloadMap.put(Mapping.TOKEN_CONTEXT_DATA, contextData);
                 }
 
                 // Add attachment properties to payload context data
-                contextData.put(ProcessingContext.ATTACHMENT_NAME, "");
+                contextData.put(ProcessingContext.ATTACHMENT_TYPE, "");
                 contextData.put(ProcessingContext.ATTACHMENT_NAME, "");
                 contextData.put(ProcessingContext.ATTACHMENT_DATA, "");
             }

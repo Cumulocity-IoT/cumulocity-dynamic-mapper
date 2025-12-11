@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.camel.Exchange;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.cumulocity.model.idtype.GId;
@@ -56,16 +55,20 @@ import org.graalvm.polyglot.Value;
 @Slf4j
 public class EnrichmentOutboundProcessor extends BaseProcessor {
 
-    @Autowired
-    private ConfigurationRegistry configurationRegistry;
-
-    @Autowired
-    private MappingService mappingService;
-
-    @Autowired
-    private C8YAgent c8yAgent;
+    private final ConfigurationRegistry configurationRegistry;
+    private final MappingService mappingService;
+    private final C8YAgent c8yAgent;
 
     private Context.Builder graalContextBuilder;
+
+    public EnrichmentOutboundProcessor(
+            ConfigurationRegistry configurationRegistry,
+            MappingService mappingService,
+            C8YAgent c8yAgent) {
+        this.configurationRegistry = configurationRegistry;
+        this.mappingService = mappingService;
+        this.c8yAgent = c8yAgent;
+    }
 
     @Override
     public void process(Exchange exchange) throws Exception {
@@ -136,8 +139,9 @@ public class EnrichmentOutboundProcessor extends BaseProcessor {
 
     private Context createGraalContext(Engine graalEngine)
             throws Exception {
-        if (graalContextBuilder == null)
+        if (graalContextBuilder == null) {
             graalContextBuilder = Context.newBuilder("js");
+        }
 
         Context graalContext = graalContextBuilder
                 .engine(graalEngine)
@@ -226,17 +230,19 @@ public class EnrichmentOutboundProcessor extends BaseProcessor {
             addToFlowContext(flowContext, context, ProcessingContext.RETAIN, false);
         } else {
             if (payloadObject instanceof Map) {
-                ((Map) payloadObject).put(Mapping.TOKEN_IDENTITY, identityFragment);
-                ((Map) payloadObject).put(ProcessingContext.RETAIN, false);
+                @SuppressWarnings("unchecked")
+                Map<String, Object> payloadMap = (Map<String, Object>) payloadObject;
+                payloadMap.put(Mapping.TOKEN_IDENTITY, identityFragment);
+                payloadMap.put(ProcessingContext.RETAIN, false);
                 List<String> splitTopicExAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
-                ((Map) payloadObject).put(Mapping.TOKEN_TOPIC_LEVEL, splitTopicExAsList);
+                payloadMap.put(Mapping.TOKEN_TOPIC_LEVEL, splitTopicExAsList);
             } else {
                 log.warn("{} - Parsing this message as JSONArray, no elements from the topic level can be used!",
                         tenant);
             }
         }
 
-        if (mapping.getUseExternalId() && !("").equals(mapping.getExternalIdType())) {
+        if (mapping.getUseExternalId() && !mapping.getExternalIdType().isEmpty()) {
             ExternalIDRepresentation externalId = c8yAgent.resolveGlobalId2ExternalId(context.getTenant(),
                     new GId(sourceId.toString()), mapping.getExternalIdType(),
                     context.getTesting());

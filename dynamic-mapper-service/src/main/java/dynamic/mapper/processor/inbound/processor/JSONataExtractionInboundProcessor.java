@@ -7,7 +7,6 @@ import java.util.Map;
 
 import org.apache.camel.Exchange;
 import org.joda.time.DateTime;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import static dynamic.mapper.model.Substitution.toPrettyJsonString;
@@ -31,8 +30,11 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class JSONataExtractionInboundProcessor extends BaseProcessor {
 
-    @Autowired
-    private MappingService mappingService;
+    private final MappingService mappingService;
+
+    public JSONataExtractionInboundProcessor(MappingService mappingService) {
+        this.mappingService = mappingService;
+    }
 
     @Override
     public void process(Exchange exchange) throws Exception {
@@ -49,11 +51,12 @@ public class JSONataExtractionInboundProcessor extends BaseProcessor {
                     "%s - Error in JSONataExtractionInboundProcessor for mapping: %s,",
                     tenant, mapping.getName());
             log.error(errorMessage, e);
-            if(e instanceof ProcessingException)
+            if (e instanceof ProcessingException) {
                 context.addError((ProcessingException) e);
-            else
+            } else {
                 context.addError(new ProcessingException(errorMessage, e));
-            
+            }
+
             if (!testing) {
                 MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
                 mappingStatus.errors++;

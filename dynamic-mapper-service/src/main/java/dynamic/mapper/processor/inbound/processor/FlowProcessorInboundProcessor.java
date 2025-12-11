@@ -10,7 +10,6 @@ import org.apache.camel.Exchange;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
@@ -30,8 +29,11 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class FlowProcessorInboundProcessor extends BaseProcessor {
 
-    @Autowired
-    private MappingService mappingService;
+    private final MappingService mappingService;
+
+    public FlowProcessorInboundProcessor(MappingService mappingService) {
+        this.mappingService = mappingService;
+    }
 
     @Override
     public void process(Exchange exchange) throws Exception {
@@ -53,10 +55,11 @@ public class FlowProcessorInboundProcessor extends BaseProcessor {
                     tenant, mapping.getName(), e.getMessage(), lineNumber);
             log.error(errorMessage, e);
 
-            if (e instanceof ProcessingException)
+            if (e instanceof ProcessingException) {
                 context.addError((ProcessingException) e);
-            else
+            } else {
                 context.addError(new ProcessingException(errorMessage, e));
+            }
 
             if (!testing) {
                 MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);

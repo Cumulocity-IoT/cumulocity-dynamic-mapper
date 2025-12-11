@@ -49,15 +49,15 @@ export class ConnectorStatusComponent implements OnInit, OnDestroy {
     connectorIdentifier: 'ALL',
     type: LoggingEventType.ALL,
   };
-  LoggingEventTypeMap = LoggingEventTypeMap;
-  LoggingEventType = LoggingEventType;
-  private destroy$ = new Subject<void>();
+  readonly LoggingEventTypeMap = LoggingEventTypeMap;
+  readonly LoggingEventType = LoggingEventType;
+  private readonly destroy$ = new Subject<void>();
 
   constructor(
-    public bsModalService: BsModalService,
-    public connectorStatusService: ConnectorLogService,
-    public connectorConfigurationService: ConnectorConfigurationService,
-    public alertService: AlertService,
+    private readonly bsModalService: BsModalService,
+    readonly connectorStatusService: ConnectorLogService,
+    readonly connectorConfigurationService: ConnectorConfigurationService,
+    private readonly alertService: AlertService
   ) {}
 
   async ngOnInit() {
@@ -82,6 +82,6 @@ export class ConnectorStatusComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.destroy$.next();
     this.destroy$.complete();
-        this.connectorStatusService.stopConnectorStatusLogs();
+    this.connectorStatusService.stopConnectorStatusLogs();
   }
 }

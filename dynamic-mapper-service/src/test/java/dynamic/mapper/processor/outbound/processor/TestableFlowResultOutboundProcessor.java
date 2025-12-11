@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.camel.Exchange;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -38,6 +37,7 @@ import dynamic.mapper.processor.flow.ExternalSource;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.util.JavaScriptInteropHelper;
+import dynamic.mapper.service.MappingService;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -46,6 +46,15 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 public class TestableFlowResultOutboundProcessor extends FlowResultOutboundProcessor {
+
+    private final ObjectMapper objectMapper;
+
+    public TestableFlowResultOutboundProcessor(
+            MappingService mappingService,
+            ObjectMapper objectMapper) {
+        super(mappingService, objectMapper);
+        this.objectMapper = objectMapper;
+    }
 
     @Setter
     private DeviceResolverFunction deviceResolver;
@@ -62,10 +71,6 @@ public class TestableFlowResultOutboundProcessor extends FlowResultOutboundProce
     // Flag to use simplified processing for tests
     @Setter
     private boolean useSimplifiedProcessing = true;
-
-    // Need access to objectMapper - it's injected in parent
-    @Autowired
-    private ObjectMapper objectMapper;
 
     @FunctionalInterface
     public interface DeviceResolverFunction {

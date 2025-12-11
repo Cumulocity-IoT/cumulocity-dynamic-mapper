@@ -101,11 +101,9 @@ class FlowResultOutboundProcessorTest {
 @BeforeEach
 void setUp() throws Exception {
     // Create testable processor with simplified processing enabled
-    processor = new TestableFlowResultOutboundProcessor()
+    processor = new TestableFlowResultOutboundProcessor(mappingService, objectMapper)
             .withDefaultDeviceId(TEST_DEVICE_ID)
-            .withSimplifiedProcessing(true);  // <-- ADD THIS!
-    
-    injectDependencies();
+            .withSimplifiedProcessing(true);
 
     mapping = createSmartFunctionOutboundMapping();
     mappingStatus = new MappingStatus(
@@ -398,7 +396,7 @@ void setUp() throws Exception {
         // Given - Create a NEW processor with custom resolver
         String customDeviceId = "custom-device-999";
 
-        TestableFlowResultOutboundProcessor customProcessor = new TestableFlowResultOutboundProcessor()
+        TestableFlowResultOutboundProcessor customProcessor = new TestableFlowResultOutboundProcessor(mappingService, objectMapper)
                 .withDefaultDeviceId(customDeviceId)
                 .withDeviceResolver((externalSource, context, tenant) -> {
                     log.info("Custom device resolver called for externalId: {}, returning: {}",

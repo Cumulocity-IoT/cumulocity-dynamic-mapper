@@ -87,8 +87,7 @@ class JSONataExtractionInboundProcessorTest {
     @BeforeEach
     void setUp() throws Exception {
         // Create the processor
-        processor = new JSONataExtractionInboundProcessor();
-        injectMappingService(processor, mappingService);
+        processor = new JSONataExtractionInboundProcessor(mappingService);
 
         // Create test mapping with ALL required fields
         Mapping mapping = createCompleteMapping();
