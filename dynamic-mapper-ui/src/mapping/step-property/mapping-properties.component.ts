@@ -315,7 +315,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             className: 'col-lg-3',
             key: 'createNonExistingDevice',
             type: 'switch',
-            wrappers: ['custom-form-field-wrapper'],
+            wrappers: ['c8y-form-field'],
             templateOptions: {
               label: 'Create device',
               disabled:
@@ -335,7 +335,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             className: 'col-lg-3',
             key: 'updateExistingDevice',
             type: 'switch',
-            wrappers: ['custom-form-field-wrapper'],
+            wrappers: ['c8y-form-field'],
             templateOptions: {
               label: 'Update Existing Device',
               disabled:
@@ -355,7 +355,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             className: 'col-lg-3',
             key: 'autoAckOperation',
             type: 'switch',
-            wrappers: ['custom-form-field-wrapper'],
+            wrappers: ['c8y-form-field'],
             templateOptions: {
               label: 'Auto acknowledge',
               disabled:
@@ -376,7 +376,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             className: 'col-lg-3',
             key: 'eventWithAttachment',
             type: 'switch',
-            wrappers: ['custom-form-field-wrapper'],
+            wrappers: ['c8y-form-field'],
             templateOptions: {
               label: 'Event contains attachment',
               disabled:
@@ -434,7 +434,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             className: 'col-lg-3',
             key: 'useExternalId',
             type: 'switch',
-            wrappers: ['custom-form-field-wrapper'],
+            wrappers: ['c8y-form-field'],
             templateOptions: {
               label: 'Use external id',
               switchMode: true,

@@ -28,10 +28,10 @@ import {
   ConnectorSpecification,
   ConnectorType,
   Feature,
-  FormatStringPipe,
   nextIdAndPad,
   SharedService
 } from '../..';
+import { FormatStringPipe } from '../../misc/format-string.pipe';
 import { CommonModule } from '@angular/common';
 
 interface PropertyEntry {
@@ -49,7 +49,7 @@ interface PropertyEntry {
     CommonModule,
     FormsModule,
     FormlyModule,
-  ],
+  ]
 })
 export class ConnectorConfigurationDrawerComponent implements OnInit {
   @Input() add: boolean;
@@ -87,7 +87,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
 
   bottomDrawerRef = inject(BottomDrawerRef);
   sharedService = inject(SharedService);
-  formatStringPipe = inject(FormatStringPipe);
+  formatStringPipe = new FormatStringPipe();
   cd = inject(ChangeDetectorRef);
   mode: string;
 
@@ -198,7 +198,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
   }
 
   private createLargeStringField(entry: PropertyEntry): FormlyFieldConfig {
-    return this.createBaseFormField(entry, 'textarea-custom', {
+    return this.createBaseFormField(entry, 'd11r-textarea', {
       cols: 120,
       rows: 6
     });
@@ -264,7 +264,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
         },
         {
           className: 'col-lg-12',
-          type: 'textarea-custom',
+          type: 'd11r-textarea',
           key: 'description',
           wrappers: ['c8y-form-field'],
           templateOptions: {

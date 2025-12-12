@@ -315,12 +315,11 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         fieldGroup: [
           {
             key: 'filterMapping',
-            type: 'input-custom',
-            wrappers: ['custom-form-field-wrapper'],
+            type: 'd11r-input',
+            wrappers: ['c8y-form-field'],
             templateOptions: {
               label: 'Filter execution mapping',
               class: 'input-sm',
-              customWrapperClass: 'm-b-24',
               disabled: this.stepperConfiguration.editorMode === EditorMode.READ_ONLY ||
                 !this.stepperConfiguration.allowDefiningSubstitutions ||
                 (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),

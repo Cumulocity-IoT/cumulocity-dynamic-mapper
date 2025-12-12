@@ -147,12 +147,11 @@ export class MappingSubstitutionStepComponent implements OnInit {
           {
             className: 'col-lg-5 col-lg-offset-1',
             key: 'pathSource',
-            type: 'input-custom',
-            wrappers: ['custom-form-field-wrapper'],
+            type: 'd11r-input',
+            wrappers: ['c8y-form-field'],
             templateOptions: {
               label: 'Source Expression',
               class: 'input-sm',
-              customWrapperClass: 'm-b-24',
               disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
                 !this.stepperConfiguration.allowDefiningSubstitutions,
               placeholder: '$join([$substring(txt,5), id]) or $number(id)/10',
@@ -183,11 +182,10 @@ export class MappingSubstitutionStepComponent implements OnInit {
           {
             className: 'col-lg-5',
             key: 'pathTarget',
-            type: 'input-custom',
-            wrappers: ['custom-form-field-wrapper'],
+            type: 'd11r-input',
+            wrappers: ['c8y-form-field'],
             templateOptions: {
               label: 'Target Expression',
-              customWrapperClass: 'm-b-24',
               disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
                 !this.stepperConfiguration.allowDefiningSubstitutions,
               description: `Use <a href="https://jsonata.org" target="_blank">JSONata</a>

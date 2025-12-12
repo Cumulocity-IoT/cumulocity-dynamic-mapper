@@ -44,7 +44,7 @@ import { FieldType, FormlyModule } from '@ngx-formly/core';
   standalone: true,
   imports: [FormsModule, ReactiveFormsModule, FormlyModule]
 })
-export class FieldTextareaCustom extends FieldType {
+export class CustomFieldTextarea extends FieldType {
   get class() {
     return `form-control ${this.props['class']}`;
   }
