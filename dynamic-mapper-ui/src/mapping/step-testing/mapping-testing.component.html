@@ -85,7 +85,7 @@
           <div style="display: flex">
             <label>{{ targetSystem }} Response&nbsp;</label>
             <div *ngIf="(selectedResult$ | async) > 0" class="m-l-auto">
-              <span class="badge badge-success m-r-8">{{
+              <span class="badge badge-success m-r-8"> {{
                 selectedResult$ | async
                 }}</span>
               </div>
@@ -127,7 +127,7 @@
             <button type="button" class="btn btn-default btn-sm" (click)="onNextTestResult()"
               [disabled]="!stepperConfiguration.allowTestTransformation || testingModel.results.length <= 1">
               Show Next Test Result&nbsp;<span *ngIf="testingModel.results.length > 0" class="badge badge-success">
-                {{ testingModel.results.length }}</span>
+                total {{ testingModel.results.length }}</span>
             </button>
           </div>
           <div class="btn-group">
