@@ -36,7 +36,7 @@ import { FormlyPresetModule } from '@ngx-formly/core/preset';
 import {
   MappingNavigationFactory,
 } from './shared';
-import { TestingModule } from './testing-device/testing.module';
+import { TestingModule } from './test-device/testing.module';
 import './shared/styles/shared.css';
 import { BrokerConnectorModule } from './connector';
 import { LandingModule } from './landing/landing.module';

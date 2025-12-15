@@ -39,11 +39,11 @@ import {
   TransformationTypeDescriptions,
   TransformationTypeLabels
 } from '../../shared';
-import { CodeTemplate } from 'src/configuration';
+import { CodeTemplate } from '../../configuration';
 import { CodeExplorerComponent } from '../code-explorer/code-explorer-modal.component';
 import { base64ToString } from '../shared/util';
 import { CommonModule } from '@angular/common';
-import { CustomSelectComponent } from 'src/shared/component/select/custom-select.component';
+import { CustomSelectComponent } from '../../shared/component/select/custom-select.component';
 
 // Types
 interface SelectOption<T> {

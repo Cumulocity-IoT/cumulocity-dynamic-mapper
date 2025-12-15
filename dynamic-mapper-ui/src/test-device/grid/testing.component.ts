@@ -33,7 +33,7 @@ import {
 } from '@c8y/ngx-components';
 import { TestingDeviceService } from '../testing.service';
 import { ActivatedRoute } from '@angular/router';
-import { Feature } from 'src/shared';
+import { Feature } from '../../shared';
 
 @Component({
   selector: 'd11r-mapping-testing-grid',

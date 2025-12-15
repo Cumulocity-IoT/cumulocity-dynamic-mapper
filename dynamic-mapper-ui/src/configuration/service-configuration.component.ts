@@ -27,7 +27,7 @@ import { gettext } from '@c8y/ngx-components/gettext';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { BehaviorSubject, from, map, Subject, takeUntil } from 'rxjs';
 import packageJson from '../../package.json';
-import { AIAgentService } from 'src/mapping/core/ai-agent.service';
+import { AIAgentService } from '../mapping/core/ai-agent.service';
 import { Feature, Operation, SharedService } from '../shared';
 import { ServiceConfiguration } from './shared/configuration.model';
 
