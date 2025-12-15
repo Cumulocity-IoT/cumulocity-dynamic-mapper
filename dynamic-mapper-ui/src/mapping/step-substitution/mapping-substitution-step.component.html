@@ -26,7 +26,7 @@
                         <div class="d-flex j-c-between">
                             <div class="d-flex">
                                 <label>Target Template - {{ targetSystem }}</label>
-                                <span class="hidden-xs hidden-sm m-l-4">
+                                <span class="hidden-xs hidden-sm">
                                     <ng-template #popupTargetTemplateHelp>
                                         <div [innerHtml]="targetTemplateHelp"></div>
                                     </ng-template>
@@ -101,9 +101,21 @@
                             </button>
                         </div>
                         <div class="btn-group">
-                            <button type="button" class="btn btn-default btn-sm" (click)="toggleExpertMode()">
+                            <!-- <button type="button" class="btn btn-default btn-sm" (click)="toggleExpertMode()">
                                 <i c8yIcon="c8y-analytic-model"></i>&nbsp;Toggle expert mode
-                            </button>
+                            </button> -->
+
+                            <div class="d-flex m-l-auto m-r-auto">
+                                <label class="c8y-switch">
+                                    <input type="checkbox" (click)="toggleExpertMode()" />
+                                    <span class="m-r-8"></span>
+                                    {{ 'Expert Mode' | translate }}
+                                </label>
+
+                                <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
+                                    popover="{{'Allow to define expressions using JSONata'}}" triggers="focus"
+                                    type="button" container="body"></button>
+                            </div>
                         </div>
                     </div>
                 </div>
