@@ -220,9 +220,9 @@ public class ProcessingResultHelper {
                 : context.getMapping().getExternalIdType();
 
         // Set device properties
-        request.put(MappingRepresentation.MAPPING_GENERATED_DEVICE, null);
-        request.put("c8y_IsDevice", null);
-        request.put("com_cumulocity_model_Agent", null);
+        // request.put(MappingRepresentation.MAPPING_GENERATED_DEVICE, new HashMap<>());
+        request.put("c8y_IsDevice",  new HashMap<>());
+        request.put("com_cumulocity_model_Agent",  new HashMap<>());
 
         try {
             int predecessor = context.getRequests().size();

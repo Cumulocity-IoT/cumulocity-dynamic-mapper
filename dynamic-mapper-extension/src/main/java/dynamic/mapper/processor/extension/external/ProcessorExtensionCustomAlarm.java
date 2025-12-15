@@ -255,9 +255,9 @@ public class ProcessorExtensionCustomAlarm
         Map<String, Object> request = new HashMap<String, Object>();
         request.put("name",
                 "device_" + identity.getType() + "_" + identity.getValue());
-        request.put(MappingRepresentation.MAPPING_GENERATED_DEVICE, null);
-        request.put("c8y_IsDevice", null);
-        request.put("com_cumulocity_model_Agent", null);
+        // request.put(MappingRepresentation.MAPPING_GENERATED_DEVICE, new HashMap<>());
+        request.put("c8y_IsDevice",  new HashMap<>());
+        request.put("com_cumulocity_model_Agent",  new HashMap<>());
         try {
             var predecessor = context.getRequests().size();
             var requestString = objectMapper.writeValueAsString(request);
