@@ -18,25 +18,6 @@ Parse multiline CSV payload and create measurements
 01/12/2025 15:59:38,0,+021.63,+00002042,+000139.3,-088.7,+000.2,00
 */
 
-/**
- * @name Sample parsing payload as CSV
- * @description Create measurement parsing payload as CSV
- * @templateType INBOUND_SMART_FUNCTION
- * @direction INBOUND
- * @defaultTemplate false
- * @internal true
- * @readonly true
- */
-
-/*
-Parse multiline CSV payload and create measurements
-
-351144440855493
-01/12/2025 15:49:38,0,+021.63,+00002045,+000139.3,-088.7,+000.2,00
-01/12/2025 15:54:38,0,+021.63,+00002041,+000139.3,-088.7,+000.3,00
-01/12/2025 15:59:38,0,+021.63,+00002042,+000139.3,-088.7,+000.2,00
-*/
-
 function onMessage(msg, context) {
     const payload = msg.getPayload();
     console.log("Context: " + context.getConfig());
