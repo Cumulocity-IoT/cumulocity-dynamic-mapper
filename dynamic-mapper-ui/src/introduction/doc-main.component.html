@@ -46,13 +46,16 @@
       <li><a (click)="scrollToElement('define-subscription-for-outbound')" style="cursor: pointer;">{{ 'Defining a
           subscription for outbound mapping' | translate
           }}</a></li>
-      <li><a (click)="scrollToElement('transformation-types')" style="cursor: pointer;">{{ 'Transformation Types' | translate }}</a>
-        <ul style="list-style-type: lower-alpha;">
+      <li><a (click)="scrollToElement('transformation-types')" style="cursor: pointer;">{{ 'Transformation Types' |
+          translate }}</a>
+        <ul style="list-style-type: lower-alpha; margin-top: 8px;">
           <li><a (click)="scrollToElement('jsonata-substitution')" style="cursor: pointer;">{{ 'Defining a substitution
               using JSONata' | translate }}</a></li>
-          <li><a (click)="scrollToElement('javascript-substitution')" style="cursor: pointer;">{{ 'Defining a substitution
+          <li><a (click)="scrollToElement('javascript-substitution')" style="cursor: pointer;">{{ 'Defining a
+              substitution
               using JavaScript' | translate }}</a></li>
-          <li><a (click)="scrollToElement('javascript-smart-function')" style="cursor: pointer;">{{ 'Defining the payload
+          <li><a (click)="scrollToElement('javascript-smart-function')" style="cursor: pointer;">{{ 'Defining the
+              payload
               transformation using a Smart Function (JavaScript)' | translate }}</a></li>
         </ul>
       </li>
@@ -206,7 +209,7 @@
       make two key decisions:
     </div>
 
-    <h5 class="p-t-8 p-b-4"><strong>2.1 Select the Payload Type</strong></h5>
+    <h5 class="p-t-8 p-b-4 text-16"><strong>Step 2.1 Select the Payload Type</strong></h5>
     <div class="p-b-8 text-16">
       Choose the format that matches your incoming or outgoing data:
     </div>
@@ -218,7 +221,7 @@
       <li><strong>Extension</strong> - For custom payload formats using extensions</li>
     </ul>
 
-    <h5 class="p-t-8 p-b-4"><strong>2.2 Choose the Transformation Type</strong></h5>
+    <h5 class="p-t-8 p-b-4 text-16"><strong>Step 2.2 Choose the Transformation Type</strong></h5>
     <div class="p-b-8 text-16">
       Select how you want to define the data transformation logic:
     </div>
@@ -372,6 +375,7 @@
       tenant. Multiple mappings can share the same connector instance. Configure the connector properties carefully as
       they affect all associated mappings.
     </div>
+    <br />
 
     <div class="p-b-8 text-16">A new connector using the following wizard
       <a [routerLink]="ROUTE_CONNECTORS"> <strong>Configuration → Connectors → Add connector</strong> </a> .
@@ -441,6 +445,7 @@
       alt="Mapping stepper properties" />
     <p class="image-description m-l-48"><b>Description:</b> Screenshot of second wizard step to define general
       properties.</p>
+    <br />
 
     <div class="p-b-8 text-16">
       The stepper guides you through these steps to define a mapping using JSONata for substitutions:
@@ -548,6 +553,7 @@
     alt="Substitution mapping outbound" />
   <p class="image-description m-l-48"><b>Description:</b> Screenshot of subscribed devices to receive messages for
     outbound.</p>
+  <br />
 
   <div class="card-header" id="transformation-types">
     <h3>
@@ -564,15 +570,16 @@
     <div class="alert alert-info m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-info-circle m-r-4"></i>
       <strong>Choosing a Transformation Type:</strong> Select JSONata for simple mappings, JavaScript substitutions when
-      you need more computational power for individual fields, and Smart Functions when you need complete control over the
+      you need more computational power for individual fields, and Smart Functions when you need complete control over
+      the
       transformation logic or when working with array payloads.
     </div>
 
     <h4 class="p-t-16 p-b-8" id="jsonata-substitution">{{ 'Defining a substitution using JSONata' | translate }}</h4>
     <div class="p-b-8 text-16">
-      <strong>JSONata Transformations:</strong> JSONata is a powerful query and transformation language for JSON. It
-      supports path expressions, predicates, functions, and aggregations. Ideal for straightforward field mappings when
-      you need computational power for individual fields.
+      JSONata is a powerful query and transformation language for JSON that supports path expressions, predicates,
+      functions, and aggregations. Use JSONata when you need declarative, expression-based transformations for
+      straightforward field mappings without requiring programming knowledge.
     </div>
     <div class="p-b-16 text-16">
       <strong><a [routerLink]="['/c8y-pkg-dynamic-mapper/landing/jsonata']">
@@ -583,9 +590,9 @@
     <h4 class="p-t-16 p-b-8" id="javascript-substitution">{{ 'Defining a substitution using JavaScript' | translate }}
     </h4>
     <div class="p-b-8 text-16">
-      <strong>JavaScript Substitutions:</strong> Choose JavaScript substitutions when you need familiar JavaScript
-      syntax, complex string manipulations, mathematical calculations, or conditional logic that's easier to express in
-      imperative code.
+      JavaScript substitutions allow you to define individual field transformations using familiar JavaScript syntax
+      within a substitution-based structure. Use JavaScript substitutions when you need complex string manipulations,
+      mathematical calculations, or conditional logic that's easier to express in imperative code.
     </div>
     <div class="p-b-16 text-16">
       <strong><a [routerLink]="['/c8y-pkg-dynamic-mapper/landing/javascript']">
@@ -596,9 +603,10 @@
     <h4 class="p-t-16 p-b-8" id="javascript-smart-function">
       {{ 'Defining the payload transformation using a Smart Function (JavaScript)' | translate }}</h4>
     <div class="p-b-8 text-16">
-      <strong>Smart Functions:</strong> Smart Functions offer maximum flexibility with complete control over the payload
-      structure, access to device inventory data, complex business logic, multiple outputs from a single input message,
-      and state management across messages using context.
+      Smart Functions provide complete programmatic control over the entire transformation logic using JavaScript,
+      allowing you to define the full payload structure rather than just substitutions. Use Smart Functions when you need
+      maximum flexibility with access to device inventory data, complex business logic, multiple outputs from a single
+      input message, or state management across messages.
     </div>
     <div class="p-b-16 text-16">
       <strong><a [routerLink]="['/c8y-pkg-dynamic-mapper/landing/smartfunction']">
@@ -633,6 +641,12 @@
       Therefore, the metadata is not saved in the mapping itself and cannot store individual information. To overwrite
       e.g. the API for a mapping at runtime, you have to add a substitution: <code>[ 'EVENT' →
         _CONTEXT_DATA_.api ]</code>.
+      <br />
+      This section does not apply for mappings with transformation type <strong>Smart Function</strong>. For this
+      transformation type check out the code templates, which contains samples on how to achieve the same results using
+      <a [routerLink]="['/c8y-pkg-dynamic-mapper/landing/smartfunction']">
+        <i class="fa fa-book m-r-8"></i>Smart Functions
+      </a>.
     </div>
 
     <br />
@@ -714,6 +728,7 @@
       alt="Metadata inbound" />
     <p class="image-description m-l-48"><b>Description:</b> Screenshot showing the metadata added for inbound mappings.
     </p>
+    <br />
 
     <div class="p-b-8 text-16">The following table lists all metadata nodes for outbound mappings:
       <br />
@@ -798,9 +813,6 @@
     <p class="image-description m-l-48"><b>Description:</b> Screenshot showing the metadata added for outbound
       mappings.</p>
     <br />
-    This section does not apply for mappings with transformation type <strong>Smart Function</strong>. For this
-    transformation type check out the code templates, which contains samples on how to achieve the same results using
-    <strong>Smart Function</strong>.
   </div>
 
 
@@ -851,7 +863,7 @@
     <p class="image-description m-l-48"><b>Description:</b> Modal dialog to create a mapping in snooping mode.</p>
 
     <br />
-    <p>The following screenshot shows a mapping that uses snoop and for which snooped messages have already arrived.</p>
+    <p class="text-16">The following screenshot shows a mapping that uses snoop and for which snooped messages have already arrived.</p>
     <div>
       <img width="70%" class="m-l-48 m-b-48 m-b-16"
         src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Snooping_Started.png"
