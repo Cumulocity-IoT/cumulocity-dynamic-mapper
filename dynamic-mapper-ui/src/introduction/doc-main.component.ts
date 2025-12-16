@@ -30,12 +30,12 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 @Component({
   selector: 'd11r-landing',
-  templateUrl: './landing.component.html',
-  styleUrl: './landing.component.css',
+  templateUrl: './doc-main.component.html',
+  styleUrl: './doc-shared.css',
   standalone: true,
   imports: [CoreModule, CommonModule, RouterLink]
 })
-export class LandingComponent implements OnInit {
+export class DocMainComponent implements OnInit {
   constructor(
     private mappingService: MappingService,
     private alertService: AlertService,

@@ -39,7 +39,7 @@ import {
 import { TestingModule } from './test-device/testing.module';
 import './shared/styles/shared.css';
 import { BrokerConnectorModule } from './connector';
-import { LandingModule } from './landing/landing.module';
+import { LandingModule } from './introduction/doc.module';
 
 @NgModule({
   imports: [

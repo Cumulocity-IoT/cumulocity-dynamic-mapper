@@ -46,12 +46,16 @@
       <li><a (click)="scrollToElement('define-subscription-for-outbound')" style="cursor: pointer;">{{ 'Defining a
           subscription for outbound mapping' | translate
           }}</a></li>
-      <li><a (click)="scrollToElement('jsonata-substitution')" style="cursor: pointer;">{{ 'Defining a substitution
-          using JSONata' | translate }}</a></li>
-      <li><a (click)="scrollToElement('javascript-substitution')" style="cursor: pointer;">{{ 'Defining a substitution
-          using JavaScript' | translate }}</a></li>
-      <li><a (click)="scrollToElement('javascript-smart-function')" style="cursor: pointer;">{{ 'Defining the payload
-          transformation using a Smart Function (JavaScript)' | translate }}</a></li>
+      <li><a (click)="scrollToElement('transformation-types')" style="cursor: pointer;">{{ 'Transformation Types' | translate }}</a>
+        <ul style="list-style-type: lower-alpha;">
+          <li><a (click)="scrollToElement('jsonata-substitution')" style="cursor: pointer;">{{ 'Defining a substitution
+              using JSONata' | translate }}</a></li>
+          <li><a (click)="scrollToElement('javascript-substitution')" style="cursor: pointer;">{{ 'Defining a substitution
+              using JavaScript' | translate }}</a></li>
+          <li><a (click)="scrollToElement('javascript-smart-function')" style="cursor: pointer;">{{ 'Defining the payload
+              transformation using a Smart Function (JavaScript)' | translate }}</a></li>
+        </ul>
+      </li>
       <li><a (click)="scrollToElement('metadata')" style="cursor: pointer;">{{ 'Using metadata in
           source templates and target templates' | translate }}</a></li>
       <li><a (click)="scrollToElement('unknown-payload')" style="cursor: pointer;">{{ 'Getting started without knowing
@@ -545,6 +549,32 @@
   <p class="image-description m-l-48"><b>Description:</b> Screenshot of subscribed devices to receive messages for
     outbound.</p>
 
+  <div class="card-header" id="transformation-types">
+    <h3>
+      {{ 'Transformation Types' | translate }}
+    </h3>
+  </div>
+  <div class="card-block">
+    <div class="p-b-8 text-16">
+      The Dynamic Mapper offers three powerful ways to transform your data between external formats and Cumulocity IoT.
+      Each transformation type provides different levels of control and flexibility, allowing you to choose the approach
+      that best fits your use case:
+    </div>
+    <ul class="text-16 p-b-16">
+      <li><strong>JSONata Expressions</strong> - Declarative query and transformation language, ideal for straightforward
+        field mappings</li>
+      <li><strong>JavaScript Substitutions</strong> - Individual field transformations with familiar JavaScript syntax
+      </li>
+      <li><strong>Smart Functions</strong> - Complete programmatic control over the entire transformation logic</li>
+    </ul>
+    <div class="alert alert-info m-t-16 m-b-16" role="alert" style="max-width: 90%;">
+      <i class="fa fa-info-circle m-r-4"></i>
+      <strong>Choosing a Transformation Type:</strong> Select JSONata for simple mappings, JavaScript substitutions when
+      you need more computational power for individual fields, and Smart Functions when you need complete control over the
+      transformation logic or when working with array payloads.
+    </div>
+  </div>
+
   <div class="card-header" id="jsonata-substitution">
     <h3>
       {{ 'Defining a substitution using JSONata' | translate }}
@@ -553,72 +583,23 @@
   <div class="card-block">
     <div class="p-b-8 text-16">
       A substitution is a rule that copies content from the source payload (usually your custom JSON payload) to the
-      target payload (Cumulocity JSON payload).<br />
-      When defining substitutions, templates for the source and target payloads are used.<br />
-      At runtime, these rules are applied to the actual payload received from your broker. To define a substitution:
+      target payload (Cumulocity JSON payload). When defining substitutions, templates for the source and target
+      payloads are used. At runtime, these rules are applied to the actual payload received from your broker.
     </div>
-    <br />
-    <ol class="p-b-8 text-16">
-      <li>
-        Select a node in the source payload (e.g., <code>_TOPIC_LEVEL_[1]</code>).
-      </li>
-      <li>
-        Select a node in the target payload (e.g., <code>source.id</code>).
-      </li>
-      <li>Press <b>Add substitution</b>.</li>
-      <li>The substitution is added to the table of existing substitutions.</li>
-    </ol>
 
     <div class="alert alert-info m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-info-circle m-r-4"></i>
-      <strong>Understanding JSONata:</strong> JSONata is a powerful query and transformation language for JSON. It
-      supports path expressions, predicates, functions, and aggregations. For simple mappings, you can use dot notation
-      (e.g., <code>sensor.temperature</code>). For complex transformations, explore <a href="https://jsonata.org/"
-        target="_blank">JSONata documentation</a>.
+      <strong>JSONata Transformations:</strong> JSONata is a powerful query and transformation language for JSON. It
+      supports path expressions, predicates, functions, and aggregations.
     </div>
 
-    <p class="p-b-8 text-16">
-      At runtime, this substitution copies the value at <code>_TOPIC_LEVEL_[1]</code> to <code>source.id</code> in
-      the target payload.<br />
-    </p>
-    <br />
-    <img width="70%" class="m-l-48 m-b-48 m-b-16"
-      src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Basic_Annotated.png"
-      alt="Substitution annotation" />
-    <p class="image-description m-l-48"><b>Description:</b> Screenshot showing step 4 for defining substitutions using
-      JSONata.</p>
+    <div class="p-b-16 text-16">
+      <strong><a [routerLink]="['/c8y-pkg-dynamic-mapper/landing/jsonata']">
+        <i class="fa fa-book m-r-8"></i>Learn more about defining substitutions using JSONata →
+      </a></strong>
+    </div>
   </div>
 
-
-  <div class="card-block">
-    <div class="p-b-8 text-16">
-      For more advanced mapping rules, e.g. extracting parts of a string for a name (40404-psid-device100-w2w2),
-      expressions in JSONata can be used.<br />
-      To use this option you have to toggle the button <b>Toggle expert mode</b>.<br />
-    </div>
-
-    <div class="alert alert-success  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-      <i class="fa fa-lightbulb-o m-r-4"></i>
-      <strong>Expert Mode Examples:</strong>
-      <ul class="m-t-8 m-b-0">
-        <li>String manipulation: <code>$split(deviceName, "-")[2]</code> extracts "device100" from
-          "40404-psid-device100-w2w2"</li>
-        <li>Conditional logic: <code>temperature > 50 ? "hot" : "normal"</code></li>
-        <li>Date formatting: <code>$now()</code> for current timestamp</li>
-        <li>Array operations: <code>sensors[type="temperature"].value</code></li>
-      </ul>
-    </div>
-
-    <br />
-    <img width="70%" class="m-l-48 m-b-48 m-b-16"
-      src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Substitution_ExpertMode.png"
-      alt="Defining Substitutions in ExpertMode" />
-    <p class="image-description m-l-48"><b>Description:</b> Screenshot showing the definition of substitutions in
-      ExpertMode
-      using JSONata.</p>
-  </div>
-
-  <div class="p-b-8"></div>
   <div class="card-header" id="javascript-substitution">
     <h3>
       {{ 'Defining a substitution using JavaScript' | translate }}
@@ -626,36 +607,22 @@
   </div>
   <div class="card-block">
     <div class="p-b-8 text-16">
-      In step 4, you can define substitutions directly in the editor using JavaScript syntax.<br />
-      At runtime, the JavaScript code is evaluated and copies the value to the target payload path.
-    </div>
-
-    <div class="alert alert-warning  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-      <i class="fa fa-exclamation-triangle m-r-4"></i>
-      <strong>Note:</strong> The JavaScript editor is only available if you select <code>Define substitutions as
-        JavaScript</code> when creating the mapping. You cannot switch between transformation types after creating the
-      mapping.
+      In step 4, you can define substitutions directly in the editor using JavaScript syntax. At runtime, the
+      JavaScript code is evaluated and copies the value to the target payload path.
     </div>
 
     <div class="alert alert-info m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-info-circle m-r-4"></i>
-      <strong>When to Use JavaScript Substitutions:</strong> Choose JavaScript substitutions when you need:
-      <ul class="m-t-8 m-b-0">
-        <li>Familiar JavaScript syntax instead of learning JSONata</li>
-        <li>Complex string manipulations or regular expressions</li>
-        <li>Mathematical calculations or date operations</li>
-        <li>Conditional logic that's easier to express in imperative code</li>
-      </ul>
-      For complete control over the entire payload structure, consider using Smart Functions instead.
+      <strong>When to Use JavaScript Substitutions:</strong> Choose JavaScript substitutions when you need familiar
+      JavaScript syntax, complex string manipulations, mathematical calculations, or conditional logic that's easier to
+      express in imperative code.
     </div>
 
-    <br />
-    <img width="70%" class="m-l-48 m-b-48 m-b-16"
-      src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Substitution_JavaScript.png"
-      alt="JavaScript substitution" />
-    <p class="image-description m-l-48"><b>Description:</b> Screenshot showing step 4 for defining substitutions using
-      JavaScript.</p>
-    <div class="p-b-8"></div>
+    <div class="p-b-16 text-16">
+      <strong><a [routerLink]="['/c8y-pkg-dynamic-mapper/landing/javascript']">
+        <i class="fa fa-book m-r-8"></i>Learn more about defining substitutions using JavaScript →
+      </a></strong>
+    </div>
   </div>
 
 
@@ -668,441 +635,21 @@
   <div class="card-block">
     <div class="p-b-8 text-16">
       When you select <b>Smart Function</b> as the <b>Transformation Type</b> in the modal dialog, you can define
-      the entire payload directly in the editor using JavaScript syntax, rather than just substitutions. At runtime,
-      this JavaScript code is evaluated and copies the value to the target payload path. This gives you the freedom to
-      see the payload exactly as it is sent to the Cumulocity backend.
-    </div>
-
-    <div class="alert alert-success  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-      <i class="fa fa-lightbulb-o m-r-4"></i>
-      <strong>Power of Smart Functions:</strong> Smart Functions offer maximum flexibility:
-      <ul class="m-t-8 m-b-0">
-        <li>Complete control over the payload structure</li>
-        <li>Access to device inventory data for enrichment</li>
-        <li>Complex business logic and calculations</li>
-        <li>Multiple outputs from a single input message</li>
-        <li>State management across messages using context</li>
-      </ul>
-    </div>
-    <div class="alert alert-warning  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-      <i class="fa fa-exclamation-triangle m-r-4"></i>
-      <strong>Note:</strong> The JavaScript editor for Smart Function is only available if you select <b>Smart
-        Function</b> as a <b>Transformation Type</b> when creating the mapping.
-    </div>
-
-    <div class="p-b-8 text-14">
-      The signature and structure of a <b>Smart Function</b> has the form: <br /> <br />
-      <pre><code>&nbsp;&nbsp;&nbsp;&nbsp;
-&nbsp;&nbsp;&nbsp;&nbsp;function onMessage (inputMsg, context) {{ '{' }}
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;const msg = inputMsg; 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;var payload = msg.getPayload(); // contains payload 
-
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;console.log("Context" + context.getStateAll());
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;console.log("Payload Raw:" + msg.getPayload());
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;console.log("Payload messageId" +  msg.getPayload().get('messageId'));
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;// insert transformation logic here
-
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;// then return result
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return [{{ '{' }}
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cumulocityType: "measurement",
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;action: "create",
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;payload: {{ '{' }}
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"time":  new Date().toISOString(),
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"type": "c8y_TemperatureMeasurement",
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"c8y_Steam": {{ '{' }}
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"Temperature": {{ '{' }}
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"unit": "C",
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"value": payload["sensorData"]["temp_val"]
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{{ '}' }}  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{{ '}' }}  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{{ '}' }},
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;externalSource: [{{ '{' }}"type":"c8y_Serial", "externalId": payload.get("clientId"){{ '}' }}]
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{{ '}' }}];
-&nbsp;&nbsp;&nbsp;&nbsp;{{ '}' }}   
-            </code></pre>
-    </div>
-    <div class="p-b-8 text-14">
-      The <b>Smart Function</b> allows enriching the payload with inventory data from the device, e.g.: <br /> <br />
-      <pre><code>&nbsp;&nbsp;&nbsp;&nbsp;// lookup device for enrichment
-&nbsp;&nbsp;&nbsp;&nbsp;var deviceByDeviceId = context.getManagedObjectByDeviceId(payload.get("deviceId"));
-&nbsp;&nbsp;&nbsp;&nbsp;console.log("Device (by device id): " + deviceByDeviceId);
-
-&nbsp;&nbsp;&nbsp;&nbsp;var deviceByExternalId = context.getManagedObject( {{ '{' }} externalId: payload.get("clientId"), type: "c8y_Serial" {{ '}' }} );
-&nbsp;&nbsp;&nbsp;&nbsp;console.log("Device (by external id): " + deviceByExternalId);</code></pre>
-    </div>
-
-    <div class="alert alert-warning  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-      <i class="fa fa-exclamation-triangle m-r-4"></i>
-      <strong>Important Configuration:</strong> Only device fragments configured in <a
-        [routerLink]="ROUTE_SERVICE_CONFIGURATION"> <b>Configuration → Service
-          Configuration → Function → Fragments from inventory to cache</b></a> can be referenced in Smart Functions.
-      Make
-      sure to add all required fragments to this list before using them in your code.
-    </div>
-
-    <br />
-    <img width="70%" class="m-l-48 m-b-48 m-b-16"
-      src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_SmartFunction.png"
-      alt="JavaScript substitution" />
-    <p class="image-description m-l-48"><b>Description:</b> Screenshot showing step 4 for defining complete
-      transformation
-      using JavaScript.</p>
-    <div class="p-b-8"></div>
-
-    <h4 class="p-t-16 p-b-8">Using Metadata in Smart Functions</h4>
-    <div class="p-b-8 text-16">
-      When using <b>Smart Functions</b> as the <b>Transformation Type</b>, metadata is handled differently than in
-      substitution-based mappings. Instead of using metadata nodes like <code>_IDENTITY_</code> or
-      <code>_CONTEXT_DATA_</code> in templates, you define metadata directly in the JavaScript return object.
-    </div>
-
-    <div class="alert alert-info m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-      <i class="fa fa-info-circle m-r-4"></i>
-      <strong>Key Difference:</strong> In Smart Functions, you don't manipulate <code>_IDENTITY_</code> or
-      <code>_CONTEXT_DATA_</code> nodes. Instead, you return JavaScript objects with specific properties that control how
-      the mapper processes your data.
-    </div>
-
-    <h5 class="p-t-8 p-b-4"><strong>Metadata Properties for Inbound Smart Functions</strong></h5>
-    <div class="p-b-8 text-16">
-      For <b>inbound</b> mappings, your Smart Function should return an array of objects with the following properties:
-    </div>
-
-    <div class="table-responsive table-width-80">
-      <table class="table _table-striped" style="table-layout: fixed;">
-        <thead class="thead-light">
-          <tr>
-            <th style="width: 25%;">Property</th>
-            <th style="width: 15%;">Required</th>
-            <th style="width: 60%;">Description</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><code>cumulocityType</code></td>
-            <td>Yes</td>
-            <td>The Cumulocity API to use: <code>"measurement"</code>, <code>"event"</code>, <code>"alarm"</code>, or
-              <code>"inventory"</code>
-            </td>
-          </tr>
-          <tr>
-            <td><code>action</code></td>
-            <td>Yes</td>
-            <td>The action to perform: <code>"create"</code>, <code>"update"</code>, or <code>"delete"</code></td>
-          </tr>
-          <tr>
-            <td><code>payload</code></td>
-            <td>Yes</td>
-            <td>The actual data object to send to Cumulocity (e.g., measurement, event, alarm)</td>
-          </tr>
-          <tr>
-            <td><code>externalSource</code></td>
-            <td>Yes*</td>
-            <td>Array defining the external device identifier: <code>[{{"{"}}type: "c8y_Serial", externalId:
-                "deviceId"{{"}"}}]</code>. Required unless the device already exists in Cumulocity.</td>
-          </tr>
-          <tr>
-            <td><code>contextData</code></td>
-            <td>No</td>
-            <td>Object with additional properties:
-              <ul class="m-t-8 m-b-0">
-                <li><code>deviceName</code>: Name for implicitly created devices</li>
-                <li><code>deviceType</code>: Type for implicitly created devices</li>
-                <li><code>processingMode</code>: Set to <code>"persistent"</code> or <code>"transient"</code></li>
-              </ul>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <div class="alert alert-warning m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-      <i class="fa fa-exclamation-triangle m-r-4"></i>
-      <strong>Note:</strong> When using <code>contextData.deviceName</code> and <code>contextData.deviceType</code>, make
-      sure the mapping has the <b>Create non-existing devices</b> option enabled. Otherwise, the mapper will fail if the
-      device doesn't exist.
-    </div>
-
-    <div class="p-b-8 text-14">
-      <strong>Example: Basic inbound Smart Function with device identification</strong><br /><br />
-      <pre><code>
-function onMessage(msg, context) &#123;
-    var payload = msg.getPayload();
-
-    return [&#123;
-        cumulocityType: "measurement",
-        action: "create",
-        payload: &#123;
-            "time": new Date().toISOString(),
-            "type": "c8y_TemperatureMeasurement",
-            "c8y_Steam": &#123;
-                "Temperature": &#123;
-                    "unit": "C",
-                    "value": payload["sensorData"]["temp_val"]
-                &#125;
-            &#125;
-        &#125;,
-        externalSource: [&#123;"type": "c8y_Serial", "externalId": payload.get("clientId")&#125;]
-    &#125;];
-&#125;
-      </code></pre>
-    </div>
-
-    <div class="p-b-8 text-14">
-      <strong>Example: Implicitly creating a device with name and type</strong><br /><br />
-      <pre><code>
-function onMessage(msg, context) &#123;
-    var payload = msg.getPayload();
-
-    return [&#123;
-        cumulocityType: "measurement",
-        action: "create",
-        payload: &#123;
-            "time": new Date().toISOString(),
-            "type": "c8y_TemperatureMeasurement",
-            "c8y_Steam": &#123;
-                "Temperature": &#123;"unit": "C", "value": payload["sensorData"]["temp_val"]&#125;
-            &#125;
-        &#125;,
-        externalSource: [&#123;"type": "c8y_Serial", "externalId": payload.get("clientId")&#125;],
-        contextData: &#123;
-            "deviceName": "Temperature-Sensor-01",
-            "deviceType": "sensor-type"
-        &#125;
-    &#125;];
-&#125;
-      </code></pre>
-    </div>
-
-    <div class="p-b-8 text-14">
-      <strong>Example: Conditionally creating measurements or events</strong><br /><br />
-      <pre><code>
-function onMessage(msg, context) &#123;
-    var payload = msg.getPayload();
-    const payloadType = payload["payloadType"];
-
-    if (payloadType == "telemetry") &#123;
-        return [&#123;
-            cumulocityType: "measurement",
-            action: "create",
-            payload: &#123;
-                "time": new Date().toISOString(),
-                "type": "c8y_TemperatureMeasurement",
-                "c8y_Steam": &#123;
-                    "Temperature": &#123;"unit": "C", "value": payload["sensorData"]["temp_val"]&#125;
-                &#125;
-            &#125;,
-            externalSource: [&#123;"type": "c8y_Serial", "externalId": payload.get("clientId")&#125;]
-        &#125;];
-    &#125; else &#123;
-        // Create an event for error cases
-        return [&#123;
-            cumulocityType: "event",
-            action: "create",
-            payload: &#123;
-                "time": new Date().toISOString(),
-                "type": "c8y_ErrorEvent",
-                "text": payload["logMessage"],
-                "severity": "MAJOR"
-            &#125;,
-            externalSource: [&#123;"type": "c8y_Serial", "externalId": payload.get("clientId")&#125;]
-        &#125;];
-    &#125;
-&#125;
-      </code></pre>
-    </div>
-
-    <h5 class="p-t-8 p-b-4"><strong>Metadata Properties for Outbound Smart Functions</strong></h5>
-    <div class="p-b-8 text-16">
-      For <b>outbound</b> mappings, your Smart Function should return an object (or array of objects) with the following
-      properties:
-    </div>
-
-    <div class="table-responsive table-width-80">
-      <table class="table _table-striped" style="table-layout: fixed;">
-        <thead class="thead-light">
-          <tr>
-            <th style="width: 25%;">Property</th>
-            <th style="width: 15%;">Required</th>
-            <th style="width: 60%;">Description</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><code>topic</code></td>
-            <td>Yes*</td>
-            <td>The MQTT topic or URL path to publish to. Can include dynamic values like device IDs. For WebHook
-              connectors, this is appended to the base URL as the context path.</td>
-          </tr>
-          <tr>
-            <td><code>payload</code></td>
-            <td>Yes</td>
-            <td>The data object or array to send to the external broker/system</td>
-          </tr>
-          <tr>
-            <td><code>externalSource</code></td>
-            <td>No</td>
-            <td>Array specifying the external ID type: <code>[{{"{"}}type: "c8y_Serial"{{"}"}}]</code>. When specified, you
-              can use <code>_externalId_</code> placeholder in the topic string, which will be automatically resolved to
-              the actual external ID.</td>
-          </tr>
-          <tr>
-            <td><code>transportFields</code></td>
-            <td>No</td>
-            <td>Object with transport-specific fields:
-              <ul class="m-t-8 m-b-0">
-                <li><code>key</code>: Kafka message key (for Kafka connectors only)</li>
-                <li><code>method</code>: HTTP method like <code>"POST"</code>, <code>"PUT"</code> (for WebHook connectors)
-                </li>
-                <li><code>retain</code>: Boolean to set MQTT retained message flag (for MQTT connectors)</li>
-              </ul>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      the entire payload directly in the editor using JavaScript syntax, rather than just substitutions. This gives you
+      complete control over the payload structure and access to device inventory data for enrichment.
     </div>
 
     <div class="alert alert-success m-t-16 m-b-16" role="alert" style="max-width: 90%;">
       <i class="fa fa-lightbulb-o m-r-4"></i>
-      <strong>Dynamic Topic Resolution:</strong> Use the <code>_externalId_</code> placeholder in your topic string to
-      automatically include the device's external ID. For example: <code>topic: "measurements/_externalId_"</code> will
-      resolve to <code>"measurements/device-serial-123"</code> at runtime.
+      <strong>Power of Smart Functions:</strong> Smart Functions offer maximum flexibility with complete control over
+      the payload structure, access to device inventory data, complex business logic, multiple outputs from a single
+      input message, and state management across messages using context.
     </div>
 
-    <div class="p-b-8 text-14">
-      <strong>Example: Basic outbound Smart Function</strong><br /><br />
-      <pre><code>
-function onMessage(msg, context) &#123;
-    var payload = msg.getPayload();
-
-    return &#123;
-        topic: "measurements/" + payload["source"]["id"],
-        payload: &#123;
-            "time": new Date().toISOString(),
-            "c8y_Steam": &#123;
-                "Temperature": &#123;
-                    "unit": "C",
-                    "value": payload["c8y_TemperatureMeasurement"]["T"]["value"]
-                &#125;
-            &#125;
-        &#125;
-    &#125;;
-&#125;
-      </code></pre>
-    </div>
-
-    <div class="p-b-8 text-14">
-      <strong>Example: Using <code>_externalId_</code> placeholder</strong><br /><br />
-      <pre><code>
-function onMessage(msg, context) &#123;
-    var payload = msg.getPayload();
-
-    return [&#123;
-        topic: "measurements/_externalId_",  // Automatically resolved to external ID
-        payload: &#123;
-            "time": new Date().toISOString(),
-            "c8y_Steam": &#123;
-                "Temperature": &#123;
-                    "unit": "C",
-                    "value": payload["c8y_TemperatureMeasurement"]["T"]["value"]
-                &#125;
-            &#125;
-        &#125;,
-        externalSource: [&#123;"type": "c8y_Serial"&#125;]  // Specifies which external ID type to use
-    &#125;];
-&#125;
-      </code></pre>
-    </div>
-
-    <div class="p-b-8 text-14">
-      <strong>Example: Setting Kafka message key</strong><br /><br />
-      <pre><code>
-function onMessage(msg, context) &#123;
-    var payload = msg.getPayload();
-
-    return [&#123;
-        topic: "measurements/" + payload["source"]["id"],
-        payload: &#123;
-            "time": new Date().toISOString(),
-            "c8y_Steam": &#123;
-                "Temperature": &#123;
-                    "unit": "C",
-                    "value": payload["c8y_TemperatureMeasurement"]["T"]["value"]
-                &#125;
-            &#125;
-        &#125;,
-        transportFields: &#123;
-            "key": payload["source"]["id"]  // Set Kafka partition key
-        &#125;
-    &#125;];
-&#125;
-      </code></pre>
-    </div>
-
-    <div class="alert alert-info m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-      <i class="fa fa-info-circle m-r-4"></i>
-      <strong>Return Type Flexibility:</strong> For outbound Smart Functions, you can return either a single object or an
-      array of objects. If you need to send a message to multiple topics or transform one Cumulocity event into multiple
-      external messages, return an array.
-    </div>
-
-    <h5 class="p-t-8 p-b-4"><strong>Accessing Metadata from Incoming Messages</strong></h5>
-    <div class="p-b-8 text-16">
-      When your Smart Function receives a message, you can access metadata information through the payload:
-    </div>
-
-    <ul class="text-16 p-b-16">
-      <li>
-        <strong>MQTT Topic Levels</strong> (inbound only): Access topic parts using
-        <code>payload["_TOPIC_LEVEL_"][index]</code>. For example, if the topic is <code>device/12345/telemetry</code>,
-        then <code>payload["_TOPIC_LEVEL_"][1]</code> returns <code>"12345"</code>.
-      </li>
-      <li>
-        <strong>External ID</strong> (outbound only): Access the device's external ID using
-        <code>payload["_IDENTITY_"]["externalId"]</code>.
-      </li>
-      <li>
-        <strong>Cumulocity Source ID</strong> (outbound only): Access the device's internal Cumulocity ID using
-        <code>payload["_IDENTITY_"]["c8ySourceId"]</code>.
-      </li>
-    </ul>
-
-    <div class="p-b-8 text-14">
-      <strong>Example: Extracting device ID from MQTT topic (inbound)</strong><br /><br />
-      <pre><code>
-function onMessage(msg, context) &#123;
-    var payload = msg.getPayload();
-
-    // Extract device ID from second level of topic: device/12345/telemetry
-    var deviceId = payload["_TOPIC_LEVEL_"] && payload["_TOPIC_LEVEL_"][1];
-    console.log("Device ID from topic: " + deviceId);
-
-    return [&#123;
-        cumulocityType: "measurement",
-        action: "create",
-        payload: &#123;
-            "time": new Date().toISOString(),
-            "type": "c8y_TemperatureMeasurement",
-            "c8y_Steam": &#123;
-                "Temperature": &#123;"unit": "C", "value": payload["temp"]&#125;
-            &#125;
-        &#125;,
-        externalSource: [&#123;"type": "c8y_Serial", "externalId": deviceId&#125;]
-    &#125;];
-&#125;
-      </code></pre>
-    </div>
-
-    <div class="alert alert-warning m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-      <i class="fa fa-exclamation-triangle m-r-4"></i>
-      <strong>Best Practice:</strong> Always validate metadata values before using them. Check if
-      <code>_TOPIC_LEVEL_</code> exists and has the expected index before accessing it. Similarly, verify external IDs and
-      source IDs are present in outbound mappings.
-    </div>
-
-    <div class="p-b-8 text-16">
-      For more examples and complete code templates, navigate to <a [routerLink]="ROUTE_CODE_TEMPLATES"> Code Templates
-      </a> to see comprehensive JavaScript Smart Function samples.
+    <div class="p-b-16 text-16">
+      <strong><a [routerLink]="['/c8y-pkg-dynamic-mapper/landing/smartfunction']">
+        <i class="fa fa-book m-r-8"></i>Learn more about Smart Functions and metadata usage →
+      </a></strong>
     </div>
   </div>
 

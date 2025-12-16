@@ -1,0 +1,72 @@
+<!--
+  ~ Copyright (c) 2022-2025 Cumulocity GmbH.
+  ~
+  ~ SPDX-License-Identifier: Apache-2.0
+  ~
+  ~  Licensed under the Apache License, Version 2.0 (the "License");
+  ~  you may not use this file except in compliance with the License.
+  ~  You may obtain a copy of the License at
+  ~
+  ~       http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~  Unless required by applicable law or agreed to in writing, software
+  ~  distributed under the License is distributed on an "AS IS" BASIS,
+  ~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~  See the License for the specific language governing permissions and
+  ~  limitations under the License.
+  ~
+  ~  @authors Christof Strack, Stefan Witschel
+  ~
+  -->
+<c8y-title>{{ 'Defining a substitution using JavaScript' | translate }}</c8y-title>
+
+<a id="top"></a>
+<div class="text-right m-b-16">
+  <a (click)="scrollToElement('top')" class="to-the-top" role="button" aria-label="Scroll to top"
+    style="cursor: pointer;">
+    <i class="dlt-c8y-icon-chevron-up m-r-4"></i> Top
+  </a>
+</div>
+
+<div>
+  <div class="card-header" id="javascript-substitution">
+    <h3>
+      {{ 'Defining a substitution using JavaScript' | translate }}
+    </h3>
+  </div>
+  <div class="card-block">
+    <div class="p-b-8 text-16">
+      In step 4, you can define substitutions directly in the editor using JavaScript syntax.<br />
+      At runtime, the JavaScript code is evaluated and copies the value to the target payload path.
+    </div>
+
+    <div class="alert alert-warning  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
+      <i class="fa fa-exclamation-triangle m-r-4"></i>
+      <strong>Note:</strong> The JavaScript editor is only available if you select <code>Define substitutions as
+        JavaScript</code> when creating the mapping. You cannot switch between transformation types after creating the
+      mapping.
+    </div>
+
+    <div class="alert alert-info m-t-16 m-b-16" role="alert" style="max-width: 90%;">
+      <i class="fa fa-info-circle m-r-4"></i>
+      <strong>When to Use JavaScript Substitutions:</strong> Choose JavaScript substitutions when you need:
+      <ul class="m-t-8 m-b-0">
+        <li>Familiar JavaScript syntax instead of learning JSONata</li>
+        <li>Complex string manipulations or regular expressions</li>
+        <li>Mathematical calculations or date operations</li>
+        <li>Conditional logic that's easier to express in imperative code</li>
+      </ul>
+      For complete control over the entire payload structure, consider using Smart Functions instead.
+    </div>
+
+    <br />
+    <img width="70%" class="m-l-48 m-b-48 m-b-16"
+      src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Substitution_JavaScript.png"
+      alt="JavaScript substitution" />
+    <p class="image-description m-l-48"><b>Description:</b> Screenshot showing step 4 for defining substitutions using
+      JavaScript.</p>
+    <div class="p-b-8"></div>
+  </div>
+
+  <div class="p-b-8"></div>
+</div>

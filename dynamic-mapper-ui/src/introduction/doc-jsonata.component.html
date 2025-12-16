@@ -1,0 +1,106 @@
+<!--
+  ~ Copyright (c) 2022-2025 Cumulocity GmbH.
+  ~
+  ~ SPDX-License-Identifier: Apache-2.0
+  ~
+  ~  Licensed under the Apache License, Version 2.0 (the "License");
+  ~  you may not use this file except in compliance with the License.
+  ~  You may obtain a copy of the License at
+  ~
+  ~       http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~  Unless required by applicable law or agreed to in writing, software
+  ~  distributed under the License is distributed on an "AS IS" BASIS,
+  ~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~  See the License for the specific language governing permissions and
+  ~  limitations under the License.
+  ~
+  ~  @authors Christof Strack, Stefan Witschel
+  ~
+  -->
+<c8y-title>{{ 'Defining a substitution using JSONata' | translate }}</c8y-title>
+
+<a id="top"></a>
+<div class="text-right m-b-16">
+  <a (click)="scrollToElement('top')" class="to-the-top" role="button" aria-label="Scroll to top"
+    style="cursor: pointer;">
+    <i class="dlt-c8y-icon-chevron-up m-r-4"></i> Top
+  </a>
+</div>
+
+<div>
+  <div class="card-header" id="jsonata-substitution">
+    <h3>
+      {{ 'Defining a substitution using JSONata' | translate }}
+    </h3>
+  </div>
+  <div class="card-block">
+    <div class="p-b-8 text-16">
+      A substitution is a rule that copies content from the source payload (usually your custom JSON payload) to the
+      target payload (Cumulocity JSON payload).<br />
+      When defining substitutions, templates for the source and target payloads are used.<br />
+      At runtime, these rules are applied to the actual payload received from your broker. To define a substitution:
+    </div>
+    <br />
+    <ol class="p-b-8 text-16">
+      <li>
+        Select a node in the source payload (e.g., <code>_TOPIC_LEVEL_[1]</code>).
+      </li>
+      <li>
+        Select a node in the target payload (e.g., <code>source.id</code>).
+      </li>
+      <li>Press <b>Add substitution</b>.</li>
+      <li>The substitution is added to the table of existing substitutions.</li>
+    </ol>
+
+    <div class="alert alert-info m-t-16 m-b-16" role="alert" style="max-width: 90%;">
+      <i class="fa fa-info-circle m-r-4"></i>
+      <strong>Understanding JSONata:</strong> JSONata is a powerful query and transformation language for JSON. It
+      supports path expressions, predicates, functions, and aggregations. For simple mappings, you can use dot notation
+      (e.g., <code>sensor.temperature</code>). For complex transformations, explore <a href="https://jsonata.org/"
+        target="_blank">JSONata documentation</a>.
+    </div>
+
+    <p class="p-b-8 text-16">
+      At runtime, this substitution copies the value at <code>_TOPIC_LEVEL_[1]</code> to <code>source.id</code> in
+      the target payload.<br />
+    </p>
+    <br />
+    <img width="70%" class="m-l-48 m-b-48 m-b-16"
+      src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Basic_Annotated.png"
+      alt="Substitution annotation" />
+    <p class="image-description m-l-48"><b>Description:</b> Screenshot showing step 4 for defining substitutions using
+      JSONata.</p>
+  </div>
+
+
+  <div class="card-block">
+    <div class="p-b-8 text-16">
+      For more advanced mapping rules, e.g. extracting parts of a string for a name (40404-psid-device100-w2w2),
+      expressions in JSONata can be used.<br />
+      To use this option you have to toggle the button <b>Toggle expert mode</b>.<br />
+    </div>
+
+    <div class="alert alert-success  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
+      <i class="fa fa-lightbulb-o m-r-4"></i>
+      <strong>Expert Mode Examples:</strong>
+      <ul class="m-t-8 m-b-0">
+        <li>String manipulation: <code>$split(deviceName, "-")[2]</code> extracts "device100" from
+          "40404-psid-device100-w2w2"</li>
+        <li>Conditional logic: <code>temperature > 50 ? "hot" : "normal"</code></li>
+        <li>Date formatting: <code>$now()</code> for current timestamp</li>
+        <li>Array operations: <code>sensors[type="temperature"].value</code></li>
+      </ul>
+    </div>
+
+    <br />
+    <img width="70%" class="m-l-48 m-b-48 m-b-16"
+      src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Substitution_ExpertMode.png"
+      alt="Defining Substitutions in ExpertMode" />
+    <p class="image-description m-l-48"><b>Description:</b> Screenshot showing the definition of substitutions in
+      ExpertMode
+      using JSONata.</p>
+  </div>
+
+  <div class="p-b-8"></div>
+</div>
