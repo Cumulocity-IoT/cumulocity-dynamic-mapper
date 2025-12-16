@@ -310,12 +310,12 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                 if (isConnected()) {
                     initializeSubscriptionsAfterConnect();
                 }
-
+                attempt++;
             } catch (Exception e) {
                 log.error("{} - Error connecting MQTT Service Pulsar connector: {}", tenant, e.getMessage(), e);
                 connectionStateManager.updateStatusWithError(e);
                 connectionStateManager.setConnected(false);
-
+                attempt++;
                 // Cleanup on failure
                 cleanupOnConnectionFailure();
             }
