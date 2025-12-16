@@ -748,6 +748,362 @@
       transformation
       using JavaScript.</p>
     <div class="p-b-8"></div>
+
+    <h4 class="p-t-16 p-b-8">Using Metadata in Smart Functions</h4>
+    <div class="p-b-8 text-16">
+      When using <b>Smart Functions</b> as the <b>Transformation Type</b>, metadata is handled differently than in
+      substitution-based mappings. Instead of using metadata nodes like <code>_IDENTITY_</code> or
+      <code>_CONTEXT_DATA_</code> in templates, you define metadata directly in the JavaScript return object.
+    </div>
+
+    <div class="alert alert-info m-t-16 m-b-16" role="alert" style="max-width: 90%;">
+      <i class="fa fa-info-circle m-r-4"></i>
+      <strong>Key Difference:</strong> In Smart Functions, you don't manipulate <code>_IDENTITY_</code> or
+      <code>_CONTEXT_DATA_</code> nodes. Instead, you return JavaScript objects with specific properties that control how
+      the mapper processes your data.
+    </div>
+
+    <h5 class="p-t-8 p-b-4"><strong>Metadata Properties for Inbound Smart Functions</strong></h5>
+    <div class="p-b-8 text-16">
+      For <b>inbound</b> mappings, your Smart Function should return an array of objects with the following properties:
+    </div>
+
+    <div class="table-responsive table-width-80">
+      <table class="table _table-striped" style="table-layout: fixed;">
+        <thead class="thead-light">
+          <tr>
+            <th style="width: 25%;">Property</th>
+            <th style="width: 15%;">Required</th>
+            <th style="width: 60%;">Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>cumulocityType</code></td>
+            <td>Yes</td>
+            <td>The Cumulocity API to use: <code>"measurement"</code>, <code>"event"</code>, <code>"alarm"</code>, or
+              <code>"inventory"</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>action</code></td>
+            <td>Yes</td>
+            <td>The action to perform: <code>"create"</code>, <code>"update"</code>, or <code>"delete"</code></td>
+          </tr>
+          <tr>
+            <td><code>payload</code></td>
+            <td>Yes</td>
+            <td>The actual data object to send to Cumulocity (e.g., measurement, event, alarm)</td>
+          </tr>
+          <tr>
+            <td><code>externalSource</code></td>
+            <td>Yes*</td>
+            <td>Array defining the external device identifier: <code>[{{"{"}}type: "c8y_Serial", externalId:
+                "deviceId"{{"}"}}]</code>. Required unless the device already exists in Cumulocity.</td>
+          </tr>
+          <tr>
+            <td><code>contextData</code></td>
+            <td>No</td>
+            <td>Object with additional properties:
+              <ul class="m-t-8 m-b-0">
+                <li><code>deviceName</code>: Name for implicitly created devices</li>
+                <li><code>deviceType</code>: Type for implicitly created devices</li>
+                <li><code>processingMode</code>: Set to <code>"persistent"</code> or <code>"transient"</code></li>
+              </ul>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="alert alert-warning m-t-16 m-b-16" role="alert" style="max-width: 90%;">
+      <i class="fa fa-exclamation-triangle m-r-4"></i>
+      <strong>Note:</strong> When using <code>contextData.deviceName</code> and <code>contextData.deviceType</code>, make
+      sure the mapping has the <b>Create non-existing devices</b> option enabled. Otherwise, the mapper will fail if the
+      device doesn't exist.
+    </div>
+
+    <div class="p-b-8 text-14">
+      <strong>Example: Basic inbound Smart Function with device identification</strong><br /><br />
+      <pre><code>
+function onMessage(msg, context) &#123;
+    var payload = msg.getPayload();
+
+    return [&#123;
+        cumulocityType: "measurement",
+        action: "create",
+        payload: &#123;
+            "time": new Date().toISOString(),
+            "type": "c8y_TemperatureMeasurement",
+            "c8y_Steam": &#123;
+                "Temperature": &#123;
+                    "unit": "C",
+                    "value": payload["sensorData"]["temp_val"]
+                &#125;
+            &#125;
+        &#125;,
+        externalSource: [&#123;"type": "c8y_Serial", "externalId": payload.get("clientId")&#125;]
+    &#125;];
+&#125;
+      </code></pre>
+    </div>
+
+    <div class="p-b-8 text-14">
+      <strong>Example: Implicitly creating a device with name and type</strong><br /><br />
+      <pre><code>
+function onMessage(msg, context) &#123;
+    var payload = msg.getPayload();
+
+    return [&#123;
+        cumulocityType: "measurement",
+        action: "create",
+        payload: &#123;
+            "time": new Date().toISOString(),
+            "type": "c8y_TemperatureMeasurement",
+            "c8y_Steam": &#123;
+                "Temperature": &#123;"unit": "C", "value": payload["sensorData"]["temp_val"]&#125;
+            &#125;
+        &#125;,
+        externalSource: [&#123;"type": "c8y_Serial", "externalId": payload.get("clientId")&#125;],
+        contextData: &#123;
+            "deviceName": "Temperature-Sensor-01",
+            "deviceType": "sensor-type"
+        &#125;
+    &#125;];
+&#125;
+      </code></pre>
+    </div>
+
+    <div class="p-b-8 text-14">
+      <strong>Example: Conditionally creating measurements or events</strong><br /><br />
+      <pre><code>
+function onMessage(msg, context) &#123;
+    var payload = msg.getPayload();
+    const payloadType = payload["payloadType"];
+
+    if (payloadType == "telemetry") &#123;
+        return [&#123;
+            cumulocityType: "measurement",
+            action: "create",
+            payload: &#123;
+                "time": new Date().toISOString(),
+                "type": "c8y_TemperatureMeasurement",
+                "c8y_Steam": &#123;
+                    "Temperature": &#123;"unit": "C", "value": payload["sensorData"]["temp_val"]&#125;
+                &#125;
+            &#125;,
+            externalSource: [&#123;"type": "c8y_Serial", "externalId": payload.get("clientId")&#125;]
+        &#125;];
+    &#125; else &#123;
+        // Create an event for error cases
+        return [&#123;
+            cumulocityType: "event",
+            action: "create",
+            payload: &#123;
+                "time": new Date().toISOString(),
+                "type": "c8y_ErrorEvent",
+                "text": payload["logMessage"],
+                "severity": "MAJOR"
+            &#125;,
+            externalSource: [&#123;"type": "c8y_Serial", "externalId": payload.get("clientId")&#125;]
+        &#125;];
+    &#125;
+&#125;
+      </code></pre>
+    </div>
+
+    <h5 class="p-t-8 p-b-4"><strong>Metadata Properties for Outbound Smart Functions</strong></h5>
+    <div class="p-b-8 text-16">
+      For <b>outbound</b> mappings, your Smart Function should return an object (or array of objects) with the following
+      properties:
+    </div>
+
+    <div class="table-responsive table-width-80">
+      <table class="table _table-striped" style="table-layout: fixed;">
+        <thead class="thead-light">
+          <tr>
+            <th style="width: 25%;">Property</th>
+            <th style="width: 15%;">Required</th>
+            <th style="width: 60%;">Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>topic</code></td>
+            <td>Yes*</td>
+            <td>The MQTT topic or URL path to publish to. Can include dynamic values like device IDs. For WebHook
+              connectors, this is appended to the base URL as the context path.</td>
+          </tr>
+          <tr>
+            <td><code>payload</code></td>
+            <td>Yes</td>
+            <td>The data object or array to send to the external broker/system</td>
+          </tr>
+          <tr>
+            <td><code>externalSource</code></td>
+            <td>No</td>
+            <td>Array specifying the external ID type: <code>[{{"{"}}type: "c8y_Serial"{{"}"}}]</code>. When specified, you
+              can use <code>_externalId_</code> placeholder in the topic string, which will be automatically resolved to
+              the actual external ID.</td>
+          </tr>
+          <tr>
+            <td><code>transportFields</code></td>
+            <td>No</td>
+            <td>Object with transport-specific fields:
+              <ul class="m-t-8 m-b-0">
+                <li><code>key</code>: Kafka message key (for Kafka connectors only)</li>
+                <li><code>method</code>: HTTP method like <code>"POST"</code>, <code>"PUT"</code> (for WebHook connectors)
+                </li>
+                <li><code>retain</code>: Boolean to set MQTT retained message flag (for MQTT connectors)</li>
+              </ul>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="alert alert-success m-t-16 m-b-16" role="alert" style="max-width: 90%;">
+      <i class="fa fa-lightbulb-o m-r-4"></i>
+      <strong>Dynamic Topic Resolution:</strong> Use the <code>_externalId_</code> placeholder in your topic string to
+      automatically include the device's external ID. For example: <code>topic: "measurements/_externalId_"</code> will
+      resolve to <code>"measurements/device-serial-123"</code> at runtime.
+    </div>
+
+    <div class="p-b-8 text-14">
+      <strong>Example: Basic outbound Smart Function</strong><br /><br />
+      <pre><code>
+function onMessage(msg, context) &#123;
+    var payload = msg.getPayload();
+
+    return &#123;
+        topic: "measurements/" + payload["source"]["id"],
+        payload: &#123;
+            "time": new Date().toISOString(),
+            "c8y_Steam": &#123;
+                "Temperature": &#123;
+                    "unit": "C",
+                    "value": payload["c8y_TemperatureMeasurement"]["T"]["value"]
+                &#125;
+            &#125;
+        &#125;
+    &#125;;
+&#125;
+      </code></pre>
+    </div>
+
+    <div class="p-b-8 text-14">
+      <strong>Example: Using <code>_externalId_</code> placeholder</strong><br /><br />
+      <pre><code>
+function onMessage(msg, context) &#123;
+    var payload = msg.getPayload();
+
+    return [&#123;
+        topic: "measurements/_externalId_",  // Automatically resolved to external ID
+        payload: &#123;
+            "time": new Date().toISOString(),
+            "c8y_Steam": &#123;
+                "Temperature": &#123;
+                    "unit": "C",
+                    "value": payload["c8y_TemperatureMeasurement"]["T"]["value"]
+                &#125;
+            &#125;
+        &#125;,
+        externalSource: [&#123;"type": "c8y_Serial"&#125;]  // Specifies which external ID type to use
+    &#125;];
+&#125;
+      </code></pre>
+    </div>
+
+    <div class="p-b-8 text-14">
+      <strong>Example: Setting Kafka message key</strong><br /><br />
+      <pre><code>
+function onMessage(msg, context) &#123;
+    var payload = msg.getPayload();
+
+    return [&#123;
+        topic: "measurements/" + payload["source"]["id"],
+        payload: &#123;
+            "time": new Date().toISOString(),
+            "c8y_Steam": &#123;
+                "Temperature": &#123;
+                    "unit": "C",
+                    "value": payload["c8y_TemperatureMeasurement"]["T"]["value"]
+                &#125;
+            &#125;
+        &#125;,
+        transportFields: &#123;
+            "key": payload["source"]["id"]  // Set Kafka partition key
+        &#125;
+    &#125;];
+&#125;
+      </code></pre>
+    </div>
+
+    <div class="alert alert-info m-t-16 m-b-16" role="alert" style="max-width: 90%;">
+      <i class="fa fa-info-circle m-r-4"></i>
+      <strong>Return Type Flexibility:</strong> For outbound Smart Functions, you can return either a single object or an
+      array of objects. If you need to send a message to multiple topics or transform one Cumulocity event into multiple
+      external messages, return an array.
+    </div>
+
+    <h5 class="p-t-8 p-b-4"><strong>Accessing Metadata from Incoming Messages</strong></h5>
+    <div class="p-b-8 text-16">
+      When your Smart Function receives a message, you can access metadata information through the payload:
+    </div>
+
+    <ul class="text-16 p-b-16">
+      <li>
+        <strong>MQTT Topic Levels</strong> (inbound only): Access topic parts using
+        <code>payload["_TOPIC_LEVEL_"][index]</code>. For example, if the topic is <code>device/12345/telemetry</code>,
+        then <code>payload["_TOPIC_LEVEL_"][1]</code> returns <code>"12345"</code>.
+      </li>
+      <li>
+        <strong>External ID</strong> (outbound only): Access the device's external ID using
+        <code>payload["_IDENTITY_"]["externalId"]</code>.
+      </li>
+      <li>
+        <strong>Cumulocity Source ID</strong> (outbound only): Access the device's internal Cumulocity ID using
+        <code>payload["_IDENTITY_"]["c8ySourceId"]</code>.
+      </li>
+    </ul>
+
+    <div class="p-b-8 text-14">
+      <strong>Example: Extracting device ID from MQTT topic (inbound)</strong><br /><br />
+      <pre><code>
+function onMessage(msg, context) &#123;
+    var payload = msg.getPayload();
+
+    // Extract device ID from second level of topic: device/12345/telemetry
+    var deviceId = payload["_TOPIC_LEVEL_"] && payload["_TOPIC_LEVEL_"][1];
+    console.log("Device ID from topic: " + deviceId);
+
+    return [&#123;
+        cumulocityType: "measurement",
+        action: "create",
+        payload: &#123;
+            "time": new Date().toISOString(),
+            "type": "c8y_TemperatureMeasurement",
+            "c8y_Steam": &#123;
+                "Temperature": &#123;"unit": "C", "value": payload["temp"]&#125;
+            &#125;
+        &#125;,
+        externalSource: [&#123;"type": "c8y_Serial", "externalId": deviceId&#125;]
+    &#125;];
+&#125;
+      </code></pre>
+    </div>
+
+    <div class="alert alert-warning m-t-16 m-b-16" role="alert" style="max-width: 90%;">
+      <i class="fa fa-exclamation-triangle m-r-4"></i>
+      <strong>Best Practice:</strong> Always validate metadata values before using them. Check if
+      <code>_TOPIC_LEVEL_</code> exists and has the expected index before accessing it. Similarly, verify external IDs and
+      source IDs are present in outbound mappings.
+    </div>
+
+    <div class="p-b-8 text-16">
+      For more examples and complete code templates, navigate to <a [routerLink]="ROUTE_CODE_TEMPLATES"> Code Templates
+      </a> to see comprehensive JavaScript Smart Function samples.
+    </div>
   </div>
 
   <div class="card-header" id="metadata">
