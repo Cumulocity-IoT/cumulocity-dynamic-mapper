@@ -77,6 +77,16 @@ h1, h2, h3, h4 {
   font-family: 'Segoe UI', Arial, sans-serif;
 }
 
+/* Card sections - constrain width and add margins */
+.card-header,
+.card-block {
+  max-width: 1200px;
+  margin-left: 0;
+  margin-right: auto;
+  padding-left: 0;
+  padding-right: 24px;
+}
+
 .landing-section-header {
   margin-top: 32px;
   margin-bottom: 8px;
