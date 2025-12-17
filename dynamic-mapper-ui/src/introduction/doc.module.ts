@@ -19,9 +19,10 @@
  */
 
 import { NgModule } from '@angular/core';
-import { hookRoute } from '@c8y/ngx-components';
+import { hookNavigator, hookRoute } from '@c8y/ngx-components';
 import { featureResolver } from '../shared';
 import { DocMainComponent } from './doc-main.component';
+import { DocNavigationFactory } from './doc-navigation.factory';
 
 @NgModule({
   providers: [
@@ -55,7 +56,75 @@ import { DocMainComponent } from './doc-main.component';
       component: DocMainComponent, resolve: {
         feature: featureResolver
       }
-    })
+    }),
+    // Section routes - all use the same component but different paths for proper navigation highlighting
+    hookRoute({
+      path: 'c8y-pkg-dynamic-mapper/landing/overview',
+      component: DocMainComponent, resolve: {
+        feature: featureResolver
+      }
+    }),
+    hookRoute({
+      path: 'c8y-pkg-dynamic-mapper/landing/getting-started',
+      component: DocMainComponent, resolve: {
+        feature: featureResolver
+      }
+    }),
+    hookRoute({
+      path: 'c8y-pkg-dynamic-mapper/landing/managing-connectors',
+      component: DocMainComponent, resolve: {
+        feature: featureResolver
+      }
+    }),
+    hookRoute({
+      path: 'c8y-pkg-dynamic-mapper/landing/define-mapping',
+      component: DocMainComponent, resolve: {
+        feature: featureResolver
+      }
+    }),
+    hookRoute({
+      path: 'c8y-pkg-dynamic-mapper/landing/define-subscription-for-outbound',
+      component: DocMainComponent, resolve: {
+        feature: featureResolver
+      }
+    }),
+    hookRoute({
+      path: 'c8y-pkg-dynamic-mapper/landing/transformation-types',
+      component: DocMainComponent, resolve: {
+        feature: featureResolver
+      }
+    }),
+    hookRoute({
+      path: 'c8y-pkg-dynamic-mapper/landing/code-templates',
+      component: DocMainComponent, resolve: {
+        feature: featureResolver
+      }
+    }),
+    hookRoute({
+      path: 'c8y-pkg-dynamic-mapper/landing/metadata',
+      component: DocMainComponent, resolve: {
+        feature: featureResolver
+      }
+    }),
+    hookRoute({
+      path: 'c8y-pkg-dynamic-mapper/landing/unknown-payload',
+      component: DocMainComponent, resolve: {
+        feature: featureResolver
+      }
+    }),
+    hookRoute({
+      path: 'c8y-pkg-dynamic-mapper/landing/reliability-settings',
+      component: DocMainComponent, resolve: {
+        feature: featureResolver
+      }
+    }),
+    hookRoute({
+      path: 'c8y-pkg-dynamic-mapper/landing/access-control',
+      component: DocMainComponent, resolve: {
+        feature: featureResolver
+      }
+    }),
+    hookNavigator(DocNavigationFactory),
   ]
 })
 export class LandingModule { }

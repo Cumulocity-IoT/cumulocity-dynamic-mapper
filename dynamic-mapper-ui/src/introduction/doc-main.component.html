@@ -38,55 +38,7 @@
       </a>
     </div>
 
-    <!-- ==================== TABLE OF CONTENTS ==================== -->
     <div>
-      <div class="card-header">
-        <h3>{{ 'Topics that will help you getting started ...' | translate }}</h3>
-      </div>
-      <div class="card-block">
-        <ul class="text-16" style="list-style-type: decimal;">
-          <li><a (click)="scrollToElement('overview')" style="cursor: pointer;">{{ 'Overview of Dynamic Mapper' |
-              translate
-              }}</a></li>
-          <li><a (click)="scrollToElement('getting-started')" style="cursor: pointer;">{{ 'Getting started' |
-              translate }}</a></li>
-          <li><a (click)="scrollToElement('managing-connectors')" style="cursor: pointer;">{{ 'Managing connectors' |
-              translate }}</a></li>
-          <li><a (click)="scrollToElement('define-mapping')" style="cursor: pointer;">{{ 'Defining a mapping' |
-              translate
-              }}</a></li>
-          <li><a (click)="scrollToElement('define-subscription-for-outbound')" style="cursor: pointer;">{{ 'Defining a
-              subscription for outbound mapping' | translate
-              }}</a></li>
-          <li><a (click)="scrollToElement('transformation-types')" style="cursor: pointer;">{{ 'Transformation Types' |
-              translate }}</a>
-            <ul style="list-style-type: lower-alpha;">
-              <li><a (click)="scrollToElement('jsonata-substitution')" style="cursor: pointer;">{{ 'Defining a
-                  substitution
-                  using JSONata' | translate }}</a></li>
-              <li><a (click)="scrollToElement('javascript-smart-function')" style="cursor: pointer;">{{ 'Defining the
-                  payload
-                  transformation using a Smart Function (JavaScript)' | translate }}</a></li>
-              <li><a (click)="scrollToElement('javascript-substitution')" style="cursor: pointer;">{{ 'Defining a
-                  substitution
-                  using JavaScript' | translate }}</a></li>
-            </ul>
-          </li>
-          <li><a (click)="scrollToElement('code-templates')" style="cursor: pointer;">{{ 'Code Templates' | translate
-              }}</a></li>
-          <li><a (click)="scrollToElement('metadata')" style="cursor: pointer;">{{ 'Using metadata in
-              source templates and target templates' | translate }}</a></li>
-          <li><a (click)="scrollToElement('unknown-payload')" style="cursor: pointer;">{{ 'Getting started without
-              knowing
-              your source payload' | translate }}</a></li>
-          <li><a (click)="scrollToElement('reliability-settings')" style="cursor: pointer;">{{ 'Using reliability
-              settings
-              in mappings' | translate }}</a></li>
-          <li><a (click)="scrollToElement('access-control')" style="cursor: pointer;">{{ 'Managing permissions for
-              Dynamic
-              Mapper features' | translate }}</a></li>
-        </ul>
-      </div>
 
       <!-- ==================== SECTION: OVERVIEW OF DYNAMIC MAPPER ==================== -->
       <div class="card-header" id="overview">
@@ -119,12 +71,13 @@
           </li>
         </ul>
 
-        <div class="alert alert-info m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-          <i class="fa fa-info-circle m-r-4"></i>
-          <strong>What is Dynamic Mapper?</strong> It acts as a bridge between your devices/systems and Cumulocity IoT,
-          translating custom data formats into Cumulocity's standardized domain model. This eliminates the need for
-          custom
-          device agents or firmware modifications.
+        <div class="admonition info" style="max-width: 90%;">
+          <div class="title">Info</div>
+          <div class="content">
+            <strong>What is Dynamic Mapper?</strong> It acts as a bridge between your devices/systems and Cumulocity IoT,
+            translating custom data formats into Cumulocity's standardized domain model. This eliminates the need for
+            custom device agents or firmware modifications.
+          </div>
         </div>
 
         <div class="p-b-8 text-16">
@@ -159,17 +112,17 @@
           The following screenshot shows a prompt to generate a list of substitutions (mapping rules):
         </div>
 
-        <div class="alert alert-success m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-          <i class="fa fa-lightbulb-o m-r-4"></i>
-          <strong>AI-Powered Development:</strong> The Dynamic Mapper can leverage AI to automatically generate mapping
-          rules from your payload examples. Simply describe what you want to achieve in natural language, and the AI
-          generates the corresponding JSONata expressions or JavaScript code.
-          <br />
-          Configure an AI provider (Anthropic, ChatGPT, etc.) in the service
-          configuration
-          to automatically generate substitutions and transformation code. This significantly accelerates the
-          integration
-          process.
+        <div class="admonition info" style="max-width: 90%;">
+          <div class="title">Info</div>
+          <div class="content">
+            <strong>AI-Powered Development:</strong> The Dynamic Mapper can leverage AI to automatically generate mapping
+            rules from your payload examples. Simply describe what you want to achieve in natural language, and the AI
+            generates the corresponding JSONata expressions or JavaScript code.
+            <br />
+            Configure an AI provider (Anthropic, ChatGPT, etc.) in the service configuration
+            to automatically generate substitutions and transformation code. This significantly accelerates the
+            integration process.
+          </div>
         </div>
 
         <br />
@@ -290,14 +243,15 @@
           The intuitive stepper wizard will guide you through the mapping configuration process.
         </div>
 
-        <div class="alert alert-info m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-          <i class="fa fa-info-circle m-r-4"></i>
-          <strong>Tip:</strong> If you're unsure about your device's payload structure, enable <b>Snooping Mode</b> when
-          creating a mapping.
-          This captures incoming messages that you can analyze and use as templates.
-          See <a (click)="scrollToElement('unknown-payload')" style="cursor: pointer;">Getting started without knowing
-            your
-            source payload</a> for details.
+        <div class="admonition info" style="max-width: 90%;">
+          <div class="title">Info</div>
+          <div class="content">
+            <strong>Tip:</strong> If you're unsure about your device's payload structure, enable <b>Snooping Mode</b> when
+            creating a mapping.
+            This captures incoming messages that you can analyze and use as templates.
+            See <a (click)="scrollToElement('unknown-payload')" style="cursor: pointer;">Getting started without knowing
+              your source payload</a> for details.
+          </div>
         </div>
 
         <div class="p-t-16 text-16">
@@ -404,13 +358,13 @@
           </table>
         </div>
 
-        <div class="alert alert-warning  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-          <i class="fa fa-exclamation-triangle m-r-4"></i>
-          <strong>Note:</strong> Some connectors like HTTP Connector and Cumulocity MQTT Service have only one instance
-          per
-          tenant. Multiple mappings can share the same connector instance. Configure the connector properties carefully
-          as
-          they affect all associated mappings.
+        <div class="admonition caution" style="max-width: 90%;">
+          <div class="title">Caution</div>
+          <div class="content">
+            <strong>Note:</strong> Some connectors like HTTP Connector and Cumulocity MQTT Service have only one instance
+            per tenant. Multiple mappings can share the same connector instance. Configure the connector properties carefully
+            as they affect all associated mappings.
+          </div>
         </div>
         <br />
 
@@ -455,14 +409,15 @@
           </ol>
         </div>
 
-        <div class="alert alert-warning  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-          <i class="fa fa-exclamation-triangle m-r-4"></i>
-          <strong>Important:</strong> If any of the templates: source or target is a JSON array - instead of a JSON
-          object -
-          then you have to choose <strong>Smart Function</strong> as a transformation tape.
-          <br />
-          This is due to the internal handling of metadata, e.g. <code>_IDENTITY_.externalId</code> that is added to the
-          template. This is not possible for JSON arrays.
+        <div class="admonition important" style="max-width: 90%;">
+          <div class="title">Important</div>
+          <div class="content">
+            If any of the templates: source or target is a JSON array - instead of a JSON object -
+            then you have to choose <strong>Smart Function</strong> as a transformation tape.
+            <br />
+            This is due to the internal handling of metadata, e.g. <code>_IDENTITY_.externalId</code> that is added to the
+            template. This is not possible for JSON arrays.
+          </div>
         </div>
 
         <img width="70%" class="m-l-48 m-b-48 m-b-16"
@@ -513,12 +468,13 @@
           </li>
         </ol>
 
-        <div class="alert alert-success  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-          <i class="fa fa-lightbulb-o m-r-4"></i>
-          <strong>Best Practice:</strong> Always test your mapping with sample payloads before activating it. Use the
-          test
-          feature in step 5 to verify that your substitutions produce the expected Cumulocity format. This helps catch
-          errors early and ensures smooth operation.
+        <div class="admonition info" style="max-width: 90%;">
+          <div class="title">Info</div>
+          <div class="content">
+            <strong>Best Practice:</strong> Always test your mapping with sample payloads before activating it. Use the
+            test feature in step 5 to verify that your substitutions produce the expected Cumulocity format. This helps catch
+            errors early and ensures smooth operation.
+          </div>
         </div>
 
         <br />
@@ -544,13 +500,13 @@
           An outbound mapping is processed only if all of the following conditions apply:<br />
         </div>
 
-        <div class="alert alert-warning  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-          <i class="fa fa-exclamation-triangle m-r-4"></i>
-          <strong>Important:</strong> Outbound mappings require active subscriptions. Without a subscription, the
-          mapping
-          will not be triggered even if it's enabled. Make sure to configure subscriptions properly for your device
-          groups
-          or device types.
+        <div class="admonition important" style="max-width: 90%;">
+          <div class="title">Important</div>
+          <div class="content">
+            Outbound mappings require active subscriptions. Without a subscription, the
+            mapping will not be triggered even if it's enabled. Make sure to configure subscriptions properly for your device
+            groups or device types.
+          </div>
         </div>
 
         <ol class="text-16">
@@ -589,12 +545,13 @@
           </li>
         </ol>
 
-        <div class="alert alert-info m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-          <i class="fa fa-info-circle m-r-4"></i>
-          <strong>Tip:</strong> Use <b>dynamic subscriptions</b> with device types when you have many devices of the
-          same
-          type. This automatically creates subscriptions for new devices as they're added to the system, reducing manual
-          configuration overhead.
+        <div class="admonition info" style="max-width: 90%;">
+          <div class="title">Info</div>
+          <div class="content">
+            <strong>Tip:</strong> Use <b>dynamic subscriptions</b> with device types when you have many devices of the
+            same type. This automatically creates subscriptions for new devices as they're added to the system, reducing manual
+            configuration overhead.
+          </div>
         </div>
 
         <br />
@@ -621,14 +578,13 @@
           that best fits your use case:
         </div>
 
-        <div class="alert alert-info m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-          <i class="fa fa-info-circle m-r-4"></i>
-          <strong>Choosing a Transformation Type:</strong> Select JSONata for simple mappings, JavaScript substitutions
-          when
-          you need more computational power for individual fields, and Smart Functions when you need complete control
-          over
-          the
-          transformation logic or when working with array payloads.
+        <div class="admonition info" style="max-width: 90%;">
+          <div class="title">Info</div>
+          <div class="content">
+            <strong>Choosing a Transformation Type:</strong> Select JSONata for simple mappings, JavaScript substitutions
+            when you need more computational power for individual fields, and Smart Functions when you need complete control
+            over the transformation logic or when working with array payloads.
+          </div>
         </div>
 
         <h4 class="p-t-16 p-b-8" id="jsonata-substitution">{{ 'Defining a substitution using JSONata' | translate }}
@@ -690,10 +646,12 @@
           requirements.
         </div>
 
-        <div class="alert alert-info m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-          <i class="fa fa-info-circle m-r-4"></i>
-          <strong>Using Code Templates:</strong> Code templates are available in the mapping editor when creating or
-          editing mappings. You can view, customize, and test these templates before applying them to your mappings.
+        <div class="admonition info" style="max-width: 90%;">
+          <div class="title">Info</div>
+          <div class="content">
+            <strong>Using Code Templates:</strong> Code templates are available in the mapping editor when creating or
+            editing mappings. You can view, customize, and test these templates before applying them to your mappings.
+          </div>
         </div>
 
         <div class="table-responsive table-width-80">
@@ -750,22 +708,22 @@
           </ul>
         </div>
 
-        <div class="alert alert-warning  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-          <i class="fa fa-exclamation-triangle m-r-4"></i>
-          <strong>Note:</strong> All metadata nodes including sub-nodes are not meant to be changed directly. All
-          metadata
-          nodes are generated before the processing of a mapping and removed from the target payload before it is sent.
-          Therefore, the metadata is not saved in the mapping itself and cannot store individual information. To
-          overwrite
-          e.g. the API for a mapping at runtime, you have to add a substitution: <code>[ 'EVENT' →
+        <div class="admonition caution" style="max-width: 90%;">
+          <div class="title">Caution</div>
+          <div class="content">
+            <strong>Note:</strong> All metadata nodes including sub-nodes are not meant to be changed directly. All
+            metadata nodes are generated before the processing of a mapping and removed from the target payload before it is sent.
+            Therefore, the metadata is not saved in the mapping itself and cannot store individual information. To
+            overwrite e.g. the API for a mapping at runtime, you have to add a substitution: <code>[ 'EVENT' →
         _CONTEXT_DATA_.api ]</code>.
-          <br />
-          This section does not apply for mappings with transformation type <strong>Smart Function</strong>. For this
-          transformation type check out the code templates, which contains samples on how to achieve the same results
-          using
-          <a [routerLink]="['/c8y-pkg-dynamic-mapper/landing/smartfunction']">
-            <i class="fa fa-book m-r-8"></i>Smart Functions
-          </a>.
+            <br />
+            This section does not apply for mappings with transformation type <strong>Smart Function</strong>. For this
+            transformation type check out the code templates, which contains samples on how to achieve the same results
+            using
+            <a [routerLink]="['/c8y-pkg-dynamic-mapper/landing/smartfunction']">
+              <i class="fa fa-book m-r-8"></i>Smart Functions
+            </a>.
+          </div>
         </div>
 
         <br />
@@ -918,16 +876,18 @@
             </tbody>
           </table>
 
-          <div class="alert alert-info m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-            <i class="fa fa-info-circle m-r-4"></i>
-            <strong>Outbound Metadata Tips:</strong>
-            <ul class="m-t-8 m-b-0">
-              <li>Use <code>_TOPIC_LEVEL_</code> to dynamically construct topics based on device properties</li>
-              <li>Set <code>_CONTEXT_DATA_.method</code> to control HTTP methods (GET, POST, PUT, DELETE) for WebHook
-                connectors</li>
-              <li>Use <code>_CONTEXT_DATA_.retain</code> for MQTT to ensure last message is always available to new
-                subscribers</li>
-            </ul>
+          <div class="admonition info" style="max-width: 90%;">
+            <div class="title">Info</div>
+            <div class="content">
+              <strong>Outbound Metadata Tips:</strong>
+              <ul class="m-t-8 m-b-0">
+                <li>Use <code>_TOPIC_LEVEL_</code> to dynamically construct topics based on device properties</li>
+                <li>Set <code>_CONTEXT_DATA_.method</code> to control HTTP methods (GET, POST, PUT, DELETE) for WebHook
+                  connectors</li>
+                <li>Use <code>_CONTEXT_DATA_.retain</code> for MQTT to ensure last message is always available to new
+                  subscribers</li>
+              </ul>
+            </div>
           </div>
 
         </div>
@@ -954,20 +914,22 @@
           The stepper guides you through these steps:
         </div>
 
-        <div class="alert alert-success  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-          <i class="fa fa-lightbulb-o m-r-4"></i>
-          <strong>Snooping Best Practices:</strong>
-          <ul class="m-t-8 m-b-0">
-            <li>Enable snooping when you're uncertain about the payload structure</li>
-            <li>Let your devices send multiple messages to capture variations</li>
-            <li>Review captured payloads to understand data patterns</li>
-            <li>Use captured payloads as templates for your mapping</li>
-            <li>Disable snooping once you've finalized the mapping to improve performance</li>
-            <li>
-              Use wildcards in topic patterns to
-              capture messages from multiple devices.
-            </li>
-          </ul>
+        <div class="admonition info" style="max-width: 90%;">
+          <div class="title">Info</div>
+          <div class="content">
+            <strong>Snooping Best Practices:</strong>
+            <ul class="m-t-8 m-b-0">
+              <li>Enable snooping when you're uncertain about the payload structure</li>
+              <li>Let your devices send multiple messages to capture variations</li>
+              <li>Review captured payloads to understand data patterns</li>
+              <li>Use captured payloads as templates for your mapping</li>
+              <li>Disable snooping once you've finalized the mapping to improve performance</li>
+              <li>
+                Use wildcards in topic patterns to
+                capture messages from multiple devices.
+              </li>
+            </ul>
+          </div>
         </div>
 
         <ol class="text-16">
@@ -1011,19 +973,19 @@
           processing mappings, depending on the connector (message source):
         </div>
 
-        <div class="alert alert-info m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-          <i class="fa fa-info-circle m-r-4"></i>
-          <strong>Understanding QoS Levels:</strong>
-          <ul class="m-t-8 m-b-0">
-            <li><strong>QoS 0 (At most once):</strong> Fastest, no delivery guarantee. Use for non-critical data where
-              occasional loss is acceptable.</li>
-            <li><strong>QoS 1 (At least once):</strong> Guaranteed delivery, but duplicates possible. Recommended for
-              most
-              use cases.</li>
-            <li><strong>QoS 2 (Exactly once):</strong> Highest reliability, slowest. Use for critical data where
-              duplicates
-              must be avoided.</li>
-          </ul>
+        <div class="admonition info" style="max-width: 90%;">
+          <div class="title">Info</div>
+          <div class="content">
+            <strong>Understanding QoS Levels:</strong>
+            <ul class="m-t-8 m-b-0">
+              <li><strong>QoS 0 (At most once):</strong> Fastest, no delivery guarantee. Use for non-critical data where
+                occasional loss is acceptable.</li>
+              <li><strong>QoS 1 (At least once):</strong> Guaranteed delivery, but duplicates possible. Recommended for
+                most use cases.</li>
+              <li><strong>QoS 2 (Exactly once):</strong> Highest reliability, slowest. Use for critical data where
+                duplicates must be avoided.</li>
+            </ul>
+          </div>
         </div>
 
         <ul class="p-b-8 text-16">
@@ -1035,12 +997,13 @@
           <li><strong>Kafka</strong>: Limited to QoS 0 for outbound operations.</li>
         </ul>
 
-        <div class="alert alert-warning  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-          <i class="fa fa-exclamation-triangle m-r-4"></i>
-          <strong>Performance Considerations:</strong> Higher QoS levels (1-2) provide better delivery guarantees but
-          impact performance. QoS 2 requires a four-way handshake and is significantly slower. Choose the lowest QoS
-          level
-          that meets your reliability requirements.
+        <div class="admonition caution" style="max-width: 90%;">
+          <div class="title">Caution</div>
+          <div class="content">
+            <strong>Performance Considerations:</strong> Higher QoS levels (1-2) provide better delivery guarantees but
+            impact performance. QoS 2 requires a four-way handshake and is significantly slower. Choose the lowest QoS
+            level that meets your reliability requirements.
+          </div>
         </div>
 
         <p class="p-b-8 text-16">
@@ -1193,12 +1156,13 @@
             service configuration editing.</li>
         </ul>
 
-        <div class="alert alert-warning  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-          <i class="fa fa-exclamation-triangle m-r-4"></i>
-          <strong>Security Best Practice:</strong> Assign the minimum required role to users. Regular users typically
-          need
-          only <strong>Create role</strong> to work with mappings. Reserve <strong>Admin role</strong> for system
-          administrators who manage infrastructure-level settings like connectors and service configuration.
+        <div class="admonition caution" style="max-width: 90%;">
+          <div class="title">Caution</div>
+          <div class="content">
+            <strong>Security Best Practice:</strong> Assign the minimum required role to users. Regular users typically
+            need only <strong>Create role</strong> to work with mappings. Reserve <strong>Admin role</strong> for system
+            administrators who manage infrastructure-level settings like connectors and service configuration.
+          </div>
         </div>
 
         <p class="text-16">Key points:</p>
@@ -1289,12 +1253,13 @@
           </table>
         </div>
 
-        <div class="alert alert-success  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-          <i class="fa fa-lightbulb-o m-r-4"></i>
-          <strong>Tip:</strong> To configure roles, navigate to <b>Administration → Role Management</b> in Cumulocity.
-          Look
-          for "Dynamic Mapper" permissions and assign them to global roles or specific user groups based on your
-          organization's needs.
+        <div class="admonition info" style="max-width: 90%;">
+          <div class="title">Info</div>
+          <div class="content">
+            <strong>Tip:</strong> To configure roles, navigate to <b>Administration → Role Management</b> in Cumulocity.
+            Look for "Dynamic Mapper" permissions and assign them to global roles or specific user groups based on your
+            organization's needs.
+          </div>
         </div>
       </div>
     </div>
@@ -1340,13 +1305,14 @@
           <li>The substitution is added to the table of existing substitutions.</li>
         </ol>
 
-        <div class="alert alert-info m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-          <i class="fa fa-info-circle m-r-4"></i>
-          <strong>Understanding JSONata:</strong> JSONata is a powerful query and transformation language for JSON. It
-          supports path expressions, predicates, functions, and aggregations. For simple mappings, you can use dot
-          notation
-          (e.g., <code>sensor.temperature</code>). For complex transformations, explore <a href="https://jsonata.org/"
-            target="_blank">JSONata documentation</a>.
+        <div class="admonition info" style="max-width: 90%;">
+          <div class="title">Info</div>
+          <div class="content">
+            <strong>Understanding JSONata:</strong> JSONata is a powerful query and transformation language for JSON. It
+            supports path expressions, predicates, functions, and aggregations. For simple mappings, you can use dot
+            notation (e.g., <code>sensor.temperature</code>). For complex transformations, explore <a href="https://jsonata.org/"
+              target="_blank">JSONata documentation</a>.
+          </div>
         </div>
 
         <p class="p-b-8 text-16">
@@ -1370,16 +1336,18 @@
           To use this option you have to toggle the button <b>Toggle expert mode</b>.<br />
         </div>
 
-        <div class="alert alert-success  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-          <i class="fa fa-lightbulb-o m-r-4"></i>
-          <strong>Expert Mode Examples:</strong>
-          <ul class="m-t-8 m-b-0">
-            <li>String manipulation: <code>$split(deviceName, "-")[2]</code> extracts "device100" from
-              "40404-psid-device100-w2w2"</li>
-            <li>Conditional logic: <code>temperature > 50 ? "hot" : "normal"</code></li>
-            <li>Date formatting: <code>$now()</code> for current timestamp</li>
-            <li>Array operations: <code>sensors[type="temperature"].value</code></li>
-          </ul>
+        <div class="admonition info" style="max-width: 90%;">
+          <div class="title">Info</div>
+          <div class="content">
+            <strong>Expert Mode Examples:</strong>
+            <ul class="m-t-8 m-b-0">
+              <li>String manipulation: <code>$split(deviceName, "-")[2]</code> extracts "device100" from
+                "40404-psid-device100-w2w2"</li>
+              <li>Conditional logic: <code>temperature > 50 ? "hot" : "normal"</code></li>
+              <li>Date formatting: <code>$now()</code> for current timestamp</li>
+              <li>Array operations: <code>sensors[type="temperature"].value</code></li>
+            </ul>
+          </div>
         </div>
 
         <br />
@@ -1424,23 +1392,27 @@
           At runtime, the JavaScript code is evaluated and copies the value to the target payload path.
         </div>
 
-        <div class="alert alert-warning  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-          <i class="fa fa-exclamation-triangle m-r-4"></i>
-          <strong>Note:</strong> The JavaScript editor is only available if you select <code>Define substitutions as
+        <div class="admonition caution" style="max-width: 90%;">
+          <div class="title">Caution</div>
+          <div class="content">
+            <strong>Note:</strong> The JavaScript editor is only available if you select <code>Define substitutions as
         JavaScript</code> when creating the mapping. You cannot switch between transformation types after creating the
-          mapping.
+            mapping.
+          </div>
         </div>
 
-        <div class="alert alert-info m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-          <i class="fa fa-info-circle m-r-4"></i>
-          <strong>When to Use JavaScript Substitutions:</strong> Choose JavaScript substitutions when you need:
-          <ul class="m-t-8 m-b-0">
-            <li>Familiar JavaScript syntax instead of learning JSONata</li>
-            <li>Complex string manipulations or regular expressions</li>
-            <li>Mathematical calculations or date operations</li>
-            <li>Conditional logic that's easier to express in imperative code</li>
-          </ul>
-          For complete control over the entire payload structure, consider using Smart Functions instead.
+        <div class="admonition info" style="max-width: 90%;">
+          <div class="title">Info</div>
+          <div class="content">
+            <strong>When to Use JavaScript Substitutions:</strong> Choose JavaScript substitutions when you need:
+            <ul class="m-t-8 m-b-0">
+              <li>Familiar JavaScript syntax instead of learning JSONata</li>
+              <li>Complex string manipulations or regular expressions</li>
+              <li>Mathematical calculations or date operations</li>
+              <li>Conditional logic that's easier to express in imperative code</li>
+            </ul>
+            For complete control over the entire payload structure, consider using Smart Functions instead.
+          </div>
         </div>
 
         <br />
@@ -1486,21 +1458,25 @@
           see the payload exactly as it is sent to the Cumulocity backend.
         </div>
 
-        <div class="alert alert-success  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-          <i class="fa fa-lightbulb-o m-r-4"></i>
-          <strong>Power of Smart Functions:</strong> Smart Functions offer maximum flexibility:
-          <ul class="m-t-8 m-b-0">
-            <li>Complete control over the payload structure</li>
-            <li>Access to device inventory data for enrichment</li>
-            <li>Complex business logic and calculations</li>
-            <li>Multiple outputs from a single input message</li>
-            <li>State management across messages using context</li>
-          </ul>
+        <div class="admonition info" style="max-width: 90%;">
+          <div class="title">Info</div>
+          <div class="content">
+            <strong>Power of Smart Functions:</strong> Smart Functions offer maximum flexibility:
+            <ul class="m-t-8 m-b-0">
+              <li>Complete control over the payload structure</li>
+              <li>Access to device inventory data for enrichment</li>
+              <li>Complex business logic and calculations</li>
+              <li>Multiple outputs from a single input message</li>
+              <li>State management across messages using context</li>
+            </ul>
+          </div>
         </div>
-        <div class="alert alert-warning  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-          <i class="fa fa-exclamation-triangle m-r-4"></i>
-          <strong>Note:</strong> The JavaScript editor for Smart Function is only available if you select <b>Smart
-            Function</b> as a <b>Transformation Type</b> when creating the mapping.
+        <div class="admonition caution" style="max-width: 90%;">
+          <div class="title">Caution</div>
+          <div class="content">
+            <strong>Note:</strong> The JavaScript editor for Smart Function is only available if you select <b>Smart
+              Function</b> as a <b>Transformation Type</b> when creating the mapping.
+          </div>
         </div>
 
         <div class="p-b-8 text-14">
@@ -1542,13 +1518,14 @@ console.log("Device (by device id): " + deviceByDeviceId);
 var deviceByExternalId = context.getManagedObject( &#123; externalId: payload.get("clientId"), type: "c8y_Serial" &#125; );
 console.log("Device (by external id): " + deviceByExternalId);</code></pre>
 
-        <div class="alert alert-warning  m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-          <i class="fa fa-exclamation-triangle m-r-4"></i>
-          <strong>Important Configuration:</strong> Only device fragments configured in <a
-            [routerLink]="ROUTE_SERVICE_CONFIGURATION"> <b>Configuration → Service
-              Configuration → Function → Fragments from inventory to cache</b></a> can be referenced in Smart Functions.
-          Make
-          sure to add all required fragments to this list before using them in your code.
+        <div class="admonition important" style="max-width: 90%;">
+          <div class="title">Important</div>
+          <div class="content">
+            <strong>Important Configuration:</strong> Only device fragments configured in <a
+              [routerLink]="ROUTE_SERVICE_CONFIGURATION"> <b>Configuration → Service
+                Configuration → Function → Fragments from inventory to cache</b></a> can be referenced in Smart Functions.
+            Make sure to add all required fragments to this list before using them in your code.
+          </div>
         </div>
 
         <br />
@@ -1567,12 +1544,13 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
           <code>_CONTEXT_DATA_</code> in templates, you define metadata directly in the JavaScript return object.
         </div>
 
-        <div class="alert alert-info m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-          <i class="fa fa-info-circle m-r-4"></i>
-          <strong>Key Difference:</strong> In Smart Functions, you don't manipulate <code>_IDENTITY_</code> or
-          <code>_CONTEXT_DATA_</code> nodes. Instead, you return JavaScript objects with specific properties that
-          control how
-          the mapper processes your data.
+        <div class="admonition info" style="max-width: 90%;">
+          <div class="title">Info</div>
+          <div class="content">
+            <strong>Key Difference:</strong> In Smart Functions, you don't manipulate <code>_IDENTITY_</code> or
+            <code>_CONTEXT_DATA_</code> nodes. Instead, you return JavaScript objects with specific properties that
+            control how the mapper processes your data.
+          </div>
         </div>
 
         <h5 class="p-t-8 p-b-4"><strong>Metadata Properties for Inbound Smart Functions</strong></h5>
@@ -1630,13 +1608,13 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
           </table>
         </div>
 
-        <div class="alert alert-warning m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-          <i class="fa fa-exclamation-triangle m-r-4"></i>
-          <strong>Note:</strong> When using <code>contextData.deviceName</code> and <code>contextData.deviceType</code>,
-          make
-          sure the mapping has the <b>Create non-existing devices</b> option enabled. Otherwise, the mapper will fail if
-          the
-          device doesn't exist.
+        <div class="admonition caution" style="max-width: 90%;">
+          <div class="title">Caution</div>
+          <div class="content">
+            <strong>Note:</strong> When using <code>contextData.deviceName</code> and <code>contextData.deviceType</code>,
+            make sure the mapping has the <b>Create non-existing devices</b> option enabled. Otherwise, the mapper will fail if
+            the device doesn't exist.
+          </div>
         </div>
 
         <div class="p-b-8 text-14">
@@ -1782,13 +1760,13 @@ function onMessage(msg, context) &#123;
           </table>
         </div>
 
-        <div class="alert alert-success m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-          <i class="fa fa-lightbulb-o m-r-4"></i>
-          <strong>Dynamic Topic Resolution:</strong> Use the <code>_externalId_</code> placeholder in your topic string
-          to
-          automatically include the device's external ID. For example: <code>topic: "measurements/_externalId_"</code>
-          will
-          resolve to <code>"measurements/device-serial-123"</code> at runtime.
+        <div class="admonition info" style="max-width: 90%;">
+          <div class="title">Info</div>
+          <div class="content">
+            <strong>Dynamic Topic Resolution:</strong> Use the <code>_externalId_</code> placeholder in your topic string
+            to automatically include the device's external ID. For example: <code>topic: "measurements/_externalId_"</code>
+            will resolve to <code>"measurements/device-serial-123"</code> at runtime.
+          </div>
         </div>
 
         <div class="p-b-8 text-14">
@@ -1861,13 +1839,13 @@ function onMessage(msg, context) &#123;
       </code></pre>
         </div>
 
-        <div class="alert alert-info m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-          <i class="fa fa-info-circle m-r-4"></i>
-          <strong>Return Type Flexibility:</strong> For outbound Smart Functions, you can return either a single object
-          or an
-          array of objects. If you need to send a message to multiple topics or transform one Cumulocity event into
-          multiple
-          external messages, return an array.
+        <div class="admonition info" style="max-width: 90%;">
+          <div class="title">Info</div>
+          <div class="content">
+            <strong>Return Type Flexibility:</strong> For outbound Smart Functions, you can return either a single object
+            or an array of objects. If you need to send a message to multiple topics or transform one Cumulocity event into
+            multiple external messages, return an array.
+          </div>
         </div>
 
         <h5 class="p-t-8 p-b-4"><strong>Accessing Metadata from Incoming Messages</strong></h5>
@@ -1918,12 +1896,13 @@ function onMessage(msg, context) &#123;
       </code></pre>
         </div>
 
-        <div class="alert alert-warning m-t-16 m-b-16" role="alert" style="max-width: 90%;">
-          <i class="fa fa-exclamation-triangle m-r-4"></i>
-          <strong>Best Practice:</strong> Always validate metadata values before using them. Check if
-          <code>_TOPIC_LEVEL_</code> exists and has the expected index before accessing it. Similarly, verify external
-          IDs and
-          source IDs are present in outbound mappings.
+        <div class="admonition caution" style="max-width: 90%;">
+          <div class="title">Caution</div>
+          <div class="content">
+            <strong>Best Practice:</strong> Always validate metadata values before using them. Check if
+            <code>_TOPIC_LEVEL_</code> exists and has the expected index before accessing it. Similarly, verify external
+            IDs and source IDs are present in outbound mappings.
+          </div>
         </div>
 
         <div class="p-b-8 text-16">

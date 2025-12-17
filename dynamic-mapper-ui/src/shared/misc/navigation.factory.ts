@@ -36,44 +36,13 @@ import { gettext } from '@c8y/ngx-components/gettext';
 
 @Injectable()
 export class MappingNavigationFactory implements NavigatorNodeFactory {
-  private static readonly APPLICATION_DYNAMIC_MAPPING_SERVICE =
+  static readonly APPLICATION_DYNAMIC_MAPPING_SERVICE =
     'dynamic-mapper-service';
 
   appName: string;
   isStandaloneApp: boolean = false;
   configurations: ConnectorConfiguration[] = [];
   staticNodesStandalone = {
-    rootNode: new NavigatorNode({
-      label: gettext('Introduction'),
-      icon: 'home',
-      path: '/c8y-pkg-dynamic-mapper/landing',
-      priority: 600,
-      preventDuplicates: true
-    }),
-    jsonNataNode: new NavigatorNode({
-      parent: gettext('Introduction'),
-      label: gettext('JSONata'),
-      icon: 'help-outline',
-      path: '/c8y-pkg-dynamic-mapper/landing/jsonata',
-      priority: 600,
-      preventDuplicates: true
-    }),
-    javaScriptNode: new NavigatorNode({
-      parent: gettext('Introduction'),
-      label: gettext('Substitution as JavaScript'),
-      icon: 'help-outline',
-      path: '/c8y-pkg-dynamic-mapper/landing/javascript',
-      priority: 600,
-      preventDuplicates: true
-    }),
-    smartFunctionNode: new NavigatorNode({
-      parent: gettext('Introduction'),
-      label: gettext('Smart Function'),
-      path: '/c8y-pkg-dynamic-mapper/landing/smartfunction',
-      icon: 'help-outline',
-      priority: 600,
-      preventDuplicates: true
-    }),
     configurationNode: new NavigatorNode({
       label: gettext('Configuration'),
       icon: 'cog',

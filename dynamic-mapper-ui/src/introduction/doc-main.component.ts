@@ -19,10 +19,10 @@
  * @authors Christof Strack
  */
 
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { MappingService } from '../mapping/core/mapping.service';
 import { CodeExplorerComponent, Direction, Feature, JsonEditorComponent, NODE1, NODE3 } from '../shared';
-import { BehaviorSubject, from, Subject } from 'rxjs';
+import { BehaviorSubject, from, Subject, Subscription } from 'rxjs';
 import { ConnectorConfigurationService } from '../connector';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { AlertService, CoreModule } from '@c8y/ngx-components';
@@ -44,7 +44,7 @@ import { base64ToString } from '../mapping/shared/util';
     RouterLink
   ]
 })
-export class DocMainComponent implements OnInit {
+export class DocMainComponent implements OnInit, OnDestroy {
   constructor(
     private mappingService: MappingService,
     private alertService: AlertService,
@@ -77,6 +77,7 @@ export class DocMainComponent implements OnInit {
   feature: Feature;
 
   currentPage: string = 'main';
+  private fragmentSubscription: Subscription;
 
   async ngOnInit() {
 
@@ -84,6 +85,22 @@ export class DocMainComponent implements OnInit {
 
     // Determine which page to display based on the URL path
     const path = this.route.snapshot.routeConfig?.path || '';
+
+    // Map of path segments to their corresponding element IDs for scrolling
+    const pathToFragmentMap: { [key: string]: string } = {
+      'overview': 'overview',
+      'getting-started': 'getting-started',
+      'managing-connectors': 'managing-connectors',
+      'define-mapping': 'define-mapping',
+      'define-subscription-for-outbound': 'define-subscription-for-outbound',
+      'transformation-types': 'transformation-types',
+      'code-templates': 'code-templates',
+      'metadata': 'metadata',
+      'unknown-payload': 'unknown-payload',
+      'reliability-settings': 'reliability-settings',
+      'access-control': 'access-control'
+    };
+
     if (path.includes('jsonata')) {
       this.currentPage = 'jsonata';
     } else if (path.includes('javascript')) {
@@ -92,10 +109,33 @@ export class DocMainComponent implements OnInit {
       this.currentPage = 'smartfunction';
     } else {
       this.currentPage = 'main';
+
+      // Check if the path corresponds to a section that needs scrolling
+      const pathSegment = path.split('/').pop() || '';
+      const fragmentId = pathToFragmentMap[pathSegment];
+
+      if (fragmentId) {
+        // Wait for DOM to render before scrolling
+        setTimeout(() => {
+          this.scrollToElement(fragmentId);
+        }, 100);
+      } else {
+        // No specific section, scroll to top
+        setTimeout(() => {
+          window.scrollTo(0, 0);
+        }, 0);
+      }
     }
 
-    // Scroll to top when page loads
-    window.scrollTo(0, 0);
+    // Subscribe to fragment changes for navigation anchor scrolling (fallback for hash-based navigation)
+    this.fragmentSubscription = this.route.fragment.subscribe(fragment => {
+      if (fragment) {
+        // Wait for DOM to render before scrolling
+        setTimeout(() => {
+          this.scrollToElement(fragment);
+        }, 100);
+      }
+    });
 
     // Only load data for the main page
     if (this.currentPage === 'main') {
@@ -189,6 +229,12 @@ export class DocMainComponent implements OnInit {
         behavior: 'smooth',
         block: 'start'
       });
+    }
+  }
+
+  ngOnDestroy(): void {
+    if (this.fragmentSubscription) {
+      this.fragmentSubscription.unsubscribe();
     }
   }
 
