@@ -59,12 +59,12 @@
               <li><a (click)="scrollToElement('jsonata-substitution')" style="cursor: pointer;">{{ 'Defining a
                   substitution
                   using JSONata' | translate }}</a></li>
-              <li><a (click)="scrollToElement('javascript-substitution')" style="cursor: pointer;">{{ 'Defining a
-                  substitution
-                  using JavaScript' | translate }}</a></li>
               <li><a (click)="scrollToElement('javascript-smart-function')" style="cursor: pointer;">{{ 'Defining the
                   payload
                   transformation using a Smart Function (JavaScript)' | translate }}</a></li>
+              <li><a (click)="scrollToElement('javascript-substitution')" style="cursor: pointer;">{{ 'Defining a
+                  substitution
+                  using JavaScript' | translate }}</a></li>
             </ul>
           </li>
           <li><a (click)="scrollToElement('code-templates')" style="cursor: pointer;">{{ 'Code Templates' | translate
@@ -268,7 +268,8 @@
 
         <div class="p-b-8 text-16">
           If you're using <strong>JavaScript Substitutions</strong> or <strong>Smart Function
-            (JavaScript)</strong> as Transformation Type, navigate to <a [routerLink]="ROUTE_CODE_TEMPLATES"> Code
+            (JavaScript)</strong> as Transformation Type, navigate to <a
+            [routerLink]="ROUTE_CODE_TEMPLATES_INBOUND_SMART_FUNCTION"> Code
             Templates
           </a> to see
           JavaScript codes samples
@@ -633,21 +634,6 @@
             </a></strong>
         </div>
 
-        <h4 class="p-t-16 p-b-8" id="javascript-substitution">{{ 'Defining a substitution using JavaScript' | translate
-          }}
-        </h4>
-        <div class="p-b-8 text-16">
-          JavaScript substitutions allow you to define individual field transformations using familiar JavaScript syntax
-          within a substitution-based structure. Use JavaScript substitutions when you need complex string
-          manipulations,
-          mathematical calculations, or conditional logic that's easier to express in imperative code.
-        </div>
-        <div class="p-b-16 text-16">
-          <strong><a [routerLink]="['/c8y-pkg-dynamic-mapper/landing/javascript']">
-              <i class="fa fa-book m-r-8"></i>Learn more about defining substitutions using JavaScript →
-            </a></strong>
-        </div>
-
         <h4 class="p-t-16 p-b-8" id="javascript-smart-function">
           {{ 'Defining the payload transformation using a Smart Function (JavaScript)' | translate }}</h4>
         <div class="p-b-8 text-16">
@@ -663,6 +649,22 @@
               <i class="fa fa-book m-r-8"></i>Learn more about Smart Functions and metadata usage →
             </a></strong>
         </div>
+
+        <h4 class="p-t-16 p-b-8" id="javascript-substitution">{{ 'Defining a substitution using JavaScript' | translate
+          }}
+        </h4>
+        <div class="p-b-8 text-16">
+          JavaScript substitutions allow you to define individual field transformations using familiar JavaScript syntax
+          within a substitution-based structure. Use JavaScript substitutions when you need complex string
+          manipulations,
+          mathematical calculations, or conditional logic that's easier to express in imperative code.
+        </div>
+        <div class="p-b-16 text-16">
+          <strong><a [routerLink]="['/c8y-pkg-dynamic-mapper/landing/javascript']">
+              <i class="fa fa-book m-r-8"></i>Learn more about defining substitutions using JavaScript →
+            </a></strong>
+        </div>
+
       </div>
 
       <div class="card-header" id="code-templates">

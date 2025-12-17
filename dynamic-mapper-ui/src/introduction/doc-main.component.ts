@@ -68,11 +68,10 @@ export class DocMainComponent implements OnInit {
   ROUTE_OUTBOUND: string =
     `/c8y-pkg-dynamic-mapper/${NODE1}/mappings/outbound`;
   ROUTE_CONNECTORS: string = `/c8y-pkg-dynamic-mapper/${NODE3}/connectorConfiguration`;
-  ROUTE_CODE_TEMPLATES_INBOUND_SMART_FUNCTION= ``;
+  ROUTE_CODE_TEMPLATES_INBOUND_SMART_FUNCTION= `/c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/INBOUND_SMART_FUNCTION`;
   countMappingInbound$: Subject<any> = new BehaviorSubject<any>(0);
   countMappingOutbound$: Subject<any> = new BehaviorSubject<any>(0);
   countConnector$: Subject<any> = new BehaviorSubject<any>(0);
-  linkSnoopProcess: string = `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/INBOUND_SMART_FUNCTION`;
   linkSVG: SafeResourceUrl;
 
   feature: Feature;
@@ -95,10 +94,11 @@ export class DocMainComponent implements OnInit {
       this.currentPage = 'main';
     }
 
+    // Scroll to top when page loads
+    window.scrollTo(0, 0);
+
     // Only load data for the main page
     if (this.currentPage === 'main') {
-      this.linkSnoopProcess = '/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Snooping_Stepper_Process.svg';
-
       // Load code templates
       const codeTemplatesMap: CodeTemplateMap = await this.sharedService.getCodeTemplates();
       this.codeTemplates = Object.entries(codeTemplatesMap)
