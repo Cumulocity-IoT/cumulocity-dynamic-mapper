@@ -19,9 +19,14 @@
   ~
   -->
 
-<!-- Page Switcher -->
+<!-- ================================================================================ -->
+<!-- PAGE SWITCHER - Routes between main, jsonata, javascript, and smartfunction -->
+<!-- ================================================================================ -->
 <div [ngSwitch]="currentPage">
-  <!-- Main Page -->
+
+  <!-- ========================================================================== -->
+  <!-- ========================= MAIN LANDING PAGE ============================== -->
+  <!-- ========================================================================== -->
   <div *ngSwitchCase="'main'">
     <c8y-title>{{ 'Getting started: Dynamic Mapper' | translate }}</c8y-title>
 
@@ -33,7 +38,7 @@
       </a>
     </div>
 
-    <!-- Table of Contents -->
+    <!-- ==================== TABLE OF CONTENTS ==================== -->
     <div>
       <div class="card-header">
         <h3>{{ 'Topics that will help you getting started ...' | translate }}</h3>
@@ -83,6 +88,7 @@
         </ul>
       </div>
 
+      <!-- ==================== SECTION: OVERVIEW OF DYNAMIC MAPPER ==================== -->
       <div class="card-header" id="overview">
         <h3>
           {{ 'Overview of Dynamic Mapper' | translate }}
@@ -175,7 +181,7 @@
           (mapping rules).</p>
       </div>
 
-
+      <!-- ==================== SECTION: GETTING STARTED ==================== -->
       <div class="card-header" id="getting-started">
         <h3>
           {{ 'Getting started' | translate }}
@@ -307,6 +313,7 @@
         </ul>
       </div>
 
+      <!-- ==================== SECTION: MANAGING CONNECTORS ==================== -->
       <div class="card-header" id="managing-connectors">
         <h3>
           {{ 'Managing connectors' | translate }}
@@ -424,6 +431,7 @@
         <br />
       </div>
 
+      <!-- ==================== SECTION: DEFINING A MAPPING ==================== -->
       <div class="card-header" id="define-mapping">
         <h3>
           {{ 'Defining a mapping' | translate }}
@@ -522,6 +530,7 @@
         <div class="p-b-8"></div>
       </div>
 
+      <!-- ==================== SECTION: DEFINING A SUBSCRIPTION FOR OUTBOUND MAPPING ==================== -->
       <div class="card-header" id="define-subscription-for-outbound">
         <h3>
           {{ 'Defining a subscription for outbound mapping' | translate }}
@@ -597,6 +606,7 @@
         outbound.</p>
       <br />
 
+      <!-- ==================== SECTION: TRANSFORMATION TYPES ==================== -->
       <div class="card-header" id="transformation-types">
         <h3>
           {{ 'Transformation Types' | translate }}
@@ -667,6 +677,7 @@
 
       </div>
 
+      <!-- ==================== SECTION: CODE TEMPLATES ==================== -->
       <div class="card-header" id="code-templates">
         <h3>
           {{ 'Code Templates' | translate }}
@@ -718,6 +729,7 @@
         </ul>
       </div>
 
+      <!-- ==================== SECTION: USING METADATA IN SOURCE AND TARGET TEMPLATES ==================== -->
       <div class="card-header" id="metadata">
         <h3>
           {{ 'Using metadata in source templates and target templates' | translate }}
@@ -927,7 +939,7 @@
         <br />
       </div>
 
-
+      <!-- ==================== SECTION: GETTING STARTED WITHOUT KNOWING YOUR SOURCE PAYLOAD ==================== -->
       <div class="card-header" id="unknown-payload">
         <h3>
           {{ 'Getting started without knowing your source payload' | translate }}
@@ -987,6 +999,7 @@
           mode.</p>
       </div>
 
+      <!-- ==================== SECTION: USING RELIABILITY SETTINGS IN MAPPINGS ==================== -->
       <div class="card-header" id="reliability-settings">
         <h3>
           {{ 'Using reliability settings in mappings' | translate }}
@@ -1161,6 +1174,7 @@
         </div>
       </div>
 
+      <!-- ==================== SECTION: MANAGING PERMISSIONS FOR DYNAMIC MAPPER FEATURES ==================== -->
       <div class="card-header" id="access-control">
         <h3>
           {{ 'Managing permissions for Dynamic Mapper features' | translate }}
@@ -1285,9 +1299,11 @@
       </div>
     </div>
   </div>
-  <!-- End Main Page -->
+  <!-- ========================= END MAIN LANDING PAGE ============================== -->
 
-  <!-- JSONata Page -->
+  <!-- ========================================================================== -->
+  <!-- ========================= JSONATA PAGE =================================== -->
+  <!-- ========================================================================== -->
   <div *ngSwitchCase="'jsonata'">
     <c8y-title>{{ 'Defining a substitution using JSONata' | translate }}</c8y-title>
 
@@ -1378,9 +1394,11 @@
       <div class="p-b-8"></div>
     </div>
   </div>
-  <!-- End JSONata Page -->
+  <!-- ========================= END JSONATA PAGE =================================== -->
 
-  <!-- JavaScript Page -->
+  <!-- ========================================================================== -->
+  <!-- ========================= JAVASCRIPT PAGE ================================ -->
+  <!-- ========================================================================== -->
   <div *ngSwitchCase="'javascript'">
     <c8y-title>{{ 'Defining a substitution using JavaScript' | translate }}</c8y-title>
 
@@ -1437,9 +1455,11 @@
       <div class="p-b-8"></div>
     </div>
   </div>
-  <!-- End JavaScript Page -->
+  <!-- ========================= END JAVASCRIPT PAGE ================================ -->
 
-  <!-- Smart Function Page -->
+  <!-- ========================================================================== -->
+  <!-- ========================= SMART FUNCTION PAGE ============================ -->
+  <!-- ========================================================================== -->
   <div *ngSwitchCase="'smartfunction'">
     <c8y-title>{{ 'Defining the payload transformation using a Smart Function (JavaScript)' | translate }}</c8y-title>
 
@@ -1914,6 +1934,9 @@ function onMessage(msg, context) &#123;
       </div>
     </div>
   </div>
-  <!-- End Smart Function Page -->
+  <!-- ========================= END SMART FUNCTION PAGE ============================ -->
 
 </div>
+<!-- ================================================================================ -->
+<!-- END PAGE SWITCHER -->
+<!-- ================================================================================ -->
