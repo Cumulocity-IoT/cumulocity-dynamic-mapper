@@ -68,10 +68,11 @@ export class DocMainComponent implements OnInit {
   ROUTE_OUTBOUND: string =
     `/c8y-pkg-dynamic-mapper/${NODE1}/mappings/outbound`;
   ROUTE_CONNECTORS: string = `/c8y-pkg-dynamic-mapper/${NODE3}/connectorConfiguration`;
+  ROUTE_CODE_TEMPLATES_INBOUND_SMART_FUNCTION= ``;
   countMappingInbound$: Subject<any> = new BehaviorSubject<any>(0);
   countMappingOutbound$: Subject<any> = new BehaviorSubject<any>(0);
   countConnector$: Subject<any> = new BehaviorSubject<any>(0);
-  linkSnoopProcess: string = '';
+  linkSnoopProcess: string = `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/INBOUND_SMART_FUNCTION`;
   linkSVG: SafeResourceUrl;
 
   feature: Feature;
