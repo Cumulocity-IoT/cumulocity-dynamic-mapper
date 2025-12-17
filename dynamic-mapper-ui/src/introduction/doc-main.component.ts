@@ -109,22 +109,6 @@ export class DocMainComponent implements OnInit, OnDestroy {
       this.currentPage = 'smartfunction';
     } else {
       this.currentPage = 'main';
-
-      // Check if the path corresponds to a section that needs scrolling
-      const pathSegment = path.split('/').pop() || '';
-      const fragmentId = pathToFragmentMap[pathSegment];
-
-      if (fragmentId) {
-        // Wait for DOM to render before scrolling
-        setTimeout(() => {
-          this.scrollToElement(fragmentId);
-        }, 100);
-      } else {
-        // No specific section, scroll to top
-        setTimeout(() => {
-          window.scrollTo(0, 0);
-        }, 0);
-      }
     }
 
     // Subscribe to fragment changes for navigation anchor scrolling (fallback for hash-based navigation)
@@ -186,6 +170,22 @@ export class DocMainComponent implements OnInit, OnDestroy {
           "You don't have the role 'Dynamic Mapper User' and therefore cannot edit mappings. Please contact your administrator."
         );
       }
+
+      // After data is loaded, check if we need to scroll to a specific section
+      const pathSegment = path.split('/').pop() || '';
+      const fragmentId = pathToFragmentMap[pathSegment];
+
+      if (fragmentId) {
+        // Wait for DOM to fully render with loaded data before scrolling
+        setTimeout(() => {
+          this.scrollToElement(fragmentId);
+        }, 200);
+      } else {
+        // No specific section, scroll to top
+        setTimeout(() => {
+          window.scrollTo(0, 0);
+        }, 0);
+      }
     }
   }
 
@@ -225,9 +225,12 @@ export class DocMainComponent implements OnInit, OnDestroy {
   scrollToElement(elementId: string): void {
     const element = document.getElementById(elementId);
     if (element) {
-      element.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start'
+      const elementPosition = element.getBoundingClientRect().top + window.scrollY;
+      const offsetPosition = elementPosition - 80; // Offset to show heading with some space above
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
       });
     }
   }
