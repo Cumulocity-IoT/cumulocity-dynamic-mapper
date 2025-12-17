@@ -23,13 +23,12 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CoreModule, ModalLabels } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
-import { Substitution } from '../../shared';
 import { EditorComponent } from '@c8y/ngx-components/editor';
+import { Substitution } from '../../../shared';
 
 @Component({
   selector: 'd11r-code-explorer-modal',
   templateUrl: './code-explorer-modal.component.html',
-  styleUrls: ['../shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
   imports: [CoreModule, EditorComponent, CommonModule, FormsModule]

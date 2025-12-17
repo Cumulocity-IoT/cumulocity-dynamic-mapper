@@ -22,9 +22,6 @@ import { NgModule } from '@angular/core';
 import { hookRoute } from '@c8y/ngx-components';
 import { featureResolver } from '../shared';
 import { DocMainComponent } from './doc-main.component';
-import { DocJSONataComponent } from './doc-jsonata.component';
-import { DocJavaScriptComponent } from './doc-javascript.component';
-import { DocSmartFunctionComponent } from './doc-smartfunction.component';
 
 @NgModule({
   providers: [
@@ -43,19 +40,19 @@ import { DocSmartFunctionComponent } from './doc-smartfunction.component';
     }),
     hookRoute({
       path: 'c8y-pkg-dynamic-mapper/landing/jsonata',
-      component: DocJSONataComponent, resolve: {
+      component: DocMainComponent, resolve: {
         feature: featureResolver
       }
     }),
     hookRoute({
       path: 'c8y-pkg-dynamic-mapper/landing/javascript',
-      component: DocJavaScriptComponent, resolve: {
+      component: DocMainComponent, resolve: {
         feature: featureResolver
       }
     }),
     hookRoute({
       path: 'c8y-pkg-dynamic-mapper/landing/smartfunction',
-      component: DocSmartFunctionComponent, resolve: {
+      component: DocMainComponent, resolve: {
         feature: featureResolver
       }
     })

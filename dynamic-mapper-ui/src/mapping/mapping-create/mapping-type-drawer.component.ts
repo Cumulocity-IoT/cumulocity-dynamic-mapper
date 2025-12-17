@@ -29,6 +29,7 @@ import { BottomDrawerRef, CoreModule, ModalLabels } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { Subject, takeUntil } from 'rxjs';
 import {
+  CodeExplorerComponent,
   Direction,
   MappingType,
   MappingTypeDescriptionMap,
@@ -40,7 +41,6 @@ import {
   TransformationTypeLabels
 } from '../../shared';
 import { CodeTemplate } from '../../configuration';
-import { CodeExplorerComponent } from '../code-explorer/code-explorer-modal.component';
 import { base64ToString } from '../shared/util';
 import { CommonModule } from '@angular/common';
 import { CustomSelectComponent } from '../../shared/component/select/custom-select.component';
