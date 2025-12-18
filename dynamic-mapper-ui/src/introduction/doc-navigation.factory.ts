@@ -48,7 +48,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
     overviewNode: new NavigatorNode({
       parent: gettext('Introduction'),
       icon: 'empty',
-      label: gettext('Overview of Dynamic Mapper'),
+      label: gettext('Overview'),
       path: '/c8y-pkg-dynamic-mapper/landing/overview',
       priority: 613,
       preventDuplicates: true
@@ -80,7 +80,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
     subscriptionOutboundNode: new NavigatorNode({
       parent: gettext('Introduction'),
       icon: 'empty',
-      label: gettext('Defining a subscription for outbound mapping'),
+      label: gettext('Outbound mapping'),
       path: '/c8y-pkg-dynamic-mapper/landing/define-subscription-for-outbound',
       priority: 609,
       preventDuplicates: true
@@ -101,19 +101,19 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       priority: 607,
       preventDuplicates: true
     }),
-    javaScriptNode: new NavigatorNode({
-      parent: gettext('Transformation Types'),
-      icon: 'empty',
-      label: gettext('Substitution as JavaScript'),
-      path: '/c8y-pkg-dynamic-mapper/landing/javascript',
-      priority: 606,
-      preventDuplicates: true
-    }),
     smartFunctionNode: new NavigatorNode({
       parent: gettext('Transformation Types'),
       icon: 'empty',
       label: gettext('Smart Function'),
       path: '/c8y-pkg-dynamic-mapper/landing/smartfunction',
+      priority: 606,
+      preventDuplicates: true
+    }),
+    javaScriptNode: new NavigatorNode({
+      parent: gettext('Transformation Types'),
+      icon: 'empty',
+      label: gettext('Substitution as JavaScript'),
+      path: '/c8y-pkg-dynamic-mapper/landing/javascript',
       priority: 605,
       preventDuplicates: true
     }),
@@ -128,7 +128,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
     metadataNode: new NavigatorNode({
       parent: gettext('Introduction'),
       icon: 'empty',
-      label: gettext('Using metadata in templates'),
+      label: gettext('Metadata'),
       path: '/c8y-pkg-dynamic-mapper/landing/metadata',
       priority: 603,
       preventDuplicates: true
@@ -136,7 +136,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
     unknownPayloadNode: new NavigatorNode({
       parent: gettext('Introduction'),
       icon: 'empty',
-      label: gettext('Getting started without source payload'),
+      label: gettext('Snooping'),
       path: '/c8y-pkg-dynamic-mapper/landing/unknown-payload',
       priority: 602,
       preventDuplicates: true
@@ -144,7 +144,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
     reliabilitySettingsNode: new NavigatorNode({
       parent: gettext('Introduction'),
       icon: 'empty',
-      label: gettext('Using reliability settings'),
+      label: gettext('Reliability settings'),
       path: '/c8y-pkg-dynamic-mapper/landing/reliability-settings',
       priority: 601,
       preventDuplicates: true
