@@ -18,44 +18,34 @@
  * @authors Christof Strack
  */
 
-/* Shared styles for all landing documentation pages */
+/* ============================================================================ */
+/* LAYOUT & STRUCTURE                                                           */
+/* ============================================================================ */
 
-/* SVG handling */
-svg {
-  width: inherit;
-  height: inherit;
+/* Card sections - main content containers */
+.card-header,
+.card-block {
+  max-width: 1200px;
+  margin-left: 0;
+  margin-right: auto;
+  padding-left: 0;
+  padding-right: 24px;
 }
 
-/* Scroll to top button */
-.to-the-top {
-  position: fixed;
-  right: 3rem;
-  bottom: 4rem;
-  z-index: 38;
-  font-size: 1.5rem;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0;
-  padding: 6px 18px 6px 10px;
-  width: auto;
-  height: auto;
-  border: 1px solid var(--c8y-brand-primary);
-  background-color: white;
-  color: var(--c8y-brand-primary);
-  text-align: center;
-  transition: all 0.4s ease;
-  cursor: pointer;
-  text-decoration: none;
+.card-header {
+  margin-top: 24px;
+  margin-bottom: 16px;
 }
 
-.to-the-top:hover {
-  text-decoration: underline;
-  color: #0056b3;
+.card-block {
+  margin-bottom: 24px;
 }
 
-/* Typography */
+/* ============================================================================ */
+/* TYPOGRAPHY                                                                   */
+/* ============================================================================ */
+
+/* Headings */
 h1, .h1 {
   font-size: 36px;
 }
@@ -69,140 +59,199 @@ h1, h2, h3, h4 {
   text-transform: uppercase;
 }
 
-/* Landing page layout */
-.landing-help {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 24px 16px;
-  font-family: 'Segoe UI', Arial, sans-serif;
+h3 {
+  font-size: 24px;
+  color: #333;
 }
 
-/* Card sections - constrain width and add margins */
-.card-header,
-.card-block {
-  max-width: 1200px;
-  margin-left: 0;
-  margin-right: auto;
-  padding-left: 0;
-  padding-right: 24px;
+h4 {
+  font-size: 18px;
+  color: #444;
 }
 
-.landing-section-header {
-  margin-top: 32px;
-  margin-bottom: 8px;
-  border-bottom: 1px solid #e0e0e0;
-  padding-bottom: 4px;
-}
+/* ============================================================================ */
+/* IMAGES                                                                       */
+/* ============================================================================ */
 
-.landing-section-block {
-  margin-bottom: 32px;
-  padding-left: 8px;
-}
-
-.landing-section-spacer {
-  height: 24px;
-}
-
-/* Lists */
-.landing-list {
-  margin: 12px 0 12px 24px;
-  padding: 0;
-  font-size: 16px;
-}
-
-.landing-list--toc {
-  list-style-type: decimal;
-  margin-left: 32px;
-}
-
-.landing-list--numbered {
-  list-style-type: decimal;
-  margin-left: 32px;
-}
-
-/* Text */
-.landing-text {
-  margin-bottom: 12px;
-  font-size: 16px;
-  line-height: 1.6;
-}
-
-/* Images */
-.landing-image {
+/* Standard documentation images */
+img {
   display: block;
-  margin: 24px auto 16px auto;
+  max-width: 100%;
+  height: auto;
   border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-  background: #fafbfc;
 }
 
-.landing-image--small {
-  width: 30%;
-  min-width: 180px;
-  max-width: 300px;
-}
-
-.landing-image--medium {
-  width: 70%;
-  min-width: 320px;
-  max-width: 640px;
-}
-
-.landing-image--large {
-  width: 80%;
-  min-width: 400px;
-  max-width: 900px;
-}
-
-.landing-image-description {
-  text-align: center;
-  font-size: 14px;
-  color: #666;
-  margin-top: -8px;
-  margin-bottom: 16px;
-}
-
+/* Image descriptions */
 .image-description {
   font-style: italic;
   color: #666;
   font-size: 14px;
+  margin-top: 8px;
+  margin-bottom: 24px;
 }
 
-/* Tables */
+/* ============================================================================ */
+/* TABLES                                                                       */
+/* ============================================================================ */
+
+/* Table container with width constraints */
+.table-responsive {
+  overflow-x: auto;
+  margin: 16px 0;
+}
+
 .table-width-80 {
   max-width: 80%;
 }
 
-/* Code blocks */
+.table-width-100 {
+  max-width: 100%;
+}
+
+/* Table styling */
+.table {
+  width: 100%;
+  margin-bottom: 16px;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.table th {
+  font-weight: 600;
+  background-color: #f8f9fa;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+  background-color: #f9f9f9;
+}
+
+.table-light {
+  background-color: #f8f9fa;
+}
+
+.thead-light th {
+  background-color: #e9ecef;
+  color: #495057;
+}
+
+/* ============================================================================ */
+/* LISTS                                                                        */
+/* ============================================================================ */
+
+/* Unordered lists */
+ul.text-16,
+ul {
+  margin: 12px 0;
+  padding-left: 24px;
+  line-height: 1.2;
+}
+
+ul.text-16 li,
+ul li {
+  margin-bottom: 8px;
+}
+
+/* Ordered lists */
+ol.text-16,
+ol {
+  margin: 12px 0;
+  padding-left: 24px;
+  line-height: 1.2;
+  counter-reset: item;
+}
+
+ol.text-16 li,
+ol li {
+  margin-bottom: 12px;
+}
+
+/* ============================================================================ */
+/* LINKS                                                                        */
+/* ============================================================================ */
+
+a {
+  color: var(--c8y-brand-primary, #007bff);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: #0056b3;
+  text-decoration: underline;
+}
+
+a:focus {
+  outline: 2px solid var(--c8y-brand-primary, #007bff);
+  outline-offset: 2px;
+}
+
+/* Links with icons */
+a .fa {
+  margin-right: 4px;
+}
+
+/* ============================================================================ */
+/* CODE BLOCKS                                                                  */
+/* ============================================================================ */
+
+/* code {
+  padding: 2px 6px;
+  background-color: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  border-radius: 3px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+  color: #d63384;
+} */
+
+code {
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-size: 90%;
+    background-color: var(--c8y-code-background);
+    color: var(--c8y-code-color);
+}
+
 pre {
-  margin: 8px 0;
+  margin: 16px 0;
   padding: 0;
   background-color: transparent;
   border: none;
 }
 
 pre code {
-  white-space: pre;
   display: block;
   padding: 16px;
   background-color: #f5f5f5;
   border: 1px solid #ddd;
   border-radius: 4px;
   overflow-x: auto;
+  white-space: pre;
   font-family: 'Courier New', Courier, monospace;
   font-size: 13px;
   line-height: 1.5;
   color: #333;
 }
 
-/* Admonition boxes */
+/* ============================================================================ */
+/* ADMONITION BOXES                                                             */
+/* ============================================================================ */
+
 .admonition {
-  margin: 16px 0;
+  margin: 24px 0;
   padding: 0;
   border-radius: 4px;
-  border-left: 4px solid;
+  border-left: 8px solid;
   background-color: #f9f9f9;
   overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }
 
 .admonition .title {
@@ -215,21 +264,20 @@ pre code {
 }
 
 .admonition .content {
-  padding: 12px 16px;
+  padding: 16px;
   font-size: 14px;
-  line-height: 1.6;
+  line-height: 1.7;
   margin: 0;
 }
 
-/* Caution/Warning - Orange/Yellow */
-.admonition.caution {
-  border-left-color: #f0ad4e;
-  background-color: #fcf8e3;
+.admonition .content ul {
+  margin-top: 8px;
+  margin-bottom: 0;
 }
 
-.admonition.caution .title {
-  background-color: #f9ecc5;
-  color: var(--c8y-palette-status-warning);
+.admonition .content strong {
+  font-weight: 600;
+  color: #333;
 }
 
 /* Info - Blue */
@@ -240,7 +288,18 @@ pre code {
 
 .admonition.info .title {
   background-color: #bcdff1;
-  color: var(--c8y-palette-status-info);
+  color: var(--c8y-palette-status-info, #31708f);
+}
+
+/* Caution/Warning - Orange/Yellow */
+.admonition.caution {
+  border-left-color: #f0ad4e;
+  background-color: #fcf8e3;
+}
+
+.admonition.caution .title {
+  background-color: #f9ecc5;
+  color: var(--c8y-palette-status-warning, #8a6d3b);
 }
 
 /* Important - Red */
@@ -251,5 +310,91 @@ pre code {
 
 .admonition.important .title {
   background-color: #ebcccc;
-  color: var(--c8y-palette-status-danger);
+  color: var(--c8y-palette-status-danger, #a94442);
+}
+
+/* ============================================================================ */
+/* SCROLL TO TOP BUTTON                                                         */
+/* ============================================================================ */
+
+.to-the-top {
+  position: fixed;
+  right: 3rem;
+  bottom: 4rem;
+  z-index: 38;
+  font-size: 1.5rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 8px 20px 8px 12px;
+  width: auto;
+  height: auto;
+  border: 1px solid var(--c8y-brand-primary, #007bff);
+  border-radius: 4px;
+  background-color: white;
+  color: var(--c8y-brand-primary, #007bff);
+  text-align: center;
+  text-decoration: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.to-the-top:hover {
+  background-color: var(--c8y-brand-primary, #007bff);
+  color: white;
+  text-decoration: none;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.to-the-top:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+/* ============================================================================ */
+/* UTILITY CLASSES                                                              */
+/* ============================================================================ */
+
+/* Text alignment */
+.text-center {
+  text-align: center;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.text-left {
+  text-align: left;
+}
+
+/* Text colors */
+.text-muted {
+  color: #6c757d;
+}
+
+/* Text sizes */
+.text-14 {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.text-16 {
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+/* Alignment */
+.align-middle {
+  vertical-align: middle;
+}
+
+/* SVG handling */
+svg {
+  width: inherit;
+  height: inherit;
 }
