@@ -33,7 +33,7 @@ import { SnoopExplorerComponent } from '../snoop-explorer/snoop-explorer-modal.c
         (click)="exploreSnoopedTemplates()"
         style="padding-top: 0px; padding-bottom: 10px;"
       >
-        <span>{{ snoopedTemplatesCount }}</span>
+        <span class="animated flash infinite" style="animation-duration:5s">{{ snoopedTemplatesCount }}</span>
       </button>
     </div>
   `,
