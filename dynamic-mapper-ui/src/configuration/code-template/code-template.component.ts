@@ -64,7 +64,7 @@ export class CodeComponent implements OnInit {
   feature: Feature;
 
 
-  codeEditorHelp = `Shared code is evaluated across all mappings that utilize <b>Define substitutions as JavaScript</b> for creating substitutions. The templates <b>Inbound</b> and <b>Outbound</b> are available in the code editor and can be customized according to your requirements per mapping.`;
+  codeEditorHelp = `Shared code is evaluated across all mappings that utilize  <b>Smart Function JavaScript</b> or <b>Substitutions as JavaScript</b> for creating substitutions. The templates <b>Inbound</b> and <b>Outbound</b> are available in the code editor and can be customized according to your requirements per mapping.`;
 
   constructor(
     private bsModalService: BsModalService,
@@ -92,25 +92,25 @@ export class CodeComponent implements OnInit {
         pattern: /INBOUND_SUBSTITUTION_AS_CODE/,
         type: TemplateType.INBOUND_SUBSTITUTION_AS_CODE,
         direction: Direction.INBOUND,
-        help: `The templates <b>Inbound</b> are available in the code editor and can be customized according to your requirements per mapping. They serve as sample to building substitutions in JavaScript. The function <code>function extractFromSource(ctx) {} </code> is called during the evaluation at runtime to define substitutions.`
+        help: `The templates <b>Inbound</b> are available in the code editor and can be customized according to your requirements per mapping. They serve as sample to building substitutions in JavaScript. The function <code>function extractFromSource(ctx)</code> is called during the evaluation at runtime to define substitutions.`
       },
       {
         pattern: /OUTBOUND_SUBSTITUTION_AS_CODE/,
         type: TemplateType.OUTBOUND_SUBSTITUTION_AS_CODE,
         direction: Direction.OUTBOUND,
-        help: `The templates <b>Outbound</b> are available in the code editor and can be customized according to your requirements per mapping. They serve as sample to building substitutions in JavaScript. The function <code>function extractFromSource(ctx) {} </code> is called during the evaluation at runtime to define substitutions.`
+        help: `The templates <b>Outbound</b> are available in the code editor and can be customized according to your requirements per mapping. They serve as sample to building substitutions in JavaScript. The function <code>function extractFromSource(ctx)</code> is called during the evaluation at runtime to define substitutions.`
       },
       {
         pattern: /INBOUND_SMART_FUNCTION/,
         type: TemplateType.INBOUND_SMART_FUNCTION,
         direction: Direction.INBOUND,
-        help: `The templates <b>Inbound for Smart Function</b> are available in the code editor and can be customized according to your requirements per mapping. They serve as sample for a predefined Smart Function for data transformation and create payload for Cumulocity API calls. The function <code>function onMessage(msg, context) </code> is called during evaluation at runtime to define the payload.`
+        help: `The templates <b>Inbound for Smart Function</b> are available in the code editor and can be customized according to your requirements per mapping. They serve as sample for a predefined Smart Function for data transformation and create payload for Cumulocity API calls. The function <code>function onMessage(msg, context)</code> is called during evaluation at runtime to define the payload.`
       },
       {
         pattern: /OUTBOUND_SMART_FUNCTION/,
         type: TemplateType.OUTBOUND_SMART_FUNCTION,
         direction: Direction.OUTBOUND,
-        help: `The templates <b>Outbound for Smart Function</b> are available in the code editor and can be customized according to your requirements per mapping. They serve as sample for a Smart Function (JavaScript) to create Broker Payload. The function <code>function extractFromSource(ctx) {} </code> is called during evaluation at runtime to define the payload.`
+        help: `The templates <b>Outbound for Smart Function</b> are available in the code editor and can be customized according to your requirements per mapping. They serve as sample for a Smart Function (JavaScript) to create Broker Payload. The function <code>function onMessage(msg, context)</code> is called during evaluation at runtime to define the payload.`
       }
     ];
 
@@ -124,7 +124,7 @@ export class CodeComponent implements OnInit {
     } else {
       this.templateType = TemplateType.SHARED;
       this.defaultTemplate = TemplateType.SHARED.toString();
-      this.codeEditorHelp = `Shared code is evaluated across all mappings that utilize <b>Define substitutions as JavaScript</b> for creating substitutions. The system code shows the code with definitions of used wrapper classes.`;
+      this.codeEditorHelp = `Shared code is evaluated across all mappings that utilize <b>Smart Function JavaScript</b> or <b>Substitutions as JavaScript</b> for creating substitutions. The system code shows the code with definitions of used wrapper classes used only for <b>Substitutions as JavaScript</b>.`;
     }
   }
 

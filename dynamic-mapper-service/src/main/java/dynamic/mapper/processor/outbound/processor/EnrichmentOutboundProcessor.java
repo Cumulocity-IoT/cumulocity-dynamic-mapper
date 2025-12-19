@@ -105,8 +105,8 @@ public class EnrichmentOutboundProcessor extends BaseProcessor {
             try {
                 var graalEngine = configurationRegistry.getGraalEngine(tenant);
                 var graalContext = createGraalContext(graalEngine);
-                // processingContext.setSystemCode(serviceConfiguration.getCodeTemplates()
-                // .get(TemplateType.SMART.name()).getCode());
+                context.setSystemCode(serviceConfiguration.getCodeTemplates()
+                        .get(TemplateType.SHARED.name()).getCode());
                 context.setGraalContext(graalContext);
                 context.setFlowState(new HashMap<String, Object>());
                 context.setFlowContext(new SimpleFlowContext(graalContext, tenant,

@@ -287,7 +287,7 @@ class FlowProcessorOutboundProcessorTest {
         processor.process(exchange);
 
         // Then - Should load system code
-        verify(graalContext, times(2)).eval(any(Source.class)); // Main code + system code
+        verify(graalContext, times(1)).eval(any(Source.class)); // Main code, system code is not called
 
         log.info("✅ System code test passed");
     }
@@ -441,7 +441,7 @@ class FlowProcessorOutboundProcessorTest {
             processor.process(exchange);
 
             // Then - Should load both codes
-            verify(graalContext, times(3)).eval(any(Source.class)); // Main + shared + system
+            verify(graalContext, times(2)).eval(any(Source.class)); // Main + shared, system i snot called
 
             log.info("✅ Both shared and system code test passed");
         }

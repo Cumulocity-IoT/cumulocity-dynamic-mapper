@@ -121,9 +121,8 @@ public class FlowProcessorInboundProcessor extends BaseProcessor {
                         .buildLiteral();
                 graalContext.eval(source);
 
-                // Load shared and system code if available
+                // Load shared  code if available
                 loadSharedCode(graalContext, context);
-                loadSystemCode(graalContext, context);
 
                 onMessageFunction = bindings.getMember(identifier);
                 inputMessage = createInputMessage(graalContext, context);
@@ -156,22 +155,6 @@ public class FlowProcessorInboundProcessor extends BaseProcessor {
             } finally {
                 // CRITICAL FIX: Clear source reference
                 sharedSource = null;
-            }
-        }
-    }
-
-    private void loadSystemCode(Context graalContext, ProcessingContext<?> context) {
-        if (context.getSystemCode() != null) {
-            Source systemSource = null;
-            try {
-                byte[] decodedSystemCodeBytes = Base64.getDecoder().decode(context.getSystemCode());
-                String decodedSystemCode = new String(decodedSystemCodeBytes);
-                systemSource = Source.newBuilder("js", decodedSystemCode, "systemCode.js")
-                        .buildLiteral();
-                graalContext.eval(systemSource);
-            } finally {
-                // CRITICAL FIX: Clear source reference
-                systemSource = null;
             }
         }
     }
