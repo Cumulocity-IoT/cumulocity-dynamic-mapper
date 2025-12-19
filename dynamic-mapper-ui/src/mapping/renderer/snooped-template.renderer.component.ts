@@ -17,11 +17,12 @@
  *
  * @authors Christof Strack
  */
-import { NgIf } from '@angular/common';
+import { NgClass, NgIf } from '@angular/common';
 import { Component } from '@angular/core';
 import { CellRendererContext } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { SnoopExplorerComponent } from '../snoop-explorer/snoop-explorer-modal.component';
+import { SnoopStatus } from '../../shared';
 
 @Component({
   selector: 'd11r-mapping-renderer-snooped',
@@ -33,18 +34,21 @@ import { SnoopExplorerComponent } from '../snoop-explorer/snoop-explorer-modal.c
         (click)="exploreSnoopedTemplates()"
         style="padding-top: 0px; padding-bottom: 10px;"
       >
-        <span class="animated flash infinite" style="animation-duration:5s">{{ snoopedTemplatesCount }}</span>
+        <span [ngClass]="{'animated flash infinite': context.value.snoopStatus === SnoopStatus.STARTED}" [style.animation-duration]="context.value.snoopStatus === SnoopStatus.STARTED ? '5s' : null">{{ snoopedTemplatesCount }}</span>
       </button>
     </div>
   `,
   standalone: true,
-  imports: [NgIf]
+  imports: [NgIf, NgClass]
 })
 export class SnoopedTemplateRendererComponent {
   constructor(
     public readonly context: CellRendererContext,
     private readonly bsModalService: BsModalService
-  ) {}
+  ) {
+  }
+
+  SnoopStatus = SnoopStatus;
 
   get hasSnoopedTemplates(): boolean {
     return (this.context.value.snoopedTemplates?.length ?? 0) > 0;

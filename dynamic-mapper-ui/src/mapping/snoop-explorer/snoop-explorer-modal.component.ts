@@ -37,7 +37,8 @@ import { CommonModule } from '@angular/common';
 export class SnoopExplorerComponent implements OnInit, OnDestroy {
   constructor(
     private mappingService: MappingService,
-    private alertService: AlertService, public sharedService: SharedService,
+    private alertService: AlertService,
+    public sharedService: SharedService,
     private cdr: ChangeDetectorRef
   ) { }
 

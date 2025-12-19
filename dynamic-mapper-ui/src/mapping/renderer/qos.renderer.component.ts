@@ -18,20 +18,23 @@
  * @authors Christof Strack
  */
 import { Component } from '@angular/core';
-import { CellRendererContext, CommonModule } from '@c8y/ngx-components';
+import { CellRendererContext } from '@c8y/ngx-components';
 
 @Component({
-selector: 'd11r-mapping-renderer-qos',
-  template: `<span>{{
-    context.item.value === 'AT_MOST_ONCE'
-      ? 'At most once'
-      : context.item.value === 'AT_LEAST_ONCE'
-        ? 'At least once'
-        : 'Exactly once'
-  }}</span>`,
-  standalone: true,
-  imports: [CommonModule]
+  selector: 'd11r-mapping-renderer-qos',
+  template: `<span>{{ qosLabel }}</span>`,
+  standalone: true
 })
 export class QOSRendererComponent {
   constructor(public context: CellRendererContext) {}
+
+  private readonly qosLabels: Record<string, string> = {
+    'AT_MOST_ONCE': 'At most once',
+    'AT_LEAST_ONCE': 'At least once',
+    'EXACTLY_ONCE': 'Exactly once'
+  };
+
+  get qosLabel(): string {
+    return this.qosLabels[this.context.value] ?? this.context.value;
+  }
 }

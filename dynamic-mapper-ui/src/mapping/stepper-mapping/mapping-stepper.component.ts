@@ -93,6 +93,11 @@ import { MappingSubstitutionStepComponent } from '../step-substitution/mapping-s
 import { PopoverModule } from 'ngx-bootstrap/popover';
 
 let initializedMonaco = false;
+
+const STEP_LABEL_TEST_MAPPING = 'Test mapping';
+const STEP_LABEL_GENERAL_SETTINGS = 'General settings';
+const STEP_LABEL_SELECT_TEMPLATES = 'Select templates';
+
 interface StepperStepChange {
   stepper: C8yStepper;
   step: CdkStep;
@@ -488,14 +493,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       updatedContentAsJson
     );
 
-    // Show error message if transformation type is invalid
-    // if (!isTransformationTypeValid) {
-    //   this.raiseAlert({
-    //     type: 'warning',
-    //     text: 'Wrong Transformation Type: an Array in Source Template or Target Template requires Transformation Type Smart Function'
-    //   });
-    // }
-
     // Consider both validations
     const isValid = !hasProtectedChanges && isTransformationTypeValid;
     this.isContentChangeValid$.next(isValid);
@@ -539,14 +536,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.mapping.transformationType,
       updatedContentAsJson
     );
-
-    // Show error message if transformation type is invalid
-    // if (!isTransformationTypeValid) {
-    //   this.raiseAlert({
-    //     type: 'warning',
-    //     text: 'Wrong Transformation Type: an Array in Source Template or Target Template requires Transformation Type Smart Function'
-    //   });
-    // }
 
     // Consider both validations
     const isValid = !hasProtectedChanges && isTransformationTypeValid;
@@ -730,9 +719,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.step = event.step.label;
     this.stepperForward = false;
 
-    if (this.step === 'Test mapping') {
+    if (this.step === STEP_LABEL_TEST_MAPPING) {
       this.mappingTestingStep.editorTestingRequest.setSchema({});
-    } else if (this.step === 'General settings' || this.step === 'Select templates') {
+    } else if (this.step === STEP_LABEL_GENERAL_SETTINGS || this.step === STEP_LABEL_SELECT_TEMPLATES) {
       this.templatesInitialized = false;
     }
 
@@ -819,14 +808,18 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   onSelectCodeTemplate(): void {
-    this.mappingCode = this.codeTemplatesDecoded.get(this.templateId).code;
+    const template = this.codeTemplatesDecoded.get(this.templateId);
+    if (template) {
+      this.mappingCode = template.code;
+    }
   }
 
   getCodeTemplateEntries(): { key: string; name: string; type: TemplateType }[] {
     if (!this.codeTemplates) return [];
+    const expectedType = `${this.stepperConfiguration.direction.toString()}_${this.mapping?.transformationType.toString()}`;
     return Object.entries(this.codeTemplates)
       .filter(([key, template]) =>
-        template.templateType.toString() == `${this.stepperConfiguration.direction.toString()}_${this.mapping?.transformationType.toString()}`
+        template.templateType.toString() === expectedType
       )
       .map(([key, template]) => ({
         key,
@@ -877,15 +870,15 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     });
 
     try {
-      const resultOf = await drawer.instance.result;
+      const result = await drawer.instance.result;
 
       if (isSubstitutionsAsCode(this.mapping)) {
-        if (typeof resultOf === 'string' && resultOf.trim()) {
-          this.mappingCode = resultOf;
+        if (typeof result === 'string' && result.trim()) {
+          this.mappingCode = result;
           this.cdr.detectChanges();
 
           if (this.codeEditor) {
-            setTimeout(() => this.codeEditor.writeValue(resultOf), 100);
+            setTimeout(() => this.codeEditor.writeValue(result), 100);
           }
 
           this.alertService.success('Generated JavaScript code successfully.');
@@ -893,10 +886,10 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
           this.raiseAlert({ type: 'warning', text: 'No valid JavaScript code was generated.' });
         }
       } else {
-        if (Array.isArray(resultOf) && resultOf.length > 0) {
-          this.alertService.success(`Generated ${resultOf.length} substitutions.`);
+        if (Array.isArray(result) && result.length > 0) {
+          this.alertService.success(`Generated ${result.length} substitutions.`);
           this.mapping.substitutions.splice(0);
-          resultOf.forEach(sub => {
+          result.forEach(sub => {
             this.substitutionService.addSubstitution(
               sub,
               this.mapping,
@@ -916,8 +909,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
           this.raiseAlert({ type: 'warning', text: 'No substitutions were generated.' });
         }
       }
-    } catch (ex) {
-      // User canceled or error occurred
+    } catch (error) {
+      console.error('AI generation error:', error);
     }
 
     this.isGenerateSubstitutionOpen = false;

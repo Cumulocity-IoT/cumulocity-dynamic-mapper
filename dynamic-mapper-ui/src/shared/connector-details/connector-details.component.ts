@@ -80,7 +80,6 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
   private readonly cdr = inject(ChangeDetectorRef);
 
   async ngOnInit() {
-    // console.log('Running version', this.version);
     this.specifications$ = this.connectorConfigurationService.getSpecifications();
     this.feature = await this.sharedService.getFeatures();
     this.contextSubscription = this.route.data.pipe(
@@ -96,13 +95,10 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
       });
     this.connectorStatusService.startConnectorStatusLogs();
     this.statusLogs$ = this.connectorStatusService.getStatusLogs();
-    // Subscribe to logs to verify they're coming through
     this.statusLogs$.pipe(
       takeUntil(this.destroy$)
     ).subscribe({
-      // next: (logs) => console.log('Received logs in component:', logs),
-      error: (error) => console.error('Error receiving logs:', error),
-      // complete: () => console.log('Completed') // optional
+      error: (error) => console.error('Error receiving logs:', error)
     });
     this.updateStatusLogs();
   }
@@ -158,12 +154,8 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
         parameter: { connectorIdentifier: configuration.identifier }
       }
     );
-    // console.log('Details toggle activation to broker', response1);
     if (response1.status === HttpStatusCode.Created) {
-      // if (response1.status === HttpStatusCode.Created && response2.status === HttpStatusCode.Created) {
-      Promise.resolve().then(() => {
-        this.configuration.enabled = !this.configuration.enabled;
-      });
+      this.configuration.enabled = !this.configuration.enabled;
       this.alertService.success(gettext('Connection updated successfully.'));
     } else {
       this.alertService.danger(gettext('Failed to establish connection!'));

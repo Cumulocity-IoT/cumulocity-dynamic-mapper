@@ -103,7 +103,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
       {
         validators: {
           validation: [
-            this.stepperConfiguration.direction == Direction.INBOUND
+            this.stepperConfiguration.direction === Direction.INBOUND
               ? 'checkTopicsInboundAreValid'
               : 'checkTopicsOutboundAreValid'
           ]
@@ -117,8 +117,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             type: 'input',
             templateOptions: {
               label: 'Mapping Name',
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
+              disabled: this.isFieldDisabled,
               required: true
             }
           },
@@ -130,14 +129,13 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             templateOptions: {
               label: 'Mapping Topic',
               placeholder: 'The MappingTopic defines a key to which this mapping is bound. It is a kind of key to organize the mappings internally',
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
+              disabled: this.isFieldDisabled,
               description: 'Mapping Topic',
               change: () => {
                 const newDerivedTopic = deriveSampleTopicFromTopic(
                   this.propertyFormly.get('mappingTopic').value
                 );
-                if (this.stepperConfiguration.direction == Direction.INBOUND) {
+                if (this.stepperConfiguration.direction === Direction.INBOUND) {
                   this.propertyFormly
                     .get('mappingTopicSample')
                     .setValue(newDerivedTopic);
@@ -147,10 +145,10 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
                     .setValue(newDerivedTopic);
                 }
               },
-              required: this.stepperConfiguration.direction == Direction.INBOUND
+              required: this.stepperConfiguration.direction === Direction.INBOUND
             },
             hideExpression:
-              this.stepperConfiguration.direction == Direction.OUTBOUND
+              this.stepperConfiguration.direction === Direction.OUTBOUND
           },
           {
             className: 'col-lg-6',
@@ -160,8 +158,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             templateOptions: {
               label: 'Publish Topic',
               placeholder: 'Publish Topic ...',
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
+              disabled: this.isFieldDisabled,
               change: () => {
                 const newDerivedTopic = deriveSampleTopicFromTopic(
                   this.propertyFormly.get('publishTopic').value
@@ -174,38 +171,8 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
                 true
             },
             hideExpression:
-              this.stepperConfiguration.direction == Direction.INBOUND
+              this.stepperConfiguration.direction === Direction.INBOUND
           },
-          // {
-          //   className: 'col-lg-6',
-          //   key: 'filterMapping',
-          //   type: 'input',
-          //   templateOptions: {
-          //     label: 'Filter Mapping',
-          //     placeholder: 'custom_OperationFragment',
-          //     disabled:
-          //       this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
-          //     description:
-          //       'The filter has to be defined as boolean expression (JSONata), e.g. <code>$exists(<C8Y_FRAGMENT>)</code>',
-          //     required:
-          //       this.stepperConfiguration.direction == Direction.OUTBOUND
-          //   },
-          //   hideExpression:
-          //     this.stepperConfiguration.direction == Direction.INBOUND || (this.stepperConfiguration.direction == Direction.OUTBOUND && (this.mapping.snoopStatus == SnoopStatus.NONE || this.mapping.snoopStatus == SnoopStatus.STOPPED)),
-          //   hooks: {
-          //     onInit: (field: FormlyFieldConfig) => {
-          //       field.formControl.valueChanges.pipe(
-          //         // Wait for 1500ms pause in typing before processing
-          //         debounceTime(1500),
-
-          //         // Only trigger if the value has actually changed
-          //         distinctUntilChanged()
-          //       ).subscribe(path => {
-          //         this.updateFilterMappingExpressionResult(path);
-          //       });
-          //     }
-          //   }
-          // },
           {
             className: 'col-lg-6',
             key: 'filterInventory',
@@ -213,15 +180,12 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             templateOptions: {
               label: 'Filter Inventory',
               placeholder: `type = "lora_device_type`,
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
+              disabled: this.isFieldDisabled,
               description:
                 'The filter is applied to the inventory object that is referenced in the payload. The filter has to be defined as boolean expression (JSONata), e.g. <code>type = "lora-device-type"</code>. NOTE: Any property referenced here has to be added in Configuration > Service Configuration > Fragments from inventory to cache.',
               required:
                 false
             },
-            // hideExpression:
-            //this.stepperConfiguration.direction == Direction.INBOUND,
             hooks: {
               onInit: (field: FormlyFieldConfig) => {
                 field.formControl.valueChanges.pipe(
@@ -244,8 +208,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             templateOptions: {
               label: 'Mapping Topic Sample',
               placeholder: 'e.g. device/110',
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
+              disabled: this.isFieldDisabled,
               description: `The Mapping Topic Sample name
               must have the same structure and number of
               levels as the MappingTopic. Wildcards, i.e. <code>+</code> in the Mapping Topic are replaced with concrete runtime values. This helps to identify the relevant positions in the substitutions`,
@@ -262,15 +225,14 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             templateOptions: {
               label: 'Publish Topic Sample',
               placeholder: 'e.g. device/110',
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
+              disabled: this.isFieldDisabled,
               description: `The Publish Topic Sample name
               must have the same structure and number of
               levels as the PublishTopic. Wildcards, i.e. <code>+</code> in the PublishTopic are replaced with concrete runtime values. This helps to identify the relevant positions in the substitutions`,
               required: true
             },
             hideExpression:
-              this.stepperConfiguration.direction != Direction.OUTBOUND
+              this.stepperConfiguration.direction !== Direction.OUTBOUND
           }
         ]
       },
@@ -287,23 +249,14 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             type: 'select',
             wrappers: ['c8y-form-field'],
             templateOptions: {
-              label: this.stepperConfiguration.direction == Direction.INBOUND ? 'Target API' : 'Source API',
+              label: this.stepperConfiguration.direction === Direction.INBOUND ? 'Target API' : 'Source API',
               options: Object.keys(API)
-                .filter((key) => key != API.ALL.name)
+                .filter((key) => key !== API.ALL.name)
                 .map((key) => {
                   return { label: this.formatStringPipe.transform(key), value: key };
                 }),
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
-              // eslint-disable-next-line @typescript-eslint/no-unused-vars
-              change: (field: FormlyFieldConfig, event?: any) => {
-                // console.log(
-                //  'Changes:',
-                //  field,
-                //  event,
-                //  this.mapping,
-                //  this.propertyFormly.valid
-                // );
+              disabled: this.isFieldDisabled,
+              change: () => {
                 this.onTargetAPIChanged(
                   this.propertyFormly.get('targetAPI').value
                 );
@@ -318,8 +271,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             wrappers: ['c8y-form-field'],
             templateOptions: {
               label: 'Create device',
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
+              disabled: this.isFieldDisabled,
               description:
                 'In case a MEAO (Measuremente, Event, Alarm, Operation) is received and the referenced device does not yet exist, it can be created automatically.',
               required: false,
@@ -328,8 +280,8 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
               hideLabel: true
             },
             hideExpression: () =>
-              this.stepperConfiguration.direction == Direction.OUTBOUND ||
-              this.mapping.targetAPI == API.INVENTORY.name
+              this.stepperConfiguration.direction === Direction.OUTBOUND ||
+              this.mapping.targetAPI === API.INVENTORY.name
           },
           {
             className: 'col-lg-3',
@@ -338,8 +290,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             wrappers: ['c8y-form-field'],
             templateOptions: {
               label: 'Update Existing Device',
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
+              disabled: this.isFieldDisabled,
               description: 'Update Existing Device.',
               required: false,
               switchMode: true,
@@ -347,9 +298,9 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
               hideLabel: true
             },
             hideExpression: () =>
-              this.stepperConfiguration.direction == Direction.OUTBOUND ||
-              (this.stepperConfiguration.direction == Direction.INBOUND &&
-                this.mapping.targetAPI != API.INVENTORY.name)
+              this.stepperConfiguration.direction === Direction.OUTBOUND ||
+              (this.stepperConfiguration.direction === Direction.INBOUND &&
+                this.mapping.targetAPI !== API.INVENTORY.name)
           },
           {
             className: 'col-lg-3',
@@ -358,8 +309,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             wrappers: ['c8y-form-field'],
             templateOptions: {
               label: 'Auto acknowledge',
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
+              disabled: this.isFieldDisabled,
               description: 'Auto acknowledge outbound operation.',
               required: false,
               switchMode: true,
@@ -367,9 +317,9 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
               hideLabel: true
             },
             hideExpression: () =>
-              this.stepperConfiguration.direction == Direction.INBOUND ||
-              (this.stepperConfiguration.direction == Direction.OUTBOUND &&
-                this.mapping.targetAPI != API.OPERATION.name)
+              this.stepperConfiguration.direction === Direction.INBOUND ||
+              (this.stepperConfiguration.direction === Direction.OUTBOUND &&
+                this.mapping.targetAPI !== API.OPERATION.name)
           },
 
           {
@@ -379,8 +329,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             wrappers: ['c8y-form-field'],
             templateOptions: {
               label: 'Event contains attachment',
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
+              disabled: this.isFieldDisabled,
               description: 'Event contains attachment, e.g. image, ... that is stored separately.',
               required: false,
               switchMode: true,
@@ -388,7 +337,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
               hideLabel: true
             },
             hideExpression: () =>
-              this.stepperConfiguration.direction == Direction.OUTBOUND ||
+              this.stepperConfiguration.direction === Direction.OUTBOUND ||
               this.mapping.targetAPI !== API.EVENT.name
           },
 
@@ -398,9 +347,9 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             className: 'col-lg-3',
             template: '<div class="form-group row" style="height:80px"></div>',
             hideExpression: () =>
-              this.stepperConfiguration.direction == Direction.INBOUND ||
-              (this.stepperConfiguration.direction == Direction.OUTBOUND &&
-                this.mapping.targetAPI == API.OPERATION.name)
+              this.stepperConfiguration.direction === Direction.INBOUND ||
+              (this.stepperConfiguration.direction === Direction.OUTBOUND &&
+                this.mapping.targetAPI === API.OPERATION.name)
           },
           {
             className: 'col-lg-6',
@@ -420,8 +369,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
                 map((key) => {
                   return { label: this.formatStringPipe.transform(key), value: key };
                 }),
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
+              disabled: this.isFieldDisabled,
               required: true
             }
           }
@@ -438,8 +386,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             templateOptions: {
               label: 'Use external id',
               switchMode: true,
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
+              disabled: this.isFieldDisabled,
               description:
                 'If this is enabled then the device id is identified by its  external id which is looked up and translated using the externalIdType.',
               indeterminate: false,
@@ -453,8 +400,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             defaultValue: 'c8y_Serial',
             templateOptions: {
               label: 'External Id type',
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
+              disabled: this.isFieldDisabled,
             },
             hideExpression: (model) => !model.useExternalId
           },
@@ -471,8 +417,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             wrappers: ['c8y-form-field'],
             templateOptions: {
               label: 'Max failure count',
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
+              disabled: this.isFieldDisabled,
               description:
                 'Max failure count, if this is exceeded the mapping is automatically deactivated. A value of 0 means no limit. The failure count is reset to 0 if the mapping is reactivated.',
             },
@@ -486,7 +431,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
     this.selectedResult$.complete();
   }
 
-  async updateFilterMappingExpressionResult(path) {
+  async updateFilterMappingExpressionResult(path: string) {
     try {
       const resultExpression: JSON = await this.mappingService.evaluateExpression(
         JSON.parse('{}'),
@@ -497,11 +442,8 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
         result: JSON.stringify(resultExpression, null, 4),
         valid: true
       };
-      if (path && this.filterMappingModel.filterExpression.resultType != 'Boolean') throw Error('The filter expression must return of boolean type');
+      if (path && this.filterMappingModel.filterExpression.resultType !== 'Boolean') throw Error('The filter expression must return of boolean type');
       this.mapping.filterMapping = path;
-      // this.propertyFormly
-      // .get('filterMapping')
-      // .setErrors(null);
     } catch (error) {
       this.filterMappingModel.filterExpression.valid = false;
       this.propertyFormly
@@ -512,9 +454,9 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
     this.filterMappingModel = { ...this.filterMappingModel };
   }
 
-  async updateFilterInventoryExpressionResult(path) {
+  async updateFilterInventoryExpressionResult(path: string) {
     this.clearAlerts();
-    this.raiseAlert({ type: 'info', text: 'NOTE: Any property referenced here has to be added in Configuration > Service Configuration > Fragments from inventory to cache.' })
+    this.raiseAlert({ type: 'info', text: 'NOTE: Any property referenced here has to be added in Configuration > Service Configuration > Fragments from inventory to cache.' });
     try {
       const resultExpression: JSON = await this.mappingService.evaluateExpression(
         JSON.parse('{}'),
@@ -525,11 +467,8 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
         result: JSON.stringify(resultExpression, null, 4),
         valid: true
       };
-      if (path && this.filterInventoryModel.filterExpression.resultType != 'Boolean') throw Error('The filter expression must return of boolean type');
+      if (path && this.filterInventoryModel.filterExpression.resultType !== 'Boolean') throw Error('The filter expression must return of boolean type');
       this.mapping.filterInventory = path;
-      // this.propertyFormly
-      // .get('filterInventory')
-      // .setErrors(null);
     } catch (error) {
       this.filterInventoryModel.filterExpression.valid = false;
       this.propertyFormly

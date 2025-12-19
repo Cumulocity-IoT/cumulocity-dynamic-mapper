@@ -21,7 +21,7 @@ import { CommonModule } from '@angular/common';
 import { HttpStatusCode } from '@angular/common/http';
 import { ChangeDetectorRef, Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { AlertService, CellRendererContext, CoreModule } from '@c8y/ngx-components';
-import { Direction, Feature, Mapping, SharedService } from '../../shared';
+import { Direction, Feature, SharedService } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { SubscriptionService } from '../core/subscription.service';
 
@@ -41,11 +41,8 @@ import { SubscriptionService } from '../core/subscription.service';
           [disabled]="!canEdit || isCheckingValidity"
         />
         <span></span>
-        <span
-          class="text-capitalize"
-          [title]="statusTitle"
-        >
-          {{ context.value ? 'active' : ('inactive' | translate) }}
+        <span class="text-capitalize">
+          {{ context.value ? ('active' | translate) : ('inactive' | translate) }}
         </span>
       </label>
     </div>
@@ -70,16 +67,13 @@ export class MappingStatusActivationRendererComponent implements OnInit {
     return this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole;
   }
 
-  get statusTitle(): string {
-    return this.context.value ? 'active' : 'inactive';
-  }
-
   async ngOnInit() {
     try {
       this.feature = await this.sharedService.getFeatures();
       this.cdr.detectChanges();
     } catch (error) {
       console.error('Error loading features in component', error);
+      this.alertService.danger('Failed to load features. Please refresh the page.');
     }
   }
 
@@ -143,7 +137,7 @@ export class MappingStatusActivationRendererComponent implements OnInit {
   }
 
   private async handleActivationFailure(response: Response): Promise<void> {
-    const failedMap = await response.json();
+    const failedMap: Record<string, string> = await response.json();
     const failedList = Object.values(failedMap).join(', ');
     this.alertService.warning(
       `Mapping could only activate partially. It failed for the following connectors: ${failedList}`
