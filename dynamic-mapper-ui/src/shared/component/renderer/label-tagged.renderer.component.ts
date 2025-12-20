@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { NgIf } from '@angular/common';
+import { NgFor, NgIf } from '@angular/common';
 import { Component } from '@angular/core';
 import { CellRendererContext } from '@c8y/ngx-components';
 
@@ -42,6 +42,7 @@ import { CellRendererContext } from '@c8y/ngx-components';
   standalone: true,
   imports: [
     NgIf,
+    NgFor
   ]
 })
 export class LabelTaggedRendererComponent {

@@ -18,6 +18,7 @@
  * @authors Christof Strack
  */
 
+import { CommonModule } from '@angular/common';
 import {
   Component,
   ElementRef,
@@ -66,7 +67,8 @@ export interface ContentChanges {
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrls: ['./jsoneditor.style.css'],
   encapsulation: ViewEncapsulation.None,
-  standalone: true
+  standalone: true,
+  imports: [CommonModule]
 })
 export class JsonEditorComponent implements OnInit, OnDestroy, AfterViewInit {
   @Input() options;

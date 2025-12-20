@@ -19,20 +19,23 @@
  */
 import { Component, Input, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup } from '@angular/forms';
-import { ModalLabels } from '@c8y/ngx-components';
+import { CoreModule, ModalLabels } from '@c8y/ngx-components';
 import { BehaviorSubject, Subject } from 'rxjs';
 import {
   Direction,
   Mapping,
   Substitution,
-  RepairStrategy
+  RepairStrategy,
+  SharedModule
 } from '../../../shared';
 import { definesDeviceIdentifier, StepperConfiguration } from '../../../shared/mapping/mapping.model';
 import { EditorMode } from '../../shared/stepper.model';
+import { PopoverModule } from 'ngx-bootstrap/popover';
 
 @Component({
   selector: 'd11r-edit-substitution-modal',
   templateUrl: './edit-substitution-modal.component.html',
+  imports:[CoreModule, SharedModule, PopoverModule],
   standalone: true
 })
 export class EditSubstitutionComponent implements OnInit, OnDestroy {
