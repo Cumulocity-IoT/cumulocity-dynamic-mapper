@@ -25,6 +25,7 @@ import { CoreModule, ModalLabels } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
 import { EditorComponent } from '@c8y/ngx-components/editor';
 import { Substitution } from '../../../shared';
+import { gettext } from '@c8y/ngx-components/gettext';
 
 @Component({
   selector: 'd11r-code-explorer-modal',
@@ -42,7 +43,7 @@ export class CodeExplorerComponent implements OnInit, OnDestroy {
 
   editorOptions: EditorComponent['editorOptions'];
   closeSubject: Subject<Substitution> = new Subject();
-  labels: ModalLabels;
+  labels: ModalLabels = { ok: gettext('Save settings'), cancel: gettext('Cancel') };
 
   private readonly destroy$ = new Subject<void>();
 

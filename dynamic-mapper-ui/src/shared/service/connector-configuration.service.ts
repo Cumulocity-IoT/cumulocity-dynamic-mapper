@@ -384,7 +384,7 @@ export class ConnectorConfigurationService {
     ).subscribe({
       complete: () => {
         // Countdown completed naturally
-        console.log('⏰ Countdown cycle completed');
+        //console.log('⏰ Countdown cycle completed');
       }
     });
   }

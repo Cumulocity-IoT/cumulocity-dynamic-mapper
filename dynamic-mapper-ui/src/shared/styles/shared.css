@@ -26,11 +26,19 @@ div a i.dlt-c8y-icon-swipe-right {
   color: green !important;
 }
 
+c8y-navigator-icon i.dlt-c8y-icon-swipe-right {
+  color: green !important;
+}
+
 /* #app div a i.dlt-c8y-icon-swipe-left {
   color: orange !important;
 } */
 
 div a i.dlt-c8y-icon-swipe-left {
+  color: orange !important;
+}
+
+c8y-navigator-icon i.dlt-c8y-icon-swipe-left {
   color: orange !important;
 }
 
