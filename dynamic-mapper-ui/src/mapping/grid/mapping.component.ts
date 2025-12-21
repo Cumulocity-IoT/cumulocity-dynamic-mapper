@@ -33,6 +33,7 @@ import {
   BulkActionControl,
   Column,
   ColumnDataType,
+  CoreModule,
   DataGridComponent,
   DisplayOptions,
   Pagination
@@ -41,37 +42,43 @@ import { saveAs } from 'file-saver';
 import {
   API,
   ConfirmationModalComponent,
+  createCustomUuid,
+  DeploymentMapEntry,
   Direction,
+  ExtensionType,
+  Feature,
+  FormatStringPipe,
+  getExternalTemplate,
+  isSubstitutionsAsCode,
+  LabelTaggedRendererComponent,
   Mapping,
   MappingEnriched,
-  Substitution,
   MappingType,
+  MappingTypeDescriptionMap,
+  nextIdAndPad,
   Operation,
   Qos,
   SAMPLE_TEMPLATES_C8Y,
-  SnoopStatus,
-  createCustomUuid,
-  getExternalTemplate,
-  nextIdAndPad,
-  DeploymentMapEntry,
-  ExtensionType,
-  LabelTaggedRendererComponent,
-  MappingTypeDescriptionMap,
+  SharedModule,
   SharedService,
+  SnoopStatus,
   StepperConfiguration,
-  Feature,
-  isSubstitutionsAsCode,
+  Substitution,
   TransformationType
 } from '../../shared';
 
 import { HttpStatusCode } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { IIdentified } from '@c8y/client';
+import { gettext } from '@c8y/ngx-components/gettext';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
-import { BehaviorSubject, Subject, filter, finalize, switchMap, take } from 'rxjs';
+import { BehaviorSubject, filter, finalize, Subject, switchMap, take } from 'rxjs';
+import { CodeTemplate } from '../../configuration/shared/configuration.model';
 import { MappingService } from '../core/mapping.service';
+import { SubscriptionService } from '../core/subscription.service';
 import { MappingFilterComponent } from '../filter/mapping-filter.component';
 import { ImportMappingsComponent } from '../import/import-modal.component';
+import { MappingTypeDrawerComponent } from '../mapping-create/mapping-type-drawer.component';
 import { MappingDeploymentRendererComponent } from '../renderer/mapping-deployment.renderer.component';
 import { MappingIdCellRendererComponent } from '../renderer/mapping-id.renderer.component';
 import { SnoopedTemplateRendererComponent } from '../renderer/snooped-template.renderer.component';
@@ -82,16 +89,17 @@ import {
 } from '../shared/mapping.model';
 import { AdvisorAction, EditorMode } from '../shared/stepper.model';
 import { AdviceActionComponent } from './advisor/advice-action.component';
-import { SubscriptionService } from '../core/subscription.service';
-import { MappingTypeDrawerComponent } from '../mapping-create/mapping-type-drawer.component';
-import { gettext } from '@c8y/ngx-components/gettext';
+import { CommonModule } from '@angular/common';
+import { MappingStepperComponent } from '../stepper-mapping/mapping-stepper.component';
+import { SnoopingStepperComponent } from '../stepper-snooping/snooping-stepper.component';
 
 @Component({
   selector: 'd11r-mapping-mapping-grid',
   templateUrl: 'mapping.component.html',
   styleUrls: ['../shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
-  standalone: false
+  standalone: true,
+  imports: [CoreModule, CommonModule, SharedModule, MappingStepperComponent, SnoopingStepperComponent],
 })
 export class MappingComponent implements OnInit, OnDestroy {
   @ViewChild('mappingGrid') mappingGrid: DataGridComponent;
@@ -151,6 +159,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   bulkActionControls: BulkActionControl[] = [];
 
   feature: Feature;
+  codeTemplate: CodeTemplate;
 
   constructor(
   ) {
@@ -372,7 +381,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     const initialState = { mapping, sourceSystem };
     try {
       const modalRef = this.bsModalService.show(MappingFilterComponent, {
-        initialState
+        initialState, class: 'modal-lg'
       });
       await new Promise((resolve) => {
         modalRef.content.closeSubject
@@ -520,6 +529,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       this.transformationType = resultOf.transformationType;
       this.substitutionsAsCode = this.transformationType == TransformationType.SMART_FUNCTION || this.transformationType == TransformationType.SUBSTITUTION_AS_CODE;
       this.mappingType = resultOf.mappingType;
+      this.codeTemplate = resultOf.codeTemplate;
       this.addMapping();
     }
   }
@@ -537,7 +547,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     let mapping: Mapping;
     if (this.stepperConfiguration.direction == Direction.INBOUND) {
       let code;
-      if (this.substitutionsAsCode) code = (await this.sharedService.getCodeTemplate(Direction.INBOUND, this.transformationType)).code;
+      if (this.substitutionsAsCode) code = this.codeTemplate.code;
       mapping = {
         // name: `Mapping - ${identifier.substring(0, 7)}`,
         name: `Mapping - ${nextIdAndPad(this.mappingsCount, 2)}`,
@@ -568,7 +578,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       };
     } else {
       let code;
-      if (this.substitutionsAsCode) code = (await this.sharedService.getCodeTemplate(Direction.OUTBOUND, this.transformationType)).code;
+      if (this.substitutionsAsCode) code = this.codeTemplate.code;
       mapping = {
         name: `Mapping - ${identifier.substring(0, 7)}`,
         id: identifier,

@@ -30,7 +30,6 @@ import org.apache.camel.Exchange;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
@@ -50,14 +49,18 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class FlowProcessorOutboundProcessor extends BaseProcessor {
 
-    @Autowired
-    private MappingService mappingService;
+    private final MappingService mappingService;
+
+    public FlowProcessorOutboundProcessor(MappingService mappingService) {
+        this.mappingService = mappingService;
+    }
 
     @Override
     public void process(Exchange exchange) throws Exception {
         ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
-        Mapping mapping = context.getMapping();
+
         String tenant = context.getTenant();
+        Mapping mapping = context.getMapping();
 
         try {
             processSmartMapping(context);
@@ -130,9 +133,8 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
                         .buildLiteral();
                 graalContext.eval(source);
 
-                // Load shared and system code if available
+                // Load shared code if available
                 loadSharedCode(graalContext, context);
-                loadSystemCode(graalContext, context);
 
                 onMessageFunction = bindings.getMember(identifier);
                 inputMessage = createInputMessage(graalContext, context);
@@ -209,21 +211,6 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
                 graalContext.eval(sharedSource);
             } finally {
                 sharedSource = null;
-            }
-        }
-    }
-
-    private void loadSystemCode(Context graalContext, ProcessingContext<?> context) {
-        if (context.getSystemCode() != null) {
-            Source systemSource = null;
-            try {
-                byte[] decodedSystemCodeBytes = Base64.getDecoder().decode(context.getSystemCode());
-                String decodedSystemCode = new String(decodedSystemCodeBytes);
-                systemSource = Source.newBuilder("js", decodedSystemCode, "systemCode.js")
-                        .buildLiteral();
-                graalContext.eval(systemSource);
-            } finally {
-                systemSource = null;
             }
         }
     }

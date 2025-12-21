@@ -18,17 +18,12 @@
  * @authors Christof Strack
  */
 import { NgModule } from '@angular/core';
-import { CoreModule, hookNavigator, hookRoute } from '@c8y/ngx-components';
-import { featureResolver, NODE2, SharedModule } from '../shared';
+import { hookNavigator, hookRoute } from '@c8y/ngx-components';
+import { featureResolver, NODE2 } from '../shared';
 import { TestingComponent } from './grid/testing.component';
 import { TestNavigationFactory } from './test-navigation.factory';
 
 @NgModule({
-  declarations: [
-    TestingComponent,
-  ],
-  imports: [CoreModule, SharedModule],
-  exports: [],
   providers: [
     hookRoute({
       path: `c8y-pkg-dynamic-mapper/${NODE2}/testing`,

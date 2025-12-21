@@ -22,6 +22,8 @@ import {
   ActionControl,
   BulkActionControl,
   Column,
+  CommonModule,
+  CoreModule,
   DataGridComponent,
   DataSourceModifier,
   DisplayOptions,
@@ -31,13 +33,14 @@ import {
 } from '@c8y/ngx-components';
 import { TestingDeviceService } from '../testing.service';
 import { ActivatedRoute } from '@angular/router';
-import { Feature } from 'src/shared';
+import { Feature } from '../../shared';
 
 @Component({
   selector: 'd11r-mapping-testing-grid',
   templateUrl: 'testing.component.html',
   styleUrls: ['../../mapping/shared/mapping.style.css'],
-  standalone: false
+  standalone: true,
+  imports: [CoreModule, CommonModule]
 })
 export class TestingComponent implements OnInit {
   constructor(private service: TestingDeviceService,
@@ -54,9 +57,9 @@ export class TestingComponent implements OnInit {
     this.pagination = this.service.getPagination();
     this.actionControls = this.service.getActionControls();
   }
-  async ngOnInit(): Promise<void>  {
+  async ngOnInit(): Promise<void> {
     this.feature = await this.route.snapshot.data['feature'];
-    if ( this.feature?.userHasMappingAdminRole){
+    if (this.feature?.userHasMappingAdminRole) {
       this.bulkActionControls = this.service.getBulkActionControls();
     }
   }

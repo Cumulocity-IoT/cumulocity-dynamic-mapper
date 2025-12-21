@@ -20,7 +20,7 @@
 import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { IManagedObject } from '@c8y/client';
-import { AlertService } from '@c8y/ngx-components';
+import { AlertService, CommonModule, CoreModule } from '@c8y/ngx-components';
 import { ConfirmationModalComponent, ExtensionStatus, Feature, SharedService } from '../../shared';
 import { ExtensionService } from '../extension.service';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
@@ -28,13 +28,15 @@ import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 @Component({
   selector: 'd11r-mapping-extension-card',
   templateUrl: './extension-card.component.html',
-  standalone: false
+  standalone: true,
+  imports: [CoreModule]
 })
 export class ExtensionCardComponent implements OnInit {
   @Input() app: IManagedObject;
   @Output() appDeleted: EventEmitter<void> = new EventEmitter();
+
   ExtensionStatus = ExtensionStatus;
-  external: boolean = true;
+  external = true;
   feature: Feature;
 
   constructor(
@@ -42,52 +44,53 @@ export class ExtensionCardComponent implements OnInit {
     private alertService: AlertService,
     private router: Router,
     private activatedRoute: ActivatedRoute,
-    public bsModalService: BsModalService,
+    private bsModalService: BsModalService,
     private sharedService: SharedService
-  ) { }
+  ) {}
 
   async ngOnInit() {
     this.external = this.app?.['external'];
     this.feature = await this.sharedService.getFeatures();
   }
 
-  async detail() {
-    // this.router.navigateByUrl(`/c8y-pkg-dynamic-mapper/node3/extension/${this.app.id}`);
+  detail(): void {
     this.router.navigate(['properties/', this.app.id], {
       relativeTo: this.activatedRoute
     });
-    // console.log('Details clicked now:', this.app.id);
   }
 
-  async delete() {
-    const initialState = {
+  async delete(): Promise<void> {
+    const confirmed = await this.showConfirmationModal({
       title: 'Delete mapping extension',
-      message:
-        'You are about to delete a mapping extension. Do you want to proceed?',
-      labels: {
-        ok: 'Delete',
-        cancel: 'Cancel'
-      }
-    };
-    const confirmDeletionModalRef: BsModalRef = this.bsModalService.show(
-      ConfirmationModalComponent,
-      { initialState }
-    );
-    confirmDeletionModalRef.content.closeSubject.subscribe(
-      async (confirmation: boolean) => {
-        // console.log('Confirmation result:', confirmation);
-        if (confirmation) {
-          try {
-            await this.extensionService.deleteProcessorExtension(this.app);
-            this.appDeleted.emit();
-          } catch (ex) {
-            if (ex) {
-              this.alertService.addServerFailure(ex);
-            }
-          }
-        }
-        confirmDeletionModalRef.hide();
-      }
-    );
+      message: 'You are about to delete a mapping extension. Do you want to proceed?',
+      labels: { ok: 'Delete', cancel: 'Cancel' }
+    });
+
+    if (!confirmed) return;
+
+    try {
+      await this.extensionService.deleteProcessorExtension(this.app);
+      this.appDeleted.emit();
+    } catch (error) {
+      this.alertService.addServerFailure(error);
+    }
+  }
+
+  private async showConfirmationModal(config: {
+    title: string;
+    message: string;
+    labels: { ok: string; cancel: string };
+  }): Promise<boolean> {
+    return new Promise((resolve) => {
+      const modalRef: BsModalRef = this.bsModalService.show(
+        ConfirmationModalComponent,
+        { initialState: config }
+      );
+
+      modalRef.content.closeSubject.subscribe((confirmation: boolean) => {
+        modalRef.hide();
+        resolve(confirmation);
+      });
+    });
   }
 }

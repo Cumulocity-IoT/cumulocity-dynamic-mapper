@@ -26,15 +26,17 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 import { IIdentified } from '@c8y/client';
-import { Column } from '@c8y/ngx-components';
-import { DeviceGridService, GroupDeviceGridColumn, NameDeviceGridColumn, RegistrationDateDeviceGridColumn, SystemIdDeviceGridColumn } from '@c8y/ngx-components/device-grid';
+import { Column, CoreModule } from '@c8y/ngx-components';
+import { AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
+import { DeviceGridModule, DeviceGridService, GroupDeviceGridColumn, NameDeviceGridColumn, RegistrationDateDeviceGridColumn, SystemIdDeviceGridColumn } from '@c8y/ngx-components/device-grid';
 
 @Component({
   selector: 'd11r-device-selector-subscription2',
   templateUrl: 'device-selector-subscription2.component.html',
   styleUrls: ['../../shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
-  standalone: false
+  standalone: true,
+  imports: [CoreModule, AssetSelectorModule, DeviceGridModule]
 })
 export class DeviceSelectorSubscription2Component implements OnInit {
   @Input() deviceList: IIdentified[];

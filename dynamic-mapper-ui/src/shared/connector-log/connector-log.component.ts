@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { AlertService } from '@c8y/ngx-components';
+import { AlertService, CoreModule } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { Observable, Subject, takeUntil } from 'rxjs';
 import packageJson from '../../../package.json';
@@ -28,14 +28,17 @@ import {
   LoggingEventType,
   LoggingEventTypeMap,
 } from '..';
+import { FormatStringPipe } from '../misc/format-string.pipe'; 
 import { ConnectorLogService } from '../service/connector-log.service';
 import { ConnectorConfigurationService } from '../service/connector-configuration.service';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'd11r-mapping-connector-log',
   styleUrls: ['./connector-log.component.style.css'],
   templateUrl: 'connector-log.component.html',
-  standalone: false
+  standalone: true,
+  imports:[CoreModule, CommonModule, FormatStringPipe]
 })
 export class ConnectorStatusComponent implements OnInit, OnDestroy {
   version: string = packageJson.version;
@@ -46,15 +49,15 @@ export class ConnectorStatusComponent implements OnInit, OnDestroy {
     connectorIdentifier: 'ALL',
     type: LoggingEventType.ALL,
   };
-  LoggingEventTypeMap = LoggingEventTypeMap;
-  LoggingEventType = LoggingEventType;
-  private destroy$ = new Subject<void>();
+  readonly LoggingEventTypeMap = LoggingEventTypeMap;
+  readonly LoggingEventType = LoggingEventType;
+  private readonly destroy$ = new Subject<void>();
 
   constructor(
-    public bsModalService: BsModalService,
-    public connectorStatusService: ConnectorLogService,
-    public connectorConfigurationService: ConnectorConfigurationService,
-    public alertService: AlertService,
+    private readonly bsModalService: BsModalService,
+    readonly connectorStatusService: ConnectorLogService,
+    readonly connectorConfigurationService: ConnectorConfigurationService,
+    private readonly alertService: AlertService
   ) {}
 
   async ngOnInit() {
@@ -79,6 +82,6 @@ export class ConnectorStatusComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.destroy$.next();
     this.destroy$.complete();
-        this.connectorStatusService.stopConnectorStatusLogs();
+    this.connectorStatusService.stopConnectorStatusLogs();
   }
 }

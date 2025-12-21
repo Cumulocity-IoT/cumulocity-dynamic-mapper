@@ -17,14 +17,15 @@
  *
  * @authors Christof Strack
  */
+import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { CellRendererContext } from '@c8y/ngx-components';
 
 @Component({
-  template: ' <span title="{{ context.value }}">{{ context.value }}</span> ',
-  standalone: false
+  template: '<span [title]="context.value">{{ context.value }}</span>',
+  standalone: true,
+  imports: [CommonModule]
 })
 export class NumberRendererComponent {
-  constructor(public context: CellRendererContext) {
-  }
+  constructor(public readonly context: CellRendererContext) {}
 }

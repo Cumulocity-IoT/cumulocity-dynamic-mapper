@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.camel.Exchange;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -31,20 +30,25 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class FlowResultInboundProcessor extends BaseProcessor {
 
-    @Autowired
-    private MappingService mappingService;
+    private final MappingService mappingService;
+    private final C8YAgent c8yAgent;
+    private final ObjectMapper objectMapper;
 
-    @Autowired
-    private C8YAgent c8yAgent;
-
-    @Autowired
-    private ObjectMapper objectMapper;
+    public FlowResultInboundProcessor(
+            MappingService mappingService,
+            C8YAgent c8yAgent,
+            ObjectMapper objectMapper) {
+        this.mappingService = mappingService;
+        this.c8yAgent = c8yAgent;
+        this.objectMapper = objectMapper;
+    }
 
     @Override
     public void process(Exchange exchange) throws Exception {
         ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
-        Mapping mapping = context.getMapping();
+
         String tenant = context.getTenant();
+        Mapping mapping = context.getMapping();
         Boolean testing = context.getTesting();
 
         try {
@@ -76,10 +80,11 @@ public class FlowResultInboundProcessor extends BaseProcessor {
                     "%s - Error in FlowResultInboundProcessor: %s for mapping: %s, line %s",
                     tenant, mapping.getName(), e.getMessage(), lineNumber);
             log.error(errorMessage, e);
-            if (e instanceof ProcessingException)
+            if (e instanceof ProcessingException) {
                 context.addError((ProcessingException) e);
-            else
+            } else {
                 context.addError(new ProcessingException(errorMessage, e));
+            }
 
             if (!testing) {
                 MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);

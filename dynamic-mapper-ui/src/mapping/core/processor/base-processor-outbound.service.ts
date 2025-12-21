@@ -37,12 +37,14 @@ import {
 
 @Injectable({ providedIn: 'root' })
 export abstract class BaseProcessorOutbound {
+  protected readonly JSONATA = require('jsonata');
+
   constructor(
-    private alert: AlertService,
-    public c8yAgent: C8YAgent,
-    private mqttClient: MQTTClient,
-    public sharedService: SharedService,
-  ) { }
+    private readonly alert: AlertService,
+    public readonly c8yAgent: C8YAgent,
+    private readonly mqttClient: MQTTClient,
+    public readonly sharedService: SharedService
+  ) {}
 
   abstract deserializePayload(
     mapping: Mapping,
@@ -51,8 +53,6 @@ export abstract class BaseProcessorOutbound {
   ): ProcessingContext;
 
   abstract extractFromSource(context: ProcessingContext): void;
-
-  protected JSONATA = require('jsonata');
 
   async substituteInTargetAndSend(context: ProcessingContext) {
     // step 3 replace target with extract content from o payload
@@ -100,7 +100,7 @@ export abstract class BaseProcessorOutbound {
      * step 4 prepare target payload for sending to mqttBroker
      */
 
-    if (mapping.targetAPI != API.INVENTORY.name) {
+    if (mapping.targetAPI !== API.INVENTORY.name) {
       const topicLevels: string[] = payloadTarget[TOKEN_TOPIC_LEVEL];
       if (!topicLevels && topicLevels.length > 0) {
         // now merge the replaced topic levels
@@ -111,7 +111,7 @@ export abstract class BaseProcessorOutbound {
         topicLevels.forEach((tl) => {
           while (
             c < splitTopicInAsList.length &&
-            '/' == splitTopicInAsList[c]
+            '/' === splitTopicInAsList[c]
           ) {
             c++;
           }
@@ -158,7 +158,7 @@ export abstract class BaseProcessorOutbound {
 
   async evaluateExpression(json: JSON, path: string): Promise<JSON> {
     let result: any = '';
-    if (path != undefined && path != '' && json != undefined) {
+    if (path !== undefined && path !== '' && json !== undefined) {
       const expression = this.JSONATA(path);
       result = (await expression.evaluate(json)) as JSON;
     }

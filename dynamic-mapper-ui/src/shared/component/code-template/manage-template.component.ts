@@ -24,7 +24,7 @@ import {
   OnInit,
   ViewEncapsulation
 } from '@angular/core';
-import { ModalLabels } from '@c8y/ngx-components';
+import { CoreModule, ModalLabels } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
 import { CapitalizeCasePipe } from '../../../shared';
 import { CodeTemplate } from './../../../configuration';
@@ -33,7 +33,8 @@ import { CodeTemplate } from './../../../configuration';
   selector: 'd11r-manage-template',
   templateUrl: './manage-template.component.html',
   encapsulation: ViewEncapsulation.None,
-  standalone: false
+  standalone: true,
+  imports:[CoreModule]
 })
 export class ManageTemplateComponent implements OnInit, OnDestroy {
   @Input() action: string = 'CREATE';

@@ -65,6 +65,7 @@ public class CodeExtractionInboundProcessor extends BaseProcessor {
     @Override
     public void process(Exchange exchange) throws Exception {
         ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+        
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
         Boolean testing = context.getTesting();

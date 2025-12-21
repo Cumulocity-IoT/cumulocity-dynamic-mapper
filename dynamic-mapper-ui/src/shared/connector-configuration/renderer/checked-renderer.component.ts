@@ -17,6 +17,7 @@
  *
  * @authors Christof Strack
  */
+import { CommonModule } from '@angular/common';
 import { Component, ViewEncapsulation } from '@angular/core';
 import { AlertService, CellRendererContext } from '@c8y/ngx-components';
 
@@ -37,7 +38,8 @@ import { AlertService, CellRendererContext } from '@c8y/ngx-components';
       </label>
     </div>
   `,
-  standalone: false
+  standalone: true,
+  imports: [CommonModule]
 })
 export class CheckedRendererComponent {
   constructor(

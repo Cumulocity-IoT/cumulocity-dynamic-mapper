@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 import { Component, EventEmitter, Input, OnInit, Output, ViewChild, AfterViewInit, ViewEncapsulation, OnDestroy, inject } from '@angular/core';
-import { ActionControl, AlertService, BottomDrawerService, Column, CountdownIntervalComponent, DataGridComponent, Pagination } from '@c8y/ngx-components';
+import { ActionControl, AlertService, BottomDrawerService, Column, CoreModule, CountdownIntervalComponent, DataGridComponent, Pagination } from '@c8y/ngx-components';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, combineLatest, from, Observable, Subject, } from 'rxjs';
 import { filter, map, take, takeUntil } from 'rxjs/operators';
@@ -42,7 +42,10 @@ import { gettext } from '@c8y/ngx-components/gettext';
   styleUrls: ['./connector-grid.component.style.css'],
   templateUrl: 'connector-grid.component.html',
   encapsulation: ViewEncapsulation.None,
-  standalone: false
+  standalone: true,
+  imports: [
+    CoreModule,
+  ]
 })
 export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy {
   @Input() selectable = true;
@@ -83,18 +86,17 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
   private featurePromise: Promise<Feature>;
   initialStateDrawer: any;
 
-  constructor(
-  ) {
+  private readonly alertService = inject(AlertService);
+  private readonly sharedService = inject(SharedService);
+  private readonly bsModalService = inject(BsModalService);
+  private readonly bottomDrawerService = inject(BottomDrawerService);
+  readonly connectorConfigurationService = inject(ConnectorConfigurationService);
+  private readonly fb = inject(FormBuilder);
+
+  constructor() {
     this.toggleIntervalForm = this.initForm();
     this.featurePromise = this.sharedService.getFeatures();
   }
-
-  alertService = inject(AlertService);
-  sharedService = inject(SharedService);
-  bsModalService = inject(BsModalService);
-  bottomDrawerService = inject(BottomDrawerService);
-  connectorConfigurationService = inject(ConnectorConfigurationService);
-  fb = inject(FormBuilder);
 
   async ngOnInit(): Promise<void> {
     this.initializeColumns();
@@ -368,9 +370,9 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
     return rules.every(rule => {
       switch (rule.type) {
         case 'enabled':
-          return (item.enabled === rule.value);
+          return item.enabled === rule.value;
         case 'readOnly':
-          return (this.readOnly === rule.value);
+          return this.readOnly === rule.value;
         case 'connectorType':
           return item.connectorType !== ConnectorType.HTTP;
         case 'userRole':

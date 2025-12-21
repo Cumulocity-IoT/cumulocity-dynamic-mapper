@@ -13,7 +13,6 @@ import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.inbound.processor.CodeExtractionInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.DeserializationInboundProcessor;
-import dynamic.mapper.processor.inbound.processor.EnrichmentInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.ExtensibleProcessor;
 import dynamic.mapper.processor.inbound.processor.FilterInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.FlowProcessorInboundProcessor;
@@ -22,7 +21,7 @@ import dynamic.mapper.processor.inbound.processor.InternalProtobufProcessor;
 import dynamic.mapper.processor.inbound.processor.SendInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.SnoopingInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.JSONataExtractionInboundProcessor;
-import dynamic.mapper.processor.inbound.processor.MappingContextInboundProcessor;
+import dynamic.mapper.processor.inbound.processor.EnrichmentInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.SubstitutionInboundProcessor;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
@@ -46,7 +45,7 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
     private InternalProtobufProcessor internalProtobufProcessor;
 
     @Autowired
-    private MappingContextInboundProcessor mappingContextProcessor;
+    private EnrichmentInboundProcessor enrichmentProcessor;
 
     @Autowired
     private CodeExtractionInboundProcessor codeExtractionInboundProcessor;
@@ -62,9 +61,6 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
 
     @Autowired
     private DeserializationInboundProcessor deserializationInboundProcessor;
-
-    @Autowired
-    private EnrichmentInboundProcessor enrichmentInboundProcessor;
 
     @Autowired
     private JSONataExtractionInboundProcessor jsonataExtractionInboundProcessor;
@@ -168,8 +164,7 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
                 .routeId("single-filtered-inbound-mapping-processor")
                 // 0. Common processing for all
                 .process(deserializationInboundProcessor)
-                .process(mappingContextProcessor)
-                .process(enrichmentInboundProcessor)
+                .process(enrichmentProcessor)
                 .process(filterInboundProcessor)
 
                 // Check if further processing should be ignored after enrichment

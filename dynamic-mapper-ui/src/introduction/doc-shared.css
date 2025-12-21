@@ -1,0 +1,400 @@
+/*
+ * Copyright (c) 2025 Cumulocity GmbH
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * @authors Christof Strack
+ */
+
+/* ============================================================================ */
+/* LAYOUT & STRUCTURE                                                           */
+/* ============================================================================ */
+
+/* Card sections - main content containers */
+.card-header,
+.card-block {
+  max-width: 1200px;
+  margin-left: 0;
+  margin-right: auto;
+  padding-left: 0;
+  padding-right: 24px;
+}
+
+.card-header {
+  margin-top: 24px;
+  margin-bottom: 16px;
+}
+
+.card-block {
+  margin-bottom: 24px;
+}
+
+/* ============================================================================ */
+/* TYPOGRAPHY                                                                   */
+/* ============================================================================ */
+
+/* Headings */
+h1, .h1 {
+  font-size: 36px;
+}
+
+h1, h2, h3, h4 {
+  margin: 0 0 1em;
+  font-weight: 600;
+  line-height: 1.2;
+  font-family: "Euclid Square","Libre Franklin","Helvetica",Arial,sans-serif;
+  text-wrap: pretty;
+  text-transform: uppercase;
+}
+
+h3 {
+  font-size: 24px;
+  color: #333;
+}
+
+h4 {
+  font-size: 18px;
+  color: #444;
+}
+
+/* ============================================================================ */
+/* IMAGES                                                                       */
+/* ============================================================================ */
+
+/* Standard documentation images */
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+
+/* Image descriptions */
+.image-description {
+  font-style: italic;
+  color: #666;
+  font-size: 14px;
+  margin-top: 8px;
+  margin-bottom: 24px;
+}
+
+/* ============================================================================ */
+/* TABLES                                                                       */
+/* ============================================================================ */
+
+/* Table container with width constraints */
+.table-responsive {
+  overflow-x: auto;
+  margin: 16px 0;
+}
+
+.table-width-80 {
+  max-width: 80%;
+}
+
+.table-width-100 {
+  max-width: 100%;
+}
+
+/* Table styling */
+.table {
+  width: 100%;
+  margin-bottom: 16px;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.table th {
+  font-weight: 600;
+  background-color: #f8f9fa;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+  background-color: #f9f9f9;
+}
+
+.table-light {
+  background-color: #f8f9fa;
+}
+
+.thead-light th {
+  background-color: #e9ecef;
+  color: #495057;
+}
+
+/* ============================================================================ */
+/* LISTS                                                                        */
+/* ============================================================================ */
+
+/* Unordered lists */
+ul.text-16,
+ul {
+  margin: 12px 0;
+  padding-left: 24px;
+  line-height: 1.2;
+}
+
+ul.text-16 li,
+ul li {
+  margin-bottom: 8px;
+}
+
+/* Ordered lists */
+ol.text-16,
+ol {
+  margin: 12px 0;
+  padding-left: 24px;
+  line-height: 1.2;
+  counter-reset: item;
+}
+
+ol.text-16 li,
+ol li {
+  margin-bottom: 12px;
+}
+
+/* ============================================================================ */
+/* LINKS                                                                        */
+/* ============================================================================ */
+
+a {
+  color: var(--c8y-brand-primary, #007bff);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: #0056b3;
+  text-decoration: underline;
+}
+
+a:focus {
+  outline: 2px solid var(--c8y-brand-primary, #007bff);
+  outline-offset: 2px;
+}
+
+/* Links with icons */
+a .fa {
+  margin-right: 4px;
+}
+
+/* ============================================================================ */
+/* CODE BLOCKS                                                                  */
+/* ============================================================================ */
+
+/* code {
+  padding: 2px 6px;
+  background-color: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  border-radius: 3px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+  color: #d63384;
+} */
+
+code {
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-size: 90%;
+    background-color: var(--c8y-code-background);
+    color: var(--c8y-code-color);
+}
+
+pre {
+  margin: 16px 0;
+  padding: 0;
+  background-color: transparent;
+  border: none;
+}
+
+pre code {
+  display: block;
+  padding: 16px;
+  background-color: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  overflow-x: auto;
+  white-space: pre;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #333;
+}
+
+/* ============================================================================ */
+/* ADMONITION BOXES                                                             */
+/* ============================================================================ */
+
+.admonition {
+  margin: 24px 0;
+  padding: 0;
+  border-radius: 8px;
+  border-left: 8px solid;
+  background-color: #f9f9f9;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+.admonition .title {
+  font-weight: 600;
+  padding: 12px 16px;
+  margin: 0;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.admonition .content {
+  padding: 16px;
+  font-size: 14px;
+  line-height: 1.7;
+  margin: 0;
+}
+
+.admonition .content ul {
+  margin-top: 8px;
+  margin-bottom: 0;
+}
+
+.admonition .content strong {
+  font-weight: 600;
+  color: #333;
+}
+
+/* Info - Blue */
+.admonition.info {
+  border-left-color: #5bc0de;
+  background-color: #d9edf7;
+}
+
+.admonition.info .title {
+  background-color: #bcdff1;
+  color: var(--c8y-palette-status-info, #31708f);
+}
+
+/* Caution/Warning - Orange/Yellow */
+.admonition.caution {
+  border-left-color: #f0ad4e;
+  background-color: #fcf8e3;
+}
+
+.admonition.caution .title {
+  background-color: #f9ecc5;
+  color: var(--c8y-palette-status-warning, #8a6d3b);
+}
+
+/* Important - Red */
+.admonition.important {
+  border-left-color: #d9534f;
+  background-color: #f2dede;
+}
+
+.admonition.important .title {
+  background-color: #ebcccc;
+  color: var(--c8y-palette-status-danger, #a94442);
+}
+
+/* ============================================================================ */
+/* SCROLL TO TOP BUTTON                                                         */
+/* ============================================================================ */
+
+.to-the-top {
+  position: fixed;
+  right: 3rem;
+  bottom: 4rem;
+  z-index: 38;
+  font-size: 1.5rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 8px 20px 8px 12px;
+  width: auto;
+  height: auto;
+  border: 1px solid var(--c8y-brand-primary, #007bff);
+  border-radius: 4px;
+  background-color: white;
+  color: var(--c8y-brand-primary, #007bff);
+  text-align: center;
+  text-decoration: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.to-the-top:hover {
+  background-color: var(--c8y-brand-primary, #007bff);
+  color: white;
+  text-decoration: none;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.to-the-top:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+/* ============================================================================ */
+/* UTILITY CLASSES                                                              */
+/* ============================================================================ */
+
+/* Text alignment */
+.text-center {
+  text-align: center;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.text-left {
+  text-align: left;
+}
+
+/* Text colors */
+.text-muted {
+  color: #6c757d;
+}
+
+/* Text sizes */
+.text-14 {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.text-16 {
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+/* Alignment */
+.align-middle {
+  vertical-align: middle;
+}
+
+/* SVG handling */
+svg {
+  width: inherit;
+  height: inherit;
+}

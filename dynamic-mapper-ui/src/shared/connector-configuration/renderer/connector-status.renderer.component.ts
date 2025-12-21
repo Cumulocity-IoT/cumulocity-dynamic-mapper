@@ -17,6 +17,7 @@
  *
  * @authors Christof Strack
  */
+import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { CellRendererContext } from '@c8y/ngx-components';
 
@@ -46,7 +47,8 @@ import { CellRendererContext } from '@c8y/ngx-components';
     "
     >{{ context.item?.status }}
   </span> `,
-  standalone: false
+  standalone: true,
+  imports: [CommonModule]
 })
 export class ConnectorStatusRendererComponent {
   constructor(public context: CellRendererContext) {

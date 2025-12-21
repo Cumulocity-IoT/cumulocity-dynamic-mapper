@@ -32,6 +32,7 @@ import {
   BulkActionControl,
   Column,
   ColumnDataType,
+  CoreModule,
   DataGridComponent,
   DisplayOptions,
   Pagination
@@ -54,13 +55,21 @@ import { MappingService } from '../core/mapping.service';
 import { Device, NotificationSubscriptionResponse } from '../shared/mapping.model';
 import { SubscriptionService } from '../core/subscription.service';
 import { gettext } from '@c8y/ngx-components/gettext';
+import { DeviceGridModule } from '@c8y/ngx-components/device-grid';
+import { PopoverModule } from 'ngx-bootstrap/popover';
+import { DeviceSelectorSubscriptionComponent } from './device-selector/device-selector-subscription.component';
+import { DeviceSelectorSubscription2Component } from './device-selector2/device-selector-subscription2.component';
+import { DeviceSelectorSubscription3Component } from './device-selector3/device-selector-subscription3.component';
+import { DeviceSelectorSubscription4Component } from './device-selector4/device-selector-subscription4.component';
 
 @Component({
   selector: 'd11r-mapping-subscription-grid',
   templateUrl: 'subscription.component.html',
   styleUrls: ['../shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
-  standalone: false
+  standalone: true,
+  imports: [CoreModule, DeviceGridModule, PopoverModule, DeviceSelectorSubscriptionComponent, DeviceSelectorSubscription2Component, DeviceSelectorSubscription3Component, DeviceSelectorSubscription4Component]
+
 })
 export class MappingSubscriptionComponent implements OnInit, OnDestroy {
   @ViewChild('subscriptionGrid') subscriptionGrid: DataGridComponent;
@@ -166,7 +175,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
       this.loadSubscriptionByDeviceGroup(),
       this.loadSubscriptionByDeviceType()
     ]);
-    
+
     this.feature = this.route.snapshot.data['feature'];
     if (this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole) {
       this.bulkActionControlSubscription.push({
@@ -181,7 +190,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
   }
 
   async loadSubscriptionDevice(): Promise<void> {
-    const subscription = this.path === "dynamic"? this.subscriptionService.DYNAMIC_DEVICE_SUBSCRIPTION: this.subscriptionService.STATIC_DEVICE_SUBSCRIPTION;
+    const subscription = this.path === "dynamic" ? this.subscriptionService.DYNAMIC_DEVICE_SUBSCRIPTION : this.subscriptionService.STATIC_DEVICE_SUBSCRIPTION;
     this.subscriptionDevices = await this.subscriptionService.getSubscriptionDevice(subscription);
     this.subscribedDevices = this.subscriptionDevices.devices;
     this.subscriptionGrid?.reload();
@@ -218,7 +227,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
   async deleteSubscription(device: IIdentified): Promise<void> {
     // console.log('Delete device', device);
     try {
-    const subscription = this.path === "dynamic"? this.subscriptionService.DYNAMIC_DEVICE_SUBSCRIPTION: this.subscriptionService.STATIC_DEVICE_SUBSCRIPTION;
+      const subscription = this.path === "dynamic" ? this.subscriptionService.DYNAMIC_DEVICE_SUBSCRIPTION : this.subscriptionService.STATIC_DEVICE_SUBSCRIPTION;
 
       await this.subscriptionService.deleteSubscriptionDevice(device, subscription);
       this.alertService.success(

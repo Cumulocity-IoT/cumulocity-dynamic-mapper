@@ -20,56 +20,115 @@
  */
 package dynamic.mapper.processor.outbound.processor;
 
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.camel.Exchange;
-import org.graalvm.polyglot.Value;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import dynamic.mapper.configuration.ServiceConfiguration;
+import dynamic.mapper.configuration.TemplateType;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.InventoryEnrichmentClient;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
+import dynamic.mapper.processor.flow.SimpleFlowContext;
 import dynamic.mapper.processor.flow.DataPrepContext;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.TransformationType;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
-@Slf4j
+import org.graalvm.polyglot.Engine;
+import org.graalvm.polyglot.Context;
+import org.graalvm.polyglot.Value;
+
 @Component
+@Slf4j
 public class EnrichmentOutboundProcessor extends BaseProcessor {
-    @Autowired
-    private MappingService mappingService;
 
-    @Autowired
-    private C8YAgent c8yAgent;
+    private final ConfigurationRegistry configurationRegistry;
+    private final MappingService mappingService;
+    private final C8YAgent c8yAgent;
 
-    @Autowired
-    private ConfigurationRegistry configurationRegistry;
+    private Context.Builder graalContextBuilder;
+
+    public EnrichmentOutboundProcessor(
+            ConfigurationRegistry configurationRegistry,
+            MappingService mappingService,
+            C8YAgent c8yAgent) {
+        this.configurationRegistry = configurationRegistry;
+        this.mappingService = mappingService;
+        this.c8yAgent = c8yAgent;
+    }
 
     @Override
     public void process(Exchange exchange) throws Exception {
-        ProcessingContext<Object> context = getProcessingContextAsObject(exchange);
+        ProcessingContext<?> context = exchange.getIn().getHeader("processingContext",
+                ProcessingContext.class);
+
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
 
+        ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();
+        MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
+
+        // Extract additional info from headers if available
+        String connectorIdentifier = exchange.getIn().getHeader("connectorIdentifier", String.class);
+
+        // Prepare GraalVM context if code exists
+        if (mapping.getCode() != null
+                && mapping.isSubstitutionAsCode()) {
+            try {
+                // contextSemaphore.acquire();
+                var graalEngine = configurationRegistry.getGraalEngine(tenant);
+                var graalContext = createGraalContext(graalEngine);
+                context.setGraalContext(graalContext);
+                context.setSharedCode(serviceConfiguration.getCodeTemplates()
+                        .get(TemplateType.SHARED.name()).getCode());
+                context.setSystemCode(serviceConfiguration.getCodeTemplates()
+                        .get(TemplateType.SYSTEM.name()).getCode());
+            } catch (Exception e) {
+                handleGraalVMError(tenant, mapping, e, context);
+                return;
+            }
+        } else if (mapping.getCode() != null &&
+                TransformationType.SMART_FUNCTION.equals(mapping.getTransformationType())) {
+            try {
+                var graalEngine = configurationRegistry.getGraalEngine(tenant);
+                var graalContext = createGraalContext(graalEngine);
+                context.setSystemCode(serviceConfiguration.getCodeTemplates()
+                        .get(TemplateType.SHARED.name()).getCode());
+                context.setGraalContext(graalContext);
+                context.setFlowState(new HashMap<String, Object>());
+                context.setFlowContext(new SimpleFlowContext(graalContext, tenant,
+                        (InventoryEnrichmentClient) configurationRegistry.getC8yAgent(),
+                        context.getTesting()));
+
+            } catch (Exception e) {
+                handleGraalVMError(tenant, mapping, e, context);
+                return;
+            }
+        }
+
+        mappingStatus.messagesReceived++;
+        logOutboundMessageReceived(tenant, mapping, connectorIdentifier, context, serviceConfiguration);
+
+        // Now call the enrichment logic
         try {
             enrichPayload(context);
         } catch (Exception e) {
-            String errorMessage = String.format("%s - Error in EnrichmentOutboundProcessor for mapping: %s", tenant,
+            String errorMessage = String.format("%s - Error in enrichment phase for mapping: %s", tenant,
                     mapping.getName());
             log.error(errorMessage, e);
-            MappingStatus mappingStatus = mappingService
-                    .getMappingStatus(tenant, mapping);
             context.addError(new ProcessingException(errorMessage, e));
             context.setIgnoreFurtherProcessing(true);
             mappingStatus.errors++;
@@ -78,7 +137,70 @@ public class EnrichmentOutboundProcessor extends BaseProcessor {
         }
     }
 
-    public void enrichPayload(ProcessingContext<Object> context) {
+    private Context createGraalContext(Engine graalEngine)
+            throws Exception {
+        if (graalContextBuilder == null) {
+            graalContextBuilder = Context.newBuilder("js");
+        }
+
+        Context graalContext = graalContextBuilder
+                .engine(graalEngine)
+                // .option("engine.WarnInterpreterOnly", "false")
+                .allowHostAccess(configurationRegistry.getHostAccess())
+                .allowHostClassLookup(className ->
+                // Allow only the specific SubstitutionContext class
+                className.equals("dynamic.mapper.processor.model.SubstitutionContext")
+                        || className.equals("dynamic.mapper.processor.model.SubstitutionResult")
+                        || className.equals("dynamic.mapper.processor.model.SubstituteValue")
+                        || className.equals("dynamic.mapper.processor.model.SubstituteValue$TYPE")
+                        || className.equals("dynamic.mapper.processor.model.RepairStrategy")
+                        // Allow base collection classes needed for return values
+                        || className.equals("java.util.ArrayList") ||
+                        className.equals("java.util.HashMap") ||
+                        className.equals("java.util.HashSet"))
+                .build();
+        return graalContext;
+    }
+
+    private void logOutboundMessageReceived(String tenant, Mapping mapping, String connectorIdentifier,
+            ProcessingContext<?> context,
+            ServiceConfiguration serviceConfiguration) {
+        if (serviceConfiguration.getLogPayload() || mapping.getDebug()) {
+            Object pp = context.getPayload();
+            String ppLog = null;
+
+            if (pp instanceof byte[]) {
+                ppLog = new String((byte[]) pp, StandardCharsets.UTF_8);
+            } else if (pp != null) {
+                ppLog = pp.toString();
+            }
+            log.info(
+                    "{} - PROCESSING message on topic: [{}], on  connector: {}, for Mapping {} with QoS: {}, wrapped message: {}",
+                    tenant, context.getTopic(), connectorIdentifier, mapping.getName(),
+                    mapping.getQos().ordinal(), ppLog);
+        } else {
+            log.info(
+                    "{} - PROCESSING message on topic: [{}], on  connector: {}, for Mapping {} with QoS: {}",
+                    tenant, context.getTopic(), connectorIdentifier, mapping.getName(),
+                    mapping.getQos().ordinal());
+        }
+    }
+
+    private void handleGraalVMError(String tenant, Mapping mapping, Exception e,
+            ProcessingContext<?> context) {
+        MappingStatus mappingStatus = mappingService
+                .getMappingStatus(tenant, mapping);
+        String errorMessage = String.format("Tenant %s - Failed to set up GraalVM context: %s",
+                tenant, e.getMessage());
+        log.error(errorMessage, e);
+        context.addError(new ProcessingException(errorMessage, e));
+        mappingStatus.errors++;
+        mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+    }
+
+    // ========== ENRICHMENT LOGIC (from EnrichmentOutboundProcessor) ==========
+
+    public void enrichPayload(ProcessingContext<?> context) {
 
         /*
          * step 0 patch payload with dummy property _IDENTITY_ in case the content
@@ -108,17 +230,19 @@ public class EnrichmentOutboundProcessor extends BaseProcessor {
             addToFlowContext(flowContext, context, ProcessingContext.RETAIN, false);
         } else {
             if (payloadObject instanceof Map) {
-                ((Map) payloadObject).put(Mapping.TOKEN_IDENTITY, identityFragment);
-                ((Map) payloadObject).put(ProcessingContext.RETAIN, false);
+                @SuppressWarnings("unchecked")
+                Map<String, Object> payloadMap = (Map<String, Object>) payloadObject;
+                payloadMap.put(Mapping.TOKEN_IDENTITY, identityFragment);
+                payloadMap.put(ProcessingContext.RETAIN, false);
                 List<String> splitTopicExAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
-                ((Map) payloadObject).put(Mapping.TOKEN_TOPIC_LEVEL, splitTopicExAsList);
+                payloadMap.put(Mapping.TOKEN_TOPIC_LEVEL, splitTopicExAsList);
             } else {
                 log.warn("{} - Parsing this message as JSONArray, no elements from the topic level can be used!",
                         tenant);
             }
         }
 
-        if (mapping.getUseExternalId() && !("").equals(mapping.getExternalIdType())) {
+        if (mapping.getUseExternalId() && !mapping.getExternalIdType().isEmpty()) {
             ExternalIDRepresentation externalId = c8yAgent.resolveGlobalId2ExternalId(context.getTenant(),
                     new GId(sourceId.toString()), mapping.getExternalIdType(),
                     context.getTesting());
@@ -160,7 +284,7 @@ public class EnrichmentOutboundProcessor extends BaseProcessor {
     /**
      * Helper method to safely add values to DataPrepContext
      */
-    private void addToFlowContext(DataPrepContext flowContext, ProcessingContext<Object> context, String key,
+    private void addToFlowContext(DataPrepContext flowContext, ProcessingContext<?> context, String key,
             Object value) {
         try {
             if (context.getGraalContext() != null && value != null) {

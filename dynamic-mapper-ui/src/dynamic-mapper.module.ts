@@ -26,22 +26,20 @@ import {
   hookNavigator,
   RealtimeModule
 } from '@c8y/ngx-components';
-import { BsModalService, ModalModule } from 'ngx-bootstrap/modal';
+import { ModalModule } from 'ngx-bootstrap/modal';
 import { ServiceConfigurationModule } from './configuration/service-configuration.module';
 import { ExtensionModule } from './extension/extension.module';
 import { MappingTreeModule } from './mapping-tree/tree.module';
 import { MappingModule } from './mapping/mapping.module';
 import { MonitoringModule } from './monitoring/monitoring.module';
 import { FormlyPresetModule } from '@ngx-formly/core/preset';
-
 import {
   MappingNavigationFactory,
-  OverviewGuard,
 } from './shared';
-import { TestingModule } from './testing-device/testing.module';
+import { TestingModule } from './test-device/testing.module';
 import './shared/styles/shared.css';
 import { BrokerConnectorModule } from './connector';
-import { LandingModule } from './landing/landing.module';
+import { LandingModule } from './introduction/doc.module';
 
 @NgModule({
   imports: [
@@ -63,11 +61,7 @@ import { LandingModule } from './landing/landing.module';
     FormlyPresetModule,
     RealtimeModule
   ],
-  exports: [],
-  declarations: [],
   providers: [
-    OverviewGuard,
-    BsModalService,
     hookNavigator(MappingNavigationFactory),
   ],
 })

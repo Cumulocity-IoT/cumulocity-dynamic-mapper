@@ -39,6 +39,7 @@ import org.mockito.quality.Strictness;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
+import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
@@ -48,11 +49,13 @@ import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
-
 @Slf4j
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-class MappingContextInboundProcessorTest {
+class EnrichmentInboundProcessorTest {
+
+    @Mock
+    private ConfigurationRegistry configurationRegistry;
 
     @Mock
     private MappingService mappingService;
@@ -72,7 +75,7 @@ class MappingContextInboundProcessorTest {
     @Mock
     private ProcessingContext<Object> processingContext;
 
-    private MappingContextInboundProcessor processor;
+    private EnrichmentInboundProcessor processor;
 
     private static final String TEST_TENANT = "testTenant";
     private Mapping mapping;
@@ -83,7 +86,6 @@ class MappingContextInboundProcessorTest {
         // Create real Mapping object
         mapping = Mapping.builder().identifier("test-mapping").name("Test Mapping").debug(false).qos(Qos.AT_LEAST_ONCE)
                 .build();
-
 
         // Create real MappingStatus object with all required fields initialized
         mappingStatus = new MappingStatus(
@@ -102,10 +104,7 @@ class MappingContextInboundProcessorTest {
         );
 
         // Create the processor
-        processor = new MappingContextInboundProcessor();
-
-        // Use reflection to inject the mocked mappingService
-        injectMappingServiceIfExists(processor, mappingService);
+        processor = new EnrichmentInboundProcessor(configurationRegistry, mappingService);
 
         // Setup basic exchange and message mocks
         when(exchange.getIn()).thenReturn(message);
@@ -131,7 +130,7 @@ class MappingContextInboundProcessorTest {
         when(connectorMessage.getPayload()).thenReturn("test payload".getBytes());
     }
 
-    private void injectMappingServiceIfExists(MappingContextInboundProcessor processor, MappingService mappingService) {
+    private void injectMappingServiceIfExists(EnrichmentInboundProcessor processor, MappingService mappingService) {
         try {
             Field field = findMappingServiceField(processor.getClass());
             if (field != null) {
@@ -215,16 +214,22 @@ class MappingContextInboundProcessorTest {
     @Test
     void testProcessWithNullMapping() throws Exception {
         // Given
-        when(message.getBody(Mapping.class)).thenReturn(null);
+        when(processingContext.getMapping()).thenReturn(null);
 
-        // When & Then
-        assertThrows(Exception.class, () -> processor.process(exchange));
+        // When & Then - if the processor should handle null gracefully
+        try {
+            processor.process(exchange);
+            fail("Should have thrown NullPointerException");
+        } catch (NullPointerException e) {
+            // Expected - verify it's the mapping that's null
+            assertTrue(true, "Correctly threw NPE for null mapping");
+        }
     }
 
     @Test
     void testConstructorInitialization() {
         // Given & When
-        MappingContextInboundProcessor newProcessor = new MappingContextInboundProcessor();
+        EnrichmentInboundProcessor newProcessor = new EnrichmentInboundProcessor(configurationRegistry, mappingService);
 
         // Then
         assertNotNull(newProcessor);
@@ -283,7 +288,7 @@ class MappingContextInboundProcessorTest {
     @Test
     void testWithMinimalMocking() throws Exception {
         // Create a completely fresh processor with minimal mocking
-        MappingContextInboundProcessor freshProcessor = new MappingContextInboundProcessor();
+        EnrichmentInboundProcessor freshProcessor = new EnrichmentInboundProcessor(configurationRegistry, mappingService);
 
         // Only inject mappingService if the field exists
         try {

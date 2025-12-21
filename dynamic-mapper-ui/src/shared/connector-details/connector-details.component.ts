@@ -19,7 +19,7 @@
  */
 import * as _ from 'lodash';
 import { ChangeDetectorRef, Component, inject, OnDestroy, OnInit } from '@angular/core';
-import { AlertService, BottomDrawerService } from '@c8y/ngx-components';
+import { AlertService, BottomDrawerService, CoreModule } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { firstValueFrom, Observable, Subject, Subscription, takeUntil, tap } from 'rxjs';
 import packageJson from '../../../package.json';
@@ -46,7 +46,10 @@ import { gettext } from '@c8y/ngx-components/gettext';
   selector: 'd11r-mapping-connector-details',
   styleUrls: ['./connector-details.component.style.css'],
   templateUrl: 'connector-details.component.html',
-  standalone: false
+  standalone: true,
+  imports: [
+    CoreModule,
+  ]
 })
 export class ConnectorDetailsComponent implements OnInit, OnDestroy {
   version: string = packageJson.version;
@@ -65,19 +68,18 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
   contextSubscription: Subscription;
   initialStateDrawer: any;
 
-  private destroy$ = new Subject<void>();
+  private readonly destroy$ = new Subject<void>();
 
-  connectorStatusService = inject(ConnectorLogService);
-  route = inject(ActivatedRoute);
-  alertService = inject(AlertService);
-  sharedService = inject(SharedService);
-  bsModalService = inject(BsModalService);
-  bottomDrawerService = inject(BottomDrawerService);
-  connectorConfigurationService = inject(ConnectorConfigurationService);
-  cdr = inject(ChangeDetectorRef);
+  private readonly connectorStatusService = inject(ConnectorLogService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly alertService = inject(AlertService);
+  private readonly sharedService = inject(SharedService);
+  private readonly bsModalService = inject(BsModalService);
+  private readonly bottomDrawerService = inject(BottomDrawerService);
+  private readonly connectorConfigurationService = inject(ConnectorConfigurationService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   async ngOnInit() {
-    // console.log('Running version', this.version);
     this.specifications$ = this.connectorConfigurationService.getSpecifications();
     this.feature = await this.sharedService.getFeatures();
     this.contextSubscription = this.route.data.pipe(
@@ -93,13 +95,10 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
       });
     this.connectorStatusService.startConnectorStatusLogs();
     this.statusLogs$ = this.connectorStatusService.getStatusLogs();
-    // Subscribe to logs to verify they're coming through
     this.statusLogs$.pipe(
       takeUntil(this.destroy$)
     ).subscribe({
-      // next: (logs) => console.log('Received logs in component:', logs),
-      error: (error) => console.error('Error receiving logs:', error),
-      // complete: () => console.log('Completed') // optional
+      error: (error) => console.error('Error receiving logs:', error)
     });
     this.updateStatusLogs();
   }
@@ -155,12 +154,8 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
         parameter: { connectorIdentifier: configuration.identifier }
       }
     );
-    // console.log('Details toggle activation to broker', response1);
     if (response1.status === HttpStatusCode.Created) {
-      // if (response1.status === HttpStatusCode.Created && response2.status === HttpStatusCode.Created) {
-      Promise.resolve().then(() => {
-        this.configuration.enabled = !this.configuration.enabled;
-      });
+      this.configuration.enabled = !this.configuration.enabled;
       this.alertService.success(gettext('Connection updated successfully.'));
     } else {
       this.alertService.danger(gettext('Failed to establish connection!'));

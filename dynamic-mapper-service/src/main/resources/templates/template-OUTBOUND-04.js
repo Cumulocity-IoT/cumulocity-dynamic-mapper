@@ -1,6 +1,6 @@
 /**
  * @name Snippet shows setting method, publishTopic
- * @description This sample shows how to perform a partial update using the PATCH method
+ * @description This sample shows shows setting method, publishTopic
  * @templateType OUTBOUND_SUBSTITUTION_AS_CODE
  * @direction OUTBOUND
  * @defaultTemplate false

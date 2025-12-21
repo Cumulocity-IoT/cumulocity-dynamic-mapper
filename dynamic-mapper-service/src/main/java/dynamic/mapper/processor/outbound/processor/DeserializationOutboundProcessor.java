@@ -36,12 +36,13 @@ public class DeserializationOutboundProcessor extends BaseProcessor {
     @Override
     public void process(Exchange exchange) throws Exception {
         C8YMessage c8yMessage = exchange.getIn().getHeader("c8yMessage", C8YMessage.class);
-        Mapping mapping = exchange.getIn().getBody(Mapping.class);
-        Boolean testing = exchange.getIn().getHeader("testing", Boolean.class);
-        ServiceConfiguration serviceConfiguration = exchange.getIn().getHeader("serviceConfiguration",
-                ServiceConfiguration.class);
 
         String tenant = c8yMessage.getTenant();
+        Mapping mapping = exchange.getIn().getBody(Mapping.class);
+        Boolean testing = exchange.getIn().getHeader("testing", Boolean.class);
+
+        ServiceConfiguration serviceConfiguration = exchange.getIn().getHeader("serviceConfiguration",
+                ServiceConfiguration.class);
 
         ProcessingContext<Object> context = createProcessingContextAsObject(tenant, mapping, c8yMessage,
                 serviceConfiguration, testing);

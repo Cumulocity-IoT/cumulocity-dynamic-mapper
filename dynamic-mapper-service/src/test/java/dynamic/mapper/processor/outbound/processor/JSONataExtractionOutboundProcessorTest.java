@@ -90,9 +90,8 @@ class JSONataExtractionOutboundProcessorTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        processor = new JSONataExtractionOutboundProcessor();
         objectMapper = new ObjectMapper();
-        injectDependencies();
+        processor = new JSONataExtractionOutboundProcessor(mappingService);
 
         mapping = createOutboundEventMapping();
         mappingStatus = new MappingStatus(

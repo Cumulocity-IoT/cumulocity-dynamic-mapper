@@ -18,22 +18,36 @@
   ~  @authors Christof Strack, Stefan Witschel
   ~
   -->
-<div class="flex-col flex-nowrap no-align-items p-48 fit-h col-md-12 col-md-offset-0 c8y-stepper--no-btns">
+
+<!-- Loading State -->
+<div class="flex-col flex-nowrap no-align-items p-48 fit-h col-md-12 col-md-offset-0 c8y-stepper--no-btns" *ngIf="isLoading">
   <div class="card card--fullpage">
+    <div class="card-block text-center">
+      <c8y-loading></c8y-loading>
+    </div>
+  </div>
+</div>
+
+<!-- Main Content -->
+<div class="flex-col flex-nowrap no-align-items p-48 fit-h col-md-12 col-md-offset-0 c8y-stepper--no-btns" *ngIf="!isLoading && formGroup">
+  <div class="card card--fullpage">
+    
+    <!-- Header -->
     <div class="card-header separator" style="justify-content: center">
       <h4 class="card-title d-flex">
         <i [c8yIcon]="'plus-circle'" class="icon-32 m-r-16"></i>
         <span class="m-t-8">
-          {{ 'Select Payload Format and Transformation Type' |
-          translate }}
+          {{ 'Select Payload Format and Transformation Type' | translate }}
         </span>
       </h4>
     </div>
 
+    <!-- Form Content -->
     <div class="card-inner-scroll fit-h">
       <div class="card-block">
         <form [formGroup]="formGroup">
 
+          <!-- Expert Mode Toggle -->
           <c8y-form-group class="p-l-16 p-r-16">
             <label class="c8y-switch">
               <input type="checkbox" formControlName="expertMode" />
@@ -42,33 +56,84 @@
             </label>
           </c8y-form-group>
 
+          <!-- Payload Format Selection -->
           <c8y-form-group class="p-l-16 p-r-16">
             <label>{{ 'Payload Format' | translate }}</label>
-            <c8y-select [items]="filteredMappingTypeOptions" formControlName="mappingType" labelProperty="label"
-              valueProperty="value" [insideClick]="false" [autoClose]="true" aria-label="Payload Format">
-            </c8y-select>
+            <d11r-select 
+              [items]="mappingTypeOptions" 
+              formControlName="mappingType" 
+              labelProperty="label"
+              aria-label="Payload Format">
+            </d11r-select>
             <small class="text-muted" *ngIf="formGroup.get('mappingType')?.value">
               {{ getMappingTypeDescription() }}
             </small>
           </c8y-form-group>
 
+          <!-- Transformation Type Selection (Expert Mode Only) -->
           <c8y-form-group class="p-l-16 p-r-16" *ngIf="shouldShowTransformationType()">
             <label>{{ 'Transformation Type' | translate }}</label>
-            <c8y-select [items]="transformationTypeOptions" formControlName="transformationType" labelProperty="label"
-              valueProperty="value" [insideClick]="false" [autoClose]="true" aria-label="Transformation Type">
-            </c8y-select>
+            <d11r-select 
+              [items]="transformationTypeOptions" 
+              formControlName="transformationType" 
+              labelProperty="label"
+              aria-label="Transformation Type">
+            </d11r-select>
             <small class="text-muted">
               {{ getTransformationTypeDescription() }}
             </small>
           </c8y-form-group>
 
-          <c8y-form-group class="p-l-16 p-r-16">
-            <label>{{ 'Description Payload Format' | translate }}</label>
-            <textarea #descriptionTextarea readonly c8y-textarea-autoresize formControlName="mappingTypeDescription"
-              class="form-control">
-            </textarea>
+          <!-- Code Template Selection - Loading State -->
+          <c8y-form-group class="p-l-16 p-r-16" *ngIf="shouldShowCodeTemplate() && isLoadingCodeTemplates">
+            <label>{{ 'JavaScript Code Template' | translate }}</label>
+            <div class="text-center p-24">
+              <c8y-loading></c8y-loading>
+              <p class="text-muted m-t-8">{{ 'Loading code templates...' | translate }}</p>
+            </div>
           </c8y-form-group>
 
+          <!-- Code Template Selection - With Templates -->
+          <c8y-form-group class="p-l-16 p-r-16" 
+            *ngIf="shouldShowCodeTemplate() && !isLoadingCodeTemplates && codeTemplateOptions.length > 0">
+            <label>{{ 'JavaScript Code Template' | translate }}</label>
+            <div class="input-group">
+              <d11r-select 
+                [items]="codeTemplateOptions" 
+                formControlName="codeTemplate" 
+                labelProperty="label"
+                style="width: 100%" 
+                [insideClick]="false" 
+                [autoClose]="true" 
+                aria-label="JavaScript Code Template">
+              </d11r-select>
+              <span class="input-group-btn">
+                <button 
+                  class="btn btn-primary" 
+                  type="button" 
+                  aria-label="View Code" 
+                  (click)="viewCode()"
+                  [disabled]="!formGroup.get('codeTemplate')?.value">
+                  {{ 'View Code' | translate }}
+                </button>
+              </span>
+            </div>
+            <small class="text-muted">
+              {{ getCodeTemplateDescription() }}
+            </small>
+          </c8y-form-group>
+
+          <!-- Code Template - No Templates Available -->
+          <c8y-form-group class="p-l-16 p-r-16" 
+            *ngIf="shouldShowCodeTemplate() && !isLoadingCodeTemplates && codeTemplateOptions.length === 0">
+            <label>{{ 'JavaScript Code Template' | translate }}</label>
+            <div class="alert alert-info">
+              <i c8yIcon="info"></i>
+              {{ 'No code templates available for this transformation type' | translate }}
+            </div>
+          </c8y-form-group>
+
+          <!-- Snoop Toggle -->
           <c8y-form-group class="p-l-16 p-r-16">
             <label class="c8y-switch">
               <input type="checkbox" formControlName="snoop" />
@@ -76,10 +141,7 @@
               {{ 'Enable snooping' | translate }}
             </label>
             <small class="text-muted">
-              {{ 'Before defining a complete mapping with substitutions you can snoop (record) messages from the source
-              system (Step 1). These can be use in a second step (Step 2) for defining the substitutions from the source
-              payload in the target payload. To continue after Step 2 to defining a complete mapping, incl.
-              substitutions you have to stop the snooping for the respective mapping.' | translate }}
+              {{ 'Before defining a complete mapping with substitutions you can snoop (record) messages from the source system (Step 1). These can be used in a second step (Step 2) for defining the substitutions from the source payload in the target payload. To continue after Step 2 to defining a complete mapping, including substitutions, you have to stop the snooping for the respective mapping.' | translate }}
             </small>
           </c8y-form-group>
 
@@ -87,15 +149,24 @@
       </div>
     </div>
 
+    <!-- Footer Buttons -->
     <div class="card-footer text-center sticky-buttons">
       <div class="form-group">
-        <button type="button" class="btn btn-primary" (click)="onSave()" [disabled]="!valid">
+        <button 
+          type="button" 
+          class="btn btn-primary" 
+          (click)="onSave()" 
+          [disabled]="!valid || !formGroup.valid">
           {{ 'Save' | translate }}
         </button>
-        <button type="button" class="btn btn-default" (click)="onCancel()">
+        <button 
+          type="button" 
+          class="btn btn-default" 
+          (click)="onCancel()">
           {{ 'Cancel' | translate }}
         </button>
       </div>
     </div>
+
   </div>
 </div>

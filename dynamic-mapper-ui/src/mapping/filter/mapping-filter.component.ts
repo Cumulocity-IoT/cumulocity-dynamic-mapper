@@ -28,9 +28,9 @@ import {
 } from '@angular/core';
 import { FormlyFieldConfig } from '@ngx-formly/core';
 import { FormGroup } from '@angular/forms';
-import { C8yStepper, ModalLabels } from '@c8y/ngx-components';
+import { C8yStepper, CoreModule, ModalLabels } from '@c8y/ngx-components';
 import { BehaviorSubject, Subject } from 'rxjs';
-import { JsonEditorComponent, Mapping } from '../../shared';
+import { JsonEditorComponent, Mapping, SharedModule } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { getTypeOf } from '../shared/util';
 
@@ -39,7 +39,8 @@ import { getTypeOf } from '../shared/util';
   templateUrl: './mapping-filter.component.html',
   styleUrls: ['../shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
-  standalone: false
+  standalone: true,
+  imports: [CoreModule, SharedModule, JsonEditorComponent]
 })
 export class MappingFilterComponent implements OnInit, OnDestroy, AfterViewInit {
   @Input() mapping: Mapping;
@@ -50,7 +51,7 @@ export class MappingFilterComponent implements OnInit, OnDestroy, AfterViewInit 
   @ViewChild(C8yStepper, { static: true }) closeSubject: Subject<any>;
 
   labels: ModalLabels = { ok: 'Apply', cancel: 'Cancel' };
-  editorOptionsSourceFilter: any ={
+  editorOptionsSourceFilter: any = {
     mode: 'tree',
     removeModes: ['text', 'table'],
     mainMenuBar: true,
@@ -85,7 +86,7 @@ export class MappingFilterComponent implements OnInit, OnDestroy, AfterViewInit 
           {
             key: 'pathSource',
             type: 'input',
-            wrappers: ['custom-form-field-wrapper'],
+            wrappers: ['c8y-form-field'],
             templateOptions: {
               label: 'Filter Expression',
               placeholder: '$join([$substring(txt,5), id]) or $number(id)/10',

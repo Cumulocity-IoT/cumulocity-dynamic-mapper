@@ -33,6 +33,20 @@ export class CodeTemplateTabFactory implements TabFactory {
     const tabs: Tab[] = [];
     if (this.router.url.match(/c8y-pkg-dynamic-mapper\/node3\/codeTemplate/g)) {
       tabs.push({
+        path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/INBOUND_SMART_FUNCTION`,
+        priority: 980,
+        label: 'Inbound (Smart Function JavaScript)',
+        icon: 'swipe-right',
+        orientation: 'horizontal'
+      } as Tab);
+      tabs.push({
+        path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/OUTBOUND_SMART_FUNCTION`,
+        priority: 970,
+        label: 'Outbound (Smart Function JavaScript)',
+        icon: 'swipe-left',
+        orientation: 'horizontal'
+      } as Tab);
+      tabs.push({
         path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/INBOUND_SUBSTITUTION_AS_CODE`,
         priority: 960,
         label: `Inbound (${TransformationTypeLabels[Direction.INBOUND][TransformationType.SUBSTITUTION_AS_CODE]})`,
@@ -51,20 +65,6 @@ export class CodeTemplateTabFactory implements TabFactory {
         priority: 940,
         label: 'System, shared',
         icon: 'processor',
-        orientation: 'horizontal'
-      } as Tab);
-      tabs.push({
-        path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/INBOUND_SMART_FUNCTION`,
-        priority: 930,
-        label: 'Inbound (Smart Function JavaScript)',
-        icon: 'swipe-right',
-        orientation: 'horizontal'
-      } as Tab);
-      tabs.push({
-        path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/OUTBOUND_SMART_FUNCTION`,
-        priority: 920,
-        label: 'Outbound (Smart Function JavaScript)',
-        icon: 'swipe-left',
         orientation: 'horizontal'
       } as Tab);
       return merge(of(tabs)).pipe(mergeAll(), toArray());

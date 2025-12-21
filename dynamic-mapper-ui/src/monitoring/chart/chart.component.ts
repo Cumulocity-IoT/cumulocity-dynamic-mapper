@@ -17,150 +17,167 @@
  *
  * @authors Christof Strack
  */
+import { CommonModule } from '@angular/common';
 import { Component, ElementRef, OnDestroy, OnInit } from '@angular/core';
-import { CHART_COLORS } from './util';
-import { Subject } from 'rxjs';
-import { Direction, MappingStatus } from '../../shared';
-import { map } from 'rxjs/operators';
-import { MonitoringService } from '../shared/monitoring.service';
+import { CoreModule } from '@c8y/ngx-components';
 import { ECharts, EChartsOption } from 'echarts';
+import { NgxEchartsModule, provideEcharts } from 'ngx-echarts';
+import { Subject } from 'rxjs';
+import { map, takeUntil } from 'rxjs/operators';
+import { Direction, MappingStatus } from '../../shared';
+import { MonitoringService } from '../shared/monitoring.service';
+import { CHART_COLORS } from './util';
+
+interface AccumulatedStats {
+  direction: Direction;
+  errors: number;
+  messagesReceived: number;
+  snoopedTemplatesTotal: number;
+  snoopedTemplatesActive: number;
+}
 
 @Component({
   selector: 'd11r-monitoring-chart',
   templateUrl: './chart.component.html',
   styleUrls: ['./chart.component.css'],
-  standalone: false
+  standalone: true,
+  imports: [CoreModule, CommonModule, NgxEchartsModule],
+  providers: [provideEcharts()]
 })
 export class MonitoringChartComponent implements OnInit, OnDestroy {
-  constructor(
-    private el: ElementRef,
-    public monitoringService: MonitoringService
-  ) { }
-
-  mappingStatus$: Subject<MappingStatus[]> = new Subject<MappingStatus[]>();
+  mappingStatus$ = new Subject<MappingStatus[]>();
   echartOptions: EChartsOption;
   echartUpdateOptions: EChartsOption;
-  echartsInstance: any;
-  textColor: string;
-  fontFamily: string;
-  fontWeight: number;
-  fontSize: number;
+  echartsInstance: ECharts;
 
-  ngOnInit() {
+  private readonly destroy$ = new Subject<void>();
+  private readonly yAxisData = ['Errors', 'Messages received', 'Snooped templates total', 'Snooped templates active'];
+  private textColor: string;
+  private fontFamily: string;
+  private fontWeight: number;
+  private fontSize: number;
+
+  constructor(
+    private readonly el: ElementRef,
+    public readonly monitoringService: MonitoringService
+  ) {}
+
+  ngOnInit(): void {
+    this.initializeThemeVariables();
     this.initializeMonitoringService();
+    this.setupChartDataSubscription();
+    this.echartOptions = this.createChartOptions();
+  }
 
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+    this.monitoringService.stopMonitoring();
+  }
+
+  onChartInit(ec: ECharts): void {
+    this.echartsInstance = ec;
+  }
+
+  private initializeThemeVariables(): void {
     const root = this.el.nativeElement.ownerDocument.documentElement;
-    this.textColor = getComputedStyle(root)
-      .getPropertyValue('--c8y-text-color')
-      .trim();
-    this.fontFamily = getComputedStyle(root)
-      .getPropertyValue('--c8y-font-family-sans-serif')
-      .trim();
-    this.fontWeight = parseInt(
-      getComputedStyle(root)
-        .getPropertyValue('--c8y-font-weight-headings')
-        .trim()
-    );
-    this.fontSize = parseInt(
-      getComputedStyle(root).getPropertyValue('--c8y-font-size-base').trim()
-    );
+    const computedStyle = getComputedStyle(root);
 
-    const data = [undefined, undefined];
+    this.textColor = computedStyle.getPropertyValue('--c8y-text-color').trim();
+    this.fontFamily = computedStyle.getPropertyValue('--c8y-font-family-sans-serif').trim();
+    this.fontWeight = parseInt(computedStyle.getPropertyValue('--c8y-font-weight-headings').trim());
+    this.fontSize = parseInt(computedStyle.getPropertyValue('--c8y-font-size-base').trim());
+  }
+
+  private async initializeMonitoringService(): Promise<void> {
+    await this.monitoringService.startMonitoring();
+    this.monitoringService
+      .getMappingStatus()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((status) => this.mappingStatus$.next(status));
+  }
+
+  private setupChartDataSubscription(): void {
     this.mappingStatus$
       .pipe(
-        map((data01) => {
-          // console.log('data01', acc01, data01);
-          return data01?.reduce(
-            (acc02, data02) => {
-              const [inbound, outbound] = acc02;
-              // console.log('data02', acc02, data02);
-              if (data02.direction == Direction.INBOUND || !data02.direction) {
-                inbound.errors = inbound.errors + data02.errors;
-                inbound.messagesReceived =
-                  inbound.messagesReceived + data02.messagesReceived;
-                inbound.snoopedTemplatesTotal =
-                  inbound.snoopedTemplatesTotal + data02.snoopedTemplatesTotal;
-                inbound.snoopedTemplatesActive =
-                  inbound.snoopedTemplatesActive +
-                  data02.snoopedTemplatesActive;
-              } else {
-                outbound.errors = outbound.errors + data02.errors;
-                outbound.messagesReceived =
-                  outbound.messagesReceived + data02.messagesReceived;
-                outbound.snoopedTemplatesTotal =
-                  outbound.snoopedTemplatesTotal + data02.snoopedTemplatesTotal;
-                outbound.snoopedTemplatesActive =
-                  outbound.snoopedTemplatesActive +
-                  data02.snoopedTemplatesActive;
-              }
-              return [inbound, outbound];
-            },
-            [
-              {
-                direction: Direction.INBOUND,
-                errors: 0,
-                messagesReceived: 0,
-                snoopedTemplatesTotal: 0,
-                snoopedTemplatesActive: 0
-              } as Partial<MappingStatus>,
-              {
-                direction: Direction.OUTBOUND,
-                errors: 0,
-                messagesReceived: 0,
-                snoopedTemplatesTotal: 0,
-                snoopedTemplatesActive: 0
-              } as Partial<MappingStatus>
-            ]
-          );
-        })
+        map((statuses) => this.aggregateStatsByDirection(statuses)),
+        takeUntil(this.destroy$)
       )
-      .subscribe((total) => {
-        // console.log('Statistic', total);
-        if (total) {
-          const [inbound, outbound] = total;
-          data[0] = [
-            inbound.errors,
-            inbound.messagesReceived,
-            inbound.snoopedTemplatesTotal,
-            inbound.snoopedTemplatesActive
-          ];
-          data[1] = [
-            outbound.errors,
-            outbound.messagesReceived,
-            outbound.snoopedTemplatesTotal,
-            outbound.snoopedTemplatesActive
-          ];
-          //   this.statusMappingChart.update();
-          this.echartUpdateOptions = {
-            series: [
-              {
-                type: 'bar',
-                data: data[0]
-              },
-              {
-                type: 'bar',
-                data: data[1]
-              }
-            ]
-          };
-          // this.echartsInstance?.setOption(this.echartUpdateOptions);
+      .subscribe((aggregated) => {
+        if (aggregated) {
+          this.updateChartData(aggregated);
         }
       });
+  }
 
-    const yAxisData = [
-      'Errors',
-      'Messages received',
-      'Snooped templates total',
-      'Snooped templates active'
+  private aggregateStatsByDirection(statuses: MappingStatus[]): [AccumulatedStats, AccumulatedStats] {
+    const initialStats: [AccumulatedStats, AccumulatedStats] = [
+      this.createEmptyStats(Direction.INBOUND),
+      this.createEmptyStats(Direction.OUTBOUND)
     ];
 
-    this.echartOptions = {
+    return statuses?.reduce((acc, status) => {
+      const [inbound, outbound] = acc;
+      const target = status.direction === Direction.INBOUND || !status.direction ? inbound : outbound;
+
+      this.accumulateStats(target, status);
+      return [inbound, outbound];
+    }, initialStats) || initialStats;
+  }
+
+  private createEmptyStats(direction: Direction): AccumulatedStats {
+    return {
+      direction,
+      errors: 0,
+      messagesReceived: 0,
+      snoopedTemplatesTotal: 0,
+      snoopedTemplatesActive: 0
+    };
+  }
+
+  private accumulateStats(target: AccumulatedStats, status: MappingStatus): void {
+    target.errors += status.errors;
+    target.messagesReceived += status.messagesReceived;
+    target.snoopedTemplatesTotal += status.snoopedTemplatesTotal;
+    target.snoopedTemplatesActive += status.snoopedTemplatesActive;
+  }
+
+  private updateChartData([inbound, outbound]: [AccumulatedStats, AccumulatedStats]): void {
+    const inboundData = [
+      inbound.errors,
+      inbound.messagesReceived,
+      inbound.snoopedTemplatesTotal,
+      inbound.snoopedTemplatesActive
+    ];
+
+    const outboundData = [
+      outbound.errors,
+      outbound.messagesReceived,
+      outbound.snoopedTemplatesTotal,
+      outbound.snoopedTemplatesActive
+    ];
+
+    this.echartUpdateOptions = {
+      series: [
+        { type: 'bar', data: inboundData },
+        { type: 'bar', data: outboundData }
+      ]
+    };
+  }
+
+  private createChartOptions(): EChartsOption {
+    const textStyle = {
+      fontSize: this.fontSize,
+      color: this.textColor,
+      fontFamily: this.fontFamily
+    };
+
+    return {
       title: {
         show: false,
         text: 'Messages processed',
         textStyle: {
-          color: this.textColor,
-          fontFamily: this.fontFamily,
+          ...textStyle,
           fontSize: this.fontSize + 4,
           fontWeight: this.fontWeight
         }
@@ -168,80 +185,39 @@ export class MonitoringChartComponent implements OnInit, OnDestroy {
       legend: {
         data: ['Inbound', 'Outbound'],
         align: 'left',
-        textStyle: {
-          fontSize: this.fontSize,
-          color: this.textColor,
-          fontFamily: this.fontFamily
-        }
+        textStyle
       },
       tooltip: {},
       grid: {
-        left: '20%' // Adjust this value as needed
+        left: '20%'
       },
       xAxis: {
         type: 'value',
         boundaryGap: [0, 0.01],
-        axisLabel: {
-          fontSize: this.fontSize,
-          color: this.textColor,
-          fontFamily: this.fontFamily
-        }
+        axisLabel: textStyle
       },
       yAxis: {
-        axisTick: {
-          show: false
-        },
+        axisTick: { show: false },
         type: 'category',
-        data: yAxisData,
+        data: this.yAxisData,
         silent: false,
-        splitLine: {
-          show: true
-        },
-        axisLabel: {
-          fontSize: this.fontSize,
-          color: this.textColor,
-          fontFamily: this.fontFamily
-        }
+        splitLine: { show: true },
+        axisLabel: textStyle
       },
       series: [
         {
           name: 'Inbound',
           color: CHART_COLORS.green,
           type: 'bar',
-          data: data[0],
-          //   animationDelay: (idx) => idx * 10 + 100
+          data: undefined
         },
         {
           name: 'Outbound',
           color: CHART_COLORS.orange,
           type: 'bar',
-          data: data[1]
-          //   animationDelay: (idx) => idx * 10
+          data: undefined
         }
       ]
-      //   animationEasing: 'elasticOut',
-      //   animationDelayUpdate: (idx) => idx * 5
     };
-  }
-
-  onChartInit(ec: ECharts) {
-    this.echartsInstance = ec;
-  }
-
-  private async initializeMonitoringService() {
-    await this.monitoringService.startMonitoring();
-    this.monitoringService
-      .getMappingStatus()
-      .subscribe((status) => this.mappingStatus$.next(status));
-  }
-
-  ngOnDestroy(): void {
-    // console.log('Stop subscription');
-    this.monitoringService.stopMonitoring();
-  }
-
-  randomIntFromInterval(min, max) {
-    // min and max included
-    return Math.floor(Math.random() * (max - min + 1) + min);
   }
 }

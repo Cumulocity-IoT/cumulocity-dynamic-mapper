@@ -32,6 +32,7 @@ import {
   BulkActionControl,
   Column,
   ColumnDataType,
+  CoreModule,
   DataGridComponent,
   DisplayOptions,
   Pagination,
@@ -49,13 +50,18 @@ import { IIdentified } from '@c8y/client';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { ClientRelationService } from '../core/client-relation.service';
 import { gettext } from '@c8y/ngx-components/gettext';
+import { CommonModule } from '@angular/common';
+import { ClientRelationStepperComponent } from './client-relation-stepper.component';
+import { PopoverModule } from 'ngx-bootstrap/popover';
 
 @Component({
   selector: 'd11r-mapping-device-client-map',
   templateUrl: 'device-client-map.component.html',
   styleUrls: ['../shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
-  standalone: false
+  standalone: true,
+  imports: [CoreModule, CommonModule, PopoverModule, ClientRelationStepperComponent]
+
 })
 export class DeviceClientMapComponent implements OnInit, OnDestroy {
 

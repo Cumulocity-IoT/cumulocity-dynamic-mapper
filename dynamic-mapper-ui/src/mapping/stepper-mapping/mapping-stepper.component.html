@@ -135,13 +135,13 @@
                   <div>
                     <label translate>Source Template - {{ sourceSystem }}</label>
                   </div>
-                  <d11r-mapping-json-editor2
+                  <d11r-mapping-json-editor
                     *ngIf="stepperConfiguration.showEditorSource || stepperConfiguration.showCodeEditor"
                     [updateEditor]="updateSourceEditor" [options]="editorOptionsSourceTemplate"
                     [class]="'jse-main-small'" (initialized)="onEditorSourceInitialized()"
                     (contentChanged)="onSourceTemplateChanged($event)" [data]="sourceTemplate"
                     (pathChanged)="onSelectedPathFilterMappingChanged($event)"
-                    #editorSourceStepTemplate></d11r-mapping-json-editor2>
+                    #editorSourceStepTemplate></d11r-mapping-json-editor>
                   <ng-container
                     *ngIf="(stepperConfiguration.showProcessorExtensionsSource || stepperConfiguration.showProcessorExtensionsSourceTarget  || stepperConfiguration.showProcessorExtensionsInternal)">
                     <ng-container *ngTemplateOutlet="extensionTemplateSource; context: { form: templateForm }">
@@ -156,12 +156,12 @@
                       <label>Target Template - {{ targetSystem }}</label>
                     </div>
                   </div>
-                  <d11r-mapping-json-editor2 *ngIf="stepperConfiguration.showEditorTarget"
+                  <d11r-mapping-json-editor *ngIf="stepperConfiguration.showEditorTarget"
                     [updateEditor]="updateTargetEditor" [options]="editorOptionsTargetTemplate"
                     [class]="'jse-main-small'" (initialized)="onEditorTargetInitialized()"
                     (contentChanged)="onTargetTemplateChanged($event)" [data]="targetTemplate"
                     #editorTargetStepTemplate>
-                  </d11r-mapping-json-editor2>
+                  </d11r-mapping-json-editor>
                   <div>
                     <small *ngIf="!stepperConfiguration.showEditorTarget" class="text-muted">{{
                       'Template is described internally by the chosen mapping

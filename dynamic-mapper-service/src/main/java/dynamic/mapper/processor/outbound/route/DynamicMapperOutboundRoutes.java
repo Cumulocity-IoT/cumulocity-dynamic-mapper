@@ -37,9 +37,8 @@ import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingResultWrapper;
 import dynamic.mapper.processor.outbound.processor.CodeExtractionOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.DeserializationOutboundProcessor;
-import dynamic.mapper.processor.outbound.processor.EnrichmentOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.JSONataExtractionOutboundProcessor;
-import dynamic.mapper.processor.outbound.processor.MappingContextOutboundProcessor;
+import dynamic.mapper.processor.outbound.processor.EnrichmentOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.SendOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.SnoopingOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.SubstitutionOutboundProcessor;
@@ -55,7 +54,7 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
     private ExecutorService virtualThreadPool;
 
     @Autowired
-    private MappingContextOutboundProcessor mappingContextProcessor;
+    private EnrichmentOutboundProcessor enrichmentProcessor;
 
     @Autowired
     private CodeExtractionOutboundProcessor codeExtractionOutboundProcessor;
@@ -71,9 +70,6 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
 
     @Autowired
     private DeserializationOutboundProcessor deserializationOutboundProcessor;
-
-    @Autowired
-    private EnrichmentOutboundProcessor enrichmentOutboundProcessor;
 
     @Autowired
     private JSONataExtractionOutboundProcessor jsonataExtractionOutboundProcessor;
@@ -171,8 +167,8 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
                 .routeId("single-filtered-outbound-mapping-processor")
                 // 0. Common processing for all
                 .process(deserializationOutboundProcessor)
-                .process(mappingContextProcessor)
-                .process(enrichmentOutboundProcessor)
+                .process(enrichmentProcessor)
+
 
                 // Check if further processing should be ignored after enrichment
                 .choice()

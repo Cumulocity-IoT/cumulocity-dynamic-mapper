@@ -18,6 +18,7 @@
  * @authors Christof Strack
  */
 
+import { CommonModule } from '@angular/common';
 import {
   Component,
   ElementRef,
@@ -60,13 +61,14 @@ export interface ContentChanges {
 }
 
 @Component({
-  selector: 'd11r-mapping-json-editor2',
+  selector: 'd11r-mapping-json-editor',
   template: '<div [class]="class" [id]="id" #jsonEditorContainer></div>',
   preserveWhitespaces: false,
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrls: ['./jsoneditor.style.css'],
   encapsulation: ViewEncapsulation.None,
-  standalone: false
+  standalone: true,
+  imports: [CommonModule]
 })
 export class JsonEditorComponent implements OnInit, OnDestroy, AfterViewInit {
   @Input() options;

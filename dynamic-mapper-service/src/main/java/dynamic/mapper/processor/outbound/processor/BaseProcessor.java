@@ -40,11 +40,11 @@ public abstract class BaseProcessor extends CommonProcessor {
     public abstract void process(Exchange exchange) throws Exception;
 
     @SuppressWarnings("unchecked")
-    ProcessingContext<Object> getProcessingContextAsObject(Exchange exchange) {
+    ProcessingContext<Object> createProcessingContextAsObject(Exchange exchange) {
         return exchange.getIn().getHeader("processingContext", ProcessingContext.class);
     }
 
-    protected Object extractContent(ProcessingContext<Object> context, Object payloadJsonNode,
+    protected Object extractContent(ProcessingContext<?> context, Object payloadJsonNode,
             String payloadAsString, @NotNull String ps) {
         Object extractedSourceContent = null;
         try {

@@ -25,6 +25,7 @@ import {
 } from '@angular/core';
 import {
   AlertService,
+  CoreModule,
   DropAreaComponent,
   ModalLabels
 } from '@c8y/ngx-components';
@@ -37,7 +38,8 @@ import { createCustomUuid, Mapping } from '../../shared';
   templateUrl: './import-modal.component.html',
   styleUrls: ['./import-modal.component.style.css'],
   encapsulation: ViewEncapsulation.None,
-  standalone: false
+  standalone: true,
+  imports:[CoreModule]
 })
 export class ImportMappingsComponent implements OnDestroy {
   @ViewChild(DropAreaComponent) dropAreaComponent;

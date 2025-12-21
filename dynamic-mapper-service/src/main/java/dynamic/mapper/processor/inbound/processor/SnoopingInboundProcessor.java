@@ -25,6 +25,7 @@ public class SnoopingInboundProcessor extends BaseProcessor {
     @Override
     public void process(Exchange exchange) throws Exception {
         ProcessingContext<Object> context = getProcessingContext(exchange);
+        
         Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
 

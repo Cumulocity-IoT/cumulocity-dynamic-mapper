@@ -26,8 +26,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import dynamic.mapper.model.API;
-import org.springframework.web.bind.annotation.RequestMethod;
 
+import org.springframework.web.bind.annotation.RequestMethod;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

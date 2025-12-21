@@ -31,13 +31,13 @@ import { FacadeOperationService } from './facade/facade-operation.service';
 @Injectable({ providedIn: 'root' })
 export class MQTTClient {
   constructor(
-    private inventory: FacadeInventoryService,
-    private identity: FacadeIdentityService,
-    private event: FacadeEventService,
-    private alarm: FacadeAlarmService,
-    private measurement: FacadeMeasurementService,
-    private operation: FacadeOperationService,
-    private alert: AlertService
+    private readonly inventory: FacadeInventoryService,
+    private readonly identity: FacadeIdentityService,
+    private readonly event: FacadeEventService,
+    private readonly alarm: FacadeAlarmService,
+    private readonly measurement: FacadeMeasurementService,
+    private readonly operation: FacadeOperationService,
+    private readonly alert: AlertService
   ) {}
 
   async createMEAO(context: ProcessingContext) {

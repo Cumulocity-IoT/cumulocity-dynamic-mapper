@@ -17,6 +17,7 @@
  *
  * @authors Christof Strack
  */
+import { CommonModule } from '@angular/common';
 import {
   Component,
   EventEmitter,
@@ -28,83 +29,81 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 import { FormGroup } from '@angular/forms';
+import { Alert, AlertService, CoreModule } from '@c8y/ngx-components';
 import { FormlyFieldConfig } from '@ngx-formly/core';
+import { PopoverModule } from 'ngx-bootstrap/popover';
 import { BehaviorSubject, debounceTime, distinctUntilChanged } from 'rxjs';
-import { EditorMode } from '../shared/stepper.model';
-import { ValidationError } from '../shared/mapping.model';
-import { deriveSampleTopicFromTopic, getTypeOf } from '../shared/util';
-import { StepperConfiguration, API, Direction, Mapping, Qos, SnoopStatus, FormatStringPipe, SharedService, MappingTypeLabels } from '../../shared';
+import {
+  API,
+  Direction,
+  Feature,
+  FormatStringPipe,
+  Mapping,
+  MappingTypeLabels,
+  Qos,
+  SharedService,
+  SnoopStatus,
+  StepperConfiguration
+} from '../../shared';
 import { MappingService } from '../core/mapping.service';
-import { Alert, AlertService } from '@c8y/ngx-components';
+import { ValidationError } from '../shared/mapping.model';
+import { EditorMode } from '../shared/stepper.model';
+import { deriveSampleTopicFromTopic, getTypeOf } from '../shared/util';
+
+interface FilterExpressionModel {
+  filterExpression: {
+    result: string;
+    resultType: string;
+    valid: boolean;
+  };
+}
 
 @Component({
   selector: 'd11r-mapping-properties',
   templateUrl: 'mapping-properties.component.html',
   styleUrls: ['../shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
-  standalone: false
+  standalone: true,
+  imports: [CoreModule, CommonModule, PopoverModule]
 })
-export class MappingStepPropertiesComponent
-  implements OnInit, OnDestroy {
+export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
   @Input() mapping: Mapping;
-
   @Input() stepperConfiguration: StepperConfiguration;
   @Input() propertyFormly: FormGroup;
   @Input() codeFormly: FormGroup;
-
   @Output() targetAPIChanged = new EventEmitter<string>();
   @Output() snoopStatusChanged = new EventEmitter<SnoopStatus>();
 
-  ValidationError = ValidationError;
-  MappingTypeLabels = MappingTypeLabels;
-  Direction = Direction;
-  EditorMode = EditorMode;
+  readonly ValidationError = ValidationError;
+  readonly MappingTypeLabels = MappingTypeLabels;
+  readonly Direction = Direction;
+  readonly EditorMode = EditorMode;
+  readonly readOnlyHelp = ' To edit this mapping deactivate the mapping first in mapping list.';
+  readonly selectedResult$ = new BehaviorSubject<number>(0);
 
   propertyFormlyFields: FormlyFieldConfig[] = [];
-  selectedResult$: BehaviorSubject<number> = new BehaviorSubject<number>(0);
   sourceSystem: string;
   targetSystem: string;
-  filterMappingModel: any;
-  filterInventoryModel: any;
-  readOnlyHelp = ' To edit this mapping deactivate the mapping first in mapping list.';
-  feature: any;
+  filterMappingModel: FilterExpressionModel;
+  filterInventoryModel: FilterExpressionModel;
+  feature: Feature;
 
+  private readonly alertService = inject(AlertService);
+  private readonly sharedService = inject(SharedService);
+  private readonly mappingService = inject(MappingService);
+  private readonly formatStringPipe = inject(FormatStringPipe);
 
-  private alertService = inject(AlertService);
-  private sharedService = inject(SharedService);
-  private mappingService = inject(MappingService);
-  private formatStringPipe = inject(FormatStringPipe);
-
-  async ngOnInit() {
+  async ngOnInit(): Promise<void> {
     this.feature = await this.sharedService.getFeatures();
-    // console.log('EditorMode', this.stepperConfiguration.editorMode, this.stepperConfiguration.editorMode !== EditorMode.CREATE);
-    // set value for backward compatibility
-    if (!this.mapping.direction) this.mapping.direction = Direction.INBOUND;
-    this.targetSystem =
-      this.mapping.direction == Direction.INBOUND ? 'Cumulocity' : 'Broker';
-    this.sourceSystem =
-      this.mapping.direction == Direction.OUTBOUND ? 'Cumulocity' : 'Broker';
 
-    this.filterMappingModel = {
-      filterExpression: {
-        result: '',
-        resultType: 'empty',
-        valid: false,
-      },
-    };
-    this.filterInventoryModel = {
-      filterExpression: {
-        result: '',
-        resultType: 'empty',
-        valid: false,
-      },
-    };
+    this.initializeDirection();
+    this.initializeFilterModels();
 
     this.propertyFormlyFields = [
       {
         validators: {
           validation: [
-            this.stepperConfiguration.direction == Direction.INBOUND
+            this.stepperConfiguration.direction === Direction.INBOUND
               ? 'checkTopicsInboundAreValid'
               : 'checkTopicsOutboundAreValid'
           ]
@@ -118,8 +117,7 @@ export class MappingStepPropertiesComponent
             type: 'input',
             templateOptions: {
               label: 'Mapping Name',
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
+              disabled: this.isFieldDisabled,
               required: true
             }
           },
@@ -131,14 +129,13 @@ export class MappingStepPropertiesComponent
             templateOptions: {
               label: 'Mapping Topic',
               placeholder: 'The MappingTopic defines a key to which this mapping is bound. It is a kind of key to organize the mappings internally',
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
+              disabled: this.isFieldDisabled,
               description: 'Mapping Topic',
               change: () => {
                 const newDerivedTopic = deriveSampleTopicFromTopic(
                   this.propertyFormly.get('mappingTopic').value
                 );
-                if (this.stepperConfiguration.direction == Direction.INBOUND) {
+                if (this.stepperConfiguration.direction === Direction.INBOUND) {
                   this.propertyFormly
                     .get('mappingTopicSample')
                     .setValue(newDerivedTopic);
@@ -148,10 +145,10 @@ export class MappingStepPropertiesComponent
                     .setValue(newDerivedTopic);
                 }
               },
-              required: this.stepperConfiguration.direction == Direction.INBOUND
+              required: this.stepperConfiguration.direction === Direction.INBOUND
             },
             hideExpression:
-              this.stepperConfiguration.direction == Direction.OUTBOUND
+              this.stepperConfiguration.direction === Direction.OUTBOUND
           },
           {
             className: 'col-lg-6',
@@ -161,8 +158,7 @@ export class MappingStepPropertiesComponent
             templateOptions: {
               label: 'Publish Topic',
               placeholder: 'Publish Topic ...',
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
+              disabled: this.isFieldDisabled,
               change: () => {
                 const newDerivedTopic = deriveSampleTopicFromTopic(
                   this.propertyFormly.get('publishTopic').value
@@ -175,38 +171,8 @@ export class MappingStepPropertiesComponent
                 true
             },
             hideExpression:
-              this.stepperConfiguration.direction == Direction.INBOUND
+              this.stepperConfiguration.direction === Direction.INBOUND
           },
-          // {
-          //   className: 'col-lg-6',
-          //   key: 'filterMapping',
-          //   type: 'input',
-          //   templateOptions: {
-          //     label: 'Filter Mapping',
-          //     placeholder: 'custom_OperationFragment',
-          //     disabled:
-          //       this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
-          //     description:
-          //       'The filter has to be defined as boolean expression (JSONata), e.g. <code>$exists(<C8Y_FRAGMENT>)</code>',
-          //     required:
-          //       this.stepperConfiguration.direction == Direction.OUTBOUND
-          //   },
-          //   hideExpression:
-          //     this.stepperConfiguration.direction == Direction.INBOUND || (this.stepperConfiguration.direction == Direction.OUTBOUND && (this.mapping.snoopStatus == SnoopStatus.NONE || this.mapping.snoopStatus == SnoopStatus.STOPPED)),
-          //   hooks: {
-          //     onInit: (field: FormlyFieldConfig) => {
-          //       field.formControl.valueChanges.pipe(
-          //         // Wait for 1500ms pause in typing before processing
-          //         debounceTime(1500),
-
-          //         // Only trigger if the value has actually changed
-          //         distinctUntilChanged()
-          //       ).subscribe(path => {
-          //         this.updateFilterMappingExpressionResult(path);
-          //       });
-          //     }
-          //   }
-          // },
           {
             className: 'col-lg-6',
             key: 'filterInventory',
@@ -214,15 +180,12 @@ export class MappingStepPropertiesComponent
             templateOptions: {
               label: 'Filter Inventory',
               placeholder: `type = "lora_device_type`,
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
+              disabled: this.isFieldDisabled,
               description:
                 'The filter is applied to the inventory object that is referenced in the payload. The filter has to be defined as boolean expression (JSONata), e.g. <code>type = "lora-device-type"</code>. NOTE: Any property referenced here has to be added in Configuration > Service Configuration > Fragments from inventory to cache.',
               required:
                 false
             },
-            // hideExpression:
-            //this.stepperConfiguration.direction == Direction.INBOUND,
             hooks: {
               onInit: (field: FormlyFieldConfig) => {
                 field.formControl.valueChanges.pipe(
@@ -245,8 +208,7 @@ export class MappingStepPropertiesComponent
             templateOptions: {
               label: 'Mapping Topic Sample',
               placeholder: 'e.g. device/110',
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
+              disabled: this.isFieldDisabled,
               description: `The Mapping Topic Sample name
               must have the same structure and number of
               levels as the MappingTopic. Wildcards, i.e. <code>+</code> in the Mapping Topic are replaced with concrete runtime values. This helps to identify the relevant positions in the substitutions`,
@@ -263,15 +225,14 @@ export class MappingStepPropertiesComponent
             templateOptions: {
               label: 'Publish Topic Sample',
               placeholder: 'e.g. device/110',
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
+              disabled: this.isFieldDisabled,
               description: `The Publish Topic Sample name
               must have the same structure and number of
               levels as the PublishTopic. Wildcards, i.e. <code>+</code> in the PublishTopic are replaced with concrete runtime values. This helps to identify the relevant positions in the substitutions`,
               required: true
             },
             hideExpression:
-              this.stepperConfiguration.direction != Direction.OUTBOUND
+              this.stepperConfiguration.direction !== Direction.OUTBOUND
           }
         ]
       },
@@ -288,23 +249,14 @@ export class MappingStepPropertiesComponent
             type: 'select',
             wrappers: ['c8y-form-field'],
             templateOptions: {
-              label: this.stepperConfiguration.direction == Direction.INBOUND ? 'Target API' : 'Source API',
+              label: this.stepperConfiguration.direction === Direction.INBOUND ? 'Target API' : 'Source API',
               options: Object.keys(API)
-                .filter((key) => key != API.ALL.name)
+                .filter((key) => key !== API.ALL.name)
                 .map((key) => {
                   return { label: this.formatStringPipe.transform(key), value: key };
                 }),
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
-              // eslint-disable-next-line @typescript-eslint/no-unused-vars
-              change: (field: FormlyFieldConfig, event?: any) => {
-                // console.log(
-                //  'Changes:',
-                //  field,
-                //  event,
-                //  this.mapping,
-                //  this.propertyFormly.valid
-                // );
+              disabled: this.isFieldDisabled,
+              change: () => {
                 this.onTargetAPIChanged(
                   this.propertyFormly.get('targetAPI').value
                 );
@@ -316,11 +268,10 @@ export class MappingStepPropertiesComponent
             className: 'col-lg-3',
             key: 'createNonExistingDevice',
             type: 'switch',
-            wrappers: ['custom-form-field-wrapper'],
+            wrappers: ['c8y-form-field'],
             templateOptions: {
               label: 'Create device',
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
+              disabled: this.isFieldDisabled,
               description:
                 'In case a MEAO (Measuremente, Event, Alarm, Operation) is received and the referenced device does not yet exist, it can be created automatically.',
               required: false,
@@ -329,18 +280,17 @@ export class MappingStepPropertiesComponent
               hideLabel: true
             },
             hideExpression: () =>
-              this.stepperConfiguration.direction == Direction.OUTBOUND ||
-              this.mapping.targetAPI == API.INVENTORY.name
+              this.stepperConfiguration.direction === Direction.OUTBOUND ||
+              this.mapping.targetAPI === API.INVENTORY.name
           },
           {
             className: 'col-lg-3',
             key: 'updateExistingDevice',
             type: 'switch',
-            wrappers: ['custom-form-field-wrapper'],
+            wrappers: ['c8y-form-field'],
             templateOptions: {
               label: 'Update Existing Device',
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
+              disabled: this.isFieldDisabled,
               description: 'Update Existing Device.',
               required: false,
               switchMode: true,
@@ -348,19 +298,18 @@ export class MappingStepPropertiesComponent
               hideLabel: true
             },
             hideExpression: () =>
-              this.stepperConfiguration.direction == Direction.OUTBOUND ||
-              (this.stepperConfiguration.direction == Direction.INBOUND &&
-                this.mapping.targetAPI != API.INVENTORY.name)
+              this.stepperConfiguration.direction === Direction.OUTBOUND ||
+              (this.stepperConfiguration.direction === Direction.INBOUND &&
+                this.mapping.targetAPI !== API.INVENTORY.name)
           },
           {
             className: 'col-lg-3',
             key: 'autoAckOperation',
             type: 'switch',
-            wrappers: ['custom-form-field-wrapper'],
+            wrappers: ['c8y-form-field'],
             templateOptions: {
               label: 'Auto acknowledge',
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
+              disabled: this.isFieldDisabled,
               description: 'Auto acknowledge outbound operation.',
               required: false,
               switchMode: true,
@@ -368,20 +317,19 @@ export class MappingStepPropertiesComponent
               hideLabel: true
             },
             hideExpression: () =>
-              this.stepperConfiguration.direction == Direction.INBOUND ||
-              (this.stepperConfiguration.direction == Direction.OUTBOUND &&
-                this.mapping.targetAPI != API.OPERATION.name)
+              this.stepperConfiguration.direction === Direction.INBOUND ||
+              (this.stepperConfiguration.direction === Direction.OUTBOUND &&
+                this.mapping.targetAPI !== API.OPERATION.name)
           },
 
           {
             className: 'col-lg-3',
             key: 'eventWithAttachment',
             type: 'switch',
-            wrappers: ['custom-form-field-wrapper'],
+            wrappers: ['c8y-form-field'],
             templateOptions: {
               label: 'Event contains attachment',
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
+              disabled: this.isFieldDisabled,
               description: 'Event contains attachment, e.g. image, ... that is stored separately.',
               required: false,
               switchMode: true,
@@ -389,7 +337,7 @@ export class MappingStepPropertiesComponent
               hideLabel: true
             },
             hideExpression: () =>
-              this.stepperConfiguration.direction == Direction.OUTBOUND ||
+              this.stepperConfiguration.direction === Direction.OUTBOUND ||
               this.mapping.targetAPI !== API.EVENT.name
           },
 
@@ -399,9 +347,9 @@ export class MappingStepPropertiesComponent
             className: 'col-lg-3',
             template: '<div class="form-group row" style="height:80px"></div>',
             hideExpression: () =>
-              this.stepperConfiguration.direction == Direction.INBOUND ||
-              (this.stepperConfiguration.direction == Direction.OUTBOUND &&
-                this.mapping.targetAPI == API.OPERATION.name)
+              this.stepperConfiguration.direction === Direction.INBOUND ||
+              (this.stepperConfiguration.direction === Direction.OUTBOUND &&
+                this.mapping.targetAPI === API.OPERATION.name)
           },
           {
             className: 'col-lg-6',
@@ -421,8 +369,7 @@ export class MappingStepPropertiesComponent
                 map((key) => {
                   return { label: this.formatStringPipe.transform(key), value: key };
                 }),
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
+              disabled: this.isFieldDisabled,
               required: true
             }
           }
@@ -435,12 +382,11 @@ export class MappingStepPropertiesComponent
             className: 'col-lg-3',
             key: 'useExternalId',
             type: 'switch',
-            wrappers: ['custom-form-field-wrapper'],
+            wrappers: ['c8y-form-field'],
             templateOptions: {
               label: 'Use external id',
               switchMode: true,
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
+              disabled: this.isFieldDisabled,
               description:
                 'If this is enabled then the device id is identified by its  external id which is looked up and translated using the externalIdType.',
               indeterminate: false,
@@ -454,8 +400,7 @@ export class MappingStepPropertiesComponent
             defaultValue: 'c8y_Serial',
             templateOptions: {
               label: 'External Id type',
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
+              disabled: this.isFieldDisabled,
             },
             hideExpression: (model) => !model.useExternalId
           },
@@ -472,8 +417,7 @@ export class MappingStepPropertiesComponent
             wrappers: ['c8y-form-field'],
             templateOptions: {
               label: 'Max failure count',
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
+              disabled: this.isFieldDisabled,
               description:
                 'Max failure count, if this is exceeded the mapping is automatically deactivated. A value of 0 means no limit. The failure count is reset to 0 if the mapping is reactivated.',
             },
@@ -487,7 +431,7 @@ export class MappingStepPropertiesComponent
     this.selectedResult$.complete();
   }
 
-  async updateFilterMappingExpressionResult(path) {
+  async updateFilterMappingExpressionResult(path: string) {
     try {
       const resultExpression: JSON = await this.mappingService.evaluateExpression(
         JSON.parse('{}'),
@@ -498,11 +442,8 @@ export class MappingStepPropertiesComponent
         result: JSON.stringify(resultExpression, null, 4),
         valid: true
       };
-      if (path && this.filterMappingModel.filterExpression.resultType != 'Boolean') throw Error('The filter expression must return of boolean type');
+      if (path && this.filterMappingModel.filterExpression.resultType !== 'Boolean') throw Error('The filter expression must return of boolean type');
       this.mapping.filterMapping = path;
-      // this.propertyFormly
-      // .get('filterMapping')
-      // .setErrors(null);
     } catch (error) {
       this.filterMappingModel.filterExpression.valid = false;
       this.propertyFormly
@@ -513,9 +454,9 @@ export class MappingStepPropertiesComponent
     this.filterMappingModel = { ...this.filterMappingModel };
   }
 
-  async updateFilterInventoryExpressionResult(path) {
+  async updateFilterInventoryExpressionResult(path: string) {
     this.clearAlerts();
-    this.raiseAlert({ type: 'info', text: 'NOTE: Any property referenced here has to be added in Configuration > Service Configuration > Fragments from inventory to cache.' })
+    this.raiseAlert({ type: 'info', text: 'NOTE: Any property referenced here has to be added in Configuration > Service Configuration > Fragments from inventory to cache.' });
     try {
       const resultExpression: JSON = await this.mappingService.evaluateExpression(
         JSON.parse('{}'),
@@ -526,11 +467,8 @@ export class MappingStepPropertiesComponent
         result: JSON.stringify(resultExpression, null, 4),
         valid: true
       };
-      if (path && this.filterInventoryModel.filterExpression.resultType != 'Boolean') throw Error('The filter expression must return of boolean type');
+      if (path && this.filterInventoryModel.filterExpression.resultType !== 'Boolean') throw Error('The filter expression must return of boolean type');
       this.mapping.filterInventory = path;
-      // this.propertyFormly
-      // .get('filterInventory')
-      // .setErrors(null);
     } catch (error) {
       this.filterInventoryModel.filterExpression.valid = false;
       this.propertyFormly
@@ -541,20 +479,58 @@ export class MappingStepPropertiesComponent
     this.filterInventoryModel = { ...this.filterInventoryModel };
   }
 
-  onTargetAPIChanged(targetAPI) {
+  onTargetAPIChanged(targetAPI: string): void {
     this.mapping.targetAPI = targetAPI;
     this.targetAPIChanged.emit(targetAPI);
   }
 
-  clearAlerts() {
+  clearAlerts(): void {
     this.alertService.clearAll();
   }
 
-  raiseAlert(alert: Alert) {
-    // clear all info alert
+  raiseAlert(alert: Alert): void {
     this.alertService.state.forEach(a => {
-      if (a.type == 'info') { this.alertService.remove(a) }
-    })
+      if (a.type === 'info') {
+        this.alertService.remove(a);
+      }
+    });
     this.alertService.add(alert);
+  }
+
+  private initializeDirection(): void {
+    if (!this.mapping.direction) {
+      this.mapping.direction = Direction.INBOUND;
+    }
+
+    this.targetSystem = this.mapping.direction === Direction.INBOUND ? 'Cumulocity' : 'Broker';
+    this.sourceSystem = this.mapping.direction === Direction.OUTBOUND ? 'Cumulocity' : 'Broker';
+  }
+
+  private initializeFilterModels(): void {
+    const emptyFilterExpression = {
+      result: '',
+      resultType: 'empty',
+      valid: false
+    };
+
+    this.filterMappingModel = {
+      filterExpression: { ...emptyFilterExpression }
+    };
+
+    this.filterInventoryModel = {
+      filterExpression: { ...emptyFilterExpression }
+    };
+  }
+
+  private get isReadOnly(): boolean {
+    return this.stepperConfiguration.editorMode === EditorMode.READ_ONLY;
+  }
+
+  private get canEdit(): boolean {
+    return this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole;
+  }
+
+  private get isFieldDisabled(): boolean {
+    return this.isReadOnly || !this.canEdit;
   }
 }

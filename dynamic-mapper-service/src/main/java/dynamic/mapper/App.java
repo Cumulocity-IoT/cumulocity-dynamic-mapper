@@ -53,6 +53,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -98,12 +99,20 @@ public class App {
     }
 
     @Bean
+    @Primary
     public ObjectMapper objectMapper() {
-        ObjectMapper objectMapper = baseObjectMapper();
-        objectMapper.registerModule(cumulocityModule());
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.setSerializationInclusion(NON_NULL);
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        objectMapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
+
+        objectMapper.registerModule(new JodaModule());
+        objectMapper.registerModule(cumulocityModule(objectMapper));
+
         SimpleModule module = new SimpleModule();
         module.addSerializer(MappingTreeNode.class, new MappingTreeNodeSerializer());
         objectMapper.registerModule(module);
+
         return objectMapper;
     }
 
@@ -114,33 +123,11 @@ public class App {
                 .build();
     }
 
-
-    public static ObjectMapper baseObjectMapper() {
-        final ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.setSerializationInclusion(NON_NULL);
-        // objectMapper.configure(SerializationFeature.WRITE_ENUMS_USING_TO_STRING,
-        // true);
-        // objectMapper.configure(DeserializationFeature.READ_ENUMS_USING_TO_STRING,
-        // true);
-        // objectMapper.configure(DeserializationFeature.FAIL_ON_INVALID_SUBTYPE,
-        // false);
-        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        objectMapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
-        // objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
-        // objectMapper.setDateFormat(new RFC3339DateFormat());
-        // objectMapper.registerModule(new JavaTimeModule());
-        objectMapper.registerModule(new JodaModule());
-
-        return objectMapper;
-    }
-
-    private static Module cumulocityModule() {
+    private static Module cumulocityModule(ObjectMapper mapper) {
         final JSONParser jsonParser = getJsonParser();
-        final ObjectMapper mapper = baseObjectMapper();
-
         class SvensonDeserializers extends Deserializers.Base {
             public JsonDeserializer<?> findBeanDeserializer(JavaType type, DeserializationConfig config,
-                                                            BeanDescription beanDesc) {
+                    BeanDescription beanDesc) {
                 final Class<?> rawClass = type.getRawClass();
 
                 // base resource representation is deserialized using svenson
@@ -162,7 +149,7 @@ public class App {
         class SvensonSerializers extends Serializers.Base {
             @Override
             public JsonSerializer<?> findSerializer(final SerializationConfig config, final JavaType type,
-                                                    BeanDescription beanDesc) {
+                    BeanDescription beanDesc) {
                 final Class<?> rawClass = type.getRawClass();
 
                 // gid is serialized using svenson
@@ -170,7 +157,7 @@ public class App {
                     return new JsonSerializer<Object>() {
                         @SneakyThrows
                         public void serialize(Object value, final JsonGenerator gen,
-                                              final SerializerProvider serializers) {
+                                final SerializerProvider serializers) {
                             final GId representation = (GId) value;
                             gen.writeString(representation.getValue());
                         }
@@ -196,18 +183,21 @@ public class App {
 
     private static JSONParser getJsonParser() {
         final JSONParser jsonParser = JSONBase.getJSONParser();
+
+        // Set repository FIRST (if you really need to clear the cache)
+        jsonParser.setTypeConverterRepository(new DefaultTypeConverterRepository());
+
+        // THEN register your converters
         jsonParser.registerTypeConversion(DateTime.class, new DateTimeConverter());
         jsonParser.registerTypeConversion(GId.class, new IDTypeConverter() {
             public Object fromJSON(Object in) {
                 if (in instanceof Number) {
-                    // gid is serialized using svenson
                     return GId.asGId(((Number) in).longValue());
                 }
                 return super.fromJSON(in);
             }
         });
-        // cleaning the cache
-        jsonParser.setTypeConverterRepository(new DefaultTypeConverterRepository());
+
         return jsonParser;
     }
 

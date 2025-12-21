@@ -19,21 +19,24 @@
  */
 import { HttpStatusCode } from '@angular/common/http';
 import { Component, inject, OnDestroy, OnInit } from '@angular/core';
-import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
-import { AlertService } from '@c8y/ngx-components';
+import { CommonModule } from '@angular/common';
+import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
+import { AlertService, CoreModule } from '@c8y/ngx-components';
+import { gettext } from '@c8y/ngx-components/gettext';
+import { PopoverModule } from 'ngx-bootstrap/popover';
+import { BehaviorSubject, from, map, Subject, takeUntil } from 'rxjs';
 import packageJson from '../../package.json';
+import { AIAgentService } from '../mapping/core/ai-agent.service';
 import { Feature, Operation, SharedService } from '../shared';
 import { ServiceConfiguration } from './shared/configuration.model';
-import { ActivatedRoute } from '@angular/router';
-import { AIAgentService } from 'src/mapping/core/ai-agent.service';
-import { BehaviorSubject, from, map, Subject, takeUntil } from 'rxjs';
-import { gettext } from '@c8y/ngx-components/gettext';
 
 @Component({
   selector: 'd11r-mapping-service-configuration',
   styleUrls: ['./service-configuration.component.style.css'],
   templateUrl: 'service-configuration.component.html',
-  standalone: false
+  standalone: true,
+  imports: [CoreModule, CommonModule, PopoverModule, ReactiveFormsModule]
 })
 export class ServiceConfigurationComponent implements OnInit, OnDestroy {
 
@@ -75,46 +78,10 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
 
 
   async ngOnInit() {
-    // console.log('Running version', this.version);
     this.feature = this.route.snapshot.data['feature'];
-    this.serviceForm = this.fb.group({
-      logPayload: new FormControl(''),
-      logSubstitution: new FormControl(''),
-      logConnectorErrorInBackend: new FormControl(''),
-      sendConnectorLifecycle: new FormControl(''),
-      sendMappingStatus: new FormControl(''),
-      sendSubscriptionEvents: new FormControl(''),
-      sendNotificationLifecycle: new FormControl(''),
-      outboundMappingEnabled: new FormControl(''),
-      deviceIsolationMQTTServiceEnabled: new FormControl(''),
-      inboundExternalIdCacheSize: new FormControl(''),
-      inboundExternalIdCacheRetention: new FormControl(''),
-      inventoryCacheRetention: new FormControl(''),
-      inventoryCacheSize: new FormControl(''),
-      inventoryFragmentsToCache: new FormControl(''),
-      maxCPUTimeMS: new FormControl(''),
-      jsonataAgent: new FormControl({ value: '', disabled: true }),
-      javaScriptAgent: new FormControl({ value: '', disabled: true }),
-      smartFunctionAgent: new FormControl({ value: '', disabled: true }),
-    });
+    this.initializeForm();
     await this.loadData();
-    from(this.aiAgentService.getAIAgents())
-      .pipe(map(agents => agents.map(agent => agent.name)), takeUntil(this.destroy$))
-      .subscribe(agentNames => {
-        this.agents$.next(agentNames);
-        this.aiAgentDeployed = agentNames.length > 0;
-
-        // Enable/disable controls based on whether agents are available
-        if (this.aiAgentDeployed) {
-          this.serviceForm.get('javaScriptAgent')?.enable();
-          this.serviceForm.get('jsonataAgent')?.enable();
-          this.serviceForm.get('smartFunctionAgent')?.enable();
-        } else {
-          this.serviceForm.get('javaScriptAgent')?.disable();
-          this.serviceForm.get('jsonataAgent')?.disable();
-          this.serviceForm.get('smartFunctionAgent')?.disable();
-        }
-      });
+    this.subscribeToAIAgents();
   }
 
   ngOnDestroy(): void {
@@ -122,64 +89,78 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  private initializeForm(): void {
+    this.serviceForm = this.fb.group({
+      logPayload: [''],
+      logSubstitution: [''],
+      logConnectorErrorInBackend: [''],
+      sendConnectorLifecycle: [''],
+      sendMappingStatus: [''],
+      sendSubscriptionEvents: [''],
+      sendNotificationLifecycle: [''],
+      outboundMappingEnabled: [''],
+      deviceIsolationMQTTServiceEnabled: [''],
+      inboundExternalIdCacheSize: [''],
+      inboundExternalIdCacheRetention: [''],
+      inventoryCacheRetention: [''],
+      inventoryCacheSize: [''],
+      inventoryFragmentsToCache: [''],
+      maxCPUTimeMS: [''],
+      jsonataAgent: [{ value: '', disabled: true }],
+      javaScriptAgent: [{ value: '', disabled: true }],
+      smartFunctionAgent: [{ value: '', disabled: true }],
+    });
+  }
+
+  private subscribeToAIAgents(): void {
+    from(this.aiAgentService.getAIAgents())
+      .pipe(
+        map(agents => agents.map(agent => agent.name)),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(agentNames => {
+        this.agents$.next(agentNames);
+        this.aiAgentDeployed = agentNames.length > 0;
+        this.updateAgentControlsState();
+      });
+  }
+
+  private updateAgentControlsState(): void {
+    const agentControls = ['javaScriptAgent', 'jsonataAgent', 'smartFunctionAgent'];
+    agentControls.forEach(controlName => {
+      const control = this.serviceForm.get(controlName);
+      if (this.aiAgentDeployed) {
+        control?.enable();
+      } else {
+        control?.disable();
+      }
+    });
+  }
+
   async loadData(): Promise<void> {
-    this.serviceConfiguration =
-      await this.sharedService.getServiceConfiguration();
+    this.serviceConfiguration = await this.sharedService.getServiceConfiguration();
+
     this.serviceForm.patchValue({
-      logPayload: this.serviceConfiguration.logPayload,
-      logSubstitution: this.serviceConfiguration.logSubstitution,
-      logConnectorErrorInBackend:
-        this.serviceConfiguration.logConnectorErrorInBackend,
-      sendConnectorLifecycle: this.serviceConfiguration.sendConnectorLifecycle,
-      sendMappingStatus: this.serviceConfiguration.sendMappingStatus,
-      sendSubscriptionEvents: this.serviceConfiguration.sendSubscriptionEvents,
-      sendNotificationLifecycle:
-        this.serviceConfiguration.sendNotificationLifecycle,
-      outboundMappingEnabled: this.serviceConfiguration.outboundMappingEnabled,
-      deviceIsolationMQTTServiceEnabled: this.serviceConfiguration.deviceIsolationMQTTServiceEnabled,
-      inboundExternalIdCacheSize:
-        this.serviceConfiguration.inboundExternalIdCacheSize,
-      inboundExternalIdCacheRetention:
-        this.serviceConfiguration.inboundExternalIdCacheRetention,
-      inventoryCacheSize:
-        this.serviceConfiguration.inventoryCacheSize,
-      inventoryCacheRetention:
-        this.serviceConfiguration.inventoryCacheRetention,
-      inventoryFragmentsToCache:
-        this.serviceConfiguration.inventoryFragmentsToCache.join(","),
-      maxCPUTimeMS:
-        this.serviceConfiguration.maxCPUTimeMS,
-      jsonataAgent:
-        this.serviceConfiguration.jsonataAgent,
-      javaScriptAgent:
-        this.serviceConfiguration.javaScriptAgent,
-      smartFunctionAgent:
-        this.serviceConfiguration.smartFunctionAgent,
+      ...this.serviceConfiguration,
+      inventoryFragmentsToCache: this.serviceConfiguration.inventoryFragmentsToCache.join(',')
     });
   }
 
   async clickedClearInboundExternalIdCache() {
-    const response1 = await this.sharedService.runOperation(
-      {
-        operation: Operation.CLEAR_CACHE,
-        parameter: { cacheId: 'INBOUND_ID_CACHE' }
-      }
-    );
-    if (response1.status === HttpStatusCode.Created) {
-      this.alertService.success(gettext('Cache cleared.'));
-    } else {
-      this.alertService.danger(gettext('Failed to clear cache!'));
-    }
+    await this.clearCache('INBOUND_ID_CACHE');
   }
 
   async clickedClearInventoryCache() {
-    const response1 = await this.sharedService.runOperation(
-      {
-        operation: Operation.CLEAR_CACHE,
-        parameter: { cacheId: 'INVENTORY_CACHE' }
-      }
-    );
-    if (response1.status === HttpStatusCode.Created) {
+    await this.clearCache('INVENTORY_CACHE');
+  }
+
+  private async clearCache(cacheId: string): Promise<void> {
+    const response = await this.sharedService.runOperation({
+      operation: Operation.CLEAR_CACHE,
+      parameter: { cacheId }
+    });
+
+    if (response.status === HttpStatusCode.Created) {
       this.alertService.success(gettext('Cache cleared.'));
     } else {
       this.alertService.danger(gettext('Failed to clear cache!'));
@@ -188,32 +169,32 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
 
   async clickedSaveServiceConfiguration() {
     const conf = this.serviceForm.value;
-    // trim the separated fragments
-    conf.inventoryFragmentsToCache = this.serviceForm.value['inventoryFragmentsToCache']
-      .split(",")
-      .map(fragment => fragment.trim())
-      .filter(fragment => fragment.length > 0);
 
-    // console.log("VALUE", this.serviceForm.value['jsonataAgent'])
-    conf.javaScriptAgent = this.serviceForm.value['javaScriptAgent']
-      ? this.serviceForm.value['javaScriptAgent']?.trim()
-      : undefined;
-    ;
-    conf.jsonataAgent = this.serviceForm.value['jsonataAgent']
-      ? this.serviceForm.value['jsonataAgent']?.trim()
-      : undefined;
+    conf.inventoryFragmentsToCache = this.parseFragmentsList(
+      this.serviceForm.value['inventoryFragmentsToCache']
+    );
 
-    conf.smartFunctionAgent = this.serviceForm.value['smartFunctionAgent']
-      ? this.serviceForm.value['smartFunctionAgent']?.trim()
-      : undefined;
+    conf.javaScriptAgent = this.trimOrUndefined(this.serviceForm.value['javaScriptAgent']);
+    conf.jsonataAgent = this.trimOrUndefined(this.serviceForm.value['jsonataAgent']);
+    conf.smartFunctionAgent = this.trimOrUndefined(this.serviceForm.value['smartFunctionAgent']);
 
     const response = await this.sharedService.updateServiceConfiguration(conf);
+
     if (response.status >= 200 && response.status < 300) {
       this.alertService.success(gettext('Update successful'));
     } else {
-      this.alertService.danger(
-        gettext('Failed to update service configuration')
-      );
+      this.alertService.danger(gettext('Failed to update service configuration'));
     }
+  }
+
+  private parseFragmentsList(fragmentsString: string): string[] {
+    return fragmentsString
+      .split(',')
+      .map(fragment => fragment.trim())
+      .filter(fragment => fragment.length > 0);
+  }
+
+  private trimOrUndefined(value: string | null | undefined): string | undefined {
+    return value?.trim() || undefined;
   }
 }

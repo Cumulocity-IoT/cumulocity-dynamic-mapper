@@ -18,14 +18,20 @@
  * @authors Christof Strack
  */
 import { Component } from '@angular/core';
-import { CellRendererContext } from '@c8y/ngx-components';
+import { CellRendererContext, CommonModule } from '@c8y/ngx-components';
+
+const UNSPECIFIED_ID = -1;
+const UNSPECIFIED_LABEL = 'UNSPECIFIED';
 
 @Component({
-  template: `<span>{{
-    context.item.id === -1 ? 'UNSPECIFIED' : context.item.id
-  }}</span>`,
-  standalone: false
+  template: `<span>{{ displayValue }}</span>`,
+  standalone: true,
+  imports: [CommonModule]
 })
 export class IdRendererComponent {
-  constructor(public context: CellRendererContext) {}
+  constructor(public readonly context: CellRendererContext) {}
+
+  get displayValue(): string | number {
+    return this.context.item.id === UNSPECIFIED_ID ? UNSPECIFIED_LABEL : this.context.item.id;
+  }
 }

@@ -48,9 +48,10 @@ public class DeserializationInboundProcessor extends BaseProcessor {
     @Override
     @SuppressWarnings("unchecked")
     public void process(Exchange exchange) throws Exception {
-        Mapping mapping = exchange.getIn().getBody(Mapping.class);
         String tenant = exchange.getIn().getHeader("tenant", String.class);
+        Mapping mapping = exchange.getIn().getBody(Mapping.class);
         Boolean testing = exchange.getIn().getHeader("testing", Boolean.class);
+        
         ServiceConfiguration serviceConfiguration = exchange.getIn().getHeader("serviceConfiguration",
                 ServiceConfiguration.class);
         ConnectorMessage connectorMessage = exchange.getIn().getHeader("connectorMessage", ConnectorMessage.class);

@@ -17,89 +17,116 @@
  *
  * @authors Christof Strack
  */
-import {
-  Component,
-  ElementRef,
-  inject,
-  Input,
-  OnDestroy,
-  OnInit,
-  ViewChild,
-  ViewEncapsulation
-} from '@angular/core';
+
+/*
+ * Copyright (c) 2025 Cumulocity GmbH
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { Component, inject, Input, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
 import { FormBuilder, FormGroup } from '@angular/forms';
-import { BottomDrawerRef, ModalLabels } from '@c8y/ngx-components';
+import { BottomDrawerRef, CoreModule, ModalLabels } from '@c8y/ngx-components';
+import { BsModalService } from 'ngx-bootstrap/modal';
 import { Subject, takeUntil } from 'rxjs';
-import { Direction, MappingType, MappingTypeDescriptionMap, MappingTypeDescriptions, MappingTypeLabels, TransformationType, TransformationTypeDescriptions, TransformationTypeLabels } from '../../shared';
+import {
+  CodeExplorerComponent,
+  Direction,
+  MappingType,
+  MappingTypeDescriptionMap,
+  MappingTypeDescriptions,
+  MappingTypeLabels,
+  SharedService,
+  TransformationType,
+  TransformationTypeDescriptions,
+  TransformationTypeLabels
+} from '../../shared';
+import { CodeTemplate } from '../../configuration';
+import { base64ToString } from '../shared/util';
+import { CommonModule } from '@angular/common';
+import { CustomSelectComponent } from '../../shared/component/select/custom-select.component';
 
-interface MappingTypeOption {
+// Types
+interface SelectOption<T> {
   label: string;
-  value: MappingType;
+  value: T;
   description?: string;
+  id?: string;
 }
 
-interface TransformationTypeOption {
-  label: string;
-  value: TransformationType;
-  description?: string;
-}
+type MappingTypeOption = SelectOption<MappingType>;
+type TransformationTypeOption = SelectOption<TransformationType>;
+type CodeTemplateOption = SelectOption<CodeTemplate>;
 
 interface SaveResult {
   mappingType: MappingType;
   transformationType: TransformationType;
   snoop: boolean;
+  codeTemplate?: CodeTemplate;
 }
 
 @Component({
   selector: 'd11r-mapping-type-drawer',
   templateUrl: './mapping-type-drawer.component.html',
   encapsulation: ViewEncapsulation.None,
-  standalone: false
+  standalone: true,
+  imports: [CoreModule, CommonModule, CustomSelectComponent]
 })
 export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   @Input() direction: Direction;
 
-  @ViewChild('descriptionTextarea') descriptionTextarea: ElementRef<HTMLTextAreaElement>;
+  // Services
+  private readonly bottomDrawerRef = inject(BottomDrawerRef);
+  private readonly sharedService = inject(SharedService);
+  private readonly fb = inject(FormBuilder);
+  private readonly bsModalService = inject(BsModalService);
+  private readonly destroy$ = new Subject<void>();
 
-  // Template constants
-  readonly labels: ModalLabels = { ok: 'Select', cancel: 'Cancel' };
-  readonly MappingTypeDescriptionMap = MappingTypeDescriptionMap;
-  readonly Direction = Direction;
+  // Constants - Remove 'as const' to allow normal type checking
+  private readonly DEFAULTS = {
+    MAPPING_TYPE: MappingType.JSON,
+    TRANSFORMATION_TYPE: TransformationType.JSONATA
+  };
 
-  // Form and options
-  formGroup: FormGroup;
-  filteredMappingTypeOptions: MappingTypeOption[] = [];
-  transformationTypeOptions: TransformationTypeOption[] = [];
-
-  // State
-  showTransformationType = false;
-  valid = true;
-
-  // Constants
-  private readonly DEFAULT_MAPPING_TYPE = MappingType.JSON;
-  private readonly DEFAULT_TRANSFORMATION_TYPE = TransformationType.JSONATA;
-  private readonly EXPERT_MODE_EXCLUDED_TYPES = [
+  private readonly EXPERT_MODE_EXCLUDED_TYPES: MappingType[] = [
     MappingType.EXTENSION_SOURCE,
     MappingType.PROTOBUF_INTERNAL,
     MappingType.EXTENSION_SOURCE_TARGET
   ];
 
-  private readonly destroy$ = new Subject<void>();
-  private readonly bottomDrawerRef = inject(BottomDrawerRef);
-  private readonly fb = inject(FormBuilder);
+  private readonly CODE_TEMPLATE_TYPES: TransformationType[] = [
+    TransformationType.SUBSTITUTION_AS_CODE,
+    TransformationType.SMART_FUNCTION
+  ];
 
-  // Promise resolvers
-  private _save: (value: SaveResult) => void;
-  private _cancel: (reason?: any) => void;
+  // Public properties
+  readonly labels: ModalLabels = { ok: 'Select', cancel: 'Cancel' };
+  
+  formGroup: FormGroup;
+  mappingTypeOptions: MappingTypeOption[] = [];
+  transformationTypeOptions: TransformationTypeOption[] = [];
+  codeTemplateOptions: CodeTemplateOption[] = [];
+  
+  isLoading = true;
+  isLoadingCodeTemplates = false;
+  showTransformationType = false;
+  valid = true;
 
-  result: Promise<SaveResult | string> = new Promise((resolve, reject) => {
-    this._save = resolve;
-    this._cancel = reject;
+  // Promise for modal result
+  private _resolve: (value: SaveResult) => void;
+  private _reject: (reason?: any) => void;
+  
+  result = new Promise<SaveResult>((resolve, reject) => {
+    this._resolve = resolve;
+    this._reject = reject;
   });
 
-  ngOnInit(): void {
-    this.initializeForm();
-    this.setupFormSubscriptions();
+  async ngOnInit(): Promise<void> {
+    try {
+      await this.initializeForm();
+      this.setupFormSubscriptions();
+    } finally {
+      this.isLoading = false;
+    }
   }
 
   ngOnDestroy(): void {
@@ -107,230 +134,243 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  // Public methods
   onCancel(): void {
-    this._cancel("User canceled");
+    this._reject('User canceled');
     this.bottomDrawerRef.close();
   }
 
-  // Update the onSave method to extract the enum value
   onSave(): void {
     if (!this.formGroup.valid) return;
 
-    const formValue = this.formGroup.getRawValue();
-    const selectedMappingTypeOption = formValue.mappingType as MappingTypeOption;
-    const selectedMappingType = selectedMappingTypeOption.value;
-    const snoopSupported = this.getMappingTypeConfig(selectedMappingType).snoopSupported;
+    const { mappingType, transformationType, snoop, codeTemplate } = this.formGroup.getRawValue();
+    const snoopSupported = this.getConfigForMappingType(mappingType.value).snoopSupported;
 
-    this._save({
-      mappingType: selectedMappingType,
-      transformationType: formValue.transformationType.value || TransformationType.DEFAULT,
-      snoop: formValue.snoop && snoopSupported
+    this._resolve({
+      mappingType: mappingType.value,
+      transformationType: transformationType?.value || TransformationType.DEFAULT,
+      snoop: snoop && snoopSupported,
+      codeTemplate: codeTemplate?.value
     });
     this.bottomDrawerRef.close();
   }
 
-  getTransformationTypeDescription(): string {
-    const currentType = this.formGroup.get('transformationType')?.value;
-    return currentType ? TransformationTypeDescriptions[currentType] : '';
-  }
+  viewCode(): void {
+    const codeTemplate = this.formGroup.get('codeTemplate')?.value as CodeTemplateOption;
+    if (!codeTemplate?.value) return;
 
-  private initializeForm(): void {
-    // Find the first enabled mapping type for the current direction as default
-    const enabledMappingTypes = Object.values(MappingType).filter(type => {
-      const mappingTypeConfig = MappingTypeDescriptionMap[type];
-      return mappingTypeConfig?.enabled &&
-        mappingTypeConfig.properties?.[this.direction]?.directionSupported;
+    this.bsModalService.show(CodeExplorerComponent, {
+      initialState: {
+        templateCode: base64ToString(codeTemplate.value.code),
+        templateName: codeTemplate.description,
+        labels: { ok: 'Cancel', cancel: 'Cancel' }
+      },
+      class: 'modal-lg'
     });
-
-    const defaultMappingType = enabledMappingTypes.includes(this.DEFAULT_MAPPING_TYPE)
-      ? this.DEFAULT_MAPPING_TYPE
-      : enabledMappingTypes[0] || this.DEFAULT_MAPPING_TYPE;
-
-    const initialConfig = this.getMappingTypeConfig(defaultMappingType);
-    const supportedTransformationTypes = initialConfig.supportedTransformationTypes;
-
-    // Choose default transformation type from supported types
-    const defaultTransformationType = supportedTransformationTypes.includes(this.DEFAULT_TRANSFORMATION_TYPE)
-      ? this.DEFAULT_TRANSFORMATION_TYPE
-      : supportedTransformationTypes[0] || this.DEFAULT_TRANSFORMATION_TYPE;
-
-    // Create the initial mapping type option object
-    const initialMappingTypeOption: MappingTypeOption = {
-      label: MappingTypeLabels[defaultMappingType],
-      value: defaultMappingType,
-      description: MappingTypeDescriptions[defaultMappingType]
-    };
-
-    // Create the initial mapping type option object
-    const initialTransformationTypeOption: TransformationTypeOption = {
-      label: TransformationTypeLabels[this.direction][defaultTransformationType],
-      value: defaultTransformationType,
-      description: TransformationTypeDescriptions[defaultTransformationType]
-    };
-
-    this.formGroup = this.fb.group({
-      expertMode: [false],
-      mappingType: [initialMappingTypeOption],
-      transformationType: [initialTransformationTypeOption],
-      mappingTypeDescription: [{ value: initialConfig.description, disabled: true }],
-      snoop: [{ value: false, disabled: !initialConfig.snoopSupported }]
-    });
-
-    this.updateDerivedState();
-
-    // Initialize transformation type options
-    this.updateTransformationTypeOptions(initialConfig.substitutionsAsCodeSupported);
   }
 
-  private setupFormSubscriptions(): void {
-    this.formGroup.get('mappingType')?.valueChanges
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(type => this.onMappingTypeChange(type));
-
-    this.formGroup.get('expertMode')?.valueChanges
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(expertMode => this.onExpertModeChange(expertMode));
-  }
-
-  private updateDerivedState(): void {
-    this.filteredMappingTypeOptions = this.getFilteredMappingTypes();
-  }
-
-  private getFilteredMappingTypes(): MappingTypeOption[] {
-    return Object.values(MappingType)
-      .filter(type => this.shouldIncludeMappingType(type))
-      .map(type => ({
-        label: MappingTypeLabels[type],
-        value: type,
-        description: MappingTypeDescriptions[type]
-      }));
-  }
-
-  private manualResize() {
-    if (this.descriptionTextarea?.nativeElement) {
-      const element = this.descriptionTextarea.nativeElement;
-      element.style.height = '32px';
-      element.style.height = element.scrollHeight + 'px';
-    }
-  }
-
-  private onMappingTypeChange(selectedOption: MappingTypeOption): void {
-    // The selectedOption is always a MappingTypeOption object
-    const mappingType = selectedOption.value;
-    const config = this.getMappingTypeConfig(mappingType);
-    const snoopControl = this.formGroup.get('snoop');
-
-    // Update description
-    this.formGroup.patchValue({
-      mappingTypeDescription: config.description
-    });
-
-    // Trigger resize after content change
-    setTimeout(() => this.manualResize(), 0);
-
-    // Update snoop control
-    if (config.snoopSupported) {
-      snoopControl?.enable();
-    } else {
-      snoopControl?.disable();
-      snoopControl?.patchValue(false);
-    }
-
-    // Update transformation type options based on the new mapping type
-    this.updateTransformationTypeOptions(config.substitutionsAsCodeSupported);
-  }
-
-  private onExpertModeChange(expertMode: boolean): void {
-    this.showTransformationType = expertMode;
-
-    const transformationTypeControl = this.formGroup.get('transformationType');
-    const mappingTypeControl = this.formGroup.get('mappingType');
-
-    // The form control value is always a MappingTypeOption object
-    const currentMappingTypeOption = mappingTypeControl?.value as MappingTypeOption;
-    const currentMappingType = currentMappingTypeOption?.value;
-
-    if (expertMode) {
-      transformationTypeControl?.enable();
-    } else {
-      transformationTypeControl?.disable();
-
-      const patchValues: any = {};
-
-      // Reset mapping type if current selection is not available in non-expert mode
-      if (currentMappingType && this.EXPERT_MODE_EXCLUDED_TYPES.includes(currentMappingType)) {
-        // Find the first available mapping type for non-expert mode
-        const availableMappingTypes = this.getFilteredMappingTypes();
-        const defaultOption = availableMappingTypes.find(
-          option => option.value === this.DEFAULT_MAPPING_TYPE
-        ) || availableMappingTypes[0];
-
-        if (defaultOption) {
-          patchValues.mappingType = defaultOption;
-        }
-      }
-
-      // Always reset transformation type when leaving expert mode
-      const finalMappingType = patchValues.mappingType?.value || currentMappingType;
-      if (finalMappingType) {
-        const config = this.getMappingTypeConfig(finalMappingType);
-        const supportedTypes = config.supportedTransformationTypes;
-        const defaultTransformationType = supportedTypes.includes(this.DEFAULT_TRANSFORMATION_TYPE)
-          ? this.DEFAULT_TRANSFORMATION_TYPE
-          : supportedTypes[0] || this.DEFAULT_TRANSFORMATION_TYPE;
-
-        patchValues.transformationType = defaultTransformationType;
-      }
-
-      this.formGroup.patchValue(patchValues);
-    }
-
-    this.updateDerivedState();
-
-    // Update transformation type options based on current mapping type
-    const finalMappingTypeOption = this.formGroup.get('mappingType')?.value as MappingTypeOption;
-    const finalMappingType = finalMappingTypeOption?.value;
-    if (finalMappingType) {
-      const config = this.getMappingTypeConfig(finalMappingType);
-      this.updateTransformationTypeOptions(config.substitutionsAsCodeSupported);
-    }
-  }
-
-  // Update these methods to handle the object properly
+  // Template helpers
   getMappingTypeDescription(): string {
-    const currentOption = this.formGroup.get('mappingType')?.value as MappingTypeOption;
-    const currentType = currentOption?.value;
-    return currentType ? MappingTypeDescriptionMap[currentType]?.description : '';
+    const option = this.formGroup?.get('mappingType')?.value as MappingTypeOption;
+    return option?.value ? MappingTypeDescriptionMap[option.value]?.description : '';
+  }
+
+  getTransformationTypeDescription(): string {
+    const option = this.formGroup?.get('transformationType')?.value as TransformationTypeOption;
+    return option?.value ? TransformationTypeDescriptions[option.value] : '';
+  }
+
+  getCodeTemplateDescription(): string {
+    const option = this.formGroup?.get('codeTemplate')?.value as CodeTemplateOption;
+    return option?.description || 'Select a code template to use as a starting point for your transformation';
   }
 
   shouldShowTransformationType(): boolean {
-    if (!this.showTransformationType) {
-      return false;
-    }
-
-    const currentMappingTypeOption = this.formGroup.get('mappingType')?.value as MappingTypeOption;
-    if (!currentMappingTypeOption?.value) {
-      return false;
-    }
-
-    const config = this.getMappingTypeConfig(currentMappingTypeOption.value);
+    if (!this.showTransformationType) return false;
+    
+    const option = this.formGroup?.get('mappingType')?.value as MappingTypeOption;
+    if (!option?.value) return false;
+    
+    const config = this.getConfigForMappingType(option.value);
     return config.supportedTransformationTypes.length > 0;
   }
 
+  shouldShowCodeTemplate(): boolean {
+    if (!this.showTransformationType) return false;
+    
+    const option = this.formGroup?.get('transformationType')?.value as TransformationTypeOption;
+    return option?.value ? this.CODE_TEMPLATE_TYPES.includes(option.value) : false;
+  }
+
+  // Private initialization methods
+  private async initializeForm(): Promise<void> {
+    const defaultMappingType = this.getDefaultMappingType();
+    const config = this.getConfigForMappingType(defaultMappingType);
+    const defaultTransformationType = this.getDefaultTransformationType(config.supportedTransformationTypes);
+
+    const initialMappingType = this.createMappingTypeOption(defaultMappingType);
+    const initialTransformationType = this.createTransformationTypeOption(defaultTransformationType);
+    
+    await this.loadCodeTemplates(defaultTransformationType);
+
+    this.formGroup = this.fb.group({
+      expertMode: [false],
+      mappingType: [initialMappingType],
+      transformationType: [initialTransformationType],
+      snoop: [{ value: false, disabled: !config.snoopSupported }],
+      codeTemplate: [this.codeTemplateOptions[0] || null]
+    });
+
+    this.updateMappingTypeOptions();
+    this.updateTransformationTypeOptions();
+  }
+
+  private setupFormSubscriptions(): void {
+    this.formGroup.get('expertMode')?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(enabled => this.onExpertModeChange(enabled));
+
+    this.formGroup.get('mappingType')?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(option => this.onMappingTypeChange(option));
+
+    this.formGroup.get('transformationType')?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(option => this.onTransformationTypeChange(option));
+  }
+
+  // Event handlers
+  private onExpertModeChange(expertMode: boolean): void {
+    this.showTransformationType = expertMode;
+    const transformationControl = this.formGroup.get('transformationType');
+
+    if (expertMode) {
+      transformationControl?.enable();
+    } else {
+      transformationControl?.disable();
+      this.resetToDefaultsIfNeeded();
+    }
+
+    this.updateMappingTypeOptions();
+    this.updateTransformationTypeOptions();
+  }
+
+  private onMappingTypeChange(option: MappingTypeOption): void {
+    const config = this.getConfigForMappingType(option.value);
+    const snoopControl = this.formGroup.get('snoop');
+
+    // Update snoop control
+    config.snoopSupported ? snoopControl?.enable() : snoopControl?.disable();
+    if (!config.snoopSupported) snoopControl?.setValue(false);
+
+    this.updateTransformationTypeOptions();
+  }
+
+  private async onTransformationTypeChange(option: TransformationTypeOption): Promise<void> {
+    if (!option?.value) return;
+
+    this.isLoadingCodeTemplates = true;
+    this.formGroup.patchValue({ codeTemplate: null }, { emitEvent: false });
+    this.codeTemplateOptions = [];
+
+    await this.loadCodeTemplates(option.value);
+
+    if (this.codeTemplateOptions.length > 0) {
+      this.formGroup.patchValue({ codeTemplate: this.codeTemplateOptions[0] }, { emitEvent: false });
+    }
+
+    this.isLoadingCodeTemplates = false;
+  }
+
+  // Helper methods
+  private getDefaultMappingType(): MappingType {
+    const enabledTypes = Object.values(MappingType).filter(type => {
+      const config = MappingTypeDescriptionMap[type];
+      return config?.enabled && config.properties?.[this.direction]?.directionSupported;
+    });
+
+    return enabledTypes.includes(this.DEFAULTS.MAPPING_TYPE) 
+      ? this.DEFAULTS.MAPPING_TYPE 
+      : enabledTypes[0] || this.DEFAULTS.MAPPING_TYPE;
+  }
+
+  private getDefaultTransformationType(supportedTypes: TransformationType[]): TransformationType {
+    return supportedTypes.includes(this.DEFAULTS.TRANSFORMATION_TYPE)
+      ? this.DEFAULTS.TRANSFORMATION_TYPE
+      : supportedTypes[0] || this.DEFAULTS.TRANSFORMATION_TYPE;
+  }
+
+  private resetToDefaultsIfNeeded(): void {
+    const currentMapping = this.formGroup.get('mappingType')?.value as MappingTypeOption;
+    
+    if (currentMapping?.value && this.EXPERT_MODE_EXCLUDED_TYPES.includes(currentMapping.value)) {
+      const defaultMapping = this.createMappingTypeOption(this.getDefaultMappingType());
+      this.formGroup.patchValue({ mappingType: defaultMapping });
+    }
+
+    const mappingType = currentMapping?.value || this.DEFAULTS.MAPPING_TYPE;
+    const config = this.getConfigForMappingType(mappingType);
+    const defaultTransformation = this.getDefaultTransformationType(config.supportedTransformationTypes);
+    
+    this.formGroup.patchValue({
+      transformationType: this.createTransformationTypeOption(defaultTransformation)
+    });
+  }
+
+  private updateMappingTypeOptions(): void {
+    this.mappingTypeOptions = Object.values(MappingType)
+      .filter(type => this.shouldIncludeMappingType(type))
+      .map(type => this.createMappingTypeOption(type));
+  }
+
+  private updateTransformationTypeOptions(): void {
+    const currentMapping = this.formGroup?.get('mappingType')?.value as MappingTypeOption;
+    if (!currentMapping?.value) {
+      this.transformationTypeOptions = [];
+      return;
+    }
+
+    const config = this.getConfigForMappingType(currentMapping.value);
+    this.transformationTypeOptions = config.supportedTransformationTypes.map(type =>
+      this.createTransformationTypeOption(type)
+    );
+
+    // Reset if current selection is not available
+    const currentTransformation = this.formGroup?.get('transformationType')?.value as TransformationTypeOption;
+    if (currentTransformation?.value && !config.supportedTransformationTypes.includes(currentTransformation.value)) {
+      const defaultType = this.getDefaultTransformationType(config.supportedTransformationTypes);
+      this.formGroup.patchValue({ transformationType: this.createTransformationTypeOption(defaultType) });
+    }
+  }
+
+  private async loadCodeTemplates(transformationType: TransformationType): Promise<void> {
+    if (!this.CODE_TEMPLATE_TYPES.includes(transformationType)) {
+      this.codeTemplateOptions = [];
+      return;
+    }
+
+    try {
+      const templates = await this.sharedService.getCodeTemplatesByType(this.direction, transformationType);
+      
+      this.codeTemplateOptions = templates.map(template => ({
+        id: template.id,
+        label: template.name || template.id,
+        value: template,
+        description: template.description || `Code template for ${transformationType}`
+      }));
+    } catch (error) {
+      console.error('Failed to load code templates:', error);
+      this.codeTemplateOptions = [];
+    }
+  }
+
   private shouldIncludeMappingType(type: MappingType): boolean {
-    // Check if the mapping type is enabled
-    const mappingTypeConfig = MappingTypeDescriptionMap[type];
-    if (!mappingTypeConfig?.enabled) {
-      return false;
-    }
+    const mappingConfig = MappingTypeDescriptionMap[type];
+    if (!mappingConfig?.enabled) return false;
 
-    // Check direction support
-    const config = this.getMappingTypeConfig(type);
-    if (!config.directionSupported) {
-      return false;
-    }
+    const config = this.getConfigForMappingType(type);
+    if (!config.directionSupported) return false;
 
-    // In non-expert mode, exclude advanced types
     if (!this.showTransformationType && this.EXPERT_MODE_EXCLUDED_TYPES.includes(type)) {
       return false;
     }
@@ -338,48 +378,34 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     return true;
   }
 
-  private updateTransformationTypeOptions(substitutionsAsCodeSupported: boolean): void {
-    const currentMappingTypeOption = this.formGroup.get('mappingType')?.value as MappingTypeOption;
-    const currentMappingType = currentMappingTypeOption?.value;
-
-    if (!currentMappingType) {
-      this.transformationTypeOptions = [];
-      return;
-    }
-
-    const config = this.getMappingTypeConfig(currentMappingType);
-    const supportedTypes = config.supportedTransformationTypes || [];
-
-    this.transformationTypeOptions = supportedTypes.map(type => ({
-      label: TransformationTypeLabels[this.direction][type],
-      value: type,
-      description: TransformationTypeDescriptions[type]
-    }));
-
-    // Reset if current selection is not available
-    const currentValue = this.formGroup.get('transformationType')?.value;
-    if (!supportedTypes.includes(currentValue)) {
-      // Set to the first available type or DEFAULT if available
-      const defaultType = supportedTypes.includes(TransformationType.DEFAULT)
-        ? TransformationType.DEFAULT
-        : supportedTypes[0] || TransformationType.DEFAULT;
-
-      this.formGroup.patchValue({ transformationType: defaultType });
-    }
-  }
-
-  private getMappingTypeConfig(type: MappingType) {
-    const mappingTypeConfig = MappingTypeDescriptionMap[type];
-    const config = mappingTypeConfig?.properties?.[this.direction];
+  private getConfigForMappingType(type: MappingType) {
+    const mappingConfig = MappingTypeDescriptionMap[type];
+    const directionConfig = mappingConfig?.properties?.[this.direction];
 
     return {
-      description: mappingTypeConfig?.description || '',
-      enabled: mappingTypeConfig?.enabled || false,
-      snoopSupported: config?.snoopSupported || false,
-      substitutionsAsCodeSupported: config?.substitutionsAsCodeSupported || false,
-      directionSupported: config?.directionSupported || false,
-      supportedTransformationTypes: config?.supportedTransformationTypes || []
+      description: mappingConfig?.description || '',
+      enabled: mappingConfig?.enabled || false,
+      snoopSupported: directionConfig?.snoopSupported || false,
+      substitutionsAsCodeSupported: directionConfig?.substitutionsAsCodeSupported || false,
+      directionSupported: directionConfig?.directionSupported || false,
+      supportedTransformationTypes: directionConfig?.supportedTransformationTypes || []
     };
   }
 
+  // Factory methods for options
+  private createMappingTypeOption(type: MappingType): MappingTypeOption {
+    return {
+      label: MappingTypeLabels[type],
+      value: type,
+      description: MappingTypeDescriptions[type]
+    };
+  }
+
+  private createTransformationTypeOption(type: TransformationType): TransformationTypeOption {
+    return {
+      label: TransformationTypeLabels[this.direction][type],
+      value: type,
+      description: TransformationTypeDescriptions[type]
+    };
+  }
 }

@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.camel.Exchange;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import static dynamic.mapper.model.Substitution.toPrettyJsonString;
@@ -46,12 +45,15 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class JSONataExtractionOutboundProcessor extends BaseProcessor {
 
-    @Autowired
-    private MappingService mappingService;
+    private final MappingService mappingService;
+
+    public JSONataExtractionOutboundProcessor(MappingService mappingService) {
+        this.mappingService = mappingService;
+    }
 
     @Override
     public void process(Exchange exchange) throws Exception {
-        ProcessingContext<Object> context = getProcessingContextAsObject(exchange);
+        ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
 
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
@@ -71,7 +73,7 @@ public class JSONataExtractionOutboundProcessor extends BaseProcessor {
         }
     }
 
-    public void extractFromSource(ProcessingContext<Object> context)
+    public void extractFromSource(ProcessingContext<?> context)
             throws ProcessingException {
         try {
             Mapping mapping = context.getMapping();

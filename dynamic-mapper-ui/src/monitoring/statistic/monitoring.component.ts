@@ -23,10 +23,12 @@ import {
   AlertService,
   Column,
   ColumnDataType,
+  CommonModule,
+  CoreModule,
   DisplayOptions,
   Pagination
 } from '@c8y/ngx-components';
-import { BehaviorSubject, catchError, filter, map, of, Subject, takeUntil } from 'rxjs';
+import { BehaviorSubject, catchError, map, of, Subject, takeUntil } from 'rxjs';
 import {
   ConfirmationModalComponent,
   Direction,
@@ -37,7 +39,6 @@ import {
 } from '../../shared';
 import { MonitoringService } from '../shared/monitoring.service';
 import { NumberRendererComponent } from '../renderer/number.renderer.component';
-import { DirectionRendererComponent } from '../renderer/direction.renderer.component';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { NameRendererComponent } from '../../mapping/renderer/name.renderer.component';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -53,30 +54,20 @@ interface MonitoringComponentState {
   templateUrl: 'monitoring.component.html',
   styleUrls: ['../../mapping/shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
-  standalone: false
+  standalone: true,
+  imports: [CoreModule, CommonModule]
 })
 export class MonitoringComponent implements OnInit, OnDestroy {
-  constructor(
-  ) {
-    const href = this.router.url;
-    this.direction = href.includes('/monitoring/statistic/inbound')
-      ? Direction.INBOUND
-      : Direction.OUTBOUND;
-
-    this.titleStatistic = `Statistic ${this.direction.toLowerCase()}`;
-  }
-
   // Modern Angular dependency injection
-  private router = inject(Router);
+  private readonly router = inject(Router);
   private readonly monitoringService = inject(MonitoringService);
   private readonly alertService = inject(AlertService);
   private readonly bsModalService = inject(BsModalService);
   private readonly sharedService = inject(SharedService);
   private readonly route = inject(ActivatedRoute);
 
-
   // Subscription management
-  private destroy$;
+  private readonly destroy$ = new Subject<void>();
 
   // State management
   readonly state$ = new BehaviorSubject<MonitoringComponentState>({
@@ -192,11 +183,10 @@ export class MonitoringComponent implements OnInit, OnDestroy {
     try {
       this.updateState({ isLoading: true, error: null });
 
+      this.initializeDirection();
       this.feature = this.route.snapshot.data['feature'];
-      
-      // Initialize columns based on direction
       this.initializeColumns();
-      
+
       await this.initializeMonitoringService();
 
       this.updateState({ isLoading: false });
@@ -242,14 +232,19 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       });
   }
 
+  private initializeDirection(): void {
+    const href = this.router.url;
+    this.direction = href.includes('/monitoring/statistic/inbound')
+      ? Direction.INBOUND
+      : Direction.OUTBOUND;
+    this.titleStatistic = `Statistic ${this.direction.toLowerCase()}`;
+  }
+
   private initializeColumns(): void {
-    // Filter columns based on direction
     this.columns = this.baseColumns.filter(column => {
-      // For INBOUND: remove publishTopic
       if (this.direction === Direction.INBOUND && column.name === 'publishTopic') {
         return false;
       }
-      // For OUTBOUND: remove mappingTopic
       if (this.direction === Direction.OUTBOUND && column.name === 'mappingTopic') {
         return false;
       }
@@ -259,7 +254,6 @@ export class MonitoringComponent implements OnInit, OnDestroy {
 
   private async initializeMonitoringService(): Promise<void> {
     await this.monitoringService.startMonitoring();
-    this.destroy$ = new Subject<void>();
 
     this.monitoringService
       .getMappingStatus()

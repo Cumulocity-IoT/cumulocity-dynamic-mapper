@@ -27,7 +27,6 @@ import java.util.Map;
 
 import org.apache.camel.Exchange;
 import org.apache.commons.lang3.mutable.MutableInt;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -50,17 +49,22 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class FlowResultOutboundProcessor extends BaseProcessor {
 
-    @Autowired
-    private MappingService mappingService;
+    private final MappingService mappingService;
+    private final ObjectMapper objectMapper;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    public FlowResultOutboundProcessor(
+            MappingService mappingService,
+            ObjectMapper objectMapper) {
+        this.mappingService = mappingService;
+        this.objectMapper = objectMapper;
+    }
 
     @Override
     public void process(Exchange exchange) throws Exception {
         ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
-        Mapping mapping = context.getMapping();
+
         String tenant = context.getTenant();
+        Mapping mapping = context.getMapping();
 
         try {
             processFlowResults(context);
@@ -214,13 +218,11 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
                 ProcessingResultHelper.setHierarchicalValue(payload, targetAPI.identifier, resolvedDeviceId);
                 context.setSourceId(resolvedDeviceId);
             } else if (externalSources != null && !externalSources.isEmpty()) {
-
                 // No device ID and not creating implicit devices - skip this message
                 log.warn(
                         "{} - Cannot process message: no device ID resolved and createNonExistingDevice is false for mapping {}",
                         tenant, mapping.getIdentifier());
                 return; // Don't create a request
-
             } else {
                 log.warn("{} - Cannot process message: no external source provided for mapping {}",
                         tenant, mapping.getIdentifier());

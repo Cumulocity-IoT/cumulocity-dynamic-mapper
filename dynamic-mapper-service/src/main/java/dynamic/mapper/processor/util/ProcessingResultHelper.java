@@ -44,9 +44,38 @@ import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingResultWrapper;
 
+/**
+ * Utility class for creating and managing processing results in the dynamic mapper system.
+ *
+ * <p>This helper provides factory methods to construct {@link ProcessingResultWrapper} instances
+ * for various processing outcomes including success, failure, and asynchronous operations.
+ * It also includes utilities for device management and data manipulation during message processing.
+ *
+ * <p>Key responsibilities:
+ * <ul>
+ *   <li>Creating standardized processing result wrappers with appropriate QoS and timing information</li>
+ *   <li>Managing implicit device creation when devices don't exist in Cumulocity</li>
+ *   <li>Building dynamic mapper requests for C8Y API operations</li>
+ *   <li>Utility methods for hierarchical data structure manipulation</li>
+ * </ul>
+ *
+ * @author Christof Strack, Stefan Witschel
+ * @see ProcessingResultWrapper
+ * @see ProcessingContext
+ */
 @Component
 public class ProcessingResultHelper {
 
+    /**
+     * Creates a successful processing result wrapper from a list of completed processing contexts.
+     *
+     * <p>This method consolidates multiple processing contexts into a single result, determining
+     * the highest QoS level across all contexts and calculating the total processing time.
+     *
+     * @param <T> the type of payload in the processing contexts
+     * @param contexts the list of processing contexts that were successfully processed
+     * @return a ProcessingResultWrapper containing the completed future, consolidated QoS, and processing time
+     */
     public static <T> ProcessingResultWrapper<T> success(List<ProcessingContext<T>> contexts) {
         CompletableFuture<List<ProcessingContext<T>>> future = CompletableFuture.completedFuture(contexts);
 
@@ -67,6 +96,18 @@ public class ProcessingResultHelper {
                 .build();
     }
 
+    /**
+     * Creates a successful processing result wrapper for asynchronous operations.
+     *
+     * <p>Use this method when processing is performed asynchronously and you want to return
+     * a result immediately while processing continues in the background.
+     *
+     * @param <T> the type of payload in the processing contexts
+     * @param future a Future containing the list of processing contexts that will be completed asynchronously
+     * @param qos the Quality of Service level for this processing operation
+     * @param maxCPUTimeMS the maximum CPU time in milliseconds allocated for this operation
+     * @return a ProcessingResultWrapper for the asynchronous operation
+     */
     public static <T> ProcessingResultWrapper<T> successAsync(Future<List<ProcessingContext<T>>> future, Qos qos,
             int maxCPUTimeMS) {
         return ProcessingResultWrapper.<T>builder()
@@ -76,6 +117,13 @@ public class ProcessingResultHelper {
                 .build();
     }
 
+    /**
+     * Creates a failure processing result wrapper with zero processing time.
+     *
+     * @param <T> the type of payload that would have been in the processing contexts
+     * @param error the exception that caused the processing to fail
+     * @return a ProcessingResultWrapper indicating failure with the provided error
+     */
     public static <T> ProcessingResultWrapper<T> failure(Exception error) {
         return ProcessingResultWrapper.<T>builder()
                 .error(error)
@@ -83,6 +131,17 @@ public class ProcessingResultHelper {
                 .build();
     }
 
+    /**
+     * Creates a failure processing result wrapper with specified processing time.
+     *
+     * <p>Use this method when processing failed but you want to record how much CPU time
+     * was consumed before the failure occurred.
+     *
+     * @param <T> the type of payload that would have been in the processing contexts
+     * @param error the exception that caused the processing to fail
+     * @param maxCPUTimeMS the CPU time in milliseconds consumed before failure
+     * @return a ProcessingResultWrapper indicating failure with the provided error and timing
+     */
     public static <T> ProcessingResultWrapper<T> failure(Exception error, int maxCPUTimeMS) {
         return ProcessingResultWrapper.<T>builder()
                 .error(error)
@@ -90,6 +149,16 @@ public class ProcessingResultHelper {
                 .build();
     }
 
+    /**
+     * Creates an empty processing result wrapper indicating no processing was performed.
+     *
+     * <p>This is typically used when there are no messages to process or when processing
+     * is skipped due to conditions not being met. The result has AT_MOST_ONCE QoS and
+     * zero processing time.
+     *
+     * @param <T> the type of payload that would have been in the processing contexts
+     * @return a ProcessingResultWrapper with an empty context list and minimal resource usage
+     */
     public static <T> ProcessingResultWrapper<T> empty() {
         CompletableFuture<List<ProcessingContext<T>>> emptyFuture = CompletableFuture
                 .completedFuture(new ArrayList<>());
@@ -102,21 +171,43 @@ public class ProcessingResultHelper {
     }
 
     /**
-     * Create implicit device when needed - extracted from original
-     * createImplicitDevice
+     * Creates an implicit device in Cumulocity when a device identity is encountered but doesn't exist yet.
+     *
+     * <p>This method automatically provisions a new device in Cumulocity with appropriate properties
+     * when an external device sends data but hasn't been explicitly registered. The device is created
+     * with properties from the processing context (if provided) or with generated defaults.
+     *
+     * <p>Device properties set:
+     * <ul>
+     *   <li>name: from context.getDeviceName() or generated as "device_{type}_{value}"</li>
+     *   <li>type: from context.getDeviceType() or defaults to "c8y_GeneratedDeviceType"</li>
+     *   <li>Special markers: MAPPING_GENERATED_DEVICE, c8y_IsDevice, com_cumulocity_model_Agent</li>
+     * </ul>
+     *
+     * <p>The method creates a {@link DynamicMapperRequest} and adds it to the processing context,
+     * then executes the device creation via the C8Y agent. The response is stored back in the context.
+     *
+     * @param identity the external identity for the device (type and value)
+     * @param context the current processing context containing mapping and device information
+     * @param log the logger for recording operations and errors
+     * @param c8yAgent the Cumulocity agent for executing the device creation
+     * @param objectMapper the Jackson ObjectMapper for JSON serialization/deserialization
+     * @return the Cumulocity internal device ID (managed object ID) if successful, null if creation failed
      */
     public static String createImplicitDevice(ID identity, ProcessingContext<?> context, Logger log, C8YAgent c8yAgent,
             ObjectMapper objectMapper) {
         Map<String, Object> request = new HashMap<>();
 
-        // Set device name
+        // Set device name to either from context (provided as part of the mapping) or
+        // based on identity
         if (context.getDeviceName() != null) {
             request.put("name", context.getDeviceName());
         } else {
             request.put("name", "device_" + identity.getType() + "_" + identity.getValue());
         }
 
-        // Set device type
+        // Set device type to either from context (provided as part of the mapping) or
+        // default
         if (context.getDeviceType() != null) {
             request.put("type", context.getDeviceType());
         } else {
@@ -125,13 +216,13 @@ public class ProcessingResultHelper {
 
         // update context with values from identity
         context.setExternalId(identity.getValue());
-        String externalIdType = identity.getType() != null ? identity.getType(): context.getMapping().getExternalIdType();
-    
+        String externalIdType = identity.getType() != null ? identity.getType()
+                : context.getMapping().getExternalIdType();
 
         // Set device properties
-        request.put(MappingRepresentation.MAPPING_GENERATED_TEST_DEVICE, null);
-        request.put("c8y_IsDevice", null);
-        request.put("com_cumulocity_model_Agent", null);
+        // request.put(MappingRepresentation.MAPPING_GENERATED_DEVICE, new HashMap<>());
+        request.put("c8y_IsDevice",  new HashMap<>());
+        request.put("com_cumulocity_model_Agent",  new HashMap<>());
 
         try {
             int predecessor = context.getRequests().size();
@@ -150,15 +241,15 @@ public class ProcessingResultHelper {
             var index = context.addRequest(deviceRequest);
 
             // Create the device
-            ManagedObjectRepresentation adHocDevice = c8yAgent.upsertDevice(context.getTenant(), identity, context,
+            ManagedObjectRepresentation implicitDevice = c8yAgent.upsertDevice(context.getTenant(), identity, context,
                     index);
 
             // Update request with response
-            String response = objectMapper.writeValueAsString(adHocDevice);
+            String response = objectMapper.writeValueAsString(implicitDevice);
             context.getCurrentRequest().setResponse(response);
-            context.getCurrentRequest().setSourceId(adHocDevice.getId().getValue());
+            context.getCurrentRequest().setSourceId(implicitDevice.getId().getValue());
 
-            return adHocDevice.getId().getValue();
+            return implicitDevice.getId().getValue();
 
         } catch (Exception e) {
             context.getCurrentRequest().setError(e);
@@ -168,9 +259,20 @@ public class ProcessingResultHelper {
     }
 
     /**
-     * Creates a DynamicMapperRequest based on the reference implementation from
-     * BaseProcessorOutbound
-     * This follows the same pattern as substituteInTargetAndSend method
+     * Creates a DynamicMapperRequest and adds it to the processing context.
+     *
+     * <p>This method constructs a request object that represents a Cumulocity API operation
+     * based on the processing context, mapping configuration, and action. The request is
+     * automatically added to the context's request list for tracking and execution.
+     *
+     * <p>This follows the same pattern as the substituteInTargetAndSend method from
+     * BaseProcessorOutbound, ensuring consistency in request creation across the system.
+     *
+     * @param context the processing context containing current state and configuration
+     * @param payloadJson the JSON payload to be sent in the request body
+     * @param action the action type ("update" uses PUT, all others use POST)
+     * @param mapping the mapping configuration containing target API and external ID information
+     * @return the created DynamicMapperRequest that was added to the context
      */
     public static DynamicMapperRequest createAndAddDynamicMapperRequest(ProcessingContext<?> context,
             String payloadJson,
@@ -203,8 +305,25 @@ public class ProcessingResultHelper {
     }
 
     /**
-     * Sets a value hierarchically in a map using dot notation
-     * E.g., "source.id" will create nested maps: {"source": {"id": value}}
+     * Sets a value hierarchically in a map using dot notation path.
+     *
+     * <p>This utility method creates nested map structures as needed to accommodate
+     * a dot-separated path. If intermediate maps don't exist, they are created automatically.
+     * If a non-map value exists at an intermediate key, it is replaced with a map.
+     *
+     * <p>Examples:
+     * <pre>
+     * Map&lt;String, Object&gt; map = new HashMap&lt;&gt;();
+     * setHierarchicalValue(map, "source.id", "12345");
+     * // Result: {"source": {"id": "12345"}}
+     *
+     * setHierarchicalValue(map, "data.temperature.value", 23.5);
+     * // Result: {"data": {"temperature": {"value": 23.5}}}
+     * </pre>
+     *
+     * @param map the root map to set the value in
+     * @param path the dot-separated path (e.g., "source.id" or "data.temperature.value")
+     * @param value the value to set at the specified path
      */
     public static void setHierarchicalValue(Map<String, Object> map, String path, Object value) {
         String[] keys = path.split("\\.");
@@ -223,8 +342,21 @@ public class ProcessingResultHelper {
         current.put(keys[keys.length - 1], value);
     }
 
+    /**
+     * Determines the higher Quality of Service level between two QoS values.
+     *
+     * <p>QoS priority order (highest to lowest):
+     * <ol>
+     *   <li>EXACTLY_ONCE - highest reliability</li>
+     *   <li>AT_LEAST_ONCE - medium reliability</li>
+     *   <li>AT_MOST_ONCE - lowest reliability</li>
+     * </ol>
+     *
+     * @param q1 first QoS value
+     * @param q2 second QoS value
+     * @return the higher QoS level between the two inputs
+     */
     private static Qos getHigherQos(Qos q1, Qos q2) {
-        // Assuming QoS priority: EXACTLY_ONCE > AT_LEAST_ONCE > AT_MOST_ONCE
         if (q1 == Qos.EXACTLY_ONCE || q2 == Qos.EXACTLY_ONCE) {
             return Qos.EXACTLY_ONCE;
         }
@@ -234,6 +366,22 @@ public class ProcessingResultHelper {
         return Qos.AT_MOST_ONCE;
     }
 
+    /**
+     * Calculates the estimated processing time based on processing contexts.
+     *
+     * <p>The calculation takes into account:
+     * <ul>
+     *   <li>Base time of 200ms per context</li>
+     *   <li>50ms per request in the context</li>
+     *   <li>Additional 100ms penalty for contexts with errors</li>
+     * </ul>
+     *
+     * <p>The minimum returned value is 100ms even for empty context lists.
+     *
+     * @param <T> the type of payload in the processing contexts
+     * @param contexts the list of processing contexts to calculate time for
+     * @return the estimated processing time in milliseconds, minimum 100ms
+     */
     private static <T> int calculateProcessingTime(List<ProcessingContext<T>> contexts) {
         if (contexts == null || contexts.isEmpty()) {
             return 100;

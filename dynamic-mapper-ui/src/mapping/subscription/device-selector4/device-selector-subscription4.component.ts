@@ -25,13 +25,15 @@ import {
   Output,
   ViewEncapsulation
 } from '@angular/core';
+import { CoreModule } from '@c8y/ngx-components';
 
 @Component({
   selector: 'd11r-device-selector-subscription4',
   templateUrl: 'device-selector-subscription4.component.html',
   styleUrls: ['../../shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
-  standalone: false
+  standalone: true,
+  imports:[CoreModule]
 })
 export class DeviceSelectorSubscription4Component implements OnInit {
   @Input() set typeList(list) {

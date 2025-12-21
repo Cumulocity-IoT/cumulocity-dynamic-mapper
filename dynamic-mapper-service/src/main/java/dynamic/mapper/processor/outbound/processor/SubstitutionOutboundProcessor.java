@@ -68,9 +68,10 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
 
     @Override
     public void process(Exchange exchange) throws Exception {
-        ProcessingContext<Object> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
-        Mapping mapping = context.getMapping();
+        ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+
         String tenant = context.getTenant();
+        Mapping mapping = context.getMapping();
 
         try {
             substituteInTargetAndCreateRequests(context);
@@ -90,7 +91,7 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
     /**
      * Perform substitution and create C8Y requests
      */
-    private void substituteInTargetAndCreateRequests(ProcessingContext<Object> context) throws Exception {
+    private void substituteInTargetAndCreateRequests(ProcessingContext<?> context) throws Exception {
 
         /*
          * step 3 replace target with extract content from outbound payload

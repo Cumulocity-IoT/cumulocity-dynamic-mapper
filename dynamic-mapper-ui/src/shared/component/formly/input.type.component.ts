@@ -19,10 +19,12 @@
  */
 
 import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { CoreModule } from '@c8y/ngx-components';
 import { FieldType } from '@ngx-formly/core';
 
 @Component({
-  selector: 'd11r-formly-field-input-custom',
+  selector: 'd11r-formly-field-d11r-input',
   template: `<input
       *ngIf="type !== 'number'; else numberTmp"
       [type]="type"
@@ -45,9 +47,13 @@ import { FieldType } from '@ngx-formly/core';
       />
     </ng-template>`,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  standalone: false
+  standalone: true,
+      imports: [
+      CoreModule,
+      FormsModule,
+    ]
 })
-export class FieldInputCustom extends FieldType {
+export class CustomFieldInput extends FieldType {
   get type() {
     return this.props.type || 'text';
   }

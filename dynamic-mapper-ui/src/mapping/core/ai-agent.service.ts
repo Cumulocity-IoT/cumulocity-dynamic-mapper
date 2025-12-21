@@ -33,8 +33,7 @@ import { type JSONValue } from 'ai';
   providedIn: 'root'
 })
 export class AIAgentService {
-
-  client: FetchClient = inject(FetchClient);
+  private readonly client: FetchClient = inject(FetchClient);
 
   async getAIAgents(): Promise<AgentTextDefinition[]> {
     try {
@@ -65,18 +64,18 @@ export class AIAgentService {
   }
 
   async test(
-    definition: AgentTextDefinition | AgentObjectDefinition,
+    definition: AgentTextDefinition | AgentObjectDefinition
   ): Promise<string | JSONValue> {
     const data = await this.client.fetch(
-      BASE_AI_URL + '/' + PATH_AGENT_ENDPOINT + '/test/' + definition.type,
+      `${BASE_AI_URL}/${PATH_AGENT_ENDPOINT}/test/${definition.type}`,
       {
         method: 'POST',
         body: JSON.stringify(definition),
         headers: {
           ...this.client.defaultHeaders,
-          'content-type': 'application/json',
-        },
-      },
+          'content-type': 'application/json'
+        }
+      }
     );
 
     if (definition.type === 'object') {

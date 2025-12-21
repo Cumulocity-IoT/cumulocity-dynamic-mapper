@@ -90,7 +90,7 @@ export class TestingService {
     const ctx: ProcessingContext = {
       mapping: mapping,
       topic:
-        mapping.direction == Direction.INBOUND
+        mapping.direction === Direction.INBOUND
           ? mapping.mappingTopicSample
           : mapping.publishTopicSample,
       processingType: ProcessingType.UNDEFINED,
@@ -105,7 +105,7 @@ export class TestingService {
   }
 
   initializeCache(dir: Direction): void {
-    if (dir == Direction.INBOUND) {
+    if (dir === Direction.INBOUND) {
       this.jsonProcessorInbound.initializeCache();
     }
   }
@@ -115,11 +115,13 @@ export class TestingService {
     message: any
   ): Promise<ProcessingContext> {
     const { mapping } = context;
-    if (context.mapping.transformationType == TransformationType.SMART_FUNCTION) {
+    if (context.mapping.transformationType === TransformationType.SMART_FUNCTION) {
       let extractedPayload;
-      if (context.mapping.mappingType == MappingType.HEX || context.mapping.mappingType == MappingType.FLAT_FILE) {
+      if (context.mapping.mappingType === MappingType.HEX || context.mapping.mappingType === MappingType.FLAT_FILE) {
         extractedPayload = message['payload'];
-      } else { extractedPayload = JSON.stringify(message); }
+      } else {
+        extractedPayload = JSON.stringify(message);
+      }
       const testingContext = { mapping: context.mapping, payload: extractedPayload, send: false };
       const testingResult = await this.testMapping(testingContext);
       // Convert request from JSON string to object for all items
@@ -132,9 +134,8 @@ export class TestingService {
       context.errors = testingResult.errors;
       context.warnings = testingResult.warnings;
       context.logs = testingResult.logs;
-      // console.log(testingResult);
     } else {
-      if (mapping.direction == Direction.INBOUND) {
+      if (mapping.direction === Direction.INBOUND) {
         if (isSubstitutionsAsCode(mapping)) {
           this.codeBasedProcessorInbound.deserializePayload(mapping, message, context);
           this.codeBasedProcessorInbound.enrichPayload(context);

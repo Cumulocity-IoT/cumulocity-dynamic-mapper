@@ -34,7 +34,7 @@ import {
 } from '@angular/core';
 import { FormControl, FormGroup } from '@angular/forms';
 import { EditorComponent, loadMonacoEditor } from '@c8y/ngx-components/editor';
-import { Alert, AlertService, BottomDrawerService, C8yStepper } from '@c8y/ngx-components';
+import { Alert, AlertService, BottomDrawerService, C8yStepper, CoreModule } from '@c8y/ngx-components';
 import { FormlyFieldConfig } from '@ngx-formly/core';
 import * as _ from 'lodash';
 import { BsModalService } from 'ngx-bootstrap/modal';
@@ -61,7 +61,8 @@ import {
   TransformationType,
   MappingTypeLabels,
   ContentChanges,
-  MappingTypeDescriptions
+  MappingTypeDescriptions,
+  CapitalizeCasePipe
 } from '../../shared';
 import { ValidationError } from '../shared/mapping.model';
 import { createCompletionProviderFlowFunction, createCompletionProviderSubstitutionAsCode, EditorMode, STEP_DEFINE_SUBSTITUTIONS, STEP_GENERAL_SETTINGS, STEP_SELECT_TEMPLATES, STEP_TEST_MAPPING } from '../shared/stepper.model';
@@ -85,8 +86,18 @@ import { MappingStepTestingComponent } from '../step-testing/mapping-testing.com
 import { gettext } from '@c8y/ngx-components/gettext';
 import { MappingStepperService } from '../service/mapping-stepper.service';
 import { SubstitutionManagementService } from '../service/substitution-management.service';
+import { CommonModule } from '@angular/common';
+import { MappingStepPropertiesComponent } from '../step-property/mapping-properties.component';
+import { MappingConnectorComponent } from '../step-connector/mapping-connector.component';
+import { MappingSubstitutionStepComponent } from '../step-substitution/mapping-substitution-step.component';
+import { PopoverModule } from 'ngx-bootstrap/popover';
 
 let initializedMonaco = false;
+
+const STEP_LABEL_TEST_MAPPING = 'Test mapping';
+const STEP_LABEL_GENERAL_SETTINGS = 'General settings';
+const STEP_LABEL_SELECT_TEMPLATES = 'Select templates';
+
 interface StepperStepChange {
   stepper: C8yStepper;
   step: CdkStep;
@@ -97,8 +108,9 @@ interface StepperStepChange {
   templateUrl: 'mapping-stepper.component.html',
   styleUrls: ['../shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
-  standalone: false,
-  providers: [MappingStepperService, SubstitutionManagementService]
+  standalone: true,
+  providers: [MappingStepperService, SubstitutionManagementService],
+  imports: [CoreModule, CommonModule, EditorComponent, CapitalizeCasePipe, PopoverModule, MappingStepPropertiesComponent, MappingConnectorComponent, MappingSubstitutionStepComponent, MappingStepTestingComponent, JsonEditorComponent]
 })
 export class MappingStepperComponent implements OnInit, OnDestroy {
   @Input() mapping: Mapping;
@@ -119,15 +131,13 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   @ViewChild('substitutionModelSourceExpression') substitutionModelSourceExpression: ElementRef<HTMLTextAreaElement>;
   @ViewChild('substitutionModelTargetExpression') substitutionModelTargetExpression: ElementRef<HTMLTextAreaElement>;
 
-  private cdr = inject(ChangeDetectorRef);
-  private bsModalService = inject(BsModalService);
-  private sharedService = inject(SharedService);
-  private alertService = inject(AlertService);
-  private bottomDrawerService = inject(BottomDrawerService);
-
-  // Inject new services
-  private stepperService = inject(MappingStepperService);
-  private substitutionService = inject(SubstitutionManagementService);
+  private readonly cdr = inject(ChangeDetectorRef);
+  private readonly bsModalService = inject(BsModalService);
+  private readonly sharedService = inject(SharedService);
+  private readonly alertService = inject(AlertService);
+  private readonly bottomDrawerService = inject(BottomDrawerService);
+  private readonly stepperService = inject(MappingStepperService);
+  private readonly substitutionService = inject(SubstitutionManagementService);
 
   readonly ValidationError = ValidationError;
   readonly checkTransformationType = checkTransformationType;
@@ -168,7 +178,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   targetTemplate: any;
   targetTemplateUpdated: any;
   targetSystem: string;
-  aiAgentDeployed: boolean = false;
+  aiAgentDeployed = false;
   aiAgent: AgentObjectDefinition | AgentTextDefinition | null = null;
 
   // Use service observables
@@ -220,16 +230,17 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     statusBar: true
   };
 
-  selectedSubstitution: number = -1;
-  snoopedTemplateCounter: number = -1;
+  selectedSubstitution = -1;
+  snoopedTemplateCounter = -1;
   step: any;
-  expertMode: boolean = false;
-  templatesInitialized: boolean = false;
+  expertMode = false;
+  templatesInitialized = false;
   extensions: Map<string, Extension> = new Map();
-  destroy$ = new Subject<void>();
   editorOptions: EditorComponent['editorOptions'];
-  stepperForward: boolean = true;
+  stepperForward = true;
   currentStepIndex: number;
+
+  private readonly destroy$ = new Subject<void>();
   codeEditorHelp: string;
   codeEditorLabel: string;
   targetTemplateHelp = 'The template contains the dummy field <code>_TOPIC_LEVEL_</code> for outbound to map device identifiers.';
@@ -241,8 +252,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.labels = { ...this.labels, custom: 'Start snooping' } as const;
     }
 
-    this.targetSystem = this.mapping.direction == Direction.INBOUND ? 'Cumulocity' : 'Broker';
-    this.sourceSystem = this.mapping.direction == Direction.OUTBOUND ? 'Cumulocity' : 'Broker';
+    this.targetSystem = this.mapping.direction === Direction.INBOUND ? 'Cumulocity' : 'Broker';
+    this.sourceSystem = this.mapping.direction === Direction.OUTBOUND ? 'Cumulocity' : 'Broker';
     this.templateModel = {
       stepperConfiguration: this.stepperConfiguration,
       mapping: this.mapping
@@ -253,7 +264,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       language: 'javascript',
       renderWhitespace: 'none',
       tabSize: 4,
-      readOnly: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY
+      readOnly: this.stepperConfiguration.editorMode === EditorMode.READ_ONLY
     };
 
     this.substitutionModel = {
@@ -292,36 +303,34 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.initializeFormlyFields();
     await this.initializeCodeTemplates();
 
-    this.codeEditorHelp = this.mapping.transformationType == TransformationType.SUBSTITUTION_AS_CODE ||
-      this.mapping.mappingType == MappingType.CODE_BASED ?
+    this.codeEditorHelp = this.mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE ||
+      this.mapping.mappingType === MappingType.CODE_BASED ?
       'JavaScript for creating substitutions...' :
       'JavaScript for creating complete payloads as Smart Functions.';
 
-    this.codeEditorLabel = this.mapping.transformationType == TransformationType.SUBSTITUTION_AS_CODE ||
-      this.mapping.mappingType == MappingType.CODE_BASED ?
+    this.codeEditorLabel = this.mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE ||
+      this.mapping.mappingType === MappingType.CODE_BASED ?
       'JavaScript callback for creating substitutions' :
       'JavaScript callback for Smart functions';
   }
 
   private initializeFormlyFields(): void {
-    // Filter fields initialization
     this.filterFormlyFields = [
       {
         fieldGroup: [
           {
             key: 'filterMapping',
-            type: 'input-custom',
-            wrappers: ['custom-form-field-wrapper'],
+            type: 'd11r-input',
+            wrappers: ['c8y-form-field'],
             templateOptions: {
               label: 'Filter execution mapping',
               class: 'input-sm',
-              customWrapperClass: 'm-b-24',
-              disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
+              disabled: this.stepperConfiguration.editorMode === EditorMode.READ_ONLY ||
                 !this.stepperConfiguration.allowDefiningSubstitutions ||
                 (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
               placeholder: '$exists(c8y_TemperatureMeasurement)',
               description: 'This expression is required...',
-              required: this.mapping.direction == Direction.OUTBOUND,
+              required: this.mapping.direction === Direction.OUTBOUND,
               customMessage: this.sourceCustomMessage$
             },
             hooks: {
@@ -336,7 +345,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         ]
       }
     ];
-
   }
 
   async initializeCodeTemplates(): Promise<void> {
@@ -348,7 +356,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   async ngAfterViewInit(): Promise<void> {
     if (!initializedMonaco) {
       const monaco = await loadMonacoEditor();
-      if (this.mapping.transformationType == TransformationType.SMART_FUNCTION) {
+      if (this.mapping.transformationType === TransformationType.SMART_FUNCTION) {
         monaco.languages.registerCompletionItemProvider('javascript', createCompletionProviderFlowFunction(monaco));
       } else {
         monaco.languages.registerCompletionItemProvider('javascript', createCompletionProviderSubstitutionAsCode(monaco));
@@ -366,11 +374,11 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.templateForm = new FormGroup({
       extensionName: new FormControl({
         value: this.mapping?.extension?.extensionName,
-        disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY
+        disabled: this.stepperConfiguration.editorMode === EditorMode.READ_ONLY
       }),
       eventName: new FormControl({
         value: this.mapping?.extension?.eventName,
-        disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY
+        disabled: this.stepperConfiguration.editorMode === EditorMode.READ_ONLY
       }),
       snoopedTemplateIndex: new FormControl({
         value: -1,
@@ -395,7 +403,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   deploymentMapEntryChange(deploymentMapEntry: DeploymentMapEntry): void {
-    const isDisabled = !this.deploymentMapEntry?.connectors || this.deploymentMapEntry?.connectors?.length == 0;
+    const isDisabled = !this.deploymentMapEntry?.connectors || this.deploymentMapEntry?.connectors?.length === 0;
     setTimeout(() => {
       this.isButtonDisabled$.next(isDisabled);
     });
@@ -485,14 +493,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       updatedContentAsJson
     );
 
-    // Show error message if transformation type is invalid
-    // if (!isTransformationTypeValid) {
-    //   this.raiseAlert({
-    //     type: 'warning',
-    //     text: 'Wrong Transformation Type: an Array in Source Template or Target Template requires Transformation Type Smart Function'
-    //   });
-    // }
-
     // Consider both validations
     const isValid = !hasProtectedChanges && isTransformationTypeValid;
     this.isContentChangeValid$.next(isValid);
@@ -537,14 +537,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       updatedContentAsJson
     );
 
-    // Show error message if transformation type is invalid
-    // if (!isTransformationTypeValid) {
-    //   this.raiseAlert({
-    //     type: 'warning',
-    //     text: 'Wrong Transformation Type: an Array in Source Template or Target Template requires Transformation Type Smart Function'
-    //   });
-    // }
-
     // Consider both validations
     const isValid = !hasProtectedChanges && isTransformationTypeValid;
     this.isContentChangeValid$.next(isValid);
@@ -561,7 +553,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   raiseAlert(alert: Alert): void {
     this.alertService.state.forEach(a => {
-      if (a.type == 'info') this.alertService.remove(a);
+      if (a.type === 'info') this.alertService.remove(a);
     });
     this.alertService.add(alert);
   }
@@ -578,7 +570,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.mapping.code = stringToBase64(this.mappingCode);
     }
 
-    if (isSubstitutionsAsCode(this.mapping) && (!this.mapping.code || this.mapping.code == null || this.mapping.code == '')) {
+    if (isSubstitutionsAsCode(this.mapping) && (!this.mapping.code || this.mapping.code === null || this.mapping.code === '')) {
       this.raiseAlert({ type: 'warning', text: "Internal error in editor. Try again!" });
       this.commit.emit();
     }
@@ -587,7 +579,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   async onSampleTargetTemplatesButton(): Promise<void> {
-    if (this.stepperConfiguration.direction == Direction.INBOUND) {
+    if (this.stepperConfiguration.direction === Direction.INBOUND) {
       this.targetTemplate = expandC8YTemplate(
         JSON.parse(SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI]),
         this.mapping
@@ -705,7 +697,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   onNextStep(event: StepperStepChange): void {
     this.stepperForward = true;
     if (this.stepperConfiguration.advanceFromStepToEndStep &&
-      this.stepperConfiguration.advanceFromStepToEndStep == this.currentStepIndex) {
+      this.stepperConfiguration.advanceFromStepToEndStep === this.currentStepIndex) {
       this.goToLastStep();
       this.raiseAlert({ type: 'info', text: 'The other steps have been skipped for this mapping type!' });
     } else {
@@ -727,9 +719,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.step = event.step.label;
     this.stepperForward = false;
 
-    if (this.step == 'Test mapping') {
+    if (this.step === STEP_LABEL_TEST_MAPPING) {
       this.mappingTestingStep.editorTestingRequest.setSchema({});
-    } else if (this.step == 'General settings' || this.step == 'Select templates') {
+    } else if (this.step === STEP_LABEL_GENERAL_SETTINGS || this.step === STEP_LABEL_SELECT_TEMPLATES) {
       this.templatesInitialized = false;
     }
 
@@ -765,7 +757,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.mapping.snoopedTemplates[this.snoopedTemplateCounter]
     );
 
-    if (this.stepperConfiguration.direction == Direction.INBOUND) {
+    if (this.stepperConfiguration.direction === Direction.INBOUND) {
       this.sourceTemplate = expandExternalTemplate(
         this.sourceTemplate,
         this.mapping, splitTopicExcludingSeparator(this.mapping.mappingTopicSample, false)
@@ -784,7 +776,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.mapping.snoopedTemplates[index]
     );
 
-    if (this.stepperConfiguration.direction == Direction.INBOUND) {
+    if (this.stepperConfiguration.direction === Direction.INBOUND) {
       this.sourceTemplate = expandExternalTemplate(
         this.sourceTemplate,
         this.mapping,
@@ -798,7 +790,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   async onTargetAPIChanged(changedTargetAPI: string): Promise<void> {
-    if (this.stepperConfiguration.direction == Direction.INBOUND) {
+    if (this.stepperConfiguration.direction === Direction.INBOUND) {
       this.mapping.targetTemplate = SAMPLE_TEMPLATES_C8Y[changedTargetAPI];
       this.mapping.sourceTemplate = getExternalTemplate(this.mapping);
       const schemaTarget = getSchema(this.mapping.targetAPI, this.mapping.direction, true, false);
@@ -816,14 +808,18 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   onSelectCodeTemplate(): void {
-    this.mappingCode = this.codeTemplatesDecoded.get(this.templateId).code;
+    const template = this.codeTemplatesDecoded.get(this.templateId);
+    if (template) {
+      this.mappingCode = template.code;
+    }
   }
 
   getCodeTemplateEntries(): { key: string; name: string; type: TemplateType }[] {
     if (!this.codeTemplates) return [];
+    const expectedType = `${this.stepperConfiguration.direction.toString()}_${this.mapping?.transformationType.toString()}`;
     return Object.entries(this.codeTemplates)
       .filter(([key, template]) =>
-        template.templateType.toString() == `${this.stepperConfiguration.direction.toString()}_${this.mapping?.transformationType.toString()}`
+        template.templateType.toString() === expectedType
       )
       .map(([key, template]) => ({
         key,
@@ -874,15 +870,15 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     });
 
     try {
-      const resultOf = await drawer.instance.result;
+      const result = await drawer.instance.result;
 
       if (isSubstitutionsAsCode(this.mapping)) {
-        if (typeof resultOf === 'string' && resultOf.trim()) {
-          this.mappingCode = resultOf;
+        if (typeof result === 'string' && result.trim()) {
+          this.mappingCode = result;
           this.cdr.detectChanges();
 
           if (this.codeEditor) {
-            setTimeout(() => this.codeEditor.writeValue(resultOf), 100);
+            setTimeout(() => this.codeEditor.writeValue(result), 100);
           }
 
           this.alertService.success('Generated JavaScript code successfully.');
@@ -890,10 +886,10 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
           this.raiseAlert({ type: 'warning', text: 'No valid JavaScript code was generated.' });
         }
       } else {
-        if (Array.isArray(resultOf) && resultOf.length > 0) {
-          this.alertService.success(`Generated ${resultOf.length} substitutions.`);
+        if (Array.isArray(result) && result.length > 0) {
+          this.alertService.success(`Generated ${result.length} substitutions.`);
           this.mapping.substitutions.splice(0);
-          resultOf.forEach(sub => {
+          result.forEach(sub => {
             this.substitutionService.addSubstitution(
               sub,
               this.mapping,
@@ -913,8 +909,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
           this.raiseAlert({ type: 'warning', text: 'No substitutions were generated.' });
         }
       }
-    } catch (ex) {
-      // User canceled or error occurred
+    } catch (error) {
+      console.error('AI generation error:', error);
     }
 
     this.isGenerateSubstitutionOpen = false;
@@ -931,8 +927,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.substitutionModel.pathSourceIsExpression = isExpression(this.substitutionModel.pathSource);
 
     await Promise.all([
-      this.editorSourceStepSubstitution.setSelectionToPath(this.substitutionModel.pathSource),
-      this.editorTargetStepSubstitution.setSelectionToPath(this.substitutionModel.pathTarget)
+      this.editorSourceStepSubstitution?.setSelectionToPath(this.substitutionModel.pathSource),
+      this.editorTargetStepSubstitution?.setSelectionToPath(this.substitutionModel.pathTarget)
     ]);
   }
 
@@ -948,11 +944,11 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   private manualResize(source: string): void {
     let element;
 
-    if (source == 'filterModelFilterExpression' && this.filterModelFilterExpression?.nativeElement) {
+    if (source === 'filterModelFilterExpression' && this.filterModelFilterExpression?.nativeElement) {
       element = this.filterModelFilterExpression.nativeElement;
-    } else if (source == 'substitutionModelSourceExpression' && this.substitutionModelSourceExpression?.nativeElement) {
+    } else if (source === 'substitutionModelSourceExpression' && this.substitutionModelSourceExpression?.nativeElement) {
       element = this.substitutionModelSourceExpression.nativeElement;
-    } else if (source == 'substitutionModelTargetExpression' && this.substitutionModelTargetExpression?.nativeElement) {
+    } else if (source === 'substitutionModelTargetExpression' && this.substitutionModelTargetExpression?.nativeElement) {
       element = this.substitutionModelTargetExpression.nativeElement;
     }
 

@@ -10,7 +10,7 @@ import {
   inject
 } from '@angular/core';
 import { FormGroup } from '@angular/forms';
-import { AlertService, BottomDrawerService } from '@c8y/ngx-components';
+import { AlertService, BottomDrawerService, CoreModule } from '@c8y/ngx-components';
 import { FormlyFieldConfig } from '@ngx-formly/core';
 import { debounceTime, distinctUntilChanged, Observable } from 'rxjs';
 import {
@@ -29,12 +29,16 @@ import { AgentObjectDefinition, AgentTextDefinition } from '../shared/ai-prompt.
 import { MappingStepperService } from '../service/mapping-stepper.service';
 import { SubstitutionManagementService } from '../service/substitution-management.service';
 import { isExpression } from '../shared/util';
+import { CommonModule } from '@angular/common';
+import { PopoverModule } from 'ngx-bootstrap/popover';
+import { CollapseModule } from 'ngx-bootstrap/collapse';
 
 @Component({
   selector: 'd11r-mapping-substitution-step',
   templateUrl: './mapping-substitution-step.component.html',
   styleUrls: ['../shared/mapping.style.css'],
-  standalone: false
+  standalone: true,
+  imports: [CoreModule, CommonModule, PopoverModule, CollapseModule, SubstitutionRendererComponent, JsonEditorComponent]
 })
 export class MappingSubstitutionStepComponent implements OnInit {
   @Input() mapping: Mapping;
@@ -60,16 +64,16 @@ export class MappingSubstitutionStepComponent implements OnInit {
 
   @ViewChild('editorSourceStepSubstitution', { static: false })
   editorSourceStepSubstitution!: JsonEditorComponent;
-  
+
   @ViewChild('editorTargetStepSubstitution', { static: false })
   editorTargetStepSubstitution!: JsonEditorComponent;
-  
+
   @ViewChild(SubstitutionRendererComponent, { static: false })
   substitutionChild!: SubstitutionRendererComponent;
-  
+
   @ViewChild('substitutionModelSourceExpression')
   substitutionModelSourceExpression: ElementRef<HTMLTextAreaElement>;
-  
+
   @ViewChild('substitutionModelTargetExpression')
   substitutionModelTargetExpression: ElementRef<HTMLTextAreaElement>;
 
@@ -81,7 +85,7 @@ export class MappingSubstitutionStepComponent implements OnInit {
   readonly COLOR_HIGHLIGHTED = COLOR_HIGHLIGHTED;
   readonly EditorMode = EditorMode;
 
-  templateForm: FormGroup;
+  templateForm: FormGroup = new FormGroup({});
   substitutionFormly: FormGroup = new FormGroup({});
   substitutionFormlyFields: FormlyFieldConfig[];
   substitutionModel: any = {};
@@ -143,12 +147,11 @@ export class MappingSubstitutionStepComponent implements OnInit {
           {
             className: 'col-lg-5 col-lg-offset-1',
             key: 'pathSource',
-            type: 'input-custom',
-            wrappers: ['custom-form-field-wrapper'],
+            type: 'd11r-input',
+            wrappers: ['c8y-form-field'],
             templateOptions: {
               label: 'Source Expression',
               class: 'input-sm',
-              customWrapperClass: 'm-b-24',
               disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
                 !this.stepperConfiguration.allowDefiningSubstitutions,
               placeholder: '$join([$substring(txt,5), id]) or $number(id)/10',
@@ -179,11 +182,10 @@ export class MappingSubstitutionStepComponent implements OnInit {
           {
             className: 'col-lg-5',
             key: 'pathTarget',
-            type: 'input-custom',
-            wrappers: ['custom-form-field-wrapper'],
+            type: 'd11r-input',
+            wrappers: ['c8y-form-field'],
             templateOptions: {
               label: 'Target Expression',
-              customWrapperClass: 'm-b-24',
               disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
                 !this.stepperConfiguration.allowDefiningSubstitutions,
               description: `Use <a href="https://jsonata.org" target="_blank">JSONata</a>
@@ -403,7 +405,7 @@ export class MappingSubstitutionStepComponent implements OnInit {
   }
 
   private manualResize(source: 'source' | 'target'): void {
-    const element = source === 'source' 
+    const element = source === 'source'
       ? this.substitutionModelSourceExpression?.nativeElement
       : this.substitutionModelTargetExpression?.nativeElement;
 

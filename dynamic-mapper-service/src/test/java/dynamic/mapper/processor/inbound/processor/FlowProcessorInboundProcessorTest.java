@@ -92,8 +92,7 @@ class FlowProcessorInboundProcessorTest {
     @BeforeEach
     void setUp() throws Exception {
         // FIX: Pass the mocked ConfigurationController to the constructor
-        processor = new FlowProcessorInboundProcessor();
-        injectMappingService(processor, mappingService);
+        processor = new FlowProcessorInboundProcessor(mappingService);
 
         mapping = createSampleMapping();
         mappingStatus = new MappingStatus(

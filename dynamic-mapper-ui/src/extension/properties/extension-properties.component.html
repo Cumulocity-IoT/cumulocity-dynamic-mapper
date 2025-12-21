@@ -22,11 +22,7 @@
 <c8y-title>{{ extension['name'] }}</c8y-title>
 
 <c8y-breadcrumb>
-  <c8y-breadcrumb-item
-    [icon]="'c8y-modules'"
-    [label]="'Extensions' | translate"
-    [path]="LINK"
-  >
+  <c8y-breadcrumb-item [icon]="'c8y-modules'" [label]="'Extensions' | translate" [path]="LINK">
   </c8y-breadcrumb-item>
   <c8y-breadcrumb-item [label]="extension['name']"></c8y-breadcrumb-item>
 </c8y-breadcrumb>
@@ -39,62 +35,53 @@
       </h4>
     </div>
     <div class="card-block">
-      <div class="row">
-        <div class="d-contents">
-          <c8y-list-group>
-            <c8y-li
-              *ngFor="let entry of extension['extensionEntries']; let i = index"
-              #li
-            >
-              <c8y-li-icon [icon]="'plugin'"></c8y-li-icon>
-              <button class="btn-clean" style="width:100%" (click)="li.collapsed = !li.collapsed">
-                <span class="m-r-16">{{ entry.eventName }}</span>
-                <span class="label label-primary m-l-10">{{
-                  extension['external'] ? 'External' : 'Internal'
+      <div class="d-contents p-l-24 p-r-24">
+        <c8y-list-group class="separator-top" role="list">
+          <c8y-li role="listitem" class="p-t-4 p-b-4" *ngFor="let entry of extension['extensionEntries']; let i = index"
+            #li>
+            <c8y-li-icon [icon]="'plugin'"></c8y-li-icon>
+            <button class="btn-clean" style="width:100%" (click)="li.collapsed = !li.collapsed">
+              <span class="m-r-16">{{ entry.eventName }}</span>
+              <span class="label label-primary m-l-10">{{
+                extension['external'] ? 'External' : 'Internal'
                 }}</span>
-              </button>
-              <c8y-li-collapse>
-                <table class="table table-condensed table-striped">
-                  <thead>
-                    <tr>
-                      <th style="width: 20%">Property</th>
-                      <th style="width: 80%">Value</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>Event Name</td>
-                      <td>{{ entry.eventName }}</td>
-                    </tr>
-                    <tr>
-                      <td>Event Implementation</td>
-                      <td>{{ entry.fqnClassName }}</td>
-                    </tr>
-                    <tr>
-                      <td>Message</td>
-                      <td>{{ entry.message }}</td>
-                    </tr>
-                    <tr>
-                      <td>Type</td>
-                      <td>{{ entry.extensionType | formatStringAsWords }}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </c8y-li-collapse>
-            </c8y-li>
-            <c8y-ui-empty-state
-              *ngIf="
+            </button>
+            <c8y-li-collapse>
+              <table class="table table-condensed table-striped">
+                <thead>
+                  <tr>
+                    <th style="width: 20%">Property</th>
+                    <th style="width: 80%">Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Event Name</td>
+                    <td>{{ entry.eventName }}</td>
+                  </tr>
+                  <tr>
+                    <td>Event Implementation</td>
+                    <td>{{ entry.fqnClassName }}</td>
+                  </tr>
+                  <tr>
+                    <td>Message</td>
+                    <td>{{ entry.message }}</td>
+                  </tr>
+                  <tr>
+                    <td>Type</td>
+                    <td>{{ entry.extensionType | formatStringAsWords }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </c8y-li-collapse>
+          </c8y-li>
+          <c8y-ui-empty-state *ngIf="
                 !extension['extensionEntries'] ||
                 extension['extensionEntries'].length === 0
-              "
-              [icon]="'plugin'"
-              [title]="
+              " [icon]="'plugin'" [title]="
                 'No entries for this extension, try to reload extensions.'
-              "
-              [horizontal]="true"
-            ></c8y-ui-empty-state>
-          </c8y-list-group>
-        </div>
+              " [horizontal]="true"></c8y-ui-empty-state>
+        </c8y-list-group>
       </div>
     </div>
   </div>

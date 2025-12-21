@@ -18,26 +18,48 @@
  * @authors Christof Strack
  */
 import { Component, OnInit } from '@angular/core';
-import { FormGroup } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
-import { NODE3 } from '../../shared';
 import { IManagedObject } from '@c8y/client';
+import { CommonModule } from '@angular/common';
+import { CoreModule } from '@c8y/ngx-components';
+import { NODE3, SharedModule } from '../../shared';
+
+interface ExtensionWithEntries extends IManagedObject {
+  extensionEntries?: any[];
+  external?: boolean;
+  manifest?: {
+    version?: string;
+  };
+}
 
 @Component({
   selector: 'd11r-mapping-extension-properties',
   templateUrl: './extension-properties.component.html',
-  standalone: false
+  standalone: true,
+  imports: [CoreModule, CommonModule, SharedModule]
 })
 export class ExtensionPropertiesComponent implements OnInit {
-  extensionsEntryForm: FormGroup;
-  extension: IManagedObject;
-  LINK = `c8y-pkg-dynamic-mapper/${NODE3}/extension`;
-  breadcrumbConfig: { icon: string; label: string; path: string };
+  extension: ExtensionWithEntries;
+  readonly LINK = `c8y-pkg-dynamic-mapper/${NODE3}/processorExtension`;
 
   constructor(private route: ActivatedRoute) {}
 
-  ngOnInit() {
-    const {extensions} = this.route.snapshot.data;
+  ngOnInit(): void {
+    const { extensions } = this.route.snapshot.data;
+
+    if (!extensions || extensions.length === 0) {
+      console.error('No extension data available');
+      return;
+    }
+
     this.extension = extensions[0];
+  }
+
+  get hasExtensionEntries(): boolean {
+    return this.extension?.extensionEntries?.length > 0;
+  }
+
+  get extensionType(): string {
+    return this.extension?.external ? 'External' : 'Internal';
   }
 }

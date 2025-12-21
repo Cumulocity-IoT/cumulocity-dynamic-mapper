@@ -25,7 +25,6 @@ import static dynamic.mapper.model.Substitution.toPrettyJsonString;
 
 import java.util.ArrayList;
 import java.util.Base64;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -61,7 +60,8 @@ public class CodeExtractionOutboundProcessor extends BaseProcessor {
 
     @Override
     public void process(Exchange exchange) throws Exception {
-        ProcessingContext<Object> context = getProcessingContextAsObject(exchange);
+        ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
         Boolean testing = context.getTesting();
@@ -105,7 +105,7 @@ public class CodeExtractionOutboundProcessor extends BaseProcessor {
         }
     }
 
-    public void extractFromSource(ProcessingContext<Object> context) throws ProcessingException {
+    public void extractFromSource(ProcessingContext<?> context) throws ProcessingException {
         Value result = null;
         Value sourceValue = null;
         Value bindings = null;
@@ -311,142 +311,11 @@ public class CodeExtractionOutboundProcessor extends BaseProcessor {
     }
 
     /**
-     * CRITICAL: Deep convert SubstitutionResult from GraalVM Values to Java objects
-     * This must be done BEFORE closing the GraalVM context
-     */
-    private SubstitutionResult deepConvertSubstitutionResult(Value result, String tenant) {
-        if (result == null || result.isNull()) {
-            return new SubstitutionResult();
-        }
-
-        try {
-            // Extract as host object (Java object wrapped by GraalVM)
-            if (result.isHostObject()) {
-                Object hostObj = result.asHostObject();
-
-                if (hostObj instanceof SubstitutionResult) {
-                    SubstitutionResult originalResult = (SubstitutionResult) hostObj;
-
-                    log.debug("{} - Converting SubstitutionResult with {} substitutions",
-                            tenant, originalResult.substitutions.size());
-
-                    // Deep convert all SubstituteValue objects to ensure no GraalVM Values remain
-                    SubstitutionResult cleanResult = new SubstitutionResult();
-
-                    for (Map.Entry<String, List<SubstituteValue>> entry : originalResult.substitutions.entrySet()) {
-                        String key = entry.getKey();
-                        List<SubstituteValue> originalValues = entry.getValue();
-                        List<SubstituteValue> cleanValues = new ArrayList<>();
-
-                        log.trace("{} - Processing key '{}' with {} values", tenant, key, originalValues.size());
-
-                        for (SubstituteValue subValue : originalValues) {
-                            SubstituteValue cleanSubValue = convertSubstituteValue(subValue, tenant);
-                            cleanValues.add(cleanSubValue);
-                        }
-
-                        cleanResult.substitutions.put(key, cleanValues);
-                    }
-
-                    // Copy alarms
-                    if (originalResult.alarms != null) {
-                        cleanResult.alarms.addAll(originalResult.alarms);
-                    }
-
-                    log.info("{} - Successfully converted SubstitutionResult with {} substitutions",
-                            tenant, cleanResult.substitutions.size());
-
-                    return cleanResult;
-                }
-            }
-
-            // Shouldn't reach here based on your logs, but keep as fallback
-            log.warn("{} - Result is not a SubstitutionResult host object, attempting manual extraction", tenant);
-            return new SubstitutionResult();
-
-        } catch (Exception e) {
-            log.error("{} - Error converting SubstitutionResult: {}", tenant, e.getMessage(), e);
-            throw new RuntimeException("Failed to convert substitution result", e);
-        }
-    }
-
-    /**
-     * Convert a single SubstituteValue, handling GraalVM Value objects
-     */
-    private SubstituteValue convertSubstituteValue(SubstituteValue original, String tenant) {
-        Object cleanValue = original.value;
-
-        // Check if the value is a GraalVM/Truffle object
-        if (cleanValue != null) {
-            String className = cleanValue.getClass().getName();
-
-            // Check for any GraalVM/Truffle class
-            if (className.contains("org.graalvm.polyglot") ||
-                    className.contains("com.oracle.truffle.polyglot")) {
-
-                log.debug("{} - Found GraalVM/Truffle object: {}, attempting conversion", tenant, className);
-
-                try {
-                    // Try to get the Value interface
-                    if (cleanValue instanceof Value) {
-                        Value graalValue = (Value) cleanValue;
-                        cleanValue = JavaScriptInteropHelper.convertValueToJavaObject(graalValue);
-                        log.debug("{} - Successfully converted via Value interface to: {} (type: {})",
-                                tenant,
-                                cleanValue,
-                                cleanValue != null ? cleanValue.getClass().getName() : "null");
-                    } else {
-                        // Fallback: Try reflection to access as Value
-                        try {
-                            // PolyglotMap and similar classes should implement Value methods
-                            java.lang.reflect.Method asMapMethod = cleanValue.getClass().getMethod("as", Class.class);
-                            @SuppressWarnings("unchecked")
-                            Map<String, Object> mapValue = (Map<String, Object>) asMapMethod.invoke(cleanValue,
-                                    Map.class);
-                            cleanValue = new HashMap<>(mapValue);
-                            log.debug("{} - Converted via reflection to Map with {} entries",
-                                    tenant, mapValue.size());
-                        } catch (Exception reflectionEx) {
-                            log.warn("{} - Failed to convert {} via reflection: {}",
-                                    tenant, className, reflectionEx.getMessage());
-
-                            // Last resort: convert to string
-                            cleanValue = cleanValue.toString();
-                            log.warn("{} - Converted to string as last resort: {}", tenant, cleanValue);
-                        }
-                    }
-                } catch (Exception e) {
-                    log.error("{} - Error converting GraalVM object: {}", tenant, e.getMessage(), e);
-                    // Keep original value, which will likely cause an error downstream
-                }
-            }
-        }
-
-        // Validate the converted value doesn't contain GraalVM objects
-        if (cleanValue != null) {
-            String cleanClassName = cleanValue.getClass().getName();
-            if (cleanClassName.contains("org.graalvm") || cleanClassName.contains("com.oracle.truffle")) {
-                log.error("{} - CONVERSION FAILED! Value still contains GraalVM object: {}",
-                        tenant, cleanClassName);
-            }
-        }
-
-        // Create new SubstituteValue with converted value
-        SubstituteValue cleanSubValue = new SubstituteValue(
-                cleanValue,
-                original.type,
-                original.repairStrategy,
-                original.expandArray);
-
-        return cleanSubValue;
-    }
-
-    /**
      * Process the converted Java result (no more GraalVM Values)
      */
     private void processConvertedResult(
             SubstitutionResult javaResult,
-            ProcessingContext<Object> context,
+            ProcessingContext<?> context,
             Map<?, ?> jsonObject,
             Mapping mapping,
             String tenant) {

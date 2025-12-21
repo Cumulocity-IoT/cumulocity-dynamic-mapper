@@ -27,6 +27,7 @@ import {
 } from '@angular/core';
 import {
   ConfirmModalComponent,
+  CoreModule,
   ModalLabels,
   Status,
   StatusType
@@ -38,7 +39,8 @@ import { Subject } from 'rxjs';
 @Component({
   selector: 'd11r-confirmation-modal',
   templateUrl: 'confirmation-modal.component.html',
-  standalone: false
+  standalone: true,
+  imports:[CoreModule]
 })
 export class ConfirmationModalComponent
   implements OnInit, AfterViewInit, OnDestroy

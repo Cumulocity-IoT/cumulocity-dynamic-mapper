@@ -1,0 +1,170 @@
+
+<div
+  class="c8y-search-dropdown dropdown fit-w"
+  placement="bottom left"
+  dropdown
+  [container]="container"
+  #dropdown="bs-dropdown"
+  [autoClose]="autoClose"
+  [isDisabled]="disabled"
+  [insideClick]="insideClick"
+  (onShown)="onShown()"
+  (onHidden)="onHidden()"
+  dropdownToggle
+  (click)="open()"
+>
+  <div
+    class="input-group input-group-dropdown"
+    role="button"
+  >
+    <div
+      class="form-control text-truncate"
+      *ngIf="true"
+      [ngClass]="{
+        'm-r-80': canDeselect && selected.length > 0,
+        'm-r-40': !canDeselect || selected.length === 0,
+        'text-truncate': !multi,
+        'inner-scroll d-flex a-i-center': multi
+      }"
+    >
+      <!-- rendering of selected items (with content projection) -->
+      <div
+        class="selected-items"
+        *ngIf="projectedSelectedItems"
+      >
+        <ng-container *ngFor="let selectedItem of selected">
+          <ng-container
+            *ngTemplateOutlet="
+              projectedSelectedItems.templateRef;
+              context: { $implicit: selectedItem }
+            "
+          ></ng-container>
+        </ng-container>
+        <i
+          class="text-muted"
+          *ngIf="selected.length === 0 && !searchHasFocus && searchControl.value.length === 0"
+        >
+          {{ placeholder | translate }}
+        </i>
+      </div>
+
+      <!-- rendering of selected items (default) -->
+      <div
+        class="selected-items"
+        *ngIf="!projectedSelectedItems"
+      >
+        <span *ngIf="!multi">
+          <!-- hidden is needed, otherwise the propagation does not work correctly -->
+          <span [hidden]="!searchHasFocus || !preselectedItem">
+            {{ preselectedItem?.label | translate }}
+          </span>
+          <span [hidden]="searchHasFocus || selected.length !== 1">
+            {{ selected[0]?.label | translate }}
+          </span>
+        </span>
+        <i
+          class="text-muted"
+          *ngIf="selected.length === 0 && !preselectedItem && searchControl.value.length === 0"
+        >
+          {{ placeholder | translate }}
+        </i>
+        <ng-container *ngIf="multi">
+          <span class="m-r-4">{{ searchControl.value }}</span>
+          <span
+            class="tag tag--info chip"
+            *ngFor="let selectedItem of selected"
+          >
+            <button
+              class="btn btn-xs btn-clean text-10 m-r-4"
+              title="{{ selectedItem.label | translate }}"
+              type="button"
+              [disabled]="disabled"
+              (click)="$event.preventDefault(); $event.stopPropagation(); deselect(selectedItem)"
+            >
+              <i c8yIcon="times"></i>
+            </button>
+            {{ selectedItem.label | translate }}
+          </span>
+        </ng-container>
+      </div>
+    </div>
+
+    <input
+      class="form-control text-truncate"
+      type="text"
+      autocomplete="off"
+      #searchControl
+      [ngClass]="{
+        'p-absolute': true,
+        'm-r-80': canDeselect && selected.length > 0,
+        'm-r-40': !canDeselect || selected.length === 0
+      }"
+      [required]="required"
+      (blur)="doBlur()"
+      (focus)="doFocus()"
+      [name]="name"
+      [disabled]="disabled"
+    />
+
+    <span class="input-group-btn">
+      <!-- this button is displayed only if we have something selected and are allowed to deselect -->
+      <button
+        class="btn btn-dot"
+        title="{{ 'Deselect' | translate }}"
+        type="button"
+        *ngIf="canDeselect && selected.length > 0"
+        [disabled]="disabled"
+        (click)="$event.preventDefault(); $event.stopPropagation(); deselectAll()"
+        data-cy="deselect-all-button"
+      >
+        <i c8yIcon="times"></i>
+      </button>
+      <button
+        class="btn btn-dot"
+        title="{{ 'Search' | translate }}"
+        type="button"
+        [disabled]="disabled"
+        (click)="onIconClick.emit({ icon, $event })"
+        data-cy="select-button"
+      >
+        <i
+          class="text-primary"
+          [c8yIcon]="icon"
+        ></i>
+      </button>
+    </span>
+  </div>
+
+  <c8y-list-group
+    class="dropdown-menu dropdown-menu--modal dropdown-menu--select"
+    [style.width]="container === 'body' ? searchControl.parentNode.clientWidth + 'px' : undefined"
+    role="menu"
+    data-cy="select--dropdown-menu"
+    *dropdownMenu
+  >
+    <!-- rendering of items (default) -->
+    <c8y-li
+      style="cursor: pointer"
+      *ngFor="let item of items"
+      [selectable]="true"
+      [dense]="true"
+      [active]="!multi && item.value === selected[0]?.value"
+      (click)="select(item)"
+    >
+      <span [attr.data-search-label]="item.label | translate"></span>
+      <c8y-li-checkbox
+        *ngIf="multi"
+        [selected]="selected.indexOf(item) > -1"
+        (click)="$event.preventDefault()"
+      ></c8y-li-checkbox>
+      <c8y-li-body *ngIf="!item.template">
+        {{ item.label | translate }}
+      </c8y-li-body>
+      <ng-container
+        *ngTemplateOutlet="item?.template"
+        ngProjectAs="c8y-li-body"
+      ></ng-container>
+    </c8y-li>
+    <ng-content select="div"></ng-content>
+  </c8y-list-group>
+</div>

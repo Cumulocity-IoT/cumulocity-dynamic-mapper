@@ -19,23 +19,26 @@
  */
 
 import { ChangeDetectorRef, Component, Input, OnDestroy, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
-import { AlertService, ModalLabels } from '@c8y/ngx-components';
+import { AlertService, CoreModule, ModalLabels } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
 import { JsonEditorComponent, Mapping, Substitution, MappingEnriched, SharedService, Feature } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { HttpStatusCode } from '@angular/common/http';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'd11r-snoop-explorer-modal',
   templateUrl: './snoop-explorer-modal.component.html',
   styleUrls: ['../shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
-  standalone: false
+  standalone: true,
+  imports: [CoreModule, CommonModule, JsonEditorComponent]
 })
 export class SnoopExplorerComponent implements OnInit, OnDestroy {
   constructor(
     private mappingService: MappingService,
-    private alertService: AlertService, public sharedService: SharedService,
+    private alertService: AlertService,
+    public sharedService: SharedService,
     private cdr: ChangeDetectorRef
   ) { }
 

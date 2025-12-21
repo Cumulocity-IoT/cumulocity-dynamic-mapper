@@ -18,7 +18,8 @@
  * @authors Christof Strack
  */
 import { Component } from '@angular/core';
-import { CellRendererContext } from '@c8y/ngx-components';
+import { RouterLink } from '@angular/router';
+import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
 
 /**
  * The example component for custom cell renderer.
@@ -42,7 +43,11 @@ import { CellRendererContext } from '@c8y/ngx-components';
       </a>
     </ng-template>
   `,
-  standalone: false
+  standalone: true,
+  imports: [
+    CoreModule,
+    RouterLink
+  ]
 })
 export class ConnectorDetailCellRendererComponent {
   constructor(public context: CellRendererContext) { }

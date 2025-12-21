@@ -22,7 +22,7 @@ import { Pipe, PipeTransform } from '@angular/core';
 
 @Pipe({
   name: 'camelCase',
-  standalone: false
+  standalone: true
 })
 export class CamelCasePipe implements PipeTransform {
   transform(value: string): string {

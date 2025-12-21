@@ -99,8 +99,8 @@ export class ConnectorConfigurationService {
   private specifications$?: Observable<ConnectorSpecification[]>;
 
   constructor(
-    private client: FetchClient,
-  ) { }
+    private readonly client: FetchClient
+  ) {}
 
   cleanUp(): void {
     console.log('ConnectorConfigurationService destroyed');
@@ -154,7 +154,7 @@ export class ConnectorConfigurationService {
   }
 
   getCurrentPollingInterval(): PollingInterval {
-    return this.AVAILABLE_INTERVALS.find(item => item.value == this.pollingInterval$.value);
+    return this.AVAILABLE_INTERVALS.find(item => item.value === this.pollingInterval$.value);
   }
 
   getCurrentPollingIntervalLabel(): string {
@@ -384,7 +384,7 @@ export class ConnectorConfigurationService {
     ).subscribe({
       complete: () => {
         // Countdown completed naturally
-        console.log('⏰ Countdown cycle completed');
+        //console.log('⏰ Countdown cycle completed');
       }
     });
   }
