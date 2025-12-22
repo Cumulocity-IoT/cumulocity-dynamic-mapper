@@ -94,15 +94,21 @@ public class ProcessingContext<O> implements AutoCloseable {
 
     private Object rawPayload;
 
+    // NOTE: ArrayList is not thread-safe. If multiple threads concurrently call addRequest()
+    // on the same ProcessingContext, consider using CopyOnWriteArrayList or Collections.synchronizedList().
+    // Currently safe in parallel processing routes as requests are pre-created and only read/updated, not added.
     @Builder.Default
     private List<DynamicMapperRequest> requests = new ArrayList<DynamicMapperRequest>();
 
+    // NOTE: ArrayList is not thread-safe. Review if addError() is called from multiple threads concurrently.
     @Builder.Default
     private List<Exception> errors = new ArrayList<Exception>();
 
+    // NOTE: ArrayList is not thread-safe. Review if concurrent writes occur from multiple threads.
     @Builder.Default
     private List<String> warnings = new ArrayList<>();
 
+    // NOTE: ArrayList is not thread-safe. Review if concurrent writes occur from multiple threads.
     @Builder.Default
     private List<String> logs = new ArrayList<>();
 
@@ -112,6 +118,10 @@ public class ProcessingContext<O> implements AutoCloseable {
     private MappingType mappingType;
 
     // <pathTarget, substituteValues>
+    // NOTE: TreeMap is not thread-safe. If multiple threads concurrently modify processingCache
+    // (via addSubstitution() or direct put/get operations), consider using ConcurrentHashMap or
+    // Collections.synchronizedMap(). The TreeMap is used for sorted keys to ensure
+    // "_CONTEXT_DATA_.deviceName" is available when creating an implicit device.
     @Builder.Default
     // private Map<String, List<SubstituteValue>> processingCache = new
     // HashMap<String, List<SubstituteValue>>();
@@ -160,6 +170,8 @@ public class ProcessingContext<O> implements AutoCloseable {
 
     private Value sourceValue;
 
+    // NOTE: HashSet is not thread-safe. If multiple threads concurrently add alarms,
+    // consider using Collections.synchronizedSet() or ConcurrentHashMap.newKeySet().
     @Builder.Default
     private Set<String> alarms = new HashSet<>();
 
@@ -183,6 +195,17 @@ public class ProcessingContext<O> implements AutoCloseable {
         return errors != null && errors.size() > 0;
     }
 
+    /**
+     * Adds a request to the processing context.
+     *
+     * NOTE: This method is NOT thread-safe due to ArrayList not being thread-safe.
+     * If multiple threads call this method concurrently on the same ProcessingContext,
+     * race conditions may occur (lost updates, ArrayIndexOutOfBoundsException, corrupted state).
+     * Consider synchronizing this method or using a thread-safe list if concurrent access is needed.
+     *
+     * @param c8yRequest the request to add
+     * @return the index of the added request in the list
+     */
     public int addRequest(DynamicMapperRequest c8yRequest) {
         requests.add(c8yRequest);
         return requests.size() - 1;
@@ -202,10 +225,30 @@ public class ProcessingContext<O> implements AutoCloseable {
         return requests.get(requests.size() - 1);
     }
 
+    /**
+     * Adds an error to the processing context.
+     *
+     * NOTE: This method is NOT thread-safe due to ArrayList not being thread-safe.
+     * If multiple threads call this method concurrently, consider synchronizing or using a thread-safe list.
+     *
+     * @param processingException the exception to add
+     */
     public void addError(ProcessingException processingException) {
         errors.add(processingException);
     }
 
+    /**
+     * Adds a substitution to the processing cache.
+     *
+     * NOTE: This method is NOT thread-safe due to TreeMap not being thread-safe.
+     * If multiple threads call this method concurrently, consider synchronizing or using ConcurrentHashMap.
+     *
+     * @param key the substitution key
+     * @param value the substitution value
+     * @param type the type of substitution
+     * @param repairStrategy the repair strategy
+     * @param expandArray whether to expand arrays
+     */
     public void addSubstitution(String key, Object value, SubstituteValue.TYPE type,
             RepairStrategy repairStrategy, boolean expandArray) {
         processingCache.put(key,

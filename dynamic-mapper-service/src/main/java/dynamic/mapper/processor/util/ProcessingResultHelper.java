@@ -268,6 +268,10 @@ public class ProcessingResultHelper {
      * <p>This follows the same pattern as the substituteInTargetAndSend method from
      * BaseProcessorOutbound, ensuring consistency in request creation across the system.
      *
+     * <p><b>THREAD SAFETY WARNING:</b> This method calls {@link ProcessingContext#addRequest(DynamicMapperRequest)}
+     * which is NOT thread-safe. If multiple threads call this method concurrently on the same
+     * ProcessingContext, race conditions may occur. Review thread safety if concurrent access is needed.
+     *
      * @param context the processing context containing current state and configuration
      * @param payloadJson the JSON payload to be sent in the request body
      * @param action the action type ("update" uses PUT, all others use POST)
