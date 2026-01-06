@@ -308,7 +308,7 @@ public class ConfigurationRegistry {
 
     public void createGraalsResources(String tenant, ServiceConfiguration serviceConfiguration) {
         Engine eng = Engine.newBuilder()
-                .option("engine.WarnInterpreterOnly", "false")
+                //.option("engine.WarnInterpreterOnly", "false")
                 .build();
 
         graalEngines.put(tenant, eng);
