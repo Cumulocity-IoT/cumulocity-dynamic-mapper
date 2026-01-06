@@ -15,6 +15,9 @@ ADD resources/* /data/
 #RUN $JAVA_HOME/bin/java --version
 # Extracting Fat jar
 RUN java -Djarmode=tools -jar /data/@package.name@.jar extract
-RUN ls -al /
+COPY etc/ /etc/@package.name@/
+RUN ls -al /etc/@package.name@/
+
+RUN chmod +x /etc/@package.name@/entrypoint.sh
 # Starting non-fat jar
-ENTRYPOINT ["java", "-jar", "/@package.name@/@package.name@.jar"]
+ENTRYPOINT ["/etc/@package.name@/entrypoint.sh"]
