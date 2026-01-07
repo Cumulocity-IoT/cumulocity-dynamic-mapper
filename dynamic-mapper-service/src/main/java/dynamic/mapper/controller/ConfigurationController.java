@@ -347,12 +347,11 @@ public class ConfigurationController {
             if (configuration.getConnectorType().equals(ConnectorType.HTTP)) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Can't delete a HttpConnector!");
             }
-            // make sure the connector is disconnected before it is deleted.
-            bootstrapService.disableConnector(tenant, identifier);
+            // Disconnect the connector and clean up all resources
+            bootstrapService.shutdownAndRemoveConnector(tenant, identifier);
             connectorConfigurationService.deleteConnectorConfiguration(identifier);
             mappingService.removeConnectorFromDeploymentMap(tenant, identifier);
             connectorRegistry.removeClientFromStatusMap(tenant, identifier);
-            bootstrapService.shutdownAndRemoveConnector(tenant, identifier);
         } catch (Exception ex) {
             log.error("{} - Error deleting connector instance: {}", tenant, identifier, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
