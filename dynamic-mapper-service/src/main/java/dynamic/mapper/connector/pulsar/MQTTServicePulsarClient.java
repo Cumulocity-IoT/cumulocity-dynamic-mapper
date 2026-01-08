@@ -572,7 +572,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
 
     /**
      * Delete the Pulsar subscription permanently
-     * This removes the subscription and its queued messages from the broker
+     * This removes the subscription and its queued messages from the broker via Cumulocity messaging management API
      */
     private void deletePulsarSubscription() {
         if (towardsPlatformTopic == null) {
@@ -583,23 +583,12 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         String subscriptionName = getSubscriptionName(connectorIdentifier, additionalSubscriptionIdTest);
 
         try {
-            // Note: Pulsar's Java client doesn't directly support subscription deletion
-            // The subscription is automatically garbage collected by Pulsar after the consumer closes
-            // and the configured retention period expires.
-            //
-            // For immediate deletion, you would need to use the Pulsar Admin API:
-            // pulsarAdmin.topics().deleteSubscription(towardsPlatformTopic, subscriptionName);
-            //
-            // However, since we don't have PulsarAdmin configured here, we rely on:
-            // 1. Consumer close (already done in disconnect())
-            // 2. Pulsar's automatic cleanup based on broker configuration
-
-            log.info("{} - Closed consumer for subscription [{}] on topic [{}]. " +
-                    "Subscription will be cleaned up by Pulsar broker based on retention policy.",
+            // Delegate to C8YAgent which handles all Cumulocity platform HTTP calls
+            c8yAgent.deletePulsarSubscription(tenant, subscriptionName);
+            log.info("{} - Initiated deletion of Pulsar subscription [{}] on topic [{}]",
                     tenant, subscriptionName, towardsPlatformTopic);
-
         } catch (Exception e) {
-            log.warn("{} - Note about subscription cleanup: {}", tenant, e.getMessage());
+            log.error("{} - Exception deleting Pulsar subscription [{}]", tenant, subscriptionName, e);
         }
     }
 
