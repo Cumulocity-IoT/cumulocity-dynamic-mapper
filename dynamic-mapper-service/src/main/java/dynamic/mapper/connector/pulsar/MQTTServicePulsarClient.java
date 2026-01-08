@@ -559,6 +559,79 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         disconnect();
     }
 
+    /**
+     * Delete resources permanently - called only when connector is being deleted, not just disconnected
+     * This removes the subscription from the broker by calling unsubscribe()
+     * If the consumer is already closed, it will temporarily reconnect to perform the unsubscribe
+     */
+    public void deleteResources() {
+        if (towardsPlatformTopic == null) {
+            log.debug("{} - No platform topic configured, skipping subscription deletion", tenant);
+            return;
+        }
+
+        String subscriptionName = getSubscriptionName(connectorIdentifier, additionalSubscriptionIdTest);
+        Consumer<byte[]> tempConsumer = null;
+        boolean createdTempConsumer = false;
+
+        try {
+            // Check if we can use the existing consumer
+            if (platformConsumer != null && platformConsumer.isConnected()) {
+                tempConsumer = platformConsumer;
+                log.debug("{} - Using existing connected consumer to unsubscribe", tenant);
+            } else {
+                // Consumer is closed, need to create a temporary one just for unsubscribing
+                log.info("{} - Consumer not connected, creating temporary consumer to unsubscribe from [{}]",
+                        tenant, subscriptionName);
+
+                try {
+                    // Check if we have a valid Pulsar client
+                    if (pulsarClient == null || pulsarClient.isClosed()) {
+                        log.warn("{} - Pulsar client not available, cannot unsubscribe from [{}]",
+                                tenant, subscriptionName);
+                        return;
+                    }
+
+                    // Create temporary consumer with the same subscription name
+                    tempConsumer = pulsarClient.newConsumer()
+                            .topic(towardsPlatformTopic)
+                            .subscriptionName(subscriptionName)
+                            .subscribe();
+                    createdTempConsumer = true;
+                    log.debug("{} - Created temporary consumer for unsubscribe", tenant);
+                } catch (Exception e) {
+                    log.warn("{} - Could not create temporary consumer to unsubscribe [{}]: {}",
+                            tenant, subscriptionName, e.getMessage());
+                    return; // Can't unsubscribe without a consumer
+                }
+            }
+
+            // Now unsubscribe using the consumer (either existing or temporary)
+            if (tempConsumer != null) {
+                try {
+                    tempConsumer.unsubscribe();
+                    log.info("{} - Successfully unsubscribed from Pulsar subscription [{}] on topic [{}]",
+                            tenant, subscriptionName, towardsPlatformTopic);
+                } catch (PulsarClientException e) {
+                    log.warn("{} - Could not unsubscribe from Pulsar subscription [{}]: {}",
+                            tenant, subscriptionName, e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            log.error("{} - Exception deleting Pulsar subscription [{}]", tenant, subscriptionName, e);
+        } finally {
+            // Clean up temporary consumer if we created one
+            if (createdTempConsumer && tempConsumer != null) {
+                try {
+                    tempConsumer.close();
+                    log.debug("{} - Closed temporary consumer", tenant);
+                } catch (Exception e) {
+                    log.debug("{} - Error closing temporary consumer: {}", tenant, e.getMessage());
+                }
+            }
+        }
+    }
+
     @Override
     public boolean isConnected() {
         boolean clientConnected = pulsarClient != null && !pulsarClient.isClosed();

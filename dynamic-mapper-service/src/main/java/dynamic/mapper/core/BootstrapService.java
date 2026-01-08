@@ -448,6 +448,24 @@ public class BootstrapService {
         }
     }
 
+    // deleteConnectorResources will delete connector-specific resources like Pulsar subscriptions
+    // This must be called before disconnecting the connector (while client is still in registry)
+    public void deleteConnectorResources(String tenant, String connectorIdentifier)
+            throws ConnectorRegistryException {
+        AConnectorClient client = connectorRegistry.getClientForTenant(tenant, connectorIdentifier);
+        if (client == null) {
+            log.warn("{} - Cannot delete resources for connector {}: client not found in registry (already disconnected)",
+                    tenant, connectorIdentifier);
+            return;
+        }
+
+        if (client instanceof dynamic.mapper.connector.pulsar.MQTTServicePulsarClient) {
+            dynamic.mapper.connector.pulsar.MQTTServicePulsarClient pulsarClient =
+                (dynamic.mapper.connector.pulsar.MQTTServicePulsarClient) client;
+            pulsarClient.deleteResources();
+        }
+    }
+
     // shutdownAndRemoveConnector will unsubscribe the subscriber which drops all
     // queues
     public void shutdownAndRemoveConnector(String tenant, String connectorIdentifier)

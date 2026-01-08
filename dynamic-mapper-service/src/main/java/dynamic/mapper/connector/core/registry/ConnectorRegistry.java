@@ -151,6 +151,7 @@ public class ConnectorRegistry {
                 AConnectorClient client = connectorMap.get(identifier);
                 // to avoid memory leaks
                 client.setDispatcher(null);
+                // Disconnect asynchronously, then stop housekeeping
                 client.submitDisconnect();
                 client.stopHousekeepingAndClose();
 

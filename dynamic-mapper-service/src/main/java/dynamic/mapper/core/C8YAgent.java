@@ -835,17 +835,20 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     public Map<String, Object> getMOFromInventoryCacheByExternalId(String tenant, ExternalId externalId,
             Boolean testing) {
 
-        return inventoryCacheEnrichmentService.getMOFromInventoryCacheByExternalId(tenant, externalId, testing, this, configurationRegistry);
+        return inventoryCacheEnrichmentService.getMOFromInventoryCacheByExternalId(tenant, externalId, testing, this,
+                configurationRegistry);
     }
 
     public Map<String, Object> updateMOInInventoryCache(String tenant, String sourceId, Map<String, Object> updates,
             Boolean testing) {
-        return inventoryCacheEnrichmentService.updateMOInInventoryCache(tenant, sourceId, updates, testing, this, configurationRegistry);
+        return inventoryCacheEnrichmentService.updateMOInInventoryCache(tenant, sourceId, updates, testing, this,
+                configurationRegistry);
     }
 
     public Map<String, Object> getMOFromInventoryCache(String tenant, String sourceId, Boolean testing) {
 
-        return inventoryCacheEnrichmentService.getMOFromInventoryCache(tenant, sourceId, testing, this, configurationRegistry);
+        return inventoryCacheEnrichmentService.getMOFromInventoryCache(tenant, sourceId, testing, this,
+                configurationRegistry);
     }
 
     /**
