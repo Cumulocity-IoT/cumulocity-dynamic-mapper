@@ -33,6 +33,7 @@ import {
 } from '../..';
 import { FormatStringPipe } from '../../misc/format-string.pipe';
 import { CommonModule } from '@angular/common';
+import { SharedModule } from '../../shared.module';
 
 interface PropertyEntry {
   key: string;
@@ -49,6 +50,7 @@ interface PropertyEntry {
     CommonModule,
     FormsModule,
     FormlyModule,
+    SharedModule,
   ]
 })
 export class ConnectorConfigurationDrawerComponent implements OnInit {
