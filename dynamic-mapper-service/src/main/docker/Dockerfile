@@ -9,7 +9,7 @@ RUN jdeps --ignore-missing-deps -q  \
 /app/@package.name@/@package.name@.jar > deps.info
 RUN jlink \
 --module-path $JAVA_HOME/jmods \
---add-modules $(cat deps.info) \
+--add-modules java.se,java.base,java.compiler,java.desktop,java.instrument,java.naming,java.net.http,java.prefs,java.rmi,java.scripting,java.security.jgss,java.security.sasl,java.sql,jdk.jfr,jdk.management,jdk.unsupported,org.graalvm.collections,org.graalvm.nativeimage,jdk.crypto.ec \
 --no-header-files \
 --no-man-pages \
 --output /opt/jdk-mini
