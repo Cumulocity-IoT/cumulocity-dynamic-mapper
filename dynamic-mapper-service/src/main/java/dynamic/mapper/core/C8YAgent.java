@@ -25,7 +25,6 @@ import static java.util.Map.entry;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -39,14 +38,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.RestTemplate;
 import com.cumulocity.microservice.api.CumulocityClientProperties;
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
@@ -75,7 +67,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import c8y.IsDevice;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.client.Certificate;
-import dynamic.mapper.connector.pulsar.MQTTServicePulsarClient;
 import dynamic.mapper.core.cache.InboundExternalIdCache;
 import dynamic.mapper.core.cache.InventoryCache;
 import dynamic.mapper.core.facade.IdentityFacade;
@@ -249,57 +240,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
             return null;
         });
         return result;
-    }
-
-    public void deletePulsarSubscription(String tenant, String subscriptionName) {
-        try {
-            // Build the URL for deleting the Pulsar subscription
-            // Pattern: /service/messaging-management/tenants/{tenant}/namespaces/{namespace}/topics/{topic}/types/persistent/subscribers/{subscriptionName}
-            String baseUrl = clientProperties.getBaseURL();
-            if (baseUrl == null) {
-                log.error("{} - Cannot delete Pulsar subscription: base URL is null", tenant);
-                return;
-            }
-
-            String url = String.format("%s/service/messaging-management/tenants/%s/namespaces/%s/topics/%s/types/persistent/subscribers/%s",
-                    baseUrl,
-                    tenant,
-                    MQTTServicePulsarClient.PULSAR_NAMESPACE,
-                    MQTTServicePulsarClient.PULSAR_TOWARDS_PLATFORM_TOPIC,
-                    subscriptionName);
-
-            // Create headers with authentication
-            HttpHeaders headers = new HttpHeaders();
-            headers.set("Authorization", contextService.getContext().toCumulocityCredentials().getAuthenticationString());
-            headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
-
-            HttpEntity<String> entity = new HttpEntity<>(headers);
-
-            // Make the DELETE request
-            RestTemplate restTemplate = new RestTemplate();
-            ResponseEntity<String> response = restTemplate.exchange(
-                    url,
-                    HttpMethod.DELETE,
-                    entity,
-                    String.class);
-
-            if (response.getStatusCode().is2xxSuccessful()) {
-                log.info("{} - Successfully deleted Pulsar subscription: {}", tenant, subscriptionName);
-            } else {
-                log.warn("{} - Failed to delete Pulsar subscription: {} - Status: {}",
-                        tenant, subscriptionName, response.getStatusCode());
-            }
-        } catch (HttpClientErrorException e) {
-            if (e.getStatusCode().value() == 404) {
-                log.debug("{} - Pulsar subscription {} not found (already deleted or never existed)",
-                        tenant, subscriptionName);
-            } else {
-                log.error("{} - HTTP error deleting Pulsar subscription {}: {} - {}",
-                        tenant, subscriptionName, e.getStatusCode(), e.getMessage());
-            }
-        } catch (Exception e) {
-            log.error("{} - Exception deleting Pulsar subscription {}", tenant, subscriptionName, e);
-        }
     }
 
     public MeasurementRepresentation createMeasurement(String name, String type, ManagedObjectRepresentation mor,

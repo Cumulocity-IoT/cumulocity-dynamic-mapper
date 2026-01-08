@@ -341,13 +341,41 @@ public class ConfigurationController {
         try {
             ConnectorConfiguration configuration = connectorConfigurationService.getConnectorConfiguration(identifier,
                     tenant);
-            if (configuration.getEnabled())
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body("Can't delete an enabled connector! Disable connector first.");
             if (configuration.getConnectorType().equals(ConnectorType.HTTP)) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Can't delete a HttpConnector!");
             }
-            // Disconnect the connector and clean up all resources
+
+            boolean wasDisabled = !configuration.getEnabled();
+            boolean needsReconnect = wasDisabled &&
+                (configuration.getConnectorType().equals(ConnectorType.CUMULOCITY_MQTT_SERVICE_PULSAR));
+
+            // For Pulsar connectors that are disabled, temporarily enable them to delete subscriptions
+            if (needsReconnect) {
+                log.info("{} - Temporarily enabling connector {} to delete Pulsar subscription", tenant, identifier);
+                configuration.setEnabled(true);
+                connectorConfigurationService.saveConnectorConfiguration(configuration);
+
+                ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
+                Future<?> connectTask = bootstrapService.initializeConnectorByConfiguration(configuration, serviceConfiguration, tenant);
+
+                // Wait for connector to connect (with timeout)
+                try {
+                    connectTask.get(10, java.util.concurrent.TimeUnit.SECONDS);
+                } catch (Exception e) {
+                    log.warn("{} - Could not reconnect connector {} for subscription cleanup: {}", tenant, identifier, e.getMessage());
+                    // Continue anyway - deleteResources() has fallback logic
+                }
+            }
+
+            // Delete connector-specific resources (e.g., Pulsar subscriptions)
+            bootstrapService.deleteConnectorResources(tenant, identifier);
+
+            // Disable the connector if it's enabled (either originally or temporarily)
+            if (configuration.getEnabled()) {
+                bootstrapService.disableConnector(tenant, identifier);
+            }
+
+            // Clean up Notification 2.0 subscriptions
             bootstrapService.shutdownAndRemoveConnector(tenant, identifier);
             connectorConfigurationService.deleteConnectorConfiguration(identifier);
             mappingService.removeConnectorFromDeploymentMap(tenant, identifier);

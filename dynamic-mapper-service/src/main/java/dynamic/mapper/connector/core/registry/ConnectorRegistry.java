@@ -151,12 +151,9 @@ public class ConnectorRegistry {
                 AConnectorClient client = connectorMap.get(identifier);
                 // to avoid memory leaks
                 client.setDispatcher(null);
-                // Disconnect asynchronously, then cleanup
+                // Disconnect asynchronously, then stop housekeeping
                 client.submitDisconnect();
-                // cleanup() performs: stopHousekeepingAndClose() (which calls close/disconnect),
-                // clears subscription manager, and any connector-specific cleanup
-                // (e.g., deleting Pulsar subscriptions)
-                client.cleanup();
+                client.stopHousekeepingAndClose();
 
                 // store last connector status for monitoring
                 connectorMap.remove(identifier);
