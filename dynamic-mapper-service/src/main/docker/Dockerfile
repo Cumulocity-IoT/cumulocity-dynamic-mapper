@@ -1,13 +1,18 @@
 FROM ghcr.io/graalvm/jdk-community:21 as base
+ADD resources/* /data/
+RUN java -Djarmode=tools -jar /data/@package.name@.jar extract
+RUN jdeps --ignore-missing-deps -q  \
+--recursive \
+--multi-release 21 \
+--print-module-deps \
+--class-path '/app/@package.name@/lib/*' \
+/app/@package.name@/@package.name@.jar > deps.info
 RUN jlink \
 --module-path $JAVA_HOME/jmods \
---add-modules java.se,jdk.unsupported,jdk.crypto.ec \
+--add-modules $(cat deps.info) \
 --no-header-files \
 --no-man-pages \
 --output /opt/jdk-mini
-ADD resources/* /data/
-RUN java -Djarmode=tools -jar /data/@package.name@.jar extract
-RUN ls -al /app/@package.name@/
 
 FROM debian:12-slim
 COPY --from=base /opt/jdk-mini /opt/jdk-mini
