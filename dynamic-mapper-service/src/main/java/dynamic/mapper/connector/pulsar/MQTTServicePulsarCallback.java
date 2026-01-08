@@ -94,77 +94,94 @@ public class MQTTServicePulsarCallback implements MessageListener<byte[]> {
                     "{} - PREPARING_RESULTS: message on topic: [{}], connector {}",
                     tenant, towardsDeviceTopic, connectorIdentifier);
         }
+        int mappingQos = processedResults.getConsolidatedQos().ordinal();
+        if(mappingQos > 0) {
+            // Use the provided virtualThreadPool instead of creating a new thread
+            virtualThreadPool.submit(() -> {
+                try {
+                    // Wait for the future to complete
+                    List<? extends ProcessingContext<?>> results;
+                    if (timeout > 0) {
+                        results = processedResults.getProcessingResult().get(timeout, TimeUnit.MILLISECONDS);
+                    } else {
+                        results = processedResults.getProcessingResult().get();
+                    }
 
-        // Use the provided virtualThreadPool instead of creating a new thread
-        virtualThreadPool.submit(() -> {
-            try {
-                // Wait for the future to complete
-                List<? extends ProcessingContext<?>> results;
-                if (timeout > 0) {
-                    results = processedResults.getProcessingResult().get(timeout, TimeUnit.MILLISECONDS);
-                } else {
-                    results = processedResults.getProcessingResult().get();
-                }
-
-                // Check for errors in results
-                boolean hasErrors = false;
-                int httpStatusCode = 0;
-                if (results != null) {
-                    for (ProcessingContext<?> context : results) {
-                        if (context.hasError()) {
-                            for (Exception error : context.getErrors()) {
-                                if (error instanceof ProcessingException) {
-                                    if (((ProcessingException) error).getOriginException() instanceof SDKException) {
-                                        if (((SDKException) ((ProcessingException) error).getOriginException())
-                                                .getHttpStatus() > httpStatusCode) {
-                                            httpStatusCode = ((SDKException) ((ProcessingException) error)
-                                                    .getOriginException()).getHttpStatus();
+                    // Check for errors in results
+                    boolean hasErrors = false;
+                    int httpStatusCode = 0;
+                    if (results != null) {
+                        for (ProcessingContext<?> context : results) {
+                            if (context.hasError()) {
+                                for (Exception error : context.getErrors()) {
+                                    if (error instanceof ProcessingException) {
+                                        if (((ProcessingException) error).getOriginException() instanceof SDKException) {
+                                            if (((SDKException) ((ProcessingException) error).getOriginException())
+                                                    .getHttpStatus() > httpStatusCode) {
+                                                httpStatusCode = ((SDKException) ((ProcessingException) error)
+                                                        .getOriginException()).getHttpStatus();
+                                            }
                                         }
                                     }
                                 }
+                                hasErrors = true;
+                                log.error("{} - Error in processing context for topic: [{}]", tenant, towardsDeviceTopic);
+                                break;
                             }
-                            hasErrors = true;
-                            log.error("{} - Error in processing context for topic: [{}]", tenant, towardsDeviceTopic);
-                            break;
                         }
                     }
-                }
 
-                if (!hasErrors) {
-                    // No errors found, acknowledge based on original QoS requirements
-                    if (serviceConfiguration.getLogPayload()) {
-                        log.debug("{} - END: Sending ack for Pulsar message: topic: [{}], connector: {}",
+                    if (!hasErrors) {
+                        // No errors found, acknowledge based on original QoS requirements
+                        if (serviceConfiguration.getLogPayload()) {
+                            log.debug("{} - END: Sending ack for Pulsar message: topic: [{}], connector: {}",
+                                    tenant, towardsDeviceTopic, connectorIdentifier);
+                        }
+                        consumer.acknowledge(message);
+                    } else if (httpStatusCode < 500) {
+                        // Client errors - acknowledge to prevent redelivery
+                        log.warn("{} - END: Sending ack due to client error for Pulsar message: topic: [{}], connector: {}",
                                 tenant, towardsDeviceTopic, connectorIdentifier);
+                        consumer.acknowledge(message);
+                    } else {
+                        // Server error, negative acknowledge to trigger redelivery
+                        // But only if QoS requires reliability
+                        log.warn(
+                                "{} - END: Sending negative ack due to server error for Pulsar message: topic: [{}], connector: {}",
+                                tenant, towardsDeviceTopic, connectorIdentifier);
+                        consumer.negativeAcknowledge(message);
                     }
-                    consumer.acknowledge(message);
-                } else if (httpStatusCode < 500) {
-                    // Client errors - acknowledge to prevent redelivery
-                    log.warn("{} - END: Sending ack due to client error for Pulsar message: topic: [{}], connector: {}",
-                            tenant, towardsDeviceTopic, connectorIdentifier);
-                    consumer.acknowledge(message);
-                } else {
-                    // Server error, negative acknowledge to trigger redelivery
-                    // But only if QoS requires reliability
-                    log.warn(
-                            "{} - END: Sending negative ack due to server error for Pulsar message: topic: [{}], connector: {}",
+                } catch (InterruptedException | ExecutionException e) {
+                    // Processing failed, negative acknowledge to allow redelivery
+                    log.warn("{} - END: Was interrupted for Pulsar message: topic: [{}], connector: {}",
                             tenant, towardsDeviceTopic, connectorIdentifier);
                     consumer.negativeAcknowledge(message);
+                } catch (TimeoutException e) {
+                    var cancelResult = processedResults.getProcessingResult().cancel(true);
+                    log.warn("{} - END: Processing timed out with: {} milliseconds, connector {}, result of cancelling: {}",
+                            tenant, timeout, connectorIdentifier, cancelResult);
+                    consumer.negativeAcknowledge(message);
+                } catch (PulsarClientException e) {
+                    log.error("{} - Error acknowledging Pulsar message: topic: [{}], connector: {}",
+                            tenant, towardsDeviceTopic, connectorIdentifier, e);
                 }
-            } catch (InterruptedException | ExecutionException e) {
-                // Processing failed, negative acknowledge to allow redelivery
-                log.warn("{} - END: Was interrupted for Pulsar message: topic: [{}], connector: {}",
-                        tenant, towardsDeviceTopic, connectorIdentifier);
-                consumer.negativeAcknowledge(message);
-            } catch (TimeoutException e) {
-                var cancelResult = processedResults.getProcessingResult().cancel(true);
-                log.warn("{} - END: Processing timed out with: {} milliseconds, connector {}, result of cancelling: {}",
-                        tenant, timeout, connectorIdentifier, cancelResult);
-                consumer.negativeAcknowledge(message);
+                return null;
+            });
+        } else {
+            // For QoS 0 (or downgraded to 0), no need for special handling
+            // Acknowledge message with QoS=0
+            if (serviceConfiguration.getLogPayload()) {
+                log.info("{} - END: Sending manual ack for MQTT message: topic: [{}], QoS: {}, connector: {}",
+                        tenant, towardsDeviceTopic, mappingQos, connectorIdentifier);
+            }
+            try {
+                consumer.acknowledge(message);
             } catch (PulsarClientException e) {
                 log.error("{} - Error acknowledging Pulsar message: topic: [{}], connector: {}",
                         tenant, towardsDeviceTopic, connectorIdentifier, e);
             }
-            return null;
-        });
+
+        }
+
     }
 }
