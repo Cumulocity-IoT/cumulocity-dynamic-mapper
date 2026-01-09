@@ -307,7 +307,9 @@ public class ConfigurationRegistry {
     }
 
     public void createGraalsResources(String tenant, ServiceConfiguration serviceConfiguration) {
-        Engine eng = Engine.newBuilder()
+        Engine eng = Engine.newBuilder().allowExperimentalOptions(true)
+                .option("engine.Mode", "latency")
+                //.option("engine.Compilation", "false")
                 //.option("engine.WarnInterpreterOnly", "false")
                 .build();
 

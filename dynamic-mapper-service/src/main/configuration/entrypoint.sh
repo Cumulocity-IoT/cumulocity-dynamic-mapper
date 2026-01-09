@@ -23,7 +23,7 @@
 if [ -n "$MEMORY_LIMIT" ];
  then
   value=$(numfmt  --from=auto  --grouping $MEMORY_LIMIT)
-  value=$(($value/1048576)) # convert to MB
+  value=$(($value/1048576)) # convert to MB#
   echo "MEMORY_LIMIT: ${value}MB"
   memory_left=$(awk "BEGIN { memory = int($value * 0.1); if (memory <50) {memory = 50} print memory} ")
   echo "${memory_left}MB is left for system"
@@ -53,6 +53,8 @@ jvm_gc=${JAVA_GC:-"-XX:+UseG1GC -XX:+UseStringDeduplication -XX:MinHeapFreeRatio
 jvm_mem=${JAVA_MEM:-" "}
 jvm_opts=${JAVA_OPTS:-"-server -XX:HeapDumpPath=/var/log/dynamic-mapper-service/heap-dump-%p.hprof"}
 arguments=${ARGUMENTS:-" --package.name=dynamic-mapper-service --package.directory=dynamic-mapper-service"}
+graal_optimiziation="-Dpolyglot.engine.Compilation=false"
+#graal_optimiziation="-Dpolyglot.engine.Mode=latency"
 
 proxy_params=""
 if [ -n "$PROXY_HTTP_HOST" ]; then proxy_params="-Dhttp.proxyHost=${PROXY_HTTP_HOST} -DproxyHost=${PROXY_HTTP_HOST}"; fi
@@ -73,4 +75,4 @@ echo "otel_agent_attach = ${otel_agent_attach}"
 
 mkdir -p /var/log/dynamic-mapper-service; echo "heap dumps  /var/log/dynamic-mapper-service/heap-dump-<pid>.hprof"
 
-java ${jvm_opts} ${jvm_gc} ${jvm_mem} ${proxy_params}  ${otel_agent_attach} -jar /dynamic-mapper-service/dynamic-mapper-service.jar ${arguments}
+java ${jvm_opts} ${jvm_gc} ${jvm_mem} ${proxy_params} ${graal_optimiziation} ${otel_agent_attach} -jar /dynamic-mapper-service/dynamic-mapper-service.jar ${arguments}
