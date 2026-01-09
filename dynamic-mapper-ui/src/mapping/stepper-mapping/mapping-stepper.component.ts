@@ -33,7 +33,7 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 import { FormControl, FormGroup } from '@angular/forms';
-import { EditorComponent, loadMonacoEditor } from '@c8y/ngx-components/editor';
+import { EditorComponent } from '@c8y/ngx-components/editor';
 import { Alert, AlertService, BottomDrawerService, C8yStepper, CoreModule } from '@c8y/ngx-components';
 import { FormlyFieldConfig } from '@ngx-formly/core';
 import * as _ from 'lodash';
@@ -91,8 +91,6 @@ import { MappingStepPropertiesComponent } from '../step-property/mapping-propert
 import { MappingConnectorComponent } from '../step-connector/mapping-connector.component';
 import { MappingSubstitutionStepComponent } from '../step-substitution/mapping-substitution-step.component';
 import { PopoverModule } from 'ngx-bootstrap/popover';
-
-let initializedMonaco = false;
 
 const STEP_LABEL_TEST_MAPPING = 'Test mapping';
 const STEP_LABEL_GENERAL_SETTINGS = 'General settings';
@@ -353,16 +351,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.codeTemplateDecoded = this.codeTemplatesDecoded.get(this.templateId);
   }
 
-  async ngAfterViewInit(): Promise<void> {
-    if (!initializedMonaco) {
-      const monaco = await loadMonacoEditor();
-      if (this.mapping.transformationType === TransformationType.SMART_FUNCTION) {
-        monaco.languages.registerCompletionItemProvider('javascript', createCompletionProviderFlowFunction(monaco));
-      } else {
-        monaco.languages.registerCompletionItemProvider('javascript', createCompletionProviderSubstitutionAsCode(monaco));
-      }
-      if (monaco) initializedMonaco = true;
-    }
+  ngAfterViewInit(): void {
+    // Monaco is now loaded in ngOnInit
   }
 
   ngOnDestroy(): void {
