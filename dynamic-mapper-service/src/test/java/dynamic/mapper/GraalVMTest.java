@@ -26,6 +26,9 @@ import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Engine;
 import org.graalvm.polyglot.Value;
 
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+
 @Slf4j
 public class GraalVMTest {
     String scriptFibonacci = """
@@ -38,10 +41,160 @@ public class GraalVMTest {
 
     public static void main(String[] args) {
         GraalVMTest test = new GraalVMTest();
-        test.runTest();
+        test.runTestNewContext();
+        test.runTestSingleContext();
+        test.runTestPooledContext();
     }
 
-    private void runTest() {
+    private void runTestPooledContext() {
+        log.info("\n");
+        log.info("Starting GraalVM performance test with pooled Context");
+
+        // Create a single Engine instance to be reused
+        long engineStartTime = System.nanoTime();
+        Engine engine = Engine.newBuilder()
+                .option("engine.WarnInterpreterOnly", "false")
+                .build();
+        long engineBuildTime = System.nanoTime() - engineStartTime;
+        log.info("Engine build time:                   {} ms", String.format("%10.3f", engineBuildTime / 1_000_000.0));
+
+        // Create a pool of Context instances
+        int poolSize = 10;
+        BlockingQueue<Context> contextPool = new ArrayBlockingQueue<>(poolSize);
+        long totalPoolCreationTime = 0;
+
+        log.info("Creating context pool with size:     {}", String.format("%10d", poolSize));
+        for (int i = 0; i < poolSize; i++) {
+            long contextStartTime = System.nanoTime();
+            Context context = Context.newBuilder("js")
+                    .engine(engine)
+                    .option("js.strict", "true")
+                    .build();
+            long contextBuildTime = System.nanoTime() - contextStartTime;
+            totalPoolCreationTime += contextBuildTime;
+            contextPool.offer(context);
+        }
+        log.info("Pool creation time:                  {} ms", String.format("%10.3f", totalPoolCreationTime / 1_000_000.0));
+
+        // Run the test 100 times using contexts from the pool
+        int iterations = 100;
+        long totalContextAcquisitionTime = 0;
+        long totalScriptExecutionTime = 0;
+        long totalContextReturnTime = 0;
+        Value lastResult = null;
+
+        for (int i = 0; i < iterations; i++) {
+            try {
+                // Measure time to acquire context from pool
+                long acquireStartTime = System.nanoTime();
+                Context context = contextPool.take();
+                long acquireTime = System.nanoTime() - acquireStartTime;
+                totalContextAcquisitionTime += acquireTime;
+
+                // Measure script execution time
+                long scriptStartTime = System.nanoTime();
+                lastResult = context.eval("js", scriptFibonacci);
+                long scriptExecutionTime = System.nanoTime() - scriptStartTime;
+                totalScriptExecutionTime += scriptExecutionTime;
+
+                // Measure time to return context to pool
+                long returnStartTime = System.nanoTime();
+                contextPool.put(context);
+                long returnTime = System.nanoTime() - returnStartTime;
+                totalContextReturnTime += returnTime;
+
+                // Log progress every 100 iterations
+                if ((i + 1) % 100 == 0) {
+                    log.info("Completed {} iterations", i + 1);
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.error("Thread interrupted", e);
+                break;
+            }
+        }
+
+        // Close all contexts in the pool and the engine
+        for (Context context : contextPool) {
+            context.close();
+        }
+        engine.close();
+
+        // Calculate averages and totals
+        double avgContextAcquisitionTime = totalContextAcquisitionTime / (double) iterations / 1_000_000.0;
+        double avgScriptExecutionTime = totalScriptExecutionTime / (double) iterations / 1_000_000.0;
+        double avgContextReturnTime = totalContextReturnTime / (double) iterations / 1_000_000.0;
+        double avgTotalTime = avgContextAcquisitionTime + avgScriptExecutionTime + avgContextReturnTime;
+        double aggregatedScriptExecutionTime = totalScriptExecutionTime / 1_000_000.0;
+
+        // Log results
+        log.info("=== GraalVM Performance Test Results (Pooled Context) ===");
+        log.info("Pool size:                           {}", String.format("%10d", poolSize));
+        log.info("Iterations:                          {}", String.format("%10d", iterations));
+        log.info("Fibonacci result:                    {}", String.format("%10d", lastResult != null ? lastResult.asInt() : 0));
+        log.info("Average Context acquisition time:    {} ms", String.format("%10.3f", avgContextAcquisitionTime));
+        log.info("Average Script execution time:       {} ms", String.format("%10.3f", avgScriptExecutionTime));
+        log.info("Average Context return time:         {} ms", String.format("%10.3f", avgContextReturnTime));
+        log.info("Average total time per iteration:    {} ms", String.format("%10.3f", avgTotalTime));
+        log.info("Aggregated Script execution time:    {} ms", String.format("%10.3f", aggregatedScriptExecutionTime));
+    }
+
+    private void runTestSingleContext() {
+        log.info("\n");
+        log.info("Starting GraalVM performance test with single reused Context");
+
+        // Create a single Engine instance to be reused
+        long engineStartTime = System.nanoTime();
+        Engine engine = Engine.newBuilder()
+                .option("engine.WarnInterpreterOnly", "false")
+                .build();
+        long engineBuildTime = System.nanoTime() - engineStartTime;
+        log.info("Engine build time:                   {} ms", String.format("%10.3f", engineBuildTime / 1_000_000.0));
+
+        // Create a single Context instance to be reused
+        long contextStartTime = System.nanoTime();
+        Context context = Context.newBuilder("js")
+                .engine(engine)
+                .option("js.strict", "true")
+                .build();
+        long contextBuildTime = System.nanoTime() - contextStartTime;
+        log.info("Context build time:                  {} ms", String.format("%10.3f", contextBuildTime / 1_000_000.0));
+
+        // Run the test 100 times with the same context
+        int iterations = 100;
+        long totalScriptExecutionTime = 0;
+        Value lastResult = null;
+
+        for (int i = 0; i < iterations; i++) {
+            // Measure script execution time
+            long scriptStartTime = System.nanoTime();
+            lastResult = context.eval("js", scriptFibonacci);
+            long scriptExecutionTime = System.nanoTime() - scriptStartTime;
+            totalScriptExecutionTime += scriptExecutionTime;
+
+            // Log progress every 100 iterations
+            if ((i + 1) % 100 == 0) {
+                log.info("Completed {} iterations", i + 1);
+            }
+        }
+
+        // Close the context and engine
+        context.close();
+        engine.close();
+
+        // Calculate averages and totals
+        double avgScriptExecutionTime = totalScriptExecutionTime / (double) iterations / 1_000_000.0;
+        double aggregatedScriptExecutionTime = totalScriptExecutionTime / 1_000_000.0;
+
+        // Log results
+        log.info("=== GraalVM Performance Test Results (Single Context) ===");
+        log.info("Iterations:                          {}", String.format("%10d", iterations));
+        log.info("Fibonacci result:                    {}", String.format("%10d", lastResult != null ? lastResult.asInt() : 0));
+        log.info("Average Script execution time:       {} ms", String.format("%10.3f", avgScriptExecutionTime));
+        log.info("Aggregated Script execution time:    {} ms", String.format("%10.3f", aggregatedScriptExecutionTime));
+    }
+
+    private void runTestNewContext() {
         log.info("Starting GraalVM performance test");
 
         // Create a single Engine instance to be reused
