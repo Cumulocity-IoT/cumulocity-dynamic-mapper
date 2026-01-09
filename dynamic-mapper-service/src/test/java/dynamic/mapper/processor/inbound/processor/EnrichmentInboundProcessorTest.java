@@ -130,23 +130,6 @@ class EnrichmentInboundProcessorTest {
         when(connectorMessage.getPayload()).thenReturn("test payload".getBytes());
     }
 
-    private void injectMappingServiceIfExists(EnrichmentInboundProcessor processor, MappingService mappingService) {
-        try {
-            Field field = findMappingServiceField(processor.getClass());
-            if (field != null) {
-                field.setAccessible(true);
-                field.set(processor, mappingService);
-                log.info("Successfully injected mappingService into " + processor.getClass().getSimpleName());
-            } else {
-                log.info("No mappingService field found in " + processor.getClass().getSimpleName()
-                        + " or its parent classes");
-            }
-        } catch (Exception e) {
-            log.info("Failed to inject mappingService: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-
     private Field findMappingServiceField(Class<?> clazz) {
         while (clazz != null) {
             try {
