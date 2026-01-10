@@ -4,14 +4,15 @@
     "outDir": "./out-tsc/app",
     "noImplicitOverride": false,
     "skipLibCheck": true,
-    "strict": false,
-    "noPropertyAccessFromIndexSignature": false,
-    "noImplicitReturns": false
+    "strict": false
   },
   "files": [
     "src/main.ts"
   ],
   "include": [
     "src/**/*.ts"
+  ],
+  "exclude": [
+    "../ngx-components/**/*.spec.ts"
   ]
 }
