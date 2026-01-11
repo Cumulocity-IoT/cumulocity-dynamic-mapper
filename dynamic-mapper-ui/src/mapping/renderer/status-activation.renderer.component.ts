@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { CommonModule } from '@angular/common';
+
 import { HttpStatusCode } from '@angular/common/http';
 import { ChangeDetectorRef, Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { AlertService, CellRendererContext, CoreModule } from '@c8y/ngx-components';
@@ -48,7 +48,7 @@ import { SubscriptionService } from '../core/subscription.service';
     </div>
   `,
   standalone: true,
-  imports: [CoreModule, CommonModule]
+  imports: [CoreModule]
 })
 export class MappingStatusActivationRendererComponent implements OnInit {
   feature: Feature;

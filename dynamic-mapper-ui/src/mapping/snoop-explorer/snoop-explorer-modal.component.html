@@ -1,23 +1,23 @@
 <!--
-  ~ Copyright (c) 2022-2025 Cumulocity GmbH.
-  ~
-  ~ SPDX-License-Identifier: Apache-2.0
-  ~
-  ~  Licensed under the Apache License, Version 2.0 (the "License");
-  ~  you may not use this file except in compliance with the License.
-  ~  You may obtain a copy of the License at
-  ~
-  ~       http://www.apache.org/licenses/LICENSE-2.0
-  ~
-  ~  Unless required by applicable law or agreed to in writing, software
-  ~  distributed under the License is distributed on an "AS IS" BASIS,
-  ~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  ~  See the License for the specific language governing permissions and
-  ~  limitations under the License.
-  ~
-  ~  @authors Christof Strack, Stefan Witschel
-  ~
-  -->
+~ Copyright (c) 2022-2025 Cumulocity GmbH.
+~
+~ SPDX-License-Identifier: Apache-2.0
+~
+~  Licensed under the Apache License, Version 2.0 (the "License");
+~  you may not use this file except in compliance with the License.
+~  You may obtain a copy of the License at
+~
+~       http://www.apache.org/licenses/LICENSE-2.0
+~
+~  Unless required by applicable law or agreed to in writing, software
+~  distributed under the License is distributed on an "AS IS" BASIS,
+~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+~  See the License for the specific language governing permissions and
+~  limitations under the License.
+~
+~  @authors Christof Strack, Stefan Witschel
+~
+-->
 
 <div class="modal-header dialog-header animated fadeIn">
   <h1 c8yIcon="c8y-data-explorer"></h1>
@@ -29,15 +29,17 @@
       <div class="c8y-select-wrapper" style="width: 50%">
         <select class="form-control" (change)="onSelectSnoopedTemplate($event)"
           [disabled]="mapping.snoopedTemplates?.length === 0">
-          <option *ngFor="let template of mapping.snoopedTemplates; let i = index" [value]="i" [selected]="i === 0">
-            {{ 'Template - ' + (i + 1) }}
-          </option>
+          @for (template of mapping.snoopedTemplates; track template; let i = $index) {
+            <option [value]="i" [selected]="i === 0">
+              {{ 'Template - ' + (i + 1) }}
+            </option>
+          }
         </select>
       </div>
       <div class="p-t-16">
         <label>Template</label>
         <d11r-mapping-json-editor [options]="editorOptionsGeneral" [class]="'jse-main-small'" [data]="template"
-          #editorGeneral></d11r-mapping-json-editor>
+        #editorGeneral></d11r-mapping-json-editor>
       </div>
     </div>
   </div>

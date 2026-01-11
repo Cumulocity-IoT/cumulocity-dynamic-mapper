@@ -26,7 +26,7 @@ const UNSPECIFIED_LABEL = 'UNSPECIFIED';
 @Component({
   template: `<span>{{ displayValue }}</span>`,
   standalone: true,
-  imports: [CommonModule]
+  imports: []
 })
 export class IdRendererComponent {
   constructor(public readonly context: CellRendererContext) {}

@@ -20,7 +20,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { IManagedObject } from '@c8y/client';
-import { CommonModule } from '@angular/common';
+
 import { CoreModule } from '@c8y/ngx-components';
 import { NODE3, SharedModule } from '../../shared';
 
@@ -36,7 +36,7 @@ interface ExtensionWithEntries extends IManagedObject {
   selector: 'd11r-mapping-extension-properties',
   templateUrl: './extension-properties.component.html',
   standalone: true,
-  imports: [CoreModule, CommonModule, SharedModule]
+  imports: [CoreModule, SharedModule]
 })
 export class ExtensionPropertiesComponent implements OnInit {
   extension: ExtensionWithEntries;

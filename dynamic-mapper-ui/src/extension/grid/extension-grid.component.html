@@ -1,23 +1,23 @@
 <!--
-  ~ Copyright (c) 2022-2025 Cumulocity GmbH.
-  ~
-  ~ SPDX-License-Identifier: Apache-2.0
-  ~
-  ~  Licensed under the Apache License, Version 2.0 (the "License");
-  ~  you may not use this file except in compliance with the License.
-  ~  You may obtain a copy of the License at
-  ~
-  ~       http://www.apache.org/licenses/LICENSE-2.0
-  ~
-  ~  Unless required by applicable law or agreed to in writing, software
-  ~  distributed under the License is distributed on an "AS IS" BASIS,
-  ~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  ~  See the License for the specific language governing permissions and
-  ~  limitations under the License.
-  ~
-  ~  @authors Christof Strack, Stefan Witschel
-  ~
-  -->
+~ Copyright (c) 2022-2025 Cumulocity GmbH.
+~
+~ SPDX-License-Identifier: Apache-2.0
+~
+~  Licensed under the Apache License, Version 2.0 (the "License");
+~  you may not use this file except in compliance with the License.
+~  You may obtain a copy of the License at
+~
+~       http://www.apache.org/licenses/LICENSE-2.0
+~
+~  Unless required by applicable law or agreed to in writing, software
+~  distributed under the License is distributed on an "AS IS" BASIS,
+~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+~  See the License for the specific language governing permissions and
+~  limitations under the License.
+~
+~  @authors Christof Strack, Stefan Witschel
+~
+-->
 
 <c8y-title>{{ 'Processor extension' | translate }}</c8y-title>
 
@@ -34,7 +34,7 @@
   <div class="no-min-height p-t-0 card-column-40 text-center-grid">
     <span class="label label-primary">Loading Extensions:&nbsp;{{
       externalExtensionEnabled ? 'External and Internal' : 'only Internal'
-      }}</span>
+    }}</span>
   </div>
 </c8y-action-bar-item>
 
@@ -47,10 +47,12 @@
 </c8y-action-bar-item>
 
 <c8y-action-bar-item [placement]="'right'">
-  <button (click)="reloadExtensions()" class="btn btn-link" title="{{ 'Reload' | translate }}" *ngIf="feature?.userHasMappingAdminRole">
-    <i [ngClass]="{ 'icon-spin': reloading }" c8yIcon="refresh"></i>
-    {{ 'Reload' | translate }}
-  </button>
+  @if (feature?.userHasMappingAdminRole) {
+    <button (click)="reloadExtensions()" class="btn btn-link" title="{{ 'Reload' | translate }}">
+      <i [ngClass]="{ 'icon-spin': reloading }" c8yIcon="refresh"></i>
+      {{ 'Reload' | translate }}
+    </button>
+  }
 </c8y-action-bar-item>
 
 <c8y-action-bar-item [placement]="'left'" itemClass="navbar-form hidden-xs">
@@ -58,33 +60,39 @@
   </c8y-list-display-switch>
 </c8y-action-bar-item>
 
-<div *ngIf="(extensions$ | async)?.length === 0" class="c8y-empty-state text-center">
-  <h1 class="c8y-icon c8y-icon-modules c8y-icon-duocolor"></h1>
-  <h3 translate>No extension to display.</h3>
-  <p translate>Add your first extension by clicking below.</p>
-  <p>
-    <button (click)="addExtension()" class="btn btn-primary" title="{{ 'Add Java Extension' | translate }}">
-      {{ 'Add extension' | translate }}
-    </button>
-  </p>
-</div>
+@if ((extensions$ | async)?.length === 0) {
+  <div class="c8y-empty-state text-center">
+    <h1 class="c8y-icon c8y-icon-modules c8y-icon-duocolor"></h1>
+    <h3 translate>No extension to display.</h3>
+    <p translate>Add your first extension by clicking below.</p>
+    <p>
+      <button (click)="addExtension()" class="btn btn-primary" title="{{ 'Add Java Extension' | translate }}">
+        {{ 'Add extension' | translate }}
+      </button>
+    </p>
+  </div>
+}
 
 <div [ngClass]="listClass" class="card-group">
-  <div class="page-sticky-header hidden-xs d-flex" *ngIf="(extensions$ | async)?.length > 0">
-    <div class="card-block card-column-40 p-l-0">
-      <div class="card-appicon"></div>
-      {{ 'Extension' | translate }}
-    </div>
-    <div class="card-block p-0 card-column-80 p-l-0">
-      <div class="card-block card-column-60">
-        {{ 'Extension type' | translate }}
+  @if ((extensions$ | async)?.length > 0) {
+    <div class="page-sticky-header hidden-xs d-flex">
+      <div class="card-block card-column-40 p-l-0">
+        <div class="card-appicon"></div>
+        {{ 'Extension' | translate }}
       </div>
-      <div class="card-block card-column-60">{{ 'Number events' | translate }}</div>
+      <div class="card-block p-0 card-column-80 p-l-0">
+        <div class="card-block card-column-60">
+          {{ 'Extension type' | translate }}
+        </div>
+        <div class="card-block card-column-60">{{ 'Number events' | translate }}</div>
+      </div>
     </div>
-  </div>
+  }
 
-  <div *ngFor="let app of extensions$ | async" class="col-xs-12 col-sm-4 col-md-3">
-    <d11r-mapping-extension-card (appDeleted)="loadExtensions()" [app]="app" class="d-contents">
-    </d11r-mapping-extension-card>
-  </div>
+  @for (app of extensions$ | async; track app) {
+    <div class="col-xs-12 col-sm-4 col-md-3">
+      <d11r-mapping-extension-card (appDeleted)="loadExtensions()" [app]="app" class="d-contents">
+      </d11r-mapping-extension-card>
+    </div>
+  }
 </div>

@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { CommonModule } from '@angular/common';
+
 import { Component, ElementRef, OnDestroy, OnInit } from '@angular/core';
 import { CoreModule } from '@c8y/ngx-components';
 import { ECharts, EChartsOption } from 'echarts';
@@ -41,7 +41,7 @@ interface AccumulatedStats {
   templateUrl: './chart.component.html',
   styleUrls: ['./chart.component.css'],
   standalone: true,
-  imports: [CoreModule, CommonModule, NgxEchartsModule],
+  imports: [CoreModule, NgxEchartsModule],
   providers: [provideEcharts()]
 })
 export class MonitoringChartComponent implements OnInit, OnDestroy {

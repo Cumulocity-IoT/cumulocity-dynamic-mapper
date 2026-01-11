@@ -1,23 +1,23 @@
 <!--
-  ~ Copyright (c) 2022-2025 Cumulocity GmbH.
-  ~
-  ~ SPDX-License-Identifier: Apache-2.0
-  ~
-  ~  Licensed under the Apache License, Version 2.0 (the "License");
-  ~  you may not use this file except in compliance with the License.
-  ~  You may obtain a copy of the License at
-  ~
-  ~       http://www.apache.org/licenses/LICENSE-2.0
-  ~
-  ~  Unless required by applicable law or agreed to in writing, software
-  ~  distributed under the License is distributed on an "AS IS" BASIS,
-  ~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  ~  See the License for the specific language governing permissions and
-  ~  limitations under the License.
-  ~
-  ~  @authors Christof Strack, Stefan Witschel
-  ~
-  -->
+~ Copyright (c) 2022-2025 Cumulocity GmbH.
+~
+~ SPDX-License-Identifier: Apache-2.0
+~
+~  Licensed under the Apache License, Version 2.0 (the "License");
+~  you may not use this file except in compliance with the License.
+~  You may obtain a copy of the License at
+~
+~       http://www.apache.org/licenses/LICENSE-2.0
+~
+~  Unless required by applicable law or agreed to in writing, software
+~  distributed under the License is distributed on an "AS IS" BASIS,
+~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+~  See the License for the specific language governing permissions and
+~  limitations under the License.
+~
+~  @authors Christof Strack, Stefan Witschel
+~
+-->
 <c8y-stepper class="d-col no-align-items fit-h c8y-stepper--no-btns a-i-center"
   [disableDefaultIcons]="{ edit: true, done: false }" [customClasses]="[
     'col-xs-10',
@@ -56,17 +56,21 @@
                   </div>
                   <c8y-typeahead container="body" name="selectedClient" [placeholder]="'Search for clients...'"
                     [allowFreeEntries]="true" [(ngModel)]="selectedClient" (onSearch)="onSearch($event)">
-                    <c8y-li class="p-l-8 p-r-8 c8y-list__item--link" *ngFor="let client of filteredClients"
-                      (click)="selectClient(client)">
-                      <c8y-highlight [text]="client.name" [pattern]="pattern"></c8y-highlight>
-                    </c8y-li>
-                    <c8y-li class="bg-level-2 p-8 sticky-bottom" *ngIf="selectedClient && filteredClients.length == 0">
-                      <span translate>New client: {{selectedClient.name}}</span>
-                      <button class="btn btn-default btn-sm m-l-8" title="Add new client" type="button"
-                        (click)="addNewClient(searchTerm)" translate>
-                        Add new client
-                      </button>
-                    </c8y-li>
+                    @for (client of filteredClients; track client) {
+                      <c8y-li class="p-l-8 p-r-8 c8y-list__item--link"
+                        (click)="selectClient(client)">
+                        <c8y-highlight [text]="client.name" [pattern]="pattern"></c8y-highlight>
+                      </c8y-li>
+                    }
+                    @if (selectedClient && filteredClients.length == 0) {
+                      <c8y-li class="bg-level-2 p-8 sticky-bottom">
+                        <span translate>New client: {{selectedClient.name}}</span>
+                        <button class="btn btn-default btn-sm m-l-8" title="Add new client" type="button"
+                          (click)="addNewClient(searchTerm)" translate>
+                          Add new client
+                        </button>
+                      </c8y-li>
+                    }
                   </c8y-typeahead>
                 </div>
               </div>
