@@ -167,6 +167,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   codeTemplateDecoded: CodeTemplate;
   codeTemplatesDecoded: Map<string, CodeTemplate> = new Map<string, CodeTemplate>();
   codeTemplates: CodeTemplateMap;
+  codeTemplateEntries: { key: string; name: string; type: TemplateType }[] = [];
   mappingCode: any;
   templateId: TemplateType = undefined;
 
@@ -349,6 +350,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.codeTemplates = await this.sharedService.getCodeTemplates();
     this.codeTemplatesDecoded = await this.stepperService.loadCodeTemplates();
     this.codeTemplateDecoded = this.codeTemplatesDecoded.get(this.templateId);
+    this.updateCodeTemplateEntries();
   }
 
   ngAfterViewInit(): void {
@@ -804,10 +806,13 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     }
   }
 
-  getCodeTemplateEntries(): { key: string; name: string; type: TemplateType }[] {
-    if (!this.codeTemplates) return [];
+  private updateCodeTemplateEntries(): void {
+    if (!this.codeTemplates) {
+      this.codeTemplateEntries = [];
+      return;
+    }
     const expectedType = `${this.stepperConfiguration.direction.toString()}_${this.mapping?.transformationType.toString()}`;
-    return Object.entries(this.codeTemplates)
+    this.codeTemplateEntries = Object.entries(this.codeTemplates)
       .filter(([key, template]) =>
         template.templateType.toString() === expectedType
       )
@@ -838,6 +843,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         );
 
         this.codeTemplates = await this.sharedService.getCodeTemplates();
+        this.updateCodeTemplateEntries();
 
         if (response.status >= 200 && response.status < 300) {
           this.alertService.success(gettext('Added new code template.'));
@@ -865,10 +871,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       if (isSubstitutionsAsCode(this.mapping)) {
         if (typeof result === 'string' && result.trim()) {
           this.mappingCode = result;
-          this.cdr.detectChanges();
 
           if (this.codeEditor) {
-            setTimeout(() => this.codeEditor.writeValue(result), 100);
+            setTimeout(() => this.codeEditor.writeValue(result), 0);
           }
 
           this.alertService.success('Generated JavaScript code successfully.');

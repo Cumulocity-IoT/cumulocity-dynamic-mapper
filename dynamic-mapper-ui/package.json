@@ -8,7 +8,10 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "format": "prettier --write 'src/**/*.ts'",
+    "lint": "eslint --ext .ts,.component.html .",
+    "cy:run": "cypress run"
   },
   "license": "Apache-2.0",
   "prettier": {
@@ -56,6 +59,9 @@
     "@c8y/devkit": "1023.17.6",
     "@c8y/options": "1023.17.6",
     "@types/jasmine": "~5.1.0",
+    "cumulocity-cypress": "^1.4.1",
+    "cypress": "^15.8.2",
+    "cypress-slow-down": "^1.3.1",
     "jasmine-core": "~5.9.0",
     "karma": "~6.4.0",
     "karma-chrome-launcher": "~3.2.0",
