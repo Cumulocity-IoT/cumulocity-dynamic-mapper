@@ -273,7 +273,8 @@ export class CustomSelectComponent
         this.selectKeyboardService.options = {
             emptyInput: true,
             keyboardSearch: true,
-            spaceSelect: this.canSelectWithSpace
+            spaceSelect: this.canSelectWithSpace,
+            noMatchHighlightFirst: false
         };
     }
 
@@ -315,11 +316,12 @@ export class CustomSelectComponent
      * @ignore
      */
     ngOnChanges(changes: SimpleChanges): void {
-        if (changes.canSelectWithSpace) {
+        if (changes['canSelectWithSpace']) {
             this.selectKeyboardService.options = {
                 emptyInput: true,
                 keyboardSearch: true,
-                spaceSelect: changes.canSelectWithSpace.currentValue
+                spaceSelect: changes['canSelectWithSpace'].currentValue,
+                noMatchHighlightFirst: false
             };
         }
     }

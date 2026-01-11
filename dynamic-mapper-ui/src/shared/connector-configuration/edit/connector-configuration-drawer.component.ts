@@ -114,11 +114,13 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
       wrappers: ['c8y-form-field'],
       props: {
         label: 'Connector type',
-        options: this.specifications.map(sp => ({
-          label: !this.allowedConnectors.includes(sp.connectorType) ? sp.name + '-  Only one instance per tenant allowed' : sp.name,
-          value: sp.connectorType,
-          disabled: !this.allowedConnectors.includes(sp.connectorType) // Disable if not allowed
-        })),
+        options: this.specifications
+          .filter(sp => sp.connectorType !== ConnectorType.CUMULOCITY_MQTT_SERVICE)
+          .map(sp => ({
+            label: !this.allowedConnectors.includes(sp.connectorType) ? sp.name + '-  Only one instance per tenant allowed' : sp.name,
+            value: sp.connectorType,
+            disabled: !this.allowedConnectors.includes(sp.connectorType) // Disable if not allowed
+          })),
         change: () => this.createDynamicForm(this.brokerForm.get('connectorType').value),
         required: true,
         disabled: this.readOnly

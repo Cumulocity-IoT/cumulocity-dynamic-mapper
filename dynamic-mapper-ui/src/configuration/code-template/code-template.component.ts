@@ -23,18 +23,15 @@ import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AlertService, CoreModule } from '@c8y/ngx-components';
-import { EditorComponent, loadMonacoEditor } from '@c8y/ngx-components/editor';
+import { EditorComponent } from '@c8y/ngx-components/editor';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { BehaviorSubject } from 'rxjs';
 import { base64ToString, stringToBase64 } from '../../mapping/shared/util';
-import { createCompletionProviderSubstitutionAsCode } from '../../mapping/shared/stepper.model';
 import { Direction, Feature, ManageTemplateComponent, Operation, createCustomUuid } from '../../shared';
 import { SharedService } from '../../shared/service/shared.service';
 import { CodeTemplate, CodeTemplateMap, TemplateType } from '../shared/configuration.model';
-
-let initializedMonaco = false;
 
 @Component({
   selector: 'd11r-shared-code',
@@ -132,14 +129,8 @@ export class CodeComponent implements OnInit {
     this.updateCodeTemplateEntries();
   }
 
-  async ngAfterViewInit(): Promise<void> {
-    if (!initializedMonaco) {
-      const monaco = await loadMonacoEditor();
-      monaco.languages.registerCompletionItemProvider('javascript', createCompletionProviderSubstitutionAsCode(monaco));
-      if (monaco) {
-        initializedMonaco = true;
-      }
-    }
+  ngAfterViewInit(): void {
+    // Monaco is now loaded in ngOnInit
   }
 
   async updateCodeTemplateEntries(): Promise<void> {
