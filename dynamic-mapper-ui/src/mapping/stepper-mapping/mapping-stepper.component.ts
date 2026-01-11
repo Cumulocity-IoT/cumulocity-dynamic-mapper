@@ -65,7 +65,7 @@ import {
   CapitalizeCasePipe
 } from '../../shared';
 import { ValidationError } from '../shared/mapping.model';
-import { createCompletionProviderFlowFunction, createCompletionProviderSubstitutionAsCode, EditorMode, STEP_DEFINE_SUBSTITUTIONS, STEP_GENERAL_SETTINGS, STEP_SELECT_TEMPLATES, STEP_TEST_MAPPING } from '../shared/stepper.model';
+import { EditorMode, STEP_DEFINE_SUBSTITUTIONS, STEP_GENERAL_SETTINGS, STEP_SELECT_TEMPLATES, STEP_TEST_MAPPING } from '../shared/stepper.model';
 import {
   base64ToString,
   checkTransformationType,
