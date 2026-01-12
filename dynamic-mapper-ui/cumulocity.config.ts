@@ -12,10 +12,18 @@ export default {
     icon: {
       class: 'c8y-icon-dynamic-mapper'
     },
-    dynamicOptionsUrl: true
+    key: 'c8y-pkg-dynamic-mapper-key',
+    contentSecurityPolicy:
+      "base-uri 'none'; default-src 'self' 'unsafe-inline' http: https: ws: wss:; connect-src 'self' http: https: ws: wss:;  script-src 'self' *.bugherd.com *.twitter.com *.twimg.com *.aptrinsic.com 'unsafe-inline' 'unsafe-eval' data:; style-src * 'unsafe-inline' blob:; img-src * data: blob:; font-src * data:; frame-src *; worker-src 'self' blob:;",
+    dynamicOptionsUrl: '/apps/public/public-options/options.json',
+    tabsHorizontal: true,
+    noAppSwitcher: false,
+    package: 'blueprint',
+    contextHelp: true,
+    isPackage: true,
   },
   buildTime: {
-        copy: [
+    copy: [
       {
         from: 'README.md',
         to: 'README.md'
@@ -86,7 +94,7 @@ export default {
         from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Change_Metadata.png',
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_Change_Metadata.png'
       },
-            {
+      {
         from: '../resources/image/Dynamic_Mapper_Connector_New.png',
         to: 'image/Dynamic_Mapper_Connector_New.png'
       },
