@@ -32,7 +32,7 @@ import {
   SharedService
 } from '../..';
 import { FormatStringPipe } from '../../misc/format-string.pipe';
-import { CommonModule } from '@angular/common';
+
 import { SharedModule } from '../../shared.module';
 
 interface PropertyEntry {
@@ -47,11 +47,10 @@ interface PropertyEntry {
   standalone: true,
   imports: [
     CoreModule,
-    CommonModule,
     FormsModule,
     FormlyModule,
-    SharedModule,
-  ]
+    SharedModule
+]
 })
 export class ConnectorConfigurationDrawerComponent implements OnInit {
   @Input() add: boolean;

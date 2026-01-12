@@ -17,22 +17,26 @@
  *
  * @authors Christof Strack
  */
-import { CommonModule } from '@angular/common';
+
 import { Component } from '@angular/core';
 import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
 
 @Component({
   selector: 'd11r-mapping-renderer-deployment',
   template: `
-    <div *ngFor="let con of connectors">
-      <span class="text-12 tag tag--success">{{ con.name }}</span>
-    </div>
-    <div *ngIf="showNoConnectorWarning">
-      <span class="text-12 tag tag--danger">No active connector</span>
-    </div>
-  `,
+    @for (con of connectors; track con) {
+      <div>
+        <span class="text-12 tag tag--success">{{ con.name }}</span>
+      </div>
+    }
+    @if (showNoConnectorWarning) {
+      <div>
+        <span class="text-12 tag tag--danger">No active connector</span>
+      </div>
+    }
+    `,
   standalone: true,
-  imports: [CoreModule, CommonModule]
+  imports: [CoreModule]
 })
 export class MappingDeploymentRendererComponent {
   constructor(public readonly context: CellRendererContext) {}

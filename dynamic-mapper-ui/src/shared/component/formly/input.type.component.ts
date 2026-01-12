@@ -25,27 +25,28 @@ import { FieldType } from '@ngx-formly/core';
 
 @Component({
   selector: 'd11r-formly-field-d11r-input',
-  template: `<input
-      *ngIf="type !== 'number'; else numberTmp"
-      [type]="type"
-      [formControl]="formControl"
-      [class]="class"
-      [formlyAttributes]="field"
-      [required]="props.required"
-      [attr.autocomplete]="props['autocomplete'] ? props['autocomplete'] : null"
-      [class.is-invalid]="showError"
+  template: `@if (type !== 'number') {
+  <input
+    [type]="type"
+    [formControl]="formControl"
+    [class]="class"
+    [formlyAttributes]="field"
+    [required]="props.required"
+    [attr.autocomplete]="props['autocomplete'] ? props['autocomplete'] : null"
+    [class.is-invalid]="showError"
     />
-    <ng-template #numberTmp>
-      <input
-        type="number"
-        [formControl]="formControl"
-        [class]="class"
-        [formlyAttributes]="field"
-        [required]="props.required"
-        [attr.autocomplete]="props['autocomplete']? props['autocomplete'] : null"
-        [class.is-invalid]="showError"
-      />
-    </ng-template>`,
+} @else {
+  <input
+    type="number"
+    [formControl]="formControl"
+    [class]="class"
+    [formlyAttributes]="field"
+    [required]="props.required"
+    [attr.autocomplete]="props['autocomplete']? props['autocomplete'] : null"
+    [class.is-invalid]="showError"
+    />
+}
+`,
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
       imports: [
