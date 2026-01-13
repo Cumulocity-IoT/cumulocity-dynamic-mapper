@@ -26,7 +26,7 @@ import {
 } from '@angular/forms';
 import { BsDropdownDirective, BsDropdownModule } from 'ngx-bootstrap/dropdown';
 import { Subject } from 'rxjs';
-import { NgIf, NgClass, NgFor, NgTemplateOutlet } from '@angular/common';
+import { NgClass, NgTemplateOutlet } from '@angular/common';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { isEqual } from 'lodash-es';
 import { C8yTranslatePipe, IconDirective, ListGroupComponent, ListItemBodyComponent, ListItemCheckboxComponent, ListItemComponent, RequiredInputPlaceholderDirective, SelectableItem, SelectableItemTemplate, SelectedItemsDirective, SelectItemDirective, SelectKeyboardService } from '@c8y/ngx-components';
@@ -50,19 +50,17 @@ import { C8yTranslatePipe, IconDirective, ListGroupComponent, ListItemBodyCompon
     ],
     standalone: true,
     imports: [
-        BsDropdownModule,
-        NgIf,
-        NgClass,
-        NgFor,
-        NgTemplateOutlet,
-        IconDirective,
-        RequiredInputPlaceholderDirective,
-        ListGroupComponent,
-        ListItemComponent,
-        ListItemCheckboxComponent,
-        ListItemBodyComponent,
-        C8yTranslatePipe
-    ]
+    BsDropdownModule,
+    NgClass,
+    NgTemplateOutlet,
+    IconDirective,
+    RequiredInputPlaceholderDirective,
+    ListGroupComponent,
+    ListItemComponent,
+    ListItemCheckboxComponent,
+    ListItemBodyComponent,
+    C8yTranslatePipe
+]
 })
 export class CustomSelectComponent
     implements AfterContentInit, OnChanges, OnDestroy, AfterViewInit, ControlValueAccessor, Validator {

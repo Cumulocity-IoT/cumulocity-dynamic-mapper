@@ -1,78 +1,95 @@
 <!--
-  ~ Copyright (c) 2022-2025 Cumulocity GmbH.
-  ~
-  ~ SPDX-License-Identifier: Apache-2.0
-  ~
-  ~  Licensed under the Apache License, Version 2.0 (the "License");
-  ~  you may not use this file except in compliance with the License.
-  ~  You may obtain a copy of the License at
-  ~
-  ~       http://www.apache.org/licenses/LICENSE-2.0
-  ~
-  ~  Unless required by applicable law or agreed to in writing, software
-  ~  distributed under the License is distributed on an "AS IS" BASIS,
-  ~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  ~  See the License for the specific language governing permissions and
-  ~  limitations under the License.
-  ~
-  ~  @authors Christof Strack, Stefan Witschel
-  ~
-  -->
+~ Copyright (c) 2022-2025 Cumulocity GmbH.
+~
+~ SPDX-License-Identifier: Apache-2.0
+~
+~  Licensed under the Apache License, Version 2.0 (the "License");
+~  you may not use this file except in compliance with the License.
+~  You may obtain a copy of the License at
+~
+~       http://www.apache.org/licenses/LICENSE-2.0
+~
+~  Unless required by applicable law or agreed to in writing, software
+~  distributed under the License is distributed on an "AS IS" BASIS,
+~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+~  See the License for the specific language governing permissions and
+~  limitations under the License.
+~
+~  @authors Christof Strack, Stefan Witschel
+~
+-->
 
 <c8y-title translate>Subscription outbound</c8y-title>
 <c8y-action-bar-item [placement]="'right'">
-  <button class="btn btn-link" title="{{ 'Manage subscriptions' | translate }}" (click)="onDefineSubscription4()"
-    [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole" *ngIf="path == 'dynamic'">
-    <i c8yIcon="subscription"></i>
-    {{ 'Manage subscriptions (by device type)' | translate }}
-  </button>
-  <button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate" popover="{{
+  @if (path == 'dynamic') {
+    <button class="btn btn-link" title="{{ 'Manage subscriptions' | translate }}" (click)="onDefineSubscription4()"
+      [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole">
+      <i c8yIcon="subscription"></i>
+      {{ 'Manage subscriptions (by device type)' | translate }}
+    </button>
+  }
+  @if (path == 'dynamic') {
+<button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate" popover="{{
       'Specify device types. Only when CREATING a device of any of types a subscription is created (dynamic). When a type is removed the existing subscriptions resulting from this type are NOT deleted.'
         | translate
-    }}" placement="bottom" triggers="focus" type="button" *ngIf="path == 'dynamic'"></button>
+    }}" placement="bottom" triggers="focus" type="button"></button>
+  }
 </c8y-action-bar-item>
 <c8y-action-bar-item [placement]="'right'">
-  <button class="btn btn-link" title="{{ 'Manage subscriptions' | translate }}" (click)="onDefineSubscription3()"
-    [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole" *ngIf="path == 'dynamic'">
-    <i c8yIcon="subscription"></i>
-    {{ 'Manage subscriptions (by device groups)' | translate }}
-  </button>
-  <button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate" popover="{{
+  @if (path == 'dynamic') {
+    <button class="btn btn-link" title="{{ 'Manage subscriptions' | translate }}" (click)="onDefineSubscription3()"
+      [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole">
+      <i c8yIcon="subscription"></i>
+      {{ 'Manage subscriptions (by device groups)' | translate }}
+    </button>
+  }
+  @if (path == 'dynamic') {
+<button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate" popover="{{
       'Specify device groups. When a device group is added subscriptions for all assigned devices are created. When a device is added/removed from a chosen group the subscription is created/deleted (dynamic). The filter applies to child assets and child devices.'
         | translate
-    }}" placement="bottom" triggers="focus" type="button" *ngIf="path == 'dynamic'"></button>
+    }}" placement="bottom" triggers="focus" type="button"></button>
+  }
 </c8y-action-bar-item>
 <c8y-action-bar-item [placement]="'right'">
-  <button class="btn btn-link" title="{{ 'Manage subscriptions' | translate }}" (click)="onDefineSubscription1()"
-    [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole" *ngIf="path == 'static'">
-    <i c8yIcon="subscription"></i>
-    {{ 'Manage subscriptions (device selection)' | translate }}
-  </button>
-  <button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate" popover="{{
+  @if (path == 'static') {
+    <button class="btn btn-link" title="{{ 'Manage subscriptions' | translate }}" (click)="onDefineSubscription1()"
+      [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole">
+      <i c8yIcon="subscription"></i>
+      {{ 'Manage subscriptions (device selection)' | translate }}
+    </button>
+  }
+  @if (path == 'static') {
+<button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate" popover="{{
       'Specify a device or device group to create subscription. When a device group is added subscriptions for all assigned devices are created. When a device is added/removed from a chosen group the subscription is NOT created/deleted (static).'
         | translate
-    }}" placement="bottom" triggers="focus" type="button" *ngIf="path == 'static'"></button>
+    }}" placement="bottom" triggers="focus" type="button"></button>
+  }
 </c8y-action-bar-item>
 <c8y-action-bar-item [placement]="'right'">
-  <button class="btn btn-link" title="{{ 'Manage subscriptions (table)' | translate }}"
-    (click)="onDefineSubscription2()"
-    [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole" *ngIf="path == 'static'">
-    <i c8yIcon="subscription"></i>
-    {{ 'Manage subscriptions (device table )' | translate }}
-  </button>
-  <button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate" popover="{{
+  @if (path == 'static') {
+    <button class="btn btn-link" title="{{ 'Manage subscriptions (table)' | translate }}"
+      (click)="onDefineSubscription2()"
+      [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole">
+      <i c8yIcon="subscription"></i>
+      {{ 'Manage subscriptions (device table )' | translate }}
+    </button>
+  }
+  @if (path == 'static') {
+<button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate" popover="{{
       'Specify a device or device group using filters in the device table to create subscription. When a device group is added subscriptions for all assigned devices are created. When a device is added/removed from a chosen group the subscription is NOT created/deleted (static).'
         | translate
-    }}" placement="bottom" triggers="focus" type="button" *ngIf="path == 'static'"></button>
+    }}" placement="bottom" triggers="focus" type="button"></button>
+  }
 </c8y-action-bar-item>
 
-<div class="card" *ngIf="subscriptionDevices?.devices">
-  <div class="card-block content-fullpage border-top border-bottom">
-    <c8y-data-grid #subscriptionGrid [selectable]="true" [configureColumnsEnabled]="false"
-      [title]="titleSubscription | translate" [columns]="columnsSubscriptions" [rows]="subscribedDevices"
-      [pagination]="pagination" [actionControls]="actionControlSubscription"
-      [bulkActionControls]="bulkActionControlSubscription">
-      <c8y-ui-empty-state [icon]="'c8y-icon dlt-c8y-icon-mail'"
+@if (subscriptionDevices?.devices) {
+  <div class="card">
+    <div class="card-block content-fullpage border-top border-bottom">
+      <c8y-data-grid #subscriptionGrid [selectable]="true" [configureColumnsEnabled]="false"
+        [title]="titleSubscription | translate" [columns]="columnsSubscriptions" [rows]="subscribedDevices"
+        [pagination]="pagination" [actionControls]="actionControlSubscription"
+        [bulkActionControls]="bulkActionControlSubscription">
+        <c8y-ui-empty-state [icon]="'c8y-icon dlt-c8y-icon-mail'"
         [title]="'No subscriptions for devices exist.' | translate" [subtitle]="
     'Create your first subscription for a device.' | translate
   " [horizontal]="true"> <button class="btn btn-link m-t-16" title="{{ 'Manage subscriptions' | translate }}"
@@ -84,36 +101,45 @@
     </c8y-data-grid>
   </div>
 </div>
+}
 
 <div [ngClass]="{ drawerOpen: showConfigSubscription1 }">
   <div class="bottom-drawer">
-    <d11r-device-selector-subscription *ngIf="showConfigSubscription1" (cancel)="showConfigSubscription1 = false"
-      (commit)="onCommitSubscriptionDevice($event)" [deviceList]="subscribedDevices">
-    </d11r-device-selector-subscription>
+    @if (showConfigSubscription1) {
+      <d11r-device-selector-subscription (cancel)="showConfigSubscription1 = false"
+        (commit)="onCommitSubscriptionDevice($event)" [deviceList]="subscribedDevices">
+      </d11r-device-selector-subscription>
+    }
   </div>
 </div>
 
 
 <div [ngClass]="{ drawerOpen: showConfigSubscription2 }">
   <div class="bottom-drawer">
-    <d11r-device-selector-subscription2 *ngIf="showConfigSubscription2" (cancel)="showConfigSubscription2 = false"
-      (commit)="onCommitSubscriptionDevice($event)" [deviceList]="subscribedDevices">
-    </d11r-device-selector-subscription2>
+    @if (showConfigSubscription2) {
+      <d11r-device-selector-subscription2 (cancel)="showConfigSubscription2 = false"
+        (commit)="onCommitSubscriptionDevice($event)" [deviceList]="subscribedDevices">
+      </d11r-device-selector-subscription2>
+    }
   </div>
 </div>
 
 <div [ngClass]="{ drawerOpen: showConfigSubscription3 }">
   <div class="bottom-drawer">
-    <d11r-device-selector-subscription3 *ngIf="showConfigSubscription3" (cancel)="showConfigSubscription3 = false"
-      (commit)="onCommitSubscriptionByDeviceGroup($event)" [deviceList]="subscribedDeviceGroups">
-    </d11r-device-selector-subscription3>
+    @if (showConfigSubscription3) {
+      <d11r-device-selector-subscription3 (cancel)="showConfigSubscription3 = false"
+        (commit)="onCommitSubscriptionByDeviceGroup($event)" [deviceList]="subscribedDeviceGroups">
+      </d11r-device-selector-subscription3>
+    }
   </div>
 </div>
 
 <div [ngClass]="{ drawerOpen: showConfigSubscription4 }">
   <div class="bottom-drawer">
-    <d11r-device-selector-subscription4 *ngIf="showConfigSubscription4" (cancel)="showConfigSubscription4 = false"
-      (commit)="onCommitSubscriptionByDeviceType($event)" [typeList]="subscribedDeviceTypes">
-    </d11r-device-selector-subscription4>
+    @if (showConfigSubscription4) {
+      <d11r-device-selector-subscription4 (cancel)="showConfigSubscription4 = false"
+        (commit)="onCommitSubscriptionByDeviceType($event)" [typeList]="subscribedDeviceTypes">
+      </d11r-device-selector-subscription4>
+    }
   </div>
 </div>

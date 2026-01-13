@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { NgFor, NgIf } from '@angular/common';
+
 import { Component } from '@angular/core';
 import { CellRendererContext } from '@c8y/ngx-components';
 
@@ -25,25 +25,26 @@ import { CellRendererContext } from '@c8y/ngx-components';
   selector: 'd11r-mapping-renderer-api',
   template: `
 <div>
-    <span *ngIf="!isArray(context.value)" class="text-10 label label-primary">
-        {{ context.value }}
+  @if (!isArray(context.value)) {
+    <span class="text-10 label label-primary">
+      {{ context.value }}
     </span>
+  }
 
-    <ng-container *ngIf="isArray(context.value)">
-        <div *ngFor="let item of context.value" >
-          <!-- <span class="text-10 label label-primary"> -->
-          <span class="text-12 tag tag--success">
-              {{ item }}
-          </span>
-        </div>
-    </ng-container>
+  @if (isArray(context.value)) {
+    @for (item of context.value; track item) {
+      <div >
+        <!-- <span class="text-10 label label-primary"> -->
+        <span class="text-12 tag tag--success">
+          {{ item }}
+        </span>
+      </div>
+    }
+  }
 </div>
-  `,
+`,
   standalone: true,
-  imports: [
-    NgIf,
-    NgFor
-  ]
+  imports: []
 })
 export class LabelTaggedRendererComponent {
   constructor(public context: CellRendererContext) {

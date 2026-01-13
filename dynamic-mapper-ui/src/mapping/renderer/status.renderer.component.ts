@@ -17,24 +17,30 @@
  *
  * @authors Christof Strack
  */
-import { CommonModule } from '@angular/common';
+
 import { Component } from '@angular/core';
 import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
 
 @Component({
   selector: 'd11r-mapping-renderer-status',
   template: `
-    <ng-container *ngIf="context.value.debug">
+    @if (context.value.debug) {
       <span class="text-10 label label-primary">debug</span>
-    </ng-container>
-    <ng-container [ngSwitch]="context.value.snoopStatus">
-      <span *ngSwitchCase="'STARTED'" class="text-10 label label-primary">snoop: started</span>
-      <span *ngSwitchCase="'STOPPED'" class="text-10 label label-primary">snoop: stopped</span>
-      <span *ngSwitchCase="'ENABLED'" class="text-10 label label-primary">snoop: pending</span>
-    </ng-container>
-  `,
+    }
+    @switch (context.value.snoopStatus) {
+      @case ('STARTED') {
+        <span class="text-10 label label-primary">snoop: started</span>
+      }
+      @case ('STOPPED') {
+        <span class="text-10 label label-primary">snoop: stopped</span>
+      }
+      @case ('ENABLED') {
+        <span class="text-10 label label-primary">snoop: pending</span>
+      }
+    }
+    `,
   standalone: true,
-  imports: [CoreModule, CommonModule]
+  imports: [CoreModule]
 })
 export class StatusRendererComponent {
   constructor(public readonly context: CellRendererContext) {}

@@ -42,7 +42,7 @@ import {
 } from '../../shared';
 import { CodeTemplate } from '../../configuration';
 import { base64ToString } from '../shared/util';
-import { CommonModule } from '@angular/common';
+
 import { CustomSelectComponent } from '../../shared/component/select/custom-select.component';
 
 // Types
@@ -69,7 +69,7 @@ interface SaveResult {
   templateUrl: './mapping-type-drawer.component.html',
   encapsulation: ViewEncapsulation.None,
   standalone: true,
-  imports: [CoreModule, CommonModule, CustomSelectComponent]
+  imports: [CoreModule, CustomSelectComponent]
 })
 export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   @Input() direction: Direction;

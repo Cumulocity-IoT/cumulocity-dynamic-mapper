@@ -1,23 +1,23 @@
 <!--
-  ~ Copyright (c) 2022-2025 Cumulocity GmbH.
-  ~
-  ~ SPDX-License-Identifier: Apache-2.0
-  ~
-  ~  Licensed under the Apache License, Version 2.0 (the "License");
-  ~  you may not use this file except in compliance with the License.
-  ~  You may obtain a copy of the License at
-  ~
-  ~       http://www.apache.org/licenses/LICENSE-2.0
-  ~
-  ~  Unless required by applicable law or agreed to in writing, software
-  ~  distributed under the License is distributed on an "AS IS" BASIS,
-  ~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  ~  See the License for the specific language governing permissions and
-  ~  limitations under the License.
-  ~
-  ~  @authors Christof Strack, Stefan Witschel
-  ~
-  -->
+~ Copyright (c) 2022-2025 Cumulocity GmbH.
+~
+~ SPDX-License-Identifier: Apache-2.0
+~
+~  Licensed under the Apache License, Version 2.0 (the "License");
+~  you may not use this file except in compliance with the License.
+~  You may obtain a copy of the License at
+~
+~       http://www.apache.org/licenses/LICENSE-2.0
+~
+~  Unless required by applicable law or agreed to in writing, software
+~  distributed under the License is distributed on an "AS IS" BASIS,
+~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+~  See the License for the specific language governing permissions and
+~  limitations under the License.
+~
+~  @authors Christof Strack, Stefan Witschel
+~
+-->
 
 <div class="p-16 p-t-0 flex-no-shrink separator-bottom col-xs-12">
   <div class="d-flex">
@@ -40,113 +40,134 @@
             [data]="testingModel.payload" [class]="'jse-main-tiny'" #editorTestingPayload id="editorTestingPayload">
           </d11r-mapping-json-editor>
           <c8y-messages>
-            <c8y-message *ngIf="testingModel.errorMsg" translate><span class="text-warning">{{ testingModel.errorMsg
-                }}</span>
+            @if (testingModel.errorMsg) {
+              <c8y-message translate><span class="text-warning">{{ testingModel.errorMsg
+              }}</span>
             </c8y-message>
-          </c8y-messages>
-        </div>
+          }
+        </c8y-messages>
       </div>
-      <div class="col-lg-5 col-md-5 column-left-border">
-        <div class="form-group">
-          <div style="display: flex">
-            <label for="testResult" translate>{{ targetSystem }} Request&nbsp;</label>
-            <ng-container *ngIf="(selectedResult$ | async) > 0" class="m-r-8">
+    </div>
+    <div class="col-lg-5 col-md-5 column-left-border">
+      <div class="form-group">
+        <div style="display: flex">
+          <label for="testResult" translate>{{ targetSystem }} Request&nbsp;</label>
+          @if ((selectedResult$ | async) > 0) {
+            <ng-container class="m-r-8">
               <div class="m-l-auto">
                 @if (testingModel.api) {
                   <span class="tag tag--success m-b-4">{{
                     testingModel.api
+                @if (testingModel?.api) {
+                  <span class="tag tag--success m-b-4">{{
+                    testingModel.api
                   }}</span>
+                }
               </div>
               <div>
                 <span class="badge badge-success">{{
                   selectedResult$ | async
-                  }}</span>
+                }}</span>
               </div>
             </ng-container>
-          </div>
-          <d11r-mapping-json-editor [options]="editorOptionsDefault" [data]="testingModel.request"
-            [class]="'jse-main-tiny'" #editorTestingRequest id="editorTestingRequest">
-          </d11r-mapping-json-editor>
-          <c8y-messages>
-            <c8y-message *ngIf="testingModel.errorMsg" translate><span class="text-warning">{{ testingModel.errorMsg
-                }}</span>
-            </c8y-message>
-          </c8y-messages>
+          }
         </div>
-      </div>
+        <d11r-mapping-json-editor [options]="editorOptionsDefault" [data]="testingModel.request"
+          [class]="'jse-main-tiny'" #editorTestingRequest id="editorTestingRequest">
+        </d11r-mapping-json-editor>
+        <c8y-messages>
+          @if (testingModel.errorMsg) {
+            <c8y-message translate><span class="text-warning">{{ testingModel.errorMsg
+            }}</span>
+          </c8y-message>
+        }
+      </c8y-messages>
     </div>
-    <div class="d-flex" *ngIf="mapping.direction !== Direction.OUTBOUND && !isSubstitutionsAsCode(mapping)">
-      <div class="form-block legend col-lg-10 col-lg-offset-1 col-md-10 col-md-offset-1">
-      </div>
+  </div>
+</div>
+@if (mapping.direction !== Direction.OUTBOUND && !isSubstitutionsAsCode(mapping)) {
+  <div class="d-flex">
+    <div class="form-block legend col-lg-10 col-lg-offset-1 col-md-10 col-md-offset-1">
     </div>
-    <div class="d-flex" *ngIf="mapping.direction !== Direction.OUTBOUND && !isSubstitutionsAsCode(mapping)">
-      <div class="col-lg-5 col-lg-offset-1 col-md-5 col-md-offset-1 column-right-border"></div>
-      <div class="col-lg-5 column-left-border">
-        <div class="form-group">
-          <div style="display: flex">
-            <label>{{ targetSystem }} Response&nbsp;</label>
-            <div *ngIf="(selectedResult$ | async) > 0" class="m-l-auto">
+  </div>
+}
+@if (mapping.direction !== Direction.OUTBOUND && !isSubstitutionsAsCode(mapping)) {
+  <div class="d-flex">
+    <div class="col-lg-5 col-lg-offset-1 col-md-5 col-md-offset-1 column-right-border"></div>
+    <div class="col-lg-5 column-left-border">
+      <div class="form-group">
+        <div style="display: flex">
+          <label>{{ targetSystem }} Response&nbsp;</label>
+          @if ((selectedResult$ | async) > 0) {
+            <div class="m-l-auto">
               <span class="badge badge-success m-r-8"> {{
                 selectedResult$ | async
-                }}</span>
-              </div>
-          </div>
-          <d11r-mapping-json-editor [options]="editorOptionsDefault" [class]="'jse-main-tiny'"
-            [data]="testingModel.response" #editorTestingResponse id="editorTestingResponse">
-          </d11r-mapping-json-editor>
+              }}</span>
+            </div>
+          }
         </div>
-      </div>
-    </div>
-    <div class="d-flex" *ngIf="isSubstitutionsAsCode(mapping)">
-      <div class="legend form-block col-lg-10 col-lg-offset-1 col-md-10 col-md-offset-1">
-      </div>
-    </div>
-    <div class="d-flex" *ngIf="isSubstitutionsAsCode(mapping)">
-      <div class="col-lg-10 col-lg-offset-1 col-md-10 col-md-offset-1">
-
-        <div class="form-group">
-          <div style="display: flex">
-            <label>Console output</label>
-          </div>
-          <textarea [ngModel]=" testContext?.logs?.join('\n')" class="form-control" _not-applied_c8y-textarea-autoresize
-            class="fit-w" readonly="true" style="font-family: Courier, monospace">
-            </textarea>
-        </div>
-      </div>
-    </div>
-
-    <div class="d-flex sticky-buttons">
-      <div class="col-lg-10 col-lg-offset-1">
-        <div class="btn-group btn-group-justified">
-          <div class="btn-group">
-            <button type="button" class="btn btn-default btn-sm" (click)="onTestTransformation()"
-              [disabled]="!stepperConfiguration.allowTestTransformation || (testingModel.results.length > 0)">
-              Transform Test Message
-            </button>
-          </div>
-          <div class="btn-group">
-            <button type="button" class="btn btn-default btn-sm" (click)="onNextTestResult()"
-              [disabled]="!stepperConfiguration.allowTestTransformation || testingModel.results.length <= 1">
-              Show Next Test Result&nbsp;<span *ngIf="testingModel.results.length > 0" class="badge badge-success">
-                total {{ testingModel.results.length }}</span>
-            </button>
-          </div>
-          <div class="btn-group">
-            <button type="button" class="btn btn-default btn-sm" (click)="onResetTransformation()"
-              [disabled]="!stepperConfiguration.allowTestTransformation || testingModel.results.length == 0">
-              Reset Transform
-            </button>
-          </div>
-          <div class="btn-group">
-            <button type="button" class="btn btn-default btn-sm" [disabled]="disableTestSending()"
-              (click)="onSendTest()">
-              Send Test Message
-            </button>
-            <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
-              popover="{{'Send Test Message is only supported for mappings that use an external id!'}}" triggers="focus"
-              type="button" container="body" allow></button>
-          </div>
-        </div>
+        <d11r-mapping-json-editor [options]="editorOptionsDefault" [class]="'jse-main-tiny'"
+          [data]="testingModel.response" #editorTestingResponse id="editorTestingResponse">
+        </d11r-mapping-json-editor>
       </div>
     </div>
   </div>
+}
+@if (isSubstitutionsAsCode(mapping)) {
+  <div class="d-flex">
+    <div class="legend form-block col-lg-10 col-lg-offset-1 col-md-10 col-md-offset-1">
+    </div>
+  </div>
+}
+@if (isSubstitutionsAsCode(mapping)) {
+  <div class="d-flex">
+    <div class="col-lg-10 col-lg-offset-1 col-md-10 col-md-offset-1">
+      <div class="form-group">
+        <div style="display: flex">
+          <label>Console output</label>
+        </div>
+        <textarea [ngModel]=" testContext?.logs?.join('\n')" class="form-control" _not-applied_c8y-textarea-autoresize
+          class="fit-w" readonly="true" style="font-family: Courier, monospace">
+        </textarea>
+      </div>
+    </div>
+  </div>
+}
+
+<div class="d-flex sticky-buttons">
+  <div class="col-lg-10 col-lg-offset-1">
+    <div class="btn-group btn-group-justified">
+      <div class="btn-group">
+        <button type="button" class="btn btn-default btn-sm" (click)="onTestTransformation()"
+          [disabled]="!stepperConfiguration.allowTestTransformation || (testingModel.results.length > 0)">
+          Transform Test Message
+        </button>
+      </div>
+      <div class="btn-group">
+        <button type="button" class="btn btn-default btn-sm" (click)="onNextTestResult()"
+          [disabled]="!stepperConfiguration.allowTestTransformation || testingModel.results.length <= 1">
+          Show Next Test Result&nbsp;@if (testingModel.results.length > 0) {
+          <span class="badge badge-success">
+          total {{ testingModel.results.length }}</span>
+        }
+      </button>
+    </div>
+    <div class="btn-group">
+      <button type="button" class="btn btn-default btn-sm" (click)="onResetTransformation()"
+        [disabled]="!stepperConfiguration.allowTestTransformation || testingModel.results.length == 0">
+        Reset Transform
+      </button>
+    </div>
+    <div class="btn-group">
+      <button type="button" class="btn btn-default btn-sm" [disabled]="disableTestSending()"
+        (click)="onSendTest()">
+        Send Test Message
+      </button>
+      <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
+        popover="{{'Send Test Message is only supported for mappings that use an external id!'}}" triggers="focus"
+      type="button" container="body" allow></button>
+    </div>
+  </div>
+</div>
+</div>
+</div>

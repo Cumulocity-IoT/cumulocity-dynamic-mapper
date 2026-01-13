@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { CommonModule } from '@angular/common';
+
 import {
   Component,
   EventEmitter,
@@ -64,7 +64,7 @@ interface FilterExpressionModel {
   styleUrls: ['../shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
-  imports: [CoreModule, CommonModule, PopoverModule]
+  imports: [CoreModule, PopoverModule]
 })
 export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
   @Input() mapping: Mapping;

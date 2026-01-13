@@ -39,7 +39,7 @@ import { MappingService } from '../core/mapping.service';
     </button>
   `,
   standalone: true,
-  imports: [CommonModule]
+  imports: []
 })
 export class MappingIdCellRendererComponent {
   constructor(

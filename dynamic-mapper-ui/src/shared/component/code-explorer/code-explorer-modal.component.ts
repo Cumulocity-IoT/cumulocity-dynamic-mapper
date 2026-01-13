@@ -19,7 +19,7 @@
  */
 
 import { Component, Input, OnDestroy, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { CoreModule, ModalLabels } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
@@ -32,7 +32,7 @@ import { gettext } from '@c8y/ngx-components/gettext';
   templateUrl: './code-explorer-modal.component.html',
   encapsulation: ViewEncapsulation.None,
   standalone: true,
-  imports: [CoreModule, EditorComponent, CommonModule, FormsModule]
+  imports: [CoreModule, EditorComponent, FormsModule]
 })
 export class CodeExplorerComponent implements OnInit, OnDestroy {
 
