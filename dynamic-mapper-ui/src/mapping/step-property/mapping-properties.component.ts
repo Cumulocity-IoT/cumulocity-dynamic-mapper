@@ -268,7 +268,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             className: 'col-lg-3',
             key: 'createNonExistingDevice',
             type: 'switch',
-            wrappers: ['c8y-form-field'],
+            wrappers: ['d11r-wrapper-form-field'],
             templateOptions: {
               label: 'Create device',
               disabled: this.isFieldDisabled,
@@ -287,7 +287,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             className: 'col-lg-3',
             key: 'updateExistingDevice',
             type: 'switch',
-            wrappers: ['c8y-form-field'],
+            wrappers: ['d11r-wrapper-form-field'],
             templateOptions: {
               label: 'Update Existing Device',
               disabled: this.isFieldDisabled,
@@ -306,7 +306,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             className: 'col-lg-3',
             key: 'autoAckOperation',
             type: 'switch',
-            wrappers: ['c8y-form-field'],
+            wrappers: ['d11r-wrapper-form-field'],
             templateOptions: {
               label: 'Auto acknowledge',
               disabled: this.isFieldDisabled,
@@ -321,27 +321,6 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
               (this.stepperConfiguration.direction === Direction.OUTBOUND &&
                 this.mapping.targetAPI !== API.OPERATION.name)
           },
-
-          {
-            className: 'col-lg-3',
-            key: 'eventWithAttachment',
-            type: 'switch',
-            wrappers: ['c8y-form-field'],
-            templateOptions: {
-              label: 'Event contains attachment',
-              disabled: this.isFieldDisabled,
-              description: 'Event contains attachment, e.g. image, ... that is stored separately.',
-              required: false,
-              switchMode: true,
-              indeterminate: false,
-              hideLabel: true
-            },
-            hideExpression: () =>
-              this.stepperConfiguration.direction === Direction.OUTBOUND ||
-              this.mapping.targetAPI !== API.EVENT.name
-          },
-
-
 
           {
             className: 'col-lg-3',
@@ -380,9 +359,32 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
         fieldGroup: [
           {
             className: 'col-lg-3',
+            key: 'eventWithAttachment',
+            type: 'switch',
+            wrappers: ['d11r-wrapper-form-field'],
+            templateOptions: {
+              label: 'Event contains attachment',
+              disabled: this.isFieldDisabled,
+              description: 'Event contains attachment, e.g. image, ... that is stored separately.',
+              required: false,
+              switchMode: true,
+              indeterminate: false,
+              hideLabel: true
+            },
+            hideExpression: () =>
+              this.stepperConfiguration.direction === Direction.OUTBOUND ||
+              this.mapping.targetAPI !== API.EVENT.name
+          }
+        ]
+      },
+      {
+        fieldGroupClassName: 'row',
+        fieldGroup: [
+          {
+            className: 'col-lg-3',
             key: 'useExternalId',
             type: 'switch',
-            wrappers: ['c8y-form-field'],
+            wrappers: ['d11r-wrapper-form-field'],
             templateOptions: {
               label: 'Use external id',
               switchMode: true,

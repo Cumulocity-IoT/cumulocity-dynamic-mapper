@@ -49,10 +49,10 @@ import { FieldType } from '@ngx-formly/core';
 `,
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
-      imports: [
-      CoreModule,
-      FormsModule,
-    ]
+  imports: [
+    CoreModule,
+    FormsModule,
+  ]
 })
 export class CustomFieldInput extends FieldType {
   get type() {
