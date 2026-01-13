@@ -96,14 +96,15 @@
                       <option [value]="-1" [disabled]="true">
                         Select snooped template
                       </option>
-                      <option [value]="i" *ngFor="
-                          let t of [].constructor(
-                            mapping.snoopedTemplates.length
-                          );
-                          let i = index
-                        ">
-                        {{ 'Template - ' + i }}
-                      </option>
+                      @for (
+                        t of [].constructor(
+                        mapping.snoopedTemplates.length
+                        ); track
+                        $index; let i = $index) {
+                        <option [value]="i">
+                          {{ 'Template - ' + i }}
+                        </option>
+                      }
                     </select>
                   </div>
                   <div>

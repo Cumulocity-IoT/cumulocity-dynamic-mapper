@@ -52,8 +52,9 @@
             <label for="testResult" translate>{{ targetSystem }} Request&nbsp;</label>
             <ng-container *ngIf="(selectedResult$ | async) > 0" class="m-r-8">
               <div class="m-l-auto">
-                <span class="tag tag--success m-b-4" *ngIf="testingModel?.api">{{
-                  testingModel.api
+                @if (testingModel.api) {
+                  <span class="tag tag--success m-b-4">{{
+                    testingModel.api
                   }}</span>
               </div>
               <div>
