@@ -277,7 +277,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         int delay = 0;
 
         while (attempt < maxAttempts && !isConnected() && shouldConnect()) {
-            //Do not have a delay on first start, then for each attemp +5s
+            //Do not have a delay on first start, then for each attempt +5s
             if(attempt > 0) {
                 delay = delay + 5000;
                 try {
