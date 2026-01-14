@@ -55,7 +55,7 @@
           @if ((selectedResult$ | async) > 0) {
             <ng-container class="m-r-8">
               <div class="m-l-auto">
-                @if (testingModel.api) {
+                @if (testingModel.api && mapping.direction !== Direction.OUTBOUND) {
                   <span class="tag tag--success m-b-4">{{
                     testingModel.api
                   }}</span>

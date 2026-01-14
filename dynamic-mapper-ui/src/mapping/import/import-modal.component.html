@@ -25,7 +25,14 @@
   </ng-container>
   <div class=" p-24 modal-inner-scroll animated fadeIn">
     <div class="modal-body">
-      @if (!isAppCreated) {
+      <!-- Debug: isAppCreated = {{ isAppCreated }}, isLoading = {{ isLoading }} -->
+      @if (isAppCreated) {
+        <div class="d-flex a-i-center j-c-center" style="min-height: 285px">
+          <c8y-operation-result text="{{ successText | translate }}" [vertical]="true" [size]="84" class="lead"
+            type="success">
+          </c8y-operation-result>
+        </div>
+      } @else {
         <c8y-form-group [hasError]="!!errorMessage" class="m-auto"
           style="max-width: 285px">
           <c8y-drop-area (dropped)="onFileDroppedEvent($event)" [accept]="'.json'" [loading]="isLoading"
@@ -40,12 +47,6 @@
             }
           </c8y-messages>
         </c8y-form-group>
-      } @else {
-        <div class="d-flex a-i-center j-c-center" style="min-height: 285px">
-          <c8y-operation-result text="{{ successText | translate }}" [vertical]="true" [size]="84" class="lead"
-            type="success">
-          </c8y-operation-result>
-        </div>
       }
     </div>
   </div>
