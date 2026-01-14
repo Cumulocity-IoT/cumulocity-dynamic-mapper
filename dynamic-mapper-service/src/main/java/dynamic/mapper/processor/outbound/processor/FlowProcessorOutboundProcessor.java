@@ -119,7 +119,8 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor {
                 String identifier = Mapping.SMART_FUNCTION_NAME + "_" + mapping.getIdentifier();
                 bindings = graalContext.getBindings("js");
 
-                if (context.getFlowContext() != null && context.getFlowContext().getTesting()) {
+                // Always provide console for JavaScript code
+                if (context.getFlowContext() != null) {
                     JavaScriptConsole console = new JavaScriptConsole(context.getFlowContext(), tenant);
                     bindings.putMember("console", console);
                 }

@@ -93,33 +93,64 @@ public class SendOutboundProcessor extends BaseProcessor {
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
 
-        // Process each C8Y request
+        // Get all requests from the context
+        var requests = context.getRequests();
+
+        if (requests == null || requests.isEmpty()) {
+            log.debug("{} - No requests to process", tenant);
+            // Create a placeholder request to avoid further processing
+            ProcessingResultHelper.createAndAddDynamicMapperRequest(context, context.getMapping().getTargetTemplate(), null,
+                    context.getMapping());
+            return;
+        }
 
         try {
             AConnectorClient connectorClient = connectorRegistry.getClientForTenant(tenant, connectorIdentifier);
-            DynamicMapperRequest request = context.getCurrentRequest();
-            if (request == null) {
-                // Create a placeholder request to avoid further processing
-                request = ProcessingResultHelper.createAndAddDynamicMapperRequest(context, context.getMapping().getTargetTemplate(), null,
-                        context.getMapping());
-            }
-            if (connectorClient.isConnected() && context.getSendPayload()) {
-                connectorClient.publishMEAO(context);
-            } else {
-                log.warn("{} - Not sending message: connected {}, sendPayload {}", tenant,
-                        connectorClient.isConnected(), context.getSendPayload());
+
+            if (!connectorClient.isConnected()) {
+                log.warn("{} - Not sending messages: connector not connected", tenant);
+                return;
             }
 
-            // Log if debug is enabled
-            if (mapping.getDebug() || context.getServiceConfiguration().getLogPayload()) {
-                log.info("{} - Transformed message sent: API {}, message {}, topic {}",
-                        tenant, request.getApi(), request.getRequest(), context.getResolvedPublishTopic());
+            if (!context.getSendPayload()) {
+                log.warn("{} - Not sending messages: sendPayload is false", tenant);
+                return;
             }
+
+            // Store original requests list
+            var originalRequests = new java.util.ArrayList<>(context.getRequests());
+
+            // Process each request individually
+            for (int i = 0; i < originalRequests.size(); i++) {
+                DynamicMapperRequest request = originalRequests.get(i);
+                try {
+                    // Temporarily set the requests list to contain only the current request
+                    // This ensures publishMEAO() operates on the correct request
+                    context.setRequests(new java.util.ArrayList<>(java.util.Arrays.asList(request)));
+
+                    connectorClient.publishMEAO(context);
+
+                    // Log if debug is enabled
+                    if (mapping.getDebug() || context.getServiceConfiguration().getLogPayload()) {
+                        log.info("{} - Transformed message sent ({}/{}): API {}, message {}, topic {}",
+                                tenant, i + 1, originalRequests.size(), request.getApi(), request.getRequest(), context.getResolvedPublishTopic());
+                    }
+                } catch (Exception e) {
+                    request.setError(e);
+                    log.error("{} - Error publishing request ({}/{}): API {}, error: {}",
+                            tenant, i + 1, originalRequests.size(), request.getApi(), e.getMessage(), e);
+                }
+            }
+
+            // Restore original requests list
+            context.setRequests(originalRequests);
 
         } catch (Exception e) {
-            context.getCurrentRequest().setError(e);
-            log.error("{} - Error during publishing outbound message: ", tenant, e);
-            log.error("{} - Failed to process request: {}", tenant, e.getMessage(), e);
+            log.error("{} - Error during publishing outbound messages: ", tenant, e);
+            log.error("{} - Failed to process requests: {}", tenant, e.getMessage(), e);
+            if (context.getCurrentRequest() != null) {
+                context.getCurrentRequest().setError(e);
+            }
         }
 
     }
