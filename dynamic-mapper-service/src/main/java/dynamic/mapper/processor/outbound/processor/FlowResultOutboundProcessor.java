@@ -141,14 +141,23 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
             Map<String, Object> payload = clonePayload(deviceMessage.getPayload());
 
             // Resolve device ID and set it hierarchically in the payload
-            String resolvedExternalId = null;
+            String resolvedExternalId = context.getSourceId();  // defaults to sourceId in context
+            log.debug("{} - Initial context.sourceId before resolution: {}", tenant, resolvedExternalId);
+
             try {
                 resolvedExternalId = resolveGlobalId2ExternalId(deviceMessage, context, tenant);
                 context.setSourceId(resolvedExternalId);
+                log.debug("{} - Resolved external ID: {}", tenant, resolvedExternalId);
             } catch (ProcessingException e) {
                 log.warn("{} - Could not resolve external ID for device message: {}", tenant, e.getMessage());
-                // Continue processing without resolved external ID
+                // Fall back to context sourceId if resolution failed
+                if (resolvedExternalId == null || resolvedExternalId.isEmpty()) {
+                    resolvedExternalId = context.getSourceId();
+                    log.warn("{} - Using context sourceId as fallback: {}", tenant, resolvedExternalId);
+                }
             }
+
+            log.debug("{} - Final resolvedExternalId to be used: {}", tenant, resolvedExternalId);
 
             // Set resolved publish topic (from substituteInTargetAndSend logic)
             setResolvedPublishTopic(context, payload);
@@ -157,7 +166,7 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
             String payloadJson = objectMapper.writeValueAsString(payload);
 
             // Create the request using the corrected method
-            ProcessingResultHelper.createAndAddDynamicMapperRequest(context,
+            DynamicMapperRequest request = ProcessingResultHelper.createAndAddDynamicMapperRequest(context,
                     payloadJson, null, mapping);
 
             // Set resolvedPublishTopic topic in context
@@ -179,6 +188,11 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
                 context.setKey(deviceMessage.getTransportFields().get(Mapping.CONTEXT_DATA_KEY_NAME));
             }
             context.setResolvedPublishTopic(publishTopic);
+
+            // Set the publishTopic on the request object
+            request.setPublishTopic(publishTopic);
+            // This ensures that for WebHook configured as internal (Cumulocity Core) the request is sent to the originating message.
+            request.setSourceId(resolvedExternalId);
 
             context.setRetain(deviceMessage.getRetain());
 
@@ -229,6 +243,9 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
                 return; // Don't create a request
             }
 
+            // Set resolved publish topic (from substituteInTargetAndSend logic)
+            setResolvedPublishTopic(context, payload);
+
             // Convert payload to JSON string for the request
             String payloadJson = objectMapper.writeValueAsString(payload);
 
@@ -240,10 +257,16 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
             c8yRequest.setExternalIdType(externalType);
             c8yRequest.setExternalId(externalId);
 
+            // Set the publishTopic on the request object
+            if (context.getResolvedPublishTopic() != null) {
+                c8yRequest.setPublishTopic(context.getResolvedPublishTopic());
+            }
+
             context.setRetain(c8yRequest.getRetain());
 
-            log.debug("{} - Created C8Y request: API={}, action={}, deviceId={}",
-                    tenant, targetAPI.name, cumulocityMessage.getAction(), resolvedDeviceId);
+            log.debug("{} - Created C8Y request: API={}, action={}, deviceId={}, topic={}",
+                    tenant, targetAPI.name, cumulocityMessage.getAction(), resolvedDeviceId,
+                    context.getResolvedPublishTopic());
 
         } catch (Exception e) {
             throw new ProcessingException("Failed to process CumulocityObject: " + e.getMessage(), e);

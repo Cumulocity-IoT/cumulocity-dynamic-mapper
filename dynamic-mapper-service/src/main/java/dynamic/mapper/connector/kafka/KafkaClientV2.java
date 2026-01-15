@@ -39,6 +39,7 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
+import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingResultWrapper;
 import lombok.Getter;
@@ -704,31 +705,52 @@ public class KafkaClientV2 extends AConnectorClient {
             return;
         }
 
-        if (context.getCurrentRequest() == null ||
-                context.getCurrentRequest().getRequest() == null) {
-            log.warn("{} - No payload to publish for mapping: {}", tenant, context.getMapping().getName());
+        var requests = context.getRequests();
+        if (requests == null || requests.isEmpty()) {
+            log.warn("{} - No requests to publish for mapping: {}", tenant, context.getMapping().getName());
             return;
         }
 
-        String topic = context.getResolvedPublishTopic();
-        String payload = context.getCurrentRequest().getRequest();
         String key = context.getKey();
 
-        ProducerRecord<String, String> record = new ProducerRecord<>(topic, key, payload);
+        // Process each request
+        for (int i = 0; i < requests.size(); i++) {
+            DynamicMapperRequest request = requests.get(i);
 
-        try {
-            Future<RecordMetadata> future = kafkaProducer.send(record);
-            RecordMetadata metadata = future.get(10, TimeUnit.SECONDS);
-
-            if (context.getMapping().getDebug() || serviceConfiguration.getLogPayload()) {
-                log.info("{} - Published to Kafka topic: [{}], partition: {}, offset: {}, mapping: {}",
-                        tenant, topic, metadata.partition(), metadata.offset(), context.getMapping().getName());
+            if (request == null || request.getRequest() == null) {
+                log.warn("{} - Skipping null request or payload ({}/{})", tenant, i + 1, requests.size());
+                continue;
             }
 
-        } catch (Exception e) {
-            String errorMessage = String.format("%s - Error publishing to Kafka topic: [%s]", tenant, topic);
-            log.error(errorMessage, e);
-            context.addError(new ProcessingException(errorMessage, e));
+            String payload = request.getRequest();
+            // Use the publishTopic from the request, fallback to context if not set
+            String topic = request.getPublishTopic() != null ? request.getPublishTopic() : context.getResolvedPublishTopic();
+
+            if (topic == null || topic.isEmpty()) {
+                log.warn("{} - No topic specified for request ({}/{}), skipping", tenant, i + 1, requests.size());
+                request.setError(new Exception("No publish topic specified"));
+                continue;
+            }
+
+            ProducerRecord<String, String> record = new ProducerRecord<>(topic, key, payload);
+
+            try {
+                Future<RecordMetadata> future = kafkaProducer.send(record);
+                RecordMetadata metadata = future.get(10, TimeUnit.SECONDS);
+
+                if (context.getMapping().getDebug() || serviceConfiguration.getLogPayload()) {
+                    log.info("{} - Published to Kafka ({}/{}): topic=[{}], partition: {}, offset: {}, mapping: {}",
+                            tenant, i + 1, requests.size(), topic, metadata.partition(), metadata.offset(), context.getMapping().getName());
+                } else {
+                    log.debug("{} - Published to Kafka ({}/{}): topic=[{}]", tenant, i + 1, requests.size(), topic);
+                }
+
+            } catch (Exception e) {
+                String errorMessage = String.format("%s - Error publishing to Kafka topic: [%s] (%d/%d)", tenant, topic, i + 1, requests.size());
+                log.error(errorMessage, e);
+                request.setError(e);
+                context.addError(new ProcessingException(errorMessage, e));
+            }
         }
     }
 

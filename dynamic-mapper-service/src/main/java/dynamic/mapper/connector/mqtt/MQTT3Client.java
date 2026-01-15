@@ -600,37 +600,56 @@ public class MQTT3Client extends AConnectorClient {
             return;
         }
 
-        try {
-            DynamicMapperRequest request = context.getCurrentRequest();
+        var requests = context.getRequests();
+        if (requests == null || requests.isEmpty()) {
+            log.warn("{} - No requests to publish for mapping: {}", tenant, context.getMapping().getName());
+            return;
+        }
 
-            if (context.getCurrentRequest() == null ||
-                    context.getCurrentRequest().getRequest() == null) {
-                log.warn("{} - No payload to publish for mapping: {}", tenant, context.getMapping().getName());
-                return;
+        MqttQos mqttQos = MqttQos.fromCode(context.getQos().ordinal());
+
+        // Process each request
+        for (int i = 0; i < requests.size(); i++) {
+            DynamicMapperRequest request = requests.get(i);
+
+            if (request == null || request.getRequest() == null) {
+                log.warn("{} - Skipping null request or payload ({}/{})", tenant, i + 1, requests.size());
+                continue;
             }
 
             String payload = request.getRequest();
-            String topic = context.getResolvedPublishTopic();
-            MqttQos mqttQos = MqttQos.fromCode(context.getQos().ordinal());
+            // Use the publishTopic from the request, fallback to context if not set
+            String topic = request.getPublishTopic() != null ? request.getPublishTopic() : context.getResolvedPublishTopic();
 
-            Mqtt3Publish message = Mqtt3Publish.builder()
-                    .topic(topic)
-                    .retain(context.getRetain() == null ? false : context.getRetain())
-                    .qos(mqttQos)
-                    .payload(payload.getBytes(StandardCharsets.UTF_8))
-                    .build();
-
-            mqttClient.publish(message);
-
-            if (context.getMapping().getDebug() || context.getServiceConfiguration().getLogPayload()) {
-                log.info("{} - Published message on topic: [{}], QoS: {}, payload: {}",
-                        tenant, topic, mqttQos, payload);
-            } else {
-                log.debug("{} - Published message on topic: [{}], QoS: {}", tenant, topic, mqttQos);
+            if (topic == null || topic.isEmpty()) {
+                log.warn("{} - No topic specified for request ({}/{}), skipping", tenant, i + 1, requests.size());
+                request.setError(new Exception("No publish topic specified"));
+                continue;
             }
 
-        } catch (Exception e) {
-            log.error("{} - Error publishing message: {}", tenant, e.getMessage(), e);
+            try {
+                Mqtt3Publish message = Mqtt3Publish.builder()
+                        .topic(topic)
+                        .retain(context.getRetain() == null ? false : context.getRetain())
+                        .qos(mqttQos)
+                        .payload(payload.getBytes(StandardCharsets.UTF_8))
+                        .build();
+
+                mqttClient.publish(message);
+
+                if (context.getMapping().getDebug() || context.getServiceConfiguration().getLogPayload()) {
+                    log.info("{} - Published message ({}/{}): topic=[{}], QoS: {}, payload: {}",
+                            tenant, i + 1, requests.size(), topic, mqttQos, payload);
+                } else {
+                    log.debug("{} - Published message ({}/{}): topic=[{}], QoS: {}", tenant, i + 1, requests.size(), topic, mqttQos);
+                }
+
+            } catch (Exception e) {
+                log.error("{} - Error publishing to topic: {} ({}/{})", tenant, topic, i + 1, requests.size(), e);
+                request.setError(e);
+                context.addError(new dynamic.mapper.processor.ProcessingException(
+                        "Failed to publish message " + (i + 1) + "/" + requests.size(), e));
+            }
         }
     }
 

@@ -35,6 +35,7 @@ import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.model.API;
 import dynamic.mapper.model.ConnectorStatus;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
@@ -365,44 +366,266 @@ public class WebHook extends AConnectorClient {
             return;
         }
 
-        DynamicMapperRequest currentRequest = context.getCurrentRequest();
-
-        if (context.getCurrentRequest() == null ||
-                context.getCurrentRequest().getRequest() == null) {
-            log.warn("{} - No payload to publish for mapping: {}", tenant, context.getMapping().getName());
+        var requests = context.getRequests();
+        if (requests == null || requests.isEmpty()) {
+            log.warn("{} - No requests to publish for mapping: {}", tenant, context.getMapping().getName());
             return;
         }
 
-        String payload = currentRequest.getRequest();
-        String contextPath = context.getResolvedPublishTopic();
-        RequestMethod method = currentRequest.getMethod();
+        Boolean cumulocityInternal = (Boolean) connectorConfiguration.getProperties()
+                .getOrDefault("cumulocityInternal", false);
 
-        // Build full path
-        String fullPath = buildFullPath(contextPath);
+        // Process each request
+        for (int i = 0; i < requests.size(); i++) {
+            DynamicMapperRequest request = requests.get(i);
 
-        log.debug("{} - Publishing to path: {}, method: {}", tenant, fullPath, method);
-
-        try {
-            Mono<ResponseEntity<String>> responseEntity = executeHttpRequest(method, fullPath, payload);
-
-            ResponseEntity<String> response = responseEntity.block();
-
-            if (response != null && response.getStatusCode().is2xxSuccessful()) {
-                if (context.getMapping().getDebug() || serviceConfiguration.getLogPayload()) {
-                    log.info("{} - Published message successfully: path: {}, method: {}, mapping: {}",
-                            tenant, fullPath, method, context.getMapping().getName());
-                }
-            } else {
-                String error = String.format("Failed to publish: status %s",
-                        response != null ? response.getStatusCode() : "unknown");
-                log.error("{} - {}", tenant, error);
-                context.addError(new ProcessingException(error));
+            if (request == null || request.getRequest() == null) {
+                log.warn("{} - Skipping null request or payload ({}/{})", tenant, i + 1, requests.size());
+                continue;
             }
 
+            String payload = request.getRequest();
+            String contextPath;
+            RequestMethod method = request.getMethod();
+            API derivedAPI = request.getApi();
+
+            // For cumulocityInternal, we need to determine the API endpoint
+            if (cumulocityInternal) {
+                // Always try to derive API from publishTopic if available (for DeviceMessage objects)
+                String publishTopic = request.getPublishTopic() != null ? request.getPublishTopic() : context.getResolvedPublishTopic();
+                if (publishTopic != null && !publishTopic.isEmpty()) {
+                    log.info("{} - Deriving API from topic '{}' ({}/{})", tenant, publishTopic, i + 1, requests.size());
+                    API topicDerivedAPI = deriveAPIFromTopic(publishTopic);
+
+                    if (topicDerivedAPI != null) {
+                        derivedAPI = topicDerivedAPI;
+                        request.setApi(derivedAPI);
+                        log.info("{} - Derived API {} from topic '{}', will use path '{}' ({}/{})",
+                                tenant, derivedAPI.name, publishTopic, derivedAPI.path, i + 1, requests.size());
+                    } else if (derivedAPI == null) {
+                        log.warn("{} - Cannot derive API type from topic '{}' and no API set for cumulocityInternal connector ({}/{}), skipping",
+                                tenant, publishTopic, i + 1, requests.size());
+                        request.setError(new Exception("Cannot derive API type from topic: " + publishTopic));
+                        continue;
+                    } else {
+                        log.warn("{} - Cannot derive API type from topic '{}' for cumulocityInternal connector ({}/{}), using existing API {}",
+                                tenant, publishTopic, i + 1, requests.size(), derivedAPI.name);
+                    }
+                } else if (derivedAPI == null) {
+                    log.warn("{} - No publishTopic available and no API set for cumulocityInternal connector ({}/{}), skipping",
+                            tenant, i + 1, requests.size());
+                    request.setError(new Exception("No publishTopic available and no API set for cumulocityInternal connector"));
+                    continue;
+                }
+
+                // Populate source identifier in payload for Cumulocity API requests
+                payload = populateSourceIdentifier(payload, request, tenant, i + 1, requests.size());
+
+                // Use the API path field for Cumulocity REST endpoint
+                contextPath = derivedAPI.path;
+                log.info("{} - Using contextPath '{}' for API {} ({}/{})", tenant, contextPath, derivedAPI.name, i + 1, requests.size());
+
+                // Default method to POST if not set
+                if (method == null) {
+                    method = RequestMethod.POST;
+                }
+            } else {
+                // For external webhooks, use publishTopic as the path
+                contextPath = request.getPublishTopic() != null ? request.getPublishTopic() : context.getResolvedPublishTopic();
+            }
+
+            if (contextPath == null || contextPath.isEmpty()) {
+                log.warn("{} - No path specified for request ({}/{}), skipping", tenant, i + 1, requests.size());
+                request.setError(new Exception("No publish path specified"));
+                continue;
+            }
+
+            // Build full path
+            String fullPath = buildFullPath(contextPath);
+
+            log.debug("{} - Publishing ({}/{}): path={}, method={}, API={}",
+                    tenant, i + 1, requests.size(), fullPath, method, request.getApi());
+
+            try {
+                Mono<ResponseEntity<String>> responseEntity = executeHttpRequest(method, fullPath, payload);
+
+                ResponseEntity<String> response = responseEntity.block();
+
+                if (response != null && response.getStatusCode().is2xxSuccessful()) {
+                    if (context.getMapping().getDebug() || serviceConfiguration.getLogPayload()) {
+                        log.info("{} - Published message successfully ({}/{}): path={}, method={}, mapping={}",
+                                tenant, i + 1, requests.size(), fullPath, method, context.getMapping().getName());
+                    }
+                } else {
+                    String error = String.format("Failed to publish (%d/%d): status %s",
+                            i + 1, requests.size(), response != null ? response.getStatusCode() : "unknown");
+                    log.error("{} - {} - Payload: {}", tenant, error, payload);
+                    request.setError(new Exception(error));
+                    context.addError(new ProcessingException(error));
+                }
+
+            } catch (Exception e) {
+                String error = String.format("Error publishing to %s (%d/%d): %s", fullPath, i + 1, requests.size(), e.getMessage());
+                log.error("{} - {} - Payload: {}", tenant, error, payload, e);
+                request.setError(e);
+                context.addError(new ProcessingException(error, e));
+            }
+        }
+    }
+
+    /**
+     * Populate source identifier in the payload for Cumulocity API requests.
+     * Uses API.identifier field to determine which field name to populate (e.g., "source.id", "id", "deviceId")
+     * and sets it to the value from request.getSourceId().
+     */
+    private String populateSourceIdentifier(String payload, DynamicMapperRequest request, String tenant, int requestNum, int totalRequests) {
+        // Only populate if we have both API info and sourceId
+        if (request.getApi() == null || request.getSourceId() == null || request.getSourceId().isEmpty()) {
+            return payload;
+        }
+
+        String identifier = request.getApi().identifier;
+        String sourceId = request.getSourceId();
+
+        try {
+            // Parse the JSON payload
+            JsonNode jsonNode = objectMapper.readTree(payload);
+
+            if (!(jsonNode instanceof ObjectNode)) {
+                log.warn("{} - Payload is not a JSON object, cannot populate source identifier ({}/{})",
+                        tenant, requestNum, totalRequests);
+                return payload;
+            }
+
+            ObjectNode objectNode = (ObjectNode) jsonNode;
+
+            // Handle hierarchical identifiers like "source.id"
+            if (identifier.contains(".")) {
+                String[] parts = identifier.split("\\.");
+                ObjectNode currentNode = objectNode;
+
+                // Navigate/create nested structure
+                for (int i = 0; i < parts.length - 1; i++) {
+                    String part = parts[i];
+                    if (!currentNode.has(part) || !currentNode.get(part).isObject()) {
+                        currentNode.set(part, objectMapper.createObjectNode());
+                    }
+                    currentNode = (ObjectNode) currentNode.get(part);
+                }
+
+                // Set the final value
+                String lastPart = parts[parts.length - 1];
+                currentNode.put(lastPart, sourceId);
+            } else {
+                // Simple identifier - set directly
+                objectNode.put(identifier, sourceId);
+            }
+
+            String modifiedPayload = objectMapper.writeValueAsString(objectNode);
+
+            log.debug("{} - Populated {} with value {} ({}/{})",
+                    tenant, identifier, sourceId, requestNum, totalRequests);
+
+            return modifiedPayload;
+
         } catch (Exception e) {
-            String error = String.format("Error publishing to %s: %s", fullPath, e.getMessage());
-            log.error("{} - {}", tenant, error, e);
-            context.addError(new ProcessingException(error, e));
+            log.warn("{} - Failed to populate source identifier in payload ({}/{}): {}",
+                    tenant, requestNum, totalRequests, e.getMessage());
+            return payload; // Return original payload on error
+        }
+    }
+
+    /**
+     * Derive API type from MQTT-style topic.
+     * Handles both simple MQTT topics and REST path-style topics:
+     * - "measurements/9877263" → MEASUREMENT
+     * - "measurement/measurements/9877263" → MEASUREMENT (REST path format)
+     * - "events/9877263" → EVENT
+     * - "event/events/9877263" → EVENT (REST path format)
+     * - "eventsWithChildren/9877263" → EVENT_WITH_CHILDREN
+     * - "alarms/9877263" → ALARM
+     * - "alarm/alarms/9877263" → ALARM (REST path format)
+     * - "alarmsWithChildren/9877263" → ALARM_WITH_CHILDREN
+     * - "inventory/managedObjects/9877263" → INVENTORY
+     * - "managedobjects/9877263" → INVENTORY
+     * - "operations/9877263" → OPERATION
+     * - "devicecontrol/operations/9877263" → OPERATION (REST path format)
+     */
+    private API deriveAPIFromTopic(String topic) {
+        if (topic == null || topic.isEmpty()) {
+            log.warn("Cannot derive API: topic is null or empty");
+            return null;
+        }
+
+        String[] segments = topic.split("/");
+        if (segments.length == 0) {
+            log.warn("Cannot derive API: no segments in topic '{}'", topic);
+            return null;
+        }
+
+        // Try first segment, then second segment (for REST path format like "measurement/measurements/...")
+        String firstSegment = segments[0].toLowerCase();
+        String secondSegment = segments.length > 1 ? segments[1].toLowerCase() : null;
+
+        log.info("Deriving API from topic '{}': firstSegment='{}', secondSegment='{}'", topic, firstSegment, secondSegment);
+
+        // Map topic segment to API type
+        // Check for exact matches (including withChildren variants and REST paths)
+        API result = deriveFromSegment(firstSegment);
+        if (result != null) {
+            log.info("Derived API {} from first segment '{}'", result.name, firstSegment);
+            return result;
+        }
+
+        if (secondSegment != null) {
+            // Try second segment for REST path format
+            result = deriveFromSegment(secondSegment);
+            if (result != null) {
+                log.info("Derived API {} from second segment '{}'", result.name, secondSegment);
+                return result;
+            }
+        }
+
+        log.warn("Unknown topic segment for API derivation: firstSegment='{}', secondSegment='{}'", firstSegment, secondSegment);
+        return null;
+    }
+
+    /**
+     * Helper method to derive API from a single segment
+     */
+    private API deriveFromSegment(String segment) {
+        if (segment == null) {
+            return null;
+        }
+
+        switch (segment) {
+            case "measurement":
+            case "measurements":
+                return API.MEASUREMENT;
+
+            case "event":
+            case "events":
+                return API.EVENT;
+            case "eventswithchildren":
+                return API.EVENT_WITH_CHILDREN;
+
+            case "alarm":
+            case "alarms":
+                return API.ALARM;
+            case "alarmswithchildren":
+                return API.ALARM_WITH_CHILDREN;
+
+            case "inventory":
+            case "managedobjects":
+                return API.INVENTORY;
+
+            case "devicecontrol":
+            case "operation":
+            case "operations":
+                return API.OPERATION;
+
+            default:
+                return null;
         }
     }
 

@@ -494,31 +494,50 @@ public class PulsarConnectorClient extends AConnectorClient {
             return;
         }
 
-        DynamicMapperRequest request = context.getCurrentRequest();
-
-        if (context.getCurrentRequest() == null ||
-                context.getCurrentRequest().getRequest() == null) {
-            log.warn("{} - No payload to publish for mapping: {}", tenant, context.getMapping().getName());
+        var requests = context.getRequests();
+        if (requests == null || requests.isEmpty()) {
+            log.warn("{} - No requests to publish for mapping: {}", tenant, context.getMapping().getName());
             return;
         }
 
-        String payload = request.getRequest();
-        String topic = context.getResolvedPublishTopic();
         Qos qos = context.getQos();
 
-        try {
-            Producer<byte[]> producer = getOrCreateProducer(topic, qos);
+        // Process each request
+        for (int i = 0; i < requests.size(); i++) {
+            DynamicMapperRequest request = requests.get(i);
 
-            if (producer != null && producer.isConnected()) {
-                sendMessageWithQos(producer, payload, qos, context);
-            } else {
-                log.error("{} - No connected producer for topic: {}", tenant, topic);
+            if (request == null || request.getRequest() == null) {
+                log.warn("{} - Skipping null request or payload ({}/{})", tenant, i + 1, requests.size());
+                continue;
             }
 
-        } catch (Exception e) {
-            log.error("{} - Error publishing to topic: {}", tenant, topic, e);
-            context.addError(new dynamic.mapper.processor.ProcessingException(
-                    "Failed to publish message", e));
+            String payload = request.getRequest();
+            // Use the publishTopic from the request, fallback to context if not set
+            String topic = request.getPublishTopic() != null ? request.getPublishTopic() : context.getResolvedPublishTopic();
+
+            if (topic == null || topic.isEmpty()) {
+                log.warn("{} - No topic specified for request ({}/{}), skipping", tenant, i + 1, requests.size());
+                request.setError(new Exception("No publish topic specified"));
+                continue;
+            }
+
+            try {
+                Producer<byte[]> producer = getOrCreateProducer(topic, qos);
+
+                if (producer != null && producer.isConnected()) {
+                    sendMessageWithQos(producer, payload, qos, context);
+                    log.debug("{} - Published message ({}/{}): topic={}", tenant, i + 1, requests.size(), topic);
+                } else {
+                    log.error("{} - No connected producer for topic: {} ({}/{})", tenant, topic, i + 1, requests.size());
+                    request.setError(new Exception("No connected producer for topic: " + topic));
+                }
+
+            } catch (Exception e) {
+                log.error("{} - Error publishing to topic: {} ({}/{})", tenant, topic, i + 1, requests.size(), e);
+                request.setError(e);
+                context.addError(new dynamic.mapper.processor.ProcessingException(
+                        "Failed to publish message " + (i + 1) + "/" + requests.size(), e));
+            }
         }
     }
 

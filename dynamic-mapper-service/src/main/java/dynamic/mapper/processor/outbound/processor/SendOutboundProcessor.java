@@ -117,33 +117,14 @@ public class SendOutboundProcessor extends BaseProcessor {
                 return;
             }
 
-            // Store original requests list
-            var originalRequests = new java.util.ArrayList<>(context.getRequests());
+            // Publish all requests in a single call
+            // The connector implementation will handle looping over requests
+            connectorClient.publishMEAO(context);
 
-            // Process each request individually
-            for (int i = 0; i < originalRequests.size(); i++) {
-                DynamicMapperRequest request = originalRequests.get(i);
-                try {
-                    // Temporarily set the requests list to contain only the current request
-                    // This ensures publishMEAO() operates on the correct request
-                    context.setRequests(new java.util.ArrayList<>(java.util.Arrays.asList(request)));
-
-                    connectorClient.publishMEAO(context);
-
-                    // Log if debug is enabled
-                    if (mapping.getDebug() || context.getServiceConfiguration().getLogPayload()) {
-                        log.info("{} - Transformed message sent ({}/{}): API {}, message {}, topic {}",
-                                tenant, i + 1, originalRequests.size(), request.getApi(), request.getRequest(), context.getResolvedPublishTopic());
-                    }
-                } catch (Exception e) {
-                    request.setError(e);
-                    log.error("{} - Error publishing request ({}/{}): API {}, error: {}",
-                            tenant, i + 1, originalRequests.size(), request.getApi(), e.getMessage(), e);
-                }
+            // Log if debug is enabled
+            if (mapping.getDebug() || context.getServiceConfiguration().getLogPayload()) {
+                log.info("{} - Published {} outbound message(s)", tenant, requests.size());
             }
-
-            // Restore original requests list
-            context.setRequests(originalRequests);
 
         } catch (Exception e) {
             log.error("{} - Error during publishing outbound messages: ", tenant, e);

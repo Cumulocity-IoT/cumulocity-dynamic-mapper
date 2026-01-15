@@ -35,6 +35,7 @@ import dynamic.mapper.model.ConnectorStatus;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
+import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 import lombok.Getter;
 import lombok.Setter;
@@ -214,19 +215,30 @@ public class TestClient extends AConnectorClient {
     @Override
     public void publishMEAO(ProcessingContext<?> context) {
         // Simulate publishing - just log the message
-        String topic = context.getResolvedPublishTopic();
-
-        if (context.getCurrentRequest() == null ||
-                context.getCurrentRequest().getRequest() == null) {
-            log.warn("{} - No payload to publish for mapping: {}", tenant, context.getMapping().getName());
+        var requests = context.getRequests();
+        if (requests == null || requests.isEmpty()) {
+            log.warn("{} - No requests to publish for mapping: {}", tenant, context.getMapping().getName());
             return;
         }
 
-        String payload = context.getCurrentRequest().getRequest();
         Qos qos = context.getQos();
 
-        log.info("{} - Test Connector simulating publish to topic: [{}], QoS: {}, payload: {}",
-                tenant, topic, qos, payload);
+        // Process each request
+        for (int i = 0; i < requests.size(); i++) {
+            DynamicMapperRequest request = requests.get(i);
+
+            if (request == null || request.getRequest() == null) {
+                log.warn("{} - Skipping null request or payload ({}/{})", tenant, i + 1, requests.size());
+                continue;
+            }
+
+            String payload = request.getRequest();
+            // Use the publishTopic from the request, fallback to context if not set
+            String topic = request.getPublishTopic() != null ? request.getPublishTopic() : context.getResolvedPublishTopic();
+
+            log.info("{} - Test Connector simulating publish ({}/{}): topic=[{}], QoS: {}, payload: {}",
+                    tenant, i + 1, requests.size(), topic, qos, payload);
+        }
 
         // In a real test scenario, you might want to collect these messages
         // for verification in tests
