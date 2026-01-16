@@ -272,15 +272,16 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
     }
 
     private void connectWithRetry() {
-        int maxAttempts = 3;
+        int maxAttempts = 10;
         int attempt = 0;
         int delay = 0;
-        int delayStep = 5000;
+        int delayStep = 10000;
 
         while (attempt < maxAttempts && !isConnected() && shouldConnect()) {
             //Do not have a delay on first start, then for each attempt +5s
             if(attempt > 0) {
                 delay = delay + delayStep;
+                log.info("{} - Pulsar Connection Attempt {} with delay {}", tenant, attempt, delay);
                 try {
                     Thread.sleep(delay);
                 } catch (InterruptedException e) {
