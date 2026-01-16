@@ -295,7 +295,7 @@ public class WebHook extends AConnectorClient {
         String healthEndpoint = (String) connectorConfiguration.getProperties()
                 .getOrDefault("baseUrlHealthEndpoint", null);
 
-        log.info("{} - Checking health of webHook endpoint: {}", tenant, healthEndpoint);
+        log.debug("{} - Checking health of webHook endpoint: {}", tenant, healthEndpoint);
 
         return webhookClient.get()
                 .uri(healthEndpoint)

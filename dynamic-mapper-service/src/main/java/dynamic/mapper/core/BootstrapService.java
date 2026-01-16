@@ -432,6 +432,7 @@ public class BootstrapService {
         testConnectorConfig.setName("Test Connector");
 
         TestClient initialTestClient = new TestClient();
+        initialTestClient.setTenant(tenant);
         initialTestClient.getConnectorSpecification().getProperties()
                 .forEach((key, prop) -> testConnectorConfig.getProperties().put(key, prop.defaultValue));
         initialTestClient.setConnectorConfiguration(testConnectorConfig);

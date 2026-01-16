@@ -83,9 +83,12 @@ public class CamelDispatcherOutbound implements NotificationCallback {
 
     @Override
     public void onOpen(URI serverUri) {
+        String tenant = connectorClient.getTenant() != null ? connectorClient.getTenant() : "UNKNOWN";
         log.info("{} - Phase IV: Notification 2.0 connected over WebSocket, linked to connector: {}",
-                connectorClient.getTenant(), connectorClient.getConnectorName());
-        notificationSubscriber.setDeviceConnectionStatus(connectorClient.getTenant(), 200);
+                tenant, connectorClient.getConnectorName());
+        if (connectorClient.getTenant() != null) {
+            notificationSubscriber.setDeviceConnectionStatus(connectorClient.getTenant(), 200);
+        }
     }
 
     @Override
