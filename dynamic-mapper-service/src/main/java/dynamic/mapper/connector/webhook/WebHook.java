@@ -394,14 +394,13 @@ public class WebHook extends AConnectorClient {
                 // Always try to derive API from publishTopic if available (for DeviceMessage objects)
                 String publishTopic = request.getPublishTopic() != null ? request.getPublishTopic() : context.getResolvedPublishTopic();
                 if (publishTopic != null && !publishTopic.isEmpty()) {
-                    log.info("{} - Deriving API from topic '{}' ({}/{})", tenant, publishTopic, i + 1, requests.size());
                     API topicDerivedAPI = deriveAPIFromTopic(publishTopic);
 
                     if (topicDerivedAPI != null) {
                         derivedAPI = topicDerivedAPI;
                         request.setApi(derivedAPI);
-                        log.info("{} - Derived API {} from topic '{}', will use path '{}' ({}/{})",
-                                tenant, derivedAPI.name, publishTopic, derivedAPI.path, i + 1, requests.size());
+                        log.info("{} - Topic '{}' -> API {} ({}/{})",
+                                tenant, publishTopic, derivedAPI.name, i + 1, requests.size());
                     } else if (derivedAPI == null) {
                         log.warn("{} - Cannot derive API type from topic '{}' and no API set for cumulocityInternal connector ({}/{}), skipping",
                                 tenant, publishTopic, i + 1, requests.size());
@@ -423,7 +422,6 @@ public class WebHook extends AConnectorClient {
 
                 // Use the API path field for Cumulocity REST endpoint
                 contextPath = derivedAPI.path;
-                log.info("{} - Using contextPath '{}' for API {} ({}/{})", tenant, contextPath, derivedAPI.name, i + 1, requests.size());
 
                 // Default method to POST if not set
                 if (method == null) {
@@ -452,9 +450,9 @@ public class WebHook extends AConnectorClient {
                 ResponseEntity<String> response = responseEntity.block();
 
                 if (response != null && response.getStatusCode().is2xxSuccessful()) {
-                    if (context.getMapping().getDebug() || serviceConfiguration.getLogPayload()) {
-                        log.info("{} - Published message successfully ({}/{}): path={}, method={}, mapping={}",
-                                tenant, i + 1, requests.size(), fullPath, method, context.getMapping().getName());
+                    if (context.getMapping().getDebug() || context.getServiceConfiguration().getLogPayload()) {
+                        log.info("{} - Published message successfully ({}/{}): path={}, method={}, mapping={}, payload={}",
+                                tenant, i + 1, requests.size(), fullPath, method, context.getMapping().getName(), payload);
                     }
                 } else {
                     String error = String.format("Failed to publish (%d/%d): status %s",
@@ -553,13 +551,11 @@ public class WebHook extends AConnectorClient {
      */
     private API deriveAPIFromTopic(String topic) {
         if (topic == null || topic.isEmpty()) {
-            log.warn("Cannot derive API: topic is null or empty");
             return null;
         }
 
         String[] segments = topic.split("/");
         if (segments.length == 0) {
-            log.warn("Cannot derive API: no segments in topic '{}'", topic);
             return null;
         }
 
@@ -567,13 +563,10 @@ public class WebHook extends AConnectorClient {
         String firstSegment = segments[0].toLowerCase();
         String secondSegment = segments.length > 1 ? segments[1].toLowerCase() : null;
 
-        log.info("Deriving API from topic '{}': firstSegment='{}', secondSegment='{}'", topic, firstSegment, secondSegment);
-
         // Map topic segment to API type
         // Check for exact matches (including withChildren variants and REST paths)
         API result = deriveFromSegment(firstSegment);
         if (result != null) {
-            log.info("Derived API {} from first segment '{}'", result.name, firstSegment);
             return result;
         }
 
@@ -581,12 +574,10 @@ public class WebHook extends AConnectorClient {
             // Try second segment for REST path format
             result = deriveFromSegment(secondSegment);
             if (result != null) {
-                log.info("Derived API {} from second segment '{}'", result.name, secondSegment);
                 return result;
             }
         }
 
-        log.warn("Unknown topic segment for API derivation: firstSegment='{}', secondSegment='{}'", firstSegment, secondSegment);
         return null;
     }
 
