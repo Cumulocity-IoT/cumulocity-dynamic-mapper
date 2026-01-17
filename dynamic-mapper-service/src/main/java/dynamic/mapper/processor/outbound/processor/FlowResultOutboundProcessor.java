@@ -44,6 +44,8 @@ import dynamic.mapper.processor.flow.ExternalId;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.notification.websocket.Notification;
 import lombok.extern.slf4j.Slf4j;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 @Slf4j
 @Component
@@ -194,6 +196,22 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
             // This ensures that for WebHook configured as internal (Cumulocity Core) the request is sent to the originating message.
             request.setSourceId(resolvedExternalId);
 
+            // Derive API from publishTopic if available (for DeviceMessage objects)
+            if (publishTopic != null && !publishTopic.isEmpty()) {
+                API derivedAPI = deriveAPIFromTopic(publishTopic);
+                if (derivedAPI != null) {
+                    request.setApi(derivedAPI);
+                    log.debug("{} - Derived API {} from topic '{}' for DeviceMessage",
+                            tenant, derivedAPI.name, publishTopic);
+                }
+            }
+
+            // Populate Cumulocity-specific request with source identifier
+            if (request.getApi() != null && resolvedExternalId != null && !resolvedExternalId.isEmpty()) {
+                String cumulocityPayload = populateSourceIdentifier(payloadJson, request, tenant);
+                request.setRequestCumulocity(cumulocityPayload);
+            }
+
             context.setRetain(deviceMessage.getRetain());
 
             log.debug("{} - Created outbound request: deviceId={}, topic={}",
@@ -260,6 +278,12 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
             // Set the publishTopic on the request object
             if (context.getResolvedPublishTopic() != null) {
                 c8yRequest.setPublishTopic(context.getResolvedPublishTopic());
+            }
+
+            // Populate Cumulocity-specific request with source identifier
+            if (c8yRequest.getApi() != null && resolvedDeviceId != null && !resolvedDeviceId.isEmpty()) {
+                String cumulocityPayload = populateSourceIdentifier(payloadJson, c8yRequest, tenant);
+                c8yRequest.setRequestCumulocity(cumulocityPayload);
             }
 
             context.setRetain(c8yRequest.getRetain());
@@ -352,6 +376,160 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
             }
         } catch (Exception e) {
             throw new ProcessingException("Failed to clone payload: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Derive API type from MQTT-style topic.
+     * Handles both simple MQTT topics and REST path-style topics:
+     * - "measurements/9877263" → MEASUREMENT
+     * - "measurement/measurements/9877263" → MEASUREMENT (REST path format)
+     * - "events/9877263" → EVENT
+     * - "event/events/9877263" → EVENT (REST path format)
+     * - "eventsWithChildren/9877263" → EVENT_WITH_CHILDREN
+     * - "alarms/9877263" → ALARM
+     * - "alarm/alarms/9877263" → ALARM (REST path format)
+     * - "alarmsWithChildren/9877263" → ALARM_WITH_CHILDREN
+     * - "inventory/managedObjects/9877263" → INVENTORY
+     * - "managedobjects/9877263" → INVENTORY
+     * - "operations/9877263" → OPERATION
+     * - "devicecontrol/operations/9877263" → OPERATION (REST path format)
+     */
+    public static API deriveAPIFromTopic(String topic) {
+        if (topic == null || topic.isEmpty()) {
+            return null;
+        }
+
+        String[] segments = topic.split("/");
+        if (segments.length == 0) {
+            return null;
+        }
+
+        // Try first segment, then second segment (for REST path format like "measurement/measurements/...")
+        String firstSegment = segments[0].toLowerCase();
+        String secondSegment = segments.length > 1 ? segments[1].toLowerCase() : null;
+
+        // Map topic segment to API type
+        // Check for exact matches (including withChildren variants and REST paths)
+        API result = deriveFromSegment(firstSegment);
+        if (result != null) {
+            return result;
+        }
+
+        if (secondSegment != null) {
+            // Try second segment for REST path format
+            result = deriveFromSegment(secondSegment);
+            if (result != null) {
+                return result;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Helper method to derive API from a single segment
+     */
+    private static API deriveFromSegment(String segment) {
+        if (segment == null) {
+            return null;
+        }
+
+        switch (segment) {
+            case "measurement":
+            case "measurements":
+                return API.MEASUREMENT;
+
+            case "event":
+            case "events":
+                return API.EVENT;
+            case "eventswithchildren":
+                return API.EVENT_WITH_CHILDREN;
+
+            case "alarm":
+            case "alarms":
+                return API.ALARM;
+            case "alarmswithchildren":
+                return API.ALARM_WITH_CHILDREN;
+
+            case "inventory":
+            case "managedobjects":
+                return API.INVENTORY;
+
+            case "devicecontrol":
+            case "operation":
+            case "operations":
+                return API.OPERATION;
+
+            default:
+                return null;
+        }
+    }
+
+    /**
+     * Populate source identifier in the payload for Cumulocity API requests.
+     * Uses API.identifier field to determine which field name to populate (e.g., "source.id", "id", "deviceId")
+     * and sets it to the value from request.getSourceId().
+     *
+     * @param payload The JSON payload as a string
+     * @param request The DynamicMapperRequest containing API and sourceId information
+     * @param tenant The tenant identifier for logging
+     * @return The modified payload with source identifier populated, or original payload on error
+     */
+    private String populateSourceIdentifier(String payload, DynamicMapperRequest request, String tenant) {
+        // Only populate if we have both API info and sourceId
+        if (request.getApi() == null || request.getSourceId() == null || request.getSourceId().isEmpty()) {
+            return payload;
+        }
+
+        String identifier = request.getApi().identifier;
+        String sourceId = request.getSourceId();
+
+        try {
+            // Parse the JSON payload
+            JsonNode jsonNode = objectMapper.readTree(payload);
+
+            if (!(jsonNode instanceof ObjectNode)) {
+                log.warn("{} - Payload is not a JSON object, cannot populate source identifier",
+                        tenant);
+                return payload;
+            }
+
+            ObjectNode objectNode = (ObjectNode) jsonNode;
+
+            // Handle hierarchical identifiers like "source.id"
+            if (identifier.contains(".")) {
+                String[] parts = identifier.split("\\.");
+                ObjectNode currentNode = objectNode;
+
+                // Navigate/create nested structure
+                for (int i = 0; i < parts.length - 1; i++) {
+                    String part = parts[i];
+                    if (!currentNode.has(part) || !currentNode.get(part).isObject()) {
+                        currentNode.set(part, objectMapper.createObjectNode());
+                    }
+                    currentNode = (ObjectNode) currentNode.get(part);
+                }
+
+                // Set the final value
+                String lastPart = parts[parts.length - 1];
+                currentNode.put(lastPart, sourceId);
+            } else {
+                // Simple identifier - set directly
+                objectNode.put(identifier, sourceId);
+            }
+
+            String modifiedPayload = objectMapper.writeValueAsString(objectNode);
+
+            log.debug("{} - Populated {} with value {}",
+                    tenant, identifier, sourceId);
+
+            return modifiedPayload;
+
+        } catch (Exception e) {
+            log.warn("{} - Failed to populate source identifier in payload: {}",
+                    tenant, e.getMessage());
+            return payload; // Return original payload on error
         }
     }
 

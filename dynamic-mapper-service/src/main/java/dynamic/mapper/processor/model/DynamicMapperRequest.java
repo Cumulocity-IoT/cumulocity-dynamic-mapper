@@ -43,6 +43,8 @@ public class DynamicMapperRequest {
     private String externalId;
     private String externalIdType;
     private String request;
+    // For Cumulocity internal connectors: the request payload with source identifier populated
+    private String requestCumulocity;
     private String response;
     private Exception error;
     // this property documents if a C8Y request was already submitted and is created only for documentation/testing purpose.
