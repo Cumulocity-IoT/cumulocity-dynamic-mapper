@@ -44,7 +44,7 @@ import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.outbound.processor.FlowResultOutboundProcessor;
+import dynamic.mapper.processor.util.APITopicUtil;
 import jakarta.ws.rs.NotSupportedException;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -397,7 +397,7 @@ public class WebHook extends AConnectorClient {
                     // Fallback: Try to derive API from publishTopic if not already set
                     String publishTopic = request.getPublishTopic() != null ? request.getPublishTopic() : context.getResolvedPublishTopic();
                     if (publishTopic != null && !publishTopic.isEmpty()) {
-                        derivedAPI = FlowResultOutboundProcessor.deriveAPIFromTopic(publishTopic);
+                        derivedAPI = APITopicUtil.deriveAPIFromTopic(publishTopic);
                         if (derivedAPI != null) {
                             request.setApi(derivedAPI);
                             log.info("{} - Topic '{}' -> API {} ({}/{})",

@@ -20,191 +20,50 @@
  */
 package dynamic.mapper.processor.outbound.processor;
 
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.camel.Exchange;
 import org.springframework.stereotype.Component;
 
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import dynamic.mapper.configuration.ServiceConfiguration;
-import dynamic.mapper.configuration.TemplateType;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
-import dynamic.mapper.core.InventoryEnrichmentClient;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.processor.AbstractEnrichmentProcessor;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.flow.SimpleFlowContext;
 import dynamic.mapper.processor.flow.DataPrepContext;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.TransformationType;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
-import org.graalvm.polyglot.Engine;
-import org.graalvm.polyglot.Context;
-import org.graalvm.polyglot.Value;
-
+/**
+ * Outbound Enrichment processor that enriches Cumulocity operation payloads
+ * with identity information and metadata before transformation.
+ */
 @Component
 @Slf4j
-public class EnrichmentOutboundProcessor extends BaseProcessor {
+public class EnrichmentOutboundProcessor extends AbstractEnrichmentProcessor {
 
-    private final ConfigurationRegistry configurationRegistry;
-    private final MappingService mappingService;
     private final C8YAgent c8yAgent;
-
-    private Context.Builder graalContextBuilder;
 
     public EnrichmentOutboundProcessor(
             ConfigurationRegistry configurationRegistry,
             MappingService mappingService,
             C8YAgent c8yAgent) {
-        this.configurationRegistry = configurationRegistry;
-        this.mappingService = mappingService;
+        super(configurationRegistry, mappingService);
         this.c8yAgent = c8yAgent;
     }
 
     @Override
-    public void process(Exchange exchange) throws Exception {
-        ProcessingContext<?> context = exchange.getIn().getHeader("processingContext",
-                ProcessingContext.class);
-
-        String tenant = context.getTenant();
-        Mapping mapping = context.getMapping();
-
-        ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();
-        MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
-
-        // Extract additional info from headers if available
-        String connectorIdentifier = exchange.getIn().getHeader("connectorIdentifier", String.class);
-
-        // Prepare GraalVM context if code exists
-        if (mapping.getCode() != null
-                && mapping.isSubstitutionAsCode()) {
-            try {
-                // contextSemaphore.acquire();
-                var graalEngine = configurationRegistry.getGraalEngine(tenant);
-                var graalContext = createGraalContext(graalEngine);
-                context.setGraalContext(graalContext);
-                context.setSharedCode(serviceConfiguration.getCodeTemplates()
-                        .get(TemplateType.SHARED.name()).getCode());
-                context.setSystemCode(serviceConfiguration.getCodeTemplates()
-                        .get(TemplateType.SYSTEM.name()).getCode());
-            } catch (Exception e) {
-                handleGraalVMError(tenant, mapping, e, context);
-                return;
-            }
-        } else if (mapping.getCode() != null &&
-                TransformationType.SMART_FUNCTION.equals(mapping.getTransformationType())) {
-            try {
-                var graalEngine = configurationRegistry.getGraalEngine(tenant);
-                var graalContext = createGraalContext(graalEngine);
-                context.setSystemCode(serviceConfiguration.getCodeTemplates()
-                        .get(TemplateType.SHARED.name()).getCode());
-                context.setGraalContext(graalContext);
-                context.setFlowState(new HashMap<String, Object>());
-                context.setFlowContext(new SimpleFlowContext(graalContext, tenant,
-                        (InventoryEnrichmentClient) configurationRegistry.getC8yAgent(),
-                        context.getTesting()));
-
-            } catch (Exception e) {
-                handleGraalVMError(tenant, mapping, e, context);
-                return;
-            }
-        }
-
-        mappingStatus.messagesReceived++;
-        logOutboundMessageReceived(tenant, mapping, connectorIdentifier, context, serviceConfiguration);
-
-        // Now call the enrichment logic
-        try {
-            enrichPayload(context);
-        } catch (Exception e) {
-            String errorMessage = String.format("%s - Error in enrichment phase for mapping: %s", tenant,
-                    mapping.getName());
-            log.error(errorMessage, e);
-            context.addError(new ProcessingException(errorMessage, e));
-            context.setIgnoreFurtherProcessing(true);
-            mappingStatus.errors++;
-            mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
-            return;
-        }
-    }
-
-    private Context createGraalContext(Engine graalEngine)
-            throws Exception {
-        if (graalContextBuilder == null) {
-            graalContextBuilder = Context.newBuilder("js");
-        }
-
-        Context graalContext = graalContextBuilder
-                .engine(graalEngine)
-                // .option("engine.WarnInterpreterOnly", "false")
-                .allowHostAccess(configurationRegistry.getHostAccess())
-                .allowHostClassLookup(className ->
-                // Allow only the specific SubstitutionContext class
-                className.equals("dynamic.mapper.processor.model.SubstitutionContext")
-                        || className.equals("dynamic.mapper.processor.model.SubstitutionResult")
-                        || className.equals("dynamic.mapper.processor.model.SubstituteValue")
-                        || className.equals("dynamic.mapper.processor.model.SubstituteValue$TYPE")
-                        || className.equals("dynamic.mapper.processor.model.RepairStrategy")
-                        // Allow base collection classes needed for return values
-                        || className.equals("java.util.ArrayList") ||
-                        className.equals("java.util.HashMap") ||
-                        className.equals("java.util.HashSet"))
-                .build();
-        return graalContext;
-    }
-
-    private void logOutboundMessageReceived(String tenant, Mapping mapping, String connectorIdentifier,
-            ProcessingContext<?> context,
-            ServiceConfiguration serviceConfiguration) {
-        if (serviceConfiguration.getLogPayload() || mapping.getDebug()) {
-            Object pp = context.getPayload();
-            String ppLog = null;
-
-            if (pp instanceof byte[]) {
-                ppLog = new String((byte[]) pp, StandardCharsets.UTF_8);
-            } else if (pp != null) {
-                ppLog = pp.toString();
-            }
-            log.info(
-                    "{} - PROCESSING message on topic: [{}], on  connector: {}, for Mapping {} with QoS: {}, wrapped message: {}",
-                    tenant, context.getTopic(), connectorIdentifier, mapping.getName(),
-                    mapping.getQos().ordinal(), ppLog);
-        } else {
-            log.info(
-                    "{} - PROCESSING message on topic: [{}], on  connector: {}, for Mapping {} with QoS: {}",
-                    tenant, context.getTopic(), connectorIdentifier, mapping.getName(),
-                    mapping.getQos().ordinal());
-        }
-    }
-
-    private void handleGraalVMError(String tenant, Mapping mapping, Exception e,
-            ProcessingContext<?> context) {
-        MappingStatus mappingStatus = mappingService
-                .getMappingStatus(tenant, mapping);
-        String errorMessage = String.format("Tenant %s - Failed to set up GraalVM context: %s",
-                tenant, e.getMessage());
-        log.error(errorMessage, e);
-        context.addError(new ProcessingException(errorMessage, e));
-        mappingStatus.errors++;
-        mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
-    }
-
-    // ========== ENRICHMENT LOGIC (from EnrichmentOutboundProcessor) ==========
-
-    public void enrichPayload(ProcessingContext<?> context) {
-
+    protected void enrichPayload(ProcessingContext<?> context) {
         /*
-         * step 0 patch payload with dummy property _IDENTITY_ in case the content
-         * is required in the payload for a substitution
+         * Enrich payload with _IDENTITY_ property containing source device information
          */
         String tenant = context.getTenant();
         Object payloadObject = context.getPayload();
@@ -212,8 +71,7 @@ public class EnrichmentOutboundProcessor extends BaseProcessor {
 
         String identifier = context.getTesting() ? "_IDENTITY_.c8ySourceId" : context.getApi().identifier;
         String payloadAsString = toPrettyJsonString(payloadObject);
-        Object sourceId = extractContent(context, payloadObject, payloadAsString,
-                identifier);
+        Object sourceId = extractContent(context, payloadObject, payloadAsString, identifier);
         context.setSourceId(sourceId.toString());
 
         Map<String, String> identityFragment = new HashMap<>();
@@ -255,7 +113,18 @@ public class EnrichmentOutboundProcessor extends BaseProcessor {
                 identityFragment.put("externalId", externalId.getExternalId());
             }
         }
+    }
 
+    @Override
+    protected void handleEnrichmentError(String tenant, Mapping mapping, Exception e,
+            ProcessingContext<?> context, MappingStatus mappingStatus) {
+        String errorMessage = String.format("%s - Error in enrichment phase for mapping: %s", tenant,
+                mapping.getName());
+        log.error(errorMessage, e);
+        context.addError(new ProcessingException(errorMessage, e));
+        context.setIgnoreFurtherProcessing(true);
+        mappingStatus.errors++;
+        mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
     }
 
     /**
@@ -280,20 +149,4 @@ public class EnrichmentOutboundProcessor extends BaseProcessor {
             return payloadObject != null ? payloadObject.toString() : "null";
         }
     }
-
-    /**
-     * Helper method to safely add values to DataPrepContext
-     */
-    private void addToFlowContext(DataPrepContext flowContext, ProcessingContext<?> context, String key,
-            Object value) {
-        try {
-            if (context.getGraalContext() != null && value != null) {
-                Value graalValue = context.getGraalContext().asValue(value);
-                flowContext.setState(key, graalValue);
-            }
-        } catch (Exception e) {
-            log.warn("{} - Failed to add '{}' to DataPrepContext: {}", context.getTenant(), key, e.getMessage());
-        }
-    }
-
 }

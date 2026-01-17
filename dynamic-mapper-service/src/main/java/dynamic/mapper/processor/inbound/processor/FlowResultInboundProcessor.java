@@ -1,11 +1,8 @@
 package dynamic.mapper.processor.inbound.processor;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.camel.Exchange;
 import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -15,8 +12,10 @@ import com.cumulocity.sdk.client.ProcessingMode;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.processor.AbstractFlowResultProcessor;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
+import dynamic.mapper.processor.model.ExternalIdInfo;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
 import dynamic.mapper.processor.flow.CumulocityObject;
@@ -28,116 +27,74 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
-public class FlowResultInboundProcessor extends BaseProcessor {
+public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
 
-    private final MappingService mappingService;
     private final C8YAgent c8yAgent;
-    private final ObjectMapper objectMapper;
 
     public FlowResultInboundProcessor(
             MappingService mappingService,
             C8YAgent c8yAgent,
             ObjectMapper objectMapper) {
-        this.mappingService = mappingService;
+        super(mappingService, objectMapper);
         this.c8yAgent = c8yAgent;
-        this.objectMapper = objectMapper;
     }
 
     @Override
-    public void process(Exchange exchange) throws Exception {
-        ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
-
+    protected void processMessage(Object message, ProcessingContext<?> context) throws ProcessingException {
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
-        Boolean testing = context.getTesting();
 
-        try {
-            processFlowResults(context);
-
-            // Check inventory filter condition if specified
-            // if (mapping.getFilterInventory() != null &&
-            // !mapping.getCreateNonExistingDevice()) {
-            if (mapping.getFilterInventory() != null) {
-                boolean filterInventory = evaluateInventoryFilter(tenant, mapping.getFilterInventory(),
-                        context.getSourceId(), context.getTesting());
-                if (context.getSourceId() == null
-                        || !filterInventory) {
-                    if (mapping.getDebug()) {
-                        log.info(
-                                "{} - Inbound mapping {}/{} not processed, failing Filter inventory execution: filterResult {}",
-                                tenant, mapping.getName(), mapping.getIdentifier(),
-                                filterInventory);
-                    }
-                    context.setIgnoreFurtherProcessing(true);
-                }
-            }
-        } catch (Exception e) {
-            int lineNumber = 0;
-            if (e.getStackTrace().length > 0) {
-                lineNumber = e.getStackTrace()[0].getLineNumber();
-            }
-            String errorMessage = String.format(
-                    "%s - Error in FlowResultInboundProcessor: %s for mapping: %s, line %s",
-                    tenant, mapping.getName(), e.getMessage(), lineNumber);
-            log.error(errorMessage, e);
-            if (e instanceof ProcessingException) {
-                context.addError((ProcessingException) e);
-            } else {
-                context.addError(new ProcessingException(errorMessage, e));
-            }
-
-            if (!testing) {
-                MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
-                mappingStatus.errors++;
-                mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
-            }
-            return;
+        if (message instanceof CumulocityObject) {
+            processCumulocityObject((CumulocityObject) message, context, tenant, mapping);
+        } else {
+            log.debug("{} - Message is not a CumulocityObject, skipping: {}", tenant,
+                    message.getClass().getSimpleName());
         }
     }
 
-    private void processFlowResults(ProcessingContext<?> context) throws ProcessingException {
-        Object flowResult = context.getFlowResult();
-        String tenant = context.getTenant();
+    @Override
+    protected void postProcessFlowResults(ProcessingContext<?> context) throws ProcessingException {
         Mapping mapping = context.getMapping();
+        String tenant = context.getTenant();
 
-        if (flowResult == null) {
-            log.debug("{} - No flow result available, skipping Flow substitution", tenant);
-            context.setIgnoreFurtherProcessing(true);
-            return;
-        }
-
-        List<Object> messagesToProcess = new ArrayList<>();
-
-        // Handle both single objects and lists
-        if (flowResult instanceof List) {
-            messagesToProcess.addAll((List<?>) flowResult);
-        } else {
-            messagesToProcess.add(flowResult);
-        }
-
-        if (messagesToProcess.isEmpty()) {
-            log.info("{} - Flow result is empty, skipping processing", tenant);
-            context.setIgnoreFurtherProcessing(true);
-            return;
-        }
-
-        // Process each message
-        for (Object message : messagesToProcess) {
-            if (message instanceof CumulocityObject) {
-                processCumulocityObject((CumulocityObject) message, context, tenant, mapping);
-            } else {
-                log.debug("{} - Message is not a CumulocityObject, skipping: {}", tenant,
-                        message.getClass().getSimpleName());
+        // Check inventory filter condition if specified
+        if (mapping.getFilterInventory() != null) {
+            boolean filterInventory = evaluateInventoryFilter(tenant, mapping.getFilterInventory(),
+                    context.getSourceId(), context.getTesting());
+            if (context.getSourceId() == null || !filterInventory) {
+                if (mapping.getDebug()) {
+                    log.info(
+                            "{} - Inbound mapping {}/{} not processed, failing Filter inventory execution: filterResult {}",
+                            tenant, mapping.getName(), mapping.getIdentifier(),
+                            filterInventory);
+                }
+                context.setIgnoreFurtherProcessing(true);
             }
         }
+    }
 
-        if (context.getRequests().isEmpty()) {
-            log.info("{} - No C8Y requests generated from flow result", tenant);
-            context.setIgnoreFurtherProcessing(true);
+    @Override
+    protected void handleProcessingError(Exception e, ProcessingContext<?> context, String tenant, Mapping mapping) {
+        int lineNumber = 0;
+        if (e.getStackTrace().length > 0) {
+            lineNumber = e.getStackTrace()[0].getLineNumber();
+        }
+        String errorMessage = String.format(
+                "%s - Error in FlowResultInboundProcessor: %s for mapping: %s, line %s",
+                tenant, mapping.getName(), e.getMessage(), lineNumber);
+        log.error(errorMessage, e);
+
+        if (e instanceof ProcessingException) {
+            context.addError((ProcessingException) e);
         } else {
-            log.info("{} - Generated {} C8Y requests from flow result", tenant, context.getRequests().size());
+            context.addError(new ProcessingException(errorMessage, e));
         }
 
+        if (!context.getTesting()) {
+            MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
+            mappingStatus.errors++;
+            mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+        }
     }
 
     private void processCumulocityObject(CumulocityObject cumulocityMessage, ProcessingContext<?> context,
@@ -176,14 +133,10 @@ public class FlowResultInboundProcessor extends BaseProcessor {
             // Resolve device ID and set it hierarchically in the payload
             String resolvedDeviceId = resolveDeviceIdentifier(cumulocityMessage, context, tenant);
             List<ExternalId> externalSources = cumulocityMessage.getExternalSource();
-            String externalId = null;
-            String externalType = null;
+            ExternalIdInfo externalIdInfo = ExternalIdInfo.from(externalSources);
 
-            if (externalSources != null && !externalSources.isEmpty()) {
-                ExternalId externalSource = externalSources.get(0);
-                externalId = externalSource.getExternalId();
-                externalType = externalSource.getType();
-                context.setExternalId(externalId);
+            if (externalIdInfo.isPresent()) {
+                context.setExternalId(externalIdInfo.getExternalId());
             }
 
             if (resolvedDeviceId != null) {
@@ -202,8 +155,11 @@ public class FlowResultInboundProcessor extends BaseProcessor {
                                 objectMapper);
                         context.setSourceId(sourceId);
                         resolvedDeviceId = sourceId; // Set this so it's used below
-                        externalType = externalSource.getType();
-                        externalId = externalSource.getExternalId();
+                        // Update externalIdInfo with created device info
+                        externalIdInfo = ExternalIdInfo.builder()
+                                .externalType(externalSource.getType())
+                                .externalId(externalSource.getExternalId())
+                                .build();
                         context.setExternalId(externalSource.getExternalId());
                         ProcessingResultHelper.setHierarchicalValue(payload, targetAPI.identifier, sourceId);
                     }
@@ -235,28 +191,14 @@ public class FlowResultInboundProcessor extends BaseProcessor {
                     cumulocityMessage.getAction(), mapping);
             dynamicMapperRequest.setApi(targetAPI);
             dynamicMapperRequest.setSourceId(resolvedDeviceId);
-            dynamicMapperRequest.setExternalId(externalId);
-            dynamicMapperRequest.setExternalIdType(externalType);
+            dynamicMapperRequest.setExternalId(externalIdInfo.getExternalId());
+            dynamicMapperRequest.setExternalIdType(externalIdInfo.getExternalType());
 
             log.debug("{} - Created C8Y request: API={}, action={}, deviceId={}",
                     tenant, targetAPI.name, cumulocityMessage.getAction(), resolvedDeviceId);
 
         } catch (Exception e) {
             throw new ProcessingException("Failed to process CumulocityObject: " + e.getMessage(), e);
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    private Map<String, Object> clonePayload(Object payload) throws ProcessingException {
-        try {
-            if (payload instanceof Map) {
-                return new HashMap<>((Map<String, Object>) payload);
-            } else {
-                // Convert object to map using Jackson
-                return objectMapper.convertValue(payload, Map.class);
-            }
-        } catch (Exception e) {
-            throw new ProcessingException("Failed to clone payload: " + e.getMessage(), e);
         }
     }
 

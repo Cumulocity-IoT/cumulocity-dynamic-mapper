@@ -20,121 +20,59 @@
  */
 package dynamic.mapper.processor.outbound.processor;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import static com.dashjoin.jsonata.Jsonata.jsonata;
 
-import org.apache.camel.Exchange;
 import org.springframework.stereotype.Component;
 
-import static dynamic.mapper.model.Substitution.toPrettyJsonString;
-
-import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Substitution;
+import dynamic.mapper.processor.AbstractJSONataExtractionProcessor;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.SubstituteValue;
-import dynamic.mapper.processor.model.SubstitutionEvaluation;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Outbound JSONata extraction processor that extracts and processes substitutions
+ * from Cumulocity payloads using JSONata expressions.
+ *
+ * Evaluates JSONata expressions directly against the payload object.
+ */
 @Slf4j
 @Component
-public class JSONataExtractionOutboundProcessor extends BaseProcessor {
-
-    private final MappingService mappingService;
+public class JSONataExtractionOutboundProcessor extends AbstractJSONataExtractionProcessor {
 
     public JSONataExtractionOutboundProcessor(MappingService mappingService) {
-        this.mappingService = mappingService;
+        super(mappingService);
     }
 
     @Override
-    public void process(Exchange exchange) throws Exception {
-        ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
-
-        String tenant = context.getTenant();
-        Mapping mapping = context.getMapping();
-
+    protected Object extractContentFromPayload(ProcessingContext<?> context,
+                                              Substitution substitution,
+                                              Object payloadObject,
+                                              String payloadAsString) {
+        Object extractedSourceContent = null;
         try {
-            extractFromSource(context);
+            var expr = jsonata(substitution.getPathSource());
+            extractedSourceContent = expr.evaluate(payloadObject);
         } catch (Exception e) {
-            String errorMessage = String.format(
-                    "Tenant %s - Error in JSONataExtractionOutboundProcessor for mapping: %s,",
-                    tenant, mapping.getName());
-            log.error(errorMessage, e);
-            MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
-            context.addError(new ProcessingException(errorMessage, e));
-            mappingStatus.errors++;
-            mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
-            return;
+            log.error("{} - EvaluateRuntimeException for: {}, {}: ", context.getTenant(),
+                    substitution.getPathSource(), payloadAsString, e);
         }
+        return extractedSourceContent;
     }
 
-    public void extractFromSource(ProcessingContext<?> context)
-            throws ProcessingException {
-        try {
-            Mapping mapping = context.getMapping();
-            String tenant = context.getTenant();
-            ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();
-
-            Object payloadObject = context.getPayload();
-
-            Map<String, List<SubstituteValue>> processingCache = context.getProcessingCache();
-            String payloadAsString = toPrettyJsonString(payloadObject);
-
-            if (serviceConfiguration.getLogPayload() || mapping.getDebug()) {
-                log.info("{} - Incoming payload (patched): {} {} {} {}", tenant,
-                        payloadAsString,
-                        serviceConfiguration.getLogPayload(), mapping.getDebug(),
-                        serviceConfiguration.getLogPayload() || mapping.getDebug());
-            }
-
-            for (Substitution substitution : mapping.getSubstitutions()) {
-                Object extractedSourceContent = null;
-
-                /*
-                 * step 1 extract content from inbound payload
-                 */
-                extractedSourceContent = extractContent(context, payloadObject, payloadAsString,
-                        substitution.getPathSource());
-                /*
-                 * step 2 analyse extracted content: textual, array
-                 */
-                List<SubstituteValue> processingCacheEntry = processingCache.getOrDefault(
-                        substitution.getPathTarget(),
-                        new ArrayList<>());
-
-                if (SubstitutionEvaluation.isArray(extractedSourceContent)
-                        && substitution.getExpandArray()) {
-                    var extractedSourceContentCollection = (Collection) extractedSourceContent;
-                    // extracted result from sourcePayload is an array, so we potentially have to
-                    // iterate over the result, e.g. creating multiple devices
-                    for (Object jn : extractedSourceContentCollection) {
-                        SubstitutionEvaluation.processSubstitute(tenant,
-                                processingCacheEntry, jn,
-                                substitution, mapping);
-                    }
-                } else {
-                    SubstitutionEvaluation.processSubstitute(tenant,
-                            processingCacheEntry, extractedSourceContent,
-                            substitution, mapping);
-                }
-                processingCache.put(substitution.getPathTarget(), processingCacheEntry);
-
-                if (context.getServiceConfiguration().getLogSubstitution() || mapping.getDebug()) {
-                    String contentAsString = extractedSourceContent != null ? extractedSourceContent.toString()
-                            : "null";
-                    log.debug("{} - Evaluated substitution (pathSource:substitute)/({}: {}), (pathTarget)/({})",
-                            context.getTenant(),
-                            substitution.getPathSource(), contentAsString, substitution.getPathTarget());
-                }
-            }
-        } catch (Exception e) {
-            throw new ProcessingException(e.getMessage());
-        }
+    @Override
+    protected void handleProcessingError(Exception e, ProcessingContext<?> context, String tenant, Mapping mapping) {
+        String errorMessage = String.format(
+                "Tenant %s - Error in JSONataExtractionOutboundProcessor for mapping: %s,",
+                tenant, mapping.getName());
+        log.error(errorMessage, e);
+        MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
+        context.addError(new ProcessingException(errorMessage, e));
+        mappingStatus.errors++;
+        mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
     }
 
 }

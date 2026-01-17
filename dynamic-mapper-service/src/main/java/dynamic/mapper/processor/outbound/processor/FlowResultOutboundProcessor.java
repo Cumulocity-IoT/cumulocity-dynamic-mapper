@@ -20,12 +20,9 @@
  */
 package dynamic.mapper.processor.outbound.processor;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.camel.Exchange;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.springframework.stereotype.Component;
 
@@ -34,13 +31,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.processor.AbstractFlowResultProcessor;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
+import dynamic.mapper.processor.model.ExternalIdInfo;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.util.APITopicUtil;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
 import dynamic.mapper.processor.flow.CumulocityObject;
 import dynamic.mapper.processor.flow.DeviceMessage;
-import dynamic.mapper.processor.flow.ExternalId;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.notification.websocket.Notification;
 import lombok.extern.slf4j.Slf4j;
@@ -49,89 +48,46 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 @Slf4j
 @Component
-public class FlowResultOutboundProcessor extends BaseProcessor {
+public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
 
-    private final MappingService mappingService;
-    private final ObjectMapper objectMapper;
+    protected static final String EXTERNAL_ID_TOKEN = "_externalId_";
 
     public FlowResultOutboundProcessor(
             MappingService mappingService,
             ObjectMapper objectMapper) {
-        this.mappingService = mappingService;
-        this.objectMapper = objectMapper;
+        super(mappingService, objectMapper);
     }
 
     @Override
-    public void process(Exchange exchange) throws Exception {
-        ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
-
+    protected void processMessage(Object message, ProcessingContext<?> context) throws ProcessingException {
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
 
-        try {
-            processFlowResults(context);
-        } catch (Exception e) {
-            int lineNumber = 0;
-            if (e.getStackTrace().length > 0) {
-                lineNumber = e.getStackTrace()[0].getLineNumber();
-            }
-            String errorMessage = String.format(
-                    "Tenant %s - Error in FlowResultOutboundProcessor: %s for mapping: %s, line %s",
-                    tenant, mapping.getName(), e.getMessage(), lineNumber);
-            log.error(errorMessage, e);
-
-            MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
-            context.addError(new ProcessingException(errorMessage, e));
-            mappingStatus.errors++;
-            mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
-            return;
+        if (message instanceof DeviceMessage) {
+            processDeviceMessage((DeviceMessage) message, context, tenant, mapping);
+        } else if (message instanceof CumulocityObject) {
+            processCumulocityObject((CumulocityObject) message, context, tenant, mapping);
+        } else {
+            log.debug("{} - Message is not a recognized type, skipping: {}", tenant,
+                    message.getClass().getSimpleName());
         }
     }
 
-    private void processFlowResults(ProcessingContext<?> context) throws ProcessingException {
-        Object flowResult = context.getFlowResult();
-        String tenant = context.getTenant();
-        Mapping mapping = context.getMapping();
-
-        if (flowResult == null) {
-            log.debug("{} - No flow result available, skipping flow result processing", tenant);
-            context.setIgnoreFurtherProcessing(true);
-            return;
+    @Override
+    protected void handleProcessingError(Exception e, ProcessingContext<?> context, String tenant, Mapping mapping) {
+        int lineNumber = 0;
+        if (e.getStackTrace().length > 0) {
+            lineNumber = e.getStackTrace()[0].getLineNumber();
         }
+        String errorMessage = String.format(
+                "Tenant %s - Error in FlowResultOutboundProcessor: %s for mapping: %s, line %s",
+                tenant, mapping.getName(), e.getMessage(), lineNumber);
+        log.error(errorMessage, e);
 
-        List<Object> messagesToProcess = new ArrayList<>();
-
-        // Handle both single objects and lists
-        if (flowResult instanceof List) {
-            messagesToProcess.addAll((List<?>) flowResult);
-        } else {
-            messagesToProcess.add(flowResult);
-        }
-
-        if (messagesToProcess.isEmpty()) {
-            log.info("{} - Flow result is empty, skipping processing", tenant);
-            context.setIgnoreFurtherProcessing(true);
-            return;
-        }
-
-        // Process each message
-        for (Object message : messagesToProcess) {
-            if (message instanceof DeviceMessage) {
-                processDeviceMessage((DeviceMessage) message, context, tenant, mapping);
-            } else if (message instanceof CumulocityObject) {
-                processCumulocityObject((CumulocityObject) message, context, tenant, mapping);
-            } else {
-                log.debug("{} - Message is not a CumulocityObject, skipping: {}", tenant,
-                        message.getClass().getSimpleName());
-            }
-        }
-
-        if (context.getRequests().isEmpty()) {
-            log.info("{} - No requests generated from flow result", tenant);
-            context.setIgnoreFurtherProcessing(true);
-        } else {
-            log.info("{} - Generated {} requests from flow result", tenant, context.getRequests().size());
-        }
+        MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
+        context.addError(new ProcessingException(errorMessage, e));
+        mappingStatus.errors++;
+        mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
     }
 
     private void processDeviceMessage(DeviceMessage deviceMessage, ProcessingContext<?> context,
@@ -198,7 +154,7 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
 
             // Derive API from publishTopic if available (for DeviceMessage objects)
             if (publishTopic != null && !publishTopic.isEmpty()) {
-                API derivedAPI = deriveAPIFromTopic(publishTopic);
+                API derivedAPI = APITopicUtil.deriveAPIFromTopic(publishTopic);
                 if (derivedAPI != null) {
                     request.setApi(derivedAPI);
                     log.debug("{} - Derived API {} from topic '{}' for DeviceMessage",
@@ -235,21 +191,16 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
 
             // Resolve device ID and set it hierarchically in the payload
             String resolvedDeviceId = resolveDeviceIdentifier(cumulocityMessage, context, tenant);
-            List<ExternalId> externalSources = cumulocityMessage.getExternalSource();
-            String externalId = null;
-            String externalType = null;
+            ExternalIdInfo externalIdInfo = ExternalIdInfo.from(cumulocityMessage.getExternalSource());
 
-            if (externalSources != null && !externalSources.isEmpty()) {
-                ExternalId externalSource = externalSources.get(0);
-                externalId = externalSource.getExternalId();
-                externalType = externalSource.getType();
-                context.setExternalId(externalId);
+            if (externalIdInfo.isPresent()) {
+                context.setExternalId(externalIdInfo.getExternalId());
             }
 
             if (resolvedDeviceId != null) {
                 ProcessingResultHelper.setHierarchicalValue(payload, targetAPI.identifier, resolvedDeviceId);
                 context.setSourceId(resolvedDeviceId);
-            } else if (externalSources != null && !externalSources.isEmpty()) {
+            } else if (externalIdInfo.isPresent()) {
                 // No device ID and not creating implicit devices - skip this message
                 log.warn(
                         "{} - Cannot process message: no device ID resolved and createNonExistingDevice is false for mapping {}",
@@ -272,8 +223,8 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
                     cumulocityMessage.getAction(), mapping);
             c8yRequest.setApi(targetAPI);
             c8yRequest.setSourceId(resolvedDeviceId);
-            c8yRequest.setExternalIdType(externalType);
-            c8yRequest.setExternalId(externalId);
+            c8yRequest.setExternalIdType(externalIdInfo.getExternalType());
+            c8yRequest.setExternalId(externalIdInfo.getExternalId());
 
             // Set the publishTopic on the request object
             if (context.getResolvedPublishTopic() != null) {
@@ -362,107 +313,6 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
 
             // Remove TOKEN_CONTEXT_DATA from payload
             payload.remove(Mapping.TOKEN_CONTEXT_DATA);
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    private Map<String, Object> clonePayload(Object payload) throws ProcessingException {
-        try {
-            if (payload instanceof Map) {
-                return new HashMap<>((Map<String, Object>) payload);
-            } else {
-                // Convert object to map using Jackson
-                return objectMapper.convertValue(payload, Map.class);
-            }
-        } catch (Exception e) {
-            throw new ProcessingException("Failed to clone payload: " + e.getMessage(), e);
-        }
-    }
-
-    /**
-     * Derive API type from MQTT-style topic.
-     * Handles both simple MQTT topics and REST path-style topics:
-     * - "measurements/9877263" → MEASUREMENT
-     * - "measurement/measurements/9877263" → MEASUREMENT (REST path format)
-     * - "events/9877263" → EVENT
-     * - "event/events/9877263" → EVENT (REST path format)
-     * - "eventsWithChildren/9877263" → EVENT_WITH_CHILDREN
-     * - "alarms/9877263" → ALARM
-     * - "alarm/alarms/9877263" → ALARM (REST path format)
-     * - "alarmsWithChildren/9877263" → ALARM_WITH_CHILDREN
-     * - "inventory/managedObjects/9877263" → INVENTORY
-     * - "managedobjects/9877263" → INVENTORY
-     * - "operations/9877263" → OPERATION
-     * - "devicecontrol/operations/9877263" → OPERATION (REST path format)
-     */
-    public static API deriveAPIFromTopic(String topic) {
-        if (topic == null || topic.isEmpty()) {
-            return null;
-        }
-
-        String[] segments = topic.split("/");
-        if (segments.length == 0) {
-            return null;
-        }
-
-        // Try first segment, then second segment (for REST path format like "measurement/measurements/...")
-        String firstSegment = segments[0].toLowerCase();
-        String secondSegment = segments.length > 1 ? segments[1].toLowerCase() : null;
-
-        // Map topic segment to API type
-        // Check for exact matches (including withChildren variants and REST paths)
-        API result = deriveFromSegment(firstSegment);
-        if (result != null) {
-            return result;
-        }
-
-        if (secondSegment != null) {
-            // Try second segment for REST path format
-            result = deriveFromSegment(secondSegment);
-            if (result != null) {
-                return result;
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Helper method to derive API from a single segment
-     */
-    private static API deriveFromSegment(String segment) {
-        if (segment == null) {
-            return null;
-        }
-
-        switch (segment) {
-            case "measurement":
-            case "measurements":
-                return API.MEASUREMENT;
-
-            case "event":
-            case "events":
-                return API.EVENT;
-            case "eventswithchildren":
-                return API.EVENT_WITH_CHILDREN;
-
-            case "alarm":
-            case "alarms":
-                return API.ALARM;
-            case "alarmswithchildren":
-                return API.ALARM_WITH_CHILDREN;
-
-            case "inventory":
-            case "managedobjects":
-                return API.INVENTORY;
-
-            case "devicecontrol":
-            case "operation":
-            case "operations":
-                return API.OPERATION;
-
-            default:
-                return null;
         }
     }
 
