@@ -26,6 +26,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Base64;
 import java.util.List;
 
@@ -56,8 +58,9 @@ class MappingScenarioIntegrationTest {
     private List<Mapping> inboundMappings;
     private List<Mapping> outboundMappings;
 
-    private static final String INBOUND_MAPPINGS_PATH = "/Users/ck/work/git/cumulocity-dynamic-mapper/resources/samples/mappings-INBOUND.json";
-    private static final String OUTBOUND_MAPPINGS_PATH = "/Users/ck/work/git/cumulocity-dynamic-mapper/resources/samples/mappings-OUTBOUND.json";
+    // Relative paths from project root to samples directory
+    private static final String INBOUND_MAPPINGS_PATH = "resources/samples/mappings-INBOUND.json";
+    private static final String OUTBOUND_MAPPINGS_PATH = "resources/samples/mappings-OUTBOUND.json";
 
     @BeforeEach
     void setUp() throws IOException {
@@ -77,14 +80,24 @@ class MappingScenarioIntegrationTest {
         outboundMappings = null;
     }
 
-    private List<Mapping> loadMappingsFromFile(String path) throws IOException {
-        File file = new File(path);
+    private List<Mapping> loadMappingsFromFile(String relativePath) throws IOException {
+        // Get the project root directory by navigating up from the test class location
+        Path testClassPath = Paths.get(getClass().getProtectionDomain().getCodeSource().getLocation().getPath());
+
+        // Navigate up to project root: target/test-classes -> target -> dynamic-mapper-service -> project root
+        Path projectRoot = testClassPath.getParent().getParent().getParent();
+
+        // Resolve the relative path from project root
+        Path filePath = projectRoot.resolve(relativePath).normalize();
+
+        File file = filePath.toFile();
         if (!file.exists()) {
-            log.warn("Mapping file not found: {}", path);
+            log.warn("Mapping file not found: {} (resolved to: {})", relativePath, filePath);
             return List.of();
         }
 
         String content = Files.readString(file.toPath());
+        log.debug("Loaded mappings from: {}", filePath);
         return objectMapper.readValue(content, new TypeReference<List<Mapping>>() {});
     }
 
