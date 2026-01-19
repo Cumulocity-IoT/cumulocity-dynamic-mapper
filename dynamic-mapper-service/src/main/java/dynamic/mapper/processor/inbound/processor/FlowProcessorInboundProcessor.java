@@ -1,166 +1,42 @@
 package dynamic.mapper.processor.inbound.processor;
 
-import static dynamic.mapper.model.Substitution.toPrettyJsonString;
-
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 
-import org.apache.camel.Exchange;
 import org.graalvm.polyglot.Context;
-import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
 import org.springframework.stereotype.Component;
 
-import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.processor.AbstractFlowProcessorProcessor;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.flow.CumulocityObject;
 import dynamic.mapper.processor.flow.DeviceMessage;
-import dynamic.mapper.processor.flow.JavaScriptConsole;
-import dynamic.mapper.processor.flow.DataPrepContext;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.util.JavaScriptInteropHelper;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Inbound FlowProcessor that executes JavaScript smart functions
+ * to transform device messages into Cumulocity objects.
+ */
 @Slf4j
 @Component
-public class FlowProcessorInboundProcessor extends BaseProcessor {
-
-    private final MappingService mappingService;
+public class FlowProcessorInboundProcessor extends AbstractFlowProcessorProcessor {
 
     public FlowProcessorInboundProcessor(MappingService mappingService) {
-        this.mappingService = mappingService;
+        super(mappingService);
     }
 
     @Override
-    public void process(Exchange exchange) throws Exception {
-        ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
-
-        String tenant = context.getTenant();
-        Mapping mapping = context.getMapping();
-        Boolean testing = context.getTesting();
-
-        try {
-            processSmartMapping(context);
-        } catch (Exception e) {
-            int lineNumber = 0;
-            if (e.getStackTrace().length > 0) {
-                lineNumber = e.getStackTrace()[0].getLineNumber();
-            }
-            String errorMessage = String.format(
-                    "%s - Error in FlowProcessorInboundProcessor: %s for mapping: %s, line %s",
-                    tenant, mapping.getName(), e.getMessage(), lineNumber);
-            log.error(errorMessage, e);
-
-            if (e instanceof ProcessingException) {
-                context.addError((ProcessingException) e);
-            } else {
-                context.addError(new ProcessingException(errorMessage, e));
-            }
-
-            if (!testing) {
-                MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
-                mappingStatus.errors++;
-                mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
-            }
-        } finally {
-            // Close the Context completely
-            if (context != null) {
-                try {
-                    context.close();
-                } catch (Exception e) {
-                    log.warn("{} - Error closing context in finally block: {}", tenant, e.getMessage());
-                }
-            }
-        }
+    protected String getProcessorName() {
+        return "FlowProcessorInboundProcessor";
     }
 
-    public void processSmartMapping(ProcessingContext<?> context) throws ProcessingException {
-        String tenant = context.getTenant();
-        Mapping mapping = context.getMapping();
-        ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();
-
-        Object payloadObject = context.getPayload();
-
-        if (serviceConfiguration.getLogPayload() || mapping.getDebug()) {
-            String payload = toPrettyJsonString(payloadObject); // is this and this required?
-            log.info("{} - Incoming payload (patched) in onMessage(): {} {} {} {}", tenant,
-                    payload,
-                    serviceConfiguration.getLogPayload(), mapping.getDebug(),
-                    serviceConfiguration.getLogPayload() || mapping.getDebug());
-        }
-
-        if (mapping.getCode() != null) {
-            Context graalContext = context.getGraalContext();
-
-            // Explicitly null out GraalVM Value references
-            Value bindings = null;
-            Value onMessageFunction = null;
-            Value inputMessage = null;
-            Value result = null;
-
-            try {
-                // Task 1: Invoking JavaScript function
-                String identifier = Mapping.SMART_FUNCTION_NAME + "_" + mapping.getIdentifier();
-                bindings = graalContext.getBindings("js");
-
-                // Always provide console for JavaScript code
-                if (context.getFlowContext() != null) {
-                    JavaScriptConsole console = new JavaScriptConsole(context.getFlowContext(), tenant);
-                    bindings.putMember("console", console);
-                }
-
-                // Load and execute the JavaScript code
-                byte[] decodedBytes = Base64.getDecoder().decode(mapping.getCode());
-                String decodedCode = new String(decodedBytes);
-                String decodedCodeAdapted = decodedCode.replaceFirst("onMessage", identifier);
-
-                Source source = Source.newBuilder("js", decodedCodeAdapted, identifier + ".js")
-                        .buildLiteral();
-                graalContext.eval(source);
-
-                // Load shared  code if available
-                loadSharedCode(graalContext, context);
-
-                onMessageFunction = bindings.getMember(identifier);
-                inputMessage = createInputMessage(graalContext, context);
-
-                // Execute the JavaScript function
-                result = onMessageFunction.execute(inputMessage, context.getFlowContext());
-
-                // Task 2: Extracting the result
-                processResult(result, context, tenant);
-
-            } finally {
-                // Explicitly null out GraalVM Value references
-                bindings = null;
-                onMessageFunction = null;
-                inputMessage = null;
-                result = null;
-            }
-        }
-    }
-
-    private void loadSharedCode(Context graalContext, ProcessingContext<?> context) {
-        if (context.getSharedCode() != null) {
-            Source sharedSource = null;
-            try {
-                byte[] decodedSharedCodeBytes = Base64.getDecoder().decode(context.getSharedCode());
-                String decodedSharedCode = new String(decodedSharedCodeBytes);
-                sharedSource = Source.newBuilder("js", decodedSharedCode, "sharedCode.js")
-                        .buildLiteral();
-                graalContext.eval(sharedSource);
-            } finally {
-                // CRITICAL FIX: Clear source reference
-                sharedSource = null;
-            }
-        }
-    }
-
-    private Value createInputMessage(Context graalContext, ProcessingContext<?> context) {
+    @Override
+    protected Value createInputMessage(Context graalContext, ProcessingContext<?> context) {
         // Create a DeviceMessage from the current context
         DeviceMessage deviceMessage = new DeviceMessage();
 
@@ -179,10 +55,9 @@ public class FlowProcessorInboundProcessor extends BaseProcessor {
         return graalContext.asValue(deviceMessage);
     }
 
-    private void processResult(Value result, ProcessingContext<?> context, String tenant) {
-
+    @Override
+    protected void processResult(Value result, ProcessingContext<?> context, String tenant) {
         extractWarnings(context, tenant);
-
         extractLogs(context, tenant);
 
         // Check if result is null or undefined
@@ -234,68 +109,25 @@ public class FlowProcessorInboundProcessor extends BaseProcessor {
         }
     }
 
-    /**
-     * Extract warnings from the flow context.
-     */
-    private void extractWarnings(ProcessingContext<?> context, String tenant) {
-        Value warnings = null;
-        try {
-            warnings = context.getFlowContext().getState(DataPrepContext.WARNINGS);
-            if (warnings != null && warnings.hasArrayElements()) {
-                List<String> warningList = new ArrayList<>();
-                long size = warnings.getArraySize();
+    @Override
+    protected void handleProcessingError(Exception e, String errorMessage,
+            ProcessingContext<?> context, String tenant, Mapping mapping) {
+        if (e instanceof ProcessingException) {
+            context.addError((ProcessingException) e);
+        } else {
+            context.addError(new ProcessingException(errorMessage, e));
+        }
 
-                for (long i = 0; i < size; i++) {
-                    Value warningElement = null;
-                    try {
-                        warningElement = warnings.getArrayElement(i);
-                        if (warningElement != null && warningElement.isString()) {
-                            warningList.add(warningElement.asString());
-                        }
-                    } finally {
-                        warningElement = null;
-                    }
-                }
-
-                context.setWarnings(warningList);
-                log.debug("{} - Collected {} warning(s) from flow execution", tenant, warningList.size());
-            }
-        } finally {
-            warnings = null;
+        if (!context.getTesting()) {
+            MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
+            mappingStatus.errors++;
+            mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
         }
     }
 
     /**
-     * Extract warnings from the flow context.
+     * Process an array result from JavaScript function.
      */
-    private void extractLogs(ProcessingContext<?> context, String tenant) {
-        Value logs = null;
-        try {
-            logs = context.getFlowContext().getState(DataPrepContext.LOGS);
-            if (logs != null && logs.hasArrayElements()) {
-                List<String> logList = new ArrayList<>();
-                long size = logs.getArraySize();
-
-                for (long i = 0; i < size; i++) {
-                    Value logElement = null;
-                    try {
-                        logElement = logs.getArrayElement(i);
-                        if (logElement != null && logElement.isString()) {
-                            logList.add(logElement.asString());
-                        }
-                    } finally {
-                        logElement = null;
-                    }
-                }
-
-                context.setLogs(logList);
-                log.debug("{} - Collected {} logs from flow execution", tenant, logList.size());
-            }
-        } finally {
-            logs = null;
-        }
-    }
-
     private void processArrayResult(Value result, List<Object> outputMessages, String tenant) {
         long arraySize = result.getArraySize();
 
@@ -318,11 +150,18 @@ public class FlowProcessorInboundProcessor extends BaseProcessor {
         }
     }
 
+    /**
+     * Process a single object result from JavaScript function.
+     */
     private void processSingleObjectResult(Value result, List<Object> outputMessages, String tenant) {
         log.debug("{} - Processing single object result", tenant);
         processResultElement(result, outputMessages, tenant);
     }
 
+    /**
+     * Process a single result element and add it to the output list.
+     * Handles CumulocityObject types for inbound processing.
+     */
     private void processResultElement(Value element, List<Object> outputMessages, String tenant) {
         if (element == null || element.isNull()) {
             log.debug("{} - Skipping null element", tenant);
@@ -338,5 +177,4 @@ public class FlowProcessorInboundProcessor extends BaseProcessor {
             log.error("{} - Error processing result element: {}", tenant, e.getMessage(), e);
         }
     }
-
 }
