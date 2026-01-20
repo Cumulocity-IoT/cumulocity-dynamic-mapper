@@ -287,12 +287,18 @@
                     </execution>
                 </executions>
             </plugin>
+            <!-- Spring Boot Maven Plugin for app lifecycle -->
+            <!-- NOTE: App startup for integration tests is DISABLED -->
+            <!-- The pre/post integration-test phases were starting the full app -->
+            <!-- which requires C8Y platform configuration not available in CI -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <version>${spring-boot-dependencies.version}</version>
                 <executions>
-                    <execution>
+                    <!-- DISABLED: App startup not needed for integration tests -->
+                    <!-- Re-enable for OpenAPI generation with proper configuration -->
+                    <!-- <execution>
                         <id>pre-integration-test</id>
                         <goals>
                             <goal>start</goal>
@@ -303,13 +309,16 @@
                         <goals>
                             <goal>stop</goal>
                         </goals>
-                    </execution>
+                    </execution> -->
                 </executions>
                 <configuration>
                     <mainClass>${main.class}</mainClass>
                     <jvmArguments>-Dspring.application.admin.enabled=true -Dspring.profiles.active=dev</jvmArguments>
                 </configuration>
             </plugin>
+            <!-- SpringDoc OpenAPI Maven Plugin -->
+            <!-- DISABLED: Requires running application to fetch OpenAPI spec -->
+            <!-- Re-enable when app can start with proper configuration -->
             <plugin>
                 <groupId>org.springdoc</groupId>
                 <artifactId>springdoc-openapi-maven-plugin</artifactId>
@@ -317,6 +326,7 @@
                 <executions>
                     <execution>
                         <id>integration-test</id>
+                        <phase>none</phase>  <!-- DISABLED -->
                         <goals>
                             <goal>generate</goal>
                         </goals>
@@ -331,15 +341,16 @@
                     </headers>
                 </configuration>
             </plugin>
+            <!-- OpenAPI Generator Maven Plugin -->
+            <!-- DISABLED: Depends on openapi.json from springdoc plugin above -->
             <plugin>
-                <!-- converts the openapi docu to markdown -->
                 <groupId>org.openapitools</groupId>
                 <artifactId>openapi-generator-maven-plugin</artifactId>
                 <version>7.13.0</version>
                 <executions>
                     <execution>
                         <id>export-openapi-to-html-doc</id>
-                        <phase>post-integration-test</phase>
+                        <phase>none</phase>  <!-- DISABLED -->
                         <goals>
                             <goal>generate</goal>
                         </goals>
