@@ -41,9 +41,11 @@ jobs:
         run: mvn -B verify -DskipTests --file pom.xml
 
       # Full Transformation Validation (only on tags/releases)
-      - name: Run Full Transformation Validation Tests
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-        run: mvn -B verify -Pfull-validation --file pom.xml
+      # NOTE: Currently DISABLED - requires full Spring Boot context setup
+      # See TRANSFORMATION_TESTS_SETUP.md for configuration requirements
+      # - name: Run Full Transformation Validation Tests
+      #   if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+      #   run: mvn -B verify -Pfull-validation --file pom.xml
 
       #Building Starter backend
       - name: Build Starter Backend

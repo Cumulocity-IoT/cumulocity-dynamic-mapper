@@ -67,7 +67,7 @@ import lombok.extern.slf4j.Slf4j;
  * - Final C8Y request generation
  */
 @Slf4j
-@SpringBootTest
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @ActiveProfiles("test")
 class InboundTransformationValidationTest {
 

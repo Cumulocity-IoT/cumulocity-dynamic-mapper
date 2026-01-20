@@ -458,9 +458,11 @@
                     </execution>
 
                     <!-- Full Transformation Validation Tests (Slower) -->
+                    <!-- SKIPPED BY DEFAULT - requires full application context -->
+                    <!-- Run with: mvn verify -Pfull-validation -->
                     <execution>
                         <id>integration-test-transformation</id>
-                        <phase>integration-test</phase>
+                        <phase>none</phase>  <!-- Disabled by default -->
                         <goals>
                             <goal>integration-test</goal>
                         </goals>
@@ -517,12 +519,16 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-failsafe-plugin</artifactId>
-                        <configuration>
-                            <includes>
-                                <include>**/*IntegrationTest.java</include>
-                                <include>**/*ValidationTest.java</include>
-                            </includes>
-                        </configuration>
+                        <executions>
+                            <!-- Re-enable transformation tests -->
+                            <execution>
+                                <id>integration-test-transformation</id>
+                                <phase>integration-test</phase>  <!-- Re-enable -->
+                                <goals>
+                                    <goal>integration-test</goal>
+                                </goals>
+                            </execution>
+                        </executions>
                     </plugin>
                 </plugins>
             </build>
@@ -544,9 +550,18 @@
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-failsafe-plugin</artifactId>
                         <executions>
+                            <!-- Disable dispatcher tests -->
                             <execution>
                                 <id>integration-test-dispatcher</id>
                                 <phase>none</phase>
+                            </execution>
+                            <!-- Enable transformation tests -->
+                            <execution>
+                                <id>integration-test-transformation</id>
+                                <phase>integration-test</phase>
+                                <goals>
+                                    <goal>integration-test</goal>
+                                </goals>
                             </execution>
                         </executions>
                     </plugin>

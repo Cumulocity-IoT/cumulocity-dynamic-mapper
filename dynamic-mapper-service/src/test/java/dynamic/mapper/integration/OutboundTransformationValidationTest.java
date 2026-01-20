@@ -66,7 +66,7 @@ import lombok.extern.slf4j.Slf4j;
  * this test validates the complete transformation pipeline.
  */
 @Slf4j
-@SpringBootTest
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @ActiveProfiles("test")
 class OutboundTransformationValidationTest {
 
