@@ -110,6 +110,11 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.apache.kafka</groupId>
             <artifactId>kafka-clients</artifactId>
         </dependency>
@@ -400,6 +405,153 @@
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>flatten-maven-plugin</artifactId>
             </plugin>
+
+            <!-- Surefire Plugin for Unit Tests -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.5.2</version>
+                <configuration>
+                    <!-- Run fast unit tests by default -->
+                    <includes>
+                        <include>**/*Test.java</include>
+                    </includes>
+                    <excludes>
+                        <!-- Exclude integration tests from unit test phase -->
+                        <exclude>**/*IntegrationTest.java</exclude>
+                        <exclude>**/integration/*ValidationTest.java</exclude>
+                    </excludes>
+                    <!-- Parallel execution for faster unit tests -->
+                    <parallel>classes</parallel>
+                    <threadCount>4</threadCount>
+                    <!-- Report configuration -->
+                    <useFile>false</useFile>
+                    <reportFormat>plain</reportFormat>
+                </configuration>
+            </plugin>
+
+            <!-- Failsafe Plugin for Integration Tests -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>3.5.2</version>
+                <configuration>
+                    <!-- Sequential execution for integration tests -->
+                    <parallel>none</parallel>
+                </configuration>
+                <executions>
+                    <!-- Fast Dispatcher Integration Tests -->
+                    <execution>
+                        <id>integration-test-dispatcher</id>
+                        <phase>integration-test</phase>
+                        <goals>
+                            <goal>integration-test</goal>
+                        </goals>
+                        <configuration>
+                            <includes>
+                                <include>**/Camel*IntegrationTest.java</include>
+                                <include>**/Mapping*ExecutionIntegrationTest.java</include>
+                                <include>**/MappingScenarioIntegrationTest.java</include>
+                            </includes>
+                            <summaryFile>${project.build.directory}/failsafe-reports/failsafe-summary-dispatcher.xml</summaryFile>
+                        </configuration>
+                    </execution>
+
+                    <!-- Full Transformation Validation Tests (Slower) -->
+                    <execution>
+                        <id>integration-test-transformation</id>
+                        <phase>integration-test</phase>
+                        <goals>
+                            <goal>integration-test</goal>
+                        </goals>
+                        <configuration>
+                            <includes>
+                                <include>**/*TransformationValidationTest.java</include>
+                            </includes>
+                            <summaryFile>${project.build.directory}/failsafe-reports/failsafe-summary-transformation.xml</summaryFile>
+                            <!-- Allow longer timeouts for Spring Boot context loading -->
+                            <forkedProcessTimeoutInSeconds>300</forkedProcessTimeoutInSeconds>
+                        </configuration>
+                    </execution>
+
+                    <!-- Verify all integration tests passed -->
+                    <execution>
+                        <id>verify</id>
+                        <goals>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!-- Profile for quick build (only unit tests + dispatcher tests) -->
+        <profile>
+            <id>quick</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>integration-test-transformation</id>
+                                <phase>none</phase>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!-- Profile for full validation (all tests including transformation) -->
+        <profile>
+            <id>full-validation</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <configuration>
+                            <includes>
+                                <include>**/*IntegrationTest.java</include>
+                                <include>**/*ValidationTest.java</include>
+                            </includes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!-- Profile for only transformation validation tests -->
+        <profile>
+            <id>transformation-only</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <skip>true</skip>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>integration-test-dispatcher</id>
+                                <phase>none</phase>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
