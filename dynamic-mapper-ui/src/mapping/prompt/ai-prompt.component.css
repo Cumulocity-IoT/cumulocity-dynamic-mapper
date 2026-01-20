@@ -1,41 +1,9 @@
-.chat-message {
-  margin: 8px 0;
-  padding: 8px 12px;
-  border-radius: var(--c8y-root-component-border-caret-width);
-  max-width: 85%;
-  box-shadow: var(--c8y-elevation-sm);
-  min-width: 0;
-  .message-content{
-    overflow-wrap: break-word;
-    word-break: break-word;
-    max-width: 100%;
-    min-width: 0;
-    p{
-      margin-bottom: 8px;
-      &:last-child {
-        margin-bottom: 0;
-      }
-    }
-  }
-}
-
-.agent-message {
-  color: var(--c8y-palette-low);
-  background-color: var(--c8y-brand-70);
-  align-self: flex-start;
- 
-}
-
-.user-message {
-  background-color: var(--c8y-level-3);
-  color: var(--c8y-text-color);
-  align-self: flex-end;
-}
+/* Custom styles for the AI prompt component */
+/* The c8y-ai-chat component handles most chat styling, so these are minimal overrides */
 
 .agent-tabs-content{
   box-sizing: border-box;
 }
-
 
 .split-view {
 
@@ -52,12 +20,9 @@
       }
     }
 
-    
-
     &--4-8 {
       height: calc(100vh - 166px);
     }
-
 
     &__list {
       flex-grow: 1;
@@ -98,18 +63,11 @@
   }
 }
 
-
 .agent-tabs-nav .component-tabs{
   padding-top: 0;
 }
 
-
 .text-pre{
   white-space-collapse: preserve!important;
   text-wrap-mode: wrap!important;
-}
-
-.d-col-reverse {
-  display: flex!important;
-  flex-direction: column-reverse!important;
 }

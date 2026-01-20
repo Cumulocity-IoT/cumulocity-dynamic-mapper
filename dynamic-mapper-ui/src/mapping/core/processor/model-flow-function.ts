@@ -69,7 +69,7 @@ export interface CumulocityObject {
     /** Which type in the C8Y api is being modified. Singular not plural. e.g. "measurement". The presence of this field also serves as a discriminator to identify this JS object as CumulocityObject */
     cumulocityType: string;
     /** What kind of operation is being performed on this type */
-    action: "create" | "update";
+    action: "create" | "update" | "delete" | "patch";
 
     /** 
      * Since we usually don't know the C8Y Id to put in the payload, 
@@ -192,13 +192,24 @@ export interface DeviceMessage {
     /**
      * External source configuration for resolving the `_externalId_` placeholder in the topic.
      * Defines which external ID type should be used to lookup the device.
-     * 
+     *
      * @since 6.1.2 New field to support _externalId_ placeholder resolution
-     * 
+     *
      * @example [{"type": "c8y_Serial"}]
      * @example [{"type": "c8y_DeviceId"}]
      */
     externalSource?: Array<{ type: string }>;
+
+    /**
+     * What kind of operation is being performed on this message.
+     * Similar to CumulocityObject action field.
+     *
+     * @example "create"
+     * @example "update"
+     * @example "delete"
+     * @example "patch"
+     */
+    action?: "create" | "update" | "delete" | "patch";
 }
 
 /**

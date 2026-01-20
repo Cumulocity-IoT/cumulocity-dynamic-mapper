@@ -29,40 +29,21 @@
       </h4>
     </div>
 
-    <!-- Add the ViewChild reference here -->
-    <div #cardInnerScroll class="card-inner-scroll fit-h">
-      <div class="card-block">
-        <div class="inner-scroll flex-grow d-col-reverse">
-          @if (aiAgent) {
-            <div class="d-col p-16">
-              @for (message of getCompatibleMessages(); track message) {
-<div class="chat-message text-break-word" [ngClass]="{
-                'user-message': message.role === 'user',
-                'aiAgent-message': message.role === 'assistant',
-              }">
-                  @if (aiAgent.type === 'text' || message.role === 'user') {
-                    <div class="message-content text-break-word"
-                    [innerHTML]="getMessageContent(message) | markdownToHtml | async"></div>
-                  }
-                  @if (aiAgent.type === 'object' && message.role === 'assistant') {
-                    <div
-                      class="message-content text-break-word"
-                    [innerHTML]="'```json\n' + message.content + '\n```' | markdownToHtml | async"></div>
-                  }
-                </div>
-              }
-            </div>
-          }
-        </div>
-
+    <div class="card-inner-scroll fit-h">
+      <div class="card-block p-0">
         @if (aiAgent) {
-          <div class="chat-input d-flex p-16 bg-level-1 border-top">
-            <input type="text" class="form-control flex-grow" placeholder="Type your message..." [(ngModel)]="newMessage"
-              (keyup.enter)="sendMessage()" [disabled]="isLoadingChat" />
-            <button class="btn btn-primary m-l-8" (click)="sendMessage()" [disabled]="!newMessage || isLoadingChat">
-              Send
-            </button>
-          </div>
+          <c8y-ai-chat
+            [isLoading]="isLoadingChat"
+            [disabled]="false"
+            [(prompt)]="newMessage"
+            (onMessage)="handleMessage($event)"
+            [config]="chatConfig"
+          >
+            @for (message of getCompatibleMessages(); track message) {
+              <c8y-ai-chat-message [message]="formatMessage(message)">
+              </c8y-ai-chat-message>
+            }
+          </c8y-ai-chat>
         }
       </div>
     </div>

@@ -39,6 +39,12 @@ public class DeviceMessage {
      */
     private Object payload;
 
+    /**
+     * What kind of operation is being performed, e.g. "create", "update", "delete",
+     * "patch"
+     */
+    private String action;
+
     /** External ID to lookup (and optionally create), optional */
     private Object externalSource; // ExternalSource[] | ExternalSource
 

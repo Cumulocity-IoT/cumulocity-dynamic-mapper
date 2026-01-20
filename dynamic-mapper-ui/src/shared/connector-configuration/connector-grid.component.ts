@@ -150,22 +150,26 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
   }
 
   private initializeActionControls(): void {
-    this.actionControls = ACTION_CONTROLS.map(control => ({
-      ...control,
-      callback: this[control.callbackName].bind(this),
-      showIf: (item: ConnectorConfiguration) =>
-        this.checkActionVisibility(item, control.visibilityRules)
-    }));
+    this.actionControls = ACTION_CONTROLS
+      .filter(control => !this.selectable || control.type === 'VIEW')
+      .map(control => ({
+        ...control,
+        callback: this[control.callbackName].bind(this),
+        showIf: (item: ConnectorConfiguration) =>
+          this.selectable && control.type === 'VIEW' ? true : this.checkActionVisibility(item, control.visibilityRules)
+      }));
   }
 
   private initializeColumns(): void {
-    this.columns = GRID_COLUMNS.map(column => ({
-      ...column,
-      gridTrackSize: column.name === 'status' || column.name === 'enabled'
-        ? this.selectable ? column.gridTrackSize : `${parseInt(column.gridTrackSize) + 4}%`
-        : column.gridTrackSize,
-      cellRendererComponent: this.selectable && column.name === 'name' ? undefined : column.cellRendererComponent,
-    }));
+    this.columns = GRID_COLUMNS
+      .filter(column => !(this.selectable && column.name === 'enabled'))
+      .map(column => ({
+        ...column,
+        gridTrackSize: column.name === 'status' || column.name === 'enabled'
+          ? this.selectable ? column.gridTrackSize : `${parseInt(column.gridTrackSize) + 4}%`
+          : column.gridTrackSize,
+        cellRendererComponent: this.selectable && column.name === 'name' ? undefined : column.cellRendererComponent,
+      }));
   }
 
   private initializeConfigurations(): void {
@@ -259,7 +263,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
   async onConfigurationCopy(config: ConnectorConfiguration): Promise<void> {
     const copiedConfig = this.prepareCopyConfiguration(config);
     this.initialStateDrawer = {
-      add: false,
+      action: 'create',
       configuration: copiedConfig,
       specifications: this.specifications,
       configurationsCount: this.configurations?.length,
@@ -290,13 +294,14 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
   }
 
   async onConfigurationAddOrUpdate(config: ConnectorConfiguration): Promise<void> {
-    let add = true;
+    let action: 'create' | 'update' | 'view' = 'create';
     let configuration = {
       properties: {},
       identifier: createCustomUuid()
     } as Partial<ConnectorConfiguration>;
     if (config) {
-      add = false;
+      // Determine action: view for enabled connectors or when in selectable mode, otherwise update
+      action = (config.enabled || this.selectable) ? 'view' : 'update';
       configuration = cloneDeep(config);
     }
 
@@ -307,7 +312,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
     const allowedConnectors = this.specifications.filter(sp => (!sp.singleton || (!configuredConnectorType.has(sp.connectorType))) && (sp.connectorType !== ConnectorType.CUMULOCITY_MQTT_SERVICE_PULSAR || this.feature.pulsarAvailable)).map(sp => sp.connectorType);
 
     this.initialStateDrawer = {
-      add,
+      action,
       configuration,
       specifications: this.specifications,
       configurationsCount: this.configurations?.length,
@@ -315,14 +320,14 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
     }
     const drawer = this.bottomDrawerService.openDrawer(ConnectorConfigurationDrawerComponent, { initialState: this.initialStateDrawer });
     const resultOf = await drawer.instance.result;
-    if (this.initialStateDrawer.add) {
+    if (this.initialStateDrawer.action === 'create') {
       await this.handleModalResponse(
         resultOf,
         'Added successfully.',
         'Failed to create connector configuration',
         config => this.connectorConfigurationService.createConfiguration(config)
       );
-    } else {
+    } else if (this.initialStateDrawer.action === 'update') {
       await this.handleModalResponse(
         resultOf,
         'Updated successfully.',
@@ -330,6 +335,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
         config => this.connectorConfigurationService.updateConfiguration(config)
       );
     }
+    // For 'view' action, no API call is made
   }
 
   findNameByIdent(identifier: string): string {

@@ -34,7 +34,7 @@
       </div>
       <div class="card-block">
         <div class="p-24 modal-inner-scroll animated fadeIn">
-          @if (add) {
+          @if (action === 'create') {
             <div [formGroup]="brokerForm">
               <formly-form [form]="brokerForm" [fields]="brokerFormFields"></formly-form>
             </div>

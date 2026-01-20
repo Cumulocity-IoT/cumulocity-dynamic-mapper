@@ -172,6 +172,11 @@ public class JavaScriptInteropHelper {
             }
         }
 
+        // Handle action
+        if (value.hasMember("action")) {
+            msg.setAction(value.getMember("action").asString());
+        }
+
         return msg;
     }
 

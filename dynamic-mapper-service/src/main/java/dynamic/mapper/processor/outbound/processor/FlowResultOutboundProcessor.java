@@ -123,9 +123,9 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             // Convert payload to JSON string for the request
             String payloadJson = objectMapper.writeValueAsString(payload);
 
-            // Create the request using the corrected method
+            // Create the request - pass action from DeviceMessage for WebHook internal mode
             DynamicMapperRequest request = ProcessingResultHelper.createAndAddDynamicMapperRequest(context,
-                    payloadJson, null, mapping);
+                    payloadJson, deviceMessage.getAction(), mapping);
 
             // Set resolvedPublishTopic topic in context
             String publishTopic = deviceMessage.getTopic();

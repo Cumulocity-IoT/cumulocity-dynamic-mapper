@@ -18,19 +18,17 @@
  * @authors Christof Strack
  */
 import {
-  AfterViewChecked,
   Component,
-  ElementRef,
   inject,
   Input,
   OnDestroy,
   OnInit,
-  ViewChild,
   ViewEncapsulation
 } from '@angular/core';
 import { DeviceGridService, } from '@c8y/ngx-components/device-grid';
 import { Mapping, Substitution, MappingType, SharedService, isSubstitutionsAsCode } from '../../shared';
 import { AlertService, BottomDrawerRef, CoreModule } from '@c8y/ngx-components';
+import { AiChatComponent, AiChatMessageComponent } from '@c8y/ngx-components/ai/ai-chat';
 import { AIAgentService } from '../core/ai-agent.service';
 import { AgentObjectDefinition, AgentTextDefinition } from '../shared/ai-prompt.model';
 import { ServiceConfiguration } from '../../configuration';
@@ -44,12 +42,9 @@ import { base64ToBytes } from '../shared/util';
   styleUrls: ['./ai-prompt.component.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
-  imports:[CoreModule]
+  imports:[CoreModule, AiChatComponent, AiChatMessageComponent]
 })
-export class AIPromptComponent implements OnInit, OnDestroy, AfterViewChecked {
-
-  @ViewChild('cardInnerScroll', { static: false }) cardInnerScroll: ElementRef;
-  private shouldScrollToBottom = false;
+export class AIPromptComponent implements OnInit, OnDestroy {
 
   alertService = inject(AlertService);
   aiAgentService = inject(AIAgentService);
@@ -80,6 +75,16 @@ export class AIPromptComponent implements OnInit, OnDestroy, AfterViewChecked {
   testVars: string = '';
   serviceConfiguration: ServiceConfiguration;
   agentType: MappingType;
+
+  chatConfig = {
+    headline: 'AI Assistant',
+    welcomeText: '',
+    title: 'Generate substitutions using AI',
+    placeholder: 'Type your message...',
+    sendButtonText: 'Send',
+    cancelButtonText: 'Cancel',
+    disclaimerText: 'AI-generated responses can contain errors. Verify the details before use.'
+  };
 
   // Add getter to check if this is a code-based mapping
   get isCodeMapping(): boolean {
@@ -155,38 +160,6 @@ export class AIPromptComponent implements OnInit, OnDestroy, AfterViewChecked {
     this.destroy$.complete();
   }
 
-  ngAfterViewChecked(): void {
-    if (this.shouldScrollToBottom) {
-      this.scrollToBottom();
-      this.shouldScrollToBottom = false;
-    }
-  }
-
-  private scrollToBottom(): void {
-    setTimeout(() => {
-      try {
-        if (this.cardInnerScroll && this.cardInnerScroll.nativeElement) {
-          const element = this.cardInnerScroll.nativeElement;
-          element.scrollTo({
-            top: element.scrollHeight,
-            behavior: 'smooth'
-          });
-          return;
-        }
-
-        const cardInnerScrollElement = document.querySelector('.card-inner-scroll');
-        if (cardInnerScrollElement) {
-          cardInnerScrollElement.scrollTo({
-            top: cardInnerScrollElement.scrollHeight,
-            behavior: 'smooth'
-          });
-        }
-      } catch (err) {
-        console.error('Error scrolling to bottom:', err);
-      }
-    }, 200);
-  }
-
   save() {
     if (this.isCodeMapping) {
       this._save(this.generatedCode);
@@ -247,9 +220,6 @@ export class AIPromptComponent implements OnInit, OnDestroy, AfterViewChecked {
           content,
           role: 'assistant',
         });
-
-        // Set flag to scroll after AI response is added
-        this.shouldScrollToBottom = true;
 
         if (this.isCodeMapping) {
           this.checkIfResponseContainsJavaScript(content);
@@ -410,6 +380,32 @@ export class AIPromptComponent implements OnInit, OnDestroy, AfterViewChecked {
     } catch {
       return '[Unable to display content]';
     }
+  }
+
+  /**
+   * Handles incoming messages from the c8y-ai-chat component
+   */
+  handleMessage(event: any) {
+    this.newMessage = event.content;
+    this.sendMessage();
+  }
+
+  /**
+   * Formats a message for the c8y-ai-chat-message component
+   */
+  formatMessage(message: any): any {
+    let content = this.getMessageContent(message);
+
+    // For assistant messages with object type, wrap in JSON code block
+    if (this.aiAgent?.type === 'object' && message.role === 'assistant') {
+      content = '```json\n' + content + '\n```';
+    }
+
+    return {
+      role: message.role,
+      content: content,
+      timestamp: message.timestamp || new Date().toISOString()
+    };
   }
 
 }

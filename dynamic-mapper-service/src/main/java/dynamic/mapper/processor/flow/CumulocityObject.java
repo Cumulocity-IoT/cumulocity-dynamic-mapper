@@ -61,7 +61,7 @@ public class CumulocityObject {
     private CumulocityType cumulocityType;
 
     /** What kind of operation is being performed on this type */
-    private String action; // "create" | "update"
+    private String action; // "create" | "update" | "delete" | "patch"
 
     /**
      * Since we usually don't know the C8Y ID to put in the payload, the flow can

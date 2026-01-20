@@ -34,6 +34,7 @@ import {
 import { FormatStringPipe } from '../../misc/format-string.pipe';
 
 import { SharedModule } from '../../shared.module';
+import { Action } from '../types';
 
 interface PropertyEntry {
   key: string;
@@ -53,7 +54,7 @@ interface PropertyEntry {
 ]
 })
 export class ConnectorConfigurationDrawerComponent implements OnInit {
-  @Input() add: boolean;
+  @Input() action: Action;
   @Input() configuration: ConnectorConfiguration;
   @Input() specifications: ConnectorSpecification[];
   @Input() configurationsCount: number;
@@ -94,12 +95,12 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
 
   async ngOnInit() {
     this.feature = await this.sharedService.getFeatures();
-    this.mode = this.add ? 'Add' : 'Update';
+    this.mode = this.action === 'create' ? 'Add' : this.action === 'update' ? 'Update' : 'View';
     this.setConnectorDescription();
     this.initializeBrokerFormFields();
-    this.readOnly = this.configuration.enabled;
+    this.readOnly = this.configuration.enabled || this.action === 'view';
 
-    if (!this.add) {
+    if (this.action !== 'create') {
       this.createDynamicForm(this.configuration.connectorType);
     }
   }
@@ -242,7 +243,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
     this.setConnectorDescription();
     this.initializeBasicFormFields();
 
-    if (this.add) {
+    if (this.action === 'create') {
       this.setDefaultConfiguration(connectorType);
     }
 
@@ -305,7 +306,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
     const sortedFields = new Array(numberFields);
 
     Object.entries(dynamicFields.properties).forEach(([key, property]) => {
-      if ('defaultValue' in property && this.add) {
+      if ('defaultValue' in property && this.action === 'create') {
         this.configuration.properties[key] = property.defaultValue;
       }
 
