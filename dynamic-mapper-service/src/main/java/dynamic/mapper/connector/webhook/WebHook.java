@@ -468,7 +468,7 @@ public class WebHook extends AConnectorClient {
                     tenant, i + 1, requests.size(), fullPath, method, request.getApi());
 
             try {
-                Mono<ResponseEntity<String>> responseEntity = executeHttpRequest(method, fullPath, payload);
+                Mono<ResponseEntity<String>> responseEntity = executeHttpRequest(method, fullPath, payload, context);
 
                 ResponseEntity<String> response = responseEntity.block();
 
@@ -514,14 +514,14 @@ public class WebHook extends AConnectorClient {
     /**
      * Execute HTTP request based on method
      */
-    private Mono<ResponseEntity<String>> executeHttpRequest(RequestMethod method, String path, String payload) {
+    private Mono<ResponseEntity<String>> executeHttpRequest(RequestMethod method, String path, String payload, ProcessingContext<?> context) {
         switch (method) {
             case PUT:
                 return executePut(path, payload);
             case DELETE:
                 return executeDelete(path);
             case PATCH:
-                return executePatch(path, payload);
+                return executePatch(path, payload, context);
             default:
                 return executePost(path, payload);
         }
@@ -570,13 +570,13 @@ public class WebHook extends AConnectorClient {
     /**
      * Execute PATCH request
      */
-    private Mono<ResponseEntity<String>> executePatch(String path, String payload) {
+    private Mono<ResponseEntity<String>> executePatch(String path, String payload, ProcessingContext<?> context) {
         Boolean cumulocityInternal = (Boolean) connectorConfiguration.getProperties()
                 .getOrDefault("cumulocityInternal", false);
 
         if (cumulocityInternal) {
             // For Cumulocity internal, do GET + merge + PUT
-            return patchObject(path, payload);
+            return patchObject(path, payload, context);
         } else {
             // For external, do direct PATCH
             return webhookClient.patch()
@@ -593,9 +593,16 @@ public class WebHook extends AConnectorClient {
     /**
      * Handle PATCH for Cumulocity internal (GET + merge + PUT)
      */
-    public Mono<ResponseEntity<String>> patchObject(String path, String payload) {
+    public Mono<ResponseEntity<String>> patchObject(String path, String payload, ProcessingContext<?> context) {
+        // Get logging flags from context
+        final boolean enableDetailedLogging = context != null &&
+                (context.getMapping().getDebug() || context.getServiceConfiguration().getLogPayload());
+
         log.info("{} - PATCH: Starting GET+merge+PUT for path: {}", tenant, path);
-        log.info("{} - PATCH: Update payload: {}", tenant, payload);
+
+        if (enableDetailedLogging) {
+            log.info("{} - PATCH: Update payload: {}", tenant, payload);
+        }
 
         return webhookClient.get()
                 .uri(path)
@@ -605,9 +612,15 @@ public class WebHook extends AConnectorClient {
                 .toEntity(String.class)
                 .flatMap(existingResponse -> {
                     try {
-                        log.info("{} - PATCH: Existing object retrieved: {}", tenant, existingResponse.getBody());
-                        String mergedPayload = mergeJsonObjects(existingResponse.getBody(), payload);
-                        log.info("{} - PATCH: Merged payload for PUT: {}", tenant, mergedPayload);
+                        if (enableDetailedLogging) {
+                            log.info("{} - PATCH: Existing object retrieved: {}", tenant, existingResponse.getBody());
+                        }
+
+                        String mergedPayload = mergeJsonObjects(existingResponse.getBody(), payload, context);
+
+                        if (enableDetailedLogging) {
+                            log.info("{} - PATCH: Merged payload for PUT: {}", tenant, mergedPayload);
+                        }
 
                         return webhookClient.put()
                                 .uri(path)
@@ -627,17 +640,17 @@ public class WebHook extends AConnectorClient {
     /**
      * Merge JSON objects for PATCH operation
      */
-    public String mergeJsonObjects(String existingJson, String newJson) throws IOException {
+    public String mergeJsonObjects(String existingJson, String newJson, ProcessingContext<?> context) throws IOException {
         JsonNode existingNode = objectMapper.readTree(existingJson);
         JsonNode newNode = objectMapper.readTree(newJson);
-        JsonNode mergedNode = mergeNodes(existingNode, newNode);
+        JsonNode mergedNode = mergeNodes(existingNode, newNode, context);
         return objectMapper.writeValueAsString(mergedNode);
     }
 
     /**
      * Merge JSON nodes (top-level merge)
      */
-    public JsonNode mergeNodes(JsonNode existingNode, JsonNode updateNode) {
+    public JsonNode mergeNodes(JsonNode existingNode, JsonNode updateNode, ProcessingContext<?> context) {
         ObjectNode result = objectMapper.createObjectNode();
 
         // First, copy all existing fields
@@ -667,7 +680,7 @@ public class WebHook extends AConnectorClient {
         }
 
         // Remove read-only fields that Cumulocity rejects in PUT requests
-        removeReadOnlyFields(result);
+        removeReadOnlyFields(result, context);
 
         return result;
     }
@@ -676,7 +689,7 @@ public class WebHook extends AConnectorClient {
      * Remove read-only system fields from a JSON node before sending to Cumulocity.
      * These fields are returned in GET responses but cannot be updated via PUT.
      */
-    private void removeReadOnlyFields(ObjectNode node) {
+    private void removeReadOnlyFields(ObjectNode node, ProcessingContext<?> context) {
         // List of read-only fields that Cumulocity rejects in PUT requests
         String[] readOnlyFields = {
             "self",
@@ -701,7 +714,15 @@ public class WebHook extends AConnectorClient {
         }
 
         if (!removedFields.isEmpty()) {
-            log.info("{} - PATCH: Removed read-only fields from merged object: {}", tenant, removedFields);
+            // Get logging flags from context
+            boolean enableDetailedLogging = context != null &&
+                    (context.getMapping().getDebug() || context.getServiceConfiguration().getLogPayload());
+
+            if (enableDetailedLogging) {
+                log.info("{} - PATCH: Removed read-only fields from merged object: {}", tenant, removedFields);
+            } else {
+                log.debug("{} - PATCH: Removed {} read-only fields from merged object", tenant, removedFields.size());
+            }
         }
     }
 

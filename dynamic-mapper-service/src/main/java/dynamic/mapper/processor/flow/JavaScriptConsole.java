@@ -41,31 +41,31 @@ public class JavaScriptConsole {
     
     public void log(Object... args) {
         String message = formatArgs(args);
-        log.info("{} - JS: {}", tenant, message);
-        flowContext.addLogMessage("LOG: " + message);
+        log.info("{} - JS LOG: {}", tenant, message);
+        flowContext.addLogMessage("JS LOG: " + message);
     }
-    
+
     public void error(Object... args) {
         String message = formatArgs(args);
-        log.error("{} - JS: {}", tenant, message);
-        flowContext.addLogMessage("ERROR: " + message);
+        log.error("{} - JS ERROR: {}", tenant, message);
+        flowContext.addLogMessage("JS ERROR: " + message);
     }
-    
+
     public void warn(Object... args) {
         String message = formatArgs(args);
-        log.warn("{} - JS: {}", tenant, message);
-        flowContext.addLogMessage("WARN: " + message);
+        log.warn("{} - JS WARN: {}", tenant, message);
+        flowContext.addLogMessage("JS WARN: " + message);
     }
-    
+
     public void debug(Object... args) {
         String message = formatArgs(args);
         // Use INFO level when mapping.debug is enabled, otherwise use DEBUG level
         if (mapping != null && mapping.getDebug()) {
             log.info("{} - JS DEBUG: {}", tenant, message);
         } else {
-            log.debug("{} - JS: {}", tenant, message);
+            log.debug("{} - JS DEBUG: {}", tenant, message);
         }
-        flowContext.addLogMessage("DEBUG: " + message);
+        flowContext.addLogMessage("JS DEBUG: " + message);
     }
     
     private String formatArgs(Object... args) {

@@ -71,7 +71,7 @@ jobs:
         if: always()
         with:
           files: |
-            **/target/failsafe-reports/*-dispatcher.xml
+            **/target/failsafe-reports/TEST-*.xml
 
   # Job 3: Comprehensive transformation validation tests (slower)
   # NOTE: These tests are currently DISABLED because they require full Spring Boot context
@@ -107,7 +107,7 @@ jobs:
         if: always()
         with:
           files: |
-            **/target/failsafe-reports/*-transformation.xml
+            **/target/failsafe-reports/TEST-*.xml
 
   # Job 4: Build verification
   build:
