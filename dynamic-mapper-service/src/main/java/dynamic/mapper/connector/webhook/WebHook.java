@@ -380,6 +380,13 @@ public class WebHook extends AConnectorClient {
         for (int i = 0; i < requests.size(); i++) {
             DynamicMapperRequest request = requests.get(i);
 
+            log.info("{} - 🔍 Processing request ({}/{}): method={}, api={}, hasRequest={}, hasRequestCumulocity={}",
+                    tenant, i + 1, requests.size(),
+                    request != null ? request.getMethod() : "null",
+                    request != null && request.getApi() != null ? request.getApi().name : "null",
+                    request != null && request.getRequest() != null,
+                    request != null && request.getRequestCumulocity() != null);
+
             if (request == null || request.getRequest() == null) {
                 log.warn("{} - Skipping null request or payload ({}/{})", tenant, i + 1, requests.size());
                 continue;
@@ -466,10 +473,17 @@ public class WebHook extends AConnectorClient {
                 ResponseEntity<String> response = responseEntity.block();
 
                 if (response != null && response.getStatusCode().is2xxSuccessful()) {
+                    // Always log success with method info to verify correct build is deployed
+                    log.info("{} - ✅ Published successfully ({}/{}): method={}, status={}, API={}, path={}",
+                            tenant, i + 1, requests.size(), method, response.getStatusCode(),
+                            request.getApi() != null ? request.getApi().name : "EXTERNAL", fullPath);
+
                     if (context.getMapping().getDebug() || context.getServiceConfiguration().getLogPayload()) {
-                        log.info("{} - Published message successfully ({}/{}): path={}, method={}, mapping={}, payload={}",
-                                tenant, i + 1, requests.size(), fullPath, method, context.getMapping().getName(), payload);
+                        log.info("{} - Request details ({}/{}): mapping={}, payload={}",
+                                tenant, i + 1, requests.size(), context.getMapping().getName(), payload);
                     }
+                    log.debug("{} - Response body ({}/{}): {}", tenant, i + 1, requests.size(),
+                            response.getBody() != null ? response.getBody() : "<empty>");
                 } else {
                     String error = String.format("Failed to publish (%d/%d): status %s",
                             i + 1, requests.size(), response != null ? response.getStatusCode() : "unknown");
@@ -580,6 +594,9 @@ public class WebHook extends AConnectorClient {
      * Handle PATCH for Cumulocity internal (GET + merge + PUT)
      */
     public Mono<ResponseEntity<String>> patchObject(String path, String payload) {
+        log.info("{} - PATCH: Starting GET+merge+PUT for path: {}", tenant, path);
+        log.info("{} - PATCH: Update payload: {}", tenant, payload);
+
         return webhookClient.get()
                 .uri(path)
                 .retrieve()
@@ -588,7 +605,9 @@ public class WebHook extends AConnectorClient {
                 .toEntity(String.class)
                 .flatMap(existingResponse -> {
                     try {
+                        log.info("{} - PATCH: Existing object retrieved: {}", tenant, existingResponse.getBody());
                         String mergedPayload = mergeJsonObjects(existingResponse.getBody(), payload);
+                        log.info("{} - PATCH: Merged payload for PUT: {}", tenant, mergedPayload);
 
                         return webhookClient.put()
                                 .uri(path)
@@ -599,6 +618,7 @@ public class WebHook extends AConnectorClient {
                                 .onStatus(HttpStatusCode::is5xxServerError, this::handleServerError)
                                 .toEntity(String.class);
                     } catch (IOException e) {
+                        log.error("{} - PATCH: Error merging JSON: {}", tenant, e.getMessage(), e);
                         return Mono.error(new ProcessingException("Error merging JSON: " + e.getMessage(), e));
                     }
                 });
@@ -620,13 +640,21 @@ public class WebHook extends AConnectorClient {
     public JsonNode mergeNodes(JsonNode existingNode, JsonNode updateNode) {
         ObjectNode result = objectMapper.createObjectNode();
 
-        Iterator<String> fieldNames = updateNode.fieldNames();
-        while (fieldNames.hasNext()) {
-            String fieldName = fieldNames.next();
+        // First, copy all existing fields
+        Iterator<String> existingFieldNames = existingNode.fieldNames();
+        while (existingFieldNames.hasNext()) {
+            String fieldName = existingFieldNames.next();
+            result.set(fieldName, existingNode.get(fieldName));
+        }
+
+        // Then, update/add fields from updateNode
+        Iterator<String> updateFieldNames = updateNode.fieldNames();
+        while (updateFieldNames.hasNext()) {
+            String fieldName = updateFieldNames.next();
             JsonNode fieldValue = updateNode.get(fieldName);
 
-            if (existingNode.has(fieldName)) {
-                JsonNode existingValue = existingNode.get(fieldName);
+            if (result.has(fieldName)) {
+                JsonNode existingValue = result.get(fieldName);
 
                 if (existingValue.isObject() && fieldValue.isObject()) {
                     result.set(fieldName, deepMergeObjects(existingValue, fieldValue));
@@ -638,7 +666,43 @@ public class WebHook extends AConnectorClient {
             }
         }
 
+        // Remove read-only fields that Cumulocity rejects in PUT requests
+        removeReadOnlyFields(result);
+
         return result;
+    }
+
+    /**
+     * Remove read-only system fields from a JSON node before sending to Cumulocity.
+     * These fields are returned in GET responses but cannot be updated via PUT.
+     */
+    private void removeReadOnlyFields(ObjectNode node) {
+        // List of read-only fields that Cumulocity rejects in PUT requests
+        String[] readOnlyFields = {
+            "self",
+            "id",
+            "lastUpdated",
+            "creationTime",
+            "owner",
+            "childDevices",
+            "childAssets",
+            "childAdditions",
+            "deviceParents",
+            "assetParents",
+            "additionParents"
+        };
+
+        List<String> removedFields = new ArrayList<>();
+        for (String field : readOnlyFields) {
+            if (node.has(field)) {
+                node.remove(field);
+                removedFields.add(field);
+            }
+        }
+
+        if (!removedFields.isEmpty()) {
+            log.info("{} - PATCH: Removed read-only fields from merged object: {}", tenant, removedFields);
+        }
     }
 
     /**

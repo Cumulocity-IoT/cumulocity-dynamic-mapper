@@ -352,14 +352,19 @@ public class ProcessingResultHelper {
      *   <li>"create" → POST</li>
      *   <li>"update" → PUT</li>
      *   <li>"delete" → DELETE</li>
-     *   <li>"patch" → PUT (Cumulocity doesn't support PATCH universally, use PUT instead)</li>
+     *   <li>"patch" → PATCH</li>
      *   <li>default/null → POST</li>
      * </ul>
      *
      * <p><b>Note on PATCH:</b> While PATCH is a standard HTTP method, Cumulocity's REST API
-     * does not universally support it. Events, Alarms, and Measurements don't support PATCH.
-     * Only Inventory (Managed Objects) supports PATCH. Therefore, we map "patch" action to PUT
-     * which is universally supported across all Cumulocity APIs.
+     * does not universally support it. Measurements don't support PATCH (they are immutable).
+     * Events and Alarms support PUT but not PATCH. Only Inventory (Managed Objects) supports PATCH.
+     *
+     * <p>Special handling is done in FlowResultOutboundProcessor:
+     * <ul>
+     *   <li>Measurements with PATCH → converted to POST (measurements are immutable)</li>
+     *   <li>Other APIs with PATCH → ID appended to path, removed from body (standard PATCH behavior)</li>
+     * </ul>
      *
      * @param action the action type string
      * @return the corresponding RequestMethod
@@ -373,8 +378,9 @@ public class ProcessingResultHelper {
             case "create":
                 return RequestMethod.POST;
             case "update":
-            case "patch":  // Map patch to PUT since Cumulocity doesn't universally support PATCH
                 return RequestMethod.PUT;
+            case "patch":
+                return RequestMethod.PATCH;
             case "delete":
                 return RequestMethod.DELETE;
             default:

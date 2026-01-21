@@ -177,26 +177,27 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
                         tenant, request.getApi(), resolvedExternalId);
             }
 
-            // For PUT/DELETE methods, append ID to path and remove from body
-            // Note: PATCH is mapped to PUT in ProcessingResultHelper.mapActionToRequestMethod()
-            log.info("{} - Checking PUT/DELETE adjustment: api={}, apiName={}, resolvedExternalId={}, method={}, action={}, publishTopic={}",
+            // For PUT/PATCH/DELETE methods, append ID to path and remove from body
+            log.info("{} - Checking PUT/PATCH/DELETE adjustment: api={}, apiName={}, resolvedExternalId={}, method={}, action={}, publishTopic={}",
                     tenant, request.getApi(), request.getApi() != null ? request.getApi().name : "null",
                     resolvedExternalId, request.getMethod(), deviceMessage.getAction(), publishTopic);
 
-            // Special case: Measurements don't support PUT - they are immutable time-series data
-            if (request.getApi() == API.MEASUREMENT && request.getMethod() == RequestMethod.PUT) {
+            // Special case: Measurements don't support PUT/PATCH - they are immutable time-series data
+            if (request.getApi() == API.MEASUREMENT &&
+                (request.getMethod() == RequestMethod.PUT || request.getMethod() == RequestMethod.PATCH)) {
                 log.warn("{} - Measurements are immutable and don't support PUT/PATCH. " +
                         "Converting to POST to create a new measurement instead. Use action='create' to avoid this warning.",
                         tenant);
-                // Convert PUT to POST (create new measurement)
+                // Convert PUT/PATCH to POST (create new measurement)
                 request.setMethod(RequestMethod.POST);
                 // For POST, use the base API path without ID in pathCumulocity
                 request.setPathCumulocity(request.getApi().path);
-                log.info("{} - ✅ Converted measurement from PUT to POST, using base path: {}",
-                        tenant, request.getApi().path);
+                log.info("{} - ✅ Converted measurement from {} to POST, using base path: {}",
+                        tenant, request.getMethod(), request.getApi().path);
                 // The ID will remain in the body which is correct for POST
             } else if (request.getApi() != null && resolvedExternalId != null &&
                 (request.getMethod() == RequestMethod.PUT ||
+                 request.getMethod() == RequestMethod.PATCH ||
                  request.getMethod() == RequestMethod.DELETE)) {
 
                 String pathWithId = request.getApi().path + "/" + resolvedExternalId;
@@ -299,27 +300,28 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
                         tenant, c8yRequest.getApi(), resolvedDeviceId);
             }
 
-            // For PUT/DELETE methods, append ID to path and remove from body
-            // Note: PATCH is mapped to PUT in ProcessingResultHelper.mapActionToRequestMethod()
-            log.info("{} - Checking PUT/DELETE adjustment: api={}, apiName={}, resolvedDeviceId={}, method={}, action={}, publishTopic={}",
+            // For PUT/PATCH/DELETE methods, append ID to path and remove from body
+            log.info("{} - Checking PUT/PATCH/DELETE adjustment: api={}, apiName={}, resolvedDeviceId={}, method={}, action={}, publishTopic={}",
                     tenant, c8yRequest.getApi(), c8yRequest.getApi() != null ? c8yRequest.getApi().name : "null",
                     resolvedDeviceId, c8yRequest.getMethod(), cumulocityMessage.getAction(),
                     context.getResolvedPublishTopic());
 
-            // Special case: Measurements don't support PUT - they are immutable time-series data
-            if (c8yRequest.getApi() == API.MEASUREMENT && c8yRequest.getMethod() == RequestMethod.PUT) {
+            // Special case: Measurements don't support PUT/PATCH - they are immutable time-series data
+            if (c8yRequest.getApi() == API.MEASUREMENT &&
+                (c8yRequest.getMethod() == RequestMethod.PUT || c8yRequest.getMethod() == RequestMethod.PATCH)) {
                 log.warn("{} - Measurements are immutable and don't support PUT/PATCH. " +
                         "Converting to POST to create a new measurement instead. Use action='create' to avoid this warning.",
                         tenant);
-                // Convert PUT to POST (create new measurement)
+                // Convert PUT/PATCH to POST (create new measurement)
                 c8yRequest.setMethod(RequestMethod.POST);
                 // For POST, use the base API path without ID in pathCumulocity
                 c8yRequest.setPathCumulocity(c8yRequest.getApi().path);
-                log.info("{} - ✅ Converted measurement from PUT to POST, using base path: {}",
-                        tenant, c8yRequest.getApi().path);
+                log.info("{} - ✅ Converted measurement from {} to POST, using base path: {}",
+                        tenant, c8yRequest.getMethod(), c8yRequest.getApi().path);
                 // The ID will remain in the body which is correct for POST
             } else if (c8yRequest.getApi() != null && resolvedDeviceId != null &&
                 (c8yRequest.getMethod() == RequestMethod.PUT ||
+                 c8yRequest.getMethod() == RequestMethod.PATCH ||
                  c8yRequest.getMethod() == RequestMethod.DELETE)) {
 
                 String pathWithId = c8yRequest.getApi().path + "/" + resolvedDeviceId;
