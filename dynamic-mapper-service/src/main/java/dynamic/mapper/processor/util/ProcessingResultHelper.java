@@ -38,7 +38,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingRepresentation;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
@@ -274,7 +273,7 @@ public class ProcessingResultHelper {
      *
      * @param context the processing context containing current state and configuration
      * @param payloadJson the JSON payload to be sent in the request body
-     * @param action the action type ("update" uses PUT, all others use POST)
+     * @param action the action type ("create", "update", "delete", "patch")
      * @param mapping the mapping configuration containing target API and external ID information
      * @return the created DynamicMapperRequest that was added to the context
      */
@@ -282,9 +281,8 @@ public class ProcessingResultHelper {
             String payloadJson,
             String action, Mapping mapping) {
 
-        // Determine the request method based on action (from substituteInTargetAndSend)
-        RequestMethod method = "update".equals(action) ? RequestMethod.PUT : RequestMethod.POST; // Default from //
-                                                                                                 // reference
+        // Determine the request method based on action
+        RequestMethod method = mapActionToRequestMethod(action);
         API api = context.getApi() != null ? context.getApi() : mapping.getTargetAPI();
 
         // Use -1 as predecessor for flow-generated requests (no predecessor in flow
@@ -344,6 +342,44 @@ public class ProcessingResultHelper {
 
         // Set the value at the final key
         current.put(keys[keys.length - 1], value);
+    }
+
+    /**
+     * Maps an action string to the corresponding HTTP RequestMethod.
+     *
+     * <p>Action mappings:
+     * <ul>
+     *   <li>"create" → POST</li>
+     *   <li>"update" → PUT</li>
+     *   <li>"delete" → DELETE</li>
+     *   <li>"patch" → PUT (Cumulocity doesn't support PATCH universally, use PUT instead)</li>
+     *   <li>default/null → POST</li>
+     * </ul>
+     *
+     * <p><b>Note on PATCH:</b> While PATCH is a standard HTTP method, Cumulocity's REST API
+     * does not universally support it. Events, Alarms, and Measurements don't support PATCH.
+     * Only Inventory (Managed Objects) supports PATCH. Therefore, we map "patch" action to PUT
+     * which is universally supported across all Cumulocity APIs.
+     *
+     * @param action the action type string
+     * @return the corresponding RequestMethod
+     */
+    public static RequestMethod mapActionToRequestMethod(String action) {
+        if (action == null) {
+            return RequestMethod.POST;
+        }
+
+        switch (action.toLowerCase()) {
+            case "create":
+                return RequestMethod.POST;
+            case "update":
+            case "patch":  // Map patch to PUT since Cumulocity doesn't universally support PATCH
+                return RequestMethod.PUT;
+            case "delete":
+                return RequestMethod.DELETE;
+            default:
+                return RequestMethod.POST;
+        }
     }
 
     /**

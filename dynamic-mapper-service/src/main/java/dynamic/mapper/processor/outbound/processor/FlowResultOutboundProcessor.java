@@ -25,6 +25,7 @@ import java.util.Map;
 
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.RequestMethod;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -147,11 +148,6 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             }
             context.setResolvedPublishTopic(publishTopic);
 
-            // Set the publishTopic on the request object
-            request.setPublishTopic(publishTopic);
-            // This ensures that for WebHook configured as internal (Cumulocity Core) the request is sent to the originating message.
-            request.setSourceId(resolvedExternalId);
-
             // Derive API from publishTopic if available (for DeviceMessage objects)
             if (publishTopic != null && !publishTopic.isEmpty()) {
                 API derivedAPI = APITopicUtil.deriveAPIFromTopic(publishTopic);
@@ -162,10 +158,63 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
                 }
             }
 
+            // Set sourceId on request BEFORE calling populateSourceIdentifier
+            // (populateSourceIdentifier needs request.getSourceId() to be set)
+            request.setSourceId(resolvedExternalId);
+
             // Populate Cumulocity-specific request with source identifier
             if (request.getApi() != null && resolvedExternalId != null && !resolvedExternalId.isEmpty()) {
+                log.info("{} - Populating source identifier: resolvedExternalId={}, api.identifier={}",
+                        tenant, resolvedExternalId, request.getApi().identifier);
                 String cumulocityPayload = populateSourceIdentifier(payloadJson, request, tenant);
                 request.setRequestCumulocity(cumulocityPayload);
+                log.info("{} - Set requestCumulocity: {}", tenant, cumulocityPayload);
+            } else {
+                log.warn("{} - Skipping populateSourceIdentifier: api={}, resolvedExternalId={}",
+                        tenant, request.getApi(), resolvedExternalId);
+            }
+
+            // For PUT/DELETE methods, append ID to path and remove from body
+            // Note: PATCH is mapped to PUT in ProcessingResultHelper.mapActionToRequestMethod()
+            log.info("{} - Checking PUT/DELETE adjustment: api={}, apiName={}, resolvedExternalId={}, method={}, action={}, publishTopic={}",
+                    tenant, request.getApi(), request.getApi() != null ? request.getApi().name : "null",
+                    resolvedExternalId, request.getMethod(), deviceMessage.getAction(), publishTopic);
+
+            // Special case: Measurements don't support PUT - they are immutable time-series data
+            if (request.getApi() == API.MEASUREMENT && request.getMethod() == RequestMethod.PUT) {
+                log.warn("{} - Measurements are immutable and don't support PUT/PATCH. " +
+                        "Converting to POST to create a new measurement instead. Use action='create' to avoid this warning.",
+                        tenant);
+                // Convert PUT to POST (create new measurement)
+                request.setMethod(RequestMethod.POST);
+                // For POST, use the base API path without ID
+                request.setPublishTopic(request.getApi().path);
+                log.info("{} - ✅ Converted measurement from PUT to POST, using base path: {}",
+                        tenant, request.getApi().path);
+                // The ID will remain in the body which is correct for POST
+            } else if (request.getApi() != null && resolvedExternalId != null &&
+                (request.getMethod() == RequestMethod.PUT ||
+                 request.getMethod() == RequestMethod.DELETE)) {
+
+                String pathWithId = request.getApi().path + "/" + resolvedExternalId;
+                request.setPublishTopic(pathWithId);
+
+                // Remove ID from the Cumulocity request body
+                if (request.getRequestCumulocity() != null) {
+                    String bodyWithoutId = removeIdentifierFromPayload(request.getRequestCumulocity(),
+                                                                        request.getApi().identifier, tenant);
+                    request.setRequestCumulocity(bodyWithoutId);
+                }
+
+                log.info("{} - ✅ Adjusted path for {} method: {} -> {}",
+                        tenant, request.getMethod(), request.getApi().path, pathWithId);
+            } else if (request.getMethod() == RequestMethod.POST) {
+                // For POST requests, ensure we use the base API path without ID
+                // This handles cases where the JavaScript code may have appended an ID to the topic
+                if (request.getApi() != null) {
+                    request.setPublishTopic(request.getApi().path);
+                    log.info("{} - ✅ Using base API path for POST: {}", tenant, request.getApi().path);
+                }
             }
 
             context.setRetain(deviceMessage.getRetain());
@@ -231,10 +280,64 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
                 c8yRequest.setPublishTopic(context.getResolvedPublishTopic());
             }
 
+            // Set sourceId on request BEFORE calling populateSourceIdentifier
+            // (populateSourceIdentifier needs request.getSourceId() to be set)
+            c8yRequest.setSourceId(resolvedDeviceId);
+
             // Populate Cumulocity-specific request with source identifier
             if (c8yRequest.getApi() != null && resolvedDeviceId != null && !resolvedDeviceId.isEmpty()) {
+                log.info("{} - Populating source identifier: resolvedDeviceId={}, api.identifier={}",
+                        tenant, resolvedDeviceId, c8yRequest.getApi().identifier);
                 String cumulocityPayload = populateSourceIdentifier(payloadJson, c8yRequest, tenant);
                 c8yRequest.setRequestCumulocity(cumulocityPayload);
+                log.info("{} - Set requestCumulocity: {}", tenant, cumulocityPayload);
+            } else {
+                log.warn("{} - Skipping populateSourceIdentifier: api={}, resolvedDeviceId={}",
+                        tenant, c8yRequest.getApi(), resolvedDeviceId);
+            }
+
+            // For PUT/DELETE methods, append ID to path and remove from body
+            // Note: PATCH is mapped to PUT in ProcessingResultHelper.mapActionToRequestMethod()
+            log.info("{} - Checking PUT/DELETE adjustment: api={}, apiName={}, resolvedDeviceId={}, method={}, action={}, publishTopic={}",
+                    tenant, c8yRequest.getApi(), c8yRequest.getApi() != null ? c8yRequest.getApi().name : "null",
+                    resolvedDeviceId, c8yRequest.getMethod(), cumulocityMessage.getAction(),
+                    context.getResolvedPublishTopic());
+
+            // Special case: Measurements don't support PUT - they are immutable time-series data
+            if (c8yRequest.getApi() == API.MEASUREMENT && c8yRequest.getMethod() == RequestMethod.PUT) {
+                log.warn("{} - Measurements are immutable and don't support PUT/PATCH. " +
+                        "Converting to POST to create a new measurement instead. Use action='create' to avoid this warning.",
+                        tenant);
+                // Convert PUT to POST (create new measurement)
+                c8yRequest.setMethod(RequestMethod.POST);
+                // For POST, use the base API path without ID
+                c8yRequest.setPublishTopic(c8yRequest.getApi().path);
+                log.info("{} - ✅ Converted measurement from PUT to POST, using base path: {}",
+                        tenant, c8yRequest.getApi().path);
+                // The ID will remain in the body which is correct for POST
+            } else if (c8yRequest.getApi() != null && resolvedDeviceId != null &&
+                (c8yRequest.getMethod() == RequestMethod.PUT ||
+                 c8yRequest.getMethod() == RequestMethod.DELETE)) {
+
+                String pathWithId = c8yRequest.getApi().path + "/" + resolvedDeviceId;
+                c8yRequest.setPublishTopic(pathWithId);
+
+                // Remove ID from the Cumulocity request body
+                if (c8yRequest.getRequestCumulocity() != null) {
+                    String bodyWithoutId = removeIdentifierFromPayload(c8yRequest.getRequestCumulocity(),
+                                                                        c8yRequest.getApi().identifier, tenant);
+                    c8yRequest.setRequestCumulocity(bodyWithoutId);
+                }
+
+                log.info("{} - ✅ Adjusted path for {} method: {} -> {}",
+                        tenant, c8yRequest.getMethod(), c8yRequest.getApi().path, pathWithId);
+            } else if (c8yRequest.getMethod() == RequestMethod.POST) {
+                // For POST requests, ensure we use the base API path without ID
+                // This handles cases where the JavaScript code may have appended an ID to the topic
+                if (c8yRequest.getApi() != null) {
+                    c8yRequest.setPublishTopic(c8yRequest.getApi().path);
+                    log.info("{} - ✅ Using base API path for POST: {}", tenant, c8yRequest.getApi().path);
+                }
             }
 
             context.setRetain(c8yRequest.getRetain());
@@ -378,6 +481,65 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
 
         } catch (Exception e) {
             log.warn("{} - Failed to populate source identifier in payload: {}",
+                    tenant, e.getMessage());
+            return payload; // Return original payload on error
+        }
+    }
+
+    /**
+     * Remove identifier field from the payload for PUT/PATCH/DELETE operations.
+     * For these methods, the ID is in the URL path and should not be in the body.
+     *
+     * @param payload The JSON payload as a string
+     * @param identifier The identifier field to remove (e.g., "id", "source.id")
+     * @param tenant The tenant identifier for logging
+     * @return The modified payload with identifier removed, or original payload on error
+     */
+    private String removeIdentifierFromPayload(String payload, String identifier, String tenant) {
+        try {
+            // Parse the JSON payload
+            JsonNode jsonNode = objectMapper.readTree(payload);
+
+            if (!(jsonNode instanceof ObjectNode)) {
+                log.warn("{} - Payload is not a JSON object, cannot remove identifier",
+                        tenant);
+                return payload;
+            }
+
+            ObjectNode objectNode = (ObjectNode) jsonNode;
+
+            // Handle hierarchical identifiers like "source.id"
+            if (identifier.contains(".")) {
+                String[] parts = identifier.split("\\.");
+                ObjectNode currentNode = objectNode;
+
+                // Navigate to the parent node
+                for (int i = 0; i < parts.length - 1; i++) {
+                    String part = parts[i];
+                    if (!currentNode.has(part) || !currentNode.get(part).isObject()) {
+                        // Path doesn't exist, nothing to remove
+                        return payload;
+                    }
+                    currentNode = (ObjectNode) currentNode.get(part);
+                }
+
+                // Remove the final field
+                String lastPart = parts[parts.length - 1];
+                currentNode.remove(lastPart);
+            } else {
+                // Simple identifier - remove directly
+                objectNode.remove(identifier);
+            }
+
+            String modifiedPayload = objectMapper.writeValueAsString(objectNode);
+
+            log.debug("{} - Removed {} from payload for PUT/PATCH/DELETE request",
+                    tenant, identifier);
+
+            return modifiedPayload;
+
+        } catch (Exception e) {
+            log.warn("{} - Failed to remove identifier from payload: {}",
                     tenant, e.getMessage());
             return payload; // Return original payload on error
         }

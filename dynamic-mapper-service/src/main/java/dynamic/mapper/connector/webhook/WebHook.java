@@ -427,7 +427,14 @@ public class WebHook extends AConnectorClient {
                 }
 
                 // Use the API path field for Cumulocity REST endpoint
-                contextPath = derivedAPI.path;
+                // Check if a custom path with ID has been set (for PUT/PATCH/DELETE operations)
+                if (request.getPublishTopic() != null && !request.getPublishTopic().isEmpty()) {
+                    contextPath = request.getPublishTopic();
+                    log.debug("{} - Using custom publishTopic path: {} ({}/{})",
+                            tenant, contextPath, i + 1, requests.size());
+                } else {
+                    contextPath = derivedAPI.path;
+                }
 
                 // Default method to POST if not set
                 if (method == null) {
