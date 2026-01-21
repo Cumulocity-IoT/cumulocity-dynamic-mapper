@@ -23,17 +23,20 @@
 
 import org.graalvm.polyglot.Value;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dynamic.mapper.model.Mapping;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class JavaScriptConsole {
     private final DataPrepContext flowContext;
     private final String tenant;
+    private final Mapping mapping;
     private static final ObjectMapper objectMapper = new ObjectMapper();
-    
-    public JavaScriptConsole(DataPrepContext flowContext, String tenant) {
+
+    public JavaScriptConsole(DataPrepContext flowContext, String tenant, Mapping mapping) {
         this.flowContext = flowContext;
         this.tenant = tenant;
+        this.mapping = mapping;
     }
     
     public void log(Object... args) {
@@ -56,7 +59,12 @@ public class JavaScriptConsole {
     
     public void debug(Object... args) {
         String message = formatArgs(args);
-        log.debug("{} - JS: {}", tenant, message);
+        // Use INFO level when mapping.debug is enabled, otherwise use DEBUG level
+        if (mapping != null && mapping.getDebug()) {
+            log.info("{} - JS DEBUG: {}", tenant, message);
+        } else {
+            log.debug("{} - JS: {}", tenant, message);
+        }
         flowContext.addLogMessage("DEBUG: " + message);
     }
     

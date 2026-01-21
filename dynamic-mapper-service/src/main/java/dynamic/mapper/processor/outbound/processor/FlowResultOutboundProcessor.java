@@ -158,6 +158,9 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
                 }
             }
 
+            // Set publishTopic on request (preserve what JavaScript sets)
+            request.setPublishTopic(publishTopic);
+
             // Set sourceId on request BEFORE calling populateSourceIdentifier
             // (populateSourceIdentifier needs request.getSourceId() to be set)
             request.setSourceId(resolvedExternalId);
@@ -187,8 +190,8 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
                         tenant);
                 // Convert PUT to POST (create new measurement)
                 request.setMethod(RequestMethod.POST);
-                // For POST, use the base API path without ID
-                request.setPublishTopic(request.getApi().path);
+                // For POST, use the base API path without ID in pathCumulocity
+                request.setPathCumulocity(request.getApi().path);
                 log.info("{} - ✅ Converted measurement from PUT to POST, using base path: {}",
                         tenant, request.getApi().path);
                 // The ID will remain in the body which is correct for POST
@@ -197,7 +200,7 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
                  request.getMethod() == RequestMethod.DELETE)) {
 
                 String pathWithId = request.getApi().path + "/" + resolvedExternalId;
-                request.setPublishTopic(pathWithId);
+                request.setPathCumulocity(pathWithId);
 
                 // Remove ID from the Cumulocity request body
                 if (request.getRequestCumulocity() != null) {
@@ -206,14 +209,14 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
                     request.setRequestCumulocity(bodyWithoutId);
                 }
 
-                log.info("{} - ✅ Adjusted path for {} method: {} -> {}",
+                log.info("{} - ✅ Adjusted pathCumulocity for {} method: {} -> {}",
                         tenant, request.getMethod(), request.getApi().path, pathWithId);
             } else if (request.getMethod() == RequestMethod.POST) {
-                // For POST requests, ensure we use the base API path without ID
-                // This handles cases where the JavaScript code may have appended an ID to the topic
+                // For POST requests, use the base API path without ID in pathCumulocity
+                // This overrides any ID that JavaScript may have appended to the topic
                 if (request.getApi() != null) {
-                    request.setPublishTopic(request.getApi().path);
-                    log.info("{} - ✅ Using base API path for POST: {}", tenant, request.getApi().path);
+                    request.setPathCumulocity(request.getApi().path);
+                    log.info("{} - ✅ Using base API path for POST in pathCumulocity: {}", tenant, request.getApi().path);
                 }
             }
 
@@ -310,8 +313,8 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
                         tenant);
                 // Convert PUT to POST (create new measurement)
                 c8yRequest.setMethod(RequestMethod.POST);
-                // For POST, use the base API path without ID
-                c8yRequest.setPublishTopic(c8yRequest.getApi().path);
+                // For POST, use the base API path without ID in pathCumulocity
+                c8yRequest.setPathCumulocity(c8yRequest.getApi().path);
                 log.info("{} - ✅ Converted measurement from PUT to POST, using base path: {}",
                         tenant, c8yRequest.getApi().path);
                 // The ID will remain in the body which is correct for POST
@@ -320,7 +323,7 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
                  c8yRequest.getMethod() == RequestMethod.DELETE)) {
 
                 String pathWithId = c8yRequest.getApi().path + "/" + resolvedDeviceId;
-                c8yRequest.setPublishTopic(pathWithId);
+                c8yRequest.setPathCumulocity(pathWithId);
 
                 // Remove ID from the Cumulocity request body
                 if (c8yRequest.getRequestCumulocity() != null) {
@@ -329,14 +332,14 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
                     c8yRequest.setRequestCumulocity(bodyWithoutId);
                 }
 
-                log.info("{} - ✅ Adjusted path for {} method: {} -> {}",
+                log.info("{} - ✅ Adjusted pathCumulocity for {} method: {} -> {}",
                         tenant, c8yRequest.getMethod(), c8yRequest.getApi().path, pathWithId);
             } else if (c8yRequest.getMethod() == RequestMethod.POST) {
-                // For POST requests, ensure we use the base API path without ID
-                // This handles cases where the JavaScript code may have appended an ID to the topic
+                // For POST requests, use the base API path without ID in pathCumulocity
+                // This overrides any ID that JavaScript may have appended to the topic
                 if (c8yRequest.getApi() != null) {
-                    c8yRequest.setPublishTopic(c8yRequest.getApi().path);
-                    log.info("{} - ✅ Using base API path for POST: {}", tenant, c8yRequest.getApi().path);
+                    c8yRequest.setPathCumulocity(c8yRequest.getApi().path);
+                    log.info("{} - ✅ Using base API path for POST in pathCumulocity: {}", tenant, c8yRequest.getApi().path);
                 }
             }
 

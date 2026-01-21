@@ -596,12 +596,16 @@ void setUp() throws Exception {
         DynamicMapperRequest request = processingContext.getRequests().get(0);
 
         assertEquals(RequestMethod.POST, request.getMethod(), "Should use POST method");
-        assertEquals("/measurement/measurements", request.getPublishTopic(),
-                "POST should use base API path without ID");
+        assertEquals("/measurement/measurements", request.getPathCumulocity(),
+                "POST should use base API path without ID in pathCumulocity");
+        // publishTopic should remain unchanged (what JavaScript set)
+        assertEquals("measurement/measurements/" + TEST_DEVICE_ID, request.getPublishTopic(),
+                "publishTopic should preserve what JavaScript set");
 
         log.info("✅ POST request base path test passed");
         log.info("   - Method: {}", request.getMethod());
-        log.info("   - Publish topic: {}", request.getPublishTopic());
+        log.info("   - Publish topic (from JS): {}", request.getPublishTopic());
+        log.info("   - Path Cumulocity (adjusted): {}", request.getPathCumulocity());
     }
 
     @Test
@@ -624,12 +628,12 @@ void setUp() throws Exception {
         DynamicMapperRequest request = processingContext.getRequests().get(0);
 
         assertEquals(RequestMethod.PUT, request.getMethod(), "Should use PUT method for update action");
-        assertEquals("/event/events/" + TEST_DEVICE_ID, request.getPublishTopic(),
-                "PUT should append device ID to path");
+        assertEquals("/event/events/" + TEST_DEVICE_ID, request.getPathCumulocity(),
+                "PUT should append device ID to pathCumulocity");
 
         log.info("✅ PUT request with ID test passed");
         log.info("   - Method: {}", request.getMethod());
-        log.info("   - Publish topic: {}", request.getPublishTopic());
+        log.info("   - Path Cumulocity: {}", request.getPathCumulocity());
     }
 
     @Test
@@ -653,13 +657,13 @@ void setUp() throws Exception {
 
         assertEquals(RequestMethod.PUT, request.getMethod(),
                 "PATCH action should map to PUT method");
-        assertEquals("/inventory/managedObjects/" + TEST_DEVICE_ID, request.getPublishTopic(),
-                "PUT should append device ID to path");
+        assertEquals("/inventory/managedObjects/" + TEST_DEVICE_ID, request.getPathCumulocity(),
+                "PUT should append device ID to pathCumulocity");
 
         log.info("✅ PATCH->PUT mapping test passed");
         log.info("   - Action: patch");
         log.info("   - Method: {}", request.getMethod());
-        log.info("   - Publish topic: {}", request.getPublishTopic());
+        log.info("   - Path Cumulocity: {}", request.getPathCumulocity());
     }
 
     @Test
@@ -682,12 +686,12 @@ void setUp() throws Exception {
         DynamicMapperRequest request = processingContext.getRequests().get(0);
 
         assertEquals(RequestMethod.DELETE, request.getMethod(), "Should use DELETE method");
-        assertEquals("/event/events/" + TEST_DEVICE_ID, request.getPublishTopic(),
-                "DELETE should append device ID to path");
+        assertEquals("/event/events/" + TEST_DEVICE_ID, request.getPathCumulocity(),
+                "DELETE should append device ID to pathCumulocity");
 
         log.info("✅ DELETE request with ID test passed");
         log.info("   - Method: {}", request.getMethod());
-        log.info("   - Publish topic: {}", request.getPublishTopic());
+        log.info("   - Path Cumulocity: {}", request.getPathCumulocity());
     }
 
     @Test
@@ -710,13 +714,13 @@ void setUp() throws Exception {
 
         assertEquals(RequestMethod.POST, request.getMethod(),
                 "Measurement with update action should convert to POST");
-        assertEquals("/measurement/measurements", request.getPublishTopic(),
-                "POST should use base API path without ID");
+        assertEquals("/measurement/measurements", request.getPathCumulocity(),
+                "POST should use base API path without ID in pathCumulocity");
 
         log.info("✅ Measurement PUT->POST conversion test passed");
         log.info("   - Original action: update");
         log.info("   - Final method: {}", request.getMethod());
-        log.info("   - Publish topic: {}", request.getPublishTopic());
+        log.info("   - Path Cumulocity: {}", request.getPathCumulocity());
     }
 
     @Test
@@ -739,13 +743,13 @@ void setUp() throws Exception {
 
         assertEquals(RequestMethod.POST, request.getMethod(),
                 "Measurement with patch action should convert to POST");
-        assertEquals("/measurement/measurements", request.getPublishTopic(),
-                "POST should use base API path without ID");
+        assertEquals("/measurement/measurements", request.getPathCumulocity(),
+                "POST should use base API path without ID in pathCumulocity");
 
         log.info("✅ Measurement PATCH->POST conversion test passed");
         log.info("   - Original action: patch");
         log.info("   - Final method: {}", request.getMethod());
-        log.info("   - Publish topic: {}", request.getPublishTopic());
+        log.info("   - Path Cumulocity: {}", request.getPathCumulocity());
     }
 
     @Test
@@ -768,12 +772,15 @@ void setUp() throws Exception {
         DynamicMapperRequest request = processingContext.getRequests().get(0);
 
         assertEquals(RequestMethod.POST, request.getMethod(), "Should use POST method");
-        assertEquals("/measurement/measurements", request.getPublishTopic(),
-                "POST should override JavaScript topic and use base path without ID");
+        assertEquals("/measurement/measurements", request.getPathCumulocity(),
+                "pathCumulocity should use base path without ID");
+        // publishTopic should remain as JavaScript set it
+        assertEquals("measurement/measurements/" + TEST_DEVICE_ID, request.getPublishTopic(),
+                "publishTopic should preserve what JavaScript set");
 
         log.info("✅ JavaScript topic override for POST test passed");
-        log.info("   - Original topic from JS: measurement/measurements/{}", TEST_DEVICE_ID);
-        log.info("   - Final publish topic: {}", request.getPublishTopic());
+        log.info("   - Original topic from JS: {}", request.getPublishTopic());
+        log.info("   - Path Cumulocity (adjusted): {}", request.getPathCumulocity());
     }
 
     @Test
@@ -796,12 +803,12 @@ void setUp() throws Exception {
         DynamicMapperRequest request = processingContext.getRequests().get(0);
 
         assertEquals(RequestMethod.PUT, request.getMethod(), "Should use PUT method for update");
-        assertEquals("/event/events/" + TEST_DEVICE_ID, request.getPublishTopic(),
-                "PUT should include device ID in path");
+        assertEquals("/event/events/" + TEST_DEVICE_ID, request.getPathCumulocity(),
+                "PUT should include device ID in pathCumulocity");
 
         log.info("✅ Event update test passed");
         log.info("   - Method: {}", request.getMethod());
-        log.info("   - Publish topic: {}", request.getPublishTopic());
+        log.info("   - Path Cumulocity: {}", request.getPathCumulocity());
     }
 
     @Test
@@ -825,11 +832,11 @@ void setUp() throws Exception {
 
         assertEquals(RequestMethod.PUT, request.getMethod(),
                 "Inventory patch should map to PUT (Cumulocity doesn't universally support PATCH)");
-        assertEquals("/inventory/managedObjects/" + TEST_DEVICE_ID, request.getPublishTopic(),
-                "PUT should include device ID in path");
+        assertEquals("/inventory/managedObjects/" + TEST_DEVICE_ID, request.getPathCumulocity(),
+                "PUT should include device ID in pathCumulocity");
 
         log.info("✅ Inventory patch test passed");
         log.info("   - Method: {}", request.getMethod());
-        log.info("   - Publish topic: {}", request.getPublishTopic());
+        log.info("   - Path Cumulocity: {}", request.getPathCumulocity());
     }
 }

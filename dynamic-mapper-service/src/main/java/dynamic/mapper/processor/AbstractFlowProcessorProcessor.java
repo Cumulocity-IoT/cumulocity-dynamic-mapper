@@ -121,7 +121,7 @@ public abstract class AbstractFlowProcessorProcessor extends CommonProcessor {
 
                 // Always provide console for JavaScript code
                 if (context.getFlowContext() != null) {
-                    JavaScriptConsole console = new JavaScriptConsole(context.getFlowContext(), tenant);
+                    JavaScriptConsole console = new JavaScriptConsole(context.getFlowContext(), tenant, mapping);
                     bindings.putMember("console", console);
                 }
 
