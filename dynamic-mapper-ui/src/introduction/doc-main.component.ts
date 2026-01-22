@@ -244,27 +244,8 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
     if (!this.highlightApplied) {
       // Use setTimeout to ensure DOM is fully rendered
       setTimeout(() => {
-        console.log('Attempting Prism highlighting...');
-        console.log('Prism available:', typeof Prism !== 'undefined');
-        console.log('Prism.languages.javascript:', Prism.languages?.javascript ? 'loaded' : 'not loaded');
-
-        const codeBlocks = document.querySelectorAll('pre code.language-javascript');
-        console.log('Code blocks found:', codeBlocks.length);
-
-        if (codeBlocks.length > 0) {
-          console.log('First code block content preview:', codeBlocks[0].textContent?.substring(0, 50));
-        }
-
         Prism.highlightAll();
-        console.log('Prism.highlightAll() executed');
-
-        // Check if highlighting was applied
-        const highlightedTokens = document.querySelectorAll('.token');
-        console.log('Tokens created after highlighting:', highlightedTokens.length);
-
-        // Add copy buttons to code blocks
         this.addCopyButtons();
-
         this.highlightApplied = true;
       }, 100);
     }
@@ -273,9 +254,9 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
   private addCopyButtons(): void {
     const preElements = document.querySelectorAll('pre[class*="language-"]');
 
-    preElements.forEach((pre) => {
+    preElements.forEach((pre: Element) => {
       // Skip if button already exists
-      if (pre.querySelector('.copy-button')) {
+      if (pre.querySelector('.btn-copy-code')) {
         return;
       }
 
@@ -284,33 +265,60 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
         return;
       }
 
-      // Create copy button
+      // Ensure pre element has relative positioning
+      (pre as HTMLElement).style.position = 'relative';
+
+      // Create toolbar container
+      const toolbar = document.createElement('div');
+      toolbar.className = 'd-flex';
+      toolbar.style.position = 'absolute';
+      toolbar.style.top = '0';
+      toolbar.style.right = '0';
+      toolbar.style.zIndex = '100';
+
+      // Create copy button with icon
       const button = document.createElement('button');
-      button.className = 'copy-button';
-      button.textContent = 'Copy';
+      button.className = 'btn-copy-code';
+      button.setAttribute('type', 'button');
       button.setAttribute('aria-label', 'Copy code to clipboard');
 
+      // Create icon element
+      const icon = document.createElement('i');
+      icon.className = 'dlt-c8y-icon-clipboard';
+      icon.style.marginRight = '4px';
+
+      // Add icon and text to button
+      button.appendChild(icon);
+      button.appendChild(document.createTextNode('Copy to clipboard'));
+
       // Add click handler
-      button.addEventListener('click', () => {
+      button.addEventListener('click', async () => {
         const code = codeElement.textContent || '';
-        navigator.clipboard.writeText(code).then(() => {
-          button.textContent = 'Copied!';
+        try {
+          await navigator.clipboard.writeText(code);
+          icon.className = 'dlt-c8y-icon-ok';
+          button.childNodes[1].textContent = 'Copied!';
           button.classList.add('copied');
 
           setTimeout(() => {
-            button.textContent = 'Copy';
+            icon.className = 'dlt-c8y-icon-clipboard';
+            button.childNodes[1].textContent = 'Copy to clipboard';
             button.classList.remove('copied');
           }, 2000);
-        }).catch(err => {
+        } catch (err) {
           console.error('Failed to copy code:', err);
-          button.textContent = 'Failed';
+          icon.className = 'dlt-c8y-icon-remove';
+          button.childNodes[1].textContent = 'Failed';
           setTimeout(() => {
-            button.textContent = 'Copy';
+            icon.className = 'dlt-c8y-icon-clipboard';
+            button.childNodes[1].textContent = 'Copy to clipboard';
           }, 2000);
-        });
+        }
       });
 
-      pre.appendChild(button);
+      // Append button to toolbar and toolbar to pre element
+      toolbar.appendChild(button);
+      pre.insertBefore(toolbar, pre.firstChild);
     });
   }
 
