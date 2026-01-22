@@ -41,7 +41,7 @@
               "@cordobo/qrcode",
               "zone.js/dist/zone",
               "chroma-js",
-              "prismjs"
+              "highlight.js"
             ]
           },
           "configurations": {

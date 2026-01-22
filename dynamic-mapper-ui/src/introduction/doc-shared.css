@@ -240,49 +240,52 @@ pre code {
   color: #d4d4d4;
 }
 
-/* Prism.js syntax highlighting adjustments */
-pre[class*="language-"],
-pre.language-javascript {
+/* Highlight.js syntax highlighting adjustments */
+pre {
   margin: 16px 0 !important;
-  padding: 16px !important;
-  background-color: #2b2b2b !important;
-  background: #2b2b2b !important;
+  padding: 0 !important;
+  background-color: #282c34 !important;
+  background: #282c34 !important;
   border: none !important;
   border-radius: 4px !important;
   overflow-x: auto;
   position: relative !important;
 }
 
-/* Override margin when inside code-toolbar */
-div.code-toolbar > pre[class*="language-"],
-div.code-toolbar > pre.language-javascript {
-  margin: 0 !important;
-}
-
-/* Adjust only specific properties, let Prism handle colors */
-code[class*="language-"] {
+/* Code element styling */
+pre code {
   font-family: 'Courier New', Courier, monospace !important;
   font-size: 13px !important;
   line-height: 1.4 !important;
   tab-size: 2 !important;
-}
-
-/* Base text color for code - but allow tokens to override */
-pre[class*="language-"] code[class*="language-"],
-code[class*="language-"] {
   color: #d4d4d4;
   background-color: transparent;
+  display: block;
+  padding: 8px 16px 16px 16px;
+  border: none;
+  border-radius: 0;
+  white-space: pre;
 }
 
-/* Note: Prism token color styles are defined globally in styles.less */
+/* Note: Highlight.js token color styles are defined globally in styles.less */
 
 /* Toolbar container styling - only within code blocks */
-pre[class*="language-"] .d-flex {
-  background-color: #1a1a1a;
+pre .code-toolbar {
+  background-color: #000000;
   padding: 0;
-  border-radius: 3px;
-  display: flex;
-  justify-content: flex-end;
+  margin: 0;
+  border-radius: 4px 4px 0 0;
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: flex-end !important;
+  align-items: center !important;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: 32px;
+  z-index: 10;
 }
 
 /* Custom Copy Button Styling - Cumulocity style */
@@ -290,7 +293,7 @@ pre[class*="language-"] .d-flex {
   display: inline-flex;
   align-items: center;
   padding: 6px 12px;
-  margin: 4px;
+  margin: 0 8px 0 auto;
   background-color: transparent;
   color: #c8c8c8;
   border: none;

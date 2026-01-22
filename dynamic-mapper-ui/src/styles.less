@@ -1,120 +1,93 @@
 /* You can add global styles to this file, and also import other style files */
 
-/* Prism.js token colors - global styles optimized for dark background */
+/* Highlight.js token colors - global styles optimized for dark background */
 
-/* Ensure all tokens have transparent backgrounds */
-pre[class*="language-"] .token,
-code[class*="language-"] .token {
-  background-color: transparent !important;
-  background: none !important;
+/* Base styles for all tokens */
+.hljs {
+  color: #d4d4d4;
+  background: transparent;
 }
 
-pre[class*="language-"] .token.comment,
-pre[class*="language-"] .token.prolog,
-pre[class*="language-"] .token.doctype,
-pre[class*="language-"] .token.cdata,
-code[class*="language-"] .token.comment,
-code[class*="language-"] .token.prolog,
-code[class*="language-"] .token.doctype,
-code[class*="language-"] .token.cdata {
+/* Comments */
+.hljs-comment,
+.hljs-quote {
   color: #6a9955 !important;
+  font-style: italic;
 }
 
-pre[class*="language-"] .token.punctuation,
-code[class*="language-"] .token.punctuation {
-  color: #d4d4d4 !important;
-}
-
-pre[class*="language-"] .token.namespace,
-code[class*="language-"] .token.namespace {
-  opacity: .7 !important;
-}
-
-pre[class*="language-"] .token.property,
-pre[class*="language-"] .token.tag,
-pre[class*="language-"] .token.boolean,
-pre[class*="language-"] .token.number,
-pre[class*="language-"] .token.constant,
-pre[class*="language-"] .token.symbol,
-pre[class*="language-"] .token.deleted,
-pre[class*="language-"] .token.literal-property,
-code[class*="language-"] .token.property,
-code[class*="language-"] .token.tag,
-code[class*="language-"] .token.boolean,
-code[class*="language-"] .token.number,
-code[class*="language-"] .token.constant,
-code[class*="language-"] .token.symbol,
-code[class*="language-"] .token.deleted,
-code[class*="language-"] .token.literal-property {
-  color: #9cdcfe !important;
-  background-color: transparent !important;
-  background: none !important;
-}
-
-pre[class*="language-"] .token.selector,
-pre[class*="language-"] .token.attr-name,
-pre[class*="language-"] .token.string,
-pre[class*="language-"] .token.char,
-pre[class*="language-"] .token.builtin,
-pre[class*="language-"] .token.inserted,
-code[class*="language-"] .token.selector,
-code[class*="language-"] .token.attr-name,
-code[class*="language-"] .token.string,
-code[class*="language-"] .token.char,
-code[class*="language-"] .token.builtin,
-code[class*="language-"] .token.inserted {
-  color: #ce9178 !important;
-}
-
-pre[class*="language-"] .token.operator,
-pre[class*="language-"] .token.entity,
-pre[class*="language-"] .token.url,
-code[class*="language-"] .token.operator,
-code[class*="language-"] .token.entity,
-code[class*="language-"] .token.url,
-.language-css .token.string,
-.style .token.string {
-  color: #d4d4d4 !important;
-}
-
-pre[class*="language-"] .token.atrule,
-pre[class*="language-"] .token.attr-value,
-pre[class*="language-"] .token.keyword,
-code[class*="language-"] .token.atrule,
-code[class*="language-"] .token.attr-value,
-code[class*="language-"] .token.keyword {
+/* Keywords */
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-literal,
+.hljs-type,
+.hljs-addition {
   color: #569cd6 !important;
 }
 
-pre[class*="language-"] .token.function,
-pre[class*="language-"] .token.class-name,
-code[class*="language-"] .token.function,
-code[class*="language-"] .token.class-name {
+/* Strings */
+.hljs-string,
+.hljs-regexp,
+.hljs-template-tag,
+.hljs-template-variable {
+  color: #ce9178 !important;
+}
+
+/* Functions */
+.hljs-function,
+.hljs-title,
+.hljs-title.class_,
+.hljs-title.function_ {
   color: #dcdcaa !important;
 }
 
-pre[class*="language-"] .token.regex,
-pre[class*="language-"] .token.important,
-pre[class*="language-"] .token.variable,
-code[class*="language-"] .token.regex,
-code[class*="language-"] .token.important,
-code[class*="language-"] .token.variable {
+/* Numbers and constants */
+.hljs-number,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-link {
+  color: #b5cea8 !important;
+}
+
+/* Variables and properties */
+.hljs-variable,
+.hljs-property,
+.hljs-attr {
+  color: #9cdcfe !important;
+}
+
+/* Built-ins */
+.hljs-built_in,
+.hljs-class .hljs-title {
+  color: #4ec9b0 !important;
+}
+
+/* Operators and punctuation */
+.hljs-operator,
+.hljs-punctuation {
+  color: #d4d4d4 !important;
+}
+
+/* Meta and attributes */
+.hljs-meta,
+.hljs-meta .hljs-keyword {
+  color: #569cd6 !important;
+}
+
+/* Parameters */
+.hljs-params {
+  color: #9cdcfe !important;
+}
+
+/* Emphasis */
+.hljs-emphasis {
+  font-style: italic;
+}
+
+.hljs-strong {
+  font-weight: bold;
+}
+
+/* Deletion */
+.hljs-deletion {
   color: #d16969 !important;
-}
-
-pre[class*="language-"] .token.important,
-pre[class*="language-"] .token.bold,
-code[class*="language-"] .token.important,
-code[class*="language-"] .token.bold {
-  font-weight: bold !important;
-}
-
-pre[class*="language-"] .token.italic,
-code[class*="language-"] .token.italic {
-  font-style: italic !important;
-}
-
-pre[class*="language-"] .token.entity,
-code[class*="language-"] .token.entity {
-  cursor: help !important;
 }

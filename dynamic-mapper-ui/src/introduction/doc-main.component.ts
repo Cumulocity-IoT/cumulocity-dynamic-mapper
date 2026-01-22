@@ -33,8 +33,11 @@ import { SharedService } from '../shared/service/shared.service';
 import { CodeTemplate, CodeTemplateMap } from '../configuration/shared/configuration.model';
 import { base64ToString } from '../mapping/shared/util';
 
-import * as Prism from 'prismjs';
-import 'prismjs/components/prism-javascript';
+import hljs from 'highlight.js/lib/core';
+import javascript from 'highlight.js/lib/languages/javascript';
+
+// Register the JavaScript language
+hljs.registerLanguage('javascript', javascript);
 
 @Component({
   selector: 'd11r-landing',
@@ -244,7 +247,10 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
     if (!this.highlightApplied) {
       // Use setTimeout to ensure DOM is fully rendered
       setTimeout(() => {
-        Prism.highlightAll();
+        // Highlight all code blocks
+        document.querySelectorAll('pre code').forEach((block) => {
+          hljs.highlightElement(block as HTMLElement);
+        });
         this.addCopyButtons();
         this.highlightApplied = true;
       }, 100);
@@ -252,16 +258,16 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   private addCopyButtons(): void {
-    const preElements = document.querySelectorAll('pre[class*="language-"]');
+    const preElements = document.querySelectorAll('pre code');
 
-    preElements.forEach((pre: Element) => {
-      // Skip if button already exists
-      if (pre.querySelector('.btn-copy-code')) {
+    preElements.forEach((codeElement: Element) => {
+      const pre = codeElement.parentElement;
+      if (!pre) {
         return;
       }
 
-      const codeElement = pre.querySelector('code');
-      if (!codeElement) {
+      // Skip if button already exists
+      if (pre.querySelector('.btn-copy-code')) {
         return;
       }
 
@@ -270,17 +276,22 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
 
       // Create toolbar container
       const toolbar = document.createElement('div');
-      toolbar.className = 'd-flex';
-      toolbar.style.position = 'absolute';
-      toolbar.style.top = '4px';
-      toolbar.style.right = '4px';
-      toolbar.style.zIndex = '100';
+      toolbar.className = 'code-toolbar';
+      // Force flexbox styles inline to override any framework styles
+      toolbar.style.display = 'flex';
+      toolbar.style.flexDirection = 'row';
+      toolbar.style.justifyContent = 'flex-end';
+      toolbar.style.alignItems = 'center';
+      toolbar.style.backgroundColor = '#000000';
 
       // Create copy button with icon
       const button = document.createElement('button');
       button.className = 'btn-copy-code';
       button.setAttribute('type', 'button');
       button.setAttribute('aria-label', 'Copy code to clipboard');
+      // Force button positioning inline
+      button.style.marginLeft = 'auto';
+      button.style.marginRight = '2px';
 
       // Create icon element
       const icon = document.createElement('i');
