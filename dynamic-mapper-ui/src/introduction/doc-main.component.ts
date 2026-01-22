@@ -272,8 +272,8 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
       const toolbar = document.createElement('div');
       toolbar.className = 'd-flex';
       toolbar.style.position = 'absolute';
-      toolbar.style.top = '0';
-      toolbar.style.right = '0';
+      toolbar.style.top = '4px';
+      toolbar.style.right = '4px';
       toolbar.style.zIndex = '100';
 
       // Create copy button with icon
