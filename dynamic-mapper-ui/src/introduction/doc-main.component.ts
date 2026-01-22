@@ -289,9 +289,15 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
       button.className = 'btn-copy-code';
       button.setAttribute('type', 'button');
       button.setAttribute('aria-label', 'Copy code to clipboard');
-      // Force button positioning inline
+      // Force button positioning and size inline
       button.style.marginLeft = 'auto';
-      button.style.marginRight = '2px';
+      button.style.marginRight = '4px';
+      button.style.marginBottom = '4px';
+      button.style.marginTop = '2px';
+      button.style.height = '18px';
+      button.style.backgroundColor = '#000000';
+
+      button.style.fontSize = '12px';
 
       // Create icon element
       const icon = document.createElement('i');
