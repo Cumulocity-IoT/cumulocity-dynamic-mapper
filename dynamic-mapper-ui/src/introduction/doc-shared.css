@@ -228,16 +228,85 @@ pre {
 
 pre code {
   display: block;
-  padding: 16px;
-  background-color: #f5f5f5;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  padding: 0;
+  background-color: transparent;
+  border: none;
+  border-radius: 0;
   overflow-x: auto;
   white-space: pre;
   font-family: 'Courier New', Courier, monospace;
   font-size: 13px;
   line-height: 1.5;
-  color: #333;
+  color: #d4d4d4;
+}
+
+/* Prism.js syntax highlighting adjustments */
+pre[class*="language-"],
+pre.language-javascript,
+pre {
+  margin: 16px 0 !important;
+  padding: 16px !important;
+  background-color: #1e1e1e !important;
+  background: #1e1e1e !important;
+  border: none !important;
+  border-radius: 4px !important;
+  overflow-x: auto;
+  position: relative !important;
+}
+
+/* Adjust only specific properties, let Prism handle colors */
+code[class*="language-"] {
+  font-family: 'Courier New', Courier, monospace !important;
+  font-size: 13px !important;
+  line-height: 1.2 !important;
+  tab-size: 2 !important;
+}
+
+/* Base text color for code - but allow tokens to override */
+pre[class*="language-"] code[class*="language-"],
+code[class*="language-"] {
+  color: #d4d4d4;
+  background-color: transparent;
+}
+
+/* Note: Prism token color styles are defined globally in styles.less */
+
+/* Copy to clipboard button */
+.code-block-wrapper {
+  position: relative;
+}
+
+.copy-button {
+  position: absolute !important;
+  top: 4px !important;
+  right: 4px !important;
+  bottom: auto !important;
+  left: auto !important;
+  padding: 4px 10px;
+  background-color: #3c3c3c;
+  color: #d4d4d4;
+  border: 1px solid #555;
+  border-radius: 3px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 100;
+  line-height: 1.4;
+}
+
+.copy-button:hover {
+  background-color: #4c4c4c;
+  border-color: #777;
+}
+
+.copy-button:active {
+  background-color: #2c2c2c;
+}
+
+.copy-button.copied {
+  background-color: #28a745;
+  border-color: #28a745;
+  color: white;
 }
 
 /* ============================================================================ */

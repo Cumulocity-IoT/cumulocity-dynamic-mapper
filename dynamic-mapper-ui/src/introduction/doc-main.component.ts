@@ -19,7 +19,7 @@
  * @authors Christof Strack
  */
 
-import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewChild, AfterViewChecked } from '@angular/core';
 import { MappingService } from '../mapping/core/mapping.service';
 import { CodeExplorerComponent, Direction, Feature, JsonEditorComponent, NODE1, NODE3 } from '../shared';
 import { BehaviorSubject, from, Subject, Subscription } from 'rxjs';
@@ -33,6 +33,9 @@ import { SharedService } from '../shared/service/shared.service';
 import { CodeTemplate, CodeTemplateMap } from '../configuration/shared/configuration.model';
 import { base64ToString } from '../mapping/shared/util';
 
+import * as Prism from 'prismjs';
+import 'prismjs/components/prism-javascript';
+
 @Component({
   selector: 'd11r-landing',
   templateUrl: './doc-main.component.html',
@@ -44,7 +47,8 @@ import { base64ToString } from '../mapping/shared/util';
     RouterLink
   ]
 })
-export class DocMainComponent implements OnInit, OnDestroy {
+export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
+  private highlightApplied = false;
   constructor(
     private mappingService: MappingService,
     private alertService: AlertService,
@@ -233,6 +237,81 @@ export class DocMainComponent implements OnInit, OnDestroy {
         behavior: 'smooth'
       });
     }
+  }
+
+  ngAfterViewChecked(): void {
+    // Apply syntax highlighting once after the view is initialized
+    if (!this.highlightApplied) {
+      // Use setTimeout to ensure DOM is fully rendered
+      setTimeout(() => {
+        console.log('Attempting Prism highlighting...');
+        console.log('Prism available:', typeof Prism !== 'undefined');
+        console.log('Prism.languages.javascript:', Prism.languages?.javascript ? 'loaded' : 'not loaded');
+
+        const codeBlocks = document.querySelectorAll('pre code.language-javascript');
+        console.log('Code blocks found:', codeBlocks.length);
+
+        if (codeBlocks.length > 0) {
+          console.log('First code block content preview:', codeBlocks[0].textContent?.substring(0, 50));
+        }
+
+        Prism.highlightAll();
+        console.log('Prism.highlightAll() executed');
+
+        // Check if highlighting was applied
+        const highlightedTokens = document.querySelectorAll('.token');
+        console.log('Tokens created after highlighting:', highlightedTokens.length);
+
+        // Add copy buttons to code blocks
+        this.addCopyButtons();
+
+        this.highlightApplied = true;
+      }, 100);
+    }
+  }
+
+  private addCopyButtons(): void {
+    const preElements = document.querySelectorAll('pre[class*="language-"]');
+
+    preElements.forEach((pre) => {
+      // Skip if button already exists
+      if (pre.querySelector('.copy-button')) {
+        return;
+      }
+
+      const codeElement = pre.querySelector('code');
+      if (!codeElement) {
+        return;
+      }
+
+      // Create copy button
+      const button = document.createElement('button');
+      button.className = 'copy-button';
+      button.textContent = 'Copy';
+      button.setAttribute('aria-label', 'Copy code to clipboard');
+
+      // Add click handler
+      button.addEventListener('click', () => {
+        const code = codeElement.textContent || '';
+        navigator.clipboard.writeText(code).then(() => {
+          button.textContent = 'Copied!';
+          button.classList.add('copied');
+
+          setTimeout(() => {
+            button.textContent = 'Copy';
+            button.classList.remove('copied');
+          }, 2000);
+        }).catch(err => {
+          console.error('Failed to copy code:', err);
+          button.textContent = 'Failed';
+          setTimeout(() => {
+            button.textContent = 'Copy';
+          }, 2000);
+        });
+      });
+
+      pre.appendChild(button);
+    });
   }
 
   ngOnDestroy(): void {

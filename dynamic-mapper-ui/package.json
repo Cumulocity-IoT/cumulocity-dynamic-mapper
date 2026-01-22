@@ -47,6 +47,7 @@
     "monaco-editor": "^0.53.0",
     "ngx-bootstrap": "20.0.2",
     "ngx-echarts": "^18.0.0",
+    "prismjs": "^1.30.0",
     "rxjs": "7.8.2",
     "tslib": "^2.3.0",
     "vanilla-jsoneditor": "^3.11.0",
