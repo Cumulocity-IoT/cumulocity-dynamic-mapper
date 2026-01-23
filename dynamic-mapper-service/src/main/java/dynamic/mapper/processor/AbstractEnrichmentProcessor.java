@@ -45,7 +45,8 @@ import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Abstract base class for Enrichment processors that provides common functionality
+ * Abstract base class for Enrichment processors that provides common
+ * functionality
  * for setting up GraalVM contexts and enriching payloads with metadata.
  *
  * Handles both SUBSTITUTION_AS_CODE and SMART_FUNCTION transformation types.
@@ -103,6 +104,8 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
                 var graalEngine = configurationRegistry.getGraalEngine(tenant);
                 var graalContext = createGraalContext(graalEngine);
                 context.setSystemCode(serviceConfiguration.getCodeTemplates()
+                        .get(TemplateType.SHARED.name()).getCode());
+                context.setSharedCode(serviceConfiguration.getCodeTemplates()
                         .get(TemplateType.SHARED.name()).getCode());
                 context.setGraalContext(graalContext);
                 context.setFlowState(new HashMap<String, Object>());
@@ -230,7 +233,7 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
      * Hook for subclass-specific pre-enrichment setup.
      * Default implementation does nothing.
      *
-     * @param context The processing context
+     * @param context             The processing context
      * @param connectorIdentifier The connector identifier
      */
     protected void performPreEnrichmentSetup(ProcessingContext<?> context, String connectorIdentifier) {
@@ -241,7 +244,8 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
      * Enrich the payload with metadata and context information.
      * Subclasses must implement their specific enrichment logic.
      *
-     * @param context The processing context containing payload and mapping information
+     * @param context The processing context containing payload and mapping
+     *                information
      */
     protected abstract void enrichPayload(ProcessingContext<?> context);
 
@@ -249,10 +253,10 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
      * Handle errors during enrichment phase.
      * Subclasses must implement their specific error handling strategy.
      *
-     * @param tenant The tenant identifier
-     * @param mapping The mapping being processed
-     * @param e The exception that occurred
-     * @param context The processing context
+     * @param tenant        The tenant identifier
+     * @param mapping       The mapping being processed
+     * @param e             The exception that occurred
+     * @param context       The processing context
      * @param mappingStatus The mapping status for error tracking
      */
     protected abstract void handleEnrichmentError(String tenant, Mapping mapping, Exception e,
