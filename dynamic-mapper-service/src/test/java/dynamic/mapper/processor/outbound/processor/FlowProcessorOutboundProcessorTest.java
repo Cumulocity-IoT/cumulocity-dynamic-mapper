@@ -264,15 +264,18 @@ class FlowProcessorOutboundProcessorTest {
 
     @Test
     void testProcessWithSharedCode() throws Exception {
-        // Given - Context with shared code
-        String sharedCodeBase64 = Base64.getEncoder().encodeToString("var sharedFunction = function() {};".getBytes());
-        processingContext.setSharedCode(sharedCodeBase64);
+        // Given - Context with cached shared code Source
+        String sharedCode = "var sharedFunction = function() {};";
+        Source sharedSource = Source.newBuilder("js", sharedCode, "sharedCode.js")
+                .cached(true)
+                .buildLiteral();
+        processingContext.setSharedSource(sharedSource);
 
         // When
         processor.process(exchange);
 
-        // Then - Should load shared code
-        verify(graalContext, times(2)).eval(any(Source.class)); // Main code + shared code
+        // Then - Should load shared code (main code + shared code = 2 eval calls)
+        verify(graalContext, times(2)).eval(any(Source.class));
 
         log.info("✅ Shared code test passed");
     }
@@ -426,11 +429,19 @@ class FlowProcessorOutboundProcessorTest {
     @Test
     void testProcessWithBothSharedAndSystemCode() throws Exception {
         try (MockedStatic<JavaScriptInteropHelper> mockHelper = mockStatic(JavaScriptInteropHelper.class)) {
-            // Given - Context with both shared and system code
-            String sharedCodeBase64 = Base64.getEncoder().encodeToString("var sharedFn = function() {};".getBytes());
-            String systemCodeBase64 = Base64.getEncoder().encodeToString("var systemFn = function() {};".getBytes());
-            processingContext.setSharedCode(sharedCodeBase64);
-            processingContext.setSystemCode(systemCodeBase64);
+            // Given - Context with both cached Source objects
+            String sharedCode = "var sharedFn = function() {};";
+            Source sharedSource = Source.newBuilder("js", sharedCode, "sharedCode.js")
+                    .cached(true)
+                    .buildLiteral();
+
+            String systemCode = "var systemFn = function() {};";
+            Source systemSource = Source.newBuilder("js", systemCode, "systemCode.js")
+                    .cached(true)
+                    .buildLiteral();
+
+            processingContext.setSharedSource(sharedSource);
+            processingContext.setSystemSource(systemSource);
 
             DeviceMessage expectedMessage = new DeviceMessage();
             expectedMessage.setTopic("test/topic");
@@ -440,8 +451,8 @@ class FlowProcessorOutboundProcessorTest {
             // When
             processor.process(exchange);
 
-            // Then - Should load both codes
-            verify(graalContext, times(2)).eval(any(Source.class)); // Main + shared, system i snot called
+            // Then - Should load both codes (main + shared + system = 3 eval calls)
+            verify(graalContext, times(3)).eval(any(Source.class));
 
             log.info("✅ Both shared and system code test passed");
         }

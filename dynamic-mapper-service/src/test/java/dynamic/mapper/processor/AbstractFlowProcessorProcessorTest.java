@@ -31,6 +31,7 @@ import java.util.Map;
 import org.apache.camel.Exchange;
 import org.apache.camel.Message;
 import org.graalvm.polyglot.Context;
+import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -299,10 +300,12 @@ class AbstractFlowProcessorProcessorTest {
 
     @Test
     void testLoadSharedCodeWithValidCode() {
-        // Given
+        // Given - Create cached Source object (simulating ConfigurationRegistry behavior)
         String sharedJsCode = "var sharedValue = 'shared';";
-        String encodedSharedCode = Base64.getEncoder().encodeToString(sharedJsCode.getBytes());
-        processingContext.setSharedCode(encodedSharedCode);
+        Source sharedSource = Source.newBuilder("js", sharedJsCode, "sharedCode.js")
+                .cached(true)
+                .buildLiteral();
+        processingContext.setSharedSource(sharedSource);
 
         // When
         processor.loadSharedCode(graalContext, processingContext);
@@ -555,10 +558,12 @@ class AbstractFlowProcessorProcessorTest {
 
     @Test
     void testLoadSharedCodeCleansUpSourceInFinally() {
-        // Given
+        // Given - Create cached Source object
         String sharedJsCode = "var testVar = 123;";
-        String encodedSharedCode = Base64.getEncoder().encodeToString(sharedJsCode.getBytes());
-        processingContext.setSharedCode(encodedSharedCode);
+        Source sharedSource = Source.newBuilder("js", sharedJsCode, "sharedCode.js")
+                .cached(true)
+                .buildLiteral();
+        processingContext.setSharedSource(sharedSource);
 
         // When
         processor.loadSharedCode(graalContext, processingContext);

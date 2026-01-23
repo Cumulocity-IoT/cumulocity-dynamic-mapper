@@ -130,22 +130,14 @@ public abstract class AbstractCodeExtractionProcessor extends CommonProcessor {
 
                 sourceValue = bindings.getMember(identifier);
 
-                // Load shared code if available
-                if (context.getSharedCode() != null) {
-                    byte[] decodedSharedCodeBytes = Base64.getDecoder().decode(context.getSharedCode());
-                    String decodedSharedCode = new String(decodedSharedCodeBytes);
-                    Source sharedSource = Source.newBuilder("js", decodedSharedCode, "sharedCode.js")
-                            .buildLiteral();
-                    graalContext.eval(sharedSource);
+                // Load shared code using cached Source - OPTIMIZED!
+                if (context.getSharedSource() != null) {
+                    graalContext.eval(context.getSharedSource());
                 }
 
-                // Load system code if available
-                if (context.getSystemCode() != null) {
-                    byte[] decodedSystemCodeBytes = Base64.getDecoder().decode(context.getSystemCode());
-                    String decodedSystemCode = new String(decodedSystemCodeBytes);
-                    Source systemSource = Source.newBuilder("js", decodedSystemCode, "systemCode.js")
-                            .buildLiteral();
-                    graalContext.eval(systemSource);
+                // Load system code using cached Source - OPTIMIZED!
+                if (context.getSystemSource() != null) {
+                    graalContext.eval(context.getSystemSource());
                 }
 
                 // Prepare payload - subclass-specific

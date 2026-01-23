@@ -90,6 +90,12 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
                 var graalEngine = configurationRegistry.getGraalEngine(tenant);
                 var graalContext = createGraalContext(graalEngine);
                 context.setGraalContext(graalContext);
+
+                // Set cached Source objects for performance
+                context.setSharedSource(configurationRegistry.getGraalsSourceShared(tenant));
+                context.setSystemSource(configurationRegistry.getGraalsSourceSystem(tenant));
+
+                // Keep Base64 strings for backward compatibility if needed
                 context.setSharedCode(serviceConfiguration.getCodeTemplates()
                         .get(TemplateType.SHARED.name()).getCode());
                 context.setSystemCode(serviceConfiguration.getCodeTemplates()
@@ -103,10 +109,17 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
             try {
                 var graalEngine = configurationRegistry.getGraalEngine(tenant);
                 var graalContext = createGraalContext(graalEngine);
+
+                // Set cached Source objects for performance
+                context.setSharedSource(configurationRegistry.getGraalsSourceShared(tenant));
+                context.setSystemSource(configurationRegistry.getGraalsSourceSystem(tenant));
+
+                // Keep Base64 strings for backward compatibility if needed
                 context.setSharedCode(serviceConfiguration.getCodeTemplates()
                         .get(TemplateType.SHARED.name()).getCode());
                 context.setSystemCode(serviceConfiguration.getCodeTemplates()
                         .get(TemplateType.SYSTEM.name()).getCode());
+
                 context.setGraalContext(graalContext);
                 context.setFlowState(new HashMap<String, Object>());
                 context.setFlowContext(new SimpleFlowContext(graalContext, tenant,

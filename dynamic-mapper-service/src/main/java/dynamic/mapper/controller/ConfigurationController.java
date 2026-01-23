@@ -31,6 +31,7 @@ import jakarta.validation.Valid;
 import dynamic.mapper.configuration.CodeTemplate;
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.configuration.ServiceConfiguration;
+import dynamic.mapper.configuration.TemplateType;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
@@ -634,6 +635,16 @@ public class ConfigurationController {
 
             result = codeTemplates.remove(id);
             serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
+
+            // Clear cached GraalVM sources if SHARED or SYSTEM templates are deleted
+            // (Though this should rarely happen since they're typically marked as internal)
+            if (TemplateType.SHARED.name().equals(id)) {
+                configurationRegistry.updateGraalsSourceShared(tenant, "");
+                log.info("{} - Cleared cached SHARED code source after deletion", tenant);
+            } else if (TemplateType.SYSTEM.name().equals(id)) {
+                configurationRegistry.updateGraalsSourceSystem(tenant, "");
+                log.info("{} - Cleared cached SYSTEM code source after deletion", tenant);
+            }
         } catch (Exception ex) {
             log.error("{} - Error updating code template [{}]", tenant, id, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
@@ -687,6 +698,16 @@ public class ConfigurationController {
             codeTemplates.put(id, codeTemplate);
             serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
             configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
+
+            // Invalidate cached GraalVM sources if SHARED or SYSTEM templates are updated
+            if (TemplateType.SHARED.name().equals(id)) {
+                configurationRegistry.updateGraalsSourceShared(tenant, codeTemplate.getCode());
+                log.info("{} - Invalidated and updated cached SHARED code source", tenant);
+            } else if (TemplateType.SYSTEM.name().equals(id)) {
+                configurationRegistry.updateGraalsSourceSystem(tenant, codeTemplate.getCode());
+                log.info("{} - Invalidated and updated cached SYSTEM code source", tenant);
+            }
+
             log.debug("{} - Updated code template", tenant);
         } catch (Exception ex) {
             log.error("{} - Error updating code template [{}]", tenant, id, ex);
@@ -721,6 +742,16 @@ public class ConfigurationController {
             codeTemplates.put(codeTemplate.id, codeTemplate);
             serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
             configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
+
+            // Invalidate cached GraalVM sources if SHARED or SYSTEM templates are created
+            if (TemplateType.SHARED.name().equals(codeTemplate.id)) {
+                configurationRegistry.updateGraalsSourceShared(tenant, codeTemplate.getCode());
+                log.info("{} - Created and cached SHARED code source", tenant);
+            } else if (TemplateType.SYSTEM.name().equals(codeTemplate.id)) {
+                configurationRegistry.updateGraalsSourceSystem(tenant, codeTemplate.getCode());
+                log.info("{} - Created and cached SYSTEM code source", tenant);
+            }
+
             log.debug("{} - Create code template", tenant);
         } catch (JsonProcessingException ex) {
             log.error("{} - Error creating code template", tenant, ex);

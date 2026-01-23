@@ -45,6 +45,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.configuration.ServiceConfiguration;
+import dynamic.mapper.configuration.TemplateType;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
@@ -80,15 +81,11 @@ public class ConfigurationRegistry {
 
     private Map<String, Engine> graalEngines = new ConcurrentHashMap<>();
 
-    // // Structure: < Tenant, Source>>
-    // private Map<String, Source> graalSourceShared = new ConcurrentHashMap<>();
-    //
-    // // Structure: < Tenant, Source>>
-    // private Map<String, Source> graalSourceSystem = new ConcurrentHashMap<>();
-    //
-    // // Structure: < Tenant, < MappingIdentifier, < Source > >
-    // private Map<String, Map<String, Source>> graalSourceMapping = new
-    // ConcurrentHashMap<>();
+    // Structure: < Tenant, Source>>
+    private Map<String, Source> graalSourceShared = new ConcurrentHashMap<>();
+
+    // Structure: < Tenant, Source>>
+    private Map<String, Source> graalSourceSystem = new ConcurrentHashMap<>();
 
     private Map<String, MicroserviceCredentials> microserviceCredentials = new ConcurrentHashMap<>();
 
@@ -322,56 +319,67 @@ public class ConfigurationRegistry {
                 .build();
 
         graalEngines.put(tenant, eng);
-        // graalSourceShared.put(tenant,
-        // decodeCode(serviceConfiguration.getCodeTemplates()
-        // .get(TemplateType.SHARED.name()).getCode(), "sharedCode.js", false, null));
-        // graalSourceSystem.put(tenant,
-        // decodeCode(serviceConfiguration.getCodeTemplates()
-        // .get(TemplateType.SYSTEM.name()).getCode(), "systemCode.js", false, null));
-        // graalSourceMapping.put(tenant, new ConcurrentHashMap<>());
+
+        // Create cached sources at Engine level - these will be parsed once and reused
+        String sharedCode = serviceConfiguration.getCodeTemplates()
+                .get(TemplateType.SHARED.name()).getCode();
+        Source sharedSource = Source.newBuilder("js",
+                new String(Base64.getDecoder().decode(sharedCode)),
+                "sharedCode.js")
+                .cached(true)  // KEY: Engine-level caching
+                .buildLiteral();
+
+        String systemCode = serviceConfiguration.getCodeTemplates()
+                .get(TemplateType.SYSTEM.name()).getCode();
+        Source systemSource = Source.newBuilder("js",
+                new String(Base64.getDecoder().decode(systemCode)),
+                "systemCode.js")
+                .cached(true)  // KEY: Engine-level caching
+                .buildLiteral();
+
+        graalSourceShared.put(tenant, sharedSource);
+        graalSourceSystem.put(tenant, systemSource);
+
+        log.info("{} - Created cached GraalVM sources for shared and system code", tenant);
     }
 
     public Engine getGraalEngine(String tenant) {
         return graalEngines.get(tenant);
     }
 
-    // public void updateGraalsSourceShared(String tenant, String code) {
-    // graalSourceShared.put(tenant, decodeCode(code, "sharedCode.js", false,
-    // null));
-    // }
-    //
-    // public Source getGraalsSourceShared(String tenant) {
-    // return graalSourceShared.get(tenant);
-    // }
-    //
-    // public void updateGraalsSourceSystem(String tenant, String code) {
-    // graalSourceSystem.put(tenant, decodeCode(code, "systemCode.js", false,
-    // null));
-    // }
-    //
-    // public Source getGraalsSourceSystem(String tenant) {
-    // return graalSourceSystem.get(tenant);
-    // }
-    //
-    // public void updateGraalsSourceMapping(String tenant, String mappingId, String
-    // code) {
-    // graalSourceMapping.get(tenant).put(mappingId, decodeCode(code, mappingId +
-    // ".js", true, mappingId));
-    // }
-    //
-    // public Source getGraalsSourceMapping(String tenant, String mappingId) {
-    // return graalSourceMapping.get(tenant).get(mappingId);
-    // }
-    //
-    // public void removeGraalsSourceMapping(String tenant, String mappingId) {
-    // graalSourceMapping.get(tenant).remove(mappingId);
-    // }
+    public void updateGraalsSourceShared(String tenant, String code) {
+        Source sharedSource = Source.newBuilder("js",
+                new String(Base64.getDecoder().decode(code)),
+                "sharedCode.js")
+                .cached(true)  // Engine-level caching
+                .buildLiteral();
+        graalSourceShared.put(tenant, sharedSource);
+        log.info("{} - Updated cached shared code source", tenant);
+    }
+
+    public Source getGraalsSourceShared(String tenant) {
+        return graalSourceShared.get(tenant);
+    }
+
+    public void updateGraalsSourceSystem(String tenant, String code) {
+        Source systemSource = Source.newBuilder("js",
+                new String(Base64.getDecoder().decode(code)),
+                "systemCode.js")
+                .cached(true)  // Engine-level caching
+                .buildLiteral();
+        graalSourceSystem.put(tenant, systemSource);
+        log.info("{} - Updated cached system code source", tenant);
+    }
+
+    public Source getGraalsSourceSystem(String tenant) {
+        return graalSourceSystem.get(tenant);
+    }
 
     public void removeGraalsResources(String tenant) {
         graalEngines.remove(tenant);
-        // graalSourceShared.remove(tenant);
-        // graalSourceSystem.remove(tenant);
-        // graalSourceMapping.remove(tenant);
+        graalSourceShared.remove(tenant);
+        graalSourceSystem.remove(tenant);
+        log.info("{} - Removed GraalVM engine and cached sources", tenant);
     }
 
     public ServiceConfiguration getServiceConfiguration(String tenant) {

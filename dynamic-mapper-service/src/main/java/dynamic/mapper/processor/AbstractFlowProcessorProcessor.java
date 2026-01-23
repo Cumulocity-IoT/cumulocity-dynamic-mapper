@@ -157,20 +157,17 @@ public abstract class AbstractFlowProcessorProcessor extends CommonProcessor {
     }
 
     /**
-     * Load shared code into GraalVM context.
+     * Load shared and system code into GraalVM context using cached Sources - OPTIMIZED!
      */
     protected void loadSharedCode(Context graalContext, ProcessingContext<?> context) {
-        if (context.getSharedCode() != null) {
-            Source sharedSource = null;
-            try {
-                byte[] decodedSharedCodeBytes = Base64.getDecoder().decode(context.getSharedCode());
-                String decodedSharedCode = new String(decodedSharedCodeBytes);
-                sharedSource = Source.newBuilder("js", decodedSharedCode, "sharedCode.js")
-                        .buildLiteral();
-                graalContext.eval(sharedSource);
-            } finally {
-                sharedSource = null;
-            }
+        // Use pre-cached Source if available - no decoding or parsing needed
+        if (context.getSharedSource() != null) {
+            graalContext.eval(context.getSharedSource());
+        }
+
+        // Also load system code if available
+        if (context.getSystemSource() != null) {
+            graalContext.eval(context.getSystemSource());
         }
     }
 

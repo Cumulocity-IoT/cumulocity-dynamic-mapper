@@ -425,46 +425,59 @@ public class ServiceConfigurationService {
                 return;
             }
 
-            // Extract the header section
-            int headerEnd = decodedCode.indexOf("*/");
+            // Validate and clean corrupted headers before processing
+            decodedCode = cleanCorruptedHeader(decodedCode, codeTemplate);
+
+            // Extract the header section - look for JSDoc block at the start of the file
+            int headerEnd = findJSDocHeaderEnd(decodedCode);
             if (headerEnd == -1) {
                 // No proper header found, create a new one
                 decodedCode = createNewHeader(codeTemplate) + decodedCode;
             } else {
-                headerEnd += 2; // Include the */ in the header
                 String header = decodedCode.substring(0, headerEnd);
                 String codeBody = decodedCode.substring(headerEnd);
 
-                // Test if we use values for name, description from header
-                String name = extractAnnotation(header, "@name");
-                String description = extractAnnotation(header, "@description");
-                if (overrideHeaderWithMetadata) {
+                // Determine name and description based on overrideHeaderWithMetadata flag
+                String name = overrideHeaderWithMetadata ? codeTemplate.name : extractAnnotation(header, "@name");
+                String description = overrideHeaderWithMetadata ? codeTemplate.description : extractAnnotation(header, "@description");
+
+                // Fall back to template values if extraction returned empty
+                if (name == null || name.isEmpty()) {
                     name = codeTemplate.name;
+                }
+                if (description == null || description.isEmpty()) {
                     description = codeTemplate.description;
                 }
+
+                // Update header annotations
                 header = updateAnnotation(header, "@name", name);
                 header = updateAnnotation(header, "@description", description);
+                header = updateAnnotation(header, "@templateType", codeTemplate.templateType.name());
+
+                // Update name and description in the template object
                 codeTemplate.name = name;
                 codeTemplate.description = description;
-                // Update other annotations in the header
-                header = updateAnnotation(header, "@templateType", codeTemplate.templateType.name());
-                String templateTypeStr = codeTemplate.templateType.name();
 
-                // MIGRATION: derive direction from templateType if not found in annotations
-                String directionAsString = extractAnnotation(header, "@direction");
-                if (directionAsString == null || directionAsString.isEmpty()) {
-                    directionAsString = templateTypeStr;
+                // Handle direction annotation - use codeTemplate.direction if available
+                Direction direction = codeTemplate.direction;
+                if (direction == null) {
+                    // MIGRATION: Try to extract from header for backward compatibility
+                    String directionAsString = extractAnnotation(header, "@direction");
+                    if (directionAsString != null && !directionAsString.isEmpty()) {
+                        try {
+                            direction = Direction.valueOf(directionAsString);
+                        } catch (IllegalArgumentException e) {
+                            log.debug("Could not parse direction from header: {}", directionAsString);
+                        }
+                    }
                 }
 
-                // Convert direction string to enum
-                Direction direction = null;
-                try {
-                    direction = Direction.valueOf(directionAsString);
-                } catch (Exception e) {
-                    log.warn("Invalid template type: {}", templateTypeStr);
-
+                // Only add @direction annotation if direction is not null
+                if (direction != null) {
+                    header = updateAnnotation(header, "@direction", direction.name());
                 }
-                header = updateAnnotation(header, "@direction", String.valueOf(direction));
+
+                // Update boolean annotations
                 header = updateAnnotation(header, "@defaultTemplate", String.valueOf(codeTemplate.defaultTemplate));
                 header = updateAnnotation(header, "@internal", String.valueOf(codeTemplate.internal));
                 header = updateAnnotation(header, "@readonly", String.valueOf(codeTemplate.readonly));
@@ -480,6 +493,137 @@ public class ServiceConfigurationService {
         } catch (Exception e) {
             log.error("Error rectifying header for template: {}", codeTemplate.name, e);
         }
+    }
+
+    /**
+     * Cleans corrupted JSDoc headers that may have duplicate header blocks,
+     * malformed closing tags, or invalid annotations like "@direction null".
+     *
+     * Common corruption patterns:
+     * - Duplicate JSDoc blocks at the start
+     * - Missing closing star-slash on first block
+     * - "@direction null" as a literal string
+     *
+     * @param content The template code content
+     * @param codeTemplate The CodeTemplate for reference
+     * @return Cleaned content with only one valid JSDoc header
+     */
+    private String cleanCorruptedHeader(String content, CodeTemplate codeTemplate) {
+        if (content == null || content.trim().isEmpty()) {
+            return content;
+        }
+
+        String trimmed = content.trim();
+        if (!trimmed.startsWith("/**")) {
+            return content; // No JSDoc header, nothing to clean
+        }
+
+        try {
+            // Check for duplicate JSDoc headers
+            int firstHeaderEnd = trimmed.indexOf("*/");
+            if (firstHeaderEnd == -1) {
+                log.warn("Found unclosed JSDoc header for template: {}", codeTemplate.name);
+                return content;
+            }
+
+            // Look for a second /** after the first header closes
+            int secondHeaderStart = trimmed.indexOf("/**", firstHeaderEnd + 2);
+
+            if (secondHeaderStart != -1) {
+                // We have potential duplicate headers - check if it's within the first few hundred chars
+                String betweenHeaders = trimmed.substring(firstHeaderEnd + 2, secondHeaderStart).trim();
+
+                // If there's only whitespace between headers, we likely have corruption
+                if (betweenHeaders.isEmpty() || betweenHeaders.matches("^\\s*$")) {
+                    log.warn("Detected duplicate JSDoc headers for template: {}. Cleaning...", codeTemplate.name);
+
+                    // Find the end of the second header
+                    int secondHeaderEnd = trimmed.indexOf("*/", secondHeaderStart);
+                    if (secondHeaderEnd != -1) {
+                        // Extract the code body (everything after the second header)
+                        String codeBody = trimmed.substring(secondHeaderEnd + 2);
+
+                        // Create a new clean header and combine with code body
+                        log.info("Rebuilt header for template: {}", codeTemplate.name);
+                        return createNewHeader(codeTemplate) + codeBody;
+                    }
+                }
+            }
+
+            // Check for malformed annotations in the first header
+            String firstHeader = trimmed.substring(0, firstHeaderEnd + 2);
+            boolean hasCorruption = false;
+
+            // Check for "@direction null" literal
+            if (firstHeader.contains("@direction null")) {
+                log.warn("Found '@direction null' in template: {}. Cleaning...", codeTemplate.name);
+                hasCorruption = true;
+            }
+
+            // Check for unclosed comment (missing */ before second header or code)
+            if (firstHeader.contains("@direction") && !firstHeader.contains("*/")) {
+                log.warn("Found unclosed JSDoc comment in template: {}. Cleaning...", codeTemplate.name);
+                hasCorruption = true;
+            }
+
+            if (hasCorruption) {
+                // Extract code body and rebuild with clean header
+                String codeBody = trimmed.substring(firstHeaderEnd + 2);
+
+                // If there's a second /** header, skip past it too
+                if (secondHeaderStart != -1) {
+                    int secondHeaderEnd = trimmed.indexOf("*/", secondHeaderStart);
+                    if (secondHeaderEnd != -1) {
+                        codeBody = trimmed.substring(secondHeaderEnd + 2);
+                    }
+                }
+
+                log.info("Rebuilt header for corrupted template: {}", codeTemplate.name);
+                return createNewHeader(codeTemplate) + codeBody;
+            }
+
+        } catch (Exception e) {
+            log.error("Error cleaning corrupted header for template: {}. Proceeding with original content.",
+                      codeTemplate.name, e);
+            return content;
+        }
+
+        return content;
+    }
+
+    /**
+     * Finds the end position of a JSDoc comment block that starts at the beginning of the content.
+     * Returns -1 if no valid JSDoc header is found at the start.
+     *
+     * @param content The content to search
+     * @return The end position (including the "* /") or -1 if not found
+     */
+    private int findJSDocHeaderEnd(String content) {
+        if (content == null || !content.trim().startsWith("/**")) {
+            return -1;
+        }
+
+        // Find the closing */ of the JSDoc block
+        int pos = 0;
+        while (pos < content.length()) {
+            int closingPos = content.indexOf("*/", pos);
+            if (closingPos == -1) {
+                return -1; // No closing found
+            }
+
+            // Check if this is the first */ after the opening /**
+            // A simple heuristic: if we find /** followed by */ without another /** in between, it's our header
+            int nextOpenPos = content.indexOf("/**", pos + 3);
+            if (nextOpenPos == -1 || nextOpenPos > closingPos) {
+                // This */ closes our header
+                return closingPos + 2;
+            }
+
+            // Otherwise, continue searching
+            pos = closingPos + 2;
+        }
+
+        return -1;
     }
 
     /**
@@ -536,9 +680,9 @@ public class ServiceConfigurationService {
                 // There's already a comment block, add the annotation inside it
                 int commentEndIndex = content.indexOf("*/");
                 if (commentEndIndex != -1) {
-                    // Insert before the end of the comment
+                    // Insert before the end of the comment with proper formatting
                     return content.substring(0, commentEndIndex)
-                            + "\n * " + annotation + " " + value
+                            + " * " + annotation + " " + value + "\n"
                             + content.substring(commentEndIndex);
                 }
             }
