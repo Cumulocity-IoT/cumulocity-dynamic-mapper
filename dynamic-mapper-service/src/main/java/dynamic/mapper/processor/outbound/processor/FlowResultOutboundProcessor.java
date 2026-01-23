@@ -151,7 +151,7 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             API derivedAPI = null;
             if (deviceMessage.getCumulocityType() != null) {
                 // Use explicitly specified cumulocityType from DeviceMessage
-                derivedAPI = APITopicUtil.deriveAPIFromTopic(deviceMessage.getCumulocityType().name());
+                derivedAPI = APITopicUtil.deriveAPIFromTopic(deviceMessage.getCumulocityType().toString());
                 if (derivedAPI != null) {
                     request.setApi(derivedAPI);
                     log.debug("{} - Using API {} from DeviceMessage.cumulocityType for DeviceMessage",
@@ -246,7 +246,7 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
 
         try {
             // Get the API from the cumulocityType using unified API derivation
-            API targetAPI = APITopicUtil.deriveAPIFromTopic(cumulocityMessage.getCumulocityType().name());
+            API targetAPI = APITopicUtil.deriveAPIFromTopic(cumulocityMessage.getCumulocityType().toString());
 
             // Clone the payload to modify it
             Map<String, Object> payload = clonePayload(cumulocityMessage.getPayload());

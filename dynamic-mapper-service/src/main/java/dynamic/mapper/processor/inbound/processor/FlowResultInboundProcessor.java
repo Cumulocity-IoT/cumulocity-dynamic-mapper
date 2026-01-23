@@ -102,7 +102,7 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
 
         try {
             // Get the API from the cumulocityType using unified API derivation
-            API targetAPI = APITopicUtil.deriveAPIFromTopic(cumulocityMessage.getCumulocityType().name());
+            API targetAPI = APITopicUtil.deriveAPIFromTopic(cumulocityMessage.getCumulocityType().toString());
 
             // Clone the payload to modify it
             Map<String, Object> payload = clonePayload(cumulocityMessage.getPayload());
