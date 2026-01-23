@@ -52,11 +52,18 @@ public class CumulocityObject {
     private Object payload;
 
     /**
-     * Which type in the C8Y api is being modified. Singular not plural. e.g.
-     * "measurement".
+     * Which type in the C8Y API is being modified. Singular not plural.
      * The presence of this field also serves as a discriminator to identify this
-     * object
-     * as a Cumulocity object.
+     * object as a Cumulocity object.
+     *
+     * Available values:
+     * - MEASUREMENT ("measurement") - Time-series measurement data
+     * - EVENT ("event") - Events from devices
+     * - ALARM ("alarm") - Alarm notifications
+     * - OPERATION ("operation") - Device operations/commands
+     * - MANAGED_OBJECT ("managedObject") - Inventory/device objects
+     *
+     * @see CumulocityType
      */
     private CumulocityType cumulocityType;
 

@@ -73,7 +73,7 @@ export function createCompletionProviderFlowFunction(monaco) {
       isEnum: false,
       properties: [
         { name: 'payload', type: 'object', documentation: 'The same payload that would be used in the C8Y REST/SmartREST API.' },
-        { name: 'cumulocityType', type: 'string', documentation: 'Which type in the C8Y api is being modified. e.g. "measurement".' },
+        { name: 'cumulocityType', type: '"measurement" | "event" | "alarm" | "operation" | "managedObject"', documentation: 'Which type in the C8Y API is being modified (measurement, event, alarm, operation, managedObject). Singular not plural. Serves as discriminator for CumulocityObject.' },
         { name: 'action', type: '"create" | "update"| "delete" | "patch"', documentation: 'What kind of operation is being performed on this type.' },
         { name: 'externalSource', type: 'ExternalId[] | ExternalId', documentation: 'External Id to lookup and optionally create. Use ExternalId for simple lookups.' },
         { name: 'destination', type: '"cumulocity" | "iceflow" | "streaming-analytics"', documentation: 'Destination for the message.' }
@@ -87,6 +87,7 @@ export function createCompletionProviderFlowFunction(monaco) {
       properties: [
         { name: 'payload', type: 'Uint8Array', documentation: 'Message payload as Uint8Array. Use TextEncoder/TextDecoder for string conversion. (Changed from ArrayBuffer in v2.0)' },
         { name: 'action', type: '"create" | "update"| "delete" | "patch"', documentation: 'What kind of operation is being performed on this type.' },
+        { name: 'cumulocityType', type: '"measurement" | "event" | "alarm" | "operation" | "managedObject"', documentation: 'Optional: Target Cumulocity API type (measurement, event, alarm, operation, managedObject). If not specified, derived from topic or mapping.' },
         { name: 'transportId', type: 'string', documentation: 'Identifier for the source/dest transport e.g. "mqtt", "opc-ua".' },
         { name: 'topic', type: 'string', documentation: 'The topic on the transport. Use _externalId_ placeholder to auto-reference device external ID.' },
         { name: 'clientId', type: 'string', documentation: 'Transport/MQTT client Id.' },

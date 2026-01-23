@@ -59,15 +59,28 @@ export interface ExternalSource {
 
 /** A request going to or coming from Cumulocity core (or IceFlow/offloading) */
 export interface CumulocityObject {
-    /** The same payload that would be used in the C8Y REST/SmartREST API 
+    /** The same payload that would be used in the C8Y REST/SmartREST API
     Exceptions:
-     - If providing an externalSource you don't need to provide an "id" as you would in those APIs. 
+     - If providing an externalSource you don't need to provide an "id" as you would in those APIs.
      - When using update APIs (e.g. PUT /inventory/managedObjects/{id}), you should add an "id" field into the payload (which would otherwise be in the "path")
 */
     payload: object;
 
-    /** Which type in the C8Y api is being modified. Singular not plural. e.g. "measurement". The presence of this field also serves as a discriminator to identify this JS object as CumulocityObject */
-    cumulocityType: string;
+    /**
+     * Which type in the C8Y API is being modified. Singular not plural.
+     * The presence of this field also serves as a discriminator to identify this JS object as CumulocityObject.
+     *
+     * Available values:
+     * - "measurement" - Time-series measurement data
+     * - "event" - Events from devices
+     * - "alarm" - Alarm notifications
+     * - "operation" - Device operations/commands
+     * - "managedObject" - Inventory/device objects
+     *
+     * @example "measurement"
+     * @example "event"
+     */
+    cumulocityType: "measurement" | "event" | "alarm" | "operation" | "managedObject";
     /** What kind of operation is being performed on this type */
     action: "create" | "update" | "delete" | "patch";
 
@@ -210,6 +223,24 @@ export interface DeviceMessage {
      * @example "patch"
      */
     action?: "create" | "update" | "delete" | "patch";
+
+    /**
+     * Optional: Specifies which Cumulocity API type this device message should map to.
+     * When set, this helps determine the target API endpoint for the message.
+     * If not specified, the target API is derived from the topic or mapping configuration.
+     *
+     * Available values:
+     * - "measurement" - Time-series measurement data
+     * - "event" - Events from devices
+     * - "alarm" - Alarm notifications
+     * - "operation" - Device operations/commands
+     * - "managedObject" - Inventory/device objects
+     *
+     * @since 6.1.5
+     * @example "measurement"
+     * @example "event"
+     */
+    cumulocityType?: "measurement" | "event" | "alarm" | "operation" | "managedObject";
 }
 
 /**

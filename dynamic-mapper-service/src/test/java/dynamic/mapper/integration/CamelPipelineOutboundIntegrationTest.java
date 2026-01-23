@@ -57,6 +57,7 @@ import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.notification.NotificationSubscriber;
 import dynamic.mapper.notification.websocket.Notification;
+import dynamic.mapper.processor.util.APITopicUtil;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingResultWrapper;
@@ -879,7 +880,7 @@ class CamelPipelineOutboundIntegrationTest {
     private Notification createNotification(API api, String operation, String payload) {
         // Create notification in the format expected by Notification.parse()
         // Format: ackHeader\n/tenant/api\noperation\nsubscription-id\n\npayload
-        String apiResource = Notification.convertAPItoResource(api);
+        String apiResource = APITopicUtil.convertAPIToResource(api);
         String ackHeader = String.format("/%s/test-subscription/%d", TEST_TENANT, System.currentTimeMillis());
         String tenantApiHeader = String.format("/%s/%s", TEST_TENANT, apiResource);
 

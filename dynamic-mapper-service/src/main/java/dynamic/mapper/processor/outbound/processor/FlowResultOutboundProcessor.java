@@ -42,7 +42,6 @@ import dynamic.mapper.processor.util.ProcessingResultHelper;
 import dynamic.mapper.processor.flow.CumulocityObject;
 import dynamic.mapper.processor.flow.DeviceMessage;
 import dynamic.mapper.service.MappingService;
-import dynamic.mapper.notification.websocket.Notification;
 import lombok.extern.slf4j.Slf4j;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -148,9 +147,19 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             }
             context.setResolvedPublishTopic(publishTopic);
 
-            // Derive API from publishTopic if available (for DeviceMessage objects)
-            if (publishTopic != null && !publishTopic.isEmpty()) {
-                API derivedAPI = APITopicUtil.deriveAPIFromTopic(publishTopic);
+            // Derive API: prioritize cumulocityType from DeviceMessage, fallback to deriving from topic
+            API derivedAPI = null;
+            if (deviceMessage.getCumulocityType() != null) {
+                // Use explicitly specified cumulocityType from DeviceMessage
+                derivedAPI = APITopicUtil.deriveAPIFromTopic(deviceMessage.getCumulocityType().name());
+                if (derivedAPI != null) {
+                    request.setApi(derivedAPI);
+                    log.debug("{} - Using API {} from DeviceMessage.cumulocityType for DeviceMessage",
+                            tenant, derivedAPI.name);
+                }
+            } else if (publishTopic != null && !publishTopic.isEmpty()) {
+                // Fallback: derive API from publishTopic
+                derivedAPI = APITopicUtil.deriveAPIFromTopic(publishTopic);
                 if (derivedAPI != null) {
                     request.setApi(derivedAPI);
                     log.debug("{} - Derived API {} from topic '{}' for DeviceMessage",
@@ -236,8 +245,8 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             String tenant, Mapping mapping) throws ProcessingException {
 
         try {
-            // Get the API from the cumulocityType
-            API targetAPI = Notification.convertResourceToAPI(cumulocityMessage.getCumulocityType().name());
+            // Get the API from the cumulocityType using unified API derivation
+            API targetAPI = APITopicUtil.deriveAPIFromTopic(cumulocityMessage.getCumulocityType().name());
 
             // Clone the payload to modify it
             Map<String, Object> payload = clonePayload(cumulocityMessage.getPayload());

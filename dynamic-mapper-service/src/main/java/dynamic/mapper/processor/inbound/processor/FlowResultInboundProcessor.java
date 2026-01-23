@@ -18,11 +18,11 @@ import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ExternalIdInfo;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
+import dynamic.mapper.processor.util.APITopicUtil;
 import dynamic.mapper.processor.flow.CumulocityObject;
 import dynamic.mapper.processor.flow.ExternalId;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.service.MappingService;
-import dynamic.mapper.notification.websocket.Notification;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -101,8 +101,8 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
             String tenant, Mapping mapping) throws ProcessingException {
 
         try {
-            // Get the API from the cumulocityType
-            API targetAPI = Notification.convertResourceToAPI(cumulocityMessage.getCumulocityType().name());
+            // Get the API from the cumulocityType using unified API derivation
+            API targetAPI = APITopicUtil.deriveAPIFromTopic(cumulocityMessage.getCumulocityType().name());
 
             // Clone the payload to modify it
             Map<String, Object> payload = clonePayload(cumulocityMessage.getPayload());

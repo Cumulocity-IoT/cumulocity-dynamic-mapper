@@ -166,7 +166,10 @@
             <strong>HTTP Connector</strong> - Receive data via REST endpoints
           </li>
           <li>
-            <strong>Webhook</strong> - Send data to external REST APIs or the Cumulocity REST API
+            <strong>Webhook</strong> - Send data to external REST APIs
+          </li>
+          <li>
+            <strong>Cumulocity API</strong> - Use the internal Cumulocity REST API for creating, updating, and deleting managed objects, events, alarms, and measurements
           </li>
           <li>
             <strong>Apache Kafka</strong> - Integrate with Kafka topics for high-throughput messaging
@@ -269,7 +272,7 @@ Functions</a> for advanced scenarios</li>
     based on your message broker or integration requirements. <br />
     For IoT devices, MQTT connectors are most common. For enterprise integrations, consider Kafka or HTTP
     connectors.
-    Webhooks are ideal for outbound integrations to external systems. <br />
+    Webhooks are ideal for outbound integrations to external systems, while the Cumulocity API connector is for internal Cumulocity REST API operations. <br />
     The mapper
   supports the following connectors and payload formats:</div>
   <div class="table-responsive table-width-100">
@@ -312,7 +315,7 @@ Functions</a> for advanced scenarios</li>
       <td>JSON, Hex, Protobuf, Extension</td>
     </tr>
     <tr class="table-light">
-      <td><strong>Webhook</strong><br><small class="text-muted">(including Cumulocity Rest API)</small></td>
+      <td><strong>Webhook</strong><br><small class="text-muted">(for external REST APIs)</small></td>
       <td class="text-center text-muted">-</td>
       <td class="text-center"><strong>X</strong></td>
       <td class="text-center"><strong>X</strong></td>
@@ -320,6 +323,14 @@ Functions</a> for advanced scenarios</li>
       <td>JSON, Hex</td>
     </tr>
     <tr>
+      <td><strong>Cumulocity API</strong><br><small class="text-muted">(for internal Cumulocity REST API)</small></td>
+      <td class="text-center text-muted">-</td>
+      <td class="text-center"><strong>X</strong></td>
+      <td class="text-center"><strong>X</strong></td>
+      <td class="text-center"><strong>X</strong><br></td>
+      <td>JSON</td>
+    </tr>
+    <tr class="table-light">
       <td><strong>Apache Pulsar </strong><small class="text-muted"></small></td>
       <td class="text-center"><strong>X</strong></td>
       <td class="text-center"><strong>X</strong></td>
@@ -1663,10 +1674,11 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
           <td>The MQTT topic or URL path to publish to. Can include dynamic values like device IDs. For Webhook
           connectors, this is appended to the base URL as the context path.
           <br /><br />
-          <strong>For Webhook connectors with Cumulocity Internal enabled:</strong> The <code>topic</code> is used
-          to derive the Cumulocity API endpoint. Topics should start with the API name (e.g., <code>"measurement"</code>,
-          <code>"event"</code>, <code>"alarm"</code>, <code>"inventory"</code>) to automatically route to the correct
-          Cumulocity REST API endpoint. The mapper derives the API type from the topic and constructs the proper REST path.</td>
+          <strong>For Webhook connectors with Cumulocity Internal enabled:</strong> If <code>cumulocityType</code> is not specified,
+          the <code>topic</code> is used to derive the Cumulocity API endpoint. Topics should start with the API name
+          (e.g., <code>"measurement"</code>, <code>"event"</code>, <code>"alarm"</code>, <code>"inventory"</code>) to automatically
+          route to the correct Cumulocity REST API endpoint. However, using <code>cumulocityType</code> is recommended for more
+          reliable API routing.</td>
         </tr>
         <tr>
           <td><code>payload</code></td>
@@ -1686,6 +1698,18 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
             <strong>Special case:</strong> Measurements are immutable time-series data and don't support update or patch operations.
             If you specify <code>action: "update"</code> or <code>action: "patch"</code> for measurements, the mapper automatically
             converts it to <code>"create"</code> (POST) to create a new measurement instead.
+          </td>
+        </tr>
+        <tr>
+          <td><code>cumulocityType</code></td>
+          <td>No</td>
+          <td>Explicitly specifies which Cumulocity API type to use: <code>"measurement"</code>, <code>"event"</code>, <code>"alarm"</code>, <code>"operation"</code>, or <code>"managedObject"</code>.
+            <br /><br />
+            <strong>When specified:</strong> The mapper uses this explicit value to determine the target Cumulocity API endpoint, making the API selection more robust and less ambiguous.
+            <br /><br />
+            <strong>When not specified:</strong> The mapper falls back to deriving the API type from the <code>topic</code> string (e.g., a topic starting with <code>"measurements/"</code> automatically routes to the Measurement API).
+            <br /><br />
+            <strong>Recommended for Webhook connectors with Cumulocity Internal:</strong> Using <code>cumulocityType</code> provides explicit control over API routing and is more reliable than topic-based derivation.
           </td>
         </tr>
         <tr>
@@ -1717,12 +1741,12 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
   <div class="title">Important: Webhook with Cumulocity Internal</div>
   <div class="content">
     <strong>Using Webhook connectors with Cumulocity Internal enabled:</strong><br />
-    When the Webhook connector is configured with <strong>Cumulocity Internal</strong> enabled, the
-    <code>topic</code> and <code>action</code> properties work together to interact with the Cumulocity REST API:
+    When the Webhook connector is configured with <strong>Cumulocity Internal</strong> enabled, the mapper interacts with the Cumulocity REST API using these properties:
     <ul class="m-t-8 m-b-0">
-      <li><strong>topic</strong>: Used to derive the Cumulocity API endpoint. Start your topic with the API name
-        (e.g., <code>"measurement"</code>, <code>"event"</code>, <code>"alarm"</code>, <code>"inventory"</code>)
-        to route to the correct REST API.</li>
+      <li><strong>cumulocityType</strong> (recommended): Explicitly specify the API type (<code>"measurement"</code>, <code>"event"</code>, <code>"alarm"</code>, <code>"operation"</code>, <code>"managedObject"</code>).
+        This provides the most reliable API routing and is preferred over topic-based derivation.</li>
+      <li><strong>topic</strong>: If <code>cumulocityType</code> is not specified, the mapper derives the API endpoint from the topic.
+        Start your topic with the API name (e.g., <code>"measurement"</code>, <code>"event"</code>) to route to the correct REST API.</li>
       <li><strong>action</strong>: Determines the HTTP method and operation type:
         <ul class="m-t-4 m-b-0">
           <li><code>"create"</code> → POST (create new objects)</li>
@@ -1734,7 +1758,7 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
     </ul>
     <br />
     <strong>Example:</strong> To partially update a device's custom properties, use
-    <code>topic: "inventory/12345"</code> with <code>action: "patch"</code>.
+    <code>cumulocityType: "managedObject"</code> or <code>topic: "inventory/12345"</code> with <code>action: "patch"</code>.
     The mapper will automatically fetch the device, merge your changes, and send a PUT request.
   </div>
 </div>
@@ -1772,6 +1796,21 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
       "c8y_Steam": &#123; "Temperature": &#123; "unit": "C", "value": payload["c8y_TemperatureMeasurement"]["T"]["value"] &#125; &#125;
     &#125;,
     externalSource: [&#123; "type": "c8y_Serial" &#125;]  // Specifies which external ID type to use
+  &#125;];
+&#125;</code></pre>
+</div>
+<div class="p-b-8 text-14">
+  <strong>Example: Using <code>cumulocityType</code> for explicit API specification (recommended)</strong><br /><br />
+  <pre><code class="language-javascript">function onMessage(msg, context) &#123;
+  var payload = msg.getPayload();
+  return [&#123;
+    topic: "custom/device/topic",  // Custom topic - API won't be derived from this
+    cumulocityType: "measurement",  // Explicitly specify to use Measurement API
+    payload: &#123;
+      "time": new Date().toISOString(),
+      "c8y_Steam": &#123; "Temperature": &#123; "unit": "C", "value": payload["c8y_TemperatureMeasurement"]["T"]["value"] &#125; &#125;
+    &#125;,
+    action: "create"  // Create a new measurement
   &#125;];
 &#125;</code></pre>
 </div>

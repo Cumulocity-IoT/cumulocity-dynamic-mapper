@@ -24,7 +24,8 @@ package dynamic.mapper.processor.util;
 import dynamic.mapper.model.API;
 
 /**
- * Utility class for deriving Cumulocity API types from MQTT-style or REST-style topics.
+ * Utility class for bidirectional conversion between Cumulocity API types and their various string representations.
+ * Handles topics, REST paths, resource names, and simple type names.
  */
 public class APITopicUtil {
 
@@ -33,30 +34,66 @@ public class APITopicUtil {
     }
 
     /**
-     * Derive API type from MQTT-style topic or REST path-style topic.
-     * Handles both simple MQTT topics and REST path-style topics:
-     * - "measurements/9877263" → MEASUREMENT
-     * - "measurement/measurements/9877263" → MEASUREMENT (REST path format)
-     * - "events/9877263" → EVENT
-     * - "event/events/9877263" → EVENT (REST path format)
-     * - "eventsWithChildren/9877263" → EVENT_WITH_CHILDREN
-     * - "alarms/9877263" → ALARM
-     * - "alarm/alarms/9877263" → ALARM (REST path format)
-     * - "alarmsWithChildren/9877263" → ALARM_WITH_CHILDREN
-     * - "inventory/managedObjects/9877263" → INVENTORY
-     * - "managedobjects/9877263" → INVENTORY
-     * - "operations/9877263" → OPERATION
-     * - "devicecontrol/operations/9877263" → OPERATION (REST path format)
+     * Convert API enum to its Cumulocity resource name (notification filter format).
+     * This is the reverse operation of deriveAPIFromTopic.
      *
-     * @param topic The topic string to parse
+     * Examples:
+     * - API.MEASUREMENT → "measurements"
+     * - API.EVENT → "events"
+     * - API.EVENT_WITH_CHILDREN → "eventsWithChildren"
+     * - API.ALARM → "alarms"
+     * - API.INVENTORY → "managedobjects"
+     * - API.OPERATION → "operations"
+     *
+     * @param api The API enum to convert
+     * @return The resource name, or "events" as default for unknown types
+     */
+    public static String convertAPIToResource(API api) {
+        if (api == null) {
+            return "events";
+        }
+
+        switch (api) {
+            case ALARM:
+                return "alarms";
+            case ALARM_WITH_CHILDREN:
+                return "alarmsWithChildren";
+            case EVENT:
+                return "events";
+            case EVENT_WITH_CHILDREN:
+                return "eventsWithChildren";
+            case MEASUREMENT:
+                return "measurements";
+            case INVENTORY:
+                return "managedobjects";
+            case OPERATION:
+                return "operations";
+            default:
+                return "events";
+        }
+    }
+
+    /**
+     * Derive API type from MQTT-style topic, REST path-style topic, or simple resource/type name.
+     * Handles multiple formats:
+     * - Simple type names: "measurement", "event", "alarm", "inventory", "operation" → corresponding API
+     * - MQTT topics: "measurements/9877263" → MEASUREMENT
+     * - REST path format: "measurement/measurements/9877263" → MEASUREMENT
+     * - WithChildren variants: "eventsWithChildren", "alarmsWithChildren" → EVENT_WITH_CHILDREN, ALARM_WITH_CHILDREN
+     * - REST paths: "inventory/managedObjects/9877263" → INVENTORY
+     * - Alternative names: "managedobjects", "managedobject" → INVENTORY
+     *
+     * This method replaces the need for separate conversion methods by handling all input formats.
+     *
+     * @param topicOrType The topic string, REST path, or simple type name to parse
      * @return The derived API type, or null if it cannot be determined
      */
-    public static API deriveAPIFromTopic(String topic) {
-        if (topic == null || topic.isEmpty()) {
+    public static API deriveAPIFromTopic(String topicOrType) {
+        if (topicOrType == null || topicOrType.isEmpty()) {
             return null;
         }
 
-        String[] segments = topic.split("/");
+        String[] segments = topicOrType.split("/");
         if (segments.length == 0) {
             return null;
         }
@@ -84,9 +121,15 @@ public class APITopicUtil {
     }
 
     /**
-     * Helper method to derive API from a single segment
+     * Helper method to derive API from a single segment.
+     * Handles various naming conventions:
+     * - Simple type names: "measurement", "event", "alarm", "inventory", "operation"
+     * - Plural resource names: "measurements", "events", "alarms", "operations"
+     * - Alternative names: "managedobject", "managedobjects"
+     * - WithChildren variants: "eventswithchildren", "alarmswithchildren"
+     * - REST path prefixes: "devicecontrol"
      *
-     * @param segment The topic segment to parse
+     * @param segment The topic segment to parse (case-insensitive)
      * @return The derived API type, or null if not recognized
      */
     private static API deriveFromSegment(String segment) {
@@ -112,6 +155,7 @@ public class APITopicUtil {
                 return API.ALARM_WITH_CHILDREN;
 
             case "inventory":
+            case "managedobject":
             case "managedobjects":
                 return API.INVENTORY;
 
