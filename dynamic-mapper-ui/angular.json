@@ -40,7 +40,8 @@
               "regenerator-runtime/runtime",
               "@cordobo/qrcode",
               "zone.js/dist/zone",
-              "chroma-js"
+              "chroma-js",
+              "highlight.js"
             ]
           },
           "configurations": {

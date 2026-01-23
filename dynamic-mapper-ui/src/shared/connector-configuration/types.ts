@@ -19,6 +19,8 @@
  */
 import { BuiltInActionType } from "@c8y/ngx-components";
 
+export type Action = 'create' | 'update' | 'view';
+
 export interface ActionVisibilityRule {
     type: 'enabled' | 'readOnly' | 'connectorType' | 'userRole';
     value?: boolean | string; // 'viewLogic' for custom logic

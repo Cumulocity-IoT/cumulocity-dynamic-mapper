@@ -57,6 +57,7 @@ import dynamic.mapper.connector.pulsar.MQTTServicePulsarClient;
 import dynamic.mapper.connector.pulsar.PulsarConnectorClient;
 import dynamic.mapper.connector.test.TestClient;
 import dynamic.mapper.connector.webhook.WebHook;
+import dynamic.mapper.connector.webhook.WebHookInternal;
 import dynamic.mapper.model.DeviceToClientMapRepresentation;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
@@ -245,6 +246,15 @@ public class ConfigurationRegistry {
 
             case WEB_HOOK:
                 connectorClient = new WebHook(this, connectorRegistry, connectorConfiguration,
+                        null,
+                        additionalSubscriptionIdTest, tenant);
+                log.info("{} - WebHook Connector created, identifier: {}", tenant,
+                        connectorConfiguration.getIdentifier());
+                break;
+
+
+            case WEB_HOOK_INTERNAL:
+                connectorClient = new WebHookInternal(this, connectorRegistry, connectorConfiguration,
                         null,
                         additionalSubscriptionIdTest, tenant);
                 log.info("{} - WebHook Connector created, identifier: {}", tenant,

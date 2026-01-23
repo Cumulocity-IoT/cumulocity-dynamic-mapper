@@ -39,6 +39,28 @@ public class DeviceMessage {
      */
     private Object payload;
 
+    /**
+     * What kind of operation is being performed, e.g. "create", "update", "delete",
+     * "patch"
+     */
+    private String action;
+
+    /**
+     * Optional: Specifies which Cumulocity API type this device message should map to.
+     * When set, this helps determine the target API endpoint for the message.
+     * If not specified, the target API is derived from the topic or mapping configuration.
+     *
+     * Available values:
+     * - MEASUREMENT ("measurement") - Time-series measurement data
+     * - EVENT ("event") - Events from devices
+     * - ALARM ("alarm") - Alarm notifications
+     * - OPERATION ("operation") - Device operations/commands
+     * - MANAGED_OBJECT ("managedObject") - Inventory/device objects
+     *
+     * @see CumulocityType
+     */
+    private CumulocityType cumulocityType;
+
     /** External ID to lookup (and optionally create), optional */
     private Object externalSource; // ExternalSource[] | ExternalSource
 

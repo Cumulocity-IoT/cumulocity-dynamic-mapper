@@ -19,7 +19,7 @@
  * @authors Christof Strack
  */
 
-import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewChild, AfterViewChecked } from '@angular/core';
 import { MappingService } from '../mapping/core/mapping.service';
 import { CodeExplorerComponent, Direction, Feature, JsonEditorComponent, NODE1, NODE3 } from '../shared';
 import { BehaviorSubject, from, Subject, Subscription } from 'rxjs';
@@ -33,6 +33,12 @@ import { SharedService } from '../shared/service/shared.service';
 import { CodeTemplate, CodeTemplateMap } from '../configuration/shared/configuration.model';
 import { base64ToString } from '../mapping/shared/util';
 
+import hljs from 'highlight.js/lib/core';
+import javascript from 'highlight.js/lib/languages/javascript';
+
+// Register the JavaScript language
+hljs.registerLanguage('javascript', javascript);
+
 @Component({
   selector: 'd11r-landing',
   templateUrl: './doc-main.component.html',
@@ -44,7 +50,8 @@ import { base64ToString } from '../mapping/shared/util';
     RouterLink
   ]
 })
-export class DocMainComponent implements OnInit, OnDestroy {
+export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
+  private highlightApplied = false;
   constructor(
     private mappingService: MappingService,
     private alertService: AlertService,
@@ -233,6 +240,103 @@ export class DocMainComponent implements OnInit, OnDestroy {
         behavior: 'smooth'
       });
     }
+  }
+
+  ngAfterViewChecked(): void {
+    // Apply syntax highlighting once after the view is initialized
+    if (!this.highlightApplied) {
+      // Use setTimeout to ensure DOM is fully rendered
+      setTimeout(() => {
+        // Highlight all code blocks
+        document.querySelectorAll('pre code').forEach((block) => {
+          hljs.highlightElement(block as HTMLElement);
+        });
+        this.addCopyButtons();
+        this.highlightApplied = true;
+      }, 100);
+    }
+  }
+
+  private addCopyButtons(): void {
+    const preElements = document.querySelectorAll('pre code');
+
+    preElements.forEach((codeElement: Element) => {
+      const pre = codeElement.parentElement;
+      if (!pre) {
+        return;
+      }
+
+      // Skip if button already exists
+      if (pre.querySelector('.btn-copy-code')) {
+        return;
+      }
+
+      // Ensure pre element has relative positioning
+      (pre as HTMLElement).style.position = 'relative';
+
+      // Create toolbar container
+      const toolbar = document.createElement('div');
+      toolbar.className = 'code-toolbar';
+      // Force flexbox styles inline to override any framework styles
+      toolbar.style.display = 'flex';
+      toolbar.style.flexDirection = 'row';
+      toolbar.style.justifyContent = 'flex-end';
+      toolbar.style.alignItems = 'center';
+      toolbar.style.backgroundColor = '#000000';
+
+      // Create copy button with icon
+      const button = document.createElement('button');
+      button.className = 'btn-copy-code';
+      button.setAttribute('type', 'button');
+      button.setAttribute('aria-label', 'Copy code to clipboard');
+      // Force button positioning and size inline
+      button.style.marginLeft = 'auto';
+      button.style.marginRight = '4px';
+      button.style.marginBottom = '4px';
+      button.style.marginTop = '2px';
+      button.style.height = '18px';
+      button.style.backgroundColor = '#000000';
+
+      button.style.fontSize = '12px';
+
+      // Create icon element
+      const icon = document.createElement('i');
+      icon.className = 'dlt-c8y-icon-clipboard';
+      icon.style.marginRight = '4px';
+
+      // Add icon and text to button
+      button.appendChild(icon);
+      button.appendChild(document.createTextNode('Copy to clipboard'));
+
+      // Add click handler
+      button.addEventListener('click', async () => {
+        const code = codeElement.textContent || '';
+        try {
+          await navigator.clipboard.writeText(code);
+          icon.className = 'dlt-c8y-icon-ok';
+          button.childNodes[1].textContent = 'Copied!';
+          button.classList.add('copied');
+
+          setTimeout(() => {
+            icon.className = 'dlt-c8y-icon-clipboard';
+            button.childNodes[1].textContent = 'Copy to clipboard';
+            button.classList.remove('copied');
+          }, 2000);
+        } catch (err) {
+          console.error('Failed to copy code:', err);
+          icon.className = 'dlt-c8y-icon-remove';
+          button.childNodes[1].textContent = 'Failed';
+          setTimeout(() => {
+            icon.className = 'dlt-c8y-icon-clipboard';
+            button.childNodes[1].textContent = 'Copy to clipboard';
+          }, 2000);
+        }
+      });
+
+      // Append button to toolbar and toolbar to pre element
+      toolbar.appendChild(button);
+      pre.insertBefore(toolbar, pre.firstChild);
+    });
   }
 
   ngOnDestroy(): void {

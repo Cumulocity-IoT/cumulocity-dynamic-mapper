@@ -34,6 +34,7 @@ import dynamic.mapper.connector.mqtt.MQTTServiceClient;
 import dynamic.mapper.connector.pulsar.MQTTServicePulsarClient;
 import dynamic.mapper.connector.pulsar.PulsarConnectorClient;
 import dynamic.mapper.connector.webhook.WebHook;
+import dynamic.mapper.connector.webhook.WebHookInternal;
 import dynamic.mapper.model.ConnectorStatusEvent;
 
 import org.springframework.stereotype.Component;
@@ -199,6 +200,7 @@ public class ConnectorRegistry {
                 new MQTTServiceClient().getConnectorSpecification());
         connectorSpecificationMap.put(ConnectorType.KAFKA, new KafkaClientV2().getConnectorSpecification());
         connectorSpecificationMap.put(ConnectorType.WEB_HOOK, new WebHook().getConnectorSpecification());
+        connectorSpecificationMap.put(ConnectorType.WEB_HOOK_INTERNAL, new WebHookInternal().getConnectorSpecification());
         connectorSpecificationMap.put(ConnectorType.HTTP, new HttpClient().getConnectorSpecification());
         connectorSpecificationMap.put(ConnectorType.PULSAR, new PulsarConnectorClient().getConnectorSpecification());
         connectorSpecificationMap.put(ConnectorType.CUMULOCITY_MQTT_SERVICE_PULSAR, 

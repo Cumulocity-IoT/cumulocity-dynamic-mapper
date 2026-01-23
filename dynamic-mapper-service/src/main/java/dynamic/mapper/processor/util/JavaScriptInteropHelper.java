@@ -123,6 +123,9 @@ public class JavaScriptInteropHelper {
         if (value.hasMember("payload")) {
             msg.setPayload(convertValueToJavaObject(value.getMember("payload")));
         }
+        if (value.hasMember("cumulocityType")) {
+            msg.setCumulocityType(CumulocityType.fromValue(value.getMember("cumulocityType").asString()));
+        }
         if (value.hasMember("topic")) {
             msg.setTopic(value.getMember("topic").asString());
         }
@@ -170,6 +173,11 @@ public class JavaScriptInteropHelper {
                 long timestamp = timeValue.asLong();
                 msg.setTime(Instant.ofEpochMilli(timestamp));
             }
+        }
+
+        // Handle action
+        if (value.hasMember("action")) {
+            msg.setAction(value.getMember("action").asString());
         }
 
         return msg;

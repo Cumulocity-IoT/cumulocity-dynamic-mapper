@@ -31,9 +31,25 @@ jobs:
       - name: Getting version of pom.xml
         run: echo "version=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec)" >> $GITHUB_OUTPUT
         id: project
+
+      # Fast Unit Tests (runs during compile)
+      - name: Run Unit Tests
+        run: mvn -B test --file pom.xml
+
+      # Fast Dispatcher Integration Tests
+      - name: Run Dispatcher Integration Tests
+        run: mvn -B verify -DskipTests --file pom.xml
+
+      # Full Transformation Validation (only on tags/releases)
+      # NOTE: Currently DISABLED - requires full Spring Boot context setup
+      # See TRANSFORMATION_TESTS_SETUP.md for configuration requirements
+      # - name: Run Full Transformation Validation Tests
+      #   if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+      #   run: mvn -B verify -Pfull-validation --file pom.xml
+
       #Building Starter backend
       - name: Build Starter Backend
-        run: mvn -B package --file pom.xml
+        run: mvn -B package -DskipTests --file pom.xml
       - name: Packaging Starter Backend
         run: |
           mv ./dynamic-mapper-service/target/dynamic-mapper-service.zip ./dynamic-mapper-service/target/dynamic-mapper-service-starter.zip

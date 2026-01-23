@@ -34,6 +34,7 @@ import {
 import { FormatStringPipe } from '../../misc/format-string.pipe';
 
 import { SharedModule } from '../../shared.module';
+import { Action } from '../types';
 
 interface PropertyEntry {
   key: string;
@@ -53,7 +54,7 @@ interface PropertyEntry {
 ]
 })
 export class ConnectorConfigurationDrawerComponent implements OnInit {
-  @Input() add: boolean;
+  @Input() action: Action;
   @Input() configuration: ConnectorConfiguration;
   @Input() specifications: ConnectorSpecification[];
   @Input() configurationsCount: number;
@@ -94,12 +95,12 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
 
   async ngOnInit() {
     this.feature = await this.sharedService.getFeatures();
-    this.mode = this.add ? 'Add' : 'Update';
+    this.mode = this.action === 'create' ? 'Add' : this.action === 'update' ? 'Update' : 'View';
     this.setConnectorDescription();
     this.initializeBrokerFormFields();
-    this.readOnly = this.configuration.enabled;
+    this.readOnly = this.configuration.enabled || this.action === 'view';
 
-    if (!this.add) {
+    if (this.action !== 'create') {
       this.createDynamicForm(this.configuration.connectorType);
     }
   }
@@ -115,11 +116,16 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
         label: 'Connector type',
         options: this.specifications
           .filter(sp => sp.connectorType !== ConnectorType.CUMULOCITY_MQTT_SERVICE)
-          .map(sp => ({
-            label: !this.allowedConnectors.includes(sp.connectorType) ? sp.name + '-  Only one instance per tenant allowed' : sp.name,
-            value: sp.connectorType,
-            disabled: !this.allowedConnectors.includes(sp.connectorType) // Disable if not allowed
-          })),
+          .map(sp => {
+            const directions = sp.supportedDirections?.map(d => d.charAt(0).toUpperCase() + d.slice(1).toLowerCase()).join(', ') || '';
+            const directionLabel = directions ? ` ${directions}` : '';
+            const singletonSuffix = !this.allowedConnectors.includes(sp.connectorType) ? ' - Only one instance per tenant allowed' : '';
+            return {
+              label: `${sp.name} - ${directionLabel}${singletonSuffix}`,
+              value: sp.connectorType,
+              disabled: !this.allowedConnectors.includes(sp.connectorType) // Disable if not allowed
+            };
+          }),
         change: () => this.createDynamicForm(this.brokerForm.get('connectorType').value),
         required: true,
         disabled: this.readOnly
@@ -242,7 +248,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
     this.setConnectorDescription();
     this.initializeBasicFormFields();
 
-    if (this.add) {
+    if (this.action === 'create') {
       this.setDefaultConfiguration(connectorType);
     }
 
@@ -282,7 +288,9 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
   }
 
   private setDefaultConfiguration(connectorType: ConnectorType): void {
-    const formattedName = this.formatStringPipe.transform(connectorType);
+    const formattedName = connectorType === ConnectorType.WEB_HOOK_INTERNAL
+      ? 'Cumulocity API'
+      : this.formatStringPipe.transform(connectorType);
     this.configuration.name = `${formattedName} - ${nextIdAndPad(this.configurationsCount, 2)}`;
     this.configuration.enabled = false;
   }
@@ -305,7 +313,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
     const sortedFields = new Array(numberFields);
 
     Object.entries(dynamicFields.properties).forEach(([key, property]) => {
-      if ('defaultValue' in property && this.add) {
+      if ('defaultValue' in property && this.action === 'create') {
         this.configuration.properties[key] = property.defaultValue;
       }
 

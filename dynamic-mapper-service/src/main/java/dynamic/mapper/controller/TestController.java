@@ -43,6 +43,7 @@ import dynamic.mapper.model.TestContext;
 import dynamic.mapper.model.TestResult;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingResultWrapper;
+import dynamic.mapper.processor.util.APITopicUtil;
 import dynamic.mapper.service.ConnectorConfigurationService;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.service.ServiceConfigurationService;
@@ -225,7 +226,7 @@ public class TestController {
         // Example: /t12345/alarms/CREATE
 
         // First header: tenant and API path
-        String apiPath = Notification.convertAPItoResource(api);
+        String apiPath = APITopicUtil.convertAPIToResource(api);
         String tenantApiHeader = String.format("/%s/%s", tenant, apiPath);
         notificationHeaders.add(tenantApiHeader);
 

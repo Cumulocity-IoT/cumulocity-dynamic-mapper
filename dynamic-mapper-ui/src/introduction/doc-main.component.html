@@ -166,7 +166,10 @@
             <strong>HTTP Connector</strong> - Receive data via REST endpoints
           </li>
           <li>
-            <strong>Webhook</strong> - Send data to external REST APIs or the Cumulocity REST API
+            <strong>Webhook</strong> - Send data to external REST APIs
+          </li>
+          <li>
+            <strong>Cumulocity API</strong> - Use the internal Cumulocity REST API for creating, updating, and deleting managed objects, events, alarms, and measurements
           </li>
           <li>
             <strong>Apache Kafka</strong> - Integrate with Kafka topics for high-throughput messaging
@@ -269,7 +272,7 @@ Functions</a> for advanced scenarios</li>
     based on your message broker or integration requirements. <br />
     For IoT devices, MQTT connectors are most common. For enterprise integrations, consider Kafka or HTTP
     connectors.
-    Webhooks are ideal for outbound integrations to external systems. <br />
+    Webhooks are ideal for outbound integrations to external systems, while the Cumulocity API connector is for internal Cumulocity REST API operations. <br />
     The mapper
   supports the following connectors and payload formats:</div>
   <div class="table-responsive table-width-100">
@@ -312,7 +315,7 @@ Functions</a> for advanced scenarios</li>
       <td>JSON, Hex, Protobuf, Extension</td>
     </tr>
     <tr class="table-light">
-      <td><strong>Webhook</strong><br><small class="text-muted">(including Cumulocity Rest API)</small></td>
+      <td><strong>Webhook</strong><br><small class="text-muted">(for external REST APIs)</small></td>
       <td class="text-center text-muted">-</td>
       <td class="text-center"><strong>X</strong></td>
       <td class="text-center"><strong>X</strong></td>
@@ -320,6 +323,14 @@ Functions</a> for advanced scenarios</li>
       <td>JSON, Hex</td>
     </tr>
     <tr>
+      <td><strong>Cumulocity API</strong><br><small class="text-muted">(for internal Cumulocity REST API)</small></td>
+      <td class="text-center text-muted">-</td>
+      <td class="text-center"><strong>X</strong></td>
+      <td class="text-center"><strong>X</strong></td>
+      <td class="text-center"><strong>X</strong><br></td>
+      <td>JSON</td>
+    </tr>
+    <tr class="table-light">
       <td><strong>Apache Pulsar </strong><small class="text-muted"></small></td>
       <td class="text-center"><strong>X</strong></td>
       <td class="text-center"><strong>X</strong></td>
@@ -1428,38 +1439,33 @@ using JSONata.</p>
         <div class="p-b-8 text-14">
           The signature and structure of a <b>Smart Function</b> has the form:
         </div>
-        <pre><code>function onMessage (inputMsg, context) &#123;
-          const msg = inputMsg;
-          var payload = msg.getPayload(); // contains payload
-          console.log("Context" + context.getStateAll());
-          console.log("Payload Raw:" + msg.getPayload());
-          console.log("Payload messageId" +  msg.getPayload().get('messageId'));
-          // insert transformation logic here
-          // then return result
-          return [&#123;
-          cumulocityType: "measurement",
-          action: "create",
-          payload: &#123;
-          "time":  new Date().toISOString(),
-          "type": "c8y_TemperatureMeasurement",
-          "c8y_Steam": &#123;
-          "Temperature": &#123;
-          "unit": "C",
-          "value": payload["sensorData"]["temp_val"]
-          &#125;
-          &#125;
-          &#125;,
-          externalSource: [&#123;"type":"c8y_Serial", "externalId": payload.get("clientId")&#125;]
-          &#125;];
-        &#125;</code></pre>
+        <pre><code class="language-javascript">function onMessage(inputMsg, context) &#123;
+  const msg = inputMsg;
+  var payload = msg.getPayload(); // contains payload
+  console.log("Context" + context.getStateAll());
+  console.log("Payload Raw:" + msg.getPayload());
+  console.log("Payload messageId" + msg.getPayload().get('messageId'));
+  // insert transformation logic here
+  // then return result
+  return [&#123;
+    cumulocityType: "measurement",
+    action: "create",
+    payload: &#123;
+      "time": new Date().toISOString(),
+      "type": "c8y_TemperatureMeasurement",
+      "c8y_Steam": &#123; "Temperature": &#123; "unit": "C", "value": payload["sensorData"]["temp_val"] &#125; &#125;
+    &#125;,
+    externalSource: [&#123; "type": "c8y_Serial", "externalId": payload.get("clientId") &#125;]
+  &#125;];
+&#125;</code></pre>
         <div class="p-b-8 text-14">
           The <b>Smart Function</b> allows enriching the payload with inventory data from the device, e.g.:
         </div>
-        <pre><code>// lookup device for enrichment
-          var deviceByDeviceId = context.getManagedObjectByDeviceId(payload.get("deviceId"));
-          console.log("Device (by device id): " + deviceByDeviceId);
-          var deviceByExternalId = context.getManagedObject( &#123; externalId: payload.get("clientId"), type: "c8y_Serial" &#125; );
-        console.log("Device (by external id): " + deviceByExternalId);</code></pre>
+        <pre><code class="language-javascript">// lookup device for enrichment
+var deviceByDeviceId = context.getManagedObjectByDeviceId(payload.get("deviceId"));
+console.log("Device (by device id): " + deviceByDeviceId);
+var deviceByExternalId = context.getManagedObject(&#123; externalId: payload.get("clientId"), type: "c8y_Serial" &#125;);
+console.log("Device (by external id): " + deviceByExternalId);</code></pre>
         <div class="admonition important" style="max-width: 100%;">
           <div class="title">Important</div>
           <div class="content">
@@ -1518,7 +1524,12 @@ using JSONata.</p>
         <tr>
           <td><code>action</code></td>
           <td>Yes</td>
-          <td>The action to perform: <code>"create"</code>, <code>"update"</code>, or <code>"delete"</code></td>
+          <td>The action to perform: <code>"create"</code>, <code>"update"</code>, <code>"patch"</code>, or <code>"delete"</code>.
+            <br /><br />
+            <strong>Note:</strong> Measurements are immutable time-series data and don't support <code>"update"</code> or
+            <code>"patch"</code> operations. If you specify these actions for measurements, the mapper automatically
+            converts them to <code>"create"</code> to create a new measurement instead. For other Cumulocity objects
+            (events, alarms, inventory), all actions are supported.</td>
         </tr>
         <tr>
           <td><code>payload</code></td>
@@ -1557,86 +1568,89 @@ using JSONata.</p>
   </div>
   <div class="p-b-8 text-14">
     <strong>Example: Basic inbound Smart Function with device identification</strong><br /><br />
-    <pre><code>
-      function onMessage(msg, context) &#123;
-      var payload = msg.getPayload();
-      return [&#123;
-      cumulocityType: "measurement",
-      action: "create",
-      payload: &#123;
+    <pre><code class="language-javascript">function onMessage(msg, context) &#123;
+  var payload = msg.getPayload();
+  return [&#123;
+    cumulocityType: "measurement",
+    action: "create",
+    payload: &#123;
       "time": new Date().toISOString(),
       "type": "c8y_TemperatureMeasurement",
-      "c8y_Steam": &#123;
-      "Temperature": &#123;
-      "unit": "C",
-      "value": payload["sensorData"]["temp_val"]
-      &#125;
-      &#125;
-      &#125;,
-      externalSource: [&#123;"type": "c8y_Serial", "externalId": payload.get("clientId")&#125;]
-      &#125;];
-      &#125;
-    </code></pre>
+      "c8y_Steam": &#123; "Temperature": &#123; "unit": "C", "value": payload["sensorData"]["temp_val"] &#125; &#125;
+    &#125;,
+    externalSource: [&#123; "type": "c8y_Serial", "externalId": payload.get("clientId") &#125;]
+  &#125;];
+&#125;</code></pre>
   </div>
   <div class="p-b-8 text-14">
     <strong>Example: Implicitly creating a device with name and type</strong><br /><br />
-    <pre><code>
-      function onMessage(msg, context) &#123;
-      var payload = msg.getPayload();
-      return [&#123;
-      cumulocityType: "measurement",
-      action: "create",
-      payload: &#123;
+    <pre><code class="language-javascript">function onMessage(msg, context) &#123;
+  var payload = msg.getPayload();
+  return [&#123;
+    cumulocityType: "measurement",
+    action: "create",
+    payload: &#123;
       "time": new Date().toISOString(),
       "type": "c8y_TemperatureMeasurement",
-      "c8y_Steam": &#123;
-      "Temperature": &#123;"unit": "C", "value": payload["sensorData"]["temp_val"]&#125;
-      &#125;
-      &#125;,
-      externalSource: [&#123;"type": "c8y_Serial", "externalId": payload.get("clientId")&#125;],
-      contextData: &#123;
-      "deviceName": "Temperature-Sensor-01",
-      "deviceType": "sensor-type"
-      &#125;
-      &#125;];
-      &#125;
-    </code></pre>
+      "c8y_Steam": &#123; "Temperature": &#123; "unit": "C", "value": payload["sensorData"]["temp_val"] &#125; &#125;
+    &#125;,
+    externalSource: [&#123; "type": "c8y_Serial", "externalId": payload.get("clientId") &#125;],
+    contextData: &#123; "deviceName": "Temperature-Sensor-01", "deviceType": "sensor-type" &#125;
+  &#125;];
+&#125;</code></pre>
   </div>
   <div class="p-b-8 text-14">
     <strong>Example: Conditionally creating measurements or events</strong><br /><br />
-    <pre><code>
-      function onMessage(msg, context) &#123;
-      var payload = msg.getPayload();
-      const payloadType = payload["payloadType"];
-      if (payloadType == "telemetry") &#123;
-      return [&#123;
+    <pre><code class="language-javascript">function onMessage(msg, context) &#123;
+  var payload = msg.getPayload();
+  const payloadType = payload["payloadType"];
+  if (payloadType == "telemetry") &#123;
+    return [&#123;
       cumulocityType: "measurement",
       action: "create",
       payload: &#123;
-      "time": new Date().toISOString(),
-      "type": "c8y_TemperatureMeasurement",
-      "c8y_Steam": &#123;
-      "Temperature": &#123;"unit": "C", "value": payload["sensorData"]["temp_val"]&#125;
-      &#125;
+        "time": new Date().toISOString(),
+        "type": "c8y_TemperatureMeasurement",
+        "c8y_Steam": &#123; "Temperature": &#123; "unit": "C", "value": payload["sensorData"]["temp_val"] &#125; &#125;
       &#125;,
-      externalSource: [&#123;"type": "c8y_Serial", "externalId": payload.get("clientId")&#125;]
-      &#125;];
-      &#125; else &#123;
-      // Create an event for error cases
-      return [&#123;
+      externalSource: [&#123; "type": "c8y_Serial", "externalId": payload.get("clientId") &#125;]
+    &#125;];
+  &#125; else &#123;
+    // Create an event for error cases
+    return [&#123;
       cumulocityType: "event",
       action: "create",
       payload: &#123;
-      "time": new Date().toISOString(),
-      "type": "c8y_ErrorEvent",
-      "text": payload["logMessage"],
-      "severity": "MAJOR"
+        "time": new Date().toISOString(),
+        "type": "c8y_ErrorEvent",
+        "text": payload["logMessage"],
+        "severity": "MAJOR"
       &#125;,
-      externalSource: [&#123;"type": "c8y_Serial", "externalId": payload.get("clientId")&#125;]
-      &#125;];
-      &#125;
-      &#125;
-    </code></pre>
+      externalSource: [&#123; "type": "c8y_Serial", "externalId": payload.get("clientId") &#125;]
+    &#125;];
+  &#125;
+&#125;</code></pre>
+  </div>
+  <div class="p-b-8 text-14">
+    <strong>Example: Using patch action to partially update inventory</strong><br /><br />
+    <pre><code class="language-javascript">function onMessage(msg, context) &#123;
+  var payload = msg.getPayload();
+  // Partially update a managed object (inventory) without replacing the entire object
+  return [&#123;
+    cumulocityType: "inventory",
+    action: "patch",  // Partial update - only specified fields are changed
+    payload: &#123;
+      "c8y_Notes": "Last updated: " + new Date().toISOString(),
+      "customData": &#123; "temperature": payload["temp"], "humidity": payload["hum"] &#125;
+    &#125;,
+    externalSource: [&#123; "type": "c8y_Serial", "externalId": payload.get("deviceId") &#125;]
+  &#125;];
+&#125;</code></pre>
+    <p class="p-t-8 text-14">
+      <strong>Note:</strong> Using <code>action: "patch"</code> is useful when you want to update only specific
+      properties of an inventory object without affecting other existing properties. This is more efficient than
+      fetching the entire object, modifying it, and sending it back with <code>action: "update"</code>.
+    </p>
   </div>
   <h5 class="p-t-8 p-b-4"><strong>Metadata Properties for Outbound Smart Functions</strong></h5>
   <div class="p-b-8 text-16">
@@ -1658,12 +1672,45 @@ using JSONata.</p>
           <td><code>topic</code></td>
           <td>Yes*</td>
           <td>The MQTT topic or URL path to publish to. Can include dynamic values like device IDs. For Webhook
-          connectors, this is appended to the base URL as the context path.</td>
+          connectors, this is appended to the base URL as the context path.
+          <br /><br />
+          <strong>For Webhook connectors with Cumulocity Internal enabled:</strong> If <code>cumulocityType</code> is not specified,
+          the <code>topic</code> is used to derive the Cumulocity API endpoint. Topics should start with the API name
+          (e.g., <code>"measurement"</code>, <code>"event"</code>, <code>"alarm"</code>, <code>"inventory"</code>) to automatically
+          route to the correct Cumulocity REST API endpoint. However, using <code>cumulocityType</code> is recommended for more
+          reliable API routing.</td>
         </tr>
         <tr>
           <td><code>payload</code></td>
           <td>Yes</td>
           <td>The data object or array to send to the external broker/system</td>
+        </tr>
+        <tr>
+          <td><code>action</code></td>
+          <td>No</td>
+          <td>The action to perform: <code>"create"</code> (POST), <code>"update"</code> (PUT), <code>"patch"</code> (PATCH), or <code>"delete"</code> (DELETE).
+            The action is automatically mapped to the corresponding HTTP method.
+            <br /><br />
+            <strong>For Webhook connectors with Cumulocity Internal enabled:</strong> The <code>action</code> property is essential
+            for determining how to interact with the Cumulocity REST API. Combined with the <code>topic</code>, it controls whether
+            to create, update, patch, or delete Cumulocity objects (measurements, events, alarms, inventory).
+            <br /><br />
+            <strong>Special case:</strong> Measurements are immutable time-series data and don't support update or patch operations.
+            If you specify <code>action: "update"</code> or <code>action: "patch"</code> for measurements, the mapper automatically
+            converts it to <code>"create"</code> (POST) to create a new measurement instead.
+          </td>
+        </tr>
+        <tr>
+          <td><code>cumulocityType</code></td>
+          <td>No</td>
+          <td>Explicitly specifies which Cumulocity API type to use: <code>"measurement"</code>, <code>"event"</code>, <code>"alarm"</code>, <code>"operation"</code>, or <code>"managedObject"</code>.
+            <br /><br />
+            <strong>When specified:</strong> The mapper uses this explicit value to determine the target Cumulocity API endpoint, making the API selection more robust and less ambiguous.
+            <br /><br />
+            <strong>When not specified:</strong> The mapper falls back to deriving the API type from the <code>topic</code> string (e.g., a topic starting with <code>"measurements/"</code> automatically routes to the Measurement API).
+            <br /><br />
+            <strong>Recommended for Webhook connectors with Cumulocity Internal:</strong> Using <code>cumulocityType</code> provides explicit control over API routing and is more reliable than topic-based derivation.
+          </td>
         </tr>
         <tr>
           <td><code>externalSource</code></td>
@@ -1690,6 +1737,31 @@ using JSONata.</p>
   </tbody>
 </table>
 </div>
+<div class="admonition important" style="max-width: 100%;">
+  <div class="title">Important: Webhook with Cumulocity Internal</div>
+  <div class="content">
+    <strong>Using Webhook connectors with Cumulocity Internal enabled:</strong><br />
+    When the Webhook connector is configured with <strong>Cumulocity Internal</strong> enabled, the mapper interacts with the Cumulocity REST API using these properties:
+    <ul class="m-t-8 m-b-0">
+      <li><strong>cumulocityType</strong> (recommended): Explicitly specify the API type (<code>"measurement"</code>, <code>"event"</code>, <code>"alarm"</code>, <code>"operation"</code>, <code>"managedObject"</code>).
+        This provides the most reliable API routing and is preferred over topic-based derivation.</li>
+      <li><strong>topic</strong>: If <code>cumulocityType</code> is not specified, the mapper derives the API endpoint from the topic.
+        Start your topic with the API name (e.g., <code>"measurement"</code>, <code>"event"</code>) to route to the correct REST API.</li>
+      <li><strong>action</strong>: Determines the HTTP method and operation type:
+        <ul class="m-t-4 m-b-0">
+          <li><code>"create"</code> → POST (create new objects)</li>
+          <li><code>"update"</code> → PUT (replace entire object)</li>
+          <li><code>"patch"</code> → PATCH (partial update - GET + merge + PUT)</li>
+          <li><code>"delete"</code> → DELETE (remove object)</li>
+        </ul>
+      </li>
+    </ul>
+    <br />
+    <strong>Example:</strong> To partially update a device's custom properties, use
+    <code>cumulocityType: "managedObject"</code> or <code>topic: "inventory/12345"</code> with <code>action: "patch"</code>.
+    The mapper will automatically fetch the device, merge your changes, and send a PUT request.
+  </div>
+</div>
 <div class="admonition info" style="max-width: 100%;">
   <div class="title">Info</div>
   <div class="content">
@@ -1702,67 +1774,104 @@ using JSONata.</p>
 </div>
 <div class="p-b-8 text-14">
   <strong>Example: Basic outbound Smart Function</strong><br /><br />
-  <pre><code>
-    function onMessage(msg, context) &#123;
-    var payload = msg.getPayload();
-    return &#123;
+  <pre><code class="language-javascript">function onMessage(msg, context) &#123;
+  var payload = msg.getPayload();
+  return &#123;
     topic: "measurements/" + payload["source"]["id"],
     payload: &#123;
-    "time": new Date().toISOString(),
-    "c8y_Steam": &#123;
-    "Temperature": &#123;
-    "unit": "C",
-    "value": payload["c8y_TemperatureMeasurement"]["T"]["value"]
+      "time": new Date().toISOString(),
+      "c8y_Steam": &#123; "Temperature": &#123; "unit": "C", "value": payload["c8y_TemperatureMeasurement"]["T"]["value"] &#125; &#125;
     &#125;
-    &#125;
-    &#125;
-    &#125;;
-    &#125;
-  </code></pre>
+  &#125;;
+&#125;</code></pre>
 </div>
 <div class="p-b-8 text-14">
   <strong>Example: Using <code>_externalId_</code> placeholder</strong><br /><br />
-  <pre><code>
-    function onMessage(msg, context) &#123;
-    var payload = msg.getPayload();
-    return [&#123;
+  <pre><code class="language-javascript">function onMessage(msg, context) &#123;
+  var payload = msg.getPayload();
+  return [&#123;
     topic: "measurements/_externalId_",  // Automatically resolved to external ID
     payload: &#123;
-    "time": new Date().toISOString(),
-    "c8y_Steam": &#123;
-    "Temperature": &#123;
-    "unit": "C",
-    "value": payload["c8y_TemperatureMeasurement"]["T"]["value"]
-    &#125;
-    &#125;
+      "time": new Date().toISOString(),
+      "c8y_Steam": &#123; "Temperature": &#123; "unit": "C", "value": payload["c8y_TemperatureMeasurement"]["T"]["value"] &#125; &#125;
     &#125;,
-    externalSource: [&#123;"type": "c8y_Serial"&#125;]  // Specifies which external ID type to use
-    &#125;];
-    &#125;
-  </code></pre>
+    externalSource: [&#123; "type": "c8y_Serial" &#125;]  // Specifies which external ID type to use
+  &#125;];
+&#125;</code></pre>
+</div>
+<div class="p-b-8 text-14">
+  <strong>Example: Using <code>cumulocityType</code> for explicit API specification (recommended)</strong><br /><br />
+  <pre><code class="language-javascript">function onMessage(msg, context) &#123;
+  var payload = msg.getPayload();
+  return [&#123;
+    topic: "custom/device/topic",  // Custom topic - API won't be derived from this
+    cumulocityType: "measurement",  // Explicitly specify to use Measurement API
+    payload: &#123;
+      "time": new Date().toISOString(),
+      "c8y_Steam": &#123; "Temperature": &#123; "unit": "C", "value": payload["c8y_TemperatureMeasurement"]["T"]["value"] &#125; &#125;
+    &#125;,
+    action: "create"  // Create a new measurement
+  &#125;];
+&#125;</code></pre>
 </div>
 <div class="p-b-8 text-14">
   <strong>Example: Setting Kafka message key</strong><br /><br />
-  <pre><code>
-    function onMessage(msg, context) &#123;
-    var payload = msg.getPayload();
-    return [&#123;
+  <pre><code class="language-javascript">function onMessage(msg, context) &#123;
+  var payload = msg.getPayload();
+  return [&#123;
     topic: "measurements/" + payload["source"]["id"],
     payload: &#123;
-    "time": new Date().toISOString(),
-    "c8y_Steam": &#123;
-    "Temperature": &#123;
-    "unit": "C",
-    "value": payload["c8y_TemperatureMeasurement"]["T"]["value"]
-    &#125;
-    &#125;
+      "time": new Date().toISOString(),
+      "c8y_Steam": &#123; "Temperature": &#123; "unit": "C", "value": payload["c8y_TemperatureMeasurement"]["T"]["value"] &#125; &#125;
+    &#125;,
+    transportFields: &#123; "key": payload["source"]["id"] &#125;  // Set Kafka partition key
+  &#125;];
+&#125;</code></pre>
+</div>
+<div class="p-b-8 text-14">
+  <strong>Example: Using the action property for external Webhook</strong><br /><br />
+  <pre><code class="language-javascript">function onMessage(msg, context) &#123;
+  var payload = msg.getPayload();
+  // Determine action based on the message type or content
+  var actionType = payload["c8y_IsDeleted"] ? "delete" : "update";
+  return [&#123;
+    topic: "devices/" + payload["source"]["id"],
+    action: actionType,  // Can be "create", "update", "delete", or "patch"
+    payload: &#123;
+      "deviceId": payload["source"]["id"],
+      "temperature": payload["c8y_TemperatureMeasurement"]["T"]["value"],
+      "timestamp": new Date().toISOString()
     &#125;,
     transportFields: &#123;
-    "key": payload["source"]["id"]  // Set Kafka partition key
+      "method": actionType === "delete" ? "DELETE" : "PUT"
     &#125;
-    &#125;];
+  &#125;];
+&#125;</code></pre>
+</div>
+<div class="p-b-8 text-14">
+  <strong>Example: Using action and topic for Cumulocity Internal (Webhook)</strong><br /><br />
+  <pre><code class="language-javascript">function onMessage(msg, context) &#123;
+  var payload = msg.getPayload();
+  // For Cumulocity Internal, topic determines the API endpoint
+  // and action determines the HTTP method (create=POST, update=PUT, patch=PATCH, delete=DELETE)
+
+  // Example: Partially update a managed object (inventory) using PATCH
+  return [&#123;
+    topic: "inventory/" + payload["source"]["id"],  // Derives API from "inventory"
+    action: "patch",  // Maps to HTTP PATCH method
+    payload: &#123;
+      "c8y_Notes": "Updated via Dynamic Mapper",
+      "customFragment": &#123; "lastSync": new Date().toISOString() &#125;
     &#125;
-  </code></pre>
+  &#125;];
+&#125;</code></pre>
+  <p class="p-t-8 text-14">
+    <strong>Note:</strong> For Webhook connectors with <strong>Cumulocity Internal</strong> enabled, the
+    <code>action</code> property controls the HTTP method, and the <code>topic</code> determines which Cumulocity
+    REST API to call. The mapper automatically handles the REST path construction and proper request formatting.
+    When using <code>action: "patch"</code>, the mapper performs a GET + merge + PUT operation to partially update
+    the object while preserving existing fields.
+  </p>
 </div>
 <div class="admonition info" style="max-width: 100%;">
   <div class="title">Info</div>
@@ -1796,26 +1905,22 @@ using JSONata.</p>
 </ul>
 <div class="p-b-8 text-14">
   <strong>Example: Extracting device ID from MQTT topic (inbound)</strong><br /><br />
-  <pre><code>
-    function onMessage(msg, context) &#123;
-    var payload = msg.getPayload();
-    // Extract device ID from second level of topic: device/12345/telemetry
-    var deviceId = payload["_TOPIC_LEVEL_"] && payload["_TOPIC_LEVEL_"][1];
-    console.log("Device ID from topic: " + deviceId);
-    return [&#123;
+  <pre><code class="language-javascript">function onMessage(msg, context) &#123;
+  var payload = msg.getPayload();
+  // Extract device ID from second level of topic: device/12345/telemetry
+  var deviceId = payload["_TOPIC_LEVEL_"] && payload["_TOPIC_LEVEL_"][1];
+  console.log("Device ID from topic: " + deviceId);
+  return [&#123;
     cumulocityType: "measurement",
     action: "create",
     payload: &#123;
-    "time": new Date().toISOString(),
-    "type": "c8y_TemperatureMeasurement",
-    "c8y_Steam": &#123;
-    "Temperature": &#123;"unit": "C", "value": payload["temp"]&#125;
-    &#125;
+      "time": new Date().toISOString(),
+      "type": "c8y_TemperatureMeasurement",
+      "c8y_Steam": &#123; "Temperature": &#123; "unit": "C", "value": payload["temp"] &#125; &#125;
     &#125;,
-    externalSource: [&#123;"type": "c8y_Serial", "externalId": deviceId&#125;]
-    &#125;];
-    &#125;
-  </code></pre>
+    externalSource: [&#123; "type": "c8y_Serial", "externalId": deviceId &#125;]
+  &#125;];
+&#125;</code></pre>
 </div>
 <div class="admonition caution" style="max-width: 100%;">
   <div class="title">Caution</div>
