@@ -289,13 +289,13 @@ export enum MappingType {
 export const TransformationTypeLabels = {
   [Direction.INBOUND]: {
     [TransformationType.DEFAULT]: 'Default Transformation',
-    [TransformationType.SUBSTITUTION_AS_CODE]: 'Substitution as JavaScript',
+    [TransformationType.SUBSTITUTION_AS_CODE]: 'Substitution as JavaScript (deprecated)',
     [TransformationType.SMART_FUNCTION]: 'Smart Function (JavaScript) to create Cumulocity API calls',
     [TransformationType.JSONATA]: 'Substitution as JSONata Expression'
   },
   [Direction.OUTBOUND]: {
     [TransformationType.DEFAULT]: 'Default Transformation',
-    [TransformationType.SUBSTITUTION_AS_CODE]: 'Substitution as JavaScript',
+    [TransformationType.SUBSTITUTION_AS_CODE]: 'Substitution as JavaScript (deprecated)',
     [TransformationType.SMART_FUNCTION]: 'Smart Function (JavaScript) to create Broker Payload',
     [TransformationType.JSONATA]: 'Substitution as JSONata Expression'
   }

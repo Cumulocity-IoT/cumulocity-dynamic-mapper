@@ -210,7 +210,7 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
     switch (templateType) {
       case 'INBOUND_SUBSTITUTION_AS_CODE':
       case 'OUTBOUND_SUBSTITUTION_AS_CODE':
-        return 'JavaScript Substitutions';
+        return 'Substitution as JavaScript (deprecated)';
       case 'INBOUND_SMART_FUNCTION':
       case 'OUTBOUND_SMART_FUNCTION':
         return 'Smart Functions';
@@ -223,7 +223,7 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
       case 'OUTBOUND':
         return 'Outbound (deprecated)';
       case 'SUBSTITUTION_AS_CODE':
-        return 'Substitution as Code';
+        return 'Substitution as JavaScript (deprecated)';
       default:
         return templateType;
     }
