@@ -371,7 +371,8 @@ public abstract class AConnectorClient {
             return url.startsWith("mqtts://") ||
                    url.startsWith("wss://") ||
                    url.startsWith("ssl://") ||
-                   url.startsWith("https://");
+                   url.startsWith("https://") ||
+                   url.startsWith("amqps://");
         }
         return false;
     }
