@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2025 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -18,7 +18,7 @@
  *  @authors Christof Strack, Stefan Witschel
  *
  */
-package dynamic.mapper.connector.mqtt;
+package dynamic.mapper.connector.amqp;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -27,10 +27,8 @@ import static org.mockito.Mockito.*;
 import java.lang.reflect.Field;
 import java.util.*;
 
-import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient;
-import com.hivemq.client.mqtt.mqtt3.Mqtt3BlockingClient;
-import com.hivemq.client.mqtt.mqtt3.message.connect.connack.Mqtt3ConnAck;
-import com.hivemq.client.mqtt.mqtt3.message.publish.Mqtt3Publish;
+import com.rabbitmq.client.Channel;
+import com.rabbitmq.client.Connection;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -65,7 +63,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-class MQTT3ClientTest {
+class AMQPClientTest {
 
     @Mock
     private ConfigurationRegistry configurationRegistry;
@@ -86,21 +84,18 @@ class MQTT3ClientTest {
     @Mock
     private ServiceConfiguration serviceConfiguration;
     @Mock
-    private Mqtt3BlockingClient mqttClient;
+    private Connection connection;
     @Mock
-    private Mqtt3AsyncClient asyncClient;
-    @Mock
-    private Mqtt3ConnAck connAck;
+    private Channel channel;
 
     private static final String TEST_TENANT = "test_tenant";
-    private static final String TEST_CONNECTOR_NAME = "test_mqtt_connector";
-    private static final String TEST_CONNECTOR_IDENTIFIER = "mqtt_1";
+    private static final String TEST_CONNECTOR_NAME = "test_amqp_connector";
+    private static final String TEST_CONNECTOR_IDENTIFIER = "amqp_1";
     private static final String TEST_SUBSCRIPTION_ID = "_test";
-    private static final String TEST_MQTT_HOST = "mqtt.example.com";
-    private static final Integer TEST_MQTT_PORT = 1883;
-    private static final String TEST_CLIENT_ID = "test-client-123";
+    private static final String TEST_AMQP_HOST = "46.101.117.78";
+    private static final Integer TEST_AMQP_PORT = 5672;
 
-    private MQTT3Client mqtt3Client;
+    private AMQPClient amqpClient;
     private ObjectMapper objectMapper;
 
     @BeforeEach
@@ -119,35 +114,33 @@ class MQTT3ClientTest {
         when(configurationRegistry.getServiceConfiguration(anyString())).thenReturn(serviceConfiguration);
         when(configurationRegistry.getConnectorRegistry()).thenReturn(connectorRegistry);
 
-        // Setup connector configuration COMPLETELY before any test
+        // Setup connector configuration
         when(connectorConfiguration.getName()).thenReturn(TEST_CONNECTOR_NAME);
         when(connectorConfiguration.getIdentifier()).thenReturn(TEST_CONNECTOR_IDENTIFIER);
         when(connectorConfiguration.getEnabled()).thenReturn(true);
         when(connectorConfiguration.getProperties()).thenReturn(createDefaultProperties());
 
-        // THIS IS THE KEY - stub copyPredefinedValues to do NOTHING
+        // Mock copyPredefinedValues to do nothing
         doNothing().when(connectorConfiguration).copyPredefinedValues(any());
 
-        // THIS IS THE KEY FIX - Mock the service to return your mock configuration
+        // Mock the service to return configuration
         when(connectorConfigurationService.getConnectorConfiguration(
                 eq(TEST_CONNECTOR_IDENTIFIER),
                 eq(TEST_TENANT)))
                 .thenReturn(connectorConfiguration);
 
-        // Also mock for any string arguments (when identifier might not match exactly)
         when(connectorConfigurationService.getConnectorConfiguration(
                 anyString(),
                 anyString()))
                 .thenReturn(connectorConfiguration);
 
-        // Mock copyPredefinedValues to do nothing
+        // Mock copyPredefinedValues
         doNothing().when(connectorConfiguration).copyPredefinedValues(any(ConnectorSpecification.class));
 
         // Mock getCleanedConfig
         when(connectorConfiguration.getCleanedConfig(any(ConnectorSpecification.class)))
                 .thenReturn(connectorConfiguration);
 
-        // Also stub getCleanedConfig
         when(connectorConfiguration.getCleanedConfig(any())).thenReturn(connectorConfiguration);
 
         // Setup service configuration
@@ -158,7 +151,7 @@ class MQTT3ClientTest {
         // Setup connector registry
         when(connectorRegistry.getConnectorStatusMap(anyString())).thenReturn(new HashMap<>());
 
-        // Setup mapping service for cache operations
+        // Setup mapping service
         when(mappingService.getCacheOutboundMappings(anyString())).thenReturn(new HashMap<>());
         when(mappingService.getCacheInboundMappings(anyString())).thenReturn(new HashMap<>());
         when(mappingService.getCacheMappingInbound(anyString())).thenReturn(new HashMap<>());
@@ -166,15 +159,18 @@ class MQTT3ClientTest {
 
     private Map<String, Object> createDefaultProperties() {
         Map<String, Object> properties = new HashMap<>();
-        properties.put("version", "3.1.1");
-        properties.put("protocol", "mqtt://");
-        properties.put("mqttHost", TEST_MQTT_HOST);
-        properties.put("mqttPort", TEST_MQTT_PORT);
-        properties.put("clientId", TEST_CLIENT_ID);
-        properties.put("user", "testuser");
-        properties.put("password", "testpass");
-        properties.put("cleanSession", true);
+        properties.put("protocol", "amqp://");
+        properties.put("host", TEST_AMQP_HOST);
+        properties.put("port", TEST_AMQP_PORT);
+        properties.put("virtualHost", "/");
+        properties.put("username", "guest");
+        properties.put("password", "guest");
+        properties.put("exchange", "");
+        properties.put("exchangeType", "topic");
+        properties.put("queuePrefix", "");
+        properties.put("autoDeleteQueue", false);
         properties.put("useSelfSignedCertificate", false);
+        properties.put("automaticRecovery", true);
         properties.put("supportsWildcardInTopicInbound", true);
         properties.put("supportsWildcardInTopicOutbound", false);
         return properties;
@@ -183,17 +179,16 @@ class MQTT3ClientTest {
     @Test
     void testDefaultConstructor() {
         // When
-        MQTT3Client client = new MQTT3Client();
+        AMQPClient client = new AMQPClient();
 
         // Then
         assertNotNull(client);
-        assertEquals(ConnectorType.MQTT, client.getConnectorType());
+        assertEquals(ConnectorType.AMQP, client.getConnectorType());
         assertFalse(client.isSingleton());
         assertNotNull(client.getSupportedQOS());
-        assertEquals(3, client.getSupportedQOS().size());
+        assertEquals(2, client.getSupportedQOS().size());
         assertTrue(client.getSupportedQOS().contains(Qos.AT_MOST_ONCE));
         assertTrue(client.getSupportedQOS().contains(Qos.AT_LEAST_ONCE));
-        assertTrue(client.getSupportedQOS().contains(Qos.EXACTLY_ONCE));
 
         log.info("✅ Default constructor test passed");
     }
@@ -201,7 +196,7 @@ class MQTT3ClientTest {
     @Test
     void testFullConstructor() {
         // When
-        mqtt3Client = new MQTT3Client(
+        amqpClient = new AMQPClient(
                 configurationRegistry,
                 connectorRegistry,
                 connectorConfiguration,
@@ -210,11 +205,11 @@ class MQTT3ClientTest {
                 TEST_TENANT);
 
         // Then
-        assertNotNull(mqtt3Client);
-        assertEquals(TEST_CONNECTOR_NAME, mqtt3Client.getConnectorName());
-        assertEquals(TEST_CONNECTOR_IDENTIFIER, mqtt3Client.getConnectorIdentifier());
-        assertEquals(TEST_TENANT, mqtt3Client.getTenant());
-        assertNotNull(mqtt3Client.getConnectorSpecification());
+        assertNotNull(amqpClient);
+        assertEquals(TEST_CONNECTOR_NAME, amqpClient.getConnectorName());
+        assertEquals(TEST_CONNECTOR_IDENTIFIER, amqpClient.getConnectorIdentifier());
+        assertEquals(TEST_TENANT, amqpClient.getTenant());
+        assertNotNull(amqpClient.getConnectorSpecification());
 
         log.info("✅ Full constructor test passed");
     }
@@ -222,7 +217,7 @@ class MQTT3ClientTest {
     @Test
     void testInitializeSuccess() {
         // Given
-        mqtt3Client = new MQTT3Client(
+        amqpClient = new AMQPClient(
                 configurationRegistry,
                 connectorRegistry,
                 connectorConfiguration,
@@ -231,29 +226,54 @@ class MQTT3ClientTest {
                 TEST_TENANT);
 
         // When
-        boolean result = mqtt3Client.initialize();
+        boolean result = amqpClient.initialize();
 
         // Then
         assertTrue(result);
 
-        // Verify copyPredefinedValues was called during construction/initialization
+        // Verify copyPredefinedValues was called
         verify(connectorConfiguration, atLeastOnce()).copyPredefinedValues(any(ConnectorSpecification.class));
 
         log.info("✅ Initialize success test passed");
     }
 
     @Test
+    void testInitializeWithSslProtocol() {
+        // Given
+        Map<String, Object> properties = createDefaultProperties();
+        properties.put("protocol", "amqps://");
+        properties.put("useSelfSignedCertificate", false);
+
+        when(connectorConfiguration.getProperties()).thenReturn(properties);
+
+        amqpClient = new AMQPClient(
+                configurationRegistry,
+                connectorRegistry,
+                connectorConfiguration,
+                dispatcher,
+                TEST_SUBSCRIPTION_ID,
+                TEST_TENANT);
+
+        // When
+        boolean result = amqpClient.initialize();
+
+        // Then - Should succeed with default SSL
+        assertTrue(result);
+
+        log.info("✅ Initialize with SSL protocol test passed");
+    }
+
+    @Test
     void testInitializeWithSelfSignedCertificate() {
         // Given
         Map<String, Object> properties = createDefaultProperties();
+        properties.put("protocol", "amqps://");
         properties.put("useSelfSignedCertificate", true);
         properties.put("nameCertificate", "test-cert");
         properties.put("fingerprintSelfSignedCertificate", "AA:BB:CC:DD");
 
-        // // Update the mock with new properties BEFORE creating the client
         when(connectorConfiguration.getProperties()).thenReturn(properties);
 
-        // Use a valid (but self-signed) certificate for testing
         String validCertPem = "-----BEGIN CERTIFICATE-----\n" +
                 "MIIDXTCCAkWgAwIBAgIJAKHHCgVZU2T9MA0GCSqGSIb3DQEBCwUAMEUxCzAJBgNV\n" +
                 "BAYTAkFVMRMwEQYDVQQIDApTb21lLVN0YXRlMSEwHwYDVQQKDBhJbnRlcm5ldCBX\n" +
@@ -282,7 +302,7 @@ class MQTT3ClientTest {
                 eq(TEST_TENANT),
                 eq(TEST_CONNECTOR_NAME))).thenReturn(mockCert);
 
-        mqtt3Client = new MQTT3Client(
+        amqpClient = new AMQPClient(
                 configurationRegistry,
                 connectorRegistry,
                 connectorConfiguration,
@@ -291,10 +311,9 @@ class MQTT3ClientTest {
                 TEST_TENANT);
 
         // When
-        boolean result = mqtt3Client.initialize();
+        boolean result = amqpClient.initialize();
 
         // Then
-        // Verify certificate loading was attempted
         verify(c8yAgent).loadCertificateByName(
                 eq("test-cert"),
                 eq("AA:BB:CC:DD"),
@@ -309,93 +328,9 @@ class MQTT3ClientTest {
     }
 
     @Test
-    void testInitializeWithMissingCertificate() {
-        // Given
-        Map<String, Object> properties = createDefaultProperties();
-        properties.put("useSelfSignedCertificate", true);
-        properties.put("nameCertificate", "test-cert");
-        properties.put("fingerprintSelfSignedCertificate", "AA:BB:CC:DD");
-
-        // Update the mock with new properties BEFORE creating the client
-        when(connectorConfiguration.getProperties()).thenReturn(properties);
-
-        when(c8yAgent.loadCertificateByName(any(), any(), any(), any())).thenReturn(null);
-
-        mqtt3Client = new MQTT3Client(
-                configurationRegistry,
-                connectorRegistry,
-                connectorConfiguration,
-                dispatcher,
-                TEST_SUBSCRIPTION_ID,
-                TEST_TENANT);
-
-        // When
-        boolean result = mqtt3Client.initialize();
-
-        // Then
-        assertFalse(result);
-
-        log.info("✅ Initialize with missing certificate test passed");
-    }
-
-    @Test
-    void testWebSocketConfiguration() {
-        // Given
-        Map<String, Object> properties = createDefaultProperties();
-        properties.put("protocol", "ws://");
-        properties.put("serverPath", "/mqtt");
-
-        // Update the mock with new properties BEFORE creating the client
-        when(connectorConfiguration.getProperties()).thenReturn(properties);
-
-        mqtt3Client = new MQTT3Client(
-                configurationRegistry,
-                connectorRegistry,
-                connectorConfiguration,
-                dispatcher,
-                TEST_SUBSCRIPTION_ID,
-                TEST_TENANT);
-
-        // When
-        boolean result = mqtt3Client.initialize();
-
-        // Then
-        assertTrue(result);
-
-        log.info("✅ WebSocket configuration test passed");
-    }
-
-    @Test
-    void testCleanSessionDefault() {
-        // Given - cleanSession not explicitly set
-        Map<String, Object> properties = createDefaultProperties();
-        properties.remove("cleanSession");
-
-        // Update the mock with new properties BEFORE creating the client
-        when(connectorConfiguration.getProperties()).thenReturn(properties);
-        when(connectorConfiguration.getProperties()).thenReturn(properties);
-
-        mqtt3Client = new MQTT3Client(
-                configurationRegistry,
-                connectorRegistry,
-                connectorConfiguration,
-                dispatcher,
-                TEST_SUBSCRIPTION_ID,
-                TEST_TENANT);
-
-        // When
-        mqtt3Client.initialize();
-
-        // Then - Should default to true
-        assertNotNull(mqtt3Client);
-
-        log.info("✅ Clean session default test passed");
-    }
-
-    @Test
     void testSupportsWildcardInTopic() {
         // Given
-        mqtt3Client = new MQTT3Client(
+        amqpClient = new AMQPClient(
                 configurationRegistry,
                 connectorRegistry,
                 connectorConfiguration,
@@ -404,8 +339,8 @@ class MQTT3ClientTest {
                 TEST_TENANT);
 
         // When & Then
-        assertTrue(mqtt3Client.supportsWildcardInTopic(Direction.INBOUND));
-        assertFalse(mqtt3Client.supportsWildcardInTopic(Direction.OUTBOUND));
+        assertTrue(amqpClient.supportsWildcardInTopic(Direction.INBOUND));
+        assertFalse(amqpClient.supportsWildcardInTopic(Direction.OUTBOUND));
 
         log.info("✅ Supports wildcard in topic test passed");
     }
@@ -413,10 +348,10 @@ class MQTT3ClientTest {
     @Test
     void testSupportedDirections() {
         // Given
-        mqtt3Client = new MQTT3Client();
+        amqpClient = new AMQPClient();
 
         // When
-        List<Direction> directions = mqtt3Client.supportedDirections();
+        List<Direction> directions = amqpClient.supportedDirections();
 
         // Then
         assertNotNull(directions);
@@ -430,7 +365,7 @@ class MQTT3ClientTest {
     @Test
     void testIsConfigValidWithValidConfig() {
         // Given
-        mqtt3Client = new MQTT3Client(
+        amqpClient = new AMQPClient(
                 configurationRegistry,
                 connectorRegistry,
                 connectorConfiguration,
@@ -439,7 +374,7 @@ class MQTT3ClientTest {
                 TEST_TENANT);
 
         // When
-        boolean result = mqtt3Client.isConfigValid(connectorConfiguration);
+        boolean result = amqpClient.isConfigValid(connectorConfiguration);
 
         // Then
         assertTrue(result);
@@ -450,10 +385,10 @@ class MQTT3ClientTest {
     @Test
     void testIsConfigValidWithNullConfig() {
         // Given
-        mqtt3Client = new MQTT3Client();
+        amqpClient = new AMQPClient();
 
         // When
-        boolean result = mqtt3Client.isConfigValid(null);
+        boolean result = amqpClient.isConfigValid(null);
 
         // Then
         assertFalse(result);
@@ -465,16 +400,16 @@ class MQTT3ClientTest {
     void testIsConfigValidWithMissingSelfSignedCertProps() {
         // Given
         Map<String, Object> properties = createDefaultProperties();
+        properties.put("protocol", "amqps://");
         properties.put("useSelfSignedCertificate", true);
         // Missing fingerprintSelfSignedCertificate and nameCertificate
 
-        // Create a separate mock for this test to avoid interfering with the main mock
         ConnectorConfiguration invalidConfig = mock(ConnectorConfiguration.class);
         when(invalidConfig.getName()).thenReturn(TEST_CONNECTOR_NAME);
         when(invalidConfig.getIdentifier()).thenReturn(TEST_CONNECTOR_IDENTIFIER);
         when(invalidConfig.getProperties()).thenReturn(properties);
 
-        mqtt3Client = new MQTT3Client(
+        amqpClient = new AMQPClient(
                 configurationRegistry,
                 connectorRegistry,
                 connectorConfiguration,
@@ -483,7 +418,7 @@ class MQTT3ClientTest {
                 TEST_TENANT);
 
         // When
-        boolean result = mqtt3Client.isConfigValid(invalidConfig);
+        boolean result = amqpClient.isConfigValid(invalidConfig);
 
         // Then
         assertFalse(result);
@@ -494,7 +429,7 @@ class MQTT3ClientTest {
     @Test
     void testPublishMEAO() throws Exception {
         // Given
-        mqtt3Client = new MQTT3Client(
+        amqpClient = new AMQPClient(
                 configurationRegistry,
                 connectorRegistry,
                 connectorConfiguration,
@@ -502,22 +437,23 @@ class MQTT3ClientTest {
                 TEST_SUBSCRIPTION_ID,
                 TEST_TENANT);
 
-        // Inject mocked MQTT client
-        injectMqttClient(mqtt3Client, mqttClient);
-        setConnectedState(mqtt3Client, true);
+        // Inject mocked AMQP connection and channel
+        injectConnection(amqpClient, connection);
+        injectChannel(amqpClient, channel);
+        setConnectedState(amqpClient, true);
+
+        // Mock connection and channel state for isPhysicallyConnected() check
+        when(connection.isOpen()).thenReturn(true);
+        when(channel.isOpen()).thenReturn(true);
 
         // Create test context
         ProcessingContext<?> context = createTestProcessingContext();
 
-        // Mock MQTT client state
-        when(mqttClient.getState()).thenReturn(mock(com.hivemq.client.mqtt.MqttClientState.class));
-        when(mqttClient.getState().isConnected()).thenReturn(true);
-
         // When
-        mqtt3Client.publishMEAO(context);
+        amqpClient.publishMEAO(context);
 
         // Then
-        verify(mqttClient).publish(any(Mqtt3Publish.class));
+        verify(channel).basicPublish(anyString(), anyString(), any(), any(byte[].class));
 
         log.info("✅ Publish MEAO test passed");
     }
@@ -525,7 +461,7 @@ class MQTT3ClientTest {
     @Test
     void testPublishMEAOWhenNotConnected() throws Exception {
         // Given
-        mqtt3Client = new MQTT3Client(
+        amqpClient = new AMQPClient(
                 configurationRegistry,
                 connectorRegistry,
                 connectorConfiguration,
@@ -533,15 +469,15 @@ class MQTT3ClientTest {
                 TEST_SUBSCRIPTION_ID,
                 TEST_TENANT);
 
-        setConnectedState(mqtt3Client, false);
+        setConnectedState(amqpClient, false);
 
         ProcessingContext<?> context = createTestProcessingContext();
 
         // When
-        mqtt3Client.publishMEAO(context);
+        amqpClient.publishMEAO(context);
 
         // Then - Should not attempt to publish
-        verify(mqttClient, never()).publish(any());
+        verify(channel, never()).basicPublish(anyString(), anyString(), any(), any(byte[].class));
 
         log.info("✅ Publish MEAO when not connected test passed");
     }
@@ -549,65 +485,52 @@ class MQTT3ClientTest {
     @Test
     void testCreateConnectorSpecification() {
         // Given
-        mqtt3Client = new MQTT3Client();
+        amqpClient = new AMQPClient();
 
         // When
-        ConnectorSpecification spec = mqtt3Client.getConnectorSpecification();
+        ConnectorSpecification spec = amqpClient.getConnectorSpecification();
 
         // Then
         assertNotNull(spec);
-        assertEquals(ConnectorType.MQTT, spec.getConnectorType());
+        assertEquals(ConnectorType.AMQP, spec.getConnectorType());
         assertFalse(spec.isSingleton());
-        assertEquals("Generic MQTT", spec.getName());
+        assertEquals("AMQP Connector", spec.getName());
 
         // Verify required properties
-        assertTrue(spec.getProperties().containsKey("mqttHost"));
-        assertTrue(spec.getProperties().containsKey("mqttPort"));
-        assertTrue(spec.getProperties().containsKey("clientId"));
         assertTrue(spec.getProperties().containsKey("protocol"));
-        assertTrue(spec.getProperties().containsKey("version"));
+        assertTrue(spec.getProperties().containsKey("host"));
+        assertTrue(spec.getProperties().containsKey("port"));
 
         // Verify optional properties
-        assertTrue(spec.getProperties().containsKey("user"));
+        assertTrue(spec.getProperties().containsKey("virtualHost"));
+        assertTrue(spec.getProperties().containsKey("username"));
         assertTrue(spec.getProperties().containsKey("password"));
+        assertTrue(spec.getProperties().containsKey("exchange"));
+        assertTrue(spec.getProperties().containsKey("exchangeType"));
         assertTrue(spec.getProperties().containsKey("useSelfSignedCertificate"));
-        assertTrue(spec.getProperties().containsKey("cleanSession"));
 
         log.info("✅ Connector specification test passed");
     }
 
     @Test
-    void testQosAdjustment() throws Exception {
+    void testProtocolOptions() {
         // Given
-        mqtt3Client = new MQTT3Client(
-                configurationRegistry,
-                connectorRegistry,
-                connectorConfiguration,
-                dispatcher,
-                TEST_SUBSCRIPTION_ID,
-                TEST_TENANT);
+        amqpClient = new AMQPClient();
 
-        // Test via reflection since adjustQos is protected in AMQTTClient base class
-        java.lang.reflect.Method method = AMQTTClient.class.getDeclaredMethod("adjustQos", Qos.class);
-        method.setAccessible(true);
+        // When
+        ConnectorSpecification spec = amqpClient.getConnectorSpecification();
 
-        // When & Then - Test null QoS
-        Qos result = (Qos) method.invoke(mqtt3Client, (Qos) null);
-        assertEquals(Qos.AT_MOST_ONCE, result);
+        // Then
+        assertNotNull(spec.getProperties().get("protocol"));
+        assertEquals("amqp://", spec.getProperties().get("protocol").getDefaultValue());
 
-        // Test supported QoS values
-        for (Qos qos : Arrays.asList(Qos.AT_MOST_ONCE, Qos.AT_LEAST_ONCE, Qos.EXACTLY_ONCE)) {
-            result = (Qos) method.invoke(mqtt3Client, qos);
-            assertEquals(qos, result);
-        }
-
-        log.info("✅ QoS adjustment test passed");
+        log.info("✅ Protocol options test passed");
     }
 
     @Test
     void testDisconnect() throws Exception {
         // Given
-        mqtt3Client = new MQTT3Client(
+        amqpClient = new AMQPClient(
                 configurationRegistry,
                 connectorRegistry,
                 connectorConfiguration,
@@ -615,78 +538,30 @@ class MQTT3ClientTest {
                 TEST_SUBSCRIPTION_ID,
                 TEST_TENANT);
 
-        injectMqttClient(mqtt3Client, mqttClient);
-        setConnectedState(mqtt3Client, true);
+        injectConnection(amqpClient, connection);
+        injectChannel(amqpClient, channel);
+        setConnectedState(amqpClient, true);
 
-        com.hivemq.client.mqtt.MqttClientState mockState = mock(com.hivemq.client.mqtt.MqttClientState.class);
-        when(mqttClient.getState()).thenReturn(mockState);
-        when(mockState.isConnected()).thenReturn(true);
+        when(connection.isOpen()).thenReturn(true);
+        when(channel.isOpen()).thenReturn(true);
 
         // When
-        mqtt3Client.disconnect();
+        amqpClient.disconnect();
 
         // Then
-        verify(mqttClient).disconnect();
+        verify(channel).close();
+        verify(connection).close();
 
         log.info("✅ Disconnect test passed");
     }
 
     @Test
-    void testDisconnectWhenAlreadyDisconnected() throws Exception {
-        // Given
-        mqtt3Client = new MQTT3Client(
-                configurationRegistry,
-                connectorRegistry,
-                connectorConfiguration,
-                dispatcher,
-                TEST_SUBSCRIPTION_ID,
-                TEST_TENANT);
-
-        setConnectedState(mqtt3Client, false);
-
-        // When
-        mqtt3Client.disconnect();
-
-        // Then - Should not attempt to disconnect
-        verify(mqttClient, never()).disconnect();
-
-        log.info("✅ Disconnect when already disconnected test passed");
-    }
-
-    @Test
-    void testClose() throws Exception {
-        // Given
-        mqtt3Client = new MQTT3Client(
-                configurationRegistry,
-                connectorRegistry,
-                connectorConfiguration,
-                dispatcher,
-                TEST_SUBSCRIPTION_ID,
-                TEST_TENANT);
-
-        injectMqttClient(mqtt3Client, mqttClient);
-        setConnectedState(mqtt3Client, true);
-
-        com.hivemq.client.mqtt.MqttClientState mockState = mock(com.hivemq.client.mqtt.MqttClientState.class);
-        when(mqttClient.getState()).thenReturn(mockState);
-        when(mockState.isConnected()).thenReturn(true);
-
-        // When
-        mqtt3Client.close();
-
-        // Then
-        verify(mqttClient).disconnect();
-
-        log.info("✅ Close test passed");
-    }
-
-    @Test
     void testMonitorSubscriptions() {
         // Given
-        mqtt3Client = new MQTT3Client();
+        amqpClient = new AMQPClient();
 
         // When & Then - Should not throw exception
-        assertDoesNotThrow(() -> mqtt3Client.monitorSubscriptions());
+        assertDoesNotThrow(() -> amqpClient.monitorSubscriptions());
 
         log.info("✅ Monitor subscriptions test passed");
     }
@@ -694,7 +569,7 @@ class MQTT3ClientTest {
     @Test
     void testGetters() {
         // Given
-        mqtt3Client = new MQTT3Client(
+        amqpClient = new AMQPClient(
                 configurationRegistry,
                 connectorRegistry,
                 connectorConfiguration,
@@ -703,9 +578,9 @@ class MQTT3ClientTest {
                 TEST_TENANT);
 
         // When & Then
-        assertEquals(TEST_CONNECTOR_IDENTIFIER, mqtt3Client.getConnectorIdentifier());
-        assertEquals(TEST_CONNECTOR_NAME, mqtt3Client.getConnectorName());
-        assertEquals(TEST_TENANT, mqtt3Client.getTenant());
+        assertEquals(TEST_CONNECTOR_IDENTIFIER, amqpClient.getConnectorIdentifier());
+        assertEquals(TEST_CONNECTOR_NAME, amqpClient.getConnectorName());
+        assertEquals(TEST_TENANT, amqpClient.getTenant());
 
         log.info("✅ Getters test passed");
     }
@@ -723,7 +598,6 @@ class MQTT3ClientTest {
         mapping.setIdentifier("test-mapping");
         mapping.setDebug(false);
 
-        // Mock getRequests() to return a list with the request
         when(context.getRequests()).thenReturn(java.util.Arrays.asList(request));
         when(context.getCurrentRequest()).thenReturn(request);
         when(context.getResolvedPublishTopic()).thenReturn("test/topic");
@@ -734,17 +608,27 @@ class MQTT3ClientTest {
         return context;
     }
 
-    private void injectMqttClient(MQTT3Client client, Mqtt3BlockingClient mqttClient) {
+    private void injectConnection(AMQPClient client, Connection connection) {
         try {
-            Field field = MQTT3Client.class.getDeclaredField("mqttClient");
+            Field field = AMQPClient.class.getDeclaredField("connection");
             field.setAccessible(true);
-            field.set(client, mqttClient);
+            field.set(client, connection);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
-    private void setConnectedState(MQTT3Client client, boolean connected) throws Exception {
+    private void injectChannel(AMQPClient client, Channel channel) {
+        try {
+            Field field = AMQPClient.class.getDeclaredField("channel");
+            field.setAccessible(true);
+            field.set(client, channel);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void setConnectedState(AMQPClient client, boolean connected) throws Exception {
         Field managerField = findField(AConnectorClient.class, "connectionStateManager");
         managerField.setAccessible(true);
         Object connectionStateManager = managerField.get(client);

@@ -22,9 +22,9 @@
 package dynamic.mapper.connector.webhook;
 
 import dynamic.mapper.configuration.ConnectorConfiguration;
-import dynamic.mapper.connector.core.ConnectorProperty;
-import dynamic.mapper.connector.core.ConnectorPropertyType;
+import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
 import dynamic.mapper.connector.core.ConnectorSpecification;
+import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.ConfigurationRegistry;
@@ -33,8 +33,6 @@ import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 /**
  * WebHookInternal Connector Client.
@@ -102,37 +100,38 @@ public class WebHookInternal extends WebHook {
      * This connector is pre-configured for internal Cumulocity communication
      */
     private ConnectorSpecification createConnectorSpecification() {
-        Map<String, ConnectorProperty> configProps = new LinkedHashMap<>();
+        return ConnectorSpecificationBuilder
+                .create("Cumulocity API", ConnectorType.WEB_HOOK_INTERNAL)
+                .description("Internal connector to use the Cumulocity REST API. " +
+                        "Automatically configured with microservice credentials and internal endpoints. " +
+                        "This connector enables direct communication with Cumulocity platform services " +
+                        "for creating, updating, and deleting managed objects, events, alarms, and measurements. " +
+                        "Supports POST, PUT, PATCH, and DELETE methods.")
+                .supportsMessageContext(true)
+                .supportedDirections(supportedDirections())
 
-        // Hidden property that is always true for internal connector
-        configProps.put("cumulocityInternal",
-                new ConnectorProperty(
-                        "This connector automatically connects to the Cumulocity instance the mapper is deployed to.",
-                        false, 0, ConnectorPropertyType.BOOLEAN_PROPERTY, true, true, true, null, null));
+                // Hidden property that is always true for internal connector
+                .property("cumulocityInternal", ConnectorPropertyBuilder.optionalBoolean()
+                        .order(0)
+                        .description("This connector automatically connects to the Cumulocity instance the mapper is deployed to.")
+                        .readonly(true)
+                        .hidden(true)
+                        .defaultValue(true))
 
-        configProps.put("supportsWildcardInTopicInbound",
-                new ConnectorProperty(null, false, 1, ConnectorPropertyType.BOOLEAN_PROPERTY,
-                        true, true, true, null, null));
+                // Wildcard support (read-only and hidden)
+                .property("supportsWildcardInTopicInbound", ConnectorPropertyBuilder.optionalBoolean()
+                        .order(1)
+                        .readonly(true)
+                        .hidden(true)
+                        .defaultValue(true))
 
-        configProps.put("supportsWildcardInTopicOutbound",
-                new ConnectorProperty(null, false, 2, ConnectorPropertyType.BOOLEAN_PROPERTY,
-                        true, true, true, null, null));
+                .property("supportsWildcardInTopicOutbound", ConnectorPropertyBuilder.optionalBoolean()
+                        .order(2)
+                        .readonly(true)
+                        .hidden(true)
+                        .defaultValue(true))
 
-        String name = "Cumulocity API";
-        String description = "Internal connector to use the Cumulocity REST API. " +
-                "Automatically configured with microservice credentials and internal endpoints. " +
-                "This connector enables direct communication with Cumulocity platform services " +
-                "for creating, updating, and deleting managed objects, events, alarms, and measurements. " +
-                "Supports POST, PUT, PATCH, and DELETE methods.";
-
-        return new ConnectorSpecification(
-                name,
-                description,
-                ConnectorType.WEB_HOOK_INTERNAL,
-                false,
-                configProps,
-                true,
-                supportedDirections());
+                .build();
     }
 
     @Override

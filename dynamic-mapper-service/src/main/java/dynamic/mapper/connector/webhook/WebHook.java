@@ -27,9 +27,10 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.configuration.ConnectorId;
 import dynamic.mapper.connector.core.ConnectorProperty;
-import dynamic.mapper.connector.core.ConnectorPropertyCondition;
+import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
 import dynamic.mapper.connector.core.ConnectorPropertyType;
 import dynamic.mapper.connector.core.ConnectorSpecification;
+import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
@@ -353,11 +354,6 @@ public class WebHook extends AConnectorClient {
     @Override
     public void close() {
         disconnect();
-    }
-
-    @Override
-    public boolean isConnected() {
-        return connectionStateManager.isConnected();
     }
 
     @Override
@@ -869,81 +865,73 @@ public class WebHook extends AConnectorClient {
      * Create WebHook connector specification
      */
     private ConnectorSpecification createConnectorSpecification() {
-        Map<String, ConnectorProperty> configProps = new LinkedHashMap<>();
+        return ConnectorSpecificationBuilder
+                .create("Webhook", ConnectorType.WEB_HOOK)
+                .description("Webhook to send outbound messages to the configured REST endpoint as POST in JSON format. " +
+                        "The publishTopic is appended to the REST endpoint. " +
+                        "In case the endpoint does not end with a trailing / and the publishTopic does not start with a / it is automatically added. " +
+                        "The health endpoint is tested with a GET request. " +
+                        "Supports POST, PUT, PATCH, and DELETE methods.")
+                .supportsMessageContext(true)
+                .supportedDirections(supportedDirections())
 
-        ConnectorPropertyCondition basicAuthCondition = new ConnectorPropertyCondition(
-                "authentication", new String[] { "Basic" });
-        ConnectorPropertyCondition bearerAuthCondition = new ConnectorPropertyCondition(
-                "authentication", new String[] { "Bearer" });
-        ConnectorPropertyCondition cumulocityInternalCondition = new ConnectorPropertyCondition(
-                "cumulocityInternal", new String[] { "false" });
+                // Cumulocity internal mode toggle
+                .property("cumulocityInternal", ConnectorPropertyBuilder.optionalBoolean()
+                        .order(7)
+                        .description("When checked the webHook connector can automatically connect to the Cumulocity instance the mapper is deployed to.")
+                        .defaultValue(false))
 
-        configProps.put("baseUrl",
-                new ConnectorProperty(null, true, 0, ConnectorPropertyType.STRING_PROPERTY,
-                        false, false, null, null, cumulocityInternalCondition));
+                // External URL configuration (only when not using internal mode)
+                .property("baseUrl", ConnectorPropertyBuilder.requiredString()
+                        .order(0)
+                        .condition("cumulocityInternal", "false"))
 
-        configProps.put("authentication",
-                new ConnectorProperty(null, false, 1, ConnectorPropertyType.OPTION_PROPERTY,
-                        false, false, null,
-                        Map.of("Basic", "Basic", "Bearer", "Bearer"),
-                        cumulocityInternalCondition));
+                .property("authentication", ConnectorPropertyBuilder.optionalOption()
+                        .order(1)
+                        .options("Basic", "Bearer")
+                        .condition("cumulocityInternal", "false"))
 
-        configProps.put("user",
-                new ConnectorProperty(null, false, 2, ConnectorPropertyType.STRING_PROPERTY,
-                        false, false, null, null, basicAuthCondition));
+                .property("user", ConnectorPropertyBuilder.optionalString()
+                        .order(2)
+                        .condition("authentication", "Basic"))
 
-        configProps.put("password",
-                new ConnectorProperty(null, false, 3, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY,
-                        false, false, null, null, basicAuthCondition));
+                .property("password", ConnectorPropertyBuilder.optionalSensitive()
+                        .order(3)
+                        .condition("authentication", "Basic"))
 
-        configProps.put("token",
-                new ConnectorProperty(null, false, 4, ConnectorPropertyType.STRING_PROPERTY,
-                        false, false, null, null, bearerAuthCondition));
+                .property("token", ConnectorPropertyBuilder.optionalString()
+                        .order(4)
+                        .condition("authentication", "Bearer"))
 
-        configProps.put("headerAccept",
-                new ConnectorProperty(null, false, 5, ConnectorPropertyType.STRING_PROPERTY,
-                        false, false, "application/json", null, cumulocityInternalCondition));
+                .property("headerAccept", ConnectorPropertyBuilder.optionalString()
+                        .order(5)
+                        .defaultValue("application/json")
+                        .condition("cumulocityInternal", "false"))
 
-        configProps.put("baseUrlHealthEndpoint",
-                new ConnectorProperty("health endpoint for GET request", false, 6,
-                        ConnectorPropertyType.STRING_PROPERTY, false, false, null, null,
-                        cumulocityInternalCondition));
+                .property("baseUrlHealthEndpoint", ConnectorPropertyBuilder.optionalString()
+                        .order(6)
+                        .description("health endpoint for GET request")
+                        .condition("cumulocityInternal", "false"))
 
-        configProps.put("cumulocityInternal",
-                new ConnectorProperty(
-                        "When checked the webHook connector can automatically connect to the Cumulocity instance the mapper is deployed to.",
-                        false, 7, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, false, null, null));
+                .property("headers", ConnectorPropertyBuilder.create(ConnectorPropertyType.MAP_PROPERTY)
+                        .order(8)
+                        .description("Define additional headers")
+                        .required(false)
+                        .defaultValue(new HashMap<String, String>())
+                        .condition("cumulocityInternal", "false"))
 
-        configProps.put("headers",
-                new ConnectorProperty("Define additional headers", false, 8,
-                        ConnectorPropertyType.MAP_PROPERTY, false, false,
-                        new HashMap<String, String>(), null, cumulocityInternalCondition));
+                // Wildcard support (read-only)
+                .property("supportsWildcardInTopicInbound", ConnectorPropertyBuilder.optionalBoolean()
+                        .order(9)
+                        .readonly(true)
+                        .defaultValue(false))
 
-        configProps.put("supportsWildcardInTopicInbound",
-                new ConnectorProperty(null, false, 9, ConnectorPropertyType.BOOLEAN_PROPERTY,
-                        true, false, false, null, null));
+                .property("supportsWildcardInTopicOutbound", ConnectorPropertyBuilder.optionalBoolean()
+                        .order(10)
+                        .readonly(true)
+                        .defaultValue(true))
 
-        configProps.put("supportsWildcardInTopicOutbound",
-                new ConnectorProperty(null, false, 10, ConnectorPropertyType.BOOLEAN_PROPERTY,
-                        true, false, true, null, null));
-
-        String name = "Webhook";
-        String description = "Webhook to send outbound messages to the configured REST endpoint as POST in JSON format. "
-                +
-                "The publishTopic is appended to the REST endpoint. " +
-                "In case the endpoint does not end with a trailing / and the publishTopic does not start with a / it is automatically added. "
-                +
-                "The health endpoint is tested with a GET request. " +
-                "Supports POST, PUT, PATCH, and DELETE methods.";
-
-        return new ConnectorSpecification(
-                name,
-                description,
-                ConnectorType.WEB_HOOK,
-                false,
-                configProps,
-                true,
-                supportedDirections());
+                .build();
     }
 
 }

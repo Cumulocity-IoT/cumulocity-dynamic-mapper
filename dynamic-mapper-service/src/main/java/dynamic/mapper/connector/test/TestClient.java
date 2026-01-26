@@ -23,9 +23,9 @@ package dynamic.mapper.connector.test;
 
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.configuration.ConnectorId;
-import dynamic.mapper.connector.core.ConnectorProperty;
-import dynamic.mapper.connector.core.ConnectorPropertyType;
+import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
 import dynamic.mapper.connector.core.ConnectorSpecification;
+import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
@@ -278,8 +278,8 @@ public class TestClient extends AConnectorClient {
     }
 
     @Override
-    public boolean isConnected() {
-        return simulatedConnected && connectionStateManager.isConnected();
+    protected boolean isPhysicallyConnected() {
+        return simulatedConnected;
     }
 
     /**
@@ -307,29 +307,22 @@ public class TestClient extends AConnectorClient {
      * Create connector specification for test connector
      */
     private ConnectorSpecification createConnectorSpecification() {
-        Map<String, ConnectorProperty> configProps = new LinkedHashMap<>();
+        return ConnectorSpecificationBuilder
+                .create("Test Connector", ConnectorType.TEST)
+                .description("Internal connector for testing mappings without external connections.")
+                .singleton(true)
+                .supportedDirections(supportedDirections())
 
-        // Minimal configuration - test connector doesn't need real connection
-        // properties
-        configProps.put("enabled",
-                new ConnectorProperty(null, false, 0, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false,
-                        true, null, null));
+                // Minimal configuration - test connector doesn't need real connection properties
+                .property("enabled", ConnectorPropertyBuilder.optionalBoolean()
+                        .order(0)
+                        .defaultValue(true))
 
-        configProps.put("description",
-                new ConnectorProperty(null, false, 1, ConnectorPropertyType.STRING_PROPERTY, false, false,
-                        "Test Connector for mapping validation", null, null));
+                .property("description", ConnectorPropertyBuilder.optionalString()
+                        .order(1)
+                        .defaultValue("Test Connector for mapping validation"))
 
-        String name = "Test Connector";
-        String description = "Internal connector for testing mappings without external connections.";
-
-        return new ConnectorSpecification(
-                name,
-                description,
-                ConnectorType.TEST,
-                true, // singleton
-                configProps,
-                false,
-                supportedDirections());
+                .build();
     }
 
     /**

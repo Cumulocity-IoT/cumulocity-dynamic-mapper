@@ -25,18 +25,16 @@ import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 import jakarta.validation.constraints.NotNull;
 
 @Data
 @ToString()
+@NoArgsConstructor
 @AllArgsConstructor
 public class ConnectorPropertyCondition implements Cloneable {
-
-    // @NotNull
-    // @JsonSetter(nulls = Nulls.SKIP)
-    // public Integer order;
 
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
@@ -46,11 +44,17 @@ public class ConnectorPropertyCondition implements Cloneable {
     @JsonSetter(nulls = Nulls.SKIP)
     public String[] anyOf;
 
-    public Object clone() {
+    @Override
+    public ConnectorPropertyCondition clone() {
         try {
-            return super.clone();
+            ConnectorPropertyCondition cloned = (ConnectorPropertyCondition) super.clone();
+            // Deep clone the array
+            if (this.anyOf != null) {
+                cloned.anyOf = this.anyOf.clone();
+            }
+            return cloned;
         } catch (CloneNotSupportedException e) {
-            return null;
+            throw new AssertionError("Cloning failed for ConnectorPropertyCondition", e);
         }
     }
 }

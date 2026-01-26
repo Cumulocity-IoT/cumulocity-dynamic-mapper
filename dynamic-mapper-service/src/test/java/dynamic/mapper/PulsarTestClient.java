@@ -38,7 +38,7 @@ import org.apache.pulsar.client.api.SubscriptionType;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class PulsarClientTest {
+public class PulsarTestClient {
     private PulsarClient client;
     private Producer<byte[]> producer;
     private Consumer<byte[]> consumer;
@@ -54,7 +54,7 @@ public class PulsarClientTest {
     static String topic = System.getenv().getOrDefault("TOPIC", "persistent://public/default/measurement-kobu-webhook-001");
     static String TOPIC_PATTERN = System.getenv().getOrDefault("TOPIC_PATTERN", "persistent://public/default/measurement-kobu-webhook-[0-9]{3}");
 
-    public PulsarClientTest() {
+    public PulsarTestClient() {
         this.executorService = Executors.newCachedThreadPool();
     }
 
@@ -65,7 +65,7 @@ public class PulsarClientTest {
         log.info("Topic Pattern: " + TOPIC_PATTERN);
         log.info("Subscription: " + SUBSCRIPTION_NAME);
 
-        PulsarClientTest testClient = new PulsarClientTest();
+        PulsarTestClient testClient = new PulsarTestClient();
         
         try {
             // Initialize client

@@ -37,7 +37,7 @@ import org.apache.pulsar.client.api.SubscriptionType;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class MQTTServicePulsarClientTest {
+public class MQTTServicePulsarTestClient {
     private PulsarClient client;
     private Producer<byte[]> producer;
     private Consumer<byte[]> consumer;
@@ -62,7 +62,7 @@ public class MQTTServicePulsarClientTest {
     public static final String PULSAR_PROPERTY_CHANNEL = "channel";
     public static final String PULSAR_PROPERTY_CLIENT = "client";
 
-    public MQTTServicePulsarClientTest() {
+    public MQTTServicePulsarTestClient() {
         this.executorService = Executors.newCachedThreadPool();
         // Build topics using N-2 model: persistent://tenant/namespace/topic-name
         TOWARDS_DEVICE_TOPIC = String.format("persistent://%s/%s/to-device", TENANT, PULSAR_NAMESPACE);
@@ -78,7 +78,7 @@ public class MQTTServicePulsarClientTest {
         log.info("Towards Platform Topic: " + TOWARDS_PLATFORM_TOPIC);
         log.info("Subscription: " + SUBSCRIPTION_NAME);
 
-        MQTTServicePulsarClientTest testClient = new MQTTServicePulsarClientTest();
+        MQTTServicePulsarTestClient testClient = new MQTTServicePulsarTestClient();
 
         try {
             // Initialize client

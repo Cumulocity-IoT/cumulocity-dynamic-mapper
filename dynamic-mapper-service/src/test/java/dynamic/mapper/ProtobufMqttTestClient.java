@@ -34,7 +34,7 @@ import dynamic.mapper.processor.processor.fixed.InternalCustomMeasurementOuter.I
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class ProtobufMqttClient {
+public class ProtobufMqttTestClient {
     Mqtt3BlockingClient testClient;
     static String brokerHost = System.getenv("BROKER_HOST");
     static Integer brokerPort = Integer.valueOf(System.getenv("BROKER_PORT"));
@@ -42,7 +42,7 @@ public class ProtobufMqttClient {
     static String brokerUsername = System.getenv("BROKER_USERNAME");
     static String brokerPassword = System.getenv("BROKER_PASSWORD");
 
-    public ProtobufMqttClient(Mqtt3BlockingClient sampleClient) {
+    public ProtobufMqttTestClient(Mqtt3BlockingClient sampleClient) {
         testClient = sampleClient;
     }
 
@@ -67,7 +67,7 @@ public class ProtobufMqttClient {
                     .sslWithDefaultConfig()
                     .buildBlocking();
         }
-        ProtobufMqttClient client = new ProtobufMqttClient(sampleClient);
+        ProtobufMqttTestClient client = new ProtobufMqttTestClient(sampleClient);
         client.testSendMeasurement();
         client.testSendAlarm();
 

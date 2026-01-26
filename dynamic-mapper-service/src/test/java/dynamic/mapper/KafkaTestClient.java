@@ -30,7 +30,7 @@ import org.apache.kafka.common.serialization.StringSerializer;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class KafkaClient {
+public class KafkaTestClient {
 	KafkaProducer<String, String> testClient;
 	static String brokerHost = System.getenv("KAFKA_BROKER_HOST");
 	static String brokerUsername = System.getenv("BROKER_USERNAME");
@@ -39,7 +39,7 @@ public class KafkaClient {
 	static String topic = System.getenv("TOPIC");
 	static String saslMechanism = System.getenv("SASL_MECHANISM");
 
-	public KafkaClient(KafkaProducer<String, String> sampleClient) {
+	public KafkaTestClient(KafkaProducer<String, String> sampleClient) {
 		testClient = sampleClient;
 	}
 
@@ -62,14 +62,14 @@ public class KafkaClient {
 		props.put("group.id", groupId);
 		props.put("sasl.jaas.config", jaasCfg);
 
-		KafkaClient client = new KafkaClient(new KafkaProducer<>(props));
+		KafkaTestClient client = new KafkaTestClient(new KafkaProducer<>(props));
 		client.testSendMeasurement();
 
 	}
 
 	private void testSendMeasurement() {
 
-		String topic = KafkaClient.topic;
+		String topic = KafkaTestClient.topic;
 		log.info("Connecting to Kafka broker: " + brokerHost + "!");
 
 		log.info("Publishing message on topic: " + topic);

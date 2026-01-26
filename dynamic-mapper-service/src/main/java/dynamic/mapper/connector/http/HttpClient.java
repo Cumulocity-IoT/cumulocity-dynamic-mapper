@@ -23,9 +23,9 @@ package dynamic.mapper.connector.http;
 
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.configuration.ConnectorId;
-import dynamic.mapper.connector.core.ConnectorProperty;
-import dynamic.mapper.connector.core.ConnectorPropertyType;
+import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
 import dynamic.mapper.connector.core.ConnectorSpecification;
+import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
@@ -206,13 +206,6 @@ public class HttpClient extends AConnectorClient {
     }
 
     @Override
-    public boolean isConnected() {
-        // HTTP connector is connected if state is true
-        // It's a passive receiver, so there's no active connection to test
-        return connectionStateManager.isConnected();
-    }
-
-    @Override
     public void publishMEAO(ProcessingContext<?> context) {
         // HTTP connector is inbound only - no outbound publishing
         log.warn("{} - HTTP connector does not support outbound publishing", tenant);
@@ -352,43 +345,42 @@ public class HttpClient extends AConnectorClient {
      * Create HTTP connector specification
      */
     private ConnectorSpecification createConnectorSpecification() {
-        Map<String, ConnectorProperty> configProps = new LinkedHashMap<>();
-
         String httpPath = "/service/dynamic-mapper-service/" + HTTP_CONNECTOR_PATH;
 
-        configProps.put("path",
-                new ConnectorProperty(null, false, 0, ConnectorPropertyType.STRING_PROPERTY,
-                        true, false, httpPath, null, null));
+        return ConnectorSpecificationBuilder
+                .create("HTTP Endpoint", ConnectorType.HTTP)
+                .description("HTTP Endpoint to receive custom payload in the body.\n" +
+                        "The sub path following '.../dynamic-mapper-service/httpConnector/' is used as '<MAPPING_TOPIC>', " +
+                        "e.g. a json payload sent to 'https://<YOUR_CUMULOCITY_TENANT>/service/dynamic-mapper-service/httpConnector/temp/berlin_01' " +
+                        "will be resolved to a mapping with mapping topic: 'temp/berlin_01'.\n" +
+                        "The message must be sent in a POST request.\n" +
+                        "NOTE: The leading '/' is cut off from the sub path automatically. This can be configured with the '" +
+                        PROPERTY_CUTOFF_LEADING_SLASH + "' property.")
+                .singleton(true)
+                .supportedDirections(supportedDirections())
 
-        configProps.put("supportsWildcardInTopicInbound",
-                new ConnectorProperty(null, false, 1, ConnectorPropertyType.BOOLEAN_PROPERTY,
-                        true, false, true, null, null));
+                // HTTP path configuration (read-only)
+                .property("path", ConnectorPropertyBuilder.optionalString()
+                        .order(0)
+                        .readonly(true)
+                        .defaultValue(httpPath))
 
-        configProps.put("supportsWildcardInTopicOutbound",
-                new ConnectorProperty(null, false, 2, ConnectorPropertyType.BOOLEAN_PROPERTY,
-                        true, false, false, null, null));
+                // Wildcard support (read-only)
+                .property("supportsWildcardInTopicInbound", ConnectorPropertyBuilder.optionalBoolean()
+                        .order(1)
+                        .readonly(true)
+                        .defaultValue(true))
 
-        configProps.put(PROPERTY_CUTOFF_LEADING_SLASH,
-                new ConnectorProperty(null, false, 3, ConnectorPropertyType.BOOLEAN_PROPERTY,
-                        false, false, true, null, null));
+                .property("supportsWildcardInTopicOutbound", ConnectorPropertyBuilder.optionalBoolean()
+                        .order(2)
+                        .readonly(true)
+                        .defaultValue(false))
 
-        String name = "HTTP Endpoint";
-        String description = "HTTP Endpoint to receive custom payload in the body.\n" +
-                "The sub path following '.../dynamic-mapper-service/httpConnector/' is used as '<MAPPING_TOPIC>', " +
-                "e.g. a json payload sent to 'https://<YOUR_CUMULOCITY_TENANT>/service/dynamic-mapper-service/httpConnector/temp/berlin_01' "
-                +
-                "will be resolved to a mapping with mapping topic: 'temp/berlin_01'.\n" +
-                "The message must be sent in a POST request.\n" +
-                "NOTE: The leading '/' is cut off from the sub path automatically. This can be configured with the '" +
-                PROPERTY_CUTOFF_LEADING_SLASH + "' property.";
+                // Leading slash configuration
+                .property(PROPERTY_CUTOFF_LEADING_SLASH, ConnectorPropertyBuilder.optionalBoolean()
+                        .order(3)
+                        .defaultValue(true))
 
-        return new ConnectorSpecification(
-                name,
-                description,
-                ConnectorType.HTTP,
-                true, // singleton
-                configProps,
-                false, // doesn't support message context
-                supportedDirections());
+                .build();
     }
 }
