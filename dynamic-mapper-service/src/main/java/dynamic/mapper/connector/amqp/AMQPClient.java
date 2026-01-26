@@ -44,12 +44,8 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManagerFactory;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.security.KeyStore;
-import java.security.cert.X509Certificate;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
@@ -65,13 +61,6 @@ public class AMQPClient extends AConnectorClient {
     private Connection connection;
     private Channel channel;
     private final Map<String, String> consumerTags = new ConcurrentHashMap<>();
-
-    // Synchronization objects
-    private final Object connectionLock = new Object();
-    private final Object disconnectionLock = new Object();
-    private volatile boolean isConnecting = false;
-    private volatile boolean isDisconnecting = false;
-    private volatile boolean intentionalDisconnect = false;
 
     @Getter
     @Setter
@@ -130,12 +119,8 @@ public class AMQPClient extends AConnectorClient {
         loadConfiguration();
 
         try {
-            String protocol = (String) connectorConfiguration.getProperties()
-                    .getOrDefault("protocol", "amqp://");
-
-            if ("amqps://".equals(protocol)) {
-                initializeSslConfiguration();
-            }
+            // Initialize SSL if needed (checks protocol and certificate configuration)
+            initializeSslIfNeeded();
 
             log.info("{} - Connector {} initialized successfully", tenant, connectorName);
             if (isConfigValid(connectorConfiguration)) {
@@ -150,70 +135,10 @@ public class AMQPClient extends AConnectorClient {
         }
     }
 
-    private void initializeSslConfiguration() throws Exception {
-        try {
-            Boolean useSelfSignedCertificate = (Boolean) connectorConfiguration.getProperties()
-                    .getOrDefault("useSelfSignedCertificate", false);
-
-            if (!useSelfSignedCertificate) {
-                // Use default SSL context
-                sslContext = SSLContext.getDefault();
-                log.info("{} - Using default SSL configuration", tenant);
-                return;
-            }
-
-            // Load certificate using common method
-            cert = loadCertificateFromConfiguration();
-
-            // Log certificate information
-            logCertificateInfo(cert);
-
-            // Get X509 certificates
-            List<X509Certificate> customCertificates = cert.getX509Certificates();
-            if (customCertificates.isEmpty()) {
-                throw new ConnectorException("No valid X.509 certificates found in PEM");
-            }
-
-            log.info("{} - Successfully parsed {} X.509 certificate(s)", tenant, customCertificates.size());
-
-            // Create truststore (include system CAs)
-            KeyStore trustStore = createTrustStore(true, customCertificates, cert);
-
-            // Create TrustManagerFactory
-            TrustManagerFactory tmf = createTrustManagerFactory(trustStore);
-
-            // Build SSL context
-            sslContext = SSLContext.getInstance("TLS");
-            sslContext.init(null, tmf.getTrustManagers(), null);
-
-            log.info("{} - SSL configuration initialized successfully", tenant);
-            log.info("{}   Custom CAs: {}", tenant, customCertificates.size());
-
-        } catch (Exception e) {
-            log.error("{} - Error creating SSL configuration", tenant, e);
-            throw new ConnectorException("Failed to initialize SSL configuration: " + e.getMessage(), e);
-        }
-    }
-
     @Override
     public void connect() {
-        synchronized (connectionLock) {
-            if (isConnecting) {
-                log.debug("{} - Connection attempt already in progress", tenant);
-                return;
-            }
-
-            if (isDisconnecting) {
-                log.debug("{} - Disconnect in progress, cannot connect", tenant);
-                return;
-            }
-
-            if (isConnected()) {
-                log.debug("{} - Already connected", tenant);
-                return;
-            }
-
-            isConnecting = true;
+        if (!beginConnection()) {
+            return;
         }
 
         try {
@@ -262,9 +187,7 @@ public class AMQPClient extends AConnectorClient {
             log.error("{} - Error connecting AMQP client: {}", tenant, e.getMessage(), e);
             connectionStateManager.updateStatusWithError(e);
         } finally {
-            synchronized (connectionLock) {
-                isConnecting = false;
-            }
+            endConnection();
         }
     }
 
@@ -393,19 +316,8 @@ public class AMQPClient extends AConnectorClient {
 
     @Override
     public void disconnect() {
-        synchronized (disconnectionLock) {
-            if (isDisconnecting) {
-                log.debug("{} - Disconnect already in progress", tenant);
-                return;
-            }
-
-            if (!isConnected() && connection == null) {
-                log.debug("{} - Already disconnected", tenant);
-                return;
-            }
-
-            isDisconnecting = true;
-            intentionalDisconnect = true;
+        if (!beginDisconnection()) {
+            return;
         }
 
         try {
@@ -458,11 +370,14 @@ public class AMQPClient extends AConnectorClient {
             connectionStateManager.setConnected(false);
             connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTED, true, true);
         } finally {
-            synchronized (disconnectionLock) {
-                isDisconnecting = false;
-                intentionalDisconnect = false;
-            }
+            endDisconnection();
         }
+    }
+
+    @Override
+    protected boolean isPhysicallyConnected() {
+        return connection != null && connection.isOpen() &&
+               channel != null && channel.isOpen();
     }
 
     @Override

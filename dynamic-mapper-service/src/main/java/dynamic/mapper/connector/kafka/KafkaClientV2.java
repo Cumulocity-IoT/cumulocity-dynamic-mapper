@@ -306,31 +306,39 @@ public class KafkaClientV2 extends AConnectorClient {
 
     @Override
     public void connect() {
-        log.info("{} - Connecting Kafka connector: {}", tenant, connectorName);
-
-        if (!shouldConnect()) {
-            log.info("{} - Connector disabled or invalid configuration", tenant);
+        if (!beginConnection()) {
             return;
         }
 
         try {
+            log.info("{} - Connecting Kafka connector: {}", tenant, connectorName);
+
+            if (!shouldConnect()) {
+                log.info("{} - Connector disabled or invalid configuration", tenant);
+                return;
+            }
+
             connectionStateManager.updateStatus(ConnectorStatus.CONNECTING, true, true);
 
             // Build properties
             buildKafkaProperties();
 
-            // Test connectivity with admin client
-            if (adminClient == null) {
-                adminClient = AdminClient.create(kafkaProducerProperties);
-            }
+            // Create and test connectivity with retry logic
+            retryOperation("Kafka connection", 3, 2000, () -> {
+                // Test connectivity with admin client
+                if (adminClient == null) {
+                    adminClient = AdminClient.create(kafkaProducerProperties);
+                }
 
-            log.info("{} - Testing Kafka connectivity...", tenant);
-            ListTopicsResult listTopics = adminClient.listTopics();
-            listTopics.names().get(10, TimeUnit.SECONDS);
-            log.info("{} - Kafka connectivity test passed", tenant);
+                log.info("{} - Testing Kafka connectivity...", tenant);
+                ListTopicsResult listTopics = adminClient.listTopics();
+                listTopics.names().get(10, TimeUnit.SECONDS);
+                log.info("{} - Kafka connectivity test passed", tenant);
 
-            // Create producer
-            kafkaProducer = new KafkaProducer<>(kafkaProducerProperties);
+                // Create producer
+                kafkaProducer = new KafkaProducer<>(kafkaProducerProperties);
+                return null;
+            });
 
             connectionStateManager.setConnected(true);
             connectionStateManager.updateStatus(ConnectorStatus.CONNECTED, true, true);
@@ -346,6 +354,8 @@ public class KafkaClientV2 extends AConnectorClient {
             log.error("{} - Error connecting Kafka connector: {}", tenant, e.getMessage(), e);
             connectionStateManager.updateStatusWithError(e);
             connectionStateManager.setConnected(false);
+        } finally {
+            endConnection();
         }
     }
 
@@ -627,49 +637,58 @@ public class KafkaClientV2 extends AConnectorClient {
 
     @Override
     public void disconnect() {
-        log.info("{} - Disconnecting Kafka connector", tenant);
-        connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTING, true, true);
-
-        // Stop consumer tasks
-        consumerTasks.values().forEach(task -> {
-            if (!task.isDone()) {
-                task.cancel(true);
-            }
-        });
-        consumerTasks.clear();
-
-        // Close consumers
-        topicConsumers.values().forEach(wrapper -> {
-            try {
-                wrapper.getConsumer().close(Duration.ofSeconds(10));
-            } catch (Exception e) {
-                log.warn("{} - Error closing Kafka consumer: {}", tenant, e.getMessage());
-            }
-        });
-        topicConsumers.clear();
-
-        // Close producer
-        if (kafkaProducer != null) {
-            try {
-                kafkaProducer.close(Duration.ofSeconds(10));
-            } catch (Exception e) {
-                log.warn("{} - Error closing Kafka producer: {}", tenant, e.getMessage());
-            }
+        if (!beginDisconnection()) {
+            return;
         }
 
-        // Close admin client
-        if (adminClient != null) {
-            try {
-                adminClient.close(Duration.ofSeconds(10));
-            } catch (Exception e) {
-                log.warn("{} - Error closing Kafka admin client: {}", tenant, e.getMessage());
+        try {
+            log.info("{} - Disconnecting Kafka connector", tenant);
+            connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTING, true, true);
+
+            // Stop consumer tasks
+            consumerTasks.values().forEach(task -> {
+                if (!task.isDone()) {
+                    task.cancel(true);
+                }
+            });
+            consumerTasks.clear();
+
+            // Close consumers
+            topicConsumers.values().forEach(wrapper -> {
+                try {
+                    wrapper.getConsumer().close(Duration.ofSeconds(10));
+                } catch (Exception e) {
+                    log.warn("{} - Error closing Kafka consumer: {}", tenant, e.getMessage());
+                }
+            });
+            topicConsumers.clear();
+
+            // Close producer
+            if (kafkaProducer != null) {
+                try {
+                    kafkaProducer.close(Duration.ofSeconds(10));
+                } catch (Exception e) {
+                    log.warn("{} - Error closing Kafka producer: {}", tenant, e.getMessage());
+                }
             }
+
+            // Close admin client
+            if (adminClient != null) {
+                try {
+                    adminClient.close(Duration.ofSeconds(10));
+                } catch (Exception e) {
+                    log.warn("{} - Error closing Kafka admin client: {}", tenant, e.getMessage());
+                }
+            }
+
+            connectionStateManager.setConnected(false);
+            connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTED, true, true);
+
+            log.info("{} - Kafka connector disconnected", tenant);
+
+        } finally {
+            endDisconnection();
         }
-
-        connectionStateManager.setConnected(false);
-        connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTED, true, true);
-
-        log.info("{} - Kafka connector disconnected", tenant);
     }
 
     @Override

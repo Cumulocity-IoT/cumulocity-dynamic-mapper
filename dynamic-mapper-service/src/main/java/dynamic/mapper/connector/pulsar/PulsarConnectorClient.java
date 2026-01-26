@@ -28,7 +28,6 @@ import dynamic.mapper.connector.core.ConnectorPropertyCondition;
 import dynamic.mapper.connector.core.ConnectorPropertyType;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.client.AConnectorClient;
-import dynamic.mapper.connector.core.client.Certificate;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
@@ -44,14 +43,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.pulsar.client.api.*;
 
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManagerFactory;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.KeyStore;
-import java.security.cert.X509Certificate;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -78,8 +73,6 @@ public class PulsarConnectorClient extends AConnectorClient {
 
     protected PulsarClient pulsarClient;
     protected PulsarCallback pulsarCallback;
-    protected SSLContext sslContext;
-    protected Certificate cert;
 
     // Consumer and producer management
     protected final Map<String, Consumer<byte[]>> consumers = new ConcurrentHashMap<>();
@@ -141,12 +134,8 @@ public class PulsarConnectorClient extends AConnectorClient {
         loadConfiguration();
 
         try {
-            Boolean useSelfSignedCertificate = (Boolean) connectorConfiguration.getProperties()
-                    .getOrDefault("useSelfSignedCertificate", false);
-
-            if (useSelfSignedCertificate) {
-                initializeSslConfiguration();
-            }
+            // Initialize SSL if needed (checks protocol and certificate configuration)
+            initializeSslIfNeeded();
 
             log.info("{} - Pulsar connector initialized successfully", tenant);
             if (isConfigValid(connectorConfiguration)) {
@@ -161,56 +150,20 @@ public class PulsarConnectorClient extends AConnectorClient {
         }
     }
 
-    /**
-     * Initialize SSL context for self-signed certificates
-     */
-    private void initializeSslConfiguration() throws Exception {
-        try {
-            // Load certificate using common method
-            cert = loadCertificateFromConfiguration();
-
-            // Log basic info
-            log.info("{} - Loaded {} certificate(s)", tenant, cert.getCertificateCount());
-
-            // Get X509 certificates
-            List<X509Certificate> customCertificates = cert.getX509Certificates();
-            if (customCertificates.isEmpty()) {
-                throw new ConnectorException("No valid X.509 certificates found in PEM");
-            }
-
-            // Create truststore (can choose whether to include system CAs) - PASS cert
-            KeyStore trustStore = createTrustStore(false, customCertificates, cert);
-
-            // Create TrustManagerFactory
-            TrustManagerFactory tmf = createTrustManagerFactory(trustStore);
-
-            // Create SSLContext for Pulsar
-            sslContext = SSLContext.getInstance("TLSv1.2");
-            sslContext.init(null, tmf.getTrustManagers(), null);
-
-            log.info("{} - SSL context initialized for Pulsar", tenant);
-
-        } catch (Exception e) {
-            log.error("{} - Error creating SSL context for Pulsar", tenant, e);
-            throw new ConnectorException("Failed to initialize SSL context: " + e.getMessage(), e);
-        }
-    }
-
     @Override
     public void connect() {
-        log.info("{} - Connecting Pulsar connector: {}", tenant, connectorName);
-
-        if (isConnected()) {
-            log.debug("{} - Already connected, disconnecting first", tenant);
-            disconnect();
-        }
-
-        if (!shouldConnect()) {
-            log.info("{} - Connector disabled or invalid configuration", tenant);
+        if (!beginConnection()) {
             return;
         }
 
         try {
+            log.info("{} - Connecting Pulsar connector: {}", tenant, connectorName);
+
+            if (!shouldConnect()) {
+                log.info("{} - Connector disabled or invalid configuration", tenant);
+                return;
+            }
+
             connectionStateManager.updateStatus(ConnectorStatus.CONNECTING, true, true);
 
             // Build Pulsar client
@@ -238,6 +191,8 @@ public class PulsarConnectorClient extends AConnectorClient {
             log.error("{} - Error connecting Pulsar connector: {}", tenant, e.getMessage(), e);
             connectionStateManager.updateStatusWithError(e);
             connectionStateManager.setConnected(false);
+        } finally {
+            endConnection();
         }
     }
 
@@ -430,15 +385,14 @@ public class PulsarConnectorClient extends AConnectorClient {
 
     @Override
     public void disconnect() {
-        if (!isConnected()) {
-            log.debug("{} - Already disconnected", tenant);
+        if (!beginDisconnection()) {
             return;
         }
 
-        log.info("{} - Disconnecting Pulsar connector", tenant);
-        connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTING, true, true);
-
         try {
+            log.info("{} - Disconnecting Pulsar connector", tenant);
+            connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTING, true, true);
+
             // Close consumers
             consumers.values().forEach(consumer -> {
                 try {
@@ -471,6 +425,8 @@ public class PulsarConnectorClient extends AConnectorClient {
 
         } catch (Exception e) {
             log.error("{} - Error during disconnect: {}", tenant, e.getMessage(), e);
+        } finally {
+            endDisconnection();
         }
     }
 
@@ -568,52 +524,46 @@ public class PulsarConnectorClient extends AConnectorClient {
      * Create producer with retry logic
      */
     private Producer<byte[]> createProducerWithRetry(String topic, Qos qos) throws PulsarClientException {
-        for (int attempt = 1; attempt <= MAX_PRODUCER_CREATE_RETRIES; attempt++) {
-            try {
-                String pulsarTopic = ensurePulsarTopicFormat(topic);
+        try {
+            return retryOperation(
+                "Create Pulsar producer for topic: " + topic,
+                MAX_PRODUCER_CREATE_RETRIES,
+                PRODUCER_CREATE_RETRY_DELAY_MS,
+                () -> {
+                    String pulsarTopic = ensurePulsarTopicFormat(topic);
 
-                ProducerBuilder<byte[]> builder = pulsarClient.newProducer()
-                        .topic(pulsarTopic);
+                    ProducerBuilder<byte[]> builder = pulsarClient.newProducer()
+                            .topic(pulsarTopic);
 
-                // Configure based on QoS
-                switch (qos) {
-                    case AT_MOST_ONCE:
-                        builder.sendTimeout(0, TimeUnit.SECONDS);
-                        break;
-                    case AT_LEAST_ONCE:
-                    case EXACTLY_ONCE:
-                        builder.sendTimeout(30, TimeUnit.SECONDS);
-                        break;
-                }
-
-                try {
-                    return builder.create();
-                } catch (PulsarClientException.FeatureNotSupportedException e) {
-                    if (e.getMessage().contains("PIP-344")) {
-                        log.warn("{} - Broker doesn't support PIP-344, using async fallback", tenant);
-                        return builder.createAsync().get(30, TimeUnit.SECONDS);
+                    // Configure based on QoS
+                    switch (qos) {
+                        case AT_MOST_ONCE:
+                            builder.sendTimeout(0, TimeUnit.SECONDS);
+                            break;
+                        case AT_LEAST_ONCE:
+                        case EXACTLY_ONCE:
+                            builder.sendTimeout(30, TimeUnit.SECONDS);
+                            break;
                     }
-                    throw e;
-                }
 
-            } catch (Exception e) {
-                if (attempt == MAX_PRODUCER_CREATE_RETRIES) {
-                    if (e instanceof PulsarClientException) {
-                        throw (PulsarClientException) e;
+                    try {
+                        return builder.create();
+                    } catch (PulsarClientException.FeatureNotSupportedException e) {
+                        if (e.getMessage().contains("PIP-344")) {
+                            log.warn("{} - Broker doesn't support PIP-344, using async fallback", tenant);
+                            return builder.createAsync().get(30, TimeUnit.SECONDS);
+                        }
+                        throw e;
                     }
-                    throw new PulsarClientException(e);
                 }
-
-                try {
-                    Thread.sleep(PRODUCER_CREATE_RETRY_DELAY_MS * attempt);
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                    throw new PulsarClientException(ie);
-                }
+            );
+        } catch (ConnectorException e) {
+            // Unwrap if it's a PulsarClientException inside ConnectorException
+            if (e.getCause() instanceof PulsarClientException) {
+                throw (PulsarClientException) e.getCause();
             }
+            throw new PulsarClientException(e);
         }
-
-        throw new PulsarClientException("Failed to create producer after " + MAX_PRODUCER_CREATE_RETRIES + " attempts");
     }
 
     /**
