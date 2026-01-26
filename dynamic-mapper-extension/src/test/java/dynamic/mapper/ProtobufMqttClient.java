@@ -33,7 +33,6 @@ import com.hivemq.client.mqtt.mqtt3.message.connect.connack.Mqtt3ConnAckReturnCo
 
 import dynamic.mapper.processor.extension.external.CustomEventOuter;
 import dynamic.mapper.processor.extension.external.CustomEventOuter.CustomEvent;
-import dynamic.mapper.ProtobufMqttTestClient;
 
 public class ProtobufMqttClient {
     Mqtt3BlockingClient testClient;
@@ -68,7 +67,7 @@ public class ProtobufMqttClient {
                     .sslWithDefaultConfig()
                     .buildBlocking();
         }
-        ProtobufMqttTestClient client = new ProtobufMqttTestClient(sampleClient);
+        ProtobufMqttClient client = new ProtobufMqttClient(sampleClient);
         client.testSendEvent();
     }
 
