@@ -196,6 +196,9 @@ export class MappingComponent implements OnInit, OnDestroy {
       this.mappingsCount = maps.length;
     });
 
+    // Check and show deprecation warning for this direction
+    await this.mappingService.checkAndShowDeprecationWarning(this.stepperConfiguration.direction);
+
     // Start listening to mapping changes
     await this.mappingService.startChangedMappingEvents();
 
