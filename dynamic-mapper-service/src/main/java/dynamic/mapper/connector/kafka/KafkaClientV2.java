@@ -24,10 +24,10 @@ package dynamic.mapper.connector.kafka;
 import com.cumulocity.sdk.client.SDKException;
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.configuration.ConnectorId;
-import dynamic.mapper.connector.core.ConnectorProperty;
-import dynamic.mapper.connector.core.ConnectorPropertyCondition;
+import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
 import dynamic.mapper.connector.core.ConnectorPropertyType;
 import dynamic.mapper.connector.core.ConnectorSpecification;
+import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
@@ -874,80 +874,76 @@ public class KafkaClientV2 extends AConnectorClient {
      * Create Kafka connector specification
      */
     private ConnectorSpecification createConnectorSpecification() {
-        Map<String, ConnectorProperty> configProps = new LinkedHashMap<>();
+        // Create builder-based specification
+        ConnectorSpecificationBuilder builder = ConnectorSpecificationBuilder
+                .create("Kafka", ConnectorType.KAFKA)
+                .description("Connector to receive and send messages to an external Kafka broker. " +
+                        "Inbound mappings allow to extract values from the payload and the key and map these to the Cumulocity payload. " +
+                        "The relevant setting in a mapping is 'supportsMessageContext'.\n" +
+                        "In outbound mappings any string that is mapped to '_CONTEXT_DATA_.key' is used as the outbound Kafka record key.\n" +
+                        "The connector uses SASL_SSL as security protocol.")
+                .supportsMessageContext(true)
+                .supportedDirections(supportedDirections())
 
-        ConnectorPropertyCondition saslCondition = new ConnectorPropertyCondition("username", new String[] { "*" });
+                // Basic connection
+                .property("bootstrapServers", ConnectorPropertyBuilder.requiredString()
+                        .order(0))
 
-        configProps.put("bootstrapServers",
-                new ConnectorProperty(null, true, 0, ConnectorPropertyType.STRING_PROPERTY,
-                        false, false, null, null, null));
+                // SASL authentication (optional)
+                .property("username", ConnectorPropertyBuilder.optionalString()
+                        .order(1))
 
-        configProps.put("username",
-                new ConnectorProperty(null, false, 1, ConnectorPropertyType.STRING_PROPERTY,
-                        false, false, null, null, null));
+                .property("password", ConnectorPropertyBuilder.optionalSensitive()
+                        .order(2)
+                        .condition("username", "*"))
 
-        configProps.put("password",
-                new ConnectorProperty(null, false, 2, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY,
-                        false, false, null, null, saslCondition));
+                .property("saslMechanism", ConnectorPropertyBuilder.optionalOption()
+                        .order(3)
+                        .defaultValue("SCRAM-SHA-256")
+                        .options("SCRAM-SHA-256", "SCRAM-SHA-512")
+                        .condition("username", "*"))
 
-        configProps.put("saslMechanism",
-                new ConnectorProperty(null, false, 3, ConnectorPropertyType.OPTION_PROPERTY,
-                        false, false, "SCRAM-SHA-256",
-                        Map.of("SCRAM-SHA-256", "SCRAM-SHA-256", "SCRAM-SHA-512", "SCRAM-SHA-512"),
-                        saslCondition));
+                // Consumer group
+                .property("groupId", ConnectorPropertyBuilder.requiredString()
+                        .order(4))
 
-        configProps.put("groupId",
-                new ConnectorProperty(null, true, 4, ConnectorPropertyType.STRING_PROPERTY,
-                        false, false, null, null, null));
+                // Custom properties
+                .property("defaultPropertiesProducer", ConnectorPropertyBuilder.create(ConnectorPropertyType.MAP_PROPERTY)
+                        .order(5)
+                        .description("Producer properties")
+                        .required(false)
+                        .defaultValue(new HashMap<String, String>()))
 
-        configProps.put("defaultPropertiesProducer",
-                new ConnectorProperty("Producer properties", false, 5, ConnectorPropertyType.MAP_PROPERTY,
-                        false, false, new HashMap<String, String>(), null, null));
-
-        configProps.put("defaultPropertiesConsumer",
-                new ConnectorProperty("Consumer properties", false, 7, ConnectorPropertyType.MAP_PROPERTY,
-                        false, false, new HashMap<String, String>(), null, null));
+                .property("defaultPropertiesConsumer", ConnectorPropertyBuilder.create(ConnectorPropertyType.MAP_PROPERTY)
+                        .order(7)
+                        .description("Consumer properties")
+                        .required(false)
+                        .defaultValue(new HashMap<String, String>()));
 
         // Add predefined properties as read-only text
         try {
             StringWriter writerProducer = new StringWriter();
             defaultPropertiesProducer.store(writerProducer,
                     "properties can only be edited in the property file: kafka-producer.properties");
-            configProps.put("propertiesProducer",
-                    new ConnectorProperty("Predefined producer properties", false, 6,
-                            ConnectorPropertyType.STRING_LARGE_PROPERTY,
-                            true, false, removeDateCommentLine(writerProducer.getBuffer().toString()),
-                            null, null));
+            builder.property("propertiesProducer", ConnectorPropertyBuilder.largeText()
+                    .order(6)
+                    .description("Predefined producer properties")
+                    .readonly(true)
+                    .defaultValue(removeDateCommentLine(writerProducer.getBuffer().toString())));
 
             StringWriter writerConsumer = new StringWriter();
             defaultPropertiesConsumer.store(writerConsumer,
                     "properties can only be edited in the property file: kafka-consumer.properties");
-            configProps.put("propertiesConsumer",
-                    new ConnectorProperty("Predefined consumer properties", false, 8,
-                            ConnectorPropertyType.STRING_LARGE_PROPERTY,
-                            true, false, removeDateCommentLine(writerConsumer.getBuffer().toString()),
-                            null, null));
+            builder.property("propertiesConsumer", ConnectorPropertyBuilder.largeText()
+                    .order(8)
+                    .description("Predefined consumer properties")
+                    .readonly(true)
+                    .defaultValue(removeDateCommentLine(writerConsumer.getBuffer().toString())));
         } catch (IOException e) {
             log.warn("Could not create properties display: {}", e.getMessage());
         }
 
-        String name = "Kafka";
-        String description = "Connector to receive and send messages to an external Kafka broker. " +
-                "Inbound mappings allow to extract values from the payload and the key and map these to the Cumulocity payload. "
-                +
-                "The relevant setting in a mapping is 'supportsMessageContext'.\n" +
-                "In outbound mappings any string that is mapped to '_CONTEXT_DATA_.key' is used as the outbound Kafka record key.\n"
-                +
-                "The connector uses SASL_SSL as security protocol.";
-
-        return new ConnectorSpecification(
-                name,
-                description,
-                ConnectorType.KAFKA,
-                false,
-                configProps,
-                true,
-                supportedDirections());
+        return builder.build();
     }
 
 }

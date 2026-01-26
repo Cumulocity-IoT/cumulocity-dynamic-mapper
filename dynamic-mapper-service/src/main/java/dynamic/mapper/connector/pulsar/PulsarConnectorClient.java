@@ -24,9 +24,9 @@ package dynamic.mapper.connector.pulsar;
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.configuration.ConnectorId;
 import dynamic.mapper.connector.core.ConnectorProperty;
-import dynamic.mapper.connector.core.ConnectorPropertyCondition;
-import dynamic.mapper.connector.core.ConnectorPropertyType;
+import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
 import dynamic.mapper.connector.core.ConnectorSpecification;
+import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
@@ -837,100 +837,92 @@ public class PulsarConnectorClient extends AConnectorClient {
      * Create Pulsar connector specification
      */
     private ConnectorSpecification createConnectorSpecification() {
-        Map<String, ConnectorProperty> configProps = new LinkedHashMap<>();
+        return ConnectorSpecificationBuilder
+                .create("Apache Pulsar", ConnectorType.PULSAR)
+                .description("Connector for connecting to Apache Pulsar message broker. " +
+                        "Supports QoS levels, wildcards, and MQTT-style topic format conversion.")
+                .supportedDirections(supportedDirections())
 
-        ConnectorPropertyCondition tlsCondition = new ConnectorPropertyCondition("enableTls", new String[] { "true" });
-        ConnectorPropertyCondition certCondition = new ConnectorPropertyCondition(
-                "useSelfSignedCertificate", new String[] { "true" });
-        ConnectorPropertyCondition authCondition = new ConnectorPropertyCondition(
-                "authenticationMethod", new String[] { "token", "oauth2", "tls", "basic" });
+                // Connection settings
+                .property("serviceUrl", ConnectorPropertyBuilder.requiredString()
+                        .order(0)
+                        .description("This can be in the format: pulsar://localhost:6650 for non-TLS or pulsar+ssl://localhost:6651 for TLS")
+                        .defaultValue("pulsar://localhost:6650"))
 
-        configProps.put("serviceUrl",
-                new ConnectorProperty(
-                        "This can be in the format: pulsar://localhost:6650 for non-TLS or pulsar+ssl://localhost:6651 for TLS",
-                        true, 0, ConnectorPropertyType.STRING_PROPERTY, false, false,
-                        "pulsar://localhost:6650", null, null));
+                // TLS configuration
+                .property("enableTls", ConnectorPropertyBuilder.optionalBoolean()
+                        .order(1)
+                        .defaultValue(false))
 
-        configProps.put("enableTls",
-                new ConnectorProperty(null, false, 1, ConnectorPropertyType.BOOLEAN_PROPERTY,
-                        false, false, false, null, null));
+                .property("useSelfSignedCertificate", ConnectorPropertyBuilder.optionalBoolean()
+                        .order(2)
+                        .defaultValue(false)
+                        .condition("enableTls", "true"))
 
-        configProps.put("useSelfSignedCertificate",
-                new ConnectorProperty(null, false, 2, ConnectorPropertyType.BOOLEAN_PROPERTY,
-                        false, false, false, null, tlsCondition));
+                .property("fingerprintSelfSignedCertificate", ConnectorPropertyBuilder.optionalString()
+                        .order(3)
+                        .condition("useSelfSignedCertificate", "true"))
 
-        configProps.put("fingerprintSelfSignedCertificate",
-                new ConnectorProperty(null, false, 3, ConnectorPropertyType.STRING_PROPERTY,
-                        false, false, null, null, certCondition));
+                .property("nameCertificate", ConnectorPropertyBuilder.optionalString()
+                        .order(4)
+                        .condition("useSelfSignedCertificate", "true"))
 
-        configProps.put("nameCertificate",
-                new ConnectorProperty(null, false, 4, ConnectorPropertyType.STRING_PROPERTY,
-                        false, false, null, null, certCondition));
+                // Authentication
+                .property("authenticationMethod", ConnectorPropertyBuilder.optionalOption()
+                        .order(5)
+                        .defaultValue("none")
+                        .optionsWithLabels("none", "None", "token", "Token", "oauth2", "OAuth2",
+                                "tls", "TLS", "basic", "Basic"))
 
-        configProps.put("authenticationMethod",
-                new ConnectorProperty(null, false, 5, ConnectorPropertyType.OPTION_PROPERTY,
-                        false, false, "none",
-                        Map.of("none", "None", "token", "Token", "oauth2", "OAuth2",
-                                "tls", "TLS", "basic", "Basic"),
-                        null));
+                .property("authenticationParams", ConnectorPropertyBuilder.optionalSensitive()
+                        .order(6)
+                        .condition("authenticationMethod", "token", "oauth2", "tls", "basic"))
 
-        configProps.put("authenticationParams",
-                new ConnectorProperty(null, false, 6, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY,
-                        false, false, null, null, authCondition));
+                // Timeouts
+                .property("connectionTimeoutSeconds", ConnectorPropertyBuilder.requiredNumeric()
+                        .order(7)
+                        .defaultValue(DEFAULT_CONNECTION_TIMEOUT))
 
-        configProps.put("connectionTimeoutSeconds",
-                new ConnectorProperty(null, false, 7, ConnectorPropertyType.NUMERIC_PROPERTY,
-                        false, false, DEFAULT_CONNECTION_TIMEOUT, null, null));
+                .property("operationTimeoutSeconds", ConnectorPropertyBuilder.requiredNumeric()
+                        .order(8)
+                        .defaultValue(DEFAULT_OPERATION_TIMEOUT))
 
-        configProps.put("operationTimeoutSeconds",
-                new ConnectorProperty(null, false, 8, ConnectorPropertyType.NUMERIC_PROPERTY,
-                        false, false, DEFAULT_OPERATION_TIMEOUT, null, null));
+                .property("keepAliveIntervalSeconds", ConnectorPropertyBuilder.requiredNumeric()
+                        .order(9)
+                        .defaultValue(DEFAULT_KEEP_ALIVE))
 
-        configProps.put("keepAliveIntervalSeconds",
-                new ConnectorProperty(null, false, 9, ConnectorPropertyType.NUMERIC_PROPERTY,
-                        false, false, DEFAULT_KEEP_ALIVE, null, null));
+                // Subscription settings
+                .property("subscriptionType", ConnectorPropertyBuilder.optionalOption()
+                        .order(10)
+                        .defaultValue("Shared")
+                        .optionsWithLabels("Exclusive", "Exclusive", "Shared", "Shared",
+                                "Failover", "Failover", "Key_Shared", "Key Shared"))
 
-        configProps.put("subscriptionType",
-                new ConnectorProperty(null, false, 10, ConnectorPropertyType.OPTION_PROPERTY,
-                        false, false, "Shared",
-                        Map.of("Exclusive", "Exclusive", "Shared", "Shared",
-                                "Failover", "Failover", "Key_Shared", "Key Shared"),
-                        null));
+                .property("subscriptionName", ConnectorPropertyBuilder.optionalString()
+                        .order(11)
+                        .description("Controls how Pulsar subscription names are generated"))
 
-        configProps.put("subscriptionName",
-                new ConnectorProperty(
-                        "Controls how Pulsar subscription names are generated",
-                        false, 11, ConnectorPropertyType.STRING_PROPERTY, false, false,
-                        null, null, null));
+                // Wildcard support (read-only)
+                .property("supportsWildcardInTopicInbound", ConnectorPropertyBuilder.optionalBoolean()
+                        .order(12)
+                        .readonly(true)
+                        .defaultValue(true))
 
-        configProps.put("supportsWildcardInTopicInbound",
-                new ConnectorProperty(null, false, 12, ConnectorPropertyType.BOOLEAN_PROPERTY,
-                        true, false, true, null, null));
+                .property("supportsWildcardInTopicOutbound", ConnectorPropertyBuilder.optionalBoolean()
+                        .order(13)
+                        .readonly(true)
+                        .defaultValue(false))
 
-        configProps.put("supportsWildcardInTopicOutbound",
-                new ConnectorProperty(null, false, 13, ConnectorPropertyType.BOOLEAN_PROPERTY,
-                        true, false, false, null, null));
+                // Pulsar-specific settings
+                .property("pulsarTenant", ConnectorPropertyBuilder.optionalString()
+                        .order(14)
+                        .defaultValue("public"))
 
-        configProps.put("pulsarTenant",
-                new ConnectorProperty(null, false, 14, ConnectorPropertyType.STRING_PROPERTY,
-                        false, false, "public", null, null));
+                .property("pulsarNamespace", ConnectorPropertyBuilder.optionalString()
+                        .order(15)
+                        .defaultValue("default"))
 
-        configProps.put("pulsarNamespace",
-                new ConnectorProperty(null, false, 15, ConnectorPropertyType.STRING_PROPERTY,
-                        false, false, "default", null, null));
-
-        String name = "Apache Pulsar";
-        String description = "Connector for connecting to Apache Pulsar message broker. " +
-                "Supports QoS levels, wildcards, and MQTT-style topic format conversion.";
-
-        return new ConnectorSpecification(
-                name,
-                description,
-                ConnectorType.PULSAR,
-                false,
-                configProps,
-                false,
-                supportedDirections());
+                .build();
     }
 
     /**

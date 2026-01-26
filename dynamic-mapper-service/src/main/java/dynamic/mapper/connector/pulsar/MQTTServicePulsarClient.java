@@ -26,9 +26,10 @@ import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.configuration.ConnectorId;
 import dynamic.mapper.connector.core.ConnectorProperty;
-import dynamic.mapper.connector.core.ConnectorPropertyCondition;
+import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
 import dynamic.mapper.connector.core.ConnectorPropertyType;
 import dynamic.mapper.connector.core.ConnectorSpecification;
+import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
@@ -793,95 +794,105 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
      * Create MQTT Service Pulsar specification
      */
     private ConnectorSpecification createConnectorSpecification() {
-        Map<String, ConnectorProperty> configProps = new LinkedHashMap<>();
+        return ConnectorSpecificationBuilder
+                .create("Cumulocity MQTT-Service", ConnectorType.CUMULOCITY_MQTT_SERVICE_PULSAR)
+                .description("Connector for connecting to Cumulocity MQTT Service using Pulsar protocol. " +
+                        "The QoS 'exactly once' is reduced to 'at least once'.")
+                .singleton(true)
+                .supportedDirections(supportedDirections())
 
-        ConnectorPropertyCondition tlsCondition = new ConnectorPropertyCondition("enableTls", new String[] { "true" });
-        ConnectorPropertyCondition authCondition = new ConnectorPropertyCondition(
-                "authenticationMethod", new String[] { "token", "oauth2", "tls", "basic" });
+                // Connection settings (pre-configured, read-only)
+                .property("serviceUrl", ConnectorPropertyBuilder.requiredString()
+                        .order(0)
+                        .description("Pulsar service URL for Cumulocity MQTT Service")
+                        .readonly(true)
+                        .hidden(true)
+                        .defaultValue("pulsar://cumulocity:6650"))
 
-        configProps.put("serviceUrl",
-                new ConnectorProperty(
-                        "Pulsar service URL for Cumulocity MQTT Service",
-                        true, 0, ConnectorPropertyType.STRING_PROPERTY, true, true,
-                        "pulsar://cumulocity:6650", null, null));
+                // TLS configuration (read-only)
+                .property("enableTls", ConnectorPropertyBuilder.optionalBoolean()
+                        .order(1)
+                        .readonly(true)
+                        .defaultValue(false))
 
-        configProps.put("enableTls",
-                new ConnectorProperty(null, false, 1, ConnectorPropertyType.BOOLEAN_PROPERTY,
-                        false, true, false, null, null));
+                .property("useSelfSignedCertificate", ConnectorPropertyBuilder.optionalBoolean()
+                        .order(2)
+                        .readonly(true)
+                        .defaultValue(false)
+                        .condition("enableTls", "true"))
 
-        configProps.put("useSelfSignedCertificate",
-                new ConnectorProperty(null, false, 2, ConnectorPropertyType.BOOLEAN_PROPERTY,
-                        false, true, false, null, tlsCondition));
+                .property("fingerprintSelfSignedCertificate", ConnectorPropertyBuilder.optionalString()
+                        .order(3)
+                        .readonly(true))
 
-        configProps.put("fingerprintSelfSignedCertificate",
-                new ConnectorProperty(null, false, 3, ConnectorPropertyType.STRING_PROPERTY,
-                        false, true, null, null, null));
+                .property("nameCertificate", ConnectorPropertyBuilder.optionalString()
+                        .order(4)
+                        .readonly(true))
 
-        configProps.put("nameCertificate",
-                new ConnectorProperty(null, false, 4, ConnectorPropertyType.STRING_PROPERTY,
-                        false, true, null, null, null));
+                // Authentication (pre-configured, read-only)
+                .property("authenticationMethod", ConnectorPropertyBuilder.optionalOption()
+                        .order(5)
+                        .readonly(true)
+                        .defaultValue("basic")
+                        .optionsWithLabels("none", "None", "token", "Token", "oauth2", "OAuth2",
+                                "tls", "TLS", "basic", "Basic"))
 
-        configProps.put("authenticationMethod",
-                new ConnectorProperty(null, false, 5, ConnectorPropertyType.OPTION_PROPERTY,
-                        false, true, "basic",
-                        Map.of("none", "None", "token", "Token", "oauth2", "OAuth2",
-                                "tls", "TLS", "basic", "Basic"),
-                        null));
+                .property("authenticationParams", ConnectorPropertyBuilder.optionalSensitive()
+                        .order(6)
+                        .readonly(true)
+                        .condition("authenticationMethod", "token", "oauth2", "tls", "basic"))
 
-        configProps.put("authenticationParams",
-                new ConnectorProperty(null, false, 6, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY,
-                        false, true, null, null, authCondition));
+                // Timeouts (read-only)
+                .property("connectionTimeoutSeconds", ConnectorPropertyBuilder.requiredNumeric()
+                        .order(7)
+                        .readonly(true)
+                        .defaultValue(DEFAULT_CONNECTION_TIMEOUT))
 
-        configProps.put("connectionTimeoutSeconds",
-                new ConnectorProperty(null, false, 7, ConnectorPropertyType.NUMERIC_PROPERTY,
-                        false, true, DEFAULT_CONNECTION_TIMEOUT, null, null));
+                .property("operationTimeoutSeconds", ConnectorPropertyBuilder.requiredNumeric()
+                        .order(8)
+                        .readonly(true)
+                        .defaultValue(DEFAULT_OPERATION_TIMEOUT))
 
-        configProps.put("operationTimeoutSeconds",
-                new ConnectorProperty(null, false, 8, ConnectorPropertyType.NUMERIC_PROPERTY,
-                        false, true, DEFAULT_OPERATION_TIMEOUT, null, null));
+                .property("keepAliveIntervalSeconds", ConnectorPropertyBuilder.requiredNumeric()
+                        .order(9)
+                        .readonly(true)
+                        .defaultValue(DEFAULT_KEEP_ALIVE))
 
-        configProps.put("keepAliveIntervalSeconds",
-                new ConnectorProperty(null, false, 9, ConnectorPropertyType.NUMERIC_PROPERTY,
-                        false, true, DEFAULT_KEEP_ALIVE, null, null));
+                // Subscription settings (read-only)
+                .property("subscriptionType", ConnectorPropertyBuilder.optionalOption()
+                        .order(10)
+                        .readonly(true)
+                        .defaultValue("Shared")
+                        .optionsWithLabels("Exclusive", "Exclusive", "Shared", "Shared",
+                                "Failover", "Failover", "Key_Shared", "Key Shared"))
 
-        configProps.put("subscriptionType",
-                new ConnectorProperty(null, false, 10, ConnectorPropertyType.OPTION_PROPERTY,
-                        false, true, "Shared",
-                        Map.of("Exclusive", "Exclusive", "Shared", "Shared",
-                                "Failover", "Failover", "Key_Shared", "Key Shared"),
-                        null));
+                .property("subscriptionName", ConnectorPropertyBuilder.optionalString()
+                        .order(11)
+                        .description("Pulsar subscription name")
+                        .readonly(true))
 
-        configProps.put("subscriptionName",
-                new ConnectorProperty("Pulsar subscription name", false, 11,
-                        ConnectorPropertyType.STRING_PROPERTY, false, true, null, null, null));
+                // Wildcard support (read-only)
+                .property("supportsWildcardInTopicInbound", ConnectorPropertyBuilder.optionalBoolean()
+                        .order(12)
+                        .readonly(true)
+                        .defaultValue(true))
 
-        configProps.put("supportsWildcardInTopicInbound",
-                new ConnectorProperty(null, false, 12, ConnectorPropertyType.BOOLEAN_PROPERTY,
-                        true, false, true, null, null));
+                .property("supportsWildcardInTopicOutbound", ConnectorPropertyBuilder.optionalBoolean()
+                        .order(13)
+                        .readonly(true)
+                        .defaultValue(true))
 
-        configProps.put("supportsWildcardInTopicOutbound",
-                new ConnectorProperty(null, false, 13, ConnectorPropertyType.BOOLEAN_PROPERTY,
-                        true, false, true, null, null));
+                // Pulsar-specific settings (read-only)
+                .property("pulsarTenant", ConnectorPropertyBuilder.optionalString()
+                        .order(14)
+                        .readonly(true)
+                        .defaultValue("public"))
 
-        configProps.put("pulsarTenant",
-                new ConnectorProperty(null, false, 14, ConnectorPropertyType.STRING_PROPERTY,
-                        false, true, "public", null, null));
+                .property("pulsarNamespace", ConnectorPropertyBuilder.optionalString()
+                        .order(15)
+                        .readonly(true)
+                        .defaultValue(PULSAR_NAMESPACE))
 
-        configProps.put("pulsarNamespace",
-                new ConnectorProperty(null, false, 15, ConnectorPropertyType.STRING_PROPERTY,
-                        false, true, PULSAR_NAMESPACE, null, null));
-
-        String name = "Cumulocity MQTT-Service";
-        String description = "Connector for connecting to Cumulocity MQTT Service using Pulsar protocol. " +
-                "The QoS 'exactly once' is reduced to 'at least once'.";
-
-        return new ConnectorSpecification(
-                name,
-                description,
-                ConnectorType.CUMULOCITY_MQTT_SERVICE_PULSAR,
-                true, // singleton
-                configProps,
-                false,
-                supportedDirections());
+                .build();
     }
 }

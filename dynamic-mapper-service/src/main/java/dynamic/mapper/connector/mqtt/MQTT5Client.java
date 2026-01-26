@@ -35,6 +35,7 @@ import com.hivemq.client.mqtt.mqtt5.message.unsubscribe.Mqtt5Unsubscribe;
 import com.hivemq.client.mqtt.mqtt5.message.auth.Mqtt5SimpleAuthBuilder.Complete;
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.connector.core.ConnectorSpecification;
+import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
@@ -422,16 +423,11 @@ public class MQTT5Client extends AMQTTClient {
 
     @Override
     protected ConnectorSpecification createConnectorSpecification() {
-        String name = "Generic MQTT 5.0";
-        String description = "Connector for connecting to external MQTT 5.0 broker over tcp or websocket.";
-
-        return new ConnectorSpecification(
-                name,
-                description,
-                ConnectorType.MQTT,
-                false,
-                buildCommonMqttProperties(MQTT_VERSION_5_0),
-                false,
-                supportedDirections());
+        return ConnectorSpecificationBuilder
+                .create("Generic MQTT 5.0", ConnectorType.MQTT)
+                .description("Connector for connecting to external MQTT 5.0 broker over tcp or websocket.")
+                .properties(buildCommonMqttProperties(MQTT_VERSION_5_0))
+                .supportedDirections(supportedDirections())
+                .build();
     }
 }

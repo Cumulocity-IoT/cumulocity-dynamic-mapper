@@ -34,6 +34,7 @@ import com.hivemq.client.mqtt.mqtt3.message.unsubscribe.Mqtt3Unsubscribe;
 import com.hivemq.client.mqtt.mqtt3.message.auth.Mqtt3SimpleAuthBuilder.Complete;
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.connector.core.ConnectorSpecification;
+import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
@@ -389,16 +390,11 @@ public class MQTT3Client extends AMQTTClient {
 
     @Override
     protected ConnectorSpecification createConnectorSpecification() {
-        String name = "Generic MQTT";
-        String description = "Connector for connecting to external MQTT broker over tcp or websocket.";
-
-        return new ConnectorSpecification(
-                name,
-                description,
-                ConnectorType.MQTT,
-                false,
-                buildCommonMqttProperties(MQTT_VERSION_3_1_1),
-                false,
-                supportedDirections());
+        return ConnectorSpecificationBuilder
+                .create("Generic MQTT", ConnectorType.MQTT)
+                .description("Connector for connecting to external MQTT broker over tcp or websocket.")
+                .properties(buildCommonMqttProperties(MQTT_VERSION_3_1_1))
+                .supportedDirections(supportedDirections())
+                .build();
     }
 }

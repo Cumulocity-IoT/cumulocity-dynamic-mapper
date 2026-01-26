@@ -25,9 +25,9 @@ import com.rabbitmq.client.*;
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.configuration.ConnectorId;
 import dynamic.mapper.connector.core.ConnectorProperty;
-import dynamic.mapper.connector.core.ConnectorPropertyCondition;
-import dynamic.mapper.connector.core.ConnectorPropertyType;
+import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
 import dynamic.mapper.connector.core.ConnectorSpecification;
+import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
@@ -554,102 +554,95 @@ public class AMQPClient extends AConnectorClient {
     }
 
     /**
-     * Create connector specification with all properties
+     * Create connector specification with all properties using builder pattern
      */
     private ConnectorSpecification createConnectorSpecification() {
-        Map<String, ConnectorProperty> configProps = new LinkedHashMap<>();
+        return ConnectorSpecificationBuilder
+                .create("AMQP Connector", ConnectorType.AMQP)
+                .description("Connector for connecting to AMQP 0-9-1 brokers (RabbitMQ, etc.). " +
+                        "Supports publishing and consuming messages via queues and exchanges.")
+                .supportedDirections(supportedDirections())
 
-        ConnectorPropertyCondition tlsCondition = new ConnectorPropertyCondition("protocol",
-                new String[] { "amqps://" });
-        ConnectorPropertyCondition certCondition = new ConnectorPropertyCondition(
-                "useSelfSignedCertificate", new String[] { "true" });
+                // Protocol selection
+                .property("protocol", ConnectorPropertyBuilder.requiredOption()
+                        .order(0)
+                        .defaultValue("amqp://")
+                        .options("amqp://", "amqps://"))
 
-        configProps.put("protocol",
-                new ConnectorProperty(null, true, 0, ConnectorPropertyType.OPTION_PROPERTY, false, false,
-                        "amqp://",
-                        Map.of("amqp://", "amqp://", "amqps://", "amqps://"),
-                        null));
+                // Basic connection properties
+                .property("host", ConnectorPropertyBuilder.requiredString()
+                        .order(1)
+                        .defaultValue("localhost"))
 
-        configProps.put("host",
-                new ConnectorProperty(null, true, 1, ConnectorPropertyType.STRING_PROPERTY, false, false,
-                        "localhost", null, null));
+                .property("port", ConnectorPropertyBuilder.requiredNumeric()
+                        .order(2)
+                        .defaultValue(5672))
 
-        configProps.put("port",
-                new ConnectorProperty(null, true, 2, ConnectorPropertyType.NUMERIC_PROPERTY, false, false,
-                        5672, null, null));
+                .property("virtualHost", ConnectorPropertyBuilder.optionalString()
+                        .order(3)
+                        .defaultValue("/"))
 
-        configProps.put("virtualHost",
-                new ConnectorProperty(null, false, 3, ConnectorPropertyType.STRING_PROPERTY, false, false,
-                        "/", null, null));
+                // Authentication
+                .property("username", ConnectorPropertyBuilder.optionalString()
+                        .order(4)
+                        .defaultValue("guest"))
 
-        configProps.put("username",
-                new ConnectorProperty(null, false, 4, ConnectorPropertyType.STRING_PROPERTY, false, false,
-                        "guest", null, null));
+                .property("password", ConnectorPropertyBuilder.optionalSensitive()
+                        .order(5))
 
-        configProps.put("password",
-                new ConnectorProperty(null, false, 5, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, false, false,
-                        null, null, null));
+                // AMQP exchange configuration
+                .property("exchange", ConnectorPropertyBuilder.optionalString()
+                        .order(6)
+                        .defaultValue(""))
 
-        configProps.put("exchange",
-                new ConnectorProperty(null, false, 6, ConnectorPropertyType.STRING_PROPERTY, false, false,
-                        "", null, null));
+                .property("exchangeType", ConnectorPropertyBuilder.optionalOption()
+                        .order(7)
+                        .defaultValue("topic")
+                        .optionsWithLabels("topic", "Topic", "direct", "Direct", "fanout", "Fanout", "headers", "Headers"))
 
-        configProps.put("exchangeType",
-                new ConnectorProperty(null, false, 7, ConnectorPropertyType.OPTION_PROPERTY, false, false,
-                        "topic",
-                        Map.of("topic", "Topic", "direct", "Direct", "fanout", "Fanout", "headers", "Headers"),
-                        null));
+                // Queue configuration
+                .property("queuePrefix", ConnectorPropertyBuilder.optionalString()
+                        .order(8)
+                        .defaultValue(""))
 
-        configProps.put("queuePrefix",
-                new ConnectorProperty(null, false, 8, ConnectorPropertyType.STRING_PROPERTY, false, false,
-                        "", null, null));
+                .property("autoDeleteQueue", ConnectorPropertyBuilder.optionalBoolean()
+                        .order(9)
+                        .defaultValue(false))
 
-        configProps.put("autoDeleteQueue",
-                new ConnectorProperty(null, false, 9, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false,
-                        false, null, null));
+                // TLS/SSL Certificate configuration (only for amqps://)
+                .property("useSelfSignedCertificate", ConnectorPropertyBuilder.optionalBoolean()
+                        .order(10)
+                        .defaultValue(false)
+                        .condition("protocol", "amqps://"))
 
-        configProps.put("useSelfSignedCertificate",
-                new ConnectorProperty(null, false, 10, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false,
-                        false, null, tlsCondition));
+                .property("fingerprintSelfSignedCertificate", ConnectorPropertyBuilder.largeText()
+                        .order(11)
+                        .description("SHA 1 fingerprint of CA or Self Signed Certificate")
+                        .condition("useSelfSignedCertificate", "true"))
 
-        configProps.put("fingerprintSelfSignedCertificate",
-                new ConnectorProperty("SHA 1 fingerprint of CA or Self Signed Certificate", false, 11,
-                        ConnectorPropertyType.STRING_LARGE_PROPERTY, false, false,
-                        null, null, certCondition));
+                .property("nameCertificate", ConnectorPropertyBuilder.optionalString()
+                        .order(12)
+                        .condition("useSelfSignedCertificate", "true"))
 
-        configProps.put("nameCertificate",
-                new ConnectorProperty(null, false, 12, ConnectorPropertyType.STRING_PROPERTY, false, false,
-                        null, null, certCondition));
+                .property("certificateChainInPemFormat", ConnectorPropertyBuilder.largeText()
+                        .order(13)
+                        .description("Either enter certificate in PEM format or identify certificate by name and fingerprint (must be uploaded as Trusted Certificate in Device Management)")
+                        .condition("useSelfSignedCertificate", "true"))
 
-        configProps.put("certificateChainInPemFormat",
-                new ConnectorProperty(
-                        "Either enter certificate in PEM format or identify certificate by name and fingerprint (must be uploaded as Trusted Certificate in Device Management)",
-                        false, 13, ConnectorPropertyType.STRING_LARGE_PROPERTY, false, false,
-                        null, null, certCondition));
+                // Connection behavior
+                .property("automaticRecovery", ConnectorPropertyBuilder.optionalBoolean()
+                        .order(14)
+                        .defaultValue(true))
 
-        configProps.put("automaticRecovery",
-                new ConnectorProperty(null, false, 14, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false,
-                        true, null, null));
+                // Wildcard support flags
+                .property("supportsWildcardInTopicInbound", ConnectorPropertyBuilder.optionalBoolean()
+                        .order(15)
+                        .defaultValue(true))
 
-        configProps.put("supportsWildcardInTopicInbound",
-                new ConnectorProperty(null, false, 15, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false,
-                        true, null, null));
+                .property("supportsWildcardInTopicOutbound", ConnectorPropertyBuilder.optionalBoolean()
+                        .order(16)
+                        .defaultValue(false))
 
-        configProps.put("supportsWildcardInTopicOutbound",
-                new ConnectorProperty(null, false, 16, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false,
-                        false, null, null));
-
-        String name = "AMQP Connector";
-        String description = "Connector for connecting to AMQP 0-9-1 brokers (RabbitMQ, etc.). " +
-                "Supports publishing and consuming messages via queues and exchanges.";
-
-        return new ConnectorSpecification(
-                name,
-                description,
-                ConnectorType.AMQP,
-                false,
-                configProps,
-                false,
-                supportedDirections());
+                .build();
     }
 }

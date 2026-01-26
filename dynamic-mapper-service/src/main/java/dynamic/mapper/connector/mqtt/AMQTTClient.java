@@ -25,9 +25,9 @@ import com.hivemq.client.mqtt.MqttClientSslConfig;
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.configuration.ConnectorId;
 import dynamic.mapper.connector.core.ConnectorProperty;
-import dynamic.mapper.connector.core.ConnectorPropertyCondition;
-import dynamic.mapper.connector.core.ConnectorPropertyType;
+import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
 import dynamic.mapper.connector.core.ConnectorSpecification;
+import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
@@ -402,93 +402,103 @@ public abstract class AMQTTClient extends AConnectorClient {
     }
 
     /**
-     * Create common MQTT connector specification properties
+     * Create common MQTT connector specification properties using builder pattern
      * Returns base properties that are common to MQTT 3.x and 5.0
+     *
+     * @param defaultVersion The default MQTT version (3.1.1 or 5.0)
+     * @return Map of property names to ConnectorProperty instances
      */
     protected Map<String, ConnectorProperty> buildCommonMqttProperties(String defaultVersion) {
         Map<String, ConnectorProperty> configProps = new LinkedHashMap<>();
 
-        ConnectorPropertyCondition tlsCondition = new ConnectorPropertyCondition("protocol",
-                new String[] { MQTT_PROTOCOL_MQTTS, MQTT_PROTOCOL_WSS });
-        ConnectorPropertyCondition certCondition = new ConnectorPropertyCondition(
-                "useSelfSignedCertificate", new String[] { "true" });
-        ConnectorPropertyCondition wsCondition = new ConnectorPropertyCondition("protocol",
-                new String[] { MQTT_PROTOCOL_WS, MQTT_PROTOCOL_WSS });
+        // MQTT Version selection
+        configProps.put("version", ConnectorPropertyBuilder.requiredOption()
+                .order(0)
+                .defaultValue(defaultVersion)
+                .options(MQTT_VERSION_3_1_1, MQTT_VERSION_5_0)
+                .build());
 
-        configProps.put("version",
-                new ConnectorProperty(null, true, 0, ConnectorPropertyType.OPTION_PROPERTY, false, false,
-                        defaultVersion,
-                        Map.of(MQTT_VERSION_3_1_1, MQTT_VERSION_3_1_1, MQTT_VERSION_5_0, MQTT_VERSION_5_0),
-                        null));
+        // Protocol selection (mqtt://, mqtts://, ws://, wss://)
+        configProps.put("protocol", ConnectorPropertyBuilder.requiredOption()
+                .order(1)
+                .defaultValue(MQTT_PROTOCOL_MQTT)
+                .options(MQTT_PROTOCOL_MQTT, MQTT_PROTOCOL_MQTTS, MQTT_PROTOCOL_WS, MQTT_PROTOCOL_WSS)
+                .build());
 
-        configProps.put("protocol",
-                new ConnectorProperty(null, true, 1, ConnectorPropertyType.OPTION_PROPERTY, false, false,
-                        MQTT_PROTOCOL_MQTT,
-                        Map.of(
-                                MQTT_PROTOCOL_MQTT, MQTT_PROTOCOL_MQTT,
-                                MQTT_PROTOCOL_MQTTS, MQTT_PROTOCOL_MQTTS,
-                                MQTT_PROTOCOL_WS, MQTT_PROTOCOL_WS,
-                                MQTT_PROTOCOL_WSS, MQTT_PROTOCOL_WSS),
-                        null));
+        // Basic connection properties
+        configProps.put("mqttHost", ConnectorPropertyBuilder.requiredString()
+                .order(2)
+                .build());
 
-        configProps.put("mqttHost",
-                new ConnectorProperty(null, true, 2, ConnectorPropertyType.STRING_PROPERTY, false, false,
-                        null, null, null));
+        configProps.put("mqttPort", ConnectorPropertyBuilder.requiredNumeric()
+                .order(3)
+                .build());
 
-        configProps.put("mqttPort",
-                new ConnectorProperty(null, true, 3, ConnectorPropertyType.NUMERIC_PROPERTY, false, false,
-                        null, null, null));
+        // Optional authentication
+        configProps.put("user", ConnectorPropertyBuilder.optionalString()
+                .order(4)
+                .build());
 
-        configProps.put("user",
-                new ConnectorProperty(null, false, 4, ConnectorPropertyType.STRING_PROPERTY, false, false,
-                        null, null, null));
+        configProps.put("password", ConnectorPropertyBuilder.optionalSensitive()
+                .order(5)
+                .build());
 
-        configProps.put("password",
-                new ConnectorProperty(null, false, 5, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, false, false,
-                        null, null, null));
+        configProps.put("clientId", ConnectorPropertyBuilder.requiredString()
+                .order(6)
+                .build());
 
-        configProps.put("clientId",
-                new ConnectorProperty(null, true, 6, ConnectorPropertyType.STRING_PROPERTY, false, false,
-                        null, null, null));
+        // TLS/SSL Certificate configuration (only visible for secure protocols)
+        configProps.put("useSelfSignedCertificate", ConnectorPropertyBuilder.optionalBoolean()
+                .order(7)
+                .defaultValue(false)
+                .condition("protocol", MQTT_PROTOCOL_MQTTS, MQTT_PROTOCOL_WSS)
+                .build());
 
-        configProps.put("useSelfSignedCertificate",
-                new ConnectorProperty(null, false, 7, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false,
-                        false, null, tlsCondition));
+        configProps.put("fingerprintSelfSignedCertificate", ConnectorPropertyBuilder.largeText()
+                .order(8)
+                .description("SHA 1 fingerprint of CA or Self Signed Certificate")
+                .condition("useSelfSignedCertificate", "true")
+                .build());
 
-        configProps.put("fingerprintSelfSignedCertificate",
-                new ConnectorProperty("SHA 1 fingerprint of CA or Self Signed Certificate", false, 8,
-                        ConnectorPropertyType.STRING_LARGE_PROPERTY, false, false,
-                        null, null, certCondition));
+        configProps.put("nameCertificate", ConnectorPropertyBuilder.optionalString()
+                .order(9)
+                .condition("useSelfSignedCertificate", "true")
+                .build());
 
-        configProps.put("nameCertificate",
-                new ConnectorProperty(null, false, 9, ConnectorPropertyType.STRING_PROPERTY, false, false,
-                        null, null, certCondition));
+        configProps.put("certificateChainInPemFormat", ConnectorPropertyBuilder.largeText()
+                .order(10)
+                .description("Either enter certificate in PEM format or identify certificate by name and fingerprint (must be uploaded as Trusted Certificate in Device Management)")
+                .condition("useSelfSignedCertificate", "true")
+                .build());
 
-        configProps.put("certificateChainInPemFormat",
-                new ConnectorProperty(
-                        "Either enter certificate in PEM format or identify certificate by name and fingerprint (must be uploaded as Trusted Certificate in Device Management)",
-                        false, 10, ConnectorPropertyType.STRING_LARGE_PROPERTY, false, false,
-                        null, null, certCondition));
+        configProps.put("disableHostnameValidation", ConnectorPropertyBuilder.optionalBoolean()
+                .order(11)
+                .defaultValue(false)
+                .condition("useSelfSignedCertificate", "true")
+                .build());
 
-        configProps.put("disableHostnameValidation",
-                new ConnectorProperty(null, false, 11, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false,
-                        false, null, certCondition));
+        // Wildcard support flags
+        configProps.put("supportsWildcardInTopicInbound", ConnectorPropertyBuilder.optionalBoolean()
+                .order(12)
+                .defaultValue(true)
+                .build());
 
-        configProps.put("supportsWildcardInTopicInbound",
-                new ConnectorProperty(null, false, 12, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false,
-                        true, null, null));
+        configProps.put("supportsWildcardInTopicOutbound", ConnectorPropertyBuilder.optionalBoolean()
+                .order(13)
+                .defaultValue(false)
+                .build());
 
-        configProps.put("supportsWildcardInTopicOutbound",
-                new ConnectorProperty(null, false, 13, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false,
-                        false, null, null));
+        // WebSocket specific configuration (only visible for WS/WSS protocols)
+        configProps.put("serverPath", ConnectorPropertyBuilder.optionalString()
+                .order(14)
+                .condition("protocol", MQTT_PROTOCOL_WS, MQTT_PROTOCOL_WSS)
+                .build());
 
-        configProps.put("serverPath",
-                new ConnectorProperty(null, false, 14, ConnectorPropertyType.STRING_PROPERTY, false, false,
-                        null, null, wsCondition));
-
-        configProps.put("cleanSession",
-                new ConnectorProperty(null, false, 15, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false,
-                        true, null, null));
+        // MQTT session behavior
+        configProps.put("cleanSession", ConnectorPropertyBuilder.optionalBoolean()
+                .order(15)
+                .defaultValue(true)
+                .build());
 
         return configProps;
     }
