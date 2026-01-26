@@ -56,3 +56,4 @@ setEnv.sh
 setup-env.sh
 USERGUIDE.html
 .claude/settings.json
+resources/test-env/amqp/setup.sh

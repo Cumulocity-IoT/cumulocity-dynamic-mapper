@@ -1,0 +1,49 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    hostname: rabbitmq
+    ports:
+      - "5672:5672"      # AMQP port
+      - "15672:15672"    # Management UI
+      - "5671:5671"      # AMQPS port (SSL/TLS)
+    environment:
+      # Default credentials
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+
+      # Virtual host
+      RABBITMQ_DEFAULT_VHOST: /
+
+      # Enable management plugin (already included in rabbitmq:*-management image)
+      # Additional plugins can be enabled here
+      # RABBITMQ_PLUGINS: rabbitmq_management rabbitmq_prometheus
+
+      # Server configuration
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: -rabbit log_levels [{connection,info}]
+
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+      - rabbitmq-logs:/var/log/rabbitmq
+
+    healthcheck:
+      test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+    networks:
+      - amqp-network
+
+    restart: unless-stopped
+
+volumes:
+  rabbitmq-data:
+    driver: local
+  rabbitmq-logs:
+    driver: local
+
+networks:
+  amqp-network:
+    driver: bridge
