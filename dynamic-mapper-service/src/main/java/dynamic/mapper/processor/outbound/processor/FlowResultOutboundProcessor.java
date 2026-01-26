@@ -127,25 +127,30 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             DynamicMapperRequest request = ProcessingResultHelper.createAndAddDynamicMapperRequest(context,
                     payloadJson, deviceMessage.getAction(), mapping);
 
-            // Set resolvedPublishTopic topic in context
+            // Override resolvedPublishTopic if DeviceMessage provides a topic
             String publishTopic = deviceMessage.getTopic();
 
-            if (publishTopic != null && !publishTopic.isEmpty() && publishTopic.contains(EXTERNAL_ID_TOKEN)) {
-                if (resolvedExternalId != null) {
-                    publishTopic = publishTopic.replace(EXTERNAL_ID_TOKEN, resolvedExternalId);
-                } else {
-                    log.warn("{} - Publish topic contains {} token but external ID could not be resolved",
-                            tenant, EXTERNAL_ID_TOKEN);
-                    // Optionally: skip processing or use a default value
-                    // return; // Uncomment to skip processing if external ID is required
+            if (publishTopic != null && !publishTopic.isEmpty()) {
+                // Handle EXTERNAL_ID_TOKEN replacement in the topic
+                if (publishTopic.contains(EXTERNAL_ID_TOKEN)) {
+                    if (resolvedExternalId != null) {
+                        publishTopic = publishTopic.replace(EXTERNAL_ID_TOKEN, resolvedExternalId);
+                    } else {
+                        log.warn("{} - Publish topic contains {} token but external ID could not be resolved",
+                                tenant, EXTERNAL_ID_TOKEN);
+                        // Optionally: skip processing or use a default value
+                        // return; // Uncomment to skip processing if external ID is required
+                    }
                 }
+                // Override the resolved publish topic with the one from DeviceMessage
+                context.setResolvedPublishTopic(publishTopic);
             }
+            // If publishTopic is null or empty, keep the resolved topic from mapping (set at line 121)
 
             // set key for Kafka messages
             if (deviceMessage.getTransportFields() != null) {
                 context.setKey(deviceMessage.getTransportFields().get(Mapping.CONTEXT_DATA_KEY_NAME));
             }
-            context.setResolvedPublishTopic(publishTopic);
 
             // Derive API: prioritize cumulocityType from DeviceMessage, fallback to deriving from topic
             API derivedAPI = null;
@@ -157,18 +162,18 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
                     log.debug("{} - Using API {} from DeviceMessage.cumulocityType for DeviceMessage",
                             tenant, derivedAPI.name);
                 }
-            } else if (publishTopic != null && !publishTopic.isEmpty()) {
-                // Fallback: derive API from publishTopic
-                derivedAPI = APITopicUtil.deriveAPIFromTopic(publishTopic);
+            } else if (context.getResolvedPublishTopic() != null && !context.getResolvedPublishTopic().isEmpty()) {
+                // Fallback: derive API from resolved publishTopic
+                derivedAPI = APITopicUtil.deriveAPIFromTopic(context.getResolvedPublishTopic());
                 if (derivedAPI != null) {
                     request.setApi(derivedAPI);
-                    log.debug("{} - Derived API {} from topic '{}' for DeviceMessage",
-                            tenant, derivedAPI.name, publishTopic);
+                    log.debug("{} - Derived API {} from resolved topic '{}' for DeviceMessage",
+                            tenant, derivedAPI.name, context.getResolvedPublishTopic());
                 }
             }
 
-            // Set publishTopic on request (preserve what JavaScript sets)
-            request.setPublishTopic(publishTopic);
+            // Set publishTopic on request from resolved topic
+            request.setPublishTopic(context.getResolvedPublishTopic());
 
             // Set sourceId on request BEFORE calling populateSourceIdentifier
             // (populateSourceIdentifier needs request.getSourceId() to be set)
@@ -189,7 +194,7 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             // For PUT/PATCH/DELETE methods, append ID to path and remove from body
             log.info("{} - Checking PUT/PATCH/DELETE adjustment: api={}, apiName={}, resolvedExternalId={}, method={}, action={}, publishTopic={}",
                     tenant, request.getApi(), request.getApi() != null ? request.getApi().name : "null",
-                    resolvedExternalId, request.getMethod(), deviceMessage.getAction(), publishTopic);
+                    resolvedExternalId, request.getMethod(), deviceMessage.getAction(), context.getResolvedPublishTopic());
 
             // Special case: Measurements don't support PUT/PATCH - they are immutable time-series data
             if (request.getApi() == API.MEASUREMENT &&
