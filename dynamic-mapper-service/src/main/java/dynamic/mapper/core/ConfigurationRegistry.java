@@ -49,6 +49,7 @@ import dynamic.mapper.configuration.TemplateType;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
+import dynamic.mapper.connector.amqp.AMQPClient;
 import dynamic.mapper.connector.http.HttpClient;
 import dynamic.mapper.connector.kafka.KafkaClientV2;
 import dynamic.mapper.connector.mqtt.MQTT3Client;
@@ -272,6 +273,13 @@ public class ConfigurationRegistry {
                     log.info("{} - MQTTService Pulsar Connector created, identifier: {}", tenant,
                             connectorConfiguration.getIdentifier());
                 }
+                break;
+            case AMQP:
+                connectorClient = new AMQPClient(this, connectorRegistry, connectorConfiguration,
+                        null,
+                        additionalSubscriptionIdTest, tenant);
+                log.info("{} - AMQP Connector created, identifier: {}", tenant,
+                        connectorConfiguration.getIdentifier());
                 break;
             case TEST:
                 connectorClient = new TestClient(this, connectorRegistry, connectorConfiguration,

@@ -177,6 +177,9 @@
           <li>
             <strong>Apache Pulsar</strong> - Connect to Pulsar topics for cloud-native messaging
           </li>
+          <li>
+            <strong>AMQP</strong> - Connect to AMQP 0-9-1 brokers like RabbitMQ for reliable message queuing
+          </li>
         </ul>
         <div class="p-b-8 text-16">
           Use the <a [routerLink]="ROUTE_ADD_CONNECTOR"> wizard</a> and <b> Add Connector</b> to create your connector.
@@ -340,6 +343,14 @@ Functions</a> for advanced scenarios</li>
     </tr>
     <tr>
       <td><strong>Kafka</strong></td>
+      <td class="text-center"><strong>X</strong></td>
+      <td class="text-center"><strong>X</strong></td>
+      <td class="text-center"><strong>X</strong></td>
+      <td class="text-center"><strong>X</strong><br></td>
+      <td>JSON, Hex, Protobuf, Extension</td>
+    </tr>
+    <tr class="table-light">
+      <td><strong>AMQP</strong><br><small class="text-muted">(RabbitMQ, etc.)</small></td>
       <td class="text-center"><strong>X</strong></td>
       <td class="text-center"><strong>X</strong></td>
       <td class="text-center"><strong>X</strong></td>
@@ -967,6 +978,7 @@ mappings.</p>
     <li><strong>Apache Pulsar</strong>: Supports QoS 0 equivalent (fire-and-forget).</li>
     <li><strong>Cumulocity MQTT Service (device isolation)</strong>: Supports QoS 0 and 1.</li>
     <li><strong>Kafka</strong>: Limited to QoS 0 for outbound operations.</li>
+    <li><strong>AMQP</strong>: Supports QoS 0 and 1 (non-persistent and persistent delivery).</li>
   </ul>
   <div class="admonition info" style="max-width: 100%;">
     <div class="title">Info</div>
@@ -1107,6 +1119,23 @@ mappings.</p>
         <td class="text-muted">not supported</td>
       </tr>
       <tr>
+        <td class="text-center">2</td>
+        <td class="text-muted">not relevant</td>
+        <td class="text-muted">not supported</td>
+      </tr>
+      <!-- AMQP group - grey background -->
+      <tr class="table-light">
+        <td rowspan="3" class="align-middle"><strong>AMQP</strong></td>
+        <td class="text-center">0</td>
+        <td class="text-muted">not relevant</td>
+        <td>Non-persistent delivery, no acknowledgment guarantee</td>
+      </tr>
+      <tr class="table-light">
+        <td class="text-center">1</td>
+        <td class="text-muted">not relevant</td>
+        <td>Persistent delivery with acknowledgment after processing</td>
+      </tr>
+      <tr class="table-light">
         <td class="text-center">2</td>
         <td class="text-muted">not relevant</td>
         <td class="text-muted">not supported</td>
