@@ -206,13 +206,6 @@ public class HttpClient extends AConnectorClient {
     }
 
     @Override
-    public boolean isConnected() {
-        // HTTP connector is connected if state is true
-        // It's a passive receiver, so there's no active connection to test
-        return connectionStateManager.isConnected();
-    }
-
-    @Override
     public void publishMEAO(ProcessingContext<?> context) {
         // HTTP connector is inbound only - no outbound publishing
         log.warn("{} - HTTP connector does not support outbound publishing", tenant);

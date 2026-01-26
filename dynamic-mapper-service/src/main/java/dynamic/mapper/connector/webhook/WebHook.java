@@ -356,11 +356,6 @@ public class WebHook extends AConnectorClient {
     }
 
     @Override
-    public boolean isConnected() {
-        return connectionStateManager.isConnected();
-    }
-
-    @Override
     public void publishMEAO(ProcessingContext<?> context) {
         if (webhookClient == null) {
             log.error("{} - WebClient is not initialized", tenant);

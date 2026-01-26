@@ -278,8 +278,8 @@ public class TestClient extends AConnectorClient {
     }
 
     @Override
-    public boolean isConnected() {
-        return simulatedConnected && connectionStateManager.isConnected();
+    protected boolean isPhysicallyConnected() {
+        return simulatedConnected;
     }
 
     /**

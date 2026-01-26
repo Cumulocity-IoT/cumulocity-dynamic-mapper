@@ -648,7 +648,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
     }
 
     @Override
-    public boolean isConnected() {
+    protected boolean isPhysicallyConnected() {
         boolean clientConnected = pulsarClient != null && !pulsarClient.isClosed();
         boolean consumerConnected = platformConsumer != null && platformConsumer.isConnected();
         boolean producerConnected = deviceProducer != null && deviceProducer.isConnected();

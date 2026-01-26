@@ -678,8 +678,8 @@ public class KafkaClientV2 extends AConnectorClient {
     }
 
     @Override
-    public boolean isConnected() {
-        if (!connectionStateManager.isConnected() || kafkaProducer == null) {
+    protected boolean isPhysicallyConnected() {
+        if (kafkaProducer == null) {
             return false;
         }
 

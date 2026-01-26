@@ -146,6 +146,13 @@ public abstract class AConnectorClient {
     @Getter
     protected ConnectionStateManager connectionStateManager;
 
+    // Synchronization primitives for connection management
+    protected final Object connectionLock = new Object();
+    protected final Object disconnectionLock = new Object();
+    protected volatile boolean isConnecting = false;
+    protected volatile boolean isDisconnecting = false;
+    protected volatile boolean intentionalDisconnect = false;
+
     // Lifecycle tasks
     private CompletableFuture<Void> initializeTask;
     private CompletableFuture<Void> connectTask;
@@ -170,11 +177,16 @@ public abstract class AConnectorClient {
     public abstract List<Direction> supportedDirections();
 
     /**
-     * This method if specifically for Kafka, since it does not have the concept of
+     * Monitor subscriptions for health and connectivity
+     * This method is specifically for Kafka, since it does not have the concept of
      * a client. Kafka rather supports consumer on topic level. They can fail to
-     * connect
-     **/
-    public abstract void monitorSubscriptions();
+     * connect.
+     * Default implementation is a no-op. Subclasses should override if needed.
+     */
+    public void monitorSubscriptions() {
+        // Default no-op implementation
+        // Subclasses like KafkaClientV2 can override to provide specific monitoring
+    }
 
     // Helper
     @Getter
@@ -187,6 +199,182 @@ public abstract class AConnectorClient {
     // Common SSL configuration constants
     protected static final List<String> DEFAULT_TLS_PROTOCOLS = Arrays.asList("TLSv1.2", "TLSv1.3");
     protected static final String CACERTS_PASSWORD = "changeit";
+
+    /**
+     * Begin connection operation - returns true if connection should proceed
+     * Subclasses should call this at the start of their connect() method
+     */
+    protected boolean beginConnection() {
+        synchronized (connectionLock) {
+            if (isConnecting) {
+                log.debug("{} - Connection already in progress", tenant);
+                return false;
+            }
+            isConnecting = true;
+            intentionalDisconnect = false;
+            return true;
+        }
+    }
+
+    /**
+     * End connection operation
+     * Subclasses should call this at the end of their connect() method
+     */
+    protected void endConnection() {
+        synchronized (connectionLock) {
+            isConnecting = false;
+        }
+    }
+
+    /**
+     * Begin disconnection operation - returns true if disconnection should proceed
+     * Subclasses should call this at the start of their disconnect() method
+     */
+    protected boolean beginDisconnection() {
+        synchronized (disconnectionLock) {
+            if (isDisconnecting) {
+                log.debug("{} - Disconnection already in progress", tenant);
+                return false;
+            }
+            isDisconnecting = true;
+            intentionalDisconnect = true;
+            return true;
+        }
+    }
+
+    /**
+     * End disconnection operation
+     * Subclasses should call this at the end of their disconnect() method
+     */
+    protected void endDisconnection() {
+        synchronized (disconnectionLock) {
+            isDisconnecting = false;
+        }
+    }
+
+    /**
+     * Functional interface for operations that can throw exceptions
+     */
+    @FunctionalInterface
+    protected interface SupplierWithException<T> {
+        T get() throws Exception;
+    }
+
+    /**
+     * Retry operation with exponential backoff
+     * @param operationName name of the operation for logging
+     * @param maxAttempts maximum number of attempts
+     * @param baseDelayMs base delay in milliseconds (will be doubled on each retry)
+     * @param operation the operation to execute
+     * @return result of the operation
+     * @throws ConnectorException if all retries fail
+     */
+    protected <T> T retryOperation(String operationName, int maxAttempts, long baseDelayMs,
+            SupplierWithException<T> operation) throws ConnectorException {
+        Exception lastException = null;
+        long delay = baseDelayMs;
+
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                log.debug("{} - Attempting {} (attempt {}/{})", tenant, operationName, attempt, maxAttempts);
+                T result = operation.get();
+                if (attempt > 1) {
+                    log.info("{} - {} succeeded on attempt {}", tenant, operationName, attempt);
+                }
+                return result;
+            } catch (Exception e) {
+                lastException = e;
+                if (attempt < maxAttempts) {
+                    log.warn("{} - {} failed on attempt {}/{}: {}. Retrying in {}ms",
+                            tenant, operationName, attempt, maxAttempts, e.getMessage(), delay);
+                    try {
+                        Thread.sleep(delay);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        throw new ConnectorException("Retry interrupted", ie);
+                    }
+                    delay *= 2; // Exponential backoff
+                } else {
+                    log.error("{} - {} failed after {} attempts", tenant, operationName, maxAttempts, e);
+                }
+            }
+        }
+
+        throw new ConnectorException(
+                String.format("%s failed after %d attempts", operationName, maxAttempts),
+                lastException);
+    }
+
+    /**
+     * Initialize SSL configuration if needed
+     * Checks configuration for SSL requirements and sets up SSL context and sslConfig
+     * @return true if SSL was initialized or not needed, false if SSL is required but failed
+     * @throws Exception if SSL initialization fails
+     */
+    protected boolean initializeSslIfNeeded() throws Exception {
+        // Check if SSL is required (protocol uses SSL/TLS)
+        boolean sslRequired = isSslRequired();
+
+        if (!sslRequired) {
+            log.debug("{} - SSL not required for this connection", tenant);
+            return true;
+        }
+
+        log.info("{} - Initializing SSL configuration", tenant);
+
+        // Check if certificate is provided
+        Boolean useSelfSignedCertificate = (Boolean) connectorConfiguration.getProperties()
+                .getOrDefault("useSelfSignedCertificate", false);
+
+        if (!useSelfSignedCertificate) {
+            log.info("{} - Using system default SSL certificates", tenant);
+            // Create SSL context with system defaults
+            KeyStore trustStore = createTrustStore(true, null, null);
+            TrustManagerFactory tmf = createTrustManagerFactory(trustStore);
+            sslContext = SSLContext.getInstance("TLS");
+            sslContext.init(null, tmf.getTrustManagers(), null);
+            return true;
+        }
+
+        // Load and configure custom certificate
+        log.info("{} - Loading custom SSL certificate", tenant);
+        cert = loadCertificateFromConfiguration();
+
+        if (cert == null) {
+            throw new ConnectorException("Failed to load SSL certificate");
+        }
+
+        logCertificateInfo(cert);
+
+        // Create truststore with custom certificates
+        KeyStore trustStore = createTrustStore(true, cert.getX509Certificates(), cert);
+        TrustManagerFactory tmf = createTrustManagerFactory(trustStore);
+
+        // Initialize SSL context
+        sslContext = SSLContext.getInstance("TLS");
+        sslContext.init(null, tmf.getTrustManagers(), null);
+
+        log.info("{} - SSL configuration initialized successfully", tenant);
+        return true;
+    }
+
+    /**
+     * Check if SSL is required based on configuration
+     * Subclasses can override this method for protocol-specific logic
+     * @return true if SSL/TLS is required
+     */
+    protected boolean isSslRequired() {
+        // Default implementation checks for common SSL indicators
+        Object urlProperty = connectorConfiguration.getProperties().get("url");
+        if (urlProperty instanceof String) {
+            String url = (String) urlProperty;
+            return url.startsWith("mqtts://") ||
+                   url.startsWith("wss://") ||
+                   url.startsWith("ssl://") ||
+                   url.startsWith("https://");
+        }
+        return false;
+    }
 
     /**
      * Initialize managers
@@ -233,14 +421,15 @@ public abstract class AConnectorClient {
                             if (!success) {
                                 throw new ConnectorException("Initialization failed");
                             }
-                            // Add this: Set status to CONFIGURED after successful initialization
+                            // Set status to CONFIGURED after successful initialization
                             if (isConfigValid(connectorConfiguration)) {
                                 connectionStateManager.updateStatus(ConnectorStatus.CONFIGURED, true, true);
                             }
+                            log.info("{} - Connector initialized successfully", tenant);
                         } catch (Exception e) {
                             log.error("{} - Initialization failed: {}", tenant, e.getMessage(), e);
                             connectionStateManager.updateStatusWithError(e);
-                            throw new CompletionException(e);
+                            throw new CompletionException("Initialization failed for connector " + connectorName, e);
                         }
                     }, virtualThreadPool);
         }
@@ -260,10 +449,11 @@ public abstract class AConnectorClient {
                         try {
                             connectionStateManager.updateStatus(ConnectorStatus.CONNECTING, true, true);
                             connect();
+                            log.info("{} - Connector connected successfully", tenant);
                         } catch (Exception e) {
                             log.error("{} - Connection failed: {}", tenant, e.getMessage(), e);
                             connectionStateManager.updateStatusWithError(e);
-                            throw new CompletionException(e);
+                            throw new CompletionException("Connection failed for connector " + connectorName, e);
                         }
                     }, virtualThreadPool);
         }
@@ -288,9 +478,11 @@ public abstract class AConnectorClient {
                             connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTING, true, true);
                             disconnect();
                             connectionStateManager.setConnected(false);
+                            log.info("{} - Connector disconnected successfully", tenant);
                         } catch (Exception e) {
                             log.error("{} - Disconnection failed: {}", tenant, e.getMessage(), e);
-                            throw new CompletionException(e);
+                            connectionStateManager.updateStatusWithError(e);
+                            throw new CompletionException("Disconnection failed for connector " + connectorName, e);
                         }
                     }, virtualThreadPool);
         }
@@ -669,9 +861,83 @@ public abstract class AConnectorClient {
 
     /**
      * Check if connector is connected
+     * Checks both the connection state manager AND physical connectivity
      */
-    public boolean isConnected() {
-        return connectionStateManager.isConnected();
+    public final boolean isConnected() {
+        return connectionStateManager.isConnected() && isPhysicallyConnected();
+    }
+
+    /**
+     * Template method for checking physical connectivity
+     * Subclasses can override to perform actual connectivity tests
+     * Default implementation returns true (assumes connection state manager is sufficient)
+     * @return true if physically connected, false otherwise
+     */
+    protected boolean isPhysicallyConnected() {
+        return true;
+    }
+
+    /**
+     * Validate certificate configuration
+     * Checks if certificate is properly configured when SSL is required
+     * @param configuration the connector configuration to validate
+     * @return true if certificate configuration is valid or not required
+     */
+    protected boolean validateCertificateConfig(ConnectorConfiguration configuration) {
+        Boolean useSelfSignedCertificate = (Boolean) configuration.getProperties()
+                .getOrDefault("useSelfSignedCertificate", false);
+
+        if (!useSelfSignedCertificate) {
+            return true; // System certificates will be used
+        }
+
+        // Check for inline PEM certificate
+        String certificateChainInPemFormat = (String) configuration.getProperties()
+                .get("certificateChainInPemFormat");
+        if (certificateChainInPemFormat != null && !certificateChainInPemFormat.trim().isEmpty()) {
+            return true;
+        }
+
+        // Check for C8Y certificate store reference
+        String nameCertificate = (String) configuration.getProperties().get("nameCertificate");
+        String fingerprint = (String) configuration.getProperties().get("fingerprintSelfSignedCertificate");
+
+        if (nameCertificate != null && !nameCertificate.trim().isEmpty() &&
+            fingerprint != null && !fingerprint.trim().isEmpty()) {
+            return true;
+        }
+
+        log.warn("{} - SSL certificate configuration incomplete. Either provide 'certificateChainInPemFormat' " +
+                 "or both 'nameCertificate' and 'fingerprintSelfSignedCertificate'", tenant);
+        return false;
+    }
+
+    /**
+     * Validate required properties in configuration
+     * Subclasses should override to add connector-specific validation
+     * @param configuration the connector configuration to validate
+     * @param requiredProperties list of required property names
+     * @return true if all required properties are present and non-empty
+     */
+    protected boolean validateRequiredProperties(ConnectorConfiguration configuration, String... requiredProperties) {
+        if (requiredProperties == null || requiredProperties.length == 0) {
+            return true;
+        }
+
+        List<String> missingProperties = new ArrayList<>();
+        for (String propertyName : requiredProperties) {
+            Object value = configuration.getProperties().get(propertyName);
+            if (value == null || (value instanceof String && ((String) value).trim().isEmpty())) {
+                missingProperties.add(propertyName);
+            }
+        }
+
+        if (!missingProperties.isEmpty()) {
+            log.warn("{} - Missing required configuration properties: {}", tenant, missingProperties);
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -737,16 +1003,29 @@ public abstract class AConnectorClient {
 
     /**
      * Reconnect
+     * Performs disconnect, initialize, and connect sequence
+     * @return CompletableFuture for the connection task (never returns null)
      */
-    public Future<?> reconnect() {
-        try {
-            submitDisconnect().get();
-            submitInitialize().get();
-            return submitConnect();
-        } catch (Exception e) {
-            log.error("{} - Error during reconnect: {}", tenant, e.getMessage(), e);
-        }
-        return null;
+    public CompletableFuture<Void> reconnect() {
+        log.info("{} - Starting reconnection sequence", tenant);
+        return CompletableFuture.runAsync(() -> {
+            try {
+                log.debug("{} - Reconnect: disconnecting", tenant);
+                submitDisconnect().get();
+
+                log.debug("{} - Reconnect: initializing", tenant);
+                submitInitialize().get();
+
+                log.debug("{} - Reconnect: connecting", tenant);
+                submitConnect().get();
+
+                log.info("{} - Reconnection completed successfully", tenant);
+            } catch (Exception e) {
+                log.error("{} - Reconnection failed: {}", tenant, e.getMessage(), e);
+                connectionStateManager.updateStatusWithError(e);
+                throw new CompletionException(e);
+            }
+        }, virtualThreadPool);
     }
 
     /**

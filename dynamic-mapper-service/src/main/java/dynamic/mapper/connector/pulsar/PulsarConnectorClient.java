@@ -480,10 +480,8 @@ public class PulsarConnectorClient extends AConnectorClient {
     }
 
     @Override
-    public boolean isConnected() {
-        return connectionStateManager.isConnected() &&
-                pulsarClient != null &&
-                !pulsarClient.isClosed();
+    protected boolean isPhysicallyConnected() {
+        return pulsarClient != null && !pulsarClient.isClosed();
     }
 
     @Override
