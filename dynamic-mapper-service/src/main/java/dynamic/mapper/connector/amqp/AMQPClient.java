@@ -115,6 +115,17 @@ public class AMQPClient extends AConnectorClient {
     }
 
     @Override
+    protected boolean isSslRequired() {
+        // AMQP uses 'protocol' property instead of 'url'
+        Object protocolProperty = connectorConfiguration.getProperties().get("protocol");
+        if (protocolProperty instanceof String) {
+            String protocol = (String) protocolProperty;
+            return "amqps://".equals(protocol);
+        }
+        return false;
+    }
+
+    @Override
     public boolean initialize() {
         loadConfiguration();
 

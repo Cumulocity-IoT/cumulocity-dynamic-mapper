@@ -442,7 +442,8 @@ class AMQPClientTest {
         injectChannel(amqpClient, channel);
         setConnectedState(amqpClient, true);
 
-        // Mock channel state
+        // Mock connection and channel state for isPhysicallyConnected() check
+        when(connection.isOpen()).thenReturn(true);
         when(channel.isOpen()).thenReturn(true);
 
         // Create test context

@@ -587,8 +587,8 @@ class MQTT3ClientTest {
                 TEST_SUBSCRIPTION_ID,
                 TEST_TENANT);
 
-        // Test via reflection since adjustQos is private
-        java.lang.reflect.Method method = MQTT3Client.class.getDeclaredMethod("adjustQos", Qos.class);
+        // Test via reflection since adjustQos is protected in AMQTTClient base class
+        java.lang.reflect.Method method = AMQTTClient.class.getDeclaredMethod("adjustQos", Qos.class);
         method.setAccessible(true);
 
         // When & Then - Test null QoS

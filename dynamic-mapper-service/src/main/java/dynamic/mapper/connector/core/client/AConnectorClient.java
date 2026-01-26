@@ -865,6 +865,10 @@ public abstract class AConnectorClient {
      * Checks both the connection state manager AND physical connectivity
      */
     public final boolean isConnected() {
+        // Handle case where connector hasn't been fully initialized yet
+        if (connectionStateManager == null) {
+            return false;
+        }
         return connectionStateManager.isConnected() && isPhysicallyConnected();
     }
 
