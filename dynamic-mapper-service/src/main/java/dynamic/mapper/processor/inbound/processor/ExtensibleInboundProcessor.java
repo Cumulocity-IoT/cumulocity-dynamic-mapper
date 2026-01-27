@@ -31,13 +31,20 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.AbstractExtensibleProcessor;
 import dynamic.mapper.processor.ProcessingException;
+import dynamic.mapper.processor.extension.ExtensionResultProcessor;
 import dynamic.mapper.processor.extension.InboundExtension;
 import dynamic.mapper.processor.extension.ProcessorExtensionInbound;
+import dynamic.mapper.processor.flow.CumulocityObject;
+import dynamic.mapper.processor.flow.DataPreparationContext;
+import dynamic.mapper.processor.flow.Message;
+import dynamic.mapper.processor.flow.SimpleDataPreparationContext;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.TransformationType;
 import dynamic.mapper.service.ExtensionInboundRegistry;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
+
+import java.lang.reflect.Method;
 
 /**
  * Inbound extensible processor that delegates processing to external Java extensions.
@@ -53,6 +60,9 @@ public class ExtensibleInboundProcessor extends AbstractExtensibleProcessor {
 
     @Autowired
     private C8YAgent c8yAgent;
+
+    @Autowired
+    private ExtensionResultProcessor resultProcessor;
 
     public ExtensibleInboundProcessor(
             MappingService mappingService,
@@ -116,6 +126,7 @@ public class ExtensibleInboundProcessor extends AbstractExtensibleProcessor {
 
     /**
      * Process using ProcessorExtensionInbound for complete transformation and sending to C8Y.
+     * Supports both legacy and new patterns.
      */
     @SuppressWarnings({"rawtypes", "unchecked"})
     private void processWithExtensionInbound(ProcessingContext<byte[]> context,
@@ -137,7 +148,67 @@ public class ExtensibleInboundProcessor extends AbstractExtensibleProcessor {
             return; // Unreachable, but makes null analysis happy
         }
 
-        extension.substituteInTargetAndSend(context, c8yAgent);
+        // Check which pattern the extension uses
+        if (usesNewPattern(extension)) {
+            // NEW PATTERN: Return-value based
+            processWithNewPattern(extension, context, tenant);
+        } else {
+            // OLD PATTERN: Side-effect based
+            log.debug("{} - Extension {} uses deprecated substituteInTargetAndSend() pattern",
+                     tenant, extensionEntry.getExtensionName());
+            extension.substituteInTargetAndSend(context, c8yAgent);
+        }
+    }
+
+    /**
+     * Check if extension uses the new onMessage pattern.
+     *
+     * <p>Pattern detection works by checking if the extension class has overridden
+     * the onMessage method. If it's still the default implementation from the interface,
+     * we use the legacy pattern.</p>
+     */
+    private boolean usesNewPattern(ProcessorExtensionInbound<?> extension) {
+        try {
+            Method method = extension.getClass().getMethod("onMessage",
+                Message.class, DataPreparationContext.class);
+            // Check if the method is declared in the implementation class
+            // (not in the interface where the default is defined)
+            return !method.getDeclaringClass().equals(ProcessorExtensionInbound.class);
+        } catch (NoSuchMethodException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Process extension using the new return-value based pattern.
+     */
+    @SuppressWarnings("unchecked")
+    private void processWithNewPattern(ProcessorExtensionInbound extension,
+                                       ProcessingContext<byte[]> context,
+                                       String tenant) throws ProcessingException {
+        // 1. Create Message wrapper
+        Message<byte[]> message = Message.from(context);
+
+        // 2. Create DataPreparationContext
+        DataPreparationContext prepContext = new SimpleDataPreparationContext(
+            context.getFlowContext(),
+            c8yAgent,
+            tenant,
+            context.getTesting(),
+            context.getMapping(),
+            context
+        );
+
+        // 3. Call new pattern method
+        CumulocityObject[] results = extension.onMessage(message, prepContext);
+
+        // 4. Process results
+        if (results != null && results.length > 0) {
+            log.debug("{} - Extension returned {} CumulocityObject(s)", tenant, results.length);
+            resultProcessor.processInboundResults(results, context);
+        } else {
+            log.warn("{} - Extension onMessage() returned null or empty array - no data to process", tenant);
+        }
     }
 
     private void validateExtensionDirection(String tenant, ExtensionEntry extension, Direction expectedDirection)

@@ -22,15 +22,60 @@
 package dynamic.mapper.processor.extension;
 
 import dynamic.mapper.processor.ProcessingException;
+import dynamic.mapper.processor.flow.DataPreparationContext;
+import dynamic.mapper.processor.flow.DeviceMessage;
+import dynamic.mapper.processor.flow.Message;
 import dynamic.mapper.processor.model.ProcessingContext;
 import org.springframework.stereotype.Component;
 
 /**
  * Extension interface for outbound processing (Cumulocity → Broker).
  *
- * <p>This interface is used when the extension needs to perform complete
- * transformation from Cumulocity payload to broker message format.
- * The extension prepares the outbound requests, and the framework handles sending.</p>
+ * <p>This interface supports two patterns:</p>
+ *
+ * <h3>1. New Pattern - Return-Value Based (SMART Function Pattern)</h3>
+ * <p>Implement {@link #onMessage(Message, DataPreparationContext)} to follow the functional
+ * programming pattern used by SMART JavaScript functions. This is the recommended approach
+ * for new extensions.</p>
+ *
+ * <pre>
+ * {@code
+ * @Override
+ * public DeviceMessage[] onMessage(Message<byte[]> message, DataPreparationContext context) {
+ *     // Parse Cumulocity payload
+ *     Map<?, ?> alarm = Json.parseJson(new String(message.getPayload(), "UTF-8"));
+ *
+ *     // Transform to custom format
+ *     Map<String, Object> customFormat = Map.of(
+ *         "deviceId", alarm.get("source").get("id"),
+ *         "alarmType", alarm.get("type"),
+ *         "severity", alarm.get("severity")
+ *     );
+ *     String customJson = new ObjectMapper().writeValueAsString(customFormat);
+ *
+ *     // Build and return result
+ *     return new DeviceMessage[] {
+ *         DeviceMessage.forTopic(context.getMapping().getPublishTopic())
+ *             .payload(customJson)
+ *             .retain(false)
+ *             .build()
+ *     };
+ * }
+ * }
+ * </pre>
+ *
+ * <h3>2. Legacy Pattern - Side-Effect Based (Deprecated)</h3>
+ * <p>The original {@link #extractAndPrepare(ProcessingContext)} method
+ * is still supported for backwards compatibility but is deprecated. Existing extensions
+ * will continue to work unchanged.</p>
+ *
+ * <p>Benefits of the new pattern:</p>
+ * <ul>
+ *   <li>Cleaner code - no side effects, easier to test</li>
+ *   <li>Consistent with SMART JavaScript function pattern</li>
+ *   <li>Builder pattern for cleaner object construction</li>
+ *   <li>Better separation of concerns</li>
+ * </ul>
  *
  * <p>By implementing this interface, the extension is automatically tagged with Direction.OUTBOUND
  * via the {@link OutboundExtension} marker interface.</p>
@@ -49,43 +94,23 @@ import org.springframework.stereotype.Component;
  *   <li>Complex multi-message protocols</li>
  * </ul>
  *
- * <p>Example implementation:</p>
- * <pre>
- * public class ProcessorExtensionOperationToBinary
- *         implements ProcessorExtensionOutbound&lt;byte[]&gt; {
- *
- *     {@literal @}Override
- *     public void extractAndPrepare(ProcessingContext&lt;byte[]&gt; context)
- *             throws ProcessingException {
- *         // 1. Parse Cumulocity payload
- *         String json = new String(context.getPayload(), "UTF-8");
- *         Map&lt;String, Object&gt; operation = Json.parseJson(json);
- *
- *         // 2. Generate binary protocol
- *         byte[] binaryMessage = generateBinaryProtocol(operation);
- *
- *         // 3. Create request and add to context
- *         DynamicMapperRequest request = DynamicMapperRequest.builder()
- *                 .payload(binaryMessage)
- *                 .publishTopic(context.getResolvedPublishTopic())
- *                 .build();
- *         context.addRequest(request);
- *
- *         // SendOutboundProcessor will handle the actual sending
- *     }
- * }
- * </pre>
- *
  * @param <O> The type of payload being processed (typically byte[] or Object)
  *
  * @see OutboundExtension for parsing only (substitution-based)
- * @see ProcessorExtensionInbound for inbound complete processing (with C8YAgent)
+ * @see ProcessorExtensionInbound for inbound complete processing
+ * @see Message
+ * @see DataPreparationContext
+ * @see DeviceMessage
  */
 @Component
 public interface ProcessorExtensionOutbound<O> extends OutboundExtension<O> {
 
     /**
-     * Extract data from Cumulocity payload and prepare outbound requests.
+     * Legacy pattern: Extract data from Cumulocity payload and prepare outbound requests.
+     *
+     * <p><strong>DEPRECATED:</strong> This method uses the side-effect based pattern
+     * where extensions directly call {@code context.addRequest()} to send data.
+     * New extensions should use {@link #onMessage(Message, DataPreparationContext)} instead.</p>
      *
      * <p>This method is responsible for:</p>
      * <ol>
@@ -97,17 +122,65 @@ public interface ProcessorExtensionOutbound<O> extends OutboundExtension<O> {
      *
      * <p>The actual sending is handled by SendOutboundProcessor.</p>
      *
-     * <p>The context provides:</p>
-     * <ul>
-     *   <li>context.getPayload() - The Cumulocity payload (Event, Alarm, etc.)</li>
-     *   <li>context.getMapping() - Mapping configuration</li>
-     *   <li>context.getResolvedPublishTopic() - Topic to publish to</li>
-     *   <li>context.addRequest() - Method to add prepared requests</li>
-     * </ul>
+     * <p>Existing implementations will continue to work. The processor automatically
+     * detects which pattern an extension uses at runtime.</p>
      *
      * @param context Processing context containing the Cumulocity payload and mapping info
      * @throws ProcessingException if parsing or transformation fails
+     * @deprecated Use {@link #onMessage(Message, DataPreparationContext)} for new extensions
      */
-    void extractAndPrepare(ProcessingContext<O> context)
-            throws ProcessingException;
+    @Deprecated(since = "2.0", forRemoval = false)
+    default void extractAndPrepare(ProcessingContext<O> context)
+            throws ProcessingException {
+        throw new UnsupportedOperationException(
+            "Extension must implement either extractAndPrepare() or onMessage()");
+    }
+
+    /**
+     * New pattern: Process a Cumulocity message and return device messages to publish.
+     *
+     * <p>This method follows the SMART function pattern used by JavaScript extensions.
+     * It receives an immutable {@link Message} wrapper containing the Cumulocity payload
+     * (Event, Alarm, Operation, etc.) and a {@link DataPreparationContext} for accessing
+     * state, inventory, and utility methods.</p>
+     *
+     * <p>The extension should parse the Cumulocity message, perform any necessary transformations,
+     * and return an array of {@link DeviceMessage}s to be published to the broker.
+     * Use the builder pattern for clean object construction:</p>
+     *
+     * <pre>
+     * {@code
+     * DeviceMessage.forTopic("device/alarms")
+     *     .payload(customJson)
+     *     .retain(false)
+     *     .transportField("qos", "1")
+     *     .build()
+     * }
+     * </pre>
+     *
+     * <p>Each {@link DeviceMessage} should specify:</p>
+     * <ul>
+     *   <li>topic - The broker topic to publish to</li>
+     *   <li>payload - The message payload (String, byte[], or Object)</li>
+     *   <li>retain (optional) - Whether to retain the message</li>
+     *   <li>transportFields (optional) - Transport-specific fields (QoS, headers, etc.)</li>
+     *   <li>clientId (optional) - Target client ID</li>
+     * </ul>
+     *
+     * <p>If this method returns {@code null}, the processor will fall back to calling
+     * {@link #extractAndPrepare(ProcessingContext)} for backwards compatibility.</p>
+     *
+     * @param message Immutable message wrapper containing Cumulocity payload, topic, clientId, etc.
+     * @param context Data preparation context with access to state, inventory, mapping, etc.
+     * @return Array of DeviceMessage instances to publish, or null if using legacy pattern
+     * @throws ProcessingException if parsing or transformation fails
+     * @see DeviceMessage
+     * @see Message
+     * @see DataPreparationContext
+     */
+    default DeviceMessage[] onMessage(Message<O> message, DataPreparationContext context)
+            throws ProcessingException {
+        return null; // Null indicates this extension uses the legacy pattern
+    }
 }
+

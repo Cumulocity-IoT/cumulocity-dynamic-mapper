@@ -50,7 +50,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Legacy inbound extension using deprecated side-effect pattern.
+ *
+ * @deprecated Since 2.0. Use {@link ProcessorExtensionCustomAlarmNew} instead.
+ *             This implementation uses the deprecated substituteInTargetAndSend() pattern
+ *             with manual request building and direct API calls. The new pattern uses
+ *             onMessage() with return values and builder pattern for cleaner code.
+ * @see ProcessorExtensionCustomAlarmNew
+ */
 @Slf4j
+@Deprecated(since = "2.0", forRemoval = false)
 public class ProcessorExtensionCustomAlarm
         implements ProcessorExtensionInbound<byte[]> {
 

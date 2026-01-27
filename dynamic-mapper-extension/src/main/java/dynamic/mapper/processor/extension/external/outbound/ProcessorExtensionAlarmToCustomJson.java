@@ -37,6 +37,14 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
+ * Legacy outbound extension using deprecated side-effect pattern.
+ *
+ * @deprecated Since 2.0. Use {@link ProcessorExtensionAlarmToCustomJsonNew} instead.
+ *             This implementation uses the deprecated extractAndPrepare() pattern
+ *             with manual request building. The new pattern uses onMessage() with
+ *             return values and builder pattern for cleaner, more testable code.
+ * @see ProcessorExtensionAlarmToCustomJsonNew
+ *
  * Sample outbound extension that converts a Cumulocity alarm to a custom JSON format.
  *
  * This extension demonstrates complete outbound processing:
@@ -47,6 +55,7 @@ import java.util.Map;
  * Use Case: Send alarm notifications to devices in their proprietary format
  */
 @Slf4j
+@Deprecated(since = "2.0", forRemoval = false)
 public class ProcessorExtensionAlarmToCustomJson implements ProcessorExtensionOutbound<byte[]> {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
