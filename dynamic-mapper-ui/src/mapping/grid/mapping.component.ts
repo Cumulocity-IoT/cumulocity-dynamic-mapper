@@ -1084,13 +1084,15 @@ export class MappingComponent implements OnInit, OnDestroy {
         showEditorSource: true,
         showEditorTarget: false,
         allowTestSending: false,
-        allowTestTransformation: false
+        allowTestTransformation: false,
+        advanceFromStepToEndStep: 2
       }),
       ...((transformationType == TransformationType.EXTENSION_TARGET && direction === Direction.OUTBOUND) && {
         showProcessorExtensionsTarget: true,
         showEditorTarget: false,
         allowTestSending: false,
-        allowTestTransformation: false
+        allowTestTransformation: false,
+        advanceFromStepToEndStep: 2
       })
     };
 
