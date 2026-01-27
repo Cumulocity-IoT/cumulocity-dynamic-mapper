@@ -77,7 +77,10 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
     this._cancel = reject;
   });
 
-  private readonly propertyTypeToFormConfig = new Map([
+  private readonly propertyTypeToFormConfig = new Map<
+    ConnectorPropertyType,
+    (entry: PropertyEntry) => FormlyFieldConfig
+  >([
     [ConnectorPropertyType.NUMERIC_PROPERTY, this.createNumericField.bind(this)],
     [ConnectorPropertyType.STRING_PROPERTY, this.createStringField.bind(this)],
     [ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, this.createSensitiveStringField.bind(this)],
@@ -141,6 +144,17 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
     }
   }
 
+  private createHideExpression(property: ConnectorProperty) {
+    return (model) => {
+      if (property?.condition?.anyOf) {
+        const convertedAnyOf = this.convertBooleanStrings(property.condition.anyOf);
+        //console.log("Evaluating:", property, convertedAnyOf, property.condition.key, model.properties[property.condition.key], !convertedAnyOf.includes(model.properties[property.condition.key]));
+        return !convertedAnyOf.includes(model.properties[property.condition.key]);
+      }
+      return false;
+    };
+  }
+
   private createBaseFormField(entry: PropertyEntry, type: string, additionalProps = {}): FormlyFieldConfig {
     return {
       fieldGroup: [{
@@ -156,16 +170,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
           description: entry.property.description || undefined,
           ...additionalProps
         },
-        hideExpression: (model) => {
-          if (entry.property?.condition && entry.property?.condition.anyOf) {
-            const convertedAnyOf = this.convertBooleanStrings(entry.property.condition.anyOf);
-            //console.log("Evaluating:", entry.key, entry.property?.condition.key, entry.property?.condition.anyOf, convertedAnyOf, convertedAnyOf, model.properties[entry.property?.condition.key], model);
-            //console.log("Evaluating:", entry.key, convertedAnyOf, entry.property?.condition.key, model.properties[entry.property?.condition.key], !convertedAnyOf.includes(model.properties[entry.property?.condition.key],));
-            //console.log("Model:", entry.property.condition.anyOf, model, model.properties);
-            //console.log("Model:", model.properties);
-            return !convertedAnyOf.includes(model.properties[entry.property?.condition.key])
-          } else { return false }
-        }
+        hideExpression: this.createHideExpression(entry.property)
       }]
     };
   }
@@ -198,11 +203,12 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
   }
 
   private createOptionField(entry: PropertyEntry): FormlyFieldConfig {
+    const options = (entry.property as any).options;
     return this.createBaseFormField(entry, 'select', {
-      options: Object.values(entry.property['options']).map(key => ({
+      options: options ? Object.values(options).map((key: string) => ({
         label: key,
         value: key
-      }))
+      })) : []
     });
   }
 
@@ -227,13 +233,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
           disabled: entry.property.readonly || this.readOnly,
           description: entry.property.description || undefined,
         },
-        hideExpression: (model) => {
-          if (entry.property?.condition && entry.property?.condition.anyOf) {
-            const convertedAnyOf = this.convertBooleanStrings(entry.property.condition.anyOf);
-            return !convertedAnyOf.includes(model.properties[entry.property?.condition.key]);
-          }
-          return false;
-        },
+        hideExpression: this.createHideExpression(entry.property),
         // Initialize with empty object if no default value
         defaultValue: entry.property.defaultValue || {}
       }]
@@ -304,29 +304,33 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
       const formConfigFn = this.propertyTypeToFormConfig.get(entry.property.type);
       if (formConfigFn) {
         this.dynamicFormFields.push(formConfigFn(entry));
+      } else {
+        console.warn(`Unsupported property type: ${entry.property.type} for field: ${entry.key}`);
       }
     });
   }
 
   private getSortedFields(dynamicFields: ConnectorSpecification): PropertyEntry[] {
-    const numberFields = Object.keys(dynamicFields.properties).length;
-    const sortedFields = new Array(numberFields);
+    const entries: PropertyEntry[] = [];
 
     Object.entries(dynamicFields.properties).forEach(([key, property]) => {
+      // Set default values for create action
       if ('defaultValue' in property && this.action === 'create') {
         this.configuration.properties[key] = property.defaultValue;
       }
 
-      if (property.order < numberFields && property.order >= 0 && !property.hidden) {
-        if (!sortedFields[property.order]) {
-          sortedFields[property.order] = { key, property };
-        } else {
-          sortedFields.push({ key, property });
-        }
+      // Only include visible properties
+      if (!property.hidden) {
+        entries.push({ key, property });
       }
     });
 
-    return sortedFields;
+    // Sort by order, handling missing or invalid order values
+    return entries.sort((a, b) => {
+      const orderA = a.property.order ?? Number.MAX_SAFE_INTEGER;
+      const orderB = b.property.order ?? Number.MAX_SAFE_INTEGER;
+      return orderA - orderB;
+    });
   }
 
   onCancel() {
