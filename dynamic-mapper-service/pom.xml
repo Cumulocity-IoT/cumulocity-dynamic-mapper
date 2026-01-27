@@ -277,6 +277,27 @@
                     </annotationProcessorPaths> -->
                 </configuration>
             </plugin>
+            <!-- Create classes-only JAR before Spring Boot repackaging -->
+            <!-- This JAR can be used as a Maven dependency by other modules -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>classes-jar</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                        <phase>package</phase>
+                        <configuration>
+                            <classifier>classes</classifier>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Spring Boot repackages main JAR as executable (no classifier) -->
+            <!-- Main artifact becomes executable Spring Boot JAR for Cumulocity deployment -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
@@ -289,10 +310,6 @@
                         <goals>
                             <goal>repackage</goal>
                         </goals>
-                        <configuration>
-                            <!-- Use classifier to preserve original JAR for Maven dependencies -->
-                            <classifier>exec</classifier>
-                        </configuration>
                     </execution>
                 </executions>
             </plugin>

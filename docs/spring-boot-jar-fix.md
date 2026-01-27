@@ -36,8 +36,35 @@ When `dynamic-mapper-extension` tried to depend on `dynamic-mapper-service`, it 
 
 ## Solution
 
-Added a `<classifier>exec</classifier>` to the Spring Boot Maven Plugin's repackage configuration in `dynamic-mapper-service/pom.xml`:
+### Initial Approach (Incorrect)
 
+First attempted adding `<classifier>exec</classifier>` to the Spring Boot Maven Plugin's repackage configuration. This preserved the original JAR but made it the main artifact, which broke Cumulocity microservice deployment (needs executable JAR as main artifact).
+
+### Corrected Approach
+
+Create a classes-only JAR **before** Spring Boot repackaging, then let Spring Boot repackage the main JAR:
+
+**Step 1**: Add maven-jar-plugin to create classes JAR:
+```xml
+<plugin>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-jar-plugin</artifactId>
+    <executions>
+        <execution>
+            <id>classes-jar</id>
+            <goals>
+                <goal>jar</goal>
+            </goals>
+            <phase>package</phase>
+            <configuration>
+                <classifier>classes</classifier>
+            </configuration>
+        </execution>
+    </executions>
+</plugin>
+```
+
+**Step 2**: Spring Boot Maven Plugin repackages main JAR (no configuration change needed):
 ```xml
 <plugin>
     <groupId>org.springframework.boot</groupId>
@@ -51,21 +78,59 @@ Added a `<classifier>exec</classifier>` to the Spring Boot Maven Plugin's repack
             <goals>
                 <goal>repackage</goal>
             </goals>
-            <configuration>
-                <!-- Use classifier to preserve original JAR for Maven dependencies -->
-                <classifier>exec</classifier>
-            </configuration>
         </execution>
     </executions>
 </plugin>
+```
+
+**Step 3**: Update extension module dependency to use classes JAR:
+```xml
+<!-- In dynamic-mapper-extension/pom.xml -->
+<dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>com.cumulocity.mapping</groupId>
+            <artifactId>dynamic-mapper-service</artifactId>
+            <classifier>classes</classifier>
+            <version>${revision}</version>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
+
+<dependencies>
+    <dependency>
+        <groupId>com.cumulocity.mapping</groupId>
+        <artifactId>dynamic-mapper-service</artifactId>
+        <classifier>classes</classifier>
+        <scope>compile</scope>
+    </dependency>
+</dependencies>
 ```
 
 ## Result
 
 The build now produces **two JARs**:
 
-### 1. Regular JAR (for Maven dependencies)
-**File**: `dynamic-mapper-service-6.1.5-SNAPSHOT.jar`
+### 1. Executable JAR (Main Artifact - for Spring Boot application)
+**File**: `dynamic-mapper-service-6.1.5-SNAPSHOT.jar` *(no classifier)*
+**Structure**: Spring Boot fat JAR
+```
+BOOT-INF/
+  classes/ [all application classes]
+  lib/ [all dependencies]
+org/springframework/boot/loader/ [Spring Boot loader]
+META-INF/
+  MANIFEST.MF [Main-Class: org.springframework.boot.loader.launch.JarLauncher]
+```
+
+**Usage**:
+- Main artifact installed to Maven repository
+- Used by Cumulocity microservice deployment (Docker image)
+- Can be run standalone: `java -jar dynamic-mapper-service-6.1.5-SNAPSHOT.jar`
+- **This is what Cumulocity expects** - executable with proper manifest
+
+### 2. Classes JAR (Secondary Artifact - for Maven dependencies)
+**File**: `dynamic-mapper-service-6.1.5-SNAPSHOT-classes.jar` *(with classifier)*
 **Structure**: Standard Java JAR with classes at root
 ```
 dynamic/mapper/processor/flow/
@@ -75,24 +140,14 @@ dynamic/mapper/processor/flow/
   DeviceMessage.class
   ...
 META-INF/
-  MANIFEST.MF
+  MANIFEST.MF [standard, no Main-Class]
 ```
 
-**Usage**: This is the JAR installed to Maven local repository and used by `dynamic-mapper-extension` as a dependency.
-
-### 2. Executable JAR (for Spring Boot application)
-**File**: `dynamic-mapper-service-6.1.5-SNAPSHOT-exec.jar`
-**Structure**: Spring Boot fat JAR
-```
-BOOT-INF/
-  classes/ [all application classes]
-  lib/ [all dependencies]
-org/springframework/boot/loader/ [Spring Boot loader]
-META-INF/
-  MANIFEST.MF [points to Spring Boot launcher]
-```
-
-**Usage**: This is the JAR used to run the Spring Boot application (Docker image, standalone execution, etc.).
+**Usage**:
+- Secondary artifact installed to Maven repository
+- Used by `dynamic-mapper-extension` as compile dependency
+- Contains only classes (no BOOT-INF structure)
+- Maven can resolve classes from root level
 
 ## Benefits
 
@@ -116,11 +171,35 @@ Status: ✅ SUCCESS
 
 All compilation errors resolved, all tests passing.
 
+## Why the Initial Approach Failed
+
+The first attempt used `<classifier>exec</classifier>` on the Spring Boot repackage goal. This approach:
+
+1. ✅ Created a classes JAR (main artifact, no classifier)
+2. ✅ Created an executable JAR (`-exec` classifier)
+3. ❌ Made the classes JAR the **main artifact**
+4. ❌ Cumulocity deployment expected main artifact to be executable
+5. ❌ Result: `no main manifest attribute, in /data/dynamic-mapper-service.jar`
+
+**The problem**: Cumulocity microservice packaging expects the **main JAR** (without classifier) to be executable. Using a classifier on the executable JAR put it as a secondary artifact.
+
+**The solution**: Reverse the approach - make the main JAR executable and create a separate classes JAR with a classifier.
+
 ## Files Modified
 
-**File**: `/Users/ck/work/git/cumulocity-dynamic-mapper/dynamic-mapper-service/pom.xml`
+**File 1**: `/Users/ck/work/git/cumulocity-dynamic-mapper/dynamic-mapper-service/pom.xml`
 
-**Change**: Added `<classifier>exec</classifier>` to Spring Boot Maven Plugin repackage configuration (lines 288-292).
+**Changes**:
+- Added maven-jar-plugin with `classes-jar` execution
+- Kept Spring Boot Maven Plugin repackage without classifier
+- Result: Main JAR is executable, secondary JAR is classes-only
+
+**File 2**: `/Users/ck/work/git/cumulocity-dynamic-mapper/dynamic-mapper-extension/pom.xml`
+
+**Changes**:
+- Added `dynamic-mapper-service` with `classes` classifier to dependencyManagement
+- Updated dependency to use `classes` classifier
+- Result: Extension module depends on classes JAR instead of executable JAR
 
 ## Verification Steps
 

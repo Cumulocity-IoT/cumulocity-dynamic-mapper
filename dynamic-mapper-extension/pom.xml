@@ -46,6 +46,12 @@
                 <artifactId>dynamic-mapper-service</artifactId>
                 <version>${revision}</version>
             </dependency>
+            <dependency>
+                <groupId>com.cumulocity.mapping</groupId>
+                <artifactId>dynamic-mapper-service</artifactId>
+                <classifier>classes</classifier>
+                <version>${revision}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -58,6 +64,7 @@
         <dependency>
             <groupId>com.cumulocity.mapping</groupId>
             <artifactId>dynamic-mapper-service</artifactId>
+            <classifier>classes</classifier>
             <scope>compile</scope>
         </dependency>
         <dependency>
