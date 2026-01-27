@@ -37,6 +37,7 @@ import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingResultWrapper;
 import dynamic.mapper.processor.outbound.processor.CodeExtractionOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.DeserializationOutboundProcessor;
+import dynamic.mapper.processor.outbound.processor.ExtensibleOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.JSONataExtractionOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.EnrichmentOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.SendOutboundProcessor;
@@ -55,6 +56,9 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
 
     @Autowired
     private EnrichmentOutboundProcessor enrichmentProcessor;
+
+    @Autowired
+    private ExtensibleOutboundProcessor extensibleOutboundProcessor;
 
     @Autowired
     private CodeExtractionOutboundProcessor codeExtractionOutboundProcessor;
@@ -184,15 +188,19 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
                 .when(exchange -> isSnooping(exchange))
                 .to("direct:processOutboundSnooping")
 
-                // 1b. Flow function path
+                // 1b. Extension processing path
+                .when(exchange -> isExtension(exchange))
+                .to("direct:processOutboundExtension")
+
+                // 1c. Flow function path
                 .when(exchange -> isFlowFunction(exchange))
                 .to("direct:processOutboundFlowFunction")
 
-                // 1c. SubstitutionAsCode extraction path
+                // 1d. SubstitutionAsCode extraction path
                 .when(exchange -> isSubstitutionAsCode(exchange))
                 .to("direct:processOutboundSubstitutionAsCodeExtraction")
 
-                // 1d. JSONata extraction path
+                // 1e. JSONata extraction path
                 .when(exchange -> isJSONataExtraction(exchange))
                 .to("direct:processOutboundJSONataExtraction")
 
@@ -208,7 +216,22 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
                 .to("log:outbound-snooping-message?level=DEBUG&showBody=false")
                 .process(consolidationProcessor);
 
-        // 1b. Flow function processing route
+        // 1b. Extension processing route
+        from("direct:processOutboundExtension")
+                .routeId("outbound-extension-processor")
+                .process(extensibleOutboundProcessor)
+                .process(substitutionOutboundProcessor)
+                .choice()
+                .when(exchange -> shouldIgnoreFurtherProcessing(exchange))
+                .to("log:outbound-extension-filtered-message?level=DEBUG")
+                .process(consolidationProcessor)
+                .stop()
+                .otherwise()
+                .process(outboundSendProcessor)
+                .process(consolidationProcessor)
+                .end();
+
+        // 1c. Flow function processing route
         from("direct:processOutboundFlowFunction")
                 .routeId("outbound-flow-function-processor")
                 .process(flowProcessorOutboundProcessor)
@@ -223,7 +246,7 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
                 .process(consolidationProcessor)
                 .end();
 
-        // 1c. SubstitutionAsCode extraction processing route
+        // 1d. SubstitutionAsCode extraction processing route
         from("direct:processOutboundSubstitutionAsCodeExtraction")
                 .routeId("outbound-substitution-as-code-extraction-processor")
                 .process(codeExtractionOutboundProcessor)
@@ -238,7 +261,7 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
                 .process(consolidationProcessor)
                 .end();
 
-        // 1d. JSONata extraction processing route
+        // 1e. JSONata extraction processing route
         from("direct:processOutboundJSONataExtraction")
                 .routeId("outbound-jsonata-extraction-processor")
                 .process(jsonataExtractionOutboundProcessor)

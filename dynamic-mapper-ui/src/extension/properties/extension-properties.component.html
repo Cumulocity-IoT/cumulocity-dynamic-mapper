@@ -72,6 +72,22 @@
                       <td>Type</td>
                       <td>{{ entry.extensionType | formatStringAsWords }}</td>
                     </tr>
+                    <tr>
+                      <td>Direction</td>
+                      <td>
+                        @if (entry.direction) {
+                          <span class="label" [ngClass]="{
+                            'label-info': entry.direction === 'INBOUND',
+                            'label-warning': entry.direction === 'OUTBOUND',
+                            'label-default': entry.direction === 'UNSPECIFIED'
+                          }">
+                            {{ entry.direction | formatStringAsWords }}
+                          </span>
+                        } @else {
+                          <span class="label label-default">UNSPECIFIED</span>
+                        }
+                      </td>
+                    </tr>
                   </tbody>
                 </table>
               </c8y-li-collapse>

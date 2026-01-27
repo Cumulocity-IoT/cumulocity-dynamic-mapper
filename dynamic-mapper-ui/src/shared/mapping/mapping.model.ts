@@ -223,7 +223,8 @@ export enum RepairStrategy {
 
 export enum Direction {
   INBOUND = 'INBOUND',
-  OUTBOUND = 'OUTBOUND'
+  OUTBOUND = 'OUTBOUND',
+  UNSPECIFIED = 'UNSPECIFIED'
 }
 
 export enum SnoopStatus {
@@ -240,6 +241,7 @@ export interface ExtensionEntry {
   loaded?: boolean;
   message?: string;
   extensionType: ExtensionType;
+  direction?: Direction;
 }
 
 export enum ExtensionType {
@@ -273,7 +275,9 @@ export enum TransformationType {
   DEFAULT = 'DEFAULT',
   SUBSTITUTION_AS_CODE = 'SUBSTITUTION_AS_CODE',
   SMART_FUNCTION = 'SMART_FUNCTION',
-  JSONATA = 'JSONATA'
+  JSONATA = 'JSONATA',
+  EXTENSION_SOURCE = 'EXTENSION_SOURCE',
+  EXTENSION_TARGET = 'EXTENSION_TARGET'
 }
 
 export enum MappingType {
@@ -291,13 +295,17 @@ export const TransformationTypeLabels = {
     [TransformationType.DEFAULT]: 'Default Transformation',
     [TransformationType.SUBSTITUTION_AS_CODE]: 'Substitution as JavaScript (deprecated)',
     [TransformationType.SMART_FUNCTION]: 'Smart Function (JavaScript) to create Cumulocity API calls',
-    [TransformationType.JSONATA]: 'Substitution as JSONata Expression'
+    [TransformationType.JSONATA]: 'Substitution as JSONata Expression',
+    [TransformationType.EXTENSION_SOURCE]: 'Java Extension Source Processing',
+    [TransformationType.EXTENSION_TARGET]: 'Java Extension Target Processing'
   },
   [Direction.OUTBOUND]: {
     [TransformationType.DEFAULT]: 'Default Transformation',
     [TransformationType.SUBSTITUTION_AS_CODE]: 'Substitution as JavaScript (deprecated)',
     [TransformationType.SMART_FUNCTION]: 'Smart Function (JavaScript) to create Broker Payload',
-    [TransformationType.JSONATA]: 'Substitution as JSONata Expression'
+    [TransformationType.JSONATA]: 'Substitution as JSONata Expression',
+    [TransformationType.EXTENSION_SOURCE]: 'Java Extension Source Processing',
+    [TransformationType.EXTENSION_TARGET]: 'Java Extension Target Processing'
   }
 } as const;
 
@@ -305,7 +313,9 @@ export const TransformationTypeDescriptions = {
   [TransformationType.DEFAULT]: 'Uses the default transformation logic without custom processing',
   [TransformationType.SUBSTITUTION_AS_CODE]: 'Allows writing custom JavaScript code for complex transformations',
   [TransformationType.SMART_FUNCTION]: 'Executes a predefined Smart Function for data transformation and create payload for Cumulocity API calls',
-  [TransformationType.JSONATA]: 'Uses JSONata query and transformation language for data mapping'
+  [TransformationType.JSONATA]: 'Uses JSONata query and transformation language for data mapping',
+  [TransformationType.EXTENSION_SOURCE]: 'Uses a Java extension to parse and extract data from the source payload',
+  [TransformationType.EXTENSION_TARGET]: 'Uses a Java extension to parse source and generate target payload directly'
 } as const;
 
 export const MappingTypeLabels = {
@@ -339,7 +349,7 @@ export interface MappingTypeDescriptionInterface {
   key: MappingType;
   description: string;
   enabled: boolean;
-  properties: Record<Direction, MappingTypeProperties>;
+  properties: Record<Exclude<Direction, Direction.UNSPECIFIED>, MappingTypeProperties>;
   stepperConfiguration: StepperConfiguration;
 }
 

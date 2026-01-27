@@ -20,16 +20,18 @@
 import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { IManagedObject } from '@c8y/client';
-import { AlertService, CommonModule, CoreModule } from '@c8y/ngx-components';
+import { AlertService, CoreModule } from '@c8y/ngx-components';
 import { ConfirmationModalComponent, ExtensionStatus, Feature, SharedService } from '../../shared';
 import { ExtensionService } from '../extension.service';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
+import { PopoverModule } from 'ngx-bootstrap/popover';
+import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
 
 @Component({
   selector: 'd11r-mapping-extension-card',
   templateUrl: './extension-card.component.html',
   standalone: true,
-  imports: [CoreModule]
+  imports: [CoreModule, PopoverModule, BsDropdownModule]
 })
 export class ExtensionCardComponent implements OnInit {
   @Input() app: IManagedObject;

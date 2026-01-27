@@ -26,14 +26,14 @@ import org.joda.time.DateTime;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import dynamic.mapper.processor.model.SubstituteValue.TYPE;
-import dynamic.mapper.processor.extension.ProcessorExtensionSource;
+import dynamic.mapper.processor.extension.InboundExtension;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.RepairStrategy;
-import jakarta.ws.rs.ProcessingException;
+import dynamic.mapper.processor.ProcessingException;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class ProcessorExtensionSourceCustomAlarm implements ProcessorExtensionSource<byte[]> {
+public class ProcessorExtensionSourceCustomAlarm implements InboundExtension<byte[]> {
     @Override
     public void extractFromSource(ProcessingContext<byte[]> context)
             throws ProcessingException {
@@ -59,7 +59,7 @@ public class ProcessorExtensionSourceCustomAlarm implements ProcessorExtensionSo
                     payloadProtobuf.getTxt(), payloadProtobuf.getAlarmType(),
                     payloadProtobuf.getExternalId(), payloadProtobuf.getSeverity());
         } catch (InvalidProtocolBufferException e) {
-            throw new ProcessingException(e.getMessage());
+            throw new ProcessingException("Failed to parse protobuf alarm: " + e.getMessage(), e);
         }
 
     }

@@ -25,7 +25,25 @@ import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.processor.model.ProcessingContext;
 import org.springframework.stereotype.Component;
 
+/**
+ * Extension interface for complete inbound processing (Broker → Cumulocity).
+ *
+ * <p>Provides access to both the processing context and the C8Y agent
+ * for full control over transformation and sending to Cumulocity.</p>
+ *
+ * <p>By implementing this interface, the extension is automatically tagged with Direction.INBOUND
+ * via the {@link InboundExtension} marker interface.</p>
+ *
+ * @param <O> The type of the source payload (typically byte[] or String)
+ * @see InboundExtension
+ */
 @Component
-public interface ProcessorExtensionTarget<O> {
+public interface ProcessorExtensionInbound<O> extends InboundExtension<O> {
+    /**
+     * Perform substitutions in the target template and send to Cumulocity.
+     *
+     * @param context Processing context containing the source payload and mapping info
+     * @param c8yAgent C8Y agent for sending data to Cumulocity
+     */
     public void substituteInTargetAndSend(ProcessingContext<O> context, C8YAgent c8yAgent);
 }

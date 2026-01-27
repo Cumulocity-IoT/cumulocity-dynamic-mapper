@@ -22,9 +22,15 @@
 #
 
 run_protoc_extension () {
+    # Generate protobuf classes for external extensions
+    # These are generated in the package defined by java_package option in the .proto file
+    # For inbound extensions: dynamic.mapper.processor.extension.external.inbound
+    # For outbound extensions: dynamic.mapper.processor.extension.external.outbound
     protoc --proto_path=src/main/resources/protobuf --java_out=src/main/java --descriptor_set_out=src/main/resources/protobuf/CustomEvent.desc CustomEvent.proto
 }
 run_protoc_backend () {
+    # Generate protobuf classes for internal extensions
+    # These are generated in the package defined by java_package option in the .proto file
     protoc --proto_path=src/main/resources/protobuf --java_out=src/main/java --descriptor_set_out=src/main/resources/protobuf/InternalCustomAlarm.desc InternalCustomAlarm.proto
     protoc --proto_path=src/main/resources/protobuf --java_out=src/main/java --descriptor_set_out=src/main/resources/protobuf/InternalCustomMeasurement.desc InternalCustomMeasurement.proto
 }
