@@ -379,6 +379,8 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                     .topic(towardsPlatformTopic)
                     .subscriptionName(subscriptionName)
                     .autoUpdatePartitions(false)
+                    //Prevents a default exclusive consumer blocking other instances during restart
+                    .subscriptionType(SubscriptionType.Failover)
                     .messageListener(mqttServiceCallback)
                     .subscribe();
 
@@ -398,6 +400,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                     .subscriptionName(subscriptionName)
                     .autoUpdatePartitions(false)
                     .messageListener(mqttServiceCallback)
+                    .subscriptionType(SubscriptionType.Failover)
                     .subscribeAsync()
                     .get(30, TimeUnit.SECONDS);
 
@@ -416,6 +419,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                     .topic(towardsPlatformTopic)
                     .subscriptionName(subscriptionName)
                     .messageListener(mqttServiceCallback)
+                    .subscriptionType(SubscriptionType.Failover)
                     .subscribeAsync()
                     .get(30, TimeUnit.SECONDS);
 
