@@ -26,6 +26,7 @@ import {
     Direction,
     Extension,
     ExtensionEntry,
+    ExtensionType,
     Mapping,
     SAMPLE_TEMPLATES_C8Y,
     TransformationType,
@@ -188,22 +189,104 @@ export class MappingStepperService {
     }
 
     async loadExtensions(mapping: Mapping): Promise<Map<string, Extension>> {
+        console.log('===== loadExtensions DEBUG START =====');
+        console.log('Loading extensions for mapping:', mapping);
+
         const extensions = await this.extensionService.getProcessorExtensions() as Map<string, Extension>;
 
+        console.log('Loaded extensions:', extensions);
+        console.log('Number of extensions:', extensions.size);
+
+        // Log details of each extension
+        extensions.forEach((extension, key) => {
+            console.log(`Extension "${key}":`, {
+                name: extension.name,
+                extensionEntries: extension.extensionEntries,
+                numberOfEntries: Object.keys(extension.extensionEntries).length
+            });
+
+            // Log each entry
+            Object.values(extension.extensionEntries).forEach((entry: ExtensionEntry) => {
+                console.log(`  Entry "${entry.eventName}":`, {
+                    extensionType: entry.extensionType,
+                    direction: entry.direction,
+                    loaded: entry.loaded,
+                    message: entry.message
+                });
+            });
+        });
+
         if (mapping?.extension?.extensionName && extensions.get(mapping.extension.extensionName)) {
-            this.extensionEvents$.next(
-                Object.values(extensions.get(mapping.extension.extensionName)?.extensionEntries)
-            );
+            console.log('Mapping has extension name set:', mapping.extension.extensionName);
+            const entries = Object.values(extensions.get(mapping.extension.extensionName)?.extensionEntries);
+            console.log('Setting initial extensionEvents$ with entries:', entries);
+            this.extensionEvents$.next(entries);
+        } else {
+            console.log('Mapping does not have extension name set or extension not found');
         }
 
+        console.log('===== loadExtensions DEBUG END =====');
         return extensions;
     }
 
     selectExtensionName(extensionName: string, extensions: Map<string, Extension>, mapping: Mapping): void {
-        this.extensionEvents$.next(
-            Object.values(extensions.get(extensionName).extensionEntries as Map<string, ExtensionEntry>)
-                .filter(entry => entry.extensionType == mapping.extension.extensionType)
-        );
+        console.log('===== selectExtensionName DEBUG START =====');
+        console.log('Extension Name:', extensionName);
+        console.log('Mapping Direction:', mapping.direction);
+        console.log('Mapping Transformation Type:', mapping.transformationType);
+        console.log('Mapping Extension Type (if set):', mapping.extension?.extensionType);
+
+        const extension = extensions.get(extensionName);
+        console.log('Extension object:', extension);
+
+        const allEntries = Object.values(extension.extensionEntries as Map<string, ExtensionEntry>);
+        console.log('All extension entries:', allEntries);
+        console.log('Number of all entries:', allEntries.length);
+
+        // Log each entry's details
+        allEntries.forEach((entry, index) => {
+            console.log(`Entry ${index}:`, {
+                eventName: entry.eventName,
+                extensionType: entry.extensionType,
+                direction: entry.direction,
+                loaded: entry.loaded
+            });
+        });
+
+        // Determine which extension type to filter for based on transformation type
+        let targetExtensionType: ExtensionType | null = null;
+
+        if (mapping.transformationType === TransformationType.EXTENSION_TARGET) {
+            // EXTENSION_TARGET uses complete extensions (INBOUND or OUTBOUND)
+            if (mapping.direction === Direction.INBOUND) {
+                targetExtensionType = ExtensionType.EXTENSION_INBOUND;
+            } else if (mapping.direction === Direction.OUTBOUND) {
+                targetExtensionType = ExtensionType.EXTENSION_OUTBOUND;
+            }
+        } else if (mapping.transformationType === TransformationType.EXTENSION_SOURCE) {
+            // EXTENSION_SOURCE uses substitution-based extensions
+            targetExtensionType = ExtensionType.EXTENSION_SOURCE;
+        } else if (mapping.extension?.extensionType) {
+            // Fall back to the mapping's extension type if set
+            targetExtensionType = mapping.extension.extensionType;
+        }
+
+        console.log('Target Extension Type to filter for:', targetExtensionType);
+
+        // Filter entries by the determined extension type
+        const filteredEntries = targetExtensionType
+            ? allEntries.filter(entry => {
+                const matches = entry.extensionType === targetExtensionType;
+                console.log(`Entry ${entry.eventName} (type: ${entry.extensionType}) matches ${targetExtensionType}:`, matches);
+                return matches;
+            })
+            : allEntries;
+
+        console.log('Filtered entries:', filteredEntries);
+        console.log('Number of filtered entries:', filteredEntries.length);
+        console.log('===== selectExtensionName DEBUG END =====');
+
+        this.extensionEvents$.next(filteredEntries);
     }
 
     async loadCodeTemplates(): Promise<Map<string, CodeTemplate>> {

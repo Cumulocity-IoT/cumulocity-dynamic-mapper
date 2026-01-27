@@ -41,7 +41,7 @@ import dynamic.mapper.model.API;
 public class ProcessorExtensionTest {
 
   @Test
-  void testDeserializeCustomEvent() {
+  void testDeserializeCustomEvent() throws dynamic.mapper.processor.ProcessingException {
 
     CustomEventOuter.CustomEvent proto = CustomEvent.newBuilder()
     .setExternalIdType("c8y_Serial")

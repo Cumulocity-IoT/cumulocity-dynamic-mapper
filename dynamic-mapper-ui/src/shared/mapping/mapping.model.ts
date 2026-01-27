@@ -246,6 +246,8 @@ export interface ExtensionEntry {
 
 export enum ExtensionType {
   EXTENSION_SOURCE = 'EXTENSION_SOURCE',
+  EXTENSION_INBOUND = 'EXTENSION_INBOUND',
+  EXTENSION_OUTBOUND = 'EXTENSION_OUTBOUND',
   EXTENSION_SOURCE_TARGET = 'EXTENSION_SOURCE_TARGET',
 }
 
@@ -259,6 +261,7 @@ export interface StepperConfiguration {
   showEditorSource?: boolean;
   showEditorTarget?: boolean;
   showProcessorExtensionsSource?: boolean;
+  showProcessorExtensionsTarget?: boolean;
   showProcessorExtensionsSourceTarget?: boolean;
   showProcessorExtensionsInternal?: boolean;
   showCodeEditor?: boolean;
@@ -381,7 +384,8 @@ export const MappingTypeDescriptionMap: Record<
           TransformationType.DEFAULT,
           TransformationType.JSONATA,
           TransformationType.SUBSTITUTION_AS_CODE,
-          TransformationType.SMART_FUNCTION
+          TransformationType.SMART_FUNCTION,
+          TransformationType.EXTENSION_TARGET
         ]
       },
     },

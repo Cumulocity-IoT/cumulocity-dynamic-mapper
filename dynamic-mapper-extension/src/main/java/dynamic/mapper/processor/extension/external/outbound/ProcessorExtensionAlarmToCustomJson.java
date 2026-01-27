@@ -26,10 +26,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.extension.OutboundExtension;
+import dynamic.mapper.processor.extension.ProcessorExtensionOutbound;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.RepairStrategy;
 import dynamic.mapper.processor.model.SubstituteValue.TYPE;
+import dynamic.mapper.processor.util.ProcessingResultHelper;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;
@@ -38,15 +39,15 @@ import java.util.Map;
 /**
  * Sample outbound extension that converts a Cumulocity alarm to a custom JSON format.
  *
- * This extension demonstrates:
+ * This extension demonstrates complete outbound processing:
  * - Extracting alarm data from Cumulocity payload
  * - Converting to a custom device-specific format
- * - Adding substitutions for template processing
+ * - Generating the complete broker message
  *
  * Use Case: Send alarm notifications to devices in their proprietary format
  */
 @Slf4j
-public class ProcessorExtensionAlarmToCustomJson implements OutboundExtension<byte[]> {
+public class ProcessorExtensionAlarmToCustomJson implements ProcessorExtensionOutbound<byte[]> {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -113,6 +114,61 @@ public class ProcessorExtensionAlarmToCustomJson implements OutboundExtension<by
             throw new ProcessingException(errorMsg, e);
         } catch (Exception e) {
             String errorMsg = "Error extracting alarm data: " + e.getMessage();
+            log.error("{} - {}", context.getTenant(), errorMsg, e);
+            throw new ProcessingException(errorMsg, e);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public void extractAndPrepare(ProcessingContext<byte[]> context) throws ProcessingException {
+        try {
+            String tenant = context.getTenant();
+
+            // Parse the Cumulocity alarm representation from the payload
+            Map<String, Object> alarmPayload = (Map<String, Object>) Json.parseJson(
+                    new String(context.getPayload(), "UTF-8"));
+
+            log.info("{} - Processing complete outbound alarm: {}", tenant, alarmPayload);
+
+            // Extract alarm fields
+            String alarmType = (String) alarmPayload.getOrDefault("type", "UNKNOWN");
+            String severity = (String) alarmPayload.getOrDefault("severity", "WARNING");
+            String text = (String) alarmPayload.getOrDefault("text", "");
+            String time = (String) alarmPayload.getOrDefault("time", "");
+            String status = (String) alarmPayload.getOrDefault("status", "ACTIVE");
+
+            // Extract source device information
+            Map<String, Object> source = (Map<String, Object>) alarmPayload.getOrDefault("source", new HashMap<>());
+            String sourceId = (String) source.getOrDefault("id", "");
+
+            // Build custom JSON structure for the device
+            Map<String, Object> customAlarmFormat = buildCustomAlarmFormat(
+                    alarmType, severity, text, time, status, sourceId);
+
+            // Convert to JSON string
+            String customJsonString = objectMapper.writeValueAsString(customAlarmFormat);
+
+            log.info("{} - Generated custom alarm format: {}", tenant, customJsonString);
+
+            // Create and add outbound request using the helper
+            // The helper will create the request and add it to context.getRequests()
+            ProcessingResultHelper.createAndAddDynamicMapperRequest(
+                    context,
+                    customJsonString,
+                    null,  // action (not needed for outbound)
+                    context.getMapping()
+            );
+
+            log.info("{} - Successfully prepared outbound alarm request for topic: {}",
+                    tenant, context.getResolvedPublishTopic());
+
+        } catch (JsonProcessingException e) {
+            String errorMsg = "Failed to generate custom alarm JSON: " + e.getMessage();
+            log.error("{} - {}", context.getTenant(), errorMsg, e);
+            throw new ProcessingException(errorMsg, e);
+        } catch (Exception e) {
+            String errorMsg = "Error preparing outbound alarm: " + e.getMessage();
             log.error("{} - {}", context.getTenant(), errorMsg, e);
             throw new ProcessingException(errorMsg, e);
         }
