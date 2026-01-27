@@ -592,11 +592,30 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   onSelectExtensionName(extensionName: string): void {
+    console.log('===== onSelectExtensionName COMPONENT DEBUG =====');
+    console.log('Selected extension name:', extensionName);
+    console.log('Current mapping:', this.mapping);
+    console.log('Current extensions:', this.extensions);
+    console.log('Mapping direction:', this.mapping.direction);
+    console.log('Mapping transformation type:', this.mapping.transformationType);
+
+    // Initialize extension object if it doesn't exist
+    if (!this.mapping.extension) {
+      this.mapping.extension = {} as any;
+    }
+
     this.mapping.extension.extensionName = extensionName;
     this.stepperService.selectExtensionName(extensionName, this.extensions, this.mapping);
+
+    console.log('===== onSelectExtensionName COMPONENT DEBUG END =====');
   }
 
   onSelectExtensionEvent(extensionEvent: string): void {
+    // Initialize extension object if it doesn't exist
+    if (!this.mapping.extension) {
+      this.mapping.extension = {} as any;
+    }
+
     this.mapping.extension.eventName = extensionEvent;
   }
 
@@ -646,6 +665,18 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
     if (this.mapping.code) {
       this.mappingCode = base64ToString(this.mapping.code);
+    }
+
+    // Trigger extension event filtering if extension is already selected
+    // This handles the case when navigating to step 3 with a pre-selected extension
+    if (this.mapping?.extension?.extensionName && this.extensions) {
+      console.log('===== handleSelectTemplatesStep: Triggering selectExtensionName =====');
+      console.log('Extension name from mapping:', this.mapping.extension.extensionName);
+      this.stepperService.selectExtensionName(
+        this.mapping.extension.extensionName,
+        this.extensions,
+        this.mapping
+      );
     }
 
     if (this.stepperForward) {

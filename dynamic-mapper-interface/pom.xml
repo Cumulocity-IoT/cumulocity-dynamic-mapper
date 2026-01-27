@@ -258,6 +258,7 @@
 						<include>dynamic/mapper/core/IdentityResolver.*</include>
 						<include>dynamic/mapper/processor/extension/ProcessorExtensionOutbound.*</include>
 						<include>dynamic/mapper/processor/ProcessingException.*</include>
+						<include>dynamic/mapper/processor/util/ProcessingResultHelper.*</include>
 						<include>dynamic/mapper/configuration/ServiceConfiguration.*</include>
 					</includes>
 				</configuration>
