@@ -19,7 +19,7 @@
  *
  */
 
-package dynamic.mapper.processor.extension.external;
+package dynamic.mapper.processor.extension.external.inbound;
 
 import com.cumulocity.model.ID;
 import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
@@ -33,12 +33,10 @@ import com.jayway.jsonpath.JsonPath;
 
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingRepresentation;
 import dynamic.mapper.processor.model.SubstituteValue.TYPE;
 import dynamic.mapper.processor.model.SubstituteValue;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.extension.ProcessorExtensionSource;
-import dynamic.mapper.processor.extension.ProcessorExtensionTarget;
+import dynamic.mapper.processor.extension.ProcessorExtensionInbound;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.RepairStrategy;
@@ -54,7 +52,7 @@ import java.util.Set;
 
 @Slf4j
 public class ProcessorExtensionCustomAlarm
-        implements ProcessorExtensionSource<byte[]>, ProcessorExtensionTarget<byte[]> {
+        implements ProcessorExtensionInbound<byte[]> {
 
     private ObjectMapper objectMapper;
 
@@ -90,7 +88,7 @@ public class ProcessorExtensionCustomAlarm
             log.info("{} - New alarm over json processor: {}, {}", context.getTenant(),
                     jsonObject.get("time"), jsonObject.get("message"));
         } catch (Exception e) {
-            throw new ProcessingException(e.getMessage());
+            throw new ProcessingException("Failed to process custom alarm: " + e.getMessage(), e);
         }
     }
 

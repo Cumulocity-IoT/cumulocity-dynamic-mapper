@@ -19,22 +19,22 @@
  *
  */
 
-package dynamic.mapper.processor.extension.external;
+package dynamic.mapper.processor.extension.external.inbound;
 
 import com.dashjoin.jsonata.json.Json;
 
 import dynamic.mapper.processor.model.SubstituteValue.TYPE;
-import dynamic.mapper.processor.extension.ProcessorExtensionSource;
+import dynamic.mapper.processor.extension.InboundExtension;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.RepairStrategy;
+import dynamic.mapper.processor.ProcessingException;
 import lombok.extern.slf4j.Slf4j;
 import org.joda.time.DateTime;
 
-import jakarta.ws.rs.ProcessingException;
 import java.util.Map;
 
 @Slf4j
-public class ProcessorExtensionCustomMeasurement implements ProcessorExtensionSource<byte[]> {
+public class ProcessorExtensionCustomMeasurement implements InboundExtension<byte[]> {
 
     public ProcessorExtensionCustomMeasurement() {
     }
@@ -80,7 +80,7 @@ public class ProcessorExtensionCustomMeasurement implements ProcessorExtensionSo
                     jsonObject.get("unit").toString(), jsonObject.get("temperature"),
                     unexpected);
         } catch (Exception e) {
-            throw new ProcessingException(e.getMessage());
+            throw new ProcessingException("Failed to process custom measurement: " + e.getMessage(), e);
         }
     }
 }

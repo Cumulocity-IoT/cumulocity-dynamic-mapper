@@ -19,14 +19,28 @@
  *
  */
 
-package dynamic.mapper.processor.extension;
+package dynamic.mapper.configuration;
 
-import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.model.ProcessingContext;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.Configuration;
 
-import org.springframework.stereotype.Component;
+import lombok.Getter;
+import lombok.Setter;
 
-@Component
-public interface ProcessorExtensionSource<O> {
-    public void extractFromSource(ProcessingContext<O> context) throws ProcessingException;
+@Configuration
+@ConfigurationProperties(prefix = "app")
+@Getter
+@Setter
+public class ExtensionConfiguration {
+
+    /**
+     * Enable or disable loading of external extensions
+     */
+    private boolean externalExtensionsEnabled = true;
+
+    /**
+     * Package name prefix that external extensions must use for security.
+     * External extensions must be in this package or a subpackage.
+     */
+    private String externalExtensionsAllowedPackage = "dynamic.mapper.processor.extension.external";
 }

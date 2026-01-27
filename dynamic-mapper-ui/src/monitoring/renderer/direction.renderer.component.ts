@@ -41,11 +41,31 @@ export class DirectionRendererComponent {
     return this.context.value === Direction.OUTBOUND;
   }
 
+  get isInbound(): boolean {
+    return this.context.value === Direction.INBOUND;
+  }
+
+  get isUnspecified(): boolean {
+    return this.context.value === Direction.UNSPECIFIED || !this.context.value;
+  }
+
   get iconStyle(): string {
-    return this.isOutbound ? 'width: 100%; color: orange' : 'width: 100%; color: green';
+    if (this.isOutbound) {
+      return 'width: 100%; color: orange';
+    } else if (this.isInbound) {
+      return 'width: 100%; color: green';
+    } else {
+      return 'width: 100%; color: gray';
+    }
   }
 
   get iconName(): string {
-    return this.isOutbound ? 'swipe-left' : 'swipe-right';
+    if (this.isOutbound) {
+      return 'swipe-left';
+    } else if (this.isInbound) {
+      return 'swipe-right';
+    } else {
+      return 'question-circle-o';
+    }
   }
 }

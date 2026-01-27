@@ -32,9 +32,9 @@ import dynamic.mapper.processor.model.SubstituteValue;
 import org.junit.jupiter.api.Test;
 
 import lombok.extern.slf4j.Slf4j;
-import dynamic.mapper.processor.extension.external.CustomEventOuter;
-import dynamic.mapper.processor.extension.external.ProcessorExtensionCustomEvent;
-import dynamic.mapper.processor.extension.external.CustomEventOuter.CustomEvent;
+import dynamic.mapper.processor.extension.external.inbound.CustomEventOuter;
+import dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionCustomEvent;
+import dynamic.mapper.processor.extension.external.inbound.CustomEventOuter.CustomEvent;
 import dynamic.mapper.model.API;
 
 @Slf4j

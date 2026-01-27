@@ -19,12 +19,11 @@
  *
  */
 
-package dynamic.mapper.processor.extension.external;
+package dynamic.mapper.processor.extension.external.inbound;
 
-import jakarta.ws.rs.ProcessingException;
-
+import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.SubstituteValue.TYPE;
-import dynamic.mapper.processor.extension.ProcessorExtensionSource;
+import dynamic.mapper.processor.extension.InboundExtension;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.RepairStrategy;
 import org.joda.time.DateTime;
@@ -34,7 +33,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class ProcessorExtensionCustomEvent implements ProcessorExtensionSource<byte[]> {
+public class ProcessorExtensionCustomEvent implements InboundExtension<byte[]> {
     @Override
     public void extractFromSource(ProcessingContext<byte[]> context)
             throws ProcessingException {
@@ -52,7 +51,7 @@ public class ProcessorExtensionCustomEvent implements ProcessorExtensionSource<b
             payloadProtobuf = CustomEventOuter.CustomEvent
                     .parseFrom(payload);
         } catch (InvalidProtocolBufferException e) {
-            throw new ProcessingException(e.getMessage());
+            throw new ProcessingException("Failed to parse protobuf event: " + e.getMessage(), e);
         }
 
         context.addSubstitution("time", new DateTime(
