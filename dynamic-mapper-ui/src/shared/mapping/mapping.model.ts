@@ -505,7 +505,8 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
       showFilterExpression: false,
       allowNoDefinedIdentifier: true,
       allowTestTransformation: false,
-      allowTestSending: false
+      allowTestSending: false,
+      advanceFromStepToEndStep: 2
     }
   },
   [MappingType.EXTENSION_JAVA]: {
