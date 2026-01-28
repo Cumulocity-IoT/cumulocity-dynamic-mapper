@@ -220,6 +220,11 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
                         .getNotificationSubscriber()
                         .subscribeDeviceAndConnect(tenant, childMO, c8yMessage.getApi(), Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
 
+                // Pre-populate inventory cache for this device to ensure inventory filters work correctly
+                log.debug("{} - Pre-populating inventory cache for child device {} in group {}",
+                        tenant, childId, groupId);
+                configurationRegistry.getC8yAgent().getMOFromInventoryCache(tenant, childId, false);
+
                 resultBuilder.addSubscription(childId, future);
                 log.debug("{} - Subscribed child device {} to group {}", tenant, childId, groupId);
 

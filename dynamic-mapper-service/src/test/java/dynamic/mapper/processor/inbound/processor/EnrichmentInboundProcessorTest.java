@@ -170,9 +170,7 @@ class EnrichmentInboundProcessorTest {
                 MappingType.FLAT_FILE,
                 MappingType.HEX,
                 MappingType.PROTOBUF_INTERNAL,
-                MappingType.EXTENSION_SOURCE,
-                MappingType.EXTENSION_SOURCE_TARGET,
-                MappingType.CODE_BASED
+                MappingType.EXTENSION_JAVA,
         };
 
         for (MappingType type : mappingTypes) {

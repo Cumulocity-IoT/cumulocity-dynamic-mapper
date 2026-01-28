@@ -49,8 +49,6 @@ import dynamic.mapper.model.Extension;
 import dynamic.mapper.model.ExtensionEntry;
 import dynamic.mapper.model.ExtensionType;
 import dynamic.mapper.processor.extension.ExtensionsComponent;
-import dynamic.mapper.processor.extension.InboundExtension;
-import dynamic.mapper.processor.extension.OutboundExtension;
 import dynamic.mapper.processor.extension.ProcessorExtensionInbound;
 import dynamic.mapper.processor.extension.ProcessorExtensionOutbound;
 import dynamic.mapper.service.ExtensionInboundRegistry;
@@ -221,10 +219,10 @@ public class ExtensionManager {
                     boolean isValidExtension = false;
 
                     // Auto-detect direction from marker interfaces
-                    if (extensionInstance instanceof InboundExtension) {
+                    if (extensionInstance instanceof ProcessorExtensionInbound) {
                         extensionEntry.setDirection(Direction.INBOUND);
                         log.debug("{} - Extension auto-detected as INBOUND via InboundExtension", tenant);
-                    } else if (extensionInstance instanceof OutboundExtension) {
+                    } else if (extensionInstance instanceof ProcessorExtensionOutbound) {
                         extensionEntry.setDirection(Direction.OUTBOUND);
                         log.debug("{} - Extension auto-detected as OUTBOUND via OutboundExtension", tenant);
                     }
@@ -244,17 +242,17 @@ public class ExtensionManager {
                         isValidExtension = true;
                         log.debug("{} - Registered ProcessorExtensionOutbound: {} for key: {}",
                                 tenant, newExtensions.getProperty(key), key);
-                    } else if (extensionInstance instanceof InboundExtension) {
+                    } else if (extensionInstance instanceof ProcessorExtensionInbound) {
                         // Substitution-based inbound (implements only InboundExtension)
                         extensionEntry.setExtensionImplSource(extensionInstance);
-                        extensionEntry.setExtensionType(ExtensionType.EXTENSION_SOURCE);
+                        extensionEntry.setExtensionType(ExtensionType.EXTENSION_INBOUND);
                         isValidExtension = true;
                         log.debug("{} - Registered substitution-based InboundExtension: {} for key: {}",
                                 tenant, newExtensions.getProperty(key), key);
-                    } else if (extensionInstance instanceof OutboundExtension) {
+                    } else if (extensionInstance instanceof ProcessorExtensionOutbound) {
                         // Substitution-based outbound (implements only OutboundExtension)
                         extensionEntry.setExtensionImplSource(extensionInstance);
-                        extensionEntry.setExtensionType(ExtensionType.EXTENSION_SOURCE);
+                        extensionEntry.setExtensionType(ExtensionType.EXTENSION_OUTBOUND);
                         isValidExtension = true;
                         log.debug("{} - Registered substitution-based OutboundExtension: {} for key: {}",
                                 tenant, newExtensions.getProperty(key), key);

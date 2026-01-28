@@ -46,6 +46,7 @@ import {
   DeploymentMapEntry,
   Direction,
   Extension,
+  ExtensionEntry,
   getExternalTemplate,
   getSchema,
   JsonEditorComponent,
@@ -302,13 +303,11 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.initializeFormlyFields();
     await this.initializeCodeTemplates();
 
-    this.codeEditorHelp = this.mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE ||
-      this.mapping.mappingType === MappingType.CODE_BASED ?
+    this.codeEditorHelp = this.mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE  ?
       'JavaScript for creating substitutions...' :
       'JavaScript for creating complete payloads as Smart Functions.';
 
-    this.codeEditorLabel = this.mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE ||
-      this.mapping.mappingType === MappingType.CODE_BASED ?
+    this.codeEditorLabel = this.mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE ?
       'JavaScript callback for creating substitutions' :
       'JavaScript callback for Smart functions';
   }
@@ -617,6 +616,25 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     }
 
     this.mapping.extension.eventName = extensionEvent;
+
+    // Look up the full extension entry to populate extensionType and other properties
+    if (this.mapping.extension.extensionName && this.extensions) {
+      const extension = this.extensions.get(this.mapping.extension.extensionName);
+      if (extension && extension.extensionEntries) {
+        // Find the matching event entry
+        const eventEntry = Object.values(extension.extensionEntries as Map<string, ExtensionEntry>)
+          .find(entry => entry.eventName === extensionEvent);
+
+        if (eventEntry) {
+          // Copy all properties from the extension entry
+          this.mapping.extension.extensionType = eventEntry.extensionType;
+          this.mapping.extension.direction = eventEntry.direction;
+          this.mapping.extension.fqnClassName = eventEntry.fqnClassName;
+          this.mapping.extension.loaded = eventEntry.loaded;
+          this.mapping.extension.message = eventEntry.message;
+        }
+      }
+    }
   }
 
   async onStepChange(event: any): Promise<void> {

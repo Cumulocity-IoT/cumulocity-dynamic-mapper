@@ -256,16 +256,13 @@ export class MappingStepperService {
         // Determine which extension type to filter for based on transformation type
         let targetExtensionType: ExtensionType | null = null;
 
-        if (mapping.transformationType === TransformationType.EXTENSION_TARGET) {
-            // EXTENSION_TARGET uses complete extensions (INBOUND or OUTBOUND)
+        if (mapping.transformationType === TransformationType.EXTENSION_JAVA) {
+            // EXTENSION_JAVA uses complete extensions (INBOUND or OUTBOUND)
             if (mapping.direction === Direction.INBOUND) {
                 targetExtensionType = ExtensionType.EXTENSION_INBOUND;
             } else if (mapping.direction === Direction.OUTBOUND) {
                 targetExtensionType = ExtensionType.EXTENSION_OUTBOUND;
             }
-        } else if (mapping.transformationType === TransformationType.EXTENSION_SOURCE) {
-            // EXTENSION_SOURCE uses substitution-based extensions
-            targetExtensionType = ExtensionType.EXTENSION_SOURCE;
         } else if (mapping.extension?.extensionType) {
             // Fall back to the mapping's extension type if set
             targetExtensionType = mapping.extension.extensionType;

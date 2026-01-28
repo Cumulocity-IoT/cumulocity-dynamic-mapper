@@ -23,57 +23,79 @@ package dynamic.mapper.processor.extension.external.inbound;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 
-import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.model.SubstituteValue.TYPE;
-import dynamic.mapper.processor.extension.InboundExtension;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.RepairStrategy;
+import dynamic.mapper.processor.extension.ProcessorExtensionInbound;
+import dynamic.mapper.processor.flow.CumulocityObject;
+import dynamic.mapper.processor.flow.DataPreparationContext;
+import dynamic.mapper.processor.flow.Message;
 import org.joda.time.DateTime;
-
-import com.google.protobuf.InvalidProtocolBufferException;
 
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Extension for processing custom protobuf events using the Smart Java Function pattern.
+ *
+ * <p>This extension parses protobuf payloads and returns Cumulocity event objects using
+ * the builder pattern. It demonstrates:</p>
+ * <ul>
+ *   <li>Protobuf deserialization</li>
+ *   <li>Return-value based processing (no side effects)</li>
+ *   <li>Builder pattern for clean object construction</li>
+ *   <li>Proper error handling with context warnings</li>
+ * </ul>
+ *
+ * <p>Input: Protobuf message with fields: timestamp, txt, eventType, externalId</p>
+ * <p>Output: Cumulocity Event object</p>
+ */
 @Slf4j
-public class ProcessorExtensionCustomEvent implements InboundExtension<byte[]> {
+public class ProcessorExtensionCustomEvent implements ProcessorExtensionInbound<byte[]> {
+
     @Override
-    public void extractFromSource(ProcessingContext<byte[]> context)
-            throws ProcessingException {
-        CustomEventOuter.CustomEvent payloadProtobuf;
+    public CumulocityObject[] onMessage(Message<byte[]> message, DataPreparationContext context) {
         try {
-            byte[] payload = context.getPayload();
+            // 1. Parse the protobuf payload
+            byte[] payload = message.getPayload();
             if (payload == null) {
-                log.info("{} - Preparing new event failed, payload == null",
-                        context.getTenant());
-
-            } else {
-                log.info("{} - Preparing new event: {}", context.getTenant(),
-                        new String(payload));
+                String errorMsg = "Protobuf event payload is null";
+                log.warn("{} - {}", context.getTenant(), errorMsg);
+                context.addWarning(errorMsg);
+                return new CumulocityObject[0];
             }
-            payloadProtobuf = CustomEventOuter.CustomEvent
-                    .parseFrom(payload);
+
+            log.debug("{} - Parsing protobuf event, payload size: {} bytes",
+                    context.getTenant(), payload.length);
+
+            CustomEventOuter.CustomEvent payloadProtobuf =
+                CustomEventOuter.CustomEvent.parseFrom(payload);
+
+            // 2. Extract fields
+            String externalId = payloadProtobuf.getExternalId().toString();
+            String eventType = payloadProtobuf.getEventType();
+            String text = payloadProtobuf.getTxt();
+            DateTime time = new DateTime(payloadProtobuf.getTimestamp());
+
+            log.info("{} - Processing custom event: type={}, text={}, externalId={}, time={}",
+                    context.getTenant(), eventType, text, externalId, time);
+
+            // 3. Build and return Cumulocity event using builder pattern
+            return new CumulocityObject[] {
+                CumulocityObject.event()
+                    .type(eventType)
+                    .text(text)
+                    .time(time.toString())
+                    .externalId(externalId, context.getMapping().getExternalIdType())
+                    .build()
+            };
+
         } catch (InvalidProtocolBufferException e) {
-            throw new ProcessingException("Failed to parse protobuf event: " + e.getMessage(), e);
+            String errorMsg = "Failed to parse protobuf event: " + e.getMessage();
+            log.error("{} - {}", context.getTenant(), errorMsg, e);
+            context.addWarning(errorMsg);
+            return new CumulocityObject[0];
+        } catch (Exception e) {
+            String errorMsg = "Failed to process custom event: " + e.getMessage();
+            log.error("{} - {}", context.getTenant(), errorMsg, e);
+            context.addWarning(errorMsg);
+            return new CumulocityObject[0];
         }
-
-        context.addSubstitution("time", new DateTime(
-                payloadProtobuf.getTimestamp())
-                .toString(), TYPE.TEXTUAL, RepairStrategy.DEFAULT,false);
-        context.addSubstitution("text",
-                payloadProtobuf.getTxt(), TYPE.TEXTUAL, RepairStrategy.DEFAULT,false);
-        context.addSubstitution("type", 
-                payloadProtobuf.getEventType(), TYPE.TEXTUAL, RepairStrategy.DEFAULT,false);
-
-        // as the mapping uses useExternalId we have to map the id to
-        // _IDENTITY_.externalId
-        context.addSubstitution(context.getMapping().getGenericDeviceIdentifier(),
-                payloadProtobuf.getExternalId()
-                        .toString(),
-                TYPE.TEXTUAL, RepairStrategy.DEFAULT,false);
-
-        log.info("{} - New event over protobuf: {}, {}, {}, {}", context.getTenant(),
-                payloadProtobuf.getTimestamp(),
-                payloadProtobuf.getTxt(), payloadProtobuf.getEventType(),
-                payloadProtobuf.getExternalId());
     }
 }

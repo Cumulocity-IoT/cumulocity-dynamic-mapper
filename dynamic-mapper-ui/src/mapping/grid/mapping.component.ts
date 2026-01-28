@@ -619,18 +619,6 @@ export class MappingComponent implements OnInit, OnDestroy {
         ...mapping,
         sourceTemplate: sampleSource
       };
-    } else if (this.mappingType == MappingType.EXTENSION_SOURCE) {
-      mapping.extension = {
-        extensionName: undefined,
-        eventName: undefined,
-        extensionType: ExtensionType.EXTENSION_SOURCE,
-      };
-    } else if (this.mappingType == MappingType.EXTENSION_SOURCE_TARGET) {
-      mapping.extension = {
-        extensionName: undefined,
-        eventName: undefined,
-        extensionType: ExtensionType.EXTENSION_SOURCE_TARGET,
-      };
     }
 
     this.mappingToUpdate = mapping;
@@ -1080,19 +1068,22 @@ export class MappingComponent implements OnInit, OnDestroy {
         allowTestSending: false,
         allowTestTransformation: true
       }),
-      ...((transformationType == TransformationType.EXTENSION_SOURCE && direction === Direction.OUTBOUND) && {
-        showEditorSource: true,
-        showEditorTarget: false,
-        allowTestSending: false,
-        allowTestTransformation: false,
-        advanceFromStepToEndStep: 2
-      }),
-      ...((transformationType == TransformationType.EXTENSION_TARGET && direction === Direction.OUTBOUND) && {
+      ...((transformationType == TransformationType.EXTENSION_JAVA && direction === Direction.OUTBOUND) && {
         showProcessorExtensionsTarget: true,
         showEditorTarget: false,
         allowTestSending: false,
         allowTestTransformation: false,
         advanceFromStepToEndStep: 2
+      }),
+      ...((transformationType == TransformationType.EXTENSION_JAVA && direction === Direction.INBOUND) && {
+        showEditorTarget: false,
+        showFilterExpression: false,
+        allowTestSending: false,
+        allowTestTransformation: false
+      }),
+      ...((mappingType == MappingType.EXTENSION_JAVA && direction === Direction.INBOUND) && {
+        showEditorTarget: false,
+        showFilterExpression: false
       })
     };
 

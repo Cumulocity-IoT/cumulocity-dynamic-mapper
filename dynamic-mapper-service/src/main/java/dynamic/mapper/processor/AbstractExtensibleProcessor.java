@@ -115,6 +115,22 @@ public abstract class AbstractExtensibleProcessor extends CommonProcessor {
     }
 
     /**
+     * Get extension outbound implementation for transformation.
+     *
+     * @param tenant The tenant identifier
+     * @param extension The extension entry configuration
+     * @return The extension outbound implementation
+     */
+    protected dynamic.mapper.processor.extension.ProcessorExtensionOutbound<?> getProcessorExtensionOutbound(String tenant, ExtensionEntry extension) {
+        String extensionName = extension.getExtensionName();
+        String eventName = extension.getEventName();
+        return extensionInboundRegistry.getExtension(tenant, extensionName)
+                .getExtensionEntries()
+                .get(eventName)
+                .getExtensionImplOutbound();
+    }
+
+    /**
      * Throw extension not found exception with formatted message.
      *
      * @param tenant The tenant identifier

@@ -22,12 +22,10 @@
 package dynamic.mapper.processor.extension.external.inbound;
 
 import com.dashjoin.jsonata.json.Json;
-import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.extension.ProcessorExtensionInbound;
 import dynamic.mapper.processor.flow.CumulocityObject;
 import dynamic.mapper.processor.flow.DataPreparationContext;
 import dynamic.mapper.processor.flow.Message;
-import dynamic.mapper.processor.model.ProcessingContext;
 import lombok.extern.slf4j.Slf4j;
 import org.joda.time.DateTime;
 
@@ -63,17 +61,6 @@ import java.util.Map;
  */
 @Slf4j
 public class ProcessorExtensionCustomAlarmNew implements ProcessorExtensionInbound<byte[]> {
-
-    /**
-     * Legacy method - not used when onMessage is implemented.
-     * This must be implemented because InboundExtension requires it, but it won't be called
-     * when using the new pattern.
-     */
-    @Override
-    public void extractFromSource(ProcessingContext<byte[]> context) throws ProcessingException {
-        throw new UnsupportedOperationException(
-            "This extension uses the new onMessage() pattern - extractFromSource() should not be called");
-    }
 
     @Override
     public CumulocityObject[] onMessage(Message<byte[]> message, DataPreparationContext context) {

@@ -31,7 +31,6 @@ import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.AbstractExtensibleProcessor;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.extension.ExtensionResultProcessor;
-import dynamic.mapper.processor.extension.OutboundExtension;
 import dynamic.mapper.processor.extension.ProcessorExtensionOutbound;
 import dynamic.mapper.processor.flow.DataPreparationContext;
 import dynamic.mapper.processor.flow.DeviceMessage;
@@ -43,15 +42,12 @@ import dynamic.mapper.service.ExtensionInboundRegistry;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
-import java.lang.reflect.Method;
-
 /**
  * Outbound extensible processor that delegates processing to external Java extensions.
  * Used when mappings are configured with extension-based processing for outbound direction.
  *
- * Supports two transformation types (validated at runtime):
- * - EXTENSION_SOURCE: Calls OutboundExtension.extractFromSource() to extract substitutions (substitution-based pattern)
- * - EXTENSION_TARGET: Calls ProcessorExtensionOutbound.onMessage() or extractAndPrepare() to prepare outbound requests (Smart Java Function pattern)
+ * Only supports EXTENSION_JAVA transformation type:
+ * - EXTENSION_JAVA: Calls ProcessorExtensionOutbound.onMessage() to prepare outbound requests (Smart Java Function pattern)
  *
  * Any other transformation type will result in a ProcessingException being thrown.
  * The extension prepares requests which are then sent by SendOutboundProcessor.
@@ -69,8 +65,24 @@ public class ExtensibleOutboundProcessor extends AbstractExtensibleProcessor {
         super(mappingService, extensionInboundRegistry);
     }
 
+    /**
+     * Override to handle ProcessingContext<Object> for outbound (not byte[])
+     */
     @Override
-    protected void processWithExtension(ProcessingContext<byte[]> context)
+    public void process(org.apache.camel.Exchange exchange) throws Exception {
+        ProcessingContext<Object> context = getProcessingContextAsObject(exchange);
+        Mapping mapping = context.getMapping();
+        String tenant = context.getTenant();
+        Boolean testing = context.getTesting();
+
+        try {
+            processWithExtensionOutbound(context);
+        } catch (Exception e) {
+            handleProcessingErrorObject(e, context, tenant, mapping, testing);
+        }
+    }
+
+    private void processWithExtensionOutbound(ProcessingContext<Object> context)
             throws ProcessingException {
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
@@ -79,91 +91,86 @@ public class ExtensibleOutboundProcessor extends AbstractExtensibleProcessor {
         // Validate direction
         validateExtensionDirection(tenant, extensionEntry, Direction.OUTBOUND);
 
-        // Check transformation type to determine which interface to use
+        // Check transformation type - only EXTENSION_JAVA is supported
         TransformationType transformationType = mapping.getTransformationType();
 
-        if (transformationType == TransformationType.EXTENSION_TARGET) {
+        if (transformationType == TransformationType.EXTENSION_JAVA) {
             // Complete processing with connector access (Smart Java Function pattern)
-            processWithExtensionOutbound(context, tenant, extensionEntry);
-        } else if (transformationType == TransformationType.EXTENSION_SOURCE) {
-            // Source parsing only (substitution-based pattern)
-            processWithExtensionSource(context, tenant, extensionEntry);
+            processWithExtensionOutboundImpl(context, tenant, extensionEntry);
         } else {
             // Invalid transformation type for extension processing
             String errorMsg = String.format(
                 "%s - Invalid transformation type '%s' for extension processing. " +
-                "Expected EXTENSION_SOURCE or EXTENSION_TARGET for mapping '%s' with extension '%s'",
+                "Expected EXTENSION_JAVA for mapping '%s' with extension '%s'. " +
+                "Note: EXTENSION_SOURCE (substitution-based pattern) has been removed.",
                 tenant, transformationType, mapping.getName(), extensionEntry.getExtensionName());
             log.error(errorMsg);
             throw new ProcessingException(errorMsg);
         }
     }
 
+    @Override
+    protected void processWithExtension(ProcessingContext<byte[]> context) throws ProcessingException {
+        // Not used for outbound - we override process() instead
+        throw new UnsupportedOperationException("Outbound processor uses ProcessingContext<Object>, not byte[]");
+    }
+
+    @SuppressWarnings("unchecked")
+    private ProcessingContext<Object> getProcessingContextAsObject(org.apache.camel.Exchange exchange) {
+        return exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+    }
+
     /**
-     * Process using OutboundExtension for substitution-based transformation.
+     * Process using ProcessorExtensionOutbound to prepare outbound requests.
+     * The actual sending is handled by SendOutboundProcessor.
+     * Uses the SMART Java Function pattern (return-value based).
      */
     @SuppressWarnings({"rawtypes", "unchecked"})
-    private void processWithExtensionSource(ProcessingContext<byte[]> context,
-                                           String tenant,
-                                           ExtensionEntry extensionEntry)
+    private void processWithExtensionOutboundImpl(ProcessingContext<Object> context,
+                                             String tenant,
+                                             ExtensionEntry extensionEntry)
             throws ProcessingException {
-        OutboundExtension extension;
+        // Get the extension from registry (same pattern as inbound)
+        ProcessorExtensionOutbound extension;
         try {
-            Object extensionObj = getProcessorExtensionSource(tenant, extensionEntry);
-            if (extensionObj instanceof OutboundExtension) {
-                extension = (OutboundExtension) extensionObj;
-            } else {
-                throwExtensionNotFoundException(tenant, extensionEntry);
-                return;
-            }
+            extension = getProcessorExtensionOutbound(tenant, extensionEntry);
         } catch (Exception ex) {
             throwExtensionNotFoundException(tenant, extensionEntry);
             return; // Unreachable, but makes null analysis happy
         }
 
         if (extension == null) {
-            log.info("{} - extractFromSource - extension not found", tenant);
+            log.info("{} - onMessage - extension not found", tenant);
             logExtensions(tenant, extensionInboundRegistry.getExtensions(tenant));
             throwExtensionNotFoundException(tenant, extensionEntry);
             return; // Unreachable, but makes null analysis happy
         }
 
-        extension.extractFromSource(context);
-    }
-
-    /**
-     * Process using ProcessorExtensionOutbound to prepare outbound requests.
-     * The actual sending is handled by SendOutboundProcessor.
-     * Supports both legacy and new patterns.
-     */
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    private void processWithExtensionOutbound(ProcessingContext<byte[]> context,
-                                             String tenant,
-                                             ExtensionEntry extensionEntry)
-            throws ProcessingException {
-        // Get the extension
-        ProcessorExtensionOutbound extension = extensionEntry.getExtensionImplOutbound();
-
-        if (extension == null) {
-            String message = String.format(
-                    "Tenant %s - Extension %s:%s not loaded or does not implement ProcessorExtensionOutbound",
-                    tenant,
-                    extensionEntry.getExtensionName(),
-                    extensionEntry.getEventName());
-            log.error(message);
-            throw new ProcessingException(message);
-        }
-
         try {
-            // Check which pattern the extension uses
-            if (usesNewPattern(extension)) {
-                // NEW PATTERN: Return-value based
-                processWithNewPattern(extension, context, tenant);
+            // Process using return-value based pattern
+            // 1. Create Message wrapper
+            Message<Object> message = Message.from(context);
+
+            // 2. Create DataPreparationContext
+            // Note: For outbound, C8YAgent is typically not needed, but we provide it for consistency
+            DataPreparationContext prepContext = new SimpleDataPreparationContext(
+                context.getFlowContext(),
+                null, // c8yAgent not typically needed for outbound
+                tenant,
+                context.getTesting(),
+                context.getMapping(),
+                context
+            );
+
+            // 3. Call new pattern method
+            DeviceMessage[] results = extension.onMessage(message, prepContext);
+
+            // 4. Process results
+            if (results != null && results.length > 0) {
+                log.debug("{} - Extension returned {} DeviceMessage(s)", tenant, results.length);
+                resultProcessor.processOutboundResults(results, context);
             } else {
-                // OLD PATTERN: Side-effect based
-                log.debug("{} - Extension {} uses deprecated extractAndPrepare() pattern",
-                         tenant, extensionEntry.getExtensionName());
-                extension.extractAndPrepare(context);
+                log.warn("{} - Extension onMessage() returned null or empty array - no data to publish", tenant);
             }
 
         } catch (Exception e) {
@@ -172,58 +179,6 @@ public class ExtensibleOutboundProcessor extends AbstractExtensibleProcessor {
                     tenant, e.getMessage());
             log.error(message, e);
             throw new ProcessingException(message, e);
-        }
-    }
-
-    /**
-     * Check if extension uses the new onMessage pattern.
-     *
-     * <p>Pattern detection works by checking if the extension class has overridden
-     * the onMessage method. If it's still the default implementation from the interface,
-     * we use the legacy pattern.</p>
-     */
-    private boolean usesNewPattern(ProcessorExtensionOutbound<?> extension) {
-        try {
-            Method method = extension.getClass().getMethod("onMessage",
-                Message.class, DataPreparationContext.class);
-            // Check if the method is declared in the implementation class
-            // (not in the interface where the default is defined)
-            return !method.getDeclaringClass().equals(ProcessorExtensionOutbound.class);
-        } catch (NoSuchMethodException e) {
-            return false;
-        }
-    }
-
-    /**
-     * Process extension using the new return-value based pattern.
-     */
-    @SuppressWarnings("unchecked")
-    private void processWithNewPattern(ProcessorExtensionOutbound extension,
-                                       ProcessingContext<byte[]> context,
-                                       String tenant) throws ProcessingException {
-        // 1. Create Message wrapper
-        Message<byte[]> message = Message.from(context);
-
-        // 2. Create DataPreparationContext
-        // Note: For outbound, C8YAgent is typically not needed, but we provide it for consistency
-        DataPreparationContext prepContext = new SimpleDataPreparationContext(
-            context.getFlowContext(),
-            null, // c8yAgent not typically needed for outbound
-            tenant,
-            context.getTesting(),
-            context.getMapping(),
-            context
-        );
-
-        // 3. Call new pattern method
-        DeviceMessage[] results = extension.onMessage(message, prepContext);
-
-        // 4. Process results
-        if (results != null && results.length > 0) {
-            log.debug("{} - Extension returned {} DeviceMessage(s)", tenant, results.length);
-            resultProcessor.processOutboundResults(results, context);
-        } else {
-            log.warn("{} - Extension onMessage() returned null or empty array - no data to publish", tenant);
         }
     }
 
@@ -245,9 +200,20 @@ public class ExtensibleOutboundProcessor extends AbstractExtensibleProcessor {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     protected void handleProcessingError(
             Exception e,
             ProcessingContext<byte[]> context,
+            String tenant,
+            Mapping mapping,
+            Boolean testing) {
+        // Delegate to the Object version (outbound uses ProcessingContext<Object>)
+        handleProcessingErrorObject(e, (ProcessingContext<Object>) (ProcessingContext<?>) context, tenant, mapping, testing);
+    }
+
+    private void handleProcessingErrorObject(
+            Exception e,
+            ProcessingContext<Object> context,
             String tenant,
             Mapping mapping,
             Boolean testing) {

@@ -28,7 +28,6 @@ import dynamic.mapper.processor.extension.ProcessorExtensionOutbound;
 import dynamic.mapper.processor.flow.DataPreparationContext;
 import dynamic.mapper.processor.flow.DeviceMessage;
 import dynamic.mapper.processor.flow.Message;
-import dynamic.mapper.processor.model.ProcessingContext;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;
@@ -81,28 +80,17 @@ import java.util.Map;
  * @see ProcessorExtensionAlarmToCustomJson for the legacy implementation
  */
 @Slf4j
-public class ProcessorExtensionAlarmToCustomJsonNew implements ProcessorExtensionOutbound<byte[]> {
+public class ProcessorExtensionAlarmToCustomJsonNew implements ProcessorExtensionOutbound<Object> {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    /**
-     * Legacy method - not used when onMessage is implemented.
-     * This must be implemented because OutboundExtension requires it, but it won't be called
-     * when using the new pattern.
-     */
     @Override
-    public void extractFromSource(ProcessingContext<byte[]> context) throws ProcessingException {
-        throw new UnsupportedOperationException(
-            "This extension uses the new onMessage() pattern - extractFromSource() should not be called");
-    }
-
-    @Override
-    public DeviceMessage[] onMessage(Message<byte[]> message, DataPreparationContext context) {
+    public DeviceMessage[] onMessage(Message<Object> message, DataPreparationContext context) throws ProcessingException {
         try {
-            // 1. Parse the Cumulocity alarm representation from the payload
-            String jsonString = new String(message.getPayload(), "UTF-8");
+            // 1. Get the Cumulocity alarm representation from the payload
+            // For outbound, payload is already a parsed Map from Cumulocity API
             @SuppressWarnings("unchecked")
-            Map<String, Object> alarmPayload = (Map<String, Object>) Json.parseJson(jsonString);
+            Map<String, Object> alarmPayload = (Map<String, Object>) message.getPayload();
 
             log.info("{} - Processing outbound alarm with new pattern: {}",
                     context.getTenant(), alarmPayload.get("type"));

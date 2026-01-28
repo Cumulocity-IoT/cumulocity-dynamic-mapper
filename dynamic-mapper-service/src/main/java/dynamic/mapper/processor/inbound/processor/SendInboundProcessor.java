@@ -1,5 +1,8 @@
 package dynamic.mapper.processor.inbound.processor;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.camel.Exchange;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,6 +12,7 @@ import com.cumulocity.model.ID;
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.core.C8YAgent;
@@ -188,11 +192,42 @@ public class SendInboundProcessor extends BaseProcessor {
      * Process non-INVENTORY API requests (MEASUREMENT, EVENT, ALARM)
      */
     private void processNonInventoryRequest(ProcessingContext<Object> context, int requestIndex) throws Exception {
+        String tenant = context.getTenant();
         DynamicMapperRequest request = context.getRequests().get(requestIndex);
         try {
+            // Resolve external ID if needed and add source to payload
+            if (request.getExternalId() != null) {
+                ID identity = new ID(request.getExternalIdType(), request.getExternalId());
+                ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId2GlobalId(tenant, identity,
+                        context.getTesting());
+
+                if (sourceId != null) {
+                    request.setSourceId(sourceId.getManagedObject().getId().getValue());
+
+                    // Add source field to payload JSON
+                    String payloadJson = request.getRequest();
+                    Map<String, Object> payloadMap = objectMapper.readValue(payloadJson, new TypeReference<Map<String, Object>>() {});
+                    Map<String, Object> source = new HashMap<>();
+                    source.put("id", request.getSourceId());
+                    payloadMap.put("source", source);
+                    request.setRequest(objectMapper.writeValueAsString(payloadMap));
+
+                    // Cache the mapping of device to client ID
+                    if (context.getClientId() != null) {
+                        configurationRegistry.addOrUpdateClientRelation(tenant, context.getClientId(),
+                                request.getSourceId());
+                    }
+                } else if (context.getMapping().getCreateNonExistingDevice()) {
+                    // Device doesn't exist but we should create it
+                    log.debug("{} - Device with externalId {} not found, creating implicitly",
+                            tenant, request.getExternalId());
+                    // Note: Implicit device creation could be added here if needed
+                    // For now, let the API call fail with validation error
+                }
+            }
+
             if (context.getSendPayload()) {
                 // Send the request to C8Y
-
                 c8yAgent.createMEAO(context, requestIndex);
 
                 // Note: adHocRequest would be returned from createMEAO if needed

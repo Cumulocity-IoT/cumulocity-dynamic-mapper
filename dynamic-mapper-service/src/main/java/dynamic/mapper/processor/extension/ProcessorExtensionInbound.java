@@ -21,22 +21,17 @@
 
 package dynamic.mapper.processor.extension;
 
-import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.processor.flow.CumulocityObject;
 import dynamic.mapper.processor.flow.DataPreparationContext;
 import dynamic.mapper.processor.flow.Message;
-import dynamic.mapper.processor.model.ProcessingContext;
 import org.springframework.stereotype.Component;
 
 /**
  * Extension interface for complete inbound processing (Broker → Cumulocity).
  *
- * <p>This interface supports two patterns:</p>
- *
- * <h3>1. New Pattern - Return-Value Based (SMART Function Pattern)</h3>
- * <p>Implement {@link #onMessage(Message, DataPreparationContext)} to follow the functional
- * programming pattern used by SMART JavaScript functions. This is the recommended approach
- * for new extensions.</p>
+ * <p>This interface uses the return-value based SMART Function Pattern.
+ * Implement {@link #onMessage(Message, DataPreparationContext)} to follow the functional
+ * programming pattern used by SMART JavaScript functions.</p>
  *
  * <pre>
  * {@code
@@ -58,12 +53,7 @@ import org.springframework.stereotype.Component;
  * }
  * </pre>
  *
- * <h3>2. Legacy Pattern - Side-Effect Based (Deprecated)</h3>
- * <p>The original {@link #substituteInTargetAndSend(ProcessingContext, C8YAgent)} method
- * is still supported for backwards compatibility but is deprecated. Existing extensions
- * will continue to work unchanged.</p>
- *
- * <p>Benefits of the new pattern:</p>
+ * <p>Benefits of this pattern:</p>
  * <ul>
  *   <li>Cleaner code - no side effects, easier to test</li>
  *   <li>Consistent with SMART JavaScript function pattern</li>
@@ -81,28 +71,7 @@ import org.springframework.stereotype.Component;
  * @see CumulocityObject
  */
 @Component
-public interface ProcessorExtensionInbound<O> extends InboundExtension<O> {
-
-    /**
-     * Legacy pattern: Perform substitutions in the target template and send to Cumulocity.
-     *
-     * <p><strong>DEPRECATED:</strong> This method uses the side-effect based pattern
-     * where extensions directly call {@code c8yAgent.createMEAO()} to send data.
-     * New extensions should use {@link #onMessage(Message, DataPreparationContext)} instead.</p>
-     *
-     * <p>Existing implementations will continue to work. The processor automatically
-     * detects which pattern an extension uses at runtime.</p>
-     *
-     * @param context Processing context containing the source payload and mapping info
-     * @param c8yAgent C8Y agent for sending data to Cumulocity
-     * @deprecated Use {@link #onMessage(Message, DataPreparationContext)} for new extensions
-     */
-    @Deprecated(since = "2.0", forRemoval = false)
-    default void substituteInTargetAndSend(ProcessingContext<O> context, C8YAgent c8yAgent) {
-        throw new UnsupportedOperationException(
-            "Extension must implement either substituteInTargetAndSend() or onMessage()");
-    }
-
+public interface ProcessorExtensionInbound<O> {
     /**
      * New pattern: Process an incoming message and return Cumulocity objects to create.
      *
@@ -133,17 +102,12 @@ public interface ProcessorExtensionInbound<O> extends InboundExtension<O> {
      *   <li>contextData (optional) - Additional metadata</li>
      * </ul>
      *
-     * <p>If this method returns {@code null}, the processor will fall back to calling
-     * {@link #substituteInTargetAndSend(ProcessingContext, C8YAgent)} for backwards compatibility.</p>
-     *
      * @param message Immutable message wrapper containing payload, topic, clientId, etc.
      * @param context Data preparation context with access to state, inventory, C8Y agent, etc.
-     * @return Array of CumulocityObject instances to create, or null if using legacy pattern
+     * @return Array of CumulocityObject instances to create
      * @see CumulocityObject
      * @see Message
      * @see DataPreparationContext
      */
-    default CumulocityObject[] onMessage(Message<O> message, DataPreparationContext context) {
-        return null; // Null indicates this extension uses the legacy pattern
-    }
+    CumulocityObject[] onMessage(Message<O> message, DataPreparationContext context);
 }

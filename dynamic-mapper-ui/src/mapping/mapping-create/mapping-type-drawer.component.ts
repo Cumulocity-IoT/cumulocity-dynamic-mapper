@@ -88,9 +88,8 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   };
 
   private readonly EXPERT_MODE_EXCLUDED_TYPES: MappingType[] = [
-    MappingType.EXTENSION_SOURCE,
+    MappingType.EXTENSION_JAVA,
     MappingType.PROTOBUF_INTERNAL,
-    MappingType.EXTENSION_SOURCE_TARGET
   ];
 
   private readonly CODE_TEMPLATE_TYPES: TransformationType[] = [

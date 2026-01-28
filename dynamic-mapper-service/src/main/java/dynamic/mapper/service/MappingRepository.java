@@ -66,7 +66,6 @@ public class MappingRepository {
             MappingRepresentation mappingMO = toMappingObject(mo);
             Mapping mapping = mappingMO.getC8yMQTTMapping();
             mapping.setId(mappingMO.getId());
-            migrateMapping(mapping);
 
             log.debug("{} - Found mapping: {}", tenant, mapping.getId());
             return Optional.of(mapping);
@@ -94,7 +93,6 @@ public class MappingRepository {
                 .filter(Optional::isPresent)
                 .map(Optional::get)
                 .filter(mapping -> shouldIncludeMapping(mapping, direction))
-                .map (mapping -> migrateMapping(mapping))
                 .collect(Collectors.toList());
 
         log.debug("{} - Loaded {} mappings for direction: {}", tenant, mappings.size(), direction);
@@ -219,11 +217,4 @@ public class MappingRepository {
         return configurationRegistry.getObjectMapper().convertValue(mor, MappingRepresentation.class);
     }
 
-    private Mapping migrateMapping(Mapping mapping) {
-        if (mapping.getMappingType() == MappingType.CODE_BASED) {
-            mapping.setTransformationType(TransformationType.SUBSTITUTION_AS_CODE);
-            mapping.setMappingType(MappingType.JSON);
-        }
-        return mapping;
-    }
 }

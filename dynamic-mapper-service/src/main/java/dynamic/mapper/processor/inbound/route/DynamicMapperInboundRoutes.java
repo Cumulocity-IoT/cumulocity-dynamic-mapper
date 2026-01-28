@@ -253,7 +253,8 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
         from("direct:processExtension")
                 .routeId("extension-processor")
                 .process(extensibleProcessor)
-                .process(substitutionInboundProcessor)
+                // Note: SubstitutionInboundProcessor is NOT needed for EXTENSION_JAVA
+                // The extension creates CumulocityObject[] which are converted to requests by ExtensibleInboundProcessor
                 .choice()
                 .when(exchange -> shouldIgnoreFurtherProcessing(exchange))
                 .to("log:extension-filtered-message?level=DEBUG")

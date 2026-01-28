@@ -32,7 +32,6 @@ import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.AbstractExtensibleProcessor;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.extension.ExtensionResultProcessor;
-import dynamic.mapper.processor.extension.InboundExtension;
 import dynamic.mapper.processor.extension.ProcessorExtensionInbound;
 import dynamic.mapper.processor.flow.CumulocityObject;
 import dynamic.mapper.processor.flow.DataPreparationContext;
@@ -44,15 +43,12 @@ import dynamic.mapper.service.ExtensionInboundRegistry;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
-import java.lang.reflect.Method;
-
 /**
  * Inbound extensible processor that delegates processing to external Java extensions.
  * Used when mappings are configured with extension-based processing for inbound direction.
  *
- * Supports two transformation types (validated at runtime):
- * - EXTENSION_SOURCE: Calls InboundExtension.extractFromSource() to extract substitutions (substitution-based pattern)
- * - EXTENSION_TARGET: Calls ProcessorExtensionInbound.onMessage() or substituteInTargetAndSend() for complete processing (Smart Java Function pattern)
+ * Only supports EXTENSION_JAVA transformation type:
+ * - EXTENSION_JAVA: Calls ProcessorExtensionInbound.onMessage() for complete processing (Smart Java Function pattern)
  *
  * Any other transformation type will result in a ProcessingException being thrown.
  */
@@ -82,20 +78,18 @@ public class ExtensibleInboundProcessor extends AbstractExtensibleProcessor {
         // Validate direction
         validateExtensionDirection(tenant, extensionEntry, Direction.INBOUND);
 
-        // Check transformation type to determine which interface to use
+        // Check transformation type - only EXTENSION_JAVA is supported
         TransformationType transformationType = mapping.getTransformationType();
 
-        if (transformationType == TransformationType.EXTENSION_TARGET) {
+        if (transformationType == TransformationType.EXTENSION_JAVA) {
             // Complete processing with C8Y agent access (Smart Java Function pattern)
             processWithExtensionInbound(context, tenant, extensionEntry);
-        } else if (transformationType == TransformationType.EXTENSION_SOURCE) {
-            // Source parsing only (substitution-based pattern)
-            processWithExtensionSource(context, tenant, extensionEntry);
         } else {
             // Invalid transformation type for extension processing
             String errorMsg = String.format(
                 "%s - Invalid transformation type '%s' for extension processing. " +
-                "Expected EXTENSION_SOURCE or EXTENSION_TARGET for mapping '%s' with extension '%s'",
+                "Expected EXTENSION_JAVA for mapping '%s' with extension '%s'. " +
+                "Note: EXTENSION_SOURCE (substitution-based pattern) has been removed.",
                 tenant, transformationType, mapping.getName(), extensionEntry.getExtensionName());
             log.error(errorMsg);
             throw new ProcessingException(errorMsg);
@@ -103,40 +97,8 @@ public class ExtensibleInboundProcessor extends AbstractExtensibleProcessor {
     }
 
     /**
-     * Process using InboundExtension for substitution-based transformation.
-     */
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    private void processWithExtensionSource(ProcessingContext<byte[]> context,
-                                           String tenant,
-                                           ExtensionEntry extensionEntry)
-            throws ProcessingException {
-        InboundExtension extension;
-        try {
-            Object extensionObj = getProcessorExtensionSource(tenant, extensionEntry);
-            if (extensionObj instanceof InboundExtension) {
-                extension = (InboundExtension) extensionObj;
-            } else {
-                throwExtensionNotFoundException(tenant, extensionEntry);
-                return;
-            }
-        } catch (Exception ex) {
-            throwExtensionNotFoundException(tenant, extensionEntry);
-            return; // Unreachable, but makes null analysis happy
-        }
-
-        if (extension == null) {
-            log.info("{} - extractFromSource - extension not found", tenant);
-            logExtensions(tenant, extensionInboundRegistry.getExtensions(tenant));
-            throwExtensionNotFoundException(tenant, extensionEntry);
-            return; // Unreachable, but makes null analysis happy
-        }
-
-        extension.extractFromSource(context);
-    }
-
-    /**
      * Process using ProcessorExtensionInbound for complete transformation and sending to C8Y.
-     * Supports both legacy and new patterns.
+     * Uses the SMART Java Function pattern (return-value based).
      */
     @SuppressWarnings({"rawtypes", "unchecked"})
     private void processWithExtensionInbound(ProcessingContext<byte[]> context,
@@ -152,50 +114,13 @@ public class ExtensibleInboundProcessor extends AbstractExtensibleProcessor {
         }
 
         if (extension == null) {
-            log.info("{} - substituteInTargetAndSend - extension not found", tenant);
+            log.info("{} - onMessage - extension not found", tenant);
             logExtensions(tenant, extensionInboundRegistry.getExtensions(tenant));
             throwExtensionNotFoundException(tenant, extensionEntry);
             return; // Unreachable, but makes null analysis happy
         }
 
-        // Check which pattern the extension uses
-        if (usesNewPattern(extension)) {
-            // NEW PATTERN: Return-value based
-            processWithNewPattern(extension, context, tenant);
-        } else {
-            // OLD PATTERN: Side-effect based
-            log.debug("{} - Extension {} uses deprecated substituteInTargetAndSend() pattern",
-                     tenant, extensionEntry.getExtensionName());
-            extension.substituteInTargetAndSend(context, c8yAgent);
-        }
-    }
-
-    /**
-     * Check if extension uses the new onMessage pattern.
-     *
-     * <p>Pattern detection works by checking if the extension class has overridden
-     * the onMessage method. If it's still the default implementation from the interface,
-     * we use the legacy pattern.</p>
-     */
-    private boolean usesNewPattern(ProcessorExtensionInbound<?> extension) {
-        try {
-            Method method = extension.getClass().getMethod("onMessage",
-                Message.class, DataPreparationContext.class);
-            // Check if the method is declared in the implementation class
-            // (not in the interface where the default is defined)
-            return !method.getDeclaringClass().equals(ProcessorExtensionInbound.class);
-        } catch (NoSuchMethodException e) {
-            return false;
-        }
-    }
-
-    /**
-     * Process extension using the new return-value based pattern.
-     */
-    @SuppressWarnings("unchecked")
-    private void processWithNewPattern(ProcessorExtensionInbound extension,
-                                       ProcessingContext<byte[]> context,
-                                       String tenant) throws ProcessingException {
+        // Process using return-value based pattern
         // 1. Create Message wrapper
         Message<byte[]> message = Message.from(context);
 

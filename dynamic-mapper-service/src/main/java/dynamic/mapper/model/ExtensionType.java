@@ -22,7 +22,6 @@
 package dynamic.mapper.model;
 
 public enum ExtensionType {
-  EXTENSION_SOURCE,
   EXTENSION_INBOUND,
   EXTENSION_OUTBOUND
 }

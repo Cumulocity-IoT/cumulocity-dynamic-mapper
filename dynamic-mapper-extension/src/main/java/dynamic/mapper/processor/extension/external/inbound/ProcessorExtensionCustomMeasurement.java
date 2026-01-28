@@ -23,64 +23,84 @@ package dynamic.mapper.processor.extension.external.inbound;
 
 import com.dashjoin.jsonata.json.Json;
 
-import dynamic.mapper.processor.model.SubstituteValue.TYPE;
-import dynamic.mapper.processor.extension.InboundExtension;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.RepairStrategy;
-import dynamic.mapper.processor.ProcessingException;
+import dynamic.mapper.processor.extension.ProcessorExtensionInbound;
+import dynamic.mapper.processor.flow.CumulocityObject;
+import dynamic.mapper.processor.flow.DataPreparationContext;
+import dynamic.mapper.processor.flow.Message;
 import lombok.extern.slf4j.Slf4j;
 import org.joda.time.DateTime;
 
 import java.util.Map;
 
+/**
+ * Extension for processing custom JSON measurements using the Smart Java Function pattern.
+ *
+ * <p>This extension demonstrates:</p>
+ * <ul>
+ *   <li>JSON parsing and field extraction</li>
+ *   <li>Building complex measurement fragments</li>
+ *   <li>Handling optional fields gracefully</li>
+ *   <li>Return-value based processing with builder pattern</li>
+ * </ul>
+ *
+ * <p>Input JSON format:</p>
+ * <pre>
+ * {
+ *   "externalId": "sensor001",
+ *   "time": "2024-01-01T12:00:00Z",
+ *   "temperature": 25.5,
+ *   "unit": "C",
+ *   "unexpected": 42 (optional)
+ * }
+ * </pre>
+ *
+ * <p>Output: Cumulocity Measurement with c8y_Temperature fragment,
+ * and optionally c8y_Unexpected fragment if present</p>
+ */
 @Slf4j
-public class ProcessorExtensionCustomMeasurement implements InboundExtension<byte[]> {
+public class ProcessorExtensionCustomMeasurement implements ProcessorExtensionInbound<byte[]> {
 
     public ProcessorExtensionCustomMeasurement() {
     }
 
     @Override
-    public void extractFromSource(ProcessingContext<byte[]> context)
-            throws ProcessingException {
+    public CumulocityObject[] onMessage(Message<byte[]> message, DataPreparationContext context) {
         try {
-            Map jsonObject = (Map) Json.parseJson(new String(context.getPayload(), "UTF-8"));
+            // 1. Parse JSON payload
+            String jsonString = new String(message.getPayload(), "UTF-8");
+            @SuppressWarnings("unchecked")
+            Map<String, Object> jsonObject = (Map<String, Object>) Json.parseJson(jsonString);
 
-            context.addSubstitution("time", new DateTime(
-                    jsonObject.get("time"))
-                    .toString(), TYPE.TEXTUAL, RepairStrategy.DEFAULT,false);
+            // 2. Extract required fields
+            String externalId = jsonObject.get("externalId").toString();
+            DateTime time = new DateTime(jsonObject.get("time"));
+            Number temperature = (Number) jsonObject.get("temperature");
+            String unit = jsonObject.get("unit").toString();
 
-            Map fragmentTemperatureSeries = Map.of("value", jsonObject.get("temperature"), "unit",
-                    jsonObject.get("unit"));
-            Map fragmentTemperature = Map.of("T", fragmentTemperatureSeries);
+            // 3. Build measurement with temperature fragment
+            CumulocityObject.MeasurementBuilder builder = CumulocityObject.measurement()
+                .type("c8y_TemperatureMeasurement")
+                .time(time.toString())
+                .fragment("c8y_Temperature", "T", temperature.doubleValue(), unit)
+                .externalId(externalId, context.getMapping().getExternalIdType());
 
-            context.addSubstitution("c8y_Fragment_to_remove", null, TYPE.TEXTUAL,
-                    RepairStrategy.REMOVE_IF_MISSING_OR_NULL, false);
-            context.addSubstitution("c8y_Temperature",
-                    fragmentTemperature, TYPE.OBJECT, RepairStrategy.DEFAULT,false);
-            // as the mapping uses useExternalId we have to map the id to
-            // _IDENTITY_.externalId
-            context.addSubstitution(context.getMapping().getGenericDeviceIdentifier(),
-                    jsonObject.get("externalId")
-                            .toString(),
-                    TYPE.TEXTUAL, RepairStrategy.DEFAULT,false);
-
-            Number unexpected = Float.NaN;
+            // 4. Add optional unexpected fragment if present
+            Number unexpected = null;
             if (jsonObject.get("unexpected") != null) {
-                // it is important to use RepairStrategy.CREATE_IF_MISSING as the node
-                // "unexpected" does not yet exists in the target payload
-                Map fragmentUnexpectedSeries = Map.of("value", jsonObject.get("unexpected"), "unit", "unknown_unit");
-                Map fragmentUnexpected = Map.of("U", fragmentUnexpectedSeries);
-                context.addSubstitution("c8y_Unexpected",
-                        fragmentUnexpected, TYPE.OBJECT, RepairStrategy.CREATE_IF_MISSING, false);
                 unexpected = (Number) jsonObject.get("unexpected");
+                builder.fragment("c8y_Unexpected", "U", unexpected.doubleValue(), "unknown_unit");
             }
 
-            log.info("{} - New measurement over json processor: {}, {}, {}, {}", context.getTenant(),
-                    jsonObject.get("time").toString(),
-                    jsonObject.get("unit").toString(), jsonObject.get("temperature"),
-                    unexpected);
+            log.info("{} - Processing custom measurement: time={}, temperature={} {}, unexpected={}",
+                    context.getTenant(), time, temperature, unit, unexpected);
+
+            return new CumulocityObject[] { builder.build() };
+
         } catch (Exception e) {
-            throw new ProcessingException("Failed to process custom measurement: " + e.getMessage(), e);
+            String errorMsg = "Failed to process custom measurement: " + e.getMessage();
+            log.error("{} - {}", context.getTenant(), errorMsg, e);
+            context.addWarning(errorMsg);
+            return new CumulocityObject[0];
         }
     }
 }
