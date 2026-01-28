@@ -49,10 +49,11 @@ import java.lang.reflect.Method;
  * Outbound extensible processor that delegates processing to external Java extensions.
  * Used when mappings are configured with extension-based processing for outbound direction.
  *
- * Supports two transformation types:
- * - EXTENSION_SOURCE: Calls OutboundExtension.extractFromSource() to extract substitutions
- * - EXTENSION_TARGET: Calls ProcessorExtensionOutbound.extractAndPrepare() to prepare outbound requests
+ * Supports two transformation types (validated at runtime):
+ * - EXTENSION_SOURCE: Calls OutboundExtension.extractFromSource() to extract substitutions (substitution-based pattern)
+ * - EXTENSION_TARGET: Calls ProcessorExtensionOutbound.onMessage() or extractAndPrepare() to prepare outbound requests (Smart Java Function pattern)
  *
+ * Any other transformation type will result in a ProcessingException being thrown.
  * The extension prepares requests which are then sent by SendOutboundProcessor.
  */
 @Slf4j
@@ -82,11 +83,19 @@ public class ExtensibleOutboundProcessor extends AbstractExtensibleProcessor {
         TransformationType transformationType = mapping.getTransformationType();
 
         if (transformationType == TransformationType.EXTENSION_TARGET) {
-            // Complete processing with connector access
+            // Complete processing with connector access (Smart Java Function pattern)
             processWithExtensionOutbound(context, tenant, extensionEntry);
-        } else {
-            // Source parsing only (substitutions)
+        } else if (transformationType == TransformationType.EXTENSION_SOURCE) {
+            // Source parsing only (substitution-based pattern)
             processWithExtensionSource(context, tenant, extensionEntry);
+        } else {
+            // Invalid transformation type for extension processing
+            String errorMsg = String.format(
+                "%s - Invalid transformation type '%s' for extension processing. " +
+                "Expected EXTENSION_SOURCE or EXTENSION_TARGET for mapping '%s' with extension '%s'",
+                tenant, transformationType, mapping.getName(), extensionEntry.getExtensionName());
+            log.error(errorMsg);
+            throw new ProcessingException(errorMsg);
         }
     }
 

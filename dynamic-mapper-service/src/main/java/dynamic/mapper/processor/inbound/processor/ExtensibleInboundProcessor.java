@@ -50,9 +50,11 @@ import java.lang.reflect.Method;
  * Inbound extensible processor that delegates processing to external Java extensions.
  * Used when mappings are configured with extension-based processing for inbound direction.
  *
- * Supports two transformation types:
- * - EXTENSION_SOURCE: Calls InboundExtension.extractFromSource() to extract substitutions
- * - EXTENSION_TARGET: Calls ProcessorExtensionInbound.substituteInTargetAndSend() for complete processing
+ * Supports two transformation types (validated at runtime):
+ * - EXTENSION_SOURCE: Calls InboundExtension.extractFromSource() to extract substitutions (substitution-based pattern)
+ * - EXTENSION_TARGET: Calls ProcessorExtensionInbound.onMessage() or substituteInTargetAndSend() for complete processing (Smart Java Function pattern)
+ *
+ * Any other transformation type will result in a ProcessingException being thrown.
  */
 @Slf4j
 @Component
@@ -84,11 +86,19 @@ public class ExtensibleInboundProcessor extends AbstractExtensibleProcessor {
         TransformationType transformationType = mapping.getTransformationType();
 
         if (transformationType == TransformationType.EXTENSION_TARGET) {
-            // Complete processing with C8Y agent access
+            // Complete processing with C8Y agent access (Smart Java Function pattern)
             processWithExtensionInbound(context, tenant, extensionEntry);
-        } else {
-            // Source parsing only (substitutions)
+        } else if (transformationType == TransformationType.EXTENSION_SOURCE) {
+            // Source parsing only (substitution-based pattern)
             processWithExtensionSource(context, tenant, extensionEntry);
+        } else {
+            // Invalid transformation type for extension processing
+            String errorMsg = String.format(
+                "%s - Invalid transformation type '%s' for extension processing. " +
+                "Expected EXTENSION_SOURCE or EXTENSION_TARGET for mapping '%s' with extension '%s'",
+                tenant, transformationType, mapping.getName(), extensionEntry.getExtensionName());
+            log.error(errorMsg);
+            throw new ProcessingException(errorMsg);
         }
     }
 

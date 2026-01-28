@@ -290,7 +290,7 @@ export enum MappingType {
   PROTOBUF_INTERNAL = 'PROTOBUF_INTERNAL',
   EXTENSION_SOURCE = 'EXTENSION_SOURCE',
   EXTENSION_SOURCE_TARGET = 'EXTENSION_SOURCE_TARGET',
-  CODE_BASED = 'CODE_BASED'
+  CODE_BASED = 'CODE_BASED', // this value is deprecated and will be removed in future versions, instead set transformationType = TransformationType.CODE_BASED
 }
 
 export const TransformationTypeLabels = {
@@ -299,16 +299,16 @@ export const TransformationTypeLabels = {
     [TransformationType.SUBSTITUTION_AS_CODE]: 'Substitution as JavaScript (deprecated)',
     [TransformationType.SMART_FUNCTION]: 'Smart Function (JavaScript) to create Cumulocity API calls',
     [TransformationType.JSONATA]: 'Substitution as JSONata Expression',
-    [TransformationType.EXTENSION_SOURCE]: 'Java Extension Source Processing',
-    [TransformationType.EXTENSION_TARGET]: 'Java Extension Target Processing'
+    [TransformationType.EXTENSION_SOURCE]: 'Java Extension (Substitution-Based)',
+    [TransformationType.EXTENSION_TARGET]: 'Java Extension (Smart Java Function)'
   },
   [Direction.OUTBOUND]: {
     [TransformationType.DEFAULT]: 'Default Transformation',
     [TransformationType.SUBSTITUTION_AS_CODE]: 'Substitution as JavaScript (deprecated)',
     [TransformationType.SMART_FUNCTION]: 'Smart Function (JavaScript) to create Broker Payload',
     [TransformationType.JSONATA]: 'Substitution as JSONata Expression',
-    [TransformationType.EXTENSION_SOURCE]: 'Java Extension Source Processing',
-    [TransformationType.EXTENSION_TARGET]: 'Java Extension Target Processing'
+    [TransformationType.EXTENSION_SOURCE]: 'Java Extension (Substitution-Based)',
+    [TransformationType.EXTENSION_TARGET]: 'Java Extension (Smart Java Function)'
   }
 } as const;
 
@@ -317,8 +317,8 @@ export const TransformationTypeDescriptions = {
   [TransformationType.SUBSTITUTION_AS_CODE]: 'Allows writing custom JavaScript code for complex transformations',
   [TransformationType.SMART_FUNCTION]: 'Executes a predefined Smart Function for data transformation and create payload for Cumulocity API calls',
   [TransformationType.JSONATA]: 'Uses JSONata query and transformation language for data mapping',
-  [TransformationType.EXTENSION_SOURCE]: 'Uses a Java extension to parse and extract data from the source payload',
-  [TransformationType.EXTENSION_TARGET]: 'Uses a Java extension to parse source and generate target payload directly'
+  [TransformationType.EXTENSION_SOURCE]: 'Java extension extracts values from payload; framework applies substitutions to template',
+  [TransformationType.EXTENSION_TARGET]: 'Java extension returns domain objects (CumulocityObject[] for inbound, DeviceMessage[] for outbound) using Smart Java Function pattern with builder syntax'
 } as const;
 
 export const MappingTypeLabels = {

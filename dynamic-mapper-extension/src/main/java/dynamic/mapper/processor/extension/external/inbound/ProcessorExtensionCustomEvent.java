@@ -21,6 +21,8 @@
 
 package dynamic.mapper.processor.extension.external.inbound;
 
+import com.google.protobuf.InvalidProtocolBufferException;
+
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.SubstituteValue.TYPE;
 import dynamic.mapper.processor.extension.InboundExtension;
