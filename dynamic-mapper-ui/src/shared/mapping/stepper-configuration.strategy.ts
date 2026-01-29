@@ -87,6 +87,15 @@ const CONFIGURATION_OVERRIDES: StepperConfigurationOverride[] = [
   },
   {
     condition: (ctx) =>
+      ctx.mappingType === MappingType.EXTENSION_JAVA &&
+      ctx.transformationType === TransformationType.EXTENSION_JAVA &&
+      ctx.direction === Direction.OUTBOUND,
+    properties: {
+      showProcessorExtensionsSource: false
+    }
+  },
+  {
+    condition: (ctx) =>
       ctx.transformationType === TransformationType.EXTENSION_JAVA &&
       ctx.direction === Direction.INBOUND,
     properties: {

@@ -231,7 +231,6 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
                 .stop()
                 .otherwise()
                 .process(extensibleResultOutboundProcessor)
-                .process(substitutionOutboundProcessor)
                 .choice()
                 .when(exchange -> shouldIgnoreFurtherProcessing(exchange))
                 .to("log:outbound-extension-result-filtered-message?level=DEBUG")
