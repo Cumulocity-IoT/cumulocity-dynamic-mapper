@@ -92,6 +92,14 @@ public class ExtensibleResultOutboundProcessor extends AbstractExtensibleResultP
             return;
         }
 
+        // Set resolved publish topic from mapping as fallback
+        // Extensions can override this by setting topic in DeviceMessage
+        Mapping mapping = context.getMapping();
+        if (mapping.getPublishTopic() != null && !mapping.getPublishTopic().isEmpty()) {
+            context.setResolvedPublishTopic(mapping.getPublishTopic());
+            log.debug("{} - Set resolved publish topic from mapping: {}", tenant, mapping.getPublishTopic());
+        }
+
         // Process each DeviceMessage
         for (DeviceMessage deviceMsg : results) {
             processDeviceMessage(deviceMsg, context);

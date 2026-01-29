@@ -751,7 +751,24 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.extensions = await this.stepperService.loadExtensions(this.mapping);
     this.updateExtensionItems(); // Update cached extension items
 
+    // Re-patch form values after items are loaded so c8y-select can match them
     if (this.mapping?.extension?.extensionName) {
+      // First, load the extension events for this extension
+      this.stepperService.selectExtensionName(
+        this.mapping.extension.extensionName,
+        this.extensions,
+        this.mapping
+      );
+
+      // Use setTimeout to ensure items are rendered before setting values
+      // This allows c8y-select to properly detect and display the selected values
+      setTimeout(() => {
+        this.templateForm.patchValue({
+          extensionName: this.mapping.extension.extensionName,
+          eventName: this.mapping.extension.eventName
+        });
+      }, 0);
+
       if (!this.extensions.get(this.mapping.extension.extensionName)) {
         const msg = `The extension ${this.mapping.extension.extensionName} with event ${this.mapping.extension.eventName} is not loaded...`;
         this.raiseAlert({ type: 'warning', text: msg });
