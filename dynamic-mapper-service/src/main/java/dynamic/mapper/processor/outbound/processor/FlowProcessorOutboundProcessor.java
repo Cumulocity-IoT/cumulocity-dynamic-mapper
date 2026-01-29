@@ -35,7 +35,7 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
-import dynamic.mapper.processor.AbstractFlowProcessorProcessor;
+import dynamic.mapper.processor.AbstractFlowProcessor;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.DeviceMessage;
 import dynamic.mapper.processor.model.ProcessingContext;
@@ -51,7 +51,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Component
-public class FlowProcessorOutboundProcessor extends AbstractFlowProcessorProcessor {
+public class FlowProcessorOutboundProcessor extends AbstractFlowProcessor {
 
     @Autowired
     private C8YAgent c8yAgent;

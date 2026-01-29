@@ -14,6 +14,7 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.inbound.processor.CodeExtractionInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.DeserializationInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.ExtensibleInboundProcessor;
+import dynamic.mapper.processor.inbound.processor.ExtensibleResultInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.FilterInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.FlowProcessorInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.FlowResultInboundProcessor;
@@ -40,6 +41,9 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
 
     @Autowired
     private ExtensibleInboundProcessor extensibleProcessor;
+
+    @Autowired
+    private ExtensibleResultInboundProcessor extensibleResultInboundProcessor;
 
     @Autowired
     private InternalProtobufProcessor internalProtobufProcessor;
@@ -253,11 +257,16 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
         from("direct:processExtension")
                 .routeId("extension-processor")
                 .process(extensibleProcessor)
-                // Note: SubstitutionInboundProcessor is NOT needed for EXTENSION_JAVA
-                // The extension creates CumulocityObject[] which are converted to requests by ExtensibleInboundProcessor
                 .choice()
                 .when(exchange -> shouldIgnoreFurtherProcessing(exchange))
                 .to("log:extension-filtered-message?level=DEBUG")
+                .process(consolidationProcessor)
+                .stop()
+                .otherwise()
+                .process(extensibleResultInboundProcessor)
+                .choice()
+                .when(exchange -> shouldIgnoreFurtherProcessing(exchange))
+                .to("log:extension-result-filtered-message?level=DEBUG")
                 .process(consolidationProcessor)
                 .stop()
                 .otherwise()
@@ -269,6 +278,7 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
                 .process(inboundSendProcessor)
                 .end()
                 .process(consolidationProcessor)
+                .end()
                 .end();
 
         // 1f. Extension processing route

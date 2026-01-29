@@ -61,7 +61,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-class AbstractFlowProcessorProcessorTest {
+class AbstractFlowProcessorTest {
 
     @Mock
     private MappingService mappingService;
@@ -89,7 +89,7 @@ class AbstractFlowProcessorProcessorTest {
     /**
      * Concrete test implementation of AbstractFlowProcessorProcessor for testing.
      */
-    static class TestableAbstractFlowProcessorProcessor extends AbstractFlowProcessorProcessor {
+    static class TestableAbstractFlowProcessorProcessor extends AbstractFlowProcessor {
 
         private boolean processResultCalled = false;
         private boolean handleErrorCalled = false;

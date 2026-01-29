@@ -92,6 +92,8 @@ public class ProcessorExtensionSmartInbound02 implements ProcessorExtensionInbou
                         .time(new DateTime().toString())
                         .fragment("c8y_Voltage", "voltage", value.doubleValue(), "V")
                         .externalId(clientId, "c8y_Serial")
+                        .deviceName(clientId)
+                        .deviceType("c8y_VoltageSensor")
                         .build()
                 };
             } else if ("current".equals(sensorType)) {
@@ -103,6 +105,8 @@ public class ProcessorExtensionSmartInbound02 implements ProcessorExtensionInbou
                         .time(new DateTime().toString())
                         .fragment("c8y_Current", "current", value.doubleValue(), "A")
                         .externalId(clientId, "c8y_Serial")
+                        .deviceName(clientId)
+                        .deviceType("c8y_CurrentSensor")
                         .build()
                 };
             } else {

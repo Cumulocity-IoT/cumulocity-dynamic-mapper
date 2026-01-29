@@ -21,7 +21,6 @@
 
 package dynamic.mapper.processor.outbound.processor;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import dynamic.mapper.model.Direction;
@@ -30,7 +29,6 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.AbstractExtensibleProcessor;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.extension.ExtensionResultProcessor;
 import dynamic.mapper.processor.extension.ProcessorExtensionOutbound;
 import dynamic.mapper.processor.flow.SimpleDataPreparationContext;
 import dynamic.mapper.processor.model.DataPreparationContext;
@@ -55,9 +53,6 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Component
 public class ExtensibleOutboundProcessor extends AbstractExtensibleProcessor {
-
-    @Autowired
-    private ExtensionResultProcessor resultProcessor;
 
     public ExtensibleOutboundProcessor(
             MappingService mappingService,
@@ -165,12 +160,13 @@ public class ExtensibleOutboundProcessor extends AbstractExtensibleProcessor {
             // 3. Call new pattern method
             DeviceMessage[] results = extension.onMessage(message, prepContext);
 
-            // 4. Process results
+            // 4. Store results in context for processing by ExtensibleResultOutboundProcessor
             if (results != null && results.length > 0) {
                 log.debug("{} - Extension returned {} DeviceMessage(s)", tenant, results.length);
-                resultProcessor.processOutboundResults(results, context);
+                context.setExtensionResult(results);
             } else {
                 log.warn("{} - Extension onMessage() returned null or empty array - no data to publish", tenant);
+                context.setIgnoreFurtherProcessing(true);
             }
 
         } catch (Exception e) {

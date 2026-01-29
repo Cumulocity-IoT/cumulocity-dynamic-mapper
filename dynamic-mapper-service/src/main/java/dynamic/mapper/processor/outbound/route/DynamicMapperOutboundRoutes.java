@@ -31,6 +31,7 @@ import org.springframework.stereotype.Component;
 
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.model.Mapping;
+import dynamic.mapper.processor.outbound.processor.ExtensibleResultOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.FlowProcessorOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.FlowResultOutboundProcessor;
 import dynamic.mapper.processor.model.ProcessingContext;
@@ -59,6 +60,9 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
 
     @Autowired
     private ExtensibleOutboundProcessor extensibleOutboundProcessor;
+
+    @Autowired
+    private ExtensibleResultOutboundProcessor extensibleResultOutboundProcessor;
 
     @Autowired
     private CodeExtractionOutboundProcessor codeExtractionOutboundProcessor;
@@ -220,15 +224,23 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
         from("direct:processOutboundExtension")
                 .routeId("outbound-extension-processor")
                 .process(extensibleOutboundProcessor)
-                .process(substitutionOutboundProcessor)
                 .choice()
                 .when(exchange -> shouldIgnoreFurtherProcessing(exchange))
                 .to("log:outbound-extension-filtered-message?level=DEBUG")
                 .process(consolidationProcessor)
                 .stop()
                 .otherwise()
+                .process(extensibleResultOutboundProcessor)
+                .process(substitutionOutboundProcessor)
+                .choice()
+                .when(exchange -> shouldIgnoreFurtherProcessing(exchange))
+                .to("log:outbound-extension-result-filtered-message?level=DEBUG")
+                .process(consolidationProcessor)
+                .stop()
+                .otherwise()
                 .process(outboundSendProcessor)
                 .process(consolidationProcessor)
+                .end()
                 .end();
 
         // 1c. Flow function processing route

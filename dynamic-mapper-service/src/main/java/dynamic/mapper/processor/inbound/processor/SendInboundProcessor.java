@@ -217,12 +217,6 @@ public class SendInboundProcessor extends BaseProcessor {
                         configurationRegistry.addOrUpdateClientRelation(tenant, context.getClientId(),
                                 request.getSourceId());
                     }
-                } else if (context.getMapping().getCreateNonExistingDevice()) {
-                    // Device doesn't exist but we should create it
-                    log.debug("{} - Device with externalId {} not found, creating implicitly",
-                            tenant, request.getExternalId());
-                    // Note: Implicit device creation could be added here if needed
-                    // For now, let the API call fail with validation error
                 }
             }
 

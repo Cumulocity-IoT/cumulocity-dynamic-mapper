@@ -183,6 +183,8 @@ public class ProcessingContext<O> implements AutoCloseable {
 
     private Object flowResult;
 
+    private Object extensionResult;
+
     private DataPrepContext flowContext;
 
     private Map<String, Object> flowState;

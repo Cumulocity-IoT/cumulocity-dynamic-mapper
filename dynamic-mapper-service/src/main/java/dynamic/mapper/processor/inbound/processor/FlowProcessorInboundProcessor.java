@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
-import dynamic.mapper.processor.AbstractFlowProcessorProcessor;
+import dynamic.mapper.processor.AbstractFlowProcessor;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.CumulocityObject;
 import dynamic.mapper.processor.model.DeviceMessage;
@@ -24,7 +24,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Component
-public class FlowProcessorInboundProcessor extends AbstractFlowProcessorProcessor {
+public class FlowProcessorInboundProcessor extends AbstractFlowProcessor {
 
     public FlowProcessorInboundProcessor(MappingService mappingService) {
         super(mappingService);

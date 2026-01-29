@@ -47,11 +47,11 @@ import lombok.extern.slf4j.Slf4j;
  * Handles JavaScript code loading, execution, result processing, and GraalVM resource cleanup.
  */
 @Slf4j
-public abstract class AbstractFlowProcessorProcessor extends CommonProcessor {
+public abstract class AbstractFlowProcessor extends CommonProcessor {
 
     protected final MappingService mappingService;
 
-    protected AbstractFlowProcessorProcessor(MappingService mappingService) {
+    protected AbstractFlowProcessor(MappingService mappingService) {
         this.mappingService = mappingService;
     }
 

@@ -79,12 +79,15 @@ public class ProcessorExtensionSmartInbound01 implements ProcessorExtensionInbou
                     context.getTenant(), tempVal, clientId);
 
             // Build measurement using builder pattern
+            // Note: deviceName and deviceType are needed for implicit device creation
             return new CumulocityObject[] {
                 CumulocityObject.measurement()
                     .type("c8y_TemperatureMeasurement")
                     .time(new DateTime().toString())
                     .fragment("c8y_Steam", "Temperature", tempVal.doubleValue(), "C")
                     .externalId(clientId, "c8y_Serial")
+                    .deviceName(clientId)           // Use clientId as device name
+                    .deviceType("c8y_TemperatureSensor")  // Device type for implicit creation
                     .build()
             };
 

@@ -31,7 +31,6 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.AbstractExtensibleProcessor;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.extension.ExtensionResultProcessor;
 import dynamic.mapper.processor.extension.ProcessorExtensionInbound;
 import dynamic.mapper.processor.flow.SimpleDataPreparationContext;
 import dynamic.mapper.processor.model.CumulocityObject;
@@ -58,9 +57,6 @@ public class ExtensibleInboundProcessor extends AbstractExtensibleProcessor {
 
     @Autowired
     private C8YAgent c8yAgent;
-
-    @Autowired
-    private ExtensionResultProcessor resultProcessor;
 
     public ExtensibleInboundProcessor(
             MappingService mappingService,
@@ -137,12 +133,13 @@ public class ExtensibleInboundProcessor extends AbstractExtensibleProcessor {
         // 3. Call new pattern method
         CumulocityObject[] results = extension.onMessage(message, prepContext);
 
-        // 4. Process results
+        // 4. Store results in context for processing by ExtensibleResultInboundProcessor
         if (results != null && results.length > 0) {
             log.debug("{} - Extension returned {} CumulocityObject(s)", tenant, results.length);
-            resultProcessor.processInboundResults(results, context);
+            context.setExtensionResult(results);
         } else {
             log.warn("{} - Extension onMessage() returned null or empty array - no data to process", tenant);
+            context.setIgnoreFurtherProcessing(true);
         }
     }
 
