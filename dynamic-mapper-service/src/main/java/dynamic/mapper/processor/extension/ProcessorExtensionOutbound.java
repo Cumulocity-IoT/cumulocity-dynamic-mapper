@@ -22,9 +22,9 @@
 package dynamic.mapper.processor.extension;
 
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.flow.DataPreparationContext;
-import dynamic.mapper.processor.flow.DeviceMessage;
-import dynamic.mapper.processor.flow.Message;
+import dynamic.mapper.processor.model.DataPreparationContext;
+import dynamic.mapper.processor.model.DeviceMessage;
+import dynamic.mapper.processor.model.Message;
 import dynamic.mapper.processor.model.ProcessingContext;
 import org.springframework.stereotype.Component;
 

@@ -18,7 +18,7 @@
  *  @authors Christof Strack, Stefan Witschel
  *
  */
-package dynamic.mapper.processor.flow;
+package dynamic.mapper.processor.model;
 
 /**
  * Details of external ID (which will be looked up by IDP to get the C8Y id, and optionally used to create a device)

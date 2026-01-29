@@ -18,19 +18,21 @@
  *  @authors Christof Strack, Stefan Witschel
  *
  */
-package dynamic.mapper.processor.flow;
+package dynamic.mapper.processor.model;
 
 /**
- * Enumeration of possible destinations for Cumulocity messages
+ * Enumeration of Cumulocity object types
  */
-public enum Destination {
-    CUMULOCITY("cumulocity"),
-    ICEFLOW("iceflow"),
-    STREAMING_ANALYTICS("streaming-analytics");
+public enum CumulocityType {
+    MEASUREMENT("measurement"),
+    EVENT("event"),
+    ALARM("alarm"),
+    OPERATION("operation"),
+    MANAGED_OBJECT("managedObject");
 
     private final String value;
 
-    Destination(String value) {
+    CumulocityType(String value) {
         this.value = value;
     }
 
@@ -46,12 +48,12 @@ public enum Destination {
     /**
      * Get enum from string value
      */
-    public static Destination fromValue(String value) {
-        for (Destination dest : Destination.values()) {
-            if (dest.value.equalsIgnoreCase(value)) {
-                return dest;
+    public static CumulocityType fromValue(String value) {
+        for (CumulocityType type : CumulocityType.values()) {
+            if (type.value.equalsIgnoreCase(value)) {
+                return type;
             }
         }
-        throw new IllegalArgumentException("Unknown Destination: " + value);
+        throw new IllegalArgumentException("Unknown CumulocityType: " + value);
     }
 }

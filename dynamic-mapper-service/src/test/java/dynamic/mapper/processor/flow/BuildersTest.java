@@ -22,6 +22,13 @@
 package dynamic.mapper.processor.flow;
 
 import org.junit.jupiter.api.Test;
+
+import dynamic.mapper.processor.model.CumulocityObject;
+import dynamic.mapper.processor.model.CumulocityType;
+import dynamic.mapper.processor.model.Destination;
+import dynamic.mapper.processor.model.DeviceMessage;
+import dynamic.mapper.processor.model.Message;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.Map;

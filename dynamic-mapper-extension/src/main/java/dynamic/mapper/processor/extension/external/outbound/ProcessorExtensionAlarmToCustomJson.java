@@ -25,9 +25,9 @@ import com.dashjoin.jsonata.json.Json;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.extension.ProcessorExtensionOutbound;
-import dynamic.mapper.processor.flow.DataPreparationContext;
-import dynamic.mapper.processor.flow.DeviceMessage;
-import dynamic.mapper.processor.flow.Message;
+import dynamic.mapper.processor.model.DataPreparationContext;
+import dynamic.mapper.processor.model.DeviceMessage;
+import dynamic.mapper.processor.model.Message;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;
@@ -80,7 +80,7 @@ import java.util.Map;
  * @see ProcessorExtensionAlarmToCustomJson for the legacy implementation
  */
 @Slf4j
-public class ProcessorExtensionAlarmToCustomJsonNew implements ProcessorExtensionOutbound<Object> {
+public class ProcessorExtensionAlarmToCustomJson implements ProcessorExtensionOutbound<Object> {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 

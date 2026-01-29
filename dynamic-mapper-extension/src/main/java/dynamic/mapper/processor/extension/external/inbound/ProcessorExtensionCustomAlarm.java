@@ -23,9 +23,9 @@ package dynamic.mapper.processor.extension.external.inbound;
 
 import com.dashjoin.jsonata.json.Json;
 import dynamic.mapper.processor.extension.ProcessorExtensionInbound;
-import dynamic.mapper.processor.flow.CumulocityObject;
-import dynamic.mapper.processor.flow.DataPreparationContext;
-import dynamic.mapper.processor.flow.Message;
+import dynamic.mapper.processor.model.CumulocityObject;
+import dynamic.mapper.processor.model.DataPreparationContext;
+import dynamic.mapper.processor.model.Message;
 import lombok.extern.slf4j.Slf4j;
 import org.joda.time.DateTime;
 
@@ -60,7 +60,7 @@ import java.util.Map;
  * @see ProcessorExtensionCustomAlarm for the legacy implementation
  */
 @Slf4j
-public class ProcessorExtensionCustomAlarmNew implements ProcessorExtensionInbound<byte[]> {
+public class ProcessorExtensionCustomAlarm implements ProcessorExtensionInbound<byte[]> {
 
     @Override
     public CumulocityObject[] onMessage(Message<byte[]> message, DataPreparationContext context) {

@@ -26,10 +26,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dynamic.mapper.model.API;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.flow.CumulocityObject;
-import dynamic.mapper.processor.flow.DeviceMessage;
-import dynamic.mapper.processor.flow.ExternalId;
+import dynamic.mapper.processor.model.CumulocityObject;
+import dynamic.mapper.processor.model.DeviceMessage;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
+import dynamic.mapper.processor.model.ExternalId;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
 import lombok.extern.slf4j.Slf4j;
@@ -262,7 +262,7 @@ public class ExtensionResultProcessor {
      * @return The corresponding API
      * @throws IllegalArgumentException if cumulocityType is null or unknown
      */
-    private API mapCumulocityTypeToAPI(dynamic.mapper.processor.flow.CumulocityType cumulocityType) {
+    private API mapCumulocityTypeToAPI(dynamic.mapper.processor.model.CumulocityType cumulocityType) {
         if (cumulocityType == null) {
             throw new IllegalArgumentException("cumulocityType must not be null");
         }

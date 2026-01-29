@@ -18,7 +18,7 @@
  *  @authors Christof Strack, Stefan Witschel
  *
  */
-package dynamic.mapper.processor.flow;
+package dynamic.mapper.processor.model;
 
 import java.time.Instant;
 import java.util.HashMap;

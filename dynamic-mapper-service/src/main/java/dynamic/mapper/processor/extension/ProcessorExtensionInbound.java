@@ -21,9 +21,10 @@
 
 package dynamic.mapper.processor.extension;
 
-import dynamic.mapper.processor.flow.CumulocityObject;
-import dynamic.mapper.processor.flow.DataPreparationContext;
-import dynamic.mapper.processor.flow.Message;
+import dynamic.mapper.processor.model.CumulocityObject;
+import dynamic.mapper.processor.model.DataPreparationContext;
+import dynamic.mapper.processor.model.Message;
+
 import org.springframework.stereotype.Component;
 
 /**

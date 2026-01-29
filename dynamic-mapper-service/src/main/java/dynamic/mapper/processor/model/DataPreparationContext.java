@@ -19,7 +19,7 @@
  *
  */
 
-package dynamic.mapper.processor.flow;
+package dynamic.mapper.processor.model;
 
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.model.Mapping;

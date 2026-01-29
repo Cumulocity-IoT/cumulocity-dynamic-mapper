@@ -105,13 +105,13 @@
                     <target>${java.version}</target>
                     <parameters>true</parameters>
                     <proc>full</proc>
-                    <!-- <annotationProcessorPaths>
+                    <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
                             <version>${lombok.version}</version>
                         </path>
-                    </annotationProcessorPaths> -->
+                    </annotationProcessorPaths>
                 </configuration>
             </plugin>
             <plugin>

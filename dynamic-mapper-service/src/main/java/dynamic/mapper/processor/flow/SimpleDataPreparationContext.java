@@ -23,6 +23,9 @@ package dynamic.mapper.processor.flow;
 
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.model.Mapping;
+import dynamic.mapper.processor.model.DataPrepContext;
+import dynamic.mapper.processor.model.DataPreparationContext;
+import dynamic.mapper.processor.model.ExternalId;
 import dynamic.mapper.processor.model.ProcessingContext;
 import lombok.extern.slf4j.Slf4j;
 import org.graalvm.polyglot.Value;

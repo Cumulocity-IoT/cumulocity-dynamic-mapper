@@ -23,7 +23,7 @@ package dynamic.mapper.core;
 
 import java.util.Map;
 
-import dynamic.mapper.processor.flow.ExternalId;
+import dynamic.mapper.processor.model.ExternalId;
 
 public interface InventoryEnrichmentClient {
     public Map<String, Object> getMOFromInventoryCache(String tenant, String sourceId, Boolean testing );

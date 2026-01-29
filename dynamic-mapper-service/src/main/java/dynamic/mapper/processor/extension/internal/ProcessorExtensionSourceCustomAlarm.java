@@ -26,9 +26,9 @@ import org.joda.time.DateTime;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import dynamic.mapper.processor.extension.ProcessorExtensionInbound;
-import dynamic.mapper.processor.flow.CumulocityObject;
-import dynamic.mapper.processor.flow.DataPreparationContext;
-import dynamic.mapper.processor.flow.Message;
+import dynamic.mapper.processor.model.CumulocityObject;
+import dynamic.mapper.processor.model.DataPreparationContext;
+import dynamic.mapper.processor.model.Message;
 import lombok.extern.slf4j.Slf4j;
 
 /**

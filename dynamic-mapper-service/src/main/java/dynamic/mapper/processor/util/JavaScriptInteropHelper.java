@@ -11,12 +11,12 @@ import java.util.Map;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Value;
 
-import dynamic.mapper.processor.flow.CumulocityObject;
-import dynamic.mapper.processor.flow.CumulocityType;
-import dynamic.mapper.processor.flow.Destination;
-import dynamic.mapper.processor.flow.DeviceMessage;
-import dynamic.mapper.processor.flow.ExternalId;
-import dynamic.mapper.processor.flow.ExternalSource;
+import dynamic.mapper.processor.model.CumulocityObject;
+import dynamic.mapper.processor.model.CumulocityType;
+import dynamic.mapper.processor.model.Destination;
+import dynamic.mapper.processor.model.DeviceMessage;
+import dynamic.mapper.processor.model.ExternalId;
+import dynamic.mapper.processor.model.ExternalSource;
 import dynamic.mapper.processor.model.ProcessingContext;
 
 /**

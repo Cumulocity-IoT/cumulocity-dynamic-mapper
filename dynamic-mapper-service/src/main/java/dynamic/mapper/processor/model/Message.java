@@ -19,9 +19,8 @@
  *
  */
 
-package dynamic.mapper.processor.flow;
+package dynamic.mapper.processor.model;
 
-import dynamic.mapper.processor.model.ProcessingContext;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 

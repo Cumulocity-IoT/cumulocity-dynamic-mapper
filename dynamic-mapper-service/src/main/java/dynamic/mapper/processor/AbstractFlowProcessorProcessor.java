@@ -35,7 +35,7 @@ import org.graalvm.polyglot.Value;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.flow.JavaScriptConsole;
-import dynamic.mapper.processor.flow.DataPrepContext;
+import dynamic.mapper.processor.model.DataPrepContext;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;

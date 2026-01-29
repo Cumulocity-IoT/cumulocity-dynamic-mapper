@@ -26,10 +26,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.processor.flow.CumulocityObject;
-import dynamic.mapper.processor.flow.CumulocityType;
 import dynamic.mapper.processor.flow.SimpleDataPreparationContext;
-import dynamic.mapper.processor.flow.Message;
+import dynamic.mapper.processor.model.CumulocityObject;
+import dynamic.mapper.processor.model.CumulocityType;
+import dynamic.mapper.processor.model.Message;
 
 import org.junit.jupiter.api.Test;
 
