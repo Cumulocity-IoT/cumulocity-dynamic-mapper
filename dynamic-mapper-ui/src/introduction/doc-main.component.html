@@ -582,7 +582,7 @@
       </div>
       <div class="card-block">
         <div class="p-b-8 text-16">
-          The Dynamic Mapper offers three powerful ways to transform your data between external formats and Cumulocity
+          The Dynamic Mapper offers four powerful ways to transform your data between external formats and Cumulocity
           IoT.
           Each transformation type provides different levels of control and flexibility, allowing you to choose the
           approach
@@ -593,9 +593,10 @@
           <div class="content">
             <strong>Choosing a Transformation Type:</strong> Select JSONata for simple mappings, JavaScript
             substitutions
-            when you need more computational power for individual fields, and Smart Functions when you need complete
+            when you need more computational power for individual fields, Smart Functions when you need complete
             control
-            over the transformation logic or when working with array payloads.
+            over the transformation logic or when working with array payloads, and Java Extensions when you need
+            enterprise-grade type safety, performance, and access to the full Java ecosystem.
           </div>
         </div>
         <h4 class="p-t-16 p-b-8" id="jsonata-substitution">{{ 'Defining a substitution using JSONata' | translate }}
@@ -637,6 +638,21 @@
         <div class="p-b-16 text-16">
           <strong><a [routerLink]="['/c8y-pkg-dynamic-mapper/landing/javascript']">
               <i class="fa fa-book m-r-8"></i>Learn more about defining substitutions using JavaScript →
+            </a></strong>
+        </div>
+        <h4 class="p-t-16 p-b-8" id="java-extension">{{ 'Defining the payload transformation using Java Extensions' | translate
+          }}
+        </h4>
+        <div class="p-b-8 text-16">
+          Java Extensions provide enterprise-grade transformation capabilities by allowing you to write custom transformation
+          logic in Java. This approach offers type safety, superior performance, and full access to the Java ecosystem
+          including third-party libraries and Cumulocity Java SDK. Use Java Extensions when you need to handle complex
+          data transformations, implement sophisticated business logic, require strong type checking, or need to integrate
+          with existing Java-based systems.
+        </div>
+        <div class="p-b-16 text-16">
+          <strong><a [routerLink]="['/c8y-pkg-dynamic-mapper/landing/javaextension']">
+              <i class="fa fa-book m-r-8"></i>Learn more about Java Extensions →
             </a></strong>
         </div>
       </div>
@@ -1996,6 +2012,115 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
   </div>
   }
   <!-- ========================= END SMART FUNCTION PAGE ============================ -->
+  <!-- ========================================================================== -->
+  <!-- ========================= JAVA EXTENSION PAGE ============================ -->
+  <!-- ========================================================================== -->
+  @case ('javaextension') {
+  <div>
+    <c8y-title>{{ 'Defining the payload transformation using Java Extensions' | translate }}</c8y-title>
+    <a id="top"></a>
+    <div class="text-right m-b-16">
+      <a (click)="scrollToElement('top')" class="to-the-top" role="button" aria-label="Scroll to top"
+        style="cursor: pointer;">
+        <i class="dlt-c8y-icon-chevron-up m-r-4"></i> Top
+      </a>
+    </div>
+    <div>
+      <div class="card-header" id="java-extension">
+        <h4>
+          {{ 'Defining the payload transformation using Java Extensions' | translate }}
+        </h4>
+      </div>
+      <div class="card-block">
+        <div class="p-b-8 text-16">
+          Java Extensions provide enterprise-grade transformation capabilities by allowing you to write custom transformation
+          logic in Java. This approach offers type safety, superior performance, and full access to the Java ecosystem
+          including third-party libraries and the Cumulocity Java SDK.
+        </div>
+        <div class="admonition info" style="max-width: 100%;">
+          <div class="title">Info</div>
+          <div class="content">
+            <strong>When to use Java Extensions:</strong> Choose Java Extensions when you need:
+            <ul class="m-t-8 m-b-0">
+              <li>Enterprise-grade type safety with compile-time checking</li>
+              <li>Optimal performance for complex transformations</li>
+              <li>Binary format support for Protobuf, Avro, MessagePack, and other non-JSON protocols</li>
+              <li>Integration with existing Java-based enterprise systems</li>
+              <li>Access to the full Java ecosystem and Cumulocity Java SDK</li>
+              <li>Advanced debugging capabilities with standard Java tools</li>
+            </ul>
+          </div>
+        </div>
+        <div class="admonition caution" style="max-width: 100%;">
+          <div class="title">Caution</div>
+          <div class="content">
+            Java Extensions must be deployed as plugins to the Dynamic Mapper microservice before they can be used.
+            Once installed, they appear in the Processor Extension configuration and become available as templates
+            in the mapping stepper.
+          </div>
+        </div>
+        <h5 class="p-t-16 p-b-8"><strong>Selecting Java Extensions in the Mapping Stepper</strong></h5>
+        <div class="p-b-8 text-16">
+          When creating a mapping, you can select from installed Java Extensions that define the transformation logic.
+          The mapping stepper displays all available extensions along with their associated templates:
+        </div>
+        <br />
+        <img width="80%" class="m-l-48 m-b-16"
+          src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Java_Extension.png"
+          alt="Java Extension in Mapping Stepper" />
+        <p class="image-description m-l-48"><b>Description:</b> Screenshot showing the mapping stepper with Java Extension
+          templates. The dropdown displays available extensions for payload parsing, including various custom extensions
+          like CustomEvent, CustomMeasurement, and MeasurementWithImplicitDevice. Each extension provides pre-configured
+          templates for both source and target payloads.</p>
+        <br />
+        <h5 class="p-t-16 p-b-8"><strong>Managing Installed Java Extensions</strong></h5>
+        <div class="p-b-8 text-16">
+          To manage and view installed Java Extensions, navigate to the Processor Extension configuration page. This page
+          displays all deployed extensions with their properties, implementation details, and supported message types:
+        </div>
+        <br />
+        <img width="80%" class="m-l-48 m-b-16"
+          src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Configuration_ProcessorExtensionSource_Plugin_Installed.png"
+          alt="Processor Extension Configuration" />
+        <p class="image-description m-l-48"><b>Description:</b> Screenshot showing the Processor Extension configuration page
+          with installed plugins. Each extension displays its name (e.g., CustomEvent, MeasurementToCustomJson),
+          implementation class path, message type, direction (Outbound/Inbound), and active status. The interface allows
+          you to view extension properties and verify that plugins are correctly installed and operational.</p>
+        <br />
+        <h5 class="p-t-16 p-b-8"><strong>Key Benefits of Java Extensions</strong></h5>
+        <ul class="text-16 p-b-8">
+          <li><strong>Type Safety:</strong> Compile-time type checking prevents runtime errors and improves code reliability.
+            Your IDE will catch errors before deployment, reducing debugging time and production issues.</li>
+          <li><strong>Performance:</strong> Native Java execution provides optimal performance for complex transformations.
+            Unlike interpreted JavaScript, Java extensions benefit from JVM optimizations and efficient memory management.</li>
+          <li><strong>Binary Format Support:</strong> Parse and process binary data formats such as Protocol Buffers (Protobuf),
+            Avro, MessagePack, and other non-JSON formats. Java Extensions can handle binary payloads that cannot be processed
+            by JSONata or JavaScript transformations, making them ideal for IoT devices using efficient binary protocols.</li>
+          <li><strong>Java Ecosystem:</strong> Full access to Java libraries, frameworks, and the Cumulocity Java SDK.
+            Leverage existing libraries for JSON processing, data validation, cryptography, and more.</li>
+          <li><strong>Reusability:</strong> Package and deploy transformation logic as reusable plugins across multiple mappings.
+            Once developed, a Java extension can be used by multiple tenants and mapping configurations.</li>
+          <li><strong>Advanced Debugging:</strong> Use standard Java debugging tools and IDEs for development.
+            Set breakpoints, inspect variables, and step through code using IntelliJ IDEA, Eclipse, or any Java debugger.</li>
+        </ul>
+        <div class="admonition important" style="max-width: 100%;">
+          <div class="title">Important</div>
+          <div class="content">
+            <strong>Development Requirements:</strong> To develop Java Extensions, you need:
+            <ul class="m-t-8 m-b-0">
+              <li>Java Development Kit (JDK) 21 or higher</li>
+              <li>Maven or Gradle for building the extension</li>
+              <li>Access to the Dynamic Mapper extension API and dependencies</li>
+            </ul>
+          </div>
+        </div>
+        <div class="p-b-8"></div>
+      </div>
+      <div class="p-b-8"></div>
+    </div>
+  </div>
+  }
+  <!-- ========================= END JAVA EXTENSION PAGE ============================ -->
   }
 </div>
 <!-- ================================================================================ -->
