@@ -65,6 +65,18 @@
                     <td>Event Implementation</td>
                     <td>{{ entry.fqnClassName }}</td>
                   </tr>
+                  @if (entry.description) {
+                  <tr>
+                    <td>Description</td>
+                    <td>{{ entry.description }}</td>
+                  </tr>
+                  }
+                  @if (entry.version) {
+                  <tr>
+                    <td>Version</td>
+                    <td><span class="label label-info">{{ entry.version }}</span></td>
+                  </tr>
+                  }
                   <tr>
                     <td>Message</td>
                     <td>{{ entry.message }}</td>

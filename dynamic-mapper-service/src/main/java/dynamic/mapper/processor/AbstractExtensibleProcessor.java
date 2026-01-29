@@ -82,23 +82,6 @@ public abstract class AbstractExtensibleProcessor extends CommonProcessor {
             throws ProcessingException;
 
     /**
-     * Get extension source implementation for extraction.
-     * Returns either InboundExtension or OutboundExtension depending on direction.
-     *
-     * @param tenant The tenant identifier
-     * @param extension The extension entry configuration
-     * @return The extension source implementation (InboundExtension or OutboundExtension)
-     */
-    protected Object getProcessorExtensionSource(String tenant, ExtensionEntry extension) {
-        String extensionName = extension.getExtensionName();
-        String eventName = extension.getEventName();
-        return extensionInboundRegistry.getExtension(tenant, extensionName)
-                .getExtensionEntries()
-                .get(eventName)
-                .getExtensionImplSource();
-    }
-
-    /**
      * Get extension inbound implementation for transformation.
      *
      * @param tenant The tenant identifier

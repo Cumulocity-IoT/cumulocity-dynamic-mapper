@@ -21,18 +21,16 @@
 
 package dynamic.mapper.core;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.Enumeration;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
+
+import org.yaml.snakeyaml.Yaml;
 
 import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,6 +44,7 @@ import dynamic.mapper.configuration.ExtensionConfiguration;
 import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Extension;
+import dynamic.mapper.model.ExtensionConfig;
 import dynamic.mapper.model.ExtensionEntry;
 import dynamic.mapper.model.ExtensionType;
 import dynamic.mapper.processor.extension.ExtensionsComponent;
@@ -58,8 +57,8 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class ExtensionManager {
 
-    private static final String EXTENSION_INTERNAL_FILE = "extension-internal.properties";
-    private static final String EXTENSION_EXTERNAL_FILE = "extension-external.properties";
+    private static final String EXTENSION_INTERNAL_FILE = "extension-internal.yaml";
+    private static final String EXTENSION_EXTERNAL_FILE = "extension-external.yaml";
 
     @Autowired
     private BinariesApi binaryApi;
@@ -171,33 +170,43 @@ public class ExtensionManager {
 
         String resource = external ? EXTENSION_EXTERNAL_FILE : EXTENSION_INTERNAL_FILE;
         InputStream resourceAsStream = dynamicLoader.getResourceAsStream(resource);
-        InputStreamReader in = null;
-        try {
-            in = new InputStreamReader(resourceAsStream);
-        } catch (Exception e) {
+
+        if (resourceAsStream == null) {
             log.error("{} - Registration file: {} missing, ignoring to load extensions from: {}", tenant,
                     resource,
                     (external ? "EXTERNAL" : "INTERNAL"));
             throw new IOException("Registration file: " + resource + " missing, ignoring to load extensions from:"
                     + (external ? "EXTERNAL" : "INTERNAL"));
         }
-        BufferedReader buffered = new BufferedReader(in);
-        Properties newExtensions = new Properties();
 
-        if (buffered != null)
-            newExtensions.load(buffered);
-        log.debug("{} - Preparing to load extensions:" + newExtensions.toString(), tenant);
+        // Parse YAML configuration
+        Yaml yaml = new Yaml();
+        ExtensionConfig extensionConfig;
+        try {
+            extensionConfig = yaml.loadAs(resourceAsStream, ExtensionConfig.class);
+        } catch (Exception e) {
+            log.error("{} - Failed to parse YAML file: {}", tenant, resource, e);
+            throw new IOException("Failed to parse YAML file: " + resource, e);
+        }
 
-        Enumeration<?> extensionEntries = newExtensions.propertyNames();
-        while (extensionEntries.hasMoreElements()) {
-            String key = (String) extensionEntries.nextElement();
+        if (extensionConfig == null || extensionConfig.getExtensions() == null) {
+            log.warn("{} - No extensions found in: {}", tenant, resource);
+            return;
+        }
+
+        log.debug("{} - Preparing to load {} extensions from {}", tenant,
+                extensionConfig.getExtensions().size(), resource);
+
+        for (ExtensionConfig.ExtensionDefinition definition : extensionConfig.getExtensions()) {
             Class<?> clazz;
             ExtensionEntry extensionEntry = ExtensionEntry.builder()
-                    .eventName(key)
+                    .eventName(definition.getEventName())
                     .extensionName(extensionName)
-                    .fqnClassName(newExtensions.getProperty(key))
+                    .fqnClassName(definition.getClassName())
+                    .description(definition.getDescription())
+                    .version(definition.getVersion())
                     .loaded(true)
-                    .message("OK")
+                    .message("Loaded successfully")
                     .direction(Direction.UNSPECIFIED)
                     .build();
 
@@ -205,7 +214,7 @@ public class ExtensionManager {
             extensionInboundRegistry.addExtensionEntry(tenant, extensionName, extensionEntry);
 
             try {
-                clazz = dynamicLoader.loadClass(newExtensions.getProperty(key));
+                clazz = dynamicLoader.loadClass(definition.getClassName());
 
                 if (external && !clazz.getPackageName().startsWith(extensionConfiguration.getExternalExtensionsAllowedPackage())) {
                     extensionEntry.setMessage(
@@ -234,80 +243,66 @@ public class ExtensionManager {
                         extensionEntry.setExtensionType(ExtensionType.EXTENSION_INBOUND);
                         isValidExtension = true;
                         log.debug("{} - Registered ProcessorExtensionInbound: {} for key: {}",
-                                tenant, newExtensions.getProperty(key), key);
+                                tenant, definition.getClassName(), definition.getEventName());
                     } else if (extensionInstance instanceof ProcessorExtensionOutbound) {
                         // Complete outbound processing with request preparation
                         extensionEntry.setExtensionImplOutbound((ProcessorExtensionOutbound<?>) extensionInstance);
                         extensionEntry.setExtensionType(ExtensionType.EXTENSION_OUTBOUND);
                         isValidExtension = true;
                         log.debug("{} - Registered ProcessorExtensionOutbound: {} for key: {}",
-                                tenant, newExtensions.getProperty(key), key);
-                    } else if (extensionInstance instanceof ProcessorExtensionInbound) {
-                        // Substitution-based inbound (implements only InboundExtension)
-                        extensionEntry.setExtensionImplSource(extensionInstance);
-                        extensionEntry.setExtensionType(ExtensionType.EXTENSION_INBOUND);
-                        isValidExtension = true;
-                        log.debug("{} - Registered substitution-based InboundExtension: {} for key: {}",
-                                tenant, newExtensions.getProperty(key), key);
-                    } else if (extensionInstance instanceof ProcessorExtensionOutbound) {
-                        // Substitution-based outbound (implements only OutboundExtension)
-                        extensionEntry.setExtensionImplSource(extensionInstance);
-                        extensionEntry.setExtensionType(ExtensionType.EXTENSION_OUTBOUND);
-                        isValidExtension = true;
-                        log.debug("{} - Registered substitution-based OutboundExtension: {} for key: {}",
-                                tenant, newExtensions.getProperty(key), key);
+                                tenant, definition.getClassName(), definition.getEventName());
                     }
 
                     if (!isValidExtension) {
                         String msg = String.format(
                                 "Extension %s=%s must implement InboundExtension, OutboundExtension, ProcessorExtensionInbound, or ProcessorExtensionOutbound!",
-                                key,
-                                newExtensions.getProperty(key));
+                                definition.getEventName(),
+                                definition.getClassName());
                         log.warn("{} - {}", tenant, msg);
                         extensionEntry.setMessage(msg);
                         extensionEntry.setLoaded(false);
                     }
                 }
             } catch (ClassNotFoundException e) {
-                String msg = String.format("Could not load extension class %s:%s: %s", key,
-                        newExtensions.getProperty(key), e.getMessage());
+                String msg = String.format("Could not load extension class %s:%s: %s", definition.getEventName(),
+                        definition.getClassName(), e.getMessage());
                 log.warn("{} - {}", tenant, msg);
                 log.debug("{} - Exception details: ", tenant, e);
                 extensionEntry.setMessage(msg);
                 extensionEntry.setLoaded(false);
             } catch (NoClassDefFoundError e) {
-                String msg = String.format("Missing dependency for extension class %s:%s: %s", key,
-                        newExtensions.getProperty(key), e.getMessage());
+                String msg = String.format("Missing dependency for extension class %s:%s: %s", definition.getEventName(),
+                        definition.getClassName(), e.getMessage());
                 log.warn("{} - {}", tenant, msg);
                 log.debug("{} - Exception details: ", tenant, e);
                 extensionEntry.setMessage(msg);
                 extensionEntry.setLoaded(false);
             } catch (NoSuchMethodException e) {
-                String msg = String.format("Extension class %s:%s must have a public no-arg constructor", key,
-                        newExtensions.getProperty(key));
+                String msg = String.format("Extension class %s:%s must have a public no-arg constructor", definition.getEventName(),
+                        definition.getClassName());
                 log.warn("{} - {}", tenant, msg);
                 log.debug("{} - Exception details: ", tenant, e);
                 extensionEntry.setMessage(msg);
                 extensionEntry.setLoaded(false);
             } catch (InstantiationException | IllegalAccessException e) {
-                String msg = String.format("Could not instantiate extension class %s:%s: %s", key,
-                        newExtensions.getProperty(key), e.getMessage());
+                String msg = String.format("Could not instantiate extension class %s:%s: %s", definition.getEventName(),
+                        definition.getClassName(), e.getMessage());
                 log.warn("{} - {}", tenant, msg);
                 log.debug("{} - Exception details: ", tenant, e);
                 extensionEntry.setMessage(msg);
                 extensionEntry.setLoaded(false);
             } catch (java.lang.reflect.InvocationTargetException e) {
                 String exceptionMsg = e.getCause() != null ? e.getCause().getMessage() : e.getMessage();
-                String msg = String.format("Extension constructor threw exception for %s:%s: %s", key,
-                        newExtensions.getProperty(key), exceptionMsg);
+                String msg = String.format("Extension constructor threw exception for %s:%s: %s", definition.getEventName(),
+                        definition.getClassName(), exceptionMsg);
                 log.warn("{} - {}", tenant, msg);
                 log.debug("{} - Exception details: ", tenant, e);
                 extensionEntry.setMessage(msg);
                 extensionEntry.setLoaded(false);
             } catch (Exception e) {
                 String exceptionMsg = e.getCause() != null ? e.getCause().getMessage() : e.getMessage();
-                String msg = String.format("Unexpected error loading extension %s:%s: %s", key,
-                        newExtensions.getProperty(key), exceptionMsg);
+                String msg = String.format("Unexpected error loading extension %s:%s: %s", definition.getEventName(),
+                        definition.getClassName(), exceptionMsg);
                 log.error("{} - {}", tenant, msg, e);
                 extensionEntry.setMessage(msg);
                 extensionEntry.setLoaded(false);

@@ -45,10 +45,14 @@ public class ExtensionEntry implements Serializable {
     
     @NotNull
     private String fqnClassName;
-    
+
+    private String description;
+
+    private String version;
+
     @NotNull
     private Boolean loaded;
-    
+
     @NotNull
     private String message;
 
@@ -58,14 +62,6 @@ public class ExtensionEntry implements Serializable {
     @NotNull
     @Builder.Default
     private Direction direction = Direction.UNSPECIFIED;
-
-    /**
-     * Substitution-based extension (InboundExtension or OutboundExtension).
-     * For substitution-based processing only.
-     */
-    @JsonIgnore
-    @Builder.Default
-    private Object extensionImplSource = null;
 
     /**
      * Complete inbound processing extension (ProcessorExtensionInbound).

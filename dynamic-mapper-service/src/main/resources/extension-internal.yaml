@@ -19,4 +19,16 @@
 #
 #
 
-InternalCustomAlarm=dynamic.mapper.processor.extension.internal.ProcessorExtensionSourceCustomAlarm
+# Internal extension configuration in YAML format
+# Each extension entry includes:
+# - eventName: Unique identifier for the extension
+# - className: Fully qualified name of the implementation class
+# - description: Human-readable description of the extension's purpose
+# - version: Version of the extension implementation
+
+extensions:
+  # Internal Extensions
+  - eventName: InternalCustomAlarm
+    className: dynamic.mapper.processor.extension.internal.ProcessorExtensionSourceCustomAlarm
+    description: Internal custom alarm processor for specialized alarm handling
+    version: "2.0"

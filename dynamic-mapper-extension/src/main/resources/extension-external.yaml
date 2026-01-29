@@ -1,0 +1,82 @@
+#
+# Copyright (c) 2022-2025 Cumulocity GmbH.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+#
+#  @authors Christof Strack, Stefan Witschel
+#
+#
+
+# Extension configuration in YAML format
+# Each extension entry includes:
+# - eventName: Unique identifier for the extension
+# - className: Fully qualified name of the implementation class
+# - description: Human-readable description of the extension's purpose
+# - version: Version of the extension implementation
+
+extensions:
+  # Inbound Extensions (Device → Cumulocity)
+  - eventName: ProtobufCustomEvent
+    className: dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionCustomEvent
+    description: Custom event processor for protobuf message formats
+    version: "2.0"
+
+  - eventName: CustomMeasurement
+    className: dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionCustomMeasurement
+    description: Custom measurement processor with specialized handling
+    version: "2.0"
+
+  - eventName: CustomAlarm
+    className: dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionCustomAlarm
+    description: Custom alarm processor using return-value based pattern (v2.0)
+    version: "2.0"
+
+  # Smart Function Equivalents - Inbound
+  - eventName: TemperatureMeasurement
+    className: dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionSmartInbound01
+    description: Temperature measurement processor demonstrating smart function pattern
+    version: "2.0"
+
+  - eventName: DynamicSensorMeasurement
+    className: dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionSmartInbound02
+    description: Dynamic sensor measurement processor with flexible data handling
+    version: "2.0"
+
+  - eventName: MeasurementWithImplicitDevice
+    className: dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionSmartInbound03
+    description: Measurement processor with implicit device creation support
+    version: "2.0"
+
+  # Outbound Extensions (Cumulocity → Device)
+  - eventName: AlarmToCustomJson
+    className: dynamic.mapper.processor.extension.external.outbound.ProcessorExtensionAlarmToCustomJson
+    description: Alarm to custom JSON converter using return-value based pattern (v2.0)
+    version: "2.0"
+
+  # Smart Function Equivalents - Outbound
+  - eventName: MeasurementToCustomJson
+    className: dynamic.mapper.processor.extension.external.outbound.ProcessorExtensionSmartOutbound01
+    description: Measurement to custom JSON converter with flexible formatting
+    version: "2.0"
+
+  - eventName: MeasurementToJsonArray
+    className: dynamic.mapper.processor.extension.external.outbound.ProcessorExtensionSmartOutbound02
+    description: Measurement to JSON array converter for batch processing
+    version: "2.0"
+
+  - eventName: MeasurementWithKafkaKey
+    className: dynamic.mapper.processor.extension.external.outbound.ProcessorExtensionSmartOutbound03
+    description: Measurement processor with Kafka key generation support
+    version: "2.0"
