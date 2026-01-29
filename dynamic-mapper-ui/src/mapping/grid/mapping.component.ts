@@ -44,9 +44,7 @@ import {
   createCustomUuid,
   DeploymentMapEntry,
   Direction,
-  ExtensionType,
   Feature,
-  FormatStringPipe,
   getExternalTemplate,
   isSubstitutionsAsCode,
   LabelTaggedRendererComponent,
@@ -65,6 +63,10 @@ import {
   Substitution,
   TransformationType
 } from '../../shared';
+import {
+  StepperConfigurationContext,
+  StepperConfigurationResolver
+} from '../../shared/mapping/stepper-configuration.strategy';
 
 import { HttpStatusCode } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -1044,55 +1046,28 @@ export class MappingComponent implements OnInit, OnDestroy {
     editorMode: EditorMode,
     substitutionsAsCode: boolean
   ) {
-    // console.log('DEBUG I', MappingTypeDescriptionMap);
-    // console.log('DEBUG II', MappingTypeDescriptionMap[mappingType]);
-    // console.log('DEBUG III', this.stepperConfiguration);
+    const baseConfig = MappingTypeDescriptionMap[mappingType].stepperConfiguration;
 
-    this.stepperConfiguration = {
-      ...MappingTypeDescriptionMap[mappingType].stepperConfiguration,
+    const context: StepperConfigurationContext = {
+      mappingType,
+      transformationType,
       direction,
       editorMode,
-      ...(direction === Direction.OUTBOUND && { allowTestSending: false }),
-      // if snoop is enabled, then skip the first step selecting an connector
-      ...(direction === Direction.OUTBOUND && this.snoopStatus === SnoopStatus.ENABLED && {
-        advanceFromStepToEndStep: 0
-      }),
-      ...((substitutionsAsCode) && {
-        advanceFromStepToEndStep: undefined,
-        showCodeEditor: true,
-        allowTestSending: false,
-        allowTestTransformation: true
-      }),
-      ...((transformationType == TransformationType.SMART_FUNCTION) && {
-        showEditorTarget: false,
-        allowTestSending: false,
-        allowTestTransformation: true
-      }),
-      ...((transformationType == TransformationType.EXTENSION_JAVA && direction === Direction.OUTBOUND) && {
-        showProcessorExtensionsTarget: true,
-        showEditorTarget: false,
-        allowTestSending: false,
-        allowTestTransformation: false,
-        advanceFromStepToEndStep: 2
-      }),
-      ...((transformationType == TransformationType.EXTENSION_JAVA && direction === Direction.INBOUND) && {
-        showEditorTarget: false,
-        showFilterExpression: false,
-        allowTestSending: false,
-        allowTestTransformation: false
-      }),
-      ...((mappingType == MappingType.EXTENSION_JAVA && direction === Direction.INBOUND) && {
-        showEditorTarget: false,
-        showFilterExpression: false
-      })
+      substitutionsAsCode,
+      snoopStatus: this.snoopStatus
     };
 
-    // Clean up undefined properties
-    if (substitutionsAsCode) {
-      delete this.stepperConfiguration.advanceFromStepToEndStep;
-    }
-    //console.log('DEBUG IV', this.stepperConfiguration, substitutionsAsCode);
+    this.stepperConfiguration = StepperConfigurationResolver.resolve(
+      baseConfig,
+      context
+    );
 
+    // For debugging (can be removed in production):
+    // const appliedOverrides = StepperConfigurationResolver.getAppliedOverrides(context);
+    // const descriptions = StepperConfigurationResolver.getAppliedOverrideDescriptions(context);
+    // console.log('Applied configuration overrides:', appliedOverrides);
+    // console.log('Override descriptions:', descriptions);
+    // console.log('Final configuration:', this.stepperConfiguration);
   }
 
   ngOnDestroy() {

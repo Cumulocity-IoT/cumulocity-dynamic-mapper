@@ -92,6 +92,7 @@ import { MappingStepPropertiesComponent } from '../step-property/mapping-propert
 import { MappingConnectorComponent } from '../step-connector/mapping-connector.component';
 import { MappingSubstitutionStepComponent } from '../step-substitution/mapping-substitution-step.component';
 import { PopoverModule } from 'ngx-bootstrap/popover';
+import { StepperViewModel, StepperViewModelFactory } from './stepper-view.model';
 
 const STEP_LABEL_TEST_MAPPING = 'Test mapping';
 const STEP_LABEL_GENERAL_SETTINGS = 'General settings';
@@ -117,6 +118,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   @Input() deploymentMapEntry: DeploymentMapEntry;
   @Output() cancel = new EventEmitter<any>();
   @Output() commit = new EventEmitter<Mapping>();
+
+  // View model with computed properties for template simplification
+  stepperViewModel!: StepperViewModel;
 
   @ViewChild('editorSourceStepTemplate', { static: false }) editorSourceStepTemplate!: JsonEditorComponent;
   @ViewChild('editorTargetStepTemplate', { static: false }) editorTargetStepTemplate!: JsonEditorComponent;
@@ -248,6 +252,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   serviceConfiguration: ServiceConfiguration;
 
   async ngOnInit(): Promise<void> {
+    // Initialize view model from stepper configuration
+    this.stepperViewModel = StepperViewModelFactory.create(this.stepperConfiguration);
+
     if (this.mapping.snoopStatus === SnoopStatus.NONE || this.mapping.snoopStatus === SnoopStatus.STOPPED) {
       this.labels = { ...this.labels, custom: 'Start snooping' } as const;
     }

@@ -344,6 +344,37 @@ export interface MappingTypeDescriptionInterface {
   stepperConfiguration: StepperConfiguration;
 }
 
+/**
+ * Base defaults for all stepper configurations.
+ * These represent the most common case (JSON inbound mapping).
+ * All mapping types inherit from these defaults unless explicitly overridden.
+ */
+const BASE_STEPPER_CONFIGURATION: StepperConfiguration = {
+  showCodeEditor: false,
+  showEditorSource: true,
+  showEditorTarget: true,
+  showFilterExpression: true,
+  allowNoDefinedIdentifier: false,
+  allowDefiningSubstitutions: true,
+  showProcessorExtensionsSource: false,
+  showProcessorExtensionsTarget: false,
+  showProcessorExtensionsInternal: false,
+  allowTestTransformation: true,
+  allowTestSending: true,
+  advanceFromStepToEndStep: undefined
+};
+
+/**
+ * Helper to create stepper configuration with only differences from base.
+ * This ensures consistency and reduces duplication across mapping types.
+ *
+ * @param overrides - Properties that differ from base configuration
+ * @returns Complete stepper configuration with base defaults and overrides applied
+ */
+function createStepperConfig(overrides: Partial<StepperConfiguration>): StepperConfiguration {
+  return { ...BASE_STEPPER_CONFIGURATION, ...overrides };
+}
+
 export const MappingTypeDescriptionMap: Record<
   MappingType,
   MappingTypeDescriptionInterface
@@ -377,17 +408,8 @@ export const MappingTypeDescriptionMap: Record<
         ]
       },
     },
-    stepperConfiguration: {
-      showCodeEditor: false,
-      showEditorSource: true,
-      showEditorTarget: true,
-      showFilterExpression: true,
-      allowNoDefinedIdentifier: false,
-      allowDefiningSubstitutions: true,
-      showProcessorExtensionsSource: false,
-      allowTestTransformation: true,
-      allowTestSending: true
-    }
+    // JSON uses base configuration as-is (no overrides needed)
+    stepperConfiguration: createStepperConfig({})
   },
   [MappingType.FLAT_FILE]: {
     key: MappingType.FLAT_FILE,
@@ -424,17 +446,8 @@ export const MappingTypeDescriptionMap: Record<
         ]
       },
     },
-    stepperConfiguration: {
-      showCodeEditor: false,
-      showEditorSource: true,
-      showEditorTarget: true,
-      showFilterExpression: true,
-      allowNoDefinedIdentifier: false,
-      allowDefiningSubstitutions: true,
-      showProcessorExtensionsSource: false,
-      allowTestTransformation: true,
-      allowTestSending: true
-    }
+    // FLAT_FILE uses same config as JSON (no overrides needed)
+    stepperConfiguration: createStepperConfig({})
   },
   [MappingType.HEX]: {
     key: MappingType.HEX,
@@ -465,17 +478,8 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
         ]
       }
     },
-    stepperConfiguration: {
-      showCodeEditor: false,
-      showEditorSource: true,
-      showEditorTarget: true,
-      showFilterExpression: true,
-      allowNoDefinedIdentifier: false,
-      allowDefiningSubstitutions: true,
-      showProcessorExtensionsSource: false,
-      allowTestTransformation: true,
-      allowTestSending: true
-    }
+    // HEX uses same config as JSON (no overrides needed)
+    stepperConfiguration: createStepperConfig({})
   },
   [MappingType.PROTOBUF_INTERNAL]: {
     key: MappingType.PROTOBUF_INTERNAL,
@@ -495,19 +499,17 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
         supportedTransformationTypes: [] // No transformation types supported for outbound
       },
     },
-    stepperConfiguration: {
-      showProcessorExtensionsSource: false,
+    // PROTOBUF has significant differences: only specify what changes from base
+    stepperConfiguration: createStepperConfig({
       showProcessorExtensionsInternal: true,
       allowDefiningSubstitutions: false,
-      showCodeEditor: false,
       showEditorSource: false,
-      showEditorTarget: true,
       showFilterExpression: false,
       allowNoDefinedIdentifier: true,
       allowTestTransformation: false,
       allowTestSending: false,
       advanceFromStepToEndStep: 2
-    }
+    })
   },
   [MappingType.EXTENSION_JAVA]: {
     key: MappingType.EXTENSION_JAVA,
@@ -528,18 +530,17 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
         supportedTransformationTypes: [TransformationType.EXTENSION_JAVA]
       },
     },
-    stepperConfiguration: {
+    // EXTENSION_JAVA configuration: shows processor extensions for source
+    stepperConfiguration: createStepperConfig({
       showProcessorExtensionsSource: true,
       allowDefiningSubstitutions: false,
-      showCodeEditor: false,
       showEditorSource: false,
-      showEditorTarget: true,
       showFilterExpression: false,
       allowNoDefinedIdentifier: true,
       allowTestTransformation: false,
       allowTestSending: false,
       advanceFromStepToEndStep: 2
-    }
+    })
   }
 };
 
