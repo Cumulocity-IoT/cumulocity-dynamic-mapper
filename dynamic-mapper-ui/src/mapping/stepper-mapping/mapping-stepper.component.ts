@@ -38,7 +38,7 @@ import { Alert, AlertService, BottomDrawerService, C8yStepper, CoreModule } from
 import { FormlyFieldConfig } from '@ngx-formly/core';
 import * as _ from 'lodash';
 import { BsModalService } from 'ngx-bootstrap/modal';
-import { debounceTime, distinctUntilChanged, Subject } from 'rxjs';
+import { debounceTime, distinctUntilChanged, map, Observable, shareReplay, Subject } from 'rxjs';
 import { Mode } from 'vanilla-jsoneditor';
 import {
   API,
@@ -62,8 +62,7 @@ import {
   TransformationType,
   MappingTypeLabels,
   ContentChanges,
-  MappingTypeDescriptions,
-  CapitalizeCasePipe
+  MappingTypeDescriptions
 } from '../../shared';
 import { ValidationError } from '../shared/mapping.model';
 import { EditorMode, STEP_DEFINE_SUBSTITUTIONS, STEP_GENERAL_SETTINGS, STEP_SELECT_TEMPLATES, STEP_TEST_MAPPING } from '../shared/stepper.model';
@@ -110,7 +109,7 @@ interface StepperStepChange {
   encapsulation: ViewEncapsulation.None,
   standalone: true,
   providers: [MappingStepperService, SubstitutionManagementService],
-  imports: [CoreModule, CommonModule, EditorComponent, CapitalizeCasePipe, PopoverModule, MappingStepPropertiesComponent, MappingConnectorComponent, MappingSubstitutionStepComponent, MappingStepTestingComponent, JsonEditorComponent]
+  imports: [CoreModule, CommonModule, EditorComponent, PopoverModule, MappingStepPropertiesComponent, MappingConnectorComponent, MappingSubstitutionStepComponent, MappingStepTestingComponent, JsonEditorComponent]
 })
 export class MappingStepperComponent implements OnInit, OnDestroy {
   @Input() mapping: Mapping;
@@ -194,6 +193,34 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   get sourceCustomMessage$() { return this.stepperService.sourceCustomMessage$; }
   get targetCustomMessage$() { return this.stepperService.targetCustomMessage$; }
 
+  // Cached properties for c8y-select components (to avoid recreating arrays on every change detection)
+  extensionItems: string[] = [];
+  extensionEventItems$: Observable<string[]>;
+  snoopedTemplateItems: Array<{label: string, value: string}> = [];
+  codeTemplateItems: Array<{label: string, value: string}> = [];
+
+  private updateExtensionItems(): void {
+    this.extensionItems = Array.from(this.extensions.keys());
+  }
+
+  private updateSnoopedTemplateItems(): void {
+    if (!this.mapping?.snoopedTemplates) {
+      this.snoopedTemplateItems = [];
+      return;
+    }
+    this.snoopedTemplateItems = Array.from({ length: this.mapping.snoopedTemplates.length }, (_, i) => ({
+      label: `Template - ${i}`,
+      value: String(i)
+    }));
+  }
+
+  private updateCodeTemplateItems(): void {
+    this.codeTemplateItems = this.codeTemplateEntries.map(item => ({
+      label: `${item.name.charAt(0).toUpperCase() + item.name.slice(1)} (${item.type})`,
+      value: item.key
+    }));
+  }
+
   labels: any = { next: 'Next', cancel: 'Cancel' };
 
   editorOptionsSourceTemplate = {
@@ -254,6 +281,13 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   async ngOnInit(): Promise<void> {
     // Initialize view model from stepper configuration
     this.stepperViewModel = StepperViewModelFactory.create(this.stepperConfiguration);
+
+    // Initialize cached arrays for c8y-select
+    this.extensionEventItems$ = this.stepperService.extensionEvents$.pipe(
+      map((events: ExtensionEntry[]) => events?.map((event: ExtensionEntry) => event.eventName) || []),
+      shareReplay(1)
+    );
+    this.updateSnoopedTemplateItems();
 
     if (this.mapping.snoopStatus === SnoopStatus.NONE || this.mapping.snoopStatus === SnoopStatus.STOPPED) {
       this.labels = { ...this.labels, custom: 'Start snooping' } as const;
@@ -379,7 +413,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         disabled: this.stepperConfiguration.editorMode === EditorMode.READ_ONLY
       }),
       snoopedTemplateIndex: new FormControl({
-        value: -1,
+        value: '-1',
         disabled: !this.stepperConfiguration.showEditorSource ||
           this.mapping.snoopedTemplates.length === 0 ||
           this.stepperConfiguration.editorMode === EditorMode.READ_ONLY
@@ -390,6 +424,48 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         disabled: undefined
       })
     });
+
+    // Master-Detail: Subscribe to extension name changes to update available events
+    this.templateForm.get('extensionName')?.valueChanges
+      .pipe(
+        distinctUntilChanged(),
+        debounceTime(100)
+      )
+      .subscribe(selected => {
+        // When using simple string arrays, c8y-select binds the string directly
+        const extensionName = typeof selected === 'string' ? selected : selected?.value ?? selected;
+        if (extensionName) {
+          this.onSelectExtensionName(extensionName);
+        }
+      });
+
+    // Subscribe to event name changes to update mapping
+    this.templateForm.get('eventName')?.valueChanges
+      .pipe(
+        distinctUntilChanged(),
+        debounceTime(100)
+      )
+      .subscribe(selected => {
+        // When using simple string arrays, c8y-select binds the string directly
+        const eventName = typeof selected === 'string' ? selected : selected?.value ?? selected;
+        if (eventName) {
+          this.onSelectExtensionEvent(eventName);
+        }
+      });
+
+    // Subscribe to snooped template selection changes
+    this.templateForm.get('snoopedTemplateIndex')?.valueChanges
+      .pipe(
+        distinctUntilChanged(),
+        debounceTime(100)
+      )
+      .subscribe(selected => {
+        // c8y-select with labelProperty binds the entire object {label, value}
+        const index = selected?.value ?? selected;
+        if (index !== null && index !== undefined && index !== '-1') {
+          this.onSelectSnoopedSourceTemplate(null as any);
+        }
+      });
 
     this.isSubstitutionValid$.subscribe(valid => {
       if (valid) {
@@ -673,6 +749,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.templateModel.mapping = this.mapping;
     this.templatesInitialized = false;
     this.extensions = await this.stepperService.loadExtensions(this.mapping);
+    this.updateExtensionItems(); // Update cached extension items
 
     if (this.mapping?.extension?.extensionName) {
       if (!this.extensions.get(this.mapping.extension.extensionName)) {
@@ -819,7 +896,10 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   async onSelectSnoopedSourceTemplate(event: Event): Promise<void> {
-    const index = this.templateForm.get('snoopedTemplateIndex')?.value;
+    const selected = this.templateForm.get('snoopedTemplateIndex')?.value;
+    // c8y-select with labelProperty binds the entire object {label, value}
+    const indexValue = selected?.value ?? selected;
+    const index = typeof indexValue === 'string' ? parseInt(indexValue, 10) : indexValue;
     this.sourceTemplate = this.stepperService.parseSnoopedTemplate(
       this.mapping.snoopedTemplates[index]
     );
@@ -865,6 +945,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   private updateCodeTemplateEntries(): void {
     if (!this.codeTemplates) {
       this.codeTemplateEntries = [];
+      this.updateCodeTemplateItems(); // Update cached items
       return;
     }
     const expectedType = `${this.stepperConfiguration.direction.toString()}_${this.mapping?.transformationType.toString()}`;
@@ -877,6 +958,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         name: template.name,
         type: template.templateType
       }));
+    this.updateCodeTemplateItems(); // Update cached items
   }
 
   async onCreateCodeTemplate(): Promise<void> {

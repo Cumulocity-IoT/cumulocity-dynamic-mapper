@@ -93,24 +93,15 @@
             <div class="d-flex" #buttonsStep2>
               <div class="col-lg-5 col-lg-offset-1 column-right-border">
                 <div class="form-group">
-                  <div class="c8y-select-wrapper" style="width: 50%">
-                    <select class="form-control" formControlName="snoopedTemplateIndex" (change)="
-                        onSelectSnoopedSourceTemplate($event)
-                      ">
-                      <option [value]="-1" [disabled]="true">
-                        Select snooped template
-                      </option>
-                      @for (
-                        t of [].constructor(
-                        mapping.snoopedTemplates.length
-                        ); track
-                        $index; let i = $index) {
-                        <option [value]="i">
-                          {{ 'Template - ' + i }}
-                        </option>
-                      }
-                    </select>
-                  </div>
+                  <c8y-select
+                    [items]="snoopedTemplateItems"
+                    formControlName="snoopedTemplateIndex"
+                    [filterItems]="true"
+                    labelProperty="label"
+                    placeholder="Select snooped template"
+                    aria-label="Snooped Template"
+                    style="width: 50%">
+                  </c8y-select>
                   <div>
                     <small class="text-muted">{{stepperViewModel.showSourceEditor?
                       'Template is described internally by the chosen mapping
@@ -290,50 +281,28 @@
     </c8y-stepper-buttons>
   </cdk-step>
 </c8y-stepper>
-<!-- </div> -->
 
 
 <ng-template #extensionTemplateSource let-form="form">
   @if (stepperViewModel.showExtensionSelectorsSource) {
-    <div
-      >
+    <div [formGroup]="form">
       <div class="form-group p-b-8">
         <label translate>Extensions for {{ MappingTypeLabels[mapping.mappingType] }}</label>
-        <div class="c8y-select-wrapper" style="max-height: 300px; overflow: auto !important">
-        <select class="form-control" [formControl]="templateForm.get('extensionName')" #extensionNameControl (change)="
-              onSelectExtensionName(templateForm.value.extensionName)
-            " required>
-            <option [ngValue]="null" disabled>
-              Select an extension
-            </option>
-            @for (extension of extensions | keyvalue; track extension) {
-              <option [ngValue]="extension.key"
-                [selected]="extension.key === mapping.extension?.extensionName"
-                [disabled]="stepperViewModel.showCodeEditorSection">
-                {{ extension.key }}
-              </option>
-            }
-          </select>
-        </div>
+        <c8y-select
+          [items]="extensionItems"
+          formControlName="extensionName"
+          [filterItems]="true"
+          aria-label="Extension Name">
+        </c8y-select>
       </div>
       <div class="form-group">
         <label translate>Events for {{ mapping?.extension?.extensionName }}</label>
-        <div class="c8y-select-wrapper" style="max-height: 300px; overflow: auto !important">
-        <select class="form-control" [formControl]="templateForm.get('eventName')" #eventNameControl (change)="
-            onSelectExtensionEvent(templateForm.value.eventName)
-          " required>
-            <option [ngValue]="null" disabled>
-              Select an event
-            </option>
-            @for (extensionEntry of (extensionEvents$ | async); track extensionEntry) {
-              <option [ngValue]="extensionEntry.eventName"
-                [selected]="extensionEntry.eventName === mapping.extension?.eventName"
-                [disabled]="stepperViewModel.showCodeEditorSection">
-                {{ extensionEntry.eventName }}
-              </option>
-            }
-          </select>
-        </div>
+        <c8y-select
+          [items]="extensionEventItems$ | async"
+          formControlName="eventName"
+          [filterItems]="true"
+          aria-label="Event Name">
+        </c8y-select>
       </div>
     </div>
   }
@@ -377,17 +346,17 @@
           }
         </div>
         <div class="col-lg-2">
-          <div class="c8y-select-wrapper" style="max-width: 200px; overflow: auto !important">
-            <select class="form-control" (change)="onSelectCodeTemplate()" [(ngModel)]="templateId"
-              name="templateSelect" required>
-              <option [ngValue]="undefined" disabled>Select template...</option>
-              @for (item of codeTemplateEntries; track item) {
-                <option [ngValue]="item.key">
-                  {{ item.name | capitalCase }} ({{ item.type }})
-                </option>
-              }
-            </select>
-          </div>
+          <c8y-select
+            [items]="codeTemplateItems"
+            [(ngModel)]="templateId"
+            (ngModelChange)="onSelectCodeTemplate()"
+            name="templateSelect"
+            [filterItems]="true"
+            labelProperty="label"
+            placeholder="Select template..."
+            aria-label="Code Template"
+            style="max-width: 200px">
+          </c8y-select>
         </div>
         <div class="col-lg-2" style="padding-top: 2px;">
           <button type="button" name="update" class="btn btn-default btn-sm" (click)="onCreateCodeTemplate()" translate>
@@ -407,98 +376,26 @@
     </div>
   }
 </ng-template>
-<ng-template #extensionTemplateSourceTarget let-form="form">
-  @if (stepperViewModel.showExtensionSelectorsSource) {
-    <div
-      >
-      <div class="form-group p-b-8">
-        <label translate>Extensions for {{ MappingTypeDescriptions[mapping.mappingType] }}</label>
-        <div class="c8y-select-wrapper" style="max-height: 300px; overflow: auto !important">
-          <select class="form-control" [formControl]="templateForm.get('extensionName')" #extensionNameControl
-          [disabled]="stepperViewModel.showCodeEditorSection" (change)="
-              onSelectExtensionName(templateForm.value.extensionName)
-            " required>
-            <option [ngValue]="null" disabled>
-              Select an extension
-            </option>
-            @for (extension of extensions | keyvalue; track extension) {
-              <option [ngValue]="extension.key"
-                [selected]="extension.key === mapping.extension?.extensionName">
-                {{ extension.key }}
-              </option>
-            }
-          </select>
-        </div>
-      </div>
-      <div class="form-group">
-        <label translate>Events for {{ mapping.extension['name'] }}</label>
-        <div class="c8y-select-wrapper" style="max-height: 300px; overflow: auto !important">
-          <select class="form-control" [formControl]="templateForm.get('eventName')" #eventNameControl
-          [disabled]="stepperViewModel.showCodeEditorSection" (change)="
-            onSelectExtensionEvent(templateForm.value.eventName)
-          " required>
-            <option [ngValue]="null" disabled>
-              Select an event
-            </option>
-            @for (extensionEntry of (extensionEvents$ | async); track extensionEntry) {
-              <option [ngValue]="extensionEntry.eventName"
-                [selected]="extensionEntry.eventName === mapping.extension?.eventName">
-                {{ extensionEntry.eventName }}
-              </option>
-            }
-          </select>
-        </div>
-      </div>
-    </div>
-  }
-  @if (stepperViewModel.showInternalExtensionNote) {
-    <div class="p-t-48">
-      <small class="text-muted">Template is described internally by the chosen
-      mapping type</small>
-    </div>
-  }
-</ng-template>
 <ng-template #extensionTemplateTarget let-form="form">
   @if (stepperViewModel.showExtensionSelectorsTarget) {
-    <div
-      >
+    <div [formGroup]="form">
       <div class="form-group p-b-8">
         <label translate>Extensions for {{ MappingTypeLabels[mapping.mappingType] }}</label>
-        <div class="c8y-select-wrapper" style="max-height: 300px; overflow: auto !important">
-        <select class="form-control" [formControl]="$any(templateForm.get('extensionName'))" #extensionNameControl (change)="
-              onSelectExtensionName(templateForm.value.extensionName)
-            " required>
-            <option [ngValue]="null" disabled>
-              Select an extension
-            </option>
-            @for (extension of extensions | keyvalue; track extension) {
-              <option [ngValue]="extension.key"
-                [selected]="extension.key === mapping.extension?.extensionName"
-                [disabled]="stepperViewModel.showCodeEditorSection">
-                {{ extension.key }}
-              </option>
-            }
-          </select>
-        </div>
+        <c8y-select
+          [items]="extensionItems"
+          formControlName="extensionName"
+          [filterItems]="true"
+          aria-label="Extension Name">
+        </c8y-select>
       </div>
       <div class="form-group">
         <label translate>Events for {{ mapping?.extension?.extensionName }}</label>
-        <div class="c8y-select-wrapper" style="max-height: 300px; overflow: auto !important">
-        <select class="form-control" [formControl]="$any(templateForm.get('eventName'))" #eventNameControl (change)="
-            onSelectExtensionEvent(templateForm.value.eventName)
-          " required>
-            <option [ngValue]="null" disabled>
-              Select an event
-            </option>
-            @for (extensionEntry of (extensionEvents$ | async); track extensionEntry) {
-              <option [ngValue]="extensionEntry.eventName"
-                [selected]="extensionEntry.eventName === mapping.extension?.eventName"
-                [disabled]="stepperViewModel.showCodeEditorSection">
-                {{ extensionEntry.eventName }}
-              </option>
-            }
-          </select>
-        </div>
+        <c8y-select
+          [items]="extensionEventItems$ | async"
+          formControlName="eventName"
+          [filterItems]="true"
+          aria-label="Event Name">
+        </c8y-select>
       </div>
     </div>
   }
