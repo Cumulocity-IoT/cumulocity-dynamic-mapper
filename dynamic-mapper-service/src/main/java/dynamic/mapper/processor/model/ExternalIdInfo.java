@@ -23,7 +23,6 @@ package dynamic.mapper.processor.model;
 
 import java.util.List;
 
-import dynamic.mapper.processor.flow.ExternalId;
 import lombok.Builder;
 import lombok.Value;
 

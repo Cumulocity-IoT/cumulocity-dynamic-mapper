@@ -114,6 +114,8 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
       this.currentPage = 'javascript';
     } else if (path.includes('smartfunction')) {
       this.currentPage = 'smartfunction';
+    } else if (path.includes('javaextension')) {
+      this.currentPage = 'javaextension';
     } else {
       this.currentPage = 'main';
     }

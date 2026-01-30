@@ -35,9 +35,9 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
-import dynamic.mapper.processor.AbstractFlowProcessorProcessor;
+import dynamic.mapper.processor.AbstractFlowProcessor;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.flow.DeviceMessage;
+import dynamic.mapper.processor.model.DeviceMessage;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.util.JavaScriptInteropHelper;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
@@ -51,7 +51,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Component
-public class FlowProcessorOutboundProcessor extends AbstractFlowProcessorProcessor {
+public class FlowProcessorOutboundProcessor extends AbstractFlowProcessor {
 
     @Autowired
     private C8YAgent c8yAgent;
@@ -67,14 +67,11 @@ public class FlowProcessorOutboundProcessor extends AbstractFlowProcessorProcess
 
     @Override
     protected Value createInputMessage(Context graalContext, ProcessingContext<?> context) {
-        // Create a DeviceMessage from the current context
-        DeviceMessage deviceMessage = new DeviceMessage();
-
-        // Set payload - convert to proper Java object first
-        deviceMessage.setPayload(context.getPayload());
-
-        // Set topic
-        deviceMessage.setTopic(context.getTopic());
+        // Create a DeviceMessage from the current context using builder pattern
+        DeviceMessage deviceMessage = DeviceMessage.create()
+            .payload(context.getPayload())
+            .topic(context.getTopic())
+            .build();
 
         // Convert to JavaScript object
         return graalContext.asValue(deviceMessage);

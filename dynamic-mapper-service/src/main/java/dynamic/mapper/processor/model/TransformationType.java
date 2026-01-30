@@ -25,7 +25,8 @@ public enum TransformationType {
     DEFAULT("DEFAULT"),
     SUBSTITUTION_AS_CODE("SUBSTITUTION_AS_CODE"),
     SMART_FUNCTION("SMART_FUNCTION"),
-    JSONATA("JSONATA");
+    JSONATA("JSONATA"),
+    EXTENSION_JAVA("EXTENSION_JAVA");
 
     public final String name;
 

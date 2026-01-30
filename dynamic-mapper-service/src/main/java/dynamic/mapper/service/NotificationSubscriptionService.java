@@ -69,6 +69,11 @@ public class NotificationSubscriptionService {
                             .getManagedObjectForId(tenant, childDevice.getId(), false);
                     configurationRegistry.getNotificationSubscriber()
                             .subscribeDeviceAndConnect(tenant, childMor, request.getApi(), subscription);
+
+                    // Pre-populate inventory cache for this device to ensure inventory filters work correctly
+                    log.debug("{} - Pre-populating inventory cache for device {} from subscription",
+                            tenant, childDevice.getId());
+                    configurationRegistry.getC8yAgent().getMOFromInventoryCache(tenant, childDevice.getId(), false);
                 }
             } else {
                 log.warn("{} - Device with id {} does not exist", tenant, device.getId());
@@ -129,6 +134,12 @@ public class NotificationSubscriptionService {
 
             List<Device> allChildDevices = new ArrayList<>();
 
+            // Ensure management client is initialized for group subscriptions
+            if (!toBeCreatedGroups.isEmpty()) {
+                log.info("{} - Ensuring management client is initialized for group subscriptions", tenant);
+                configurationRegistry.getNotificationSubscriber().initializeManagementClient(tenant);
+            }
+
             // Subscribe to new groups
             for (Device group : toBeCreatedGroups) {
                 ManagedObjectRepresentation groupMor = c8yAgent.getManagedObjectForId(tenant, group.getId(), false);
@@ -149,11 +160,20 @@ public class NotificationSubscriptionService {
             }
 
             if (!allChildDevices.isEmpty()) {
+                // Ensure dynamic device client is initialized before subscribing devices
+                log.info("{} - Ensuring dynamic device client is initialized for group subscription", tenant);
+                configurationRegistry.getNotificationSubscriber().initializeDeviceClient(tenant);
+
                 for (Device childDevice : allChildDevices) {
                     ManagedObjectRepresentation childDeviceMor = c8yAgent.getManagedObjectForId(tenant,
                             childDevice.getId(), false);
                     configurationRegistry.getNotificationSubscriber().subscribeDeviceAndConnect(tenant, childDeviceMor,
                             request.getApi(), Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
+
+                    // Pre-populate inventory cache for this device to ensure inventory filters work correctly
+                    log.debug("{} - Pre-populating inventory cache for device {} from group subscription",
+                            tenant, childDevice.getId());
+                    configurationRegistry.getC8yAgent().getMOFromInventoryCache(tenant, childDevice.getId(), false);
                 }
             }
 
@@ -238,6 +258,11 @@ public class NotificationSubscriptionService {
             if (mor != null) {
                 configurationRegistry.getNotificationSubscriber()
                         .subscribeDeviceAndConnect(tenant, mor, api, Utils.STATIC_DEVICE_SUBSCRIPTION);
+
+                // Pre-populate inventory cache for this device to ensure inventory filters work correctly
+                log.debug("{} - Pre-populating inventory cache for device {} from device addition",
+                        tenant, device.getId());
+                configurationRegistry.getC8yAgent().getMOFromInventoryCache(tenant, device.getId(), false);
             }
         }
     }

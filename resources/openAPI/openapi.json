@@ -1982,7 +1982,7 @@
           },
           "extensionType" : {
             "type" : "string",
-            "enum" : [ "EXTENSION_SOURCE", "EXTENSION_SOURCE_TARGET" ]
+            "enum" : [ "EXTENSION_JAVA" ]
           }
         },
         "required" : [ "eventName", "extensionName", "extensionType", "fqnClassName", "loaded", "message" ]
@@ -2058,7 +2058,7 @@
           "mappingType" : {
             "type" : "string",
             "description" : "Type of mapping transformation",
-            "enum" : [ "JSON", "FLAT_FILE", "HEX", "PROTOBUF_INTERNAL", "EXTENSION_SOURCE", "EXTENSION_SOURCE_TARGET", "CODE_BASED" ],
+            "enum" : [ "JSON", "FLAT_FILE", "HEX", "PROTOBUF_INTERNAL", "EXTENSION_JAVA" ],
             "example" : "JSON"
           },
           "substitutions" : {
@@ -2813,7 +2813,7 @@
           },
           "mappingType" : {
             "type" : "string",
-            "enum" : [ "JSON", "FLAT_FILE", "HEX", "PROTOBUF_INTERNAL", "EXTENSION_SOURCE", "EXTENSION_SOURCE_TARGET", "CODE_BASED" ]
+            "enum" : [ "JSON", "FLAT_FILE", "HEX", "PROTOBUF_INTERNAL", "EXTENSION_JAVA" ]
           },
           "processingCache" : {
             "type" : "object",

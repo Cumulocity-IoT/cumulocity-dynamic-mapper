@@ -31,8 +31,8 @@ import com.hivemq.client.mqtt.mqtt3.message.auth.Mqtt3SimpleAuth;
 import com.hivemq.client.mqtt.mqtt3.message.connect.connack.Mqtt3ConnAck;
 import com.hivemq.client.mqtt.mqtt3.message.connect.connack.Mqtt3ConnAckReturnCode;
 
-import dynamic.mapper.processor.extension.external.CustomEventOuter;
-import dynamic.mapper.processor.extension.external.CustomEventOuter.CustomEvent;
+import dynamic.mapper.processor.extension.external.inbound.CustomEventOuter;
+import dynamic.mapper.processor.extension.external.inbound.CustomEventOuter.CustomEvent;
 
 public class ProtobufMqttClient {
     Mqtt3BlockingClient testClient;

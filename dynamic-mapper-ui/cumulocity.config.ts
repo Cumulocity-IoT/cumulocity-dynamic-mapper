@@ -99,6 +99,14 @@ export default {
         to: 'image/Dynamic_Mapper_Connector_New.png'
       },
       {
+        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Java_Extension.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Java_Extension.png'
+      },
+      {
+        from: '../resources/image/Dynamic_Mapper_Configuration_ProcessorExtensionSource_Plugin_Installed.png',
+        to: 'image/Dynamic_Mapper_Configuration_ProcessorExtensionSource_Plugin_Installed.png'
+      },
+      {
         from: '../LICENSE',
         to: 'LICENSE.txt'
       },

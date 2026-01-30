@@ -22,19 +22,21 @@
 package dynamic.mapper.processor;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-
-import java.util.ArrayList;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.SubstituteValue;
+import dynamic.mapper.processor.flow.SimpleDataPreparationContext;
+import dynamic.mapper.processor.model.CumulocityObject;
+import dynamic.mapper.processor.model.CumulocityType;
+import dynamic.mapper.processor.model.Message;
 
 import org.junit.jupiter.api.Test;
 
 import lombok.extern.slf4j.Slf4j;
-import dynamic.mapper.processor.extension.external.CustomEventOuter;
-import dynamic.mapper.processor.extension.external.ProcessorExtensionCustomEvent;
-import dynamic.mapper.processor.extension.external.CustomEventOuter.CustomEvent;
+import dynamic.mapper.processor.extension.external.inbound.CustomEventOuter;
+import dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionCustomEvent;
+import dynamic.mapper.processor.extension.external.inbound.CustomEventOuter.CustomEvent;
 import dynamic.mapper.model.API;
 
 @Slf4j
@@ -51,20 +53,37 @@ public class ProcessorExtensionTest {
     .build();
 
     ProcessorExtensionCustomEvent extension = new ProcessorExtensionCustomEvent();
-    Object payload = proto.toByteArray();
-    Mapping m1 = new Mapping();
-    m1.setTargetAPI(API.EVENT);
-    ProcessingContext context = ProcessingContext.builder().payload(payload).mapping(m1).build();
+    byte[] payload = proto.toByteArray();
 
-    extension.extractFromSource(context);
+    Mapping mapping = new Mapping();
+    mapping.setTargetAPI(API.EVENT);
+    mapping.setExternalIdType("c8y_Serial");
 
-    ArrayList<SubstituteValue> extractedTypes = (ArrayList) context.getProcessingCache().get("type");
-    assertEquals( extractedTypes.size(), 1);
-    SubstituteValue extractedType = extractedTypes.get(0);
-    log.info("Extracted: {}, {} ", extractedType.value, extractedType.value.getClass().getName());
-    assertEquals( extractedType.value, "type_Dummy");
-   // assertEquals( (JsonNode)extractedType.typedValue(), "Dummy Text");
+    // Create Message wrapper
+    Message<byte[]> message = new Message<>(payload, "test/topic", "test-client", java.util.Map.of());
 
+    // Use SimpleDataPreparationContext with minimal setup
+    SimpleDataPreparationContext context = new SimpleDataPreparationContext(
+        null,  // flowContext
+        null,  // c8yAgent
+        "test-tenant",
+        false,  // testing
+        mapping,
+        null   // processingContext
+    );
+
+    // Call the new pattern method
+    CumulocityObject[] results = extension.onMessage(message, context);
+
+    // Verify results
+    assertNotNull(results);
+    assertEquals(1, results.length);
+
+    CumulocityObject event = results[0];
+    assertEquals(CumulocityType.EVENT, event.getCumulocityType());
+    assertNotNull(event.getPayload());
+
+    log.info("Successfully processed event with type: {}", event.getCumulocityType());
   }
 
 

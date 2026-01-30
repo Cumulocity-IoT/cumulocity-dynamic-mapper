@@ -427,7 +427,7 @@ public class Mapping implements Serializable {
             result.add(ValidationError.Source_Template_Must_Be_Valid_JSON);
         }
 
-        if (!mapping.getMappingType().equals(MappingType.EXTENSION_SOURCE)
+        if (!mapping.getMappingType().equals(MappingType.EXTENSION_JAVA)
                 && !mapping.getMappingType().equals(MappingType.PROTOBUF_INTERNAL)) {
             try {
                 if (mapping.targetTemplate.startsWith("{"))
@@ -462,14 +462,12 @@ public class Mapping implements Serializable {
 
     @JsonIgnore
     public Boolean isTransformationAsCode() {
-        return MappingType.CODE_BASED.equals(this.mappingType) ||
-                TransformationType.SUBSTITUTION_AS_CODE.equals(this.transformationType) ||
+        return TransformationType.SUBSTITUTION_AS_CODE.equals(this.transformationType) ||
                 TransformationType.SMART_FUNCTION.equals(this.transformationType);
     }
 
     @JsonIgnore
     public Boolean isSubstitutionAsCode() {
-        return MappingType.CODE_BASED.equals(this.mappingType) ||
-                TransformationType.SUBSTITUTION_AS_CODE.equals(this.transformationType);
+        return TransformationType.SUBSTITUTION_AS_CODE.equals(this.transformationType);
     }
 }

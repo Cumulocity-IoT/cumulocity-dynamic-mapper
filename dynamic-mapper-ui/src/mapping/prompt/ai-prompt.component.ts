@@ -88,7 +88,7 @@ export class AIPromptComponent implements OnInit, OnDestroy {
 
   // Add getter to check if this is a code-based mapping
   get isCodeMapping(): boolean {
-    return this.agentType === MappingType.CODE_BASED || isSubstitutionsAsCode(this.mapping);
+    return isSubstitutionsAsCode(this.mapping);
   }
 
   async ngOnInit(): Promise<void> {

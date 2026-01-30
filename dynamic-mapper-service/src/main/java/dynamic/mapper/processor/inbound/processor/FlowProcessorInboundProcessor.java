@@ -9,10 +9,10 @@ import org.springframework.stereotype.Component;
 
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
-import dynamic.mapper.processor.AbstractFlowProcessorProcessor;
+import dynamic.mapper.processor.AbstractFlowProcessor;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.flow.CumulocityObject;
-import dynamic.mapper.processor.flow.DeviceMessage;
+import dynamic.mapper.processor.model.CumulocityObject;
+import dynamic.mapper.processor.model.DeviceMessage;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.util.JavaScriptInteropHelper;
 import dynamic.mapper.service.MappingService;
@@ -24,7 +24,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Component
-public class FlowProcessorInboundProcessor extends AbstractFlowProcessorProcessor {
+public class FlowProcessorInboundProcessor extends AbstractFlowProcessor {
 
     public FlowProcessorInboundProcessor(MappingService mappingService) {
         super(mappingService);
@@ -37,19 +37,17 @@ public class FlowProcessorInboundProcessor extends AbstractFlowProcessorProcesso
 
     @Override
     protected Value createInputMessage(Context graalContext, ProcessingContext<?> context) {
-        // Create a DeviceMessage from the current context
-        DeviceMessage deviceMessage = new DeviceMessage();
-
-        // Set payload - convert to proper Java object first
-        deviceMessage.setPayload(context.getPayload());
-
-        // Set topic
-        deviceMessage.setTopic(context.getTopic());
+        // Create a DeviceMessage from the current context using builder pattern
+        DeviceMessage.Builder builder = DeviceMessage.create()
+            .payload(context.getPayload())
+            .topic(context.getTopic());
 
         // Set transport information if available
         if (context.getMapping() != null) {
-            deviceMessage.setClientId(context.getClientId());
+            builder.clientId(context.getClientId());
         }
+
+        DeviceMessage deviceMessage = builder.build();
 
         // Convert to JavaScript object
         return graalContext.asValue(deviceMessage);

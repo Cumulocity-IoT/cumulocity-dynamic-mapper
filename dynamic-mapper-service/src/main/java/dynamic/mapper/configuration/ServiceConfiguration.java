@@ -62,7 +62,7 @@ public class ServiceConfiguration implements Cloneable {
         this.maxCPUTimeMS = 5000; // 5 seconds
         this.jsonataAgent = null;
         this.javaScriptAgent = null;
-
+        this.smartFunctionAgent = null;
     }
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Enable logging of message payloads for debugging purposes. Caution: May expose sensitive data in logs.", example = "false")

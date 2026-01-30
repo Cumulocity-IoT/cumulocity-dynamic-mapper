@@ -292,19 +292,19 @@ class MappingScenarioIntegrationTest {
     }
 
     @Test
-    void testMapping15_ExtensionSource() {
-        // Given - Sample 15: EXTENSION_SOURCE mapping
+    void testMapping15_ExtensionJava() {
+        // Given - Sample 15: EXTENSION_JAVA mapping
         Mapping mapping = findMappingByName(inboundMappings, "Mapping - 15");
         assertNotNull(mapping, "Mapping - 15 should exist");
 
         // Then - Verify extension configuration
         assertEquals("protobuf/event", mapping.getMappingTopic());
-        assertEquals(MappingType.EXTENSION_SOURCE, mapping.getMappingType());
+        assertEquals(MappingType.EXTENSION_JAVA, mapping.getMappingType());
         assertNotNull(mapping.getExtension());
         assertEquals("dynamic-mapper-extension", mapping.getExtension().getExtensionName());
         assertEquals("CustomEvent", mapping.getExtension().getEventName());
 
-        log.info("✅ Mapping 15 - EXTENSION_SOURCE validated");
+        log.info("✅ Mapping 15 - EXTENSION_JAVA validated");
     }
 
     @Test
@@ -389,22 +389,6 @@ class MappingScenarioIntegrationTest {
     }
 
     @Test
-    void testMapping24_ExtensionSourceTarget() {
-        // Given - Sample 24: EXTENSION_SOURCE_TARGET mapping
-        Mapping mapping = findMappingByName(inboundMappings, "Mapping - 24");
-        assertNotNull(mapping, "Mapping - 24 should exist");
-
-        // Then - Verify extension source/target configuration
-        assertEquals("extension/source_target", mapping.getMappingTopic());
-        assertEquals(MappingType.EXTENSION_SOURCE_TARGET, mapping.getMappingType());
-        assertEquals(API.ALARM, mapping.getTargetAPI());
-        assertNotNull(mapping.getExtension());
-        assertEquals("CustomAlarm", mapping.getExtension().getEventName());
-
-        log.info("✅ Mapping 24 - EXTENSION_SOURCE_TARGET validated");
-    }
-
-    @Test
     void testMapping25_C8ySourceIdIdentifier() {
         // Given - Sample 25: Using c8ySourceId instead of externalId
         Mapping mapping = findMappingByName(inboundMappings, "Mapping - 25");
@@ -480,32 +464,6 @@ class MappingScenarioIntegrationTest {
                 "Should map to context data key");
 
         log.info("✅ Mapping 54 - Outbound with context data validated");
-    }
-
-    @Test
-    void testMapping55_OutboundCodeBased() {
-        // Given - Sample 55: Outbound CODE_BASED (SUBSTITUTION_AS_CODE)
-        Mapping mapping = findMappingByName(outboundMappings, "Mapping - 55");
-        assertNotNull(mapping, "Mapping - 55 should exist");
-
-        // Then - Verify code-based configuration
-        assertEquals("measurement/measurements", mapping.getPublishTopic());
-        assertEquals(MappingType.CODE_BASED, mapping.getMappingType());
-        assertEquals(Direction.OUTBOUND, mapping.getDirection());
-        assertNotNull(mapping.getCode(), "Should have JavaScript code");
-        assertFalse(mapping.getCode().isEmpty());
-
-        // Verify code is Base64 encoded
-        try {
-            byte[] decoded = Base64.getDecoder().decode(mapping.getCode());
-            String jsCode = new String(decoded);
-            assertTrue(jsCode.contains("function extractFromSource"),
-                    "Should contain extractFromSource function");
-        } catch (Exception e) {
-            fail("Code should be valid Base64: " + e.getMessage());
-        }
-
-        log.info("✅ Mapping 55 - Outbound CODE_BASED validated");
     }
 
     @Test
@@ -858,24 +816,6 @@ class MappingScenarioIntegrationTest {
             log.info("✅ Multi-level array expansion patterns validated");
         } else {
             log.info("ℹ️ Multi-value mapping not found, structure test passed");
-        }
-    }
-
-    @Test
-    void testExtensionSourceTargetMapping() {
-        // Given - Test EXTENSION_SOURCE_TARGET type
-        Mapping mapping = findMappingByName(inboundMappings, "Mapping - 24");
-
-        if (mapping != null) {
-            // Then - Verify extension configuration
-            assertEquals(MappingType.EXTENSION_SOURCE_TARGET, mapping.getMappingType());
-            assertNotNull(mapping.getExtension(), "Should have extension configuration");
-            assertNotNull(mapping.getExtension().getExtensionName());
-            assertNotNull(mapping.getExtension().getEventName());
-
-            log.info("✅ EXTENSION_SOURCE_TARGET mapping validated");
-        } else {
-            log.info("ℹ️ EXTENSION_SOURCE_TARGET mapping not found in inbound samples");
         }
     }
 

@@ -35,7 +35,6 @@ import dynamic.mapper.model.BinaryInfo;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.flow.DataPrepContext;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
@@ -183,6 +182,8 @@ public class ProcessingContext<O> implements AutoCloseable {
     private String deviceType;
 
     private Object flowResult;
+
+    private Object extensionResult;
 
     private DataPrepContext flowContext;
 

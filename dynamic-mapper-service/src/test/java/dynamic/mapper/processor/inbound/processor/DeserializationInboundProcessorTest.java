@@ -105,10 +105,8 @@ class DeserializationInboundProcessorTest {
     private void setupValidPayload(MappingType mappingType) {
         switch (mappingType) {
             case JSON:
-            case CODE_BASED:
-                // Provide valid JSON
-                when(connectorMessage.getPayload())
-                        .thenReturn("{\"temperature\": 25.5, \"deviceId\": \"sensor001\"}".getBytes());
+                // Provide valid JSON data
+                when(connectorMessage.getPayload()).thenReturn("{\"temperature\":25.5,\"deviceId\":\"sensor001\",\"status\":\"active\"}".getBytes());
                 break;
             case FLAT_FILE:
                 // Provide valid flat file data
@@ -119,11 +117,9 @@ class DeserializationInboundProcessorTest {
                 when(connectorMessage.getPayload()).thenReturn("48656c6c6f".getBytes());
                 break;
             case PROTOBUF_INTERNAL:
-            case EXTENSION_SOURCE:
-            case EXTENSION_SOURCE_TARGET:
-                // Provide valid binary data
-                when(connectorMessage.getPayload())
-                        .thenReturn(new byte[] { 0x08, 0x74, 0x01, 0x12, 0x04, 0x74, 0x65, 0x73, 0x74 });
+            case EXTENSION_JAVA:
+                // Provide valid byte array for byte-based processing
+                when(connectorMessage.getPayload()).thenReturn("test payload".getBytes());
                 break;
             default:
                 // Default to valid JSON
@@ -164,26 +160,10 @@ class DeserializationInboundProcessorTest {
     }
 
     @Test
-    void testProcessExtensionSourceMappingTypeSuccess() throws Exception {
+    void testProcessExtensionJavaMappingTypeSuccess() throws Exception {
         // Given
-        mapping.setMappingType(MappingType.EXTENSION_SOURCE);
-        setupValidPayload(MappingType.EXTENSION_SOURCE);
-
-        DeserializationInboundProcessor processor = new DeserializationInboundProcessor();
-        injectMappingService(processor, mappingService);
-
-        // When
-        processor.process(exchange);
-
-        // Then
-        verify(message).setHeader(eq("processingContext"), any(ProcessingContext.class));
-    }
-
-    @Test
-    void testProcessExtensionSourceTargetMappingTypeSuccess() throws Exception {
-        // Given
-        mapping.setMappingType(MappingType.EXTENSION_SOURCE_TARGET);
-        setupValidPayload(MappingType.EXTENSION_SOURCE_TARGET);
+        mapping.setMappingType(MappingType.EXTENSION_JAVA);
+        setupValidPayload(MappingType.EXTENSION_JAVA);
 
         DeserializationInboundProcessor processor = new DeserializationInboundProcessor();
         injectMappingService(processor, mappingService);
@@ -216,22 +196,6 @@ class DeserializationInboundProcessorTest {
         // Given
         mapping.setMappingType(MappingType.HEX);
         setupValidPayload(MappingType.HEX);
-
-        DeserializationInboundProcessor processor = new DeserializationInboundProcessor();
-        injectMappingService(processor, mappingService);
-
-        // When
-        processor.process(exchange);
-
-        // Then
-        verify(message).setHeader(eq("processingContext"), any(ProcessingContext.class));
-    }
-
-    @Test
-    void testProcessCodeBasedMappingTypeSuccess() throws Exception {
-        // Given
-        mapping.setMappingType(MappingType.CODE_BASED);
-        setupValidPayload(MappingType.CODE_BASED);
 
         DeserializationInboundProcessor processor = new DeserializationInboundProcessor();
         injectMappingService(processor, mappingService);
@@ -327,9 +291,7 @@ class DeserializationInboundProcessorTest {
                 MappingType.FLAT_FILE,
                 MappingType.HEX,
                 MappingType.PROTOBUF_INTERNAL,
-                MappingType.EXTENSION_SOURCE,
-                MappingType.EXTENSION_SOURCE_TARGET,
-                MappingType.CODE_BASED
+                MappingType.EXTENSION_JAVA,
         };
 
         for (MappingType type : mappingTypes) {
