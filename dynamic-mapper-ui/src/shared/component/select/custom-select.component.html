@@ -145,7 +145,7 @@
 
   <c8y-list-group
     class="dropdown-menu dropdown-menu--modal dropdown-menu--select"
-    [style.width]="container === 'body' ? searchControl.parentNode.clientWidth + 'px' : undefined"
+    [style.width]="container === 'body' ? searchControl.parentNode['clientWidth'] + 'px' : undefined"
     role="menu"
     data-cy="select--dropdown-menu"
     *dropdownMenu

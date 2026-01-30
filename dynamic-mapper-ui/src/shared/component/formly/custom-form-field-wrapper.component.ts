@@ -22,6 +22,7 @@ import { Component, OnInit } from '@angular/core';
 import { CoreModule, FormsModule } from '@c8y/ngx-components';
 import { FieldWrapper, FormlyModule } from '@ngx-formly/core';
 import { PopoverModule } from 'ngx-bootstrap/popover';
+import { SharedModule } from "../../shared.module";
 
 @Component({
   selector: 'd11r-wrapper-form-field',
@@ -32,8 +33,9 @@ import { PopoverModule } from 'ngx-bootstrap/popover';
     CoreModule,
     FormsModule,
     FormlyModule,
-    PopoverModule
-  ]
+    PopoverModule,
+    SharedModule
+]
   // changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class WrapperCustomFormField extends FieldWrapper implements OnInit {

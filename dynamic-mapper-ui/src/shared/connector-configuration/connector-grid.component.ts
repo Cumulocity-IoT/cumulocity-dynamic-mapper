@@ -65,7 +65,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
   monitoring$: Observable<ConnectorStatus>;
   specifications: ConnectorSpecification[] = [];
   configurations: ConnectorConfiguration[] = [];
-  configurations$: Observable<ConnectorConfiguration[]>;
+  configurations$: Observable<(ConnectorConfiguration & { id: string })[]>;
   customClasses: string;
   nextTriggerCountdown$: BehaviorSubject<number> = new BehaviorSubject(0);
 
@@ -177,6 +177,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
       map(configs => configs.filter(config =>
         config.supportedDirections?.some(dir => this.directions.includes(dir))
       )),
+      map(configs => configs.map(config => ({ ...config, id: config.identifier }))),
       // tap((configurations) => { console.log('Enriched configurations:', configurations) }),
     )
     this.setupConfigurationsSubscription();
