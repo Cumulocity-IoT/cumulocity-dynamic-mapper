@@ -34,7 +34,6 @@ import { SharedModule } from "../../shared.module";
     FormsModule,
     FormlyModule,
     PopoverModule,
-    SharedModule
 ]
   // changeDetection: ChangeDetectionStrategy.OnPush
 })

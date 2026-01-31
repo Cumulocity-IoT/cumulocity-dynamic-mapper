@@ -35,9 +35,13 @@ import { base64ToString } from '../mapping/shared/util';
 
 import hljs from 'highlight.js/lib/core';
 import javascript from 'highlight.js/lib/languages/javascript';
+import java from 'highlight.js/lib/languages/java';
+import yaml from 'highlight.js/lib/languages/yaml';
 
 // Register the JavaScript language
 hljs.registerLanguage('javascript', javascript);
+hljs.registerLanguage('java', java);
+hljs.registerLanguage('yaml', yaml);
 
 @Component({
   selector: 'd11r-landing',

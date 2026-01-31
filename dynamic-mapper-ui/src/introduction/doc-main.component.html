@@ -640,14 +640,17 @@
               <i class="fa fa-book m-r-8"></i>Learn more about defining substitutions using JavaScript →
             </a></strong>
         </div>
-        <h4 class="p-t-16 p-b-8" id="java-extension">{{ 'Defining the payload transformation using Java Extensions' | translate
+        <h4 class="p-t-16 p-b-8" id="java-extension">{{ 'Defining the payload transformation using Java Extensions' |
+          translate
           }}
         </h4>
         <div class="p-b-8 text-16">
-          Java Extensions provide enterprise-grade transformation capabilities by allowing you to write custom transformation
+          Java Extensions provide enterprise-grade transformation capabilities by allowing you to write custom
+          transformation
           logic in Java. This approach offers type safety, superior performance, and full access to the Java ecosystem
           including third-party libraries and Cumulocity Java SDK. Use Java Extensions when you need to handle complex
-          data transformations, implement sophisticated business logic, require strong type checking, or need to integrate
+          data transformations, implement sophisticated business logic, require strong type checking, or need to
+          integrate
           with existing Java-based systems.
         </div>
         <div class="p-b-16 text-16">
@@ -1810,7 +1813,8 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
               <li><strong>cumulocityType</strong> (recommended): Explicitly specify the API type
                 (<code>"measurement"</code>, <code>"event"</code>, <code>"alarm"</code>, <code>"operation"</code>,
                 <code>"managedObject"</code>).
-                This provides the most reliable API routing and is preferred over topic-based derivation.</li>
+                This provides the most reliable API routing and is preferred over topic-based derivation.
+              </li>
               <li><strong>topic</strong>: If <code>cumulocityType</code> is not specified, the mapper derives the API
                 endpoint from the topic.
                 Start your topic with the API name (e.g., <code>"measurement"</code>, <code>"event"</code>) to route to
@@ -2033,7 +2037,8 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
       </div>
       <div class="card-block">
         <div class="p-b-8 text-16">
-          Java Extensions provide enterprise-grade transformation capabilities by allowing you to write custom transformation
+          Java Extensions provide enterprise-grade transformation capabilities by allowing you to write custom
+          transformation
           logic in Java. This approach offers type safety, superior performance, and full access to the Java ecosystem
           including third-party libraries and the Cumulocity Java SDK.
         </div>
@@ -2068,40 +2073,110 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
         <img width="80%" class="m-l-48 m-b-16"
           src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Java_Extension.png"
           alt="Java Extension in Mapping Stepper" />
-        <p class="image-description m-l-48"><b>Description:</b> Screenshot showing the mapping stepper with Java Extension
+        <p class="image-description m-l-48"><b>Description:</b> Screenshot showing the mapping stepper with Java
+          Extension
           templates. The dropdown displays available extensions for payload parsing, including various custom extensions
           like CustomEvent, CustomMeasurement, and MeasurementWithImplicitDevice. Each extension provides pre-configured
           templates for both source and target payloads.</p>
         <br />
         <h5 class="p-t-16 p-b-8"><strong>Managing Installed Java Extensions</strong></h5>
         <div class="p-b-8 text-16">
-          To manage and view installed Java Extensions, navigate to the Processor Extension configuration page. This page
+          To manage and view installed Java Extensions, navigate to the Processor Extension configuration page. This
+          page
           displays all deployed extensions with their properties, implementation details, and supported message types:
         </div>
         <br />
         <img width="80%" class="m-l-48 m-b-16"
           src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Configuration_ProcessorExtensionSource_Plugin_Installed.png"
           alt="Processor Extension Configuration" />
-        <p class="image-description m-l-48"><b>Description:</b> Screenshot showing the Processor Extension configuration page
+        <p class="image-description m-l-48"><b>Description:</b> Screenshot showing the Processor Extension configuration
+          page
           with installed plugins. Each extension displays its name (e.g., CustomEvent, MeasurementToCustomJson),
           implementation class path, message type, direction (Outbound/Inbound), and active status. The interface allows
           you to view extension properties and verify that plugins are correctly installed and operational.</p>
         <br />
+        <div class="p-b-8 text-14">
+          The signature and structure of a <b>Java Extension</b> has the form:
+        </div>
+        <pre><code class="language-java">public class ProcessorExtensionSmartInbound01 implements ProcessorExtensionInbound&lt;byte[]&gt; &#123;
+
+    @Override
+    public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, DataPreparationContext context) &#123;
+        try &#123;
+            // Parse JSON payload
+            String jsonString = new String(message.getPayload(), "UTF-8");
+            @SuppressWarnings("unchecked")
+            Map&lt;String, Object&gt; payload = (Map&lt;String, Object&gt;) Json.parseJson(jsonString);
+
+            log.info("&#123;&#125; - Processing smart inbound message, messageId: &#123;&#125;",
+                    context.getTenant(), payload.get("messageId"));
+
+            // Extract data
+            String clientId = (String) payload.get("clientId");
+            @SuppressWarnings("unchecked")
+            Map&lt;String, Object&gt; sensorData = (Map&lt;String, Object&gt;) payload.get("sensorData");
+            Number tempVal = (Number) sensorData.get("temp_val");
+
+            log.debug("&#123;&#125; - Creating temperature measurement: &#123;&#125; C for device: &#123;&#125;",
+                    context.getTenant(), tempVal, clientId);
+
+            // Build measurement using builder pattern
+            // Note: deviceName and deviceType are needed for implicit device creation
+            return new CumulocityObject[] &#123;
+                CumulocityObject.measurement()
+                    .type("c8y_TemperatureMeasurement")
+                    .time(new DateTime().toString())
+                    .fragment("c8y_Steam", "Temperature", tempVal.doubleValue(), "C")
+                    .externalId(clientId, "c8y_Serial")
+                    .deviceName(clientId)           // Use clientId as device name
+                    .deviceType("c8y_TemperatureSensor")  // Device type for implicit creation
+                    .build()
+            &#125;;
+
+        &#125; catch (Exception e) &#123;
+            String errorMsg = "Failed to process inbound message: " + e.getMessage();
+            log.error("&#123;&#125; - &#123;&#125;", context.getTenant(), errorMsg, e);
+            context.addWarning(errorMsg);
+            return new CumulocityObject[0];
+        &#125;
+    &#125;
+&#125;</code></pre>
+        <br />
+        <div class="p-b-8 text-14">
+          The extension needs to be registered in  <b>extension-external.yaml</b> :
+        </div>
+        <pre><code class="language-yaml">extensions:
+  # Smart Function Equivalents - Inbound 
+  - eventName: TemperatureMeasurement 
+    className: dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionSmartInbound01 
+    description: Temperature measurement processor demonstrating smart function pattern 
+    version: "2.0" 
+</code></pre>
+        <br />
+
         <h5 class="p-t-16 p-b-8"><strong>Key Benefits of Java Extensions</strong></h5>
         <ul class="text-16 p-b-8">
-          <li><strong>Type Safety:</strong> Compile-time type checking prevents runtime errors and improves code reliability.
+          <li><strong>Type Safety:</strong> Compile-time type checking prevents runtime errors and improves code
+            reliability.
             Your IDE will catch errors before deployment, reducing debugging time and production issues.</li>
-          <li><strong>Performance:</strong> Native Java execution provides optimal performance for complex transformations.
-            Unlike interpreted JavaScript, Java extensions benefit from JVM optimizations and efficient memory management.</li>
-          <li><strong>Binary Format Support:</strong> Parse and process binary data formats such as Protocol Buffers (Protobuf),
-            Avro, MessagePack, and other non-JSON formats. Java Extensions can handle binary payloads that cannot be processed
-            by JSONata or JavaScript transformations, making them ideal for IoT devices using efficient binary protocols.</li>
+          <li><strong>Performance:</strong> Native Java execution provides optimal performance for complex
+            transformations.
+            Unlike interpreted JavaScript, Java extensions benefit from JVM optimizations and efficient memory
+            management.</li>
+          <li><strong>Binary Format Support:</strong> Parse and process binary data formats such as Protocol Buffers
+            (Protobuf),
+            Avro, MessagePack, and other non-JSON formats. Java Extensions can handle binary payloads that cannot be
+            processed
+            by JSONata or JavaScript transformations, making them ideal for IoT devices using efficient binary
+            protocols.</li>
           <li><strong>Java Ecosystem:</strong> Full access to Java libraries, frameworks, and the Cumulocity Java SDK.
             Leverage existing libraries for JSON processing, data validation, cryptography, and more.</li>
-          <li><strong>Reusability:</strong> Package and deploy transformation logic as reusable plugins across multiple mappings.
+          <li><strong>Reusability:</strong> Package and deploy transformation logic as reusable plugins across multiple
+            mappings.
             Once developed, a Java extension can be used by multiple tenants and mapping configurations.</li>
           <li><strong>Advanced Debugging:</strong> Use standard Java debugging tools and IDEs for development.
-            Set breakpoints, inspect variables, and step through code using IntelliJ IDEA, Eclipse, or any Java debugger.</li>
+            Set breakpoints, inspect variables, and step through code using IntelliJ IDEA, Eclipse, or any Java
+            debugger.</li>
         </ul>
         <div class="admonition important" style="max-width: 100%;">
           <div class="title">Important</div>
