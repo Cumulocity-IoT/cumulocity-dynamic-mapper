@@ -810,20 +810,21 @@
     "genericDeviceIdentifier": "_IDENTITY_.externalId"
   },
   {
-    "id": "2827668",
-    "identifier": "0z4nza",
+    "id": "14550891",
+    "identifier": "xk4csxs7",
     "name": "Mapping - 20",
     "mappingTopic": "measurementExt",
     "mappingTopicSample": "measurementExt",
     "targetAPI": "MEASUREMENT",
     "direction": "INBOUND",
     "sourceTemplate": "{\"Temperature\":{\"value\":110,\"unit\":\"C\"},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"deviceId\":\"909090\"}",
-    "targetTemplate": "{\"time\":\"2022-08-05T00:14:49.389+02:00\",\"type\":\"c8y_Temperature\",\"c8y_Temperature\":\"dummy\",\"c8y_Fragment_to_remove\":\"remove_me\"}",
+    "targetTemplate": "{\"c8y_TemperatureMeasurement\":{\"T\":{\"value\":110,\"unit\":\"C\"}},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"type\":\"c8y_TemperatureMeasurement\"}",
     "mappingType": "EXTENSION_JAVA",
     "transformationType": "EXTENSION_JAVA",
     "substitutions": [],
-    "active": true,
+    "active": false,
     "debug": false,
+    "eventWithAttachment": false,
     "createNonExistingDevice": true,
     "updateExistingDevice": false,
     "autoAckOperation": true,
@@ -834,12 +835,15 @@
     "extension": {
       "extensionName": "dynamic-mapper-extension",
       "eventName": "CustomMeasurement",
-      "loaded": false,
-      "extensionType": "EXTENSION_INBOUND"
+      "fqnClassName": "dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionCustomMeasurement",
+      "loaded": true,
+      "message": "Loaded successfully",
+      "extensionType": "EXTENSION_INBOUND",
+      "direction": "INBOUND"
     },
+    "maxFailureCount": 0,
     "qos": "AT_LEAST_ONCE",
-    "lastUpdate": 1735152784594,
-    "genericDeviceIdentifier": "_IDENTITY_.externalId"
+    "lastUpdate": 1769938525558
   },
   {
     "id": "4428730",
@@ -974,11 +978,11 @@
     "genericDeviceIdentifier": "_IDENTITY_.externalId"
   },
   {
-    "id": "6028791",
-    "identifier": "791ex5",
+    "id": "88554432",
+    "identifier": "s0kdkqmm",
     "name": "Mapping - 24",
-    "mappingTopic": "extension/source_target",
-    "mappingTopicSample": "extension/source_target",
+    "mappingTopic": "extension/customAlarm",
+    "mappingTopicSample": "extension/customAlarm",
     "targetAPI": "ALARM",
     "direction": "INBOUND",
     "sourceTemplate": "{\"deviceId\":\"909090\",\"alarmType\":\"TestAlarm\",\"description\":\"This is a new test alarm!\",\"severity\":\"MAJOR\",\"status\":\"ACTIVE\",\"time\":\"2022-08-05T00:14:49.389+02:00\"}",
@@ -988,6 +992,7 @@
     "substitutions": [],
     "active": true,
     "debug": false,
+    "eventWithAttachment": false,
     "createNonExistingDevice": false,
     "updateExistingDevice": false,
     "autoAckOperation": true,
@@ -998,12 +1003,15 @@
     "extension": {
       "extensionName": "dynamic-mapper-extension",
       "eventName": "CustomAlarm",
-      "loaded": false,
-      "extensionType": "EXTENSION_INBOUND"
+      "fqnClassName": "dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionCustomAlarm",
+      "loaded": true,
+      "message": "Loaded successfully",
+      "extensionType": "EXTENSION_INBOUND",
+      "direction": "INBOUND"
     },
+    "maxFailureCount": 0,
     "qos": "AT_LEAST_ONCE",
-    "lastUpdate": 1735221431554,
-    "genericDeviceIdentifier": "_IDENTITY_.externalId"
+    "lastUpdate": 1769933432946
   },
   {
     "id": "5725916",
