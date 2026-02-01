@@ -17,6 +17,7 @@
  *
  * @authors Christof Strack
  */
+
 import './i18n';
 
 const barHolder: HTMLElement | null = document.querySelector('body > .init-load');

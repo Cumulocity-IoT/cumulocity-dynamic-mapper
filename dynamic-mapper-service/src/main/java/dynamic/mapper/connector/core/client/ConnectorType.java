@@ -27,7 +27,9 @@ public enum ConnectorType {
     KAFKA,
     HTTP,
     WEB_HOOK,
+    WEB_HOOK_INTERNAL,
     PULSAR,
     CUMULOCITY_MQTT_SERVICE_PULSAR,
+    AMQP,
     TEST,
 }

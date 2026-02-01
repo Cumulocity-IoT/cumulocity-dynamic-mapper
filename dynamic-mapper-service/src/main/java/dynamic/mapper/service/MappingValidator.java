@@ -135,10 +135,8 @@ public class MappingValidator {
         // Skip device identifier validation for certain mapping types and conditions
         boolean skipDeviceIdentifierValidation = mapping.getSnoopStatus() == SnoopStatus.ENABLED ||
                 mapping.getSnoopStatus() == SnoopStatus.STARTED ||
-                mapping.getMappingType() == MappingType.EXTENSION_SOURCE ||
-                mapping.getMappingType() == MappingType.EXTENSION_SOURCE_TARGET ||
+                mapping.getMappingType() == MappingType.EXTENSION_JAVA ||
                 mapping.getMappingType() == MappingType.PROTOBUF_INTERNAL ||
-                mapping.getMappingType() == MappingType.CODE_BASED ||
                 mapping.getTransformationType() == TransformationType.SMART_FUNCTION ||
                 mapping.getTransformationType() == TransformationType.SUBSTITUTION_AS_CODE ||
                 mapping.getDirection() == Direction.OUTBOUND;
@@ -300,7 +298,7 @@ public class MappingValidator {
         }
 
         // Validate target template (skip for certain mapping types)
-        boolean skipTargetValidation = mapping.getMappingType() == MappingType.EXTENSION_SOURCE ||
+        boolean skipTargetValidation = mapping.getMappingType() == MappingType.EXTENSION_JAVA ||
                 mapping.getMappingType() == MappingType.PROTOBUF_INTERNAL;
 
         if (!skipTargetValidation && !isValidJSON(mapping.getTargetTemplate())) {

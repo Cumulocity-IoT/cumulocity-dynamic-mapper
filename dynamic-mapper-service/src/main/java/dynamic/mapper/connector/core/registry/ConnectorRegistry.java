@@ -27,6 +27,7 @@ import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
+import dynamic.mapper.connector.amqp.AMQPClient;
 import dynamic.mapper.connector.http.HttpClient;
 import dynamic.mapper.connector.kafka.KafkaClientV2;
 import dynamic.mapper.connector.mqtt.MQTT3Client;
@@ -34,6 +35,7 @@ import dynamic.mapper.connector.mqtt.MQTTServiceClient;
 import dynamic.mapper.connector.pulsar.MQTTServicePulsarClient;
 import dynamic.mapper.connector.pulsar.PulsarConnectorClient;
 import dynamic.mapper.connector.webhook.WebHook;
+import dynamic.mapper.connector.webhook.WebHookInternal;
 import dynamic.mapper.model.ConnectorStatusEvent;
 
 import org.springframework.stereotype.Component;
@@ -151,6 +153,7 @@ public class ConnectorRegistry {
                 AConnectorClient client = connectorMap.get(identifier);
                 // to avoid memory leaks
                 client.setDispatcher(null);
+                // Disconnect asynchronously, then stop housekeeping
                 client.submitDisconnect();
                 client.stopHousekeepingAndClose();
 
@@ -198,10 +201,12 @@ public class ConnectorRegistry {
                 new MQTTServiceClient().getConnectorSpecification());
         connectorSpecificationMap.put(ConnectorType.KAFKA, new KafkaClientV2().getConnectorSpecification());
         connectorSpecificationMap.put(ConnectorType.WEB_HOOK, new WebHook().getConnectorSpecification());
+        connectorSpecificationMap.put(ConnectorType.WEB_HOOK_INTERNAL, new WebHookInternal().getConnectorSpecification());
         connectorSpecificationMap.put(ConnectorType.HTTP, new HttpClient().getConnectorSpecification());
         connectorSpecificationMap.put(ConnectorType.PULSAR, new PulsarConnectorClient().getConnectorSpecification());
-        connectorSpecificationMap.put(ConnectorType.CUMULOCITY_MQTT_SERVICE_PULSAR, 
+        connectorSpecificationMap.put(ConnectorType.CUMULOCITY_MQTT_SERVICE_PULSAR,
                 new MQTTServicePulsarClient().getConnectorSpecification());
+        connectorSpecificationMap.put(ConnectorType.AMQP, new AMQPClient().getConnectorSpecification());
     }
 
     // === New Methods for NotificationSubscriber Support ===

@@ -14,7 +14,7 @@
  * Learn more in https://angular.io/docs/ts/latest/guide/browser-support.html
  */
 
-/** *************************************************************************************************
+/***************************************************************************************************
  * BROWSER POLYFILLS
  */
 
@@ -26,10 +26,8 @@
 (window as any).__Zone_disable_requestAnimationFrame = true; // disable patch requestAnimationFrame
 // (window as any).__Zone_disable_on_property = true; // disable patch onProperty such as onclick
 (window as any).__zone_symbol__BLACK_LISTED_EVENTS = ['scroll', 'mousemove', 'message'];
-// added to make npm module kleur work
-// (window as any).process = { env: { DEBUG: undefined }, };
 
-/** *************************************************************************************************
+/***************************************************************************************************
  * Zone JS is required by default for Angular itself.
  */
 import 'zone.js'; // Included with Angular CLI.

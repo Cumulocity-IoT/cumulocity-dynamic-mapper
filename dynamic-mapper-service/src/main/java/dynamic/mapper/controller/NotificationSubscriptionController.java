@@ -257,6 +257,11 @@ public class NotificationSubscriptionController {
         validateOutboundMappingEnabled(tenant);
 
         try {
+            // Ensure management client is initialized for type subscriptions
+            log.info("{} - Ensuring management client is initialized for type subscription", tenant);
+            configurationRegistry.getNotificationSubscriber().initializeManagementClient(tenant);
+            configurationRegistry.getNotificationSubscriber().initializeDeviceClient(tenant);
+
             NotificationSubscriptionResponse response = configurationRegistry
                     .getNotificationSubscriber().updateSubscriptionByType(tenant, request.getTypes());
             log.info("{} - Successfully updated type subscription", tenant);

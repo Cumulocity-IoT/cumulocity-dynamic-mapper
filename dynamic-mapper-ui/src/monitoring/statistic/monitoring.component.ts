@@ -22,7 +22,6 @@ import {
   ActionControl,
   AlertService,
   Column,
-  ColumnDataType,
   CommonModule,
   CoreModule,
   DisplayOptions,
@@ -98,7 +97,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       path: 'name',
       filterable: false,
       sortOrder: 'asc',
-      dataType: ColumnDataType.TextShort,
+      dataType: 'text-short' as any,
       cellRendererComponent: NameRendererComponent,
       gridTrackSize: '15%',
       visible: true
@@ -108,7 +107,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       header: 'Mapping topic',
       path: 'mappingTopic',
       filterable: false,
-      dataType: ColumnDataType.TextLong,
+      dataType: 'text-long' as any,
       //gridTrackSize: '20%'
     },
     {
@@ -116,7 +115,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       header: 'Publish topic',
       path: 'publishTopic',
       filterable: false,
-      dataType: ColumnDataType.TextLong,
+      dataType: 'text-long' as any,
       //gridTrackSize: '20%'
     },
     {
@@ -124,7 +123,6 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       name: 'messagesReceived',
       path: 'messagesReceived',
       filterable: true,
-      dataType: ColumnDataType.Numeric,
       cellRendererComponent: NumberRendererComponent,
       gridTrackSize: '12.5%'
     },
@@ -133,7 +131,6 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       name: 'snoopedTemplatesTotal',
       path: 'snoopedTemplatesTotal',
       filterable: true,
-      dataType: ColumnDataType.Numeric,
       cellRendererComponent: NumberRendererComponent,
       gridTrackSize: '12.5%'
     },
@@ -142,7 +139,6 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       name: 'snoopedTemplatesActive',
       path: 'snoopedTemplatesActive',
       filterable: true,
-      dataType: ColumnDataType.Numeric,
       cellRendererComponent: NumberRendererComponent,
       gridTrackSize: '12.5%'
     },
@@ -151,7 +147,6 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       name: 'errors',
       path: 'errors',
       filterable: true,
-      dataType: ColumnDataType.Numeric,
       cellRendererComponent: NumberRendererComponent,
       gridTrackSize: '12.5%'
     },
@@ -160,7 +155,6 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       name: 'currentFailureCount',
       path: 'currentFailureCount',
       filterable: true,
-      dataType: ColumnDataType.Numeric,
       cellRendererComponent: NumberRendererComponent,
       gridTrackSize: '12.5%'
     }

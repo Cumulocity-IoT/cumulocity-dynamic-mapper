@@ -49,11 +49,13 @@ import {
   PATH_MAPPING_ENDPOINT,
   LoggingEventTypeMap,
   LoggingEventType,
+  TransformationType,
 } from '../../shared';
 
 import {
   EventRealtimeService,
-  RealtimeSubjectService
+  RealtimeSubjectService,
+  AlertService
 } from '@c8y/ngx-components';
 
 @Injectable({
@@ -75,10 +77,12 @@ export class MappingService {
   // Cache
   private _agentId: string;
   private readonly JSONATA = require('jsonata');
+  private deprecationWarningsShown: Set<Direction> = new Set();
 
   constructor(
     private readonly sharedService: SharedService,
-    private readonly client: FetchClient
+    private readonly client: FetchClient,
+    private readonly alertService: AlertService
   ) {
     this.eventRealtimeService = new EventRealtimeService(inject(RealtimeSubjectService));
     this.reloadInbound$ = this.sharedService.reloadInbound$;
@@ -315,6 +319,26 @@ export class MappingService {
       this.reloadInbound$.next();
     } else {
       this.reloadOutbound$.next();
+    }
+  }
+
+  async checkAndShowDeprecationWarning(direction: Direction): Promise<void> {
+    // Only show the warning once per direction per session
+    if (this.deprecationWarningsShown.has(direction)) {
+      return;
+    }
+
+    const mappings = await this.getMappings(direction);
+    const deprecatedMappings = mappings.filter(
+      m => m.transformationType === TransformationType.SUBSTITUTION_AS_CODE
+    );
+
+    if (deprecatedMappings.length > 0) {
+      this.deprecationWarningsShown.add(direction);
+      const mappingNames = deprecatedMappings.map(m => m.name).join(', ');
+      this.alertService.warning(
+        `Deprecated: ${deprecatedMappings.length} mapping(s) use 'Substitution as JavaScript' (deprecated since 6.1.5): ${mappingNames}. Please migrate to Smart Functions.`
+      );
     }
   }
 

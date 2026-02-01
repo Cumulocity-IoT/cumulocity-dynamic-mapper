@@ -29,20 +29,20 @@ import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
  */
 @Component({
   template: `
-    <a
-      class="interact"
-      [title]="context.item.name"
-      *ngIf="context?.property['callback']; else router"
-      (click)="context.property['callback'](context.item)"
-    >
-      {{ context.item.name }}
-    </a>
-    <ng-template #router>
+    @if (context?.property['callback']) {
+      <a
+        class="interact"
+        [title]="context.item.name"
+        (click)="context.property['callback'](context.item)"
+        >
+        {{ context.item.name }}
+      </a>
+    } @else {
       <a class="interact" [title]="context.item.name" [routerLink]="['details/' + context.item.identifier]">
         {{ context.item.name }}
       </a>
-    </ng-template>
-  `,
+    }
+    `,
   standalone: true,
   imports: [
     CoreModule,

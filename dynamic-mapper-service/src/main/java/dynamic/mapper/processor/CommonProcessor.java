@@ -13,9 +13,9 @@ import com.cumulocity.model.idtype.GId;
 
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
-import dynamic.mapper.processor.flow.CumulocityObject;
-import dynamic.mapper.processor.flow.DeviceMessage;
-import dynamic.mapper.processor.flow.ExternalId;
+import dynamic.mapper.processor.model.CumulocityObject;
+import dynamic.mapper.processor.model.DeviceMessage;
+import dynamic.mapper.processor.model.ExternalId;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.util.JavaScriptInteropHelper;
 import dynamic.mapper.processor.util.ProcessingResultHelper;

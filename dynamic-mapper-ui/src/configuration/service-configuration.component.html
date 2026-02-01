@@ -1,23 +1,23 @@
 <!--
-  ~ Copyright (c) 2022-2025 Cumulocity GmbH.
-  ~
-  ~ SPDX-License-Identifier: Apache-2.0
-  ~
-  ~  Licensed under the Apache License, Version 2.0 (the "License");
-  ~  you may not use this file except in compliance with the License.
-  ~  You may obtain a copy of the License at
-  ~
-  ~       http://www.apache.org/licenses/LICENSE-2.0
-  ~
-  ~  Unless required by applicable law or agreed to in writing, software
-  ~  distributed under the License is distributed on an "AS IS" BASIS,
-  ~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  ~  See the License for the specific language governing permissions and
-  ~  limitations under the License.
-  ~
-  ~  @authors Christof Strack, Stefan Witschel
-  ~
-  -->
+~ Copyright (c) 2022-2025 Cumulocity GmbH.
+~
+~ SPDX-License-Identifier: Apache-2.0
+~
+~  Licensed under the Apache License, Version 2.0 (the "License");
+~  you may not use this file except in compliance with the License.
+~  You may obtain a copy of the License at
+~
+~       http://www.apache.org/licenses/LICENSE-2.0
+~
+~  Unless required by applicable law or agreed to in writing, software
+~  distributed under the License is distributed on an "AS IS" BASIS,
+~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+~  See the License for the specific language governing permissions and
+~  limitations under the License.
+~
+~  @authors Christof Strack, Stefan Witschel
+~
+-->
 
 <c8y-title>Service configuration</c8y-title>
 <c8y-action-bar-item [placement]="'right'">
@@ -63,7 +63,7 @@
                 <p>{{ 'Log substitution' | translate }}</p>
                 <p>
                   <small translate>Log substitution in microservice log file when applying a
-                    mapping.</small>
+                  mapping.</small>
                 </p>
               </div>
               <label class="c8y-switch c8y-switch--inline m-l-auto" title="{{ 'Log substitution' | translate }}">
@@ -95,322 +95,334 @@
                 <p>
                   <small translate>Send events when status of a connector changes. Be aware
                     this can cause additional costs </small><i c8yIcon="euro"></i>
-                </p>
-              </div>
-              <label class="c8y-switch c8y-switch--inline m-l-auto"
-                title="{{ 'Send connector lifecycle' | translate }}">
-                <input name="sendMappingStatus" type="checkbox" formControlName="sendConnectorLifecycle" />
-                <span></span>
-              </label>
-            </div>
-          </c8y-li>
-
-          <c8y-li>
-            <c8y-li-icon icon="c8y-usage-statistics"></c8y-li-icon>
-            <div class="d-flex a-i-center">
-              <div>
-                <p>{{ 'Send mapping statistics' | translate }}</p>
-                <p>
-                  <small translate>Send statics about how often a mapping was applied. Be
-                    aware this can cause additional costs </small><i c8yIcon="euro"></i>
-                </p>
-              </div>
-              <label class="c8y-switch c8y-switch--inline m-l-auto" title="{{ 'Send mapping status' | translate }}">
-                <input name="sendMappingStatus" type="checkbox" formControlName="sendMappingStatus" />
-                <span></span>
-              </label>
-            </div>
-          </c8y-li>
-
-          <c8y-li>
-            <c8y-li-icon icon="subscription"></c8y-li-icon>
-            <div class="d-flex a-i-center">
-              <div>
-                <p>{{ 'Send events on topic subscriptions' | translate }}</p>
-                <p>
-                  <small translate>Send events when the subscription for a topic changes. Be
-                    aware this can cause additional costs </small><i c8yIcon="euro"></i>
-                </p>
-              </div>
-              <label class="c8y-switch c8y-switch--inline m-l-auto"
-                title="{{ 'Send events on topic subscriptions' | translate }}">
-                <input name="sendSubscriptionEvents" type="checkbox" formControlName="sendSubscriptionEvents" />
-                <span></span>
-              </label>
-            </div>
-          </c8y-li>
-
-          <c8y-li>
-            <c8y-li-icon icon="process"></c8y-li-icon>
-            <div class="d-flex a-i-center">
-              <div>
-                <p>{{ 'Send notification lifecycle' | translate }}</p>
-                <p>
-                  <small translate>Send events when status for outbound notifications changes.
-                    Be aware this can cause additional costs </small><i c8yIcon="euro"></i>
-                </p>
-              </div>
-              <label class="c8y-switch c8y-switch--inline m-l-auto"
-                title="{{ 'Send notification lifecycle' | translate }}">
-                <input name="sendNotificationLifecycle" type="checkbox" formControlName="sendNotificationLifecycle" />
-                <span></span>
-              </label>
-            </div>
-          </c8y-li>
-
-          <c8y-li>
-            <c8y-li-icon icon="swipe-left"></c8y-li-icon>
-            <div class="d-flex a-i-center">
-              <div>
-                <p>{{ 'Outbound mappings' | translate }}</p>
-                <p>
-                  <small translate>Outbound mappings enabled. Changing this property require unsubscribing/subscribing the Dynamic Mapper microservice to this tenant.</small>
-                </p>
-              </div>
-              <label class="c8y-switch c8y-switch--inline m-l-auto" title="{{ 'Outbound mappings' | translate }}">
-                <input name="outboundMappingEnabled" type="checkbox" formControlName="outboundMappingEnabled" />
-                <span></span>
-              </label>
-            </div>
-          </c8y-li>
-
-          <c8y-li>
-            <c8y-li-icon icon="relay-home-automation"></c8y-li-icon>
-            <div class="d-flex a-i-center">
-              <div>
-                <p>{{ 'Device Isolation Cumulocity MQTT Service' | translate }}</p>
-                <p>
-                  <small translate>When device isolation for Cumulocity MQTT Service is enabled only registered MQTT clients receive outbound MQTT messages. Changing this property require unsubscribing/subscribing the Dynamic Mapper microservice to this tenant.</small>
-                </p>
-              </div>
-              <label class="c8y-switch c8y-switch--inline m-l-auto" title="{{ 'Device Isolation Cumulocity MQTT Service' | translate }}">
-                <input name="deviceIsolationMQTTServiceEnabled" type="checkbox" formControlName="deviceIsolationMQTTServiceEnabled" />
-                <span></span>
-              </label>
-            </div>
-          </c8y-li>
-
-          <c8y-li>
-            <c8y-li-icon icon="numbered-list"></c8y-li-icon>
-            <div class="d-flex a-i-center">
-              <div>
-                <p>{{ 'Size inbound Id cache' | translate }}</p>
-                <p>
-                  <small translate>Set size inbound Id cache. After changing the size you have
-                    to clear the cache to take effect</small>
-                </p>
-              </div>
-              <label class="editable m-l-auto" title="{{ 'Size inbound Id cache' | translate }}"
-                [ngClass]="{ updated: editable2updated }">
-                <input class="form-control" name="inboundExternalIdCacheSize" type="number"
-                  formControlName="inboundExternalIdCacheSize" />
-                <span></span>
-              </label>
-            </div>
-          </c8y-li>
-
-          <c8y-li>
-            <c8y-li-icon icon="time-machine"></c8y-li-icon>
-            <div class="d-flex a-i-center">
-              <div>
-                <p>{{ 'Days lifetime inbound Id cache' | translate }}</p>
-                <p>
-                  <small translate>Set time after which complete cache in cleared. This is
-                    useful when you plan to delete a device or assign an
-                    external id to different device</small>
-                </p>
-              </div>
-              <label class="editable m-l-auto" title="{{ 'Days lifetime ' | translate }}"
-                [ngClass]="{ updated: editable2updated }">
-                <input class="form-control" name="inboundExternalIdCacheRetention" type="number"
-                  formControlName="inboundExternalIdCacheRetention" />
-                <span></span>
-              </label>
-            </div>
-          </c8y-li>
-
-
-          <c8y-li>
-            <c8y-li-icon icon="numbered-list"></c8y-li-icon>
-            <div class="d-flex a-i-center">
-              <div>
-                <p>{{ 'Size inventory cache' | translate }}</p>
-                <p>
-                  <small translate>Set size inventory cache. After changing the size you have
-                    to clear the cache to take effect</small>
-                </p>
-              </div>
-              <label class="editable m-l-auto" title="{{ 'Size inventory cache' | translate }}"
-                [ngClass]="{ updated: editable2updated }">
-                <input class="form-control" name="inventoryCacheSize" type="number"
-                  formControlName="inventoryCacheSize" />
-                <span></span>
-              </label>
-            </div>
-          </c8y-li>
-
-          <c8y-li>
-            <c8y-li-icon icon="time-machine"></c8y-li-icon>
-            <div class="d-flex a-i-center">
-              <div>
-                <p>{{ 'Days lifetime inventory cache' | translate }}</p>
-                <p>
-                  <small translate>Set time after which complete cache in cleared. This is
-                    useful when you plan to delete a device or assign an
-                    external id to different device</small>
-                </p>
-              </div>
-              <label class="editable m-l-auto" title="{{ 'Days lifetime' | translate }}"
-                [ngClass]="{ updated: editable2updated }">
-                <input class="form-control" name="inventoryCacheRetention" type="number"
-                  formControlName="inventoryCacheRetention" />
-                <span></span>
-              </label>
-            </div>
-          </c8y-li>
-
-          <c8y-li>
-            <c8y-li-icon icon="list"></c8y-li-icon>
-            <div class="d-flex a-i-center">
-              <div>
-                <p>{{ 'Fragments from inventory to cache' | translate }}</p>
-                <p>
-                  <small translate>The listed fragments (comma separated list) will be cached and can be referenced in
-                    'filterInventory'</small>
-                </p>
-              </div>
-              <label class="editable m-l-auto" title="{{ 'Fragments from inventory to cache' | translate }}"
-                [ngClass]="{ updated: editable2updated }">
-                <input class="form-control" name="inventoryFragmentsToCache" type="string"
-                  formControlName="inventoryFragmentsToCache" />
-                <span></span>
-              </label>
-            </div>
-          </c8y-li>
-
-          <c8y-li>
-            <c8y-li-icon icon="alarm1"></c8y-li-icon>
-            <div class="d-flex a-i-center">
-              <div>
-                <p>{{ 'MaxCPU time in milliseconds for JavaScript code' | translate }}</p>
-                <p>
-                  <small translate>Set the maxCPU time in milliseconds for JavaScript code, to avoid malicious code from
-                    starving the CPU</small>
-                </p>
-              </div>
-              <label class="editable m-l-auto" title="{{ ' maxCPU time in milliseconds ' | translate }}"
-                [ngClass]="{ updated: editable2updated }">
-                <input class="form-control" name="maxCPUTimeMS" type="number" formControlName="maxCPUTimeMS" />
-                <span></span>
-              </label>
-            </div>
-          </c8y-li>
-
-          <c8y-li>
-            <c8y-li-icon icon="bot"></c8y-li-icon>
-            <div class="d-flex a-i-center">
-              <div>
-                <p>{{ 'JSONata AI Agent ' | translate }}</p>
-                <p>
-                  <small translate>Name of jsonata agent to be used when generating substitutions. The needs to be
-                    defined in the AI Agent Manager.</small>
-                </p>
-              </div>
-              <label class="m-l-auto" title="{{ ' Name of jsonata agent' | translate }}"
-                [ngClass]="{ updated: editable2updated }">
-                <div class="c8y-select-wrapper p-r-4" style="width:200px">
-                  <select class="form-control" formControlName="jsonataAgent" name="jsonataAgent">
-                    <option value="" disabled selected>
-                      Select agent
-                    </option>
-                    <option *ngFor="let agent of (agents$| async)" [value]="agent">
-                      {{ agent }}
-                    </option>
-                  </select>
+                  </p>
                 </div>
-                <span></span>
-                <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
-                  popover="{{'Select box is disabled if AI Agent is not deployed in this tenant or no agent is defined.'| translate}}"
-                  placement="bottom" triggers="focus" type="button" *ngIf="!aiAgentDeployed" container="body"></button>
-              </label>
-            </div>
-          </c8y-li>
-
-
-          <c8y-li>
-            <c8y-li-icon icon="bot"></c8y-li-icon>
-            <div class="d-flex a-i-center">
-              <div>
-                <p>{{ 'JavaScript AI Agent' |
-                  translate }}</p>
-                <p>
-                  <small translate>Name of javaScript agent to be used when generating substitutions as JavaScript code.
-                    The needs to be
-                    defined in the AI Agent Manager.</small>
-                </p>
+                <label class="c8y-switch c8y-switch--inline m-l-auto"
+                  title="{{ 'Send connector lifecycle' | translate }}">
+                  <input name="sendMappingStatus" type="checkbox" formControlName="sendConnectorLifecycle" />
+                  <span></span>
+                </label>
               </div>
-              <label class="m-l-auto" title="{{ ' Name of javaScript agent' | translate }}"
-                [ngClass]="{ updated: editable2updated }">
-                <div class="c8y-select-wrapper" style="width:200px">
-                  <select class="form-control" formControlName="javaScriptAgent" name="javaScriptAgent">
-                    <option value="" disabled selected>
-                      Select agent
-                    </option>
-                    <option *ngFor="let agent of (agents$| async)" [value]="agent">
-                      {{ agent }}
-                    </option>
-                  </select>
-                </div>
-                <span></span>
-                <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
-                  popover="{{'Select box is disabled if AI Agent is not deployed in this tenant or no agent is defined.'| translate}}"
-                  placement="bottom" triggers="focus" type="button" *ngIf="!aiAgentDeployed" container="body"></button>
-              </label>
-            </div>
-          </c8y-li>
+            </c8y-li>
 
-          <c8y-li>
-            <c8y-li-icon icon="bot"></c8y-li-icon>
-            <div class="d-flex a-i-center">
-              <div>
-                <p>{{ 'SmartFunction AI Agent' |
-                  translate }}</p>
-                <p>
-                  <small translate>Name of smartFunction agent to be used when generating Cumulocity API payloads as
-                    JavaScript code.
-                    The needs to be
-                    defined in the AI Agent Manager.</small>
-                </p>
-              </div>
-              <label class="m-l-auto" title="{{ ' Name of smartFunction agent' | translate }}"
-                [ngClass]="{ updated: editable2updated }">
-                <div class="c8y-select-wrapper" style="width:200px">
-                  <select class="form-control" formControlName="smartFunctionAgent" name="smartFunctionAgent">
-                    <option value="" disabled selected>
-                      Select agent
-                    </option>
-                    <option *ngFor="let agent of (agents$| async)" [value]="agent">
-                      {{ agent }}
-                    </option>
-                  </select>
+            <c8y-li>
+              <c8y-li-icon icon="c8y-usage-statistics"></c8y-li-icon>
+              <div class="d-flex a-i-center">
+                <div>
+                  <p>{{ 'Send mapping statistics' | translate }}</p>
+                  <p>
+                    <small translate>Send statics about how often a mapping was applied. Be
+                      aware this can cause additional costs </small><i c8yIcon="euro"></i>
+                    </p>
+                  </div>
+                  <label class="c8y-switch c8y-switch--inline m-l-auto" title="{{ 'Send mapping status' | translate }}">
+                    <input name="sendMappingStatus" type="checkbox" formControlName="sendMappingStatus" />
+                    <span></span>
+                  </label>
                 </div>
-                <span></span>
-                <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
-                  popover="{{'Select box is disabled if AI Agent is not deployed in this tenant or no agent is defined.'| translate}}"
-                  placement="bottom" triggers="focus" type="button" *ngIf="!aiAgentDeployed" container="body"></button>
-              </label>
+              </c8y-li>
+
+              <c8y-li>
+                <c8y-li-icon icon="subscription"></c8y-li-icon>
+                <div class="d-flex a-i-center">
+                  <div>
+                    <p>{{ 'Send events on topic subscriptions' | translate }}</p>
+                    <p>
+                      <small translate>Send events when the subscription for a topic changes. Be
+                        aware this can cause additional costs </small><i c8yIcon="euro"></i>
+                      </p>
+                    </div>
+                    <label class="c8y-switch c8y-switch--inline m-l-auto"
+                      title="{{ 'Send events on topic subscriptions' | translate }}">
+                      <input name="sendSubscriptionEvents" type="checkbox" formControlName="sendSubscriptionEvents" />
+                      <span></span>
+                    </label>
+                  </div>
+                </c8y-li>
+
+                <c8y-li>
+                  <c8y-li-icon icon="process"></c8y-li-icon>
+                  <div class="d-flex a-i-center">
+                    <div>
+                      <p>{{ 'Send notification lifecycle' | translate }}</p>
+                      <p>
+                        <small translate>Send events when status for outbound notifications changes.
+                          Be aware this can cause additional costs </small><i c8yIcon="euro"></i>
+                        </p>
+                      </div>
+                      <label class="c8y-switch c8y-switch--inline m-l-auto"
+                        title="{{ 'Send notification lifecycle' | translate }}">
+                        <input name="sendNotificationLifecycle" type="checkbox" formControlName="sendNotificationLifecycle" />
+                        <span></span>
+                      </label>
+                    </div>
+                  </c8y-li>
+
+                  <c8y-li>
+                    <c8y-li-icon icon="swipe-left"></c8y-li-icon>
+                    <div class="d-flex a-i-center">
+                      <div>
+                        <p>{{ 'Outbound mappings' | translate }}</p>
+                        <p>
+                          <small translate>Outbound mappings enabled. Changing this property require unsubscribing/subscribing the Dynamic Mapper microservice to this tenant.</small>
+                        </p>
+                      </div>
+                      <label class="c8y-switch c8y-switch--inline m-l-auto" title="{{ 'Outbound mappings' | translate }}">
+                        <input name="outboundMappingEnabled" type="checkbox" formControlName="outboundMappingEnabled" />
+                        <span></span>
+                      </label>
+                    </div>
+                  </c8y-li>
+
+                  <c8y-li>
+                    <c8y-li-icon icon="relay-home-automation"></c8y-li-icon>
+                    <div class="d-flex a-i-center">
+                      <div>
+                        <p>{{ 'Device Isolation Cumulocity MQTT Service' | translate }}</p>
+                        <p>
+                          <small translate>When device isolation for Cumulocity MQTT Service is enabled only registered MQTT clients receive outbound MQTT messages. Changing this property require unsubscribing/subscribing the Dynamic Mapper microservice to this tenant.</small>
+                        </p>
+                      </div>
+                      <label class="c8y-switch c8y-switch--inline m-l-auto" title="{{ 'Device Isolation Cumulocity MQTT Service' | translate }}">
+                        <input name="deviceIsolationMQTTServiceEnabled" type="checkbox" formControlName="deviceIsolationMQTTServiceEnabled" />
+                        <span></span>
+                      </label>
+                    </div>
+                  </c8y-li>
+
+                  <c8y-li>
+                    <c8y-li-icon icon="numbered-list"></c8y-li-icon>
+                    <div class="d-flex a-i-center">
+                      <div>
+                        <p>{{ 'Size inbound Id cache' | translate }}</p>
+                        <p>
+                          <small translate>Set size inbound Id cache. After changing the size you have
+                          to clear the cache to take effect</small>
+                        </p>
+                      </div>
+                      <label class="editable m-l-auto" title="{{ 'Size inbound Id cache' | translate }}"
+                        [ngClass]="{ updated: editable2updated }">
+                        <input class="form-control" name="inboundExternalIdCacheSize" type="number"
+                          formControlName="inboundExternalIdCacheSize" />
+                        <span></span>
+                      </label>
+                    </div>
+                  </c8y-li>
+
+                  <c8y-li>
+                    <c8y-li-icon icon="time-machine"></c8y-li-icon>
+                    <div class="d-flex a-i-center">
+                      <div>
+                        <p>{{ 'Days lifetime inbound Id cache' | translate }}</p>
+                        <p>
+                          <small translate>Set time after which complete cache in cleared. This is
+                            useful when you plan to delete a device or assign an
+                          external id to different device</small>
+                        </p>
+                      </div>
+                      <label class="editable m-l-auto" title="{{ 'Days lifetime ' | translate }}"
+                        [ngClass]="{ updated: editable2updated }">
+                        <input class="form-control" name="inboundExternalIdCacheRetention" type="number"
+                          formControlName="inboundExternalIdCacheRetention" />
+                        <span></span>
+                      </label>
+                    </div>
+                  </c8y-li>
+
+
+                  <c8y-li>
+                    <c8y-li-icon icon="numbered-list"></c8y-li-icon>
+                    <div class="d-flex a-i-center">
+                      <div>
+                        <p>{{ 'Size inventory cache' | translate }}</p>
+                        <p>
+                          <small translate>Set size inventory cache. After changing the size you have
+                          to clear the cache to take effect</small>
+                        </p>
+                      </div>
+                      <label class="editable m-l-auto" title="{{ 'Size inventory cache' | translate }}"
+                        [ngClass]="{ updated: editable2updated }">
+                        <input class="form-control" name="inventoryCacheSize" type="number"
+                          formControlName="inventoryCacheSize" />
+                        <span></span>
+                      </label>
+                    </div>
+                  </c8y-li>
+
+                  <c8y-li>
+                    <c8y-li-icon icon="time-machine"></c8y-li-icon>
+                    <div class="d-flex a-i-center">
+                      <div>
+                        <p>{{ 'Days lifetime inventory cache' | translate }}</p>
+                        <p>
+                          <small translate>Set time after which complete cache in cleared. This is
+                            useful when you plan to delete a device or assign an
+                          external id to different device</small>
+                        </p>
+                      </div>
+                      <label class="editable m-l-auto" title="{{ 'Days lifetime' | translate }}"
+                        [ngClass]="{ updated: editable2updated }">
+                        <input class="form-control" name="inventoryCacheRetention" type="number"
+                          formControlName="inventoryCacheRetention" />
+                        <span></span>
+                      </label>
+                    </div>
+                  </c8y-li>
+
+                  <c8y-li>
+                    <c8y-li-icon icon="list"></c8y-li-icon>
+                    <div class="d-flex a-i-center">
+                      <div>
+                        <p>{{ 'Fragments from inventory to cache' | translate }}</p>
+                        <p>
+                          <small translate>The listed fragments (comma separated list) will be cached and can be referenced in
+                          'filterInventory'</small>
+                        </p>
+                      </div>
+                      <label class="editable m-l-auto" title="{{ 'Fragments from inventory to cache' | translate }}"
+                        [ngClass]="{ updated: editable2updated }">
+                        <input class="form-control" name="inventoryFragmentsToCache" type="string"
+                          formControlName="inventoryFragmentsToCache" />
+                        <span></span>
+                      </label>
+                    </div>
+                  </c8y-li>
+
+                  <c8y-li>
+                    <c8y-li-icon icon="alarm1"></c8y-li-icon>
+                    <div class="d-flex a-i-center">
+                      <div>
+                        <p>{{ 'MaxCPU time in milliseconds for JavaScript code' | translate }}</p>
+                        <p>
+                          <small translate>Set the maxCPU time in milliseconds for JavaScript code, to avoid malicious code from
+                          starving the CPU</small>
+                        </p>
+                      </div>
+                      <label class="editable m-l-auto" title="{{ ' maxCPU time in milliseconds ' | translate }}"
+                        [ngClass]="{ updated: editable2updated }">
+                        <input class="form-control" name="maxCPUTimeMS" type="number" formControlName="maxCPUTimeMS" />
+                        <span></span>
+                      </label>
+                    </div>
+                  </c8y-li>
+
+                  <c8y-li>
+                    <c8y-li-icon icon="bot"></c8y-li-icon>
+                    <div class="d-flex a-i-center">
+                      <div>
+                        <p>{{ 'JSONata AI Agent ' | translate }}</p>
+                        <p>
+                          <small translate>Name of jsonata agent to be used when generating substitutions. The needs to be
+                          defined in the AI Agent Manager.</small>
+                        </p>
+                      </div>
+                      <label class="m-l-auto" title="{{ ' Name of jsonata agent' | translate }}"
+                        [ngClass]="{ updated: editable2updated }">
+                        <div class="c8y-select-wrapper p-r-4" style="width:200px">
+                          <select class="form-control" formControlName="jsonataAgent" name="jsonataAgent">
+                            <option value="" disabled selected>
+                              Select agent
+                            </option>
+                            @for (agent of (agents$| async); track agent) {
+                              <option [value]="agent">
+                                {{ agent }}
+                              </option>
+                            }
+                          </select>
+                        </div>
+                        <span></span>
+                        @if (!aiAgentDeployed) {
+                          <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
+                            popover="{{'Select box is disabled if AI Agent is not deployed in this tenant or no agent is defined.'| translate}}"
+                          placement="bottom" triggers="focus" type="button" container="body"></button>
+                        }
+                      </label>
+                    </div>
+                  </c8y-li>
+
+
+                  <c8y-li>
+                    <c8y-li-icon icon="bot"></c8y-li-icon>
+                    <div class="d-flex a-i-center">
+                      <div>
+                        <p>{{ 'JavaScript AI Agent' |
+                        translate }}</p>
+                        <p>
+                          <small translate>Name of javaScript agent to be used when generating substitutions as JavaScript code.
+                            The needs to be
+                          defined in the AI Agent Manager.</small>
+                        </p>
+                      </div>
+                      <label class="m-l-auto" title="{{ ' Name of javaScript agent' | translate }}"
+                        [ngClass]="{ updated: editable2updated }">
+                        <div class="c8y-select-wrapper" style="width:200px">
+                          <select class="form-control" formControlName="javaScriptAgent" name="javaScriptAgent">
+                            <option value="" disabled selected>
+                              Select agent
+                            </option>
+                            @for (agent of (agents$| async); track agent) {
+                              <option [value]="agent">
+                                {{ agent }}
+                              </option>
+                            }
+                          </select>
+                        </div>
+                        <span></span>
+                        @if (!aiAgentDeployed) {
+                          <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
+                            popover="{{'Select box is disabled if AI Agent is not deployed in this tenant or no agent is defined.'| translate}}"
+                          placement="bottom" triggers="focus" type="button" container="body"></button>
+                        }
+                      </label>
+                    </div>
+                  </c8y-li>
+
+                  <c8y-li>
+                    <c8y-li-icon icon="bot"></c8y-li-icon>
+                    <div class="d-flex a-i-center">
+                      <div>
+                        <p>{{ 'SmartFunction AI Agent' |
+                        translate }}</p>
+                        <p>
+                          <small translate>Name of smartFunction agent to be used when generating Cumulocity API payloads as
+                            JavaScript code.
+                            The needs to be
+                          defined in the AI Agent Manager.</small>
+                        </p>
+                      </div>
+                      <label class="m-l-auto" title="{{ ' Name of smartFunction agent' | translate }}"
+                        [ngClass]="{ updated: editable2updated }">
+                        <div class="c8y-select-wrapper" style="width:200px">
+                          <select class="form-control" formControlName="smartFunctionAgent" name="smartFunctionAgent">
+                            <option value="" disabled selected>
+                              Select agent
+                            </option>
+                            @for (agent of (agents$| async); track agent) {
+                              <option [value]="agent">
+                                {{ agent }}
+                              </option>
+                            }
+                          </select>
+                        </div>
+                        <span></span>
+                        @if (!aiAgentDeployed) {
+                          <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
+                            popover="{{'Select box is disabled if AI Agent is not deployed in this tenant or no agent is defined.'| translate}}"
+                          placement="bottom" triggers="focus" type="button" container="body"></button>
+                        }
+                      </label>
+                    </div>
+                  </c8y-li>
+                </form>
+              </c8y-list-group>
             </div>
-          </c8y-li>
-        </form>
-      </c8y-list-group>
-    </div>
-  </div>
-  <div class="card-footer">
-    <div class="form-group">
-      <button type="button" name="update" class="btn btn-primary" (click)="clickedSaveServiceConfiguration()" translate
-        [disabled]="!feature?.userHasMappingAdminRole">
-        Save
-      </button>
-    </div>
-  </div>
-</div>
+          </div>
+          <div class="card-footer">
+            <div class="form-group">
+              <button type="button" name="update" class="btn btn-primary" (click)="clickedSaveServiceConfiguration()" translate
+                [disabled]="!feature?.userHasMappingAdminRole">
+                Save
+              </button>
+            </div>
+          </div>
+        </div>

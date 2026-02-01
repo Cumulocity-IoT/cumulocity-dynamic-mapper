@@ -38,7 +38,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingRepresentation;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
@@ -268,9 +267,13 @@ public class ProcessingResultHelper {
      * <p>This follows the same pattern as the substituteInTargetAndSend method from
      * BaseProcessorOutbound, ensuring consistency in request creation across the system.
      *
+     * <p><b>THREAD SAFETY WARNING:</b> This method calls {@link ProcessingContext#addRequest(DynamicMapperRequest)}
+     * which is NOT thread-safe. If multiple threads call this method concurrently on the same
+     * ProcessingContext, race conditions may occur. Review thread safety if concurrent access is needed.
+     *
      * @param context the processing context containing current state and configuration
      * @param payloadJson the JSON payload to be sent in the request body
-     * @param action the action type ("update" uses PUT, all others use POST)
+     * @param action the action type ("create", "update", "delete", "patch")
      * @param mapping the mapping configuration containing target API and external ID information
      * @return the created DynamicMapperRequest that was added to the context
      */
@@ -278,9 +281,8 @@ public class ProcessingResultHelper {
             String payloadJson,
             String action, Mapping mapping) {
 
-        // Determine the request method based on action (from substituteInTargetAndSend)
-        RequestMethod method = "update".equals(action) ? RequestMethod.PUT : RequestMethod.POST; // Default from //
-                                                                                                 // reference
+        // Determine the request method based on action
+        RequestMethod method = mapActionToRequestMethod(action);
         API api = context.getApi() != null ? context.getApi() : mapping.getTargetAPI();
 
         // Use -1 as predecessor for flow-generated requests (no predecessor in flow
@@ -340,6 +342,50 @@ public class ProcessingResultHelper {
 
         // Set the value at the final key
         current.put(keys[keys.length - 1], value);
+    }
+
+    /**
+     * Maps an action string to the corresponding HTTP RequestMethod.
+     *
+     * <p>Action mappings:
+     * <ul>
+     *   <li>"create" → POST</li>
+     *   <li>"update" → PUT</li>
+     *   <li>"delete" → DELETE</li>
+     *   <li>"patch" → PATCH</li>
+     *   <li>default/null → POST</li>
+     * </ul>
+     *
+     * <p><b>Note on PATCH:</b> While PATCH is a standard HTTP method, Cumulocity's REST API
+     * does not universally support it. Measurements don't support PATCH (they are immutable).
+     * Events and Alarms support PUT but not PATCH. Only Inventory (Managed Objects) supports PATCH.
+     *
+     * <p>Special handling is done in FlowResultOutboundProcessor:
+     * <ul>
+     *   <li>Measurements with PATCH → converted to POST (measurements are immutable)</li>
+     *   <li>Other APIs with PATCH → ID appended to path, removed from body (standard PATCH behavior)</li>
+     * </ul>
+     *
+     * @param action the action type string
+     * @return the corresponding RequestMethod
+     */
+    public static RequestMethod mapActionToRequestMethod(String action) {
+        if (action == null) {
+            return RequestMethod.POST;
+        }
+
+        switch (action.toLowerCase()) {
+            case "create":
+                return RequestMethod.POST;
+            case "update":
+                return RequestMethod.PUT;
+            case "patch":
+                return RequestMethod.PATCH;
+            case "delete":
+                return RequestMethod.DELETE;
+            default:
+                return RequestMethod.POST;
+        }
     }
 
     /**

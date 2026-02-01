@@ -32,14 +32,21 @@ public class RequestAggregationStrategy implements AggregationStrategy {
 
     @Override
     public Exchange aggregate(Exchange oldExchange, Exchange newExchange) {
-        // For parallel processing, we just need to collect the results
-        // The actual requests are already processed and updated in the context
+        // For parallel processing of DynamicMapperRequests:
+        // - Each split request is processed by SendInboundProcessor
+        // - The processor updates the request object in-place (setting response/error)
+        // - All requests share the same ProcessingContext via the "processingContext" header
+        // - We need to preserve the processingContext header across all aggregations
+
         if (oldExchange == null) {
+            // First request processed - return it with the processingContext header
             return newExchange;
         }
-        
-        // You can add any specific aggregation logic here if needed
-        // For now, just return the new exchange
-        return newExchange;
+
+        // Subsequent requests: the processingContext in the header contains ALL requests
+        // (both already processed and currently processing), because they all reference
+        // the same ProcessingContext object. We just need to preserve this header.
+        // Always return oldExchange to maintain the original exchange with all headers intact.
+        return oldExchange;
     }
 }

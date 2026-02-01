@@ -1,23 +1,23 @@
 <!--
-  ~ Copyright (c) 2022-2025 Cumulocity GmbH.
-  ~
-  ~ SPDX-License-Identifier: Apache-2.0
-  ~
-  ~  Licensed under the Apache License, Version 2.0 (the "License");
-  ~  you may not use this file except in compliance with the License.
-  ~  You may obtain a copy of the License at
-  ~
-  ~       http://www.apache.org/licenses/LICENSE-2.0
-  ~
-  ~  Unless required by applicable law or agreed to in writing, software
-  ~  distributed under the License is distributed on an "AS IS" BASIS,
-  ~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  ~  See the License for the specific language governing permissions and
-  ~  limitations under the License.
-  ~
-  ~  @authors Christof Strack, Stefan Witschel
-  ~
-  -->
+~ Copyright (c) 2022-2025 Cumulocity GmbH.
+~
+~ SPDX-License-Identifier: Apache-2.0
+~
+~  Licensed under the Apache License, Version 2.0 (the "License");
+~  you may not use this file except in compliance with the License.
+~  You may obtain a copy of the License at
+~
+~       http://www.apache.org/licenses/LICENSE-2.0
+~
+~  Unless required by applicable law or agreed to in writing, software
+~  distributed under the License is distributed on an "AS IS" BASIS,
+~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+~  See the License for the specific language governing permissions and
+~  limitations under the License.
+~
+~  @authors Christof Strack, Stefan Witschel
+~
+-->
 
 <c8y-title translate>Service events</c8y-title>
 <c8y-action-bar-item [placement]="'left'" itemClass="navbar-form min-width-fit">
@@ -25,11 +25,11 @@
     <div class="">
       <div class="c8y-select-wrapper">
         <select class="form-control" style="width: 280px" formControlName="type" id="listLabel">
-          <ng-container *ngFor="let lt of LoggingEventTypeMap | keyvalue">
+          @for (lt of LoggingEventTypeMap | keyvalue; track lt) {
             <option [ngValue]="lt.key">
               {{ lt.key | formatStringAsWords:1 }}
             </option>
-          </ng-container>
+          }
         </select>
         <span></span>
       </div>
@@ -108,10 +108,12 @@
       </c8y-li>
     </c8y-li-timeline>
   </c8y-list-group>
-  <div class="c8y-empty-state" *ngIf="(events$ | async)?.data?.length === 0">
-    <h2 c8yIcon="c8y-events"></h2>
-    <p>
-      <strong>No events available.</strong><br />
-    </p>
-  </div>
+  @if ((events$ | async)?.data?.length === 0) {
+    <div class="c8y-empty-state">
+      <h2 c8yIcon="c8y-events"></h2>
+      <p>
+        <strong>No events available.</strong><br />
+      </p>
+    </div>
+  }
 </div>

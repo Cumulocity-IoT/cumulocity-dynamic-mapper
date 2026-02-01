@@ -26,9 +26,7 @@ public enum MappingType {
     FLAT_FILE("FLAT_FILE"),
     HEX("HEX"),
     PROTOBUF_INTERNAL("PROTOBUF_INTERNAL"),
-    EXTENSION_SOURCE("EXTENSION_SOURCE"),
-    EXTENSION_SOURCE_TARGET("EXTENSION_SOURCE_TARGET"),
-    CODE_BASED("CODE_BASED") // this value is deprecated and will be removed in future versions, instead set transformationType = TransformationType.CODE_BASED
+    EXTENSION_JAVA("EXTENSION_JAVA"),
     ;
 
     public final String name;

@@ -1,5 +1,5 @@
 
-ª
+²
 CustomEvent.protoprocessor.protobuf"·
 CustomEvent
 	timestamp (R	timestamp
@@ -9,5 +9,5 @@
 
 externalId (	R
 externalId
-	eventType (	R	eventTypeB?
-+dynamic.mapper.processor.extension.externalBCustomEventOuterbproto3
+	eventType (	R	eventTypeBG
+3dynamic.mapper.processor.extension.external.inboundBCustomEventOuterbproto3

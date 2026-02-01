@@ -1,5 +1,5 @@
 // input-list.component.ts
-import { NgFor } from '@angular/common';
+
 import { Component, EventEmitter, Input, OnDestroy, OnInit, Output } from '@angular/core';
 import { CoreModule } from '@c8y/ngx-components';
 import { debounceTime, Subject } from 'rxjs';
@@ -8,7 +8,7 @@ import { debounceTime, Subject } from 'rxjs';
   selector: 'd11r-input-list',
   templateUrl: './input-list.component.html',
   standalone: true,
-  imports:[CoreModule,NgFor]
+  imports: [CoreModule]
 })
 export class InputListComponent implements OnInit, OnDestroy {
   @Input()

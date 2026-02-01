@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { CommonModule } from '@angular/common';
+
 import {
   Component,
   EventEmitter,
@@ -48,7 +48,7 @@ import { EditorMode } from '../shared/stepper.model';
   styleUrls: ['../shared/mapping.style.css', './mapping-connector.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
-  imports: [ConnectorGridComponent, CommonModule]
+  imports: [ConnectorGridComponent]
 })
 export class MappingConnectorComponent implements OnInit, OnDestroy {
   @ViewChild(ConnectorGridComponent) connectorGrid!: ConnectorGridComponent;

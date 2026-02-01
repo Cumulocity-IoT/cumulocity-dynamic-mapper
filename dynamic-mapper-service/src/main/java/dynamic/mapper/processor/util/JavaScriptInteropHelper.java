@@ -11,12 +11,12 @@ import java.util.Map;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Value;
 
-import dynamic.mapper.processor.flow.CumulocityObject;
-import dynamic.mapper.processor.flow.CumulocityType;
-import dynamic.mapper.processor.flow.Destination;
-import dynamic.mapper.processor.flow.DeviceMessage;
-import dynamic.mapper.processor.flow.ExternalId;
-import dynamic.mapper.processor.flow.ExternalSource;
+import dynamic.mapper.processor.model.CumulocityObject;
+import dynamic.mapper.processor.model.CumulocityType;
+import dynamic.mapper.processor.model.Destination;
+import dynamic.mapper.processor.model.DeviceMessage;
+import dynamic.mapper.processor.model.ExternalId;
+import dynamic.mapper.processor.model.ExternalSource;
 import dynamic.mapper.processor.model.ProcessingContext;
 
 /**
@@ -123,6 +123,9 @@ public class JavaScriptInteropHelper {
         if (value.hasMember("payload")) {
             msg.setPayload(convertValueToJavaObject(value.getMember("payload")));
         }
+        if (value.hasMember("cumulocityType")) {
+            msg.setCumulocityType(CumulocityType.fromValue(value.getMember("cumulocityType").asString()));
+        }
         if (value.hasMember("topic")) {
             msg.setTopic(value.getMember("topic").asString());
         }
@@ -170,6 +173,11 @@ public class JavaScriptInteropHelper {
                 long timestamp = timeValue.asLong();
                 msg.setTime(Instant.ofEpochMilli(timestamp));
             }
+        }
+
+        // Handle action
+        if (value.hasMember("action")) {
+            msg.setAction(value.getMember("action").asString());
         }
 
         return msg;

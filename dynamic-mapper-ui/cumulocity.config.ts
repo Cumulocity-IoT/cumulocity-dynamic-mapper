@@ -1,28 +1,5 @@
-/*
- * Copyright (c) 2025 Cumulocity GmbH
- *
- * SPDX-License-Identifier: Apache-2.0
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * @authors Christof Strack
- */
-import { ConfigurationOptions } from '@c8y/devkit';
+import type { ConfigurationOptions } from '@c8y/devkit';
 import { author, description, version, license } from './package.json';
-
-// const asset = process.env['npm_config_asset'];
-// const isApp = asset == 'app' ? true : false;
-// console.log('Building asset:', asset, asset == 'app', isApp);
 
 export default {
   runTime: {
@@ -117,17 +94,21 @@ export default {
         from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Change_Metadata.png',
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_Change_Metadata.png'
       },
-            {
+      {
         from: '../resources/image/Dynamic_Mapper_Connector_New.png',
         to: 'image/Dynamic_Mapper_Connector_New.png'
       },
       {
-        from: '../LICENSE',
-        to: 'LICENSE.txt'
+        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Java_Extension.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Java_Extension.png'
       },
       {
-        from: './src/help',
-        to: 'help'
+        from: '../resources/image/Dynamic_Mapper_Configuration_ProcessorExtensionSource_Plugin_Installed.png',
+        to: 'image/Dynamic_Mapper_Configuration_ProcessorExtensionSource_Plugin_Installed.png'
+      },
+      {
+        from: '../LICENSE',
+        to: 'LICENSE.txt'
       },
     ],
     federation: [
@@ -140,11 +121,9 @@ export default {
       '@angular/platform-browser',
       '@angular/platform-browser-dynamic',
       '@angular/router',
-      '@angular/upgrade',
       '@c8y/client',
       '@c8y/ngx-components',
       'ngx-bootstrap',
-      'angular',
       '@ngx-translate/core',
       '@ngx-formly/core'
     ]

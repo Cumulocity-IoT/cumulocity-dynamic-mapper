@@ -117,12 +117,20 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       priority: 605,
       preventDuplicates: true
     }),
+    javaExtensionNode: new NavigatorNode({
+      parent: gettext('Transformation Types'),
+      icon: 'empty',
+      label: gettext('Java Extension'),
+      path: '/c8y-pkg-dynamic-mapper/landing/javaextension',
+      priority: 604,
+      preventDuplicates: true
+    }),
     codeTemplatesNode: new NavigatorNode({
       parent: gettext('Introduction'),
       icon: 'empty',
       label: gettext('Code Templates'),
       path: '/c8y-pkg-dynamic-mapper/landing/code-templates',
-      priority: 604,
+      priority: 603,
       preventDuplicates: true
     }),
     metadataNode: new NavigatorNode({
@@ -130,7 +138,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       icon: 'empty',
       label: gettext('Metadata'),
       path: '/c8y-pkg-dynamic-mapper/landing/metadata',
-      priority: 603,
+      priority: 602,
       preventDuplicates: true
     }),
     unknownPayloadNode: new NavigatorNode({
@@ -138,7 +146,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       icon: 'empty',
       label: gettext('Snooping'),
       path: '/c8y-pkg-dynamic-mapper/landing/unknown-payload',
-      priority: 602,
+      priority: 601,
       preventDuplicates: true
     }),
     reliabilitySettingsNode: new NavigatorNode({
@@ -146,7 +154,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       icon: 'empty',
       label: gettext('Reliability settings'),
       path: '/c8y-pkg-dynamic-mapper/landing/reliability-settings',
-      priority: 601,
+      priority: 600,
       preventDuplicates: true
     }),
     accessControlNode: new NavigatorNode({
@@ -154,7 +162,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       icon: 'empty',
       label: gettext('Managing permissions'),
       path: '/c8y-pkg-dynamic-mapper/landing/access-control',
-      priority: 600,
+      priority: 599,
       preventDuplicates: true
     }),
   } as const;

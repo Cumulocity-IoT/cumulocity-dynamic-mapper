@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { NgClass, NgIf } from '@angular/common';
+import { NgClass } from '@angular/common';
 import { Component } from '@angular/core';
 import { CellRendererContext } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
@@ -27,19 +27,21 @@ import { SnoopStatus } from '../../shared';
 @Component({
   selector: 'd11r-mapping-renderer-snooped',
   template: `
-    <div *ngIf="hasSnoopedTemplates">
-      <button
-        class="btn btn-link"
-        [title]="context.item.id"
-        (click)="exploreSnoopedTemplates()"
-        style="padding-top: 0px; padding-bottom: 10px;"
-      >
-        <span [ngClass]="{'animated flash infinite': context.value.snoopStatus === SnoopStatus.STARTED}" [style.animation-duration]="context.value.snoopStatus === SnoopStatus.STARTED ? '5s' : null">{{ snoopedTemplatesCount }}</span>
-      </button>
-    </div>
-  `,
+    @if (hasSnoopedTemplates) {
+      <div>
+        <button
+          class="btn btn-link"
+          [title]="context.item.id"
+          (click)="exploreSnoopedTemplates()"
+          style="padding-top: 0px; padding-bottom: 10px;"
+          >
+          <span [ngClass]="{'animated flash infinite': context.value.snoopStatus === SnoopStatus.STARTED}" [style.animation-duration]="context.value.snoopStatus === SnoopStatus.STARTED ? '5s' : null">{{ snoopedTemplatesCount }}</span>
+        </button>
+      </div>
+    }
+    `,
   standalone: true,
-  imports: [NgIf, NgClass]
+  imports: [NgClass]
 })
 export class SnoopedTemplateRendererComponent {
   constructor(

@@ -23,7 +23,7 @@
  * This module holds all the externally loaded processor extensions.
  * External processor extensions have to:
  * 1. implement the interface <code>ProcessorExtension<O></code>
- * 2. be registered in the properties file <code>/dynamic-mapper-extension/src/main/resources/extension-external.properties</code>
+ * 2. be registered in the properties file <code>/dynamic-mapper-extension/src/main/resources/extension-external.yaml</code>
  * 3. be developed/packed in the maven module <code>/dynamic-mapper-extension</code>. NOT in this maven module.
  * 4. be uploaded through the Web UI
  * <p>

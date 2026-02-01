@@ -33,12 +33,14 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Data
 @ToString()
+@NoArgsConstructor
 @AllArgsConstructor
 public class ConnectorSpecification implements Cloneable {
 
@@ -78,26 +80,38 @@ public class ConnectorSpecification implements Cloneable {
     public List<Direction> supportedDirections;
 
 	public boolean isPropertySensitive(String property) {
-		try {
-			ConnectorProperty propertyType = properties.get(property);
-			if (propertyType != null) {
-				return ConnectorPropertyType.SENSITIVE_STRING_PROPERTY == propertyType.type;
-			} else {
-				return false;
-			}
-		} catch (NullPointerException e) {
-			log.error("NullPointerException occurred: ({}: {})",
-					name,
-					connectorType, e);
+		if (properties == null || property == null) {
+			log.warn("{} - Cannot check property sensitivity: properties={}, property={}",
+					name, properties, property);
 			return false;
 		}
+
+		ConnectorProperty propertyType = properties.get(property);
+		if (propertyType == null || propertyType.type == null) {
+			return false;
+		}
+
+		return ConnectorPropertyType.SENSITIVE_STRING_PROPERTY == propertyType.type;
 	}
 
-	public Object clone() {
+	@Override
+	public ConnectorSpecification clone() {
 		try {
-			return super.clone();
+			ConnectorSpecification cloned = (ConnectorSpecification) super.clone();
+			// Deep clone mutable collections
+			if (this.properties != null) {
+				cloned.properties = new java.util.LinkedHashMap<>();
+				for (Map.Entry<String, ConnectorProperty> entry : this.properties.entrySet()) {
+					cloned.properties.put(entry.getKey(),
+							entry.getValue() != null ? entry.getValue().clone() : null);
+				}
+			}
+			if (this.supportedDirections != null) {
+				cloned.supportedDirections = new java.util.ArrayList<>(this.supportedDirections);
+			}
+			return cloned;
 		} catch (CloneNotSupportedException e) {
-			return null;
+			throw new AssertionError("Cloning failed for ConnectorSpecification", e);
 		}
 	}
 }

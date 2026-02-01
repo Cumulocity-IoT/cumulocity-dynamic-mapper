@@ -33,7 +33,7 @@ import {
 import { ConnectorGridComponent } from '../shared/connector-configuration/connector-grid.component';
 import { ActivatedRoute } from '@angular/router';
 import { gettext } from '@c8y/ngx-components/gettext';
-import { CommonModule } from '@angular/common';
+
 import { PopoverModule } from 'ngx-bootstrap/popover';
 
 @Component({
@@ -41,7 +41,7 @@ import { PopoverModule } from 'ngx-bootstrap/popover';
   styleUrls: ['./connector-configuration.component.style.css'],
   templateUrl: 'connector-configuration.component.html',
   standalone: true,
-  imports: [CoreModule, CommonModule, PopoverModule, ConnectorGridComponent]
+  imports: [CoreModule, PopoverModule, ConnectorGridComponent]
 })
 export class ConnectorConfigurationComponent {
   @ViewChild(ConnectorGridComponent) connectorGridComponent!: ConnectorGridComponent;

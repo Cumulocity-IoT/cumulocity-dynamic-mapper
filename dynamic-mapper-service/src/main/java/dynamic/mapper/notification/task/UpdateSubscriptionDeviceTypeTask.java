@@ -85,6 +85,11 @@ public class UpdateSubscriptionDeviceTypeTask implements Callable<SubscriptionUp
                     .getNotificationSubscriber()
                     .subscribeDeviceAndConnect(tenant, newMO, c8yMessage.getApi(), Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
 
+            // Pre-populate inventory cache for this device to ensure inventory filters work correctly
+            log.debug("{} - Pre-populating inventory cache for new device {} of type {}",
+                    tenant, deviceId, typeInfo.getType());
+            configurationRegistry.getC8yAgent().getMOFromInventoryCache(tenant, deviceId, false);
+
             log.info("{} - Successfully subscribed new device {} of type {}",
                     tenant, deviceId, typeInfo.getType());
 

@@ -57,6 +57,12 @@ import { DocNavigationFactory } from './doc-navigation.factory';
         feature: featureResolver
       }
     }),
+    hookRoute({
+      path: 'c8y-pkg-dynamic-mapper/landing/javaextension',
+      component: DocMainComponent, resolve: {
+        feature: featureResolver
+      }
+    }),
     // Section routes - all use the same component but different paths for proper navigation highlighting
     hookRoute({
       path: 'c8y-pkg-dynamic-mapper/landing/overview',

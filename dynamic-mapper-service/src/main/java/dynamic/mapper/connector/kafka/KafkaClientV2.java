@@ -24,10 +24,10 @@ package dynamic.mapper.connector.kafka;
 import com.cumulocity.sdk.client.SDKException;
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.configuration.ConnectorId;
-import dynamic.mapper.connector.core.ConnectorProperty;
-import dynamic.mapper.connector.core.ConnectorPropertyCondition;
+import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
 import dynamic.mapper.connector.core.ConnectorPropertyType;
 import dynamic.mapper.connector.core.ConnectorSpecification;
+import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
@@ -39,6 +39,7 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
+import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingResultWrapper;
 import lombok.Getter;
@@ -305,31 +306,39 @@ public class KafkaClientV2 extends AConnectorClient {
 
     @Override
     public void connect() {
-        log.info("{} - Connecting Kafka connector: {}", tenant, connectorName);
-
-        if (!shouldConnect()) {
-            log.info("{} - Connector disabled or invalid configuration", tenant);
+        if (!beginConnection()) {
             return;
         }
 
         try {
+            log.info("{} - Connecting Kafka connector: {}", tenant, connectorName);
+
+            if (!shouldConnect()) {
+                log.info("{} - Connector disabled or invalid configuration", tenant);
+                return;
+            }
+
             connectionStateManager.updateStatus(ConnectorStatus.CONNECTING, true, true);
 
             // Build properties
             buildKafkaProperties();
 
-            // Test connectivity with admin client
-            if (adminClient == null) {
-                adminClient = AdminClient.create(kafkaProducerProperties);
-            }
+            // Create and test connectivity with retry logic
+            retryOperation("Kafka connection", 3, 2000, () -> {
+                // Test connectivity with admin client
+                if (adminClient == null) {
+                    adminClient = AdminClient.create(kafkaProducerProperties);
+                }
 
-            log.info("{} - Testing Kafka connectivity...", tenant);
-            ListTopicsResult listTopics = adminClient.listTopics();
-            listTopics.names().get(10, TimeUnit.SECONDS);
-            log.info("{} - Kafka connectivity test passed", tenant);
+                log.info("{} - Testing Kafka connectivity...", tenant);
+                ListTopicsResult listTopics = adminClient.listTopics();
+                listTopics.names().get(10, TimeUnit.SECONDS);
+                log.info("{} - Kafka connectivity test passed", tenant);
 
-            // Create producer
-            kafkaProducer = new KafkaProducer<>(kafkaProducerProperties);
+                // Create producer
+                kafkaProducer = new KafkaProducer<>(kafkaProducerProperties);
+                return null;
+            });
 
             connectionStateManager.setConnected(true);
             connectionStateManager.updateStatus(ConnectorStatus.CONNECTED, true, true);
@@ -345,6 +354,8 @@ public class KafkaClientV2 extends AConnectorClient {
             log.error("{} - Error connecting Kafka connector: {}", tenant, e.getMessage(), e);
             connectionStateManager.updateStatusWithError(e);
             connectionStateManager.setConnected(false);
+        } finally {
+            endConnection();
         }
     }
 
@@ -626,49 +637,58 @@ public class KafkaClientV2 extends AConnectorClient {
 
     @Override
     public void disconnect() {
-        log.info("{} - Disconnecting Kafka connector", tenant);
-        connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTING, true, true);
-
-        // Stop consumer tasks
-        consumerTasks.values().forEach(task -> {
-            if (!task.isDone()) {
-                task.cancel(true);
-            }
-        });
-        consumerTasks.clear();
-
-        // Close consumers
-        topicConsumers.values().forEach(wrapper -> {
-            try {
-                wrapper.getConsumer().close(Duration.ofSeconds(10));
-            } catch (Exception e) {
-                log.warn("{} - Error closing Kafka consumer: {}", tenant, e.getMessage());
-            }
-        });
-        topicConsumers.clear();
-
-        // Close producer
-        if (kafkaProducer != null) {
-            try {
-                kafkaProducer.close(Duration.ofSeconds(10));
-            } catch (Exception e) {
-                log.warn("{} - Error closing Kafka producer: {}", tenant, e.getMessage());
-            }
+        if (!beginDisconnection()) {
+            return;
         }
 
-        // Close admin client
-        if (adminClient != null) {
-            try {
-                adminClient.close(Duration.ofSeconds(10));
-            } catch (Exception e) {
-                log.warn("{} - Error closing Kafka admin client: {}", tenant, e.getMessage());
+        try {
+            log.info("{} - Disconnecting Kafka connector", tenant);
+            connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTING, true, true);
+
+            // Stop consumer tasks
+            consumerTasks.values().forEach(task -> {
+                if (!task.isDone()) {
+                    task.cancel(true);
+                }
+            });
+            consumerTasks.clear();
+
+            // Close consumers
+            topicConsumers.values().forEach(wrapper -> {
+                try {
+                    wrapper.getConsumer().close(Duration.ofSeconds(10));
+                } catch (Exception e) {
+                    log.warn("{} - Error closing Kafka consumer: {}", tenant, e.getMessage());
+                }
+            });
+            topicConsumers.clear();
+
+            // Close producer
+            if (kafkaProducer != null) {
+                try {
+                    kafkaProducer.close(Duration.ofSeconds(10));
+                } catch (Exception e) {
+                    log.warn("{} - Error closing Kafka producer: {}", tenant, e.getMessage());
+                }
             }
+
+            // Close admin client
+            if (adminClient != null) {
+                try {
+                    adminClient.close(Duration.ofSeconds(10));
+                } catch (Exception e) {
+                    log.warn("{} - Error closing Kafka admin client: {}", tenant, e.getMessage());
+                }
+            }
+
+            connectionStateManager.setConnected(false);
+            connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTED, true, true);
+
+            log.info("{} - Kafka connector disconnected", tenant);
+
+        } finally {
+            endDisconnection();
         }
-
-        connectionStateManager.setConnected(false);
-        connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTED, true, true);
-
-        log.info("{} - Kafka connector disconnected", tenant);
     }
 
     @Override
@@ -677,8 +697,8 @@ public class KafkaClientV2 extends AConnectorClient {
     }
 
     @Override
-    public boolean isConnected() {
-        if (!connectionStateManager.isConnected() || kafkaProducer == null) {
+    protected boolean isPhysicallyConnected() {
+        if (kafkaProducer == null) {
             return false;
         }
 
@@ -704,31 +724,52 @@ public class KafkaClientV2 extends AConnectorClient {
             return;
         }
 
-        if (context.getCurrentRequest() == null ||
-                context.getCurrentRequest().getRequest() == null) {
-            log.warn("{} - No payload to publish for mapping: {}", tenant, context.getMapping().getName());
+        var requests = context.getRequests();
+        if (requests == null || requests.isEmpty()) {
+            log.warn("{} - No requests to publish for mapping: {}", tenant, context.getMapping().getName());
             return;
         }
 
-        String topic = context.getResolvedPublishTopic();
-        String payload = context.getCurrentRequest().getRequest();
         String key = context.getKey();
 
-        ProducerRecord<String, String> record = new ProducerRecord<>(topic, key, payload);
+        // Process each request
+        for (int i = 0; i < requests.size(); i++) {
+            DynamicMapperRequest request = requests.get(i);
 
-        try {
-            Future<RecordMetadata> future = kafkaProducer.send(record);
-            RecordMetadata metadata = future.get(10, TimeUnit.SECONDS);
-
-            if (context.getMapping().getDebug() || serviceConfiguration.getLogPayload()) {
-                log.info("{} - Published to Kafka topic: [{}], partition: {}, offset: {}, mapping: {}",
-                        tenant, topic, metadata.partition(), metadata.offset(), context.getMapping().getName());
+            if (request == null || request.getRequest() == null) {
+                log.warn("{} - Skipping null request or payload ({}/{})", tenant, i + 1, requests.size());
+                continue;
             }
 
-        } catch (Exception e) {
-            String errorMessage = String.format("%s - Error publishing to Kafka topic: [%s]", tenant, topic);
-            log.error(errorMessage, e);
-            context.addError(new ProcessingException(errorMessage, e));
+            String payload = request.getRequest();
+            // Use the publishTopic from the request, fallback to context if not set
+            String topic = request.getPublishTopic() != null ? request.getPublishTopic() : context.getResolvedPublishTopic();
+
+            if (topic == null || topic.isEmpty()) {
+                log.warn("{} - No topic specified for request ({}/{}), skipping", tenant, i + 1, requests.size());
+                request.setError(new Exception("No publish topic specified"));
+                continue;
+            }
+
+            ProducerRecord<String, String> record = new ProducerRecord<>(topic, key, payload);
+
+            try {
+                Future<RecordMetadata> future = kafkaProducer.send(record);
+                RecordMetadata metadata = future.get(10, TimeUnit.SECONDS);
+
+                if (context.getMapping().getDebug() || serviceConfiguration.getLogPayload()) {
+                    log.info("{} - Published to Kafka ({}/{}): topic=[{}], partition: {}, offset: {}, mapping: {}",
+                            tenant, i + 1, requests.size(), topic, metadata.partition(), metadata.offset(), context.getMapping().getName());
+                } else {
+                    log.debug("{} - Published to Kafka ({}/{}): topic=[{}]", tenant, i + 1, requests.size(), topic);
+                }
+
+            } catch (Exception e) {
+                String errorMessage = String.format("%s - Error publishing to Kafka topic: [%s] (%d/%d)", tenant, topic, i + 1, requests.size());
+                log.error(errorMessage, e);
+                request.setError(e);
+                context.addError(new ProcessingException(errorMessage, e));
+            }
         }
     }
 
@@ -833,80 +874,76 @@ public class KafkaClientV2 extends AConnectorClient {
      * Create Kafka connector specification
      */
     private ConnectorSpecification createConnectorSpecification() {
-        Map<String, ConnectorProperty> configProps = new LinkedHashMap<>();
+        // Create builder-based specification
+        ConnectorSpecificationBuilder builder = ConnectorSpecificationBuilder
+                .create("Kafka", ConnectorType.KAFKA)
+                .description("Connector to receive and send messages to an external Kafka broker. " +
+                        "Inbound mappings allow to extract values from the payload and the key and map these to the Cumulocity payload. " +
+                        "The relevant setting in a mapping is 'supportsMessageContext'.\n" +
+                        "In outbound mappings any string that is mapped to '_CONTEXT_DATA_.key' is used as the outbound Kafka record key.\n" +
+                        "The connector uses SASL_SSL as security protocol.")
+                .supportsMessageContext(true)
+                .supportedDirections(supportedDirections())
 
-        ConnectorPropertyCondition saslCondition = new ConnectorPropertyCondition("username", new String[] { "*" });
+                // Basic connection
+                .property("bootstrapServers", ConnectorPropertyBuilder.requiredString()
+                        .order(0))
 
-        configProps.put("bootstrapServers",
-                new ConnectorProperty(null, true, 0, ConnectorPropertyType.STRING_PROPERTY,
-                        false, false, null, null, null));
+                // SASL authentication (optional)
+                .property("username", ConnectorPropertyBuilder.optionalString()
+                        .order(1))
 
-        configProps.put("username",
-                new ConnectorProperty(null, false, 1, ConnectorPropertyType.STRING_PROPERTY,
-                        false, false, null, null, null));
+                .property("password", ConnectorPropertyBuilder.optionalSensitive()
+                        .order(2)
+                        .condition("username", "*"))
 
-        configProps.put("password",
-                new ConnectorProperty(null, false, 2, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY,
-                        false, false, null, null, saslCondition));
+                .property("saslMechanism", ConnectorPropertyBuilder.optionalOption()
+                        .order(3)
+                        .defaultValue("SCRAM-SHA-256")
+                        .options("SCRAM-SHA-256", "SCRAM-SHA-512")
+                        .condition("username", "*"))
 
-        configProps.put("saslMechanism",
-                new ConnectorProperty(null, false, 3, ConnectorPropertyType.OPTION_PROPERTY,
-                        false, false, "SCRAM-SHA-256",
-                        Map.of("SCRAM-SHA-256", "SCRAM-SHA-256", "SCRAM-SHA-512", "SCRAM-SHA-512"),
-                        saslCondition));
+                // Consumer group
+                .property("groupId", ConnectorPropertyBuilder.requiredString()
+                        .order(4))
 
-        configProps.put("groupId",
-                new ConnectorProperty(null, true, 4, ConnectorPropertyType.STRING_PROPERTY,
-                        false, false, null, null, null));
+                // Custom properties
+                .property("defaultPropertiesProducer", ConnectorPropertyBuilder.create(ConnectorPropertyType.MAP_PROPERTY)
+                        .order(5)
+                        .description("Producer properties")
+                        .required(false)
+                        .defaultValue(new HashMap<String, String>()))
 
-        configProps.put("defaultPropertiesProducer",
-                new ConnectorProperty("Producer properties", false, 5, ConnectorPropertyType.MAP_PROPERTY,
-                        false, false, new HashMap<String, String>(), null, null));
-
-        configProps.put("defaultPropertiesConsumer",
-                new ConnectorProperty("Consumer properties", false, 7, ConnectorPropertyType.MAP_PROPERTY,
-                        false, false, new HashMap<String, String>(), null, null));
+                .property("defaultPropertiesConsumer", ConnectorPropertyBuilder.create(ConnectorPropertyType.MAP_PROPERTY)
+                        .order(7)
+                        .description("Consumer properties")
+                        .required(false)
+                        .defaultValue(new HashMap<String, String>()));
 
         // Add predefined properties as read-only text
         try {
             StringWriter writerProducer = new StringWriter();
             defaultPropertiesProducer.store(writerProducer,
                     "properties can only be edited in the property file: kafka-producer.properties");
-            configProps.put("propertiesProducer",
-                    new ConnectorProperty("Predefined producer properties", false, 6,
-                            ConnectorPropertyType.STRING_LARGE_PROPERTY,
-                            true, false, removeDateCommentLine(writerProducer.getBuffer().toString()),
-                            null, null));
+            builder.property("propertiesProducer", ConnectorPropertyBuilder.largeText()
+                    .order(6)
+                    .description("Predefined producer properties")
+                    .readonly(true)
+                    .defaultValue(removeDateCommentLine(writerProducer.getBuffer().toString())));
 
             StringWriter writerConsumer = new StringWriter();
             defaultPropertiesConsumer.store(writerConsumer,
                     "properties can only be edited in the property file: kafka-consumer.properties");
-            configProps.put("propertiesConsumer",
-                    new ConnectorProperty("Predefined consumer properties", false, 8,
-                            ConnectorPropertyType.STRING_LARGE_PROPERTY,
-                            true, false, removeDateCommentLine(writerConsumer.getBuffer().toString()),
-                            null, null));
+            builder.property("propertiesConsumer", ConnectorPropertyBuilder.largeText()
+                    .order(8)
+                    .description("Predefined consumer properties")
+                    .readonly(true)
+                    .defaultValue(removeDateCommentLine(writerConsumer.getBuffer().toString())));
         } catch (IOException e) {
             log.warn("Could not create properties display: {}", e.getMessage());
         }
 
-        String name = "Kafka";
-        String description = "Connector to receive and send messages to an external Kafka broker. " +
-                "Inbound mappings allow to extract values from the payload and the key and map these to the Cumulocity payload. "
-                +
-                "The relevant setting in a mapping is 'supportsMessageContext'.\n" +
-                "In outbound mappings any string that is mapped to '_CONTEXT_DATA_.key' is used as the outbound Kafka record key.\n"
-                +
-                "The connector uses SASL_SSL as security protocol.";
-
-        return new ConnectorSpecification(
-                name,
-                description,
-                ConnectorType.KAFKA,
-                false,
-                configProps,
-                true,
-                supportedDirections());
+        return builder.build();
     }
 
 }

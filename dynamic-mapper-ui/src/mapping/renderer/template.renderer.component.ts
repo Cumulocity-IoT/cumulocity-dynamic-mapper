@@ -34,7 +34,7 @@ import { CellRendererContext, CommonModule } from '@c8y/ngx-components';
     >
   `,
   standalone: true,
-  imports: [CommonModule]
+  imports: []
 })
 export class TemplateRendererComponent {
   json: string;

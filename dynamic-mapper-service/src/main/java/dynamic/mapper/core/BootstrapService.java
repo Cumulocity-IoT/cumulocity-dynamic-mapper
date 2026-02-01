@@ -432,6 +432,7 @@ public class BootstrapService {
         testConnectorConfig.setName("Test Connector");
 
         TestClient initialTestClient = new TestClient();
+        initialTestClient.setTenant(tenant);
         initialTestClient.getConnectorSpecification().getProperties()
                 .forEach((key, prop) -> testConnectorConfig.getProperties().put(key, prop.defaultValue));
         initialTestClient.setConnectorConfiguration(testConnectorConfig);
@@ -445,6 +446,24 @@ public class BootstrapService {
 
         if (serviceConfiguration.getOutboundMappingEnabled()) {
             configurationRegistry.initializeOutboundMapping(tenant, serviceConfiguration, initialTestClient);
+        }
+    }
+
+    // deleteConnectorResources will delete connector-specific resources like Pulsar subscriptions
+    // This must be called before disconnecting the connector (while client is still in registry)
+    public void deleteConnectorResources(String tenant, String connectorIdentifier)
+            throws ConnectorRegistryException {
+        AConnectorClient client = connectorRegistry.getClientForTenant(tenant, connectorIdentifier);
+        if (client == null) {
+            log.warn("{} - Cannot delete resources for connector {}: client not found in registry (already disconnected)",
+                    tenant, connectorIdentifier);
+            return;
+        }
+
+        if (client instanceof dynamic.mapper.connector.pulsar.MQTTServicePulsarClient) {
+            dynamic.mapper.connector.pulsar.MQTTServicePulsarClient pulsarClient =
+                (dynamic.mapper.connector.pulsar.MQTTServicePulsarClient) client;
+            pulsarClient.deleteResources();
         }
     }
 

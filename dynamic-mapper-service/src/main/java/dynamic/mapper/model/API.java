@@ -27,24 +27,26 @@ import java.util.List;
 import java.util.Map;
 
 public enum API {
-    ALARM("ALARM", "source.id", "alarms"),
-    ALARM_WITH_CHILDREN("ALARM_WITH_CHILDREN", "source.id", "alarmsWithChildren"),
-    EVENT("EVENT", "source.id", "events"),
-    EVENT_WITH_CHILDREN("EVENT_WITH_CHILDREN", "source.id", "eventsWithChildren"),
-    MEASUREMENT("MEASUREMENT", "source.id", "measurements"),
-    INVENTORY("INVENTORY", "id", "managedobjects"),
-    OPERATION("OPERATION", "deviceId", "operations"),
-    EMPTY("NN", "nn", "nn"),
-    ALL("ALL", "*", "*");
+    ALARM("ALARM", "source.id", "alarms", "/alarm/alarms"),
+    ALARM_WITH_CHILDREN("ALARM_WITH_CHILDREN", "source.id", "alarmsWithChildren", "/alarm/alarms"),
+    EVENT("EVENT", "source.id", "events", "/event/events"),
+    EVENT_WITH_CHILDREN("EVENT_WITH_CHILDREN", "source.id", "eventsWithChildren", "/event/events"),
+    MEASUREMENT("MEASUREMENT", "source.id", "measurements", "/measurement/measurements"),
+    INVENTORY("INVENTORY", "id", "managedobjects", "/inventory/managedObjects"),
+    OPERATION("OPERATION", "deviceId", "operations", "/devicecontrol/operations"),
+    EMPTY("NN", "nn", "nn", ""),
+    ALL("ALL", "*", "*", "");
 
     public final String name;
     public final String identifier;
     public final String notificationFilter;
+    public final String path;
 
-    private API(String name, String identifier, String notificationFilter) {
+    private API(String name, String identifier, String notificationFilter, String path) {
         this.name = name;
         this.identifier = identifier;
         this.notificationFilter = notificationFilter;
+        this.path = path;
         this.aliases = Arrays.asList(name, identifier, notificationFilter);
     }
 

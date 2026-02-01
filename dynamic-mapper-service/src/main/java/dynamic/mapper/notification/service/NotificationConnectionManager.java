@@ -229,14 +229,48 @@ public class NotificationConnectionManager {
     }
 
     public void initializeConnectionsIfNeeded(String tenant) {
-        Integer status = deviceWSStatusCodes.get(tenant);
-        if (status == null || status != 200) {
-            try {
-                initializeStaticDeviceConnections(tenant);
-                initializeDynamicDeviceConnections(tenant);
-            } catch (URISyntaxException e) {
-                log.error("{} - Error initializing device connections: {}", tenant, e.getMessage());
+        try {
+            // Check if static device connections need initialization
+            boolean needStaticInit = false;
+            Map<String, CustomWebSocketClient> staticClientsForTenant = staticDeviceClients.get(tenant);
+            if (staticClientsForTenant == null || staticClientsForTenant.isEmpty()) {
+                needStaticInit = true;
+            } else {
+                // Check if any static client is connected
+                boolean hasConnectedStatic = staticClientsForTenant.values().stream()
+                        .anyMatch(client -> client != null && client.isOpen());
+                if (!hasConnectedStatic) {
+                    needStaticInit = true;
+                }
             }
+
+            // Check if dynamic device connections need initialization
+            boolean needDynamicInit = false;
+            Map<String, CustomWebSocketClient> dynamicClientsForTenant = dynamicDeviceClients.get(tenant);
+            if (dynamicClientsForTenant == null || dynamicClientsForTenant.isEmpty()) {
+                needDynamicInit = true;
+            } else {
+                // Check if any dynamic client is connected
+                boolean hasConnectedDynamic = dynamicClientsForTenant.values().stream()
+                        .anyMatch(client -> client != null && client.isOpen());
+                if (!hasConnectedDynamic) {
+                    needDynamicInit = true;
+                }
+            }
+
+            // Initialize only what's needed
+            if (needStaticInit) {
+                log.info("{} - Initializing static device connections", tenant);
+                initializeStaticDeviceConnections(tenant);
+            }
+
+            if (needDynamicInit) {
+                log.info("{} - Initializing dynamic device connections", tenant);
+                initializeDynamicDeviceConnections(tenant);
+            }
+
+        } catch (URISyntaxException e) {
+            log.error("{} - Error initializing device connections: {}", tenant, e.getMessage(), e);
         }
     }
 

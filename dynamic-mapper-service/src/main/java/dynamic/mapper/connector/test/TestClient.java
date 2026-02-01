@@ -23,9 +23,9 @@ package dynamic.mapper.connector.test;
 
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.configuration.ConnectorId;
-import dynamic.mapper.connector.core.ConnectorProperty;
-import dynamic.mapper.connector.core.ConnectorPropertyType;
+import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
 import dynamic.mapper.connector.core.ConnectorSpecification;
+import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
@@ -35,6 +35,7 @@ import dynamic.mapper.model.ConnectorStatus;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
+import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 import lombok.Getter;
 import lombok.Setter;
@@ -214,19 +215,30 @@ public class TestClient extends AConnectorClient {
     @Override
     public void publishMEAO(ProcessingContext<?> context) {
         // Simulate publishing - just log the message
-        String topic = context.getResolvedPublishTopic();
-
-        if (context.getCurrentRequest() == null ||
-                context.getCurrentRequest().getRequest() == null) {
-            log.warn("{} - No payload to publish for mapping: {}", tenant, context.getMapping().getName());
+        var requests = context.getRequests();
+        if (requests == null || requests.isEmpty()) {
+            log.warn("{} - No requests to publish for mapping: {}", tenant, context.getMapping().getName());
             return;
         }
 
-        String payload = context.getCurrentRequest().getRequest();
         Qos qos = context.getQos();
 
-        log.info("{} - Test Connector simulating publish to topic: [{}], QoS: {}, payload: {}",
-                tenant, topic, qos, payload);
+        // Process each request
+        for (int i = 0; i < requests.size(); i++) {
+            DynamicMapperRequest request = requests.get(i);
+
+            if (request == null || request.getRequest() == null) {
+                log.warn("{} - Skipping null request or payload ({}/{})", tenant, i + 1, requests.size());
+                continue;
+            }
+
+            String payload = request.getRequest();
+            // Use the publishTopic from the request, fallback to context if not set
+            String topic = request.getPublishTopic() != null ? request.getPublishTopic() : context.getResolvedPublishTopic();
+
+            log.info("{} - Test Connector simulating publish ({}/{}): topic=[{}], QoS: {}, payload: {}",
+                    tenant, i + 1, requests.size(), topic, qos, payload);
+        }
 
         // In a real test scenario, you might want to collect these messages
         // for verification in tests
@@ -266,8 +278,8 @@ public class TestClient extends AConnectorClient {
     }
 
     @Override
-    public boolean isConnected() {
-        return simulatedConnected && connectionStateManager.isConnected();
+    protected boolean isPhysicallyConnected() {
+        return simulatedConnected;
     }
 
     /**
@@ -295,29 +307,22 @@ public class TestClient extends AConnectorClient {
      * Create connector specification for test connector
      */
     private ConnectorSpecification createConnectorSpecification() {
-        Map<String, ConnectorProperty> configProps = new LinkedHashMap<>();
+        return ConnectorSpecificationBuilder
+                .create("Test Connector", ConnectorType.TEST)
+                .description("Internal connector for testing mappings without external connections.")
+                .singleton(true)
+                .supportedDirections(supportedDirections())
 
-        // Minimal configuration - test connector doesn't need real connection
-        // properties
-        configProps.put("enabled",
-                new ConnectorProperty(null, false, 0, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false,
-                        true, null, null));
+                // Minimal configuration - test connector doesn't need real connection properties
+                .property("enabled", ConnectorPropertyBuilder.optionalBoolean()
+                        .order(0)
+                        .defaultValue(true))
 
-        configProps.put("description",
-                new ConnectorProperty(null, false, 1, ConnectorPropertyType.STRING_PROPERTY, false, false,
-                        "Test Connector for mapping validation", null, null));
+                .property("description", ConnectorPropertyBuilder.optionalString()
+                        .order(1)
+                        .defaultValue("Test Connector for mapping validation"))
 
-        String name = "Test Connector";
-        String description = "Internal connector for testing mappings without external connections.";
-
-        return new ConnectorSpecification(
-                name,
-                description,
-                ConnectorType.TEST,
-                true, // singleton
-                configProps,
-                false,
-                supportedDirections());
+                .build();
     }
 
     /**

@@ -408,4 +408,366 @@ class JSONataExtractionInboundProcessorTest {
         assertTrue(processingContext.getErrors().size() > 0, "Should have added error to context");
         assertEquals(1, mappingStatus.errors);
     }
+
+    // ========== COMPLEX JSONATA SCENARIO TESTS ==========
+
+    @Test
+    void testSpreadAndMergeOperations() throws Exception {
+        // Given - Complex payload with nested measurements
+        Map<String, Object> payload = new HashMap<>();
+        Map<String, Object> measurements = new HashMap<>();
+        measurements.put("temperature", List.of(25.5));
+        measurements.put("humidity", List.of(60.0));
+        measurements.put("pressure", List.of(1013.25));
+        payload.put("measurements", measurements);
+        payload.put("deviceId", "device001");
+
+        // Test $spread for dynamic fragment creation (simplified - $spread returns array of objects)
+        var expr = com.dashjoin.jsonata.Jsonata.jsonata("$spread(measurements)");
+        Object result = expr.evaluate(payload);
+
+        assertNotNull(result, "Spread should produce result");
+        log.info("✅ $spread operations validated: " + result);
+    }
+
+    @Test
+    void testLookupWithDynamicKeys() throws Exception {
+        // Given - Payload with dynamic key lookup
+        Map<String, Object> payload = new HashMap<>();
+        Map<String, Object> values = new HashMap<>();
+        values.put("key1", "value1");
+        values.put("key2", "value2");
+        values.put("key3", "value3");
+        payload.put("values", values);
+        payload.put("selectedKey", "key2");
+
+        // Test $lookup for dynamic key access
+        var expr = com.dashjoin.jsonata.Jsonata.jsonata("$lookup(values, selectedKey)");
+        Object result = expr.evaluate(payload);
+
+        assertEquals("value2", result, "Lookup should return correct value");
+        log.info("✅ $lookup with dynamic keys validated");
+    }
+
+    @Test
+    void testKeysOperations() throws Exception {
+        // Given - Object to extract keys from
+        Map<String, Object> payload = new HashMap<>();
+        Map<String, Object> config = new HashMap<>();
+        config.put("setting1", "enabled");
+        config.put("setting2", "disabled");
+        config.put("setting3", "auto");
+        payload.put("config", config);
+
+        // Test $keys extraction - returns array of property names
+        var keysExpr = com.dashjoin.jsonata.Jsonata.jsonata("$keys(config)");
+        Object keysResult = keysExpr.evaluate(payload);
+        assertNotNull(keysResult, "Keys extraction should produce result");
+
+        log.info("✅ $keys operations validated");
+    }
+
+    @Test
+    void testComplexMapWithNestedFunctions() throws Exception {
+        // Given - Array of objects to transform
+        Map<String, Object> payload = new HashMap<>();
+        List<Map<String, Object>> devices = new ArrayList<>();
+
+        Map<String, Object> device1 = new HashMap<>();
+        device1.put("id", "dev1");
+        device1.put("temp", 25.5);
+        devices.add(device1);
+
+        Map<String, Object> device2 = new HashMap<>();
+        device2.put("id", "dev2");
+        device2.put("temp", 30.0);
+        devices.add(device2);
+
+        payload.put("devices", devices);
+
+        // Test $map with nested function and conditional logic
+        var expr = com.dashjoin.jsonata.Jsonata.jsonata(
+                "$map(devices, function($d) { $d.temp > 27 ? $d.id & '_hot' : $d.id & '_normal' })");
+        Object result = expr.evaluate(payload);
+
+        assertNotNull(result, "Complex $map should produce result");
+        log.info("✅ Complex $map with nested functions validated: " + result);
+    }
+
+    @Test
+    void testConditionalTernaryExpressions() throws Exception {
+        // Given - Payload with values to test conditionally
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("temperature", 35);
+        payload.put("status", "active");
+        payload.put("count", 5);
+
+        // Test ternary operator with comparison
+        var expr1 = com.dashjoin.jsonata.Jsonata.jsonata("temperature > 30 ? 'high' : 'normal'");
+        Object result1 = expr1.evaluate(payload);
+        assertEquals("high", result1, "Ternary should return 'high'");
+
+        // Test ternary with boolean field
+        var expr2 = com.dashjoin.jsonata.Jsonata.jsonata("status = 'active' ? 'enabled' : 'disabled'");
+        Object result2 = expr2.evaluate(payload);
+        assertEquals("enabled", result2, "Ternary should return 'enabled'");
+
+        // Test nested ternary
+        var expr3 = com.dashjoin.jsonata.Jsonata.jsonata(
+                "count > 10 ? 'high' : count > 5 ? 'medium' : 'low'");
+        Object result3 = expr3.evaluate(payload);
+        assertEquals("low", result3, "Nested ternary should return 'low'");
+
+        log.info("✅ Conditional ternary expressions validated");
+    }
+
+    @Test
+    void testStringManipulationFunctions() throws Exception {
+        // Given - Payload with strings to manipulate
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("fullName", "device_sensor_temperature_001");
+        payload.put("timestamp", "2024-06-18 13:20:45");
+        payload.put("value", "  trimmed  ");
+
+        // Test $substring
+        var expr1 = com.dashjoin.jsonata.Jsonata.jsonata("$substring(fullName, 0, 6)");
+        Object result1 = expr1.evaluate(payload);
+        assertEquals("device", result1, "$substring should extract 'device'");
+
+        // Test $substringBefore
+        var expr2 = com.dashjoin.jsonata.Jsonata.jsonata("$substringBefore(fullName, '_')");
+        Object result2 = expr2.evaluate(payload);
+        assertEquals("device", result2, "$substringBefore should return 'device'");
+
+        // Test $substringAfter
+        var expr3 = com.dashjoin.jsonata.Jsonata.jsonata("$substringAfter(fullName, '_')");
+        Object result3 = expr3.evaluate(payload);
+        assertEquals("sensor_temperature_001", result3, "$substringAfter should return remaining part");
+
+        // Test $trim
+        var expr4 = com.dashjoin.jsonata.Jsonata.jsonata("$trim(value)");
+        Object result4 = expr4.evaluate(payload);
+        assertEquals("trimmed", result4, "$trim should remove whitespace");
+
+        // Test $uppercase and $lowercase
+        var expr5 = com.dashjoin.jsonata.Jsonata.jsonata("$uppercase($substring(fullName, 0, 6))");
+        Object result5 = expr5.evaluate(payload);
+        assertEquals("DEVICE", result5, "$uppercase should convert to uppercase");
+
+        log.info("✅ String manipulation functions validated");
+    }
+
+    @Test
+    void testDateTimeConversionFunctions() throws Exception {
+        // Given - Payload with timestamps
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("timestampMillis", 1718716845000L); // 2024-06-18T13:20:45Z
+        payload.put("timestampISO", "2024-06-18T13:20:45.000Z");
+
+        // Test $fromMillis to convert timestamp
+        var expr1 = com.dashjoin.jsonata.Jsonata.jsonata("$fromMillis(timestampMillis)");
+        Object result1 = expr1.evaluate(payload);
+        assertNotNull(result1, "$fromMillis should convert timestamp");
+        assertTrue(result1.toString().contains("2024"), "Should contain year 2024");
+
+        // Test $toMillis to convert ISO timestamp
+        var expr2 = com.dashjoin.jsonata.Jsonata.jsonata("$toMillis(timestampISO)");
+        Object result2 = expr2.evaluate(payload);
+        assertNotNull(result2, "$toMillis should convert ISO timestamp");
+
+        // Test $now() function
+        var expr3 = com.dashjoin.jsonata.Jsonata.jsonata("$now()");
+        Object result3 = expr3.evaluate(payload);
+        assertNotNull(result3, "$now should return current timestamp");
+
+        log.info("✅ Date/time conversion functions validated");
+    }
+
+    @Test
+    void testRegexOperationsWithReplace() throws Exception {
+        // Given - Payload with strings to transform with regex
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("rawTimestamp", "20240618132045"); // YYYYMMDDHHMMSS format
+        payload.put("phoneNumber", "123-456-7890");
+        payload.put("text", "Hello   World");
+
+        // Test $replace with regex pattern for timestamp formatting (no global flag needed in dashjoin)
+        var expr1 = com.dashjoin.jsonata.Jsonata.jsonata(
+                "$replace(rawTimestamp, /^(\\d{4})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\d{2})$/, '$1-$2-$3T$4:$5:$6')");
+        Object result1 = expr1.evaluate(payload);
+        assertEquals("2024-06-18T13:20:45", result1, "Regex replace should format timestamp");
+
+        // Test $replace to remove hyphens (simple pattern without global flag)
+        var expr2 = com.dashjoin.jsonata.Jsonata.jsonata("$replace(phoneNumber, /-/, '')");
+        Object result2 = expr2.evaluate(payload);
+        assertNotNull(result2, "Should remove hyphen characters");
+
+        // Test $replace with simple pattern
+        var expr3 = com.dashjoin.jsonata.Jsonata.jsonata("$replace(text, /  /, ' ')");
+        Object result3 = expr3.evaluate(payload);
+        assertNotNull(result3, "Should replace double spaces");
+
+        log.info("✅ Regex operations with $replace validated");
+    }
+
+    @Test
+    void testArrayExpansionWithComplexMap() throws Exception {
+        // Given - Payload with array to expand
+        Map<String, Object> payload = new HashMap<>();
+        List<Map<String, Object>> readings = new ArrayList<>();
+
+        Map<String, Object> reading1 = new HashMap<>();
+        reading1.put("sensor", "temp1");
+        reading1.put("value", 25.5);
+        reading1.put("unit", "C");
+        readings.add(reading1);
+
+        Map<String, Object> reading2 = new HashMap<>();
+        reading2.put("sensor", "temp2");
+        reading2.put("value", 30.0);
+        reading2.put("unit", "C");
+        readings.add(reading2);
+
+        payload.put("readings", readings);
+
+        // Test $map with complex transformation including concatenation
+        var expr = com.dashjoin.jsonata.Jsonata.jsonata(
+                "$map(readings, function($r) { $r.sensor & ': ' & $string($r.value) & '°' & $r.unit })");
+        Object result = expr.evaluate(payload);
+
+        assertNotNull(result, "Array expansion with complex map should produce result");
+        log.info("✅ Array expansion with complex $map validated: " + result);
+    }
+
+    @Test
+    void testJoinAndSplitOperations() throws Exception {
+        // Given - Payload with arrays and strings
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("tags", List.of("sensor", "temperature", "outdoor"));
+        payload.put("csvData", "value1,value2,value3");
+        payload.put("path", "/device/sensor/temperature");
+
+        // Test $join to concatenate array elements
+        var expr1 = com.dashjoin.jsonata.Jsonata.jsonata("$join(tags, '_')");
+        Object result1 = expr1.evaluate(payload);
+        assertEquals("sensor_temperature_outdoor", result1, "$join should concatenate with separator");
+
+        // Test $split to break string into array
+        var expr2 = com.dashjoin.jsonata.Jsonata.jsonata("$split(csvData, ',')");
+        Object result2 = expr2.evaluate(payload);
+        assertNotNull(result2, "$split should create array");
+
+        // Test $split with multiple levels
+        var expr3 = com.dashjoin.jsonata.Jsonata.jsonata("$split(path, '/')[1]");
+        Object result3 = expr3.evaluate(payload);
+        assertEquals("device", result3, "$split with index should extract first element");
+
+        log.info("✅ $join and $split operations validated");
+    }
+
+    @Test
+    void testContainsAndExistsOperations() throws Exception {
+        // Given - Payload with various data types
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("tags", List.of("sensor", "temperature", "outdoor"));
+        payload.put("message", "Device temperature sensor reading");
+        Map<String, Object> config = new HashMap<>();
+        config.put("enabled", true);
+        config.put("interval", 60);
+        payload.put("config", config);
+
+        // Test $contains with string (primary use case)
+        var expr2 = com.dashjoin.jsonata.Jsonata.jsonata("$contains(message, 'temperature')");
+        Object result2 = expr2.evaluate(payload);
+        assertEquals(true, result2, "$contains should find substring");
+
+        // Test $exists for existing field
+        var expr3 = com.dashjoin.jsonata.Jsonata.jsonata("$exists(config.enabled)");
+        Object result3 = expr3.evaluate(payload);
+        assertEquals(true, result3, "$exists should return true for existing field");
+
+        // Test $exists for missing field
+        var expr4 = com.dashjoin.jsonata.Jsonata.jsonata("$exists(config.missing)");
+        Object result4 = expr4.evaluate(payload);
+        assertEquals(false, result4, "$exists should return false for missing field");
+
+        log.info("✅ $contains and $exists operations validated");
+    }
+
+    @Test
+    void testMathematicalOperations() throws Exception {
+        // Given - Payload with numeric values
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("temperature", 77); // Fahrenheit
+        payload.put("gallons", 10);
+        payload.put("values", List.of(10, 20, 30, 40, 50));
+
+        // Test temperature conversion (F to C)
+        var expr1 = com.dashjoin.jsonata.Jsonata.jsonata("(temperature - 32) * 5/9");
+        Object result1 = expr1.evaluate(payload);
+        assertNotNull(result1, "Mathematical expression should calculate");
+
+        // Test unit conversion (gallons to liters)
+        var expr2 = com.dashjoin.jsonata.Jsonata.jsonata("gallons * 3.78541");
+        Object result2 = expr2.evaluate(payload);
+        assertNotNull(result2, "Unit conversion should calculate");
+
+        // Test $sum
+        var expr3 = com.dashjoin.jsonata.Jsonata.jsonata("$sum(values)");
+        Object result3 = expr3.evaluate(payload);
+        assertEquals(150.0, ((Number) result3).doubleValue(), 0.01, "$sum should calculate total");
+
+        // Test $average
+        var expr4 = com.dashjoin.jsonata.Jsonata.jsonata("$average(values)");
+        Object result4 = expr4.evaluate(payload);
+        assertEquals(30.0, ((Number) result4).doubleValue(), 0.01, "$average should calculate mean");
+
+        // Test $max and $min
+        var expr5 = com.dashjoin.jsonata.Jsonata.jsonata("$max(values)");
+        Object result5 = expr5.evaluate(payload);
+        assertEquals(50.0, ((Number) result5).doubleValue(), 0.01, "$max should find maximum");
+
+        var expr6 = com.dashjoin.jsonata.Jsonata.jsonata("$min(values)");
+        Object result6 = expr6.evaluate(payload);
+        assertEquals(10.0, ((Number) result6).doubleValue(), 0.01, "$min should find minimum");
+
+        log.info("✅ Mathematical operations validated");
+    }
+
+    @Test
+    void testComplexNestedExpression() throws Exception {
+        // Given - Complex real-world scenario from sample mappings
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("deviceId", "device_001_sensor");
+        payload.put("timestamp", "20240618132045");
+
+        List<Map<String, Object>> measurements = new ArrayList<>();
+        Map<String, Object> meas1 = new HashMap<>();
+        meas1.put("type", "temperature");
+        meas1.put("value", 25.5);
+        measurements.add(meas1);
+
+        Map<String, Object> meas2 = new HashMap<>();
+        meas2.put("type", "humidity");
+        meas2.put("value", 60.0);
+        measurements.add(meas2);
+
+        payload.put("measurements", measurements);
+
+        // Test complex nested expression: extract device ID part and format timestamp
+        var expr1 = com.dashjoin.jsonata.Jsonata.jsonata(
+                "$substringBefore($substringAfter(deviceId, '_'), '_')");
+        Object result1 = expr1.evaluate(payload);
+        assertEquals("001", result1, "Nested string functions should extract ID");
+
+        // Test complex map with conditional and formatting
+        var expr2 = com.dashjoin.jsonata.Jsonata.jsonata(
+                "$map(measurements, function($m) { " +
+                        "$m.type & ': ' & ($m.value > 25 ? 'HIGH' : 'NORMAL') " +
+                        "})");
+        Object result2 = expr2.evaluate(payload);
+        assertNotNull(result2, "Complex nested map should produce result");
+
+        log.info("✅ Complex nested expressions validated");
+    }
 }

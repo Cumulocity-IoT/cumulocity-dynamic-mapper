@@ -31,12 +31,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.flow.DeviceMessage;
-import dynamic.mapper.processor.flow.ExternalId;
-import dynamic.mapper.processor.flow.ExternalSource;
+import dynamic.mapper.processor.model.DeviceMessage;
+import dynamic.mapper.processor.model.ExternalId;
+import dynamic.mapper.processor.model.ExternalSource;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.util.JavaScriptInteropHelper;
 import dynamic.mapper.service.MappingService;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -162,7 +161,7 @@ public class TestableFlowResultOutboundProcessor extends FlowResultOutboundProce
             Mapping mapping = context.getMapping();
 
             // Get external sources - handle both ExternalSource and ExternalId types
-            List<dynamic.mapper.processor.flow.ExternalId> externalIds = null;
+            List<ExternalId> externalIds = null;
 
             Object externalSourceObj = deviceMsg.getExternalSource();
 
@@ -177,26 +176,26 @@ public class TestableFlowResultOutboundProcessor extends FlowResultOutboundProce
                         externalIds = new ArrayList<>();
                         for (Object obj : sourceList) {
                             ExternalSource es = (ExternalSource) obj;
-                            dynamic.mapper.processor.flow.ExternalId externalId = new dynamic.mapper.processor.flow.ExternalId();
+                            ExternalId externalId = new ExternalId();
                             externalId.setType(es.getType());
                             externalId.setExternalId(es.getExternalId());
                             externalIds.add(externalId);
                         }
-                    } else if (first instanceof dynamic.mapper.processor.flow.ExternalId) {
+                    } else if (first instanceof ExternalId) {
                         // Already in correct format
-                        externalIds = (List<dynamic.mapper.processor.flow.ExternalId>) sourceList;
+                        externalIds = (List<ExternalId>) sourceList;
                     }
                 }
             } else if (externalSourceObj instanceof ExternalSource) {
                 // Single ExternalSource
                 ExternalSource es = (ExternalSource) externalSourceObj;
-                dynamic.mapper.processor.flow.ExternalId externalId = new dynamic.mapper.processor.flow.ExternalId();
+                ExternalId externalId = new ExternalId();
                 externalId.setType(es.getType());
                 externalId.setExternalId(es.getExternalId());
                 externalIds = List.of(externalId);
-            } else if (externalSourceObj instanceof dynamic.mapper.processor.flow.ExternalId) {
+            } else if (externalSourceObj instanceof ExternalId) {
                 // Single ExternalId
-                externalIds = List.of((dynamic.mapper.processor.flow.ExternalId) externalSourceObj);
+                externalIds = List.of((ExternalId) externalSourceObj);
             }
 
             if (externalIds == null || externalIds.isEmpty()) {
@@ -205,7 +204,7 @@ public class TestableFlowResultOutboundProcessor extends FlowResultOutboundProce
             }
 
             // Use first external source ONLY
-            dynamic.mapper.processor.flow.ExternalId primarySource = externalIds.get(0);
+            ExternalId primarySource = externalIds.get(0);
 
             log.debug("Processing single external source: type={}, externalId={}",
                     primarySource.getType(), primarySource.getExternalId());

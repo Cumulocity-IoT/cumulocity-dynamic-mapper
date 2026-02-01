@@ -85,7 +85,7 @@ The mapper supports the following connectors:
           <td class="text-center"><strong>X</strong><br></td>
           <td>JSON, Hex</td>
         </tr>
-        <tr>
+        <!-- <tr>
           <td><strong>Cumulocity MQTT Service ( deprecated ) </strong><small class="text-muted">(tenant
               isolation, only one instance per tenant exists)</small></td>
           <td class="text-center"><strong>X</strong></td>
@@ -93,7 +93,7 @@ The mapper supports the following connectors:
           <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong><br></td>
           <td>JSON, Hex, Protobuf, Extension</td>
-        </tr>
+        </tr> -->
         <tr>
           <td><strong>Cumulocity MQTT Service </strong><small class="text-muted">(device
               isolation, only one instance per tenant exists)</small></td>

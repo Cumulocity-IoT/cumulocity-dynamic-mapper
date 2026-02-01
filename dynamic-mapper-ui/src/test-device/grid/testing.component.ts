@@ -40,7 +40,7 @@ import { Feature } from '../../shared';
   templateUrl: 'testing.component.html',
   styleUrls: ['../../mapping/shared/mapping.style.css'],
   standalone: true,
-  imports: [CoreModule, CommonModule]
+  imports: [CoreModule]
 })
 export class TestingComponent implements OnInit {
   constructor(private service: TestingDeviceService,

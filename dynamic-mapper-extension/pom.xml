@@ -46,6 +46,12 @@
                 <artifactId>dynamic-mapper-service</artifactId>
                 <version>${revision}</version>
             </dependency>
+            <dependency>
+                <groupId>com.cumulocity.mapping</groupId>
+                <artifactId>dynamic-mapper-service</artifactId>
+                <classifier>classes</classifier>
+                <version>${revision}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -58,6 +64,7 @@
         <dependency>
             <groupId>com.cumulocity.mapping</groupId>
             <artifactId>dynamic-mapper-service</artifactId>
+            <classifier>classes</classifier>
             <scope>compile</scope>
         </dependency>
         <dependency>
@@ -98,34 +105,13 @@
                     <target>${java.version}</target>
                     <parameters>true</parameters>
                     <proc>full</proc>
-                    <!-- <annotationProcessorPaths>
+                    <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
                             <version>${lombok.version}</version>
                         </path>
-                    </annotationProcessorPaths> -->
-                </configuration>
-            </plugin>
-            <plugin>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>single</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <archive>
-                        <manifest>
-                            <addClasspath>true</addClasspath>
-                        </manifest>
-                    </archive>
-                    <descriptorRefs>
-                        <descriptorRef>jar-with-dependencies</descriptorRef>
-                    </descriptorRefs>
+                    </annotationProcessorPaths>
                 </configuration>
             </plugin>
             <plugin>

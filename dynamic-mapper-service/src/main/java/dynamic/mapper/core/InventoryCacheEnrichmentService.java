@@ -34,7 +34,7 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.core.cache.InventoryCache;
-import dynamic.mapper.processor.flow.ExternalId;
+import dynamic.mapper.processor.model.ExternalId;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j

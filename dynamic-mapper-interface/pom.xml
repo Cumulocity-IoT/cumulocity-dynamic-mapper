@@ -114,6 +114,10 @@
 			<groupId>org.springframework.ai</groupId>
 			<artifactId>spring-ai-starter-mcp-server-webmvc</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>com.rabbitmq</groupId>
+			<artifactId>amqp-client</artifactId>
+		</dependency>
 
 		<!-- <dependency>
 			<groupId>org.apache.pulsar</groupId>
@@ -245,14 +249,16 @@
 						<include>dynamic/mapper/model/*</include>
 						<include>dynamic/mapper/processor/model/*</include>
 						<include>dynamic/mapper/processor/model/ProcessingContext.*</include>
-						<include>dynamic/mapper/processor/extension/ProcessorExtensionSource.*</include>
-						<include>dynamic/mapper/processor/extension/ProcessorExtensionTarget.*</include>
+						<include>dynamic/mapper/processor/extension/InboundExtension.*</include>
+						<include>dynamic/mapper/processor/extension/OutboundExtension.*</include>
+						<include>dynamic/mapper/processor/extension/ProcessorExtensionInbound.*</include>
 						<include>dynamic/mapper/processor/inbound/BasePayloadProcessorInbound.*</include>
 						<include>dynamic/mapper/core/C8YAgent.*</include>
 						<include>dynamic/mapper/core/InventoryEnrichmentClient.*</include>
 						<include>dynamic/mapper/core/IdentityResolver.*</include>
 						<include>dynamic/mapper/processor/extension/ProcessorExtensionOutbound.*</include>
 						<include>dynamic/mapper/processor/ProcessingException.*</include>
+						<include>dynamic/mapper/processor/util/ProcessingResultHelper.*</include>
 						<include>dynamic/mapper/configuration/ServiceConfiguration.*</include>
 					</includes>
 				</configuration>

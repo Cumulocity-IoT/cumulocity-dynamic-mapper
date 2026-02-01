@@ -19,22 +19,20 @@
  */
 import { CommonModule } from '@angular/common';
 import { HttpStatusCode } from '@angular/common/http';
-import { Component, OnInit, ViewEncapsulation } from '@angular/core';
+import { Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AlertService, CoreModule } from '@c8y/ngx-components';
-import { EditorComponent, loadMonacoEditor } from '@c8y/ngx-components/editor';
+import { EditorComponent } from '@c8y/ngx-components/editor';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { BehaviorSubject } from 'rxjs';
 import { base64ToString, stringToBase64 } from '../../mapping/shared/util';
-import { createCompletionProviderSubstitutionAsCode } from '../../mapping/shared/stepper.model';
 import { Direction, Feature, ManageTemplateComponent, Operation, createCustomUuid } from '../../shared';
 import { SharedService } from '../../shared/service/shared.service';
 import { CodeTemplate, CodeTemplateMap, TemplateType } from '../shared/configuration.model';
-
-let initializedMonaco = false;
+import { createCompletionProviderFlowFunction, createCompletionProviderSubstitutionAsCode } from '../../mapping/shared/stepper.model';
 
 @Component({
   selector: 'd11r-shared-code',
@@ -45,6 +43,8 @@ let initializedMonaco = false;
   imports: [CoreModule, CommonModule, PopoverModule, EditorComponent, FormsModule]
 })
 export class CodeComponent implements OnInit {
+  @ViewChild(EditorComponent, { static: false }) codeEditor: EditorComponent;
+
   codeTemplateDecoded: CodeTemplate;
   codeTemplatesDecoded: Map<string, CodeTemplate> = new Map<string, CodeTemplate>();
   codeTemplates: CodeTemplateMap;
@@ -62,6 +62,7 @@ export class CodeComponent implements OnInit {
     language: 'javascript',
   };
   feature: Feature;
+  private completionProviderDisposable: any;
 
 
   codeEditorHelp = `Shared code is evaluated across all mappings that utilize  <b>Smart Function JavaScript</b> or <b>Substitutions as JavaScript</b> for creating substitutions. The templates <b>Inbound</b> and <b>Outbound</b> are available in the code editor and can be customized according to your requirements per mapping.`;
@@ -132,13 +133,62 @@ export class CodeComponent implements OnInit {
     this.updateCodeTemplateEntries();
   }
 
-  async ngAfterViewInit(): Promise<void> {
-    if (!initializedMonaco) {
-      const monaco = await loadMonacoEditor();
-      monaco.languages.registerCompletionItemProvider('javascript', createCompletionProviderSubstitutionAsCode(monaco));
-      if (monaco) {
-        initializedMonaco = true;
-      }
+  ngAfterViewInit(): void {
+    this.registerCompletionProvider();
+  }
+
+  private registerCompletionProvider(): void {
+    if (!this.codeEditor || !this.codeEditor.editor) {
+      return;
+    }
+
+    const monaco = (window as any).monaco;
+    if (!monaco) {
+      console.warn('Monaco editor not available');
+      return;
+    }
+
+    // Dispose previous provider if exists
+    if (this.completionProviderDisposable) {
+      this.completionProviderDisposable.dispose();
+    }
+
+    // Determine which completion provider to register based on template type
+    let completionProvider: any;
+
+    if (this.templateType === TemplateType.INBOUND_SMART_FUNCTION ||
+        this.templateType === TemplateType.OUTBOUND_SMART_FUNCTION) {
+      // Register Flow Function completion provider (SMART_FUNCTION)
+      completionProvider = createCompletionProviderFlowFunction(monaco);
+    } else if (this.templateType === TemplateType.INBOUND_SUBSTITUTION_AS_CODE ||
+               this.templateType === TemplateType.OUTBOUND_SUBSTITUTION_AS_CODE) {
+      // Register Substitution as Code completion provider
+      completionProvider = createCompletionProviderSubstitutionAsCode(monaco);
+    } else {
+      // For SHARED and SYSTEM templates, register both providers
+      const smartFunctionProvider = createCompletionProviderFlowFunction(monaco);
+      const substitutionProvider = createCompletionProviderSubstitutionAsCode(monaco);
+
+      // Register both providers
+      const disposable1 = monaco.languages.registerCompletionItemProvider('javascript', smartFunctionProvider);
+      const disposable2 = monaco.languages.registerCompletionItemProvider('javascript', substitutionProvider);
+
+      // Store combined disposable
+      this.completionProviderDisposable = {
+        dispose: () => {
+          disposable1.dispose();
+          disposable2.dispose();
+        }
+      };
+      return;
+    }
+
+    // Register single provider
+    if (completionProvider) {
+      this.completionProviderDisposable = monaco.languages.registerCompletionItemProvider(
+        'javascript',
+        completionProvider
+      );
     }
   }
 

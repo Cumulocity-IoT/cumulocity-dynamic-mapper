@@ -25,9 +25,12 @@
     <include resource="org/springframework/boot/logging/logback/console-appender.xml" />
 
     <logger name="com.cumulocity.microservice.security.filter.provider.SpringSecurityContextProvider" level="ERROR" />
+    <logger name="org.apache.pulsar.client" level="ERROR" />
 
-    <appender name="OpenTelemetry" class="io.opentelemetry.instrumentation.logback.appender.v1_0.OpenTelemetryAppender">
+    <appender name="OpenTelemetry"
+              class="io.opentelemetry.instrumentation.logback.appender.v1_0.OpenTelemetryAppender">
     </appender>
+
     <root level="INFO">
         <appender-ref ref="CONSOLE" />
         <appender-ref ref="OpenTelemetry"/>

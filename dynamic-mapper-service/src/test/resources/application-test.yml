@@ -1,0 +1,71 @@
+# Test configuration for transformation validation tests
+# This provides minimal configuration needed to start Spring Boot context for testing
+
+# Cumulocity Configuration (mocked values for testing)
+C8Y:
+  baseURL: http://localhost:8080
+  bootstrap:
+    tenant: test_tenant
+    user: test_user
+    password: test_password
+  mqtt:
+    enabled: false
+
+# Application Configuration
+application:
+  name: dynamic-mapper-test
+  timezone: UTC
+  logPayload: false
+  logSubstitution: false
+
+# Connector Configuration
+connector:
+  mqtt:
+    enabled: false
+    host: localhost
+    port: 1883
+  kafka:
+    enabled: false
+  pulsar:
+    enabled: false
+
+# Spring Boot Configuration
+spring:
+  application:
+    name: dynamic-mapper-test
+
+  # Disable auto-configuration for external dependencies
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+      - org.springframework.ai.autoconfigure.mcp.server.webmvc.McpServerWebMvcAutoConfiguration
+
+  # Main configuration
+  main:
+    banner-mode: off
+    allow-bean-definition-overriding: true
+    lazy-initialization: true
+
+  # Web configuration
+  web:
+    resources:
+      add-mappings: false
+
+# Logging Configuration
+logging:
+  level:
+    root: WARN
+    dynamic.mapper: INFO
+    org.springframework: WARN
+    org.apache.camel: WARN
+    com.cumulocity: WARN
+
+# Server Configuration
+server:
+  port: 0  # Random port for testing
+
+# Management/Actuator
+management:
+  endpoints:
+    enabled-by-default: false

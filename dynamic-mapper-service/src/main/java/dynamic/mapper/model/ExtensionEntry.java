@@ -23,8 +23,8 @@ package dynamic.mapper.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
-import dynamic.mapper.processor.extension.ProcessorExtensionSource;
-import dynamic.mapper.processor.extension.ProcessorExtensionTarget;
+import dynamic.mapper.processor.extension.ProcessorExtensionInbound;
+import dynamic.mapper.processor.extension.ProcessorExtensionOutbound;
 
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
@@ -45,10 +45,14 @@ public class ExtensionEntry implements Serializable {
     
     @NotNull
     private String fqnClassName;
-    
+
+    private String description;
+
+    private String version;
+
     @NotNull
     private Boolean loaded;
-    
+
     @NotNull
     private String message;
 
@@ -56,13 +60,25 @@ public class ExtensionEntry implements Serializable {
     private ExtensionType extensionType;
 
     @NotNull
-    @JsonIgnore
     @Builder.Default
-    private ProcessorExtensionSource<?> extensionImplSource = null;
-    
+    private Direction direction = Direction.UNSPECIFIED;
+
+    /**
+     * Complete inbound processing extension (ProcessorExtensionInbound).
+     * For complete processing with C8YAgent access.
+     */
     @NotNull
     @JsonIgnore
     @Builder.Default
-    private ProcessorExtensionTarget<?> extensionImplTarget = null;
-    
+    private ProcessorExtensionInbound<?> extensionImplInbound = null;
+
+    /**
+     * Complete outbound processing extension (ProcessorExtensionOutbound).
+     * For complete processing with request preparation.
+     */
+    @NotNull
+    @JsonIgnore
+    @Builder.Default
+    private ProcessorExtensionOutbound<?> extensionImplOutbound = null;
+
 }

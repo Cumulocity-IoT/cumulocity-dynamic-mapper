@@ -587,8 +587,8 @@ class MQTT3ClientTest {
                 TEST_SUBSCRIPTION_ID,
                 TEST_TENANT);
 
-        // Test via reflection since adjustQos is private
-        java.lang.reflect.Method method = MQTT3Client.class.getDeclaredMethod("adjustQos", Qos.class);
+        // Test via reflection since adjustQos is protected in AMQTTClient base class
+        java.lang.reflect.Method method = AMQTTClient.class.getDeclaredMethod("adjustQos", Qos.class);
         method.setAccessible(true);
 
         // When & Then - Test null QoS
@@ -717,11 +717,14 @@ class MQTT3ClientTest {
 
         DynamicMapperRequest request = new DynamicMapperRequest();
         request.setRequest("{\"test\": \"data\"}");
+        request.setPublishTopic("test/topic");
 
         Mapping mapping = new Mapping();
         mapping.setIdentifier("test-mapping");
         mapping.setDebug(false);
 
+        // Mock getRequests() to return a list with the request
+        when(context.getRequests()).thenReturn(java.util.Arrays.asList(request));
         when(context.getCurrentRequest()).thenReturn(request);
         when(context.getResolvedPublishTopic()).thenReturn("test/topic");
         when(context.getQos()).thenReturn(Qos.AT_LEAST_ONCE);

@@ -127,14 +127,14 @@ export class ExtensionService {
   }
 
   async deleteProcessorExtension(app: IManagedObject): Promise<void> {
-    if (!app?.name) {
+    if (!app?.['name']) {
       throw new Error('Invalid extension: missing name');
     }
 
     try {
-      await this.deleteExtensionFromBackend(app.name);
+      await this.deleteExtensionFromBackend(app['name']);
     } catch (error) {
-      console.error(`Failed to delete extension ${app.name}:`, error);
+      console.error(`Failed to delete extension ${app['name']}:`, error);
       throw error;
     }
   }
@@ -186,7 +186,7 @@ export class ExtensionService {
     backend: Map<string, Extension>
   ): IManagedObject[] {
     return inventory.map((ext) => {
-      if (!ext?.name) {
+      if (!ext?.['name']) {
         console.warn('Extension missing name:', ext);
         return {
           ...ext,
@@ -194,7 +194,7 @@ export class ExtensionService {
         };
       }
 
-      const backendExt = backend.get(ext.name);
+      const backendExt = backend.get(ext['name']);
 
       if (backendExt?.loaded) {
         return {

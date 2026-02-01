@@ -17,11 +17,11 @@
  *
  * @authors Christof Strack
  */
-import { CommonModule } from '@angular/common';
+
 import { HttpStatusCode } from '@angular/common/http';
 import { ChangeDetectorRef, Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { AlertService, CellRendererContext, CoreModule } from '@c8y/ngx-components';
-import { Direction, Feature, SharedService } from '../../shared';
+import { Direction, Feature, SharedService, TransformationType } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { SubscriptionService } from '../core/subscription.service';
 
@@ -48,7 +48,7 @@ import { SubscriptionService } from '../core/subscription.service';
     </div>
   `,
   standalone: true,
-  imports: [CoreModule, CommonModule]
+  imports: [CoreModule]
 })
 export class MappingStatusActivationRendererComponent implements OnInit {
   feature: Feature;
@@ -110,6 +110,8 @@ export class MappingStatusActivationRendererComponent implements OnInit {
       active: newActive
     });
 
+     this.handleDeprecation(mapping);
+
     if (response.status !== HttpStatusCode.Created) {
       await this.handleActivationFailure(response);
     } else {
@@ -117,6 +119,15 @@ export class MappingStatusActivationRendererComponent implements OnInit {
     }
 
     await this.refreshAllMappings();
+  }
+
+  handleDeprecation(mapping: any) {
+    if (mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE) {
+      this.alertService.warning(
+        "This mapping uses 'Substitution as JavaScript' which is deprecated since release 6.1.5 and will be removed in a future release. " +
+        "Please migrate to 'Smart Functions' for continued support. Smart Functions provide a more intuitive approach by focusing on the target payload rather than substitution objects."
+      );
+    }
   }
 
   private async validateSubscriptionOutbound(): Promise<boolean> {

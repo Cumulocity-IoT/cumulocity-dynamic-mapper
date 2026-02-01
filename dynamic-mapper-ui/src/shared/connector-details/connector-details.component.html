@@ -1,23 +1,23 @@
 <!--
-  ~ Copyright (c) 2022-2025 Cumulocity GmbH.
-  ~
-  ~ SPDX-License-Identifier: Apache-2.0
-  ~
-  ~  Licensed under the Apache License, Version 2.0 (the "License");
-  ~  you may not use this file except in compliance with the License.
-  ~  You may obtain a copy of the License at
-  ~
-  ~       http://www.apache.org/licenses/LICENSE-2.0
-  ~
-  ~  Unless required by applicable law or agreed to in writing, software
-  ~  distributed under the License is distributed on an "AS IS" BASIS,
-  ~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  ~  See the License for the specific language governing permissions and
-  ~  limitations under the License.
-  ~
-  ~  @authors Christof Strack, Stefan Witschel
-  ~
-  -->
+~ Copyright (c) 2022-2025 Cumulocity GmbH.
+~
+~ SPDX-License-Identifier: Apache-2.0
+~
+~  Licensed under the Apache License, Version 2.0 (the "License");
+~  you may not use this file except in compliance with the License.
+~  You may obtain a copy of the License at
+~
+~       http://www.apache.org/licenses/LICENSE-2.0
+~
+~  Unless required by applicable law or agreed to in writing, software
+~  distributed under the License is distributed on an "AS IS" BASIS,
+~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+~  See the License for the specific language governing permissions and
+~  limitations under the License.
+~
+~  @authors Christof Strack, Stefan Witschel
+~
+-->
 <c8y-title>{{ configuration?.name }}</c8y-title>
 <c8y-breadcrumb>
   <c8y-breadcrumb-item [icon]="'cog'" [label]="'Configuration' | translate"
@@ -58,65 +58,69 @@
               <input type="checkbox" [checked]="configuration?.enabled" (change)="onConfigurationToggle()"
                 [disabled]="!feature?.userHasMappingAdminRole" />
               <span></span>Enabled / Disabled</label>
-          </c8y-form-group>
+            </c8y-form-group>
+          </div>
+        </div>
+        <div class="card-footer separator">
+          <button class="btn btn-primary" title="{{ 'Update connector' | translate }}" (click)="onConfigurationUpdate()"
+            [disabled]="configuration?.enabled || !feature?.userHasMappingAdminRole">
+            <i c8yIcon="pencil"></i>
+            {{ 'Update connector' | translate }}
+          </button>
+          <button class="btn btn-primary" title="{{ 'View connector' | translate }}" (click)="onConfigurationUpdate()"
+            [disabled]="!configuration?.enabled">
+            <i c8yIcon="eye"></i>
+            {{ 'View connector' | translate }}
+          </button>
         </div>
       </div>
-      <div class="card-footer separator">
-        <button class="btn btn-primary" title="{{ 'Update connector' | translate }}" (click)="onConfigurationUpdate()"
-          [disabled]="configuration?.enabled || !feature?.userHasMappingAdminRole">
-          <i c8yIcon="pencil"></i>
-          {{ 'Update connector' | translate }}
-        </button>
-        <button class="btn btn-primary" title="{{ 'View connector' | translate }}" (click)="onConfigurationUpdate()"
-          [disabled]="!configuration?.enabled">
-          <i c8yIcon="eye"></i>
-          {{ 'View connector' | translate }}
-        </button>
+    </div>
+    <div class="p-l-24 p-r-24 p-b-24 separator-bottom" style="position: relative; z-index: 1;">
+      <div class="card-header separator">
+        <p class="card-title">Connector logs</p>
       </div>
-    </div>
-  </div>
-  <div class="p-l-24 p-r-24 p-b-24 separator-bottom" style="position: relative; z-index: 1;">
-    <div class="card-header separator">
-      <p class="card-title">Connector logs</p>
-    </div>
-    <div class="card-block">
-      <div class="_p-24" style="display: flex; flex-direction: column; max-height: 60vh; position: relative;">
-        <div class="c8y-list__item c8y-list--timeline m-b-8"
-          style="background: var(--c8y-page-sticky-header-background-default)!important; flex-shrink: 0;">
-          <div class="d-flex">
-            <div class="c8y-list__item__block flex-grow">
-              <div class="c8y-list__item__body">
-                <div class="d-flex">
-                  <div class="col-md-1">Date</div>
-                  <div class="col-md-1">Status</div>
-                  <div class="col-md-8">Message</div>
+      <div class="card-block">
+        <div class="_p-24" style="display: flex; flex-direction: column; max-height: 60vh; position: relative;">
+          <div class="c8y-list__item c8y-list--timeline m-b-8"
+            style="background: var(--c8y-page-sticky-header-background-default)!important; flex-shrink: 0;">
+            <div class="d-flex">
+              <div class="c8y-list__item__block flex-grow">
+                <div class="c8y-list__item__body">
+                  <div class="d-flex">
+                    <div class="col-md-1">Date</div>
+                    <div class="col-md-1">Status</div>
+                    <div class="col-md-8">Message</div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-        <c8y-list-group class="inner-scroll m-r-8 p-b-8"
-          style="flex: 1; overflow-y: auto; min-height: 0; position: relative; z-index: 0;">
-          <c8y-li-timeline *ngFor="let event of statusLogs$ | async">
-            {{ event.date | date: 'dd.MM.yy hh:mm:ss' }}
-            <c8y-li>
-              <c8y-li-body>
-                <div class="d-flex">
-                  <div class="col-md-1">
-                    <div class="label label-primary">
-                      {{ event.status ? event.status : '-' }}
+          <c8y-list-group class="inner-scroll m-r-8 p-b-8"
+            style="flex: 1; overflow-y: auto; min-height: 0; position: relative; z-index: 0;">
+            @for (event of statusLogs$ | async; track event) {
+              <c8y-li-timeline>
+                {{ event.date | date: 'dd.MM.yy hh:mm:ss' }}
+                <c8y-li>
+                  <c8y-li-body>
+                    <div class="d-flex">
+                      <div class="col-md-1">
+                        <div class="label label-primary">
+                          {{ event.status ? event.status : '-' }}
+                        </div>
+                      </div>
+                      <div class="col-md-9">
+                        <div>{{ event.message ? event.message : '-' }}</div>
+                      </div>
                     </div>
-                  </div>
-                  <div class="col-md-9">
-                    <div>{{ event.message ? event.message : '-' }}</div>
-                  </div>
-                </div>
-              </c8y-li-body>
-            </c8y-li>
-          </c8y-li-timeline>
-          <c8y-ui-empty-state *ngIf="(statusLogs$ | async)?.length === 0" [icon]="'logs'"
-            [title]="'No logs entries for this connectors.'" [horizontal]="true"></c8y-ui-empty-state>
-        </c8y-list-group>
+                  </c8y-li-body>
+                </c8y-li>
+              </c8y-li-timeline>
+            }
+            @if ((statusLogs$ | async)?.length === 0) {
+              <c8y-ui-empty-state [icon]="'logs'"
+              [title]="'No logs entries for this connectors.'" [horizontal]="true"></c8y-ui-empty-state>
+            }
+          </c8y-list-group>
+        </div>
       </div>
     </div>
-  </div>

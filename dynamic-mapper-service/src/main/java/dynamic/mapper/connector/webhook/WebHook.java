@@ -27,14 +27,16 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.configuration.ConnectorId;
 import dynamic.mapper.connector.core.ConnectorProperty;
-import dynamic.mapper.connector.core.ConnectorPropertyCondition;
+import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
 import dynamic.mapper.connector.core.ConnectorPropertyType;
 import dynamic.mapper.connector.core.ConnectorSpecification;
+import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.model.API;
 import dynamic.mapper.model.ConnectorStatus;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
@@ -43,6 +45,7 @@ import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.util.APITopicUtil;
 import jakarta.ws.rs.NotSupportedException;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -294,7 +297,7 @@ public class WebHook extends AConnectorClient {
         String healthEndpoint = (String) connectorConfiguration.getProperties()
                 .getOrDefault("baseUrlHealthEndpoint", null);
 
-        log.info("{} - Checking health of webHook endpoint: {}", tenant, healthEndpoint);
+        log.debug("{} - Checking health of webHook endpoint: {}", tenant, healthEndpoint);
 
         return webhookClient.get()
                 .uri(healthEndpoint)
@@ -354,55 +357,143 @@ public class WebHook extends AConnectorClient {
     }
 
     @Override
-    public boolean isConnected() {
-        return connectionStateManager.isConnected();
-    }
-
-    @Override
     public void publishMEAO(ProcessingContext<?> context) {
         if (webhookClient == null) {
             log.error("{} - WebClient is not initialized", tenant);
             return;
         }
 
-        DynamicMapperRequest currentRequest = context.getCurrentRequest();
-
-        if (context.getCurrentRequest() == null ||
-                context.getCurrentRequest().getRequest() == null) {
-            log.warn("{} - No payload to publish for mapping: {}", tenant, context.getMapping().getName());
+        var requests = context.getRequests();
+        if (requests == null || requests.isEmpty()) {
+            log.warn("{} - No requests to publish for mapping: {}", tenant, context.getMapping().getName());
             return;
         }
 
-        String payload = currentRequest.getRequest();
-        String contextPath = context.getResolvedPublishTopic();
-        RequestMethod method = currentRequest.getMethod();
+        Boolean cumulocityInternal = (Boolean) connectorConfiguration.getProperties()
+                .getOrDefault("cumulocityInternal", false);
 
-        // Build full path
-        String fullPath = buildFullPath(contextPath);
+        // Process each request
+        for (int i = 0; i < requests.size(); i++) {
+            DynamicMapperRequest request = requests.get(i);
 
-        log.debug("{} - Publishing to path: {}, method: {}", tenant, fullPath, method);
+            log.info("{} - 🔍 Processing request ({}/{}): method={}, api={}, hasRequest={}, hasRequestCumulocity={}",
+                    tenant, i + 1, requests.size(),
+                    request != null ? request.getMethod() : "null",
+                    request != null && request.getApi() != null ? request.getApi().name : "null",
+                    request != null && request.getRequest() != null,
+                    request != null && request.getRequestCumulocity() != null);
 
-        try {
-            Mono<ResponseEntity<String>> responseEntity = executeHttpRequest(method, fullPath, payload);
-
-            ResponseEntity<String> response = responseEntity.block();
-
-            if (response != null && response.getStatusCode().is2xxSuccessful()) {
-                if (context.getMapping().getDebug() || serviceConfiguration.getLogPayload()) {
-                    log.info("{} - Published message successfully: path: {}, method: {}, mapping: {}",
-                            tenant, fullPath, method, context.getMapping().getName());
-                }
-            } else {
-                String error = String.format("Failed to publish: status %s",
-                        response != null ? response.getStatusCode() : "unknown");
-                log.error("{} - {}", tenant, error);
-                context.addError(new ProcessingException(error));
+            if (request == null || request.getRequest() == null) {
+                log.warn("{} - Skipping null request or payload ({}/{})", tenant, i + 1, requests.size());
+                continue;
             }
 
-        } catch (Exception e) {
-            String error = String.format("Error publishing to %s: %s", fullPath, e.getMessage());
-            log.error("{} - {}", tenant, error, e);
-            context.addError(new ProcessingException(error, e));
+            String payload = request.getRequest();
+            String contextPath;
+            RequestMethod method = request.getMethod();
+            API derivedAPI = request.getApi();
+
+            // For cumulocityInternal, we need to determine the API endpoint
+            if (cumulocityInternal) {
+                // Check if API is already set (from FlowResultOutboundProcessor)
+                if (derivedAPI == null) {
+                    // Fallback: Try to derive API from publishTopic if not already set
+                    String publishTopic = request.getPublishTopic() != null ? request.getPublishTopic() : context.getResolvedPublishTopic();
+                    if (publishTopic != null && !publishTopic.isEmpty()) {
+                        derivedAPI = APITopicUtil.deriveAPIFromTopic(publishTopic);
+                        if (derivedAPI != null) {
+                            request.setApi(derivedAPI);
+                            log.info("{} - Topic '{}' -> API {} ({}/{})",
+                                    tenant, publishTopic, derivedAPI.name, i + 1, requests.size());
+                        } else {
+                            log.warn("{} - Cannot derive API type from topic '{}' and no API set for cumulocityInternal connector ({}/{}), skipping",
+                                    tenant, publishTopic, i + 1, requests.size());
+                            request.setError(new Exception("Cannot derive API type from topic: " + publishTopic));
+                            continue;
+                        }
+                    } else {
+                        log.warn("{} - No publishTopic available and no API set for cumulocityInternal connector ({}/{}), skipping",
+                                tenant, i + 1, requests.size());
+                        request.setError(new Exception("No publishTopic available and no API set for cumulocityInternal connector"));
+                        continue;
+                    }
+                } else {
+                    log.debug("{} - Using pre-set API {} for cumulocityInternal connector ({}/{})",
+                            tenant, derivedAPI.name, i + 1, requests.size());
+                }
+
+                // For Cumulocity internal, use the pre-populated requestCumulocity if available
+                if (request.getRequestCumulocity() != null && !request.getRequestCumulocity().isEmpty()) {
+                    payload = request.getRequestCumulocity();
+                    log.debug("{} - Using requestCumulocity for internal API call ({}/{})",
+                            tenant, i + 1, requests.size());
+                }
+
+                // Use the pathCumulocity field for Cumulocity REST endpoint
+                // This field is set by FlowResultOutboundProcessor with proper ID handling
+                if (request.getPathCumulocity() != null && !request.getPathCumulocity().isEmpty()) {
+                    contextPath = request.getPathCumulocity();
+                    log.debug("{} - Using pathCumulocity: {} ({}/{})",
+                            tenant, contextPath, i + 1, requests.size());
+                } else {
+                    // Fallback to API base path if pathCumulocity is not set
+                    contextPath = derivedAPI.path;
+                    log.debug("{} - Using API base path as fallback: {} ({}/{})",
+                            tenant, contextPath, i + 1, requests.size());
+                }
+
+                // Default method to POST if not set
+                if (method == null) {
+                    method = RequestMethod.POST;
+                }
+            } else {
+                // For external webhooks, use publishTopic as the path
+                contextPath = request.getPublishTopic() != null ? request.getPublishTopic() : context.getResolvedPublishTopic();
+            }
+
+            if (contextPath == null || contextPath.isEmpty()) {
+                log.warn("{} - No path specified for request ({}/{}), skipping", tenant, i + 1, requests.size());
+                request.setError(new Exception("No publish path specified"));
+                continue;
+            }
+
+            // Build full path
+            String fullPath = buildFullPath(contextPath);
+
+            log.debug("{} - Publishing ({}/{}): path={}, method={}, API={}",
+                    tenant, i + 1, requests.size(), fullPath, method, request.getApi());
+
+            try {
+                Mono<ResponseEntity<String>> responseEntity = executeHttpRequest(method, fullPath, payload, context);
+
+                ResponseEntity<String> response = responseEntity.block();
+
+                if (response != null && response.getStatusCode().is2xxSuccessful()) {
+                    // Always log success with method info to verify correct build is deployed
+                    log.info("{} - ✅ Published successfully ({}/{}): method={}, status={}, API={}, path={}",
+                            tenant, i + 1, requests.size(), method, response.getStatusCode(),
+                            request.getApi() != null ? request.getApi().name : "EXTERNAL", fullPath);
+
+                    if (context.getMapping().getDebug() || context.getServiceConfiguration().getLogPayload()) {
+                        log.info("{} - Request details ({}/{}): mapping={}, payload={}",
+                                tenant, i + 1, requests.size(), context.getMapping().getName(), payload);
+                    }
+                    log.debug("{} - Response body ({}/{}): {}", tenant, i + 1, requests.size(),
+                            response.getBody() != null ? response.getBody() : "<empty>");
+                } else {
+                    String error = String.format("Failed to publish (%d/%d): status %s",
+                            i + 1, requests.size(), response != null ? response.getStatusCode() : "unknown");
+                    log.error("{} - {} - Payload: {}", tenant, error, payload);
+                    request.setError(new Exception(error));
+                    context.addError(new ProcessingException(error));
+                }
+
+            } catch (Exception e) {
+                String error = String.format("Error publishing to %s (%d/%d): %s", fullPath, i + 1, requests.size(), e.getMessage());
+                log.error("{} - {} - Payload: {}", tenant, error, payload, e);
+                request.setError(e);
+                context.addError(new ProcessingException(error, e));
+            }
         }
     }
 
@@ -419,14 +510,14 @@ public class WebHook extends AConnectorClient {
     /**
      * Execute HTTP request based on method
      */
-    private Mono<ResponseEntity<String>> executeHttpRequest(RequestMethod method, String path, String payload) {
+    private Mono<ResponseEntity<String>> executeHttpRequest(RequestMethod method, String path, String payload, ProcessingContext<?> context) {
         switch (method) {
             case PUT:
                 return executePut(path, payload);
             case DELETE:
                 return executeDelete(path);
             case PATCH:
-                return executePatch(path, payload);
+                return executePatch(path, payload, context);
             default:
                 return executePost(path, payload);
         }
@@ -475,13 +566,13 @@ public class WebHook extends AConnectorClient {
     /**
      * Execute PATCH request
      */
-    private Mono<ResponseEntity<String>> executePatch(String path, String payload) {
+    private Mono<ResponseEntity<String>> executePatch(String path, String payload, ProcessingContext<?> context) {
         Boolean cumulocityInternal = (Boolean) connectorConfiguration.getProperties()
                 .getOrDefault("cumulocityInternal", false);
 
         if (cumulocityInternal) {
             // For Cumulocity internal, do GET + merge + PUT
-            return patchObject(path, payload);
+            return patchObject(path, payload, context);
         } else {
             // For external, do direct PATCH
             return webhookClient.patch()
@@ -498,7 +589,17 @@ public class WebHook extends AConnectorClient {
     /**
      * Handle PATCH for Cumulocity internal (GET + merge + PUT)
      */
-    public Mono<ResponseEntity<String>> patchObject(String path, String payload) {
+    public Mono<ResponseEntity<String>> patchObject(String path, String payload, ProcessingContext<?> context) {
+        // Get logging flags from context
+        final boolean enableDetailedLogging = context != null &&
+                (context.getMapping().getDebug() || context.getServiceConfiguration().getLogPayload());
+
+        log.info("{} - PATCH: Starting GET+merge+PUT for path: {}", tenant, path);
+
+        if (enableDetailedLogging) {
+            log.info("{} - PATCH: Update payload: {}", tenant, payload);
+        }
+
         return webhookClient.get()
                 .uri(path)
                 .retrieve()
@@ -507,7 +608,15 @@ public class WebHook extends AConnectorClient {
                 .toEntity(String.class)
                 .flatMap(existingResponse -> {
                     try {
-                        String mergedPayload = mergeJsonObjects(existingResponse.getBody(), payload);
+                        if (enableDetailedLogging) {
+                            log.info("{} - PATCH: Existing object retrieved: {}", tenant, existingResponse.getBody());
+                        }
+
+                        String mergedPayload = mergeJsonObjects(existingResponse.getBody(), payload, context);
+
+                        if (enableDetailedLogging) {
+                            log.info("{} - PATCH: Merged payload for PUT: {}", tenant, mergedPayload);
+                        }
 
                         return webhookClient.put()
                                 .uri(path)
@@ -518,6 +627,7 @@ public class WebHook extends AConnectorClient {
                                 .onStatus(HttpStatusCode::is5xxServerError, this::handleServerError)
                                 .toEntity(String.class);
                     } catch (IOException e) {
+                        log.error("{} - PATCH: Error merging JSON: {}", tenant, e.getMessage(), e);
                         return Mono.error(new ProcessingException("Error merging JSON: " + e.getMessage(), e));
                     }
                 });
@@ -526,26 +636,34 @@ public class WebHook extends AConnectorClient {
     /**
      * Merge JSON objects for PATCH operation
      */
-    public String mergeJsonObjects(String existingJson, String newJson) throws IOException {
+    public String mergeJsonObjects(String existingJson, String newJson, ProcessingContext<?> context) throws IOException {
         JsonNode existingNode = objectMapper.readTree(existingJson);
         JsonNode newNode = objectMapper.readTree(newJson);
-        JsonNode mergedNode = mergeNodes(existingNode, newNode);
+        JsonNode mergedNode = mergeNodes(existingNode, newNode, context);
         return objectMapper.writeValueAsString(mergedNode);
     }
 
     /**
      * Merge JSON nodes (top-level merge)
      */
-    public JsonNode mergeNodes(JsonNode existingNode, JsonNode updateNode) {
+    public JsonNode mergeNodes(JsonNode existingNode, JsonNode updateNode, ProcessingContext<?> context) {
         ObjectNode result = objectMapper.createObjectNode();
 
-        Iterator<String> fieldNames = updateNode.fieldNames();
-        while (fieldNames.hasNext()) {
-            String fieldName = fieldNames.next();
+        // First, copy all existing fields
+        Iterator<String> existingFieldNames = existingNode.fieldNames();
+        while (existingFieldNames.hasNext()) {
+            String fieldName = existingFieldNames.next();
+            result.set(fieldName, existingNode.get(fieldName));
+        }
+
+        // Then, update/add fields from updateNode
+        Iterator<String> updateFieldNames = updateNode.fieldNames();
+        while (updateFieldNames.hasNext()) {
+            String fieldName = updateFieldNames.next();
             JsonNode fieldValue = updateNode.get(fieldName);
 
-            if (existingNode.has(fieldName)) {
-                JsonNode existingValue = existingNode.get(fieldName);
+            if (result.has(fieldName)) {
+                JsonNode existingValue = result.get(fieldName);
 
                 if (existingValue.isObject() && fieldValue.isObject()) {
                     result.set(fieldName, deepMergeObjects(existingValue, fieldValue));
@@ -557,7 +675,51 @@ public class WebHook extends AConnectorClient {
             }
         }
 
+        // Remove read-only fields that Cumulocity rejects in PUT requests
+        removeReadOnlyFields(result, context);
+
         return result;
+    }
+
+    /**
+     * Remove read-only system fields from a JSON node before sending to Cumulocity.
+     * These fields are returned in GET responses but cannot be updated via PUT.
+     */
+    private void removeReadOnlyFields(ObjectNode node, ProcessingContext<?> context) {
+        // List of read-only fields that Cumulocity rejects in PUT requests
+        String[] readOnlyFields = {
+            "self",
+            "id",
+            "lastUpdated",
+            "creationTime",
+            "owner",
+            "childDevices",
+            "childAssets",
+            "childAdditions",
+            "deviceParents",
+            "assetParents",
+            "additionParents"
+        };
+
+        List<String> removedFields = new ArrayList<>();
+        for (String field : readOnlyFields) {
+            if (node.has(field)) {
+                node.remove(field);
+                removedFields.add(field);
+            }
+        }
+
+        if (!removedFields.isEmpty()) {
+            // Get logging flags from context
+            boolean enableDetailedLogging = context != null &&
+                    (context.getMapping().getDebug() || context.getServiceConfiguration().getLogPayload());
+
+            if (enableDetailedLogging) {
+                log.info("{} - PATCH: Removed read-only fields from merged object: {}", tenant, removedFields);
+            } else {
+                log.debug("{} - PATCH: Removed {} read-only fields from merged object", tenant, removedFields.size());
+            }
+        }
     }
 
     /**
@@ -703,81 +865,73 @@ public class WebHook extends AConnectorClient {
      * Create WebHook connector specification
      */
     private ConnectorSpecification createConnectorSpecification() {
-        Map<String, ConnectorProperty> configProps = new LinkedHashMap<>();
+        return ConnectorSpecificationBuilder
+                .create("Webhook", ConnectorType.WEB_HOOK)
+                .description("Webhook to send outbound messages to the configured REST endpoint as POST in JSON format. " +
+                        "The publishTopic is appended to the REST endpoint. " +
+                        "In case the endpoint does not end with a trailing / and the publishTopic does not start with a / it is automatically added. " +
+                        "The health endpoint is tested with a GET request. " +
+                        "Supports POST, PUT, PATCH, and DELETE methods.")
+                .supportsMessageContext(true)
+                .supportedDirections(supportedDirections())
 
-        ConnectorPropertyCondition basicAuthCondition = new ConnectorPropertyCondition(
-                "authentication", new String[] { "Basic" });
-        ConnectorPropertyCondition bearerAuthCondition = new ConnectorPropertyCondition(
-                "authentication", new String[] { "Bearer" });
-        ConnectorPropertyCondition cumulocityInternalCondition = new ConnectorPropertyCondition(
-                "cumulocityInternal", new String[] { "false" });
+                // Cumulocity internal mode toggle
+                .property("cumulocityInternal", ConnectorPropertyBuilder.optionalBoolean()
+                        .order(7)
+                        .description("When checked the webHook connector can automatically connect to the Cumulocity instance the mapper is deployed to.")
+                        .defaultValue(false))
 
-        configProps.put("baseUrl",
-                new ConnectorProperty(null, true, 0, ConnectorPropertyType.STRING_PROPERTY,
-                        false, false, null, null, cumulocityInternalCondition));
+                // External URL configuration (only when not using internal mode)
+                .property("baseUrl", ConnectorPropertyBuilder.requiredString()
+                        .order(0)
+                        .condition("cumulocityInternal", "false"))
 
-        configProps.put("authentication",
-                new ConnectorProperty(null, false, 1, ConnectorPropertyType.OPTION_PROPERTY,
-                        false, false, null,
-                        Map.of("Basic", "Basic", "Bearer", "Bearer"),
-                        cumulocityInternalCondition));
+                .property("authentication", ConnectorPropertyBuilder.optionalOption()
+                        .order(1)
+                        .options("Basic", "Bearer")
+                        .condition("cumulocityInternal", "false"))
 
-        configProps.put("user",
-                new ConnectorProperty(null, false, 2, ConnectorPropertyType.STRING_PROPERTY,
-                        false, false, null, null, basicAuthCondition));
+                .property("user", ConnectorPropertyBuilder.optionalString()
+                        .order(2)
+                        .condition("authentication", "Basic"))
 
-        configProps.put("password",
-                new ConnectorProperty(null, false, 3, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY,
-                        false, false, null, null, basicAuthCondition));
+                .property("password", ConnectorPropertyBuilder.optionalSensitive()
+                        .order(3)
+                        .condition("authentication", "Basic"))
 
-        configProps.put("token",
-                new ConnectorProperty(null, false, 4, ConnectorPropertyType.STRING_PROPERTY,
-                        false, false, null, null, bearerAuthCondition));
+                .property("token", ConnectorPropertyBuilder.optionalString()
+                        .order(4)
+                        .condition("authentication", "Bearer"))
 
-        configProps.put("headerAccept",
-                new ConnectorProperty(null, false, 5, ConnectorPropertyType.STRING_PROPERTY,
-                        false, false, "application/json", null, cumulocityInternalCondition));
+                .property("headerAccept", ConnectorPropertyBuilder.optionalString()
+                        .order(5)
+                        .defaultValue("application/json")
+                        .condition("cumulocityInternal", "false"))
 
-        configProps.put("baseUrlHealthEndpoint",
-                new ConnectorProperty("health endpoint for GET request", false, 6,
-                        ConnectorPropertyType.STRING_PROPERTY, false, false, null, null,
-                        cumulocityInternalCondition));
+                .property("baseUrlHealthEndpoint", ConnectorPropertyBuilder.optionalString()
+                        .order(6)
+                        .description("health endpoint for GET request")
+                        .condition("cumulocityInternal", "false"))
 
-        configProps.put("cumulocityInternal",
-                new ConnectorProperty(
-                        "When checked the webHook connector can automatically connect to the Cumulocity instance the mapper is deployed to.",
-                        false, 7, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, false, null, null));
+                .property("headers", ConnectorPropertyBuilder.create(ConnectorPropertyType.MAP_PROPERTY)
+                        .order(8)
+                        .description("Define additional headers")
+                        .required(false)
+                        .defaultValue(new HashMap<String, String>())
+                        .condition("cumulocityInternal", "false"))
 
-        configProps.put("headers",
-                new ConnectorProperty("Define additional headers", false, 8,
-                        ConnectorPropertyType.MAP_PROPERTY, false, false,
-                        new HashMap<String, String>(), null, cumulocityInternalCondition));
+                // Wildcard support (read-only)
+                .property("supportsWildcardInTopicInbound", ConnectorPropertyBuilder.optionalBoolean()
+                        .order(9)
+                        .readonly(true)
+                        .defaultValue(false))
 
-        configProps.put("supportsWildcardInTopicInbound",
-                new ConnectorProperty(null, false, 9, ConnectorPropertyType.BOOLEAN_PROPERTY,
-                        true, false, false, null, null));
+                .property("supportsWildcardInTopicOutbound", ConnectorPropertyBuilder.optionalBoolean()
+                        .order(10)
+                        .readonly(true)
+                        .defaultValue(true))
 
-        configProps.put("supportsWildcardInTopicOutbound",
-                new ConnectorProperty(null, false, 10, ConnectorPropertyType.BOOLEAN_PROPERTY,
-                        true, false, true, null, null));
-
-        String name = "Webhook";
-        String description = "Webhook to send outbound messages to the configured REST endpoint as POST in JSON format. "
-                +
-                "The publishTopic is appended to the REST endpoint. " +
-                "In case the endpoint does not end with a trailing / and the publishTopic does not start with a / it is automatically added. "
-                +
-                "The health endpoint is tested with a GET request. " +
-                "Supports POST, PUT, PATCH, and DELETE methods.";
-
-        return new ConnectorSpecification(
-                name,
-                description,
-                ConnectorType.WEB_HOOK,
-                false,
-                configProps,
-                true,
-                supportedDirections());
+                .build();
     }
 
 }

@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 import java.util.Map;
@@ -33,6 +34,7 @@ import jakarta.validation.constraints.NotNull;
 
 @Data
 @ToString()
+@NoArgsConstructor
 @AllArgsConstructor
 public class ConnectorProperty implements Cloneable {
 
@@ -72,11 +74,20 @@ public class ConnectorProperty implements Cloneable {
     @JsonSetter(nulls = Nulls.SKIP)
     public ConnectorPropertyCondition condition;
 
-    public Object clone() {
+    @Override
+    public ConnectorProperty clone() {
         try {
-            return super.clone();
+            ConnectorProperty cloned = (ConnectorProperty) super.clone();
+            // Deep clone mutable collections
+            if (this.options != null) {
+                cloned.options = new java.util.HashMap<>(this.options);
+            }
+            if (this.condition != null) {
+                cloned.condition = this.condition.clone();
+            }
+            return cloned;
         } catch (CloneNotSupportedException e) {
-            return null;
+            throw new AssertionError("Cloning failed for ConnectorProperty", e);
         }
     }
 }

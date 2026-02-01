@@ -31,7 +31,6 @@ import {
   BuiltInActionType,
   BulkActionControl,
   Column,
-  ColumnDataType,
   CoreModule,
   DataGridComponent,
   DisplayOptions,
@@ -137,7 +136,6 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
       header: 'Device ID',
       path: 'id',
       filterable: false,
-      dataType: ColumnDataType.TextShort,
       visible: true
     },
     {

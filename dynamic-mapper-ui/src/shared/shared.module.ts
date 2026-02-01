@@ -29,6 +29,7 @@ import { Base64DecodePipe } from './misc/base64-decode.pipe';
 import { CamelCasePipe } from './misc/camel-case.pipe';
 import { CustomFieldInput } from './component/formly/input.type.component';
 import { CodeExplorerComponent } from './component/code-explorer/code-explorer-modal.component';
+import { WrapperCustomFormField } from './component/formly/custom-form-field-wrapper.component';
 
 @NgModule({
   imports: [
@@ -73,6 +74,12 @@ import { CodeExplorerComponent } from './component/code-explorer/code-explorer-m
           {
             name: 'd11r-input-list',
             component: InputListFormlyComponent // You'll need to create this wrapper component
+          }
+        ],
+        wrappers: [
+          {
+            name: 'd11r-wrapper-form-field',
+            component: WrapperCustomFormField
           }
         ],
       }

@@ -93,14 +93,14 @@ The Dynamic Mapper supports the following connectors:
         <td>JSON, Hex, Protobuf, Extension</td>
         </tr>
         <tr>
-        <td><strong>Cumulocity MQTT Service - deprecated </strong><small class="text-muted">(tenant
+        <!-- <td><strong>Cumulocity MQTT Service - deprecated </strong><small class="text-muted">(tenant
             isolation, only one instance per tenant exists)</small></td>
         <td class="text-center"><strong>X</strong></td>
         <td class="text-center"><strong>X</strong></td>
         <td class="text-center"><strong>X</strong></td>
         <td class="text-center"><strong>X</strong><br></td>
         <td>JSON, Hex, Protobuf, Extension</td>
-        </tr>
+        </tr> -->
     </tbody>
     </table>
 </div>

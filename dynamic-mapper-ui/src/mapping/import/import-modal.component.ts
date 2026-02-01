@@ -18,7 +18,10 @@
  * @authors Christof Strack
  */
 import {
+  ApplicationRef,
+  ChangeDetectorRef,
   Component,
+  NgZone,
   OnDestroy,
   ViewChild,
   ViewEncapsulation
@@ -45,8 +48,8 @@ export class ImportMappingsComponent implements OnDestroy {
   @ViewChild(DropAreaComponent) dropAreaComponent;
   private importCanceled: boolean = false;
   progress$: BehaviorSubject<number> = new BehaviorSubject<number>(null);
-  isLoading: boolean;
-  isAppCreated: boolean;
+  isLoading: boolean = false;
+  isAppCreated: boolean = false;
   errorMessage: string;
   successText: string = 'Imported mappings';
   closeSubject: Subject<boolean> = new Subject();
@@ -54,7 +57,10 @@ export class ImportMappingsComponent implements OnDestroy {
 
   constructor(
     private mappingService: MappingService,
-    private alertService: AlertService
+    private alertService: AlertService,
+    private cdr: ChangeDetectorRef,
+    private ngZone: NgZone,
+    private appRef: ApplicationRef
   ) { }
 
   async onFileDroppedEvent(event) {
@@ -72,28 +78,52 @@ export class ImportMappingsComponent implements OnDestroy {
   async onFile(file: File) {
     this.isLoading = true;
     this.errorMessage = null;
+    this.isAppCreated = false;
     this.progress$.next(0);
-    // const ms = await file.text();
+
     const ms = await file.text();
     const mappings: Mapping[] = JSON.parse(ms);
     const countMappings = mappings.length;
     const errors = [];
-    mappings.forEach(async (m, i) => {
+    let successCount = 0;
+
+    for (let i = 0; i < mappings.length; i++) {
+      const m = mappings[i];
       try {
         m.identifier = createCustomUuid();
         m.lastUpdate = Date.now();
         m.active = false;
         await this.mappingService.createMapping(m);
-        this.progress$.next((100 * i) / countMappings);
+        successCount++;
+        this.progress$.next((100 * (i + 1)) / countMappings);
       } catch (ex) {
-        this.errorMessage = `Failed to import mappings ${m.name}`;
-        errors.push(this.errorMessage);
-        this.alertService.warning(`${this.errorMessage}, ${ex}`);
+        const errorMsg = `Failed to import mapping ${m.name}`;
+        errors.push(errorMsg);
+        this.alertService.warning(`${errorMsg}: ${ex}`);
       }
+    }
+
+    // Only set error message if ALL imports failed
+    if (errors.length > 0 && successCount === 0) {
+      this.errorMessage = `Failed to import mappings. ${errors.length} error(s) occurred.`;
+    } else if (errors.length > 0) {
+      // Some succeeded, some failed
+      this.alertService.warning(`Import completed with errors. ${successCount} succeeded, ${errors.length} failed.`);
+    }
+
+    console.log('Import completed:', { successCount, errors: errors.length, total: countMappings });
+
+    // Use NgZone.run to ensure the view updates run inside Angular's zone
+    this.ngZone.run(() => {
+      this.isLoading = false;
+      this.progress$.next(100);
+      this.isAppCreated = true;
+      console.log('isAppCreated set to:', this.isAppCreated);
+      console.log('Triggering change detection...');
+
+      // Force application-wide change detection for dynamically created modal
+      this.appRef.tick();
     });
-    this.isAppCreated = true;
-    this.progress$.next(100);
-    this.isLoading = false;
   }
 
   onDismiss() {

@@ -22,6 +22,8 @@ package dynamic.mapper.processor.flow;
 
 import org.graalvm.polyglot.Value;
 
+import dynamic.mapper.processor.model.DataPrepContext;
+
 /**
  * JavaScript processor for calling the onMessage function with proper GraalJS interoperability
  */
