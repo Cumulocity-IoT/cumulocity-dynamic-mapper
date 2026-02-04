@@ -349,7 +349,7 @@ public class MappingService {
         updateCacheAfterChange(tenant, mapping);
 
         configurationRegistry.getC8yAgent().createOperationEvent(
-                "Mapping snoop reset",
+                String.format("Mapping with id: %s snoop reset", mappingId ),
                 LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE,
                 DateTime.now(),
                 tenant,
@@ -508,7 +508,7 @@ public class MappingService {
         dirty.clear();
 
         configurationRegistry.getC8yAgent().createOperationEvent(
-                "Mappings updated in backend",
+                "Mappings updated in backend, dirty mappings cleaned!",
                 LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE,
                 DateTime.now(),
                 tenant,

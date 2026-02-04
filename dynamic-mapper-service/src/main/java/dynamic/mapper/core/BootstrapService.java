@@ -566,6 +566,10 @@ public class BootstrapService {
             String tenant = subscriptionsService.getTenant();
             try {
                 ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
+                if (serviceConfiguration == null) {
+                    log.warn("{} - Service configuration is null, skipping sendDeviceToClientMap", tenant);
+                    return;
+                }
                 if (serviceConfiguration.getDeviceIsolationMQTTServiceEnabled()) {
                     mappingService.sendDeviceToClientMap(tenant);
                 }

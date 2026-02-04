@@ -367,6 +367,7 @@ public class ServiceConfigurationService {
                 String msg = String.format("Failed to convert service object. Error: %s",
                         exceptionMsg);
                 log.warn(msg);
+                rt = initialize(tenant);
             }
             return rt;
         });

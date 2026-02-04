@@ -33,8 +33,8 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingRepresentation;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.TransformationType;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -47,11 +47,19 @@ import java.util.stream.StreamSupport;
  */
 @Slf4j
 @Repository
-@RequiredArgsConstructor
 public class MappingRepository {
 
     private final InventoryFacade inventoryApi;
     private final ConfigurationRegistry configurationRegistry;
+    private final MappingService mappingService;
+
+    public MappingRepository(InventoryFacade inventoryApi,
+                            ConfigurationRegistry configurationRegistry,
+                            @Lazy MappingService mappingService) {
+        this.inventoryApi = inventoryApi;
+        this.configurationRegistry = configurationRegistry;
+        this.mappingService = mappingService;
+    }
 
     /**
      * Retrieves a single mapping by ID
@@ -74,7 +82,8 @@ public class MappingRepository {
             log.warn("{} - Failed to find managed object for mapping: {}", tenant, id, e);
             return Optional.empty();
         } catch (IllegalArgumentException e) {
-            log.warn("{} - Failed to convert managed object to mapping: {}", tenant, id, e);
+            log.warn("{} - Failed to convert MO {} to mapping: {}", tenant, id,
+                e.getCause() != null ? e.getCause().getMessage() : e.getMessage());
             return Optional.empty();
         }
     }
@@ -88,7 +97,7 @@ public class MappingRepository {
 
         ManagedObjectCollection moc = inventoryApi.getManagedObjectsByFilter(inventoryFilter, false);
 
-        List<Mapping> mappings = StreamSupport.stream(moc.get().allPages().spliterator(), true)
+        List<Mapping> mappings = StreamSupport.stream(moc.get().allPages().spliterator(), false)
                 .map(mo -> convertToMapping(tenant, mo))
                 .filter(Optional::isPresent)
                 .map(Optional::get)
@@ -190,6 +199,29 @@ public class MappingRepository {
             Mapping mapping = mappingMO.getC8yMQTTMapping();
             mapping.setId(mappingMO.getId());
 
+            // Migrate deprecated CODE_BASED mappings to JSON with SMART_FUNCTION transformation
+            if (MappingType.CODE_BASED.equals(mapping.getMappingType())) {
+                String moId = mo.getId().getValue();
+                log.info("{} - Migrating deprecated CODE_BASED mapping {} to JSON with SMART_FUNCTION transformation",
+                        tenant, moId);
+
+                mapping.setMappingType(MappingType.JSON);
+                mapping.setTransformationType(TransformationType.SMART_FUNCTION);
+
+                try {
+                    // Persist the migrated mapping
+                    update(tenant, mapping, true, true);
+
+                    // Notify about the automatic migration
+                    String migrationMsg = String.format(
+                            "Mapping %s was automatically migrated from deprecated CODE_BASED to JSON with SMART_FUNCTION transformation",
+                            moId);
+                    mappingService.sendMappingLoadingError(tenant, mo, migrationMsg);
+                } catch (Exception updateEx) {
+                    log.warn("{} - Failed to persist migrated mapping {}: {}", tenant, moId, updateEx.getMessage());
+                }
+            }
+
             if (Direction.INBOUND.equals(mapping.getDirection()) && mapping.getMappingTopic() == null) {
                 log.warn("{} - Mapping {} has no mappingTopic, skipping", tenant, mapping.getId());
                 return Optional.empty();
@@ -198,7 +230,18 @@ public class MappingRepository {
             return Optional.of(mapping);
         } catch (IllegalArgumentException e) {
             String exceptionMsg = e.getCause() != null ? e.getCause().getMessage() : e.getMessage();
-            log.warn("{} - Failed to convert MO {} to mapping: {}", tenant, mo.getId().getValue(), exceptionMsg);
+            String moId = mo.getId().getValue();
+
+            // Combine context information with exception details for comprehensive error notification
+            String detailedErrorMsg = String.format("Failed to convert MO %s to mapping in tenant %s: %s",
+                    moId, tenant, exceptionMsg);
+
+            log.warn("{} - Failed to convert MO {} to mapping: {}", tenant, moId, exceptionMsg);
+            try {
+                mappingService.sendMappingLoadingError(tenant, mo, detailedErrorMsg);
+            } catch (Exception notifyEx) {
+                log.warn("{} - Failed to send mapping loading error for MO {}: {}", tenant, moId, notifyEx.getMessage());
+            }
             return Optional.empty();
         }
     }
