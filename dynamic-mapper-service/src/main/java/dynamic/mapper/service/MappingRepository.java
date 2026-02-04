@@ -21,13 +21,9 @@
 
 package dynamic.mapper.service;
 
-import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
-import com.cumulocity.sdk.client.SDKException;
-import com.cumulocity.sdk.client.inventory.InventoryFilter;
 import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
 import dynamic.mapper.core.ConfigurationRegistry;
-import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingRepresentation;
@@ -49,24 +45,22 @@ import java.util.stream.StreamSupport;
 @Repository
 public class MappingRepository {
 
-    private final InventoryFacade inventoryApi;
     private final ConfigurationRegistry configurationRegistry;
     private final MappingService mappingService;
 
-    public MappingRepository(InventoryFacade inventoryApi,
-                            ConfigurationRegistry configurationRegistry,
+    public MappingRepository(ConfigurationRegistry configurationRegistry,
                             @Lazy MappingService mappingService) {
-        this.inventoryApi = inventoryApi;
         this.configurationRegistry = configurationRegistry;
         this.mappingService = mappingService;
     }
 
     /**
      * Retrieves a single mapping by ID
+     * NOTE: This is a lower-level method that expects inventoryApi to be called from MappingService
+     * with proper tenant scope activated via subscriptionsService.callForTenant()
      */
-    public Optional<Mapping> findById(String tenant, String id) {
+    public Optional<Mapping> findById(String tenant, String id, ManagedObjectRepresentation mo) {
         try {
-            ManagedObjectRepresentation mo = inventoryApi.get(GId.asGId(id), false);
             if (mo == null) {
                 return Optional.empty();
             }
@@ -78,9 +72,6 @@ public class MappingRepository {
             log.debug("{} - Found mapping: {}", tenant, mapping.getId());
             return Optional.of(mapping);
 
-        } catch (SDKException e) {
-            log.warn("{} - Failed to find managed object for mapping: {}", tenant, id, e);
-            return Optional.empty();
         } catch (IllegalArgumentException e) {
             log.warn("{} - Failed to convert MO {} to mapping: {}", tenant, id,
                 e.getCause() != null ? e.getCause().getMessage() : e.getMessage());
@@ -90,13 +81,10 @@ public class MappingRepository {
 
     /**
      * Retrieves all mappings, optionally filtered by direction
+     * NOTE: This is a lower-level method that expects inventoryApi to be called from MappingService
+     * with proper tenant scope activated via subscriptionsService.callForTenant()
      */
-    public List<Mapping> findAll(String tenant, Direction direction) {
-        InventoryFilter inventoryFilter = new InventoryFilter();
-        inventoryFilter.byType(MappingRepresentation.MAPPING_TYPE);
-
-        ManagedObjectCollection moc = inventoryApi.getManagedObjectsByFilter(inventoryFilter, false);
-
+    public List<Mapping> findAll(String tenant, Direction direction, ManagedObjectCollection moc) {
         List<Mapping> mappings = StreamSupport.stream(moc.get().allPages().spliterator(), false)
                 .map(mo -> convertToMapping(tenant, mo))
                 .filter(Optional::isPresent)
@@ -109,31 +97,24 @@ public class MappingRepository {
     }
 
     /**
-     * Creates a new mapping
+     * Creates a new mapping - only handles conversion, actual persistence is in MappingService
+     * NOTE: This is a lower-level method that expects inventoryApi calls from MappingService
+     * with proper tenant scope activated via subscriptionsService.callForTenant()
      */
-    public Mapping create(String tenant, Mapping mapping) {
-        // Validation happens in service layer, not here
+    public Mapping prepareForCreate(String tenant, Mapping mapping) {
         MappingRepresentation mr = new MappingRepresentation();
         mapping.setLastUpdate(System.currentTimeMillis());
         mr.setType(MappingRepresentation.MAPPING_TYPE);
         mr.setC8yMQTTMapping(mapping);
-
-        ManagedObjectRepresentation mor = toManagedObject(mr);
-        mor = inventoryApi.create(mor, false);
-
-        mapping.setId(mor.getId().getValue());
-        mr.getC8yMQTTMapping().setId(mapping.getId());
-
-        mor = toManagedObject(mr);
-        mor.setId(GId.asGId(mapping.getId()));
-        mor.setName(mapping.getName());
-        inventoryApi.update(mor, false);
-
-        log.info("{} - Mapping created: {} [{}]", tenant, mapping.getName(), mapping.getId());
         return mapping;
     }
 
-    public Mapping update(String tenant, Mapping mapping,
+    /**
+     * Prepares a mapping for update - only handles conversion logic
+     * NOTE: This is a lower-level method that expects inventoryApi calls from MappingService
+     * with proper tenant scope activated via subscriptionsService.callForTenant()
+     */
+    public Mapping prepareForUpdate(String tenant, Mapping mapping,
             boolean allowUpdateWhenActive, boolean ignoreValidation) {
         // Validation happens in service layer
         if (!allowUpdateWhenActive && mapping.getActive()) {
@@ -142,57 +123,42 @@ public class MappingRepository {
                             tenant, mapping.getId()));
         }
 
-        MappingRepresentation mr = new MappingRepresentation();
         mapping.setLastUpdate(System.currentTimeMillis());
-        mr.setType(MappingRepresentation.MAPPING_TYPE);
-        mr.setC8yMQTTMapping(mapping);
-        mr.setId(mapping.getId());
-
-        ManagedObjectRepresentation mor = toManagedObject(mr);
-        mor.setId(GId.asGId(mapping.getId()));
-        mor.setName(mapping.getName());
-        inventoryApi.update(mor, false);
-
-        log.info("{} - Mapping updated: {} [{}]", tenant, mapping.getName(), mapping.getId());
         return mapping;
     }
 
     /**
-     * Deletes a mapping
+     * Deletes a mapping - only validates, actual deletion is in MappingService
+     * NOTE: This is a lower-level method that expects inventoryApi calls from MappingService
+     * with proper tenant scope activated via subscriptionsService.callForTenant()
      */
-    public void delete(String tenant, String id) {
-        Optional<Mapping> mapping = findById(tenant, id);
-
-        if (mapping.isEmpty()) {
+    public void prepareForDelete(String tenant, String id, Mapping mapping) {
+        if (mapping == null) {
             log.warn("{} - Mapping not found for deletion: {}", tenant, id);
             return;
         }
 
-        if (mapping.get().getActive()) {
+        if (mapping.getActive()) {
             throw new IllegalStateException(
                     String.format("Tenant %s - Mapping %s is active, deactivate before deleting!", tenant, id));
         }
-
-        inventoryApi.delete(GId.asGId(id), false);
-        log.info("{} - Mapping deleted: {}", tenant, id);
     }
 
     /**
-     * Batch update multiple mappings
+     * Batch update multiple mappings - only prepares data, actual persistence is in MappingService
+     * NOTE: This is a lower-level method that expects inventoryApi calls from MappingService
      */
-    public void updateBatch(String tenant, List<Mapping> mappings) {
-        mappings.forEach(mapping -> {
-            MappingRepresentation mr = new MappingRepresentation();
-            mr.setC8yMQTTMapping(mapping);
-            ManagedObjectRepresentation mor = toManagedObject(mr);
-            mor.setId(GId.asGId(mapping.getId()));
-            inventoryApi.update(mor, false);
-        });
-        log.debug("{} - Batch updated {} mappings", tenant, mappings.size());
+    public void prepareBatchForUpdate(String tenant, List<Mapping> mappings) {
+        mappings.forEach(mapping -> mapping.setLastUpdate(System.currentTimeMillis()));
+        log.debug("{} - Prepared {} mappings for batch update", tenant, mappings.size());
     }
 
     // Helper methods
 
+    /**
+     * Converts a ManagedObjectRepresentation to a Mapping, handling deprecated CODE_BASED migration
+     * This is now called within MappingService with proper tenant scope active
+     */
     private Optional<Mapping> convertToMapping(String tenant, ManagedObjectRepresentation mo) {
         try {
             MappingRepresentation mappingMO = toMappingObject(mo);
@@ -206,11 +172,11 @@ public class MappingRepository {
                         tenant, moId);
 
                 mapping.setMappingType(MappingType.JSON);
-                mapping.setTransformationType(TransformationType.SMART_FUNCTION);
+                mapping.setTransformationType(TransformationType.SUBSTITUTION_AS_CODE);
 
                 try {
-                    // Persist the migrated mapping
-                    update(tenant, mapping, true, true);
+                    // Persist the migrated mapping - now through MappingService with proper scope
+                    mappingService.updateMapping(tenant, mapping, true, true);
 
                     // Notify about the automatic migration
                     String migrationMsg = String.format(
@@ -252,7 +218,9 @@ public class MappingRepository {
                 mapping.getDirection().equals(direction);
     }
 
-    private ManagedObjectRepresentation toManagedObject(MappingRepresentation mr) {
+    // Helper methods - these are used by MappingService for conversion
+
+    public ManagedObjectRepresentation toManagedObject(MappingRepresentation mr) {
         return configurationRegistry.getObjectMapper().convertValue(mr, ManagedObjectRepresentation.class);
     }
 

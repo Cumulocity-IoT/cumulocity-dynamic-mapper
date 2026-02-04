@@ -22,9 +22,15 @@
 package dynamic.mapper.service;
 
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
+import com.cumulocity.model.idtype.GId;
+import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
+import com.cumulocity.sdk.client.SDKException;
+import com.cumulocity.sdk.client.inventory.InventoryFilter;
+import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
 import dynamic.mapper.configuration.ConnectorId;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.*;
 import dynamic.mapper.processor.model.C8YMessage;
 import dynamic.mapper.service.cache.MappingCacheManager;
@@ -49,6 +55,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class MappingService {
 
+    private final InventoryFacade inventoryApi;
     private final MappingRepository mappingRepository;
     private final MappingCacheManager cacheManager;
     private final MappingStatusService statusService;
@@ -112,9 +119,28 @@ public class MappingService {
             throw new MappingValidationException(errors);
         }
 
-        // Create (no validation in repository)
-        return subscriptionsService.callForTenant(tenant,
-                () -> mappingRepository.create(tenant, mapping));
+        // Create with proper tenant context
+        return subscriptionsService.callForTenant(tenant, () -> {
+            mappingRepository.prepareForCreate(tenant, mapping);
+            
+            MappingRepresentation mr = new MappingRepresentation();
+            mr.setType(MappingRepresentation.MAPPING_TYPE);
+            mr.setC8yMQTTMapping(mapping);
+
+            ManagedObjectRepresentation mor = mappingRepository.toManagedObject(mr);
+            mor = inventoryApi.create(mor, false);
+
+            mapping.setId(mor.getId().getValue());
+            mr.getC8yMQTTMapping().setId(mapping.getId());
+
+            mor = mappingRepository.toManagedObject(mr);
+            mor.setId(GId.asGId(mapping.getId()));
+            mor.setName(mapping.getName());
+            inventoryApi.update(mor, false);
+
+            log.info("{} - Mapping created: {} [{}]", tenant, mapping.getName(), mapping.getId());
+            return mapping;
+        });
     }
 
     /**
@@ -130,25 +156,51 @@ public class MappingService {
             }
         }
 
-        // Update (no validation in repository)
-        return subscriptionsService.callForTenant(tenant,
-                () -> mappingRepository.update(tenant, mapping, allowUpdateWhenActive, ignoreValidation));
+        // Update with proper tenant scope
+        return subscriptionsService.callForTenant(tenant, () -> {
+            mappingRepository.prepareForUpdate(tenant, mapping, allowUpdateWhenActive, ignoreValidation);
+            
+            MappingRepresentation mr = new MappingRepresentation();
+            mr.setType(MappingRepresentation.MAPPING_TYPE);
+            mr.setC8yMQTTMapping(mapping);
+            mr.setId(mapping.getId());
+
+            ManagedObjectRepresentation mor = mappingRepository.toManagedObject(mr);
+            mor.setId(GId.asGId(mapping.getId()));
+            mor.setName(mapping.getName());
+            inventoryApi.update(mor, false);
+
+            log.info("{} - Mapping updated: {} [{}]", tenant, mapping.getName(), mapping.getId());
+            return mapping;
+        });
     }
 
     /**
      * Retrieves a mapping by ID
      */
     public Mapping getMapping(String tenant, String id) {
-        return subscriptionsService.callForTenant(tenant,
-                () -> mappingRepository.findById(tenant, id).orElse(null));
+        return subscriptionsService.callForTenant(tenant, () -> {
+            try {
+                ManagedObjectRepresentation mo = inventoryApi.get(GId.asGId(id), false);
+                return mappingRepository.findById(tenant, id, mo).orElse(null);
+            } catch (SDKException e) {
+                log.warn("{} - Failed to find managed object for mapping: {}", tenant, id, e);
+                return null;
+            }
+        });
     }
 
     /**
      * Retrieves all mappings, optionally filtered by direction
      */
     public List<Mapping> getMappings(String tenant, Direction direction) {
-        return subscriptionsService.callForTenant(tenant,
-                () -> mappingRepository.findAll(tenant, direction));
+        return subscriptionsService.callForTenant(tenant, () -> {
+            InventoryFilter inventoryFilter = new InventoryFilter();
+            inventoryFilter.byType(MappingRepresentation.MAPPING_TYPE);
+            
+            ManagedObjectCollection moc = inventoryApi.getManagedObjectsByFilter(inventoryFilter, false);
+            return mappingRepository.findAll(tenant, direction, moc);
+        });
     }
 
     /**
@@ -170,13 +222,23 @@ public class MappingService {
      */
     public Mapping deleteMapping(String tenant, String id) {
         Mapping mapping = subscriptionsService.callForTenant(tenant, () -> {
-            Optional<Mapping> found = mappingRepository.findById(tenant, id);
-            if (found.isEmpty()) {
+            try {
+                ManagedObjectRepresentation mo = inventoryApi.get(GId.asGId(id), false);
+                Optional<Mapping> found = mappingRepository.findById(tenant, id, mo);
+                if (found.isEmpty()) {
+                    return null;
+                }
+
+                Mapping m = found.get();
+                mappingRepository.prepareForDelete(tenant, id, m);
+                inventoryApi.delete(GId.asGId(id), false);
+                
+                log.info("{} - Mapping deleted: {}", tenant, id);
+                return m;
+            } catch (SDKException e) {
+                log.warn("{} - Failed to find managed object for mapping: {}", tenant, id, e);
                 return null;
             }
-
-            mappingRepository.delete(tenant, id);
-            return found.get();
         });
 
         if (mapping != null) {
@@ -196,7 +258,14 @@ public class MappingService {
      */
     public void saveMappings(String tenant, List<Mapping> mappings) {
         subscriptionsService.runForTenant(tenant, () -> {
-            mappingRepository.updateBatch(tenant, mappings);
+            mappingRepository.prepareBatchForUpdate(tenant, mappings);
+            mappings.forEach(mapping -> {
+                MappingRepresentation mr = new MappingRepresentation();
+                mr.setC8yMQTTMapping(mapping);
+                ManagedObjectRepresentation mor = mappingRepository.toManagedObject(mr);
+                mor.setId(GId.asGId(mapping.getId()));
+                inventoryApi.update(mor, false);
+            });
             log.debug("{} - Batch saved {} mappings", tenant, mappings.size());
         });
     }
