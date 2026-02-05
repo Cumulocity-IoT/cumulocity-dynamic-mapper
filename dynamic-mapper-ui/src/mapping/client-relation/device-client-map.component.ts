@@ -31,6 +31,7 @@ import {
   BuiltInActionType,
   BulkActionControl,
   Column,
+  ColumnDataType,
   CoreModule,
   DataGridComponent,
   DisplayOptions,
@@ -102,14 +103,16 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
       header: 'Device ID',
       path: 'id',
       filterable: false,
-      dataType: 'text-short' as any,
-      visible: true
+      sortable: true,
+      dataType: ColumnDataType.TextShort,
     },
     {
       header: 'Client',
       name: 'client',
       path: 'client',
-      filterable: true
+      filterable: true,
+      sortable: true,
+      dataType: ColumnDataType.TextShort,
     },
   ];
 

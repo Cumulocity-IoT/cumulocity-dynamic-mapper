@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 // Now update action-controls.config.ts
-import { BuiltInActionType, Column } from '@c8y/ngx-components';
+import { BuiltInActionType, Column, ColumnDataType } from '@c8y/ngx-components';
 import { ActionControlConfig, ActionVisibilityRule } from './types'
 import { LabelTaggedRendererComponent } from '../component/renderer/label-tagged.renderer.component';
 import { LabelRendererComponent } from '../component/renderer/label.renderer.component';
@@ -80,6 +80,7 @@ export const GRID_COLUMNS: Column[] = [
     sortOrder: 'ASC',
     visible: true,
     cellRendererComponent: ConnectorDetailCellRendererComponent,
+    dataType: ColumnDataType.TextShort,
     gridTrackSize: '30%'
   },
   {
@@ -89,6 +90,7 @@ export const GRID_COLUMNS: Column[] = [
     filterable: false,
     sortable: true,
     cellRendererComponent: ConnectorStatusRendererComponent,
+    dataType: ColumnDataType.TextShort,
     gridTrackSize: '17%'
   },
   {
@@ -98,6 +100,7 @@ export const GRID_COLUMNS: Column[] = [
     filterable: false,
     sortOrder: 'ASC',
     visible: false,
+    dataType: ColumnDataType.TextShort,
     gridTrackSize: '10%'
   },
   {
@@ -108,6 +111,7 @@ export const GRID_COLUMNS: Column[] = [
     sortOrder: 'ASC',
     visible: true,
     cellRendererComponent: LabelTaggedRendererComponent,
+    dataType: ColumnDataType.TextShort,
     gridTrackSize: '15%'
   },
   {
@@ -118,6 +122,7 @@ export const GRID_COLUMNS: Column[] = [
     sortOrder: 'ASC',
     visible: true,
     cellRendererComponent: LabelRendererComponent,
+    dataType: ColumnDataType.TextShort,
     gridTrackSize: '10%'
   },
   {
@@ -127,6 +132,7 @@ export const GRID_COLUMNS: Column[] = [
     filterable: false,
     sortable: true,
     cellRendererComponent: ConnectorStatusEnabledRendererComponent,
+    dataType: ColumnDataType.TextShort,
     gridTrackSize: '11%'
   }
 ] as Column[];

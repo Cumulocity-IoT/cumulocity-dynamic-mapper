@@ -28,7 +28,7 @@ import {
 import { IIdentified } from '@c8y/client';
 import { Column, CoreModule } from '@c8y/ngx-components';
 import { AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
-import { DeviceGridModule, DeviceGridService, GroupDeviceGridColumn, NameDeviceGridColumn, RegistrationDateDeviceGridColumn, SystemIdDeviceGridColumn } from '@c8y/ngx-components/device-grid';
+import { DeviceGridModule, DeviceGridService, GroupDeviceGridColumn, NameDeviceGridColumn, RegistrationDateDeviceGridColumn, SystemIdDeviceGridColumn, TypeDeviceGridColumn } from '@c8y/ngx-components/device-grid';
 
 @Component({
   selector: 'd11r-device-selector-subscription2',
@@ -36,7 +36,9 @@ import { DeviceGridModule, DeviceGridService, GroupDeviceGridColumn, NameDeviceG
   styleUrls: ['../../shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
-  imports: [CoreModule, AssetSelectorModule, DeviceGridModule]
+  imports: [CoreModule, AssetSelectorModule, DeviceGridModule],
+  providers: [
+    DeviceGridService]
 })
 export class DeviceSelectorSubscription2Component implements OnInit {
   @Input() deviceList: IIdentified[];
@@ -100,13 +102,14 @@ export class DeviceSelectorSubscription2Component implements OnInit {
       new GroupDeviceGridColumn(),
       new RegistrationDateDeviceGridColumn(),
       new SystemIdDeviceGridColumn(),
-      {
-        header: 'Type',
-        name: 'type',
-        path: 'type',
-        filterable: true,
-        sortable: true,
-      },
+      new TypeDeviceGridColumn()
+      // {
+      //   header: 'Type',
+      //   name: 'type',
+      //   path: 'type',
+      //   filterable: true,
+      //   sortable: true,
+      // },
     ];
     return cols;
   }

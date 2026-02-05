@@ -32,6 +32,7 @@ import {
   BuiltInActionType,
   BulkActionControl,
   Column,
+  ColumnDataType,
   CoreModule,
   DataGridComponent,
   DisplayOptions,
@@ -137,14 +138,17 @@ export class MappingComponent implements OnInit, OnDestroy {
       header: 'System ID',
       path: 'id',
       filterable: false,
-      dataType: 'text-short' as any,
+      dataType: ColumnDataType.Numeric,
+      sortable: true,
       visible: true
     },
     {
       header: 'Name',
       name: 'name',
       path: 'name',
-      filterable: true
+      filterable: true,
+      sortable: true,
+      dataType: ColumnDataType.TextShort,
     }
   ];
 
