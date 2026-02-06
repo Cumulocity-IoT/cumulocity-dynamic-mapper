@@ -24,7 +24,6 @@ import { MappingService } from '../mapping/core/mapping.service';
 import { CodeExplorerComponent, Direction, Feature, JsonEditorComponent, NODE1, NODE3 } from '../shared';
 import { BehaviorSubject, from, Subject, Subscription } from 'rxjs';
 import { ConnectorConfigurationService } from '../connector';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { AlertService, CoreModule } from '@c8y/ngx-components';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
@@ -46,7 +45,7 @@ hljs.registerLanguage('yaml', yaml);
 @Component({
   selector: 'd11r-landing',
   templateUrl: './doc-main.component.html',
-  styleUrl: './doc-shared.css',
+  styleUrls: ['./doc-shared.css'],
   standalone: true,
   imports: [
     CoreModule,
@@ -60,14 +59,11 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
     private mappingService: MappingService,
     private alertService: AlertService,
     private connectorConfigurationService: ConnectorConfigurationService,
-    private sanitizer: DomSanitizer,
     private route: ActivatedRoute,
     private bsModalService: BsModalService,
     private sharedService: SharedService
   ) {
-    this.linkSVG = this.sanitizer.bypassSecurityTrustUrl(
-      'image/Dynamic_Mapper_Snooping_Stepper_Process.svg'
-    );
+
   }
   @ViewChild('editorTest', { static: false }) editorTest: JsonEditorComponent;
 
@@ -83,7 +79,6 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
   countMappingInbound$: Subject<any> = new BehaviorSubject<any>(0);
   countMappingOutbound$: Subject<any> = new BehaviorSubject<any>(0);
   countConnector$: Subject<any> = new BehaviorSubject<any>(0);
-  linkSVG: SafeResourceUrl;
 
   feature: Feature;
 

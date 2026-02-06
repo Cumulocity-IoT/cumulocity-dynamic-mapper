@@ -46,15 +46,19 @@
 /* ============================================================================ */
 
 /* Headings */
-h1, .h1 {
+h1,
+.h1 {
   font-size: 36px;
 }
 
-h1, h2, h3, h4 {
+h1,
+h2,
+h3,
+h4 {
   margin: 0 0 1em;
   font-weight: 600;
   line-height: 1.4;
-  font-family: "Euclid Square","Libre Franklin","Helvetica",Arial,sans-serif;
+  font-family: "Euclid Square", "Libre Franklin", "Helvetica", Arial, sans-serif;
   text-wrap: pretty;
   text-transform: uppercase;
 }
@@ -212,11 +216,11 @@ a .fa {
 } */
 
 code {
-    padding: 2px 4px;
-    border-radius: 3px;
-    font-size: 90%;
-    background-color: var(--c8y-code-background);
-    color: var(--c8y-code-color);
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-size: 90%;
+  background-color: var(--c8y-code-background);
+  color: var(--c8y-code-color);
 }
 
 pre {
@@ -333,6 +337,7 @@ pre .code-toolbar {
 /* ADMONITION BOXES                                                             */
 /* ============================================================================ */
 
+
 .admonition {
   margin: 24px 0;
   padding: 0;
@@ -340,7 +345,7 @@ pre .code-toolbar {
   border-left: 8px solid;
   background-color: #f9f9f9;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
 .admonition .title {
@@ -371,19 +376,20 @@ pre .code-toolbar {
 
 /* Info - Blue */
 .admonition.info {
-  border-left-color: #5bc0de;
-  background-color: #d9edf7;
+  border-left-color: #066ad6;
+  background-color: #d7e7f8;
 }
 
 .admonition.info .title {
-  background-color: #bcdff1;
+  background-color: #d7e7f8;
   color: var(--c8y-palette-status-info, #31708f);
 }
 
 /* Caution/Warning - Orange/Yellow */
 .admonition.caution {
   border-left-color: #f0ad4e;
-  background-color: #fcf8e3;
+  background-color: #f9ecc5;
+  ;
 }
 
 .admonition.caution .title {
@@ -393,13 +399,16 @@ pre .code-toolbar {
 
 /* Important - Red */
 .admonition.important {
-  border-left-color: #d9534f;
-  background-color: #f2dede;
+  border-left-color: #d60f0e;
+  background-color: #f9e4e2;
+  /* background-color:  #fdf5f4; */
+  /*var(--c8y-palette-status-danger-light); */
 }
 
 .admonition.important .title {
-  background-color: #ebcccc;
-  color: var(--c8y-palette-status-danger, #a94442);
+  /* background-color: #fdf5f4; */
+  background-color: #f9e4e2;
+  color: var(--c8y-palette-status-danger, #d60f0e);
 }
 
 /* ============================================================================ */
@@ -426,7 +435,7 @@ pre .code-toolbar {
   color: var(--c8y-brand-primary, #007bff);
   text-align: center;
   text-decoration: none;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   transition: all 0.3s ease;
   cursor: pointer;
 }
@@ -436,12 +445,12 @@ pre .code-toolbar {
   color: white;
   text-decoration: none;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .to-the-top:active {
   transform: translateY(0);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
 /* ============================================================================ */

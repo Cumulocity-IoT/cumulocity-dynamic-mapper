@@ -70,7 +70,7 @@
         <div class="c8y-list__item__body">
           <div class="d-flex m-r-48">
             <div class="col-md-2">Event type</div>
-            <div class="col-md-3">Connector</div>
+            <div class="col-md-3">Connector or System</div>
             <div class="col-md-7">Message</div>
           </div>
         </div>
@@ -91,7 +91,7 @@
             </div>
             <div class="col-md-3">
               <span class="text-10 label label-primary">
-                {{ event?.d11r_connector?.connectorName ? ( event?.d11r_connector?.connectorName ) : ''
+                {{ event?.d11r_connector?.connectorName ? ( event?.d11r_connector?.connectorName ) : 'System'
                 }}
               </span>
             </div>
