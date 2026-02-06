@@ -53,48 +53,82 @@ export interface LoggingEventTypeDetails {
   name: string;
   type?: string;
   component: string;
+  componentDisplayName?: string;
+  severity?: 'info' | 'warning' | 'error';
+  description?: string;
+}
+
+export interface EventMetadata {
+  component: string;
+  componentDisplayName: string;
+  severity: 'info' | 'warning' | 'error';
+  description: string;
 }
 
 export const LoggingEventTypeMap: Record<LoggingEventType, LoggingEventTypeDetails> = {
   [LoggingEventType.STATUS_SUBSCRIPTION_EVENT_TYPE]: {
     name: 'STATUS_SUBSCRIPTION_EVENT_TYPE',
     type: 'd11r_subscriptionEvent',
-    component: 'd11r_connector'
+    component: 'd11r_connector',
+    componentDisplayName: 'Connector',
+    severity: 'info',
+    description: 'Subscription lifecycle events for connectors'
   },
   [LoggingEventType.STATUS_CONNECTOR_EVENT_TYPE]: {
     name: 'STATUS_CONNECTOR_EVENT_TYPE',
     type: 'd11r_connectorStatusEvent',
-    component: 'd11r_connector'
+    component: 'd11r_connector',
+    componentDisplayName: 'Connector',
+    severity: 'info',
+    description: 'Connector status and connection events'
   },
   [LoggingEventType.MAPPING_LOADING_ERROR_EVENT_TYPE]: {
     name: 'MAPPING_LOADING_ERROR_EVENT_TYPE',
     type: 'd11r_mappingLoadingErrorEvent',
-    component: 'd11r_mapping'
+    component: 'd11r_system',
+    componentDisplayName: 'System',
+    severity: 'error',
+    description: 'Errors occurring during mapping configuration loading'
   },
   [LoggingEventType.STATUS_MAPPING_ACTIVATION_ERROR_EVENT_TYPE]: {
     name: 'STATUS_MAPPING_ACTIVATION_ERROR_EVENT_TYPE',
     type: 'd11r_mappingActivationErrorEvent',
-    component: 'd11r_mapping'
+    component: 'd11r_mapping',
+    componentDisplayName: 'Mapping',
+    severity: 'error',
+    description: 'Errors during mapping activation'
   },
   [LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE]: {
     name: 'STATUS_MAPPING_CHANGED_EVENT_TYPE',
     type: 'd11r_mappingChangedEvent',
-    component: 'd11r_mapping'
+    component: 'd11r_mapping',
+    componentDisplayName: 'Mapping',
+    severity: 'info',
+    description: 'Mapping configuration change notifications'
   },
     [LoggingEventType.STATUS_MAPPING_FAILURE_EVENT_TYPE]: {
     name: 'STATUS_MAPPING_FAILURE_EVENT_TYPE',
     type: 'd11r_mappingFailureEvent',
-    component: 'd11r_mapping'
+    component: 'd11r_mapping',
+    componentDisplayName: 'Mapping',
+    severity: 'error',
+    description: 'Mapping processing failures and errors'
   },
   [LoggingEventType.STATUS_NOTIFICATION_EVENT_TYPE]: {
     name: 'STATUS_NOTIFICATION_EVENT_TYPE',
     type: 'd11r_notificationStatusEvent',
-    component: 'd11r_connector'
+    component: 'd11r_connector',
+    componentDisplayName: 'Connector',
+    severity: 'warning',
+    description: 'Notification connector status events'
   },
   [LoggingEventType.ALL]: {
     name: 'ALL',
     type: 'ALL',
-    component: 'd11r_AnyComponent'
+    component: 'd11r_AnyComponent',
+    componentDisplayName: 'All Components',
+    severity: 'info',
+    description: 'All event types'
   }
 };
 

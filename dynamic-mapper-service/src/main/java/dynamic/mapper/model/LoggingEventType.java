@@ -25,14 +25,22 @@ import lombok.Getter;
 
 @Getter
 public enum LoggingEventType {
-    STATUS_SUBSCRIPTION_EVENT_TYPE("STATUS_SUBSCRIPTION_EVENT_TYPE", "d11r_subscriptionEvent", "d11r_connector"),
-    STATUS_CONNECTOR_EVENT_TYPE("STATUS_CONNECTOR_EVENT_TYPE", "d11r_connectorStatusEvent", "d11r_connector"),
-    MAPPING_LOADING_ERROR_EVENT_TYPE("MAPPING_LOADING_ERROR_EVENT_TYPE", "d11r_mappingLoadingErrorEvent", "d11r_mapping"),
-    STATUS_MAPPING_ACTIVATION_ERROR_EVENT_TYPE("STATUS_MAPPING_ACTIVATION_ERROR_EVENT_TYPE", "d11r_mappingActivationErrorEvent", "d11r_mapping"),
-    STATUS_MAPPING_CHANGED_EVENT_TYPE("STATUS_MAPPING_CHANGED_EVENT_TYPE", "d11r_mappingChangedEvent", "d11r_mapping"),
-    STATUS_MAPPING_FAILURE_EVENT_TYPE("STATUS_MAPPING_FAILURE_EVENT_TYPE", "d11r_mappingFailureEvent", "d11r_mapping"),
-    STATUS_NOTIFICATION_EVENT_TYPE("STATUS_NOTIFICATION_EVENT_TYPE", "d11r_notificationStatusEvent", "d11r_connector"),
-    ALL("ALL", "ALL", "d11r_AnyComponent");
+    STATUS_SUBSCRIPTION_EVENT_TYPE("STATUS_SUBSCRIPTION_EVENT_TYPE", "d11r_subscriptionEvent", "d11r_connector",
+            "Connector", "info", "Subscription lifecycle events for connectors"),
+    STATUS_CONNECTOR_EVENT_TYPE("STATUS_CONNECTOR_EVENT_TYPE", "d11r_connectorStatusEvent", "d11r_connector",
+            "Connector", "info", "Connector status and connection events"),
+    MAPPING_LOADING_ERROR_EVENT_TYPE("MAPPING_LOADING_ERROR_EVENT_TYPE", "d11r_mappingLoadingErrorEvent", "d11r_system",
+            "System", "error", "Errors occurring during mapping configuration loading"),
+    STATUS_MAPPING_ACTIVATION_ERROR_EVENT_TYPE("STATUS_MAPPING_ACTIVATION_ERROR_EVENT_TYPE", "d11r_mappingActivationErrorEvent", "d11r_mapping",
+            "Mapping", "error", "Errors during mapping activation"),
+    STATUS_MAPPING_CHANGED_EVENT_TYPE("STATUS_MAPPING_CHANGED_EVENT_TYPE", "d11r_mappingChangedEvent", "d11r_mapping",
+            "Mapping", "info", "Mapping configuration change notifications"),
+    STATUS_MAPPING_FAILURE_EVENT_TYPE("STATUS_MAPPING_FAILURE_EVENT_TYPE", "d11r_mappingFailureEvent", "d11r_mapping",
+            "Mapping", "error", "Mapping processing failures and errors"),
+    STATUS_NOTIFICATION_EVENT_TYPE("STATUS_NOTIFICATION_EVENT_TYPE", "d11r_notificationStatusEvent", "d11r_connector",
+            "Connector", "warning", "Notification connector status events"),
+    ALL("ALL", "ALL", "d11r_AnyComponent",
+            "All Components", "info", "All event types");
 
     public final String name;
 
@@ -40,9 +48,19 @@ public enum LoggingEventType {
 
     public final String component;
 
-    private LoggingEventType(String name, String type, String component) {
+    public final String componentDisplayName;
+
+    public final String severity;
+
+    public final String description;
+
+    private LoggingEventType(String name, String type, String component,
+                             String componentDisplayName, String severity, String description) {
         this.name = name;
         this.type = type;
         this.component = component;
+        this.componentDisplayName = componentDisplayName;
+        this.severity = severity;
+        this.description = description;
     }
 }

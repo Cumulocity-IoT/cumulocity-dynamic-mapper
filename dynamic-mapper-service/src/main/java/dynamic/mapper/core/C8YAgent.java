@@ -314,6 +314,16 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                 if (properties != null) {
                     er.setProperty(loggingType.getComponent(), properties);
                 }
+
+                // Add metadata fragment for self-contained events
+                Map<String, String> metadata = Map.of(
+                    "component", loggingType.getComponent(),
+                    "componentDisplayName", loggingType.getComponentDisplayName(),
+                    "severity", loggingType.getSeverity(),
+                    "description", loggingType.getDescription()
+                );
+                er.setProperty("d11r_metadata", metadata);
+
                 try {
                     c8ySemaphore.acquire();
                     // this.initializeMapperServiceObject(tenant), add the new mo to the

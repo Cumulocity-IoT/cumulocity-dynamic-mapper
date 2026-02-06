@@ -61,33 +61,62 @@
       Mapping service events
     </span>
   </div>
-  <div class="page-sticky-header hidden-xs c8y-list__item c8y-list--timeline">
-    <div class="d-flex">
-      <div class="c8y-list--timeline__item__date a-s-center">
-        <label>{{ 'Date' | translate }}</label>
-      </div>
-      <div class="c8y-list__item__block flex-grow">
-        <div class="c8y-list__item__body">
-          <div class="d-flex m-r-48">
-            <div class="col-md-2">Event type</div>
-            <div class="col-md-3">Connector or System</div>
-            <div class="col-md-7">Message</div>
+
+  <!-- Loading State -->
+  @if (isLoading$ | async) {
+    <div class="p-24 text-center">
+      <c8y-loading></c8y-loading>
+      <p class="text-muted m-t-16">Loading service events...</p>
+    </div>
+  }
+
+  <!-- Error State -->
+  @if (error$ | async; as error) {
+    <div class="alert alert-danger m-24">
+      <i c8yIcon="exclamation-circle"></i>
+      {{ error }}
+      <button class="btn btn-link pull-right" (click)="onFilterMappingServiceEventSelect(filterForm.get('type')?.value)">
+        Retry
+      </button>
+    </div>
+  }
+
+  <!-- Event List (only show when not loading and no error) -->
+  <div [hidden]="(isLoading$ | async) || (error$ | async)">
+    <div class="page-sticky-header hidden-xs c8y-list__item c8y-list--timeline">
+      <div class="d-flex">
+        <div class="c8y-list--timeline__item__date a-s-center">
+          <label>{{ 'Date' | translate }}</label>
+        </div>
+        <div class="c8y-list__item__block flex-grow">
+          <div class="c8y-list__item__body">
+            <div class="d-flex m-r-48">
+              <div class="col-md-2">Component</div>
+              <div class="col-md-3">Connector or System</div>
+              <div class="col-md-7">Message</div>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <c8y-list-group>
+    <c8y-list-group>
     <c8y-li-timeline *c8yFor="let event of events$| async; loadMore: 'auto'; let i = index">
       {{ event.time | c8yDate: 'MMM d, y, h:mm:ss a' }}
       <c8y-li #li [collapsed]="true">
         <c8y-li-body>
           <div class="d-flex">
             <div class="col-md-2">
-              <span class="text-10 label label-primary">
-                {{ event.type }}
-              </span>
+              @if (getEventMetadata(event); as metadata) {
+                <span
+                  class="text-10 label"
+                  [ngClass]="getSeverityClass(metadata.severity)"
+                  [title]="metadata.description">
+                  {{ metadata.componentDisplayName }}
+                </span>
+              } @else {
+                <span class="text-10 label label-default">Unknown</span>
+              }
             </div>
             <div class="col-md-3">
               <span class="text-10 label label-primary">
@@ -107,13 +136,14 @@
         </c8y-li-collapse>
       </c8y-li>
     </c8y-li-timeline>
-  </c8y-list-group>
-  @if ((events$ | async)?.data?.length === 0) {
-    <div class="c8y-empty-state">
-      <h2 c8yIcon="c8y-events"></h2>
-      <p>
-        <strong>No events available.</strong><br />
-      </p>
-    </div>
-  }
+    </c8y-list-group>
+    @if ((events$ | async)?.data?.length === 0) {
+      <div class="c8y-empty-state">
+        <h2 c8yIcon="c8y-events"></h2>
+        <p>
+          <strong>No events available.</strong><br />
+        </p>
+      </div>
+    }
+  </div>
 </div>
