@@ -25,49 +25,36 @@ import {
   Output,
   ViewEncapsulation
 } from '@angular/core';
+import { IIdentified } from '@c8y/client';
 import { CoreModule } from '@c8y/ngx-components';
+import { AssetSelectionChangeEvent, AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
 
 @Component({
-  selector: 'd11r-device-selector-subscription4',
-  templateUrl: 'device-selector-subscription4.component.html',
+  selector: 'd11r-device-selector-tree',
+  templateUrl: 'device-selector-tree.component.html',
   styleUrls: ['../../shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
-  imports:[CoreModule]
+  imports:[CoreModule, AssetSelectorModule]
 })
-export class DeviceSelectorSubscription4Component implements OnInit {
-  @Input() set typeList(list) {
-    this.typeListInternal = list;
-    if (this.typeListInternal.length === 0) {
-      this.add();
-    }
-  }
-  get typeList() {
-    return this.typeListInternal;
-  }
+export class DeviceSelectorTreeComponent implements OnInit {
+  @Input() deviceList: IIdentified[];
 
   @Output() cancel = new EventEmitter<any>();
-  @Output() commit = new EventEmitter<string[]>();
+  @Output() commit = new EventEmitter<IIdentified[]>();
 
-  typeListInternal: string[];
-
-  trackByFn(index: any, _item: any) {
-    return index;
+  constructor() {
   }
-
   ngOnInit(): void {
+
   }
 
-  add() {
-    this.typeListInternal.push("");
-  }
-
-  remove(index) {
-    this.typeListInternal.splice(index, 1);
+  selectionChanged(event: AssetSelectionChangeEvent) {
+    // console.log(event);
   }
 
   clickedUpdateSubscription() {
-    this.commit.emit(this.typeListInternal);
+    this.commit.emit(this.deviceList);
   }
 
   clickedCancel() {

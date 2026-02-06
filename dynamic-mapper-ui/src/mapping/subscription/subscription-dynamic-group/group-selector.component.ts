@@ -30,14 +30,15 @@ import { CoreModule } from '@c8y/ngx-components';
 import { AssetSelectionChangeEvent, AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
 
 @Component({
-  selector: 'd11r-device-selector-subscription',
-  templateUrl: 'device-selector-subscription.component.html',
+  selector: 'd11r-group-selector',
+  templateUrl: 'group-selector.component.html',
   styleUrls: ['../../shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
-  imports:[CoreModule, AssetSelectorModule]
+  imports: [CoreModule, AssetSelectorModule]
+
 })
-export class DeviceSelectorSubscriptionComponent implements OnInit {
+export class GroupSelectorComponent implements OnInit {
   @Input() deviceList: IIdentified[];
 
   @Output() cancel = new EventEmitter<any>();
@@ -45,8 +46,8 @@ export class DeviceSelectorSubscriptionComponent implements OnInit {
 
   constructor() {
   }
-  ngOnInit(): void {
 
+  ngOnInit(): void {
   }
 
   selectionChanged(event: AssetSelectionChangeEvent) {

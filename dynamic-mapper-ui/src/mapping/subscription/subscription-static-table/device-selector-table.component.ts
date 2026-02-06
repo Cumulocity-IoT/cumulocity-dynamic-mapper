@@ -26,13 +26,13 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 import { IIdentified } from '@c8y/client';
-import { Column, CoreModule } from '@c8y/ngx-components';
+import { Column, ColumnDataType, CoreModule } from '@c8y/ngx-components';
 import { AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
 import { DeviceGridModule, DeviceGridService, GroupDeviceGridColumn, NameDeviceGridColumn, RegistrationDateDeviceGridColumn, SystemIdDeviceGridColumn, TypeDeviceGridColumn } from '@c8y/ngx-components/device-grid';
 
 @Component({
-  selector: 'd11r-device-selector-subscription2',
-  templateUrl: 'device-selector-subscription2.component.html',
+  selector: 'd11r-device-selector-table',
+  templateUrl: 'device-selector-table.component.html',
   styleUrls: ['../../shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
@@ -40,7 +40,7 @@ import { DeviceGridModule, DeviceGridService, GroupDeviceGridColumn, NameDeviceG
   providers: [
     DeviceGridService]
 })
-export class DeviceSelectorSubscription2Component implements OnInit {
+export class DeviceSelectorTableComponent implements OnInit {
   @Input() deviceList: IIdentified[];
 
   @Output() cancel = new EventEmitter<any>();
@@ -102,14 +102,15 @@ export class DeviceSelectorSubscription2Component implements OnInit {
       new GroupDeviceGridColumn(),
       new RegistrationDateDeviceGridColumn(),
       new SystemIdDeviceGridColumn(),
-      new TypeDeviceGridColumn()
-      // {
-      //   header: 'Type',
-      //   name: 'type',
-      //   path: 'type',
-      //   filterable: true,
-      //   sortable: true,
-      // },
+     //new TypeDeviceGridColumn(),
+      {
+        header: 'Type',
+        name: 'type',
+        path: 'type',
+        filterable: true,
+        sortable: true,
+        dataType: ColumnDataType.TextLong
+      },
     ];
     return cols;
   }

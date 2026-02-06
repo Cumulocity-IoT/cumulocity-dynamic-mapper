@@ -132,25 +132,6 @@ export class MappingComponent implements OnInit, OnDestroy {
   };
 
   columnsMappings: Column[];
-  columnsSubscriptions: Column[] = [
-    {
-      name: 'id',
-      header: 'System ID',
-      path: 'id',
-      filterable: false,
-      dataType: ColumnDataType.Numeric,
-      sortable: true,
-      visible: true
-    },
-    {
-      header: 'Name',
-      name: 'name',
-      path: 'name',
-      filterable: true,
-      sortable: true,
-      dataType: ColumnDataType.TextShort,
-    }
-  ];
 
   mappingType: MappingType;
   transformationType: TransformationType;
@@ -438,8 +419,9 @@ export class MappingComponent implements OnInit, OnDestroy {
         name: 'name',
         header: 'Name',
         path: 'mapping.name',
-        filterable: false,
-        dataType: 'text-short' as any,
+        filterable: true,
+        sortable: true,
+        dataType: ColumnDataType.TextShort,
         cellRendererComponent: MappingIdCellRendererComponent,
         sortOrder: 'asc',
         visible: true,
@@ -450,7 +432,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         header: 'Identifier',
         path: 'mapping.identifier',
         filterable: false,
-        dataType: 'text-short' as any,
+        dataType: ColumnDataType.TextShort,
         visible: false,
         gridTrackSize: '0%'
       },
@@ -460,6 +442,7 @@ export class MappingComponent implements OnInit, OnDestroy {
           header: 'Publish topic',
           name: 'publishTopic',
           path: 'mapping.publishTopic',
+          dataType: ColumnDataType.TextShort,
           filterable: true
         },
       this.stepperConfiguration.direction === Direction.INBOUND
@@ -467,6 +450,7 @@ export class MappingComponent implements OnInit, OnDestroy {
           header: 'Mapping topic',
           name: 'mappingTopic',
           path: 'mapping.mappingTopic',
+          dataType: ColumnDataType.TextShort,
           filterable: true
         }
         : undefined,
@@ -476,7 +460,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         path: 'mapping.targetAPI',
         filterable: true,
         sortable: true,
-        dataType: 'text-short' as any,
+        dataType: ColumnDataType.TextShort,
         cellRendererComponent: LabelTaggedRendererComponent,
         gridTrackSize: '8%'
       },
@@ -486,6 +470,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         path: 'connectors',
         filterable: true,
         sortable: false,
+        dataType: ColumnDataType.TextShort,
         cellRendererComponent: MappingDeploymentRendererComponent
       },
       {
@@ -494,6 +479,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         path: 'mapping',
         filterable: false,
         sortable: false,
+        dataType: ColumnDataType.TextShort,
         cellRendererComponent: StatusRendererComponent,
         gridTrackSize: '10%'
       },
@@ -503,6 +489,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         path: 'mapping',
         filterable: false,
         sortable: false,
+        dataType: ColumnDataType.Numeric,
         cellCSSClassName: 'text-align-center',
         cellRendererComponent: SnoopedTemplateRendererComponent,
         gridTrackSize: '8%'

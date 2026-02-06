@@ -60,10 +60,10 @@ import { Device, NotificationSubscriptionResponse } from '../shared/mapping.mode
 import { SubscriptionService } from '../core/subscription.service';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { PopoverModule } from 'ngx-bootstrap/popover';
-import { DeviceSelectorSubscriptionComponent } from './device-selector/device-selector-subscription.component';
-import { DeviceSelectorSubscription2Component } from './device-selector2/device-selector-subscription2.component';
-import { DeviceSelectorSubscription3Component } from './device-selector3/device-selector-subscription3.component';
-import { DeviceSelectorSubscription4Component } from './device-selector4/device-selector-subscription4.component';
+import { DeviceSelectorTreeComponent } from './subscription-static-tree/device-selector-tree.component';
+import { GroupSelectorComponent } from './subscription-dynamic-group/group-selector.component';
+import { TypeSelectorComponent } from './subscription-dynamic-type/type-selector.component';
+import { DeviceSelectorTableComponent } from './subscription-static-table/device-selector-table.component';
 
 @Component({
   selector: 'd11r-mapping-subscription-grid',
@@ -71,7 +71,7 @@ import { DeviceSelectorSubscription4Component } from './device-selector4/device-
   styleUrls: ['../shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
-  imports: [CoreModule, CommonModule, SharedModule, PopoverModule, DeviceSelectorSubscriptionComponent, DeviceSelectorSubscription2Component, DeviceSelectorSubscription3Component, DeviceSelectorSubscription4Component],
+  imports: [CoreModule, CommonModule, SharedModule, PopoverModule, DeviceSelectorTreeComponent, DeviceSelectorTableComponent, GroupSelectorComponent, TypeSelectorComponent],
   providers: [
     DataGridService]
 

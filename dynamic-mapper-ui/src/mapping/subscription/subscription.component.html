@@ -106,9 +106,9 @@
 <div [ngClass]="{ drawerOpen: showConfigSubscription1 }">
   <div class="bottom-drawer">
     @if (showConfigSubscription1) {
-      <d11r-device-selector-subscription (cancel)="showConfigSubscription1 = false"
+      <d11r-device-selector-tree (cancel)="showConfigSubscription1 = false"
         (commit)="onCommitSubscriptionDevice($event)" [deviceList]="subscribedDevices">
-      </d11r-device-selector-subscription>
+      </d11r-device-selector-tree>
     }
   </div>
 </div>
@@ -117,9 +117,9 @@
 <div [ngClass]="{ drawerOpen: showConfigSubscription2 }">
   <div class="bottom-drawer">
     @if (showConfigSubscription2) {
-      <d11r-device-selector-subscription2 (cancel)="showConfigSubscription2 = false"
+      <d11r-device-selector-table (cancel)="showConfigSubscription2 = false"
         (commit)="onCommitSubscriptionDevice($event)" [deviceList]="subscribedDevices">
-      </d11r-device-selector-subscription2>
+      </d11r-device-selector-table>
     }
   </div>
 </div>
@@ -127,9 +127,9 @@
 <div [ngClass]="{ drawerOpen: showConfigSubscription3 }">
   <div class="bottom-drawer">
     @if (showConfigSubscription3) {
-      <d11r-device-selector-subscription3 (cancel)="showConfigSubscription3 = false"
+      <d11r-group-selector (cancel)="showConfigSubscription3 = false"
         (commit)="onCommitSubscriptionByDeviceGroup($event)" [deviceList]="subscribedDeviceGroups">
-      </d11r-device-selector-subscription3>
+      </d11r-group-selector>
     }
   </div>
 </div>
@@ -137,9 +137,9 @@
 <div [ngClass]="{ drawerOpen: showConfigSubscription4 }">
   <div class="bottom-drawer">
     @if (showConfigSubscription4) {
-      <d11r-device-selector-subscription4 (cancel)="showConfigSubscription4 = false"
+      <d11r-type-selector (cancel)="showConfigSubscription4 = false"
         (commit)="onCommitSubscriptionByDeviceType($event)" [typeList]="subscribedDeviceTypes">
-      </d11r-device-selector-subscription4>
+      </d11r-type-selector>
     }
   </div>
 </div>
