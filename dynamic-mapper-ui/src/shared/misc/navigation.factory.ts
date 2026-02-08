@@ -46,7 +46,7 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
     configurationNode: new NavigatorNode({
       label: gettext('Configuration'),
       icon: 'cog',
-      // path: `/c8y-pkg-dynamic-mapper/${NODE3}/serviceConfiguration`,
+      path: `/c8y-pkg-dynamic-mapper/${NODE3}/serviceConfiguration`,
       priority: 500,
       preventDuplicates: true
     }),
@@ -62,7 +62,7 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
       parent: gettext('Configuration'),
       label: gettext('Service configuration'),
       icon: 'cog',
-      path: `/c8y-pkg-dynamic-mapper/${NODE3}/serviceConfiguration`,
+      path: `/c8y-pkg-dynamic-mapper/${NODE3}/serviceConfiguration/general`,
       priority: 470,
       preventDuplicates: true
     }),

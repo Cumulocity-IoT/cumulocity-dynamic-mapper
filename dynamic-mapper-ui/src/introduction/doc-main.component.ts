@@ -71,7 +71,7 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
 
   ROUTE_INBOUND: string = `/c8y-pkg-dynamic-mapper/${NODE1}/mappings/inbound`;
   ROUTE_ADD_CONNECTOR: string = `/c8y-pkg-dynamic-mapper/${NODE3}/connectorConfiguration`;
-  ROUTE_SERVICE_CONFIGURATION: string = `/c8y-pkg-dynamic-mapper/${NODE3}/serviceConfiguration`;
+  ROUTE_SERVICE_CONFIGURATION: string = `/c8y-pkg-dynamic-mapper/${NODE3}/serviceConfiguration/general`;
   ROUTE_OUTBOUND: string =
     `/c8y-pkg-dynamic-mapper/${NODE1}/mappings/outbound`;
   ROUTE_CONNECTORS: string = `/c8y-pkg-dynamic-mapper/${NODE3}/connectorConfiguration`;

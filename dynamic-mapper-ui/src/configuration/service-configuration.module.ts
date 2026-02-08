@@ -24,6 +24,7 @@ import { featureResolver, NODE3 } from '../shared';
 import { ServiceConfigurationComponent } from './service-configuration.component';
 import { CodeComponent } from './code-template/code-template.component';
 import { CodeTemplateTabFactory } from './code-template-tab.factory';
+import { ConfigurationTabFactory } from './configuration-tab.factory';
 
 @NgModule({
   providers: [
@@ -69,7 +70,26 @@ import { CodeTemplateTabFactory } from './code-template-tab.factory';
         feature: featureResolver
       }
     }),
-    hookTab(CodeTemplateTabFactory)
+    hookRoute({
+      path: `c8y-pkg-dynamic-mapper/${NODE3}/serviceConfiguration/general`,
+      component: ServiceConfigurationComponent, resolve: {
+        feature: featureResolver
+      }
+    }),
+    hookRoute({
+      path: `c8y-pkg-dynamic-mapper/${NODE3}/serviceConfiguration/logging`,
+      component: ServiceConfigurationComponent, resolve: {
+        feature: featureResolver
+      }
+    }),
+    hookRoute({
+      path: `c8y-pkg-dynamic-mapper/${NODE3}/serviceConfiguration/caching`,
+      component: ServiceConfigurationComponent, resolve: {
+        feature: featureResolver
+      }
+    }),
+    hookTab(CodeTemplateTabFactory),
+    hookTab(ConfigurationTabFactory),
   ]
 })
 export class ServiceConfigurationModule { }
