@@ -138,6 +138,13 @@ public class MappingService {
             mor.setName(mapping.getName());
             inventoryApi.update(mor, false);
 
+            configurationRegistry.getC8yAgent().createOperationEvent(
+                    String.format("Mapping created: %s [%s]", mapping.getName(), mapping.getId()),
+                    LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE,
+                    DateTime.now(),
+                    tenant,
+                    null);
+
             log.info("{} - Mapping created: {} [{}]", tenant, mapping.getName(), mapping.getId());
             return mapping;
         });
@@ -148,6 +155,14 @@ public class MappingService {
      */
     public Mapping updateMapping(String tenant, Mapping mapping,
             boolean allowUpdateWhenActive, boolean ignoreValidation) {
+        return updateMapping(tenant, mapping, allowUpdateWhenActive, ignoreValidation, true);
+    }
+
+    /**
+     * Updates an existing mapping with optional event logging
+     */
+    private Mapping updateMapping(String tenant, Mapping mapping,
+            boolean allowUpdateWhenActive, boolean ignoreValidation, boolean logEvent) {
         // Validate unless ignoring
         if (!ignoreValidation) {
             List<ValidationError> errors = mappingValidator.validate(tenant, mapping, mapping.getId());
@@ -169,6 +184,15 @@ public class MappingService {
             mor.setId(GId.asGId(mapping.getId()));
             mor.setName(mapping.getName());
             inventoryApi.update(mor, false);
+
+            if (logEvent) {
+                configurationRegistry.getC8yAgent().createOperationEvent(
+                        String.format("Mapping updated: %s [%s]", mapping.getName(), mapping.getId()),
+                        LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE,
+                        DateTime.now(),
+                        tenant,
+                        null);
+            }
 
             log.info("{} - Mapping updated: {} [{}]", tenant, mapping.getName(), mapping.getId());
             return mapping;
@@ -247,6 +271,13 @@ public class MappingService {
             deploymentMapService.removeMappingDeployment(tenant, mapping.getIdentifier());
             javaScriptService.removeCodeFromEngine(tenant, mapping);
 
+            configurationRegistry.getC8yAgent().createOperationEvent(
+                    String.format("Mapping deleted: %s [%s]", mapping.getName(), id),
+                    LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE,
+                    DateTime.now(),
+                    tenant,
+                    null);
+
             log.info("{} - Mapping deleted: {}", tenant, id);
         }
 
@@ -308,20 +339,40 @@ public class MappingService {
             throw new IllegalArgumentException("Mapping not found: " + mappingId);
         }
 
-        // Retrieve current snooped templates
-        snoopService.applySnoopedTemplates(tenant, mapping);
+        try {
+            // Retrieve current snooped templates
+            snoopService.applySnoopedTemplates(tenant, mapping);
 
-        mapping.setActive(active);
+            mapping.setActive(active);
 
-        updateMapping(tenant, mapping, true, !active); // ignore validation when deactivating
-        updateCacheAfterChange(tenant, mapping);
+            updateMapping(tenant, mapping, true, !active); // ignore validation when deactivating
+            updateCacheAfterChange(tenant, mapping);
 
-        if (active) {
-            statusService.resetFailureCount(tenant, mapping.getIdentifier());
+            if (active) {
+                statusService.resetFailureCount(tenant, mapping.getIdentifier());
+            }
+
+            configurationRegistry.getC8yAgent().createOperationEvent(
+                    String.format("Mapping %s [%s] %s", mapping.getName(), mappingId,
+                            active ? "activated" : "deactivated"),
+                    LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE,
+                    DateTime.now(),
+                    tenant,
+                    null);
+
+            log.info("{} - Mapping {} set to active={}", tenant, mappingId, active);
+            return mapping;
+        } catch (Exception e) {
+            configurationRegistry.getC8yAgent().createOperationEvent(
+                    String.format("Failed to %s mapping %s [%s]: %s",
+                            active ? "activate" : "deactivate", mapping.getName(), mappingId, e.getMessage()),
+                    LoggingEventType.STATUS_MAPPING_ACTIVATION_ERROR_EVENT_TYPE,
+                    DateTime.now(),
+                    tenant,
+                    null);
+            log.error("{} - Failed to set activation for mapping {}", tenant, mappingId, e);
+            throw e;
         }
-
-        log.info("{} - Mapping {} set to active={}", tenant, mappingId, active);
-        return mapping;
     }
 
     /**
@@ -338,6 +389,14 @@ public class MappingService {
 
         updateMapping(tenant, mapping, true, true);
         updateCacheAfterChange(tenant, mapping);
+
+        configurationRegistry.getC8yAgent().createOperationEvent(
+                String.format("Mapping %s [%s] debug mode %s", mapping.getName(), mappingId,
+                        debug ? "enabled" : "disabled"),
+                LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE,
+                DateTime.now(),
+                tenant,
+                null);
 
         log.info("{} - Mapping {} debug set to {}", tenant, mappingId, debug);
     }
@@ -357,6 +416,13 @@ public class MappingService {
         updateMapping(tenant, mapping, true, true);
         updateCacheAfterChange(tenant, mapping);
 
+        configurationRegistry.getC8yAgent().createOperationEvent(
+                String.format("Mapping %s [%s] snoop status set to %s", mapping.getName(), mappingId, snoopStatus),
+                LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE,
+                DateTime.now(),
+                tenant,
+                null);
+
         log.info("{} - Mapping {} snoop status set to {}", tenant, mappingId, snoopStatus);
     }
 
@@ -374,6 +440,13 @@ public class MappingService {
 
         updateMapping(tenant, mapping, true, false);
         updateCacheAfterChange(tenant, mapping);
+
+        configurationRegistry.getC8yAgent().createOperationEvent(
+                String.format("Mapping %s [%s] filter updated", mapping.getName(), mappingId),
+                LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE,
+                DateTime.now(),
+                tenant,
+                null);
 
         log.info("{} - Mapping {} filter updated", tenant, mappingId);
         return mapping;
@@ -399,6 +472,14 @@ public class MappingService {
 
         updateMapping(tenant, mapping, true, true);
         updateCacheAfterChange(tenant, mapping);
+
+        configurationRegistry.getC8yAgent().createOperationEvent(
+                String.format("Mapping %s [%s] source template updated from snoop index %d",
+                        mapping.getName(), mappingId, templateIndex),
+                LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE,
+                DateTime.now(),
+                tenant,
+                null);
 
         log.info("{} - Mapping {} source template updated from snoop index {}", tenant, mappingId, templateIndex);
     }
@@ -571,7 +652,7 @@ public class MappingService {
         log.info("{} - Cleaning {} dirty mappings", tenant, dirty.size());
 
         for (Mapping mapping : dirty) {
-            updateMapping(tenant, mapping, true, false);
+            updateMapping(tenant, mapping, true, false, false); // Don't log individual updates in batch
         }
 
         dirty.clear();
