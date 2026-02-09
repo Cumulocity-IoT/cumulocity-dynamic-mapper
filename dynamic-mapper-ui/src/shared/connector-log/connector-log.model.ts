@@ -39,13 +39,14 @@ export enum ConnectorStatus {
 }
 
 export enum LoggingEventType {
-  STATUS_SUBSCRIPTION_EVENT_TYPE = 'STATUS_SUBSCRIPTION_EVENT_TYPE',
-  STATUS_CONNECTOR_EVENT_TYPE = 'STATUS_CONNECTOR_EVENT_TYPE',
+  SUBSCRIPTION_EVENT_TYPE = 'SUBSCRIPTION_EVENT_TYPE',
+  CACHE_EVENT_TYPE = 'CACHE_EVENT_TYPE',
+  CONNECTOR_EVENT_TYPE = 'CONNECTOR_EVENT_TYPE',
   MAPPING_LOADING_ERROR_EVENT_TYPE = 'MAPPING_LOADING_ERROR_EVENT_TYPE',
-  STATUS_MAPPING_ACTIVATION_ERROR_EVENT_TYPE = 'STATUS_MAPPING_ACTIVATION_ERROR_EVENT_TYPE',
-  STATUS_MAPPING_CHANGED_EVENT_TYPE = 'STATUS_MAPPING_CHANGED_EVENT_TYPE',
-  STATUS_MAPPING_FAILURE_EVENT_TYPE = 'STATUS_MAPPING_FAILURE_EVENT_TYPE',
-  STATUS_NOTIFICATION_EVENT_TYPE = 'STATUS_NOTIFICATION_EVENT_TYPE',
+  MAPPING_ACTIVATION_ERROR_EVENT_TYPE = 'MAPPING_ACTIVATION_ERROR_EVENT_TYPE',
+  MAPPING_CHANGED_EVENT_TYPE = 'MAPPING_CHANGED_EVENT_TYPE',
+  MAPPING_FAILURE_EVENT_TYPE = 'MAPPING_FAILURE_EVENT_TYPE',
+  NOTIFICATION_EVENT_TYPE = 'NOTIFICATION_EVENT_TYPE',
   ALL = 'ALL'
 }
 
@@ -66,16 +67,24 @@ export interface EventMetadata {
 }
 
 export const LoggingEventTypeMap: Record<LoggingEventType, LoggingEventTypeDetails> = {
-  [LoggingEventType.STATUS_SUBSCRIPTION_EVENT_TYPE]: {
-    name: 'STATUS_SUBSCRIPTION_EVENT_TYPE',
+  [LoggingEventType.SUBSCRIPTION_EVENT_TYPE]: {
+    name: 'SUBSCRIPTION_EVENT_TYPE',
     type: 'd11r_subscriptionEvent',
     component: 'd11r_connector',
     componentDisplayName: 'Connector',
     severity: 'info',
     description: 'Subscription lifecycle events for connectors'
   },
-  [LoggingEventType.STATUS_CONNECTOR_EVENT_TYPE]: {
-    name: 'STATUS_CONNECTOR_EVENT_TYPE',
+    [LoggingEventType.CACHE_EVENT_TYPE]: {
+    name: 'CACHE_EVENT_TYPE',
+    type: 'd11r_cacheEvent',
+    component: 'd11r_cache',
+    componentDisplayName: 'Cache',
+    severity: 'info',
+    description: 'Cache event'
+  },
+  [LoggingEventType.CONNECTOR_EVENT_TYPE]: {
+    name: 'CONNECTOR_EVENT_TYPE',
     type: 'd11r_connectorStatusEvent',
     component: 'd11r_connector',
     componentDisplayName: 'Connector',
@@ -90,32 +99,32 @@ export const LoggingEventTypeMap: Record<LoggingEventType, LoggingEventTypeDetai
     severity: 'error',
     description: 'Errors occurring during mapping configuration loading'
   },
-  [LoggingEventType.STATUS_MAPPING_ACTIVATION_ERROR_EVENT_TYPE]: {
-    name: 'STATUS_MAPPING_ACTIVATION_ERROR_EVENT_TYPE',
+  [LoggingEventType.MAPPING_ACTIVATION_ERROR_EVENT_TYPE]: {
+    name: 'MAPPING_ACTIVATION_ERROR_EVENT_TYPE',
     type: 'd11r_mappingActivationErrorEvent',
     component: 'd11r_mapping',
     componentDisplayName: 'Mapping',
     severity: 'error',
     description: 'Errors during mapping activation'
   },
-  [LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE]: {
-    name: 'STATUS_MAPPING_CHANGED_EVENT_TYPE',
+  [LoggingEventType.MAPPING_CHANGED_EVENT_TYPE]: {
+    name: 'MAPPING_CHANGED_EVENT_TYPE',
     type: 'd11r_mappingChangedEvent',
     component: 'd11r_mapping',
     componentDisplayName: 'Mapping',
     severity: 'info',
     description: 'Mapping configuration change notifications'
   },
-    [LoggingEventType.STATUS_MAPPING_FAILURE_EVENT_TYPE]: {
-    name: 'STATUS_MAPPING_FAILURE_EVENT_TYPE',
+    [LoggingEventType.MAPPING_FAILURE_EVENT_TYPE]: {
+    name: 'MAPPING_FAILURE_EVENT_TYPE',
     type: 'd11r_mappingFailureEvent',
     component: 'd11r_mapping',
     componentDisplayName: 'Mapping',
     severity: 'error',
     description: 'Mapping processing failures and errors'
   },
-  [LoggingEventType.STATUS_NOTIFICATION_EVENT_TYPE]: {
-    name: 'STATUS_NOTIFICATION_EVENT_TYPE',
+  [LoggingEventType.NOTIFICATION_EVENT_TYPE]: {
+    name: 'NOTIFICATION_EVENT_TYPE',
     type: 'd11r_notificationStatusEvent',
     component: 'd11r_connector',
     componentDisplayName: 'Connector',

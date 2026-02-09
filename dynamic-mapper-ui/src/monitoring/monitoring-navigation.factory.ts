@@ -37,7 +37,6 @@ export class MonitoringNavigationFactory implements NavigatorNodeFactory {
     'dynamic-mapper-service';
 
   appName: string;
-  isStandaloneApp: boolean = false;
   staticNodesStandalone = {
     monitoringMappingNode: new NavigatorNode({
       parent: gettext('Monitoring'),
@@ -63,7 +62,14 @@ export class MonitoringNavigationFactory implements NavigatorNodeFactory {
       priority: 510,
       preventDuplicates: true
     }),
-
+    monitoringCacheNode: new NavigatorNode({
+      parent: gettext('Monitoring'),
+      label: gettext('Statistic cache'),
+      icon: 'database',
+      path: `c8y-pkg-dynamic-mapper/${NODE2}/monitoring/cache`,
+      priority: 530,
+      preventDuplicates: true
+    }),
   } as const;
 
   constructor(
@@ -74,8 +80,6 @@ export class MonitoringNavigationFactory implements NavigatorNodeFactory {
     public router: Router
   ) {
     this.appStateService.currentApplication.subscribe((cur) => {
-      this.isStandaloneApp =
-        _.has(cur?.manifest, 'isPackage') || _.has(cur?.manifest, 'blueprint');
       this.appName = cur.name;
     });
   }

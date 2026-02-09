@@ -783,7 +783,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                     entry("connectorIdentifier", "000000"),
                     entry("date", date));
             createOperationEvent("Connector status: " + connectorStatus.name(),
-                    LoggingEventType.STATUS_NOTIFICATION_EVENT_TYPE, DateTime.now(),
+                    LoggingEventType.NOTIFICATION_EVENT_TYPE, DateTime.now(),
                     tenant,
                     stMap);
         }
@@ -823,7 +823,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     }
 
     public void clearInboundExternalIdCache(String tenant, boolean recreate, int inboundExternalIdCacheSize) {
-        cacheManager.clearInboundExternalIdCache(tenant, recreate, inboundExternalIdCacheSize);
+        cacheManager.clearInboundExternalIdCache(tenant, recreate, inboundExternalIdCacheSize, configurationRegistry);
     }
 
     public void removeDeviceFromInboundExternalIdCache(String tenant, ID identity) {

@@ -18,14 +18,20 @@
  * @authors Christof Strack
  */
 import { inject, Injectable } from '@angular/core';
-import { InventoryService } from '@c8y/client';
-import { BehaviorSubject, map, Observable, Subject, Subscription, takeUntil } from 'rxjs';
-import { MAPPING_FRAGMENT, MappingStatus, SharedService } from '../../shared';
+import { InventoryService, FetchClient } from '@c8y/client';
+import { BehaviorSubject, map, Observable, Subject, takeUntil } from 'rxjs';
+import { BASE_URL, MAPPING_FRAGMENT, MappingStatus, SharedService } from '../../shared';
 import {
   ManagedObjectRealtimeService,
   RealtimeSubjectService
 } from '@c8y/ngx-components';
 
+export type KpiDetails = {
+  id: string;
+  name: string;
+  itemName: string;
+  value?: number;
+};
 
 interface MonitoringState {
   status: MappingStatus[];
@@ -38,6 +44,7 @@ export class MonitoringService {
   private readonly inventory = inject(InventoryService);
   private readonly sharedService = inject(SharedService);
   private readonly realtimeSubjectService = inject(RealtimeSubjectService);
+  private readonly client = inject(FetchClient);
 
   constructor() {
     this.managedObjectRealtimeService = new ManagedObjectRealtimeService(
@@ -58,6 +65,41 @@ export class MonitoringService {
 
   getMappingStatus(): Observable<MappingStatus[]> {
     return this.mappingStatus$;
+  }
+
+  async getCacheSize(cacheId: string): Promise<number> {
+    try {
+      const response = await this.client.fetch(`${BASE_URL}/cache?cacheId=${encodeURIComponent(cacheId)}`, {
+        method: 'GET'
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch cache size: ${response.status}`);
+      }
+
+      const body = await response.json();
+      return typeof body === 'number' ? body : Number(body || 0);
+    } catch (err) {
+      console.error('Error fetching cache size', err);
+      throw err;
+    }
+  }
+
+  async getKpisDetails(_tenantId?: string): Promise<Array<KpiDetails>> {
+    try {
+      const [inventorySize, inboundSize] = await Promise.all([
+        this.getCacheSize('INVENTORY_CACHE'),
+        this.getCacheSize('INBOUND_ID_CACHE')
+      ]);
+
+      return [
+        { id: 'inventoryCache', name: 'Inventory cache', value: inventorySize ?? 0, itemName:"Entries" },
+        { id: 'inboundIdCache', name: 'Inbound ID cache', value: inboundSize ?? 0 , itemName:"Entries" }
+      ];
+    } catch (err) {
+      console.error('Failed to get KPIs details', err);
+      throw err;
+    }
   }
 
 

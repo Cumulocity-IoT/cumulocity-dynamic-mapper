@@ -140,7 +140,7 @@ public class MappingService {
 
             configurationRegistry.getC8yAgent().createOperationEvent(
                     String.format("Mapping created: %s [%s]", mapping.getName(), mapping.getId()),
-                    LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE,
+                    LoggingEventType.MAPPING_CHANGED_EVENT_TYPE,
                     DateTime.now(),
                     tenant,
                     null);
@@ -188,7 +188,7 @@ public class MappingService {
             if (logEvent) {
                 configurationRegistry.getC8yAgent().createOperationEvent(
                         String.format("Mapping updated: %s [%s]", mapping.getName(), mapping.getId()),
-                        LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE,
+                        LoggingEventType.MAPPING_CHANGED_EVENT_TYPE,
                         DateTime.now(),
                         tenant,
                         null);
@@ -273,7 +273,7 @@ public class MappingService {
 
             configurationRegistry.getC8yAgent().createOperationEvent(
                     String.format("Mapping deleted: %s [%s]", mapping.getName(), id),
-                    LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE,
+                    LoggingEventType.MAPPING_CHANGED_EVENT_TYPE,
                     DateTime.now(),
                     tenant,
                     null);
@@ -355,7 +355,7 @@ public class MappingService {
             configurationRegistry.getC8yAgent().createOperationEvent(
                     String.format("Mapping %s [%s] %s", mapping.getName(), mappingId,
                             active ? "activated" : "deactivated"),
-                    LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE,
+                    LoggingEventType.MAPPING_CHANGED_EVENT_TYPE,
                     DateTime.now(),
                     tenant,
                     null);
@@ -366,7 +366,7 @@ public class MappingService {
             configurationRegistry.getC8yAgent().createOperationEvent(
                     String.format("Failed to %s mapping %s [%s]: %s",
                             active ? "activate" : "deactivate", mapping.getName(), mappingId, e.getMessage()),
-                    LoggingEventType.STATUS_MAPPING_ACTIVATION_ERROR_EVENT_TYPE,
+                    LoggingEventType.MAPPING_ACTIVATION_ERROR_EVENT_TYPE,
                     DateTime.now(),
                     tenant,
                     null);
@@ -393,7 +393,7 @@ public class MappingService {
         configurationRegistry.getC8yAgent().createOperationEvent(
                 String.format("Mapping %s [%s] debug mode %s", mapping.getName(), mappingId,
                         debug ? "enabled" : "disabled"),
-                LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE,
+                LoggingEventType.MAPPING_CHANGED_EVENT_TYPE,
                 DateTime.now(),
                 tenant,
                 null);
@@ -418,7 +418,7 @@ public class MappingService {
 
         configurationRegistry.getC8yAgent().createOperationEvent(
                 String.format("Mapping %s [%s] snoop status set to %s", mapping.getName(), mappingId, snoopStatus),
-                LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE,
+                LoggingEventType.MAPPING_CHANGED_EVENT_TYPE,
                 DateTime.now(),
                 tenant,
                 null);
@@ -443,7 +443,7 @@ public class MappingService {
 
         configurationRegistry.getC8yAgent().createOperationEvent(
                 String.format("Mapping %s [%s] filter updated", mapping.getName(), mappingId),
-                LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE,
+                LoggingEventType.MAPPING_CHANGED_EVENT_TYPE,
                 DateTime.now(),
                 tenant,
                 null);
@@ -476,7 +476,7 @@ public class MappingService {
         configurationRegistry.getC8yAgent().createOperationEvent(
                 String.format("Mapping %s [%s] source template updated from snoop index %d",
                         mapping.getName(), mappingId, templateIndex),
-                LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE,
+                LoggingEventType.MAPPING_CHANGED_EVENT_TYPE,
                 DateTime.now(),
                 tenant,
                 null);
@@ -500,7 +500,7 @@ public class MappingService {
 
         configurationRegistry.getC8yAgent().createOperationEvent(
                 String.format("Mapping with id: %s snoop reset", mappingId ),
-                LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE,
+                LoggingEventType.MAPPING_CHANGED_EVENT_TYPE,
                 DateTime.now(),
                 tenant,
                 null);
@@ -659,7 +659,7 @@ public class MappingService {
 
         configurationRegistry.getC8yAgent().createOperationEvent(
                 "Mappings updated in backend, dirty mappings cleaned!",
-                LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE,
+                LoggingEventType.MAPPING_CHANGED_EVENT_TYPE,
                 DateTime.now(),
                 tenant,
                 null);

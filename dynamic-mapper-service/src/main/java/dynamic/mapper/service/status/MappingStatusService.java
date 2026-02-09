@@ -275,7 +275,7 @@ public class MappingStatusService {
             }
 
             updateInventoryWithStatuses(tenant, statusArray);
-            log.info("{} - Successfully sent {} statuses to inventory", tenant, statusArray.length);
+            log.debug("{} - Successfully sent {} statuses to inventory", tenant, statusArray.length);
 
         } catch (IllegalArgumentException e) {
             log.error("{} - Invalid argument when sending status to inventory: {}", tenant, e.getMessage());
@@ -376,7 +376,7 @@ public class MappingStatusService {
 
         configurationRegistry.getC8yAgent().createOperationEvent(
                 message,
-                LoggingEventType.STATUS_MAPPING_FAILURE_EVENT_TYPE,
+                LoggingEventType.MAPPING_FAILURE_EVENT_TYPE,
                 DateTime.now(),
                 tenant,
                 null);

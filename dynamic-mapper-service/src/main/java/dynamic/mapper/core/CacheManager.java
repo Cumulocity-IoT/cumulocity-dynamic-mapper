@@ -32,6 +32,7 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 
 import dynamic.mapper.core.cache.InboundExternalIdCache;
 import dynamic.mapper.core.cache.InventoryCache;
+import dynamic.mapper.model.LoggingEventType;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -80,14 +81,31 @@ public class CacheManager {
         return inventoryCaches.get(tenant);
     }
 
-    public void clearInboundExternalIdCache(String tenant, boolean recreate, int inboundExternalIdCacheSize) {
+    public void clearInboundExternalIdCache(String tenant, boolean recreate, int inboundExternalIdCacheSize,
+            ConfigurationRegistry configurationRegistry) {
         InboundExternalIdCache inboundExternalIdCache = inboundExternalIdCaches.get(tenant);
+
         if (inboundExternalIdCache != null) {
+            String action = recreate ? "recreated" : "cleared";
+            int previousSize = inboundExternalIdCache.getCacheSize();
+
             if (recreate) {
                 inboundExternalIdCaches.put(tenant, new InboundExternalIdCache(inboundExternalIdCacheSize, tenant));
             } else {
                 inboundExternalIdCache.clearCache();
             }
+
+            String message = String.format("InboundExternalIdCache %s (previous size: %d entries, new capacity: %d)",
+                    action, previousSize, inboundExternalIdCacheSize);
+
+            configurationRegistry.getC8yAgent().createOperationEvent(
+                    message,
+                    LoggingEventType.CACHE_EVENT_TYPE,
+                    org.joda.time.DateTime.now(),
+                    tenant,
+                    null);
+
+            log.info("{} - {}", tenant, message);
         }
     }
 
@@ -111,7 +129,11 @@ public class CacheManager {
     public void clearInventoryCache(String tenant, boolean recreate, int inventoryCacheSize,
             ConfigurationRegistry configurationRegistry) {
         InventoryCache inventoryCache = inventoryCaches.get(tenant);
+
         if (inventoryCache != null) {
+            String action = recreate ? "recreated" : "cleared";
+            int previousSize = inventoryCache.getCacheSize();
+
             if (recreate) {
                 configurationRegistry.getNotificationSubscriber().unsubscribeAllMOForInventoryCacheUpdates(tenant);
                 inventoryCaches.put(tenant, new InventoryCache(inventoryCacheSize, tenant));
@@ -119,6 +141,18 @@ public class CacheManager {
                 configurationRegistry.getNotificationSubscriber().unsubscribeAllMOForInventoryCacheUpdates(tenant);
                 inventoryCache.clearCache();
             }
+
+            String message = String.format("InventoryCache %s (previous size: %d entries, new capacity: %d)",
+                    action, previousSize, inventoryCacheSize);
+
+            configurationRegistry.getC8yAgent().createOperationEvent(
+                    message,
+                    LoggingEventType.CACHE_EVENT_TYPE,
+                    org.joda.time.DateTime.now(),
+                    tenant,
+                    null);
+
+            log.info("{} - {}", tenant, message);
         }
     }
 

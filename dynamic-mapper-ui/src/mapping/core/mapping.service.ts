@@ -423,7 +423,7 @@ export class MappingService {
         filter(
           (payload) =>
             payload['type'] ==
-            LoggingEventTypeMap[LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE].type
+            LoggingEventTypeMap[LoggingEventType.MAPPING_CHANGED_EVENT_TYPE].type
         ),
         takeUntil(this.unsubscribe$)
       )

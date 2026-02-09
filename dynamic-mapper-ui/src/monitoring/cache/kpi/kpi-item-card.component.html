@@ -1,0 +1,31 @@
+<div class="card-block text-default visible-xs text-center p-b-0">
+  <span class="text-12 text-uppercase text-muted">
+    {{ serviceLabel | translate }}
+  </span>
+</div>
+<div
+  class="card-block text-default p-t-sm-48"
+  [ngClass]="{
+    'p-b-sm-48': limit === 0
+  }"
+>
+  <div class="d-flex fit-w a-i-center gap-8 j-c-center">
+    <i
+      class="icon-32 c8y-icon-duocolor"
+      [c8yIcon]="ITEM_DETAILS[dataType]?.icon || 'bar-chart'"
+    ></i>
+    <span
+      class="h1"
+      data-cy="kpi-item-card--value"
+    >
+      {{ value | number }}
+    </span>
+    <span
+      class="a-s-baseline text-14 text-medium text-truncate"
+      title="{{ ITEM_DETAILS[dataType]?.title | translate }}"
+      data-cy="kpi-item-card--label"
+    >
+      {{ ITEM_DETAILS[dataType]?.title | translate }}
+    </span>
+  </div>
+</div>

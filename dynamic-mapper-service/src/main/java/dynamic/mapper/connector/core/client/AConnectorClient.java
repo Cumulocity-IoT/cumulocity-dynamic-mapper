@@ -973,7 +973,7 @@ public abstract class AConnectorClient {
             String message = "Connector status: " + status;
             c8yAgent.createOperationEvent(
                     message,
-                    LoggingEventType.STATUS_CONNECTOR_EVENT_TYPE,
+                    LoggingEventType.CONNECTOR_EVENT_TYPE,
                     DateTime.now(),
                     tenant,
                     statusMap);
@@ -1064,7 +1064,7 @@ public abstract class AConnectorClient {
 
         c8yAgent.createOperationEvent(
                 message,
-                LoggingEventType.STATUS_SUBSCRIPTION_EVENT_TYPE,
+                LoggingEventType.SUBSCRIPTION_EVENT_TYPE,
                 DateTime.now(),
                 tenant,
                 eventMap);
