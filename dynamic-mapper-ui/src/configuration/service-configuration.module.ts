@@ -77,6 +77,12 @@ import { ConfigurationTabFactory } from './configuration-tab.factory';
       }
     }),
     hookRoute({
+      path: `c8y-pkg-dynamic-mapper/${NODE3}/serviceConfiguration/ai`,
+      component: ServiceConfigurationComponent, resolve: {
+        feature: featureResolver
+      }
+    }),
+    hookRoute({
       path: `c8y-pkg-dynamic-mapper/${NODE3}/serviceConfiguration/logging`,
       component: ServiceConfigurationComponent, resolve: {
         feature: featureResolver

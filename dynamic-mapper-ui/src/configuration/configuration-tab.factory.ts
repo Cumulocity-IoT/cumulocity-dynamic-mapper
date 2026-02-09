@@ -44,16 +44,23 @@ export class ConfigurationTabFactory implements TabFactory {
         icon: 'settings',
         orientation: 'horizontal',
       } as Tab);
+            tabs.push({
+        path: `c8y-pkg-dynamic-mapper/${NODE3}/serviceConfiguration/ai`,
+        priority: 925,
+        label: 'Ai Agent',
+        icon: 'bot',
+        orientation: 'horizontal',
+      } as Tab);
       tabs.push({
         path: `c8y-pkg-dynamic-mapper/${NODE3}/serviceConfiguration/caching`,
-        priority: 925,
+        priority: 920,
         label: 'Caching',
         icon: 'database',
         orientation: 'horizontal',
       } as Tab);
       tabs.push({
         path: `c8y-pkg-dynamic-mapper/${NODE3}/serviceConfiguration/logging`,
-        priority: 920,
+        priority: 915,
         label: 'Logging',
         icon: 'system-report',
         orientation: 'horizontal',

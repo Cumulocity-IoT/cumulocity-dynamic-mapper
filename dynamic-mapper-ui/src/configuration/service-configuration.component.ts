@@ -96,6 +96,8 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     const href = this.router.url;
     if (href.includes('/serviceConfiguration/general')) {
       this.section = "general";
+    } else if (href.includes('/serviceConfiguration/ai')) {
+      this.section = "ai";
     } else if (href.includes('/serviceConfiguration/caching')) {
       this.section = "caching";
     } else {
