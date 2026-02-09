@@ -101,8 +101,8 @@ export class MonitoringService {
       const inboundLimit = (config && typeof config.inboundExternalIdCacheSize === 'number') ? config.inboundExternalIdCacheSize : 0;
 
       return [
-        { domain: 'inventoryCache', id: 'inventoryCacheRaw', name: 'Inventory cache', value: inventorySize ?? 0, itemName: 'Entries', icon: 'more-details', domainIcon: 'more-details', limit: inventoryLimit },
-        { domain: 'inboundIdCache', id: 'inboundIdCacheRaw', name: 'Inbound ID cache', value: inboundSize ?? 0, itemName: 'Entries', icon: 'pin-code', domainIcon: 'pin-code', limit: inboundLimit }
+        { domain: 'inventoryCache', id: 'inventoryCacheRaw', name: 'Inventory cache', value: inventorySize ?? 0, itemName: 'Entries', icon: 'hashtag', domainIcon: 'more-details', limit: inventoryLimit },
+        { domain: 'inboundIdCache', id: 'inboundIdCacheRaw', name: 'Inbound ID cache', value: inboundSize ?? 0, itemName: 'Entries', icon: 'hashtag', domainIcon: 'pin-code', limit: inboundLimit }
       ];
     } catch (err) {
       console.error('Failed to get KPIs details', err);

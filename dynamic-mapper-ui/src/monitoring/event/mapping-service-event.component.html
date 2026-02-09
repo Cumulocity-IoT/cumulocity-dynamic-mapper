@@ -56,11 +56,6 @@
 </c8y-action-bar-item>
 
 <div class="elevation-sm p-12">
-<!-- <  <div class="card-header large-padding separator sticky-top">
-    <span class="card-title" translate>
-      Mapping service events
-    </span>
-  </div>> -->
 
   <!-- Loading State -->
   @if (isLoading$ | async) {
@@ -103,35 +98,33 @@
     <c8y-list-group>
       <c8y-li-timeline *c8yFor="let event of events$| async; loadMore: 'auto'; let i = index">
         {{ event.time | c8yDate: 'MMM d, y, h:mm:ss a' }}
-        <c8y-li #li [collapsed]="true">
-          <c8y-li-body>
-            <div class="d-flex">
-              <div class="col-md-8">
-                <span>
-                  {{ event.text }}
-                </span>
-              </div>
-              <div class="col-md-2">
-                @if (getEventMetadata(event); as metadata) {
-                <span class="text-10 label" [ngClass]="getSeverityClass(metadata.severity)"
-                  [title]="metadata.description">
-                  {{ metadata.componentDisplayName }}
-                </span>
-                } @else {
-                <span class="text-10 label label-default">Unknown</span>
-                }
-              </div>
-              <div class="col-md-2">
-                <span class="text-10 label label-primary">
-                  {{ event?.d11r_connector?.connectorName ? ( event?.d11r_connector?.connectorName ) : 'System'
-                  }}
-                </span>
-              </div>
+        <c8y-li role="listitem">
+          <div class="d-flex">
+            <div class="col-md-8">
+              <span>
+                {{ event.text }}
+              </span>
             </div>
-          </c8y-li-body>
-          <c8y-li-collapse>
+            <div class="col-md-2">
+              @if (getEventMetadata(event); as metadata) {
+              <span class="text-10 label" [ngClass]="getSeverityClass(metadata.severity)"
+                [title]="metadata.description">
+                {{ metadata.componentDisplayName }}
+              </span>
+              } @else {
+              <span class="text-10 label label-default">Unknown</span>
+              }
+            </div>
+            <div class="col-md-2">
+              <span class="text-10 label label-primary">
+                {{ event?.d11r_connector?.connectorName ? ( event?.d11r_connector?.connectorName ) : 'System'
+                }}
+              </span>
+            </div>
+          </div>
+          <c8y-list-item-collapse collapseWay="button" id="detail-{{i}}">
             <small>{{event | filterJson:['self', 'source', 'creationTime', 'lastUpdated']:true | json}}</small>
-          </c8y-li-collapse>
+          </c8y-list-item-collapse>
         </c8y-li>
       </c8y-li-timeline>
     </c8y-list-group>

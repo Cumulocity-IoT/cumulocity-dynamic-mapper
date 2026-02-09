@@ -31,79 +31,37 @@
   <div class="card">
     <div class="card-header p-l-32 separator j-c-between">
       <h4 class="card-title">
-        <span>{{ 'Details extension ' + extension['name'] | translate }} </span> 
+        <span>{{ 'Details extension ' + extension['name'] | translate }} </span>
       </h4>
     </div>
     <div class="card-block">
       <div class="d-contents p-l-24 p-r-24">
         <c8y-list-group class="separator-top" role="list">
           @for (entry of extension['extensionEntries']; track entry; let i = $index) {
-          <c8y-li role="listitem" class="p-t-4 p-b-4" #li>
+          <c8y-li role="listitem" class="p-t-8 p-b-8" #li>
+
+            <!-- <div class="d-flex">
+              <div class="col-md-8"> -->
             <c8y-li-icon [icon]="'plugin'"></c8y-li-icon>
-            <button class="btn-clean" style="width:100%" (click)="li.collapsed = !li.collapsed">
+            <div class="col-md-4">
               <span class="m-r-16">{{ entry.eventName }}</span>
+            </div>
+            <div class="col-md-6">
               @if (entry.direction) {
-              <span class="label label-primary m-l-4" >
+              <span class="label label-primary m-l-4">
                 {{ entry.direction | formatStringAsWords }}
               </span>
               }
-            </button>
-            <c8y-li-collapse>
-              <table class="table table-condensed table-striped">
-                <thead>
-                  <tr>
-                    <th style="width: 20%">Property</th>
-                    <th style="width: 80%">Value</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>Event Name</td>
-                    <td>{{ entry.eventName }}</td>
-                  </tr>
-                  <tr>
-                    <td>Event Implementation</td>
-                    <td>{{ entry.fqnClassName }}</td>
-                  </tr>
-                  @if (entry.description) {
-                  <tr>
-                    <td>Description</td>
-                    <td>{{ entry.description }}</td>
-                  </tr>
-                  }
-                  @if (entry.version) {
-                  <tr>
-                    <td>Version</td>
-                    <td><span class="label label-info">{{ entry.version }}</span></td>
-                  </tr>
-                  }
-                  <tr>
-                    <td>Message</td>
-                    <td>{{ entry.message }}</td>
-                  </tr>
-                  <tr>
-                    <td>Type</td>
-                    <td>{{ entry.extensionType | formatStringAsWords }}</td>
-                  </tr>
-                  <tr>
-                    <td>Direction</td>
-                    <td>
-                      @if (entry.direction) {
-                      <span class="label" [ngClass]="{
-                            'label-info': entry.direction === 'INBOUND',
-                            'label-warning': entry.direction === 'OUTBOUND',
-                            'label-default': entry.direction === 'UNSPECIFIED'
-                          }">
-                        {{ entry.direction | formatStringAsWords }}
-                      </span>
-                      } @else {
-                      <span class="label label-default">UNSPECIFIED</span>
-                      }
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </c8y-li-collapse>
+            </div>
+            <!-- </div>
+            </div> -->
+            <c8y-list-item-collapse collapseWay="button" id="detail-{{i}}">
+              <c8y-properties-list
+                [data]="entry"
+                [properties]="getEntryProperties(entry)"
+                [emptyLabel]="'--'"
+              ></c8y-properties-list>
+            </c8y-list-item-collapse>
           </c8y-li>
           }
           @if (

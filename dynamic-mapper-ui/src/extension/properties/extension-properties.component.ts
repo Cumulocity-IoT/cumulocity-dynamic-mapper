@@ -21,7 +21,7 @@ import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { IManagedObject } from '@c8y/client';
 
-import { CoreModule } from '@c8y/ngx-components';
+import { CoreModule, PropertiesListItem } from '@c8y/ngx-components';
 import { NODE3, SharedModule } from '../../shared';
 
 interface ExtensionEntry {
@@ -72,5 +72,28 @@ export class ExtensionPropertiesComponent implements OnInit {
 
   get extensionType(): string {
     return this.extension?.external ? 'External' : 'Internal';
+  }
+
+  getEntryProperties(entry: ExtensionEntry): PropertiesListItem[] {
+    const properties: PropertiesListItem[] = [
+      { label: 'Event Name', key: 'eventName' },
+      { label: 'Event Implementation', key: 'fqnClassName' }
+    ];
+
+    if (entry.description) {
+      properties.push({ label: 'Description', key: 'description' });
+    }
+
+    if (entry.version) {
+      properties.push({ label: 'Version', key: 'version' });
+    }
+
+    properties.push(
+      { label: 'Message', key: 'message' },
+      { label: 'Type', key: 'extensionType' },
+      { label: 'Direction', key: 'direction' }
+    );
+
+    return properties;
   }
 }

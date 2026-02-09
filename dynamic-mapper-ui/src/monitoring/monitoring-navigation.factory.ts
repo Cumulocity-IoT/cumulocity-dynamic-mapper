@@ -64,7 +64,7 @@ export class MonitoringNavigationFactory implements NavigatorNodeFactory {
     }),
     monitoringCacheNode: new NavigatorNode({
       parent: gettext('Monitoring'),
-      label: gettext('Statistic cache'),
+      label: gettext('Cache statistic'),
       icon: 'database',
       path: `c8y-pkg-dynamic-mapper/${NODE2}/monitoring/cache`,
       priority: 530,
