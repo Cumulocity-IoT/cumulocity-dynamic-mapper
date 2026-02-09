@@ -1,56 +1,58 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import {
-  ActionBarItemComponent,
-  AlertService,
-  BreadcrumbModule,
-  C8yTranslateModule,
-  HeaderModule,
-  HelpModule,
-  IconDirective,
-  LoadingComponent
+    BreadcrumbModule,
+    C8yTranslateModule,
+    HeaderModule,
+    HelpModule,
+    IconDirective,
+
 } from '@c8y/ngx-components';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { KpiItemComponent } from './kpi-item.component';
-import { MonitoringService, KpiDetails } from '../../shared/monitoring.service';
+import { KpiDetails } from '../../shared/monitoring.service';
 
 @Component({
-  selector: 'd11r-kpi-list',
-  templateUrl: './kpi-list.component.html',
-  imports: [
-    CommonModule,
-    HeaderModule,
-    HelpModule,
-    C8yTranslateModule,
-    KpiItemComponent,
-    RouterLink,
-    BreadcrumbModule,
-    ActionBarItemComponent,
-    IconDirective,
-    LoadingComponent
-  ],
-  standalone: true
+    selector: 'd11r-kpi-list',
+    templateUrl: './kpi-list.component.html',
+    imports: [
+        CommonModule,
+        HeaderModule,
+        HelpModule,
+        C8yTranslateModule,
+        KpiItemComponent,
+        RouterLink, IconDirective,
+        BreadcrumbModule,
+    ],
+    standalone: true
 })
-export class KpListComponent implements OnInit {
-  alertService = inject(AlertService);
-  monitoringService = inject(MonitoringService);
+export class KpListComponent {
+    @Input() kpis: KpiDetails[];
 
-  kpisDetails: KpiDetails[] = [];
-  loading = true;
+    get kpisByDomain(): Map<string, KpiDetails[]> {
+        if (!this.kpis) {
+            return new Map();
+        }
 
-  async ngOnInit() {
-    await this.reload();
-  }
-
-  async reload() {
-    this.loading = true;
-    try {
-      // load KPI details from monitoring service
-      this.kpisDetails = await this.monitoringService.getKpisDetails();
-    } catch (e) {
-      this.alertService.addServerFailure(e);
-    } finally {
-      this.loading = false;
+        return this.kpis.reduce((map, kpi) => {
+            const domain = kpi.domain;
+            if (!map.has(domain)) {
+                map.set(domain, []);
+            }
+            map.get(domain)!.push(kpi);
+            return map;
+        }, new Map<string, KpiDetails[]>());
     }
-  }
+
+    get domains(): string[] {
+        return Array.from(this.kpisByDomain.keys());
+    }
+
+    getDomainDisplayName(domain: string): string {
+        const displayNames: { [key: string]: string } = {
+            'inventoryCache': 'Inventory Cache',
+            'inboundIdCache': 'Inbound ID Cache'
+        };
+        return displayNames[domain] || domain;
+    }
 }

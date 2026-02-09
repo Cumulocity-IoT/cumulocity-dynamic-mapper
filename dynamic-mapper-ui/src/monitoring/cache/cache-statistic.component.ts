@@ -23,28 +23,19 @@ import { Component, inject, OnDestroy, OnInit, ViewEncapsulation } from '@angula
 import {
   AlertService,
   CommonModule,
-  CoreModule,
-  DisplayOptions,
-  Pagination
+  CoreModule
 } from '@c8y/ngx-components';
-import { BehaviorSubject, map, Subject } from 'rxjs';
+import { Subject } from 'rxjs';
 import {
   Feature,
-  MappingStatus,
   Operation,
   SharedService
 } from '../../shared';
-import { MonitoringService } from '../shared/monitoring.service';
+import { KpiDetails, MonitoringService } from '../shared/monitoring.service';
 import { ActivatedRoute } from '@angular/router';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { KpListComponent } from './kpi/kpi-list.component';
 import { HttpStatusCode } from '@angular/common/http';
-
-interface MonitoringComponentState {
-  mappingStatuses: MappingStatus[];
-  isLoading: boolean;
-  error: string | null;
-}
 @Component({
   selector: 'd11r-cache-grid',
   templateUrl: 'cache-statistic.component.html',
@@ -63,75 +54,19 @@ export class CacheStatisticComponent implements OnInit, OnDestroy {
   // Subscription management
   private readonly destroy$ = new Subject<void>();
 
-  // State management
-  readonly state$ = new BehaviorSubject<MonitoringComponentState>({
-    mappingStatuses: [],
-    isLoading: false,
-    error: null
-  });
-
-
-  readonly isLoading$ = this.state$.pipe(map(state => state.isLoading));
-  readonly error$ = this.state$.pipe(map(state => state.error));
-
-  readonly displayOptions: DisplayOptions = {
-    bordered: true,
-    striped: true,
-    filter: false,
-    gridHeader: true,
-    hover: true
-  };
-
-  readonly pagination: Pagination = {
-    pageSize: 5,
-    currentPage: 1
-  };
-
   feature: Feature;
-  titleStatistic: string;
-
-  // Cache sizes
-  inboundCacheSize = 0;
-  inventoryCacheSize = 0;
-
+  kpis: KpiDetails[];
+  loading = true;
 
   async ngOnInit(): Promise<void> {
-    try {
-      await this.loadCacheSizes();
-      this.feature = this.route.snapshot.data['feature'];
-
-    } catch (error) {
-      this.handleError('Failed to initialize monitoring', error);
-    }
-  }
-
-  private async loadCacheSizes(): Promise<void> {
-    try {
-      // use the MonitoringService KPI helper
-      const kpis = await this.monitoringService.getKpisDetails();
-      const inventory = kpis.find(k => k.id === 'inventoryCache');
-      const inbound = kpis.find(k => k.id === 'inboundIdCache');
-      this.inventoryCacheSize = inventory?.value ?? 0;
-      this.inboundCacheSize = inbound?.value ?? 0;
-    } catch (error) {
-      this.handleError('Failed to load cache sizes', error);
-    }
+    this.feature = this.route.snapshot.data['feature'];
+    await this.reload();
   }
 
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
     this.monitoringService.stopMonitoring();
-  }
-
-  private handleError(message: string, error: unknown): void {
-    console.error(message, error);
-
-    const errorMessage = error instanceof Error
-      ? error.message
-      : 'Unknown error occurred';
-
-    this.alertService.danger(gettext(message));
   }
 
   async clickedClearInboundExternalIdCache() {
@@ -155,4 +90,29 @@ export class CacheStatisticComponent implements OnInit, OnDestroy {
     }
   }
 
+  async reload() {
+    this.loading = true;
+    try {
+      // load KPI details from monitoring service
+      const baseKpis = await this.monitoringService.getKpisDetails();
+
+      // Add fillrate KPIs for each cache
+      const fillrateKpis: KpiDetails[] = baseKpis.map(kpi => ({
+        domain: kpi.domain,
+        id: `${kpi.id}Fillrate`,
+        name: `${kpi.name} fillrate`,
+        itemName: 'Percent',
+        value: kpi.limit > 0 ? Math.round((kpi.value / kpi.limit) * 100) : 0,
+        limit: 100,
+        icon: 'percent',
+        domainIcon: kpi.domainIcon,
+      }));
+
+      this.kpis = [...baseKpis, ...fillrateKpis];
+    } catch (e) {
+      this.alertService.addServerFailure(e);
+    } finally {
+      this.loading = false;
+    }
+  }
 }

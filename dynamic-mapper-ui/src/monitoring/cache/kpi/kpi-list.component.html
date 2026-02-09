@@ -1,46 +1,21 @@
-<c8y-title>{{ 'Statistic cache' | translate }}</c8y-title>
-
-<c8y-breadcrumb>
-  <c8y-breadcrumb-item
-    [icon]="'monitoring'"
-    [label]="'Monitoring' | translate"
-  ></c8y-breadcrumb-item>
-  <c8y-breadcrumb-item [label]="'Statistic cache' | translate"></c8y-breadcrumb-item>
-</c8y-breadcrumb>
-
-<c8y-action-bar-item [placement]="'right'">
-  <li>
-    <a
-      class="btn btn-link"
-      title="{{ 'Reload' | translate }}"
-      (click)="reload()"
-    >
-      <i
-        c8yIcon="refresh"
-        [ngClass]="{ 'icon-spin': loading }"
-      ></i>
-      {{ 'Reload' | translate }}
-    </a>
-  </li>
-</c8y-action-bar-item>
-
-<div
-  class="interact-grid"
-  *ngIf="!loading; else loadingTemplate"
->
-  @for (kpi of kpisDetails; track kpi.id) {
-    <a
-      class="card"
-      [routerLink]="['kpi', kpi.id]"
-    >
-      <d11r-kpi-item
-        [kpiName]="kpi.id"
-        [kpi]="kpi"
-      ></d11r-kpi-item>
-    </a>
-  }
+@for (domain of domains; track domain) {
+<div class="card">
+  <div class="d-flex-sm d-col-xs p-t-24 p-l-16 p-r-16 p-b-16 m-0 bg-level-1" style="flex-wrap: nowrap;">
+    <div class="col-sm-3 m-b-24 col-xs-12 d-flex gap-16 text-default a-i-center j-c-center a-s-stretch">
+      <div class="text-center d-col">
+        <i class="m-b-8 icon-40 c8y-icon-duocolor c8y-icon" [c8yIcon]="kpisByDomain.get(domain)[0].domainIcon"></i>
+        <span class="tag tag--info">Cache</span>
+      </div>
+      <span class="h4">{{ getDomainDisplayName(domain) }}</span>
+    </div>
+    @for (kpi of kpisByDomain.get(domain); track kpi.id) {
+    <div class="col-sm-3 m-b-24 col-xs-12 a-i-stretch d-flex">
+      <a class="card m-b-0 fit-w" [routerLink]="['kpi', kpi.domain, kpi.id]"
+        style="text-decoration: none; color: inherit;">
+        <d11r-kpi-item [kpi]="kpi"></d11r-kpi-item>
+      </a>
+    </div>
+    }
+  </div>
 </div>
-
-<ng-template #loadingTemplate>
-  <c8y-loading></c8y-loading>
-</ng-template>
+}

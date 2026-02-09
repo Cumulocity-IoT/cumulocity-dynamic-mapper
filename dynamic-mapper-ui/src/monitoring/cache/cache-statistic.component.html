@@ -35,22 +35,19 @@
   </button>
 </c8y-action-bar-item>
 
+<c8y-action-bar-item [placement]="'right'">
+  <li>
+    <a class="btn btn-link" title="{{ 'Reload' | translate }}" (click)="reload()">
+      <i c8yIcon="refresh" [ngClass]="{ 'icon-spin': loading }"></i>
+      {{ 'Reload' | translate }}
+    </a>
+  </li>
+</c8y-action-bar-item>
+
 <div class="card">
-  <!-- <div class="card-block" style="max-height: 400px; overflow: auto"> -->
-  <div class="card-block">
-    <!-- <div class="row mb-2">
-      <div class="col-sm-6">
-        <strong>Inventory cache size:</strong>
-        <span>{{ inventoryCacheSize }}</span>
-      </div>
-      <div class="col-sm-6">
-        <strong>Inbound ID cache size:</strong>
-        <span>{{ inboundCacheSize }}</span>
-      </div>
-    </div> -->
-
-    <d11r-kpi-list></d11r-kpi-list>
-
-  </div>
-
+    @if (!loading) {
+    <d11r-kpi-list [kpis]="kpis"></d11r-kpi-list>
+    } @else {
+    <c8y-loading></c8y-loading>
+    }
 </div>

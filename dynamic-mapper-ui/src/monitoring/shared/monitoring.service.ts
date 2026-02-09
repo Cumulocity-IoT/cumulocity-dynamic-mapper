@@ -27,10 +27,14 @@ import {
 } from '@c8y/ngx-components';
 
 export type KpiDetails = {
+  domain: string;
   id: string;
   name: string;
   itemName: string;
   value?: number;
+  limit: number;
+  icon: string;
+  domainIcon: string;
 };
 
 interface MonitoringState {
@@ -91,10 +95,14 @@ export class MonitoringService {
         this.getCacheSize('INVENTORY_CACHE'),
         this.getCacheSize('INBOUND_ID_CACHE')
       ]);
+      // include configured limits from service configuration
+      const config = await this.sharedService.getServiceConfiguration();
+      const inventoryLimit = (config && typeof config.inventoryCacheSize === 'number') ? config.inventoryCacheSize : 0;
+      const inboundLimit = (config && typeof config.inboundExternalIdCacheSize === 'number') ? config.inboundExternalIdCacheSize : 0;
 
       return [
-        { id: 'inventoryCache', name: 'Inventory cache', value: inventorySize ?? 0, itemName:"Entries" },
-        { id: 'inboundIdCache', name: 'Inbound ID cache', value: inboundSize ?? 0 , itemName:"Entries" }
+        { domain: 'inventoryCache', id: 'inventoryCacheRaw', name: 'Inventory cache', value: inventorySize ?? 0, itemName: 'Entries', icon: 'more-details', domainIcon: 'more-details', limit: inventoryLimit },
+        { domain: 'inboundIdCache', id: 'inboundIdCacheRaw', name: 'Inbound ID cache', value: inboundSize ?? 0, itemName: 'Entries', icon: 'pin-code', domainIcon: 'pin-code', limit: inboundLimit }
       ];
     } catch (err) {
       console.error('Failed to get KPIs details', err);
