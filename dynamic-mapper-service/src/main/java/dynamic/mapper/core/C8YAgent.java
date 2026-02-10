@@ -372,8 +372,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
             StringBuffer error = new StringBuffer("");
             DynamicMapperRequest currentRequest = context.getRequests().get(requestIndex);
             String payload = currentRequest.getRequest();
-            // Use API from request if set (from smart function cumulocityType), otherwise fall back to mapping's targetAPI
-            API targetAPI = currentRequest.getApi() != null ? currentRequest.getApi() : context.getMapping().getTargetAPI();
+            // API is now always initialized when creating DynamicMapperRequest
+            API targetAPI = currentRequest.getApi();
             AbstractExtensibleRepresentation result = subscriptionsService.callForTenant(tenant, () -> {
                 MicroserviceCredentials contextCredentials = removeAppKeyHeaderFromContext(contextService.getContext());
                 return contextService.callWithinContext(contextCredentials, () -> {
@@ -486,8 +486,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         DynamicMapperRequest currentRequest = context.getRequests().get(requestIndex);
         String payload = currentRequest.getRequest();
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
-        // Use API from request if set (from smart function cumulocityType), otherwise fall back to mapping's targetAPI
-        API targetAPI = currentRequest.getApi() != null ? currentRequest.getApi() : context.getMapping().getTargetAPI();
+        // API is now always initialized when creating DynamicMapperRequest
+        API targetAPI = currentRequest.getApi();
         AbstractExtensibleRepresentation result = subscriptionsService.callForTenant(tenant, () -> {
             MicroserviceCredentials contextCredentials = removeAppKeyHeaderFromContext(contextService.getContext());
             return contextService.callWithinContext(contextCredentials, () -> {
@@ -651,8 +651,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         Boolean testing = context.getTesting();
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         AtomicReference<ProcessingException> pe = new AtomicReference<>();
-        // Use API from request if set (from smart function cumulocityType), otherwise fall back to mapping's targetAPI
-        API targetAPI = currentRequest.getApi() != null ? currentRequest.getApi() : context.getMapping().getTargetAPI();
+        // API is now always initialized when creating DynamicMapperRequest
+        API targetAPI = currentRequest.getApi();
         ManagedObjectRepresentation device = subscriptionsService.callForTenant(tenant, () -> {
             MicroserviceCredentials contextCredentials = removeAppKeyHeaderFromContext(contextService.getContext());
             return contextService.callWithinContext(contextCredentials, () -> {

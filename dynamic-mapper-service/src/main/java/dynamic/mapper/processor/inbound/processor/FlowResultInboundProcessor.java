@@ -104,6 +104,9 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
             // Get the API from the cumulocityType using unified API derivation
             API targetAPI = APITopicUtil.deriveAPIFromTopic(cumulocityMessage.getCumulocityType().toString());
 
+            // Set API on context so it's used when creating DynamicMapperRequest
+            context.setApi(targetAPI);
+
             // Clone the payload to modify it
             Map<String, Object> payload = clonePayload(cumulocityMessage.getPayload());
 
@@ -189,7 +192,7 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
             DynamicMapperRequest dynamicMapperRequest = ProcessingResultHelper.createAndAddDynamicMapperRequest(context,
                     payloadJson,
                     cumulocityMessage.getAction(), mapping);
-            dynamicMapperRequest.setApi(targetAPI);
+            // API is now set from context in createAndAddDynamicMapperRequest
             dynamicMapperRequest.setSourceId(resolvedDeviceId);
             dynamicMapperRequest.setExternalId(externalIdInfo.getExternalId());
             dynamicMapperRequest.setExternalIdType(externalIdInfo.getExternalType());
