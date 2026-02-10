@@ -185,6 +185,9 @@ public class ExtensibleResultInboundProcessor extends AbstractExtensibleResultPr
             // Get the API from the cumulocityType
             API targetAPI = APITopicUtil.deriveAPIFromTopic(c8yObj.getCumulocityType().toString());
 
+            // Set API on context for consistency
+            context.setApi(targetAPI);
+
             // Clone the payload to modify it
             Map<String, Object> payload = clonePayload(c8yObj.getPayload());
 
