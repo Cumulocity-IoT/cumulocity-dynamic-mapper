@@ -127,7 +127,7 @@ export class MappingStepperService {
         this.isSubstitutionValid$.next(isValid);
     }
 
-    expandTemplates(mapping: Mapping, direction: Direction): {
+    expandTemplates(mapping: Mapping, direction: Direction, patchPayload?: boolean, expandSourceTemplate?: boolean): {
         sourceTemplate: any;
         targetTemplate: any;
     } {
@@ -138,15 +138,20 @@ export class MappingStepperService {
             false
         );
 
-        const expandSource = (template: any) =>
-            direction === Direction.INBOUND
+        const expandSource = (template: any) => {
+            // Don't expand if patchPayload is true OR expandSourceTemplate is explicitly false
+            if (patchPayload || expandSourceTemplate === false) return template;
+            return direction === Direction.INBOUND
                 ? expandExternalTemplate(template, mapping, levels)
                 : expandC8YTemplate(template, mapping);
+        };
 
-        const expandTarget = (template: any) =>
-            direction === Direction.INBOUND
+        const expandTarget = (template: any) => {
+            if (patchPayload) return template;
+            return direction === Direction.INBOUND
                 ? expandC8YTemplate(template, mapping)
                 : expandExternalTemplate(template, mapping, levels);
+        };
 
         if (direction === Direction.INBOUND) {
             return {
@@ -161,7 +166,7 @@ export class MappingStepperService {
         }
     }
 
-    expandExistingTemplates(mapping: Mapping, direction: Direction): {
+    expandExistingTemplates(mapping: Mapping, direction: Direction, patchPayload?: boolean, expandSourceTemplate?: boolean): {
         sourceTemplate: any;
         targetTemplate: any;
     } {
@@ -172,15 +177,20 @@ export class MappingStepperService {
             false
         );
 
-        const expandSource = (template: any) =>
-            direction === Direction.INBOUND
+        const expandSource = (template: any) => {
+            // Don't expand if patchPayload is true OR expandSourceTemplate is explicitly false
+            if (patchPayload || expandSourceTemplate === false) return template;
+            return direction === Direction.INBOUND
                 ? expandExternalTemplate(template, mapping, levels)
                 : expandC8YTemplate(template, mapping);
+        };
 
-        const expandTarget = (template: any) =>
-            direction === Direction.INBOUND
+        const expandTarget = (template: any) => {
+            if (patchPayload) return template;
+            return direction === Direction.INBOUND
                 ? expandC8YTemplate(template, mapping)
                 : expandExternalTemplate(template, mapping, levels);
+        };
 
         return {
             sourceTemplate: expandSource(JSON.parse(mapping.sourceTemplate)),

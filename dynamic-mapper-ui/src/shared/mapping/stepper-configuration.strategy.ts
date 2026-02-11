@@ -113,6 +113,44 @@ const CONFIGURATION_OVERRIDES: StepperConfigurationOverride[] = [
       showEditorTarget: false,
       showFilterExpression: false
     }
+  },
+  {
+    condition: (ctx) => ctx.transformationType === TransformationType.DEFAULT,
+    properties: {
+      patchPayload: true
+    }
+  },
+  {
+    condition: (ctx) => ctx.transformationType === TransformationType.SUBSTITUTION_AS_CODE,
+    properties: {
+      patchPayload: true
+    }
+  },
+  {
+    condition: (ctx) => ctx.transformationType === TransformationType.SMART_FUNCTION,
+    properties: {
+      patchPayload: false,
+      expandSourceTemplate: false  // Smart Functions receive raw payload
+    }
+  },
+  {
+    condition: (ctx) => ctx.transformationType === TransformationType.JSONATA,
+    properties: {
+      patchPayload: true
+    }
+  },
+  {
+    condition: (ctx) => ctx.transformationType === TransformationType.EXTENSION_JAVA,
+    properties: {
+      patchPayload: false,
+      expandSourceTemplate: false  // Java Extensions receive raw payload
+    }
+  },
+  {
+    condition: (ctx) => ctx.transformationType === TransformationType.CODE_BASED,
+    properties: {
+      patchPayload: true
+    }
   }
 ];
 
