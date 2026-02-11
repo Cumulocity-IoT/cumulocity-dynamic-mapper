@@ -124,11 +124,6 @@ public class InventoryCacheEnrichmentService {
     }
 
     private ManagedObjectRepresentation getManagedObjectFromResolver(String tenant, String deviceId,
-            Boolean testing, IdentityResolver identityResolver) {
-        return getManagedObjectFromResolver(tenant, deviceId, testing, identityResolver, false);
-    }
-
-    private ManagedObjectRepresentation getManagedObjectFromResolver(String tenant, String deviceId,
             Boolean testing, IdentityResolver identityResolver, boolean withParents) {
         // Since IdentityResolver is implemented by C8YAgent, we can cast it
         if (identityResolver instanceof C8YAgent) {
