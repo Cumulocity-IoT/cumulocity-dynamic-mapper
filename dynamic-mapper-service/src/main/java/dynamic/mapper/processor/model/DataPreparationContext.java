@@ -21,6 +21,8 @@
 
 package dynamic.mapper.processor.model;
 
+import java.util.Map;
+
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.model.Mapping;
 
@@ -85,8 +87,38 @@ public interface DataPreparationContext extends DataPrepContext {
      * are not typically needed.</p>
      *
      * @return The C8YAgent instance, or null if not available
+     * @deprecated Use {@link #getManagedObjectAsMap(ExternalId)} instead for safer cache access
      */
+    @Deprecated
     C8YAgent getC8YAgent();
+
+    /**
+     * Lookup managed object from inventory cache by external ID (Java-friendly method).
+     *
+     * <p>This method provides the same functionality as {@link #getManagedObject(ExternalId)}
+     * but returns a standard Java Map instead of a GraalVM Value object, making it suitable
+     * for pure Java Extensions.</p>
+     *
+     * <p>This is a cache-first lookup - it checks the inventory cache first and only
+     * fetches from the Cumulocity API if there's a cache miss.</p>
+     *
+     * <p>Example usage:</p>
+     * <pre>
+     * {@code
+     * ExternalId externalId = new ExternalId("sensor-001", "c8y_Serial");
+     * Map<String, Object> device = context.getManagedObjectAsMap(externalId);
+     * if (device != null) {
+     *     String deviceName = (String) device.get("name");
+     *     Object assetParents = device.get("assetParents");
+     * }
+     * }
+     * </pre>
+     *
+     * @param externalId The external ID of the device to lookup
+     * @return Map containing the device properties from cache, or null if not found
+     * @since 6.1.6
+     */
+    Map<String, Object> getManagedObjectAsMap(ExternalId externalId);
 
     /**
      * Get the tenant identifier.

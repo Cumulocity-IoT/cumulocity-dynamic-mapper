@@ -64,6 +64,11 @@ extensions:
     description: Conditional processor creating either measurement or event based on payload type
     version: "2.0"
 
+  - eventName: MeasurementWithSourceIdOverride
+    className: dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionSmartInbound06
+    description: Measurement processor with sourceId override to route data to parent devices (since 6.1.6)
+    version: "2.0"
+
   # Outbound Extensions (Cumulocity → Device)
   - eventName: AlarmToCustomJson
     className: dynamic.mapper.processor.extension.external.outbound.ProcessorExtensionAlarmToCustomJson

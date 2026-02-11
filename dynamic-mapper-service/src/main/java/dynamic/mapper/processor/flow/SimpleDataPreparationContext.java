@@ -126,6 +126,16 @@ public class SimpleDataPreparationContext implements DataPreparationContext {
         log.debug("{} - Extension log: {}", tenant, logMessage);
     }
 
+    @Override
+    public java.util.Map<String, Object> getManagedObjectAsMap(ExternalId externalId) {
+        if (c8yAgent == null) {
+            log.warn("{} - getManagedObjectAsMap() called but C8YAgent not available", tenant);
+            return null;
+        }
+        // Direct cache lookup without exposing C8YAgent to extensions
+        return c8yAgent.getMOFromInventoryCacheByExternalId(tenant, externalId, testing);
+    }
+
     // ==================== DataPrepContext Delegation ====================
 
     @Override

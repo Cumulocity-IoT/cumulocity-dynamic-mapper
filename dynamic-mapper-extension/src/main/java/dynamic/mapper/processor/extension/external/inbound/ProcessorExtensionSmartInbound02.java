@@ -25,6 +25,7 @@ import com.dashjoin.jsonata.json.Json;
 import dynamic.mapper.processor.extension.ProcessorExtensionInbound;
 import dynamic.mapper.processor.model.CumulocityObject;
 import dynamic.mapper.processor.model.DataPreparationContext;
+import dynamic.mapper.processor.model.ExternalId;
 import dynamic.mapper.processor.model.Message;
 import lombok.extern.slf4j.Slf4j;
 import org.joda.time.DateTime;
@@ -71,11 +72,37 @@ public class ProcessorExtensionSmartInbound02 implements ProcessorExtensionInbou
                     context.getTenant(), payload.get("messageId"));
 
             String clientId = (String) payload.get("clientId");
+            String tenant = context.getTenant();
 
-            // In a real implementation, you would use C8YAgent to lookup device properties
-            // For demonstration, we'll use a simple approach with configuration from the payload
-            // Example: payload could include a "sensorType" field
-            String sensorType = (String) payload.getOrDefault("sensorType", "voltage");
+            // Lookup device from inventory cache for enrichment (same pattern as JavaScript Smart Functions)
+            ExternalId externalId = new ExternalId(clientId, "c8y_Serial");
+            Map<String, Object> deviceByExternalId = context.getManagedObjectAsMap(externalId);
+
+            // Determine measurement type based on device configuration (enrichment)
+            String sensorType = "voltage"; // default
+
+            if (deviceByExternalId != null) {
+                log.debug("{} - Device found for enrichment: {}", tenant, deviceByExternalId);
+
+                // Try to extract sensor type from device configuration (c8y_Sensor.type.voltage or .current)
+                Object c8ySensorObj = deviceByExternalId.get("c8y_Sensor");
+                if (c8ySensorObj instanceof Map) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> c8ySensor = (Map<String, Object>) c8ySensorObj;
+                    Object typeObj = c8ySensor.get("type");
+                    if (typeObj instanceof Map) {
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> typeMap = (Map<String, Object>) typeObj;
+                        if (Boolean.TRUE.equals(typeMap.get("voltage"))) {
+                            sensorType = "voltage";
+                        } else if (Boolean.TRUE.equals(typeMap.get("current"))) {
+                            sensorType = "current";
+                        }
+                    }
+                }
+            } else {
+                log.warn("{} - No device found for enrichment, using default sensor type", tenant);
+            }
 
             // Extract sensor value
             @SuppressWarnings("unchecked")

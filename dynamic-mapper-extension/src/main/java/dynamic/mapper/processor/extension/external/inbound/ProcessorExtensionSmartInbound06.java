@@ -86,16 +86,17 @@ public class ProcessorExtensionSmartInbound06 implements ProcessorExtensionInbou
 
             // Extract client ID for device lookup
             String clientId = (String) payload.get("clientId");
+            String tenant = context.getTenant();
 
-            // Lookup the originating device using externalId
+            // Lookup device from inventory cache (same pattern as JavaScript Smart Functions)
             ExternalId externalId = new ExternalId(clientId, "c8y_Serial");
-            Map<String, Object> originatingDevice = context.getManagedObject(externalId);
+            Map<String, Object> originatingDevice = context.getManagedObjectAsMap(externalId);
 
             // Variable to hold the target device ID (parent if available, null otherwise)
             String targetDeviceId = null;
 
             if (originatingDevice != null) {
-                log.debug("{} - Originating device found: {}", context.getTenant(), originatingDevice);
+                log.debug("{} - Originating device found: {}", tenant, originatingDevice);
 
                 // Extract parent device ID from assetParents (if available)
                 Object assetParentsObj = originatingDevice.get("assetParents");
@@ -110,18 +111,18 @@ public class ProcessorExtensionSmartInbound06 implements ProcessorExtensionInbou
                         targetDeviceId = (String) firstParent.get("id");
 
                         log.info("{} - Routing measurement to parent device - ID: {}, Name: {}, Type: {}",
-                                context.getTenant(),
+                                tenant,
                                 targetDeviceId,
                                 firstParent.get("name"),
                                 firstParent.get("type"));
                     } else {
                         log.debug("{} - No parent devices found in assetParents, measurement will go to originating device",
-                                context.getTenant());
+                                tenant);
                     }
                 }
             } else {
                 log.warn("{} - Could not find originating device with externalId: {}, type: c8y_Serial",
-                        context.getTenant(), clientId);
+                        tenant, clientId);
             }
 
             // Extract sensor data
@@ -130,7 +131,7 @@ public class ProcessorExtensionSmartInbound06 implements ProcessorExtensionInbou
             Number tempVal = (Number) sensorData.get("temp_val");
 
             log.debug("{} - Creating temperature measurement: {} C for device: {}",
-                    context.getTenant(), tempVal, clientId);
+                    tenant, tempVal, clientId);
 
             // Build measurement using builder pattern with sourceId override
             CumulocityObject.MeasurementBuilder builder = CumulocityObject.measurement()
@@ -150,7 +151,7 @@ public class ProcessorExtensionSmartInbound06 implements ProcessorExtensionInbou
 
         } catch (Exception e) {
             String errorMsg = "Failed to process inbound message with sourceId override: " + e.getMessage();
-            log.error("{} - {}", context.getTenant(), errorMsg, e);
+            log.error("{} - {}", context.getTenant(), errorMsg, e);  // context.getTenant() is safe here as it's in catch block
             context.addWarning(errorMsg);
             return new CumulocityObject[0];
         }
