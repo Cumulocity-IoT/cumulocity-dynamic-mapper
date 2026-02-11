@@ -42,6 +42,7 @@ public class SimpleFlowContext implements DataPrepContext {
     private final String tenant;
     private final InventoryEnrichmentClient inventoryEnrichmentClient;
     private Boolean testing;
+    private String clientId;
 
     public SimpleFlowContext(Context graalContext, String tenant, InventoryEnrichmentClient inventoryEnrichmentClient,
             Boolean testing) {
@@ -50,6 +51,15 @@ public class SimpleFlowContext implements DataPrepContext {
         this.tenant = tenant != null ? tenant : "unknown";
         this.inventoryEnrichmentClient = inventoryEnrichmentClient;
         this.testing = testing;
+    }
+
+    /**
+     * Set the client ID from the connector message
+     *
+     * @param clientId The client ID from the inbound message
+     */
+    public void setClientId(String clientId) {
+        this.clientId = clientId;
     }
 
     @Override
@@ -264,5 +274,10 @@ public class SimpleFlowContext implements DataPrepContext {
     @Override
     public Boolean getTesting() {
         return testing;
+    }
+
+    @Override
+    public String getClientId() {
+        return clientId;
     }
 }

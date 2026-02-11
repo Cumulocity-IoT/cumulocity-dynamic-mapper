@@ -96,11 +96,6 @@ public class SimpleDataPreparationContext implements DataPreparationContext {
     // ==================== DataPreparationContext Methods ====================
 
     @Override
-    public C8YAgent getC8YAgent() {
-        return c8yAgent;
-    }
-
-    @Override
     public String getTenant() {
         return tenant;
     }
@@ -134,6 +129,15 @@ public class SimpleDataPreparationContext implements DataPreparationContext {
         }
         // Direct cache lookup without exposing C8YAgent to extensions
         return c8yAgent.getMOFromInventoryCacheByExternalId(tenant, externalId, testing);
+    }
+
+    @Override
+    public String getClientId() {
+        if (dataPrepContext != null) {
+            return dataPrepContext.getClientId();
+        }
+        log.warn("{} - getClientId() called but DataPrepContext not available", tenant);
+        return null;
     }
 
     // ==================== DataPrepContext Delegation ====================

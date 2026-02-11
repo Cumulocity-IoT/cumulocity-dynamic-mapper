@@ -23,23 +23,22 @@ package dynamic.mapper.processor.model;
 
 import java.util.Map;
 
-import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.model.Mapping;
 
 /**
  * Context interface for Java Extension data preparation following SMART function pattern.
  *
  * <p>This interface extends {@link DataPrepContext} to provide additional methods
- * needed for extension development, including access to Cumulocity agent, mapping
- * configuration, and utility methods for warnings and logs.</p>
+ * needed for extension development, including mapping configuration, inventory cache access,
+ * and utility methods for warnings and logs.</p>
  *
  * <p>The context provides read-only access to:</p>
  * <ul>
  *   <li>State management (via {@link DataPrepContext})</li>
- *   <li>Inventory lookups (via {@link DataPrepContext})</li>
- *   <li>Cumulocity agent for API operations</li>
+ *   <li>Inventory lookups via {@link #getManagedObjectAsMap(ExternalId)}</li>
  *   <li>Mapping configuration</li>
  *   <li>Tenant and testing information</li>
+ *   <li>Client ID from connector message</li>
  * </ul>
  *
  * <p>Example usage in an inbound extension:</p>
@@ -47,12 +46,12 @@ import dynamic.mapper.model.Mapping;
  * {@code
  * @Override
  * public CumulocityObject[] onMessage(Message<byte[]> message, DataPreparationContext context) {
- *     // Access C8Y agent for lookups
- *     C8YAgent agent = context.getC8YAgent();
+ *     // Get device from inventory cache
+ *     ExternalId extId = new ExternalId("myDevice", "c8y_Serial");
+ *     Map<String, Object> device = context.getManagedObjectAsMap(extId);
  *
- *     // Get device from inventory
- *     var device = context.getManagedObject(
- *         new ExternalId("myDevice", "c8y_Serial"));
+ *     // Access client ID
+ *     String clientId = context.getClientId();
  *
  *     // Use state for tracking
  *     context.setState("lastProcessed", ...);
@@ -71,26 +70,6 @@ import dynamic.mapper.model.Mapping;
  * @see DeviceMessage
  */
 public interface DataPreparationContext extends DataPrepContext {
-
-    /**
-     * Get the Cumulocity agent for API operations.
-     *
-     * <p>The C8YAgent provides methods for:</p>
-     * <ul>
-     *   <li>Resolving external IDs to global IDs</li>
-     *   <li>Creating/updating managed objects</li>
-     *   <li>Accessing inventory cache</li>
-     * </ul>
-     *
-     * <p>Note: For inbound extensions, this provides the agent instance.
-     * For outbound extensions, this may return null as direct C8Y operations
-     * are not typically needed.</p>
-     *
-     * @return The C8YAgent instance, or null if not available
-     * @deprecated Use {@link #getManagedObjectAsMap(ExternalId)} instead for safer cache access
-     */
-    @Deprecated
-    C8YAgent getC8YAgent();
 
     /**
      * Lookup managed object from inventory cache by external ID (Java-friendly method).

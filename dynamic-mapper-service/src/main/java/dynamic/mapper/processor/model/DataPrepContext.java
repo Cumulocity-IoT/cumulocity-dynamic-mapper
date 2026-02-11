@@ -110,11 +110,19 @@ public interface DataPrepContext {
 
     /**
      * Testing cycle indicator
-     * 
+     *
      * @return Is context used in a testing cycle
-     * 
+     *
      */
     public Boolean getTesting();
+
+    /**
+     * Get the client ID from the connector message
+     *
+     * @return The client ID from the inbound message, or null if not available
+     * @since 6.1.6
+     */
+    String getClientId();
 
     void clearState();
 }
