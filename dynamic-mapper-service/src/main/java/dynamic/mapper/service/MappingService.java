@@ -122,7 +122,7 @@ public class MappingService {
         // Create with proper tenant context
         return subscriptionsService.callForTenant(tenant, () -> {
             mappingRepository.prepareForCreate(tenant, mapping);
-            
+
             MappingRepresentation mr = new MappingRepresentation();
             mr.setType(MappingRepresentation.MAPPING_TYPE);
             mr.setC8yMQTTMapping(mapping);
@@ -174,7 +174,7 @@ public class MappingService {
         // Update with proper tenant scope
         return subscriptionsService.callForTenant(tenant, () -> {
             mappingRepository.prepareForUpdate(tenant, mapping, allowUpdateWhenActive, ignoreValidation);
-            
+
             MappingRepresentation mr = new MappingRepresentation();
             mr.setType(MappingRepresentation.MAPPING_TYPE);
             mr.setC8yMQTTMapping(mapping);
@@ -221,7 +221,7 @@ public class MappingService {
         return subscriptionsService.callForTenant(tenant, () -> {
             InventoryFilter inventoryFilter = new InventoryFilter();
             inventoryFilter.byType(MappingRepresentation.MAPPING_TYPE);
-            
+
             ManagedObjectCollection moc = inventoryApi.getManagedObjectsByFilter(inventoryFilter, false);
             return mappingRepository.findAll(tenant, direction, moc);
         });
@@ -256,7 +256,7 @@ public class MappingService {
                 Mapping m = found.get();
                 mappingRepository.prepareForDelete(tenant, id, m);
                 inventoryApi.delete(GId.asGId(id), false);
-                
+
                 log.info("{} - Mapping deleted: {}", tenant, id);
                 return m;
             } catch (SDKException e) {
@@ -453,6 +453,32 @@ public class MappingService {
     }
 
     /**
+     * Updates the code for a mapping
+     */
+    public Mapping setCodeMapping(String tenant, String mappingId, String code) throws Exception {
+        Mapping mapping = getMapping(tenant, mappingId);
+        if (mapping == null) {
+            throw new IllegalArgumentException("Mapping not found: " + mappingId);
+        }
+
+        snoopService.applySnoopedTemplates(tenant, mapping);
+        mapping.setCode(code);
+
+        updateMapping(tenant, mapping, true, false);
+        updateCacheAfterChange(tenant, mapping);
+
+        configurationRegistry.getC8yAgent().createOperationEvent(
+                String.format("Mapping %s [%s] code updated", mapping.getName(), mappingId),
+                LoggingEventType.MAPPING_CHANGED_EVENT_TYPE,
+                DateTime.now(),
+                tenant,
+                null);
+
+        log.info("{} - Mapping {} code updated", tenant, mappingId);
+        return mapping;
+    }
+
+    /**
      * Updates the source template from snooped templates
      */
     public void updateSourceTemplate(String tenant, String mappingId, Integer templateIndex) throws Exception {
@@ -499,7 +525,7 @@ public class MappingService {
         updateCacheAfterChange(tenant, mapping);
 
         configurationRegistry.getC8yAgent().createOperationEvent(
-                String.format("Mapping with id: %s snoop reset", mappingId ),
+                String.format("Mapping with id: %s snoop reset", mappingId),
                 LoggingEventType.MAPPING_CHANGED_EVENT_TYPE,
                 DateTime.now(),
                 tenant,

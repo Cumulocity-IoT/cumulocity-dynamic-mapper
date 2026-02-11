@@ -43,8 +43,6 @@ import {
 import { CodeTemplate } from '../../configuration';
 import { base64ToString } from '../shared/util';
 
-import { CustomSelectComponent } from '../../shared/component/select/custom-select.component';
-
 // Types
 interface SelectOption<T> {
   label: string;
@@ -69,7 +67,7 @@ interface SaveResult {
   templateUrl: './mapping-type-drawer.component.html',
   encapsulation: ViewEncapsulation.None,
   standalone: true,
-  imports: [CoreModule, CustomSelectComponent]
+  imports: [CoreModule]
 })
 export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   @Input() direction: Direction;

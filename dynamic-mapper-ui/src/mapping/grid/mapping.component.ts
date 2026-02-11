@@ -78,7 +78,6 @@ import { BehaviorSubject, filter, finalize, Subject, switchMap, take } from 'rxj
 import { CodeTemplate } from '../../configuration/shared/configuration.model';
 import { MappingService } from '../core/mapping.service';
 import { SubscriptionService } from '../core/subscription.service';
-import { MappingFilterComponent } from '../filter/mapping-filter.component';
 import { ImportMappingsComponent } from '../import/import-modal.component';
 import { MappingTypeDrawerComponent } from '../mapping-create/mapping-type-drawer.component';
 import { MappingDeploymentRendererComponent } from '../renderer/mapping-deployment.renderer.component';
@@ -94,6 +93,8 @@ import { AdviceActionComponent } from './advisor/advice-action.component';
 import { CommonModule } from '@angular/common';
 import { MappingStepperComponent } from '../stepper-mapping/mapping-stepper.component';
 import { SnoopingStepperComponent } from '../stepper-snooping/snooping-stepper.component';
+import { MappingFilterDrawerComponent } from '../filter/mapping-filter-drawer.component';
+import { CodeEditorDrawerComponent } from '../../shared/component/code-explorer/code-editor-drawer.component';
 
 @Component({
   selector: 'd11r-mapping-mapping-grid',
@@ -270,6 +271,14 @@ export class MappingComponent implements OnInit, OnDestroy {
           item['mapping']['direction'] == Direction.OUTBOUND) && (this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole)
       },
       {
+        type: 'UPDATE_CODE',
+        text: 'Update code',
+        icon: 'source-code',
+        callback: this.updateCode.bind(this),
+        showIf: item => ((item['mapping']['transformationType'] == TransformationType.SMART_FUNCTION) ||
+          item['mapping']['transformationType'] == TransformationType.SUBSTITUTION_AS_CODE) && (this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole)
+      },
+      {
         type: 'ENABLE_DEBUG',
         text: 'Enable debugging',
         icon: 'bug1',
@@ -369,17 +378,16 @@ export class MappingComponent implements OnInit, OnDestroy {
       mapping.direction == Direction.OUTBOUND ? 'Cumulocity' : 'Broker';
     const initialState = { mapping, sourceSystem };
     try {
-      const modalRef = this.bsModalService.show(MappingFilterComponent, {
-        initialState, class: 'modal-lg'
-      });
+      const drawer = this.bottomDrawerService.openDrawer(MappingFilterDrawerComponent, { initialState: initialState });
+
       await new Promise((resolve) => {
-        modalRef.content.closeSubject
+        drawer.instance.closeSubject
           .pipe(
             take(1),
             filter(filterMapping => !!filterMapping),
             switchMap(filterMapping => this.applyMappingFilter(filterMapping, mapping.id)),
             finalize(() => {
-              modalRef.hide();
+              drawer.close();
               resolve(undefined);
             })
           )
@@ -394,7 +402,42 @@ export class MappingComponent implements OnInit, OnDestroy {
           });
       });
     } catch (error) {
-      this.alertService.danger(`'Failed to apply mapping filter': ${error.message}`);
+      this.alertService.danger(`Failed to apply mapping filter: ${error.message}`);
+    }
+  }
+
+
+  async updateCode(m: MappingEnriched) {
+    const { mapping } = m;
+    const sourceSystem =
+      mapping.direction == Direction.OUTBOUND ? 'Cumulocity' : 'Broker';
+    const initialState = { mapping, sourceSystem };
+    try {
+      const drawer = this.bottomDrawerService.openDrawer(CodeEditorDrawerComponent, { initialState: initialState });
+
+      await new Promise((resolve) => {
+        drawer.instance.closeSubject
+          .pipe(
+            take(1),
+            filter(code => !!code),
+            switchMap(code => this.applyUpdateCode(code, mapping.id)),
+            finalize(() => {
+              drawer.close();
+              resolve(undefined);
+            })
+          )
+          .subscribe({
+            next: () => {
+              this.alertService.success(`Updated code for mapping ${mapping.name}`);
+            },
+            error: (error) => {
+              this.alertService.danger('Failed to update code', error);
+              resolve(undefined);
+            }
+          });
+      });
+    } catch (error) {
+      this.alertService.danger(`Failed to update code: ${error.message}`);
     }
   }
 
@@ -411,6 +454,27 @@ export class MappingComponent implements OnInit, OnDestroy {
 
     await this.mappingService.refreshMappings(Direction.INBOUND);
     return filterMapping;
+  }
+
+
+  private async applyUpdateCode(code: string, mappingId: string): Promise<string> {
+    const params = {
+      code,
+      id: mappingId
+    };
+
+    await this.sharedService.runOperation({
+      operation: Operation.UPDATE_CODE,
+      parameter: params
+    });
+
+    if (this.stepperConfiguration.direction == Direction.INBOUND) {
+      await this.mappingService.refreshMappings(Direction.INBOUND);
+    } else {
+      await this.mappingService.refreshMappings(Direction.OUTBOUND);
+
+    }
+    return code;
   }
 
   getColumnsMappings(): Column[] {

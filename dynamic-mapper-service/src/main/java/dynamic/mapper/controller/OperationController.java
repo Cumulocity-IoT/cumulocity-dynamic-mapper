@@ -143,6 +143,7 @@ public class OperationController {
             - `RELOAD_MAPPINGS`: Reloads all mappings for the current tenant.
             - `ACTIVATE_MAPPING`: Activates or deactivates a mapping.
             - `APPLY_MAPPING_FILTER`: Applies a filter to a mapping.
+            - `UPDATE_CODE`: UPdate code for Smart Function or Substitution as Code.
             - `DEBUG_MAPPING`: Enables or disables debug mode for a mapping.
             - `SNOOP_MAPPING`: Enables or disables snooping for a mapping.
             - `SNOOP_RESET`: Resets snooping for a mapping.
@@ -265,6 +266,13 @@ public class OperationController {
                                 "User does not have permission to apply mapping filter");
                     }
                     return handleApplyMappingFilter(tenant, parameters);
+
+                case UPDATE_CODE:
+                    if (!Utils.userHasMappingCreateRole()) {
+                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                "User does not have permission to change transformation code");
+                    }
+                    return handleApplyUpdateCode(tenant, parameters);
                 case DEBUG_MAPPING:
                     if (!Utils.userHasMappingCreateRole()) {
                         throw new ResponseStatusException(HttpStatus.FORBIDDEN,
@@ -460,6 +468,13 @@ public class OperationController {
         String id = parameters.get("id");
         String filterMapping = parameters.get("filterMapping");
         mappingService.setFilterMapping(tenant, id, filterMapping);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    private ResponseEntity<?> handleApplyUpdateCode(String tenant, Map<String, String> parameters) throws Exception {
+        String id = parameters.get("id");
+        String code = parameters.get("code");
+        mappingService.setCodeMapping(tenant, id, code);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 

@@ -1,0 +1,61 @@
+<!--
+  ~ Copyright (c) 2022-2025 Cumulocity GmbH.
+  ~
+  ~ SPDX-License-Identifier: Apache-2.0
+  ~
+  ~  Licensed under the Apache License, Version 2.0 (the "License");
+  ~  you may not use this file except in compliance with the License.
+  ~  You may obtain a copy of the License at
+  ~
+  ~       http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~  Unless required by applicable law or agreed to in writing, software
+  ~  distributed under the License is distributed on an "AS IS" BASIS,
+  ~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~  See the License for the specific language governing permissions and
+  ~  limitations under the License.
+  ~
+  ~  @authors Christof Strack, Stefan Witschel
+  ~
+  -->
+
+<!-- Main Content -->
+<div class="flex-col flex-nowrap no-align-items p-48 fit-h col-md-12 col-md-offset-0 c8y-stepper--no-btns">
+  <div class="card card--fullpage">
+    <!-- Header -->
+    <div class="card-header separator" style="justify-content: center">
+      <h4 class="card-title d-flex">
+        <i [c8yIcon]="'source-code'" class="icon-32 m-r-16"></i>
+        <span class="m-t-8">
+          {{ 'Edit JavaScript Code' | translate }}
+        </span>
+      </h4>
+      @if (mapping?.name) {
+      <p class="text-muted m-t-8">
+        {{ 'Mapping: ' + mapping.name | translate }}
+      </p>
+      }
+    </div>
+    <!-- Editor Content -->
+    <div class="card-inner-scroll fit-h">
+      <div class="card-block">
+        <div class="p-b-24">
+          <c8y-editor [editorOptions]="editorOptions" class="form-control flex-grow" style="min-height: 600px"
+            monacoEditorMarkerValidator [(ngModel)]="code">
+          </c8y-editor>
+        </div>
+      </div>
+    </div>
+    <!-- Footer Buttons -->
+    <div class="card-footer text-center sticky-buttons">
+      <div class="form-group">
+        <button type="button" class="btn btn-primary" (click)="onSave()" [disabled]="!valid">
+          {{ 'Save' | translate }}
+        </button>
+        <button type="button" class="btn btn-default" (click)="onCancel()">
+          {{ 'Cancel' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
