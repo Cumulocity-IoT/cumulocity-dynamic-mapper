@@ -133,8 +133,8 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
                 }
             }
 
-            // Resolve device ID and set it hierarchically in the payload
-            String resolvedDeviceId = resolveDeviceIdentifier(cumulocityMessage, context, tenant);
+            // Check if sourceId is explicitly set in CumulocityObject
+            String resolvedDeviceId;
             List<ExternalId> externalSources = cumulocityMessage.getExternalSource();
             ExternalIdInfo externalIdInfo = ExternalIdInfo.from(externalSources);
 
@@ -142,7 +142,14 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
                 context.setExternalId(externalIdInfo.getExternalId());
             }
 
-            if (resolvedDeviceId != null) {
+            if (cumulocityMessage.getSourceId() != null && !cumulocityMessage.getSourceId().isEmpty()) {
+                // Use explicitly provided sourceId
+                resolvedDeviceId = cumulocityMessage.getSourceId();
+                context.setSourceId(resolvedDeviceId);
+                ProcessingResultHelper.setHierarchicalValue(payload, targetAPI.identifier, resolvedDeviceId);
+                log.debug("{} - Using explicit sourceId from CumulocityObject: {}", tenant, resolvedDeviceId);
+            } else if ((resolvedDeviceId = resolveDeviceIdentifier(cumulocityMessage, context, tenant)) != null) {
+                // Use resolved device ID from externalSource
                 ProcessingResultHelper.setHierarchicalValue(payload, targetAPI.identifier, resolvedDeviceId);
                 context.setSourceId(resolvedDeviceId);
             } else if (externalSources != null && !externalSources.isEmpty()) {

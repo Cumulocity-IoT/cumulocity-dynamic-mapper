@@ -111,6 +111,14 @@ public class CumulocityObject {
      */
     private Map<String, String> contextData;
 
+    /**
+     * Optional: Explicitly set the Cumulocity device ID (sourceId) for this object.
+     * When set, this overrides the automatic device resolution from externalSource.
+     * This is useful for routing data to a different device than the one that originated it
+     * (e.g., child device data sent to parent device).
+     */
+    private String sourceId;
+
     // ==================== Builder Factory Methods ====================
 
     /**
@@ -169,6 +177,7 @@ public class CumulocityObject {
         protected List<ExternalId> externalSource = new ArrayList<>();
         protected Destination destination = Destination.CUMULOCITY;
         protected Map<String, String> contextData = new HashMap<>();
+        protected String sourceId;
 
         @SuppressWarnings("unchecked")
         protected T self() {
@@ -254,6 +263,19 @@ public class CumulocityObject {
         }
 
         /**
+         * Set the Cumulocity device ID (sourceId) explicitly.
+         * When set, this overrides automatic device resolution from externalSource.
+         * Useful for routing data to a different device than the origin.
+         *
+         * @param sourceId The Cumulocity device ID
+         * @return This builder
+         */
+        public T sourceId(String sourceId) {
+            this.sourceId = sourceId;
+            return self();
+        }
+
+        /**
          * Build the CumulocityObject.
          *
          * @param cumulocityType The Cumulocity type
@@ -267,6 +289,7 @@ public class CumulocityObject {
             obj.setExternalSource(externalSource);
             obj.setDestination(destination);
             obj.setContextData(contextData.isEmpty() ? null : contextData);
+            obj.setSourceId(sourceId);
             return obj;
         }
     }

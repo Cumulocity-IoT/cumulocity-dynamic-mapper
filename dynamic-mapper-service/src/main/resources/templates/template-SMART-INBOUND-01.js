@@ -26,7 +26,6 @@ function onMessage(msg, context) {
     return [{
         cumulocityType: "measurement",
         action: "create",
-        
         payload: {
             "time":  new Date().toISOString(),
             "type": "c8y_TemperatureMeasurement",
@@ -37,7 +36,6 @@ function onMessage(msg, context) {
                 }
             }
         },
-
         externalSource: [{"type":"c8y_Serial", "externalId": payload.get("clientId")}]
     }];
 }

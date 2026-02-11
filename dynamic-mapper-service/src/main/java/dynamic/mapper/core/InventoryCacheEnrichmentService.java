@@ -21,7 +21,9 @@
 
 package dynamic.mapper.core;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -66,8 +68,12 @@ public class InventoryCacheEnrichmentService {
         inventoryCache.putMO(sourceId, newMO);
 
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
+        // Check if assetParents is requested in fragments to cache
+        boolean withParents = serviceConfiguration.getInventoryFragmentsToCache().stream()
+                .anyMatch(frag -> "assetParents".equals(frag.trim()));
+
         // Use the identityResolver to get managed object
-        ManagedObjectRepresentation device = getManagedObjectFromResolver(tenant, sourceId, testing, identityResolver);
+        ManagedObjectRepresentation device = getManagedObjectFromResolver(tenant, sourceId, testing, identityResolver, withParents);
         if (device != null) {
             Map<String, Object> attrs = device.getAttrs();
 
@@ -100,7 +106,11 @@ public class InventoryCacheEnrichmentService {
         configurationRegistry.getNotificationSubscriber().subscribeMOForInventoryCacheUpdates(tenant, mor);
 
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
-        ManagedObjectRepresentation device = getManagedObjectFromResolver(tenant, sourceId, testing, identityResolver);
+        // Check if assetParents is requested in fragments to cache
+        boolean withParents = serviceConfiguration.getInventoryFragmentsToCache().stream()
+                .anyMatch(frag -> "assetParents".equals(frag.trim()));
+
+        ManagedObjectRepresentation device = getManagedObjectFromResolver(tenant, sourceId, testing, identityResolver, withParents);
         if (device != null) {
             Map<String, Object> attrs = device.getAttrs();
 
@@ -115,9 +125,14 @@ public class InventoryCacheEnrichmentService {
 
     private ManagedObjectRepresentation getManagedObjectFromResolver(String tenant, String deviceId,
             Boolean testing, IdentityResolver identityResolver) {
+        return getManagedObjectFromResolver(tenant, deviceId, testing, identityResolver, false);
+    }
+
+    private ManagedObjectRepresentation getManagedObjectFromResolver(String tenant, String deviceId,
+            Boolean testing, IdentityResolver identityResolver, boolean withParents) {
         // Since IdentityResolver is implemented by C8YAgent, we can cast it
         if (identityResolver instanceof C8YAgent) {
-            return ((C8YAgent) identityResolver).getManagedObjectForId(tenant, deviceId, testing);
+            return ((C8YAgent) identityResolver).getManagedObjectForId(tenant, deviceId, testing, withParents);
         }
         return null;
     }
@@ -138,6 +153,50 @@ public class InventoryCacheEnrichmentService {
         }
         if ("type".equals(frag)) {
             newMO.put(frag, device.getType());
+            return;
+        }
+        if ("assetParents".equals(frag)) {
+            // Extract and simplify assetParents
+            Object assetParentsObj = attrs.get("assetParents");
+            if (assetParentsObj instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> assetParentsMap = (Map<String, Object>) assetParentsObj;
+                Object referencesObj = assetParentsMap.get("references");
+
+                if (referencesObj instanceof List) {
+                    @SuppressWarnings("unchecked")
+                    List<Map<String, Object>> references = (List<Map<String, Object>>) referencesObj;
+                    List<Map<String, String>> simplifiedParents = new ArrayList<>();
+
+                    for (Map<String, Object> reference : references) {
+                        Object moObj = reference.get("managedObject");
+                        if (moObj instanceof Map) {
+                            @SuppressWarnings("unchecked")
+                            Map<String, Object> mo = (Map<String, Object>) moObj;
+
+                            Map<String, String> simplifiedParent = new HashMap<>();
+                            if (mo.get("id") != null) {
+                                simplifiedParent.put("id", String.valueOf(mo.get("id")));
+                            }
+                            if (mo.get("name") != null) {
+                                simplifiedParent.put("name", String.valueOf(mo.get("name")));
+                            }
+                            if (mo.get("type") != null) {
+                                simplifiedParent.put("type", String.valueOf(mo.get("type")));
+                            }
+
+                            if (!simplifiedParent.isEmpty()) {
+                                simplifiedParents.add(simplifiedParent);
+                            }
+                        }
+                    }
+
+                    newMO.put(frag, simplifiedParents);
+                    return;
+                }
+            }
+            // If assetParents is not in the expected format, store empty list
+            newMO.put(frag, new ArrayList<>());
             return;
         }
 

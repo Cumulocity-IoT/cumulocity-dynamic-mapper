@@ -19,7 +19,6 @@ function onMessage(msg, context) {
     return [{
         cumulocityType: "measurement",
         action: "create",
-        
         payload: {
             "time":  new Date().toISOString(),
             "type": "c8y_TemperatureMeasurement",

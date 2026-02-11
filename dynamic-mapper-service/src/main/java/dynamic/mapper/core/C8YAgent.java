@@ -732,9 +732,13 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     }
 
     public ManagedObjectRepresentation getManagedObjectForId(String tenant, String deviceId, Boolean testing) {
+        return getManagedObjectForId(tenant, deviceId, testing, false);
+    }
+
+    public ManagedObjectRepresentation getManagedObjectForId(String tenant, String deviceId, Boolean testing, boolean withParents) {
         ManagedObjectRepresentation device = subscriptionsService.callForTenant(tenant, () -> {
             try {
-                return inventoryApi.get(GId.asGId(deviceId), testing);
+                return inventoryApi.get(GId.asGId(deviceId), testing, withParents);
             } catch (SDKException exception) {
                 log.warn("{} - Device with id {} not found!", tenant, deviceId);
             }

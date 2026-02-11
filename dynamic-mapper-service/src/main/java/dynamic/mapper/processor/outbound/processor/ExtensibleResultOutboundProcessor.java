@@ -151,6 +151,12 @@ public class ExtensibleResultOutboundProcessor extends AbstractExtensibleResultP
         String tenant = context.getTenant();
 
         try {
+            // Check if sourceId is explicitly set in DeviceMessage
+            if (deviceMsg.getSourceId() != null && !deviceMsg.getSourceId().isEmpty()) {
+                context.setSourceId(deviceMsg.getSourceId());
+                log.debug("{} - Using explicit sourceId from DeviceMessage: {}", tenant, deviceMsg.getSourceId());
+            }
+
             // Determine the publish topic (from message or context)
             String publishTopic = deviceMsg.getTopic();
             if (publishTopic == null || publishTopic.isEmpty()) {
@@ -178,6 +184,7 @@ public class ExtensibleResultOutboundProcessor extends AbstractExtensibleResultP
                             : -1)
                     .publishTopic(publishTopic)
                     .retain(deviceMsg.getRetain())
+                    .sourceId(context.getSourceId())
                     .request(payloadString)
                     .build();
 

@@ -26,6 +26,8 @@ import org.springframework.stereotype.Service;
 
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
+import com.cumulocity.sdk.client.Platform;
+import com.cumulocity.sdk.client.RestOperations;
 import com.cumulocity.sdk.client.inventory.InventoryApi;
 import com.cumulocity.sdk.client.inventory.InventoryFilter;
 import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
@@ -52,6 +54,9 @@ public class InventoryFacade {
     @Autowired
     private InventoryApi inventoryApi;
 
+    @Autowired
+    private Platform platform;
+
 
     /**
      * Create a managed object with boolean flag.
@@ -75,15 +80,42 @@ public class InventoryFacade {
     /**
      * Get a managed object by ID with boolean flag.
      * Routes to real API if testing is true, otherwise uses mock.
-     * 
+     *
      * @param id The ID of the managed object
      * @param testing Flag indicating if this is a test scenario
      * @return The managed object representation, or null if not found
      */
     public ManagedObjectRepresentation get(GId id, Boolean testing) {
+        return get(id, testing, false);
+    }
+
+    /**
+     * Get a managed object by ID with optional withParents parameter.
+     * Routes to real API if testing is true, otherwise uses mock.
+     *
+     * @param id The ID of the managed object
+     * @param testing Flag indicating if this is a test scenario
+     * @param withParents If true, includes parent device information in the response
+     * @return The managed object representation, or null if not found
+     */
+    public ManagedObjectRepresentation get(GId id, Boolean testing, boolean withParents) {
         if (Boolean.FALSE.equals(testing)) {
-            log.debug("Getting managed object via real C8Y API (testing mode): {}", id);
-            return inventoryApi.get(id);
+            log.debug("Getting managed object via real C8Y API (testing mode): {}, withParents: {}", id, withParents);
+            if (withParents) {
+                // Use RestOperations to make a custom GET request with withParents query parameter
+                RestOperations restOperations = platform.rest();
+                String url = "/inventory/managedObjects/" + id.getValue() + "?withParents=true";
+                try {
+                    return restOperations.get(url,
+                        com.cumulocity.rest.representation.CumulocityMediaType.APPLICATION_JSON_TYPE,
+                        ManagedObjectRepresentation.class);
+                } catch (Exception e) {
+                    log.warn("Failed to get managed object with parents: {}", id, e);
+                    return null;
+                }
+            } else {
+                return inventoryApi.get(id);
+            }
         } else {
             log.debug("Getting managed object via mock: {}", id);
             return inventoryMock.get(id);

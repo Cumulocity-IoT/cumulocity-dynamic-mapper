@@ -194,8 +194,8 @@ public class ExtensibleResultInboundProcessor extends AbstractExtensibleResultPr
             // Apply context data to processing context
             applyContextData(c8yObj.getContextData(), context);
 
-            // Resolve device ID and set it in the payload
-            String resolvedDeviceId = resolveDeviceIdentifier(c8yObj, context, tenant);
+            // Check if sourceId is explicitly set in CumulocityObject
+            String resolvedDeviceId;
             List<ExternalId> externalSources = c8yObj.getExternalSource();
             ExternalIdInfo externalIdInfo = ExternalIdInfo.from(externalSources);
 
@@ -203,7 +203,14 @@ public class ExtensibleResultInboundProcessor extends AbstractExtensibleResultPr
                 context.setExternalId(externalIdInfo.getExternalId());
             }
 
-            if (resolvedDeviceId != null) {
+            if (c8yObj.getSourceId() != null && !c8yObj.getSourceId().isEmpty()) {
+                // Use explicitly provided sourceId
+                resolvedDeviceId = c8yObj.getSourceId();
+                context.setSourceId(resolvedDeviceId);
+                ProcessingResultHelper.setHierarchicalValue(payload, targetAPI.identifier, resolvedDeviceId);
+                log.debug("{} - Using explicit sourceId from CumulocityObject: {}", tenant, resolvedDeviceId);
+            } else if ((resolvedDeviceId = resolveDeviceIdentifier(c8yObj, context, tenant)) != null) {
+                // Use resolved device ID from externalSource
                 ProcessingResultHelper.setHierarchicalValue(payload, targetAPI.identifier, resolvedDeviceId);
                 context.setSourceId(resolvedDeviceId);
             } else if (externalSources != null && !externalSources.isEmpty()) {

@@ -98,24 +98,33 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             // Clone the payload to modify it
             Map<String, Object> payload = clonePayload(deviceMessage.getPayload());
 
-            // Resolve device ID and set it hierarchically in the payload
-            String resolvedExternalId = context.getSourceId();  // defaults to sourceId in context
-            log.debug("{} - Initial context.sourceId before resolution: {}", tenant, resolvedExternalId);
-
-            try {
-                resolvedExternalId = resolveGlobalId2ExternalId(deviceMessage, context, tenant);
+            // Check if sourceId is explicitly set in DeviceMessage
+            String resolvedExternalId;
+            if (deviceMessage.getSourceId() != null && !deviceMessage.getSourceId().isEmpty()) {
+                // Use explicitly provided sourceId
+                resolvedExternalId = deviceMessage.getSourceId();
                 context.setSourceId(resolvedExternalId);
-                log.debug("{} - Resolved external ID: {}", tenant, resolvedExternalId);
-            } catch (ProcessingException e) {
-                log.warn("{} - Could not resolve external ID for device message: {}", tenant, e.getMessage());
-                // Fall back to context sourceId if resolution failed
-                if (resolvedExternalId == null || resolvedExternalId.isEmpty()) {
-                    resolvedExternalId = context.getSourceId();
-                    log.warn("{} - Using context sourceId as fallback: {}", tenant, resolvedExternalId);
-                }
-            }
+                log.debug("{} - Using explicit sourceId from DeviceMessage: {}", tenant, resolvedExternalId);
+            } else {
+                // Resolve device ID using existing logic
+                resolvedExternalId = context.getSourceId();  // defaults to sourceId in context
+                log.debug("{} - Initial context.sourceId before resolution: {}", tenant, resolvedExternalId);
 
-            log.debug("{} - Final resolvedExternalId to be used: {}", tenant, resolvedExternalId);
+                try {
+                    resolvedExternalId = resolveGlobalId2ExternalId(deviceMessage, context, tenant);
+                    context.setSourceId(resolvedExternalId);
+                    log.debug("{} - Resolved external ID: {}", tenant, resolvedExternalId);
+                } catch (ProcessingException e) {
+                    log.warn("{} - Could not resolve external ID for device message: {}", tenant, e.getMessage());
+                    // Fall back to context sourceId if resolution failed
+                    if (resolvedExternalId == null || resolvedExternalId.isEmpty()) {
+                        resolvedExternalId = context.getSourceId();
+                        log.warn("{} - Using context sourceId as fallback: {}", tenant, resolvedExternalId);
+                    }
+                }
+
+                log.debug("{} - Final resolvedExternalId to be used: {}", tenant, resolvedExternalId);
+            }
 
             // Set resolved publish topic (from substituteInTargetAndSend logic)
             setResolvedPublishTopic(context, payload);
@@ -256,15 +265,22 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             // Clone the payload to modify it
             Map<String, Object> payload = clonePayload(cumulocityMessage.getPayload());
 
-            // Resolve device ID and set it hierarchically in the payload
-            String resolvedDeviceId = resolveDeviceIdentifier(cumulocityMessage, context, tenant);
+            // Check if sourceId is explicitly set in CumulocityObject
+            String resolvedDeviceId;
             ExternalIdInfo externalIdInfo = ExternalIdInfo.from(cumulocityMessage.getExternalSource());
 
             if (externalIdInfo.isPresent()) {
                 context.setExternalId(externalIdInfo.getExternalId());
             }
 
-            if (resolvedDeviceId != null) {
+            if (cumulocityMessage.getSourceId() != null && !cumulocityMessage.getSourceId().isEmpty()) {
+                // Use explicitly provided sourceId
+                resolvedDeviceId = cumulocityMessage.getSourceId();
+                context.setSourceId(resolvedDeviceId);
+                ProcessingResultHelper.setHierarchicalValue(payload, targetAPI.identifier, resolvedDeviceId);
+                log.debug("{} - Using explicit sourceId from CumulocityObject: {}", tenant, resolvedDeviceId);
+            } else if ((resolvedDeviceId = resolveDeviceIdentifier(cumulocityMessage, context, tenant)) != null) {
+                // Use resolved device ID from externalSource
                 ProcessingResultHelper.setHierarchicalValue(payload, targetAPI.identifier, resolvedDeviceId);
                 context.setSourceId(resolvedDeviceId);
             } else if (externalIdInfo.isPresent()) {

@@ -193,6 +193,9 @@ public class ExtensionResultProcessor {
                 ? context.getCurrentRequest().getPredecessor()
                 : -1;
 
+        // Check for explicit sourceId override
+        String sourceId = c8yObj.getSourceId();
+
         // Build the request
         return DynamicMapperRequest.builder()
                 .predecessor(predecessor)
@@ -200,6 +203,7 @@ public class ExtensionResultProcessor {
                 .api(api)
                 .externalId(externalId)
                 .externalIdType(externalIdType)
+                .sourceId(sourceId)
                 .request(payloadJson)
                 .build();
     }
@@ -246,11 +250,15 @@ public class ExtensionResultProcessor {
                 ? context.getCurrentRequest().getPredecessor()
                 : -1;
 
+        // Check for explicit sourceId override
+        String sourceId = deviceMsg.getSourceId();
+
         // Build the request for outbound publishing
         return DynamicMapperRequest.builder()
                 .predecessor(predecessor)
                 .publishTopic(publishTopic)
                 .retain(deviceMsg.getRetain())
+                .sourceId(sourceId)
                 .request(payloadString)
                 .build();
     }

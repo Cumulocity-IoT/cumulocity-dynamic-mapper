@@ -104,6 +104,17 @@ For messages received by the flow this is not set.
 
     /** Dictionary of contextData: for creating a new device specify deviceName, deviceType */
     contextData?: object;
+
+    /**
+     * Optional: Explicitly set the Cumulocity device ID (sourceId) for this object.
+     * When set, this overrides the automatic device resolution from externalSource.
+     * This is useful for routing data to a different device than the one that originated it
+     * (e.g., child device data sent to parent device).
+     *
+     * @since 6.1.6
+     * @example "12345"
+     */
+    sourceId?: string;
 }
 
 /** 
@@ -241,6 +252,16 @@ export interface DeviceMessage {
      * @example "event"
      */
     cumulocityType?: "measurement" | "event" | "alarm" | "operation" | "managedObject";
+
+    /**
+     * Optional: Explicitly set the Cumulocity device ID (sourceId) for this message.
+     * When set in outbound processing, this overrides automatic device resolution.
+     * Useful for routing data to/from a different device than the one that originated it.
+     *
+     * @since 6.1.6
+     * @example "12345"
+     */
+    sourceId?: string;
 }
 
 /**

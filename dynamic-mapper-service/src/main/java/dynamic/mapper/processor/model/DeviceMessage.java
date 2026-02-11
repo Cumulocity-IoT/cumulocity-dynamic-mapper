@@ -87,6 +87,13 @@ public class DeviceMessage {
     /** Timestamp of incoming Pulsar message; does nothing when sending */
     private Instant time;
 
+    /**
+     * Optional: Explicitly set the Cumulocity device ID (sourceId) for this message.
+     * When set in outbound processing, this overrides automatic device resolution.
+     * Useful for routing data to/from a different device than the one that originated it.
+     */
+    private String sourceId;
+
     // ==================== Builder Factory Methods ====================
 
     /**
@@ -134,6 +141,7 @@ public class DeviceMessage {
         private Boolean retain;
         private Map<String, String> transportFields = new HashMap<>();
         private Instant time;
+        private String sourceId;
 
         /**
          * Create a builder with no topic.
@@ -283,6 +291,19 @@ public class DeviceMessage {
         }
 
         /**
+         * Set the Cumulocity device ID (sourceId) explicitly.
+         * When set, this overrides automatic device resolution.
+         * Useful for routing data to/from a different device than the origin.
+         *
+         * @param sourceId The Cumulocity device ID
+         * @return This builder
+         */
+        public Builder sourceId(String sourceId) {
+            this.sourceId = sourceId;
+            return this;
+        }
+
+        /**
          * Build the DeviceMessage.
          *
          * @return A new DeviceMessage instance
@@ -299,6 +320,7 @@ public class DeviceMessage {
             msg.setRetain(retain);
             msg.setTransportFields(transportFields.isEmpty() ? null : transportFields);
             msg.setTime(time);
+            msg.setSourceId(sourceId);
             return msg;
         }
     }

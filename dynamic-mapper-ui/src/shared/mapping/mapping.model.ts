@@ -309,9 +309,9 @@ export const TransformationTypeLabels = {
 export const TransformationTypeDescriptions = {
   [TransformationType.DEFAULT]: 'Uses the default transformation logic without custom processing',
   [TransformationType.SUBSTITUTION_AS_CODE]: 'Allows writing custom JavaScript code for complex transformations',
-  [TransformationType.SMART_FUNCTION]: 'Executes a predefined Smart Function for data transformation and create payload for Cumulocity API calls',
+  [TransformationType.SMART_FUNCTION]: 'Executes a predefined Smart Function for data transformation and create payload for Cumulocity API calls. Supports setting sourceId to route data to different devices',
   [TransformationType.JSONATA]: 'Uses JSONata query and transformation language for data mapping',
-  [TransformationType.EXTENSION_JAVA]: 'Java extension returns domain objects (CumulocityObject[] for inbound, DeviceMessage[] for outbound) using Smart Java Function pattern with builder syntax'
+  [TransformationType.EXTENSION_JAVA]: 'Java extension returns domain objects (CumulocityObject[] for inbound, DeviceMessage[] for outbound) using Smart Java Function pattern with builder syntax. Supports setting sourceId to route data to different devices'
 } as const;
 
 export const MappingTypeLabels = {
