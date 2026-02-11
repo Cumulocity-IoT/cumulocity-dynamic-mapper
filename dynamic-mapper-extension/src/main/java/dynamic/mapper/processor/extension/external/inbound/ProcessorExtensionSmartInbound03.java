@@ -70,8 +70,13 @@ public class ProcessorExtensionSmartInbound03 implements ProcessorExtensionInbou
             log.info("{} - Processing smart inbound message with implicit device creation, messageId: {}",
                     context.getTenant(), payload.get("messageId"));
 
+            // Get clientId from context first, fall back to payload
+            String clientId = context.getClientId();
+            if (clientId == null) {
+                clientId = (String) payload.get("clientId");
+            }
+
             // Extract data
-            String clientId = (String) payload.get("clientId");
             @SuppressWarnings("unchecked")
             Map<String, Object> sensorData = (Map<String, Object>) payload.get("sensorData");
             Number tempVal = (Number) sensorData.get("temp_val");

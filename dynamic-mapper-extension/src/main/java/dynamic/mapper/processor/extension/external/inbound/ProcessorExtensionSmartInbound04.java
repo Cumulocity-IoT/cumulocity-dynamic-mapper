@@ -81,8 +81,13 @@ public class ProcessorExtensionSmartInbound04 implements ProcessorExtensionInbou
             log.info("{} - Processing message, messageId: {}",
                     context.getTenant(), payload.get("messageId"));
 
+            // Get clientId from context first, fall back to payload
+            String clientId = context.getClientId();
+            if (clientId == null) {
+                clientId = (String) payload.get("clientId");
+            }
+
             // Extract common data
-            String clientId = (String) payload.get("clientId");
             String payloadType = (String) payload.get("payloadType");
 
             // Decide which type of Cumulocity object to create based on payloadType

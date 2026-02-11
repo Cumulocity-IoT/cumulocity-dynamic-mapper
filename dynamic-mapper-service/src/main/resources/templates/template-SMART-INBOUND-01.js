@@ -16,11 +16,14 @@ function onMessage(msg, context) {
     console.log("Payload Raw:" + payload);
     console.log("Payload messageId" +  payload.get("messageId"));
 
+    // Get clientId from context first, fall back to payload
+    var clientId = context.getClientId() || payload.get("clientId");
+
     // lookup device for enrichment
     var deviceByDeviceId = context.getManagedObjectByDeviceId(payload.get("deviceId"));
     console.log("Device (by device id): " + deviceByDeviceId);
 
-    var deviceByExternalId = context.getManagedObject({ externalId: payload.get("clientId"), type: "c8y_Serial" } );
+    var deviceByExternalId = context.getManagedObject({ externalId: clientId, type: "c8y_Serial" } );
     console.log("Device (by external id): " + deviceByExternalId);
 
     return [{
@@ -36,6 +39,6 @@ function onMessage(msg, context) {
                 }
             }
         },
-        externalSource: [{"type":"c8y_Serial", "externalId": payload.get("clientId")}]
+        externalSource: [{"type":"c8y_Serial", "externalId": clientId}]
     }];
 }

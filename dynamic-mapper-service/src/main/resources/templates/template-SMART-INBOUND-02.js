@@ -16,6 +16,9 @@ function onMessage(msg, context) {
     console.log("Payload Raw:" + payload);
     console.log("Payload messageId" +  payload.get("messageId"));
 
+    // Get clientId from context first, fall back to payload
+    var clientId = context.getClientId() || payload.get("clientId");
+
     // testing lookup device by deviceId for enrichment
     try {
         var deviceByDeviceId = context.getManagedObjectByDeviceId(payload.get("deviceId"));
@@ -71,6 +74,6 @@ function onMessage(msg, context) {
         cumulocityType: "measurement",
         action: "create",
         payload: measurementPayload,
-        externalSource: [{"type":"c8y_Serial", "externalId": payload.get("clientId")}]
+        externalSource: [{"type":"c8y_Serial", "externalId": clientId}]
     }];
 }

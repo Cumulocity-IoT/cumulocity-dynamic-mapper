@@ -71,7 +71,12 @@ public class ProcessorExtensionSmartInbound02 implements ProcessorExtensionInbou
             log.info("{} - Processing smart inbound message with enrichment, messageId: {}",
                     context.getTenant(), payload.get("messageId"));
 
-            String clientId = (String) payload.get("clientId");
+            // Get clientId from context first, fall back to payload
+            String clientId = context.getClientId();
+            if (clientId == null) {
+                clientId = (String) payload.get("clientId");
+            }
+
             String tenant = context.getTenant();
 
             // Lookup device from inventory cache for enrichment (same pattern as JavaScript Smart Functions)

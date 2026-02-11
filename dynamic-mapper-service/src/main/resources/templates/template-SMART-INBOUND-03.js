@@ -16,6 +16,9 @@ function onMessage(msg, context) {
     console.log("Payload Raw:" + payload);
     console.log("Payload messageId" +  payload.get("messageId"));
 
+    // Get clientId from context first, fall back to payload
+    var clientId = context.getClientId() || payload.get("clientId");
+
     return [{
         cumulocityType: "measurement",
         action: "create",
@@ -29,7 +32,7 @@ function onMessage(msg, context) {
                 }
             }
         },
-        externalSource: [{"type":"c8y_Serial", "externalId": payload.get("clientId")}],
+        externalSource: [{"type":"c8y_Serial", "externalId": clientId}],
         contextData: {"deviceName":"Test-Sensor", "deviceType": "sensor-type"} // specify the name and type of the new implicitly created device
     }];
 }

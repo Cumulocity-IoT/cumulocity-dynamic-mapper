@@ -16,6 +16,9 @@ function onMessage(msg, context) {
     console.log("Payload Raw:" + payload);
     console.log("Payload messageId" +  payload.get("messageId"));
 
+    // Get clientId from context first, fall back to payload
+    var clientId = context.getClientId() || payload.get("clientId");
+
     let result;
     const payloadType = payload["payloadType"];
 
@@ -33,7 +36,7 @@ function onMessage(msg, context) {
                     }
                 }
             },
-            externalSource: [{"type":"c8y_Serial", "externalId": payload.get("clientId")}]
+            externalSource: [{"type":"c8y_Serial", "externalId": clientId}]
         }
     } else {
         // if type == "error"
@@ -47,7 +50,7 @@ function onMessage(msg, context) {
                 "severity": "MAJOR",
                 "status": "ACTIVE"
             },
-            externalSource: [{"type":"c8y_Serial", "externalId": payload.get("clientId")}]
+            externalSource: [{"type":"c8y_Serial", "externalId": clientId}]
         }
     }
     return result;

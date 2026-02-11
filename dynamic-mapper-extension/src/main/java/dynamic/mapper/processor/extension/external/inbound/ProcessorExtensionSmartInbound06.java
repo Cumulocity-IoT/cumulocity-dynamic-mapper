@@ -84,8 +84,12 @@ public class ProcessorExtensionSmartInbound06 implements ProcessorExtensionInbou
             log.info("{} - Processing smart inbound message with sourceId override, messageId: {}",
                     context.getTenant(), payload.get("messageId"));
 
-            // Extract client ID for device lookup
-            String clientId = (String) payload.get("clientId");
+            // Get clientId from context first, fall back to payload
+            String clientId = context.getClientId();
+            if (clientId == null) {
+                clientId = (String) payload.get("clientId");
+            }
+
             String tenant = context.getTenant();
 
             // Lookup device from inventory cache (same pattern as JavaScript Smart Functions)
