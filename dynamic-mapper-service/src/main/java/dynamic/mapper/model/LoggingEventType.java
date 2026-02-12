@@ -37,6 +37,8 @@ public enum LoggingEventType {
             "Mapping", "error", "Errors during mapping activation"),
     MAPPING_CHANGED_EVENT_TYPE("MAPPING_CHANGED_EVENT_TYPE", "d11r_mappingChangedEvent", "d11r_mapping",
             "Mapping", "info", "Mapping configuration change notifications"),
+    MAPPING_MIGRATION_EVENT_TYPE("MAPPING_MIGRATION_EVENT_TYPE", "d11r_mappingMigrationEvent", "d11r_mapping",
+            "Mapping", "info", "Automatic mapping migration notifications"),
     MAPPING_FAILURE_EVENT_TYPE("MAPPING_FAILURE_EVENT_TYPE", "d11r_mappingFailureEvent", "d11r_mapping",
             "Mapping", "error", "Mapping processing failures and errors"),
     NOTIFICATION_EVENT_TYPE("NOTIFICATION_EVENT_TYPE", "d11r_notificationStatusEvent", "d11r_connector",

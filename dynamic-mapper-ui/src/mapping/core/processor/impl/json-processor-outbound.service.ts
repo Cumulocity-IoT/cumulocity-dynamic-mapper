@@ -53,6 +53,12 @@ export class JSONProcessorOutbound extends BaseProcessorOutbound {
       getGenericDeviceIdentifier(mapping)
     );
 
+    if (sourceId === undefined || sourceId === null) {
+      throw new Error(
+        `Could not extract sourceId from payload using identifier: ${getGenericDeviceIdentifier(mapping)}`
+      );
+    }
+
     context.sourceId = sourceId.toString();
 
     if (mapping.useExternalId &&  "" !== mapping.externalIdType) {

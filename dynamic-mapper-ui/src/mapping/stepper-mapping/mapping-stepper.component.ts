@@ -557,7 +557,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.sourceTemplateUpdated = updatedContentAsJson;
 
     // Just validate and show warning, don't block
-    const hasProtectedChanges = !this.stepperConfiguration.patchPayload && !validateProtectedFields(
+    const hasProtectedChanges = this.stepperConfiguration.allowTemplateExpansion && !validateProtectedFields(
       this.sourceTemplate,
       updatedContentAsJson
     );
@@ -571,7 +571,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     const isValid = !hasProtectedChanges && isTransformationTypeValid;
     this.isContentChangeValid$.next(isValid);
 
-    if (hasProtectedChanges && !this.stepperConfiguration.patchPayload) {
+    if (hasProtectedChanges && this.stepperConfiguration.allowTemplateExpansion) {
       this.raiseAlert({
         type: 'warning',
         text: "Warning: Changes to _IDENTITY_, _TOPIC_LEVEL_, or _CONTEXT_DATA_ will be reverted when saving."
@@ -601,7 +601,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.targetTemplateUpdated = updatedContentAsJson;
 
     // Just validate and show warning, don't block
-    const hasProtectedChanges = !this.stepperConfiguration.patchPayload && !validateProtectedFields(
+    const hasProtectedChanges = this.stepperConfiguration.allowTemplateExpansion && !validateProtectedFields(
       this.targetTemplate,
       updatedContentAsJson
     );
@@ -615,7 +615,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     const isValid = !hasProtectedChanges && isTransformationTypeValid;
     this.isContentChangeValid$.next(isValid);
 
-    if (hasProtectedChanges && !this.stepperConfiguration.patchPayload) {
+    if (hasProtectedChanges && this.stepperConfiguration.allowTemplateExpansion) {
       this.raiseAlert({
         type: 'warning',
         text: "Warning: Changes to _IDENTITY_, _TOPIC_LEVEL_, or _CONTEXT_DATA_ will be reverted when saving."
@@ -637,7 +637,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   async onCommitButton(): Promise<void> {
-    if (!this.stepperConfiguration.patchPayload) {
+    if (this.stepperConfiguration.allowTemplateExpansion) {
       this.mapping.sourceTemplate = reduceSourceTemplate(this.sourceTemplate, false);
       this.mapping.targetTemplate = reduceSourceTemplate(this.targetTemplate, false);
     } else {
@@ -660,13 +660,13 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   async onSampleTargetTemplatesButton(): Promise<void> {
     if (this.stepperConfiguration.direction === Direction.INBOUND) {
       const template = JSON.parse(SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI]);
-      this.targetTemplate = !this.stepperConfiguration.patchPayload
+      this.targetTemplate = this.stepperConfiguration.allowTemplateExpansion
         ? expandC8YTemplate(template, this.mapping)
         : template;
     } else {
       const levels: string[] = splitTopicExcludingSeparator(this.mapping.mappingTopicSample, false);
       const template = JSON.parse(getExternalTemplate(this.mapping));
-      this.targetTemplate = !this.stepperConfiguration.patchPayload
+      this.targetTemplate = this.stepperConfiguration.allowTemplateExpansion
         ? expandExternalTemplate(template, this.mapping, levels)
         : template;
     }
@@ -880,8 +880,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       const templates = this.stepperService.expandTemplates(
         this.mapping,
         this.stepperConfiguration.direction,
-        this.stepperConfiguration.patchPayload,
-        this.stepperConfiguration.expandSourceTemplate
+        this.stepperConfiguration.allowTemplateExpansion,
+        this.stepperConfiguration.allowSourceExpansion
       );
       this.sourceTemplate = templates.sourceTemplate;
       this.targetTemplate = templates.targetTemplate;
@@ -891,8 +891,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     const templates = this.stepperService.expandExistingTemplates(
       this.mapping,
       this.stepperConfiguration.direction,
-      this.stepperConfiguration.patchPayload,
-      this.stepperConfiguration.expandSourceTemplate
+      this.stepperConfiguration.allowTemplateExpansion,
+      this.stepperConfiguration.allowSourceExpansion
     );
     this.sourceTemplate = templates.sourceTemplate;
     this.targetTemplate = templates.targetTemplate;
@@ -907,7 +907,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.mapping.snoopedTemplates[this.snoopedTemplateCounter]
     );
 
-    if (!this.stepperConfiguration.patchPayload) {
+    if (this.stepperConfiguration.allowTemplateExpansion) {
       if (this.stepperConfiguration.direction === Direction.INBOUND) {
         this.sourceTemplate = expandExternalTemplate(
           this.sourceTemplate,
@@ -931,7 +931,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.mapping.snoopedTemplates[index]
     );
 
-    if (!this.stepperConfiguration.patchPayload) {
+    if (this.stepperConfiguration.allowTemplateExpansion) {
       if (this.stepperConfiguration.direction === Direction.INBOUND) {
         this.sourceTemplate = expandExternalTemplate(
           this.sourceTemplate,

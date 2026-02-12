@@ -45,6 +45,7 @@ export enum LoggingEventType {
   MAPPING_LOADING_ERROR_EVENT_TYPE = 'MAPPING_LOADING_ERROR_EVENT_TYPE',
   MAPPING_ACTIVATION_ERROR_EVENT_TYPE = 'MAPPING_ACTIVATION_ERROR_EVENT_TYPE',
   MAPPING_CHANGED_EVENT_TYPE = 'MAPPING_CHANGED_EVENT_TYPE',
+  MAPPING_MIGRATION_EVENT_TYPE = 'MAPPING_MIGRATION_EVENT_TYPE',
   MAPPING_FAILURE_EVENT_TYPE = 'MAPPING_FAILURE_EVENT_TYPE',
   NOTIFICATION_EVENT_TYPE = 'NOTIFICATION_EVENT_TYPE',
   ALL = 'ALL'
@@ -115,7 +116,15 @@ export const LoggingEventTypeMap: Record<LoggingEventType, LoggingEventTypeDetai
     severity: 'info',
     description: 'Mapping configuration change notifications'
   },
-    [LoggingEventType.MAPPING_FAILURE_EVENT_TYPE]: {
+  [LoggingEventType.MAPPING_MIGRATION_EVENT_TYPE]: {
+    name: 'MAPPING_MIGRATION_EVENT_TYPE',
+    type: 'd11r_mappingMigrationEvent',
+    component: 'd11r_mapping',
+    componentDisplayName: 'Mapping',
+    severity: 'info',
+    description: 'Automatic mapping migration notifications'
+  },
+  [LoggingEventType.MAPPING_FAILURE_EVENT_TYPE]: {
     name: 'MAPPING_FAILURE_EVENT_TYPE',
     type: 'd11r_mappingFailureEvent',
     component: 'd11r_mapping',

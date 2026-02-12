@@ -44,7 +44,7 @@ export abstract class BaseProcessorOutbound {
     public readonly c8yAgent: C8YAgent,
     private readonly mqttClient: MQTTClient,
     public readonly sharedService: SharedService
-  ) {}
+  ) { }
 
   abstract deserializePayload(
     mapping: Mapping,
@@ -99,57 +99,62 @@ export abstract class BaseProcessorOutbound {
     /*
      * step 4 prepare target payload for sending to mqttBroker
      */
+    console.log(mapping.targetAPI)
+    console.log(API.INVENTORY.name)
+    console.log(mapping.targetAPI !== API.INVENTORY.name)
 
-    if (mapping.targetAPI !== API.INVENTORY.name) {
-      const topicLevels: string[] = payloadTarget[TOKEN_TOPIC_LEVEL];
-      if (!topicLevels && topicLevels.length > 0) {
-        // now merge the replaced topic levels
-        let c: number = 0;
-        const splitTopicInAsList: string[] = splitTopicIncludingSeparator(
-          context.topic
-        );
-        topicLevels.forEach((tl) => {
-          while (
-            c < splitTopicInAsList.length &&
-            '/' === splitTopicInAsList[c]
-          ) {
-            c++;
-          }
-          splitTopicInAsList[c] = tl;
-          c++;
-        });
-
-        const resolvedPublishTopic: string = '';
-        for (let d: number = 0; d < splitTopicInAsList.length; d++) {
-          resolvedPublishTopic.concat(splitTopicInAsList[d]);
-        }
-        context.resolvedPublishTopic = resolvedPublishTopic.toString();
-      } else {
-        context.resolvedPublishTopic = context.mapping.publishTopic;
-      }
-
-      // leave the topic for debugging purposes
-      // _.unset(payloadTarget, TOKEN_TOPIC_LEVEL);
-      const newPredecessor = context.requests.push({
-        predecessor: predecessor,
-        method: 'POST',
-        sourceId: deviceSource,
-        externalIdType: mapping.externalIdType,
-        request: payloadTarget,
-        api: API[mapping.targetAPI].name
-      });
-      try {
-        const response = await this.mqttClient.createMEAO(context);
-        context.requests[newPredecessor - 1].response = response;
-      } catch (e) {
-        context.requests[newPredecessor - 1].error = e;
-      }
-      predecessor = context.requests.length;
-    } else {
-      console.warn(
-        'Ignoring payload: ${payloadTarget}, ${mapping.targetAPI}, ${processingCache.size}'
+    // do not remove as this still needs to be validated
+    // if (mapping.targetAPI !== API.INVENTORY.name) {
+    const topicLevels: string[] = payloadTarget[TOKEN_TOPIC_LEVEL];
+    if (!topicLevels && topicLevels.length > 0) {
+      // now merge the replaced topic levels
+      let c: number = 0;
+      const splitTopicInAsList: string[] = splitTopicIncludingSeparator(
+        context.topic
       );
+      topicLevels.forEach((tl) => {
+        while (
+          c < splitTopicInAsList.length &&
+          '/' === splitTopicInAsList[c]
+        ) {
+          c++;
+        }
+        splitTopicInAsList[c] = tl;
+        c++;
+      });
+
+      const resolvedPublishTopic: string = '';
+      for (let d: number = 0; d < splitTopicInAsList.length; d++) {
+        resolvedPublishTopic.concat(splitTopicInAsList[d]);
+      }
+      context.resolvedPublishTopic = resolvedPublishTopic.toString();
+    } else {
+      context.resolvedPublishTopic = context.mapping.publishTopic;
     }
+
+    // leave the topic for debugging purposes
+    // _.unset(payloadTarget, TOKEN_TOPIC_LEVEL);
+    const newPredecessor = context.requests.push({
+      predecessor: predecessor,
+      method: 'POST',
+      sourceId: deviceSource,
+      externalIdType: mapping.externalIdType,
+      request: payloadTarget,
+      api: API[mapping.targetAPI].name
+    });
+    try {
+      const response = await this.mqttClient.createMEAO(context);
+      context.requests[newPredecessor - 1].response = response;
+    } catch (e) {
+      context.requests[newPredecessor - 1].error = e;
+    }
+    predecessor = context.requests.length;
+    // do not remove as this still needs to be validated
+    // } else {
+    //   console.warn(
+    //     `Ignoring payload: ${payloadTarget}, ${mapping.targetAPI}, ${processingCache.size}`
+    //   );
+    //}
     //console.log(
     //  `Added payload for sending: ${payloadTarget}, ${mapping.targetAPI}, numberDevices: 1`
     //);

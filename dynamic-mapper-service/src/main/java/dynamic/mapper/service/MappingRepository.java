@@ -25,11 +25,13 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.Direction;
+import dynamic.mapper.model.LoggingEventType;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingRepresentation;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.TransformationType;
 import lombok.extern.slf4j.Slf4j;
+import org.joda.time.DateTime;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Repository;
 
@@ -102,6 +104,9 @@ public class MappingRepository {
      * with proper tenant scope activated via subscriptionsService.callForTenant()
      */
     public Mapping prepareForCreate(String tenant, Mapping mapping) {
+        // Apply migrations before creating
+        migrateMapping(tenant, mapping);
+
         MappingRepresentation mr = new MappingRepresentation();
         mapping.setLastUpdate(System.currentTimeMillis());
         mr.setType(MappingRepresentation.MAPPING_TYPE);
@@ -122,6 +127,9 @@ public class MappingRepository {
                     String.format("Tenant %s - Mapping %s is active, deactivate before updating!",
                             tenant, mapping.getId()));
         }
+
+        // Apply migrations before updating
+        migrateMapping(tenant, mapping);
 
         mapping.setLastUpdate(System.currentTimeMillis());
         return mapping;
@@ -156,6 +164,22 @@ public class MappingRepository {
     // Helper methods
 
     /**
+     * Applies automatic migrations to a mapping
+     * This ensures legacy mappings are migrated to current standards
+     */
+    private void migrateMapping(String tenant, Mapping mapping) {
+        // Migrate legacy JSON mappings without transformationType to JSONATA
+        if (MappingType.JSON.equals(mapping.getMappingType()) &&
+            (mapping.getTransformationType() == null || TransformationType.DEFAULT.equals(mapping.getTransformationType()))) {
+
+            log.info("{} - Migrating legacy JSON mapping {} to JSONATA transformation",
+                    tenant, mapping.getName() != null ? mapping.getName() : mapping.getId());
+
+            mapping.setTransformationType(TransformationType.JSONATA);
+        }
+    }
+
+    /**
      * Converts a ManagedObjectRepresentation to a Mapping, handling deprecated CODE_BASED migration
      * This is now called within MappingService with proper tenant scope active
      */
@@ -183,6 +207,34 @@ public class MappingRepository {
                             "Mapping %s was automatically migrated from deprecated CODE_BASED to JSON with SMART_FUNCTION transformation",
                             moId);
                     mappingService.sendMappingLoadingError(tenant, mo, migrationMsg);
+                } catch (Exception updateEx) {
+                    log.warn("{} - Failed to persist migrated mapping {}: {}", tenant, moId, updateEx.getMessage());
+                }
+            }
+
+            // Migrate legacy JSON mappings without transformationType to JSONATA
+            if (MappingType.JSON.equals(mapping.getMappingType()) &&
+                (mapping.getTransformationType() == null || TransformationType.DEFAULT.equals(mapping.getTransformationType()))) {
+                String moId = mo.getId().getValue();
+                log.info("{} - Migrating legacy JSON mapping {} to JSONATA transformation",
+                        tenant, moId);
+
+                mapping.setTransformationType(TransformationType.JSONATA);
+
+                try {
+                    // Persist the migrated mapping - now through MappingService with proper scope
+                    mappingService.updateMapping(tenant, mapping, true, true);
+
+                    // Notify about the automatic migration using MAPPING_MIGRATION_EVENT_TYPE
+                    String migrationMsg = String.format(
+                            "Mapping %s [%s] was automatically migrated: transformationType set to JSONATA for legacy JSON mapping",
+                            mapping.getName(), moId);
+                    configurationRegistry.getC8yAgent().createOperationEvent(
+                            migrationMsg,
+                            LoggingEventType.MAPPING_MIGRATION_EVENT_TYPE,
+                            DateTime.now(),
+                            tenant,
+                            null);
                 } catch (Exception updateEx) {
                     log.warn("{} - Failed to persist migrated mapping {}: {}", tenant, moId, updateEx.getMessage());
                 }

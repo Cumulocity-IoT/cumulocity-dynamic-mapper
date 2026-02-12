@@ -280,7 +280,7 @@ export abstract class BaseProcessorInbound {
         }
       } else {
         console.warn(
-          'Ignoring payload: ${payloadTarget}, ${mapping.targetAPI}, ${processingCache.size}'
+          `Ignoring payload: ${payloadTarget}, ${mapping.targetAPI}, ${processingCache.size}`
         );
       }
       // console.log(

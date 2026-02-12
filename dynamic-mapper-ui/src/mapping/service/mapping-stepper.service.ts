@@ -127,7 +127,7 @@ export class MappingStepperService {
         this.isSubstitutionValid$.next(isValid);
     }
 
-    expandTemplates(mapping: Mapping, direction: Direction, patchPayload?: boolean, expandSourceTemplate?: boolean): {
+    expandTemplates(mapping: Mapping, direction: Direction, allowTemplateExpansion?: boolean, allowSourceExpansion?: boolean): {
         sourceTemplate: any;
         targetTemplate: any;
     } {
@@ -139,15 +139,15 @@ export class MappingStepperService {
         );
 
         const expandSource = (template: any) => {
-            // Don't expand if patchPayload is true OR expandSourceTemplate is explicitly false
-            if (patchPayload || expandSourceTemplate === false) return template;
+            // Don't expand if allowTemplateExpansion is false OR allowSourceExpansion is explicitly false
+            if (!allowTemplateExpansion || allowSourceExpansion === false) return template;
             return direction === Direction.INBOUND
                 ? expandExternalTemplate(template, mapping, levels)
                 : expandC8YTemplate(template, mapping);
         };
 
         const expandTarget = (template: any) => {
-            if (patchPayload) return template;
+            if (!allowTemplateExpansion) return template;
             return direction === Direction.INBOUND
                 ? expandC8YTemplate(template, mapping)
                 : expandExternalTemplate(template, mapping, levels);
@@ -166,7 +166,7 @@ export class MappingStepperService {
         }
     }
 
-    expandExistingTemplates(mapping: Mapping, direction: Direction, patchPayload?: boolean, expandSourceTemplate?: boolean): {
+    expandExistingTemplates(mapping: Mapping, direction: Direction, allowTemplateExpansion?: boolean, allowSourceExpansion?: boolean): {
         sourceTemplate: any;
         targetTemplate: any;
     } {
@@ -178,15 +178,15 @@ export class MappingStepperService {
         );
 
         const expandSource = (template: any) => {
-            // Don't expand if patchPayload is true OR expandSourceTemplate is explicitly false
-            if (patchPayload || expandSourceTemplate === false) return template;
+            // Don't expand if allowTemplateExpansion is false OR allowSourceExpansion is explicitly false
+            if (!allowTemplateExpansion || allowSourceExpansion === false) return template;
             return direction === Direction.INBOUND
                 ? expandExternalTemplate(template, mapping, levels)
                 : expandC8YTemplate(template, mapping);
         };
 
         const expandTarget = (template: any) => {
-            if (patchPayload) return template;
+            if (!allowTemplateExpansion) return template;
             return direction === Direction.INBOUND
                 ? expandC8YTemplate(template, mapping)
                 : expandExternalTemplate(template, mapping, levels);

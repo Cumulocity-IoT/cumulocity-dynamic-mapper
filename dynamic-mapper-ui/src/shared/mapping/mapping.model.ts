@@ -270,8 +270,8 @@ export interface StepperConfiguration {
   allowTestSending?: boolean;
   direction?: Direction;
   advanceFromStepToEndStep?: number;
-  patchPayload?: boolean;
-  expandSourceTemplate?: boolean;  // Whether to expand source template with sample data (false for SMART_FUNCTION/EXTENSION_JAVA)
+  allowTemplateExpansion?: boolean;  // Whether to allow template expansion with sample data
+  allowSourceExpansion?: boolean;    // Whether to allow source template expansion (false for SMART_FUNCTION/EXTENSION_JAVA)
 }
 
 export enum TransformationType {
