@@ -785,6 +785,12 @@
                 <td>Key from Kafka message header</td>
               </tr>
               <tr>
+                <td>Source template <small class="text-muted">(MQTT 5 only)</small></td>
+                <td><code>_CONTEXT_DATA_.clientId</code></td>
+                <td>map-from</td>
+                <td>Client ID from MQTT 5 user properties. The publisher must include <code>clientId</code> as a user property when publishing the message. Not available for MQTT 3.1.1 connections.</td>
+              </tr>
+              <tr>
                 <td>Target template <small class="text-muted">(Cumulocity)</small></td>
                 <td><code>_IDENTITY_.externalId</code></td>
                 <td>map-to</td>
@@ -828,6 +834,38 @@
         <p class="image-description m-l-48"><b>Description:</b> Screenshot showing the metadata added for inbound
           mappings.
         </p>
+        <br />
+        <div class="admonition info" style="max-width: 100%;">
+          <div class="title">Info - MQTT 5 User Properties</div>
+          <div class="content">
+            <strong>Publisher Client ID with MQTT 5:</strong>
+            <p class="m-t-8">
+              When using MQTT 5 connectors, publishers can include their client ID as a user property, which the mapper
+              will automatically extract and make available as <code>_CONTEXT_DATA_.clientId</code>. This allows you to
+              identify which client published a message.
+            </p>
+            <p class="m-t-8">
+              <strong>Example - Publisher side (MQTT 5):</strong>
+            </p>
+            <pre class="m-t-8"><code class="language-java">Mqtt5Publish.builder()
+    .topic("devices/data")
+    .payload(payloadBytes)
+    .userProperties()
+        .add("clientId", "device-sensor-123")
+        .applyUserProperties()
+    .build();</code></pre>
+            <p class="m-t-8">
+              <strong>Example - Mapper side:</strong><br/>
+              In your mapping, you can then reference <code>_CONTEXT_DATA_.clientId</code> in the source template to
+              access the publisher's client ID. For example, you could map it to the external device ID:
+              <code>[ _CONTEXT_DATA_.clientId → _IDENTITY_.externalId ]</code>
+            </p>
+            <p class="m-t-8">
+              <strong>Note:</strong> This feature is only available for MQTT 5 connections. MQTT 3.1.1 does not support
+              user properties, so the client ID must be included in the message payload or topic instead.
+            </p>
+          </div>
+        </div>
         <br />
         <div class="p-b-8 text-16">The following table lists all metadata nodes for outbound mappings:
           <br />
@@ -1603,8 +1641,54 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
                   </ul>
                 </td>
               </tr>
+              <tr class="table-info">
+                <td colspan="3" style="text-align: center; font-weight: bold; background-color: #e7f3ff;">
+                  Context Methods for Accessing Incoming Metadata
+                </td>
+              </tr>
+              <tr>
+                <td><code>context.getClientId()</code></td>
+                <td>Access</td>
+                <td>Returns the publisher's client ID from MQTT 5 user properties. Returns <code>null</code> if not available. <strong>MQTT 5 only</strong> - the publisher must include <code>clientId</code> as a user property.
+                  <br/><strong>Example:</strong> <code>var clientId = context.getClientId();</code>
+                </td>
+              </tr>
+              <tr>
+                <td><code>context.getManagedObjectByDeviceId()</code></td>
+                <td>Access</td>
+                <td>Lookup device properties by device ID. Returns device object or <code>null</code>.
+                  <br/><strong>Example:</strong> <code>var device = context.getManagedObjectByDeviceId("12345");</code>
+                </td>
+              </tr>
+              <tr>
+                <td><code>context.getManagedObject()</code></td>
+                <td>Access</td>
+                <td>Lookup device properties by external ID. Requires object with <code>externalId</code> and <code>type</code>.
+                  <br/><strong>Example:</strong> <code>var device = context.getManagedObject(&#123;externalId: "sensor-01", type: "c8y_Serial"&#125;);</code>
+                </td>
+              </tr>
             </tbody>
           </table>
+        </div>
+        <div class="admonition info" style="max-width: 100%;">
+          <div class="title">Info - Context Methods for Accessing Metadata</div>
+          <div class="content">
+            <strong>Available Context Methods:</strong>
+            <p class="m-t-8">
+              In addition to the properties you return, Smart Functions can access incoming metadata through the
+              <code>context</code> object:
+            </p>
+            <ul class="m-t-8 m-b-0">
+              <li><code>context.getClientId()</code> - Returns the publisher's client ID from MQTT 5 user properties (MQTT 5 only, returns <code>null</code> if not available)</li>
+              <li><code>context.getManagedObjectByDeviceId(deviceId)</code> - Lookup device properties by device ID</li>
+              <li><code>context.getManagedObject(&#123;externalId, type&#125;)</code> - Lookup device properties by external ID</li>
+              <li><code>context.getTesting()</code> - Returns <code>true</code> if running in test mode</li>
+              <li><code>context.setState(key, value)</code> / <code>context.getState(key)</code> - Store/retrieve values across message processing</li>
+            </ul>
+            <p class="m-t-8">
+              <strong>Example:</strong> <code>var publisherClientId = context.getClientId();</code>
+            </p>
+          </div>
         </div>
         <div class="admonition caution" style="max-width: 100%;">
           <div class="title">Caution</div>
@@ -1971,6 +2055,12 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
             then <code>payload["_TOPIC_LEVEL_"][1]</code> returns <code>"12345"</code>.
           </li>
           <li>
+            <strong>Publisher Client ID</strong> (inbound, MQTT 5 only): Access the MQTT client ID of the message publisher using
+            <code>context.getClientId()</code>. This returns the <code>clientId</code> from MQTT 5 user properties, or <code>null</code> if not available.
+            <strong>Note:</strong> The publisher must include the <code>clientId</code> as a user property when publishing.
+            Not available for MQTT 3.1.1 connections.
+          </li>
+          <li>
             <strong>External ID</strong> (outbound only): Access the device's external ID using
             <code>payload["_IDENTITY_"]["externalId"]</code>.
           </li>
@@ -1998,12 +2088,33 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
   &#125;];
 &#125;</code></pre>
         </div>
+        <div class="p-b-8 text-14">
+          <strong>Example: Using publisher client ID from MQTT 5 user properties (inbound)</strong><br /><br />
+          <pre><code class="language-javascript">function onMessage(msg, context) &#123;
+  var payload = msg.getPayload();
+  // Get client ID from MQTT 5 user properties
+  var publisherClientId = context.getClientId();
+  console.log("Publisher Client ID: " + publisherClientId);
+
+  // Use it as external device ID
+  return [&#123;
+    cumulocityType: "measurement",
+    action: "create",
+    payload: &#123;
+      "time": new Date().toISOString(),
+      "type": "c8y_TemperatureMeasurement",
+      "c8y_Steam": &#123; "Temperature": &#123; "unit": "C", "value": payload["temp"] &#125; &#125;
+    &#125;,
+    externalSource: [&#123; "type": "c8y_Serial", "externalId": publisherClientId &#125;]
+  &#125;];
+&#125;</code></pre>
+        </div>
         <div class="admonition caution" style="max-width: 100%;">
           <div class="title">Caution</div>
           <div class="content">
             <strong>Best Practice:</strong> Always validate metadata values before using them. Check if
             <code>_TOPIC_LEVEL_</code> exists and has the expected index before accessing it. Similarly, verify external
-            IDs and source IDs are present in outbound mappings.
+            IDs and source IDs are present in outbound mappings. For <code>context.getClientId()</code>, always check if the value is not <code>null</code> before using it, as it's only available for MQTT 5 connections when the publisher includes it as a user property.
           </div>
         </div>
         <div class="p-b-8 text-16">
