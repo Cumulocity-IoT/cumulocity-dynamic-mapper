@@ -22,7 +22,6 @@ import { AlertService, DataGridComponent } from '@c8y/ngx-components';
 import { saveAs } from 'file-saver';
 import { BehaviorSubject, finalize, take, takeUntil, Subject } from 'rxjs';
 import { Direction, Mapping, MappingEnriched } from '../../shared';
-import { ConfirmationModalService } from '../../shared/service/confirmation-modal.service';
 import { MappingService } from './mapping.service';
 
 /**
@@ -35,7 +34,6 @@ import { MappingService } from './mapping.service';
 export class MappingBulkOperationsService {
   private readonly mappingService = inject(MappingService);
   private readonly alertService = inject(AlertService);
-  private readonly confirmationService = inject(ConfirmationModalService);
 
   /**
    * Activates multiple mappings in bulk

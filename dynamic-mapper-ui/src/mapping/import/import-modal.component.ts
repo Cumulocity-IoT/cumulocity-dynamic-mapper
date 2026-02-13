@@ -30,6 +30,7 @@ import {
   AlertService,
   CoreModule,
   DropAreaComponent,
+  gettext,
   ModalLabels
 } from '@c8y/ngx-components';
 import { BehaviorSubject, Subject } from 'rxjs';
@@ -94,6 +95,7 @@ export class ImportMappingsComponent implements OnDestroy {
         m.lastUpdate = Date.now();
         m.active = false;
         await this.mappingService.createMapping(m);
+        this.alertService.success(gettext(`Mapping ${m.name} imported successfully`));
         successCount++;
         this.progress$.next((100 * (i + 1)) / countMappings);
       } catch (ex) {
