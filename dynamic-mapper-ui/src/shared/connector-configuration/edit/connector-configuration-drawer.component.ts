@@ -54,10 +54,10 @@ interface PropertyEntry {
 ]
 })
 export class ConnectorConfigurationDrawerComponent implements OnInit {
-  @Input() action: Action;
-  @Input() configuration: ConnectorConfiguration;
-  @Input() specifications: ConnectorSpecification[];
-  @Input() configurationsCount: number;
+  @Input() action!: Action;
+  @Input() configuration!: ConnectorConfiguration;
+  @Input() specifications!: ConnectorSpecification[];
+  @Input() configurationsCount!: number;
   @Input() allowedConnectors: ConnectorType[] = [];
 
   brokerFormFields: FormlyFieldConfig[] = [];
@@ -65,14 +65,15 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
   dynamicFormFields: FormlyFieldConfig[] = [];
   dynamicForm = new FormGroup({});
   labels: ModalLabels = { ok: 'Save', cancel: 'Cancel' };
-  description: string;
-  readOnly: boolean;
-  feature: Feature;
+  description?: string;
+  readOnly = false;
+  feature!: Feature;
+  mode: 'Add' | 'Update' | 'View' = 'Add';
 
-  private _save: (value: ConnectorConfiguration) => void;
-  private _cancel: (reason?: any) => void;
+  private _save!: (value: ConnectorConfiguration) => void;
+  private _cancel!: (reason?: string) => void;
 
-  result: Promise<ConnectorConfiguration | string> = new Promise((resolve, reject) => {
+  result: Promise<ConnectorConfiguration> = new Promise<ConnectorConfiguration>((resolve, reject) => {
     this._save = resolve;
     this._cancel = reject;
   });
@@ -90,11 +91,10 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
     [ConnectorPropertyType.MAP_PROPERTY, this.createMapField.bind(this)]
   ]);
 
-  bottomDrawerRef = inject(BottomDrawerRef);
-  sharedService = inject(SharedService);
-  formatStringPipe = new FormatStringPipe();
-  cd = inject(ChangeDetectorRef);
-  mode: string;
+  private readonly bottomDrawerRef = inject(BottomDrawerRef);
+  private readonly sharedService = inject(SharedService);
+  private readonly formatStringPipe = inject(FormatStringPipe);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   async ngOnInit() {
     this.feature = await this.sharedService.getFeatures();
@@ -253,7 +253,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
     }
 
     this.createDynamicFormFields(dynamicFields);
-    this.cd.detectChanges();
+    this.cdr.detectChanges();
   }
 
   private initializeBasicFormFields(): void {

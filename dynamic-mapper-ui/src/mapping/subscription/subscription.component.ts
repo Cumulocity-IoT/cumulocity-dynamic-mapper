@@ -42,7 +42,6 @@ import {
 } from '@c8y/ngx-components';
 import {
   API,
-  ConfirmationModalComponent,
   Direction,
   Feature,
   MappingType,
@@ -52,7 +51,6 @@ import {
 
 import { ActivatedRoute, Router } from '@angular/router';
 import { IIdentified } from '@c8y/client';
-import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { Subject } from 'rxjs';
 import { DeploymentMapEntry, SharedService } from '../../shared';
 import { MappingService } from '../core/mapping.service';
@@ -64,6 +62,7 @@ import { DeviceSelectorTreeComponent } from './subscription-static-tree/device-s
 import { GroupSelectorComponent } from './subscription-dynamic-group/group-selector.component';
 import { TypeSelectorComponent } from './subscription-dynamic-type/type-selector.component';
 import { DeviceSelectorTableComponent } from './subscription-static-table/device-selector-table.component';
+import { ConfirmationModalService } from '../../shared/service/confirmation-modal.service';
 
 @Component({
   selector: 'd11r-mapping-subscription-grid',
@@ -77,56 +76,36 @@ import { DeviceSelectorTableComponent } from './subscription-static-table/device
 
 })
 export class MappingSubscriptionComponent implements OnInit, OnDestroy {
-  @ViewChild('subscriptionGrid') subscriptionGrid: DataGridComponent;
+  @ViewChild('subscriptionGrid') subscriptionGrid!: DataGridComponent;
 
-  constructor(
-  ) {
-    // console.log('constructor');
-    const href = this.router.url;
-    // this.static = href.match(
-    //   /c8y-pkg-dynamic-mapper\/node1\/mappings\/subscription\/static/g
-    // )
-    //   ? true
-    //   : false;
+  constructor() {}
 
-    const pathMatch = href.match(/c8y-pkg-dynamic-mapper\/node1\/mappings\/subscription\/(static|dynamic|deviceToClientMap)/);
-    this.path = pathMatch ? pathMatch[1] : null;
+  private readonly mappingService = inject(MappingService);
+  private readonly subscriptionService = inject(SubscriptionService);
+  private readonly sharedService = inject(SharedService);
+  private readonly alertService = inject(AlertService);
+  private readonly confirmationService = inject(ConfirmationModalService);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
-    this.titleSubscription = `Subscription (${this.path}) devices mapping outbound`;
+  showConfigSubscription1 = false;
+  showConfigSubscription2 = false;
+  showConfigSubscription3 = false;
+  showConfigSubscription4 = false;
 
-    // this.loadSubscriptionDevice();
-    // this.loadSubscriptionByDeviceGroup();
-    // this.loadSubscriptionByDeviceType();
-  }
+  isConnectionToMQTTEstablished = false;
 
-  private mappingService = inject(MappingService);
-  private subscriptionService = inject(SubscriptionService);
-  private sharedService = inject(SharedService);
-  private alertService = inject(AlertService);
-  private bsModalService = inject(BsModalService);
-  private router = inject(Router);
-  private route = inject(ActivatedRoute);
-
-  showConfigSubscription1: boolean = false;
-  showConfigSubscription2: boolean = false;
-  showConfigSubscription3: boolean = false;
-  showConfigSubscription4: boolean = false;
-
-  isConnectionToMQTTEstablished: boolean;
-
-  subscriptionDevices: NotificationSubscriptionResponse;
-  subscriptionDeviceGroups: NotificationSubscriptionResponse;
-  subscribedDevices: any[];
-  subscribedDeviceGroups: any[];
-  subscribedDeviceTypes: string[];
+  subscriptionDevices?: NotificationSubscriptionResponse;
+  subscriptionDeviceGroups?: NotificationSubscriptionResponse;
+  subscribedDevices: Device[] = [];
+  subscribedDeviceGroups: Device[] = [];
+  subscribedDeviceTypes: string[] = [];
   devices: IIdentified[] = [];
   Direction = Direction;
 
-  static: boolean = false;
-  path: string;
-  titleMapping: string;
-  titleSubscription: string = 'Subscription devices mapping outbound';
-  deploymentMapEntry: DeploymentMapEntry;
+  path: 'static' | 'dynamic' | 'deviceToClientMap' | null = null;
+  titleSubscription = 'Subscription devices mapping outbound';
+  deploymentMapEntry?: DeploymentMapEntry;
 
   readonly displayOptions: DisplayOptions = {
     bordered: true,
@@ -164,9 +143,9 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
     }
   ];
 
-  value: string;
-  mappingType: MappingType;
-  destroy$: Subject<boolean> = new Subject<boolean>();
+  value?: string;
+  mappingType?: MappingType;
+  private readonly destroy$ = new Subject<void>();
 
   readonly pagination: Pagination = {
     pageSize: 30,
@@ -175,17 +154,25 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
 
   actionControlSubscription: ActionControl[] = [];
   bulkActionControlSubscription: BulkActionControl[] = [];
-  feature: Feature;
+  feature!: Feature;
 
 
 
   async ngOnInit(): Promise<void> {
+    // Determine subscription path from route
+    const href = this.router.url;
+    const pathMatch = href.match(/c8y-pkg-dynamic-mapper\/node1\/mappings\/subscription\/(static|dynamic|deviceToClientMap)/);
+    this.path = pathMatch ? pathMatch[1] as 'static' | 'dynamic' | 'deviceToClientMap' : null;
+    this.titleSubscription = `Subscription (${this.path}) devices mapping outbound`;
+
+    // Load all subscriptions in parallel
     await Promise.all([
       this.loadSubscriptionDevice(),
       this.loadSubscriptionByDeviceGroup(),
       this.loadSubscriptionByDeviceType()
     ]);
 
+    // Setup action controls based on user permissions
     this.feature = this.route.snapshot.data['feature'];
     if (this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole) {
       this.bulkActionControlSubscription.push({
@@ -276,29 +263,19 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
     device2Delete: IIdentified,
     confirmation: boolean = true,
     multiple: boolean = false
-  ): Promise<boolean | PromiseLike<boolean>> {
-    let result: boolean = false;
-    if (confirmation) {
-      const initialState = {
-        title: multiple ? 'Delete subscriptions' : 'Delete subscription',
-        message: multiple
-          ? 'You are about to delete subscriptions. Do you want to proceed to delete ALL?'
-          : 'You are about to delete a subscription. Do you want to proceed?',
-        labels: {
-          ok: 'Delete',
-          cancel: 'Cancel'
-        }
-      };
-      const confirmDeletionModalRef: BsModalRef = this.bsModalService.show(
-        ConfirmationModalComponent,
-        { initialState }
-      );
+  ): Promise<boolean> {
+    let result = false;
 
-      result = await confirmDeletionModalRef.content.closeSubject.toPromise();
+    if (confirmation) {
+      result = await this.confirmationService.confirmDeletion('subscription', multiple);
       if (result) {
         await this.deleteSubscription(device2Delete);
       }
+    } else {
+      await this.deleteSubscription(device2Delete);
+      result = true;
     }
+
     this.subscriptionGrid.setAllItemsSelected(false);
     return result;
   }
@@ -384,8 +361,8 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.destroy$.next(true);
-    this.destroy$.unsubscribe();
+    this.destroy$.next();
+    this.destroy$.complete();
     this.mappingService.stopChangedMappingEvents();
   }
 }
