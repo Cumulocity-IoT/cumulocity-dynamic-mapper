@@ -664,16 +664,14 @@ export /**
 * Creates a new object with sorted keys, optionally placing specified keys at the end
 * @param {Object} obj - The original object
 * @param {Object} options - Configuration options
-* @param {boolean} [options.specialKeysAtEnd=false] - Whether to place special keys at the end
-* @param {string[]} [options.specialKeys=['_CONTEXT_DATA_', '_TOPIC_LEVEL_']] - Keys to place at the end
+* @param {boolean} [options.underscoreKeysAtEnd=true] - Whether to place keys starting with "_" at the end
 * @param {Function} [options.sortFn=null] - Optional custom sort function for keys
 * @returns {Object} - New object with sorted keys
 */
   function sortObjectKeys(obj, options = {}) {
   // Set default options
   const defaultOptions = {
-    specialKeysAtEnd: true,
-    specialKeys: ['_CONTEXT_DATA_', '_TOPIC_LEVEL_'],
+    underscoreKeysAtEnd: true,
     sortFn: null
   };
 
@@ -681,15 +679,15 @@ export /**
 
   // Get the keys of the object
   let keys = Object.keys(obj);
-  let specialKeysPresent = [];
+  let underscoreKeys = [];
 
-  // If we need to place special keys at the end, remove them temporarily
-  if (config.specialKeysAtEnd) {
-    // Extract special keys that exist in the object
-    specialKeysPresent = keys.filter(key => config.specialKeys.includes(key));
+  // If we need to place underscore keys at the end, separate them
+  if (config.underscoreKeysAtEnd) {
+    // Extract keys starting with "_"
+    underscoreKeys = keys.filter(key => key.startsWith('_'));
 
-    // Remove special keys from the main keys array
-    keys = keys.filter(key => !config.specialKeys.includes(key));
+    // Remove underscore keys from the main keys array
+    keys = keys.filter(key => !key.startsWith('_'));
   }
 
   // Sort the remaining keys
@@ -699,15 +697,11 @@ export /**
     keys.sort();
   }
 
-  // Add special keys back at the end in their original order
-  if (config.specialKeysAtEnd) {
-    // Sort special keys according to their order in the specialKeys array
-    specialKeysPresent.sort((a, b) => {
-      return config.specialKeys.indexOf(a) - config.specialKeys.indexOf(b);
-    });
-
-    // Append special keys to the end
-    keys = [...keys, ...specialKeysPresent];
+  // Sort underscore keys alphabetically among themselves
+  if (config.underscoreKeysAtEnd) {
+    underscoreKeys.sort();
+    // Append underscore keys to the end
+    keys = [...keys, ...underscoreKeys];
   }
 
   // Create a new object with the sorted keys
