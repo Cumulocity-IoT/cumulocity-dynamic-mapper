@@ -41,7 +41,6 @@ import {
 import { saveAs } from 'file-saver';
 import {
   API,
-  ConfirmationModalComponent,
   createCustomUuid,
   DeploymentMapEntry,
   Direction,
@@ -64,6 +63,7 @@ import {
   Substitution,
   TransformationType
 } from '../../shared';
+import { ConfirmationModalService } from '../../shared/service/confirmation-modal.service';
 import {
   StepperConfigurationContext,
   StepperConfigurationResolver
@@ -74,9 +74,10 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { IIdentified } from '@c8y/client';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
-import { BehaviorSubject, filter, finalize, Subject, switchMap, take } from 'rxjs';
+import { BehaviorSubject, filter, finalize, firstValueFrom, Subject, switchMap, take, takeUntil } from 'rxjs';
 import { CodeTemplate } from '../../configuration/shared/configuration.model';
 import { MappingService } from '../core/mapping.service';
+import { MappingBulkOperationsService } from '../core/mapping-bulk-operations.service';
 import { SubscriptionService } from '../core/subscription.service';
 import { ImportMappingsComponent } from '../import/import-modal.component';
 import { MappingTypeDrawerComponent } from '../mapping-create/mapping-type-drawer.component';
@@ -105,24 +106,25 @@ import { CodeEditorDrawerComponent } from '../../shared/component/code-explorer/
   imports: [CoreModule, CommonModule, SharedModule, MappingStepperComponent, SnoopingStepperComponent],
 })
 export class MappingComponent implements OnInit, OnDestroy {
-  @ViewChild('mappingGrid') mappingGrid: DataGridComponent;
+  @ViewChild('mappingGrid') mappingGrid!: DataGridComponent;
 
   showConfigMapping = false;
   showSnoopingMapping = false;
-  isConnectionToMQTTEstablished: boolean;
+  isConnectionToMQTTEstablished = false;
+  isLoading = false;
 
   readonly mappingsEnriched$ = new BehaviorSubject<MappingEnriched[]>([]);
   mappingsCount = 0;
-  mappingToUpdate: Mapping;
-  substitutionsAsCode: boolean;
+  mappingToUpdate!: Mapping;
+  substitutionsAsCode = false;
   devices: IIdentified[] = [];
   snoopStatus: SnoopStatus = SnoopStatus.NONE;
   snoopEnabled = false;
   Direction = Direction;
 
   stepperConfiguration: StepperConfiguration = {};
-  titleMapping: string;
-  deploymentMapEntry: DeploymentMapEntry;
+  titleMapping!: string;
+  deploymentMapEntry!: DeploymentMapEntry;
 
   displayOptions: DisplayOptions = {
     bordered: true,
@@ -132,11 +134,11 @@ export class MappingComponent implements OnInit, OnDestroy {
     hover: true
   };
 
-  columnsMappings: Column[];
+  columnsMappings!: Column[];
 
-  mappingType: MappingType;
-  transformationType: TransformationType;
-  destroy$ = new Subject<boolean>();
+  mappingType!: MappingType;
+  transformationType!: TransformationType;
+  private readonly destroy$ = new Subject<void>();
 
   pagination: Pagination = {
     pageSize: 30,
@@ -145,54 +147,72 @@ export class MappingComponent implements OnInit, OnDestroy {
   actionControls: ActionControl[] = [];
   bulkActionControls: BulkActionControl[] = [];
 
-  feature: Feature;
-  codeTemplate: CodeTemplate;
+  feature!: Feature;
+  codeTemplate!: CodeTemplate;
 
-  constructor(
-  ) {
-    const href = this.router.url;
-    this.stepperConfiguration.direction = href.includes('/mappings/inbound')
-      ? Direction.INBOUND
-      : Direction.OUTBOUND;
-
-    this.columnsMappings = this.getColumnsMappings();
-    this.titleMapping = `Mapping ${this.stepperConfiguration.direction.toLowerCase()}`;
+  get canManageMappings(): boolean {
+    return this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole;
   }
 
-  private subscriptionService = inject(SubscriptionService);
-  private mappingService = inject(MappingService);
-  private sharedService = inject(SharedService);
-  private alertService = inject(AlertService);
-  private bsModalService = inject(BsModalService);
-  private bottomDrawerService = inject(BottomDrawerService);
-  private router = inject(Router);
-  private route = inject(ActivatedRoute);
+  private readonly subscriptionService = inject(SubscriptionService);
+  private readonly mappingService = inject(MappingService);
+  private readonly mappingBulkOpsService = inject(MappingBulkOperationsService);
+  private readonly sharedService = inject(SharedService);
+  private readonly alertService = inject(AlertService);
+  private readonly bsModalService = inject(BsModalService);
+  private readonly bottomDrawerService = inject(BottomDrawerService);
+  private readonly confirmationService = inject(ConfirmationModalService);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
-  async ngOnInit() {
-    this.setupActionControls();
-    this.setupBulkActionControls();
+  constructor() {}
 
-    this.feature = this.route.snapshot.data['feature'];
+  async ngOnInit(): Promise<void> {
+    this.isLoading = true;
+    try {
+      // Parse direction from route
+      const href = this.router.url;
+      this.stepperConfiguration.direction = href.includes('/mappings/inbound')
+        ? Direction.INBOUND
+        : Direction.OUTBOUND;
 
-    // Subscribe to mappings observable
-    this.mappingService
-      .getMappingsObservable(this.stepperConfiguration.direction)
-      .subscribe(mappings => this.mappingsEnriched$.next(mappings));
+      // Initialize columns and title
+      this.columnsMappings = this.getColumnsMappings();
+      this.titleMapping = `Mapping ${this.stepperConfiguration.direction.toLowerCase()}`;
 
-    // Track mappings count
-    this.mappingsEnriched$.subscribe(maps => {
-      this.mappingsCount = maps.length;
-    });
+      this.setupActionControls();
+      this.setupBulkActionControls();
 
-    // Check and show deprecation warning for this direction
-    await this.mappingService.checkAndShowDeprecationWarning(this.stepperConfiguration.direction);
+      this.feature = this.route.snapshot.data['feature'];
 
-    // Start listening to mapping changes
-    await this.mappingService.startChangedMappingEvents();
+      // Subscribe to mappings observable
+      this.mappingService
+        .getMappingsObservable(this.stepperConfiguration.direction)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe(mappings => this.mappingsEnriched$.next(mappings));
 
-    this.mappingService.listenToUpdateMapping().subscribe((m: MappingEnriched) => {
-      this.updateMapping(m);
-    });
+      // Track mappings count
+      this.mappingsEnriched$
+        .pipe(takeUntil(this.destroy$))
+        .subscribe(maps => {
+          this.mappingsCount = maps.length;
+        });
+
+      // Check and show deprecation warning for this direction
+      await this.mappingService.checkAndShowDeprecationWarning(this.stepperConfiguration.direction);
+
+      // Start listening to mapping changes
+      await this.mappingService.startChangedMappingEvents();
+
+      this.mappingService
+        .listenToUpdateMapping()
+        .pipe(takeUntil(this.destroy$))
+        .subscribe((m: MappingEnriched) => {
+          this.updateMapping(m);
+        });
+    } finally {
+      this.isLoading = false;
+    }
 
     // Check outbound mapping subscriptions
     // if (this.stepperConfiguration.direction === Direction.OUTBOUND) {
@@ -715,8 +735,11 @@ export class MappingComponent implements OnInit, OnDestroy {
         { initialState }
       );
 
-      action =
-        await confirmAdviceActionModalRef.content.closeSubject.toPromise();
+      try {
+        action = await firstValueFrom(confirmAdviceActionModalRef.content.closeSubject);
+      } catch (error) {
+        action = AdvisorAction.CANCEL;
+      }
     }
 
     if (action != AdvisorAction.CANCEL && action != AdvisorAction.CONTINUE_SNOOPING) {
@@ -743,7 +766,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       );
 
       // create deep copy of existing mapping, in case user cancels changes
-      this.mappingToUpdate = JSON.parse(JSON.stringify(mapping));
+      this.mappingToUpdate = structuredClone(mapping);
 
       // for backward compatibility set direction of mapping to inbound
       if (
@@ -778,7 +801,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       isSubstitutionsAsCode(mapping)
     );
     // create deep copy of existing mapping, in case user cancels changes
-    this.mappingToUpdate = JSON.parse(JSON.stringify(mapping)) as Mapping;
+    this.mappingToUpdate = structuredClone(mapping) as Mapping;
 
     this.mappingToUpdate = {
       ...this.mappingToUpdate,
@@ -874,36 +897,15 @@ export class MappingComponent implements OnInit, OnDestroy {
     confirmation: boolean = true,
     multiple: boolean = false
   ): Promise<boolean> {
-    let result: boolean = false;
-    // const { mapping } = m;
-    // console.log('Deleting mapping before confirmation:', mapping);
-    if (confirmation) {
-      const initialState = {
-        title: multiple ? 'Delete mappings' : 'Delete mapping',
-        message: multiple
-          ? 'You are about to delete mappings. Do you want to proceed to delete ALL?'
-          : 'You are about to delete a mapping. Do you want to proceed?',
-        labels: {
-          ok: 'Delete',
-          cancel: 'Cancel'
-        }
-      };
-      const confirmDeletionModalRef: BsModalRef = this.bsModalService.show(
-        ConfirmationModalComponent,
-        { initialState }
-      );
-
-      result = await confirmDeletionModalRef.content.closeSubject.toPromise();
-      if (result) {
-        // console.log('DELETE mapping:', mapping, result);
-        await this.deleteMapping(m);
-      } else {
-        // console.log('Canceled DELETE mapping', mapping, result);
-      }
-    } else {
-      // await this.deleteMapping(mapping);
+    if (!confirmation) {
+      return await this.deleteMapping(m);
     }
-    return result;
+
+    const confirmed = await this.confirmationService.confirmDeletion('mapping', multiple);
+    if (confirmed) {
+      return await this.deleteMapping(m);
+    }
+    return false;
   }
 
   async deleteMapping(m: MappingEnriched): Promise<boolean> {
@@ -963,7 +965,12 @@ export class MappingComponent implements OnInit, OnDestroy {
   }
 
   async onReload() {
-    this.reloadMappingsInBackend();
+    this.isLoading = true;
+    try {
+      await this.reloadMappingsInBackend();
+    } finally {
+      this.isLoading = false;
+    }
   }
 
   async exportMappings(mappings2Export: Mapping[]): Promise<void> {
@@ -973,31 +980,25 @@ export class MappingComponent implements OnInit, OnDestroy {
   }
 
   private exportMappingBulk(ids: string[]) {
-    this.mappingsEnriched$.pipe(take(1)).subscribe((ms) => {
-      const mappings2Export = ms
-        .filter((m) => ids.includes(m.id))
-        .map((me) => me.mapping);
-      this.exportMappings(mappings2Export);
-    });
-
-    this.mappingGrid.setAllItemsSelected(false);
+    this.mappingBulkOpsService.exportBulk(
+      ids,
+      this.mappingsEnriched$,
+      this.stepperConfiguration.direction,
+      this.mappingGrid,
+      this.destroy$,
+      (loading) => this.isLoading = loading
+    );
   }
 
   private activateMappingBulk(ids: string[]) {
-    this.mappingsEnriched$.pipe(take(1)).subscribe(async (ms) => {
-      const mappings2Activate = ms
-        .filter((m) => ids.includes(m.id))
-        .map((me) => me.mapping);
-      for (let index = 0; index < mappings2Activate.length; index++) {
-        const m = mappings2Activate[index];
-        const action = 'Activated';
-        const parameter = { id: m.id, active: true };
-        await this.mappingService.changeActivationMapping(parameter);
-        this.alertService.success(`${action} mapping: ${m.name} was successful`);
-      }
-      this.mappingService.refreshMappings(this.stepperConfiguration.direction);
-    });
-    this.mappingGrid.setAllItemsSelected(false);
+    this.mappingBulkOpsService.activateBulk(
+      ids,
+      this.mappingsEnriched$,
+      this.stepperConfiguration.direction,
+      this.mappingGrid,
+      this.destroy$,
+      (loading) => this.isLoading = loading
+    );
 
     if (this.stepperConfiguration.direction == Direction.OUTBOUND) {
       this.validateSubscriptionOutbound();
@@ -1005,63 +1006,62 @@ export class MappingComponent implements OnInit, OnDestroy {
   }
 
   private deactivateMappingBulk(ids: string[]) {
-    this.mappingsEnriched$.pipe(take(1)).subscribe(async (ms) => {
-      const mappings2Activate = ms
-        .filter((m) => ids.includes(m.id))
-        .map((me) => me.mapping);
-      for (let index = 0; index < mappings2Activate.length; index++) {
-        const m = mappings2Activate[index];
-        const action = 'Deactivated';
-        const parameter = { id: m.id, active: false };
-        await this.mappingService.changeActivationMapping(parameter);
-        this.alertService.success(`${action} mapping: ${m.name} was successful`);
-      }
-      this.mappingService.refreshMappings(this.stepperConfiguration.direction);
-    });
-    this.mappingGrid.setAllItemsSelected(false);
+    this.mappingBulkOpsService.deactivateBulk(
+      ids,
+      this.mappingsEnriched$,
+      this.stepperConfiguration.direction,
+      this.mappingGrid,
+      this.destroy$,
+      (loading) => this.isLoading = loading
+    );
   }
 
   private async deleteMappingBulkWithConfirmation(ids: string[]) {
-    let continueDelete: boolean = false;
-    this.mappingsEnriched$.pipe(take(1)).subscribe(async (ms) => {
-      const mappings2Delete = ms
-        .filter((m) => ids.includes(m.id))
-        .map((me) => me.mapping);
-      for (let index = 0; index < mappings2Delete.length; index++) {
-        const m = mappings2Delete[index];
-        const me: MappingEnriched = {
-          id: m.id,
-          mapping: m
-        };
-        if (index == 0) {
-          continueDelete = await this.deleteMappingWithConfirmation(
-            me,
-            true,
-            true
-          );
-        } else if (continueDelete) {
-          this.deleteMapping(me);
-        }
-      }
-    });
+    await this.mappingBulkOpsService.deleteBulkWithConfirmation(
+      ids,
+      this.mappingsEnriched$,
+      this.stepperConfiguration.direction,
+      this.mappingGrid,
+      this.destroy$,
+      (loading) => this.isLoading = loading,
+      this.deleteMappingWithConfirmation.bind(this)
+    );
     this.isConnectionToMQTTEstablished = true;
-    this.mappingService.refreshMappings(this.stepperConfiguration.direction);
-    this.mappingGrid.setAllItemsSelected(false);
   }
 
   async onAddSampleMappings() {
-    let response = await this.mappingService.addSampleMappings({ direction: this.stepperConfiguration.direction });
-    if (response.status == HttpStatusCode.Created) {
-      this.alertService.success(`Added sample mappings for ${this.stepperConfiguration.direction}`);
-      this.mappingService.refreshMappings(this.stepperConfiguration.direction);
+    this.isLoading = true;
+    try {
+      const response = await this.mappingService.addSampleMappings({ direction: this.stepperConfiguration.direction });
+      if (response.status == HttpStatusCode.Created) {
+        this.alertService.success(`Added sample mappings for ${this.stepperConfiguration.direction}`);
+        this.mappingService.refreshMappings(this.stepperConfiguration.direction);
+      }
+    } catch (error) {
+      this.alertService.danger('Failed to add sample mappings', error);
+    } finally {
+      this.isLoading = false;
     }
   }
 
   async onExportAll() {
-    this.mappingsEnriched$.pipe(take(1)).subscribe((ms) => {
-      const mappings2Export = ms.map((me) => me.mapping);
-      this.exportMappings(mappings2Export);
-    });
+    this.isLoading = true;
+    this.mappingsEnriched$
+      .pipe(
+        take(1),
+        takeUntil(this.destroy$),
+        finalize(() => {
+          this.isLoading = false;
+        })
+      )
+      .subscribe((ms) => {
+        try {
+          const mappings2Export = ms.map((me) => me.mapping);
+          this.exportMappings(mappings2Export);
+        } catch (error) {
+          this.alertService.danger('Failed to export mappings', error);
+        }
+      });
   }
 
   async exportSingle(m: MappingEnriched) {
@@ -1075,10 +1075,12 @@ export class MappingComponent implements OnInit, OnDestroy {
     const modalRef = this.bsModalService.show(ImportMappingsComponent, {
       initialState
     });
-    modalRef.content.closeSubject.subscribe(() => {
-      this.mappingService.refreshMappings(this.stepperConfiguration.direction);
-      modalRef.hide();
-    });
+    modalRef.content.closeSubject
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.mappingService.refreshMappings(this.stepperConfiguration.direction);
+        modalRef.hide();
+      });
   }
 
   private async reloadMappingsInBackend() {
@@ -1125,32 +1127,44 @@ export class MappingComponent implements OnInit, OnDestroy {
     // console.log('Final configuration:', this.stepperConfiguration);
   }
 
-  ngOnDestroy() {
-    this.destroy$.next(true);
-    this.destroy$.unsubscribe();
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
     this.mappingService.stopChangedMappingEvents();
   }
 
-  refreshMappings() {
-    this.mappingService.refreshMappings(this.stepperConfiguration.direction);
+  async refreshMappings() {
+    this.isLoading = true;
+    try {
+      await this.mappingService.refreshMappings(this.stepperConfiguration.direction);
+    } finally {
+      this.isLoading = false;
+    }
   }
 
   async clickedResetDeploymentMapEndpoint() {
-    const response1 = await this.sharedService.runOperation(
-      { operation: Operation.RESET_DEPLOYMENT_MAP }
-    );
+    this.isLoading = true;
+    try {
+      const response1 = await this.sharedService.runOperation(
+        { operation: Operation.RESET_DEPLOYMENT_MAP }
+      );
 
-    const response2 = await this.sharedService.runOperation(
-      { operation: Operation.RELOAD_MAPPINGS }
-    );
-    // console.log('Details reconnect2NotificationEndpoint', response1);
-    if (response1.status === HttpStatusCode.Created && response2.status === HttpStatusCode.Created) {
-      this.alertService.success(gettext('Reset deployment cache.'));
-    } else {
-      this.alertService.danger(gettext('Failed to reset deployment cache!'));
+      const response2 = await this.sharedService.runOperation(
+        { operation: Operation.RELOAD_MAPPINGS }
+      );
+      // console.log('Details reconnect2NotificationEndpoint', response1);
+      if (response1.status === HttpStatusCode.Created && response2.status === HttpStatusCode.Created) {
+        this.alertService.success(gettext('Reset deployment cache.'));
+      } else {
+        this.alertService.danger(gettext('Failed to reset deployment cache!'));
+      }
+
+      this.mappingService.refreshMappings(this.stepperConfiguration.direction);
+    } catch (error) {
+      this.alertService.danger(gettext('Failed to reset deployment cache: ') + error.message);
+    } finally {
+      this.isLoading = false;
     }
-
-    this.mappingService.refreshMappings(this.stepperConfiguration.direction);
   }
 
 }

@@ -120,7 +120,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       //gridTrackSize: '20%'
     },
     {
-      header: '# Received',
+      header: 'Received',
       name: 'messagesReceived',
       path: 'messagesReceived',
       filterable: true,
@@ -129,7 +129,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       gridTrackSize: '12.5%'
     },
     {
-      header: '# Snooped total',
+      header: 'Snooped total',
       name: 'snoopedTemplatesTotal',
       path: 'snoopedTemplatesTotal',
       filterable: true,
@@ -138,7 +138,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       gridTrackSize: '12.5%'
     },
     {
-      header: '# Snooped active',
+      header: 'Snooped active',
       name: 'snoopedTemplatesActive',
       path: 'snoopedTemplatesActive',
       filterable: true,
@@ -147,7 +147,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       gridTrackSize: '12.5%'
     },
     {
-      header: '# Errors',
+      header: 'Errors',
       name: 'errors',
       path: 'errors',
       filterable: true,
@@ -156,7 +156,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       gridTrackSize: '12.5%'
     },
     {
-      header: '# Current failures',
+      header: 'Current failures',
       name: 'currentFailureCount',
       path: 'currentFailureCount',
       filterable: true,

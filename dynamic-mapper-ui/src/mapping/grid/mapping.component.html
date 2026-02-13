@@ -22,17 +22,17 @@
 <c8y-title translate>{{'Mapping '}} {{ stepperConfiguration.direction| capitalCase}}</c8y-title>
 <c8y-action-bar-item [placement]="'right'">
   <button class="btn btn-link" title="{{ 'Add mapping' | translate }}" (click)="onAddMapping()"
-    [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole">
+    [disabled]="!canManageMappings">
     <i c8yIcon="plus-circle"></i>
     {{ 'Add mapping' | translate }}
   </button>
   <button class="btn btn-link" title="{{ 'Install sample mapping' | translate }}" (click)="onAddSampleMappings()"
-    [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole">
+    [disabled]="!canManageMappings">
     <i c8yIcon="registry-editor"></i>
     {{ 'Add sample mappings' | translate }}
   </button>
   <button class="btn btn-link" title="{{ 'Reload mappings in service' | translate }}"
-    [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole" (click)="onReload()">
+    [disabled]="!canManageMappings" (click)="onReload()">
     <i c8yIcon="c8y-connector-out"></i>
     {{ 'Reload mappings in service' | translate }}
   </button>
@@ -41,13 +41,13 @@
     {{ 'Export all mappings' | translate }}
   </button>
   <button class="btn btn-link" title="{{ 'Import mappings' | translate }}" (click)="onImport()"
-    [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole">
+    [disabled]="!canManageMappings">
     <i c8yIcon="upload"></i>
     {{ 'Import mappings' | translate }}
   </button>
   <button class="btn btn-link" title="{{ 'Reset deployment cache' | translate }}"
     (click)="clickedResetDeploymentMapEndpoint()"
-    [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole">
+    [disabled]="!canManageMappings">
     <i c8yIcon="erase"></i>
     {{ 'Reset deployment cache' | translate }}
   </button>
@@ -57,6 +57,9 @@
   </button>
 </c8y-action-bar-item>
 <div class="card">
+  @if (isLoading) {
+    <c8y-loading></c8y-loading>
+  }
   <div class="card-block content-fullpage border-top border-bottom">
     <c8y-data-grid #mappingGrid [configureColumnsEnabled]="false" [title]="'Mappings' | translate" [selectable]="true"
       [columns]="columnsMappings" [bulkActionControls]="bulkActionControls" [rows]="mappingsEnriched$ | async"
@@ -70,21 +73,7 @@
       </button>
     </c8y-ui-empty-state>
   </c8y-data-grid>
-</div>
-<div class="card-block col-md-offset-5 bg-white">
-  @if ((mappingsEnriched$ | async)?.length === 0) {
-    <div class="c8y-empty-state">
-      <h1 [c8yIcon]="'file-text'"></h1>
-      <p>
-        <strong>No mappings available.</strong><br />
-        <small translate>Add a new mapping by clicking below.</small><br />
-        <button class="btn btn-primary" title="Add record" (click)="onAddMapping()" translate>
-          Add mapping
-        </button>
-      </p>
-    </div>
-  }
-</div>
+  </div>
 </div>
 
 <div [ngClass]="{ drawerOpen: showConfigMapping }">
