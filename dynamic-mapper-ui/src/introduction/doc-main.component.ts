@@ -21,16 +21,15 @@
 
 import { Component, OnDestroy, OnInit, ViewChild, AfterViewChecked } from '@angular/core';
 import { MappingService } from '../mapping/core/mapping.service';
-import { CodeExplorerComponent, Direction, Feature, JsonEditorComponent, NODE1, NODE3 } from '../shared';
+import { Direction, Feature, JsonEditorComponent, NODE1, NODE3 } from '../shared';
 import { BehaviorSubject, from, Subject, Subscription } from 'rxjs';
 import { ConnectorConfigurationService } from '../connector';
-import { AlertService, CoreModule } from '@c8y/ngx-components';
+import { AlertService, BottomDrawerService, CoreModule } from '@c8y/ngx-components';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { BsModalService } from 'ngx-bootstrap/modal';
 import { SharedService } from '../shared/service/shared.service';
 import { CodeTemplate, CodeTemplateMap } from '../configuration/shared/configuration.model';
-import { base64ToString } from '../mapping/shared/util';
+import { CodeEditorDrawerComponent } from '../shared/component/code-explorer/code-editor-drawer.component';
 
 import hljs from 'highlight.js/lib/core';
 import javascript from 'highlight.js/lib/languages/javascript';
@@ -60,7 +59,7 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
     private alertService: AlertService,
     private connectorConfigurationService: ConnectorConfigurationService,
     private route: ActivatedRoute,
-    private bsModalService: BsModalService,
+    private bottomDrawerService: BottomDrawerService,
     private sharedService: SharedService
   ) {
 
@@ -198,12 +197,18 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   openCodeExplorer(template: CodeTemplate): void {
-    this.bsModalService.show(CodeExplorerComponent, {
+    // Create a minimal mapping object for viewing the template code
+    const templateMapping = {
+      code: template.code,
+      name: template.name
+    } as any;
+
+    this.bottomDrawerService.openDrawer(CodeEditorDrawerComponent, {
       initialState: {
-        templateCode: base64ToString(template.code),
-        templateName: template.name
-      },
-      class: 'modal-lg'
+        mapping: templateMapping,
+        sourceSystem: 'Template',
+        action: 'view'
+      }
     });
   }
 

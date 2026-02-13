@@ -27,14 +27,14 @@
       <h4 class="card-title d-flex">
         <i [c8yIcon]="'source-code'" class="icon-32 m-r-16"></i>
         <span class="m-t-8">
-          {{ 'Edit JavaScript Code' | translate }}
+          {{ (action === 'view' ? 'View JavaScript Code' : 'Edit JavaScript Code') | translate }}
         </span>
       </h4>
-      @if (mapping?.name) {
+      <!-- @if (mapping?.name) {
       <p class="text-muted m-t-8">
         {{ 'Mapping: ' + mapping.name | translate }}
       </p>
-      }
+      } -->
     </div>
     <!-- Editor Content -->
     <div class="card-inner-scroll fit-h">
@@ -49,11 +49,13 @@
     <!-- Footer Buttons -->
     <div class="card-footer text-center sticky-buttons">
       <div class="form-group">
+        @if (action !== 'view') {
         <button type="button" class="btn btn-primary" (click)="onSave()" [disabled]="!valid">
           {{ 'Save' | translate }}
         </button>
+        }
         <button type="button" class="btn btn-default" (click)="onCancel()">
-          {{ 'Cancel' | translate }}
+          {{ (action === 'view' ? 'Close' : 'Cancel') | translate }}
         </button>
       </div>
     </div>

@@ -28,7 +28,6 @@ import { FilterJsonPipe } from './misc/filter-json.pipe';
 import { Base64DecodePipe } from './misc/base64-decode.pipe';
 import { CamelCasePipe } from './misc/camel-case.pipe';
 import { CustomFieldInput } from './component/formly/input.type.component';
-import { CodeExplorerComponent } from './component/code-explorer/code-explorer-modal.component';
 import { WrapperCustomFormField } from './component/formly/custom-form-field-wrapper.component';
 
 @NgModule({
@@ -40,8 +39,7 @@ import { WrapperCustomFormField } from './component/formly/custom-form-field-wra
     FilterJsonPipe,
     CustomFieldInput,
     CustomFieldTextarea,
-    InputListFormlyComponent,
-    CodeExplorerComponent
+    InputListFormlyComponent
   ],
   exports: [
     CamelCasePipe,
@@ -51,8 +49,7 @@ import { WrapperCustomFormField } from './component/formly/custom-form-field-wra
     FilterJsonPipe,
     CustomFieldInput,
     CustomFieldTextarea,
-    InputListFormlyComponent,
-    CodeExplorerComponent
+    InputListFormlyComponent
   ],
   providers: [CamelCasePipe, FormatStringPipe, CapitalizeCasePipe, Base64DecodePipe, FilterJsonPipe,
     provideEcharts(),

@@ -35,6 +35,7 @@ import { base64ToString, stringToBase64 } from '../../../mapping/shared/util';
 })
 export class CodeEditorDrawerComponent implements OnInit, OnDestroy {
   @Input() mapping: Mapping;
+  @Input() action: string = "update";
   @Input() sourceSystem: string;
 
   private readonly bottomDrawerRef = inject(BottomDrawerRef);
@@ -53,7 +54,7 @@ export class CodeEditorDrawerComponent implements OnInit, OnDestroy {
       language: 'javascript',
       renderWhitespace: 'none',
       tabSize: 4,
-      readOnly: false
+      readOnly: this.action === 'view'
     };
   }
 

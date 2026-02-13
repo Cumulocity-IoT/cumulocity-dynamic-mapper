@@ -25,11 +25,9 @@
 
 import { Component, inject, Input, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
 import { FormBuilder, FormGroup } from '@angular/forms';
-import { BottomDrawerRef, CoreModule, ModalLabels } from '@c8y/ngx-components';
-import { BsModalService } from 'ngx-bootstrap/modal';
+import { BottomDrawerRef, BottomDrawerService, CoreModule, ModalLabels } from '@c8y/ngx-components';
 import { Subject, takeUntil } from 'rxjs';
 import {
-  CodeExplorerComponent,
   Direction,
   MappingType,
   MappingTypeDescriptionMap,
@@ -40,6 +38,7 @@ import {
   TransformationTypeDescriptions,
   TransformationTypeLabels
 } from '../../shared';
+import { CodeEditorDrawerComponent } from '../../shared/component/code-explorer/code-editor-drawer.component';
 import { CodeTemplate } from '../../configuration';
 import { base64ToString } from '../shared/util';
 
@@ -76,7 +75,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   private readonly bottomDrawerRef = inject(BottomDrawerRef);
   private readonly sharedService = inject(SharedService);
   private readonly fb = inject(FormBuilder);
-  private readonly bsModalService = inject(BsModalService);
+  private readonly bottomDrawerService = inject(BottomDrawerService);
   private readonly destroy$ = new Subject<void>();
 
   // Constants - Remove 'as const' to allow normal type checking
@@ -156,13 +155,18 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     const codeTemplate = this.formGroup.get('codeTemplate')?.value as CodeTemplateOption;
     if (!codeTemplate?.value) return;
 
-    this.bsModalService.show(CodeExplorerComponent, {
+    // Create a minimal mapping object for viewing the template code
+    const templateMapping = {
+      code: codeTemplate.value.code,
+      name: codeTemplate.description
+    } as any;
+
+    this.bottomDrawerService.openDrawer(CodeEditorDrawerComponent, {
       initialState: {
-        templateCode: base64ToString(codeTemplate.value.code),
-        templateName: codeTemplate.description,
-        labels: { ok: 'Cancel', cancel: 'Cancel' }
-      },
-      class: 'modal-lg'
+        mapping: templateMapping,
+        sourceSystem: 'Template',
+        action: 'view'
+      }
     });
   }
 
