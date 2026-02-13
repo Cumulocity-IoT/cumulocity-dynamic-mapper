@@ -1528,6 +1528,8 @@
   console.log("Context" + context.getStateAll());
   console.log("Payload Raw:" + msg.getPayload());
   console.log("Payload messageId" + msg.getPayload().get('messageId'));
+  // Get clientId from context first, fall back to payload
+  var clientId = context.getClientId() || payload.get("clientId");
   // insert transformation logic here
   // then return result
   return [&#123;
@@ -1538,16 +1540,18 @@
       "type": "c8y_TemperatureMeasurement",
       "c8y_Steam": &#123; "Temperature": &#123; "unit": "C", "value": payload["sensorData"]["temp_val"] &#125; &#125;
     &#125;,
-    externalSource: [&#123; "type": "c8y_Serial", "externalId": payload.get("clientId") &#125;]
+    externalSource: [&#123; "type": "c8y_Serial", "externalId": clientId &#125;]
   &#125;];
 &#125;</code></pre>
         <div class="p-b-8 text-14">
           The <b>Smart Function</b> allows enriching the payload with inventory data from the device, e.g.:
         </div>
-        <pre><code class="language-javascript">// lookup device for enrichment
+        <pre><code class="language-javascript">// Get clientId from context first, fall back to payload
+var clientId = context.getClientId() || payload.get("clientId");
+// lookup device for enrichment
 var deviceByDeviceId = context.getManagedObjectByDeviceId(payload.get("deviceId"));
 console.log("Device (by device id): " + deviceByDeviceId);
-var deviceByExternalId = context.getManagedObject(&#123; externalId: payload.get("clientId"), type: "c8y_Serial" &#125;);
+var deviceByExternalId = context.getManagedObject(&#123; externalId: clientId, type: "c8y_Serial" &#125;);
 console.log("Device (by external id): " + deviceByExternalId);</code></pre>
         <div class="admonition important" style="max-width: 100%;">
           <div class="title">Important</div>
@@ -1704,6 +1708,8 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
           <strong>Example: Basic inbound Smart Function with device identification</strong><br /><br />
           <pre><code class="language-javascript">function onMessage(msg, context) &#123;
   var payload = msg.getPayload();
+  // Get clientId from context first, fall back to payload
+  var clientId = context.getClientId() || payload.get("clientId");
   return [&#123;
     cumulocityType: "measurement",
     action: "create",
@@ -1712,7 +1718,7 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
       "type": "c8y_TemperatureMeasurement",
       "c8y_Steam": &#123; "Temperature": &#123; "unit": "C", "value": payload["sensorData"]["temp_val"] &#125; &#125;
     &#125;,
-    externalSource: [&#123; "type": "c8y_Serial", "externalId": payload.get("clientId") &#125;]
+    externalSource: [&#123; "type": "c8y_Serial", "externalId": clientId &#125;]
   &#125;];
 &#125;</code></pre>
         </div>
@@ -1720,6 +1726,8 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
           <strong>Example: Implicitly creating a device with name and type</strong><br /><br />
           <pre><code class="language-javascript">function onMessage(msg, context) &#123;
   var payload = msg.getPayload();
+  // Get clientId from context first, fall back to payload
+  var clientId = context.getClientId() || payload.get("clientId");
   return [&#123;
     cumulocityType: "measurement",
     action: "create",
@@ -1728,7 +1736,7 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
       "type": "c8y_TemperatureMeasurement",
       "c8y_Steam": &#123; "Temperature": &#123; "unit": "C", "value": payload["sensorData"]["temp_val"] &#125; &#125;
     &#125;,
-    externalSource: [&#123; "type": "c8y_Serial", "externalId": payload.get("clientId") &#125;],
+    externalSource: [&#123; "type": "c8y_Serial", "externalId": clientId &#125;],
     contextData: &#123; "deviceName": "Temperature-Sensor-01", "deviceType": "sensor-type" &#125;
   &#125;];
 &#125;</code></pre>
@@ -1737,6 +1745,8 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
           <strong>Example: Conditionally creating measurements or events</strong><br /><br />
           <pre><code class="language-javascript">function onMessage(msg, context) &#123;
   var payload = msg.getPayload();
+  // Get clientId from context first, fall back to payload
+  var clientId = context.getClientId() || payload.get("clientId");
   const payloadType = payload["payloadType"];
   if (payloadType == "telemetry") &#123;
     return [&#123;
@@ -1747,7 +1757,7 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
         "type": "c8y_TemperatureMeasurement",
         "c8y_Steam": &#123; "Temperature": &#123; "unit": "C", "value": payload["sensorData"]["temp_val"] &#125; &#125;
       &#125;,
-      externalSource: [&#123; "type": "c8y_Serial", "externalId": payload.get("clientId") &#125;]
+      externalSource: [&#123; "type": "c8y_Serial", "externalId": clientId &#125;]
     &#125;];
   &#125; else &#123;
     // Create an event for error cases
@@ -1760,7 +1770,7 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
         "text": payload["logMessage"],
         "severity": "MAJOR"
       &#125;,
-      externalSource: [&#123; "type": "c8y_Serial", "externalId": payload.get("clientId") &#125;]
+      externalSource: [&#123; "type": "c8y_Serial", "externalId": clientId &#125;]
     &#125;];
   &#125;
 &#125;</code></pre>
@@ -2222,8 +2232,13 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
             log.info("&#123;&#125; - Processing smart inbound message, messageId: &#123;&#125;",
                     context.getTenant(), payload.get("messageId"));
 
+            // Get clientId from context first, fall back to payload
+            String clientId = context.getClientId();
+            if (clientId == null) &#123;
+                clientId = (String) payload.get("clientId");
+            &#125;
+
             // Extract data
-            String clientId = (String) payload.get("clientId");
             @SuppressWarnings("unchecked")
             Map&lt;String, Object&gt; sensorData = (Map&lt;String, Object&gt;) payload.get("sensorData");
             Number tempVal = (Number) sensorData.get("temp_val");
