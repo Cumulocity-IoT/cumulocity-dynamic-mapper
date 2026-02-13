@@ -187,6 +187,10 @@ public class MappingRepository {
         try {
             MappingRepresentation mappingMO = toMappingObject(mo);
             Mapping mapping = mappingMO.getC8yMQTTMapping();
+            if(mapping == null) {
+                log.warn("{} - This mapping with id {} seems to be outdated. Please migrate it to a newer version: https://github.com/Cumulocity-IoT/cumulocity-dynamic-mapper/blob/main/resources/script/mgmt/dm.sh", tenant, mappingMO.getId());
+                return Optional.empty();
+            }
             mapping.setId(mappingMO.getId());
 
             // Migrate deprecated CODE_BASED mappings to JSON with SMART_FUNCTION transformation
