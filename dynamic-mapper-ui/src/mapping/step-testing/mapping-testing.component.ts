@@ -122,8 +122,8 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   targetSystem = '';
   selectedResult$ = new BehaviorSubject<number>(0);
 
-  ngOnInit(): void {
-    this.initializeMapping();
+  async ngOnInit(): Promise<void> {
+    await this.initializeMapping();
     this.setupSubscriptions();
   }
 
@@ -149,7 +149,6 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       this.resetTestingModel();
       this.updateEditors();
       await this.initializeTestContext(this.testMapping);
-      this.testingService.initializeCache(this.mapping.direction);
 
       if (this.mapping.transformationType === TransformationType.SMART_FUNCTION) {
         await this.testingService.resetMockCache();
@@ -164,15 +163,22 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     this.displayTestResult(nextIndex);
   }
 
-  onSourceTemplateChanged(content: ContentChanges): void {
+  async onSourceTemplateChanged(content: ContentChanges): Promise<void> {
     const contentAsJson = this.parseJsonContent(content.updatedContent);
     const topicSample = this.extractTopicSample(contentAsJson);
 
-    this.updateTestMapping({
+    // Update the actual payload object used for testing
+    this.sourceTemplate = contentAsJson;
+
+    // Update only specific fields while preserving the original mapping object
+    this.testMapping = {
       ...this.testMapping,
       sourceTemplate: JSON.stringify(contentAsJson || {}),
       mappingTopicSample: topicSample
-    });
+    };
+
+    // Re-initialize the context with the updated mapping
+    await this.initializeTestContext(this.testMapping);
   }
 
   disableTestSending(): boolean {
@@ -183,11 +189,15 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
   // ===== PRIVATE METHODS =====
 
-  private initializeMapping(): void {
+  private async initializeMapping(): Promise<void> {
+    // Ensure direction is always set (fallback to INBOUND if not specified)
     this.mapping.direction = this.mapping.direction ?? Direction.INBOUND;
     const isInbound = this.mapping.direction === Direction.INBOUND;
     this.sourceSystem = isInbound ? 'Broker' : 'Cumulocity';
     this.targetSystem = isInbound ? 'Cumulocity' : 'Broker';
+
+    // Initialize testMapping with the full mapping object
+    await this.updateTestMapping(this.mapping);
   }
 
   private setupSubscriptions(): void {

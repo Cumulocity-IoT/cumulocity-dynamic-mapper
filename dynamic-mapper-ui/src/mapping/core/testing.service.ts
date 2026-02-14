@@ -30,16 +30,10 @@ import {
   Direction,
   SharedService,
   Mapping,
-  isSubstitutionsAsCode,
   PATH_TESTING_ENDPOINT,
-  TransformationType,
   Operation,
   MappingType
 } from '../../shared';
-import { JSONProcessorInbound } from './processor/impl/json-processor-inbound.service';
-import { JSONProcessorOutbound } from './processor/impl/json-processor-outbound.service';
-import { CodeBasedProcessorOutbound } from './processor/impl/code-based-processor-outbound.service';
-import { CodeBasedProcessorInbound } from './processor/impl/code-based-processor-inbound.service';
 import {
   EventRealtimeService,
   RealtimeSubjectService
@@ -64,10 +58,6 @@ export class TestingService {
   private readonly JSONATA = require('jsonata');
 
   constructor(
-    private readonly jsonProcessorInbound: JSONProcessorInbound,
-    private readonly jsonProcessorOutbound: JSONProcessorOutbound,
-    private readonly codeBasedProcessorOutbound: CodeBasedProcessorOutbound,
-    private readonly codeBasedProcessorInbound: CodeBasedProcessorInbound,
     private readonly sharedService: SharedService,
     private readonly client: FetchClient
   ) {
@@ -102,12 +92,6 @@ export class TestingService {
       requests: []
     };
     return ctx;
-  }
-
-  initializeCache(dir: Direction): void {
-    if (dir === Direction.INBOUND) {
-      this.jsonProcessorInbound.initializeCache();
-    }
   }
 
   async testResult(

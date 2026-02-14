@@ -81,7 +81,7 @@ const CONFIGURATION_OVERRIDES: StepperConfigurationOverride[] = [
       showProcessorExtensionsTarget: true,
       showEditorTarget: false,
       allowTestSending: false,
-      allowTestTransformation: false,
+      allowTestTransformation: true,
       advanceFromStepToEndStep: 2
     }
   },
@@ -102,7 +102,7 @@ const CONFIGURATION_OVERRIDES: StepperConfigurationOverride[] = [
       showEditorTarget: false,
       showFilterExpression: false,
       allowTestSending: false,
-      allowTestTransformation: false
+      allowTestTransformation: true
     }
   },
   {

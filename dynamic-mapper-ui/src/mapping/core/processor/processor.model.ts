@@ -21,15 +21,13 @@ import { AlertService } from '@c8y/ngx-components';
 import * as _ from 'lodash';
 import { getTypeOf, randomIdAsString } from '../../../mapping/shared/util';
 import { API, getPathTargetForDeviceIdentifiers, Mapping, Substitution, MappingType, RepairStrategy, ContentChanges } from '../../../shared';
-import { SubstitutionContext } from './processor-js.model';
 import { Content } from 'vanilla-jsoneditor';
 import {
   MappingTokens,
   IdentityPaths,
   ContextDataPaths,
   ContextDataKeys,
-  PROTECTED_TOKENS,
-  ProcessingConfig
+  PROTECTED_TOKENS
 } from './processor.constants';
 
 export interface DynamicMapperRequest {
@@ -201,20 +199,6 @@ export function prepareAndSubstituteInPayload(
   }
 }
 
-// Re-export refactored context types (Phase 6)
-// New code should import directly from context/processing-context.ts
-export {
-  ProcessingContext as RefactoredProcessingContext,
-  ProcessingContextFactory,
-  MappingContext,
-  RoutingContext,
-  ProcessingState,
-  DeviceContext,
-  ErrorContext,
-  RequestContext,
-  ProcessingContextOverrides
-} from './context/processing-context';
-
 // Re-export constants for backward compatibility
 export {
   TOKEN_IDENTITY,
@@ -229,7 +213,6 @@ export {
   ContextDataKeys,
   ContextDataPaths,
   TopicWildcards,
-  ProcessingConfig,
   PROTECTED_TOKENS
 } from './processor.constants';
 
@@ -294,46 +277,6 @@ export function patchC8YTemplateForTesting(template: object, mapping: Mapping) {
   _.set(template, IdentityPaths.C8Y_SOURCE_ID, identifier);
 }
 
-
-export interface EvaluationError {
-  message: string;
-  stack: string | null;
-  location: any | null;
-}
-
-export interface EvaluationResult {
-  success: boolean;
-  result?: any;
-  error?: EvaluationError;
-  logs: string[];
-}
-
-/**
- * Evaluates JavaScript code with arguments and a timeout.
- *
- * @deprecated This function now delegates to CodeEvaluatorService.
- * For new code, use CodeEvaluatorService directly for better control and testability.
- *
- * @param codeString The JavaScript code to evaluate
- * @param ctx The substitution context
- * @returns Promise resolving to evaluation result
- */
-export function evaluateWithArgsWebWorker(codeString: string, ctx: SubstitutionContext): Promise<EvaluationResult> {
-  // Import the service dynamically to avoid circular dependencies
-  // In production, this should be injected properly
-  const { CodeEvaluatorService } = require('./web-worker/code-evaluator.service');
-  const evaluator = new CodeEvaluatorService();
-
-  // Serialize the SubstitutionContext object
-  const serializableCtx = {
-    identifier: ctx.getGenericDeviceIdentifier ? ctx.getGenericDeviceIdentifier() : ctx['deviceIdentifier'],
-    payload: ctx.getPayload ? ctx.getPayload() : ctx['payload'],
-    topic: ctx.getTopic ? ctx.getTopic() : ctx['topic'],
-  };
-
-  // Delegate to the CodeEvaluatorService
-  return evaluator.evaluate(codeString, serializableCtx, { timeoutMs: ProcessingConfig.DEFAULT_TIMEOUT_MS });
-}
 
 function contentChangeAllowed(contentChanges: ContentChanges): boolean {
   // Convert both contents to JSON

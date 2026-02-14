@@ -540,7 +540,7 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
       showEditorSource: false,
       showFilterExpression: false,
       allowNoDefinedIdentifier: true,
-      allowTestTransformation: false,
+      allowTestTransformation: true,
       allowTestSending: false,
       advanceFromStepToEndStep: 2
     })

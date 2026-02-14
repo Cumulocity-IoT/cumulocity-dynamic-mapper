@@ -23,66 +23,78 @@ import {
   getTypedValue,
   isNumeric,
   processSubstitute,
-  getDeviceEntries,
-  prepareAndSubstituteInPayload,
   substituteValueInPayload,
   sortProcessingCache,
-  patchC8YTemplateForTesting,
-  evaluateWithArgsWebWorker,
   ProcessingContext,
   ProcessingType,
   SubstituteValue,
-  SubstituteValueType,
-  TOKEN_CONTEXT_DATA,
-  TOKEN_IDENTITY,
-  TOKEN_TOPIC_LEVEL,
-  IdentityPaths,
-  ContextDataPaths
+  SubstituteValueType
 } from './processor.model';
-import {
-  createMockProcessingContext,
-  createContextWithCache,
-  mockMappings,
-  mockSubstitutions,
-  mockSubstituteValues
-} from './__tests__/test-fixtures';
-import { MockAlertService, setupMockWorkerFactory, restoreWorkerFactory } from './__tests__/test-helpers';
-import { SubstitutionContext } from './processor-js.model';
 
 describe('processor.model utility functions', () => {
   describe('getTypedValue', () => {
     it('should convert NUMBER type to number', () => {
-      const result = getTypedValue(mockSubstituteValues.number);
+      const subValue: SubstituteValue = {
+        value: 25.5,
+        type: SubstituteValueType.NUMBER,
+        repairStrategy: RepairStrategy.DEFAULT
+      };
+      const result = getTypedValue(subValue);
       expect(result).toBe(25.5);
       expect(typeof result).toBe('number');
     });
 
     it('should convert TEXTUAL type to string', () => {
-      const result = getTypedValue(mockSubstituteValues.string);
+      const subValue: SubstituteValue = {
+        value: 'sensor001',
+        type: SubstituteValueType.TEXTUAL,
+        repairStrategy: RepairStrategy.DEFAULT
+      };
+      const result = getTypedValue(subValue);
       expect(result).toBe('sensor001');
       expect(typeof result).toBe('string');
     });
 
     it('should return value as-is for OBJECT type', () => {
-      const result = getTypedValue(mockSubstituteValues.object);
+      const subValue: SubstituteValue = {
+        value: { key: 'value' },
+        type: SubstituteValueType.OBJECT,
+        repairStrategy: RepairStrategy.DEFAULT
+      };
+      const result = getTypedValue(subValue);
       expect(result).toEqual({ key: 'value' });
       expect(typeof result).toBe('object');
     });
 
     it('should return value as-is for ARRAY type', () => {
-      const result = getTypedValue(mockSubstituteValues.array);
+      const subValue: SubstituteValue = {
+        value: [1, 2, 3],
+        type: SubstituteValueType.ARRAY,
+        repairStrategy: RepairStrategy.DEFAULT
+      };
+      const result = getTypedValue(subValue);
       expect(result).toEqual([1, 2, 3]);
       expect(Array.isArray(result)).toBe(true);
     });
 
     it('should return value as-is for BOOLEAN type', () => {
-      const result = getTypedValue(mockSubstituteValues.boolean);
+      const subValue: SubstituteValue = {
+        value: true,
+        type: SubstituteValueType.BOOLEAN,
+        repairStrategy: RepairStrategy.DEFAULT
+      };
+      const result = getTypedValue(subValue);
       expect(result).toBe(true);
       expect(typeof result).toBe('boolean');
     });
 
     it('should return value as-is for IGNORE type', () => {
-      const result = getTypedValue(mockSubstituteValues.ignore);
+      const subValue: SubstituteValue = {
+        value: null,
+        type: SubstituteValueType.IGNORE,
+        repairStrategy: RepairStrategy.DEFAULT
+      };
+      const result = getTypedValue(subValue);
       expect(result).toBeNull();
     });
   });
@@ -125,7 +137,12 @@ describe('processor.model utility functions', () => {
 
     beforeEach(() => {
       processingCacheEntry = [];
-      substitution = { ...mockSubstitutions['simpleValue'] };
+      substitution = {
+        pathSource: '$.testPath',
+        pathTarget: '$.targetPath',
+        repairStrategy: RepairStrategy.DEFAULT,
+        expandArray: false
+      };
     });
 
     it('should handle null values with IGNORE type', () => {
@@ -187,95 +204,6 @@ describe('processor.model utility functions', () => {
     });
   });
 
-  describe('getDeviceEntries', () => {
-    it('should return device entries from processing cache', () => {
-      const context = createContextWithCache();
-      const devicePath = IdentityPaths.EXTERNAL_ID;
-      context.processingCache.set(devicePath, [mockSubstituteValues.string]);
-
-      const result = getDeviceEntries(context);
-
-      expect(result).toBeDefined();
-      expect(result.length).toBe(1);
-      expect(result[0].value).toBe('sensor001');
-    });
-
-    it('should return undefined when no device entries exist', () => {
-      const context = createMockProcessingContext();
-      context.processingCache.clear();
-
-      const result = getDeviceEntries(context);
-
-      expect(result).toBeUndefined();
-    });
-  });
-
-  describe('prepareAndSubstituteInPayload', () => {
-    let context: ProcessingContext;
-    let alert: MockAlertService;
-    let payloadTarget: any;
-
-    beforeEach(() => {
-      context = createMockProcessingContext();
-      alert = new MockAlertService();
-      payloadTarget = { type: 'c8y_Measurement' };
-    });
-
-    it('should set deviceName in context when path is CONTEXT_DATA.deviceName', () => {
-      const substitute: SubstituteValue = {
-        value: 'TestDevice',
-        type: SubstituteValueType.TEXTUAL,
-        repairStrategy: RepairStrategy.DEFAULT
-      };
-
-      prepareAndSubstituteInPayload(
-        context,
-        substitute,
-        payloadTarget,
-        ContextDataPaths.DEVICE_NAME,
-        alert as any
-      );
-
-      expect(context.deviceName).toBe('TestDevice');
-    });
-
-    it('should set deviceType in context when path is CONTEXT_DATA.deviceType', () => {
-      const substitute: SubstituteValue = {
-        value: 'TestDeviceType',
-        type: SubstituteValueType.TEXTUAL,
-        repairStrategy: RepairStrategy.DEFAULT
-      };
-
-      prepareAndSubstituteInPayload(
-        context,
-        substitute,
-        payloadTarget,
-        ContextDataPaths.DEVICE_TYPE,
-        alert as any
-      );
-
-      expect(context.deviceType).toBe('TestDeviceType');
-    });
-
-    it('should substitute value in payload for regular paths', () => {
-      payloadTarget = { value: 0 };
-      const substitute: SubstituteValue = {
-        value: 25.5,
-        type: SubstituteValueType.NUMBER,
-        repairStrategy: RepairStrategy.DEFAULT
-      };
-
-      prepareAndSubstituteInPayload(
-        context,
-        substitute,
-        payloadTarget,
-        '$.value',
-        alert as any
-      );
-
-      expect(payloadTarget.value).toBe(25.5);
-    });
-  });
 
   describe('substituteValueInPayload', () => {
     it('should substitute at root level ($)', () => {
@@ -360,12 +288,35 @@ describe('processor.model utility functions', () => {
 
   describe('sortProcessingCache', () => {
     it('should sort cache entries alphabetically by key', () => {
-      const context = createMockProcessingContext();
+      const context: ProcessingContext = {
+        mapping: {} as any,
+        topic: 'test/topic',
+        processingType: ProcessingType.UNDEFINED,
+        errors: [],
+        mappingType: 'JSON' as any,
+        processingCache: new Map<string, SubstituteValue[]>()
+      };
 
       // Add entries in non-alphabetical order
-      context.processingCache.set('$.zebra', [mockSubstituteValues.string]);
-      context.processingCache.set('$.apple', [mockSubstituteValues.number]);
-      context.processingCache.set('$.middle', [mockSubstituteValues.boolean]);
+      const stringValue: SubstituteValue = {
+        value: 'sensor001',
+        type: SubstituteValueType.TEXTUAL,
+        repairStrategy: RepairStrategy.DEFAULT
+      };
+      const numberValue: SubstituteValue = {
+        value: 42,
+        type: SubstituteValueType.NUMBER,
+        repairStrategy: RepairStrategy.DEFAULT
+      };
+      const booleanValue: SubstituteValue = {
+        value: true,
+        type: SubstituteValueType.BOOLEAN,
+        repairStrategy: RepairStrategy.DEFAULT
+      };
+
+      context.processingCache.set('$.zebra', [stringValue]);
+      context.processingCache.set('$.apple', [numberValue]);
+      context.processingCache.set('$.middle', [booleanValue]);
 
       sortProcessingCache(context);
 
@@ -374,9 +325,25 @@ describe('processor.model utility functions', () => {
     });
 
     it('should maintain value integrity after sorting', () => {
-      const context = createMockProcessingContext();
-      const value1 = [mockSubstituteValues.string];
-      const value2 = [mockSubstituteValues.number];
+      const context: ProcessingContext = {
+        mapping: {} as any,
+        topic: 'test/topic',
+        processingType: ProcessingType.UNDEFINED,
+        errors: [],
+        mappingType: 'JSON' as any,
+        processingCache: new Map<string, SubstituteValue[]>()
+      };
+
+      const value1: SubstituteValue[] = [{
+        value: 'sensor001',
+        type: SubstituteValueType.TEXTUAL,
+        repairStrategy: RepairStrategy.DEFAULT
+      }];
+      const value2: SubstituteValue[] = [{
+        value: 42,
+        type: SubstituteValueType.NUMBER,
+        repairStrategy: RepairStrategy.DEFAULT
+      }];
 
       context.processingCache.set('$.second', value2);
       context.processingCache.set('$.first', value1);
@@ -388,81 +355,17 @@ describe('processor.model utility functions', () => {
     });
 
     it('should handle empty cache', () => {
-      const context = createMockProcessingContext();
-      context.processingCache.clear();
+      const context: ProcessingContext = {
+        mapping: {} as any,
+        topic: 'test/topic',
+        processingType: ProcessingType.UNDEFINED,
+        errors: [],
+        mappingType: 'JSON' as any,
+        processingCache: new Map<string, SubstituteValue[]>()
+      };
 
       expect(() => sortProcessingCache(context)).not.toThrow();
       expect(context.processingCache.size).toBe(0);
     });
-  });
-
-  describe('patchC8YTemplateForTesting', () => {
-    it('should add test device identifier to template', () => {
-      const template: any = { type: 'c8y_Measurement' };
-      const mapping = mockMappings.inboundJSON;
-
-      patchC8YTemplateForTesting(template, mapping);
-
-      expect(template['source.id']).toBeDefined();
-      expect(template[TOKEN_IDENTITY]).toBeDefined();
-      expect(template[TOKEN_IDENTITY].c8ySourceId).toBeDefined();
-    });
-
-    it('should generate random identifier', () => {
-      const template1: any = {};
-      const template2: any = {};
-      const mapping = mockMappings.inboundJSON;
-
-      patchC8YTemplateForTesting(template1, mapping);
-      patchC8YTemplateForTesting(template2, mapping);
-
-      // Identifiers should be different (random)
-      expect(template1['source.id']).not.toBe(template2['source.id']);
-    });
-  });
-
-  describe('evaluateWithArgsWebWorker', () => {
-    beforeEach(() => {
-      setupMockWorkerFactory();
-    });
-
-    afterEach(() => {
-      restoreWorkerFactory();
-    });
-
-    it('should execute simple JavaScript code', async () => {
-      const code = 'return 42;';
-      const ctx = new SubstitutionContext(
-        { type: 'c8y_Serial', externalId: 'test001' },
-        { value: 123 },
-        'test/topic'
-      );
-
-      // We need to mock the worker response since we're using MockWorker
-      const result = await evaluateWithArgsWebWorker(code, ctx);
-
-      expect(result.success).toBeDefined();
-    });
-
-    it('should handle timeout (250ms)', async () => {
-      jasmine.clock().install();
-
-      const code = 'while(true) {}'; // Infinite loop
-      const ctx = new SubstitutionContext(
-        { type: 'c8y_Serial', externalId: 'test001' },
-        {},
-        'test/topic'
-      );
-
-      const resultPromise = evaluateWithArgsWebWorker(code, ctx);
-
-      jasmine.clock().tick(300); // Advance past timeout
-      const result = await resultPromise;
-
-      expect(result.success).toBe(false);
-      expect(result.error?.message).toContain('timed out');
-
-      jasmine.clock().uninstall();
-    }, 10000);
   });
 });

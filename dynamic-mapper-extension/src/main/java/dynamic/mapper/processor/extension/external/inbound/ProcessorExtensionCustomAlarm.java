@@ -22,6 +22,7 @@
 package dynamic.mapper.processor.extension.external.inbound;
 
 import com.dashjoin.jsonata.json.Json;
+import dynamic.mapper.processor.extension.ExtensionExceptionUtil;
 import dynamic.mapper.processor.extension.ProcessorExtensionInbound;
 import dynamic.mapper.processor.model.CumulocityObject;
 import dynamic.mapper.processor.model.DataPreparationContext;
@@ -96,7 +97,9 @@ public class ProcessorExtensionCustomAlarm implements ProcessorExtensionInbound<
             };
 
         } catch (Exception e) {
-            String errorMsg = "Failed to process custom alarm: " + e.getMessage();
+            String errorMsg = ExtensionExceptionUtil.formatExceptionWithLocation(
+                "Failed to process custom alarm", e
+            );
             log.error("{} - {}", context.getTenant(), errorMsg, e);
             context.addWarning(errorMsg);
             // Return empty array to indicate processing failure
