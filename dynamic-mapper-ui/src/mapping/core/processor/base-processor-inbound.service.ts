@@ -40,17 +40,28 @@ import {
   SubstituteValueType,
   TOKEN_TOPIC_LEVEL,
   getDeviceEntries, getTypedValue, prepareAndSubstituteInPayload,
-  sortProcessingCache
+  sortProcessingCache,
+  IdentityPaths
 } from './processor.model';
+import { ErrorHandlerService } from './error-handling/error-handler.service';
+import { ProcessorError } from './error-handling/processor-error';
+import { ProcessorLoggerService } from './logging/processor-logger.service';
+import { ProcessorConfigService } from './config/processor-config.service';
+import { JSONataCacheService } from './performance/jsonata-cache.service';
+
+// Import JSONata at module level for better testability
+const jsonata = require('jsonata');
 
 @Injectable({ providedIn: 'root' })
 export abstract class BaseProcessorInbound {
-  protected readonly JSONATA = require('jsonata');
-
   constructor(
     private readonly alert: AlertService,
     private readonly c8yClient: C8YAgent,
-    public readonly sharedService: SharedService
+    public readonly sharedService: SharedService,
+    private readonly errorHandler: ErrorHandlerService,
+    private readonly logger: ProcessorLoggerService,
+    protected readonly config: ProcessorConfigService,
+    private readonly jsonataCache: JSONataCacheService
   ) {}
 
   abstract deserializePayload(
@@ -96,8 +107,11 @@ export abstract class BaseProcessorInbound {
         deviceEntries.push(toDouble);
       }
     } else {
-      context.errors.push("Device Id not defined in substitutions!");
-      throw new Error();
+      const error = ProcessorError.invalidMappingConfiguration(
+        "Device Id not defined in substitutions!",
+        { mappingId: mapping.id, topic: context.topic }
+      );
+      this.errorHandler.handle(error, context);
     }
   }
 
@@ -145,15 +159,17 @@ export abstract class BaseProcessorInbound {
               pathTargetSubstitute[last]
             );
           }
-          console.warn(
-            `Processing pathTarget: ${pathTarget}, repairStrategy: ${substitute.repairStrategy}.`
+          this.logger.warn(
+            'Processing pathTarget with repair strategy',
+            { pathTarget, repairStrategy: substitute.repairStrategy },
+            context
           );
         }
         let identity;
 
         // check if the targetPath === externalId and  we need to resolve an external id
         if (
-          `${TOKEN_IDENTITY}.externalId` === pathTarget && mapping.useExternalId
+          IdentityPaths.EXTERNAL_ID === pathTarget && mapping.useExternalId
         ) {
           identity = {
             externalId: substitute.value.toString(),
@@ -173,9 +189,15 @@ export abstract class BaseProcessorInbound {
               if (mapping.createNonExistingDevice) {
                 sourceId.value = await this.createImplicitDevice(identity, context);
               } else {
-                e['possibleIgnoreErrorNonExisting'] = true;
-                context.errors.push("The testing resulted in an error, that the referenced device does not exist! ");
-                throw e;
+                const error = ProcessorError.implicitDeviceCreationDisabled(
+                  identity.externalId,
+                  {
+                    mappingId: mapping.id,
+                    topic: context.topic,
+                    externalIdType: identity.type
+                  }
+                );
+                this.errorHandler.handle(error, context);
               }
             }
             prepareAndSubstituteInPayload(context,
@@ -187,7 +209,7 @@ export abstract class BaseProcessorInbound {
             context.sourceId = sourceId.value;
             substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
           }
-        } else if (`${TOKEN_IDENTITY}.c8ySourceId` === pathTarget) {
+        } else if (IdentityPaths.C8Y_SOURCE_ID === pathTarget) {
           let sourceId = {
             value: substitute.value,
             repairStrategy: RepairStrategy.CREATE_IF_MISSING,
@@ -203,20 +225,22 @@ export abstract class BaseProcessorInbound {
                 if (mapping.createNonExistingDevice) {
                   sourceId.value = await this.createImplicitDevice(undefined, context);
                 } else {
-                  const e = new Error(`Device with id: ${substitute.value} does not exist. Set option createNonExistingDevice!`);
-                  e['possibleIgnoreErrorNonExisting'] = true;
-                  context.errors.push("The testing resulted in an error, that the referenced device does not exist! ");
-                  throw e;
+                  const deviceError = ProcessorError.deviceNotFound(
+                    substitute.value,
+                    { mappingId: mapping.id, topic: context.topic }
+                  );
+                  this.errorHandler.handle(deviceError, context);
                 }
               }
             } catch (error) {
               if (mapping.createNonExistingDevice) {
                 sourceId.value = await this.createImplicitDevice(undefined, context);
               } else {
-                const e = new Error(`Device with id: ${substitute.value} does not exist. Set option createNonExistingDevice!`);
-                e['possibleIgnoreErrorNonExisting'] = true;
-                context.errors.push("The testing resulted in an error, that the referenced device does not exist! ");
-                throw e;
+                const deviceError = ProcessorError.deviceNotFound(
+                  substitute.value,
+                  { mappingId: mapping.id, topic: context.topic }
+                );
+                this.errorHandler.handle(deviceError, context);
               }
             }
             substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
@@ -279,13 +303,12 @@ export abstract class BaseProcessorInbound {
           context.requests[predecessor].error = e.message;
         }
       } else {
-        console.warn(
-          `Ignoring payload: ${payloadTarget}, ${mapping.targetAPI}, ${processingCache.size}`
+        this.logger.warn(
+          'Ignoring payload - unexpected target API',
+          { targetAPI: mapping.targetAPI, processingCacheSize: processingCache.size },
+          context
         );
       }
-      // console.log(
-      //  `Added payload for sending: ${payloadTarget}, ${mapping.targetAPI}, numberDevices: ${deviceEntries.length}`
-      // );
       i++;
     }
   }
@@ -351,7 +374,11 @@ export abstract class BaseProcessorInbound {
   async evaluateExpression(json: JSON, path: string): Promise<JSON> {
     let result: any = '';
     if (path !== undefined && path !== '' && json !== undefined) {
-      const expression = this.JSONATA(path);
+      // Use cached expression if caching is enabled
+      const expression = this.config.shouldCacheCompiledExpressions()
+        ? this.jsonataCache.getOrCompile(path, jsonata)
+        : jsonata(path);
+
       result = expression.evaluate(json) as JSON;
     }
     return result;

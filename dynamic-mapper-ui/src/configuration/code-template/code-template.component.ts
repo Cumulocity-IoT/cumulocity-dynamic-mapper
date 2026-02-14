@@ -43,15 +43,15 @@ import { createCompletionProviderFlowFunction, createCompletionProviderSubstitut
   imports: [CoreModule, CommonModule, PopoverModule, EditorComponent, FormsModule]
 })
 export class CodeComponent implements OnInit {
-  @ViewChild(EditorComponent, { static: false }) codeEditor: EditorComponent;
+  @ViewChild(EditorComponent, { static: false }) codeEditor!: EditorComponent;
 
-  codeTemplateDecoded: CodeTemplate;
+  codeTemplateDecoded!: CodeTemplate;
   codeTemplatesDecoded: Map<string, CodeTemplate> = new Map<string, CodeTemplate>();
-  codeTemplates: CodeTemplateMap;
-  template: string;
-  defaultTemplate: string;
-  templateType: TemplateType;
-  direction: Direction;
+  codeTemplates!: CodeTemplateMap;
+  template!: string;
+  defaultTemplate!: string;
+  templateType!: TemplateType;
+  direction!: Direction;
   TemplateType = TemplateType;
   codeTemplateEntries: CodeTemplate[] = [];
   codeTemplateEntries$: BehaviorSubject<CodeTemplate[]> = new BehaviorSubject<CodeTemplate[]>([]);
@@ -61,7 +61,7 @@ export class CodeComponent implements OnInit {
     //  renderValidationDecorations: "on",
     language: 'javascript',
   };
-  feature: Feature;
+  feature!: Feature;
   private completionProviderDisposable: any;
 
 
@@ -82,7 +82,7 @@ export class CodeComponent implements OnInit {
     this.template = this.defaultTemplate;
 
     await this.updateCodeTemplateEntries();
-    this.codeTemplateDecoded = this.codeTemplatesDecoded.get(this.template);
+    this.codeTemplateDecoded = this.codeTemplatesDecoded.get(this.template)!;
     this.onSelectCodeTemplate();
   }
 
@@ -199,8 +199,8 @@ export class CodeComponent implements OnInit {
     this.codeTemplateEntries = Object.entries(this.codeTemplates)
       .map(([key, template]) => ({
         key,
-        id: undefined,
-        code: undefined,
+        id: undefined as any,
+        code: undefined as any,
         name: template.name,
         description: template.description,
         templateType: template.templateType,
@@ -286,7 +286,7 @@ export class CodeComponent implements OnInit {
     if (!this.codeTemplateDecoded) return;
 
     await this.openTemplateModal('RENAME', this.codeTemplateDecoded.name, async (updatedTemplate) => {
-      this.codeTemplateDecoded.name = updatedTemplate.name;
+      this.codeTemplateDecoded.name = updatedTemplate.name!;
       const encodedCode = stringToBase64(this.codeTemplateDecoded.code);
       await this.sharedService.updateCodeTemplate(this.template, {
         ...this.codeTemplateDecoded,
@@ -303,7 +303,7 @@ export class CodeComponent implements OnInit {
       const encodedCode = stringToBase64(this.codeTemplateDecoded.code);
       await this.sharedService.createCodeTemplate({
         ...this.codeTemplateDecoded,
-        name: updatedTemplate.name,
+        name: updatedTemplate.name!,
         code: encodedCode,
         id: createCustomUuid(),
         internal: false,
@@ -325,7 +325,7 @@ export class CodeComponent implements OnInit {
 
     const modalRef = this.bsModalService.show(ManageTemplateComponent, { initialState });
 
-    modalRef.content.closeSubject.subscribe(async (codeTemplate: Partial<CodeTemplate>) => {
+    modalRef.content!.closeSubject.subscribe(async (codeTemplate: Partial<CodeTemplate>) => {
       if (codeTemplate) {
         await onSuccess(codeTemplate);
       }
@@ -340,7 +340,7 @@ export class CodeComponent implements OnInit {
   }
 
   onSelectCodeTemplate(): void {
-    this.codeTemplateDecoded = this.codeTemplatesDecoded.get(this.template);
+    this.codeTemplateDecoded = this.codeTemplatesDecoded.get(this.template)!;
   }
 
 }

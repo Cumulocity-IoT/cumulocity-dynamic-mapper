@@ -54,8 +54,6 @@ export class JSONProcessorInbound extends BaseProcessorInbound {
       try {
         // step 1 extract content from inbound payload
         extractedSourceContent = await this.evaluateExpression(
-          //JSON.parse(mapping.sourceTemplate),
-          // use payload instead
           payload,
           substitution.pathSource
         );
@@ -79,10 +77,6 @@ export class JSONProcessorInbound extends BaseProcessorInbound {
           substitution.pathTarget,
           processingCacheEntry
         );
-
-        //console.log(
-        //  `Evaluated substitution (pathSource:substitute)/(${substitution.pathSource}:${extractedSourceContent}), (pathTarget)/(${substitution.pathTarget})`
-        //);
 
         if (substitution.pathTarget === KEY_TIME) {
           substitutionTimeExists = true;
