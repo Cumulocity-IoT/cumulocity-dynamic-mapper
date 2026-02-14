@@ -196,12 +196,18 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
     // Initialize testMapping with the full mapping object
     this.updateTestMapping(this.mapping);
+
+    // Initialize testing model with the payload
+    this.resetTestingModel();
   }
 
   private setupSubscriptions(): void {
     this.updateTestingTemplate
       .pipe(takeUntil(this.destroy$))
-      .subscribe(mapping => this.updateTestMapping(mapping));
+      .subscribe(mapping => {
+        this.updateTestMapping(mapping);
+        this.resetTestingModel();
+      });
   }
 
   private updateTestMapping(testMapping: Mapping): void {
