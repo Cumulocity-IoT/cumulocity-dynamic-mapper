@@ -106,6 +106,17 @@
         <d11r-mapping-json-editor [options]="editorOptionsDefault" [class]="'jse-main-tiny'"
           [data]="testingModel.response" #editorTestingResponse id="editorTestingResponse">
         </d11r-mapping-json-editor>
+        @if (!hasResponse && testingModel.results.length > 0) {
+          <c8y-messages>
+            <c8y-message translate type="info">
+              <span class="text-info">
+                <i class="fa fa-info-circle"></i> No response in test mode.
+                Data operations (MEASUREMENT, EVENT, ALARM) are prepared but not executed.
+                Use "Send Test Message" to get actual responses.
+              </span>
+            </c8y-message>
+          </c8y-messages>
+        }
       </div>
     </div>
   </div>

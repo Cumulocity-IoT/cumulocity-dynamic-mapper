@@ -121,9 +121,11 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   sourceSystem = '';
   targetSystem = '';
   selectedResult$ = new BehaviorSubject<number>(0);
+  hasResponse = true; // Tracks if current result has a response
 
   async ngOnInit(): Promise<void> {
     await this.initializeMapping();
+    await this.testingService.resetMockCache();
     this.setupSubscriptions();
   }
 
@@ -150,9 +152,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       this.updateEditors();
       await this.initializeTestContext(this.testMapping);
 
-      if (this.mapping.transformationType === TransformationType.SMART_FUNCTION) {
-        await this.testingService.resetMockCache();
-      }
+      await this.testingService.resetMockCache();
     } catch (error) {
       this.handleError('Failed to reset transformation', error);
     }
@@ -244,8 +244,10 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   }
 
   private updateEditors(): void {
-    this.editorTestingRequest?.set(sortObjectKeys(this.testingModel.request));
-    this.editorTestingResponse?.set(sortObjectKeys(this.testingModel.response));
+    // Data is already sorted in displayTestResult(), pass it directly
+    this.editorTestingRequest?.set(this.testingModel.request);
+    // Handle null response for test mode (don't try to sort null)
+    this.editorTestingResponse?.set(this.testingModel.response);
   }
 
   private getNextVisibleResultIndex(): number {
@@ -268,13 +270,27 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     if (result) {
       this.testingModel.request = sortObjectKeys(result.request);
       this.testingModel.api = result.api;
-      this.testingModel.response = result.response ? sortObjectKeys(result.response) : {};
+
+      // Clear response if not present (test mode) - show empty object
+      if (result.response) {
+        this.testingModel.response = sortObjectKeys(result.response);
+        this.hasResponse = true;
+      } else {
+        // Show empty object and info message for test mode
+        this.testingModel.response = {};
+        this.hasResponse = false;
+      }
+
       this.testingModel.errorMsg = result.error;
     } else {
       this.testingModel.request = {};
       this.testingModel.response = {};
       this.testingModel.errorMsg = undefined;
+      this.hasResponse = false;
     }
+
+    // Force editor update to clear stale content when switching between results
+    this.updateEditors();
   }
 
   private async executeTest(sendPayload: boolean): Promise<void> {
