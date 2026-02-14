@@ -27,20 +27,15 @@ import {
 } from 'rxjs';
 import {
   BASE_URL,
-  Direction,
   SharedService,
-  Mapping,
   PATH_TESTING_ENDPOINT,
-  Operation,
-  MappingType
-} from '../../shared';
+  Operation} from '../../shared';
 import {
   EventRealtimeService,
   RealtimeSubjectService
 } from '@c8y/ngx-components';
-import { ProcessingContext, ProcessingType, SubstituteValue, TestContext, TestResult } from './processor/processor.model';
+import { TestContext, TestResult } from './processor/processor.model';
 import { HttpStatusCode } from '@angular/common/http';
-import { gettext } from '@c8y/ngx-components/gettext';
 
 @Injectable({
   providedIn: 'root'
@@ -74,56 +69,7 @@ export class TestingService {
   }
 
 
-  // ===== PROCESSING OPERATIONS =====
-
-  public initializeContext(mapping: Mapping): ProcessingContext {
-    const ctx: ProcessingContext = {
-      mapping: mapping,
-      topic:
-        mapping.direction === Direction.INBOUND
-          ? mapping.mappingTopicSample
-          : mapping.publishTopicSample,
-      processingType: ProcessingType.UNDEFINED,
-      errors: [],
-      warnings: [],
-      mappingType: mapping.mappingType,
-      processingCache: new Map<string, SubstituteValue[]>(),
-      sendPayload: false,
-      requests: []
-    };
-    return ctx;
-  }
-
-  async testResult(
-    context: ProcessingContext,
-    message: any
-  ): Promise<ProcessingContext> {
-    const { mapping } = context;
-    // TEMPORARY: Use remote endpoint for ALL transformation types
-    let extractedPayload;
-    if (context.mapping.mappingType === MappingType.HEX || context.mapping.mappingType === MappingType.FLAT_FILE) {
-      extractedPayload = message['payload'];
-    } else {
-      extractedPayload = JSON.stringify(message);
-    }
-    const testingContext = { mapping: context.mapping, payload: extractedPayload, send: false };
-    const testingResult = await this.testMapping(testingContext);
-    // Convert request and response from JSON string to object for all items
-    context.requests = testingResult.requests.map(req => ({
-      ...req,
-      request: req.request && typeof req.request === 'string'
-        ? JSON.parse(req.request)
-        : req.request,
-      response: req.response && typeof req.response === 'string'
-        ? JSON.parse(req.response)
-        : req.response
-    }));
-    context.errors = testingResult.errors;
-    context.warnings = testingResult.warnings;
-    context.logs = testingResult.logs;
-
-    return context;
-  }
+  // ===== TESTING OPERATIONS =====
 
   async testMapping(testingContext: TestContext): Promise<TestResult> {
     const response = this.client.fetch(`${BASE_URL}/${PATH_TESTING_ENDPOINT}/mapping`, {

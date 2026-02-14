@@ -20,7 +20,6 @@
 
 import {
   Component,
-  ElementRef,
   EventEmitter,
   inject,
   Input,
@@ -42,10 +41,9 @@ import {
   Mapping,
   MappingType,
   StepperConfiguration,
-  TransformationType,
   isSubstitutionsAsCode
 } from '../../shared/';
-import { DynamicMapperRequest, ProcessingContext, TestResult, TOKEN_TOPIC_LEVEL } from '../core/processor/processor.model';
+import { DynamicMapperRequest, TestResult, TestContext, MappingTokens } from '../core/processor/processor.model';
 import { TestingService } from '../core/testing.service';
 import { patchC8YTemplateForTesting, sortObjectKeys } from '../shared/util';
 import { CollapseModule } from 'ngx-bootstrap/collapse';
@@ -60,6 +58,7 @@ interface TestingModel {
   response?: any;
   errorMsg?: string;
   api?: any;
+  logs?: string[];
 }
 
 @Component({
@@ -109,12 +108,10 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   // Services
   private readonly testingService = inject(TestingService);
   private readonly alertService = inject(AlertService);
-  private readonly elementRef = inject(ElementRef);
   private readonly bsModalService = inject(BsModalService);
   private readonly destroy$ = new Subject<void>();
 
   // State
-  testContext!: ProcessingContext;
   testingModel: TestingModel = { results: [], selectedResult: -1 };
   testMapping!: Mapping;
   sourceTemplate: any;
@@ -124,7 +121,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   hasResponse = true; // Tracks if current result has a response
 
   async ngOnInit(): Promise<void> {
-    await this.initializeMapping();
+    this.initializeMapping();
     await this.testingService.resetMockCache();
     this.setupSubscriptions();
   }
@@ -150,7 +147,6 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       patchC8YTemplateForTesting(this.sourceTemplate, this.testMapping);
       this.resetTestingModel();
       this.updateEditors();
-      await this.initializeTestContext(this.testMapping);
 
       await this.testingService.resetMockCache();
     } catch (error) {
@@ -158,12 +154,12 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     }
   }
 
-  async onNextTestResult(): Promise<void> {
+  onNextTestResult(): void {
     const nextIndex = this.getNextVisibleResultIndex();
     this.displayTestResult(nextIndex);
   }
 
-  async onSourceTemplateChanged(content: ContentChanges): Promise<void> {
+  onSourceTemplateChanged(content: ContentChanges): void {
     const contentAsJson = this.parseJsonContent(content.updatedContent);
     const topicSample = this.extractTopicSample(contentAsJson);
 
@@ -176,9 +172,6 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       sourceTemplate: JSON.stringify(contentAsJson || {}),
       mappingTopicSample: topicSample
     };
-
-    // Re-initialize the context with the updated mapping
-    await this.initializeTestContext(this.testMapping);
   }
 
   disableTestSending(): boolean {
@@ -189,7 +182,12 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
   // ===== PRIVATE METHODS =====
 
-  private async initializeMapping(): Promise<void> {
+  private requiresRawPayload(): boolean {
+    return this.testMapping.mappingType === MappingType.HEX ||
+           this.testMapping.mappingType === MappingType.FLAT_FILE;
+  }
+
+  private initializeMapping(): void {
     // Ensure direction is always set (fallback to INBOUND if not specified)
     this.mapping.direction = this.mapping.direction ?? Direction.INBOUND;
     const isInbound = this.mapping.direction === Direction.INBOUND;
@@ -197,7 +195,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     this.targetSystem = isInbound ? 'Cumulocity' : 'Broker';
 
     // Initialize testMapping with the full mapping object
-    await this.updateTestMapping(this.mapping);
+    this.updateTestMapping(this.mapping);
   }
 
   private setupSubscriptions(): void {
@@ -206,7 +204,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       .subscribe(mapping => this.updateTestMapping(mapping));
   }
 
-  private async updateTestMapping(testMapping: Mapping): Promise<void> {
+  private updateTestMapping(testMapping: Mapping): void {
     try {
       this.testMapping = testMapping;
       this.sourceTemplate = JSON.parse(testMapping.sourceTemplate);
@@ -214,23 +212,9 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       if (testMapping.direction === Direction.OUTBOUND) {
         sortObjectKeys(this.sourceTemplate);
       }
-
-      await this.initializeTestContext(testMapping);
     } catch (error) {
       this.handleError('Failed to update test mapping', error);
     }
-  }
-
-  private async initializeTestContext(testMapping: Mapping): Promise<void> {
-    this.testContext = this.testingService.initializeContext(testMapping);
-
-    if (this.isEditorAvailable()) {
-      this.resetTestingModel();
-    }
-  }
-
-  private isEditorAvailable(): boolean {
-    return !!this.elementRef.nativeElement.querySelector('#editorTestingRequest');
   }
 
   private resetTestingModel(): void {
@@ -309,9 +293,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   }
 
   private showTestWarning(): void {
-    const { mappingType } = this.testContext.mapping;
-
-    if (mappingType === MappingType.HEX || mappingType === MappingType.FLAT_FILE) {
+    if (this.requiresRawPayload()) {
       this.alertService.info(
         "Validate the mapping logic with real payloads. The specific parsing of whitespace and " +
         "line terminators (CR/LF) may differ from the test environment, potentially altering the results."
@@ -319,27 +301,34 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     }
   }
 
-  private async performTest(sendPayload: boolean): Promise<TestResult> {
-    this.testContext.sendPayload = sendPayload;
-    this.testContext = await this.testingService.testResult(
-      this.testContext,
-      this.sourceTemplate
-    );
-    this.testingModel.results = this.testContext.requests;
-
-    const errors = [
-      ...(this.testContext.errors ?? []),
-      ...(this.testContext.requests ?? [])
-        .filter(req => req?.error)
-        .map(req => req.error)
-    ];
-
+  private parseRequestResponse(req: DynamicMapperRequest): DynamicMapperRequest {
     return {
-      success: errors.length === 0,
-      errors,
-      warnings: this.testContext.warnings,
-      requests: this.testContext.requests
+      ...req,
+      request: typeof req.request === 'string' ? JSON.parse(req.request) : req.request,
+      response: typeof req.response === 'string' ? JSON.parse(req.response) : req.response
     };
+  }
+
+  private async performTest(sendPayload: boolean): Promise<TestResult> {
+    // Prepare payload for testing
+    const extractedPayload = this.requiresRawPayload()
+      ? this.sourceTemplate['payload']
+      : JSON.stringify(this.sourceTemplate);
+
+    // Create test context and call remote testing endpoint
+    const testContext: TestContext = {
+      mapping: this.testMapping,
+      payload: extractedPayload,
+      send: sendPayload
+    };
+
+    const result = await this.testingService.testMapping(testContext);
+
+    // Convert request and response from JSON string to object for all items
+    this.testingModel.results = result.requests.map(req => this.parseRequestResponse(req));
+    this.testingModel.logs = result.logs;
+
+    return result;
   }
 
   private handleTestResult(result: TestResult, sendPayload: boolean): void {
@@ -359,7 +348,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     }
 
     if (sendPayload) {
-      const responseId = this.testContext.requests?.[0]?.response?.id;
+      const responseId = result.requests?.[0]?.response?.id;
       this.alertService.info(`Sending mapping result was successful: ${responseId}`);
       this.testResult.emit(true);
     } else {
@@ -374,7 +363,6 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
       if (shouldIgnore) {
         this.testMapping.createNonExistingDevice = true;
-        await this.initializeTestContext(this.testMapping);
         await this.executeTest(false);
         return;
       }
@@ -406,26 +394,10 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   }
 
   private extractErrorMessage(error: unknown): string {
-    // Handle direct error parameter
     if (error instanceof Error) {
       return error.message;
     }
-
-    // Handle errors from test context
-    const contextErrors = this.testContext?.errors;
-    if (contextErrors?.length > 0) {
-      const lastError = contextErrors[contextErrors.length - 1];
-      return this.getErrorString(lastError);
-    }
-
-    return '';
-  }
-
-  private getErrorString(error: unknown): string {
-    if (error instanceof Error) {
-      return error.message;
-    }
-    return String(error);
+    return String(error || '');
   }
 
   private parseJsonContent(content: Content): any {
@@ -440,11 +412,11 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   }
 
   private extractTopicSample(contentAsJson: any): string {
-    if (!contentAsJson?.[TOKEN_TOPIC_LEVEL] || !Array.isArray(contentAsJson[TOKEN_TOPIC_LEVEL])) {
+    if (!contentAsJson?.[MappingTokens.CONTEXT_DATA] || !Array.isArray(contentAsJson[MappingTokens.CONTEXT_DATA])) {
       return '';
     }
 
-    return contentAsJson[TOKEN_TOPIC_LEVEL]
+    return contentAsJson[MappingTokens.CONTEXT_DATA]
       .filter(item => item !== undefined && item !== null)
       .join('/');
   }

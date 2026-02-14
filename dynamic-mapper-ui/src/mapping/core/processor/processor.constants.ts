@@ -47,22 +47,6 @@ export const MappingTokens = {
 } as const;
 
 /**
- * Legacy exports for backward compatibility.
- * @deprecated Use MappingTokens.IDENTITY instead
- */
-export const TOKEN_IDENTITY = MappingTokens.IDENTITY;
-
-/**
- * @deprecated Use MappingTokens.TOPIC_LEVEL instead
- */
-export const TOKEN_TOPIC_LEVEL = MappingTokens.TOPIC_LEVEL;
-
-/**
- * @deprecated Use MappingTokens.CONTEXT_DATA instead
- */
-export const TOKEN_CONTEXT_DATA = MappingTokens.CONTEXT_DATA;
-
-/**
  * Protected tokens that cannot be modified in the payload editor.
  * Changes to these tokens are blocked to prevent data integrity issues.
  */
@@ -112,11 +96,6 @@ export const ContextDataKeys = {
   TIME: 'time' as const,
 } as const;
 
-/**
- * Legacy export for backward compatibility.
- * @deprecated Use ContextDataKeys.KEY_NAME instead
- */
-export const CONTEXT_DATA_KEY_NAME = ContextDataKeys.KEY_NAME;
 
 /**
  * Legacy export for backward compatibility.

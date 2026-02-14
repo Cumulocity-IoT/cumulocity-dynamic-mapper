@@ -17,16 +17,12 @@
  *
  * @authors Christof Strack
  */
-import { AlertService } from '@c8y/ngx-components';
 import * as _ from 'lodash';
 import { getTypeOf, randomIdAsString } from '../../../mapping/shared/util';
-import { API, getPathTargetForDeviceIdentifiers, Mapping, Substitution, MappingType, RepairStrategy, ContentChanges } from '../../../shared';
+import { API, Mapping, Substitution, RepairStrategy, ContentChanges } from '../../../shared';
 import { Content } from 'vanilla-jsoneditor';
 import {
-  MappingTokens,
   IdentityPaths,
-  ContextDataPaths,
-  ContextDataKeys,
   PROTECTED_TOKENS
 } from './processor.constants';
 
@@ -41,34 +37,6 @@ export interface DynamicMapperRequest {
   response?: any;
   error?: string;
   hidden?: boolean;
-}
-
-/**
- * @deprecated This monolithic interface mixes multiple concerns.
- *
- * For new code, import from context/processing-context.ts and use:
- * - ProcessingContext (refactored version that extends focused interfaces)
- * - ProcessingContextFactory for creating instances
- * - Individual context interfaces (MappingContext, RoutingContext, etc.) for type constraints
- *
- * This interface is maintained for backward compatibility only.
- */
-export interface ProcessingContext {
-  mapping: Mapping;
-  topic: string;
-  resolvedPublishTopic?: string;
-  payload?: JSON;
-  requests?: DynamicMapperRequest[];
-  errors?: string[];
-  warnings?: string[];
-  processingType?: ProcessingType;
-  mappingType: MappingType;
-  processingCache: Map<string, SubstituteValue[]>;
-  sendPayload?: boolean;
-  sourceId?: string;
-  logs?: any[];
-  deviceName?: string;
-  deviceType?: string;
 }
 
 export interface TestContext {
@@ -170,41 +138,8 @@ export function processSubstitute(processingCacheEntry: SubstituteValue[], extra
     );
   }
 }
-
-export function getDeviceEntries(context: ProcessingContext): SubstituteValue[] {
-  const { processingCache, mapping } = context;
-  const pathsTargetForDeviceIdentifiers: string[] = getPathTargetForDeviceIdentifiers(context);
-  const firstPathTargetForDeviceIdentifiers = pathsTargetForDeviceIdentifiers.length > 0
-    ? pathsTargetForDeviceIdentifiers[0]
-    : null;
-  const deviceEntries: SubstituteValue[] = processingCache.get(
-    firstPathTargetForDeviceIdentifiers
-  );
-  return deviceEntries;
-}
-
-export function prepareAndSubstituteInPayload(
-  context: ProcessingContext,
-  substitute: SubstituteValue,
-  payloadTarget: JSON,
-  pathTarget: string,
-  alert: AlertService
-) {
-  if (ContextDataPaths.DEVICE_NAME == pathTarget) {
-    context.deviceName = substitute.value;
-  } else if (ContextDataPaths.DEVICE_TYPE == pathTarget) {
-    context.deviceType = substitute.value;
-  } else {
-    substituteValueInPayload(substitute, payloadTarget, pathTarget);
-  }
-}
-
 // Re-export constants for backward compatibility
 export {
-  TOKEN_IDENTITY,
-  TOKEN_TOPIC_LEVEL,
-  TOKEN_CONTEXT_DATA,
-  CONTEXT_DATA_KEY_NAME,
   KEY_TIME,
   TOPIC_WILDCARD_MULTI,
   TOPIC_WILDCARD_SINGLE,
@@ -248,28 +183,6 @@ export function substituteValueInPayload(substitute: SubstituteValue, payloadTar
   }
 }
 
-/**
- * Sorts the processing cache by key
- * Optimized to avoid creating intermediate arrays when possible
- *
- * @param context - Processing context with cache to sort
- */
-export function sortProcessingCache(context: ProcessingContext): void {
-  // Optimization: Skip sorting if cache is empty or has only one entry
-  if (context.processingCache.size <= 1) {
-    return;
-  }
-
-  // Create sorted entries array
-  const sortedEntries = Array.from(context.processingCache.entries())
-    .sort(([keyA], [keyB]) => keyA.localeCompare(keyB));
-
-  // Clear and repopulate - this is faster than creating a new Map
-  context.processingCache.clear();
-  for (const [key, value] of sortedEntries) {
-    context.processingCache.set(key, value);
-  }
-}
 
 export function patchC8YTemplateForTesting(template: object, mapping: Mapping) {
   const identifier = randomIdAsString();

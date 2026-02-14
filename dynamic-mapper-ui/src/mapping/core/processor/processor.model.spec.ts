@@ -24,9 +24,6 @@ import {
   isNumeric,
   processSubstitute,
   substituteValueInPayload,
-  sortProcessingCache,
-  ProcessingContext,
-  ProcessingType,
   SubstituteValue,
   SubstituteValueType
 } from './processor.model';
@@ -283,89 +280,6 @@ describe('processor.model utility functions', () => {
       substituteValueInPayload(substitute, payloadTarget, 'existingPath');
 
       expect(payloadTarget.existingPath).toBe('newValue');
-    });
-  });
-
-  describe('sortProcessingCache', () => {
-    it('should sort cache entries alphabetically by key', () => {
-      const context: ProcessingContext = {
-        mapping: {} as any,
-        topic: 'test/topic',
-        processingType: ProcessingType.UNDEFINED,
-        errors: [],
-        mappingType: 'JSON' as any,
-        processingCache: new Map<string, SubstituteValue[]>()
-      };
-
-      // Add entries in non-alphabetical order
-      const stringValue: SubstituteValue = {
-        value: 'sensor001',
-        type: SubstituteValueType.TEXTUAL,
-        repairStrategy: RepairStrategy.DEFAULT
-      };
-      const numberValue: SubstituteValue = {
-        value: 42,
-        type: SubstituteValueType.NUMBER,
-        repairStrategy: RepairStrategy.DEFAULT
-      };
-      const booleanValue: SubstituteValue = {
-        value: true,
-        type: SubstituteValueType.BOOLEAN,
-        repairStrategy: RepairStrategy.DEFAULT
-      };
-
-      context.processingCache.set('$.zebra', [stringValue]);
-      context.processingCache.set('$.apple', [numberValue]);
-      context.processingCache.set('$.middle', [booleanValue]);
-
-      sortProcessingCache(context);
-
-      const keys = Array.from(context.processingCache.keys());
-      expect(keys).toEqual(['$.apple', '$.middle', '$.zebra']);
-    });
-
-    it('should maintain value integrity after sorting', () => {
-      const context: ProcessingContext = {
-        mapping: {} as any,
-        topic: 'test/topic',
-        processingType: ProcessingType.UNDEFINED,
-        errors: [],
-        mappingType: 'JSON' as any,
-        processingCache: new Map<string, SubstituteValue[]>()
-      };
-
-      const value1: SubstituteValue[] = [{
-        value: 'sensor001',
-        type: SubstituteValueType.TEXTUAL,
-        repairStrategy: RepairStrategy.DEFAULT
-      }];
-      const value2: SubstituteValue[] = [{
-        value: 42,
-        type: SubstituteValueType.NUMBER,
-        repairStrategy: RepairStrategy.DEFAULT
-      }];
-
-      context.processingCache.set('$.second', value2);
-      context.processingCache.set('$.first', value1);
-
-      sortProcessingCache(context);
-
-      expect(context.processingCache.get('$.first')).toBe(value1);
-      expect(context.processingCache.get('$.second')).toBe(value2);
-    });
-
-    it('should handle empty cache', () => {
-      const context: ProcessingContext = {
-        mapping: {} as any,
-        topic: 'test/topic',
-        processingType: ProcessingType.UNDEFINED,
-        errors: [],
-        mappingType: 'JSON' as any,
-        processingCache: new Map<string, SubstituteValue[]>()
-      };
-
-      expect(() => sortProcessingCache(context)).not.toThrow();
-      expect(context.processingCache.size).toBe(0);
     });
   });
 });
