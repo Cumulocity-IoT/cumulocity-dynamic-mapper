@@ -34,16 +34,26 @@ import {
   TOKEN_TOPIC_LEVEL,
   prepareAndSubstituteInPayload
 } from './processor.model';
+import { ErrorHandlerService } from './error-handling/error-handler.service';
+import { ProcessorError } from './error-handling/processor-error';
+import { ProcessorLoggerService } from './logging/processor-logger.service';
+import { ProcessorConfigService } from './config/processor-config.service';
+import { JSONataCacheService } from './performance/jsonata-cache.service';
+
+// Import JSONata at module level for better testability
+const jsonata = require('jsonata');
 
 @Injectable({ providedIn: 'root' })
 export abstract class BaseProcessorOutbound {
-  protected readonly JSONATA = require('jsonata');
-
   constructor(
     private readonly alert: AlertService,
     public readonly c8yAgent: C8YAgent,
     private readonly mqttClient: MQTTClient,
-    public readonly sharedService: SharedService
+    public readonly sharedService: SharedService,
+    private readonly errorHandler: ErrorHandlerService,
+    private readonly logger: ProcessorLoggerService,
+    protected readonly config: ProcessorConfigService,
+    private readonly jsonataCache: JSONataCacheService
   ) { }
 
   abstract deserializePayload(
@@ -99,12 +109,16 @@ export abstract class BaseProcessorOutbound {
     /*
      * step 4 prepare target payload for sending to mqttBroker
      */
-    console.log(mapping.targetAPI)
-    console.log(API.INVENTORY.name)
-    console.log(mapping.targetAPI !== API.INVENTORY.name)
+    this.logger.debug(
+      'Preparing target payload for MQTT broker',
+      {
+        targetAPI: mapping.targetAPI,
+        inventoryAPI: API.INVENTORY.name,
+        isNotInventory: mapping.targetAPI !== API.INVENTORY.name
+      },
+      context
+    );
 
-    // do not remove as this still needs to be validated
-    // if (mapping.targetAPI !== API.INVENTORY.name) {
     const topicLevels: string[] = payloadTarget[TOKEN_TOPIC_LEVEL];
     if (!topicLevels && topicLevels.length > 0) {
       // now merge the replaced topic levels
@@ -132,8 +146,6 @@ export abstract class BaseProcessorOutbound {
       context.resolvedPublishTopic = context.mapping.publishTopic;
     }
 
-    // leave the topic for debugging purposes
-    // _.unset(payloadTarget, TOKEN_TOPIC_LEVEL);
     const newPredecessor = context.requests.push({
       predecessor: predecessor,
       method: 'POST',
@@ -149,22 +161,17 @@ export abstract class BaseProcessorOutbound {
       context.requests[newPredecessor - 1].error = e;
     }
     predecessor = context.requests.length;
-    // do not remove as this still needs to be validated
-    // } else {
-    //   console.warn(
-    //     `Ignoring payload: ${payloadTarget}, ${mapping.targetAPI}, ${processingCache.size}`
-    //   );
-    //}
-    //console.log(
-    //  `Added payload for sending: ${payloadTarget}, ${mapping.targetAPI}, numberDevices: 1`
-    //);
   }
 
 
   async evaluateExpression(json: JSON, path: string): Promise<JSON> {
     let result: any = '';
     if (path !== undefined && path !== '' && json !== undefined) {
-      const expression = this.JSONATA(path);
+      // Use cached expression if caching is enabled
+      const expression = this.config.shouldCacheCompiledExpressions()
+        ? this.jsonataCache.getOrCompile(path, jsonata)
+        : jsonata(path);
+
       result = (await expression.evaluate(json)) as JSON;
     }
     return result;

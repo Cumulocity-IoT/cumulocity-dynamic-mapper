@@ -32,7 +32,7 @@ import {
 } from '../../../shared/util';
 import { CodeTemplateMap, TemplateType } from '../../../../configuration';
 import { SubstitutionContext } from '../processor-js.model';
-import { Java_Types_Serialized } from '../processor-js-serialized.model';
+import { serializeJavaTypes } from '../java-simulation/java-types-serializer';
 
 
 @Injectable({ providedIn: 'root' })
@@ -56,7 +56,7 @@ export class CodeBasedProcessorOutbound extends BaseProcessorOutbound {
     const systemCodeTemplate = codeTemplates[TemplateType.SYSTEM];
     const systemCodeTemplateDecoded = enc.decode(base64ToBytes(systemCodeTemplate.code));
     // Modify codeToRun to use arg0 instead of ctx
-    const codeToRun = `${mappingCodeTemplateDecoded}${Java_Types_Serialized}${systemCodeTemplateDecoded}${sharedCodeTemplateDecoded}\n return extractFromSource(arg0);`;
+    const codeToRun = `${mappingCodeTemplateDecoded}${serializeJavaTypes()}${systemCodeTemplateDecoded}${sharedCodeTemplateDecoded}\n return extractFromSource(arg0);`;
 
     let sourceId: any = await this.evaluateExpression(
       payload,

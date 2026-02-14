@@ -43,11 +43,6 @@ export class JSONProcessorOutbound extends BaseProcessorOutbound {
   async extractFromSource(context: ProcessingContext) {
     const { mapping, processingCache, payload } = context;
 
-    // let sourceId: any  = await this.evaluateExpression(
-    //   payload,
-    //   API[mapping.targetAPI].identifier
-    // );
-
     let sourceId: any  = await this.evaluateExpression(
       payload,
       getGenericDeviceIdentifier(mapping)
@@ -70,9 +65,6 @@ export class JSONProcessorOutbound extends BaseProcessorOutbound {
           context
         );
       } catch (e) {
-        //console.log(
-        //  `External id ${extractedSourceContent}, ${mapping.externalIdType} doesn't exist! Just return original id ${extractedSourceContent}`
-        //);
         if (context.sendPayload) {
           throw new Error(
             `External id ${externalId} for type ${mapping.externalIdType} not found!`
@@ -122,10 +114,6 @@ export class JSONProcessorOutbound extends BaseProcessorOutbound {
           substitution.pathTarget,
           processingCacheEntry
         );
-
-        //console.log(
-        //  `Evaluated substitution (pathSource:substitute)/(${substitution.pathSource}:${extractedSourceContent}), (pathTarget)/(${substitution.pathTarget})`
-        //);
 
       } catch (error) {
         context.errors.push(error.message);

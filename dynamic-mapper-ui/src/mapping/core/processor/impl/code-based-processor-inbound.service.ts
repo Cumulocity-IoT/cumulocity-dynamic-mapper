@@ -34,7 +34,7 @@ import {
 } from '../processor.model';
 import { CodeTemplateMap, TemplateType } from '../../../../configuration';
 import { SubstitutionContext } from '../processor-js.model';
-import { Java_Types_Serialized } from '../processor-js-serialized.model';
+import { serializeJavaTypes } from '../java-simulation/java-types-serializer';
 
 @Injectable({ providedIn: 'root' })
 export class CodeBasedProcessorInbound extends BaseProcessorInbound {
@@ -61,8 +61,7 @@ export class CodeBasedProcessorInbound extends BaseProcessorInbound {
     const systemCodeTemplate = codeTemplates[TemplateType.SYSTEM];
     const systemCodeTemplateDecoded = enc.decode(base64ToBytes(systemCodeTemplate.code));
     // Modify codeToRun to use arg0 instead of ctx
-    const codeToRun = `${mappingCodeTemplateDecoded}${Java_Types_Serialized}${systemCodeTemplateDecoded}${sharedCodeTemplateDecoded}\n return extractFromSource(arg0);`;
-    // console.log("Code to run:", codeToRun);
+    const codeToRun = `${mappingCodeTemplateDecoded}${serializeJavaTypes()}${systemCodeTemplateDecoded}${sharedCodeTemplateDecoded}\n return extractFromSource(arg0);`;
     let substitutionTimeExists: boolean = false;
 
     try {
@@ -86,13 +85,11 @@ export class CodeBasedProcessorInbound extends BaseProcessorInbound {
       if (evalResult.result) {
         // Continue with successful result
         const result = evalResult.result;
-        //const substitutions = result.getSubstitutions();
         const substitutions = result['substitutions']['map'];
         const keys = Object.keys(substitutions);
 
         for (const key of keys) {
           const values = substitutions[key];
-          // console.log(`Key: ${key}, Value: ${value}`);
           const processingCacheEntry: SubstituteValue[] = _.get(
             processingCache,
             key,
