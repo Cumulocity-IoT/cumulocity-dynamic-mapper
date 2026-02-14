@@ -115,52 +115,28 @@ export class TestingService {
     message: any
   ): Promise<ProcessingContext> {
     const { mapping } = context;
-    if (context.mapping.transformationType === TransformationType.SMART_FUNCTION) {
-      let extractedPayload;
-      if (context.mapping.mappingType === MappingType.HEX || context.mapping.mappingType === MappingType.FLAT_FILE) {
-        extractedPayload = message['payload'];
-      } else {
-        extractedPayload = JSON.stringify(message);
-      }
-      const testingContext = { mapping: context.mapping, payload: extractedPayload, send: false };
-      const testingResult = await this.testMapping(testingContext);
-      // Convert request from JSON string to object for all items
-      context.requests = testingResult.requests.map(req => ({
-        ...req,
-        request: req.request && typeof req.request === 'string'
-          ? JSON.parse(req.request)
-          : req.request
-      }));
-      context.errors = testingResult.errors;
-      context.warnings = testingResult.warnings;
-      context.logs = testingResult.logs;
+    // TEMPORARY: Use remote endpoint for ALL transformation types
+    let extractedPayload;
+    if (context.mapping.mappingType === MappingType.HEX || context.mapping.mappingType === MappingType.FLAT_FILE) {
+      extractedPayload = message['payload'];
     } else {
-      if (mapping.direction === Direction.INBOUND) {
-        if (isSubstitutionsAsCode(mapping)) {
-          this.codeBasedProcessorInbound.deserializePayload(mapping, message, context);
-          this.codeBasedProcessorInbound.enrichPayload(context);
-          await this.codeBasedProcessorInbound.extractFromSource(context);
-          this.codeBasedProcessorInbound.validateProcessingCache(context);
-          await this.codeBasedProcessorInbound.substituteInTargetAndSend(context);
-        } else {
-          this.jsonProcessorInbound.deserializePayload(mapping, message, context);
-          this.jsonProcessorInbound.enrichPayload(context);
-          await this.jsonProcessorInbound.extractFromSource(context);
-          this.jsonProcessorInbound.validateProcessingCache(context);
-          await this.jsonProcessorInbound.substituteInTargetAndSend(context);
-        }
-      } else {
-        if (isSubstitutionsAsCode(mapping)) {
-          this.codeBasedProcessorOutbound.deserializePayload(mapping, message, context);
-          await this.codeBasedProcessorOutbound.extractFromSource(context);
-          await this.codeBasedProcessorOutbound.substituteInTargetAndSend(context);
-        } else {
-          this.jsonProcessorOutbound.deserializePayload(mapping, message, context);
-          await this.jsonProcessorOutbound.extractFromSource(context);
-          await this.jsonProcessorOutbound.substituteInTargetAndSend(context);
-        }
-      }
+      extractedPayload = JSON.stringify(message);
     }
+    const testingContext = { mapping: context.mapping, payload: extractedPayload, send: false };
+    const testingResult = await this.testMapping(testingContext);
+    // Convert request and response from JSON string to object for all items
+    context.requests = testingResult.requests.map(req => ({
+      ...req,
+      request: req.request && typeof req.request === 'string'
+        ? JSON.parse(req.request)
+        : req.request,
+      response: req.response && typeof req.response === 'string'
+        ? JSON.parse(req.response)
+        : req.response
+    }));
+    context.errors = testingResult.errors;
+    context.warnings = testingResult.warnings;
+    context.logs = testingResult.logs;
 
     return context;
   }

@@ -823,6 +823,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.mappingCode = base64ToString(this.mapping.code);
     }
 
+    // Update snooped template items in case new templates were added
+    this.updateSnoopedTemplateItems();
+
     // Trigger extension event filtering if extension is already selected
     // This handles the case when navigating to step 3 with a pre-selected extension
     if (this.mapping?.extension?.extensionName && this.extensions) {
@@ -833,6 +836,16 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         this.extensions,
         this.mapping
       );
+
+      // Patch form values to ensure c8y-select components display the selected values
+      // Use queueMicrotask to ensure the components are rendered before setting values
+      queueMicrotask(() => {
+        this.templateForm.patchValue({
+          extensionName: this.mapping.extension.extensionName,
+          eventName: this.mapping.extension.eventName
+        });
+        this.cdr.markForCheck();
+      });
     }
 
     if (this.stepperForward) {
