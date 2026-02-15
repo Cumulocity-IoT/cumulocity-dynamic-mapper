@@ -301,6 +301,160 @@ public class ProcessingContext<O> implements AutoCloseable {
         return processingCache.size();
     }
 
+    // ===== ADAPTER METHODS FOR NEW FOCUSED CONTEXTS =====
+    // These methods provide migration path from monolithic ProcessingContext
+    // to focused, thread-safe context objects
+
+    /**
+     * Creates a RoutingContext from this ProcessingContext.
+     * Extracts routing-related fields into an immutable, thread-safe context.
+     *
+     * @return a new RoutingContext with routing information
+     */
+    @JsonIgnore
+    public RoutingContext getRoutingContext() {
+        return RoutingContext.builder()
+            .topic(this.topic)
+            .clientId(this.clientId)
+            .api(this.api)
+            .qos(this.qos)
+            .resolvedPublishTopic(this.resolvedPublishTopic)
+            .tenant(this.tenant)
+            .build();
+    }
+
+    /**
+     * Creates a PayloadContext from this ProcessingContext.
+     * Extracts payload-related fields into an immutable, thread-safe context.
+     *
+     * @return a new PayloadContext with payload information
+     */
+    @JsonIgnore
+    public PayloadContext<O> getPayloadContext() {
+        return PayloadContext.<O>builder()
+            .deserializedPayload(this.payload)
+            .rawPayload(this.rawPayload)
+            .binaryInfo(this.binaryInfo)
+            .build();
+    }
+
+    /**
+     * Creates an OutputCollector from this ProcessingContext.
+     * Migrates existing requests, errors, warnings, and logs into a thread-safe collector.
+     *
+     * Note: This creates a NEW collector with copies of current data.
+     * Changes to the returned collector do NOT affect this ProcessingContext.
+     *
+     * @return a new OutputCollector populated with current output data
+     */
+    @JsonIgnore
+    public OutputCollector getOutputCollector() {
+        OutputCollector collector = new OutputCollector();
+
+        // Copy requests
+        if (this.requests != null) {
+            this.requests.forEach(collector::addRequest);
+        }
+
+        // Copy errors
+        if (this.errors != null) {
+            this.errors.forEach(collector::addError);
+        }
+
+        // Copy warnings
+        if (this.warnings != null) {
+            this.warnings.forEach(collector::addWarning);
+        }
+
+        // Copy logs
+        if (this.logs != null) {
+            this.logs.forEach(collector::addLog);
+        }
+
+        return collector;
+    }
+
+    /**
+     * Creates a ProcessingState from this ProcessingContext.
+     * Migrates processing cache and flags into a thread-safe state manager.
+     *
+     * Note: This creates a NEW state object with copies of current data.
+     * Changes to the returned state do NOT affect this ProcessingContext.
+     *
+     * @return a new ProcessingState populated with current processing state
+     */
+    @JsonIgnore
+    public ProcessingState getProcessingState() {
+        ProcessingState state = new ProcessingState(this.processingType, this.mappingType);
+
+        // Copy processing cache
+        if (this.processingCache != null) {
+            this.processingCache.forEach(state::putSubstitutions);
+        }
+
+        // Copy flags
+        if (this.needsRepair != null) {
+            state.setNeedsRepair(this.needsRepair);
+        }
+        if (this.ignoreFurtherProcessing != null) {
+            state.setIgnoreFurtherProcessing(this.ignoreFurtherProcessing);
+        }
+
+        return state;
+    }
+
+    /**
+     * Creates a DeviceContext from this ProcessingContext.
+     * Extracts device-related fields into an immutable, thread-safe context.
+     *
+     * @return a new DeviceContext with device information
+     */
+    @JsonIgnore
+    public DeviceContext getDeviceContext() {
+        DeviceContext.DeviceContextBuilder builder = DeviceContext.builder()
+            .sourceId(this.sourceId)
+            .externalId(this.externalId)
+            .deviceName(this.deviceName)
+            .deviceType(this.deviceType);
+
+        // Add alarms if present
+        if (this.alarms != null && !this.alarms.isEmpty()) {
+            builder.alarms(this.alarms);
+        }
+
+        return builder.build();
+    }
+
+    /**
+     * Creates an ExecutionContext from this ProcessingContext.
+     * Extracts GraalVM execution-related fields into an AutoCloseable context.
+     *
+     * WARNING: The returned ExecutionContext references the same GraalVM objects.
+     * Closing the ExecutionContext will close the GraalVM context in this ProcessingContext.
+     *
+     * @return a new ExecutionContext with execution engine information
+     */
+    @JsonIgnore
+    public ExecutionContext getExecutionContext() {
+        return ExecutionContext.builder()
+            .graalEngine(this.graalEngine)
+            .graalContext(this.graalContext)
+            .sharedSource(this.sharedSource)
+            .systemSource(this.systemSource)
+            .mappingSource(this.mappingSource)
+            .sourceValue(this.sourceValue)
+            .sharedCode(this.sharedCode)
+            .systemCode(this.systemCode)
+            .flowContext(this.flowContext)
+            .flowState(this.flowState)
+            .flowResult(this.flowResult)
+            .extensionResult(this.extensionResult)
+            .tenant(this.tenant)
+            .build();
+    }
+
+    // ===== END ADAPTER METHODS =====
+
     /**
      * Clean up GraalVM resources
      */

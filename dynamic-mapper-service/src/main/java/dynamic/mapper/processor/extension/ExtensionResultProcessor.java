@@ -75,6 +75,10 @@ public class ExtensionResultProcessor {
      * <p>Converts each CumulocityObject to a DynamicMapperRequest and adds it to the
      * context's request list. The requests will later be executed by SendInboundProcessor.</p>
      *
+     * <p><b>Thread Safety (NEW):</b> This method now uses OutputCollector internally
+     * for thread-safe request accumulation. While the external API still accepts ProcessingContext
+     * for backward compatibility, internally it extracts and uses focused contexts.</p>
+     *
      * @param results Array of CumulocityObject instances returned by the extension
      * @param context Processing context to add requests to
      * @throws ProcessingException if conversion fails
@@ -85,14 +89,19 @@ public class ExtensionResultProcessor {
             return;
         }
 
-        String tenant = context.getTenant();
+        // Extract focused contexts for thread-safe processing
+        dynamic.mapper.processor.model.RoutingContext routing = context.getRoutingContext();
+        dynamic.mapper.processor.model.OutputCollector output = context.getOutputCollector();
+
+        String tenant = routing.getTenant();
         log.debug("{} - Processing {} inbound result(s) from extension", tenant, results.length);
 
         for (int i = 0; i < results.length; i++) {
             CumulocityObject c8yObj = results[i];
             try {
                 DynamicMapperRequest request = convertCumulocityObjectToRequest(c8yObj, context);
-                context.addRequest(request);
+                // Use thread-safe OutputCollector instead of context.addRequest()
+                output.addRequest(request);
                 log.debug("{} - Added inbound request {}/{}: api={}, action={}",
                         tenant, i + 1, results.length, c8yObj.getCumulocityType(), c8yObj.getAction());
             } catch (Exception e) {
@@ -102,6 +111,9 @@ public class ExtensionResultProcessor {
                 throw new ProcessingException(errorMsg, e);
             }
         }
+
+        // Sync back to context (for backward compatibility with code that reads from context.getRequests())
+        syncOutputToContext(output, context);
     }
 
     /**
@@ -110,6 +122,10 @@ public class ExtensionResultProcessor {
      * <p>Converts each DeviceMessage to a DynamicMapperRequest for broker publishing
      * and adds it to the context's request list. The requests will later be executed
      * by SendOutboundProcessor.</p>
+     *
+     * <p><b>Thread Safety (NEW):</b> This method now uses OutputCollector internally
+     * for thread-safe request accumulation. While the external API still accepts ProcessingContext
+     * for backward compatibility, internally it extracts and uses focused contexts.</p>
      *
      * @param results Array of DeviceMessage instances returned by the extension
      * @param context Processing context to add requests to
@@ -121,14 +137,19 @@ public class ExtensionResultProcessor {
             return;
         }
 
-        String tenant = context.getTenant();
+        // Extract focused contexts for thread-safe processing
+        dynamic.mapper.processor.model.RoutingContext routing = context.getRoutingContext();
+        dynamic.mapper.processor.model.OutputCollector output = context.getOutputCollector();
+
+        String tenant = routing.getTenant();
         log.debug("{} - Processing {} outbound result(s) from extension", tenant, results.length);
 
         for (int i = 0; i < results.length; i++) {
             DeviceMessage deviceMsg = results[i];
             try {
                 DynamicMapperRequest request = convertDeviceMessageToRequest(deviceMsg, context);
-                context.addRequest(request);
+                // Use thread-safe OutputCollector instead of context.addRequest()
+                output.addRequest(request);
                 log.debug("{} - Added outbound request {}/{}: topic={}",
                         tenant, i + 1, results.length, deviceMsg.getTopic());
             } catch (Exception e) {
@@ -138,6 +159,9 @@ public class ExtensionResultProcessor {
                 throw new ProcessingException(errorMsg, e);
             }
         }
+
+        // Sync back to context (for backward compatibility with code that reads from context.getRequests())
+        syncOutputToContext(output, context);
     }
 
     /**
@@ -353,5 +377,37 @@ public class ExtensionResultProcessor {
         // Note: Attachment handling for events would go here
         // For now, attachment data is in contextData but actual file upload
         // would need to be implemented separately by SendInboundProcessor
+    }
+
+    /**
+     * Synchronizes requests from OutputCollector back to ProcessingContext.
+     *
+     * <p>This method maintains backward compatibility by copying requests from the
+     * thread-safe OutputCollector back to the ProcessingContext. This allows existing
+     * code that reads from context.getRequests() to continue working.</p>
+     *
+     * <p><b>Note:</b> In a fully migrated codebase, this sync would not be necessary
+     * as all code would use OutputCollector directly.</p>
+     *
+     * @param output the OutputCollector containing accumulated requests
+     * @param context the ProcessingContext to sync to
+     */
+    private void syncOutputToContext(
+            dynamic.mapper.processor.model.OutputCollector output,
+            ProcessingContext<?> context) {
+        // Get the new requests from OutputCollector
+        java.util.List<DynamicMapperRequest> newRequests = output.getRequests();
+
+        // Clear and replace context requests (for backward compatibility)
+        context.getRequests().clear();
+        context.getRequests().addAll(newRequests);
+
+        // Also sync errors and warnings if any
+        if (output.hasErrors()) {
+            context.getErrors().addAll(output.getErrors());
+        }
+        if (output.hasWarnings()) {
+            context.getWarnings().addAll(output.getWarnings());
+        }
     }
 }
