@@ -29,7 +29,10 @@ import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.model.CumulocityObject;
 import dynamic.mapper.processor.model.DeviceMessage;
+import dynamic.mapper.processor.model.OutputCollector;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.model.ProcessingState;
+import dynamic.mapper.processor.model.RoutingContext;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -77,36 +80,62 @@ public abstract class AbstractExtensibleResultProcessor extends CommonProcessor 
     public void process(Exchange exchange) throws Exception {
         ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
 
-        String tenant = context.getTenant();
+        // Extract focused contexts at entry point
+        RoutingContext routing = context.getRoutingContext();
+        ProcessingState state = context.getProcessingState();
+        OutputCollector output = new OutputCollector();
+
+        String tenant = routing.getTenant();
         Mapping mapping = context.getMapping();
 
         try {
-            processExtensionResults(context);
-            postProcessExtensionResults(context);
+            processExtensionResults(routing, state, output, context);
+            postProcessExtensionResults(state, output, context);
+
+            // Sync back to context for backward compatibility
+            syncOutputToContext(output, context);
         } catch (Exception e) {
             handleProcessingError(e, context, tenant, mapping);
         }
     }
 
     /**
-     * Process extension results - converts domain objects to DynamicMapperRequest.
-     * Subclasses must implement this to handle their specific result types.
-     *
-     * @param context The processing context
-     * @throws ProcessingException if processing fails
+     * Sync OutputCollector contents back to ProcessingContext for backward compatibility.
+     * Can be removed once all callers migrate to reading from OutputCollector directly.
      */
-    protected abstract void processExtensionResults(ProcessingContext<?> context)
-            throws ProcessingException;
+    private void syncOutputToContext(OutputCollector output, ProcessingContext<?> context) {
+        if (!output.getRequests().isEmpty()) {
+            context.getRequests().addAll(output.getRequests());
+        }
+    }
 
     /**
-     * Hook for subclass-specific post-processing after all extension results are processed.
+     * NEW: Process extension results using focused contexts.
+     * Subclasses must implement this to handle their specific result types.
+     *
+     * @param routing Immutable routing information
+     * @param state Thread-safe mutable state
+     * @param output Thread-safe output collector
+     * @param context Legacy context for any remaining needs
+     * @throws ProcessingException if processing fails
+     */
+    protected abstract void processExtensionResults(
+            RoutingContext routing,
+            ProcessingState state,
+            OutputCollector output,
+            ProcessingContext<?> context) throws ProcessingException;
+
+    /**
+     * NEW: Hook for subclass-specific post-processing using focused contexts.
      * Default implementation does nothing.
      *
-     * @param context The processing context
+     * @param state Thread-safe mutable state
+     * @param output Thread-safe output collector
+     * @param context Legacy context for any remaining needs
      * @throws ProcessingException if post-processing fails
      */
-    protected void postProcessExtensionResults(ProcessingContext<?> context)
-            throws ProcessingException {
+    protected void postProcessExtensionResults(ProcessingState state, OutputCollector output,
+                                              ProcessingContext<?> context) throws ProcessingException {
         // Default: no post-processing
     }
 

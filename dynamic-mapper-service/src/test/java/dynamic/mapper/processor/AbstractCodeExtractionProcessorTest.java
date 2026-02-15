@@ -101,10 +101,13 @@ class AbstractCodeExtractionProcessorTest {
         @Override
         protected void processSubstitutionResult(
                 SubstitutionResult result,
-                ProcessingContext<?> context,
+                dynamic.mapper.processor.model.RoutingContext routing,
+                dynamic.mapper.processor.model.PayloadContext<?> payload,
+                dynamic.mapper.processor.model.ProcessingState state,
                 Object payloadObject,
                 Mapping mapping,
-                String tenant) throws ProcessingException {
+                String tenant,
+                ProcessingContext<?> context) throws ProcessingException {
             processSubstitutionCalled = true;
             // Simple implementation for testing
         }

@@ -404,6 +404,29 @@ public class ProcessingContext<O> implements AutoCloseable {
     }
 
     /**
+     * Syncs modifications from ProcessingState back to this ProcessingContext.
+     * Updates the processing cache and flags based on state modifications.
+     *
+     * @param state the ProcessingState with modifications to sync back
+     */
+    public void syncFromState(ProcessingState state) {
+        if (state == null) {
+            return;
+        }
+
+        // Sync processing cache
+        this.processingCache.clear();
+        state.getProcessingCache().forEach((key, values) -> {
+            // Create mutable copy of the list since state returns immutable lists
+            this.processingCache.put(key, new ArrayList<>(values));
+        });
+
+        // Sync flags
+        this.needsRepair = state.needsRepair();
+        this.ignoreFurtherProcessing = state.shouldIgnoreFurtherProcessing();
+    }
+
+    /**
      * Creates a DeviceContext from this ProcessingContext.
      * Extracts device-related fields into an immutable, thread-safe context.
      *

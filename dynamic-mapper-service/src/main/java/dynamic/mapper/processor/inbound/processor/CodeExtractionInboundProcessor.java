@@ -34,8 +34,11 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.AbstractCodeExtractionProcessor;
 import dynamic.mapper.processor.ProcessingException;
+import dynamic.mapper.processor.model.PayloadContext;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.model.ProcessingState;
 import dynamic.mapper.processor.model.RepairStrategy;
+import dynamic.mapper.processor.model.RoutingContext;
 import dynamic.mapper.processor.model.SubstituteValue;
 import dynamic.mapper.processor.model.SubstituteValue.TYPE;
 import dynamic.mapper.processor.model.SubstitutionEvaluation;
@@ -61,17 +64,17 @@ public class CodeExtractionInboundProcessor extends AbstractCodeExtractionProces
     }
 
     @Override
-    protected void preparePayload(ProcessingContext<?> context, Object payloadObject) {
+    protected void preparePayload(RoutingContext routing, PayloadContext<?> payload, Object payloadObject) {
         // Add topic levels as metadata
         @SuppressWarnings("unchecked")
         Map<String, Object> jsonObject = (Map<String, Object>) payloadObject;
-        List<String> splitTopicAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
+        List<String> splitTopicAsList = Mapping.splitTopicExcludingSeparatorAsList(routing.getTopic(), false);
         jsonObject.put(Mapping.TOKEN_TOPIC_LEVEL, splitTopicAsList);
 
         // Add context data with API information
         Map<String, String> contextData = new HashMap<String, String>() {
             {
-                put("api", context.getMapping().getTargetAPI().toString());
+                put("api", routing.getApi().toString());
             }
         };
         jsonObject.put(Mapping.TOKEN_CONTEXT_DATA, contextData);
@@ -80,17 +83,19 @@ public class CodeExtractionInboundProcessor extends AbstractCodeExtractionProces
     @Override
     protected void processSubstitutionResult(
             SubstitutionResult typedResult,
-            ProcessingContext<?> context,
+            RoutingContext routing,
+            PayloadContext<?> payload,
+            ProcessingState state,
             Object payloadObject,
             Mapping mapping,
-            String tenant) throws ProcessingException {
+            String tenant,
+            ProcessingContext<?> context) throws ProcessingException {
 
         @SuppressWarnings("unchecked")
         Map<String, Object> jsonObject = (Map<String, Object>) payloadObject;
-        Map<String, List<SubstituteValue>> processingCache = context.getProcessingCache();
 
         if (typedResult == null || typedResult.substitutions == null || typedResult.substitutions.isEmpty()) {
-            context.setIgnoreFurtherProcessing(true);
+            state.setIgnoreFurtherProcessing(true);
             log.info("{} - Extraction returned no result, payload: {}", tenant, jsonObject);
             return;
         }
@@ -122,14 +127,14 @@ public class CodeExtractionInboundProcessor extends AbstractCodeExtractionProces
                         mapping);
             }
 
-            processingCache.put(key, processingCacheEntry);
+            state.putSubstitutions(key, processingCacheEntry);
 
             if (key.equals(Mapping.KEY_TIME)) {
                 substitutionTimeExists = true;
             }
         }
 
-        // Handle alarms
+        // Handle alarms (use legacy context for now as alarms need mutation)
         if (typedResult.alarms != null && !typedResult.alarms.isEmpty()) {
             for (String alarm : typedResult.alarms) {
                 context.getAlarms().add(alarm);
@@ -137,7 +142,7 @@ public class CodeExtractionInboundProcessor extends AbstractCodeExtractionProces
             }
         }
 
-        if (mapping.getDebug() || context.getServiceConfiguration().getLogPayload()) {
+        if (mapping.getDebug()) {
             log.info("{} - Extraction returned {} results, payload: {}",
                     tenant,
                     keySet.size(),
@@ -149,16 +154,15 @@ public class CodeExtractionInboundProcessor extends AbstractCodeExtractionProces
                 mapping.getTargetAPI() != API.INVENTORY &&
                 mapping.getTargetAPI() != API.OPERATION) {
 
-            List<SubstituteValue> processingCacheEntry = processingCache.getOrDefault(
-                    Mapping.KEY_TIME,
-                    new ArrayList<>());
+            // Create a new mutable list and add the time value
+            List<SubstituteValue> processingCacheEntry = new ArrayList<>(state.getSubstitutions(Mapping.KEY_TIME));
             processingCacheEntry.add(
                     new SubstituteValue(
                             new DateTime().toString(),
                             TYPE.TEXTUAL,
                             RepairStrategy.CREATE_IF_MISSING,
                             false));
-            processingCache.put(Mapping.KEY_TIME, processingCacheEntry);
+            state.putSubstitutions(Mapping.KEY_TIME, processingCacheEntry);
         }
     }
 

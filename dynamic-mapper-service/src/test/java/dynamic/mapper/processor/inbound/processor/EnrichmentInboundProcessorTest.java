@@ -75,6 +75,15 @@ class EnrichmentInboundProcessorTest {
     @Mock
     private ProcessingContext<Object> processingContext;
 
+    @Mock
+    private dynamic.mapper.processor.model.RoutingContext routingContext;
+
+    @Mock
+    private dynamic.mapper.processor.model.PayloadContext<Object> payloadContext;
+
+    @Mock
+    private dynamic.mapper.processor.model.ProcessingState processingState;
+
     private EnrichmentInboundProcessor processor;
 
     private static final String TEST_TENANT = "testTenant";
@@ -118,6 +127,14 @@ class EnrichmentInboundProcessorTest {
         when(processingContext.getServiceConfiguration()).thenReturn(serviceConfiguration);
         when(processingContext.getTenant()).thenReturn(TEST_TENANT);
         when(processingContext.getMapping()).thenReturn(mapping);
+
+        // Mock focused contexts
+        when(processingContext.getRoutingContext()).thenReturn(routingContext);
+        when(processingContext.getPayloadContext()).thenReturn(payloadContext);
+        when(processingContext.getProcessingState()).thenReturn(processingState);
+
+        // Mock routing context
+        when(routingContext.getTenant()).thenReturn(TEST_TENANT);
 
         // Setup mapping status mocks - this is crucial!
         when(mappingService.getMappingStatus(eq(TEST_TENANT), eq(mapping))).thenReturn(mappingStatus);

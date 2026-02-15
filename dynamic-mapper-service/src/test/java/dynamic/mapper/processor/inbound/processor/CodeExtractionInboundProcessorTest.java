@@ -139,6 +139,8 @@ class CodeExtractionInboundProcessorTest {
                 .serviceConfiguration(serviceConfiguration)
                 .topic("device/sensor001/data")
                 .clientId("mqtt-client-001")
+                .api(API.MEASUREMENT)
+                .qos(Qos.AT_LEAST_ONCE)
                 .build();
     }
 
@@ -153,7 +155,7 @@ class CodeExtractionInboundProcessorTest {
         processingContext.setTopic("devices/building1/floor2/room3");
 
         // When
-        processor.preparePayload(processingContext, payload);
+        processor.preparePayload(processingContext.getRoutingContext(), processingContext.getPayloadContext(), payload);
 
         // Then
         assertTrue(payload.containsKey(Mapping.TOKEN_TOPIC_LEVEL),
@@ -177,7 +179,7 @@ class CodeExtractionInboundProcessorTest {
         processingContext.setPayload(payload);
 
         // When
-        processor.preparePayload(processingContext, payload);
+        processor.preparePayload(processingContext.getRoutingContext(), processingContext.getPayloadContext(), payload);
 
         // Then
         assertTrue(payload.containsKey(Mapping.TOKEN_CONTEXT_DATA),
@@ -208,11 +210,14 @@ class CodeExtractionInboundProcessorTest {
         Map<String, Object> payload = new HashMap<>();
         payload.put("deviceId", "sensor001");
 
+        // Get the state to use and check after processing
+        dynamic.mapper.processor.model.ProcessingState state = processingContext.getProcessingState();
+
         // When
-        processor.processSubstitutionResult(result, processingContext, payload, mapping, TEST_TENANT);
+        processor.processSubstitutionResult(result, processingContext.getRoutingContext(), processingContext.getPayloadContext(), state, payload, mapping, TEST_TENANT, processingContext);
 
         // Then
-        Map<String, List<SubstituteValue>> cache = processingContext.getProcessingCache();
+        Map<String, List<SubstituteValue>> cache = state.getProcessingCache();
         assertTrue(cache.containsKey("source"), "Cache should contain source");
         assertTrue(cache.containsKey("temp.value"), "Cache should contain temperature");
 
@@ -230,11 +235,14 @@ class CodeExtractionInboundProcessorTest {
 
         Map<String, Object> payload = new HashMap<>();
 
+        // Get the state to check after processing
+        dynamic.mapper.processor.model.ProcessingState state = processingContext.getProcessingState();
+
         // When
-        processor.processSubstitutionResult(result, processingContext, payload, mapping, TEST_TENANT);
+        processor.processSubstitutionResult(result, processingContext.getRoutingContext(), processingContext.getPayloadContext(), state, payload, mapping, TEST_TENANT, processingContext);
 
         // Then
-        assertTrue(processingContext.getIgnoreFurtherProcessing(),
+        assertTrue(state.shouldIgnoreFurtherProcessing(),
                 "Should ignore further processing when result is empty");
 
         log.info("✅ Successfully handled empty substitution result");
@@ -254,11 +262,14 @@ class CodeExtractionInboundProcessorTest {
 
         Map<String, Object> payload = new HashMap<>();
 
+        // Get the state to use and check after processing
+        dynamic.mapper.processor.model.ProcessingState state = processingContext.getProcessingState();
+
         // When
-        processor.processSubstitutionResult(result, processingContext, payload, mapping, TEST_TENANT);
+        processor.processSubstitutionResult(result, processingContext.getRoutingContext(), processingContext.getPayloadContext(), state, payload, mapping, TEST_TENANT, processingContext);
 
         // Then
-        Map<String, List<SubstituteValue>> cache = processingContext.getProcessingCache();
+        Map<String, List<SubstituteValue>> cache = state.getProcessingCache();
         assertTrue(cache.containsKey(Mapping.KEY_TIME),
                 "Should add default time for measurements");
 
@@ -284,11 +295,14 @@ class CodeExtractionInboundProcessorTest {
 
         Map<String, Object> payload = new HashMap<>();
 
+        // Get the state to use and check after processing
+        dynamic.mapper.processor.model.ProcessingState state = processingContext.getProcessingState();
+
         // When
-        processor.processSubstitutionResult(result, processingContext, payload, mapping, TEST_TENANT);
+        processor.processSubstitutionResult(result, processingContext.getRoutingContext(), processingContext.getPayloadContext(), state, payload, mapping, TEST_TENANT, processingContext);
 
         // Then
-        Map<String, List<SubstituteValue>> cache = processingContext.getProcessingCache();
+        Map<String, List<SubstituteValue>> cache = state.getProcessingCache();
         assertFalse(cache.containsKey(Mapping.KEY_TIME),
                 "Should not add default time for inventory API");
 
@@ -307,11 +321,14 @@ class CodeExtractionInboundProcessorTest {
 
         Map<String, Object> payload = new HashMap<>();
 
+        // Get the state to use and check after processing
+        dynamic.mapper.processor.model.ProcessingState state = processingContext.getProcessingState();
+
         // When
-        processor.processSubstitutionResult(result, processingContext, payload, mapping, TEST_TENANT);
+        processor.processSubstitutionResult(result, processingContext.getRoutingContext(), processingContext.getPayloadContext(), state, payload, mapping, TEST_TENANT, processingContext);
 
         // Then
-        Map<String, List<SubstituteValue>> cache = processingContext.getProcessingCache();
+        Map<String, List<SubstituteValue>> cache = state.getProcessingCache();
         assertFalse(cache.containsKey(Mapping.KEY_TIME),
                 "Should not add default time for operation API");
 
@@ -335,11 +352,14 @@ class CodeExtractionInboundProcessorTest {
 
         Map<String, Object> payload = new HashMap<>();
 
+        // Get the state to use and check after processing
+        dynamic.mapper.processor.model.ProcessingState state = processingContext.getProcessingState();
+
         // When
-        processor.processSubstitutionResult(result, processingContext, payload, mapping, TEST_TENANT);
+        processor.processSubstitutionResult(result, processingContext.getRoutingContext(), processingContext.getPayloadContext(), state, payload, mapping, TEST_TENANT, processingContext);
 
         // Then
-        Map<String, List<SubstituteValue>> cache = processingContext.getProcessingCache();
+        Map<String, List<SubstituteValue>> cache = state.getProcessingCache();
         assertTrue(cache.containsKey(Mapping.KEY_TIME), "Should have time");
 
         // Should use the provided time, not add a new default one
@@ -366,11 +386,14 @@ class CodeExtractionInboundProcessorTest {
 
         Map<String, Object> payload = new HashMap<>();
 
+        // Get the state to use and check after processing
+        dynamic.mapper.processor.model.ProcessingState state = processingContext.getProcessingState();
+
         // When
-        processor.processSubstitutionResult(result, processingContext, payload, mapping, TEST_TENANT);
+        processor.processSubstitutionResult(result, processingContext.getRoutingContext(), processingContext.getPayloadContext(), state, payload, mapping, TEST_TENANT, processingContext);
 
         // Then
-        Map<String, List<SubstituteValue>> cache = processingContext.getProcessingCache();
+        Map<String, List<SubstituteValue>> cache = state.getProcessingCache();
         assertTrue(cache.containsKey("measurements"), "Cache should contain measurements");
 
         // Array expansion should result in multiple cache entries
@@ -395,8 +418,11 @@ class CodeExtractionInboundProcessorTest {
 
         Map<String, Object> payload = new HashMap<>();
 
+        // Get the state to use and check after processing
+        dynamic.mapper.processor.model.ProcessingState state = processingContext.getProcessingState();
+
         // When
-        processor.processSubstitutionResult(result, processingContext, payload, mapping, TEST_TENANT);
+        processor.processSubstitutionResult(result, processingContext.getRoutingContext(), processingContext.getPayloadContext(), state, payload, mapping, TEST_TENANT, processingContext);
 
         // Then
         Set<String> alarms = processingContext.getAlarms();
@@ -514,11 +540,14 @@ class CodeExtractionInboundProcessorTest {
         Map<String, Object> payload = new HashMap<>();
         payload.put("test", "data");
 
+        // Get the state to check after processing
+        dynamic.mapper.processor.model.ProcessingState state = processingContext.getProcessingState();
+
         // When
-        processor.processSubstitutionResult(result, processingContext, payload, mapping, TEST_TENANT);
+        processor.processSubstitutionResult(result, processingContext.getRoutingContext(), processingContext.getPayloadContext(), state, payload, mapping, TEST_TENANT, processingContext);
 
         // Then - No exception should be thrown
-        assertFalse(processingContext.getIgnoreFurtherProcessing(),
+        assertFalse(state.shouldIgnoreFurtherProcessing(),
                 "Should continue processing with valid result");
 
         log.info("✅ Successfully processed with debug logging enabled");
@@ -532,11 +561,14 @@ class CodeExtractionInboundProcessorTest {
 
         Map<String, Object> payload = new HashMap<>();
 
+        // Get the state to check after processing
+        dynamic.mapper.processor.model.ProcessingState state = processingContext.getProcessingState();
+
         // When
-        processor.processSubstitutionResult(result, processingContext, payload, mapping, TEST_TENANT);
+        processor.processSubstitutionResult(result, processingContext.getRoutingContext(), processingContext.getPayloadContext(), state, payload, mapping, TEST_TENANT, processingContext);
 
         // Then
-        assertTrue(processingContext.getIgnoreFurtherProcessing(),
+        assertTrue(state.shouldIgnoreFurtherProcessing(),
                 "Should ignore further processing with null substitutions");
 
         log.info("✅ Successfully handled null substitutions");
@@ -561,11 +593,14 @@ class CodeExtractionInboundProcessorTest {
 
         Map<String, Object> payload = new HashMap<>();
 
+        // Get the state to use and check after processing
+        dynamic.mapper.processor.model.ProcessingState state = processingContext.getProcessingState();
+
         // When
-        processor.processSubstitutionResult(result, processingContext, payload, mapping, TEST_TENANT);
+        processor.processSubstitutionResult(result, processingContext.getRoutingContext(), processingContext.getPayloadContext(), state, payload, mapping, TEST_TENANT, processingContext);
 
         // Then
-        Map<String, List<SubstituteValue>> cache = processingContext.getProcessingCache();
+        Map<String, List<SubstituteValue>> cache = state.getProcessingCache();
         assertEquals(4, cache.size(), "Should have four substitutions in cache (including default time)");
         assertTrue(cache.containsKey("source"));
         assertTrue(cache.containsKey("temp.value"));

@@ -37,7 +37,12 @@ import com.dashjoin.jsonata.Functions;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.Mapping;
+import dynamic.mapper.processor.model.DeviceContext;
+import dynamic.mapper.processor.model.OutputCollector;
+import dynamic.mapper.processor.model.PayloadContext;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.model.ProcessingState;
+import dynamic.mapper.processor.model.RoutingContext;
 import dynamic.mapper.processor.model.SubstituteValue;
 import dynamic.mapper.processor.model.SubstitutionContext;
 import dynamic.mapper.processor.model.SubstitutionResult;
@@ -92,22 +97,46 @@ public abstract class AbstractCodeExtractionProcessor extends CommonProcessor {
      * @throws ProcessingException if extraction or processing fails
      */
     public void extractFromSource(ProcessingContext<?> context) throws ProcessingException {
+        // Extract focused contexts at entry point for cleaner internal API
+        RoutingContext routing = context.getRoutingContext();
+        PayloadContext<?> payload = context.getPayloadContext();
+        ProcessingState state = context.getProcessingState();
+        DeviceContext device = context.getDeviceContext();
+
+        extractFromSource(routing, payload, state, device, context);
+    }
+
+    /**
+     * NEW: Extract using focused contexts - cleaner internal implementation.
+     * @param routing Immutable routing information
+     * @param payload Immutable payload information
+     * @param state Thread-safe mutable state
+     * @param device Immutable device information (includes alarms)
+     * @param context Legacy context (still needed for GraalVM context and some fields)
+     */
+    private void extractFromSource(
+            RoutingContext routing,
+            PayloadContext<?> payload,
+            ProcessingState state,
+            DeviceContext device,
+            ProcessingContext<?> context) throws ProcessingException {
+
         Value result = null;
         Value sourceValue = null;
         Value bindings = null;
 
         try {
             Mapping mapping = context.getMapping();
-            String tenant = context.getTenant();
+            String tenant = routing.getTenant();
             ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();
 
-            Object payloadObject = context.getPayload();
+            Object payloadObject = payload.getDeserializedPayload();
 
             // Log payload if configured
             if (serviceConfiguration.getLogPayload() || mapping.getDebug()) {
-                String payload = toPrettyJsonString(payloadObject);
+                String payloadStr = toPrettyJsonString(payloadObject);
                 log.info("{} - Incoming payload (patched) in extractFromSource(): {} {} {} {}", tenant,
-                        payload,
+                        payloadStr,
                         serviceConfiguration.getLogPayload(), mapping.getDebug(),
                         serviceConfiguration.getLogPayload() || mapping.getDebug());
             }
@@ -140,17 +169,17 @@ public abstract class AbstractCodeExtractionProcessor extends CommonProcessor {
                     graalContext.eval(context.getSystemSource());
                 }
 
-                // Prepare payload - subclass-specific
-                preparePayload(context, payloadObject);
+                // Prepare payload - subclass-specific (pass focused contexts)
+                preparePayload(routing, payload, payloadObject);
 
                 String payloadAsString = Functions.string(payloadObject, false);
 
                 // Execute JavaScript function
                 result = sourceValue.execute(
                         new SubstitutionContext(
-                                context.getMapping().getGenericDeviceIdentifier(),
+                                mapping.getGenericDeviceIdentifier(),
                                 payloadAsString,
-                                context.getTopic()));
+                                routing.getTopic()));
 
                 // CRITICAL: Convert with Context still open
                 SubstitutionResult javaResult = deepConvertSubstitutionResultWithContext(
@@ -158,8 +187,8 @@ public abstract class AbstractCodeExtractionProcessor extends CommonProcessor {
                         graalContext,
                         tenant);
 
-                // Process the fully converted Java objects - subclass-specific
-                processSubstitutionResult(javaResult, context, payloadObject, mapping, tenant);
+                // Process the fully converted Java objects - subclass-specific (pass focused contexts)
+                processSubstitutionResult(javaResult, routing, payload, state, payloadObject, mapping, tenant, context);
             }
 
         } catch (Exception e) {
@@ -310,33 +339,40 @@ public abstract class AbstractCodeExtractionProcessor extends CommonProcessor {
     }
 
     /**
-     * Prepare the payload before JavaScript execution.
-     * Subclasses can add metadata, topic levels, etc.
+     * NEW: Prepare the payload using focused contexts.
+     * Subclasses can override to add metadata, topic levels, etc.
      *
-     * @param context The processing context
+     * @param routing Immutable routing information
+     * @param payload Immutable payload information
      * @param payloadObject The payload object to prepare
      */
-    protected void preparePayload(ProcessingContext<?> context, Object payloadObject) {
+    protected void preparePayload(RoutingContext routing, PayloadContext<?> payload, Object payloadObject) {
         // Default: no preparation
     }
 
     /**
-     * Process the SubstitutionResult after conversion.
+     * NEW: Process the SubstitutionResult using focused contexts.
      * Subclasses must implement their specific processing logic.
      *
      * @param result The converted substitution result
-     * @param context The processing context
+     * @param routing Immutable routing information
+     * @param payload Immutable payload information
+     * @param state Thread-safe mutable state
      * @param payloadObject The original payload object
      * @param mapping The mapping configuration
      * @param tenant The tenant identifier
+     * @param context Legacy context for alarms and other mutable fields
      * @throws ProcessingException if processing fails
      */
     protected abstract void processSubstitutionResult(
             SubstitutionResult result,
-            ProcessingContext<?> context,
+            RoutingContext routing,
+            PayloadContext<?> payload,
+            ProcessingState state,
             Object payloadObject,
             Mapping mapping,
-            String tenant) throws ProcessingException;
+            String tenant,
+            ProcessingContext<?> context) throws ProcessingException;
 
     /**
      * Handle processing errors in a subclass-specific way.

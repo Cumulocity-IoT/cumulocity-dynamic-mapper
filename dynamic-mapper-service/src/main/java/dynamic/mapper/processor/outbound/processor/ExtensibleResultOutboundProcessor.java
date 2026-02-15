@@ -33,7 +33,10 @@ import dynamic.mapper.processor.AbstractExtensibleResultProcessor;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.DeviceMessage;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
+import dynamic.mapper.processor.model.OutputCollector;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.model.ProcessingState;
+import dynamic.mapper.processor.model.RoutingContext;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -67,20 +70,24 @@ public class ExtensibleResultOutboundProcessor extends AbstractExtensibleResultP
     }
 
     @Override
-    protected void processExtensionResults(ProcessingContext<?> context) throws ProcessingException {
+    protected void processExtensionResults(
+            RoutingContext routing,
+            ProcessingState state,
+            OutputCollector output,
+            ProcessingContext<?> context) throws ProcessingException {
         // Extension results are stored in context by ExtensibleOutboundProcessor
         Object extensionResult = context.getExtensionResult();
-        String tenant = context.getTenant();
+        String tenant = routing.getTenant();
 
         if (extensionResult == null) {
             log.debug("{} - No extension result available, skipping extension result processing", tenant);
-            context.setIgnoreFurtherProcessing(true);
+            state.setIgnoreFurtherProcessing(true);
             return;
         }
 
         if (!(extensionResult instanceof DeviceMessage[])) {
             log.warn("{} - Extension result is not DeviceMessage[], skipping", tenant);
-            context.setIgnoreFurtherProcessing(true);
+            state.setIgnoreFurtherProcessing(true);
             return;
         }
 
@@ -88,7 +95,7 @@ public class ExtensibleResultOutboundProcessor extends AbstractExtensibleResultP
 
         if (results.length == 0) {
             log.info("{} - Extension result is empty, skipping processing", tenant);
-            context.setIgnoreFurtherProcessing(true);
+            state.setIgnoreFurtherProcessing(true);
             return;
         }
 
@@ -100,16 +107,16 @@ public class ExtensibleResultOutboundProcessor extends AbstractExtensibleResultP
             log.debug("{} - Set resolved publish topic from mapping: {}", tenant, mapping.getPublishTopic());
         }
 
-        // Process each DeviceMessage
+        // Process each DeviceMessage using thread-safe output collector
         for (DeviceMessage deviceMsg : results) {
-            processDeviceMessage(deviceMsg, context);
+            processDeviceMessage(deviceMsg, output, context);
         }
 
-        if (context.getRequests().isEmpty()) {
+        if (output.getRequests().isEmpty()) {
             log.info("{} - No requests generated from extension result", tenant);
-            context.setIgnoreFurtherProcessing(true);
+            state.setIgnoreFurtherProcessing(true);
         } else {
-            log.info("{} - Generated {} requests from extension result", tenant, context.getRequests().size());
+            log.info("{} - Generated {} requests from extension result", tenant, output.getRequests().size());
         }
     }
 
@@ -131,7 +138,7 @@ public class ExtensibleResultOutboundProcessor extends AbstractExtensibleResultP
     }
 
     /**
-     * Process a single DeviceMessage and convert it to a DynamicMapperRequest.
+     * NEW: Process a single DeviceMessage using OutputCollector.
      *
      * <p>This method handles:</p>
      * <ul>
@@ -142,11 +149,12 @@ public class ExtensibleResultOutboundProcessor extends AbstractExtensibleResultP
      * </ul>
      *
      * @param deviceMsg The DeviceMessage to process
+     * @param output Thread-safe output collector
      * @param context The processing context
      * @throws ProcessingException if processing fails
      */
-    private void processDeviceMessage(DeviceMessage deviceMsg, ProcessingContext<?> context)
-            throws ProcessingException {
+    private void processDeviceMessage(DeviceMessage deviceMsg, OutputCollector output,
+                                     ProcessingContext<?> context) throws ProcessingException {
 
         String tenant = context.getTenant();
 
@@ -188,8 +196,8 @@ public class ExtensibleResultOutboundProcessor extends AbstractExtensibleResultP
                     .request(payloadString)
                     .build();
 
-            // Add request to context
-            context.addRequest(request);
+            // Add request to thread-safe output collector
+            output.addRequest(request);
 
             // Set retain flag on context
             context.setRetain(deviceMsg.getRetain());

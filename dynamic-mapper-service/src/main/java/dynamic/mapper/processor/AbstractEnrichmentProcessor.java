@@ -39,6 +39,7 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.model.DataPrepContext;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.model.RoutingContext;
 import dynamic.mapper.processor.model.SimpleFlowContext;
 import dynamic.mapper.processor.model.TransformationType;
 import dynamic.mapper.service.MappingService;
@@ -71,7 +72,10 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
         ProcessingContext<?> context = exchange.getIn().getHeader("processingContext",
                 ProcessingContext.class);
 
-        String tenant = context.getTenant();
+        // Extract focused contexts
+        RoutingContext routing = context.getRoutingContext();
+
+        String tenant = routing.getTenant();
         Mapping mapping = context.getMapping();
 
         ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();

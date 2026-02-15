@@ -90,6 +90,15 @@ class EnrichmentOutboundProcessorTest {
     @Mock
     private HostAccess hostAccess;
 
+    @Mock
+    private dynamic.mapper.processor.model.RoutingContext routingContext;
+
+    @Mock
+    private dynamic.mapper.processor.model.PayloadContext<Object> payloadContext;
+
+    @Mock
+    private dynamic.mapper.processor.model.ProcessingState processingState;
+
     private EnrichmentOutboundProcessor processor;
 
     private static final String TEST_TENANT = "testTenant";
@@ -125,6 +134,13 @@ class EnrichmentOutboundProcessorTest {
         when(processingContext.getMapping()).thenReturn(mapping);
         when(processingContext.getPayload()).thenReturn("test payload");
         when(processingContext.getTopic()).thenReturn("test/topic");
+
+        // Setup focused context mocks
+        when(processingContext.getRoutingContext()).thenReturn(routingContext);
+        when(processingContext.getPayloadContext()).thenReturn(payloadContext);
+        when(processingContext.getProcessingState()).thenReturn(processingState);
+        when(routingContext.getTenant()).thenReturn(TEST_TENANT);
+        when(payloadContext.getDeserializedPayload()).thenReturn("test payload");
 
         // Setup mapping status mocks
         when(mappingService.getMappingStatus(anyString(), any(Mapping.class))).thenReturn(mappingStatus);
@@ -335,6 +351,7 @@ class EnrichmentOutboundProcessorTest {
         String differentTenant = "differentTenant";
         c8yMessage.setTenant(differentTenant);
         when(processingContext.getTenant()).thenReturn(differentTenant);
+        when(routingContext.getTenant()).thenReturn(differentTenant);
 
         // When
         processor.process(exchange);

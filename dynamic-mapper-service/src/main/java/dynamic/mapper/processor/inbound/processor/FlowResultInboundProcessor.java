@@ -18,7 +18,10 @@ import dynamic.mapper.processor.model.CumulocityObject;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ExternalId;
 import dynamic.mapper.processor.model.ExternalIdInfo;
+import dynamic.mapper.processor.model.OutputCollector;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.model.ProcessingState;
+import dynamic.mapper.processor.model.RoutingContext;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
 import dynamic.mapper.processor.util.APITopicUtil;
 import dynamic.mapper.core.C8YAgent;
@@ -40,12 +43,17 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
     }
 
     @Override
-    protected void processMessage(Object message, ProcessingContext<?> context) throws ProcessingException {
-        String tenant = context.getTenant();
+    protected void processMessage(
+            Object message,
+            RoutingContext routing,
+            ProcessingState state,
+            OutputCollector output,
+            ProcessingContext<?> context) throws ProcessingException {
+        String tenant = routing.getTenant();
         Mapping mapping = context.getMapping();
 
         if (message instanceof CumulocityObject) {
-            processCumulocityObject((CumulocityObject) message, context, tenant, mapping);
+            processCumulocityObject((CumulocityObject) message, routing, state, output, context, tenant, mapping);
         } else {
             log.debug("{} - Message is not a CumulocityObject, skipping: {}", tenant,
                     message.getClass().getSimpleName());
@@ -53,7 +61,8 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
     }
 
     @Override
-    protected void postProcessFlowResults(ProcessingContext<?> context) throws ProcessingException {
+    protected void postProcessFlowResults(ProcessingState state, OutputCollector output,
+                                         ProcessingContext<?> context) throws ProcessingException {
         Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
 
@@ -68,7 +77,7 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
                             tenant, mapping.getName(), mapping.getIdentifier(),
                             filterInventory);
                 }
-                context.setIgnoreFurtherProcessing(true);
+                state.setIgnoreFurtherProcessing(true);
             }
         }
     }
@@ -97,8 +106,17 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
         }
     }
 
-    private void processCumulocityObject(CumulocityObject cumulocityMessage, ProcessingContext<?> context,
-            String tenant, Mapping mapping) throws ProcessingException {
+    /**
+     * NEW: Process CumulocityObject using focused contexts.
+     */
+    private void processCumulocityObject(
+            CumulocityObject cumulocityMessage,
+            RoutingContext routing,
+            ProcessingState state,
+            OutputCollector output,
+            ProcessingContext<?> context,
+            String tenant,
+            Mapping mapping) throws ProcessingException {
 
         try {
             // Get the API from the cumulocityType using unified API derivation
@@ -196,13 +214,22 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
             // Convert payload to JSON string for the request
             String payloadJson = objectMapper.writeValueAsString(payload);
 
-            DynamicMapperRequest dynamicMapperRequest = ProcessingResultHelper.createAndAddDynamicMapperRequest(context,
+            // Create request without adding to context (will be added via OutputCollector)
+            DynamicMapperRequest dynamicMapperRequest = ProcessingResultHelper.createDynamicMapperRequest(
+                    context.getDeviceContext(),
+                    routing,
                     payloadJson,
-                    cumulocityMessage.getAction(), mapping);
-            // API is now set from context in createAndAddDynamicMapperRequest
+                    cumulocityMessage.getAction(),
+                    mapping);
+
+            // Set additional properties
+            dynamicMapperRequest.setApi(targetAPI);  // Set the derived API for this specific message
             dynamicMapperRequest.setSourceId(resolvedDeviceId);
             dynamicMapperRequest.setExternalId(externalIdInfo.getExternalId());
             dynamicMapperRequest.setExternalIdType(externalIdInfo.getExternalType());
+
+            // Add to output collector (thread-safe), will be synced back to context
+            output.addRequest(dynamicMapperRequest);
 
             log.debug("{} - Created C8Y request: API={}, action={}, deviceId={}",
                     tenant, targetAPI.name, cumulocityMessage.getAction(), resolvedDeviceId);

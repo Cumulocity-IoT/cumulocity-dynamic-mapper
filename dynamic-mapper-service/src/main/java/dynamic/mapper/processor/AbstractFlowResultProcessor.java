@@ -31,7 +31,10 @@ import org.apache.camel.Exchange;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.model.Mapping;
+import dynamic.mapper.processor.model.OutputCollector;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.model.ProcessingState;
+import dynamic.mapper.processor.model.RoutingContext;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -61,28 +64,51 @@ public abstract class AbstractFlowResultProcessor extends CommonProcessor {
     public void process(Exchange exchange) throws Exception {
         ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
 
-        String tenant = context.getTenant();
+        // Extract focused contexts at entry point
+        RoutingContext routing = context.getRoutingContext();
+        ProcessingState state = context.getProcessingState();
+        OutputCollector output = new OutputCollector();
+
+        String tenant = routing.getTenant();
         Mapping mapping = context.getMapping();
 
         try {
-            processFlowResults(context);
-            postProcessFlowResults(context);
+            processFlowResults(routing, state, output, context);
+            postProcessFlowResults(state, output, context);
+
+            // Sync back to context for backward compatibility
+            syncOutputToContext(output, context);
         } catch (Exception e) {
             handleProcessingError(e, context, tenant, mapping);
         }
     }
 
     /**
+     * Sync OutputCollector contents back to ProcessingContext for backward compatibility.
+     * Can be removed once all callers migrate to reading from OutputCollector directly.
+     */
+    private void syncOutputToContext(OutputCollector output, ProcessingContext<?> context) {
+        if (!output.getRequests().isEmpty()) {
+            context.getRequests().addAll(output.getRequests());
+        }
+    }
+
+    /**
      * Process flow results - common logic for both inbound and outbound.
      * Normalizes flow result to a list and processes each message.
+     * NEW: Uses focused contexts internally.
      */
-    private void processFlowResults(ProcessingContext<?> context) throws ProcessingException {
+    private void processFlowResults(
+            RoutingContext routing,
+            ProcessingState state,
+            OutputCollector output,
+            ProcessingContext<?> context) throws ProcessingException {
         Object flowResult = context.getFlowResult();
-        String tenant = context.getTenant();
+        String tenant = routing.getTenant();
 
         if (flowResult == null) {
             log.debug("{} - No flow result available, skipping flow result processing", tenant);
-            context.setIgnoreFurtherProcessing(true);
+            state.setIgnoreFurtherProcessing(true);
             return;
         }
 
@@ -90,16 +116,16 @@ public abstract class AbstractFlowResultProcessor extends CommonProcessor {
 
         if (messagesToProcess.isEmpty()) {
             log.info("{} - Flow result is empty, skipping processing", tenant);
-            context.setIgnoreFurtherProcessing(true);
+            state.setIgnoreFurtherProcessing(true);
             return;
         }
 
-        // Process each message
+        // Process each message using focused contexts
         for (Object message : messagesToProcess) {
-            processMessage(message, context);
+            processMessage(message, routing, state, output, context);
         }
 
-        handleEmptyRequests(context, tenant);
+        handleEmptyRequests(output, state, tenant);
     }
 
     /**
@@ -118,13 +144,14 @@ public abstract class AbstractFlowResultProcessor extends CommonProcessor {
 
     /**
      * Handle case where no requests were generated from flow results.
+     * NEW: Uses focused contexts.
      */
-    private void handleEmptyRequests(ProcessingContext<?> context, String tenant) {
-        if (context.getRequests().isEmpty()) {
+    private void handleEmptyRequests(OutputCollector output, ProcessingState state, String tenant) {
+        if (output.getRequests().isEmpty()) {
             log.info("{} - No requests generated from flow result", tenant);
-            context.setIgnoreFurtherProcessing(true);
+            state.setIgnoreFurtherProcessing(true);
         } else {
-            log.info("{} - Generated {} requests from flow result", tenant, context.getRequests().size());
+            log.info("{} - Generated {} requests from flow result", tenant, output.getRequests().size());
         }
     }
 
@@ -151,24 +178,34 @@ public abstract class AbstractFlowResultProcessor extends CommonProcessor {
     }
 
     /**
-     * Process a single message from the flow result.
+     * NEW: Process a single message using focused contexts.
      * Subclasses must implement this to handle their specific message types.
      *
      * @param message The message to process
-     * @param context The processing context
+     * @param routing Immutable routing information
+     * @param state Thread-safe mutable state
+     * @param output Thread-safe output collector
+     * @param context Legacy context for any remaining needs
      * @throws ProcessingException if processing fails
      */
-    protected abstract void processMessage(Object message, ProcessingContext<?> context)
-            throws ProcessingException;
+    protected abstract void processMessage(
+            Object message,
+            RoutingContext routing,
+            ProcessingState state,
+            OutputCollector output,
+            ProcessingContext<?> context) throws ProcessingException;
 
     /**
-     * Hook for subclass-specific post-processing after all flow results are processed.
+     * NEW: Hook for subclass-specific post-processing using focused contexts.
      * Default implementation does nothing.
      *
-     * @param context The processing context
+     * @param state Thread-safe mutable state
+     * @param output Thread-safe output collector
+     * @param context Legacy context for any remaining needs
      * @throws ProcessingException if post-processing fails
      */
-    protected void postProcessFlowResults(ProcessingContext<?> context) throws ProcessingException {
+    protected void postProcessFlowResults(ProcessingState state, OutputCollector output,
+                                         ProcessingContext<?> context) throws ProcessingException {
         // Default: no post-processing
     }
 
