@@ -21,7 +21,11 @@
 /**
  * TypeScript type definitions for the Smart Function Runtime API.
  *
+ * This module provides type definitions compatible with Cumulocity IDP (IoT Data Plane) DataPrep standard,
+ * with Dynamic Mapper enhancements for device enrichment, configuration access, and DTM integration.
+ *
  * These types provide:
+ * - IDP DataPrep standard compatibility
  * - IntelliSense/autocomplete support in IDEs
  * - Static type checking for Smart Functions
  * - Proper types for unit testing and mocking
@@ -32,12 +36,51 @@
  */
 
 // ============================================================================
-// SMART FUNCTION INPUT MESSAGE API
+// IDP DATAPREP BASE TYPES (Cumulocity Standard)
+// ============================================================================
+
+/**
+ * Standard IDP DataPrep context interface.
+ * Minimal context with state management only.
+ *
+ * Dynamic Mapper extends this with additional capabilities.
+ * See {@link DynamicMapperContext} for the extended version.
+ *
+ * @see https://github.com/Cumulocity-IoT/cumulocity-dynamic-mapper/blob/main/attic/idp/dataprep.ts
+ */
+export interface DataPrepContext {
+  /** Runtime identifier - "dynamic-mapper" for Dynamic Mapper */
+  readonly runtime: string;
+
+  /**
+   * Get state value by key.
+   * State is not shared across data plane nodes, so only use it for device-specific state.
+   *
+   * @param key - The state key
+   * @param defaultValue - Optional default value if key doesn't exist
+   * @returns The state value or default
+   */
+  getState(key: string, defaultValue?: any): any;
+
+  /**
+   * Set state value by key.
+   * State persists across invocations but is not shared across flow instances.
+   *
+   * @param key - The state key
+   * @param value - The value to store
+   */
+  setState(key: string, value: any): void;
+}
+
+// ============================================================================
+// DYNAMIC MAPPER EXTENDED TYPES
 // ============================================================================
 
 /**
  * Represents the payload of a Smart Function message.
  * Supports both object-style access (bracket notation) and Map-like API (.get()).
+ *
+ * In Dynamic Mapper, payloads are pre-deserialized from JSON for convenience.
  *
  * @example
  * // Object-style access
@@ -68,56 +111,156 @@ export interface SmartFunctionPayload {
 }
 
 /**
- * Input message passed to the Smart Function onMessage handler.
- * Provides access to the message payload, topic, and message ID.
+ * Dynamic Mapper's enhanced device message.
+ *
+ * Note: In IDP standard, DeviceMessage has `payload: Uint8Array`.
+ * In Dynamic Mapper, we pre-deserialize JSON payloads to objects for convenience.
+ * This interface represents the input message after deserialization.
  *
  * @example
- * function onMessage(msg, context) {
- *   const payload = msg.getPayload();
- *   const topic = msg.getTopic();
- *   const messageId = msg.getMessageId();
+ * function onMessage(msg: DynamicMapperDeviceMessage, context: DynamicMapperContext) {
+ *   const temp = msg.payload.temperature;  // Already parsed!
+ *   const topic = msg.topic;
+ *   const clientId = msg.clientId;
  * }
  */
-export interface SmartFunctionInputMessage {
+export interface DynamicMapperDeviceMessage {
   /**
-   * Retrieves the message payload.
-   * The payload supports both object-style access and Map-like API.
+   * Pre-deserialized JSON payload.
    *
-   * @returns The message payload
-   *
-   * @example
-   * const payload = msg.getPayload();
-   * const temp = payload["sensorData"]["temp_val"];
-   * const messageId = payload.get("messageId");
+   * Note: Differs from IDP standard (Uint8Array).
+   * Dynamic Mapper automatically deserializes JSON payloads to objects.
    */
-  getPayload(): SmartFunctionPayload;
+  payload: SmartFunctionPayload;
+
+  /** The topic on the transport (e.g., MQTT topic) */
+  topic: string;
+
+  /** Transport client ID (e.g., MQTT client ID) */
+  clientId?: string;
+
+  /** Identifier for the source/destination transport (e.g., "mqtt", "kafka") */
+  transportId?: string;
+
+  /** Transport-specific fields/properties/headers */
+  transportFields?: { [key: string]: any };
+
+  /** Timestamp of the incoming message */
+  time?: Date;
+}
+
+/**
+ * Dynamic Mapper's enhanced runtime context.
+ * Extends standard IDP DataPrepContext with additional capabilities for:
+ * - Configuration access
+ * - Device enrichment/lookups from inventory cache
+ * - DTM (Digital Twin Manager) integration
+ *
+ * @example
+ * function onMessage(msg: DynamicMapperDeviceMessage, context: DynamicMapperContext) {
+ *   // State management (standard)
+ *   context.setState("lastValue", 42);
+ *   const lastValue = context.getState("lastValue");
+ *
+ *   // Configuration access (enhanced)
+ *   const config = context.getConfig();
+ *   const clientId = context.getClientId();
+ *
+ *   // Device enrichment (enhanced)
+ *   const device = context.getManagedObject({
+ *     externalId: clientId!,
+ *     type: "c8y_Serial"
+ *   });
+ * }
+ */
+export interface DynamicMapperContext extends DataPrepContext {
+  /** Runtime identifier for Dynamic Mapper */
+  readonly runtime: "dynamic-mapper";
 
   /**
-   * Retrieves the message topic (e.g., MQTT topic).
-   * Optional - may not be available in all contexts.
+   * Retrieves all state as a single object.
+   * Useful for debugging or logging all state at once.
    *
-   * @returns The topic string, or undefined if not available
+   * @returns An object containing all state key-value pairs
    *
    * @example
-   * const topic = msg.getTopic();
-   * const topicLevels = topic.split('/');
+   * console.log("All state:", context.getStateAll());
    */
-  getTopic?(): string;
+  getStateAll(): Record<string, any>;
 
   /**
-   * Retrieves the unique message identifier.
-   * Optional - may not be available in all contexts.
+   * Retrieves the entire configuration map for the context.
+   * Configuration is set externally and provides read-only settings.
    *
-   * @returns The message ID, or undefined if not available
+   * @returns A record containing the context's configuration
    *
    * @example
-   * const messageId = msg.getMessageId();
+   * const config = context.getConfig();
+   * const threshold = config.temperatureThreshold || 30;
    */
-  getMessageId?(): string;
+  getConfig(): Record<string, any>;
+
+  /**
+   * Retrieves the MQTT client ID or transport client identifier.
+   *
+   * @returns The client ID, or undefined if not available
+   *
+   * @example
+   * const clientId = context.getClientId();
+   */
+  getClientId(): string | undefined;
+
+  /**
+   * Looks up a device from the inventory cache by internal Cumulocity device ID.
+   *
+   * @param deviceId - The internal Cumulocity device ID to look up
+   * @returns The managed object from inventory, or null if not found
+   *
+   * @example
+   * const device = context.getManagedObjectByDeviceId("12345");
+   * if (device) {
+   *   console.log("Device name:", device.name);
+   *   console.log("Device type:", device.type);
+   * }
+   */
+  getManagedObjectByDeviceId(deviceId: string): any;
+
+  /**
+   * Looks up a device from the inventory cache by external ID.
+   * This is the recommended way to look up devices by their external identifiers.
+   *
+   * @param externalId - The external ID to look up (with type)
+   * @returns The managed object from inventory, or null if not found
+   *
+   * @example
+   * const device = context.getManagedObject({
+   *   externalId: "SENSOR-001",
+   *   type: "c8y_Serial"
+   * });
+   *
+   * if (device) {
+   *   console.log("Device:", device.name);
+   *   // Access custom fragments
+   *   const sensorType = device?.c8y_Sensor?.type;
+   * }
+   */
+  getManagedObject(externalId: ExternalId): any;
+
+  /**
+   * Looks up DTM (Digital Twin Manager) Asset properties by asset ID.
+   *
+   * @param assetId - The ID of the asset to look up
+   * @returns A record containing the asset properties
+   *
+   * @example
+   * const asset = context.getDTMAsset("asset-123");
+   * console.log("Asset properties:", asset);
+   */
+  getDTMAsset(assetId: string): Record<string, any>;
 }
 
 // ============================================================================
-// SMART FUNCTION RUNTIME CONTEXT API
+// EXTERNAL ID TYPES
 // ============================================================================
 
 /**
@@ -710,34 +853,24 @@ export interface DeviceMessage {
   sourceId?: string;
 }
 
-/**
- * Union type representing all possible action objects that can be returned
- * from a Smart Function.
- *
- * Smart Functions can return either:
- * - CumulocityObject - For sending data to Cumulocity APIs
- * - DeviceMessage - For sending data back to devices/brokers
- */
-export type C8yAction = CumulocityObject | DeviceMessage;
-
 // ============================================================================
-// SMART FUNCTION TYPE
+// SMART FUNCTION TYPES
 // ============================================================================
 
 /**
- * The Smart Function signature.
+ * Inbound Smart Function signature.
  *
- * A Smart Function is a JavaScript function that processes incoming messages
- * and returns one or more actions to be executed.
+ * Processes incoming device messages from the broker and returns Cumulocity objects
+ * to be sent to the Cumulocity platform.
  *
- * @param inputMsg - The incoming message with payload and metadata
+ * @param msg - The incoming device message from the broker (pre-deserialized)
  * @param context - Runtime context providing state, config, and device lookups
- * @returns A single action, an array of actions, or an empty array
+ * @returns Cumulocity objects (measurements, events, alarms, etc.) or empty array
  *
  * @example
- * // Basic inbound Smart Function
- * function onMessage(msg, context) {
- *   const payload = msg.getPayload();
+ * // Basic inbound Smart Function (Broker → Cumulocity)
+ * const onMessage: SmartFunctionIn = (msg, context) => {
+ *   const payload = msg.payload;
  *   const clientId = context.getClientId();
  *
  *   return [{
@@ -747,31 +880,18 @@ export type C8yAction = CumulocityObject | DeviceMessage;
  *       type: "c8y_TemperatureMeasurement",
  *       time: new Date().toISOString(),
  *       c8y_Temperature: {
- *         T: { value: payload.get("temperature"), unit: "C" }
+ *         T: { value: payload.temperature, unit: "C" }
  *       }
  *     },
- *     externalSource: [{ type: "c8y_Serial", externalId: clientId }]
+ *     externalSource: [{ type: "c8y_Serial", externalId: clientId! }]
  *   }];
- * }
+ * };
  *
  * @example
- * // Outbound Smart Function
- * function onMessage(msg, context) {
- *   const payload = msg.getPayload();
- *
- *   return {
- *     topic: `measurements/${payload["source"]["id"]}`,
- *     payload: new TextEncoder().encode(JSON.stringify({
- *       temp: payload["c8y_TemperatureMeasurement"]["T"]["value"]
- *     }))
- *   };
- * }
- *
- * @example
- * // Smart Function with enrichment
- * function onMessage(msg, context) {
- *   const payload = msg.getPayload();
- *   const clientId = context.getClientId();
+ * // Inbound with device enrichment
+ * const onMessage: SmartFunctionIn = (msg, context) => {
+ *   const payload = msg.payload;
+ *   const clientId = context.getClientId()!;
  *
  *   // Lookup device for enrichment
  *   const device = context.getManagedObject({
@@ -779,33 +899,85 @@ export type C8yAction = CumulocityObject | DeviceMessage;
  *     type: "c8y_Serial"
  *   });
  *
- *   // Determine measurement type based on device config
- *   const isVoltage = device?.c8y_Sensor?.type?.voltage === true;
+ *   const measurementType = device?.c8y_CustomConfig?.measurementType
+ *     || "c8y_TemperatureMeasurement";
  *
  *   return [{
  *     cumulocityType: "measurement",
  *     action: "create",
- *     payload: isVoltage ? {
- *       type: "c8y_VoltageMeasurement",
+ *     payload: {
+ *       type: measurementType,
  *       time: new Date().toISOString(),
- *       c8y_Voltage: {
- *         voltage: { value: payload.get("val"), unit: "V" }
- *       }
- *     } : {
- *       type: "c8y_CurrentMeasurement",
- *       time: new Date().toISOString(),
- *       c8y_Current: {
- *         current: { value: payload.get("val"), unit: "A" }
+ *       c8y_Temperature: {
+ *         T: { value: payload.temperature, unit: "C" }
  *       }
  *     },
  *     externalSource: [{ type: "c8y_Serial", externalId: clientId }]
  *   }];
- * }
+ * };
  */
-export type SmartFunction = (
-  inputMsg: SmartFunctionInputMessage,
-  context: SmartFunctionRuntimeContext
-) => C8yAction[] | C8yAction | [];
+export type SmartFunctionIn = (
+  msg: DynamicMapperDeviceMessage,
+  context: DynamicMapperContext
+) => Array<CumulocityObject> | CumulocityObject | [];
+
+/**
+ * Outbound Smart Function signature.
+ *
+ * Processes Cumulocity objects from the platform and returns device messages
+ * to be sent to the broker.
+ *
+ * @param msg - The Cumulocity object from the platform (measurement, operation, etc.)
+ * @param context - Runtime context providing state, config, and device lookups
+ * @returns Device messages to send to the broker or empty array
+ *
+ * @example
+ * // Outbound Smart Function (Cumulocity → Broker)
+ * const onMessage: SmartFunctionOut = (msg, context) => {
+ *   const payload = msg.payload;
+ *   const sourceId = payload["source"]?.["id"];
+ *
+ *   return {
+ *     topic: `measurements/${sourceId}`,
+ *     payload: new TextEncoder().encode(JSON.stringify({
+ *       temp: payload["c8y_TemperatureMeasurement"]?.["T"]?.["value"],
+ *       timestamp: new Date().toISOString()
+ *     }))
+ *   };
+ * };
+ *
+ * @example
+ * // Outbound with device lookup
+ * const onMessage: SmartFunctionOut = (msg, context) => {
+ *   const payload = msg.payload;
+ *   const sourceId = payload["source"]?.["id"];
+ *
+ *   // Get device external ID for topic routing
+ *   const device = context.getManagedObjectByDeviceId(sourceId);
+ *   const externalId = device?.externalIds?.[0]?.externalId || sourceId;
+ *
+ *   return {
+ *     topic: `measurements/${externalId}`,
+ *     payload: new TextEncoder().encode(JSON.stringify(payload))
+ *   };
+ * };
+ */
+export type SmartFunctionOut = (
+  msg: CumulocityObject,
+  context: DynamicMapperContext
+) => Array<DeviceMessage> | DeviceMessage | [];
+
+/**
+ * Smart Function signature (union of inbound and outbound).
+ *
+ * A Smart Function can be either:
+ * - **SmartFunctionIn**: Processes device messages from broker → Cumulocity objects
+ * - **SmartFunctionOut**: Processes Cumulocity objects → device messages to broker
+ *
+ * Use the specific types (SmartFunctionIn or SmartFunctionOut) for better type safety
+ * when the direction is known.
+ */
+export type SmartFunction = SmartFunctionIn | SmartFunctionOut;
 
 // ============================================================================
 // HELPER TYPES FOR TESTING
@@ -833,29 +1005,33 @@ export function createMockPayload(data: Record<string, any>): SmartFunctionPaylo
 
 /**
  * Mock input message for testing Smart Functions.
+ * Creates a DynamicMapperDeviceMessage with pre-deserialized payload.
  *
  * @example
  * const mockMsg = createMockInputMessage({
  *   messageId: "msg-123",
  *   temperature: 25.5
- * }, "device/temp/data", "msg-123");
+ * }, "device/temp/data", "client-123");
  */
 export function createMockInputMessage(
   payloadData: Record<string, any>,
-  topic?: string,
-  messageId?: string
-): SmartFunctionInputMessage {
+  topic: string = "test/topic",
+  clientId?: string
+): DynamicMapperDeviceMessage {
   const payload = createMockPayload(payloadData);
 
   return {
-    getPayload: () => payload,
-    getTopic: topic ? () => topic : undefined,
-    getMessageId: messageId ? () => messageId : undefined
+    payload,
+    topic,
+    clientId,
+    transportId: "mqtt",
+    time: new Date()
   };
 }
 
 /**
  * Mock runtime context for testing Smart Functions.
+ * Creates a DynamicMapperContext with all enhanced capabilities.
  *
  * @example
  * const mockContext = createMockRuntimeContext({
@@ -874,15 +1050,16 @@ export function createMockRuntimeContext(options: {
   devices?: Record<string, any>;
   externalIdMap?: Record<string, any>;
   dtmAssets?: Record<string, any>;
-}): SmartFunctionRuntimeContext {
+}): DynamicMapperContext {
   const state: Record<string, any> = {};
 
   return {
+    runtime: "dynamic-mapper",
     setState(key: string, value: any) {
       state[key] = value;
     },
-    getState(key: string) {
-      return state[key];
+    getState(key: string, defaultValue?: any) {
+      return state[key] ?? defaultValue;
     },
     getStateAll() {
       return { ...state };
