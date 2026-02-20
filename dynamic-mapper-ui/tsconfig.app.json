@@ -11,7 +11,7 @@
   ],
   "include": [
     "src/**/*.ts"
-  ],
+, "../dynamic-mapper-smart-function/src/types/smart-function-runtime.types.spec.ts"  ],
   "exclude": [
     "../ngx-components/**/*.spec.ts"
   ]

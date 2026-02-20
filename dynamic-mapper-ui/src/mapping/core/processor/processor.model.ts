@@ -18,8 +18,8 @@
  * @authors Christof Strack
  */
 import * as _ from 'lodash';
-import { getTypeOf, randomIdAsString } from '../../../mapping/shared/util';
-import { API, Mapping, Substitution, RepairStrategy, ContentChanges } from '../../../shared';
+import { randomIdAsString } from '../../../mapping/shared/util';
+import { API, Mapping, RepairStrategy, ContentChanges } from '../../../shared';
 import { Content } from 'vanilla-jsoneditor';
 import {
   IdentityPaths,
@@ -87,57 +87,6 @@ export const isNumeric = (num: any) => (typeof num === 'number' || (typeof num =
   !isNaN(num as number);
 
 
-export function processSubstitute(processingCacheEntry: SubstituteValue[], extractedSourceContent: any, substitution: Substitution) {
-  if (getTypeOf(extractedSourceContent) == 'null') {
-    processingCacheEntry.push({
-      value: extractedSourceContent,
-      type: SubstituteValueType.IGNORE,
-      repairStrategy: substitution.repairStrategy
-    });
-    // Note: This is a utility function without ProcessingContext access
-    // Consider refactoring to accept logger or context parameter if structured logging needed
-    console.error(
-      'No substitution for: ',
-      substitution.pathSource
-    );
-  } else if (getTypeOf(extractedSourceContent) == 'String') {
-    processingCacheEntry.push({
-      value: extractedSourceContent,
-      type: SubstituteValueType.TEXTUAL,
-      repairStrategy: substitution.repairStrategy
-    });
-  } else if (getTypeOf(extractedSourceContent) == 'Number') {
-    processingCacheEntry.push({
-      value: extractedSourceContent,
-      type: SubstituteValueType.NUMBER,
-      repairStrategy: substitution.repairStrategy
-    });
-  } else if (getTypeOf(extractedSourceContent) == 'Array') {
-    processingCacheEntry.push({
-      value: extractedSourceContent,
-      type: SubstituteValueType.ARRAY,
-      repairStrategy: substitution.repairStrategy
-    });
-  } else if (getTypeOf(extractedSourceContent) == 'Object') {
-    processingCacheEntry.push({
-      value: extractedSourceContent,
-      type: SubstituteValueType.OBJECT,
-      repairStrategy: substitution.repairStrategy
-    });
-  } else if (getTypeOf(extractedSourceContent) == 'Boolean') {
-    processingCacheEntry.push({
-      value: extractedSourceContent,
-      type: SubstituteValueType.BOOLEAN,
-      repairStrategy: substitution.repairStrategy
-    });
-  } else {
-    // Note: This is a utility function without ProcessingContext access
-    // Consider refactoring to accept logger or context parameter if structured logging needed
-    console.warn(
-      `Since result is not (number, array, textual, object), it is ignored: ${extractedSourceContent}`
-    );
-  }
-}
 // Re-export constants for backward compatibility
 export {
   KEY_TIME,
@@ -150,39 +99,6 @@ export {
   TopicWildcards,
   PROTECTED_TOKENS
 } from './processor.constants';
-
-
-export function substituteValueInPayload(substitute: SubstituteValue, payloadTarget: JSON, pathTarget: string) {
-  const subValueMissingOrNull: boolean = !substitute || substitute.value == null;
-
-  if (pathTarget == '$') {
-    Object.keys(getTypedValue(substitute)).forEach((key) => {
-      payloadTarget[key] = getTypedValue(substitute)[key as keyof unknown];
-    });
-  } else {
-    if ((substitute.repairStrategy == RepairStrategy.REMOVE_IF_MISSING_OR_NULL &&
-      subValueMissingOrNull)) {
-      _.unset(payloadTarget, pathTarget);
-    } else if (substitute.repairStrategy == RepairStrategy.CREATE_IF_MISSING) {
-      // const pathIsNested: boolean = keys.includes('.') || keys.includes('[');
-      // if (pathIsNested) {
-      //   throw new Error('Can only create new nodes on the root level!');
-      // }
-      // jsonObject.put("$", keys, sub.typedValue());
-      _.set(payloadTarget, pathTarget, getTypedValue(substitute));
-    } else {
-      if (_.has(payloadTarget, pathTarget)) {
-        _.set(payloadTarget, pathTarget, getTypedValue(substitute));
-      } else {
-        // alert.warning(`Message could NOT be parsed, ignoring this message: Path: ${keys} not found!`);
-        throw new Error(
-          `Message could NOT be parsed, ignoring this message: Path: ${pathTarget} not found!`
-        );
-      }
-    }
-  }
-}
-
 
 export function patchC8YTemplateForTesting(template: object, mapping: Mapping) {
   const identifier = randomIdAsString();
