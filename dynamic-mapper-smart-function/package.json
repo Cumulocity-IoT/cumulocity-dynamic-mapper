@@ -1,7 +1,7 @@
 {
-  "name": "@cumulocity/smart-function-examples",
+  "name": "@c8y/dynamic-mapper-smart-function",
   "version": "1.0.0",
-  "description": "TypeScript examples for Cumulocity Dynamic Mapper Smart Functions",
+  "description": "Smart Function API type definitions and examples for Cumulocity Dynamic Mapper",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {

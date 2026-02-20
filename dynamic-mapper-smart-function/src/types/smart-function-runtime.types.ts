@@ -801,35 +801,6 @@ export interface DeviceMessage {
  *     externalSource: [{ type: "c8y_Serial", externalId: clientId! }]
  *   }];
  * };
- *
- * @example
- * // Inbound with device enrichment
- * const onMessage: SmartFunctionIn = (msg, context) => {
- *   const payload = msg.payload;
- *   const clientId = context.getClientId()!;
- *
- *   // Lookup device for enrichment
- *   const device = context.getManagedObject({
- *     externalId: clientId,
- *     type: "c8y_Serial"
- *   });
- *
- *   const measurementType = device?.c8y_CustomConfig?.measurementType
- *     || "c8y_TemperatureMeasurement";
- *
- *   return [{
- *     cumulocityType: "measurement",
- *     action: "create",
- *     payload: {
- *       type: measurementType,
- *       time: new Date().toISOString(),
- *       c8y_Temperature: {
- *         T: { value: payload.temperature, unit: "C" }
- *       }
- *     },
- *     externalSource: [{ type: "c8y_Serial", externalId: clientId }]
- *   }];
- * };
  */
 export type SmartFunctionIn = (
   msg: DynamicMapperDeviceMessage,
@@ -889,21 +860,6 @@ export interface OutboundMessage {
  *       temp: msg.payload["c8y_TemperatureMeasurement"]?.["T"]?.["value"],
  *       timestamp: new Date().toISOString()
  *     }))
- *   };
- * };
- *
- * @example
- * // Outbound with device lookup and .get() API
- * const onMessage: SmartFunctionOut = (msg, context) => {
- *   const sourceId = msg.payload["source"]["id"];
- *
- *   // Get device external ID for topic routing
- *   const device = context.getManagedObjectByDeviceId(sourceId);
- *   const externalId = device?.externalIds?.[0]?.externalId || sourceId;
- *
- *   return {
- *     topic: `measurements/${externalId}`,
- *     payload: new TextEncoder().encode(JSON.stringify(msg.payload))
  *   };
  * };
  */

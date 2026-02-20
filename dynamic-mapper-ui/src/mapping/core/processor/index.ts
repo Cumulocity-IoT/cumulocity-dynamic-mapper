@@ -38,7 +38,7 @@
 // IDP DataPrep base context (standard interface)
 export {
   DataPrepContext
-} from './smart-function-runtime.types';
+} from '@c8y/dynamic-mapper-smart-function';
 
 // Smart Function types
 export {
@@ -46,20 +46,20 @@ export {
   SmartFunctionOut,
   SmartFunction,
   SmartFunctionPayload
-} from './smart-function-runtime.types';
+} from '@c8y/dynamic-mapper-smart-function';
 
 // Dynamic Mapper message and context types
 export {
   DynamicMapperDeviceMessage,
   DynamicMapperContext,
   OutboundMessage
-} from './smart-function-runtime.types';
+} from '@c8y/dynamic-mapper-smart-function';
 
 // External ID types
 export {
   ExternalId,
   ExternalSource
-} from './smart-function-runtime.types';
+} from '@c8y/dynamic-mapper-smart-function';
 
 // Cumulocity domain object types
 export {
@@ -72,7 +72,7 @@ export {
   C8yOperationStatus,
   C8yManagedObject,
   C8ySourceReference
-} from './smart-function-runtime.types';
+} from '@c8y/dynamic-mapper-smart-function';
 
 // Smart Function output/input object types
 export {
@@ -80,14 +80,14 @@ export {
   DeviceMessage,
   C8yObjectAction,
   C8yObjectType
-} from './smart-function-runtime.types';
+} from '@c8y/dynamic-mapper-smart-function';
 
 // Flow function types
 export {
   InputMessage,
   OutputMessage,
   MappingError
-} from './smart-function-runtime.types';
+} from '@c8y/dynamic-mapper-smart-function';
 
 // Testing helpers
 export {
@@ -95,4 +95,4 @@ export {
   createMockInputMessage,
   createMockOutboundMessage,
   createMockRuntimeContext
-} from './smart-function-runtime.types';
+} from '@c8y/dynamic-mapper-smart-function';

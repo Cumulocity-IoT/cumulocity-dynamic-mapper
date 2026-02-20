@@ -15,5 +15,5 @@
  * This prevents duplication and ensures types stay in sync.
  */
 
-// Re-export all types from the UI project (single source of truth)
-export * from '../../../dynamic-mapper-ui/src/mapping/core/processor/smart-function-runtime.types';
+// Export all Smart Function API types — this is the authoritative source.
+export * from './smart-function-runtime.types';
