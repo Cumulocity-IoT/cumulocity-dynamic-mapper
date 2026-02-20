@@ -17,9 +17,9 @@
  */
 
 import {
-  SmartFunction,
-  SmartFunctionInputMessage,
-  SmartFunctionRuntimeContext,
+  SmartFunctionIn,
+  DynamicMapperDeviceMessage,
+  DynamicMapperContext,
   CumulocityObject,
   C8yManagedObject,
 } from '../types';
@@ -47,12 +47,12 @@ import {
  * - Looking up devices by device ID and external ID
  * - Creating measurements with proper typing
  */
-const onMessage: SmartFunction = (
-  msg: SmartFunctionInputMessage,
-  context: SmartFunctionRuntimeContext
+const onMessage: SmartFunctionIn = (
+  msg: DynamicMapperDeviceMessage,
+  context: DynamicMapperContext
 ): CumulocityObject[] => {
-  // Get payload - supports both object-style and .get() access
-  const payload = msg.getPayload();
+  // Access payload directly — already pre-deserialized from JSON
+  const payload = msg.payload;
 
   // Log context and payload for debugging
   console.log('Context state:', context.getStateAll());

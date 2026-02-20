@@ -257,6 +257,22 @@ export interface DynamicMapperContext extends DataPrepContext {
    * console.log("Asset properties:", asset);
    */
   getDTMAsset(assetId: string): Record<string, any>;
+
+  /**
+   * Adds a warning message to the processing context.
+   *
+   * Warnings are collected and surfaced to users for debugging.
+   * Use this for non-fatal issues that should be brought to attention
+   * (e.g., fallback logic applied, optional field missing).
+   *
+   * @param warning - The warning message
+   *
+   * @example
+   * if (!device) {
+   *   context.addWarning("Device not found in cache, using implicit creation");
+   * }
+   */
+  addWarning(warning: string): void;
 }
 
 // ============================================================================
@@ -620,6 +636,8 @@ export interface CumulocityObject {
    * Common fields:
    * - deviceName: Name for the new device
    * - deviceType: Type for the new device
+   * - processingMode: "PERSISTENT" or "TRANSIENT"
+   * - attachmentName/Type/Data: for EVENT attachments
    *
    * @example
    * contextData: {
@@ -627,7 +645,7 @@ export interface CumulocityObject {
    *   deviceType: "c8y_Sensor"
    * }
    */
-  contextData?: object;
+  contextData?: Record<string, string>;
 
   /**
    * Explicitly set the Cumulocity device ID (sourceId) for this object.
@@ -693,13 +711,23 @@ export interface DeviceMessage {
   clientId?: string;
 
   /**
+   * Set the MQTT retain flag on the outgoing message.
+   * When true, the broker retains the last message on the topic for new subscribers.
+   *
+   * @example true   // retain last message on topic
+   * @example false  // do not retain (default)
+   */
+  retain?: boolean;
+
+  /**
    * Dictionary of transport-specific fields/properties/headers.
    *
-   * For Kafka, use "key" to define the record key.
+   * Values must be strings. For Kafka, use "key" to define the record key.
    *
    * @example { "key": "device-123" }
+   * @example { "qos": "1", "messageExpiryInterval": "3600" }
    */
-  transportFields?: { [key: string]: any };
+  transportFields?: { [key: string]: string };
 
   /**
    * Timestamp of the message.
@@ -809,35 +837,65 @@ export type SmartFunctionIn = (
 ) => Array<CumulocityObject> | CumulocityObject | [];
 
 /**
+ * Message received by an outbound Smart Function.
+ *
+ * At runtime the Java backend wraps the Cumulocity platform event (measurement,
+ * operation, alarm, etc.) in the same `DeviceMessage` Java class used for inbound
+ * messages. This means `payload` is always a {@link SmartFunctionPayload} that supports
+ * both direct property access (`payload["source"]["id"]`) and Map-like access
+ * (`payload.get("messageId")`).
+ *
+ * @example
+ * const onMessage: SmartFunctionOut = (msg, context) => {
+ *   const sourceId = msg.payload["source"]["id"];
+ *   const temp    = msg.payload.get("c8y_TemperatureMeasurement")?.T?.value;
+ * };
+ */
+export interface OutboundMessage {
+  /**
+   * The Cumulocity event/measurement/alarm payload, pre-deserialized.
+   * Supports both bracket access and the Map-like `.get()` API.
+   */
+  payload: SmartFunctionPayload;
+
+  /** Cumulocity API type of the triggering event, if available. */
+  cumulocityType?: C8yObjectType;
+
+  /** Internal Cumulocity device ID of the originating device, if available. */
+  sourceId?: string;
+}
+
+/**
  * Outbound Smart Function signature.
  *
- * Processes Cumulocity objects from the platform and returns device messages
+ * Processes a Cumulocity platform event and returns device messages
  * to be sent to the broker.
  *
- * @param msg - The Cumulocity object from the platform (measurement, operation, etc.)
+ * The `msg.payload` is a {@link SmartFunctionPayload} — the same accessor type used
+ * in inbound functions — so both property access and `.get()` work without casting.
+ *
+ * @param msg - The incoming Cumulocity event, wrapped with SmartFunctionPayload access
  * @param context - Runtime context providing state, config, and device lookups
  * @returns Device messages to send to the broker or empty array
  *
  * @example
  * // Outbound Smart Function (Cumulocity → Broker)
  * const onMessage: SmartFunctionOut = (msg, context) => {
- *   const payload = msg.payload;
- *   const sourceId = payload["source"]?.["id"];
+ *   const sourceId = msg.payload["source"]["id"];
  *
  *   return {
  *     topic: `measurements/${sourceId}`,
  *     payload: new TextEncoder().encode(JSON.stringify({
- *       temp: payload["c8y_TemperatureMeasurement"]?.["T"]?.["value"],
+ *       temp: msg.payload["c8y_TemperatureMeasurement"]?.["T"]?.["value"],
  *       timestamp: new Date().toISOString()
  *     }))
  *   };
  * };
  *
  * @example
- * // Outbound with device lookup
+ * // Outbound with device lookup and .get() API
  * const onMessage: SmartFunctionOut = (msg, context) => {
- *   const payload = msg.payload;
- *   const sourceId = payload["source"]?.["id"];
+ *   const sourceId = msg.payload["source"]["id"];
  *
  *   // Get device external ID for topic routing
  *   const device = context.getManagedObjectByDeviceId(sourceId);
@@ -845,12 +903,12 @@ export type SmartFunctionIn = (
  *
  *   return {
  *     topic: `measurements/${externalId}`,
- *     payload: new TextEncoder().encode(JSON.stringify(payload))
+ *     payload: new TextEncoder().encode(JSON.stringify(msg.payload))
  *   };
  * };
  */
 export type SmartFunctionOut = (
-  msg: CumulocityObject,
+  msg: OutboundMessage,
   context: DynamicMapperContext
 ) => Array<DeviceMessage> | DeviceMessage | [];
 
@@ -966,6 +1024,29 @@ export function createMockInputMessage(
 }
 
 /**
+ * Mock outbound message for testing outbound Smart Functions.
+ * Creates an OutboundMessage with a pre-deserialized SmartFunctionPayload
+ * that supports both bracket access and .get().
+ *
+ * @example
+ * const mockMsg = createMockOutboundMessage({
+ *   source: { id: '12345' },
+ *   c8y_TemperatureMeasurement: { T: { value: 25.5, unit: 'C' } }
+ * }, 'measurement');
+ */
+export function createMockOutboundMessage(
+  payloadData: Record<string, any>,
+  cumulocityType?: C8yObjectType,
+  sourceId?: string
+): OutboundMessage {
+  return {
+    payload: createMockPayload(payloadData),
+    cumulocityType,
+    sourceId
+  };
+}
+
+/**
  * Mock runtime context for testing Smart Functions.
  * Creates a DynamicMapperContext with all enhanced capabilities.
  *
@@ -1015,6 +1096,9 @@ export function createMockRuntimeContext(options: {
     },
     getDTMAsset(assetId: string) {
       return options.dtmAssets?.[assetId] || {};
+    },
+    addWarning(warning: string) {
+      console.warn('[MockContext]', warning);
     }
   };
 }

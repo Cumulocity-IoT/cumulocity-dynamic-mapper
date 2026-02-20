@@ -17,9 +17,9 @@
  */
 
 import {
-  SmartFunction,
-  SmartFunctionInputMessage,
-  SmartFunctionRuntimeContext,
+  SmartFunctionOut,
+  OutboundMessage,
+  DynamicMapperContext,
   DeviceMessage,
 } from '../types';
 
@@ -47,12 +47,12 @@ import {
  * - Using topic placeholders (_externalId_)
  * - Converting data to Uint8Array for transmission
  */
-const onMessage: SmartFunction = (
-  msg: SmartFunctionInputMessage,
-  context: SmartFunctionRuntimeContext
+const onMessage: SmartFunctionOut = (
+  msg: OutboundMessage,
+  context: DynamicMapperContext
 ): DeviceMessage => {
-  // Get payload - supports both object-style and .get() access
-  const payload = msg.getPayload();
+  // Access payload directly — already pre-deserialized from JSON
+  const payload = msg.payload;
 
   // Log context and payload for debugging
   console.log('Context state:', context.getStateAll());

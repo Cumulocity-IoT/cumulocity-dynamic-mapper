@@ -5,9 +5,9 @@
  */
 
 import {
-  SmartFunction,
-  SmartFunctionInputMessage,
-  SmartFunctionRuntimeContext,
+  SmartFunctionOut,
+  OutboundMessage,
+  DynamicMapperContext,
   DeviceMessage,
 } from '../types';
 
@@ -49,11 +49,11 @@ interface CustomDevicePayload {
 /**
  * Smart Function that transforms Cumulocity measurements to custom device format.
  */
-const onMessage: SmartFunction = (
-  msg: SmartFunctionInputMessage,
-  context: SmartFunctionRuntimeContext
+const onMessage: SmartFunctionOut = (
+  msg: OutboundMessage,
+  context: DynamicMapperContext
 ): DeviceMessage => {
-  const payload = msg.getPayload();
+  const payload = msg.payload;
 
   console.log('Context state:', context.getStateAll());
   console.log('Processing Cumulocity payload:', payload);

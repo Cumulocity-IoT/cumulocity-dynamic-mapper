@@ -5,9 +5,9 @@
  */
 
 import {
-  SmartFunction,
-  SmartFunctionInputMessage,
-  SmartFunctionRuntimeContext,
+  SmartFunctionIn,
+  DynamicMapperDeviceMessage,
+  DynamicMapperContext,
   CumulocityObject,
 } from '../types';
 
@@ -27,11 +27,11 @@ import {
  * Smart Function that tracks temperature statistics using state.
  * Stores min/max values and message count across invocations.
  */
-const onMessage: SmartFunction = (
-  msg: SmartFunctionInputMessage,
-  context: SmartFunctionRuntimeContext
+const onMessage: SmartFunctionIn = (
+  msg: DynamicMapperDeviceMessage,
+  context: DynamicMapperContext
 ): CumulocityObject[] => {
-  const payload = msg.getPayload();
+  const payload = msg.payload;
   const clientId = context.getClientId() || payload.get('clientId');
 
   if (!clientId) {

@@ -5,9 +5,9 @@
  */
 
 import {
-  SmartFunction,
-  SmartFunctionInputMessage,
-  SmartFunctionRuntimeContext,
+  SmartFunctionIn,
+  DynamicMapperDeviceMessage,
+  DynamicMapperContext,
   CumulocityObject,
   C8yManagedObject,
 } from '../types';
@@ -29,11 +29,11 @@ import {
  * Smart Function that creates different measurements based on device type.
  * Looks up device configuration and creates either voltage or current measurement.
  */
-const onMessage: SmartFunction = (
-  msg: SmartFunctionInputMessage,
-  context: SmartFunctionRuntimeContext
+const onMessage: SmartFunctionIn = (
+  msg: DynamicMapperDeviceMessage,
+  context: DynamicMapperContext
 ): CumulocityObject[] => {
-  const payload = msg.getPayload();
+  const payload = msg.payload;
 
   console.log('Context state:', context.getStateAll());
   console.log('Payload Raw:', payload);
@@ -75,8 +75,8 @@ const onMessage: SmartFunction = (
 
   // Determine measurement type based on device configuration
   // Type-safe access to nested device properties
-  const isVoltage = deviceByExternalId?.c8y_Sensor?.type?.voltage === true;
-  const isCurrent = deviceByExternalId?.c8y_Sensor?.type?.current === true;
+  const isVoltage = deviceByExternalId?.['c8y_Sensor']?.type?.voltage === true;
+  const isCurrent = deviceByExternalId?.['c8y_Sensor']?.type?.current === true;
 
   let measurementPayload: any;
 

@@ -6,7 +6,7 @@
 
 import { onMessage } from '../examples/outbound-basic';
 import {
-  createMockInputMessage,
+  createMockOutboundMessage,
   createMockRuntimeContext,
   DeviceMessage,
 } from '../types';
@@ -14,7 +14,7 @@ import {
 describe('Outbound Basic Smart Function', () => {
   it('should create device message with correct topic', () => {
     // Arrange
-    const mockMsg = createMockInputMessage({
+    const mockMsg = createMockOutboundMessage({
       messageId: 'msg-123',
       type: 'c8y_TemperatureMeasurement',
       source: {
@@ -40,7 +40,7 @@ describe('Outbound Basic Smart Function', () => {
 
   it('should encode payload as Uint8Array', () => {
     // Arrange
-    const mockMsg = createMockInputMessage({
+    const mockMsg = createMockOutboundMessage({
       source: { id: '12345' },
       c8y_TemperatureMeasurement: {
         T: {
@@ -62,7 +62,7 @@ describe('Outbound Basic Smart Function', () => {
 
   it('should contain correct temperature value in payload', () => {
     // Arrange
-    const mockMsg = createMockInputMessage({
+    const mockMsg = createMockOutboundMessage({
       source: { id: '12345' },
       c8y_TemperatureMeasurement: {
         T: {
@@ -89,7 +89,7 @@ describe('Outbound Basic Smart Function', () => {
 
   it('should generate valid ISO timestamp', () => {
     // Arrange
-    const mockMsg = createMockInputMessage({
+    const mockMsg = createMockOutboundMessage({
       source: { id: '12345' },
       c8y_TemperatureMeasurement: {
         T: { value: 25.5, unit: 'C' },

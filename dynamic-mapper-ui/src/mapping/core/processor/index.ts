@@ -51,7 +51,8 @@ export {
 // Dynamic Mapper message and context types
 export {
   DynamicMapperDeviceMessage,
-  DynamicMapperContext
+  DynamicMapperContext,
+  OutboundMessage
 } from './smart-function-runtime.types';
 
 // External ID types
@@ -92,5 +93,6 @@ export {
 export {
   createMockPayload,
   createMockInputMessage,
+  createMockOutboundMessage,
   createMockRuntimeContext
 } from './smart-function-runtime.types';

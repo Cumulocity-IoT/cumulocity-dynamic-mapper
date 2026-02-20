@@ -21,12 +21,11 @@
 import {
   SmartFunctionIn,
   SmartFunctionOut,
-  SmartFunction,
-  DynamicMapperDeviceMessage,
   CumulocityObject,
   DeviceMessage,
   C8yManagedObject,
   createMockInputMessage,
+  createMockOutboundMessage,
   createMockRuntimeContext,
   createMockPayload
 } from './smart-function-runtime.types';
@@ -344,32 +343,27 @@ describe('Smart Function Runtime Types', () => {
     it('should create device message for outbound communication', () => {
       // Define Smart Function (Cumulocity → Broker)
       const onMessage: SmartFunctionOut = (msg, context) => {
-        const payload = msg.payload as any;
+        // No cast needed: msg.payload is SmartFunctionPayload
+        const sourceId = msg.payload['source']['id'];
 
-        const deviceMessage: DeviceMessage = {
-          topic: `measurements/${payload['source']['id']}`,
+        return {
+          topic: `measurements/${sourceId}`,
           payload: new TextEncoder().encode(
             JSON.stringify({
-              temp: payload['c8y_TemperatureMeasurement']['T']['value'],
+              temp: msg.payload['c8y_TemperatureMeasurement']['T']['value'],
               time: new Date().toISOString()
             })
           )
         };
-
-        return deviceMessage;
       };
 
-      // Arrange - outbound input is a CumulocityObject (from Cumulocity platform)
-      const mockMsg: CumulocityObject = {
-        cumulocityType: 'measurement',
-        action: 'create',
-        payload: {
-          source: { id: '12345' },
-          c8y_TemperatureMeasurement: {
-            T: { value: 25.5, unit: 'C' }
-          }
+      // Arrange - createMockOutboundMessage wraps data in SmartFunctionPayload
+      const mockMsg = createMockOutboundMessage({
+        source: { id: '12345' },
+        c8y_TemperatureMeasurement: {
+          T: { value: 25.5, unit: 'C' }
         }
-      };
+      }, 'measurement');
 
       const mockContext = createMockRuntimeContext({});
 
@@ -377,42 +371,33 @@ describe('Smart Function Runtime Types', () => {
       const result = onMessage(mockMsg, mockContext);
 
       // Assert
-      const action = result as DeviceMessage;
-      expect(action.topic).toBe('measurements/12345');
-      expect(action.payload).toBeInstanceOf(Uint8Array);
+      const deviceMsg = result as DeviceMessage;
+      expect(deviceMsg.topic).toBe('measurements/12345');
+      expect(deviceMsg.payload).toBeInstanceOf(Uint8Array);
 
-      const decodedPayload = JSON.parse(new TextDecoder().decode(action.payload));
-      expect(decodedPayload.temp).toBe(25.5);
+      const decoded = JSON.parse(new TextDecoder().decode(deviceMsg.payload));
+      expect(decoded.temp).toBe(25.5);
     });
 
     it('should use _externalId_ placeholder in topic', () => {
       // Define Smart Function (Cumulocity → Broker)
       const onMessage: SmartFunctionOut = (msg, context) => {
-        const payload = msg.payload as any;
+        // .get() works without casting — payload is SmartFunctionPayload
+        const temp = msg.payload.get('c8y_TemperatureMeasurement')?.['T']?.['value'];
 
-        const deviceMessage: DeviceMessage = {
+        return {
           topic: 'measurements/_externalId_',
-          payload: new TextEncoder().encode(
-            JSON.stringify({
-              temp: payload['c8y_TemperatureMeasurement']['T']['value']
-            })
-          ),
+          payload: new TextEncoder().encode(JSON.stringify({ temp })),
           externalSource: [{ type: 'c8y_Serial' }]
         };
-
-        return deviceMessage;
       };
 
-      // Arrange - outbound input is a CumulocityObject
-      const mockMsg: CumulocityObject = {
-        cumulocityType: 'measurement',
-        action: 'create',
-        payload: {
-          c8y_TemperatureMeasurement: {
-            T: { value: 25.5, unit: 'C' }
-          }
+      // Arrange
+      const mockMsg = createMockOutboundMessage({
+        c8y_TemperatureMeasurement: {
+          T: { value: 25.5, unit: 'C' }
         }
-      };
+      }, 'measurement');
 
       const mockContext = createMockRuntimeContext({});
 
@@ -420,9 +405,9 @@ describe('Smart Function Runtime Types', () => {
       const result = onMessage(mockMsg, mockContext);
 
       // Assert
-      const action = result as DeviceMessage;
-      expect(action.topic).toBe('measurements/_externalId_');
-      expect(action.externalSource).toEqual([{ type: 'c8y_Serial' }]);
+      const deviceMsg = result as DeviceMessage;
+      expect(deviceMsg.topic).toBe('measurements/_externalId_');
+      expect(deviceMsg.externalSource).toEqual([{ type: 'c8y_Serial' }]);
     });
   });
 
