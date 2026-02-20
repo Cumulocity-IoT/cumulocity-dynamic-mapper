@@ -278,132 +278,6 @@ export interface ExternalId {
   type: string;
 }
 
-/**
- * Runtime context providing access to state, configuration, and device lookup capabilities.
- * Available as the second parameter to the Smart Function onMessage handler.
- *
- * @example
- * function onMessage(msg, context) {
- *   // State management
- *   context.setState("lastValue", 42);
- *   const lastValue = context.getState("lastValue");
- *
- *   // Device lookup
- *   const device = context.getManagedObject({
- *     externalId: "DEVICE-001",
- *     type: "c8y_Serial"
- *   });
- * }
- */
-export interface SmartFunctionRuntimeContext {
-  /**
-   * Sets a value in the context's state.
-   * State persists across invocations of the Smart Function.
-   *
-   * @param key - The key for the state item
-   * @param value - The value to set for the given key
-   *
-   * @example
-   * context.setState("lastTemperature", 25.5);
-   * context.setState("messageCount", 42);
-   */
-  setState(key: string, value: any): void;
-
-  /**
-   * Retrieves a value from the context's state.
-   *
-   * @param key - The key of the state item to retrieve
-   * @returns The value associated with the key, or undefined if not found
-   *
-   * @example
-   * const lastTemp = context.getState("lastTemperature");
-   * const count = context.getState("messageCount");
-   */
-  getState(key: string): any;
-
-  /**
-   * Retrieves all state as a single object.
-   * Useful for debugging or logging all state at once.
-   *
-   * @returns An object containing all state key-value pairs
-   *
-   * @example
-   * console.log("All state:", context.getStateAll());
-   */
-  getStateAll(): Record<string, any>;
-
-  /**
-   * Retrieves the entire configuration map for the context.
-   * Configuration is set externally and provides read-only settings.
-   *
-   * @returns A record containing the context's configuration
-   *
-   * @example
-   * const config = context.getConfig();
-   * console.log("Config:", config);
-   */
-  getConfig(): Record<string, any>;
-
-  /**
-   * Retrieves the MQTT client ID or transport client identifier.
-   *
-   * @returns The client ID, or undefined if not available
-   *
-   * @example
-   * const clientId = context.getClientId();
-   * console.log("Client ID:", clientId);
-   */
-  getClientId(): string | undefined;
-
-  /**
-   * Looks up a device from the inventory cache by internal Cumulocity device ID.
-   *
-   * @param deviceId - The internal Cumulocity device ID to look up
-   * @returns The managed object from inventory, or null if not found
-   *
-   * @example
-   * const device = context.getManagedObjectByDeviceId("12345");
-   * if (device) {
-   *   console.log("Device name:", device.name);
-   *   console.log("Device type:", device.type);
-   * }
-   */
-  getManagedObjectByDeviceId(deviceId: string): any;
-
-  /**
-   * Looks up a device from the inventory cache by external ID.
-   * This is the recommended way to look up devices by their external identifiers.
-   *
-   * @param externalId - The external ID to look up (with type)
-   * @returns The managed object from inventory, or null if not found
-   *
-   * @example
-   * const device = context.getManagedObject({
-   *   externalId: "SENSOR-001",
-   *   type: "c8y_Serial"
-   * });
-   *
-   * if (device) {
-   *   console.log("Device:", device.name);
-   *   // Access custom fragments
-   *   const sensorType = device?.c8y_Sensor?.type;
-   * }
-   */
-  getManagedObject(externalId: ExternalId): any;
-
-  /**
-   * Looks up DTM (Digital Twin Manager) Asset properties by asset ID.
-   *
-   * @param assetId - The ID of the asset to look up
-   * @returns A record containing the asset properties
-   *
-   * @example
-   * const asset = context.getDTMAsset("asset-123");
-   * console.log("Asset properties:", asset);
-   */
-  getDTMAsset(assetId: string): Record<string, any>;
-}
-
 // ============================================================================
 // CUMULOCITY DOMAIN OBJECT TYPES
 // ============================================================================
@@ -616,6 +490,19 @@ export interface C8yManagedObject {
 // ============================================================================
 
 /**
+ * CRUD action to perform on a Cumulocity object.
+ * Used in {@link CumulocityObject.action} and {@link DeviceMessage.action}.
+ */
+export type C8yObjectAction = 'create' | 'update' | 'delete' | 'patch';
+
+/**
+ * Cumulocity API object type.
+ * Determines which API endpoint is used when processing the object.
+ * Used in {@link CumulocityObject.cumulocityType} and {@link DeviceMessage.cumulocityType}.
+ */
+export type C8yObjectType = 'measurement' | 'event' | 'alarm' | 'operation' | 'managedObject';
+
+/**
  * Details of external Id for advanced device creation scenarios.
  * For simple lookups, use {@link ExternalId} instead.
  */
@@ -694,7 +581,7 @@ export interface CumulocityObject {
    * - "operation" - Device operations/commands
    * - "managedObject" - Inventory/device objects
    */
-  cumulocityType: 'measurement' | 'event' | 'alarm' | 'operation' | 'managedObject';
+  cumulocityType: C8yObjectType;
 
   /**
    * What kind of operation to perform on this type.
@@ -703,7 +590,7 @@ export interface CumulocityObject {
    * - "delete" - Delete an object
    * - "patch" - Partially update an object
    */
-  action: 'create' | 'update' | 'delete' | 'patch';
+  action: C8yObjectAction;
 
   /**
    * External ID configuration for device resolution.
@@ -833,7 +720,7 @@ export interface DeviceMessage {
    * What kind of operation is being performed.
    * Similar to CumulocityObject action field.
    */
-  action?: 'create' | 'update' | 'delete' | 'patch';
+  action?: C8yObjectAction;
 
   /**
    * Specifies which Cumulocity API type this device message maps to.
@@ -841,7 +728,7 @@ export interface DeviceMessage {
    *
    * If not specified, the target API is derived from the topic or mapping.
    */
-  cumulocityType?: 'measurement' | 'event' | 'alarm' | 'operation' | 'managedObject';
+  cumulocityType?: C8yObjectType;
 
   /**
    * Explicitly set the Cumulocity device ID for this message.
@@ -978,6 +865,55 @@ export type SmartFunctionOut = (
  * when the direction is known.
  */
 export type SmartFunction = SmartFunctionIn | SmartFunctionOut;
+
+// ============================================================================
+// FLOW FUNCTION TYPES
+// ============================================================================
+
+/**
+ * Input message received by the flow function.
+ */
+export interface InputMessage {
+  /** An unique source path, example: MQTT Topic. */
+  sourcePath: string;
+
+  /** The source id, example: MQTT client id. */
+  sourceId: string;
+
+  /** The payload of the message. */
+  payload: any;
+
+  /** A map of properties associated with the message. */
+  properties: Record<string, any>;
+}
+
+/**
+ * Output message to be sent by the flow function.
+ */
+export interface OutputMessage {
+  /** An unique sink type, example: C8Y Core. */
+  sinkType: string;
+
+  /** The unique device identifier, example: External Id. */
+  deviceIdentifier?: Record<string, any>;
+
+  /** The payload of the message. */
+  payload: any;
+
+  /** A map of properties associated with the message. */
+  properties: Record<string, any>;
+}
+
+/**
+ * Error information for mapping operations.
+ */
+export interface MappingError {
+  /** Array of error detail strings. */
+  errorDetails: string[];
+
+  /** Optional payload that resulted in this error. */
+  payload?: any;
+}
 
 // ============================================================================
 // HELPER TYPES FOR TESTING

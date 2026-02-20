@@ -25,20 +25,33 @@
  *
  * @example
  * import {
+ *   SmartFunctionIn,
+ *   SmartFunctionOut,
  *   SmartFunction,
- *   SmartFunctionInputMessage,
- *   SmartFunctionRuntimeContext,
+ *   DynamicMapperDeviceMessage,
+ *   DynamicMapperContext,
  *   CumulocityObject,
- *   C8yMeasurement
+ *   DeviceMessage
  * } from '@dynamic-mapper/runtime-types';
  */
 
-// Core Smart Function types
+// IDP DataPrep base context (standard interface)
 export {
+  DataPrepContext
+} from './smart-function-runtime.types';
+
+// Smart Function types
+export {
+  SmartFunctionIn,
+  SmartFunctionOut,
   SmartFunction,
-  SmartFunctionInputMessage,
-  SmartFunctionPayload,
-  SmartFunctionRuntimeContext
+  SmartFunctionPayload
+} from './smart-function-runtime.types';
+
+// Dynamic Mapper message and context types
+export {
+  DynamicMapperDeviceMessage,
+  DynamicMapperContext
 } from './smart-function-runtime.types';
 
 // External ID types
@@ -60,11 +73,19 @@ export {
   C8ySourceReference
 } from './smart-function-runtime.types';
 
-// Action types
+// Smart Function output/input object types
 export {
   CumulocityObject,
   DeviceMessage,
-  C8yAction
+  C8yObjectAction,
+  C8yObjectType
+} from './smart-function-runtime.types';
+
+// Flow function types
+export {
+  InputMessage,
+  OutputMessage,
+  MappingError
 } from './smart-function-runtime.types';
 
 // Testing helpers
@@ -73,11 +94,3 @@ export {
   createMockInputMessage,
   createMockRuntimeContext
 } from './smart-function-runtime.types';
-
-// Legacy exports from model-flow-function.ts for backward compatibility
-export {
-  DataPrepContext,
-  InputMessage,
-  OutputMessage,
-  MappingError
-} from './model-flow-function';

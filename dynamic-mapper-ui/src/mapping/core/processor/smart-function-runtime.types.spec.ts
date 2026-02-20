@@ -19,9 +19,10 @@
  */
 
 import {
+  SmartFunctionIn,
+  SmartFunctionOut,
   SmartFunction,
-  SmartFunctionInputMessage,
-  SmartFunctionRuntimeContext,
+  DynamicMapperDeviceMessage,
   CumulocityObject,
   DeviceMessage,
   C8yManagedObject,
@@ -63,12 +64,12 @@ describe('Smart Function Runtime Types', () => {
           temperature: 25.5
         },
         'device/temp/data',
-        'msg-123'
+        'client-123'
       );
 
-      expect(mockMsg.getPayload()).toBeDefined();
-      expect(mockMsg.getTopic?.()).toBe('device/temp/data');
-      expect(mockMsg.getMessageId?.()).toBe('msg-123');
+      expect(mockMsg.payload).toBeDefined();
+      expect(mockMsg.topic).toBe('device/temp/data');
+      expect(mockMsg.clientId).toBe('client-123');
     });
 
     it('should create mock runtime context', () => {
@@ -113,8 +114,8 @@ describe('Smart Function Runtime Types', () => {
   describe('Basic Inbound Smart Function', () => {
     it('should create a measurement from incoming message', () => {
       // Define Smart Function
-      const onMessage: SmartFunction = (msg, context) => {
-        const payload = msg.getPayload();
+      const onMessage: SmartFunctionIn = (msg, context) => {
+        const payload = msg.payload;
         const clientId = context.getClientId();
 
         return [
@@ -149,13 +150,14 @@ describe('Smart Function Runtime Types', () => {
       const result = onMessage(mockMsg, mockContext);
 
       // Assert
-      expect(Array.isArray(result)).toBe(true);
-      expect(result.length).toBe(1);
+      const resultArr = result as CumulocityObject[];
+      expect(Array.isArray(resultArr)).toBe(true);
+      expect(resultArr.length).toBe(1);
 
-      const action = result[0] as CumulocityObject;
+      const action = resultArr[0];
       expect(action.cumulocityType).toBe('measurement');
       expect(action.action).toBe('create');
-      expect(action.payload).toHaveProperty('c8y_Temperature');
+      expect((action.payload as Record<string, unknown>)['c8y_Temperature']).toBeDefined();
       expect(action.externalSource).toEqual([{ type: 'c8y_Serial', externalId: 'SENSOR-001' }]);
     });
   });
@@ -163,8 +165,8 @@ describe('Smart Function Runtime Types', () => {
   describe('Smart Function with Device Enrichment', () => {
     it('should create voltage measurement when device is configured for voltage', () => {
       // Define Smart Function
-      const onMessage: SmartFunction = (msg, context) => {
-        const payload = msg.getPayload();
+      const onMessage: SmartFunctionIn = (msg, context) => {
+        const payload = msg.payload;
         const clientId = context.getClientId()!;
 
         const device: C8yManagedObject | null = context.getManagedObject({
@@ -172,7 +174,7 @@ describe('Smart Function Runtime Types', () => {
           type: 'c8y_Serial'
         });
 
-        const isVoltage = device?.c8y_Sensor?.type?.voltage === true;
+        const isVoltage = device?.['c8y_Sensor']?.['type']?.['voltage'] === true;
 
         return [
           {
@@ -221,14 +223,15 @@ describe('Smart Function Runtime Types', () => {
 
       // Assert
       const action = result[0] as CumulocityObject;
-      expect(action.payload).toHaveProperty('type', 'c8y_VoltageMeasurement');
-      expect(action.payload).toHaveProperty('c8y_Voltage');
+      const p1 = action.payload as Record<string, unknown>;
+      expect(p1['type']).toBe('c8y_VoltageMeasurement');
+      expect(p1['c8y_Voltage']).toBeDefined();
     });
 
     it('should create current measurement when device is configured for current', () => {
       // Define Smart Function
-      const onMessage: SmartFunction = (msg, context) => {
-        const payload = msg.getPayload();
+      const onMessage: SmartFunctionIn = (msg, context) => {
+        const payload = msg.payload;
         const clientId = context.getClientId()!;
 
         const device: C8yManagedObject | null = context.getManagedObject({
@@ -236,7 +239,7 @@ describe('Smart Function Runtime Types', () => {
           type: 'c8y_Serial'
         });
 
-        const isCurrent = device?.c8y_Sensor?.type?.current === true;
+        const isCurrent = device?.['c8y_Sensor']?.['type']?.['current'] === true;
 
         return [
           {
@@ -285,13 +288,14 @@ describe('Smart Function Runtime Types', () => {
 
       // Assert
       const action = result[0] as CumulocityObject;
-      expect(action.payload).toHaveProperty('type', 'c8y_CurrentMeasurement');
-      expect(action.payload).toHaveProperty('c8y_Current');
+      const p2 = action.payload as Record<string, unknown>;
+      expect(p2['type']).toBe('c8y_CurrentMeasurement');
+      expect(p2['c8y_Current']).toBeDefined();
     });
 
     it('should return empty array when device is not found', () => {
       // Define Smart Function
-      const onMessage: SmartFunction = (msg, context) => {
+      const onMessage: SmartFunctionIn = (msg, context) => {
         const clientId = context.getClientId()!;
 
         const device: C8yManagedObject | null = context.getManagedObject({
@@ -330,16 +334,17 @@ describe('Smart Function Runtime Types', () => {
       const result = onMessage(mockMsg, mockContext);
 
       // Assert
-      expect(Array.isArray(result)).toBe(true);
-      expect(result.length).toBe(0);
+      const resultArr = result as CumulocityObject[];
+      expect(Array.isArray(resultArr)).toBe(true);
+      expect(resultArr.length).toBe(0);
     });
   });
 
   describe('Outbound Smart Function', () => {
     it('should create device message for outbound communication', () => {
-      // Define Smart Function
-      const onMessage: SmartFunction = (msg, context) => {
-        const payload = msg.getPayload();
+      // Define Smart Function (Cumulocity → Broker)
+      const onMessage: SmartFunctionOut = (msg, context) => {
+        const payload = msg.payload as any;
 
         const deviceMessage: DeviceMessage = {
           topic: `measurements/${payload['source']['id']}`,
@@ -354,13 +359,17 @@ describe('Smart Function Runtime Types', () => {
         return deviceMessage;
       };
 
-      // Arrange
-      const mockMsg = createMockInputMessage({
-        source: { id: '12345' },
-        c8y_TemperatureMeasurement: {
-          T: { value: 25.5, unit: 'C' }
+      // Arrange - outbound input is a CumulocityObject (from Cumulocity platform)
+      const mockMsg: CumulocityObject = {
+        cumulocityType: 'measurement',
+        action: 'create',
+        payload: {
+          source: { id: '12345' },
+          c8y_TemperatureMeasurement: {
+            T: { value: 25.5, unit: 'C' }
+          }
         }
-      });
+      };
 
       const mockContext = createMockRuntimeContext({});
 
@@ -377,9 +386,9 @@ describe('Smart Function Runtime Types', () => {
     });
 
     it('should use _externalId_ placeholder in topic', () => {
-      // Define Smart Function
-      const onMessage: SmartFunction = (msg, context) => {
-        const payload = msg.getPayload();
+      // Define Smart Function (Cumulocity → Broker)
+      const onMessage: SmartFunctionOut = (msg, context) => {
+        const payload = msg.payload as any;
 
         const deviceMessage: DeviceMessage = {
           topic: 'measurements/_externalId_',
@@ -394,12 +403,16 @@ describe('Smart Function Runtime Types', () => {
         return deviceMessage;
       };
 
-      // Arrange
-      const mockMsg = createMockInputMessage({
-        c8y_TemperatureMeasurement: {
-          T: { value: 25.5, unit: 'C' }
+      // Arrange - outbound input is a CumulocityObject
+      const mockMsg: CumulocityObject = {
+        cumulocityType: 'measurement',
+        action: 'create',
+        payload: {
+          c8y_TemperatureMeasurement: {
+            T: { value: 25.5, unit: 'C' }
+          }
         }
-      });
+      };
 
       const mockContext = createMockRuntimeContext({});
 
@@ -416,8 +429,8 @@ describe('Smart Function Runtime Types', () => {
   describe('Smart Function with State Management', () => {
     it('should persist state across invocations', () => {
       // Define Smart Function
-      const onMessage: SmartFunction = (msg, context) => {
-        const payload = msg.getPayload();
+      const onMessage: SmartFunctionIn = (msg, context) => {
+        const payload = msg.payload;
         const currentTemp = payload.get('temperature');
 
         const lastTemp = context.getState('lastTemperature');
@@ -461,21 +474,23 @@ describe('Smart Function Runtime Types', () => {
 
       // Assert
       const action1 = result1[0] as CumulocityObject;
-      expect(action1.payload).toHaveProperty('c8y_Statistics');
-      expect((action1.payload as any).c8y_Statistics.lastValue).toBe(0);
-      expect((action1.payload as any).c8y_Statistics.messageCount).toBe(1);
+      const stats1 = (action1.payload as Record<string, any>)['c8y_Statistics'];
+      expect(stats1).toBeDefined();
+      expect(stats1.lastValue).toBe(0);
+      expect(stats1.messageCount).toBe(1);
 
       const action2 = result2[0] as CumulocityObject;
-      expect((action2.payload as any).c8y_Statistics.lastValue).toBe(20.0);
-      expect((action2.payload as any).c8y_Statistics.messageCount).toBe(2);
+      const stats2 = (action2.payload as Record<string, any>)['c8y_Statistics'];
+      expect(stats2.lastValue).toBe(20.0);
+      expect(stats2.messageCount).toBe(2);
     });
   });
 
   describe('Smart Function with Context Data', () => {
     it('should include context data for device creation', () => {
       // Define Smart Function
-      const onMessage: SmartFunction = (msg, context) => {
-        const payload = msg.getPayload();
+      const onMessage: SmartFunctionIn = (msg, context) => {
+        const payload = msg.payload;
         const clientId = context.getClientId()!;
 
         return [
