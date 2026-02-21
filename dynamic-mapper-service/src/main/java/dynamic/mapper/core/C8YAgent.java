@@ -653,6 +653,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         AtomicReference<ProcessingException> pe = new AtomicReference<>();
         // API is now always initialized when creating DynamicMapperRequest
         API targetAPI = currentRequest.getApi();
+        String clientId = context.getClientId();
         ManagedObjectRepresentation device = subscriptionsService.callForTenant(tenant, () -> {
             MicroserviceCredentials contextCredentials = removeAppKeyHeaderFromContext(contextService.getContext());
             return contextService.callWithinContext(contextCredentials, () -> {
@@ -667,6 +668,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                         // append external id to name
                         mor.setName(mor.getName());
                         mor.set(new Agent());
+                        //FIXME Potentially we need to check if device user exists before assigning it as owner
+                        if(clientId != null)
+                            mor.setOwner("device_"+clientId);
                         HashMap<String, String> agentFragments = new HashMap<>();
                         agentFragments.put("name", "Dynamic Mapper");
                         agentFragments.put("version", version);
