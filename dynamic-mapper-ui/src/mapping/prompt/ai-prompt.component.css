@@ -1,6 +1,60 @@
 /* Custom styles for the AI prompt component */
 /* The c8y-ai-chat component handles most chat styling, so these are minimal overrides */
 
+/* Sparkles icon with rotating rainbow border — mirrors btn-ai-hint */
+.ai-icon-wrap {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+}
+
+.ai-icon-wrap::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 150%;
+  aspect-ratio: 1;
+  background-image: conic-gradient(
+    var(--brand-primary, var(--c8y-brand-primary, #1776bf)),
+    var(--palette-status-danger, var(--c8y-palette-status-danger, #e0223b)),
+    var(--palette-status-warning, var(--c8y-palette-status-warning, #f8a400)),
+    var(--palette-status-info, var(--c8y-palette-status-info, #17a2b8)),
+    var(--brand-primary, var(--c8y-brand-primary, #1776bf))
+  );
+  transform: translate(-50%, -50%);
+  animation: ai-icon-rotate 6s linear infinite;
+  opacity: 0.5;
+}
+
+.ai-icon-wrap::after {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: calc(100% - 6px);
+  height: calc(100% - 6px);
+  background: var(--c8y-btn-default-background-default, #fff);
+  border-radius: 50%;
+}
+
+.ai-icon-wrap > svg {
+  position: relative;
+  z-index: 10;
+}
+
+@keyframes ai-icon-rotate {
+  100% {
+    transform: translate(-50%, -50%) rotate(1turn);
+  }
+}
+
 .agent-tabs-content{
   box-sizing: border-box;
 }

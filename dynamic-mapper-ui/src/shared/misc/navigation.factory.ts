@@ -77,7 +77,7 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
     processorExtensionNode: new NavigatorNode({
       parent: gettext('Configuration'),
       label: gettext('Processor extension'),
-      icon: 'extension',
+      icon: 'c8y-java',
       path: `/c8y-pkg-dynamic-mapper/${NODE3}/processorExtension`,
       priority: 450,
       preventDuplicates: true
