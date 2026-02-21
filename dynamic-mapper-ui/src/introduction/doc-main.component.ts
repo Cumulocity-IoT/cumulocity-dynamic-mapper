@@ -197,15 +197,9 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   openCodeExplorer(template: CodeTemplate): void {
-    // Create a minimal mapping object for viewing the template code
-    const templateMapping = {
-      code: template.code,
-      name: template.name
-    } as any;
-
     this.bottomDrawerService.openDrawer(CodeEditorDrawerComponent, {
       initialState: {
-        mapping: templateMapping,
+        encodedCode: template.code,
         sourceSystem: 'Template',
         action: 'view'
       }

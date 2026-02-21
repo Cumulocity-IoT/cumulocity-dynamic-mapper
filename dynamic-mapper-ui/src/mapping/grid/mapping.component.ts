@@ -431,7 +431,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     const { mapping } = m;
     const sourceSystem =
       mapping.direction == Direction.OUTBOUND ? 'Cumulocity' : 'Broker';
-    const initialState = { mapping, sourceSystem };
+    const initialState = { encodedCode: mapping.code, sourceSystem };
     try {
       const drawer = this.bottomDrawerService.openDrawer(CodeEditorDrawerComponent, { initialState: initialState });
 

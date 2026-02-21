@@ -155,15 +155,9 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     const codeTemplate = this.formGroup.get('codeTemplate')?.value as CodeTemplateOption;
     if (!codeTemplate?.value) return;
 
-    // Create a minimal mapping object for viewing the template code
-    const templateMapping = {
-      code: codeTemplate.value.code,
-      name: codeTemplate.description
-    } as any;
-
     this.bottomDrawerService.openDrawer(CodeEditorDrawerComponent, {
       initialState: {
-        mapping: templateMapping,
+        encodedCode: codeTemplate.value.code,
         sourceSystem: 'Template',
         action: 'view'
       }

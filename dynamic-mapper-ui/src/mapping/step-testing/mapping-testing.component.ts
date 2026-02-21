@@ -162,24 +162,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
   onSourceTemplateChanged(content: ContentChanges): void {
     const contentAsJson = this.parseJsonContent(content.updatedContent);
-    const topicSample = this.extractTopicSample(contentAsJson);
-
-    // Update the actual payload object used for testing
-    this.sourceTemplate = contentAsJson;
-
-    const updatedSourceTemplate = JSON.stringify(contentAsJson || {});
-
-    // Update only specific fields while preserving the original mapping object
-    this.testMapping = {
-      ...this.testMapping,
-      sourceTemplate: updatedSourceTemplate,
-      ...(topicSample ? { mappingTopicSample: topicSample } : {})
-    };
-
-    // Propagate sourceTemplate changes back to the shared mapping reference so the parent stays in sync
-    this.mapping.sourceTemplate = updatedSourceTemplate;
-    // Notify the stepper so its own this.sourceTemplate stays in sync (used on Confirm)
-    this.sourceTemplateChanged.emit(contentAsJson);
+    this.syncPayload(contentAsJson, this.extractTopicSample(contentAsJson));
   }
 
   disableTestSending(): boolean {
@@ -323,21 +306,28 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     };
   }
 
+  // Sync all three payload representations atomically.
+  // topicSample is only provided when called from the editor onChange handler.
+  private syncPayload(parsedContent: any, topicSample?: string): void {
+    const sourceTemplateStr = JSON.stringify(parsedContent || {});
+    this.sourceTemplate = parsedContent;
+    this.testMapping = {
+      ...this.testMapping,
+      sourceTemplate: sourceTemplateStr,
+      ...(topicSample ? { mappingTopicSample: topicSample } : {})
+    };
+    this.mapping.sourceTemplate = sourceTemplateStr;
+    this.sourceTemplateChanged.emit(parsedContent);
+  }
+
   private async performTest(sendPayload: boolean): Promise<TestResult> {
     // Always read directly from the editor to capture the latest content,
     // regardless of whether onChange fired (tree-mode edits may not always trigger it)
-    const currentPayload = this.editorTestingPayload?.get() ?? this.sourceTemplate;
-    const currentPayloadStr = JSON.stringify(currentPayload || {});
-
-    // Keep sourceTemplate and testMapping in sync with what we're actually testing
-    this.sourceTemplate = currentPayload;
-    this.testMapping = { ...this.testMapping, sourceTemplate: currentPayloadStr };
-    this.mapping.sourceTemplate = currentPayloadStr;
-    this.sourceTemplateChanged.emit(currentPayload);
+    this.syncPayload(this.editorTestingPayload?.get() ?? this.sourceTemplate);
 
     const extractedPayload = this.requiresRawPayload()
-      ? currentPayload['payload']
-      : currentPayloadStr;
+      ? this.sourceTemplate?.['payload']
+      : this.testMapping.sourceTemplate;
 
     // Create test context and call remote testing endpoint
     const testContext: TestContext = {
