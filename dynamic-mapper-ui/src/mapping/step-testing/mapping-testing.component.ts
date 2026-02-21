@@ -76,6 +76,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   @Input() stepperConfiguration!: StepperConfiguration;
   @Input() updateTestingTemplate!: EventEmitter<Mapping>;
   @Output() testResult = new EventEmitter<boolean>();
+  @Output() sourceTemplateChanged = new EventEmitter<any>();
 
   @ViewChild('editorTestingPayload') editorTestingPayload!: JsonEditorComponent;
   @ViewChild('editorTestingRequest') editorTestingRequest!: JsonEditorComponent;
@@ -177,6 +178,8 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
     // Propagate sourceTemplate changes back to the shared mapping reference so the parent stays in sync
     this.mapping.sourceTemplate = updatedSourceTemplate;
+    // Notify the stepper so its own this.sourceTemplate stays in sync (used on Confirm)
+    this.sourceTemplateChanged.emit(contentAsJson);
   }
 
   disableTestSending(): boolean {
@@ -330,6 +333,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     this.sourceTemplate = currentPayload;
     this.testMapping = { ...this.testMapping, sourceTemplate: currentPayloadStr };
     this.mapping.sourceTemplate = currentPayloadStr;
+    this.sourceTemplateChanged.emit(currentPayload);
 
     const extractedPayload = this.requiresRawPayload()
       ? currentPayload['payload']

@@ -567,6 +567,10 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.updateFilterExpressionResult(this.selectedPathFilterFilterMapping);
   }
 
+  onTestingSourceTemplateChanged(template: any): void {
+    this.sourceTemplate = template;
+  }
+
   onSourceTemplateChanged(contentChanges: ContentChanges): void {
     const { previousContent, updatedContent } = contentChanges;
 

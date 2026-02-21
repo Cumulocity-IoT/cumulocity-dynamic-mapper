@@ -272,7 +272,8 @@
     <div class="col-xs-12 flex-grow no-gutter">
       <d11r-mapping-testing #mappingTestingStep [updateTestingTemplate]="
               updateTestingTemplate
-            " [mapping]="mapping" [stepperConfiguration]="stepperConfiguration"></d11r-mapping-testing>
+            " [mapping]="mapping" [stepperConfiguration]="stepperConfiguration"
+            (sourceTemplateChanged)="onTestingSourceTemplateChanged($event)"></d11r-mapping-testing>
     </div>
     <c8y-stepper-buttons class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0"
       (onCustom)="onCommitButton()" (onCancel)="cancel.emit()" (onBack)="onBackStep($event)"
