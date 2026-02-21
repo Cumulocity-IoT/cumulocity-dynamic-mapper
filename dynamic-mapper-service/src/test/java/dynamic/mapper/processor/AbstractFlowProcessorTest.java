@@ -446,8 +446,8 @@ class AbstractFlowProcessorTest {
         assertTrue(processor.wasHandleErrorCalled(), "Should call handleProcessingError on exception");
         assertNotNull(processor.getLastError(), "Should have captured the error");
         assertNotNull(processor.getLastErrorMessage(), "Should have error message");
-        assertTrue(processor.getLastErrorMessage().contains("TestableFlowProcessor"),
-                "Error message should contain processor name");
+        assertTrue(processor.getLastErrorMessage().contains("line"),
+                "Error message should contain line number");
 
         log.info("✅ Successfully handled exception and called error handler");
     }

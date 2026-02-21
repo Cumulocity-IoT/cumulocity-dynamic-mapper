@@ -35,7 +35,6 @@ import dynamic.mapper.connector.core.registry.ConnectorRegistryException;
 import dynamic.mapper.connector.test.TestClient;
 import dynamic.mapper.core.BootstrapService;
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
@@ -73,8 +72,6 @@ import lombok.extern.slf4j.Slf4j;
 @RestController
 public class TestController {
 
-    private final ConfigurationRegistry configurationRegistry;
-
     @Autowired
     ConnectorRegistry connectorRegistry;
 
@@ -99,9 +96,6 @@ public class TestController {
     @Value("${APP.externalExtensionsEnabled}")
     private Boolean externalExtensionsEnabled;
 
-    TestController(ConfigurationRegistry configurationRegistry) {
-        this.configurationRegistry = configurationRegistry;
-    }
 
     @RequestMapping(value = "/test/payload", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<? extends ProcessingContext<?>>> testPayload(@RequestParam boolean send,
@@ -178,9 +172,7 @@ public class TestController {
                     result.setSuccess(firstResult.getErrors().isEmpty());
                     if (firstResult.getErrors() != null && !firstResult.getErrors().isEmpty()) {
                         firstResult.getErrors().forEach(e -> {
-                            String errorMessage = String.format("%s - [%s]",
-                                    e.getMessage() != null ? e.getMessage() : "No message", e.getClass().getName());
-                            result.getErrors().add(errorMessage);
+                            result.getErrors().add(e.getMessage() != null ? e.getMessage() : "No message");
                         });
                     }
                 }

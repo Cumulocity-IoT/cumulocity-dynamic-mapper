@@ -72,10 +72,9 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
             if (e.getStackTrace().length > 0) {
                 lineNumber = e.getStackTrace()[0].getLineNumber();
             }
-            String errorMessage = String.format(
-                    "%s - Error in %s: %s for mapping: %s, line %s",
-                    tenant, getProcessorName(), mapping.getName(), e.getMessage(), lineNumber);
-            log.error(errorMessage, e);
+            String errorMessage = String.format("%s, line %s", e.getMessage(), lineNumber);
+            log.error("{} - Error in {} for mapping {}: {}", tenant, getProcessorName(), mapping.getName(),
+                    errorMessage, e);
 
             handleProcessingError(e, errorMessage, context, tenant, mapping);
         } finally {
