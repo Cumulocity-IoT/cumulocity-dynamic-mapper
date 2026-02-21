@@ -193,14 +193,22 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
                     }
                 } else {
                     // No device ID and not creating implicit devices - skip this message
-                    log.warn(
-                            "{} - Cannot process message: no device ID resolved and createNonExistingDevice is false for mapping {}",
-                            tenant, mapping.getIdentifier());
+                    ExternalId externalSource = externalSources.get(0);
+                    String warnMsg = String.format(
+                            "Device with externalId '%s' (type '%s') not found in inventory and createNonExistingDevice is disabled - no request created for mapping '%s'. Enable createNonExistingDevice or use an existing externalId.",
+                            externalSource != null ? externalSource.getExternalId() : "unknown",
+                            externalSource != null ? externalSource.getType() : "unknown",
+                            mapping.getIdentifier());
+                    log.warn("{} - {}", tenant, warnMsg);
+                    output.addWarning(warnMsg);
                     return; // Don't create a request
                 }
             } else {
-                log.warn("{} - Cannot process message: no external source provided for mapping {}",
-                        tenant, mapping.getIdentifier());
+                String warnMsg = String.format(
+                        "Cannot process message: no externalSource provided for mapping '%s'. Set externalId in the returned CumulocityObject.",
+                        mapping.getIdentifier());
+                log.warn("{} - {}", tenant, warnMsg);
+                output.addWarning(warnMsg);
                 return; // Don't create a request
             }
 

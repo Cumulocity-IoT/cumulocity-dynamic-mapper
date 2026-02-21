@@ -166,12 +166,17 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     // Update the actual payload object used for testing
     this.sourceTemplate = contentAsJson;
 
+    const updatedSourceTemplate = JSON.stringify(contentAsJson || {});
+
     // Update only specific fields while preserving the original mapping object
     this.testMapping = {
       ...this.testMapping,
-      sourceTemplate: JSON.stringify(contentAsJson || {}),
-      mappingTopicSample: topicSample
+      sourceTemplate: updatedSourceTemplate,
+      ...(topicSample ? { mappingTopicSample: topicSample } : {})
     };
+
+    // Propagate sourceTemplate changes back to the shared mapping reference so the parent stays in sync
+    this.mapping.sourceTemplate = updatedSourceTemplate;
   }
 
   disableTestSending(): boolean {
@@ -316,10 +321,19 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   }
 
   private async performTest(sendPayload: boolean): Promise<TestResult> {
-    // Prepare payload for testing
+    // Always read directly from the editor to capture the latest content,
+    // regardless of whether onChange fired (tree-mode edits may not always trigger it)
+    const currentPayload = this.editorTestingPayload?.get() ?? this.sourceTemplate;
+    const currentPayloadStr = JSON.stringify(currentPayload || {});
+
+    // Keep sourceTemplate and testMapping in sync with what we're actually testing
+    this.sourceTemplate = currentPayload;
+    this.testMapping = { ...this.testMapping, sourceTemplate: currentPayloadStr };
+    this.mapping.sourceTemplate = currentPayloadStr;
+
     const extractedPayload = this.requiresRawPayload()
-      ? this.sourceTemplate['payload']
-      : JSON.stringify(this.sourceTemplate);
+      ? currentPayload['payload']
+      : currentPayloadStr;
 
     // Create test context and call remote testing endpoint
     const testContext: TestContext = {
@@ -417,12 +431,19 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     return content['json'];
   }
 
+  getLogLevel(line: string): string {
+    if (line.startsWith('JS ERROR:')) return 'error';
+    if (line.startsWith('JS WARN:')) return 'warn';
+    if (line.startsWith('JS DEBUG:')) return 'debug';
+    return 'log';
+  }
+
   private extractTopicSample(contentAsJson: any): string {
-    if (!contentAsJson?.[MappingTokens.CONTEXT_DATA] || !Array.isArray(contentAsJson[MappingTokens.CONTEXT_DATA])) {
+    if (!contentAsJson?.[MappingTokens.TOPIC_LEVEL] || !Array.isArray(contentAsJson[MappingTokens.TOPIC_LEVEL])) {
       return '';
     }
 
-    return contentAsJson[MappingTokens.CONTEXT_DATA]
+    return contentAsJson[MappingTokens.TOPIC_LEVEL]
       .filter(item => item !== undefined && item !== null)
       .join('/');
   }

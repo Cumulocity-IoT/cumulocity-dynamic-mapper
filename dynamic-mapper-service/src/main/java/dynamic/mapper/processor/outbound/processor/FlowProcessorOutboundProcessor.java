@@ -41,7 +41,6 @@ import dynamic.mapper.processor.model.DeviceMessage;
 import dynamic.mapper.processor.model.OutputCollector;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.util.JavaScriptInteropHelper;
-import dynamic.mapper.processor.util.ProcessingResultHelper;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.util.Utils;
 import lombok.extern.slf4j.Slf4j;
@@ -96,8 +95,6 @@ public class FlowProcessorOutboundProcessor extends AbstractFlowProcessor {
             output.addWarning("onMessage function did not return any transformation result");
             context.setFlowResult(outputMessages); // Set empty list
             context.setIgnoreFurtherProcessing(true);
-            ProcessingResultHelper.createAndAddDynamicMapperRequest(context,
-                    context.getMapping().getTargetTemplate(), null, context.getMapping());
 
             // Sync back to context for backward compatibility
             syncOutputToContext(output, context);
@@ -144,6 +141,7 @@ public class FlowProcessorOutboundProcessor extends AbstractFlowProcessor {
             ProcessingContext<?> context, String tenant, Mapping mapping) {
         MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
         context.addError(new ProcessingException(errorMessage, e));
+        context.setIgnoreFurtherProcessing(true);
         mappingStatus.errors++;
         mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
     }

@@ -134,9 +134,15 @@
         <div style="display: flex">
           <label>Console output</label>
         </div>
-        <textarea [ngModel]="testingModel.logs?.join('\n')" class="form-control" _not-applied_c8y-textarea-autoresize
-          class="fit-w" readonly="true" style="font-family: Courier, monospace">
-        </textarea>
+        <div class="console-output">
+          @if (testingModel.logs?.length) {
+            @for (line of testingModel.logs; track $index) {
+              <div [class]="'log-line log-' + getLogLevel(line)">{{ line }}</div>
+            }
+          } @else {
+            <span class="log-empty">No output yet</span>
+          }
+        </div>
       </div>
     </div>
   </div>

@@ -35,7 +35,6 @@ import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.util.ProcessingResultHelper;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.util.Utils;
 import lombok.extern.slf4j.Slf4j;
@@ -97,10 +96,7 @@ public class SendOutboundProcessor extends BaseProcessor {
         var requests = context.getRequests();
 
         if (requests == null || requests.isEmpty()) {
-            log.debug("{} - No requests to process", tenant);
-            // Create a placeholder request to avoid further processing
-            ProcessingResultHelper.createAndAddDynamicMapperRequest(context, context.getMapping().getTargetTemplate(), null,
-                    context.getMapping());
+            log.debug("{} - No requests to process, skipping send", tenant);
             return;
         }
 

@@ -67,8 +67,32 @@ c8y-data-grid button[title='Reload'] {
 }
 
 .console-output {
-  height: 100px;
-  overflow: auto;
+  background-color: #1e1e1e;
+  color: #d4d4d4;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 12px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  height: 200px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  border: 1px solid #333;
+}
+
+.log-line {
+  line-height: 1.5;
+  padding: 1px 0;
+}
+
+.log-debug { color: #888888; }
+.log-log   { color: #d4d4d4; }
+.log-warn  { color: #e5c07b; }
+.log-error { color: #e06c75; }
+
+.log-empty {
+  color: #555;
+  font-style: italic;
 }
 
 .sticky-buttons {

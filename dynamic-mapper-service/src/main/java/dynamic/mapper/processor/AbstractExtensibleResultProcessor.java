@@ -107,6 +107,9 @@ public abstract class AbstractExtensibleResultProcessor extends CommonProcessor 
         if (!output.getRequests().isEmpty()) {
             context.getRequests().addAll(output.getRequests());
         }
+        if (!output.getWarnings().isEmpty()) {
+            context.getWarnings().addAll(output.getWarnings());
+        }
     }
 
     /**
