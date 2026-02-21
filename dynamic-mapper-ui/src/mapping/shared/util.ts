@@ -570,8 +570,15 @@ export function randomIdAsString() {
 export function patchC8YTemplateForTesting(template: object, mapping: Mapping) {
   const identifier = randomIdAsString();
   _.set(template, API[mapping.targetAPI].identifier, identifier);
-  _.set(template, `${MappingTokens.IDENTITY}.c8ySourceId`, identifier);
-  _.set(template, `${MappingTokens.CONTEXT_DATA}.publishTopic`, mapping.publishTopic);
+  // For SMART_FUNCTION and EXTENSION_JAVA the source template must stay clean (allowSourceExpansion=false):
+  // no MappingTokens should appear in source or target templates
+  const allowSourceExpansion =
+    mapping.transformationType !== TransformationType.SMART_FUNCTION &&
+    mapping.transformationType !== TransformationType.EXTENSION_JAVA;
+  if (allowSourceExpansion) {
+    _.set(template, `${MappingTokens.IDENTITY}.c8ySourceId`, identifier);
+    _.set(template, `${MappingTokens.CONTEXT_DATA}.publishTopic`, mapping.publishTopic);
+  }
 }
 
 export function reduceSourceTemplate(
@@ -581,7 +588,7 @@ export function reduceSourceTemplate(
   if (!returnPatched) {
     delete template[MappingTokens.IDENTITY];
     delete template[MappingTokens.CONTEXT_DATA];
-    delete template[MappingTokens.CONTEXT_DATA];
+    delete template[MappingTokens.TOPIC_LEVEL];
   }
   const tt = JSON.stringify(template);
   return tt;
@@ -594,7 +601,7 @@ export function reduceTargetTemplate(
   if (template && !patched) {
     delete template[MappingTokens.IDENTITY];
     delete template[MappingTokens.CONTEXT_DATA];
-    delete template[MappingTokens.CONTEXT_DATA];
+    delete template[MappingTokens.TOPIC_LEVEL];
   }
   const tt = JSON.stringify(template);
   return tt;

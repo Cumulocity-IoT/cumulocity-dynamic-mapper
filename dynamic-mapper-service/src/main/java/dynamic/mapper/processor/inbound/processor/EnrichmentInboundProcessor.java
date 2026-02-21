@@ -68,7 +68,8 @@ public class EnrichmentInboundProcessor extends AbstractEnrichmentProcessor {
         String tenant = context.getTenant();
         Object payloadObject = context.getPayload();
         Mapping mapping = context.getMapping();
-        boolean isSmartFunction = TransformationType.SMART_FUNCTION.equals(mapping.getTransformationType());
+        boolean isSmartFunction = TransformationType.SMART_FUNCTION.equals(mapping.getTransformationType())
+                || TransformationType.EXTENSION_JAVA.equals(mapping.getTransformationType());
 
         // Process topic levels
         List<String> splitTopicAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);

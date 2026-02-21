@@ -953,7 +953,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.mapping.snoopedTemplates[this.snoopedTemplateCounter]
     );
 
-    if (this.stepperConfiguration.allowTemplateExpansion) {
+    if (this.stepperConfiguration.allowTemplateExpansion && this.stepperConfiguration.allowSourceExpansion !== false) {
       if (this.stepperConfiguration.direction === Direction.INBOUND) {
         this.sourceTemplate = expandExternalTemplate(
           this.sourceTemplate,
@@ -977,7 +977,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.mapping.snoopedTemplates[index]
     );
 
-    if (this.stepperConfiguration.allowTemplateExpansion) {
+    if (this.stepperConfiguration.allowTemplateExpansion && this.stepperConfiguration.allowSourceExpansion !== false) {
       if (this.stepperConfiguration.direction === Direction.INBOUND) {
         this.sourceTemplate = expandExternalTemplate(
           this.sourceTemplate,
