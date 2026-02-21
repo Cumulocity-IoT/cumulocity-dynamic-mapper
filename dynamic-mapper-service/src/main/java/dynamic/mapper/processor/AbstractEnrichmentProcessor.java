@@ -264,7 +264,7 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
      * @param context The processing context containing payload and mapping
      *                information
      */
-    protected abstract void enrichPayload(ProcessingContext<?> context);
+    protected abstract void enrichPayload(ProcessingContext<?> context) throws ProcessingException;
 
     /**
      * Handle errors during enrichment phase.

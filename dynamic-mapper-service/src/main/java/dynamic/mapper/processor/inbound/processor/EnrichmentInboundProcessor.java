@@ -68,47 +68,45 @@ public class EnrichmentInboundProcessor extends AbstractEnrichmentProcessor {
         String tenant = context.getTenant();
         Object payloadObject = context.getPayload();
         Mapping mapping = context.getMapping();
+        boolean isSmartFunction = TransformationType.SMART_FUNCTION.equals(mapping.getTransformationType());
 
         // Process topic levels
         List<String> splitTopicAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
 
-        // Add topic levels to DataPrepContext if available
+        // For SMART_FUNCTION: add to DataPrepContext only — never expand the payload Map
         DataPrepContext flowContext = context.getFlowContext();
-        if (flowContext != null && context.getGraalContext() != null
-                && TransformationType.SMART_FUNCTION.equals(context.getMapping().getTransformationType())) {
-            // Set clientId on the context for direct access
-            if (flowContext instanceof dynamic.mapper.processor.model.SimpleFlowContext) {
-                ((dynamic.mapper.processor.model.SimpleFlowContext) flowContext).setClientId(context.getClientId());
+        if (isSmartFunction) {
+            if (flowContext != null && context.getGraalContext() != null) {
+                if (flowContext instanceof dynamic.mapper.processor.model.SimpleFlowContext) {
+                    ((dynamic.mapper.processor.model.SimpleFlowContext) flowContext).setClientId(context.getClientId());
+                }
+
+                addToFlowContext(flowContext, context, Mapping.TOKEN_TOPIC_LEVEL, splitTopicAsList);
+
+                addToFlowContext(flowContext, context, "tenant", tenant);
+                addToFlowContext(flowContext, context, "topic", context.getTopic());
+                addToFlowContext(flowContext, context, "client", context.getClientId());
+                addToFlowContext(flowContext, context, "mappingName", mapping.getName());
+                addToFlowContext(flowContext, context, "mappingId", mapping.getId());
+                addToFlowContext(flowContext, context, "targetAPI", mapping.getTargetAPI().toString());
+                addToFlowContext(flowContext, context, ProcessingContext.GENERIC_DEVICE_IDENTIFIER, mapping.getGenericDeviceIdentifier());
+                addToFlowContext(flowContext, context, ProcessingContext.DEBUG, mapping.getDebug());
+
+                if (context.getMapping().getEventWithAttachment()) {
+                    addToFlowContext(flowContext, context, ProcessingContext.ATTACHMENT_TYPE, "");
+                    addToFlowContext(flowContext, context, ProcessingContext.ATTACHMENT_NAME, "");
+                    addToFlowContext(flowContext, context, ProcessingContext.ATTACHMENT_DATA, "");
+                    addToFlowContext(flowContext, context, ProcessingContext.EVENT_WITH_ATTACHMENT, true);
+                }
+                if (context.getMapping().getCreateNonExistingDevice()) {
+                    addToFlowContext(flowContext, context, ProcessingContext.DEVICE_NAME, context.getDeviceName());
+                    addToFlowContext(flowContext, context, ProcessingContext.DEVICE_TYPE, context.getDeviceType());
+                    addToFlowContext(flowContext, context, ProcessingContext.CREATE_NON_EXISTING_DEVICE, true);
+                }
             }
-
-            addToFlowContext(flowContext, context, Mapping.TOKEN_TOPIC_LEVEL, splitTopicAsList);
-
-            // Add basic context information
-            addToFlowContext(flowContext, context, "tenant", tenant);
-            addToFlowContext(flowContext, context, "topic", context.getTopic());
-            addToFlowContext(flowContext, context, "client", context.getClientId());
-            addToFlowContext(flowContext, context, "mappingName", mapping.getName());
-            addToFlowContext(flowContext, context, "mappingId", mapping.getId());
-            addToFlowContext(flowContext, context, "targetAPI", mapping.getTargetAPI().toString());
-            addToFlowContext(flowContext, context, ProcessingContext.GENERIC_DEVICE_IDENTIFIER, mapping.getGenericDeviceIdentifier());
-            addToFlowContext(flowContext, context, ProcessingContext.DEBUG, mapping.getDebug());
-
-            if (context.getMapping().getEventWithAttachment()) {
-                addToFlowContext(flowContext, context, ProcessingContext.ATTACHMENT_TYPE, "");
-                addToFlowContext(flowContext, context, ProcessingContext.ATTACHMENT_NAME, "");
-                addToFlowContext(flowContext, context, ProcessingContext.ATTACHMENT_DATA, "");
-                addToFlowContext(flowContext, context, ProcessingContext.EVENT_WITH_ATTACHMENT, true);
-            }
-            if (context.getMapping().getCreateNonExistingDevice()) {
-                addToFlowContext(flowContext, context, ProcessingContext.DEVICE_NAME, context.getDeviceName());
-                addToFlowContext(flowContext, context, ProcessingContext.DEVICE_TYPE, context.getDeviceType());
-                addToFlowContext(flowContext, context, ProcessingContext.CREATE_NON_EXISTING_DEVICE, true);
-            }
-
         } else if (payloadObject instanceof Map) {
             Map<String, Object> payloadMap = (Map<String, Object>) payloadObject;
 
-            // Keep original behavior - add to payload
             payloadMap.put(Mapping.TOKEN_TOPIC_LEVEL, splitTopicAsList);
 
             // Process message context
@@ -123,13 +121,11 @@ public class EnrichmentInboundProcessor extends AbstractEnrichmentProcessor {
                     contextData.put(ProcessingContext.DEVICE_TYPE, context.getDeviceType());
                 }
 
-                // Add to payload (original behavior)
                 payloadMap.put(Mapping.TOKEN_CONTEXT_DATA, contextData);
             }
 
             // Handle attachment properties independently
             if (context.getMapping().getEventWithAttachment()) {
-                // Get or create the context data map from payload
                 Map<String, String> contextData;
                 if (payloadMap.containsKey(Mapping.TOKEN_CONTEXT_DATA)) {
                     contextData = (Map<String, String>) payloadMap.get(Mapping.TOKEN_CONTEXT_DATA);
@@ -138,7 +134,6 @@ public class EnrichmentInboundProcessor extends AbstractEnrichmentProcessor {
                     payloadMap.put(Mapping.TOKEN_CONTEXT_DATA, contextData);
                 }
 
-                // Add attachment properties to payload context data
                 contextData.put(ProcessingContext.ATTACHMENT_TYPE, "");
                 contextData.put(ProcessingContext.ATTACHMENT_NAME, "");
                 contextData.put(ProcessingContext.ATTACHMENT_DATA, "");
