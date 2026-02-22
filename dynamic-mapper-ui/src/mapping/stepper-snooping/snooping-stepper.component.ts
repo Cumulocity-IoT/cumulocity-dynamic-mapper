@@ -110,7 +110,7 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy, AfterViewIni
 
   ngAfterViewInit(): void {
     this.currentStepIndex = 0;
-    if (!this.stepperConfiguration.advanceFromStepToEndStep &&
+    if (this.stepperConfiguration.advanceFromStepToEndStep != null &&
         this.stepperConfiguration.advanceFromStepToEndStep === this.currentStepIndex) {
       // Wrap changes in setTimeout to avoid ExpressionChangedAfterItHasBeenCheckedError
       setTimeout(() => {

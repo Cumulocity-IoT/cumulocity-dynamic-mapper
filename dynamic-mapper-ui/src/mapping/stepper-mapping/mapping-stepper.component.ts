@@ -892,7 +892,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   onNextStep(event: StepperStepChange): void {
     this.stepperForward = true;
-    if (this.stepperConfiguration.advanceFromStepToEndStep &&
+    if (this.stepperConfiguration.advanceFromStepToEndStep != null &&
       this.stepperConfiguration.advanceFromStepToEndStep === this.currentStepIndex) {
       this.goToLastStep();
       this.raiseAlert({ type: 'info', text: 'The other steps have been skipped for this mapping type!' });
@@ -921,7 +921,19 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.templatesInitialized = false;
     }
 
-    event.stepper.previous();
+    // When steps were skipped via advanceFromStepToEndStep, jump back to that step
+    // instead of landing on the first skipped step (e.g. "Define substitutions")
+    if (this.stepperConfiguration.advanceFromStepToEndStep != null &&
+        event.stepper.selectedIndex === event.stepper.steps.length - 1) {
+      event.stepper.steps.forEach((step, index) => {
+        if (index > this.stepperConfiguration.advanceFromStepToEndStep) {
+          step.completed = false;
+        }
+      });
+      event.stepper.selectedIndex = this.stepperConfiguration.advanceFromStepToEndStep;
+    } else {
+      event.stepper.previous();
+    }
   }
 
   private expandTemplates(): void {

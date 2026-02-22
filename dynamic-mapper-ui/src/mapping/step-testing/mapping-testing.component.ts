@@ -279,7 +279,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       this.showTestWarning();
 
       const result = await this.performTest(sendPayload);
-      this.handleTestResult(result, sendPayload);
+      await this.handleTestResult(result, sendPayload);
 
       if (this.testingModel.results.length > 0) {
         this.displayTestResult(0);
@@ -345,7 +345,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     return result;
   }
 
-  private handleTestResult(result: TestResult, sendPayload: boolean): void {
+  private async handleTestResult(result: TestResult, sendPayload: boolean): Promise<void> {
     if (!result.success) {
       result.errors.forEach(error => this.alertService.danger(error));
       if (sendPayload) {
@@ -355,9 +355,22 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     }
 
     if (result.warnings?.length > 0) {
-      result.warnings.forEach(warning => {
-        this.alertService.warning(`Test completed with warning: ${warning}`);
-      });
+      const createDeviceWarning = result.warnings.find(w =>
+        w.includes('createNonExistingDevice is disabled')
+      );
+      if (createDeviceWarning) {
+        const shouldEnable = await this.confirmEnableCreateNonExistingDevice();
+        if (shouldEnable) {
+          this.testMapping.createNonExistingDevice = true;
+          await this.executeTest(sendPayload);
+          return;
+        }
+      }
+      result.warnings
+        .filter(w => !w.includes('createNonExistingDevice is disabled'))
+        .forEach(warning => {
+          this.alertService.warning(`Test completed with warning: ${warning}`);
+        });
       return;
     }
 
@@ -368,6 +381,17 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     } else {
       this.alertService.success(`Test of mapping ${this.testMapping.name} was successful.`);
     }
+  }
+
+  private async confirmEnableCreateNonExistingDevice(): Promise<boolean> {
+    const modalRef = this.bsModalService.show(ConfirmationModalComponent, {
+      initialState: {
+        title: 'Enable device creation during testing',
+        message: 'Do you want to set createNonExistingDevice during testing to true?',
+        labels: { ok: 'Enable', cancel: 'Cancel' }
+      }
+    });
+    return await modalRef.content.closeSubject.toPromise();
   }
 
   private async handleError(message: string, error: unknown): Promise<void> {
