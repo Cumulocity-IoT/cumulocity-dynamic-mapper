@@ -57,7 +57,7 @@ const onMessage: SmartFunctionOut = (
   // Log context and payload for debugging
   console.log('Context state:', context.getStateAll());
   console.log('Payload Raw:', payload);
-  console.log('Payload messageId:', payload.get('messageId'));
+  console.log('Payload messageId:', payload['messageId']);
 
   // Example 1: Using _externalId_ placeholder (recommended)
   // The placeholder is automatically resolved using the externalId type from externalSource

@@ -1527,9 +1527,9 @@
   var payload = msg.getPayload(); // contains payload
   console.log("Context" + context.getStateAll());
   console.log("Payload Raw:" + msg.getPayload());
-  console.log("Payload messageId" + msg.getPayload().get('messageId'));
+  console.log("Payload messageId" + payload['messageId']);
   // Get clientId from context first, fall back to payload
-  var clientId = context.getClientId() || payload.get("clientId");
+  var clientId = context.getClientId() || payload["clientId"];
   // insert transformation logic here
   // then return result
   return [&#123;
@@ -1547,9 +1547,9 @@
           The <b>Smart Function</b> allows enriching the payload with inventory data from the device, e.g.:
         </div>
         <pre><code class="language-javascript">// Get clientId from context first, fall back to payload
-var clientId = context.getClientId() || payload.get("clientId");
+var clientId = context.getClientId() || payload["clientId"];
 // lookup device for enrichment
-var deviceByDeviceId = context.getManagedObjectByDeviceId(payload.get("deviceId"));
+var deviceByDeviceId = context.getManagedObjectByDeviceId(payload["deviceId"]);
 console.log("Device (by device id): " + deviceByDeviceId);
 var deviceByExternalId = context.getManagedObject(&#123; externalId: clientId, type: "c8y_Serial" &#125;);
 console.log("Device (by external id): " + deviceByExternalId);</code></pre>
@@ -1709,7 +1709,7 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
           <pre><code class="language-javascript">function onMessage(msg, context) &#123;
   var payload = msg.getPayload();
   // Get clientId from context first, fall back to payload
-  var clientId = context.getClientId() || payload.get("clientId");
+  var clientId = context.getClientId() || payload["clientId"];
   return [&#123;
     cumulocityType: "measurement",
     action: "create",
@@ -1727,7 +1727,7 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
           <pre><code class="language-javascript">function onMessage(msg, context) &#123;
   var payload = msg.getPayload();
   // Get clientId from context first, fall back to payload
-  var clientId = context.getClientId() || payload.get("clientId");
+  var clientId = context.getClientId() || payload["clientId"];
   return [&#123;
     cumulocityType: "measurement",
     action: "create",
@@ -1746,7 +1746,7 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
           <pre><code class="language-javascript">function onMessage(msg, context) &#123;
   var payload = msg.getPayload();
   // Get clientId from context first, fall back to payload
-  var clientId = context.getClientId() || payload.get("clientId");
+  var clientId = context.getClientId() || payload["clientId"];
   const payloadType = payload["payloadType"];
   if (payloadType == "telemetry") &#123;
     return [&#123;
@@ -1787,7 +1787,7 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
       "c8y_Notes": "Last updated: " + new Date().toISOString(),
       "customData": &#123; "temperature": payload["temp"], "humidity": payload["hum"] &#125;
     &#125;,
-    externalSource: [&#123; "type": "c8y_Serial", "externalId": payload.get("deviceId") &#125;]
+    externalSource: [&#123; "type": "c8y_Serial", "externalId": payload["deviceId"] &#125;]
   &#125;];
 &#125;</code></pre>
           <p class="p-t-8 text-14">

@@ -83,13 +83,9 @@ export interface DataPrepContext {
  * In Dynamic Mapper, payloads are pre-deserialized from JSON for convenience.
  *
  * @example
- * // Object-style access
+ * // Object-style access (preferred)
  * const temp = payload["sensorData"]["temp_val"];
- *
- * @example
- * // Map-like API
- * const messageId = payload.get("messageId");
- * const sensorData = payload.get("sensorData");
+ * const messageId = payload["messageId"];
  */
 export interface SmartFunctionPayload {
   /**
@@ -100,12 +96,13 @@ export interface SmartFunctionPayload {
 
   /**
    * Map-like API for accessing payload properties.
+   * @deprecated Prefer bracket notation: payload["key"] instead of payload.get("key")
    * @param key - The property key to retrieve
    * @returns The value associated with the key, or undefined if not found
    *
    * @example
-   * const messageId = payload.get("messageId");
-   * const clientId = payload.get("clientId");
+   * const messageId = payload["messageId"];
+   * const clientId = payload["clientId"];
    */
   get(key: string): any;
 }
@@ -223,7 +220,7 @@ export interface DynamicMapperContext extends DataPrepContext {
    *   console.log("Device type:", device.type);
    * }
    */
-  getManagedObjectByDeviceId(deviceId: string): any;
+  getManagedObjectByDeviceId(deviceId: string): C8yManagedObject | null;
 
   /**
    * Looks up a device from the inventory cache by external ID.
@@ -244,7 +241,7 @@ export interface DynamicMapperContext extends DataPrepContext {
    *   const sensorType = device?.c8y_Sensor?.type;
    * }
    */
-  getManagedObject(externalId: ExternalId): any;
+  getManagedObject(externalId: ExternalId): C8yManagedObject | null;
 
   /**
    * Looks up DTM (Digital Twin Manager) Asset properties by asset ID.
@@ -813,19 +810,18 @@ export type SmartFunctionIn = (
  * At runtime the Java backend wraps the Cumulocity platform event (measurement,
  * operation, alarm, etc.) in the same `DeviceMessage` Java class used for inbound
  * messages. This means `payload` is always a {@link SmartFunctionPayload} that supports
- * both direct property access (`payload["source"]["id"]`) and Map-like access
- * (`payload.get("messageId")`).
+ * direct property access using bracket notation.
  *
  * @example
  * const onMessage: SmartFunctionOut = (msg, context) => {
  *   const sourceId = msg.payload["source"]["id"];
- *   const temp    = msg.payload.get("c8y_TemperatureMeasurement")?.T?.value;
+ *   const temp    = msg.payload["c8y_TemperatureMeasurement"]?.T?.value;
  * };
  */
 export interface OutboundMessage {
   /**
    * The Cumulocity event/measurement/alarm payload, pre-deserialized.
-   * Supports both bracket access and the Map-like `.get()` API.
+   * Access properties using bracket notation: payload["key"].
    */
   payload: SmartFunctionPayload;
 

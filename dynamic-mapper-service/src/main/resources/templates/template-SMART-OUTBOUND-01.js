@@ -14,7 +14,7 @@ function onMessage(msg, context) {
 
     console.log("Context" + context.getStateAll());
     console.log("Payload Raw:" + payload);
-    console.log("Payload messageId" +  payload.get('messageId'));
+    console.log("Payload messageId" +  payload['messageId']);
 
     // use _externalId_ to reference the external id of the device.
     // it is resolved automatically using the externalId type from externalSource: [{"type":"c8y_Serial"}]

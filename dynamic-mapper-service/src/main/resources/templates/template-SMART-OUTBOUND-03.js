@@ -14,7 +14,7 @@ function onMessage(msg, context) {
 
     console.log("Context" + context.getStateAll());
     console.log("Payload Raw:" + payload);
-    console.log("Payload messageId" +  payload.get('messageId'));
+    console.log("Payload messageId" +  payload['messageId']);
 
     return [{  
         topic: `measurements/${payload["source"]["id"]}`,

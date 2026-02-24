@@ -14,10 +14,10 @@ function onMessage(msg, context) {
 
     console.log("Context" + context.getStateAll());
     console.log("Payload Raw:" + payload);
-    console.log("Payload messageId" +  payload.get("messageId"));
+    console.log("Payload messageId" +  payload["messageId"]);
 
     // Get clientId from context first, fall back to payload
-    var clientId = context.getClientId() || payload.get("clientId");
+    var clientId = context.getClientId() || payload["clientId"];
 
     return [{
         cumulocityType: "measurement",

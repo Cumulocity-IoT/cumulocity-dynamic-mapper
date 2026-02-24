@@ -37,10 +37,10 @@ const onMessage: SmartFunctionIn = (
 
   console.log('Context state:', context.getStateAll());
   console.log('Payload Raw:', payload);
-  console.log('Payload messageId:', payload.get('messageId'));
+  console.log('Payload messageId:', payload['messageId']);
 
   // Get clientId from context first, fall back to payload
-  const clientId = context.getClientId() || payload.get('clientId');
+  const clientId = context.getClientId() || payload['clientId'];
 
   if (!clientId) {
     console.error('No client ID available');
@@ -50,7 +50,7 @@ const onMessage: SmartFunctionIn = (
   // Try to lookup device by device ID
   let deviceByDeviceId: C8yManagedObject | null = null;
   try {
-    deviceByDeviceId = context.getManagedObjectByDeviceId(payload.get('deviceId'));
+    deviceByDeviceId = context.getManagedObjectByDeviceId(payload['deviceId']);
     console.log('Device (by device id):', deviceByDeviceId);
   } catch (e) {
     console.error('Error looking up device by ID:', e);
@@ -80,9 +80,9 @@ const onMessage: SmartFunctionIn = (
 
   let measurementPayload: any;
 
-  // Get sensor value - supports both nested object and .get() access
-  const sensorData = payload.get('sensorData') || payload['sensorData'];
-  const sensorValue = sensorData?.get ? sensorData.get('val') : sensorData?.val;
+  // Get sensor value using bracket notation
+  const sensorData = payload['sensorData'];
+  const sensorValue = sensorData?.['val'];
 
   if (isVoltage) {
     measurementPayload = {

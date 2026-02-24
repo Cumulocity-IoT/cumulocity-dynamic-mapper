@@ -2,17 +2,15 @@
   "name": "@c8y/dynamic-mapper-smart-function",
   "version": "1.0.0",
   "description": "Smart Function API type definitions and examples for Cumulocity Dynamic Mapper",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "zshy": "./src/index.ts",
   "scripts": {
-    "build": "tsc",
-    "build:watch": "tsc --watch",
-    "clean": "rm -rf dist",
+    "build": "zshy",
     "test": "jest",
     "test:watch": "jest --watch",
     "lint": "eslint src/**/*.ts",
-    "format": "prettier --write 'src/**/*.ts'",
-    "prebuild": "npm run clean"
+    "format": "prettier --write 'src/**/*.ts'"
   },
   "keywords": [
     "cumulocity",
@@ -23,6 +21,7 @@
   "author": "Cumulocity GmbH",
   "license": "Apache-2.0",
   "devDependencies": {
+    "zshy": "latest",
     "@types/jest": "^29.5.0",
     "@types/node": "^20.0.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
@@ -39,5 +38,16 @@
     "trailingComma": "es5",
     "tabWidth": 2,
     "semi": true
+  },
+  "files": [
+    "dist"
+  ],
+  "module": "./dist/index.mjs",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
   }
 }

@@ -32,7 +32,7 @@ const onMessage: SmartFunctionIn = (
   context: DynamicMapperContext
 ): CumulocityObject[] => {
   const payload = msg.payload;
-  const clientId = context.getClientId() || payload.get('clientId');
+  const clientId = context.getClientId() || payload['clientId'];
 
   if (!clientId) {
     console.error('No client ID available');
@@ -40,7 +40,7 @@ const onMessage: SmartFunctionIn = (
   }
 
   // Get current temperature from payload
-  const currentTemp = payload.get('temperature') as number;
+  const currentTemp = payload['temperature'] as number;
 
   // Retrieve previous state
   const lastTemp = context.getState('lastTemperature') as number | undefined;

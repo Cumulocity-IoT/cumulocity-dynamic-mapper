@@ -57,3 +57,4 @@ setup-env.sh
 USERGUIDE.html
 .claude/settings.json
 resources/test-env/amqp/setup.sh
+dynamic-mapper-service/src/main/resources/application-dev.properties

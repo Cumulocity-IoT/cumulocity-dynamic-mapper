@@ -57,14 +57,14 @@ const onMessage: SmartFunctionIn = (
   // Log context and payload for debugging
   console.log('Context state:', context.getStateAll());
   console.log('Payload Raw:', payload);
-  console.log('Payload messageId:', payload.get('messageId'));
+  console.log('Payload messageId:', payload['messageId']);
 
   // Get clientId from context first, fall back to payload
-  const clientId = context.getClientId() || payload.get('clientId');
+  const clientId = context.getClientId() || payload['clientId'];
 
   // Lookup device by device ID for enrichment
   const deviceByDeviceId: C8yManagedObject | null = context.getManagedObjectByDeviceId(
-    payload.get('deviceId')
+    payload['deviceId']
   );
   console.log('Device (by device id):', deviceByDeviceId);
 
