@@ -557,6 +557,22 @@ export interface ExternalSource {
  * A Cumulocity action object that can be returned from a Smart Function.
  * Represents a request to create/update/delete data in Cumulocity.
  *
+ * The optional type parameter `T` constrains which `cumulocityType` values are
+ * allowed, enabling per-function return-type documentation and type checking.
+ * Defaults to the full {@link C8yObjectType} union so existing code is unaffected.
+ *
+ * @example
+ * // Untyped (accepts any cumulocityType — backward-compatible default)
+ * const obj: CumulocityObject = { cumulocityType: "measurement", ... };
+ *
+ * @example
+ * // Typed to a specific subset
+ * const obj: CumulocityObject<'managedObject' | 'event'> = {
+ *   cumulocityType: "managedObject", // ✅
+ *   // cumulocityType: "measurement"  ❌ TypeScript error
+ *   ...
+ * };
+ *
  * @example
  * // Create a measurement
  * return [{
@@ -572,7 +588,7 @@ export interface ExternalSource {
  *   externalSource: [{ type: "c8y_Serial", externalId: "SENSOR-001" }]
  * }];
  */
-export interface CumulocityObject {
+export interface CumulocityObject<T extends C8yObjectType = C8yObjectType> {
   /**
    * The Cumulocity API object payload.
    * Should match the structure used in the C8Y REST API.
@@ -594,7 +610,7 @@ export interface CumulocityObject {
    * - "operation" - Device operations/commands
    * - "managedObject" - Inventory/device objects
    */
-  cumulocityType: C8yObjectType;
+  cumulocityType: T;
 
   /**
    * What kind of operation to perform on this type.
@@ -775,34 +791,34 @@ export interface DeviceMessage {
  * Processes incoming device messages from the broker and returns Cumulocity objects
  * to be sent to the Cumulocity platform.
  *
+ * The optional type parameter `T` constrains which `cumulocityType` values the
+ * returned {@link CumulocityObject} array may contain. Defaults to the full
+ * {@link C8yObjectType} union so existing code is unaffected.
+ *
  * @param msg - The incoming device message from the broker (pre-deserialized)
  * @param context - Runtime context providing state, config, and device lookups
  * @returns Cumulocity objects (measurements, events, alarms, etc.) or empty array
  *
  * @example
- * // Basic inbound Smart Function (Broker → Cumulocity)
- * const onMessage: SmartFunctionIn = (msg, context) => {
- *   const payload = msg.payload;
- *   const clientId = context.getClientId();
+ * // Untyped (any cumulocityType — backward-compatible default)
+ * const onMessage: SmartFunctionIn = (msg, context) => { ... };
  *
+ * @example
+ * // Constrained: only 'managedObject' and 'event' are valid return types
+ * const onMessage: SmartFunctionIn<'managedObject' | 'event'> = (msg, context) => {
  *   return [{
- *     cumulocityType: "measurement",
+ *     cumulocityType: "managedObject", // ✅
+ *     // cumulocityType: "measurement"  ❌ TypeScript error
  *     action: "create",
- *     payload: {
- *       type: "c8y_TemperatureMeasurement",
- *       time: new Date().toISOString(),
- *       c8y_Temperature: {
- *         T: { value: payload.temperature, unit: "C" }
- *       }
- *     },
+ *     payload: { ... },
  *     externalSource: [{ type: "c8y_Serial", externalId: clientId! }]
  *   }];
  * };
  */
-export type SmartFunctionIn = (
+export type SmartFunctionIn<T extends C8yObjectType = C8yObjectType> = (
   msg: DynamicMapperDeviceMessage,
   context: DynamicMapperContext
-) => Array<CumulocityObject> | CumulocityObject | [];
+) => Array<CumulocityObject<T>> | CumulocityObject<T> | [];
 
 /**
  * Message received by an outbound Smart Function.
@@ -812,13 +828,19 @@ export type SmartFunctionIn = (
  * messages. This means `payload` is always a {@link SmartFunctionPayload} that supports
  * direct property access using bracket notation.
  *
+ * The optional type parameter `T` narrows the `cumulocityType` of the triggering
+ * event — useful when a function is dedicated to a specific event type.
+ * Defaults to the full {@link C8yObjectType} union so existing code is unaffected.
+ *
  * @example
- * const onMessage: SmartFunctionOut = (msg, context) => {
- *   const sourceId = msg.payload["source"]["id"];
- *   const temp    = msg.payload["c8y_TemperatureMeasurement"]?.T?.value;
+ * // Constrained to measurement events only
+ * const onMessage: SmartFunctionOut<'measurement'> = (msg, context) => {
+ *   // msg.cumulocityType is narrowed to 'measurement'
+ *   const temp = msg.payload["c8y_TemperatureMeasurement"]?.T?.value;
+ *   ...
  * };
  */
-export interface OutboundMessage {
+export interface OutboundMessage<T extends C8yObjectType = C8yObjectType> {
   /**
    * The Cumulocity event/measurement/alarm payload, pre-deserialized.
    * Access properties using bracket notation: payload["key"].
@@ -826,7 +848,7 @@ export interface OutboundMessage {
   payload: SmartFunctionPayload;
 
   /** Cumulocity API type of the triggering event, if available. */
-  cumulocityType?: C8yObjectType;
+  cumulocityType?: T;
 
   /** Internal Cumulocity device ID of the originating device, if available. */
   sourceId?: string;
@@ -841,13 +863,22 @@ export interface OutboundMessage {
  * The `msg.payload` is a {@link SmartFunctionPayload} — the same accessor type used
  * in inbound functions — so both property access and `.get()` work without casting.
  *
+ * The optional type parameter `T` narrows `msg.cumulocityType` to the specified
+ * event type(s), documenting which Cumulocity events this function handles.
+ * Defaults to the full {@link C8yObjectType} union so existing code is unaffected.
+ *
  * @param msg - The incoming Cumulocity event, wrapped with SmartFunctionPayload access
  * @param context - Runtime context providing state, config, and device lookups
  * @returns Device messages to send to the broker or empty array
  *
  * @example
- * // Outbound Smart Function (Cumulocity → Broker)
- * const onMessage: SmartFunctionOut = (msg, context) => {
+ * // Untyped (handles any event type — backward-compatible default)
+ * const onMessage: SmartFunctionOut = (msg, context) => { ... };
+ *
+ * @example
+ * // Constrained: only handles 'measurement' outbound events
+ * const onMessage: SmartFunctionOut<'measurement'> = (msg, context) => {
+ *   // msg.cumulocityType is narrowed to 'measurement'
  *   const sourceId = msg.payload["source"]["id"];
  *
  *   return {
@@ -859,8 +890,8 @@ export interface OutboundMessage {
  *   };
  * };
  */
-export type SmartFunctionOut = (
-  msg: OutboundMessage,
+export type SmartFunctionOut<T extends C8yObjectType = C8yObjectType> = (
+  msg: OutboundMessage<T>,
   context: DynamicMapperContext
 ) => Array<DeviceMessage> | DeviceMessage | [];
 
