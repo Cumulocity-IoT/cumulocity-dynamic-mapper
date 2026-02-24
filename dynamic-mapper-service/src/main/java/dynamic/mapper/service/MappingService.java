@@ -33,6 +33,7 @@ import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.*;
 import dynamic.mapper.processor.model.C8YMessage;
+import dynamic.mapper.service.cache.FlowStateStore;
 import dynamic.mapper.service.cache.MappingCacheManager;
 import dynamic.mapper.service.deployment.DeploymentMapService;
 import dynamic.mapper.service.resolver.MappingResolverService;
@@ -67,6 +68,7 @@ public class MappingService {
     private final ConfigurationRegistry configurationRegistry;
     private final MicroserviceSubscriptionsService subscriptionsService;
     private final MappingValidator mappingValidator;
+    private final FlowStateStore flowStateStore;
 
     // Track dirty mappings that need to be persisted
     private final Map<String, Set<Mapping>> dirtyMappings = new ConcurrentHashMap<>();
@@ -102,6 +104,7 @@ public class MappingService {
         cacheManager.removeTenantCache(tenant);
         statusService.removeTenantStatus(tenant);
         deploymentMapService.removeTenantDeploymentMap(tenant);
+        flowStateStore.clearTenantState(tenant);
         dirtyMappings.remove(tenant);
 
         log.info("{} - Resources removed", tenant);
@@ -270,6 +273,7 @@ public class MappingService {
             statusService.removeStatus(tenant, mapping.getIdentifier());
             deploymentMapService.removeMappingDeployment(tenant, mapping.getIdentifier());
             javaScriptService.removeCodeFromEngine(tenant, mapping);
+            flowStateStore.clearMappingState(tenant, mapping.getIdentifier());
 
             configurationRegistry.getC8yAgent().createOperationEvent(
                     String.format("Mapping deleted: %s [%s]", mapping.getName(), id),

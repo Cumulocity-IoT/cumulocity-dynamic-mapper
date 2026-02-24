@@ -120,7 +120,9 @@ interface DynamicMapperContext extends DataPrepContext {
 
 // Usage - Feature-complete!
 function onMessage(msg: DynamicMapperDeviceMessage, context: DynamicMapperContext) {
-  // State (IDP standard)
+  // ✅ Persistent state — survives across messages for the same mapping
+  const count = (context.getState("messageCount") as number | undefined) || 0;
+  context.setState("messageCount", count + 1);
   context.setState("lastTemp", 25.5);
   const lastTemp = context.getState("lastTemp");
 

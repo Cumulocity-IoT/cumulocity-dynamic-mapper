@@ -13,14 +13,17 @@ import {
 
 /**
  * @name Smart Function with State Management (TypeScript)
- * @description Demonstrates state persistence across invocations
+ * @description Demonstrates persistent state across message invocations
  * @templateType INBOUND_SMART_FUNCTION
  * @direction INBOUND
  *
  * This example demonstrates:
- * - State management (setState, getState, getStateAll)
- * - Calculating statistics across messages
- * - Detecting value changes
+ * - Persistent state (setState/getState survive across messages for the same mapping)
+ * - Calculating running statistics (min, max, average, count) across messages
+ * - Detecting value changes between consecutive messages
+ *
+ * State is scoped per tenant + mapping and is cleared when the mapping is deleted.
+ * State does not survive a service restart (in-memory only).
  */
 
 /**

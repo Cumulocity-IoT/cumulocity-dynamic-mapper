@@ -38,6 +38,7 @@ import dynamic.mapper.processor.model.DataPrepContext;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.TransformationType;
 import dynamic.mapper.service.MappingService;
+import dynamic.mapper.service.cache.FlowStateStore;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -50,8 +51,9 @@ public class EnrichmentInboundProcessor extends AbstractEnrichmentProcessor {
 
     public EnrichmentInboundProcessor(
             ConfigurationRegistry configurationRegistry,
-            MappingService mappingService) {
-        super(configurationRegistry, mappingService);
+            MappingService mappingService,
+            FlowStateStore flowStateStore) {
+        super(configurationRegistry, mappingService, flowStateStore);
     }
 
     @Override

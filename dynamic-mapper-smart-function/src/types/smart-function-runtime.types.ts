@@ -53,21 +53,38 @@ export interface DataPrepContext {
   readonly runtime: string;
 
   /**
-   * Get state value by key.
-   * State is not shared across data plane nodes, so only use it for device-specific state.
+   * Retrieves a persisted state value by key.
+   *
+   * State **persists across message invocations** for the same mapping. Values
+   * written by a previous message are available when the next message arrives.
+   * State is scoped per tenant + mapping — it is not shared across mappings or
+   * tenants.
+   *
+   * State does not survive a service restart (in-memory only).
    *
    * @param key - The state key
    * @param defaultValue - Optional default value if key doesn't exist
    * @returns The state value or default
+   *
+   * @example
+   * // On first message: returns undefined; on subsequent messages: returns prior value
+   * const count = (context.getState('messageCount') as number | undefined) || 0;
    */
   getState(key: string, defaultValue?: any): any;
 
   /**
-   * Set state value by key.
-   * State persists across invocations but is not shared across flow instances.
+   * Persists a state value by key.
+   *
+   * The value is stored in memory and made available to subsequent invocations
+   * of the same mapping. State is automatically cleared when the mapping is
+   * deleted. For concurrent invocations of the same mapping, last-writer-wins.
    *
    * @param key - The state key
-   * @param value - The value to store
+   * @param value - The value to store (primitives, objects, and arrays are supported)
+   *
+   * @example
+   * context.setState('messageCount', count + 1);
+   * context.setState('lastTemperature', temperature);
    */
   setState(key: string, value: any): void;
 }
@@ -149,15 +166,19 @@ export interface DynamicMapperDeviceMessage {
 /**
  * Dynamic Mapper's enhanced runtime context.
  * Extends standard IDP DataPrepContext with additional capabilities for:
- * - Configuration access
+ * - Persistent state across message invocations (per mapping)
  * - Device enrichment/lookups from inventory cache
  * - DTM (Digital Twin Manager) integration
  *
+ * ### Persistent state
+ * `setState` / `getState` values survive across messages for the same mapping.
+ * They are cleared when the mapping is deleted and do not survive a service restart.
+ *
  * @example
  * function onMessage(msg: DynamicMapperDeviceMessage, context: DynamicMapperContext) {
- *   // State management (standard)
- *   context.setState("lastValue", 42);
- *   const lastValue = context.getState("lastValue");
+ *   // State persists across invocations — messageCount grows with each message
+ *   const count = (context.getState("messageCount") as number | undefined) || 0;
+ *   context.setState("messageCount", count + 1);
  *
  *   const clientId = context.getClientId();
  *
@@ -489,6 +510,29 @@ export interface C8yManagedObject {
 // ============================================================================
 
 /**
+ * Maps each {@link C8yObjectType} value to its corresponding C8y domain interface.
+ *
+ * Used as a lookup table in {@link CumulocityObject} so that the `payload` field
+ * is automatically typed when `T` is constrained to a specific object type:
+ *
+ * - `CumulocityObject<'measurement'>` → `payload: C8yMeasurement`
+ * - `CumulocityObject<'event'>`       → `payload: C8yEvent`
+ * - `CumulocityObject<'alarm'>`       → `payload: C8yAlarm`
+ * - `CumulocityObject<'operation'>`   → `payload: C8yOperation`
+ * - `CumulocityObject<'managedObject'>` → `payload: C8yManagedObject`
+ *
+ * When `T` is the full {@link C8yObjectType} union (the default), TypeScript
+ * distributes the conditional type, resulting in the union of all domain interfaces.
+ */
+export type C8yPayloadTypeMap = {
+  measurement: C8yMeasurement;
+  event: C8yEvent;
+  alarm: C8yAlarm;
+  operation: C8yOperation;
+  managedObject: C8yManagedObject;
+};
+
+/**
  * CRUD action to perform on a Cumulocity object.
  * Used in {@link CumulocityObject.action} and {@link DeviceMessage.action}.
  */
@@ -579,15 +623,25 @@ export interface CumulocityObject<T extends C8yObjectType = C8yObjectType> {
    * The Cumulocity API object payload.
    * Should match the structure used in the C8Y REST API.
    *
+   * The type is derived from the `T` parameter via {@link C8yPayloadTypeMap}:
+   * - `CumulocityObject<'measurement'>` → `C8yMeasurement`
+   * - `CumulocityObject<'event'>`       → `C8yEvent`
+   * - `CumulocityObject<'alarm'>`       → `C8yAlarm`
+   * - `CumulocityObject<'operation'>`   → `C8yOperation`
+   * - `CumulocityObject<'managedObject'>` → `C8yManagedObject`
+   *
+   * When `T` is the default union, the payload accepts any of the domain types.
+   *
    * Special notes:
    * - If providing an externalSource, you don't need to provide an "id"
    * - For update APIs, include an "id" field in the payload
    */
-  payload: object;
+  payload: C8yPayloadTypeMap[T];
 
   /**
    * Which Cumulocity API type is being modified.
    * This determines which API endpoint will be used.
+   * Must match the shape of {@link payload}.
    *
    * Available values:
    * - "measurement" - Time-series measurement data
@@ -672,7 +726,25 @@ export interface CumulocityObject<T extends C8yObjectType = C8yObjectType> {
  *   }))
  * };
  */
-export interface DeviceMessage {
+
+/**
+ * The optional type parameter `T` narrows the {@link DeviceMessage.cumulocityType}
+ * field, documenting which Cumulocity event type this outbound message is derived
+ * from. Defaults to the full {@link C8yObjectType} union so existing code is unaffected.
+ *
+ * @example
+ * // Untyped — any cumulocityType (backward-compatible default)
+ * const msg: DeviceMessage = { topic: "out/temp", payload: bytes };
+ *
+ * @example
+ * // Constrained to measurement
+ * const msg: DeviceMessage<'measurement'> = {
+ *   topic: "out/temp",
+ *   payload: bytes,
+ *   cumulocityType: "measurement"  // ✅ — "alarm" would be a TypeScript error
+ * };
+ */
+export interface DeviceMessage<T extends C8yObjectType = C8yObjectType> {
   /**
    * Message payload as a Uint8Array.
    * For outbound messages, serialize your data to Uint8Array.
@@ -752,10 +824,11 @@ export interface DeviceMessage {
   /**
    * Specifies which Cumulocity API type this device message maps to.
    * Helps determine the target API endpoint.
+   * Narrowed by the type parameter `T`.
    *
    * If not specified, the target API is derived from the topic or mapping.
    */
-  cumulocityType?: C8yObjectType;
+  cumulocityType?: T;
 
   /**
    * Explicitly set the Cumulocity device ID for this message.

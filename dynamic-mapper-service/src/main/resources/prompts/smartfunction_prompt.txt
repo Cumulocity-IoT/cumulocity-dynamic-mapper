@@ -268,14 +268,17 @@ export interface DeviceMessage {
  */
 export interface DataPrepContext {
     /**
-    * Sets a value in the context's state.
+    * Persists a value in the context's state.
+    * State SURVIVES across message invocations for the same mapping.
+    * State is cleared when the mapping is deleted.
     * @param {string} key - The key for the state item.
-    * @param {any} value - The value to set for the given key.
+    * @param {any} value - The value to store (primitives, objects, and arrays are supported).
     */
     setState(key: string, value: any): void;
 
     /**
-     * Retrieves a value from the context's state.
+     * Retrieves a persisted state value.
+     * Returns the value stored by a previous message invocation, or null on first call.
      * @param {string} key - The key of the state item to retrieve.
      * @returns {any} The value associated with the key, or undefined if not found.
      */
