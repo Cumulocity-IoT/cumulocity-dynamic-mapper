@@ -61,13 +61,6 @@ public interface DataPrepContext {
     Value getStateKeySet();
 
     /**
-     * Retrieves the entire configuration map for the context.
-     * 
-     * @return A Value containing the context's configuration as a JS object.
-     */
-    Value getConfig();
-
-    /**
      * Lookup DTM Asset properties
      * 
      * @param assetId The asset ID to lookup.

@@ -282,12 +282,6 @@ export interface DataPrepContext {
     getState(key: string): any;
 
     /**
-     * Retrieves the entire configuration map for the context.
-     * @returns {Record<string, any>} A Map containing the context's configuration.
-     */
-    getConfig(): Record<string, any>;
-
-    /**
      * Lookup DTM Asset properties by asset ID.
      * @param {string} assetId - The ID of the asset to look up.
      * @returns {Record<string, any>} A record containing the asset properties.

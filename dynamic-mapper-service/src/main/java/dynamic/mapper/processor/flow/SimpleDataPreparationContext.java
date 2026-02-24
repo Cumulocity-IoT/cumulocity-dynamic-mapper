@@ -179,15 +179,6 @@ public class SimpleDataPreparationContext implements DataPreparationContext {
     }
 
     @Override
-    public Value getConfig() {
-        if (dataPrepContext != null) {
-            return dataPrepContext.getConfig();
-        }
-        log.warn("{} - getConfig() called but DataPrepContext not available", tenant);
-        return null;
-    }
-
-    @Override
     public Value getDTMAsset(String assetId) {
         if (dataPrepContext != null) {
             return dataPrepContext.getDTMAsset(assetId);

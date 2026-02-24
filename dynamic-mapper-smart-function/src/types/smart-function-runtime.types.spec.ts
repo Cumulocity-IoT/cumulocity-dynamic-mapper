@@ -74,7 +74,6 @@ describe('Smart Function Runtime Types', () => {
     it('should create mock runtime context', () => {
       const mockContext = createMockRuntimeContext({
         clientId: 'client-123',
-        config: { timeout: 5000 },
         devices: {
           '12345': { id: '12345', name: 'Test Device', type: 'c8y_Device' }
         },
@@ -84,7 +83,6 @@ describe('Smart Function Runtime Types', () => {
       });
 
       expect(mockContext.getClientId()).toBe('client-123');
-      expect(mockContext.getConfig()).toEqual({ timeout: 5000 });
       expect(mockContext.getManagedObjectByDeviceId('12345')).toEqual({
         id: '12345',
         name: 'Test Device',

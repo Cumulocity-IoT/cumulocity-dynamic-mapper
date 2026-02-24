@@ -159,8 +159,6 @@ export interface DynamicMapperDeviceMessage {
  *   context.setState("lastValue", 42);
  *   const lastValue = context.getState("lastValue");
  *
- *   // Configuration access (enhanced)
- *   const config = context.getConfig();
  *   const clientId = context.getClientId();
  *
  *   // Device enrichment (enhanced)
@@ -184,18 +182,6 @@ export interface DynamicMapperContext extends DataPrepContext {
    * console.log("All state:", context.getStateAll());
    */
   getStateAll(): Record<string, any>;
-
-  /**
-   * Retrieves the entire configuration map for the context.
-   * Configuration is set externally and provides read-only settings.
-   *
-   * @returns A record containing the context's configuration
-   *
-   * @example
-   * const config = context.getConfig();
-   * const threshold = config.temperatureThreshold || 30;
-   */
-  getConfig(): Record<string, any>;
 
   /**
    * Retrieves the MQTT client ID or transport client identifier.
@@ -1046,7 +1032,6 @@ export function createMockOutboundMessage(
  */
 export function createMockRuntimeContext(options: {
   clientId?: string;
-  config?: Record<string, any>;
   devices?: Record<string, any>;
   externalIdMap?: Record<string, any>;
   dtmAssets?: Record<string, any>;
@@ -1063,9 +1048,6 @@ export function createMockRuntimeContext(options: {
     },
     getStateAll() {
       return { ...state };
-    },
-    getConfig() {
-      return options.config || {};
     },
     getClientId() {
       return options.clientId;

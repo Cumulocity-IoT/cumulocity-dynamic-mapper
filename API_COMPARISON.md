@@ -108,9 +108,6 @@ interface DynamicMapperContext extends DataPrepContext {
 
   // Dynamic Mapper enhancements
   getStateAll(): Record<string, any>;
-
-  // Configuration access
-  getConfig(): Record<string, any>;
   getClientId(): string | undefined;
 
   // Device lookup & enrichment
@@ -126,10 +123,6 @@ function onMessage(msg: DynamicMapperDeviceMessage, context: DynamicMapperContex
   // State (IDP standard)
   context.setState("lastTemp", 25.5);
   const lastTemp = context.getState("lastTemp");
-
-  // ✅ Configuration (Dynamic Mapper)
-  const config = context.getConfig();
-  const threshold = config.tempThreshold || 30;
 
   // ✅ Device enrichment (Dynamic Mapper)
   const device = context.getManagedObject({
@@ -352,7 +345,6 @@ interface DynamicMapperContext extends DataPrepContext {
   // + All IDP methods inherited
   // + Enhanced methods added
   getStateAll(): Record<string, any>;
-  getConfig(): Record<string, any>;
   getClientId(): string | undefined;
   getManagedObject(externalId: ExternalId): any;
   getManagedObjectByDeviceId(deviceId: string): any;

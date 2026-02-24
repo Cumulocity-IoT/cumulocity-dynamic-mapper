@@ -92,20 +92,6 @@ public class SimpleFlowContext implements DataPrepContext {
     }
 
     @Override
-    public Value getConfig() {
-        if (graalContext == null) {
-            return null;
-        }
-
-        // Create a basic configuration
-        Map<String, Object> config = new HashMap<>();
-        config.put("tenant", tenant);
-        config.put("timestamp", System.currentTimeMillis());
-
-        return graalContext.asValue(config);
-    }
-
-    @Override
     public Value getDTMAsset(String assetId) {
         if (graalContext == null) {
             return null;
