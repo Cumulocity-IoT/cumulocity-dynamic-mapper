@@ -22,7 +22,7 @@
 package dynamic.mapper.processor.extension;
 
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.model.DataPreparationContext;
+import dynamic.mapper.processor.model.JavaExtensionContext;
 import dynamic.mapper.processor.model.DeviceMessage;
 import dynamic.mapper.processor.model.Message;
 import dynamic.mapper.processor.model.ProcessingContext;
@@ -32,13 +32,13 @@ import org.springframework.stereotype.Component;
  * Extension interface for outbound processing (Cumulocity → Broker).
  *
  * <p>This interface uses the return-value based SMART Function Pattern.
- * Implement {@link #onMessage(Message, DataPreparationContext)} to follow the functional
+ * Implement {@link #onMessage(Message, JavaExtensionContext)} to follow the functional
  * programming pattern used by SMART JavaScript functions.</p>
  *
  * <pre>
  * {@code
  * @Override
- * public DeviceMessage[] onMessage(Message<byte[]> message, DataPreparationContext context) {
+ * public DeviceMessage[] onMessage(Message<byte[]> message, JavaExtensionContext context) {
  *     // Parse Cumulocity payload
  *     Map<?, ?> alarm = Json.parseJson(new String(message.getPayload(), "UTF-8"));
  *
@@ -91,7 +91,7 @@ import org.springframework.stereotype.Component;
  * @see OutboundExtension for parsing only (substitution-based)
  * @see ProcessorExtensionInbound for inbound complete processing
  * @see Message
- * @see DataPreparationContext
+ * @see JavaExtensionContext
  * @see DeviceMessage
  */
 @Component
@@ -102,7 +102,7 @@ public interface ProcessorExtensionOutbound<O>  {
      *
      * <p>This method follows the SMART function pattern used by JavaScript extensions.
      * It receives an immutable {@link Message} wrapper containing the Cumulocity payload
-     * (Event, Alarm, Operation, etc.) and a {@link DataPreparationContext} for accessing
+     * (Event, Alarm, Operation, etc.) and a {@link JavaExtensionContext} for accessing
      * state, inventory, and utility methods.</p>
      *
      * <p>The extension should parse the Cumulocity message, perform any necessary transformations,
@@ -134,9 +134,9 @@ public interface ProcessorExtensionOutbound<O>  {
      * @throws ProcessingException if parsing or transformation fails
      * @see DeviceMessage
      * @see Message
-     * @see DataPreparationContext
+     * @see JavaExtensionContext
      */
-    DeviceMessage[] onMessage(Message<O> message, DataPreparationContext context)
+    DeviceMessage[] onMessage(Message<O> message, JavaExtensionContext context)
             throws ProcessingException;
 }
 

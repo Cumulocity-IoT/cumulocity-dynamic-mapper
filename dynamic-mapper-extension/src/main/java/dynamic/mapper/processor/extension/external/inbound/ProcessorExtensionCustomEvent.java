@@ -25,7 +25,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 
 import dynamic.mapper.processor.extension.ProcessorExtensionInbound;
 import dynamic.mapper.processor.model.CumulocityObject;
-import dynamic.mapper.processor.model.DataPreparationContext;
+import dynamic.mapper.processor.model.JavaExtensionContext;
 import dynamic.mapper.processor.model.Message;
 
 import org.joda.time.DateTime;
@@ -51,7 +51,7 @@ import lombok.extern.slf4j.Slf4j;
 public class ProcessorExtensionCustomEvent implements ProcessorExtensionInbound<byte[]> {
 
     @Override
-    public CumulocityObject[] onMessage(Message<byte[]> message, DataPreparationContext context) {
+    public CumulocityObject[] onMessage(Message<byte[]> message, JavaExtensionContext context) {
         try {
             // 1. Parse the protobuf payload
             byte[] payload = message.getPayload();

@@ -24,14 +24,14 @@ package dynamic.mapper.processor.flow;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.model.DataPrepContext;
-import dynamic.mapper.processor.model.DataPreparationContext;
+import dynamic.mapper.processor.model.JavaExtensionContext;
 import dynamic.mapper.processor.model.ExternalId;
 import dynamic.mapper.processor.model.ProcessingContext;
 import lombok.extern.slf4j.Slf4j;
 import org.graalvm.polyglot.Value;
 
 /**
- * Simple implementation of DataPreparationContext for Java extensions.
+ * Simple implementation of JavaExtensionContext for Java extensions.
  *
  * <p>This class wraps a ProcessingContext and optionally a DataPrepContext
  * to provide a clean API for extension developers following the SMART function pattern.</p>
@@ -40,7 +40,7 @@ import org.graalvm.polyglot.Value;
  * and provides direct access to C8YAgent, mapping, and other necessary components.</p>
  */
 @Slf4j
-public class SimpleDataPreparationContext implements DataPreparationContext {
+public class JavaExtensionContextImpl implements JavaExtensionContext {
 
     private final DataPrepContext dataPrepContext;
     private final C8YAgent c8yAgent;
@@ -59,7 +59,7 @@ public class SimpleDataPreparationContext implements DataPreparationContext {
      * @param mapping The mapping configuration
      * @param processingContext The processing context for warnings/logs
      */
-    public SimpleDataPreparationContext(
+    public JavaExtensionContextImpl(
             DataPrepContext dataPrepContext,
             C8YAgent c8yAgent,
             String tenant,
@@ -84,7 +84,7 @@ public class SimpleDataPreparationContext implements DataPreparationContext {
      * @param mapping The mapping configuration
      * @param processingContext The processing context for warnings/logs
      */
-    public SimpleDataPreparationContext(
+    public JavaExtensionContextImpl(
             C8YAgent c8yAgent,
             String tenant,
             Boolean testing,
@@ -93,7 +93,7 @@ public class SimpleDataPreparationContext implements DataPreparationContext {
         this(null, c8yAgent, tenant, testing, mapping, processingContext);
     }
 
-    // ==================== DataPreparationContext Methods ====================
+    // ==================== JavaExtensionContext Methods ====================
 
     @Override
     public String getTenant() {

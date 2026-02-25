@@ -25,7 +25,7 @@ import com.dashjoin.jsonata.json.Json;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.extension.ProcessorExtensionOutbound;
-import dynamic.mapper.processor.model.DataPreparationContext;
+import dynamic.mapper.processor.model.JavaExtensionContext;
 import dynamic.mapper.processor.model.DeviceMessage;
 import dynamic.mapper.processor.model.Message;
 import lombok.extern.slf4j.Slf4j;
@@ -40,7 +40,7 @@ import java.util.Map;
  * the new SMART function pattern. It demonstrates:</p>
  * <ul>
  *   <li>Using the {@link Message} wrapper to access Cumulocity payload</li>
- *   <li>Using {@link DataPreparationContext} for context information</li>
+ *   <li>Using {@link JavaExtensionContext} for context information</li>
  *   <li>Using {@link DeviceMessage} builder for clean object construction</li>
  *   <li>Returning arrays of device messages instead of side effects</li>
  * </ul>
@@ -85,7 +85,7 @@ public class ProcessorExtensionAlarmToCustomJson implements ProcessorExtensionOu
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
-    public DeviceMessage[] onMessage(Message<Object> message, DataPreparationContext context) throws ProcessingException {
+    public DeviceMessage[] onMessage(Message<Object> message, JavaExtensionContext context) throws ProcessingException {
         try {
             // 1. Get the Cumulocity alarm representation from the payload
             // For outbound, payload is already a parsed Map from Cumulocity API
@@ -211,7 +211,7 @@ public class ProcessorExtensionAlarmToCustomJson implements ProcessorExtensionOu
      */
     @SuppressWarnings("unused")
     private DeviceMessage[] exampleMultipleMessages(Map<String, Object> alarmPayload,
-                                                    DataPreparationContext context) throws Exception {
+                                                    JavaExtensionContext context) throws Exception {
         String customJson = objectMapper.writeValueAsString(
                 buildCustomAlarmFormat("c8y_TemperatureAlarm", "CRITICAL",
                         "Temperature critical", "", "ACTIVE", "12345"));

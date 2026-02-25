@@ -25,7 +25,8 @@ import com.dashjoin.jsonata.json.Json;
 import dynamic.mapper.processor.extension.ExtensionExceptionUtil;
 import dynamic.mapper.processor.extension.ProcessorExtensionInbound;
 import dynamic.mapper.processor.model.CumulocityObject;
-import dynamic.mapper.processor.model.DataPreparationContext;
+import dynamic.mapper.processor.model.JavaExtensionContext;
+import dynamic.mapper.processor.model.ExternalId;
 import dynamic.mapper.processor.model.Message;
 import lombok.extern.slf4j.Slf4j;
 import org.joda.time.DateTime;
@@ -39,7 +40,7 @@ import java.util.Map;
  * the new SMART function pattern. It demonstrates:</p>
  * <ul>
  *   <li>Using the {@link Message} wrapper to access incoming data</li>
- *   <li>Using {@link DataPreparationContext} for context information</li>
+ *   <li>Using {@link JavaExtensionContext} for context information</li>
  *   <li>Using {@link CumulocityObject} builders for clean object construction</li>
  *   <li>Returning arrays of domain objects instead of side effects</li>
  * </ul>
@@ -63,7 +64,7 @@ import java.util.Map;
 public class ProcessorExtensionCustomAlarm implements ProcessorExtensionInbound<byte[]> {
 
     @Override
-    public CumulocityObject[] onMessage(Message<byte[]> message, DataPreparationContext context) {
+    public CumulocityObject[] onMessage(Message<byte[]> message, JavaExtensionContext context) {
         try {
             // 1. Parse the incoming message payload
             String jsonString = new String(message.getPayload(), "UTF-8");
@@ -115,7 +116,7 @@ public class ProcessorExtensionCustomAlarm implements ProcessorExtensionInbound<
      * and a measurement) from a single incoming message.</p>
      */
     @SuppressWarnings("unused")
-    private CumulocityObject[] exampleMultipleObjects(Map<?, ?> jsonObject, DataPreparationContext context) {
+    private CumulocityObject[] exampleMultipleObjects(Map<?, ?> jsonObject, JavaExtensionContext context) {
         String externalId = jsonObject.get("externalId").toString();
         String externalIdType = context.getMapping().getExternalIdType();
 
@@ -144,7 +145,7 @@ public class ProcessorExtensionCustomAlarm implements ProcessorExtensionInbound<
      * like device name and type for implicit device creation.</p>
      */
     @SuppressWarnings("unused")
-    private CumulocityObject exampleWithDeviceMetadata(Map<?, ?> jsonObject, DataPreparationContext context) {
+    private CumulocityObject exampleWithDeviceMetadata(Map<?, ?> jsonObject, JavaExtensionContext context) {
         return CumulocityObject.alarm()
             .type("c8y_TemperatureAlarm")
             .severity("CRITICAL")
@@ -163,21 +164,21 @@ public class ProcessorExtensionCustomAlarm implements ProcessorExtensionInbound<
      * for debugging and monitoring.</p>
      */
     @SuppressWarnings("unused")
-    private CumulocityObject exampleWithWarnings(Map<?, ?> jsonObject, DataPreparationContext context) {
-        String externalId = jsonObject.get("externalId").toString();
-
+    private CumulocityObject exampleWithWarnings(Map<?, ?> jsonObject, JavaExtensionContext context) {
+        String externalIdAsString = jsonObject.get("externalId").toString();
+        ExternalId externalId = new ExternalId(externalIdAsString, context.getMapping().getExternalIdType());
         // Check if device exists (if inventory lookup is available)
-        if (context.getManagedObject(externalId) == null) {
-            context.addWarning("Device " + externalId + " not found, will be created implicitly");
+        if (context.getManagedObjectByExternalId(externalId) == null) {
+            context.addWarning("Device " + externalIdAsString + " not found, will be created implicitly");
         }
 
-        context.addLog("Processing alarm for device: " + externalId);
+        context.addLog("Processing alarm for device: " + externalIdAsString);
 
         return CumulocityObject.alarm()
             .type("c8y_TemperatureAlarm")
             .severity("CRITICAL")
             .text("Temperature critical")
-            .externalId(externalId, context.getMapping().getExternalIdType())
+            .externalId(externalIdAsString, context.getMapping().getExternalIdType())
             .build();
     }
 }

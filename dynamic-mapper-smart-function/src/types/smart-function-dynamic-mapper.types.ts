@@ -80,7 +80,7 @@ export interface SmartFunctionPayload {
  * This interface represents the input message after deserialization.
  *
  * @example
- * function onMessage(msg: DynamicMapperDeviceMessage, context: DynamicMapperContext) {
+ * function onMessage(msg: DynamicMapperDeviceMessage, context: SmartFunctionContext) {
  *   const temp = msg.payload.temperature;  // Already parsed!
  *   const topic = msg.topic;
  *   const clientId = msg.clientId;
@@ -123,7 +123,7 @@ export interface DynamicMapperDeviceMessage {
  * They are cleared when the mapping is deleted and do not survive a service restart.
  *
  * @example
- * function onMessage(msg: DynamicMapperDeviceMessage, context: DynamicMapperContext) {
+ * function onMessage(msg: DynamicMapperDeviceMessage, context: SmartFunctionContext) {
  *   // State persists across invocations — messageCount grows with each message
  *   const count = (context.getState("messageCount") as number | undefined) || 0;
  *   context.setState("messageCount", count + 1);
@@ -137,7 +137,7 @@ export interface DynamicMapperDeviceMessage {
  *   });
  * }
  */
-export interface DynamicMapperContext extends DataPrepContext {
+export interface SmartFunctionContext extends DataPrepContext {
   /** Runtime identifier for Dynamic Mapper */
   readonly runtime: "dynamic-mapper";
 
@@ -805,7 +805,7 @@ export interface DeviceMessage<T extends C8yObjectType = C8yObjectType> {
  */
 export type SmartFunctionIn<T extends C8yObjectType = C8yObjectType> = (
   msg: DynamicMapperDeviceMessage,
-  context: DynamicMapperContext
+  context: SmartFunctionContext
 ) => Array<CumulocityObject<T>> | CumulocityObject<T> | [];
 
 /**
@@ -880,7 +880,7 @@ export interface OutboundMessage<T extends C8yObjectType = C8yObjectType> {
  */
 export type SmartFunctionOut<T extends C8yObjectType = C8yObjectType> = (
   msg: OutboundMessage<T>,
-  context: DynamicMapperContext
+  context: SmartFunctionContext
 ) => Array<DeviceMessage> | DeviceMessage | [];
 
 /**
@@ -1019,7 +1019,7 @@ export function createMockOutboundMessage(
 
 /**
  * Mock runtime context for testing Smart Functions.
- * Creates a DynamicMapperContext with all enhanced capabilities.
+ * Creates a SmartFunctionContext with all enhanced capabilities.
  *
  * @example
  * const mockContext = createMockRuntimeContext({
@@ -1037,7 +1037,7 @@ export function createMockRuntimeContext(options: {
   devices?: Record<string, any>;
   externalIdMap?: Record<string, any>;
   dtmAssets?: Record<string, any>;
-}): DynamicMapperContext {
+}): SmartFunctionContext {
   const state: Record<string, any> = {};
 
   return {

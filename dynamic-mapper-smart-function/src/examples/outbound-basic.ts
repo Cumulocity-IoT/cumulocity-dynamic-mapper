@@ -19,7 +19,7 @@
 import {
   SmartFunctionOut,
   OutboundMessage,
-  DynamicMapperContext,
+  SmartFunctionContext,
   DeviceMessage,
 } from '../types';
 
@@ -49,7 +49,7 @@ import {
  */
 const onMessage: SmartFunctionOut = (
   msg: OutboundMessage,
-  context: DynamicMapperContext
+  context: SmartFunctionContext
 ): DeviceMessage => {
   // Access payload directly — already pre-deserialized from JSON
   const payload = msg.payload;

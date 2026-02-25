@@ -7,7 +7,7 @@
 import {
   SmartFunctionIn,
   DynamicMapperDeviceMessage,
-  DynamicMapperContext,
+  SmartFunctionContext,
   CumulocityObject,
   C8yManagedObject,
 } from '../types';
@@ -31,7 +31,7 @@ import {
  */
 const onMessage: SmartFunctionIn = (
   msg: DynamicMapperDeviceMessage,
-  context: DynamicMapperContext
+  context: SmartFunctionContext
 ): CumulocityObject[] => {
   const payload = msg.payload;
 

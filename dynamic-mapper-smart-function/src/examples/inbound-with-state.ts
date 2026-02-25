@@ -7,7 +7,7 @@
 import {
   SmartFunctionIn,
   DynamicMapperDeviceMessage,
-  DynamicMapperContext,
+  SmartFunctionContext,
   CumulocityObject,
 } from '../types';
 
@@ -32,7 +32,7 @@ import {
  */
 const onMessage: SmartFunctionIn = (
   msg: DynamicMapperDeviceMessage,
-  context: DynamicMapperContext
+  context: SmartFunctionContext
 ): CumulocityObject[] => {
   const payload = msg.payload;
   const clientId = context.getClientId() || payload['clientId'];

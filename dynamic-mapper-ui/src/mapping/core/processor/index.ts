@@ -29,7 +29,7 @@
  *   SmartFunctionOut,
  *   SmartFunction,
  *   DynamicMapperDeviceMessage,
- *   DynamicMapperContext,
+ *   SmartFunctionContext,
  *   CumulocityObject,
  *   DeviceMessage
  * } from '@dynamic-mapper/runtime-types';
@@ -51,7 +51,7 @@ export {
 // Dynamic Mapper message and context types
 export {
   DynamicMapperDeviceMessage,
-  DynamicMapperContext,
+  SmartFunctionContext,
   OutboundMessage
 } from '@c8y/dynamic-mapper-smart-function';
 

@@ -45,7 +45,7 @@ import dynamic.mapper.model.Mapping;
  * <pre>
  * {@code
  * @Override
- * public CumulocityObject[] onMessage(Message<byte[]> message, DataPreparationContext context) {
+ * public CumulocityObject[] onMessage(Message<byte[]> message, JavaExtensionContext context) {
  *     // Get device from inventory cache
  *     ExternalId extId = new ExternalId("myDevice", "c8y_Serial");
  *     Map<String, Object> device = context.getManagedObjectAsMap(extId);
@@ -69,7 +69,7 @@ import dynamic.mapper.model.Mapping;
  * @see CumulocityObject
  * @see DeviceMessage
  */
-public interface DataPreparationContext extends DataPrepContext {
+public interface JavaExtensionContext extends DataPrepContext {
 
     /**
      * Lookup managed object from inventory cache by external ID (Java-friendly method).

@@ -30,8 +30,8 @@ import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.AbstractExtensibleProcessor;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.extension.ProcessorExtensionOutbound;
-import dynamic.mapper.processor.flow.SimpleDataPreparationContext;
-import dynamic.mapper.processor.model.DataPreparationContext;
+import dynamic.mapper.processor.flow.JavaExtensionContextImpl;
+import dynamic.mapper.processor.model.JavaExtensionContext;
 import dynamic.mapper.processor.model.DeviceMessage;
 import dynamic.mapper.processor.model.Message;
 import dynamic.mapper.processor.model.ProcessingContext;
@@ -146,9 +146,9 @@ public class ExtensibleOutboundProcessor extends AbstractExtensibleProcessor {
             // 1. Create Message wrapper
             Message<Object> message = Message.from(context);
 
-            // 2. Create DataPreparationContext
+            // 2. Create JavaExtensionContext
             // Note: For outbound, C8YAgent is typically not needed, but we provide it for consistency
-            DataPreparationContext prepContext = new SimpleDataPreparationContext(
+            JavaExtensionContext prepContext = new JavaExtensionContextImpl(
                 context.getFlowContext(),
                 null, // c8yAgent not typically needed for outbound
                 tenant,

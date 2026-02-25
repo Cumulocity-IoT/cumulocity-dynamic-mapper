@@ -20,7 +20,7 @@ import {
   SmartFunctionIn,
   SmartFunctionOut,
   DynamicMapperDeviceMessage,
-  DynamicMapperContext,
+  SmartFunctionContext,
   CumulocityObject,
   DeviceMessage,
   OutboundMessage,
@@ -45,7 +45,7 @@ import {
  */
 const onMessageInbound: SmartFunctionIn<'managedObject' | 'event'> = (
   msg: DynamicMapperDeviceMessage,
-  context: DynamicMapperContext
+  context: SmartFunctionContext
 ): CumulocityObject<'managedObject' | 'event'>[] => {
   const payload = msg.payload;
   const clientId = context.getClientId() || payload['clientId'];
@@ -111,7 +111,7 @@ export { onMessageInbound };
  */
 const onMessageOutbound: SmartFunctionOut<'measurement'> = (
   msg: OutboundMessage<'measurement'>,
-  _context: DynamicMapperContext
+  _context: SmartFunctionContext
 ): DeviceMessage => {
   const sourceId = msg.payload['source']?.['id'] ?? 'unknown';
 

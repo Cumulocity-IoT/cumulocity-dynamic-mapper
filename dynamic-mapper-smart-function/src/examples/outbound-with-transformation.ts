@@ -7,7 +7,7 @@
 import {
   SmartFunctionOut,
   OutboundMessage,
-  DynamicMapperContext,
+  SmartFunctionContext,
   DeviceMessage,
 } from '../types';
 
@@ -51,7 +51,7 @@ interface CustomDevicePayload {
  */
 const onMessage: SmartFunctionOut = (
   msg: OutboundMessage,
-  context: DynamicMapperContext
+  context: SmartFunctionContext
 ): DeviceMessage => {
   const payload = msg.payload;
 

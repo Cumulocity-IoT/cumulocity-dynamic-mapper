@@ -80,8 +80,8 @@ public class EnrichmentInboundProcessor extends AbstractEnrichmentProcessor {
         DataPrepContext flowContext = context.getFlowContext();
         if (isSmartFunction) {
             if (flowContext != null && context.getGraalContext() != null) {
-                if (flowContext instanceof dynamic.mapper.processor.model.SimpleFlowContext) {
-                    ((dynamic.mapper.processor.model.SimpleFlowContext) flowContext).setClientId(context.getClientId());
+                if (flowContext instanceof dynamic.mapper.processor.model.SmartFunctionContext) {
+                    ((dynamic.mapper.processor.model.SmartFunctionContext) flowContext).setClientId(context.getClientId());
                 }
 
                 addToFlowContext(flowContext, context, Mapping.TOKEN_TOPIC_LEVEL, splitTopicAsList);

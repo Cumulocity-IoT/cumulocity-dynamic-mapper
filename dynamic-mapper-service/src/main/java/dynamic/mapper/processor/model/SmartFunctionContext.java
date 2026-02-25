@@ -41,7 +41,7 @@ import lombok.extern.slf4j.Slf4j;
  * called by {@code ProcessingContext.close()} at the end of each message.</p>
  */
 @Slf4j
-public class SimpleFlowContext implements DataPrepContext {
+public class SmartFunctionContext implements DataPrepContext {
 
     private final Map<String, Object> state;
     private final Context graalContext;
@@ -55,7 +55,7 @@ public class SimpleFlowContext implements DataPrepContext {
     /**
      * Creates a context without persistence (backward-compatible constructor).
      */
-    public SimpleFlowContext(Context graalContext, String tenant, InventoryEnrichmentClient inventoryEnrichmentClient,
+    public SmartFunctionContext(Context graalContext, String tenant, InventoryEnrichmentClient inventoryEnrichmentClient,
             Boolean testing) {
         this(graalContext, tenant, inventoryEnrichmentClient, testing, null, null, null);
     }
@@ -71,7 +71,7 @@ public class SimpleFlowContext implements DataPrepContext {
      * @param mappingIdentifier          the mapping's short identifier used as state key (may be null)
      * @param initialState               pre-loaded state from the store (may be null)
      */
-    public SimpleFlowContext(Context graalContext, String tenant, InventoryEnrichmentClient inventoryEnrichmentClient,
+    public SmartFunctionContext(Context graalContext, String tenant, InventoryEnrichmentClient inventoryEnrichmentClient,
             Boolean testing, FlowStateStore stateStore, String mappingIdentifier, Map<String, Object> initialState) {
         this.state = (initialState != null && !initialState.isEmpty()) ? new HashMap<>(initialState) : new HashMap<>();
         this.graalContext = graalContext;

@@ -38,7 +38,7 @@
  * Minimal context with state management only.
  *
  * Dynamic Mapper extends this with additional capabilities.
- * See {@link DynamicMapperContext} for the extended version.
+ * See {@link SmartFunctionContext} for the extended version.
  */
 export interface DataPrepContext {
   /** Runtime identifier - "dynamic-mapper" for Dynamic Mapper */

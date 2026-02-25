@@ -54,7 +54,7 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.model.DataPrepContext;
-import dynamic.mapper.processor.model.SimpleFlowContext;
+import dynamic.mapper.processor.model.SmartFunctionContext;
 import dynamic.mapper.configuration.CodeTemplate;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
@@ -555,7 +555,7 @@ class AbstractEnrichmentProcessorTest {
         // Given
         graalContext = Context.newBuilder("js").allowAllAccess(true).build();
         processingContext.setGraalContext(graalContext);
-        flowContext = new SimpleFlowContext(graalContext, TEST_TENANT, c8yAgent, false);
+        flowContext = new SmartFunctionContext(graalContext, TEST_TENANT, c8yAgent, false);
 
         String key = "testKey";
         String value = "testValue";
@@ -592,7 +592,7 @@ class AbstractEnrichmentProcessorTest {
         // Given
         graalContext = Context.newBuilder("js").allowAllAccess(true).build();
         processingContext.setGraalContext(graalContext);
-        flowContext = new SimpleFlowContext(graalContext, TEST_TENANT, c8yAgent, false);
+        flowContext = new SmartFunctionContext(graalContext, TEST_TENANT, c8yAgent, false);
 
         String key = "testKey";
 

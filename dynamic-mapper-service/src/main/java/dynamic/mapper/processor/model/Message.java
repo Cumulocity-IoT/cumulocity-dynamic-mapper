@@ -37,7 +37,7 @@ import java.util.Map;
  * <pre>
  * {@code
  * @Override
- * public CumulocityObject[] onMessage(Message<byte[]> message, DataPreparationContext context) {
+ * public CumulocityObject[] onMessage(Message<byte[]> message, JavaExtensionContext context) {
  *     byte[] payload = message.getPayload();
  *     String topic = message.getTopic();
  *     // ... process message

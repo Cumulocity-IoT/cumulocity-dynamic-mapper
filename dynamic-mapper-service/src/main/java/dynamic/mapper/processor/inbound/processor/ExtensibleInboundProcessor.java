@@ -32,9 +32,9 @@ import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.AbstractExtensibleProcessor;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.extension.ProcessorExtensionInbound;
-import dynamic.mapper.processor.flow.SimpleDataPreparationContext;
+import dynamic.mapper.processor.flow.JavaExtensionContextImpl;
 import dynamic.mapper.processor.model.CumulocityObject;
-import dynamic.mapper.processor.model.DataPreparationContext;
+import dynamic.mapper.processor.model.JavaExtensionContext;
 import dynamic.mapper.processor.model.Message;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.TransformationType;
@@ -120,8 +120,8 @@ public class ExtensibleInboundProcessor extends AbstractExtensibleProcessor {
         // 1. Create Message wrapper
         Message<byte[]> message = Message.from(context);
 
-        // 2. Create DataPreparationContext
-        DataPreparationContext prepContext = new SimpleDataPreparationContext(
+        // 2. Create JavaExtensionContext
+        JavaExtensionContext prepContext = new JavaExtensionContextImpl(
             context.getFlowContext(),
             c8yAgent,
             tenant,

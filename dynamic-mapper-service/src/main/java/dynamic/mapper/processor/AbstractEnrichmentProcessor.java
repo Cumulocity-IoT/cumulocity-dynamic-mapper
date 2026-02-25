@@ -41,7 +41,7 @@ import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.model.DataPrepContext;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.RoutingContext;
-import dynamic.mapper.processor.model.SimpleFlowContext;
+import dynamic.mapper.processor.model.SmartFunctionContext;
 import dynamic.mapper.processor.model.TransformationType;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.service.cache.FlowStateStore;
@@ -132,7 +132,7 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
                 context.setGraalContext(graalContext);
                 context.setFlowState(new HashMap<String, Object>());
                 Map<String, Object> initialState = flowStateStore.loadState(tenant, mapping.getIdentifier());
-                context.setFlowContext(new SimpleFlowContext(graalContext, tenant,
+                context.setFlowContext(new SmartFunctionContext(graalContext, tenant,
                         (InventoryEnrichmentClient) configurationRegistry.getC8yAgent(),
                         context.getTesting(), flowStateStore, mapping.getIdentifier(), initialState));
             } catch (Exception e) {
