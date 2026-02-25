@@ -69,6 +69,10 @@ public class MappingRepository {
 
             MappingRepresentation mappingMO = toMappingObject(mo);
             Mapping mapping = mappingMO.getC8yMQTTMapping();
+            if(mapping == null) {
+                log.warn("{} - Mapping with id {} seems to be outdated. Please migrate it to a newer version: https://github.com/Cumulocity-IoT/cumulocity-dynamic-mapper/blob/main/resources/script/mgmt/dm.sh", tenant, id);
+                return Optional.empty();
+            }
             mapping.setId(mappingMO.getId());
 
             log.debug("{} - Found mapping: {}", tenant, mapping.getId());
@@ -195,7 +199,7 @@ public class MappingRepository {
 
             // Migrate deprecated CODE_BASED mappings to JSON with SMART_FUNCTION transformation
             if (MappingType.CODE_BASED.equals(mapping.getMappingType())) {
-                String moId = mo.getId().getValue();
+                String moId = mo.getId() != null ? mo.getId().getValue() : "unknown";
                 log.info("{} - Migrating deprecated CODE_BASED mapping {} to JSON with SMART_FUNCTION transformation",
                         tenant, moId);
 
@@ -219,7 +223,7 @@ public class MappingRepository {
             // Migrate legacy JSON mappings without transformationType to JSONATA
             if (MappingType.JSON.equals(mapping.getMappingType()) &&
                 (mapping.getTransformationType() == null || TransformationType.DEFAULT.equals(mapping.getTransformationType()))) {
-                String moId = mo.getId().getValue();
+                String moId = mo.getId() != null ? mo.getId().getValue() : null;
                 log.info("{} - Migrating legacy JSON mapping {} to JSONATA transformation",
                         tenant, moId);
 
@@ -252,7 +256,7 @@ public class MappingRepository {
             return Optional.of(mapping);
         } catch (IllegalArgumentException e) {
             String exceptionMsg = e.getCause() != null ? e.getCause().getMessage() : e.getMessage();
-            String moId = mo.getId().getValue();
+            String moId = mo.getId() != null ? mo.getId().getValue() : null;
 
             // Combine context information with exception details for comprehensive error notification
             String detailedErrorMsg = String.format("Failed to convert MO %s to mapping in tenant %s: %s",
@@ -271,7 +275,7 @@ public class MappingRepository {
     private Boolean shouldIncludeMapping(Mapping mapping, Direction direction) {
         return direction == null ||
                 Direction.UNSPECIFIED.equals(direction) ||
-                mapping.getDirection().equals(direction);
+                (mapping.getDirection() != null && mapping.getDirection().equals(direction));
     }
 
     // Helper methods - these are used by MappingService for conversion
