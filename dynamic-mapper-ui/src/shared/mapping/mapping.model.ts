@@ -271,7 +271,6 @@ export interface StepperConfiguration {
   direction?: Direction;
   advanceFromStepToEndStep?: number;
   allowTemplateExpansion?: boolean;  // Whether to allow template expansion with sample data
-  allowSourceExpansion?: boolean;    // Whether to allow source template expansion (false for SMART_FUNCTION/EXTENSION_JAVA)
 }
 
 export enum TransformationType {

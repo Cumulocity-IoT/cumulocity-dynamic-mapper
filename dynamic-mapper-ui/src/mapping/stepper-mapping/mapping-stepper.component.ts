@@ -942,8 +942,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       const templates = this.stepperService.expandTemplates(
         this.mapping,
         this.stepperConfiguration.direction,
-        this.stepperConfiguration.allowTemplateExpansion,
-        this.stepperConfiguration.allowSourceExpansion
+        this.stepperConfiguration.allowTemplateExpansion
       );
       this.sourceTemplate = templates.sourceTemplate;
       this.targetTemplate = templates.targetTemplate;
@@ -953,8 +952,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     const templates = this.stepperService.expandExistingTemplates(
       this.mapping,
       this.stepperConfiguration.direction,
-      this.stepperConfiguration.allowTemplateExpansion,
-      this.stepperConfiguration.allowSourceExpansion
+      this.stepperConfiguration.allowTemplateExpansion
     );
     this.sourceTemplate = templates.sourceTemplate;
     this.targetTemplate = templates.targetTemplate;
@@ -969,7 +967,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.mapping.snoopedTemplates[this.snoopedTemplateCounter]
     );
 
-    if (this.stepperConfiguration.allowTemplateExpansion && this.stepperConfiguration.allowSourceExpansion !== false) {
+    if (this.stepperConfiguration.allowTemplateExpansion) {
       if (this.stepperConfiguration.direction === Direction.INBOUND) {
         this.sourceTemplate = expandExternalTemplate(
           this.sourceTemplate,
@@ -993,7 +991,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.mapping.snoopedTemplates[index]
     );
 
-    if (this.stepperConfiguration.allowTemplateExpansion && this.stepperConfiguration.allowSourceExpansion !== false) {
+    if (this.stepperConfiguration.allowTemplateExpansion) {
       if (this.stepperConfiguration.direction === Direction.INBOUND) {
         this.sourceTemplate = expandExternalTemplate(
           this.sourceTemplate,

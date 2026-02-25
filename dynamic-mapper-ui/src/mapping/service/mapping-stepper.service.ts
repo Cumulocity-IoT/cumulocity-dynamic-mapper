@@ -127,7 +127,7 @@ export class MappingStepperService {
         this.isSubstitutionValid$.next(isValid);
     }
 
-    expandTemplates(mapping: Mapping, direction: Direction, allowTemplateExpansion?: boolean, allowSourceExpansion?: boolean): {
+    expandTemplates(mapping: Mapping, direction: Direction, allowTemplateExpansion?: boolean): {
         sourceTemplate: any;
         targetTemplate: any;
     } {
@@ -138,9 +138,8 @@ export class MappingStepperService {
             false
         );
 
-        const expandSource = (template: any) => {
-            // Don't expand if allowTemplateExpansion is false OR allowSourceExpansion is explicitly false
-            if (!allowTemplateExpansion || allowSourceExpansion === false) return template;
+        const expand = (template: any) => {
+            if (!allowTemplateExpansion) return template;
             return direction === Direction.INBOUND
                 ? expandExternalTemplate(template, mapping, levels)
                 : expandC8YTemplate(template, mapping);
@@ -155,18 +154,18 @@ export class MappingStepperService {
 
         if (direction === Direction.INBOUND) {
             return {
-                sourceTemplate: expandSource(JSON.parse(getExternalTemplate(mapping))),
+                sourceTemplate: expand(JSON.parse(getExternalTemplate(mapping))),
                 targetTemplate: expandTarget(JSON.parse(SAMPLE_TEMPLATES_C8Y[mapping.targetAPI]))
             };
         } else {
             return {
-                sourceTemplate: expandSource(JSON.parse(SAMPLE_TEMPLATES_C8Y[mapping.targetAPI])),
+                sourceTemplate: expand(JSON.parse(SAMPLE_TEMPLATES_C8Y[mapping.targetAPI])),
                 targetTemplate: expandTarget(JSON.parse(getExternalTemplate(mapping)))
             };
         }
     }
 
-    expandExistingTemplates(mapping: Mapping, direction: Direction, allowTemplateExpansion?: boolean, allowSourceExpansion?: boolean): {
+    expandExistingTemplates(mapping: Mapping, direction: Direction, allowTemplateExpansion?: boolean): {
         sourceTemplate: any;
         targetTemplate: any;
     } {
@@ -177,9 +176,8 @@ export class MappingStepperService {
             false
         );
 
-        const expandSource = (template: any) => {
-            // Don't expand if allowTemplateExpansion is false OR allowSourceExpansion is explicitly false
-            if (!allowTemplateExpansion || allowSourceExpansion === false) return template;
+        const expand = (template: any) => {
+            if (!allowTemplateExpansion) return template;
             return direction === Direction.INBOUND
                 ? expandExternalTemplate(template, mapping, levels)
                 : expandC8YTemplate(template, mapping);
@@ -193,7 +191,7 @@ export class MappingStepperService {
         };
 
         return {
-            sourceTemplate: expandSource(JSON.parse(mapping.sourceTemplate)),
+            sourceTemplate: expand(JSON.parse(mapping.sourceTemplate)),
             targetTemplate: expandTarget(JSON.parse(mapping.targetTemplate))
         };
     }

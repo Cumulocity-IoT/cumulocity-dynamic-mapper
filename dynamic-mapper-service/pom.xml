@@ -453,6 +453,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.5.2</version>
                 <configuration>
+
                     <!-- Run fast unit tests by default -->
                     <includes>
                         <include>**/*Test.java</include>

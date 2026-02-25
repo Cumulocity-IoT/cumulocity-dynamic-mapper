@@ -129,8 +129,7 @@ const CONFIGURATION_OVERRIDES: StepperConfigurationOverride[] = [
   {
     condition: (ctx) => ctx.transformationType === TransformationType.SMART_FUNCTION,
     properties: {
-      allowTemplateExpansion: true,
-      allowSourceExpansion: false  // Smart Functions receive raw payload
+      allowTemplateExpansion: true
     }
   },
   {
@@ -142,8 +141,7 @@ const CONFIGURATION_OVERRIDES: StepperConfigurationOverride[] = [
   {
     condition: (ctx) => ctx.transformationType === TransformationType.EXTENSION_JAVA,
     properties: {
-      allowTemplateExpansion: true,
-      allowSourceExpansion: false  // Java Extensions receive raw payload
+      allowTemplateExpansion: true
     }
   },
   {

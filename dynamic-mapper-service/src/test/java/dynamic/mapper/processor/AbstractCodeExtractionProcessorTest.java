@@ -34,8 +34,11 @@ import java.util.Map;
 import org.apache.camel.Exchange;
 import org.apache.camel.Message;
 import org.graalvm.polyglot.Context;
+import org.graalvm.polyglot.Engine;
 import org.graalvm.polyglot.Value;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -80,10 +83,26 @@ class AbstractCodeExtractionProcessorTest {
 
     private TestableAbstractCodeExtractionProcessor processor;
 
+    private static Engine graalEngine;
+
     private static final String TEST_TENANT = "testTenant";
     private Mapping mapping;
     private ProcessingContext<Object> processingContext;
     private Context graalContext;
+
+    @BeforeAll
+    static void setUpEngine() {
+        graalEngine = Engine.newBuilder()
+                .option("engine.WarnInterpreterOnly", "false")
+                .build();
+    }
+
+    @AfterAll
+    static void tearDownEngine() {
+        if (graalEngine != null) {
+            graalEngine.close();
+        }
+    }
 
     /**
      * Concrete test implementation of AbstractCodeExtractionProcessor for testing.
@@ -212,8 +231,9 @@ class AbstractCodeExtractionProcessorTest {
                 .topic("test/topic")
                 .build();
 
-        // Create GraalVM context for testing
+        // Create GraalVM context for testing — use shared engine with WarnInterpreterOnly disabled
         graalContext = Context.newBuilder("js")
+                .engine(graalEngine)
                 .allowAllAccess(true)
                 .build();
         context.setGraalContext(graalContext);

@@ -86,13 +86,12 @@ public class EnrichmentOutboundProcessor extends AbstractEnrichmentProcessor {
         identityFragment.put("c8ySourceId", sourceId.toString());
         identityFragment.put("externalIdType", mapping.getExternalIdType());
 
-        // For SMART_FUNCTION: add to DataPrepContext only — never expand the payload Map
+        // For SMART_FUNCTION/EXTENSION_JAVA: add to DataPrepContext only — never expand the payload Map
+        // _IDENTITY_ and _TOPIC_LEVEL_ are template-substitution tokens not relevant here;
+        // the function/extension reads device identity directly from the C8Y payload.
         DataPrepContext flowContext = context.getFlowContext();
         if (isSmartFunction) {
             if (flowContext != null && context.getGraalContext() != null) {
-                addToFlowContext(flowContext, context, Mapping.TOKEN_IDENTITY, identityFragment);
-                List<String> splitTopicExAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
-                addToFlowContext(flowContext, context, Mapping.TOKEN_TOPIC_LEVEL, splitTopicExAsList);
                 addToFlowContext(flowContext, context, ProcessingContext.RETAIN, false);
             }
         } else {

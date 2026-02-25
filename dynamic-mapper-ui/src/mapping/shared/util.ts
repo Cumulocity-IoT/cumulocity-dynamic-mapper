@@ -470,12 +470,17 @@ function findFieldInObject(obj: any, fieldName: string): any {
 }
 
 
+function isTokenExpansionAllowed(mapping: Mapping): boolean {
+  return mapping.transformationType !== TransformationType.SMART_FUNCTION &&
+    mapping.transformationType !== TransformationType.EXTENSION_JAVA;
+}
+
 export function expandExternalTemplate(
   template: object,
   mapping: Mapping,
   levels: string[]
 ): object {
-  if (Array.isArray(template)) {
+  if (Array.isArray(template) || !isTokenExpansionAllowed(mapping)) {
     return template;
   } else {
     // Define the context data with specific values
@@ -504,6 +509,9 @@ export function expandExternalTemplate(
 }
 
 export function expandC8YTemplate(template: object, mapping: Mapping): object {
+  if (!isTokenExpansionAllowed(mapping)) {
+    return template;
+  }
   let result;
   if (mapping.useExternalId) {
     result = {

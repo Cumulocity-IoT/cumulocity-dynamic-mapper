@@ -65,16 +65,13 @@ public class EnrichmentInboundProcessor extends AbstractEnrichmentProcessor {
     @SuppressWarnings("unchecked")
     protected void enrichPayload(ProcessingContext<?> context) {
         /*
-         * Patch payload with _TOPIC_LEVEL_ property and add enrichment data to DataPrepContext
+         * Enrich payload with _TOPIC_LEVEL_ (non-SMART_FUNCTION only) and add metadata to DataPrepContext
          */
         String tenant = context.getTenant();
         Object payloadObject = context.getPayload();
         Mapping mapping = context.getMapping();
         boolean isSmartFunction = TransformationType.SMART_FUNCTION.equals(mapping.getTransformationType())
                 || TransformationType.EXTENSION_JAVA.equals(mapping.getTransformationType());
-
-        // Process topic levels
-        List<String> splitTopicAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
 
         // For SMART_FUNCTION: add to DataPrepContext only — never expand the payload Map
         DataPrepContext flowContext = context.getFlowContext();
@@ -84,15 +81,12 @@ public class EnrichmentInboundProcessor extends AbstractEnrichmentProcessor {
                     ((dynamic.mapper.processor.model.SmartFunctionContext) flowContext).setClientId(context.getClientId());
                 }
 
-                addToFlowContext(flowContext, context, Mapping.TOKEN_TOPIC_LEVEL, splitTopicAsList);
-
                 addToFlowContext(flowContext, context, "tenant", tenant);
                 addToFlowContext(flowContext, context, "topic", context.getTopic());
                 addToFlowContext(flowContext, context, "client", context.getClientId());
                 addToFlowContext(flowContext, context, "mappingName", mapping.getName());
                 addToFlowContext(flowContext, context, "mappingId", mapping.getId());
                 addToFlowContext(flowContext, context, "targetAPI", mapping.getTargetAPI().toString());
-                addToFlowContext(flowContext, context, ProcessingContext.GENERIC_DEVICE_IDENTIFIER, mapping.getGenericDeviceIdentifier());
                 addToFlowContext(flowContext, context, ProcessingContext.DEBUG, mapping.getDebug());
 
                 if (context.getMapping().getEventWithAttachment()) {
@@ -109,6 +103,7 @@ public class EnrichmentInboundProcessor extends AbstractEnrichmentProcessor {
             }
         } else if (payloadObject instanceof Map) {
             Map<String, Object> payloadMap = (Map<String, Object>) payloadObject;
+            List<String> splitTopicAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
 
             payloadMap.put(Mapping.TOKEN_TOPIC_LEVEL, splitTopicAsList);
 

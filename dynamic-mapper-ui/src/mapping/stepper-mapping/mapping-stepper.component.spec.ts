@@ -92,7 +92,6 @@ describe('MappingStepperComponent', () => {
     allowTestSending: true,
     allowTestTransformation: true,
     allowTemplateExpansion: false,
-    allowSourceExpansion: false,
     allowNoDefinedIdentifier: false,
     showCodeEditor: false
   };
