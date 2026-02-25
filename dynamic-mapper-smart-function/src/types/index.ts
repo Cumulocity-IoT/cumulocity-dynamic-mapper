@@ -15,5 +15,5 @@
  * This prevents duplication and ensures types stay in sync.
  */
 
-// Export all Smart Function API types — this is the authoritative source.
+// Re-exports IDP DataPrep base types (DataPrepContext, ExternalId) and all DM-specific types
 export * from './smart-function-runtime.types';

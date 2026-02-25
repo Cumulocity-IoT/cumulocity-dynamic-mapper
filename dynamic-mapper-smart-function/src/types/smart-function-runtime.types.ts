@@ -21,11 +21,10 @@
 /**
  * TypeScript type definitions for the Smart Function Runtime API.
  *
- * This module provides type definitions compatible with Cumulocity IDP (IoT Data Plane) DataPrep standard,
- * with Dynamic Mapper enhancements for device enrichment, configuration access, and DTM integration.
+ * This module provides Dynamic Mapper extensions on top of the IDP DataPrep standard.
+ * Base IDP types (`DataPrepContext`, `ExternalId`) are in {@link ./dataprep.types}.
  *
  * These types provide:
- * - IDP DataPrep standard compatibility
  * - IntelliSense/autocomplete support in IDEs
  * - Static type checking for Smart Functions
  * - Proper types for unit testing and mocking
@@ -35,59 +34,8 @@
  * @since 6.1.6
  */
 
-// ============================================================================
-// IDP DATAPREP BASE TYPES (Cumulocity Standard)
-// ============================================================================
-
-/**
- * Standard IDP DataPrep context interface.
- * Minimal context with state management only.
- *
- * Dynamic Mapper extends this with additional capabilities.
- * See {@link DynamicMapperContext} for the extended version.
- *
- * @see https://github.com/Cumulocity-IoT/cumulocity-dynamic-mapper/blob/main/attic/idp/dataprep.ts
- */
-export interface DataPrepContext {
-  /** Runtime identifier - "dynamic-mapper" for Dynamic Mapper */
-  readonly runtime: string;
-
-  /**
-   * Retrieves a persisted state value by key.
-   *
-   * State **persists across message invocations** for the same mapping. Values
-   * written by a previous message are available when the next message arrives.
-   * State is scoped per tenant + mapping — it is not shared across mappings or
-   * tenants.
-   *
-   * State does not survive a service restart (in-memory only).
-   *
-   * @param key - The state key
-   * @param defaultValue - Optional default value if key doesn't exist
-   * @returns The state value or default
-   *
-   * @example
-   * // On first message: returns undefined; on subsequent messages: returns prior value
-   * const count = (context.getState('messageCount') as number | undefined) || 0;
-   */
-  getState(key: string, defaultValue?: any): any;
-
-  /**
-   * Persists a state value by key.
-   *
-   * The value is stored in memory and made available to subsequent invocations
-   * of the same mapping. State is automatically cleared when the mapping is
-   * deleted. For concurrent invocations of the same mapping, last-writer-wins.
-   *
-   * @param key - The state key
-   * @param value - The value to store (primitives, objects, and arrays are supported)
-   *
-   * @example
-   * context.setState('messageCount', count + 1);
-   * context.setState('lastTemperature', temperature);
-   */
-  setState(key: string, value: any): void;
-}
+import { DataPrepContext, ExternalId } from './dataprep.types';
+export { DataPrepContext, ExternalId };
 
 // ============================================================================
 // DYNAMIC MAPPER EXTENDED TYPES
@@ -277,25 +225,6 @@ export interface DynamicMapperContext extends DataPrepContext {
    * }
    */
   addWarning(warning: string): void;
-}
-
-// ============================================================================
-// EXTERNAL ID TYPES
-// ============================================================================
-
-/**
- * External identifier used for device lookup.
- * Used to reference devices by their external ID and type.
- *
- * @example
- * { externalId: "DEVICE-001", type: "c8y_Serial" }
- */
-export interface ExternalId {
-  /** External ID to be looked up (e.g., device serial number) */
-  externalId: string;
-
-  /** External ID type (e.g., "c8y_Serial", "c8y_DeviceId") */
-  type: string;
 }
 
 // ============================================================================
