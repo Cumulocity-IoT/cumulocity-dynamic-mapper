@@ -95,11 +95,21 @@ public interface DataPrepContext {
 
     /**
      * Log message
-     * 
+     *
      * @param message Message to log
-     * 
+     *
      */
     public void addLogMessage(String message);
+
+    /**
+     * Alias for {@link #addLogMessage(String)} for backward compatibility with
+     * JavaScript mappings that use {@code context.logMessage(...)}.
+     *
+     * @param message Message to log
+     */
+    default void logMessage(String message) {
+        addLogMessage(message);
+    }
 
     /**
      * Testing cycle indicator

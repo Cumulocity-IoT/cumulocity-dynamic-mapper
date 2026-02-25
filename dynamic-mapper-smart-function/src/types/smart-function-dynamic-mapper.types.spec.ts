@@ -28,7 +28,7 @@ import {
   createMockOutboundMessage,
   createMockRuntimeContext,
   createMockPayload
-} from './smart-function-runtime.types';
+} from './smart-function-dynamic-mapper.types';
 
 describe('Smart Function Runtime Types', () => {
   describe('Mock Helpers', () => {

@@ -23,7 +23,7 @@
  *
  * These types are compatible with the Cumulocity IDP (IoT Data Plane) DataPrep standard.
  * Dynamic Mapper extends these base types with additional capabilities — see
- * {@link ./smart-function-runtime.types} for the extended versions.
+ * {@link ./smart-function-dynamic-mapper.types} for the extended versions.
  *
  * @module DataPrepTypes
  * @since 6.1.6

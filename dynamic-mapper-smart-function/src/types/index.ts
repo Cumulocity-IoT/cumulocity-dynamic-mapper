@@ -16,4 +16,4 @@
  */
 
 // Re-exports IDP DataPrep base types (DataPrepContext, ExternalId) and all DM-specific types
-export * from './smart-function-runtime.types';
+export * from './smart-function-dynamic-mapper.types';
