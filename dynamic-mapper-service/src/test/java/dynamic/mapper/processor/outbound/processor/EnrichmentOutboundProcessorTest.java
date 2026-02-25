@@ -28,6 +28,7 @@ import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
 
+import dynamic.mapper.service.cache.FlowStateStore;
 import org.apache.camel.Exchange;
 import org.apache.camel.Message;
 import org.graalvm.polyglot.Engine;
@@ -68,6 +69,9 @@ class EnrichmentOutboundProcessorTest {
 
     @Mock
     private MappingService mappingService;
+
+    @Mock
+    private FlowStateStore flowStateStore;
 
     @Mock
     private dynamic.mapper.core.C8YAgent c8yAgent;
@@ -119,7 +123,7 @@ class EnrichmentOutboundProcessorTest {
         mappingStatus = createMappingStatus();
 
         // Create the processor
-        processor = new EnrichmentOutboundProcessor(configurationRegistry, mappingService, c8yAgent);
+        processor = new EnrichmentOutboundProcessor(configurationRegistry, mappingService, c8yAgent, flowStateStore);
 
         // Setup basic exchange and message mocks
         when(exchange.getIn()).thenReturn(message);
