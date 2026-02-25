@@ -29,10 +29,16 @@ import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Value;
 
 import dynamic.mapper.core.InventoryEnrichmentClient;
+import dynamic.mapper.service.cache.FlowStateStore;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Simple implementation of DataPrepContext for JavaScript execution
+ * Simple implementation of DataPrepContext for JavaScript execution.
+ *
+ * <p>When constructed with a {@link FlowStateStore} and a mapping identifier,
+ * state written via {@code setState} is automatically persisted across message
+ * invocations. The store is written back inside {@link #clearState()}, which is
+ * called by {@code ProcessingContext.close()} at the end of each message.</p>
  */
 @Slf4j
 public class SimpleFlowContext implements DataPrepContext {
@@ -43,14 +49,37 @@ public class SimpleFlowContext implements DataPrepContext {
     private final InventoryEnrichmentClient inventoryEnrichmentClient;
     private Boolean testing;
     private String clientId;
+    private final FlowStateStore stateStore;
+    private final String mappingIdentifier;
 
+    /**
+     * Creates a context without persistence (backward-compatible constructor).
+     */
     public SimpleFlowContext(Context graalContext, String tenant, InventoryEnrichmentClient inventoryEnrichmentClient,
             Boolean testing) {
-        this.state = new HashMap<>();
+        this(graalContext, tenant, inventoryEnrichmentClient, testing, null, null, null);
+    }
+
+    /**
+     * Creates a context with persistent state.
+     *
+     * @param graalContext               the GraalVM polyglot context
+     * @param tenant                     the tenant identifier
+     * @param inventoryEnrichmentClient  client for inventory lookups
+     * @param testing                    true when running in a test cycle
+     * @param stateStore                 store used to persist state across invocations (may be null)
+     * @param mappingIdentifier          the mapping's short identifier used as state key (may be null)
+     * @param initialState               pre-loaded state from the store (may be null)
+     */
+    public SimpleFlowContext(Context graalContext, String tenant, InventoryEnrichmentClient inventoryEnrichmentClient,
+            Boolean testing, FlowStateStore stateStore, String mappingIdentifier, Map<String, Object> initialState) {
+        this.state = (initialState != null && !initialState.isEmpty()) ? new HashMap<>(initialState) : new HashMap<>();
         this.graalContext = graalContext;
         this.tenant = tenant != null ? tenant : "unknown";
         this.inventoryEnrichmentClient = inventoryEnrichmentClient;
         this.testing = testing;
+        this.stateStore = stateStore;
+        this.mappingIdentifier = mappingIdentifier;
     }
 
     /**
@@ -89,20 +118,6 @@ public class SimpleFlowContext implements DataPrepContext {
 
         // Convert back to GraalJS Value
         return graalContext.asValue(javaValue);
-    }
-
-    @Override
-    public Value getConfig() {
-        if (graalContext == null) {
-            return null;
-        }
-
-        // Create a basic configuration
-        Map<String, Object> config = new HashMap<>();
-        config.put("tenant", tenant);
-        config.put("timestamp", System.currentTimeMillis());
-
-        return graalContext.asValue(config);
     }
 
     @Override
@@ -192,16 +207,16 @@ public class SimpleFlowContext implements DataPrepContext {
     }
 
     @Override
-    public Value getManagedObjectByDeviceId(String deviceId) {
-        Object javaValue = inventoryEnrichmentClient.getMOFromInventoryCache(tenant, deviceId, testing);
+    public Value getManagedObject(String c8ySourceId) {
+        Object javaValue = inventoryEnrichmentClient.getMOFromInventoryCache(tenant, c8ySourceId, testing);
         if (javaValue == null) {
-            addWarning(String.format("Device not found in inventory cache: %s", deviceId));
+            addWarning(String.format("Device not found in inventory cache: %s", c8ySourceId));
         }
         return graalContext.asValue(javaValue);
     }
 
     @Override
-    public Value getManagedObject(ExternalId externalId) {
+    public Value getManagedObjectByExternalId(ExternalId externalId) {
         Object javaValue = inventoryEnrichmentClient.getMOFromInventoryCacheByExternalId(tenant, externalId,
                 testing);
         if (javaValue == null) {
@@ -211,7 +226,7 @@ public class SimpleFlowContext implements DataPrepContext {
     }
 
     @Override
-    public Value getManagedObject(Value externalIdValue) {
+    public Value getManagedObjectByExternalId(Value externalIdValue) {
         if (externalIdValue == null) {
             addWarning("ExternalId parameter is null");
             return graalContext.asValue(null);
@@ -228,7 +243,7 @@ public class SimpleFlowContext implements DataPrepContext {
             else if (externalIdValue.hasMembers()) {
                 String externalId = externalIdValue.getMember("externalId").asString();
                 String type = externalIdValue.getMember("type").asString();
-                extId = new ExternalId(externalId, type); // Adjust based on your ExternalId constructor
+                extId = new ExternalId(externalId, type);
             } else {
                 addWarning("Invalid externalId parameter format");
                 return graalContext.asValue(null);
@@ -268,7 +283,21 @@ public class SimpleFlowContext implements DataPrepContext {
 
     @Override
     public void clearState() {
+        if (stateStore != null && mappingIdentifier != null) {
+            stateStore.saveState(tenant, mappingIdentifier, getPersistableState());
+        }
         state.clear();
+    }
+
+    /**
+     * Returns a copy of the state map with ephemeral keys ({@code _WARNINGS_},
+     * {@code _LOGS_}) removed. Only this subset is persisted across invocations.
+     */
+    private Map<String, Object> getPersistableState() {
+        Map<String, Object> persistable = new HashMap<>(state);
+        persistable.remove(DataPrepContext.WARNINGS);
+        persistable.remove(DataPrepContext.LOGS);
+        return persistable;
     }
 
     @Override

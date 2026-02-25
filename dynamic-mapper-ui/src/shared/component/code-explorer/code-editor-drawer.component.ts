@@ -23,7 +23,6 @@ import { FormsModule } from '@angular/forms';
 import { BottomDrawerRef, CoreModule } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
 import { EditorComponent } from '@c8y/ngx-components/editor';
-import { Mapping } from '../../../shared';
 import { base64ToString, stringToBase64 } from '../../../mapping/shared/util';
 
 @Component({
@@ -34,7 +33,7 @@ import { base64ToString, stringToBase64 } from '../../../mapping/shared/util';
   imports: [CoreModule, EditorComponent, FormsModule]
 })
 export class CodeEditorDrawerComponent implements OnInit, OnDestroy {
-  @Input() mapping: Mapping;
+  @Input() encodedCode: string = '';
   @Input() action: string = "update";
   @Input() sourceSystem: string;
 
@@ -48,7 +47,7 @@ export class CodeEditorDrawerComponent implements OnInit, OnDestroy {
 
   async ngOnInit(): Promise<void> {
     // Decode base64 encoded code for display/editing
-    this.code = this.mapping?.code ? base64ToString(this.mapping.code) : '';
+    this.code = this.encodedCode ? base64ToString(this.encodedCode) : '';
     this.editorOptions = {
       minimap: { enabled: true },
       language: 'javascript',

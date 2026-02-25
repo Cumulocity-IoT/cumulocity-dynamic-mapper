@@ -50,6 +50,7 @@ import dynamic.mapper.core.InventoryEnrichmentClient;
 import dynamic.mapper.processor.model.DataPrepContext;
 import dynamic.mapper.processor.model.SimpleFlowContext;
 import dynamic.mapper.processor.model.MappingType;
+import dynamic.mapper.processor.model.OutputCollector;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
@@ -336,14 +337,17 @@ class AbstractFlowProcessorTest {
         Value warningsArray = graalContext.eval("js", "[\"Warning 1\", \"Warning 2\", \"Warning 3\"]");
         flowContext.setState(DataPrepContext.WARNINGS, warningsArray);
 
+        // Create OutputCollector
+        OutputCollector output = new OutputCollector();
+
         // When
-        processor.extractWarnings(processingContext, TEST_TENANT);
+        processor.extractWarnings(flowContext, output, TEST_TENANT);
 
         // Then
-        assertEquals(3, processingContext.getWarnings().size(), "Should have extracted three warnings");
-        assertTrue(processingContext.getWarnings().contains("Warning 1"));
-        assertTrue(processingContext.getWarnings().contains("Warning 2"));
-        assertTrue(processingContext.getWarnings().contains("Warning 3"));
+        assertEquals(3, output.getWarnings().size(), "Should have extracted three warnings");
+        assertTrue(output.getWarnings().contains("Warning 1"));
+        assertTrue(output.getWarnings().contains("Warning 2"));
+        assertTrue(output.getWarnings().contains("Warning 3"));
 
         log.info("✅ Successfully extracted warnings from flow context");
     }
@@ -351,12 +355,14 @@ class AbstractFlowProcessorTest {
     @Test
     void testExtractWarningsWithNoWarnings() {
         // Given - No warnings in flow context
+        // Create OutputCollector
+        OutputCollector output = new OutputCollector();
 
         // When
-        processor.extractWarnings(processingContext, TEST_TENANT);
+        processor.extractWarnings(flowContext, output, TEST_TENANT);
 
         // Then
-        assertTrue(processingContext.getWarnings().isEmpty(), "Should have no warnings");
+        assertTrue(output.getWarnings().isEmpty(), "Should have no warnings");
 
         log.info("✅ Successfully handled empty warnings");
     }
@@ -367,14 +373,17 @@ class AbstractFlowProcessorTest {
         Value logsArray = graalContext.eval("js", "[\"Log entry 1\", \"Log entry 2\", \"Log entry 3\"]");
         flowContext.setState(DataPrepContext.LOGS, logsArray);
 
+        // Create OutputCollector
+        OutputCollector output = new OutputCollector();
+
         // When
-        processor.extractLogs(processingContext, TEST_TENANT);
+        processor.extractLogs(flowContext, output, TEST_TENANT);
 
         // Then
-        assertEquals(3, processingContext.getLogs().size(), "Should have extracted three logs");
-        assertTrue(processingContext.getLogs().contains("Log entry 1"));
-        assertTrue(processingContext.getLogs().contains("Log entry 2"));
-        assertTrue(processingContext.getLogs().contains("Log entry 3"));
+        assertEquals(3, output.getLogs().size(), "Should have extracted three logs");
+        assertTrue(output.getLogs().contains("Log entry 1"));
+        assertTrue(output.getLogs().contains("Log entry 2"));
+        assertTrue(output.getLogs().contains("Log entry 3"));
 
         log.info("✅ Successfully extracted logs from flow context");
     }
@@ -382,12 +391,14 @@ class AbstractFlowProcessorTest {
     @Test
     void testExtractLogsWithNoLogs() {
         // Given - No logs in flow context
+        // Create OutputCollector
+        OutputCollector output = new OutputCollector();
 
         // When
-        processor.extractLogs(processingContext, TEST_TENANT);
+        processor.extractLogs(flowContext, output, TEST_TENANT);
 
         // Then
-        assertTrue(processingContext.getLogs().isEmpty(), "Should have no logs");
+        assertTrue(output.getLogs().isEmpty(), "Should have no logs");
 
         log.info("✅ Successfully handled empty logs");
     }
@@ -435,8 +446,8 @@ class AbstractFlowProcessorTest {
         assertTrue(processor.wasHandleErrorCalled(), "Should call handleProcessingError on exception");
         assertNotNull(processor.getLastError(), "Should have captured the error");
         assertNotNull(processor.getLastErrorMessage(), "Should have error message");
-        assertTrue(processor.getLastErrorMessage().contains("TestableFlowProcessor"),
-                "Error message should contain processor name");
+        assertTrue(processor.getLastErrorMessage().contains("line"),
+                "Error message should contain line number");
 
         log.info("✅ Successfully handled exception and called error handler");
     }
@@ -545,13 +556,16 @@ class AbstractFlowProcessorTest {
         flowContext.setState(DataPrepContext.WARNINGS, warningsArray);
         flowContext.setState(DataPrepContext.LOGS, logsArray);
 
+        // Create OutputCollector
+        OutputCollector output = new OutputCollector();
+
         // When
-        processor.extractWarnings(processingContext, TEST_TENANT);
-        processor.extractLogs(processingContext, TEST_TENANT);
+        processor.extractWarnings(flowContext, output, TEST_TENANT);
+        processor.extractLogs(flowContext, output, TEST_TENANT);
 
         // Then
-        assertEquals(2, processingContext.getWarnings().size(), "Should have two warnings");
-        assertEquals(2, processingContext.getLogs().size(), "Should have two logs");
+        assertEquals(2, output.getWarnings().size(), "Should have two warnings");
+        assertEquals(2, output.getLogs().size(), "Should have two logs");
 
         log.info("✅ Successfully extracted both warnings and logs");
     }
@@ -581,13 +595,16 @@ class AbstractFlowProcessorTest {
         Value warningsArray = graalContext.eval("js", "[\"Valid warning\", 123, null]");
         flowContext.setState(DataPrepContext.WARNINGS, warningsArray);
 
+        // Create OutputCollector
+        OutputCollector output = new OutputCollector();
+
         // When
-        processor.extractWarnings(processingContext, TEST_TENANT);
+        processor.extractWarnings(flowContext, output, TEST_TENANT);
 
         // Then - Should only extract valid string warnings
-        assertEquals(1, processingContext.getWarnings().size(),
+        assertEquals(1, output.getWarnings().size(),
                 "Should only extract string warnings");
-        assertTrue(processingContext.getWarnings().contains("Valid warning"));
+        assertTrue(output.getWarnings().contains("Valid warning"));
 
         log.info("✅ Successfully handled non-string warning elements");
     }
@@ -598,13 +615,16 @@ class AbstractFlowProcessorTest {
         Value logsArray = graalContext.eval("js", "[\"Valid log\", 456, undefined]");
         flowContext.setState(DataPrepContext.LOGS, logsArray);
 
+        // Create OutputCollector
+        OutputCollector output = new OutputCollector();
+
         // When
-        processor.extractLogs(processingContext, TEST_TENANT);
+        processor.extractLogs(flowContext, output, TEST_TENANT);
 
         // Then - Should only extract valid string logs
-        assertEquals(1, processingContext.getLogs().size(),
+        assertEquals(1, output.getLogs().size(),
                 "Should only extract string logs");
-        assertTrue(processingContext.getLogs().contains("Valid log"));
+        assertTrue(output.getLogs().contains("Valid log"));
 
         log.info("✅ Successfully handled non-string log elements");
     }

@@ -38,7 +38,10 @@ import dynamic.mapper.processor.model.CumulocityObject;
 import dynamic.mapper.processor.model.DeviceMessage;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ExternalIdInfo;
+import dynamic.mapper.processor.model.OutputCollector;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.model.ProcessingState;
+import dynamic.mapper.processor.model.RoutingContext;
 import dynamic.mapper.processor.util.APITopicUtil;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
 import dynamic.mapper.service.MappingService;
@@ -59,14 +62,19 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
     }
 
     @Override
-    protected void processMessage(Object message, ProcessingContext<?> context) throws ProcessingException {
-        String tenant = context.getTenant();
+    protected void processMessage(
+            Object message,
+            RoutingContext routing,
+            ProcessingState state,
+            OutputCollector output,
+            ProcessingContext<?> context) throws ProcessingException {
+        String tenant = routing.getTenant();
         Mapping mapping = context.getMapping();
 
         if (message instanceof DeviceMessage) {
-            processDeviceMessage((DeviceMessage) message, context, tenant, mapping);
+            processDeviceMessage((DeviceMessage) message, routing, state, output, context, tenant, mapping);
         } else if (message instanceof CumulocityObject) {
-            processCumulocityObject((CumulocityObject) message, context, tenant, mapping);
+            processCumulocityObject((CumulocityObject) message, routing, state, output, context, tenant, mapping);
         } else {
             log.debug("{} - Message is not a recognized type, skipping: {}", tenant,
                     message.getClass().getSimpleName());
@@ -90,8 +98,17 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
         mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
     }
 
-    private void processDeviceMessage(DeviceMessage deviceMessage, ProcessingContext<?> context,
-            String tenant, Mapping mapping) throws ProcessingException {
+    /**
+     * NEW: Process DeviceMessage using focused contexts.
+     */
+    private void processDeviceMessage(
+            DeviceMessage deviceMessage,
+            RoutingContext routing,
+            ProcessingState state,
+            OutputCollector output,
+            ProcessingContext<?> context,
+            String tenant,
+            Mapping mapping) throws ProcessingException {
 
         try {
 
@@ -135,6 +152,8 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             // Create the request - pass action from DeviceMessage for WebHook internal mode
             DynamicMapperRequest request = ProcessingResultHelper.createAndAddDynamicMapperRequest(context,
                     payloadJson, deviceMessage.getAction(), mapping);
+            // Add to thread-safe output collector
+            output.addRequest(request);
 
             // Override resolvedPublishTopic if DeviceMessage provides a topic
             String publishTopic = deviceMessage.getTopic();
@@ -255,8 +274,17 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
         }
     }
 
-    private void processCumulocityObject(CumulocityObject cumulocityMessage, ProcessingContext<?> context,
-            String tenant, Mapping mapping) throws ProcessingException {
+    /**
+     * NEW: Process CumulocityObject using focused contexts.
+     */
+    private void processCumulocityObject(
+            CumulocityObject cumulocityMessage,
+            RoutingContext routing,
+            ProcessingState state,
+            OutputCollector output,
+            ProcessingContext<?> context,
+            String tenant,
+            Mapping mapping) throws ProcessingException {
 
         try {
             // Get the API from the cumulocityType using unified API derivation
@@ -304,6 +332,8 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             DynamicMapperRequest c8yRequest = ProcessingResultHelper.createAndAddDynamicMapperRequest(context,
                     payloadJson,
                     cumulocityMessage.getAction(), mapping);
+            // Add to thread-safe output collector
+            output.addRequest(c8yRequest);
             c8yRequest.setApi(targetAPI);
             c8yRequest.setSourceId(resolvedDeviceId);
             c8yRequest.setExternalIdType(externalIdInfo.getExternalType());

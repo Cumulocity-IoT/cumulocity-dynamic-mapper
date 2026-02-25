@@ -101,54 +101,20 @@ export class AIPromptComponent implements OnInit, OnDestroy {
       this.aiAgent?.agent?.variables || {},
     );
 
+    const mappingForAI = this.buildMappingForAI();
+
     if (this.isCodeMapping) {
-      // For CODE mappings, include existing JavaScript code if available
-      const existingCode = this.extractExistingJavaScriptCode(this.mapping);
-      const mappingWithoutSubstitutions = { ...this.mapping };
-      delete mappingWithoutSubstitutions.substitutions;
-      mappingWithoutSubstitutions.code = existingCode;
-      mappingWithoutSubstitutions.sourceTemplate = JSON.parse(mappingWithoutSubstitutions.sourceTemplate);
-      mappingWithoutSubstitutions.targetTemplate = JSON.parse(mappingWithoutSubstitutions.targetTemplate);
-
-      // this.newMessage = JSON.stringify({
-      //   sourceTemplate: JSON.parse(this.mapping.sourceTemplate),
-      //   targetTemplate: JSON.parse(this.mapping.targetTemplate),
-      //   existingCode: existingCode,
-      //   mappingType: 'JavaScript'
-      // }, null, 2);
-
+      mappingForAI.code = this.extractExistingJavaScriptCode(this.mapping);
       this.newMessage = "Map for the following mapping the source template to the target template:\n\n" +
         "**Complete Mapping:**\n\n" +
         "```json\n" +
-        JSON.stringify(mappingWithoutSubstitutions, null, 2)
-      "\n```\n";
-      // +  "**Source:**\n\n" +
-      // "```json\n" +
-      // JSON.stringify(JSON.parse(this.mapping.sourceTemplate), null, 2) +
-      // "\n```\n\n" +
-      // "**Target:**\n\n" +
-      // "```json\n" +
-      // JSON.stringify(JSON.parse(this.mapping.targetTemplate), null, 2) +
-      // "\n```\n";
+        JSON.stringify(mappingForAI, null, 2) +
+        "\n```\n";
     } else {
-      // Include the complete mapping but remove existing substitutions
-      const mappingWithoutSubstitutions = { ...this.mapping };
-      delete mappingWithoutSubstitutions.substitutions;
-      mappingWithoutSubstitutions.sourceTemplate = JSON.parse(mappingWithoutSubstitutions.sourceTemplate);
-      mappingWithoutSubstitutions.targetTemplate = JSON.parse(mappingWithoutSubstitutions.targetTemplate);
-
       this.newMessage = "Map for the following mapping the source template to the target template:\n\n" +
         "```json\n" +
-        JSON.stringify(mappingWithoutSubstitutions, null, 2)
-        + "\n```\n";
-      // + "**Source:**\n\n" +
-      // "```json\n" +
-      // JSON.stringify(JSON.parse(this.mapping.sourceTemplate), null, 2) +
-      // "\n```\n\n" +
-      // "**Target:**\n\n" +
-      // "```json\n" +
-      // JSON.stringify(JSON.parse(this.mapping.targetTemplate), null, 2) +
-      // "\n```\n";
+        JSON.stringify(mappingForAI, null, 2) +
+        "\n```\n";
     }
 
     // Call sendMessage() automatically
@@ -172,6 +138,14 @@ export class AIPromptComponent implements OnInit, OnDestroy {
   cancel() {
     this._cancel("User canceled");
     this.bottomDrawerRef.close();
+  }
+
+  private buildMappingForAI(): any {
+    const m = { ...this.mapping };
+    delete m.substitutions;
+    m.sourceTemplate = JSON.parse(m.sourceTemplate as any);
+    m.targetTemplate = JSON.parse(m.targetTemplate as any);
+    return m;
   }
 
   private extractExistingJavaScriptCode(mapping: Mapping): string {

@@ -40,6 +40,7 @@ import dynamic.mapper.processor.model.DataPrepContext;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.TransformationType;
 import dynamic.mapper.service.MappingService;
+import dynamic.mapper.service.cache.FlowStateStore;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -55,37 +56,45 @@ public class EnrichmentOutboundProcessor extends AbstractEnrichmentProcessor {
     public EnrichmentOutboundProcessor(
             ConfigurationRegistry configurationRegistry,
             MappingService mappingService,
-            C8YAgent c8yAgent) {
-        super(configurationRegistry, mappingService);
+            C8YAgent c8yAgent,
+            FlowStateStore flowStateStore) {
+        super(configurationRegistry, mappingService, flowStateStore);
         this.c8yAgent = c8yAgent;
     }
 
     @Override
-    protected void enrichPayload(ProcessingContext<?> context) {
+    protected void enrichPayload(ProcessingContext<?> context) throws ProcessingException {
         /*
          * Enrich payload with _IDENTITY_ property containing source device information
          */
         String tenant = context.getTenant();
         Object payloadObject = context.getPayload();
         Mapping mapping = context.getMapping();
+        boolean isSmartFunction = TransformationType.SMART_FUNCTION.equals(mapping.getTransformationType())
+                || TransformationType.EXTENSION_JAVA.equals(mapping.getTransformationType());
 
-        String identifier = context.getTesting() ? "_IDENTITY_.c8ySourceId" : context.getApi().identifier;
+        String identifier = context.getApi().identifier;
         String payloadAsString = toPrettyJsonString(payloadObject);
         Object sourceId = extractContent(context, payloadObject, payloadAsString, identifier);
+        if (sourceId == null) {
+            throw new ProcessingException(
+                    String.format("Could not extract source ID from payload using path '%s'", identifier));
+        }
         context.setSourceId(sourceId.toString());
 
         Map<String, String> identityFragment = new HashMap<>();
         identityFragment.put("c8ySourceId", sourceId.toString());
         identityFragment.put("externalIdType", mapping.getExternalIdType());
 
-        // Add topic levels to DataPrepContext if available
+        // For SMART_FUNCTION: add to DataPrepContext only — never expand the payload Map
         DataPrepContext flowContext = context.getFlowContext();
-        if (flowContext != null && context.getGraalContext() != null
-                && TransformationType.SMART_FUNCTION.equals(context.getMapping().getTransformationType())) {
-            addToFlowContext(flowContext, context, Mapping.TOKEN_IDENTITY, identityFragment);
-            List<String> splitTopicExAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
-            addToFlowContext(flowContext, context, Mapping.TOKEN_TOPIC_LEVEL, splitTopicExAsList);
-            addToFlowContext(flowContext, context, ProcessingContext.RETAIN, false);
+        if (isSmartFunction) {
+            if (flowContext != null && context.getGraalContext() != null) {
+                addToFlowContext(flowContext, context, Mapping.TOKEN_IDENTITY, identityFragment);
+                List<String> splitTopicExAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
+                addToFlowContext(flowContext, context, Mapping.TOKEN_TOPIC_LEVEL, splitTopicExAsList);
+                addToFlowContext(flowContext, context, ProcessingContext.RETAIN, false);
+            }
         } else {
             if (payloadObject instanceof Map) {
                 @SuppressWarnings("unchecked")

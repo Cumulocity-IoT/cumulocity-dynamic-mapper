@@ -14,14 +14,14 @@ function onMessage(msg, context) {
 
     console.log("Context" + context.getStateAll());
     console.log("Payload Raw:" + payload);
-    console.log("Payload messageId" +  payload.get("messageId"));
+    console.log("Payload messageId" +  payload["messageId"]);
 
     // Get clientId from context first, fall back to payload
-    var clientId = context.getClientId() || payload.get("clientId");
+    var clientId = context.getClientId() || payload["clientId"];
 
     // testing lookup device by deviceId for enrichment
     try {
-        var deviceByDeviceId = context.getManagedObjectByDeviceId(payload.get("deviceId"));
+        var deviceByDeviceId = context.getManagedObjectByDeviceId(payload["deviceId"]);
         console.log("Device (by device id): " + deviceByDeviceId);
     } catch (e) {
         console.log(e);
@@ -48,7 +48,7 @@ function onMessage(msg, context) {
             "c8y_Voltage": {
                 "voltage": {
                     "unit": "V",
-                    "value": payload.get("sensorData").get("val")
+                    "value": payload["sensorData"]["val"]
                 }
             }
         };
@@ -60,7 +60,7 @@ function onMessage(msg, context) {
             "c8y_Current": {
                 "current": {
                     "unit": "A",
-                    "value": payload.get("sensorData").get("val")
+                    "value": payload["sensorData"]["val"]
                 }
             }
         };

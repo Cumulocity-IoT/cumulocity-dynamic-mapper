@@ -22,6 +22,7 @@
 package dynamic.mapper.processor.extension.external.inbound;
 
 import com.dashjoin.jsonata.json.Json;
+import dynamic.mapper.processor.extension.ExtensionExceptionUtil;
 import dynamic.mapper.processor.extension.ProcessorExtensionInbound;
 import dynamic.mapper.processor.model.CumulocityObject;
 import dynamic.mapper.processor.model.DataPreparationContext;
@@ -45,13 +46,12 @@ import java.util.Map;
  *
  * <p>Input JSON format:</p>
  * <pre>
- * {
- *   "externalId": "device-001",
- *   "type": "c8y_TemperatureAlarm",
- *   "alarmType": "CRITICAL",
- *   "message": "Temperature exceeds threshold",
- *   "time": "2024-01-01T12:00:00Z"
- * }
+  {
+    "externalId": "909090123",
+    "type": "TestAlarm",
+    "message": "This is a new test alarm!",
+    "level": "MAJOR"
+  }
  * </pre>
  *
  * <p>This replaces the legacy pattern where extensions directly called
@@ -75,9 +75,11 @@ public class ProcessorExtensionCustomAlarm implements ProcessorExtensionInbound<
             // 2. Extract fields from the JSON
             String externalId = jsonObject.get("externalId").toString();
             String alarmType = jsonObject.get("type").toString();
-            String severity = jsonObject.get("alarmType").toString(); // Maps to Cumulocity severity
+            String severity = jsonObject.get("level").toString(); // Maps to Cumulocity severity
             String text = jsonObject.get("message").toString();
-            DateTime time = new DateTime(jsonObject.get("time"));
+            DateTime time = jsonObject.containsKey("time") && jsonObject.get("time") != null
+                    ? new DateTime(jsonObject.get("time"))
+                    : new DateTime();
 
             // 3. Get external ID type from mapping configuration
             String externalIdType = context.getMapping().getExternalIdType();
@@ -96,7 +98,9 @@ public class ProcessorExtensionCustomAlarm implements ProcessorExtensionInbound<
             };
 
         } catch (Exception e) {
-            String errorMsg = "Failed to process custom alarm: " + e.getMessage();
+            String errorMsg = ExtensionExceptionUtil.formatExceptionWithLocation(
+                "Failed to process custom alarm", e
+            );
             log.error("{} - {}", context.getTenant(), errorMsg, e);
             context.addWarning(errorMsg);
             // Return empty array to indicate processing failure
@@ -163,7 +167,7 @@ public class ProcessorExtensionCustomAlarm implements ProcessorExtensionInbound<
         String externalId = jsonObject.get("externalId").toString();
 
         // Check if device exists (if inventory lookup is available)
-        if (context.getManagedObjectByDeviceId(externalId) == null) {
+        if (context.getManagedObject(externalId) == null) {
             context.addWarning("Device " + externalId + " not found, will be created implicitly");
         }
 

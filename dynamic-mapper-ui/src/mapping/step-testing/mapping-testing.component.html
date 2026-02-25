@@ -106,6 +106,17 @@
         <d11r-mapping-json-editor [options]="editorOptionsDefault" [class]="'jse-main-tiny'"
           [data]="testingModel.response" #editorTestingResponse id="editorTestingResponse">
         </d11r-mapping-json-editor>
+        @if (!hasResponse && testingModel.results.length > 0) {
+          <c8y-messages>
+            <c8y-message translate type="info">
+              <span class="text-info">
+                <i class="fa fa-info-circle"></i> No response in test mode.
+                Data operations (MEASUREMENT, EVENT, ALARM) are prepared but not executed.
+                Use "Send Test Message" to get actual responses.
+              </span>
+            </c8y-message>
+          </c8y-messages>
+        }
       </div>
     </div>
   </div>
@@ -123,9 +134,15 @@
         <div style="display: flex">
           <label>Console output</label>
         </div>
-        <textarea [ngModel]=" testContext?.logs?.join('\n')" class="form-control" _not-applied_c8y-textarea-autoresize
-          class="fit-w" readonly="true" style="font-family: Courier, monospace">
-        </textarea>
+        <div class="console-output">
+          @if (testingModel.logs?.length) {
+            @for (line of testingModel.logs; track $index) {
+              <div [class]="'log-line log-' + getLogLevel(line)">{{ line }}</div>
+            }
+          } @else {
+            <span class="log-empty">No output yet</span>
+          }
+        </div>
       </div>
     </div>
   </div>

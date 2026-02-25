@@ -28,6 +28,7 @@ import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
 
+import dynamic.mapper.service.cache.FlowStateStore;
 import org.apache.camel.Exchange;
 import org.apache.camel.Message;
 import org.graalvm.polyglot.Engine;
@@ -70,6 +71,9 @@ class EnrichmentOutboundProcessorTest {
     private MappingService mappingService;
 
     @Mock
+    private FlowStateStore flowStateStore;
+
+    @Mock
     private dynamic.mapper.core.C8YAgent c8yAgent;
 
     @Mock
@@ -89,6 +93,15 @@ class EnrichmentOutboundProcessorTest {
 
     @Mock
     private HostAccess hostAccess;
+
+    @Mock
+    private dynamic.mapper.processor.model.RoutingContext routingContext;
+
+    @Mock
+    private dynamic.mapper.processor.model.PayloadContext<Object> payloadContext;
+
+    @Mock
+    private dynamic.mapper.processor.model.ProcessingState processingState;
 
     private EnrichmentOutboundProcessor processor;
 
@@ -110,7 +123,7 @@ class EnrichmentOutboundProcessorTest {
         mappingStatus = createMappingStatus();
 
         // Create the processor
-        processor = new EnrichmentOutboundProcessor(configurationRegistry, mappingService, c8yAgent);
+        processor = new EnrichmentOutboundProcessor(configurationRegistry, mappingService, c8yAgent, flowStateStore);
 
         // Setup basic exchange and message mocks
         when(exchange.getIn()).thenReturn(message);
@@ -125,6 +138,13 @@ class EnrichmentOutboundProcessorTest {
         when(processingContext.getMapping()).thenReturn(mapping);
         when(processingContext.getPayload()).thenReturn("test payload");
         when(processingContext.getTopic()).thenReturn("test/topic");
+
+        // Setup focused context mocks
+        when(processingContext.getRoutingContext()).thenReturn(routingContext);
+        when(processingContext.getPayloadContext()).thenReturn(payloadContext);
+        when(processingContext.getProcessingState()).thenReturn(processingState);
+        when(routingContext.getTenant()).thenReturn(TEST_TENANT);
+        when(payloadContext.getDeserializedPayload()).thenReturn("test payload");
 
         // Setup mapping status mocks
         when(mappingService.getMappingStatus(anyString(), any(Mapping.class))).thenReturn(mappingStatus);
@@ -335,6 +355,7 @@ class EnrichmentOutboundProcessorTest {
         String differentTenant = "differentTenant";
         c8yMessage.setTenant(differentTenant);
         when(processingContext.getTenant()).thenReturn(differentTenant);
+        when(routingContext.getTenant()).thenReturn(differentTenant);
 
         // When
         processor.process(exchange);

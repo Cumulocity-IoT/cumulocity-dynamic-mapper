@@ -26,14 +26,16 @@ import static dynamic.mapper.model.Substitution.toPrettyJsonString;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.camel.Exchange;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Substitution;
+import dynamic.mapper.processor.model.PayloadContext;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.model.ProcessingState;
+import dynamic.mapper.processor.model.RoutingContext;
 import dynamic.mapper.processor.model.SubstituteValue;
 import dynamic.mapper.processor.model.SubstitutionEvaluation;
 import dynamic.mapper.service.MappingService;
@@ -83,13 +85,31 @@ public abstract class AbstractJSONataExtractionProcessor extends CommonProcessor
      * @throws ProcessingException if extraction or processing fails
      */
     public void extractFromSource(ProcessingContext<?> context) throws ProcessingException {
+        // Extract focused contexts at entry for cleaner internal API
+        RoutingContext routing = context.getRoutingContext();
+        PayloadContext<?> payload = context.getPayloadContext();
+        ProcessingState state = context.getProcessingState();
+
+        extractFromSource(routing, payload, state, context);
+
+        // Sync state modifications back to context for downstream processors
+        context.syncFromState(state);
+    }
+
+    /**
+     * NEW: Extract using focused contexts - cleaner internal implementation.
+     */
+    private void extractFromSource(
+            RoutingContext routing,
+            PayloadContext<?> payload,
+            ProcessingState state,
+            ProcessingContext<?> context) throws ProcessingException {
         try {
             Mapping mapping = context.getMapping();
-            String tenant = context.getTenant();
+            String tenant = routing.getTenant();
             ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();
 
-            Object payloadObject = context.getPayload();
-            Map<String, List<SubstituteValue>> processingCache = context.getProcessingCache();
+            Object payloadObject = payload.getDeserializedPayload();
             String payloadAsString = toPrettyJsonString(payloadObject);
 
             // Log payload if configured
@@ -100,42 +120,44 @@ public abstract class AbstractJSONataExtractionProcessor extends CommonProcessor
                         serviceConfiguration.getLogPayload() || mapping.getDebug());
             }
 
-            // Process all substitutions
+            // Process all substitutions using focused contexts
             for (Substitution substitution : mapping.getSubstitutions()) {
-                processSubstitution(context, substitution, payloadObject, payloadAsString, processingCache);
+                processSubstitution(routing, state, substitution, payloadObject, payloadAsString, mapping, serviceConfiguration, context);
             }
 
             // Hook for subclass-specific post-processing
-            postProcessSubstitutions(context, processingCache);
+            postProcessSubstitutions(state, context);
 
         } catch (Exception e) {
-            throw new ProcessingException(e.getMessage());
+            throw new ProcessingException(e.getMessage() != null ? e.getMessage() : e.getClass().getName(), e);
         }
     }
 
     /**
      * Process a single substitution: extract content and add to cache.
-     *
-     * @param context The processing context
-     * @param substitution The substitution to process
-     * @param payloadObject The payload object
-     * @param payloadAsString The payload as a string (for logging)
-     * @param processingCache The cache to store processed values
+     * NEW: Using focused contexts internally.
      */
-    private void processSubstitution(ProcessingContext<?> context, Substitution substitution,
-                                     Object payloadObject, String payloadAsString,
-                                     Map<String, List<SubstituteValue>> processingCache) {
-        String tenant = context.getTenant();
-        Mapping mapping = context.getMapping();
-        ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();
+    private void processSubstitution(
+            RoutingContext routing,
+            ProcessingState state,
+            Substitution substitution,
+            Object payloadObject,
+            String payloadAsString,
+            Mapping mapping,
+            ServiceConfiguration serviceConfiguration,
+            ProcessingContext<?> context) {
+
+        String tenant = routing.getTenant();
 
         // Step 1: Extract content from payload
         Object extractedSourceContent = extractContentFromPayload(context, substitution, payloadObject, payloadAsString);
 
         // Step 2: Analyze and process extracted content
-        List<SubstituteValue> processingCacheEntry = processingCache.getOrDefault(
-                substitution.getPathTarget(),
-                new ArrayList<>());
+        // Get existing substitutions and create a mutable copy
+        List<SubstituteValue> existingValues = state.getSubstitutions(substitution.getPathTarget());
+        List<SubstituteValue> processingCacheEntry = existingValues != null && !existingValues.isEmpty()
+            ? new ArrayList<>(existingValues)
+            : new ArrayList<>();
 
         if (extractedSourceContent != null && SubstitutionEvaluation.isArray(extractedSourceContent)
                 && substitution.getExpandArray()) {
@@ -151,7 +173,7 @@ public abstract class AbstractJSONataExtractionProcessor extends CommonProcessor
                     substitution, mapping);
         }
 
-        processingCache.put(substitution.getPathTarget(), processingCacheEntry);
+        state.putSubstitutions(substitution.getPathTarget(), processingCacheEntry);
 
         // Log substitution if configured
         if (serviceConfiguration.getLogSubstitution() || mapping.getDebug()) {
@@ -177,15 +199,14 @@ public abstract class AbstractJSONataExtractionProcessor extends CommonProcessor
                                                        String payloadAsString);
 
     /**
-     * Hook for subclass-specific post-processing after all substitutions are processed.
+     * NEW: Hook for subclass-specific post-processing using focused contexts.
      * Default implementation does nothing.
      *
-     * @param context The processing context
-     * @param processingCache The cache with all processed substitution values
+     * @param state Thread-safe mutable state with processing cache
+     * @param context Legacy context for any remaining needs
      * @throws ProcessingException if post-processing fails
      */
-    protected void postProcessSubstitutions(ProcessingContext<?> context,
-                                           Map<String, List<SubstituteValue>> processingCache)
+    protected void postProcessSubstitutions(ProcessingState state, ProcessingContext<?> context)
             throws ProcessingException {
         // Default: no post-processing
     }

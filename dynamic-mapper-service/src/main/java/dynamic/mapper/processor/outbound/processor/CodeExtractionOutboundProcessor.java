@@ -32,7 +32,10 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.AbstractCodeExtractionProcessor;
 import dynamic.mapper.processor.ProcessingException;
+import dynamic.mapper.processor.model.PayloadContext;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.model.ProcessingState;
+import dynamic.mapper.processor.model.RoutingContext;
 import dynamic.mapper.processor.model.SubstituteValue;
 import dynamic.mapper.processor.model.SubstitutionEvaluation;
 import dynamic.mapper.processor.model.SubstitutionResult;
@@ -54,17 +57,19 @@ public class CodeExtractionOutboundProcessor extends AbstractCodeExtractionProce
     @Override
     protected void processSubstitutionResult(
             SubstitutionResult javaResult,
-            ProcessingContext<?> context,
+            RoutingContext routing,
+            PayloadContext<?> payload,
+            ProcessingState state,
             Object payloadObject,
             Mapping mapping,
-            String tenant) throws ProcessingException {
+            String tenant,
+            ProcessingContext<?> context) throws ProcessingException {
 
         @SuppressWarnings("unchecked")
         Map<?, ?> jsonObject = (Map<?, ?>) payloadObject;
-        Map<String, List<SubstituteValue>> processingCache = context.getProcessingCache();
 
         if (javaResult == null || javaResult.substitutions == null || javaResult.substitutions.isEmpty()) {
-            context.setIgnoreFurtherProcessing(true);
+            state.setIgnoreFurtherProcessing(true);
             log.info("{} - Extraction returned no results, payload: {}", tenant, jsonObject);
             return;
         }
@@ -96,7 +101,7 @@ public class CodeExtractionOutboundProcessor extends AbstractCodeExtractionProce
                         mapping);
             }
 
-            processingCache.put(key, processingCacheEntry);
+            state.putSubstitutions(key, processingCacheEntry);
         }
 
         // Handle alarms
@@ -107,7 +112,7 @@ public class CodeExtractionOutboundProcessor extends AbstractCodeExtractionProce
             }
         }
 
-        if (context.getMapping().getDebug() || context.getServiceConfiguration().getLogPayload()) {
+        if (mapping.getDebug()) {
             log.info("{} - Extraction returned {} results, payload: {}",
                     tenant,
                     keySet.size(),

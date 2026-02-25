@@ -17,19 +17,13 @@
  *
  * @authors Christof Strack
  */
-import { AlertService } from '@c8y/ngx-components';
 import * as _ from 'lodash';
-import { getTypeOf, randomIdAsString } from '../../../mapping/shared/util';
-import { API, getPathTargetForDeviceIdentifiers, Mapping, Substitution, MappingType, RepairStrategy, ContentChanges } from '../../../shared';
-import { SubstitutionContext } from './processor-js.model';
+import { randomIdAsString } from '../../../mapping/shared/util';
+import { API, Mapping, RepairStrategy, ContentChanges } from '../../../shared';
 import { Content } from 'vanilla-jsoneditor';
 import {
-  MappingTokens,
   IdentityPaths,
-  ContextDataPaths,
-  ContextDataKeys,
-  PROTECTED_TOKENS,
-  ProcessingConfig
+  PROTECTED_TOKENS
 } from './processor.constants';
 
 export interface DynamicMapperRequest {
@@ -43,34 +37,6 @@ export interface DynamicMapperRequest {
   response?: any;
   error?: string;
   hidden?: boolean;
-}
-
-/**
- * @deprecated This monolithic interface mixes multiple concerns.
- *
- * For new code, import from context/processing-context.ts and use:
- * - ProcessingContext (refactored version that extends focused interfaces)
- * - ProcessingContextFactory for creating instances
- * - Individual context interfaces (MappingContext, RoutingContext, etc.) for type constraints
- *
- * This interface is maintained for backward compatibility only.
- */
-export interface ProcessingContext {
-  mapping: Mapping;
-  topic: string;
-  resolvedPublishTopic?: string;
-  payload?: JSON;
-  requests?: DynamicMapperRequest[];
-  errors?: string[];
-  warnings?: string[];
-  processingType?: ProcessingType;
-  mappingType: MappingType;
-  processingCache: Map<string, SubstituteValue[]>;
-  sendPayload?: boolean;
-  sourceId?: string;
-  logs?: any[];
-  deviceName?: string;
-  deviceType?: string;
 }
 
 export interface TestContext {
@@ -121,106 +87,8 @@ export const isNumeric = (num: any) => (typeof num === 'number' || (typeof num =
   !isNaN(num as number);
 
 
-export function processSubstitute(processingCacheEntry: SubstituteValue[], extractedSourceContent: any, substitution: Substitution) {
-  if (getTypeOf(extractedSourceContent) == 'null') {
-    processingCacheEntry.push({
-      value: extractedSourceContent,
-      type: SubstituteValueType.IGNORE,
-      repairStrategy: substitution.repairStrategy
-    });
-    // Note: This is a utility function without ProcessingContext access
-    // Consider refactoring to accept logger or context parameter if structured logging needed
-    console.error(
-      'No substitution for: ',
-      substitution.pathSource
-    );
-  } else if (getTypeOf(extractedSourceContent) == 'String') {
-    processingCacheEntry.push({
-      value: extractedSourceContent,
-      type: SubstituteValueType.TEXTUAL,
-      repairStrategy: substitution.repairStrategy
-    });
-  } else if (getTypeOf(extractedSourceContent) == 'Number') {
-    processingCacheEntry.push({
-      value: extractedSourceContent,
-      type: SubstituteValueType.NUMBER,
-      repairStrategy: substitution.repairStrategy
-    });
-  } else if (getTypeOf(extractedSourceContent) == 'Array') {
-    processingCacheEntry.push({
-      value: extractedSourceContent,
-      type: SubstituteValueType.ARRAY,
-      repairStrategy: substitution.repairStrategy
-    });
-  } else if (getTypeOf(extractedSourceContent) == 'Object') {
-    processingCacheEntry.push({
-      value: extractedSourceContent,
-      type: SubstituteValueType.OBJECT,
-      repairStrategy: substitution.repairStrategy
-    });
-  } else if (getTypeOf(extractedSourceContent) == 'Boolean') {
-    processingCacheEntry.push({
-      value: extractedSourceContent,
-      type: SubstituteValueType.BOOLEAN,
-      repairStrategy: substitution.repairStrategy
-    });
-  } else {
-    // Note: This is a utility function without ProcessingContext access
-    // Consider refactoring to accept logger or context parameter if structured logging needed
-    console.warn(
-      `Since result is not (number, array, textual, object), it is ignored: ${extractedSourceContent}`
-    );
-  }
-}
-
-export function getDeviceEntries(context: ProcessingContext): SubstituteValue[] {
-  const { processingCache, mapping } = context;
-  const pathsTargetForDeviceIdentifiers: string[] = getPathTargetForDeviceIdentifiers(context);
-  const firstPathTargetForDeviceIdentifiers = pathsTargetForDeviceIdentifiers.length > 0
-    ? pathsTargetForDeviceIdentifiers[0]
-    : null;
-  const deviceEntries: SubstituteValue[] = processingCache.get(
-    firstPathTargetForDeviceIdentifiers
-  );
-  return deviceEntries;
-}
-
-export function prepareAndSubstituteInPayload(
-  context: ProcessingContext,
-  substitute: SubstituteValue,
-  payloadTarget: JSON,
-  pathTarget: string,
-  alert: AlertService
-) {
-  if (ContextDataPaths.DEVICE_NAME == pathTarget) {
-    context.deviceName = substitute.value;
-  } else if (ContextDataPaths.DEVICE_TYPE == pathTarget) {
-    context.deviceType = substitute.value;
-  } else {
-    substituteValueInPayload(substitute, payloadTarget, pathTarget);
-  }
-}
-
-// Re-export refactored context types (Phase 6)
-// New code should import directly from context/processing-context.ts
-export {
-  ProcessingContext as RefactoredProcessingContext,
-  ProcessingContextFactory,
-  MappingContext,
-  RoutingContext,
-  ProcessingState,
-  DeviceContext,
-  ErrorContext,
-  RequestContext,
-  ProcessingContextOverrides
-} from './context/processing-context';
-
 // Re-export constants for backward compatibility
 export {
-  TOKEN_IDENTITY,
-  TOKEN_TOPIC_LEVEL,
-  TOKEN_CONTEXT_DATA,
-  CONTEXT_DATA_KEY_NAME,
   KEY_TIME,
   TOPIC_WILDCARD_MULTI,
   TOPIC_WILDCARD_SINGLE,
@@ -229,64 +97,8 @@ export {
   ContextDataKeys,
   ContextDataPaths,
   TopicWildcards,
-  ProcessingConfig,
   PROTECTED_TOKENS
 } from './processor.constants';
-
-
-export function substituteValueInPayload(substitute: SubstituteValue, payloadTarget: JSON, pathTarget: string) {
-  const subValueMissingOrNull: boolean = !substitute || substitute.value == null;
-
-  if (pathTarget == '$') {
-    Object.keys(getTypedValue(substitute)).forEach((key) => {
-      payloadTarget[key] = getTypedValue(substitute)[key as keyof unknown];
-    });
-  } else {
-    if ((substitute.repairStrategy == RepairStrategy.REMOVE_IF_MISSING_OR_NULL &&
-      subValueMissingOrNull)) {
-      _.unset(payloadTarget, pathTarget);
-    } else if (substitute.repairStrategy == RepairStrategy.CREATE_IF_MISSING) {
-      // const pathIsNested: boolean = keys.includes('.') || keys.includes('[');
-      // if (pathIsNested) {
-      //   throw new Error('Can only create new nodes on the root level!');
-      // }
-      // jsonObject.put("$", keys, sub.typedValue());
-      _.set(payloadTarget, pathTarget, getTypedValue(substitute));
-    } else {
-      if (_.has(payloadTarget, pathTarget)) {
-        _.set(payloadTarget, pathTarget, getTypedValue(substitute));
-      } else {
-        // alert.warning(`Message could NOT be parsed, ignoring this message: Path: ${keys} not found!`);
-        throw new Error(
-          `Message could NOT be parsed, ignoring this message: Path: ${pathTarget} not found!`
-        );
-      }
-    }
-  }
-}
-
-/**
- * Sorts the processing cache by key
- * Optimized to avoid creating intermediate arrays when possible
- *
- * @param context - Processing context with cache to sort
- */
-export function sortProcessingCache(context: ProcessingContext): void {
-  // Optimization: Skip sorting if cache is empty or has only one entry
-  if (context.processingCache.size <= 1) {
-    return;
-  }
-
-  // Create sorted entries array
-  const sortedEntries = Array.from(context.processingCache.entries())
-    .sort(([keyA], [keyB]) => keyA.localeCompare(keyB));
-
-  // Clear and repopulate - this is faster than creating a new Map
-  context.processingCache.clear();
-  for (const [key, value] of sortedEntries) {
-    context.processingCache.set(key, value);
-  }
-}
 
 export function patchC8YTemplateForTesting(template: object, mapping: Mapping) {
   const identifier = randomIdAsString();
@@ -294,46 +106,6 @@ export function patchC8YTemplateForTesting(template: object, mapping: Mapping) {
   _.set(template, IdentityPaths.C8Y_SOURCE_ID, identifier);
 }
 
-
-export interface EvaluationError {
-  message: string;
-  stack: string | null;
-  location: any | null;
-}
-
-export interface EvaluationResult {
-  success: boolean;
-  result?: any;
-  error?: EvaluationError;
-  logs: string[];
-}
-
-/**
- * Evaluates JavaScript code with arguments and a timeout.
- *
- * @deprecated This function now delegates to CodeEvaluatorService.
- * For new code, use CodeEvaluatorService directly for better control and testability.
- *
- * @param codeString The JavaScript code to evaluate
- * @param ctx The substitution context
- * @returns Promise resolving to evaluation result
- */
-export function evaluateWithArgsWebWorker(codeString: string, ctx: SubstitutionContext): Promise<EvaluationResult> {
-  // Import the service dynamically to avoid circular dependencies
-  // In production, this should be injected properly
-  const { CodeEvaluatorService } = require('./web-worker/code-evaluator.service');
-  const evaluator = new CodeEvaluatorService();
-
-  // Serialize the SubstitutionContext object
-  const serializableCtx = {
-    identifier: ctx.getGenericDeviceIdentifier ? ctx.getGenericDeviceIdentifier() : ctx['deviceIdentifier'],
-    payload: ctx.getPayload ? ctx.getPayload() : ctx['payload'],
-    topic: ctx.getTopic ? ctx.getTopic() : ctx['topic'],
-  };
-
-  // Delegate to the CodeEvaluatorService
-  return evaluator.evaluate(codeString, serializableCtx, { timeoutMs: ProcessingConfig.DEFAULT_TIMEOUT_MS });
-}
 
 function contentChangeAllowed(contentChanges: ContentChanges): boolean {
   // Convert both contents to JSON

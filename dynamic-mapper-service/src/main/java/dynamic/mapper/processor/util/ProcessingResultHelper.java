@@ -39,9 +39,12 @@ import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
+import dynamic.mapper.processor.model.DeviceContext;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
+import dynamic.mapper.processor.model.OutputCollector;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingResultWrapper;
+import dynamic.mapper.processor.model.RoutingContext;
 
 /**
  * Utility class for creating and managing processing results in the dynamic mapper system.
@@ -446,5 +449,227 @@ public class ProcessingResultHelper {
                 .sum();
 
         return Math.max(100, totalTime); // Minimum 100ms
+    }
+
+    // ===== NEW FOCUSED CONTEXT METHODS =====
+    // These methods demonstrate migration to focused contexts
+
+    /**
+     * Creates an implicit device using focused contexts (NEW PATTERN).
+     *
+     * <p>This is the new focused-context version of {@link #createImplicitDevice}.
+     * It uses thread-safe OutputCollector and immutable DeviceContext instead of ProcessingContext,
+     * providing better thread-safety and clearer API boundaries.
+     *
+     * <p><b>Thread Safety:</b> This method is THREAD-SAFE because:
+     * <ul>
+     *   <li>DeviceContext is immutable</li>
+     *   <li>RoutingContext is immutable</li>
+     *   <li>OutputCollector uses thread-safe collections</li>
+     * </ul>
+     *
+     * <p>Example migration:
+     * <pre>
+     * // OLD:
+     * String sourceId = createImplicitDevice(identity, context, log, c8yAgent, mapper);
+     *
+     * // NEW:
+     * DeviceContext device = context.getDeviceContext();
+     * OutputCollector output = context.getOutputCollector();
+     * RoutingContext routing = context.getRoutingContext();
+     * String sourceId = createImplicitDevice(identity, device, output, routing,
+     *                                        mapping, log, c8yAgent, mapper);
+     * </pre>
+     *
+     * @param identity the external identity for the device (type and value)
+     * @param device the device context containing device metadata
+     * @param output the thread-safe output collector for accumulating requests
+     * @param routing the routing context containing tenant information
+     * @param mapping the mapping configuration
+     * @param log the logger for recording operations and errors
+     * @param c8yAgent the Cumulocity agent for executing the device creation
+     * @param objectMapper the Jackson ObjectMapper for JSON serialization/deserialization
+     * @return the Cumulocity internal device ID (managed object ID) if successful, null if creation failed
+     */
+    public static String createImplicitDevice(
+            ID identity,
+            dynamic.mapper.processor.model.DeviceContext device,
+            dynamic.mapper.processor.model.OutputCollector output,
+            dynamic.mapper.processor.model.RoutingContext routing,
+            Mapping mapping,
+            Logger log,
+            C8YAgent c8yAgent,
+            ObjectMapper objectMapper) {
+
+        Map<String, Object> request = new HashMap<>();
+
+        // Set device name from device context or generate from identity
+        if (device.getDeviceName() != null) {
+            request.put("name", device.getDeviceName());
+        } else {
+            request.put("name", "device_" + identity.getType() + "_" + identity.getValue());
+        }
+
+        // Set device type from device context or use default
+        if (device.getDeviceType() != null) {
+            request.put("type", device.getDeviceType());
+        } else {
+            request.put("type", "c8y_GeneratedDeviceType");
+        }
+
+        // Update device context with external ID from identity
+        DeviceContext updatedDevice = device.withExternalId(identity.getValue());
+        String externalIdType = identity.getType() != null ? identity.getType()
+                : mapping.getExternalIdType();
+
+        // Set device properties
+        request.put("c8y_IsDevice", new HashMap<>());
+        request.put("com_cumulocity_model_Agent", new HashMap<>());
+
+        try {
+            int predecessor = output.getRequestCount();
+            String requestString = objectMapper.writeValueAsString(request);
+
+            // Create C8Y request for device creation
+            DynamicMapperRequest deviceRequest = DynamicMapperRequest.builder()
+                    .predecessor(predecessor)
+                    .method(mapping.getUpdateExistingDevice() ? RequestMethod.POST : RequestMethod.PATCH)
+                    .api(API.INVENTORY)
+                    .externalIdType(externalIdType)
+                    .externalId(updatedDevice.getExternalId())
+                    .request(requestString)
+                    .build();
+
+            output.addRequest(deviceRequest);  // Thread-safe add
+            int index = output.getRequestCount() - 1;
+
+            // Create the device (Note: c8yAgent.upsertDevice still needs ProcessingContext)
+            // This is a limitation of the current C8YAgent API
+            // TODO: Consider updating C8YAgent to accept focused contexts
+
+            // For now, we need to create a minimal ProcessingContext for c8yAgent
+            // In a full migration, c8yAgent would be updated to accept focused contexts
+            ProcessingContext<?> minimalContext = ProcessingContext.builder()
+                    .tenant(routing.getTenant())
+                    .mapping(mapping)
+                    .externalId(updatedDevice.getExternalId())
+                    .deviceName(updatedDevice.getDeviceName())
+                    .deviceType(updatedDevice.getDeviceType())
+                    .requests(new ArrayList<>(output.getRequests()))
+                    .build();
+
+            ManagedObjectRepresentation implicitDevice = c8yAgent.upsertDevice(
+                    routing.getTenant(), identity, minimalContext, index);
+
+            // Update request with response
+            String response = objectMapper.writeValueAsString(implicitDevice);
+            deviceRequest.setResponse(response);
+            deviceRequest.setSourceId(implicitDevice.getId().getValue());
+
+            return implicitDevice.getId().getValue();
+
+        } catch (Exception e) {
+            DynamicMapperRequest currentRequest = output.getCurrentRequest();
+            if (currentRequest != null) {
+                currentRequest.setError(e);
+            }
+            log.error("Failed to create implicit device: {}", e.getMessage(), e);
+            return null;
+        }
+    }
+
+    /**
+     * Creates a DynamicMapperRequest and adds it to the OutputCollector (NEW PATTERN).
+     *
+     * <p>This is the new focused-context version of {@link #createAndAddDynamicMapperRequest}.
+     * It uses {@link dynamic.mapper.processor.model.OutputCollector} instead of ProcessingContext,
+     * providing better thread-safety and clearer API boundaries.
+     *
+     * <p><b>Thread Safety:</b> Unlike the ProcessingContext version, this method is THREAD-SAFE
+     * because OutputCollector uses CopyOnWriteArrayList internally. Multiple threads can safely
+     * call this method concurrently.
+     *
+     * <p>Example migration:
+     * <pre>
+     * // OLD:
+     * createAndAddDynamicMapperRequest(context, json, "create", mapping);
+     *
+     * // NEW:
+     * OutputCollector output = context.getOutputCollector();
+     * DeviceContext device = context.getDeviceContext();
+     * RoutingContext routing = context.getRoutingContext();
+     * createAndAddDynamicMapperRequest(output, device, routing, json, "create", mapping);
+     * </pre>
+     *
+     * @param output the thread-safe output collector for accumulating requests
+     * @param device the device context containing external ID
+     * @param routing the routing context containing API and tenant information
+     * @param payloadJson the JSON payload to be sent in the request body
+     * @param action the action type ("create", "update", "delete", "patch")
+     * @param mapping the mapping configuration containing target API and external ID information
+     * @return the created DynamicMapperRequest that was added to the output collector
+     */
+    public static DynamicMapperRequest createAndAddDynamicMapperRequest(
+            dynamic.mapper.processor.model.OutputCollector output,
+            dynamic.mapper.processor.model.DeviceContext device,
+            dynamic.mapper.processor.model.RoutingContext routing,
+            String payloadJson,
+            String action,
+            Mapping mapping) {
+
+        // Determine the request method based on action
+        RequestMethod method = mapActionToRequestMethod(action);
+        API api = routing.getApi() != null ? routing.getApi() : mapping.getTargetAPI();
+
+        // Use -1 as predecessor for new request pattern
+        int predecessor = output.getRequestCount() > 0
+                ? output.getRequestCount() - 1
+                : -1;
+
+        // Create the request using focused contexts
+        DynamicMapperRequest request = DynamicMapperRequest.builder()
+                .predecessor(predecessor)
+                .method(method)
+                .api(api)
+                .externalIdType(mapping.getExternalIdType())
+                .externalId(device.getExternalId())
+                .request(payloadJson)
+                .build();
+
+        output.addRequest(request);  // Thread-safe add
+        return request;
+    }
+
+    /**
+     * Creates a DynamicMapperRequest using focused contexts without adding to collector.
+     *
+     * <p>This method builds a request but doesn't add it to any collector, giving the caller
+     * full control over when and where to add it. Useful for conditional request creation.
+     *
+     * @param device the device context containing external ID
+     * @param routing the routing context containing API information
+     * @param payloadJson the JSON payload for the request
+     * @param action the action type ("create", "update", "delete", "patch")
+     * @param mapping the mapping configuration
+     * @return the created DynamicMapperRequest (not yet added to any collector)
+     */
+    public static DynamicMapperRequest createDynamicMapperRequest(
+            dynamic.mapper.processor.model.DeviceContext device,
+            dynamic.mapper.processor.model.RoutingContext routing,
+            String payloadJson,
+            String action,
+            Mapping mapping) {
+
+        RequestMethod method = mapActionToRequestMethod(action);
+        API api = routing.getApi() != null ? routing.getApi() : mapping.getTargetAPI();
+
+        return DynamicMapperRequest.builder()
+                .predecessor(-1)
+                .method(method)
+                .api(api)
+                .externalIdType(mapping.getExternalIdType())
+                .externalId(device.getExternalId())
+                .request(payloadJson)
+                .build();
     }
 }

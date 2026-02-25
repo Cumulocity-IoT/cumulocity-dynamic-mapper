@@ -179,15 +179,6 @@ public class SimpleDataPreparationContext implements DataPreparationContext {
     }
 
     @Override
-    public Value getConfig() {
-        if (dataPrepContext != null) {
-            return dataPrepContext.getConfig();
-        }
-        log.warn("{} - getConfig() called but DataPrepContext not available", tenant);
-        return null;
-    }
-
-    @Override
     public Value getDTMAsset(String assetId) {
         if (dataPrepContext != null) {
             return dataPrepContext.getDTMAsset(assetId);
@@ -197,29 +188,29 @@ public class SimpleDataPreparationContext implements DataPreparationContext {
     }
 
     @Override
-    public Value getManagedObjectByDeviceId(String deviceId) {
+    public Value getManagedObject(String c8ySourceId) {
         if (dataPrepContext != null) {
-            return dataPrepContext.getManagedObjectByDeviceId(deviceId);
-        }
-        log.warn("{} - getManagedObjectByDeviceId() called but DataPrepContext not available", tenant);
-        return null;
-    }
-
-    @Override
-    public Value getManagedObject(ExternalId externalId) {
-        if (dataPrepContext != null) {
-            return dataPrepContext.getManagedObject(externalId);
+            return dataPrepContext.getManagedObject(c8ySourceId);
         }
         log.warn("{} - getManagedObject() called but DataPrepContext not available", tenant);
         return null;
     }
 
     @Override
-    public Value getManagedObject(Value value) {
+    public Value getManagedObjectByExternalId(ExternalId externalId) {
         if (dataPrepContext != null) {
-            return dataPrepContext.getManagedObject(value);
+            return dataPrepContext.getManagedObjectByExternalId(externalId);
         }
-        log.warn("{} - getManagedObject(Value) called but DataPrepContext not available", tenant);
+        log.warn("{} - getManagedObjectByExternalId() called but DataPrepContext not available", tenant);
+        return null;
+    }
+
+    @Override
+    public Value getManagedObjectByExternalId(Value value) {
+        if (dataPrepContext != null) {
+            return dataPrepContext.getManagedObjectByExternalId(value);
+        }
+        log.warn("{} - getManagedObjectByExternalId(Value) called but DataPrepContext not available", tenant);
         return null;
     }
 

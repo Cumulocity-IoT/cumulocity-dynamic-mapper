@@ -30,6 +30,7 @@ import dynamic.mapper.model.ExtensionEntry;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.extension.ProcessorExtensionInbound;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.model.RoutingContext;
 import dynamic.mapper.service.ExtensionInboundRegistry;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
@@ -61,8 +62,12 @@ public abstract class AbstractExtensibleProcessor extends CommonProcessor {
     @Override
     public void process(Exchange exchange) throws Exception {
         ProcessingContext<byte[]> context = getProcessingContextAsByteArray(exchange);
+
+        // Extract focused contexts
+        RoutingContext routing = context.getRoutingContext();
+
         Mapping mapping = context.getMapping();
-        String tenant = context.getTenant();
+        String tenant = routing.getTenant();
         Boolean testing = context.getTesting();
 
         try {

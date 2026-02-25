@@ -25,10 +25,10 @@ function onMessage(msg, context) {
     var payload = msg.getPayload();
 
     console.log("Processing message with sourceId override");
-    console.log("Payload messageId: " + payload.get("messageId"));
+    console.log("Payload messageId: " + payload["messageId"]);
 
     // Get clientId from context first, fall back to payload
-    var clientId = context.getClientId() || payload.get("clientId");
+    var clientId = context.getClientId() || payload["clientId"];
 
     // Lookup the originating device using external ID
     var originatingDevice = context.getManagedObject({

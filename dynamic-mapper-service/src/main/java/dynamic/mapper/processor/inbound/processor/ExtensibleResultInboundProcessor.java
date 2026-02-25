@@ -41,7 +41,10 @@ import dynamic.mapper.processor.model.CumulocityObject;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ExternalId;
 import dynamic.mapper.processor.model.ExternalIdInfo;
+import dynamic.mapper.processor.model.OutputCollector;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.model.ProcessingState;
+import dynamic.mapper.processor.model.RoutingContext;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
 import dynamic.mapper.processor.util.APITopicUtil;
 import dynamic.mapper.service.MappingService;
@@ -77,20 +80,24 @@ public class ExtensibleResultInboundProcessor extends AbstractExtensibleResultPr
     }
 
     @Override
-    protected void processExtensionResults(ProcessingContext<?> context) throws ProcessingException {
+    protected void processExtensionResults(
+            RoutingContext routing,
+            ProcessingState state,
+            OutputCollector output,
+            ProcessingContext<?> context) throws ProcessingException {
         // Extension results are stored in context by ExtensibleInboundProcessor
         Object extensionResult = context.getExtensionResult();
-        String tenant = context.getTenant();
+        String tenant = routing.getTenant();
 
         if (extensionResult == null) {
             log.debug("{} - No extension result available, skipping extension result processing", tenant);
-            context.setIgnoreFurtherProcessing(true);
+            state.setIgnoreFurtherProcessing(true);
             return;
         }
 
         if (!(extensionResult instanceof CumulocityObject[])) {
             log.warn("{} - Extension result is not CumulocityObject[], skipping", tenant);
-            context.setIgnoreFurtherProcessing(true);
+            state.setIgnoreFurtherProcessing(true);
             return;
         }
 
@@ -98,25 +105,26 @@ public class ExtensibleResultInboundProcessor extends AbstractExtensibleResultPr
 
         if (results.length == 0) {
             log.info("{} - Extension result is empty, skipping processing", tenant);
-            context.setIgnoreFurtherProcessing(true);
+            state.setIgnoreFurtherProcessing(true);
             return;
         }
 
-        // Process each CumulocityObject
+        // Process each CumulocityObject using thread-safe output collector
         for (CumulocityObject c8yObj : results) {
-            processCumulocityObject(c8yObj, context);
+            processCumulocityObject(c8yObj, output, context);
         }
 
-        if (context.getRequests().isEmpty()) {
+        if (output.getRequests().isEmpty()) {
             log.info("{} - No requests generated from extension result", tenant);
-            context.setIgnoreFurtherProcessing(true);
+            state.setIgnoreFurtherProcessing(true);
         } else {
-            log.info("{} - Generated {} requests from extension result", tenant, context.getRequests().size());
+            log.info("{} - Generated {} requests from extension result", tenant, output.getRequests().size());
         }
     }
 
     @Override
-    protected void postProcessExtensionResults(ProcessingContext<?> context) throws ProcessingException {
+    protected void postProcessExtensionResults(ProcessingState state, OutputCollector output,
+                                              ProcessingContext<?> context) throws ProcessingException {
         Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
 
@@ -131,7 +139,7 @@ public class ExtensibleResultInboundProcessor extends AbstractExtensibleResultPr
                             tenant, mapping.getName(), mapping.getIdentifier(),
                             filterInventory);
                 }
-                context.setIgnoreFurtherProcessing(true);
+                state.setIgnoreFurtherProcessing(true);
             }
         }
     }
@@ -161,7 +169,7 @@ public class ExtensibleResultInboundProcessor extends AbstractExtensibleResultPr
     }
 
     /**
-     * Process a single CumulocityObject and convert it to a DynamicMapperRequest.
+     * NEW: Process a single CumulocityObject using OutputCollector.
      *
      * <p>This method handles:</p>
      * <ul>
@@ -172,11 +180,12 @@ public class ExtensibleResultInboundProcessor extends AbstractExtensibleResultPr
      * </ul>
      *
      * @param c8yObj The CumulocityObject to process
+     * @param output Thread-safe output collector
      * @param context The processing context
      * @throws ProcessingException if processing fails
      */
-    private void processCumulocityObject(CumulocityObject c8yObj, ProcessingContext<?> context)
-            throws ProcessingException {
+    private void processCumulocityObject(CumulocityObject c8yObj, OutputCollector output,
+                                        ProcessingContext<?> context) throws ProcessingException {
 
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
@@ -234,14 +243,22 @@ public class ExtensibleResultInboundProcessor extends AbstractExtensibleResultPr
                     }
                 } else {
                     // No device ID and not creating implicit devices - skip this message
-                    log.warn(
-                            "{} - Cannot process message: no device ID resolved and createNonExistingDevice is false for mapping {}",
-                            tenant, mapping.getIdentifier());
+                    ExternalId externalSource = externalSources.get(0);
+                    String warnMsg = String.format(
+                            "Device with externalId '%s' (type '%s') not found in inventory and createNonExistingDevice is disabled - no request created for mapping '%s'. Enable createNonExistingDevice or use an existing externalId.",
+                            externalSource != null ? externalSource.getExternalId() : "unknown",
+                            externalSource != null ? externalSource.getType() : "unknown",
+                            mapping.getIdentifier());
+                    log.warn("{} - {}", tenant, warnMsg);
+                    output.addWarning(warnMsg);
                     return; // Don't create a request
                 }
             } else {
-                log.warn("{} - Cannot process message: no external source provided for mapping {}",
-                        tenant, mapping.getIdentifier());
+                String warnMsg = String.format(
+                        "Cannot process message: no externalSource provided for mapping '%s'. Set externalId in the returned CumulocityObject.",
+                        mapping.getIdentifier());
+                log.warn("{} - {}", tenant, warnMsg);
+                output.addWarning(warnMsg);
                 return; // Don't create a request
             }
 
@@ -271,8 +288,8 @@ public class ExtensibleResultInboundProcessor extends AbstractExtensibleResultPr
                     .request(payloadJson)
                     .build();
 
-            // Add request to context
-            context.addRequest(request);
+            // Add request to thread-safe output collector
+            output.addRequest(request);
 
             log.debug("{} - Created C8Y request: API={}, action={}, deviceId={}",
                     tenant, targetAPI.name, c8yObj.getAction(), resolvedDeviceId);

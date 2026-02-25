@@ -23,6 +23,7 @@ package dynamic.mapper.processor.extension.external.inbound;
 
 import com.dashjoin.jsonata.json.Json;
 
+import dynamic.mapper.processor.extension.ExtensionExceptionUtil;
 import dynamic.mapper.processor.extension.ProcessorExtensionInbound;
 import dynamic.mapper.processor.model.CumulocityObject;
 import dynamic.mapper.processor.model.DataPreparationContext;
@@ -97,7 +98,9 @@ public class ProcessorExtensionCustomMeasurement implements ProcessorExtensionIn
             return new CumulocityObject[] { builder.build() };
 
         } catch (Exception e) {
-            String errorMsg = "Failed to process custom measurement: " + e.getMessage();
+            String errorMsg = ExtensionExceptionUtil.formatExceptionWithLocation(
+                "Failed to process custom measurement", e
+            );
             log.error("{} - {}", context.getTenant(), errorMsg, e);
             context.addWarning(errorMsg);
             return new CumulocityObject[0];

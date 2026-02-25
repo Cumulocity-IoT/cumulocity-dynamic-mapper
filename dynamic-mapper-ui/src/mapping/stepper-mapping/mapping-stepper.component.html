@@ -272,7 +272,8 @@
     <div class="col-xs-12 flex-grow no-gutter">
       <d11r-mapping-testing #mappingTestingStep [updateTestingTemplate]="
               updateTestingTemplate
-            " [mapping]="mapping" [stepperConfiguration]="stepperConfiguration"></d11r-mapping-testing>
+            " [mapping]="mapping" [stepperConfiguration]="stepperConfiguration"
+            (sourceTemplateChanged)="onTestingSourceTemplateChanged($event)"></d11r-mapping-testing>
     </div>
     <c8y-stepper-buttons class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0"
       (onCustom)="onCommitButton()" (onCancel)="cancel.emit()" (onBack)="onBackStep($event)"
@@ -331,13 +332,13 @@
       </div>
       <ng-container>
         <div class="col-lg-2" style="padding-top: 2px;">
-          <button type="button" name="generateSubstitution" class="btn btn-default btn-sm"
+          <button type="button" name="generateSubstitution" class="btn btn-ai btn-sm"
             (click)="openGenerateSubstitutionDrawer()" translate title="Generate substitutions" [disabled]="
                             !stepperViewModel.config.showEditorSource ||
                               stepperViewModel.config.editorMode ===
                                 EditorMode.READ_ONLY || !aiAgentDeployed
                         ">
-            <i c8yIcon="bot"></i><span id="updateButton">&nbsp;Generate substitutions</span>
+           <span id="updateButton">Generate substitutions</span>
           </button>
           @if (!aiAgentDeployed) {
             <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"

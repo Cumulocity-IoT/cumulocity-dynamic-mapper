@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 
-import { ProcessingContext, TOKEN_IDENTITY } from './../../mapping/core/processor/processor.model';
+import { MappingTokens } from './../../mapping/core/processor/processor.model';
 import { EditorMode } from '../../mapping/shared/stepper.model';
 import { ConnectorConfiguration } from '../connector-configuration/connector.model';
 
@@ -540,7 +540,7 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
       showEditorSource: false,
       showFilterExpression: false,
       allowNoDefinedIdentifier: true,
-      allowTestTransformation: false,
+      allowTestTransformation: true,
       allowTestSending: false,
       advanceFromStepToEndStep: 2
     })
@@ -616,8 +616,7 @@ export function getDeviceIdentifiers(mapping: Mapping): Substitution[] {
     .filter(sub => definesDeviceIdentifier(mapping, sub));
 }
 
-export function getPathTargetForDeviceIdentifiers(context: ProcessingContext): string[] {
-  const { mapping } = context;
+export function getPathTargetForDeviceIdentifiers(mapping: Mapping): string[] {
   let pss;
   if (isSubstitutionsAsCode(mapping)) {
     pss = [getGenericDeviceIdentifier(mapping)];
@@ -662,15 +661,15 @@ export function definesDeviceIdentifier(
 ): boolean {
   if (mapping.direction === Direction.INBOUND) {
     if (mapping.useExternalId) {
-      return sub?.pathTarget === `${TOKEN_IDENTITY}.externalId`;
+      return sub?.pathTarget === `${MappingTokens.IDENTITY}.externalId`;
     } else {
-      return sub?.pathTarget === `${TOKEN_IDENTITY}.c8ySourceId`;
+      return sub?.pathTarget === `${MappingTokens.IDENTITY}.c8ySourceId`;
     }
   } else {
     if (mapping.useExternalId) {
-      return sub?.pathSource === `${TOKEN_IDENTITY}.externalId`;
+      return sub?.pathSource === `${MappingTokens.IDENTITY}.externalId`;
     } else {
-      return sub?.pathSource === `${TOKEN_IDENTITY}.c8ySourceId`;
+      return sub?.pathSource === `${MappingTokens.IDENTITY}.c8ySourceId`;
     }
   }
 }
@@ -690,9 +689,9 @@ export function countDeviceIdentifiers(mapping: Mapping): number {
 }
 export function getGenericDeviceIdentifier(mapping: Mapping): string {
   if (mapping.useExternalId && mapping.externalIdType !== '') {
-    return `${TOKEN_IDENTITY}.externalId`;
+    return `${MappingTokens.IDENTITY}.externalId`;
   } else {
-    return `${TOKEN_IDENTITY}.c8ySourceId`;
+    return `${MappingTokens.IDENTITY}.c8ySourceId`;
   }
 }
 

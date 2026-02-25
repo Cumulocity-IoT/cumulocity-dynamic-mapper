@@ -95,11 +95,11 @@
                 </button>
               </div>
               <div class="btn-group m-l-4">
-                <button type="button" class="btn btn-default btn-sm"
+                <button type="button" class="btn btn-ai btn-sm"
                                 (click)="openGenerateSubstitutionDrawer()" [disabled]="!stepperConfiguration.showEditorSource ||
                     stepperConfiguration.editorMode === EditorMode.READ_ONLY || 
                     !aiAgentDeployed">
-                  <i c8yIcon="bot"></i>&nbsp;Generate substitutions
+                  <span>Generate substitutions</span>
                 </button>
               </div>
               <div class="btn-group">

@@ -25,6 +25,7 @@ import static com.dashjoin.jsonata.Jsonata.jsonata;
 
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.camel.Exchange;
 import org.graalvm.polyglot.Context;
@@ -39,9 +40,11 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.model.DataPrepContext;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.model.RoutingContext;
 import dynamic.mapper.processor.model.SimpleFlowContext;
 import dynamic.mapper.processor.model.TransformationType;
 import dynamic.mapper.service.MappingService;
+import dynamic.mapper.service.cache.FlowStateStore;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -56,14 +59,17 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
 
     protected final ConfigurationRegistry configurationRegistry;
     protected final MappingService mappingService;
+    protected final FlowStateStore flowStateStore;
 
     private Context.Builder graalContextBuilder;
 
     protected AbstractEnrichmentProcessor(
             ConfigurationRegistry configurationRegistry,
-            MappingService mappingService) {
+            MappingService mappingService,
+            FlowStateStore flowStateStore) {
         this.configurationRegistry = configurationRegistry;
         this.mappingService = mappingService;
+        this.flowStateStore = flowStateStore;
     }
 
     @Override
@@ -71,7 +77,10 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
         ProcessingContext<?> context = exchange.getIn().getHeader("processingContext",
                 ProcessingContext.class);
 
-        String tenant = context.getTenant();
+        // Extract focused contexts
+        RoutingContext routing = context.getRoutingContext();
+
+        String tenant = routing.getTenant();
         Mapping mapping = context.getMapping();
 
         ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();
@@ -122,9 +131,10 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
 
                 context.setGraalContext(graalContext);
                 context.setFlowState(new HashMap<String, Object>());
+                Map<String, Object> initialState = flowStateStore.loadState(tenant, mapping.getIdentifier());
                 context.setFlowContext(new SimpleFlowContext(graalContext, tenant,
                         (InventoryEnrichmentClient) configurationRegistry.getC8yAgent(),
-                        context.getTesting()));
+                        context.getTesting(), flowStateStore, mapping.getIdentifier(), initialState));
             } catch (Exception e) {
                 handleGraalVMError(tenant, mapping, e, context);
                 return;
@@ -260,7 +270,7 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
      * @param context The processing context containing payload and mapping
      *                information
      */
-    protected abstract void enrichPayload(ProcessingContext<?> context);
+    protected abstract void enrichPayload(ProcessingContext<?> context) throws ProcessingException;
 
     /**
      * Handle errors during enrichment phase.

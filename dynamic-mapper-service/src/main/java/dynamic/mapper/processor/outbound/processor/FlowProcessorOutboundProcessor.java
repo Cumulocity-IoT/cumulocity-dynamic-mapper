@@ -38,9 +38,9 @@ import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.AbstractFlowProcessor;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.DeviceMessage;
+import dynamic.mapper.processor.model.OutputCollector;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.util.JavaScriptInteropHelper;
-import dynamic.mapper.processor.util.ProcessingResultHelper;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.util.Utils;
 import lombok.extern.slf4j.Slf4j;
@@ -80,19 +80,24 @@ public class FlowProcessorOutboundProcessor extends AbstractFlowProcessor {
     @Override
     protected void processResult(Value result, ProcessingContext<?> context, String tenant)
             throws ProcessingException {
-        extractWarnings(context, tenant);
-        extractLogs(context, tenant);
+        // Use thread-safe OutputCollector internally
+        OutputCollector output = new OutputCollector();
+
+        // Extract warnings and logs using thread-safe methods
+        extractWarnings(context.getFlowContext(), output, tenant);
+        extractLogs(context.getFlowContext(), output, tenant);
 
         // Always initialize an empty list
         List<Object> outputMessages = new ArrayList<>();
 
         if (isEmptyResult(result)) {
             log.warn("{} - onMessage function did not return any transformation result", tenant);
-            context.getWarnings().add("onMessage function did not return any transformation result");
+            output.addWarning("onMessage function did not return any transformation result");
             context.setFlowResult(outputMessages); // Set empty list
             context.setIgnoreFurtherProcessing(true);
-            ProcessingResultHelper.createAndAddDynamicMapperRequest(context,
-                    context.getMapping().getTargetTemplate(), null, context.getMapping());
+
+            // Sync back to context for backward compatibility
+            syncOutputToContext(output, context);
             return;
         }
 
@@ -100,7 +105,7 @@ public class FlowProcessorOutboundProcessor extends AbstractFlowProcessor {
             outputMessages = extractOutputMessages(result, tenant);
         } catch (Exception e) {
             log.error("{} - Error extracting output messages: {}", tenant, e.getMessage(), e);
-            context.getWarnings().add("Error extracting output messages: " + e.getMessage());
+            output.addWarning("Error extracting output messages: " + e.getMessage());
             outputMessages = new ArrayList<>(); // Ensure it's empty
         }
 
@@ -109,8 +114,11 @@ public class FlowProcessorOutboundProcessor extends AbstractFlowProcessor {
 
         if (outputMessages.isEmpty()) {
             log.info("{} - No valid messages produced from onMessage function", tenant);
-            context.getWarnings().add("No valid messages produced from onMessage function");
+            output.addWarning("No valid messages produced from onMessage function");
             context.setIgnoreFurtherProcessing(true);
+
+            // Sync back to context for backward compatibility
+            syncOutputToContext(output, context);
             return;
         }
 
@@ -121,6 +129,9 @@ public class FlowProcessorOutboundProcessor extends AbstractFlowProcessor {
         // Create alarms for messages reported during processing
         createAlarmsForProcessing(context, tenant);
 
+        // Sync back to context for backward compatibility
+        syncOutputToContext(output, context);
+
         // IMPORTANT: Don't store the Value object itself, only extracted data
         // This ensures no GraalVM Value references leak
     }
@@ -130,6 +141,7 @@ public class FlowProcessorOutboundProcessor extends AbstractFlowProcessor {
             ProcessingContext<?> context, String tenant, Mapping mapping) {
         MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
         context.addError(new ProcessingException(errorMessage, e));
+        context.setIgnoreFurtherProcessing(true);
         mappingStatus.errors++;
         mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
     }
@@ -221,6 +233,19 @@ public class FlowProcessorOutboundProcessor extends AbstractFlowProcessor {
             context.getAlarms()
                     .forEach(alarm -> c8yAgent.createAlarm("WARNING", alarm, Utils.MAPPER_PROCESSING_ALARM,
                             new DateTime(), sourceMor, tenant));
+        }
+    }
+
+    /**
+     * Sync OutputCollector contents back to ProcessingContext for backward compatibility.
+     * Can be removed once all callers migrate to reading from OutputCollector directly.
+     */
+    private void syncOutputToContext(OutputCollector output, ProcessingContext<?> context) {
+        if (!output.getWarnings().isEmpty()) {
+            context.getWarnings().addAll(output.getWarnings());
+        }
+        if (!output.getLogs().isEmpty()) {
+            context.getLogs().addAll(output.getLogs());
         }
     }
 }

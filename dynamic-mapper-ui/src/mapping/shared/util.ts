@@ -27,7 +27,7 @@ import {
   TransformationType
 } from '../../shared';
 import { ValidationFormlyError } from './mapping.model';
-import { TOKEN_CONTEXT_DATA, TOKEN_IDENTITY, TOKEN_TOPIC_LEVEL } from '../core/processor/processor.model';
+import { MappingTokens } from '../core/processor/processor.model';
 
 export const CONTEXT_DATA_KEY_NAME = 'key';
 export const CONTEXT_DATA_RETAIN = 'retain';
@@ -517,7 +517,7 @@ export function expandC8YTemplate(template: object, mapping: Mapping): object {
   } else {
     result = {
       ...template,
-      [TOKEN_IDENTITY]: {
+      [MappingTokens.IDENTITY]: {
         c8ySourceId: '909090'
       }
     };
@@ -525,7 +525,7 @@ export function expandC8YTemplate(template: object, mapping: Mapping): object {
   if (mapping.direction == Direction.INBOUND) {
     result = {
       ...result,
-      [TOKEN_CONTEXT_DATA]: {
+      [MappingTokens.CONTEXT_DATA]: {
         'api': mapping.targetAPI,
         'processingMode': 'PERSISTENT'
       }
@@ -534,8 +534,8 @@ export function expandC8YTemplate(template: object, mapping: Mapping): object {
     if (mapping.createNonExistingDevice) {
       result = {
         ...result,
-        [TOKEN_CONTEXT_DATA]: {
-          ...result[TOKEN_CONTEXT_DATA], // Spread existing properties
+        [MappingTokens.CONTEXT_DATA]: {
+          ...result[MappingTokens.CONTEXT_DATA], // Spread existing properties
           'deviceName': 'generatedDevice',
           'deviceType': 'c8y_GeneratedDeviceType'
         }
@@ -544,20 +544,20 @@ export function expandC8YTemplate(template: object, mapping: Mapping): object {
 
     // Handle attachment properties independently
     if (mapping.eventWithAttachment) {
-      // Initialize [TOKEN_CONTEXT_DATA] if it doesn't exist yet
-      if (!result[TOKEN_CONTEXT_DATA]) {
-        result[TOKEN_CONTEXT_DATA] = {};
+      // Initialize [MappingTokens.CONTEXT_DATA] if it doesn't exist yet
+      if (!result[MappingTokens.CONTEXT_DATA]) {
+        result[MappingTokens.CONTEXT_DATA] = {};
       }
 
       // Add attachment properties
-      result[TOKEN_CONTEXT_DATA].attachmentName = 'TestImage.jpeg';
-      result[TOKEN_CONTEXT_DATA].attachmentType = 'image/jpeg';
-      result[TOKEN_CONTEXT_DATA].attachmentData = '';
+      result[MappingTokens.CONTEXT_DATA].attachmentName = 'TestImage.jpeg';
+      result[MappingTokens.CONTEXT_DATA].attachmentType = 'image/jpeg';
+      result[MappingTokens.CONTEXT_DATA].attachmentData = '';
     }
   }
 
   if (mapping.direction == Direction.OUTBOUND) {
-    result[TOKEN_IDENTITY].c8ySourceId = '909090';
+    result[MappingTokens.IDENTITY].c8ySourceId = '909090';
   }
 
   return result;
@@ -570,8 +570,15 @@ export function randomIdAsString() {
 export function patchC8YTemplateForTesting(template: object, mapping: Mapping) {
   const identifier = randomIdAsString();
   _.set(template, API[mapping.targetAPI].identifier, identifier);
-  _.set(template, `${TOKEN_IDENTITY}.c8ySourceId`, identifier);
-  _.set(template, `${TOKEN_CONTEXT_DATA}.publishTopic`, mapping.publishTopic);
+  // For SMART_FUNCTION and EXTENSION_JAVA the source template must stay clean (allowSourceExpansion=false):
+  // no MappingTokens should appear in source or target templates
+  const allowSourceExpansion =
+    mapping.transformationType !== TransformationType.SMART_FUNCTION &&
+    mapping.transformationType !== TransformationType.EXTENSION_JAVA;
+  if (allowSourceExpansion) {
+    _.set(template, `${MappingTokens.IDENTITY}.c8ySourceId`, identifier);
+    _.set(template, `${MappingTokens.CONTEXT_DATA}.publishTopic`, mapping.publishTopic);
+  }
 }
 
 export function reduceSourceTemplate(
@@ -579,9 +586,9 @@ export function reduceSourceTemplate(
   returnPatched: boolean
 ): string {
   if (!returnPatched) {
-    delete template[TOKEN_IDENTITY];
-    delete template[TOKEN_TOPIC_LEVEL];
-    delete template[TOKEN_CONTEXT_DATA];
+    delete template[MappingTokens.IDENTITY];
+    delete template[MappingTokens.CONTEXT_DATA];
+    delete template[MappingTokens.TOPIC_LEVEL];
   }
   const tt = JSON.stringify(template);
   return tt;
@@ -592,9 +599,9 @@ export function reduceTargetTemplate(
   patched: boolean
 ): string {
   if (template && !patched) {
-    delete template[TOKEN_IDENTITY];
-    delete template[TOKEN_TOPIC_LEVEL];
-    delete template[TOKEN_CONTEXT_DATA];
+    delete template[MappingTokens.IDENTITY];
+    delete template[MappingTokens.CONTEXT_DATA];
+    delete template[MappingTokens.TOPIC_LEVEL];
   }
   const tt = JSON.stringify(template);
   return tt;

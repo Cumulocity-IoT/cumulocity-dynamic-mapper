@@ -1,6 +1,12 @@
 {
   "compileOnSave": false,
   "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@c8y/dynamic-mapper-smart-function": [
+        "../dynamic-mapper-smart-function/src/types/smart-function-dynamic-mapper.types"
+      ]
+    },
     "strict": true,
     "noImplicitOverride": true,
     "noPropertyAccessFromIndexSignature": true,

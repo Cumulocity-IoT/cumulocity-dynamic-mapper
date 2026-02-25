@@ -23,7 +23,6 @@ package dynamic.mapper.processor;
 
 import static dynamic.mapper.model.Substitution.toPrettyJsonString;
 
-import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 
@@ -36,7 +35,11 @@ import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.flow.JavaScriptConsole;
 import dynamic.mapper.processor.model.DataPrepContext;
+import dynamic.mapper.processor.model.DeviceContext;
+import dynamic.mapper.processor.model.OutputCollector;
+import dynamic.mapper.processor.model.PayloadContext;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.model.RoutingContext;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -69,10 +72,9 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
             if (e.getStackTrace().length > 0) {
                 lineNumber = e.getStackTrace()[0].getLineNumber();
             }
-            String errorMessage = String.format(
-                    "%s - Error in %s: %s for mapping: %s, line %s",
-                    tenant, getProcessorName(), mapping.getName(), e.getMessage(), lineNumber);
-            log.error(errorMessage, e);
+            String errorMessage = String.format("%s, line %s", e.getMessage(), lineNumber);
+            log.error("{} - Error in {} for mapping {}: {}", tenant, getProcessorName(), mapping.getName(),
+                    errorMessage, e);
 
             handleProcessingError(e, errorMessage, context, tenant, mapping);
         } finally {
@@ -172,14 +174,14 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
     }
 
     /**
-     * Extract warnings from the flow context.
+     * Extract warnings from the flow context using thread-safe OutputCollector.
+     * NEW: Thread-safe version that uses focused contexts.
      */
-    protected void extractWarnings(ProcessingContext<?> context, String tenant) {
+    protected void extractWarnings(DataPrepContext flowContext, OutputCollector output, String tenant) {
         Value warnings = null;
         try {
-            warnings = context.getFlowContext().getState(DataPrepContext.WARNINGS);
+            warnings = flowContext.getState(DataPrepContext.WARNINGS);
             if (warnings != null && warnings.hasArrayElements()) {
-                List<String> warningList = new ArrayList<>();
                 long size = warnings.getArraySize();
 
                 for (long i = 0; i < size; i++) {
@@ -187,15 +189,14 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
                     try {
                         warningElement = warnings.getArrayElement(i);
                         if (warningElement != null && warningElement.isString()) {
-                            warningList.add(warningElement.asString());
+                            output.addWarning(warningElement.asString());
                         }
                     } finally {
                         warningElement = null;
                     }
                 }
 
-                context.setWarnings(warningList);
-                log.debug("{} - Collected {} warning(s) from flow execution", tenant, warningList.size());
+                log.debug("{} - Collected {} warning(s) from flow execution", tenant, output.getWarnings().size());
             }
         } finally {
             warnings = null;
@@ -203,14 +204,14 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
     }
 
     /**
-     * Extract logs from the flow context.
+     * Extract logs from the flow context using thread-safe OutputCollector.
+     * NEW: Thread-safe version that uses focused contexts.
      */
-    protected void extractLogs(ProcessingContext<?> context, String tenant) {
+    protected void extractLogs(DataPrepContext flowContext, OutputCollector output, String tenant) {
         Value logs = null;
         try {
-            logs = context.getFlowContext().getState(DataPrepContext.LOGS);
+            logs = flowContext.getState(DataPrepContext.LOGS);
             if (logs != null && logs.hasArrayElements()) {
-                List<String> logList = new ArrayList<>();
                 long size = logs.getArraySize();
 
                 for (long i = 0; i < size; i++) {
@@ -218,15 +219,14 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
                     try {
                         logElement = logs.getArrayElement(i);
                         if (logElement != null && logElement.isString()) {
-                            logList.add(logElement.asString());
+                            output.addLog(logElement.asString());
                         }
                     } finally {
                         logElement = null;
                     }
                 }
 
-                context.setLogs(logList);
-                log.debug("{} - Collected {} logs from flow execution", tenant, logList.size());
+                log.debug("{} - Collected {} logs from flow execution", tenant, output.getLogs().size());
             }
         } finally {
             logs = null;
