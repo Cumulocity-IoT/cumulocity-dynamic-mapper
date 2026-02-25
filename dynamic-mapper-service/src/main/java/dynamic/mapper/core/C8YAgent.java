@@ -33,6 +33,8 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicReference;
 
+import com.cumulocity.rest.representation.user.UserRepresentation;
+import com.cumulocity.sdk.client.user.UserApi;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -112,6 +114,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
 
     @Autowired
     private AlarmApi alarmApi;
+
+    @Autowired
+    private UserApi userApi;
 
     @Autowired
     private DeviceControlApi deviceControlApi;
@@ -668,8 +673,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                         // append external id to name
                         mor.setName(mor.getName());
                         mor.set(new Agent());
-                        //FIXME Potentially we need to check if device user exists before assigning it as owner
-                        if(clientId != null)
+                        if(clientId != null && !clientId.isEmpty() && userExists(tenant, "device_"+clientId))
                             mor.setOwner("device_"+clientId);
                         HashMap<String, String> agentFragments = new HashMap<>();
                         agentFragments.put("name", "Dynamic Mapper");
@@ -883,6 +887,26 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     public int uploadEventAttachment(final BinaryInfo binaryInfo, final String eventId,
             boolean overwrites) throws ProcessingException {
         return binaryAttachmentService.uploadEventAttachment(binaryInfo, eventId, overwrites, c8ySemaphore);
+    }
+
+    public boolean userExists(String tenant, String username) {
+        try {
+            UserRepresentation user = userApi.getUser(tenant, username);
+            if(user != null) {
+                return true;
+            } else {
+                log.info("{} - User {} not found!", tenant, username);
+                return false;
+            }
+        } catch (SDKException e) {
+            if (e.getHttpStatus() == 404) {
+                return false;
+            } else {
+                log.error("{} - Error while checking if user {} exists: {}", tenant, username, e.getMessage());
+                return false;
+            }
+        }
+
     }
 
 }
