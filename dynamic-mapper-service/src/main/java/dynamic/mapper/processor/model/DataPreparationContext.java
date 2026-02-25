@@ -74,7 +74,7 @@ public interface DataPreparationContext extends DataPrepContext {
     /**
      * Lookup managed object from inventory cache by external ID (Java-friendly method).
      *
-     * <p>This method provides the same functionality as {@link #getManagedObject(ExternalId)}
+     * <p>This method provides the same functionality as {@link #getManagedObjectByExternalId(ExternalId)}
      * but returns a standard Java Map instead of a GraalVM Value object, making it suitable
      * for pure Java Extensions.</p>
      *

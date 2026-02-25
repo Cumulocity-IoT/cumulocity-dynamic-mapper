@@ -207,16 +207,16 @@ public class SimpleFlowContext implements DataPrepContext {
     }
 
     @Override
-    public Value getManagedObjectByDeviceId(String deviceId) {
-        Object javaValue = inventoryEnrichmentClient.getMOFromInventoryCache(tenant, deviceId, testing);
+    public Value getManagedObject(String c8ySourceId) {
+        Object javaValue = inventoryEnrichmentClient.getMOFromInventoryCache(tenant, c8ySourceId, testing);
         if (javaValue == null) {
-            addWarning(String.format("Device not found in inventory cache: %s", deviceId));
+            addWarning(String.format("Device not found in inventory cache: %s", c8ySourceId));
         }
         return graalContext.asValue(javaValue);
     }
 
     @Override
-    public Value getManagedObject(ExternalId externalId) {
+    public Value getManagedObjectByExternalId(ExternalId externalId) {
         Object javaValue = inventoryEnrichmentClient.getMOFromInventoryCacheByExternalId(tenant, externalId,
                 testing);
         if (javaValue == null) {
@@ -226,7 +226,7 @@ public class SimpleFlowContext implements DataPrepContext {
     }
 
     @Override
-    public Value getManagedObject(Value externalIdValue) {
+    public Value getManagedObjectByExternalId(Value externalIdValue) {
         if (externalIdValue == null) {
             addWarning("ExternalId parameter is null");
             return graalContext.asValue(null);
@@ -243,7 +243,7 @@ public class SimpleFlowContext implements DataPrepContext {
             else if (externalIdValue.hasMembers()) {
                 String externalId = externalIdValue.getMember("externalId").asString();
                 String type = externalIdValue.getMember("type").asString();
-                extId = new ExternalId(externalId, type); // Adjust based on your ExternalId constructor
+                extId = new ExternalId(externalId, type);
             } else {
                 addWarning("Invalid externalId parameter format");
                 return graalContext.asValue(null);

@@ -69,29 +69,28 @@ public interface DataPrepContext {
     Value getDTMAsset(String assetId);
 
     /**
-     * Lookup Inventory Device properties
-     * 
-     * @param deviceId The device ID to lookup.
+     * Lookup Inventory Device properties by internal Cumulocity device ID.
+     *
+     * @param c8ySourceId The internal Cumulocity device ID to lookup.
      * @return A Value containing the device properties as a JS object.
      */
-    Value getManagedObjectByDeviceId(String deviceId);
+    Value getManagedObject(String c8ySourceId);
 
     /**
-     * Lookup Inventory Device properties by external id
-     * 
-     * @param externalId The externalId Id to lookup.
+     * Lookup Inventory Device properties by external id.
+     *
+     * @param externalId The externalId to lookup.
      * @return A Value containing the device properties as a JS object.
      */
-    Value getManagedObject(ExternalId externalId);
+    Value getManagedObjectByExternalId(ExternalId externalId);
 
-
-        /**
-     * Lookup Inventory Device properties by external id
-     * 
+    /**
+     * Lookup Inventory Device properties by external id.
+     *
      * @param externalIdValue A Value object containing externalId and type properties
      * @return A Value containing the device properties as a JS object.
      */
-    Value getManagedObject(Value externalIdValue);
+    Value getManagedObjectByExternalId(Value externalIdValue);
 
     /**
      * Log message

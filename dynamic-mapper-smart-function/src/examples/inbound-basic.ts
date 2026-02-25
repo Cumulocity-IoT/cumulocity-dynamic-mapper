@@ -63,13 +63,13 @@ const onMessage: SmartFunctionIn = (
   const clientId = context.getClientId() || payload['clientId'];
 
   // Lookup device by device ID for enrichment
-  const deviceByDeviceId: C8yManagedObject | null = context.getManagedObjectByDeviceId(
+  const deviceByDeviceId: C8yManagedObject | null = context.getManagedObject(
     payload['deviceId']
   );
   console.log('Device (by device id):', deviceByDeviceId);
 
   // Lookup device by external ID for enrichment
-  const deviceByExternalId: C8yManagedObject | null = context.getManagedObject({
+  const deviceByExternalId: C8yManagedObject | null = context.getManagedObjectByExternalId({
     externalId: clientId!,
     type: 'c8y_Serial',
   });

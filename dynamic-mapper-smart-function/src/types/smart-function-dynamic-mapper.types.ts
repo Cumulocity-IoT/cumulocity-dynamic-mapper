@@ -131,7 +131,7 @@ export interface DynamicMapperDeviceMessage {
  *   const clientId = context.getClientId();
  *
  *   // Device enrichment (enhanced)
- *   const device = context.getManagedObject({
+ *   const device = context.getManagedObjectByExternalId({
  *     externalId: clientId!,
  *     type: "c8y_Serial"
  *   });
@@ -165,17 +165,17 @@ export interface DynamicMapperContext extends DataPrepContext {
   /**
    * Looks up a device from the inventory cache by internal Cumulocity device ID.
    *
-   * @param deviceId - The internal Cumulocity device ID to look up
+   * @param c8ySourceId - The internal Cumulocity device ID to look up
    * @returns The managed object from inventory, or null if not found
    *
    * @example
-   * const device = context.getManagedObjectByDeviceId("12345");
+   * const device = context.getManagedObject("12345");
    * if (device) {
    *   console.log("Device name:", device.name);
    *   console.log("Device type:", device.type);
    * }
    */
-  getManagedObjectByDeviceId(deviceId: string): C8yManagedObject | null;
+  getManagedObject(c8ySourceId: string): C8yManagedObject | null;
 
   /**
    * Looks up a device from the inventory cache by external ID.
@@ -185,7 +185,7 @@ export interface DynamicMapperContext extends DataPrepContext {
    * @returns The managed object from inventory, or null if not found
    *
    * @example
-   * const device = context.getManagedObject({
+   * const device = context.getManagedObjectByExternalId({
    *   externalId: "SENSOR-001",
    *   type: "c8y_Serial"
    * });
@@ -196,7 +196,7 @@ export interface DynamicMapperContext extends DataPrepContext {
    *   const sensorType = device?.c8y_Sensor?.type;
    * }
    */
-  getManagedObject(externalId: ExternalId): C8yManagedObject | null;
+  getManagedObjectByExternalId(externalId: ExternalId): C8yManagedObject | null;
 
   /**
    * Looks up DTM (Digital Twin Manager) Asset properties by asset ID.
@@ -1054,10 +1054,10 @@ export function createMockRuntimeContext(options: {
     getClientId() {
       return options.clientId;
     },
-    getManagedObjectByDeviceId(deviceId: string) {
-      return options.devices?.[deviceId] || null;
+    getManagedObject(c8ySourceId: string) {
+      return options.devices?.[c8ySourceId] || null;
     },
-    getManagedObject(externalId: ExternalId) {
+    getManagedObjectByExternalId(externalId: ExternalId) {
       const key = `${externalId.externalId}:${externalId.type}`;
       return options.externalIdMap?.[key] || null;
     },

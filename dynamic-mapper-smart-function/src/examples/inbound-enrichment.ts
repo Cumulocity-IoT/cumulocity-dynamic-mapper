@@ -50,7 +50,7 @@ const onMessage: SmartFunctionIn = (
   // Try to lookup device by device ID
   let deviceByDeviceId: C8yManagedObject | null = null;
   try {
-    deviceByDeviceId = context.getManagedObjectByDeviceId(payload['deviceId']);
+    deviceByDeviceId = context.getManagedObject(payload['deviceId']);
     console.log('Device (by device id):', deviceByDeviceId);
   } catch (e) {
     console.error('Error looking up device by ID:', e);
@@ -59,7 +59,7 @@ const onMessage: SmartFunctionIn = (
   // Try to lookup device by external ID
   let deviceByExternalId: C8yManagedObject | null = null;
   try {
-    deviceByExternalId = context.getManagedObject({
+    deviceByExternalId = context.getManagedObjectByExternalId({
       externalId: clientId,
       type: 'c8y_Serial',
     });

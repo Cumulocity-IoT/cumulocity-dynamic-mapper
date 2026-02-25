@@ -83,13 +83,13 @@ describe('Smart Function Runtime Types', () => {
       });
 
       expect(mockContext.getClientId()).toBe('client-123');
-      expect(mockContext.getManagedObjectByDeviceId('12345')).toEqual({
+      expect(mockContext.getManagedObject('12345')).toEqual({
         id: '12345',
         name: 'Test Device',
         type: 'c8y_Device'
       });
       expect(
-        mockContext.getManagedObject({ externalId: 'SENSOR-001', type: 'c8y_Serial' })
+        mockContext.getManagedObjectByExternalId({ externalId: 'SENSOR-001', type: 'c8y_Serial' })
       ).toEqual({ id: '12345', name: 'Test Sensor' });
     });
 
@@ -166,7 +166,7 @@ describe('Smart Function Runtime Types', () => {
         const payload = msg.payload;
         const clientId = context.getClientId()!;
 
-        const device: C8yManagedObject | null = context.getManagedObject({
+        const device: C8yManagedObject | null = context.getManagedObjectByExternalId({
           externalId: clientId,
           type: 'c8y_Serial'
         });
@@ -231,7 +231,7 @@ describe('Smart Function Runtime Types', () => {
         const payload = msg.payload;
         const clientId = context.getClientId()!;
 
-        const device: C8yManagedObject | null = context.getManagedObject({
+        const device: C8yManagedObject | null = context.getManagedObjectByExternalId({
           externalId: clientId,
           type: 'c8y_Serial'
         });
@@ -295,7 +295,7 @@ describe('Smart Function Runtime Types', () => {
       const onMessage: SmartFunctionIn = (msg, context) => {
         const clientId = context.getClientId()!;
 
-        const device: C8yManagedObject | null = context.getManagedObject({
+        const device: C8yManagedObject | null = context.getManagedObjectByExternalId({
           externalId: clientId,
           type: 'c8y_Serial'
         });

@@ -140,8 +140,8 @@ export function createCompletionProviderFlowFunction(monaco) {
         { name: 'setState', parameters: ['key', 'value'], returnType: 'void', documentation: 'Persists a value by key. State survives across message invocations for the same mapping and is cleared when the mapping is deleted.' },
         { name: 'getState', parameters: ['key'], returnType: 'any', documentation: 'Retrieves a persisted state value. Returns the value stored by a previous invocation, or null on first call.' },
         { name: 'getDTMAsset', parameters: ['assetId'], returnType: 'Record<string, any>', documentation: 'Lookup DTM Asset properties by asset ID.' },
-        { name: 'getManagedObjectByDeviceId', parameters: ['deviceId'], returnType: 'any', documentation: 'Lookup a device from inventory cache by internal device ID.' },
-        { name: 'getManagedObject', parameters: ['externalId'], returnType: 'any', documentation: 'Lookup a device from inventory cache by external ID.' }
+        { name: 'getManagedObject', parameters: ['c8ySourceId'], returnType: 'any', documentation: 'Lookup a device from inventory cache by internal Cumulocity device ID.' },
+        { name: 'getManagedObjectByExternalId', parameters: ['externalId'], returnType: 'any', documentation: 'Lookup a device from inventory cache by external ID.' }
       ],
       documentation: 'Context object providing state management, configuration access, and device lookup capabilities'
     },

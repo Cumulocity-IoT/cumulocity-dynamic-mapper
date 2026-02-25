@@ -167,7 +167,7 @@ public class ProcessorExtensionCustomAlarm implements ProcessorExtensionInbound<
         String externalId = jsonObject.get("externalId").toString();
 
         // Check if device exists (if inventory lookup is available)
-        if (context.getManagedObjectByDeviceId(externalId) == null) {
+        if (context.getManagedObject(externalId) == null) {
             context.addWarning("Device " + externalId + " not found, will be created implicitly");
         }
 
