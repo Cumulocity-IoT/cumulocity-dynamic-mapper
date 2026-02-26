@@ -211,6 +211,27 @@ export interface SmartFunctionContext extends DataPrepContext {
   getDTMAsset(assetId: string): Record<string, any>;
 
   /**
+   * Retrieves read-only mapping configuration for the current invocation.
+   *
+   * Contains mapping metadata such as `mappingId`, `mappingName`, `tenant`,
+   * `topic`, `targetAPI`, `debug`, `clientId`, and optional flags like
+   * `createNonExistingDevice` or `eventWithAttachment`.
+   *
+   * This is populated before the Smart Function is called and does **not**
+   * persist across invocations (unlike `getState` / `setState`).
+   *
+   * @returns A record containing the mapping configuration
+   *
+   * @example
+   * const config = context.getConfig();
+   * console.log("Mapping:", config.mappingName, "Target:", config.targetAPI);
+   * if (config.debug) {
+   *   console.log("Debug mode active for mapping", config.mappingId);
+   * }
+   */
+  getConfig(): Record<string, any>;
+
+  /**
    * Adds a warning message to the processing context.
    *
    * Warnings are collected and surfaced to users for debugging.
@@ -1034,6 +1055,7 @@ export function createMockOutboundMessage(
  */
 export function createMockRuntimeContext(options: {
   clientId?: string;
+  config?: Record<string, any>;
   devices?: Record<string, any>;
   externalIdMap?: Record<string, any>;
   dtmAssets?: Record<string, any>;
@@ -1050,6 +1072,9 @@ export function createMockRuntimeContext(options: {
     },
     getStateAll() {
       return { ...state };
+    },
+    getConfig() {
+      return options.config || {};
     },
     getClientId() {
       return options.clientId;

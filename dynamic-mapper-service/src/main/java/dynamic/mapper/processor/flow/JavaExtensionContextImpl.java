@@ -122,6 +122,23 @@ public class JavaExtensionContextImpl implements JavaExtensionContext {
     }
 
     @Override
+    public java.util.Map<String, Object> getConfigAsMap() {
+        java.util.Map<String, Object> config = new java.util.HashMap<>();
+        config.put("tenant", tenant);
+        config.put("clientId", getClientId());
+        if (mapping != null) {
+            config.put("mappingId", mapping.getId());
+            config.put("mappingName", mapping.getName());
+            config.put("targetAPI", mapping.getTargetAPI() != null ? mapping.getTargetAPI().toString() : null);
+            config.put("debug", mapping.getDebug());
+        }
+        if (processingContext != null) {
+            config.put("topic", processingContext.getTopic());
+        }
+        return config;
+    }
+
+    @Override
     public java.util.Map<String, Object> getManagedObjectAsMap(ExternalId externalId) {
         if (c8yAgent == null) {
             log.warn("{} - getManagedObjectAsMap() called but C8YAgent not available", tenant);

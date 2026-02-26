@@ -86,13 +86,25 @@ public class EnrichmentOutboundProcessor extends AbstractEnrichmentProcessor {
         identityFragment.put("c8ySourceId", sourceId.toString());
         identityFragment.put("externalIdType", mapping.getExternalIdType());
 
-        // For SMART_FUNCTION/EXTENSION_JAVA: add to DataPrepContext only — never expand the payload Map
+        // For SMART_FUNCTION/EXTENSION_JAVA: populate read-only config — never expand the payload Map
         // _IDENTITY_ and _TOPIC_LEVEL_ are template-substitution tokens not relevant here;
         // the function/extension reads device identity directly from the C8Y payload.
         DataPrepContext flowContext = context.getFlowContext();
         if (isSmartFunction) {
-            if (flowContext != null && context.getGraalContext() != null) {
-                addToFlowContext(flowContext, context, ProcessingContext.RETAIN, false);
+            if (flowContext instanceof dynamic.mapper.processor.model.SmartFunctionContext) {
+                dynamic.mapper.processor.model.SmartFunctionContext sfContext =
+                        (dynamic.mapper.processor.model.SmartFunctionContext) flowContext;
+
+                Map<String, Object> config = new HashMap<>();
+                config.put("tenant", tenant);
+                config.put("topic", context.getTopic());
+                config.put("clientId", context.getClientId());
+                config.put("mappingName", mapping.getName());
+                config.put("mappingId", mapping.getId());
+                config.put("targetAPI", mapping.getTargetAPI().toString());
+                config.put(ProcessingContext.DEBUG, mapping.getDebug());
+                config.put(ProcessingContext.RETAIN, false);
+                sfContext.setConfig(config);
             }
         } else {
             if (payloadObject instanceof Map) {

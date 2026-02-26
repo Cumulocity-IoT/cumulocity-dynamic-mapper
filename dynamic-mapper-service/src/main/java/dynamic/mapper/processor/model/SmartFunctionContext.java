@@ -51,6 +51,7 @@ public class SmartFunctionContext implements DataPrepContext {
     private String clientId;
     private final FlowStateStore stateStore;
     private final String mappingIdentifier;
+    private Map<String, Object> config;
 
     /**
      * Creates a context without persistence (backward-compatible constructor).
@@ -89,6 +90,28 @@ public class SmartFunctionContext implements DataPrepContext {
      */
     public void setClientId(String clientId) {
         this.clientId = clientId;
+    }
+
+    /**
+     * Set the read-only mapping configuration for this invocation.
+     * Called by the enrichment processor before the Smart Function is invoked.
+     *
+     * @param config Map containing mapping metadata (mappingId, mappingName, tenant, topic, etc.)
+     */
+    public void setConfig(Map<String, Object> config) {
+        this.config = config;
+    }
+
+    /**
+     * Returns the mapping configuration as a GraalVM Value so JavaScript code can access it.
+     * The returned object is read-only by convention; mutations are not persisted.
+     */
+    @Override
+    public Value getConfig() {
+        if (graalContext == null || config == null) {
+            return null;
+        }
+        return graalContext.asValue(config);
     }
 
     @Override

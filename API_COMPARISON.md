@@ -99,7 +99,7 @@ function onMessage(msg: DeviceMessage, context: DataPrepContext) {
 
 ### Dynamic Mapper: Rich Integration (Extends IDP)
 ```typescript
-interface DynamicMapperContext extends DataPrepContext {
+interface SmartFunctionContext extends DataPrepContext {
   readonly runtime: "dynamic-mapper";
 
   // IDP Standard (inherited)
@@ -110,32 +110,34 @@ interface DynamicMapperContext extends DataPrepContext {
   getStateAll(): Record<string, any>;
   getClientId(): string | undefined;
 
+  // Read-only mapping configuration (per-invocation, does NOT persist)
+  getConfig(): Record<string, any>;  // mappingId, mappingName, tenant, topic, targetAPI, debug, clientId
+
   // Device lookup & enrichment
-  getManagedObject(externalId: ExternalId): any;
-  getManagedObjectByDeviceId(deviceId: string): any;
+  getManagedObject(c8ySourceId: string): C8yManagedObject | null;
+  getManagedObjectByExternalId(externalId: ExternalId): C8yManagedObject | null;
 
   // DTM (Digital Twin Manager) integration
   getDTMAsset(assetId: string): Record<string, any>;
 }
 
 // Usage - Feature-complete!
-function onMessage(msg: DynamicMapperDeviceMessage, context: DynamicMapperContext) {
+function onMessage(msg: DynamicMapperDeviceMessage, context: SmartFunctionContext) {
   // ✅ Persistent state — survives across messages for the same mapping
   const count = (context.getState("messageCount") as number | undefined) || 0;
   context.setState("messageCount", count + 1);
-  context.setState("lastTemp", 25.5);
-  const lastTemp = context.getState("lastTemp");
 
-  // ✅ Device enrichment (Dynamic Mapper)
-  const device = context.getManagedObject({
+  // ✅ Read-only config — mapping metadata, fresh per invocation
+  const config = context.getConfig();
+  console.log("Mapping:", config.mappingName, "Target:", config.targetAPI);
+
+  // ✅ Device enrichment
+  const device = context.getManagedObjectByExternalId({
     externalId: context.getClientId()!,
     type: "c8y_Serial"
   });
 
-  const deviceType = device?.type;
-  const customConfig = device?.c8y_CustomConfig;
-
-  // ✅ DTM assets (Dynamic Mapper)
+  // ✅ DTM assets
   const asset = context.getDTMAsset("asset-123");
 }
 ```

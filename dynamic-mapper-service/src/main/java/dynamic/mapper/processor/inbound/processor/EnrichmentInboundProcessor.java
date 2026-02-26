@@ -73,33 +73,35 @@ public class EnrichmentInboundProcessor extends AbstractEnrichmentProcessor {
         boolean isSmartFunction = TransformationType.SMART_FUNCTION.equals(mapping.getTransformationType())
                 || TransformationType.EXTENSION_JAVA.equals(mapping.getTransformationType());
 
-        // For SMART_FUNCTION: add to DataPrepContext only — never expand the payload Map
+        // For SMART_FUNCTION: populate read-only config — never expand the payload Map
         DataPrepContext flowContext = context.getFlowContext();
         if (isSmartFunction) {
-            if (flowContext != null && context.getGraalContext() != null) {
-                if (flowContext instanceof dynamic.mapper.processor.model.SmartFunctionContext) {
-                    ((dynamic.mapper.processor.model.SmartFunctionContext) flowContext).setClientId(context.getClientId());
-                }
+            if (flowContext instanceof dynamic.mapper.processor.model.SmartFunctionContext) {
+                dynamic.mapper.processor.model.SmartFunctionContext sfContext =
+                        (dynamic.mapper.processor.model.SmartFunctionContext) flowContext;
+                sfContext.setClientId(context.getClientId());
 
-                addToFlowContext(flowContext, context, "tenant", tenant);
-                addToFlowContext(flowContext, context, "topic", context.getTopic());
-                addToFlowContext(flowContext, context, "client", context.getClientId());
-                addToFlowContext(flowContext, context, "mappingName", mapping.getName());
-                addToFlowContext(flowContext, context, "mappingId", mapping.getId());
-                addToFlowContext(flowContext, context, "targetAPI", mapping.getTargetAPI().toString());
-                addToFlowContext(flowContext, context, ProcessingContext.DEBUG, mapping.getDebug());
+                Map<String, Object> config = new HashMap<>();
+                config.put("tenant", tenant);
+                config.put("topic", context.getTopic());
+                config.put("clientId", context.getClientId());
+                config.put("mappingName", mapping.getName());
+                config.put("mappingId", mapping.getId());
+                config.put("targetAPI", mapping.getTargetAPI().toString());
+                config.put(ProcessingContext.DEBUG, mapping.getDebug());
 
                 if (context.getMapping().getEventWithAttachment()) {
-                    addToFlowContext(flowContext, context, ProcessingContext.ATTACHMENT_TYPE, "");
-                    addToFlowContext(flowContext, context, ProcessingContext.ATTACHMENT_NAME, "");
-                    addToFlowContext(flowContext, context, ProcessingContext.ATTACHMENT_DATA, "");
-                    addToFlowContext(flowContext, context, ProcessingContext.EVENT_WITH_ATTACHMENT, true);
+                    config.put(ProcessingContext.ATTACHMENT_TYPE, "");
+                    config.put(ProcessingContext.ATTACHMENT_NAME, "");
+                    config.put(ProcessingContext.ATTACHMENT_DATA, "");
+                    config.put(ProcessingContext.EVENT_WITH_ATTACHMENT, true);
                 }
                 if (context.getMapping().getCreateNonExistingDevice()) {
-                    addToFlowContext(flowContext, context, ProcessingContext.DEVICE_NAME, context.getDeviceName());
-                    addToFlowContext(flowContext, context, ProcessingContext.DEVICE_TYPE, context.getDeviceType());
-                    addToFlowContext(flowContext, context, ProcessingContext.CREATE_NON_EXISTING_DEVICE, true);
+                    config.put(ProcessingContext.DEVICE_NAME, context.getDeviceName());
+                    config.put(ProcessingContext.DEVICE_TYPE, context.getDeviceType());
+                    config.put(ProcessingContext.CREATE_NON_EXISTING_DEVICE, true);
                 }
+                sfContext.setConfig(config);
             }
         } else if (payloadObject instanceof Map) {
             Map<String, Object> payloadMap = (Map<String, Object>) payloadObject;

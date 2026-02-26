@@ -61,8 +61,26 @@ public interface DataPrepContext {
     Value getStateKeySet();
 
     /**
+     * Retrieves the mapping configuration for the current invocation.
+     *
+     * <p>The config is read-only and contains mapping metadata such as
+     * {@code mappingId}, {@code mappingName}, {@code tenant}, {@code topic},
+     * {@code targetAPI}, {@code debug}, {@code clientId} and related flags.
+     * It is populated by the enrichment processor before the Smart Function is called
+     * and does <em>not</em> persist across invocations (unlike state).</p>
+     *
+     * <p>Implementations that do not support GraalVM (e.g. Java extensions) may return
+     * {@code null}; use {@link JavaExtensionContext#getConfigAsMap()} for Java-native access.</p>
+     *
+     * @return A GraalVM {@link Value} wrapping the config map, or {@code null} if not available.
+     */
+    default Value getConfig() {
+        return null;
+    }
+
+    /**
      * Lookup DTM Asset properties
-     * 
+     *
      * @param assetId The asset ID to lookup.
      * @return A Value containing the asset properties as a JS object.
      */

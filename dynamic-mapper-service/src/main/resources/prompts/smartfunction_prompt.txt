@@ -285,6 +285,18 @@ export interface DataPrepContext {
     getState(key: string): any;
 
     /**
+     * Retrieves read-only mapping configuration for the current invocation.
+     * Contains mapping metadata: mappingId, mappingName, tenant, topic, targetAPI, debug, clientId.
+     * Does NOT persist across invocations (unlike getState/setState).
+     * @returns {Record<string, any>} The mapping configuration object.
+     *
+     * @example
+     * const config = context.getConfig();
+     * console.log("Mapping:", config.mappingName, "Target:", config.targetAPI);
+     */
+    getConfig(): Record<string, any>;
+
+    /**
      * Lookup DTM Asset properties by asset ID.
      * @param {string} assetId - The ID of the asset to look up.
      * @returns {Record<string, any>} A record containing the asset properties.

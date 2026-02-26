@@ -100,6 +100,23 @@ public interface JavaExtensionContext extends DataPrepContext {
     Map<String, Object> getManagedObjectAsMap(ExternalId externalId);
 
     /**
+     * Get the mapping configuration for the current invocation (Java-native access).
+     *
+     * <p>Returns the same metadata as {@link DataPrepContext#getConfig()} but as a
+     * plain Java {@link Map} instead of a GraalVM Value, making it suitable for
+     * pure Java extensions.</p>
+     *
+     * <p>The map contains read-only fields such as {@code mappingId},
+     * {@code mappingName}, {@code tenant}, {@code topic}, {@code targetAPI},
+     * {@code debug} and {@code clientId}. It is populated before the extension
+     * is called and does <em>not</em> persist across invocations (unlike state).</p>
+     *
+     * @return Map containing the mapping configuration, never {@code null}
+     * @since 6.1.6
+     */
+    Map<String, Object> getConfigAsMap();
+
+    /**
      * Get the tenant identifier.
      *
      * @return The tenant ID

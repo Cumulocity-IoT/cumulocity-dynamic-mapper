@@ -1,7 +1,9 @@
 package dynamic.mapper.processor.inbound.processor;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Value;
@@ -12,7 +14,6 @@ import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.AbstractFlowProcessor;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.CumulocityObject;
-import dynamic.mapper.processor.model.DeviceMessage;
 import dynamic.mapper.processor.model.OutputCollector;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.util.JavaScriptInteropHelper;
@@ -38,20 +39,14 @@ public class FlowProcessorInboundProcessor extends AbstractFlowProcessor {
 
     @Override
     protected Value createInputMessage(Context graalContext, ProcessingContext<?> context) {
-        // Create a DeviceMessage from the current context using builder pattern
-        DeviceMessage.Builder builder = DeviceMessage.create()
-            .payload(context.getPayload())
-            .topic(context.getTopic());
-
-        // Set transport information if available
-        if (context.getMapping() != null) {
-            builder.clientId(context.getClientId());
-        }
-
-        DeviceMessage deviceMessage = builder.build();
-
-        // Convert to JavaScript object
-        return graalContext.asValue(deviceMessage);
+        // Build a plain Map so GraalVM exposes it as a JS object (same pattern as getConfig()).
+        // Wrapping a Java host object (DeviceMessage) via asValue() does NOT reliably expose
+        // Lombok getter properties in GraalVM; an explicit Map + allowMapAccess(true) does.
+        Map<String, Object> inputMsg = new HashMap<>();
+        inputMsg.put("payload", context.getPayload());
+        inputMsg.put("topic", context.getTopic());
+        inputMsg.put("clientId", context.getClientId());
+        return graalContext.asValue(inputMsg);
     }
 
     @Override
