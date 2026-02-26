@@ -90,12 +90,16 @@ public class EnrichmentOutboundProcessor extends AbstractEnrichmentProcessor {
         // _IDENTITY_ and _TOPIC_LEVEL_ are template-substitution tokens not relevant here;
         // the function/extension reads device identity directly from the C8Y payload.
         DataPrepContext flowContext = context.getFlowContext();
+
+        // Declared here so externalId can be added after resolution below
+        Map<String, Object> config = null;
+        dynamic.mapper.processor.model.SmartFunctionContext sfContext = null;
+
         if (isSmartFunction) {
             if (flowContext instanceof dynamic.mapper.processor.model.SmartFunctionContext) {
-                dynamic.mapper.processor.model.SmartFunctionContext sfContext =
-                        (dynamic.mapper.processor.model.SmartFunctionContext) flowContext;
+                sfContext = (dynamic.mapper.processor.model.SmartFunctionContext) flowContext;
 
-                Map<String, Object> config = new HashMap<>();
+                config = new HashMap<>();
                 config.put("tenant", tenant);
                 config.put("topic", context.getTopic());
                 config.put("clientId", context.getClientId());
@@ -104,7 +108,7 @@ public class EnrichmentOutboundProcessor extends AbstractEnrichmentProcessor {
                 config.put("targetAPI", mapping.getTargetAPI().toString());
                 config.put(ProcessingContext.DEBUG, mapping.getDebug());
                 config.put(ProcessingContext.RETAIN, false);
-                sfContext.setConfig(config);
+                // externalId is added below after resolution
             }
         } else {
             if (payloadObject instanceof Map) {
@@ -131,15 +135,23 @@ public class EnrichmentOutboundProcessor extends AbstractEnrichmentProcessor {
                 }
             } else {
                 identityFragment.put("externalId", externalId.getExternalId());
+                if (config != null) {
+                    config.put("externalId", externalId.getExternalId());
+                }
             }
+        }
+
+        // Set config after all values (including externalId) are populated
+        if (sfContext != null && config != null) {
+            sfContext.setConfig(config);
         }
     }
 
     @Override
     protected void handleEnrichmentError(String tenant, Mapping mapping, Exception e,
             ProcessingContext<?> context, MappingStatus mappingStatus) {
-        String errorMessage = String.format("%s - Error in enrichment phase for mapping: %s", tenant,
-                mapping.getName());
+        String errorMessage = String.format("%s - Error in enrichment phase for mapping: %s: %s", tenant,
+                mapping.getName(), e.getMessage());
         log.error(errorMessage, e);
         context.addError(new ProcessingException(errorMessage, e));
         context.setIgnoreFurtherProcessing(true);

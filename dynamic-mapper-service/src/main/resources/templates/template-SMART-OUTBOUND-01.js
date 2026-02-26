@@ -12,30 +12,12 @@
 function onMessage(msg, context) {
     var payload = msg.getPayload();
 
-    console.log("Context" + context.getStateAll());
-    console.log("Payload Raw:" + payload);
-    console.log("Payload messageId" +  payload['messageId']);
+    // context.getConfig().externalId contains the resolved external id of the source device.
+    // Requires the mapping to have 'useExternalId' enabled and an 'externalIdType' configured.
+    const externalId = context.getConfig().externalId;
 
-    // use _externalId_ to reference the external id of the device.
-    // it is resolved automatically using the externalId type from externalSource: [{"type":"c8y_Serial"}]
-    // e.g. topic: `measurements/_externalId_`
-    // return [{  
-    //    topic: `measurements/_externalId_`,
-    //    payload: {
-    //        "time":  new Date().toISOString(),
-    //        "c8y_Steam": {
-    //            "Temperature": {
-    //            "unit": "C",
-    //            "value": payload["c8y_TemperatureMeasurement"]["T"]["value"]
-    //            }
-    //        }
-    //    },
-    //    transportFields: { "key": payload["source"]["id"]},  // define key to add to Kafka payload (record)
-    //    externalSource: [{"type":"c8y_Serial"}]
-    // }];
-
-    return {  
-        topic: `measurements/${payload["source"]["id"]}`,
+    return {
+        topic: `measurements/${externalId}`,
         payload: {
             "time":  new Date().toISOString(),
             "c8y_Steam": {
