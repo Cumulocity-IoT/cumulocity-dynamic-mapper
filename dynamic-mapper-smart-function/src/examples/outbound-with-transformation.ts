@@ -55,7 +55,7 @@ const onMessage: SmartFunctionOut = (
 ): DeviceMessage => {
   const payload = msg.payload;
 
-  console.log('Context state:', context.getStateAll());
+  console.log('Config:', context.getConfig());
   console.log('Processing Cumulocity payload:', payload);
 
   // Extract measurement data

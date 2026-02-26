@@ -130,6 +130,10 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
                 // Load and execute the JavaScript code
                 byte[] decodedBytes = Base64.getDecoder().decode(mapping.getCode());
                 String decodedCode = new String(decodedBytes);
+                // Strip ES module export statements (e.g. from TypeScript-compiled .mjs output)
+                // so the code runs in GraalVM script mode without SyntaxErrors.
+                // Plain function declarations in template files are unaffected.
+                decodedCode = decodedCode.replaceAll("(?m)^export\\s+(default\\s+|\\{[^}]*}[;]?).*$", "").trim();
                 String decodedCodeAdapted = decodedCode.replaceFirst("onMessage", identifier);
 
                 Source source = Source.newBuilder("js", decodedCodeAdapted, identifier + ".js")

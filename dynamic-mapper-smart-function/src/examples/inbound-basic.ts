@@ -55,7 +55,7 @@ const onMessage: SmartFunctionIn = (
   const payload = msg.payload;
 
   // Log context and payload for debugging
-  console.log('Context state:', context.getStateAll());
+  console.log('Config:', context.getConfig());
   console.log('Payload Raw:', payload);
   console.log('Payload messageId:', payload['messageId']);
 

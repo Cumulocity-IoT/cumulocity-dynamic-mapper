@@ -35,7 +35,7 @@ const onMessage: SmartFunctionIn = (
 ): CumulocityObject[] => {
   const payload = msg.payload;
 
-  console.log('Context state:', context.getStateAll());
+  console.log('Config:', context.getConfig());
   console.log('Payload Raw:', payload);
   console.log('Payload messageId:', payload['messageId']);
 
