@@ -69,7 +69,7 @@ public interface DataPrepContext {
      * It is populated by the enrichment processor before the Smart Function is called
      * and does <em>not</em> persist across invocations (unlike state).</p>
      *
-     * <p>For outbound SMART_FUNCTIONs, the config also contains {@code externalId} — the
+     * <p>For outbound SMART_FUNCTION, the config also contains {@code externalId} — the
      * resolved external identifier of the source device. This field is only present when
      * the mapping has {@code useExternalId} enabled and a non-empty {@code externalIdType}
      * configured. Use it to build broker topics directly in JavaScript:

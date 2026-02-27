@@ -351,7 +351,7 @@ npm run bundle
 function onMessage(msg, context) {
   const payload = msg.getPayload();
   // No autocomplete, no type checking
-  const device = context.getManagedObjct({ ... }); // Typo not caught!
+  const device = context.getManagedObject({ ... }); // Typo not caught!
 }
 ```
 
@@ -359,7 +359,7 @@ function onMessage(msg, context) {
 ```typescript
 const onMessage: SmartFunction = (msg, context) => {
   const payload = msg.getPayload(); // ✅ Autocomplete!
-  const device = context.getManagedObjct({ ... }); // ❌ Compile error: Method doesn't exist!
+  const device = context.getManagedObject({ ... }); // ❌ Compile error: Method doesn't exist!
 }
 ```
 
