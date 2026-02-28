@@ -41,7 +41,7 @@
     (onSelect)="onTabSelected(2)"></c8y-tab>
   }
   @if (isTabVisible(3)) {
-  <c8y-tab [label]="'Substitutions'" [tabsOutlet]="'unified-editor'" [isActive]="activeTabIndex === 3"
+  <c8y-tab [label]="'Substitutions & Code'" [tabsOutlet]="'unified-editor'" [isActive]="activeTabIndex === 3"
     (onSelect)="onTabSelected(3)"></c8y-tab>
   }
   @if (isTabVisible(4)) {
@@ -82,7 +82,7 @@
   @if (activeTabIndex === 1 && isTabVisible(1)) {
   <div class="fit-h d-col">
     <d11r-mapping-properties [mapping]="mapping" [stepperConfiguration]="stepperConfiguration"
-      [propertyFormly]="propertyFormly" [codeFormly]="codeFormly" (targetAPIChanged)="onTargetAPIChanged($event)">
+      [propertyFormly]="propertyFormly" [codeFormly]="codeFormly" (targetAPIChanged)="onTargetAPIChanged($event)" [feature]="feature">
     </d11r-mapping-properties>
   </div>
   }
