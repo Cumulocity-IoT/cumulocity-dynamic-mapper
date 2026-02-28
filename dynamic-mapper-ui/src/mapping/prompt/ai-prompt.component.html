@@ -19,8 +19,8 @@
 ~
 -->
 
-<div class="flex-col flex-nowrap no-align-items p-48 fit-h col-md-12 col-md-offset-0 c8y-stepper--no-btns">
-  <div class="card card--fullpage">
+<div class="flex-col flex-nowrap no-align-items p-48 flex-grow col-md-12 col-md-offset-0 c8y-stepper--no-btns">
+  <div class="card card--fullpage d-col">
     <div class="card-header separator" style="justify-content: center">
       <h4 class="card-title d-flex">
         <span class="ai-icon-wrap m-r-8">
@@ -35,7 +35,7 @@
       </h4>
     </div>
 
-    <div class="card-inner-scroll fit-h">
+    <div class="card-inner-scroll flex-grow" style="min-height: 0; overflow: hidden;">
       <div class="card-block p-0">
         @if (aiAgent) {
           <c8y-ai-chat
@@ -53,7 +53,7 @@
         }
       </div>
     </div>
-    <div class="card-footer d-block text-center">
+    <div class="card-footer text-center sticky-buttons">
       <div class="form-group">
         <button type="button" name="update" class="btn btn-primary" (click)="save()" [disabled]="!valid" translate>
           Save
