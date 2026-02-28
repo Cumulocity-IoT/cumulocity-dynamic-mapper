@@ -104,6 +104,9 @@ public abstract class AbstractCodeExtractionProcessor extends CommonProcessor {
         DeviceContext device = context.getDeviceContext();
 
         extractFromSource(routing, payload, state, device, context);
+
+        // Sync state modifications back to context for downstream processors
+        context.syncFromState(state);
     }
 
     /**
