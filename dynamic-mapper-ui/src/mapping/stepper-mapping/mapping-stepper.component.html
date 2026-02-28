@@ -67,7 +67,7 @@
   <cdk-step label="General settings" [stepControl]="propertyFormly">
     <div class="col-xs-12 flex-grow no-gutter">
       <d11r-mapping-properties [mapping]="mapping" [stepperConfiguration]="stepperConfiguration"
-        [propertyFormly]="propertyFormly" [codeFormly]="codeFormly" (targetAPIChanged)="onTargetAPIChanged($event)">
+        [propertyFormly]="propertyFormly" [codeFormly]="codeFormly" (targetAPIChanged)="onTargetAPIChanged($event)" [feature]="feature">
       </d11r-mapping-properties>
     </div>
 

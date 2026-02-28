@@ -127,7 +127,7 @@ const TAB_TEST_MAPPING = 4;
 @Component({
   selector: 'd11r-mapping-unified-editor',
   templateUrl: 'mapping-unified-editor.component.html',
-  styleUrls: ['../shared/mapping.style.css'],
+  styleUrls: ['../shared/mapping.style.css', './mapping-unified-editor.component.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
   providers: [MappingStepperService, SubstitutionManagementService],
