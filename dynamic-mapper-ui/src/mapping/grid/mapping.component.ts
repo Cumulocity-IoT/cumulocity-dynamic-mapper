@@ -96,7 +96,6 @@ import { MappingStepperComponent } from '../stepper-mapping/mapping-stepper.comp
 import { SnoopingStepperComponent } from '../stepper-snooping/snooping-stepper.component';
 import { MappingFilterDrawerComponent } from '../filter/mapping-filter-drawer.component';
 import { CodeEditorDrawerComponent } from '../../shared/component/code-explorer/code-editor-drawer.component';
-
 @Component({
   selector: 'd11r-mapping-mapping-grid',
   templateUrl: 'mapping.component.html',
@@ -784,7 +783,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         mapping.snoopStatus === SnoopStatus.NONE ||
         mapping.snoopStatus === SnoopStatus.STOPPED
       ) {
-        this.showConfigMapping = true;
+        this.router.navigate(['edit', mapping.identifier], { relativeTo: this.route });
       } else {
         this.showSnoopingMapping = true;
       }

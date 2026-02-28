@@ -1,0 +1,360 @@
+<!--
+~ Copyright (c) 2025 Cumulocity GmbH.
+~
+~ SPDX-License-Identifier: Apache-2.0
+~
+~  Licensed under the Apache License, Version 2.0 (the "License");
+~  you may not use this file except in compliance with the License.
+~  You may obtain a copy of the License at
+~
+~       http://www.apache.org/licenses/LICENSE-2.0
+~
+~  Unless required by applicable law or agreed to in writing, software
+~  distributed under the License is distributed on an "AS IS" BASIS,
+~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+~  See the License for the specific language governing permissions and
+~  limitations under the License.
+~
+~  @authors Christof Strack, Stefan Witschel
+~
+-->
+
+<c8y-title translate>Edit Mapping</c8y-title>
+
+<div class="card card--fullpage content-fullpage d-col">
+
+  <!-- Tab header bar rendered by the outlet (must come before c8y-tab registrations) -->
+  <c8y-tabs-outlet orientation="horizontal" outletName="unified-editor"
+    class="col-xs-12 flex-no-shrink"></c8y-tabs-outlet>
+
+  <!-- Tab registration – tabs skipped by advanceFromStepToEndStep are omitted -->
+  @if (isTabVisible(0)) {
+  <c8y-tab [label]="'Connector'" [tabsOutlet]="'unified-editor'" [isActive]="activeTabIndex === 0"
+    (onSelect)="onTabSelected(0)"></c8y-tab>
+  }
+  @if (isTabVisible(1)) {
+  <c8y-tab [label]="'General Settings'" [tabsOutlet]="'unified-editor'" [isActive]="activeTabIndex === 1"
+    (onSelect)="onTabSelected(1)"></c8y-tab>
+  }
+  @if (isTabVisible(2)) {
+  <c8y-tab [label]="'Templates'" [tabsOutlet]="'unified-editor'" [isActive]="activeTabIndex === 2"
+    (onSelect)="onTabSelected(2)"></c8y-tab>
+  }
+  @if (isTabVisible(3)) {
+  <c8y-tab [label]="'Substitutions'" [tabsOutlet]="'unified-editor'" [isActive]="activeTabIndex === 3"
+    (onSelect)="onTabSelected(3)"></c8y-tab>
+  }
+  @if (isTabVisible(4)) {
+  <c8y-tab [label]="'Testing'" [tabsOutlet]="'unified-editor'" [isActive]="activeTabIndex === 4"
+    (onSelect)="onTabSelected(4)"></c8y-tab>
+  }
+
+  <!-- Tab content – [hidden] keeps all components alive so editors/forms retain state -->
+  <div class="card-block flex-grow overflow-auto">
+
+  <!-- Tab 0: Connector -->
+  @if (activeTabIndex === 0 && isTabVisible(0)) {
+  <!-- <div class="p-16 p-t-0 flex-no-shrink separator-bottom col-xs-12">
+        <div class="d-flex">
+          <div class="col-lg-10 col-lg-offset-1">
+            <h4 class="text-medium text-center">
+              @if (stepperConfiguration.editorMode !== EditorMode.READ_ONLY) {
+              <span>Select connector for mapping (at least one is required)</span>
+              }
+              @if (stepperConfiguration.editorMode === EditorMode.READ_ONLY) {
+              <div>
+                Selected connectors
+                <span class="label label-primary text-12">{{ 'Read Only' }}</span>
+              </div>
+              }
+            </h4>
+          </div>
+        </div>
+      </div> -->
+  <div class="col-xs-12 flex-grow no-gutter">
+    <d11r-mapping-connector [stepperConfiguration]="stepperConfiguration" [directions]="[mapping.direction]"
+      [deploymentMapEntry]="deploymentMapEntry" (deploymentMapEntryChange)="deploymentMapEntryChange($event)">
+    </d11r-mapping-connector>
+  </div>
+  }
+
+  <!-- Tab 1: General Settings -->
+  @if (activeTabIndex === 1 && isTabVisible(1)) {
+  <div class="fit-h d-col">
+    <d11r-mapping-properties [mapping]="mapping" [stepperConfiguration]="stepperConfiguration"
+      [propertyFormly]="propertyFormly" [codeFormly]="codeFormly" (targetAPIChanged)="onTargetAPIChanged($event)">
+    </d11r-mapping-properties>
+  </div>
+  }
+
+  <!-- Tab 2: Templates -->
+  @if (activeTabIndex === 2 && isTabVisible(2)) {
+  <!-- <div class="fit-h d-col">
+      <div class="col-lg-12 flex-grow no-gutter">
+        <div class="inner-scroll fit-h"> -->
+  <div class="card-block p-b-0">
+    <div [formGroup]="templateForm">
+      <div class="d-flex">
+        <div class="col-lg-5 col-lg-offset-1 column-right-border">
+          <div class="form-group">
+            <c8y-select [items]="snoopedTemplateItems" formControlName="snoopedTemplateIndex" [filterItems]="true"
+              labelProperty="label" placeholder="Select snooped template" aria-label="Snooped Template"
+              style="width: 50%">
+            </c8y-select>
+            <div>
+              <small class="text-muted">{{stepperViewModel.showSourceEditor ?
+                'Template is described internally by the chosen mapping type.' :
+                'Use sample templates for the source.'
+                }}</small>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-5 column-left-border">
+          <div class="form-group">
+            <div class="d-flex j-c-between">
+              <button type="button" name="sample" class="btn btn-default" (click)="onSampleTargetTemplatesButton()"
+                translate title="Use Sample Target Templates"
+                [disabled]="templateForm.get('sampleTargetTemplatesButton')?.value || (!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole)">
+                <i c8yIcon="enter-right"></i>Reset to default
+              </button>
+            </div>
+            <div>
+              <small class="text-muted">Use sample templates for the target.</small>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="d-flex">
+        <div class="col-lg-5 col-lg-offset-1 column-right-border">
+          <div class="form-group">
+            <div>
+              <label translate>Source Template - {{ sourceSystem }}</label>
+            </div>
+            @if (stepperViewModel.showSourceEditor) {
+            <d11r-mapping-json-editor [updateEditor]="updateSourceEditor" [options]="editorOptionsSourceTemplate"
+              [class]="'jse-main-small'" (initialized)="onEditorSourceInitialized()"
+              (contentChanged)="onSourceTemplateChanged($event)" [data]="sourceTemplate"
+              (pathChanged)="onSelectedPathFilterMappingChanged($event)" #editorSourceStepTemplate>
+            </d11r-mapping-json-editor>
+            }
+            @if (stepperViewModel.showExtensionSelectors) {
+            <ng-container *ngTemplateOutlet="extensionTemplateSource; context: { form: templateForm }">
+            </ng-container>
+            }
+          </div>
+        </div>
+        <div class="col-lg-5 column-left-border">
+          <div class="form-group">
+            <div class="d-flex j-c-between">
+              <label>Target Template - {{ targetSystem }}</label>
+            </div>
+            @if (stepperViewModel.showTargetEditor) {
+            <d11r-mapping-json-editor [updateEditor]="updateTargetEditor" [options]="editorOptionsTargetTemplate"
+              [class]="'jse-main-small'" (initialized)="onEditorTargetInitialized()"
+              (contentChanged)="onTargetTemplateChanged($event)" [data]="targetTemplate" #editorTargetStepTemplate>
+            </d11r-mapping-json-editor>
+            }
+            @if (stepperViewModel.showExtensionSelectors) {
+            <ng-container *ngTemplateOutlet="extensionTemplateTarget; context: { form: templateForm }">
+            </ng-container>
+            }
+            @if (!stepperViewModel.showTargetContent) {
+            <small class="text-muted">Template is described internally by the chosen mapping type.</small>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+    @if (!(isContentChangeValid$ | async)) {
+    <div class="d-flex">
+      <div class="col-lg-10 col-lg-offset-1 p-b-16">
+        <span class="text-warning text-12 p-l-8 p-b-12">
+          @if (sourceTemplateUpdated && !validateProtectedFields(sourceTemplate, sourceTemplateUpdated)) {
+          Changing <code>_IDENTITY_</code>, <code>_TOPIC_LEVEL_</code> or <code>_CONTEXT_DATA_</code>
+          directly in templates is not supported. Use substitutions instead. Changes are reverted!
+          }
+          @if (sourceTemplateUpdated && !checkTransformationType(mapping.transformationType,
+          sourceTemplateUpdated)) {
+          @if (sourceTemplateUpdated && !validateProtectedFields(sourceTemplate, sourceTemplateUpdated)) {
+          <span><br /></span>
+          }
+          Array templates require transformation type <code>SMART_FUNCTION</code>.
+          }
+        </span>
+      </div>
+    </div>
+    }
+    @if (stepperViewModel.showFilterControls) {
+    <div class="d-flex">
+      <div class="col-lg-5 col-lg-offset-1">
+        <button type="button" name="updateFilterExecutionMapping" class="btn btn-default btn-sm m-b-4"
+          (click)="onOverwriteFilterMapping()" translate title="Update Filter Execution Mapping"
+          [disabled]="!selectedPathFilterFilterMapping">
+          <i c8yIcon="filter"></i>Update Filter Execution Mapping
+        </button>
+      </div>
+    </div>
+    <div class="d-flex">
+      <div class="col-lg-5 col-lg-offset-1">
+        <formly-form [form]="filterFormly" [fields]="filterFormlyFields" [model]="filterModel"></formly-form>
+      </div>
+    </div>
+    <div class="d-flex">
+      <div class="col-lg-5 col-lg-offset-1">
+        <div class="form-group m-b-4">
+          <label translate style="padding-left: 6px">Filter Result [{{ filterModel.filterExpression?.resultType
+            }}]</label>
+          <textarea class="form-control" #filterModelFilterExpression c8y-textarea-autoresize readonly="true"
+            style="font-size: var(--c8y-font-size-small); line-height: var(--c8y-line-height-small);">{{
+                        filterModel.filterExpression?.result
+                      }}</textarea>
+        </div>
+      </div>
+    </div>
+    }
+  </div>
+  <!-- </div>
+      </div>
+    </div> -->
+  }
+
+  <!-- Tab 3: Substitutions -->
+  @if (activeTabIndex === 3 && isTabVisible(3)) {
+  <div class="fit-h d-col">
+    <d11r-mapping-substitution-step [mapping]="mapping" [stepperConfiguration]="stepperConfiguration"
+      [sourceTemplate]="sourceTemplate" [targetTemplate]="targetTemplate" [sourceSystem]="sourceSystem"
+      [targetSystem]="targetSystem" [feature]="feature" [aiAgentDeployed]="aiAgentDeployed" [aiAgent]="aiAgent"
+      [updateSourceEditor]="updateSourceEditor" [updateTargetEditor]="updateTargetEditor" [mappingCode]="mappingCode"
+      [codeEditorLabel]="codeEditorLabel" [codeEditorHelp]="codeEditorHelp" [currentStepIndex]="currentStepIndex"
+      (mappingCodeChange)="mappingCode = $event" (updateSubstitutionValidity)="onUpdateSubstitutionValidity()">
+
+      @if (stepperViewModel.showCodeEditorSection) {
+      <ng-container codeEditor>
+        <ng-container *ngTemplateOutlet="extensionTemplateSourceGraals; context: { form: templateForm }">
+        </ng-container>
+      </ng-container>
+      }
+    </d11r-mapping-substitution-step>
+  </div>
+  }
+
+  <!-- Tab 4: Testing -->
+  @if (activeTabIndex === 4 && isTabVisible(4)) {
+  <div class="fit-h d-col">
+    <d11r-mapping-testing #mappingTestingStep [updateTestingTemplate]="updateTestingTemplate" [mapping]="mapping"
+      [stepperConfiguration]="stepperConfiguration" (sourceTemplateChanged)="onTestingSourceTemplateChanged($event)">
+    </d11r-mapping-testing>
+  </div>
+  }
+
+  </div> <!-- end scrollable content -->
+</div> <!-- end fullpage card -->
+
+<!-- Sticky footer with Save/Cancel buttons -->
+<div class="d-block card-footer p-24 separator fit-w text-center sticky-bottom bg-level-0">
+  <button type="button" class="btn btn-default" (click)="onCancel()" translate>
+    Cancel
+  </button>
+  <button type="button" class="btn btn-primary" (click)="onCommitButton()"
+    [disabled]="(!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole) || stepperConfiguration.editorMode === EditorMode.READ_ONLY"
+    translate>
+    Save
+  </button>
+</div>
+
+
+<!-- Extension selector ng-templates (same as stepper) -->
+
+<ng-template #extensionTemplateSource let-form="form">
+  @if (stepperViewModel.showExtensionSelectorsSource) {
+  <div [formGroup]="form">
+    <div class="form-group p-b-8">
+      <label translate>Extensions for {{ MappingTypeLabels[mapping.mappingType] }}</label>
+      <c8y-select [items]="extensionItems" formControlName="extensionName" [filterItems]="true"
+        aria-label="Extension Name"></c8y-select>
+    </div>
+    <div class="form-group">
+      <label translate>Events for {{ mapping?.extension?.extensionName }}</label>
+      <c8y-select [items]="extensionEventItems$ | async" formControlName="eventName" [filterItems]="true"
+        aria-label="Event Name"></c8y-select>
+    </div>
+  </div>
+  }
+  @if (stepperViewModel.showInternalExtensionNote) {
+  <div class="p-t-48">
+    <small class="text-muted">Template is described internally by the chosen mapping type</small>
+  </div>
+  }
+</ng-template>
+
+<ng-template #extensionTemplateTarget let-form="form">
+  @if (stepperViewModel.showExtensionSelectorsTarget) {
+  <div [formGroup]="form">
+    <div class="form-group p-b-8">
+      <label translate>Extensions for {{ MappingTypeLabels[mapping.mappingType] }}</label>
+      <c8y-select [items]="extensionItems" formControlName="extensionName" [filterItems]="true"
+        aria-label="Extension Name"></c8y-select>
+    </div>
+    <div class="form-group">
+      <label translate>Events for {{ mapping?.extension?.extensionName }}</label>
+      <c8y-select [items]="extensionEventItems$ | async" formControlName="eventName" [filterItems]="true"
+        aria-label="Event Name"></c8y-select>
+    </div>
+  </div>
+  }
+  @if (stepperViewModel.showInternalExtensionNote) {
+  <div class="p-t-48">
+    <small class="text-muted">Template is described internally by the chosen mapping type</small>
+  </div>
+  }
+</ng-template>
+
+<ng-template #extensionTemplateSourceGraals let-form="form">
+  <div class="form-group p-b-8 fit-h">
+    <div class="d-flex p-b-8">
+      <div class="col-lg-6">
+        <div class="d-flex">
+          <label translate style="margin-top:4px">{{codeEditorLabel}}</label>
+          <span class="hidden-xs hidden-sm">
+            <ng-template #popupTemplateCodeHelp>
+              <div [innerHtml]="codeEditorHelp"></div>
+            </ng-template>
+            <button type="button" placement="right" [popover]="popupTemplateCodeHelp" triggers="focus" class="btn-help"
+              aria-label="Help content"></button>
+          </span>
+        </div>
+      </div>
+      <div class="col-lg-2" style="padding-top: 2px;">
+        <button type="button" name="generateSubstitution" class="btn btn-ai btn-sm"
+          (click)="openGenerateSubstitutionDrawer()" translate title="Generate substitutions"
+          [disabled]="!stepperViewModel.config.showEditorSource || stepperViewModel.config.editorMode === EditorMode.READ_ONLY || !aiAgentDeployed">
+          <span>Generate substitutions</span>
+        </button>
+        @if (!aiAgentDeployed) {
+        <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
+          popover="{{'Generate substitutions is disabled if AI Agent is not deployed in this tenant or no agent is defined.' | translate}}"
+          placement="right" container="body" triggers="focus" type="button"></button>
+        }
+      </div>
+      <div class="col-lg-2">
+        <c8y-select [items]="codeTemplateItems" [(ngModel)]="templateId" (ngModelChange)="onSelectCodeTemplate()"
+          name="templateSelect" [filterItems]="true" labelProperty="label" placeholder="Select template..."
+          aria-label="Code Template" style="max-width: 200px">
+        </c8y-select>
+      </div>
+      <div class="col-lg-2" style="padding-top: 2px;">
+        <button type="button" name="update" class="btn btn-default btn-sm" (click)="onCreateCodeTemplate()" translate>
+          Create new code template
+        </button>
+      </div>
+    </div>
+    <c8y-editor [editorOptions]="editorOptions" class="form-control fit-h" monacoEditorMarkerValidator
+      [ngModel]="mappingCode" (ngModelChange)="onValueCodeChange($event)">
+    </c8y-editor>
+  </div>
+  @if (stepperViewModel.showInternalExtensionNote) {
+  <div class="p-t-48">
+    <small class="text-muted">Template is described internally by the chosen mapping type</small>
+  </div>
+  }
+</ng-template>
