@@ -117,7 +117,7 @@ interface SubstitutionModel extends Partial<Substitution> {
 const TAB_CONNECTOR = 0;
 const TAB_GENERAL_SETTINGS = 1;
 const TAB_SELECT_TEMPLATES = 2;
-const TAB_DEFINE_SUBSTITUTIONS = 3;
+const TAB_DEFINE_TRANSFORMATION = 3;
 const TAB_TEST_MAPPING = 4;
 
 /**
@@ -244,7 +244,7 @@ export class MappingUnifiedEditorComponent implements OnInit, OnDestroy {
   extensions = new Map<string, Extension>();
   editorOptions?: EditorComponent['editorOptions'];
   currentStepIndex = TAB_CONNECTOR;
-  activeTabIndex = TAB_CONNECTOR;
+  activeTabIndex = TAB_DEFINE_TRANSFORMATION;
 
   feature!: Feature;
   serviceConfiguration!: ServiceConfiguration;
@@ -591,7 +591,7 @@ export class MappingUnifiedEditorComponent implements OnInit, OnDestroy {
       case TAB_SELECT_TEMPLATES:
         await this.handleSelectTemplatesTab();
         break;
-      case TAB_DEFINE_SUBSTITUTIONS:
+      case TAB_DEFINE_TRANSFORMATION:
         this.handleDefineSubstitutionsTab();
         break;
       case TAB_TEST_MAPPING:
