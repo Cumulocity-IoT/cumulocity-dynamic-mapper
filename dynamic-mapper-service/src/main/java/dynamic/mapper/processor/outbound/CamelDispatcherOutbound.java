@@ -29,6 +29,10 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
+import com.cumulocity.model.JSONBase;
+import com.cumulocity.model.operation.OperationStatus;
+import com.cumulocity.rest.representation.operation.OperationRepresentation;
+import dynamic.mapper.core.C8YAgent;
 import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
 import org.apache.camel.Message;
@@ -64,7 +68,7 @@ public class CamelDispatcherOutbound implements NotificationCallback {
     private ConfigurationRegistry configurationRegistry;
     private ProducerTemplate producerTemplate;
     private CamelContext camelContext;
-
+    private C8YAgent c8yAgent;
     /**
      * Constructor matching DispatcherInbound signature
      */
@@ -79,6 +83,7 @@ public class CamelDispatcherOutbound implements NotificationCallback {
         // Initialize Camel components
         this.camelContext = configurationRegistry.getCamelContext();
         this.producerTemplate = camelContext.createProducerTemplate();
+        this.c8yAgent = configurationRegistry.getC8yAgent();
     }
 
     @Override
@@ -269,6 +274,36 @@ public class CamelDispatcherOutbound implements NotificationCallback {
                 Exchange exchange = createExchange(c8yMessage, resolvedMappings, testing);
                 Exchange resultExchange = producerTemplate.send("direct:processOutboundMessage", exchange);
 
+                //FIXME: Move to another place but only here we have the payload available to update the operation...
+                // Parse operation representation if applicable
+                OperationRepresentation op = null;
+                if (c8yMessage.getApi().equals(API.OPERATION)) {
+                    try {
+                        op = JSONBase.getJSONParser().parse(OperationRepresentation.class, c8yMessage.getPayload());
+                    } catch (Exception e) {
+                        log.error("{} - Failed to parse operation representation: {}", tenant, e.getMessage());
+                        //throw new OperationParsingException("Failed to parse operation", e);
+                    }
+                }
+
+                // Process each mapping independently
+                for (Mapping mapping : resolvedMappings) {
+                    // Skip inactive mappings or mappings not deployed outbound
+                    if (!mapping.getActive() ||
+                            !connectorClient.isMappingOutboundDeployed(mapping.getIdentifier())) {
+                        continue;
+                    }
+                    // Handle auto-acknowledgment for operations
+                    if (op != null && Boolean.TRUE.equals(mapping.getAutoAckOperation())) {
+                        try {
+                            c8yAgent.updateOperationStatus(tenant, op, OperationStatus.EXECUTING, null);
+                        } catch (Exception e) {
+                            log.warn("{} - Failed to update operation status to EXECUTING: {}",
+                                    tenant, e.getMessage());
+                        }
+                        break;
+                    }
+                }
                 @SuppressWarnings("unchecked")
                 List<ProcessingContext<Object>> contexts = resultExchange.getIn().getHeader("processedContexts",
                         List.class);
