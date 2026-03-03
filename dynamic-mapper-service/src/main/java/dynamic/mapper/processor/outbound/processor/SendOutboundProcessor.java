@@ -70,7 +70,7 @@ public class SendOutboundProcessor extends BaseProcessor {
 
         try {
             // Auto-acknowledge operation before sending
-            autoAckOperation(context, tenant, mapping, OperationStatus.EXECUTING, null);
+            autoAckOperation(context, tenant, mapping, OperationStatus.EXECUTING);
 
             // Process all C8Y requests that were created by SubstitutionProcessor
             String connectorIdentifier = exchange.getIn().getHeader("connectorIdentifier", String.class);
@@ -82,9 +82,9 @@ public class SendOutboundProcessor extends BaseProcessor {
 
             //FIXME Is context.getErrors() sufficient or do we need to check also context.currentRequests.getErrors()?
             if(context.hasError())
-                autoAckOperation(context, tenant, mapping, OperationStatus.FAILED, context.getErrors());
+                autoAckOperation(context, tenant, mapping, OperationStatus.FAILED);
             else
-                autoAckOperation(context, tenant, mapping, OperationStatus.SUCCESSFUL, null);
+                autoAckOperation(context, tenant, mapping, OperationStatus.SUCCESSFUL);
         } catch (Exception e) {
             String errorMessage = String.format(
                     "Tenant %s - Error in SendOutboundProcessor: %s for mapping: %s",
@@ -104,7 +104,7 @@ public class SendOutboundProcessor extends BaseProcessor {
     /**
      * Set operation status to EXECUTING before sending the outbound message.
      */
-    private void autoAckOperation(ProcessingContext<Object> context, String tenant, Mapping mapping, OperationStatus operationStatus, List<Exception> errors) {
+    private void autoAckOperation(ProcessingContext<Object> context, String tenant, Mapping mapping, OperationStatus operationStatus) {
         if (!API.OPERATION.equals(context.getApi()) || !Boolean.TRUE.equals(mapping.getAutoAckOperation())) {
             return;
         }
@@ -112,11 +112,16 @@ public class SendOutboundProcessor extends BaseProcessor {
             OperationRepresentation op = JSONBase.getJSONParser().parse(
                     OperationRepresentation.class, (String) context.getRawPayload());
             // Join error messages for the status update
-            String errorMessage = errors.stream()
-                    .map(Exception::getMessage)
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.joining("; "));
-            c8yAgent.updateOperationStatus(tenant, op, operationStatus, errorMessage);
+            if(context.hasError()) {
+                String errorMessage = context.getErrors().stream()
+                        .map(Exception::getMessage)
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.joining("; "));
+                c8yAgent.updateOperationStatus(tenant, op, operationStatus, errorMessage);
+            } else {
+                c8yAgent.updateOperationStatus(tenant, op, operationStatus, null);
+            }
+
         } catch (Exception e) {
             log.warn("{} - Failed to update operation status to EXECUTING: {}", tenant, e.getMessage());
         }
