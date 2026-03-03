@@ -21,41 +21,51 @@
 
  package dynamic.mapper.processor.flow;
 
+import java.util.function.Consumer;
 import org.graalvm.polyglot.Value;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.model.DataPrepContext;
+import dynamic.mapper.processor.model.OutputCollector;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class JavaScriptConsole {
-    private final DataPrepContext flowContext;
+    private final Consumer<String> logSink;
     private final String tenant;
     private final Mapping mapping;
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
+    /** Used by SMART_FUNCTION — routes messages to DataPrepContext state (picked up by extractLogs). */
     public JavaScriptConsole(DataPrepContext flowContext, String tenant, Mapping mapping) {
-        this.flowContext = flowContext;
+        this.logSink = flowContext::addLogMessage;
         this.tenant = tenant;
         this.mapping = mapping;
     }
-    
+
+    /** Used by SUBSTITUTION_AS_CODE — routes messages to OutputCollector logs. */
+    public JavaScriptConsole(OutputCollector outputCollector, String tenant, Mapping mapping) {
+        this.logSink = outputCollector::addLog;
+        this.tenant = tenant;
+        this.mapping = mapping;
+    }
+
     public void log(Object... args) {
         String message = formatArgs(args);
         log.info("{} - JS LOG: {}", tenant, message);
-        flowContext.addLogMessage("JS LOG: " + message);
+        logSink.accept("JS LOG: " + message);
     }
 
     public void error(Object... args) {
         String message = formatArgs(args);
         log.error("{} - JS ERROR: {}", tenant, message);
-        flowContext.addLogMessage("JS ERROR: " + message);
+        logSink.accept("JS ERROR: " + message);
     }
 
     public void warn(Object... args) {
         String message = formatArgs(args);
         log.warn("{} - JS WARN: {}", tenant, message);
-        flowContext.addLogMessage("JS WARN: " + message);
+        logSink.accept("JS WARN: " + message);
     }
 
     public void debug(Object... args) {
@@ -66,7 +76,7 @@ public class JavaScriptConsole {
         } else {
             log.debug("{} - JS DEBUG: {}", tenant, message);
         }
-        flowContext.addLogMessage("JS DEBUG: " + message);
+        logSink.accept("JS DEBUG: " + message);
     }
     
     private String formatArgs(Object... args) {

@@ -248,19 +248,20 @@
   }
 
   </div> <!-- end scrollable content -->
-</div> <!-- end fullpage card -->
 
-<!-- Sticky footer with Save/Cancel buttons -->
-<div class="d-block card-footer p-24 separator fit-w text-center sticky-bottom bg-level-0">
-  <button type="button" class="btn btn-default" (click)="onCancel()" translate>
-    Cancel
-  </button>
-  <button type="button" class="btn btn-primary" (click)="onCommitButton()"
-    [disabled]="(!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole) || stepperConfiguration.editorMode === EditorMode.READ_ONLY"
-    translate>
-    Save
-  </button>
-</div>
+  <!-- Footer must be inside the card so flex layout pins it to the bottom -->
+  <div class="card-footer separator p-24 text-center flex-no-shrink">
+    <button type="button" class="btn btn-default" (click)="onCancel()" translate>
+      Cancel
+    </button>
+    <button type="button" class="btn btn-primary" (click)="onCommitButton()"
+      [disabled]="(!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole) || stepperConfiguration.editorMode === EditorMode.READ_ONLY"
+      translate>
+      Save
+    </button>
+  </div>
+
+</div> <!-- end fullpage card -->
 
 
 <!-- Extension selector ng-templates (same as stepper) -->

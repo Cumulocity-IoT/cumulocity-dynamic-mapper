@@ -46,6 +46,7 @@ import dynamic.mapper.processor.model.RoutingContext;
 import dynamic.mapper.processor.model.SubstituteValue;
 import dynamic.mapper.processor.model.SubstitutionContext;
 import dynamic.mapper.processor.model.SubstitutionResult;
+import dynamic.mapper.processor.flow.JavaScriptConsole;
 import dynamic.mapper.processor.util.JavaScriptInteropHelper;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
@@ -149,6 +150,10 @@ public abstract class AbstractCodeExtractionProcessor extends CommonProcessor {
 
                 String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.getIdentifier();
                 bindings = graalContext.getBindings("js");
+
+                // Register console for JavaScript code; routes to OutputCollector logs
+                bindings.putMember("console",
+                        new JavaScriptConsole(context.getOutputCollector(), tenant, mapping));
 
                 // Load main code
                 byte[] decodedBytes = Base64.getDecoder().decode(mapping.getCode());

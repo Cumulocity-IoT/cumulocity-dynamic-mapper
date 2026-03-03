@@ -37,7 +37,7 @@ import { GlobalContextService } from '@c8y/ngx-components/global-context';
 import { FormlyFieldConfig } from '@ngx-formly/core';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { ActivatedRoute } from '@angular/router';
-import { debounceTime, distinctUntilChanged, map, Observable, shareReplay, Subject, takeUntil } from 'rxjs';
+import { debounceTime, distinctUntilChanged, map, Observable, ReplaySubject, shareReplay, Subject, takeUntil } from 'rxjs';
 import { Mode } from 'vanilla-jsoneditor';
 import {
   API,
@@ -187,7 +187,7 @@ export class MappingUnifiedEditorComponent implements OnInit, OnDestroy {
   readonly SnoopStatus = SnoopStatus;
   readonly MappingTypeDescriptions = MappingTypeDescriptions;
 
-  updateTestingTemplate = new EventEmitter<Mapping>();
+  updateTestingTemplate = new ReplaySubject<Mapping>(1);
   updateSourceEditor = new EventEmitter<EditorUpdateEvent>();
   updateTargetEditor = new EventEmitter<EditorUpdateEvent>();
 
@@ -667,7 +667,7 @@ export class MappingUnifiedEditorComponent implements OnInit, OnDestroy {
     const testMapping = structuredClone(this.mapping);
     testMapping.sourceTemplate = JSON.stringify(this.sourceTemplate);
     testMapping.targetTemplate = JSON.stringify(this.targetTemplate);
-    this.updateTestingTemplate.emit(testMapping);
+    this.updateTestingTemplate.next(testMapping);
   }
 
   private handleTestMappingTab(): void {
@@ -677,7 +677,7 @@ export class MappingUnifiedEditorComponent implements OnInit, OnDestroy {
     if (this.mapping.code || this.mappingCode) {
       testMapping.code = stringToBase64(this.mappingCode);
     }
-    this.updateTestingTemplate.emit(testMapping);
+    this.updateTestingTemplate.next(testMapping);
   }
 
   private updateTemplatesInEditors(): void {
@@ -713,11 +713,14 @@ export class MappingUnifiedEditorComponent implements OnInit, OnDestroy {
       this.filterModel.filterExpression = result;
       this.mapping.filterMapping = path;
     } catch (error) {
-      this.filterModel.filterExpression.valid = false;
-      this.filterFormly.get('filterMapping').setErrors({
+      if (this.filterModel.filterExpression) {
+        this.filterModel.filterExpression.valid = false;
+      }
+      // filterFormly control only exists while tab 2 is rendered (@if); guard with ?.
+      this.filterFormly.get('filterMapping')?.setErrors({
         validationError: { message: error.message }
       });
-      this.filterFormly.get('filterMapping').markAsTouched();
+      this.filterFormly.get('filterMapping')?.markAsTouched();
     }
 
     this.filterModel = { ...this.filterModel };

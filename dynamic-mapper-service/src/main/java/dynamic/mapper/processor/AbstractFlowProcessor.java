@@ -24,8 +24,6 @@ package dynamic.mapper.processor;
 import static dynamic.mapper.model.Substitution.toPrettyJsonString;
 
 import java.util.Base64;
-import java.util.List;
-
 import org.apache.camel.Exchange;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Source;
@@ -35,11 +33,8 @@ import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.flow.JavaScriptConsole;
 import dynamic.mapper.processor.model.DataPrepContext;
-import dynamic.mapper.processor.model.DeviceContext;
 import dynamic.mapper.processor.model.OutputCollector;
-import dynamic.mapper.processor.model.PayloadContext;
 import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.RoutingContext;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -68,10 +63,7 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
         try {
             processSmartMapping(context);
         } catch (Exception e) {
-            int lineNumber = 0;
-            if (e.getStackTrace().length > 0) {
-                lineNumber = e.getStackTrace()[0].getLineNumber();
-            }
+            int lineNumber = extractJsLineNumber(e);
             String errorMessage = String.format("%s, line %s", e.getMessage(), lineNumber);
             log.error("{} - Error in {} for mapping {}: {}", tenant, getProcessorName(), mapping.getName(),
                     errorMessage, e);
@@ -262,4 +254,5 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
      */
     protected abstract void handleProcessingError(Exception e, String errorMessage,
             ProcessingContext<?> context, String tenant, Mapping mapping);
+
 }
