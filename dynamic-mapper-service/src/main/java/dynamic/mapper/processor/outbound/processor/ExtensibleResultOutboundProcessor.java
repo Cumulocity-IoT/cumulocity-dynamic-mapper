@@ -122,10 +122,7 @@ public class ExtensibleResultOutboundProcessor extends AbstractExtensibleResultP
 
     @Override
     protected void handleProcessingError(Exception e, ProcessingContext<?> context, String tenant, Mapping mapping) {
-        int lineNumber = 0;
-        if (e.getStackTrace().length > 0) {
-            lineNumber = e.getStackTrace()[0].getLineNumber();
-        }
+        int lineNumber = extractJsLineNumber(e);
         String errorMessage = String.format(
                 "Tenant %s - Error in ExtensibleResultOutboundProcessor: %s for mapping: %s, line %s",
                 tenant, mapping.getName(), e.getMessage(), lineNumber);

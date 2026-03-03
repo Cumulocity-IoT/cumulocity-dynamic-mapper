@@ -23,7 +23,7 @@ import {
   hookTab} from '@c8y/ngx-components';
 import { DeviceGridService } from '@c8y/ngx-components/device-grid';
 import { FORMLY_CONFIG } from '@ngx-formly/core';
-import { NODE1, featureResolver } from '../shared';
+import { NODE1, featureResolver, Direction } from '../shared';
 import { MappingComponent } from './grid/mapping.component';
 import { checkTopicsInboundAreValid, checkTopicsOutboundAreValid } from './shared/util';
 import { MappingSubscriptionComponent } from './subscription/subscription.component';
@@ -31,6 +31,8 @@ import { DeviceClientMapComponent } from './client-relation/device-client-map.co
 import { MappingTabFactory } from './mapping-tab.factory';
 import { SubstitutionManagementService } from './service/substitution-management.service';
 import { MappingStepperService } from './service/mapping-stepper.service';
+import { MappingUnifiedEditorComponent } from './unified-editor';
+import { mappingEditResolver } from './core/mapping-edit.resolver';
 
 @NgModule({
   providers: [
@@ -40,17 +42,37 @@ import { MappingStepperService } from './service/mapping-stepper.service';
 
     hookRoute({
       path: `c8y-pkg-dynamic-mapper/${NODE1}/mappings/inbound`,
-      component: MappingComponent,
-      resolve: {
-        feature: featureResolver
-      }
+      children: [
+        {
+          path: '',
+          pathMatch: 'full',
+          component: MappingComponent,
+          resolve: { feature: featureResolver }
+        },
+        {
+          path: 'edit/:identifier',
+          component: MappingUnifiedEditorComponent,
+          resolve: { mappingEdit: mappingEditResolver, feature: featureResolver },
+          data: { direction: Direction.INBOUND }
+        }
+      ]
     }),
     hookRoute({
       path: `c8y-pkg-dynamic-mapper/${NODE1}/mappings/outbound`,
-      component: MappingComponent,
-      resolve: {
-        feature: featureResolver
-      }
+      children: [
+        {
+          path: '',
+          pathMatch: 'full',
+          component: MappingComponent,
+          resolve: { feature: featureResolver }
+        },
+        {
+          path: 'edit/:identifier',
+          component: MappingUnifiedEditorComponent,
+          resolve: { mappingEdit: mappingEditResolver, feature: featureResolver },
+          data: { direction: Direction.OUTBOUND }
+        }
+      ]
     }),
     hookRoute({
       path: `c8y-pkg-dynamic-mapper/${NODE1}/mappings/subscription/static`,

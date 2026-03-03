@@ -71,6 +71,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
   @Input() stepperConfiguration: StepperConfiguration;
   @Input() propertyFormly: FormGroup;
   @Input() codeFormly: FormGroup;
+  @Input() feature: Feature;
   @Output() targetAPIChanged = new EventEmitter<string>();
   @Output() snoopStatusChanged = new EventEmitter<SnoopStatus>();
 
@@ -86,7 +87,6 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
   targetSystem: string;
   filterMappingModel: FilterExpressionModel;
   filterInventoryModel: FilterExpressionModel;
-  feature: Feature;
 
   private readonly alertService = inject(AlertService);
   private readonly sharedService = inject(SharedService);

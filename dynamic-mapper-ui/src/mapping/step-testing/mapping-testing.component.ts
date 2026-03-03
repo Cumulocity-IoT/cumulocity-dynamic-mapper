@@ -31,7 +31,7 @@ import {
 } from '@angular/core';
 import { AlertService, CoreModule } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
-import { BehaviorSubject, Subject, takeUntil } from 'rxjs';
+import { BehaviorSubject, ReplaySubject, Subject, takeUntil } from 'rxjs';
 import { Content } from 'vanilla-jsoneditor';
 import {
   ConfirmationModalComponent,
@@ -74,7 +74,7 @@ interface TestingModel {
 export class MappingStepTestingComponent implements OnInit, OnDestroy {
   @Input() mapping!: Mapping;
   @Input() stepperConfiguration!: StepperConfiguration;
-  @Input() updateTestingTemplate!: EventEmitter<Mapping>;
+  @Input() updateTestingTemplate!: ReplaySubject<Mapping>;
   @Output() testResult = new EventEmitter<boolean>();
   @Output() sourceTemplateChanged = new EventEmitter<any>();
 

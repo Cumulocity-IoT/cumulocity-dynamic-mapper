@@ -38,7 +38,6 @@ import com.dashjoin.jsonata.Functions;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.model.DeviceContext;
-import dynamic.mapper.processor.model.OutputCollector;
 import dynamic.mapper.processor.model.PayloadContext;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingState;
@@ -46,6 +45,7 @@ import dynamic.mapper.processor.model.RoutingContext;
 import dynamic.mapper.processor.model.SubstituteValue;
 import dynamic.mapper.processor.model.SubstitutionContext;
 import dynamic.mapper.processor.model.SubstitutionResult;
+import dynamic.mapper.processor.flow.JavaScriptConsole;
 import dynamic.mapper.processor.util.JavaScriptInteropHelper;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
@@ -104,6 +104,9 @@ public abstract class AbstractCodeExtractionProcessor extends CommonProcessor {
         DeviceContext device = context.getDeviceContext();
 
         extractFromSource(routing, payload, state, device, context);
+
+        // Sync state modifications back to context for downstream processors
+        context.syncFromState(state);
     }
 
     /**
@@ -146,6 +149,10 @@ public abstract class AbstractCodeExtractionProcessor extends CommonProcessor {
 
                 String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.getIdentifier();
                 bindings = graalContext.getBindings("js");
+
+                // Register console for JavaScript code; writes directly to ProcessingContext.logs
+                bindings.putMember("console",
+                        new JavaScriptConsole(context.getLogs()::add, tenant, mapping));
 
                 // Load main code
                 byte[] decodedBytes = Base64.getDecoder().decode(mapping.getCode());
