@@ -66,15 +66,19 @@ public class SendOutboundProcessor extends BaseProcessor {
 
         try {
             // Auto-acknowledge operation before sending
-            autoAckOperation(context, tenant, mapping);
+            autoAckOperation(context, tenant, mapping, OperationStatus.EXECUTING, null);
 
             // Process all C8Y requests that were created by SubstitutionProcessor
             String connectorIdentifier = exchange.getIn().getHeader("connectorIdentifier", String.class);
             processAndPrepareRequests(context, connectorIdentifier);
 
+
             // Create alarms for any processing issues
             createProcessingAlarms(context);
-
+            if(context.hasError())
+                autoAckOperation(context, tenant, mapping, OperationStatus.FAILED, context.getErrors().toString());
+            else
+                autoAckOperation(context, tenant, mapping, OperationStatus.SUCCESSFUL, null);
         } catch (Exception e) {
             String errorMessage = String.format(
                     "Tenant %s - Error in SendOutboundProcessor: %s for mapping: %s",
@@ -94,14 +98,14 @@ public class SendOutboundProcessor extends BaseProcessor {
     /**
      * Set operation status to EXECUTING before sending the outbound message.
      */
-    private void autoAckOperation(ProcessingContext<Object> context, String tenant, Mapping mapping) {
+    private void autoAckOperation(ProcessingContext<Object> context, String tenant, Mapping mapping, OperationStatus operationStatus, String errorMessage) {
         if (!API.OPERATION.equals(context.getApi()) || !Boolean.TRUE.equals(mapping.getAutoAckOperation())) {
             return;
         }
         try {
             OperationRepresentation op = JSONBase.getJSONParser().parse(
                     OperationRepresentation.class, (String) context.getRawPayload());
-            c8yAgent.updateOperationStatus(tenant, op, OperationStatus.EXECUTING, null);
+            c8yAgent.updateOperationStatus(tenant, op, operationStatus, errorMessage);
         } catch (Exception e) {
             log.warn("{} - Failed to update operation status to EXECUTING: {}", tenant, e.getMessage());
         }
