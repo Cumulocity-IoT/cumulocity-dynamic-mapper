@@ -38,7 +38,6 @@ import com.dashjoin.jsonata.Functions;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.model.DeviceContext;
-import dynamic.mapper.processor.model.OutputCollector;
 import dynamic.mapper.processor.model.PayloadContext;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingState;
@@ -151,9 +150,9 @@ public abstract class AbstractCodeExtractionProcessor extends CommonProcessor {
                 String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.getIdentifier();
                 bindings = graalContext.getBindings("js");
 
-                // Register console for JavaScript code; routes to OutputCollector logs
+                // Register console for JavaScript code; writes directly to ProcessingContext.logs
                 bindings.putMember("console",
-                        new JavaScriptConsole(context.getOutputCollector(), tenant, mapping));
+                        new JavaScriptConsole(context.getLogs()::add, tenant, mapping));
 
                 // Load main code
                 byte[] decodedBytes = Base64.getDecoder().decode(mapping.getCode());

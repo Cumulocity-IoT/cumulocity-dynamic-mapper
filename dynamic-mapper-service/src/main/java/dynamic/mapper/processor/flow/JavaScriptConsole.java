@@ -26,7 +26,6 @@ import org.graalvm.polyglot.Value;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.model.DataPrepContext;
-import dynamic.mapper.processor.model.OutputCollector;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -43,9 +42,9 @@ public class JavaScriptConsole {
         this.mapping = mapping;
     }
 
-    /** Used by SUBSTITUTION_AS_CODE — routes messages to OutputCollector logs. */
-    public JavaScriptConsole(OutputCollector outputCollector, String tenant, Mapping mapping) {
-        this.logSink = outputCollector::addLog;
+    /** Used by SUBSTITUTION_AS_CODE — routes messages directly to a log list or any Consumer. */
+    public JavaScriptConsole(Consumer<String> logSink, String tenant, Mapping mapping) {
+        this.logSink = logSink;
         this.tenant = tenant;
         this.mapping = mapping;
     }
