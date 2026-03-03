@@ -25,15 +25,18 @@ import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import com.cumulocity.model.JSONBase;
 import com.cumulocity.model.idtype.GId;
+import com.cumulocity.model.operation.OperationStatus;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
+import com.cumulocity.rest.representation.operation.OperationRepresentation;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.C8YAgent;
+import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.util.Utils;
@@ -62,6 +65,9 @@ public class SendOutboundProcessor extends BaseProcessor {
         Boolean testing = context.getTesting();
 
         try {
+            // Auto-acknowledge operation before sending
+            autoAckOperation(context, tenant, mapping);
+
             // Process all C8Y requests that were created by SubstitutionProcessor
             String connectorIdentifier = exchange.getIn().getHeader("connectorIdentifier", String.class);
             processAndPrepareRequests(context, connectorIdentifier);
@@ -83,6 +89,22 @@ public class SendOutboundProcessor extends BaseProcessor {
             }
         }
 
+    }
+
+    /**
+     * Set operation status to EXECUTING before sending the outbound message.
+     */
+    private void autoAckOperation(ProcessingContext<Object> context, String tenant, Mapping mapping) {
+        if (!API.OPERATION.equals(context.getApi()) || !Boolean.TRUE.equals(mapping.getAutoAckOperation())) {
+            return;
+        }
+        try {
+            OperationRepresentation op = JSONBase.getJSONParser().parse(
+                    OperationRepresentation.class, (String) context.getRawPayload());
+            c8yAgent.updateOperationStatus(tenant, op, OperationStatus.EXECUTING, null);
+        } catch (Exception e) {
+            log.warn("{} - Failed to update operation status to EXECUTING: {}", tenant, e.getMessage());
+        }
     }
 
     /**
