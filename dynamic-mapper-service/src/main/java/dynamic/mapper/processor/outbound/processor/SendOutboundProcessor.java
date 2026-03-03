@@ -42,6 +42,10 @@ import dynamic.mapper.service.MappingService;
 import dynamic.mapper.util.Utils;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
 @Slf4j
 @Component
 public class SendOutboundProcessor extends BaseProcessor {
@@ -75,8 +79,10 @@ public class SendOutboundProcessor extends BaseProcessor {
 
             // Create alarms for any processing issues
             createProcessingAlarms(context);
+
+            //FIXME Is context.getErrors() sufficient or do we need to check also context.currentRequests.getErrors()?
             if(context.hasError())
-                autoAckOperation(context, tenant, mapping, OperationStatus.FAILED, context.getErrors().toString());
+                autoAckOperation(context, tenant, mapping, OperationStatus.FAILED, context.getErrors());
             else
                 autoAckOperation(context, tenant, mapping, OperationStatus.SUCCESSFUL, null);
         } catch (Exception e) {
@@ -98,13 +104,18 @@ public class SendOutboundProcessor extends BaseProcessor {
     /**
      * Set operation status to EXECUTING before sending the outbound message.
      */
-    private void autoAckOperation(ProcessingContext<Object> context, String tenant, Mapping mapping, OperationStatus operationStatus, String errorMessage) {
+    private void autoAckOperation(ProcessingContext<Object> context, String tenant, Mapping mapping, OperationStatus operationStatus, List<Exception> errors) {
         if (!API.OPERATION.equals(context.getApi()) || !Boolean.TRUE.equals(mapping.getAutoAckOperation())) {
             return;
         }
         try {
             OperationRepresentation op = JSONBase.getJSONParser().parse(
                     OperationRepresentation.class, (String) context.getRawPayload());
+            // Join error messages for the status update
+            String errorMessage = errors.stream()
+                    .map(Exception::getMessage)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.joining("; "));
             c8yAgent.updateOperationStatus(tenant, op, operationStatus, errorMessage);
         } catch (Exception e) {
             log.warn("{} - Failed to update operation status to EXECUTING: {}", tenant, e.getMessage());
