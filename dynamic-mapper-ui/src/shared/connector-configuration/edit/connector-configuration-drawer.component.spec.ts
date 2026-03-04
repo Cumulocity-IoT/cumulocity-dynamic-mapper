@@ -48,7 +48,8 @@ describe('ConnectorConfigurationDrawerComponent', () => {
     userHasMappingAdminRole: true,
     userHasMappingCreateRole: true,
     pulsarAvailable: false,
-    deviceIsolationMQTTServiceEnabled: false
+    deviceIsolationMQTTServiceEnabled: false,
+    suppressDeprecation: false
   };
 
   const mockConfiguration: ConnectorConfiguration = {

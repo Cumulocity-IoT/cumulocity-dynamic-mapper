@@ -159,4 +159,9 @@ public class ServiceConfiguration implements Cloneable {
     @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "Name of javaScript SmartFunction agent to be used when generating Cumulocity API requests as JavaScript code. The needs to be defined in the AI Agent Manager.", example = "smartFunctionAgent")
     @JsonSetter(nulls = Nulls.SKIP)
     private String smartFunctionAgent;
+
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Suppress deprecation warning in UI.", example = "false")
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    private Boolean suppressDeprecation;
 }

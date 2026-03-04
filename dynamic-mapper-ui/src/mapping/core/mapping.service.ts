@@ -328,6 +328,11 @@ export class MappingService {
       return;
     }
 
+    const feature = await this.sharedService.getFeatures();
+    if (feature?.suppressDeprecation) {
+      return;
+    }
+
     const mappings = await this.getMappings(direction);
     const deprecatedMappings = mappings.filter(
       m => m.transformationType === TransformationType.SUBSTITUTION_AS_CODE

@@ -40,6 +40,7 @@ export interface ServiceConfiguration {
   jsonataAgent: string;
   javaScriptAgent: string;
   smartFunctionAgent: string;
+  suppressDeprecation?: boolean;
 }
 
 export enum TemplateType {

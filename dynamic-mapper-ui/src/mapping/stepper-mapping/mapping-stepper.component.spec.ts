@@ -107,7 +107,8 @@ describe('MappingStepperComponent', () => {
     userHasMappingAdminRole: true,
     userHasMappingCreateRole: true,
     pulsarAvailable: false,
-    deviceIsolationMQTTServiceEnabled: false
+    deviceIsolationMQTTServiceEnabled: false,
+    suppressDeprecation: false,
   };
 
   beforeEach(async () => {

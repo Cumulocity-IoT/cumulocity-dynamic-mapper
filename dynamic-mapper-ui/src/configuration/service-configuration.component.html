@@ -308,6 +308,23 @@
           </c8y-li>
 
           <c8y-li>
+            <c8y-li-icon icon="warning"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'Suppress deprecation warnings' | translate }}</p>
+                <p>
+                  <small translate>Suppress deprecation warnings for outdated mapping types and configurations.</small>
+                </p>
+              </div>
+              <label class="c8y-switch c8y-switch--inline m-l-auto"
+                title="{{ 'Suppress deprecation warnings' | translate }}">
+                <input name="suppressDeprecation" type="checkbox" formControlName="suppressDeprecation" />
+                <span></span>
+              </label>
+            </div>
+          </c8y-li>
+
+          <c8y-li>
             <c8y-li-icon icon="alarm1"></c8y-li-icon>
             <div class="d-flex a-i-center">
               <div>
