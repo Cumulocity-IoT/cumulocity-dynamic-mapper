@@ -150,19 +150,19 @@
 
     <div class="d-flex sticky-buttons">
       <div class="_col-lg-10">
-        <div class="btn-group" style="_text-align:center" >
-          <button type="button" class="btn btn-default btn-sm" (click)="onTestTransformation()"
+        <div class="btn-group">
+          <button type="button m-r-4" class="btn btn-default btn-sm m-r-8" (click)="onTestTransformation()"
             [disabled]="!stepperConfiguration.allowTestTransformation || (testingModel.results.length > 0)">
             Transform Test Message
           </button>
-          <button type="button" class="btn btn-default btn-sm" (click)="onNextTestResult()"
+          <button type="button" class="btn btn-default btn-sm m-r-8" (click)="onNextTestResult()"
             [disabled]="!stepperConfiguration.allowTestTransformation || testingModel.results.length <= 1">
             Show Next Test Result&nbsp;@if (testingModel.results.length > 0) {
             <span class="badge badge-success">
               total {{ testingModel.results.length }}</span>
             }
           </button>
-          <button type="button" class="btn btn-default btn-sm" (click)="onResetTransformation()"
+          <button type="button" class="btn btn-default btn-sm m-r-8" (click)="onResetTransformation()"
             [disabled]="!stepperConfiguration.allowTestTransformation || testingModel.results.length == 0">
             Reset Transform
           </button>
