@@ -253,6 +253,20 @@ public class MappingRepository {
                 return Optional.empty();
             }
 
+            if (MappingType.EXTENSION_JAVA.equals(mapping.getMappingType()) && mapping.getExtension() == null) {
+                String moId = mo.getId() != null ? mo.getId().getValue() : null;
+                String errorMsg = String.format(
+                        "Mapping %s [%s] has mappingType EXTENSION_JAVA but no extension defined - skipping",
+                        mapping.getName(), moId);
+                log.warn("{} - {}", tenant, errorMsg);
+                try {
+                    mappingService.sendMappingLoadingError(tenant, mo, errorMsg);
+                } catch (Exception notifyEx) {
+                    log.warn("{} - Failed to send mapping loading error for MO {}: {}", tenant, moId, notifyEx.getMessage());
+                }
+                return Optional.empty();
+            }
+
             return Optional.of(mapping);
         } catch (IllegalArgumentException e) {
             String exceptionMsg = e.getCause() != null ? e.getCause().getMessage() : e.getMessage();

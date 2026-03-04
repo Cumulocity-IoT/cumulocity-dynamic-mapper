@@ -31,7 +31,7 @@ import { MappingService } from '../core/mapping.service';
   template: `
     <button
       class="btn btn-link"
-      title="{{ context.item.id }}"
+      title="{{ context.item.id }} - {{ context.item.mapping.mappingType}} - {{ context.item.mapping.transformationType }}"
       (click)="updateMapping()"
       style="padding-top: 0px; padding-bottom: 10px;"
     >

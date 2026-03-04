@@ -85,10 +85,21 @@ c8y-data-grid button[title='Reload'] {
   padding: 1px 0;
 }
 
-.log-debug { color: #888888; }
-.log-log   { color: #d4d4d4; }
-.log-warn  { color: #e5c07b; }
-.log-error { color: #e06c75; }
+.log-debug {
+  color: #888888;
+}
+
+.log-log {
+  color: #d4d4d4;
+}
+
+.log-warn {
+  color: #e5c07b;
+}
+
+.log-error {
+  color: #e06c75;
+}
 
 .log-empty {
   color: #555;
@@ -99,8 +110,10 @@ c8y-data-grid button[title='Reload'] {
   z-index: 10;
   bottom: 0;
   position: sticky;
-  padding-bottom: 70px;
+  /* padding-bottom: 70px; */
+  padding-top: 8px;
   /* padding: 0 var(--c8y-component-padding, var(--c8y-root-component-padding)); */
   background: var(--c8y-component-background-default, var(--c8y-root-component-background-default));
   margin-top: auto;
+  justify-content: center;
 }

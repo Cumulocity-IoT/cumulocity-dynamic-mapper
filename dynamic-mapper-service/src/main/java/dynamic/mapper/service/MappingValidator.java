@@ -97,6 +97,7 @@ public class MappingValidator {
             errors.addAll(validateTransformationType(mapping));
             errors.addAll(validateTopics(mapping));
             errors.addAll(validateJSONTemplates(mapping));
+            errors.addAll(validateExtension(mapping));
             // errors.addAll(validateFilterOutboundUniqueness(existingMappings, mapping));
 
             if (!errors.isEmpty()) {
@@ -305,6 +306,17 @@ public class MappingValidator {
             errors.add(ValidationError.Target_Template_Must_Be_Valid_JSON);
         }
 
+        return errors;
+    }
+
+    /**
+     * Validates that EXTENSION_JAVA mappings have an extension defined
+     */
+    public List<ValidationError> validateExtension(Mapping mapping) {
+        List<ValidationError> errors = new ArrayList<>();
+        if (MappingType.EXTENSION_JAVA.equals(mapping.getMappingType()) && mapping.getExtension() == null) {
+            errors.add(ValidationError.Extension_Must_Be_Defined_For_Extension_Java_Mapping);
+        }
         return errors;
     }
 
