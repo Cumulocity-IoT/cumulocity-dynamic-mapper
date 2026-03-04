@@ -71,7 +71,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     jsonataAgent: undefined,
     javaScriptAgent: undefined,
     smartFunctionAgent: undefined,
-    suppressDeprecation: false,
+    suppressDeprecationWarning: false,
   };
   editable2updated: boolean = false;
 
@@ -126,7 +126,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
       jsonataAgent: [{ value: '', disabled: true }],
       javaScriptAgent: [{ value: '', disabled: true }],
       smartFunctionAgent: [{ value: '', disabled: true }],
-      suppressDeprecation: [''],
+      suppressDeprecationWarning: [''],
     });
   }
 

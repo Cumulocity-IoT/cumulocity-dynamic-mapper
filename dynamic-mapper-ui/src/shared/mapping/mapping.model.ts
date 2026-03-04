@@ -608,7 +608,7 @@ export interface Feature {
   userHasMappingAdminRole: boolean;
   pulsarAvailable: boolean;
   deviceIsolationMQTTServiceEnabled: boolean;
-  suppressDeprecation: boolean;
+  suppressDeprecationWarning: boolean;
 }
 
 export function getDeviceIdentifiers(mapping: Mapping): Substitution[] {

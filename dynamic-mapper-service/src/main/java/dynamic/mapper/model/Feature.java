@@ -64,5 +64,5 @@ public class Feature {
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Suppress deprecation warning in UI.", example = "false")
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
-    private Boolean suppressDeprecation;
+    private Boolean suppressDeprecationWarning;
 }

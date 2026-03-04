@@ -123,7 +123,7 @@ export class MappingStatusActivationRendererComponent implements OnInit {
 
   handleDeprecation(mapping: any) {
     if (mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE &&
-        !this.feature?.suppressDeprecation) {
+        !this.feature?.suppressDeprecationWarning) {
       this.alertService.warning(
         "This mapping uses 'Substitution as JavaScript' which is deprecated since release 6.1.5 and will be removed in a future release. " +
         "Please migrate to 'Smart Functions' for continued support. Smart Functions provide a more intuitive approach by focusing on the target payload rather than substitution objects."

@@ -153,6 +153,8 @@ export class SharedService {
     configuration: ServiceConfiguration
   ): Promise<IFetchResponse> {
     this._serviceConfiguration = undefined;
+    this._featureCache = null;
+    this._featurePromise = null;
     return this.client.fetch(
       `${BASE_URL}/${PATH_CONFIGURATION_SERVICE_ENDPOINT}`,
       {

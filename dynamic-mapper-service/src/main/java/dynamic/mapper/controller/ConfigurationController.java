@@ -155,7 +155,7 @@ public class ConfigurationController {
         feature.setUserHasMappingAdminRole(Utils.userHasMappingAdminRole());
         feature.setPulsarAvailable(configurationRegistry.isPulsarAvailable(tenant));
         feature.setDeviceIsolationMQTTServiceEnabled(serviceConfiguration.getDeviceIsolationMQTTServiceEnabled());
-        feature.setSuppressDeprecation(serviceConfiguration.getSuppressDeprecation());
+        feature.setSuppressDeprecationWarning(serviceConfiguration.getSuppressDeprecationWarning());
         return new ResponseEntity<Feature>(feature, HttpStatus.OK);
     }
 

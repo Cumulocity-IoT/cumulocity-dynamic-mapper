@@ -329,7 +329,7 @@ export class MappingService {
     }
 
     const feature = await this.sharedService.getFeatures();
-    if (feature?.suppressDeprecation) {
+    if (feature?.suppressDeprecationWarning) {
       return;
     }
 

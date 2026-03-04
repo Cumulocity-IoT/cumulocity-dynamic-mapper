@@ -48,7 +48,7 @@ describe('MappingSubscriptionComponent', () => {
     userHasMappingCreateRole: true,
     pulsarAvailable: false,
     deviceIsolationMQTTServiceEnabled: false,
-    suppressDeprecation: false
+    suppressDeprecationWarning: false
   };
 
   const mockDevices: Device[] = [
