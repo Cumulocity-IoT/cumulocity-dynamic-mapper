@@ -244,7 +244,7 @@ export class MappingUnifiedEditorComponent implements OnInit, OnDestroy {
   extensions = new Map<string, Extension>();
   editorOptions?: EditorComponent['editorOptions'];
   currentStepIndex = TAB_CONNECTOR;
-  activeTabIndex = TAB_DEFINE_TRANSFORMATION;
+  activeTabIndex = TAB_CONNECTOR;
 
   feature!: Feature;
   serviceConfiguration!: ServiceConfiguration;
@@ -324,6 +324,11 @@ export class MappingUnifiedEditorComponent implements OnInit, OnDestroy {
     this.mapping = editData.mapping;
     this.stepperConfiguration = editData.stepperConfiguration;
     this.deploymentMapEntry = editData.deploymentMapEntry;
+
+    // For EXTENSION_JAVA the transformation is configured in the templates tab
+    this.activeTabIndex = this.mapping.transformationType === TransformationType.EXTENSION_JAVA
+      ? TAB_GENERAL_SETTINGS
+      : TAB_DEFINE_TRANSFORMATION;
 
     // Initialize view model from stepper configuration
     this.stepperViewModel = StepperViewModelFactory.create(this.stepperConfiguration);
