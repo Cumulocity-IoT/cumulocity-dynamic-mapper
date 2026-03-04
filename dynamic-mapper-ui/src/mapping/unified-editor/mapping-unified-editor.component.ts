@@ -61,7 +61,8 @@ import {
   MappingTypeLabels,
   ContentChanges,
   MappingTypeDescriptions,
-  Substitution
+  Substitution,
+  MappingType
 } from '../../shared';
 import { ValidationError } from '../shared/mapping.model';
 import { EditorMode } from '../shared/stepper.model';
@@ -326,7 +327,7 @@ export class MappingUnifiedEditorComponent implements OnInit, OnDestroy {
     this.deploymentMapEntry = editData.deploymentMapEntry;
 
     // For EXTENSION_JAVA the transformation is configured in the templates tab
-    this.activeTabIndex = this.mapping.transformationType === TransformationType.EXTENSION_JAVA
+    this.activeTabIndex = this.mapping.mappingType === MappingType.PROTOBUF_INTERNAL || this.mapping.transformationType === TransformationType.EXTENSION_JAVA
       ? TAB_GENERAL_SETTINGS
       : TAB_DEFINE_TRANSFORMATION;
 
