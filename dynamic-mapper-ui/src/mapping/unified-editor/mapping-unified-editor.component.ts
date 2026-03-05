@@ -30,7 +30,7 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 import { Location } from '@angular/common';
-import { FormControl, FormGroup } from '@angular/forms';
+import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { EditorComponent } from '@c8y/ngx-components/editor';
 import { Alert, AlertService, BottomDrawerService, CoreModule, TabComponent, TabsOutletComponent } from '@c8y/ngx-components';
 import { GlobalContextService } from '@c8y/ngx-components/global-context';
@@ -505,11 +505,11 @@ export class MappingUnifiedEditorComponent implements OnInit, OnDestroy {
       extensionName: new FormControl({
         value: this.mapping?.extension?.extensionName,
         disabled: this.stepperConfiguration.editorMode === EditorMode.READ_ONLY
-      }),
+      }, Validators.required),
       eventName: new FormControl({
         value: this.mapping?.extension?.eventName,
         disabled: this.stepperConfiguration.editorMode === EditorMode.READ_ONLY
-      }),
+      }, Validators.required),
       snoopedTemplateIndex: new FormControl({
         value: '-1',
         disabled: !this.stepperConfiguration.showEditorSource ||
@@ -845,6 +845,17 @@ export class MappingUnifiedEditorComponent implements OnInit, OnDestroy {
   }
 
   async onCommitButton(): Promise<void> {
+    if (this.stepperViewModel.showExtensionSelectors) {
+      const extensionName = this.templateForm.get('extensionName');
+      const eventName = this.templateForm.get('eventName');
+      extensionName?.markAsTouched();
+      eventName?.markAsTouched();
+      if (extensionName?.invalid || eventName?.invalid) {
+        this.activeTabIndex = 2; // navigate to Templates tab
+        return;
+      }
+    }
+
     // Sync any pending template edits before saving
     this.updateTemplatesInEditors();
 

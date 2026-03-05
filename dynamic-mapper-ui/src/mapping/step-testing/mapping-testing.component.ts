@@ -123,7 +123,11 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
   async ngOnInit(): Promise<void> {
     this.initializeMapping();
-    await this.testingService.resetMockCache();
+    try {
+      await this.testingService.resetMockCache();
+    } catch (error) {
+      this.handleError('Failed to clear cache', error);
+    }
     this.setupSubscriptions();
   }
 

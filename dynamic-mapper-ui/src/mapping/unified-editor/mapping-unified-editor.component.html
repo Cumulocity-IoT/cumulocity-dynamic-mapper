@@ -269,15 +269,21 @@
 <ng-template #extensionTemplateSource let-form="form">
   @if (stepperViewModel.showExtensionSelectorsSource) {
   <div [formGroup]="form">
-    <div class="form-group p-b-8">
+    <div class="form-group p-b-8" [class.has-error]="form.get('extensionName')?.invalid && form.get('extensionName')?.touched">
       <label translate>Extensions for {{ MappingTypeLabels[mapping.mappingType] }}</label>
       <c8y-select [items]="extensionItems" formControlName="extensionName" [filterItems]="true"
         aria-label="Extension Name"></c8y-select>
+      @if (form.get('extensionName')?.invalid && form.get('extensionName')?.touched) {
+        <span class="help-block"><small translate>Extension name is required.</small></span>
+      }
     </div>
-    <div class="form-group">
+    <div class="form-group" [class.has-error]="form.get('eventName')?.invalid && form.get('eventName')?.touched">
       <label translate>Events for {{ mapping?.extension?.extensionName }}</label>
       <c8y-select [items]="extensionEventItems$ | async" formControlName="eventName" [filterItems]="true"
         aria-label="Event Name"></c8y-select>
+      @if (form.get('eventName')?.invalid && form.get('eventName')?.touched) {
+        <span class="help-block"><small translate>Event name is required.</small></span>
+      }
     </div>
   </div>
   }
@@ -291,15 +297,21 @@
 <ng-template #extensionTemplateTarget let-form="form">
   @if (stepperViewModel.showExtensionSelectorsTarget) {
   <div [formGroup]="form">
-    <div class="form-group p-b-8">
+    <div class="form-group p-b-8" [class.has-error]="form.get('extensionName')?.invalid && form.get('extensionName')?.touched">
       <label translate>Extensions for {{ MappingTypeLabels[mapping.mappingType] }}</label>
       <c8y-select [items]="extensionItems" formControlName="extensionName" [filterItems]="true"
         aria-label="Extension Name"></c8y-select>
+      @if (form.get('extensionName')?.invalid && form.get('extensionName')?.touched) {
+        <span class="help-block"><small translate>Extension name is required.</small></span>
+      }
     </div>
-    <div class="form-group">
+    <div class="form-group" [class.has-error]="form.get('eventName')?.invalid && form.get('eventName')?.touched">
       <label translate>Events for {{ mapping?.extension?.extensionName }}</label>
       <c8y-select [items]="extensionEventItems$ | async" formControlName="eventName" [filterItems]="true"
         aria-label="Event Name"></c8y-select>
+      @if (form.get('eventName')?.invalid && form.get('eventName')?.touched) {
+        <span class="help-block"><small translate>Event name is required.</small></span>
+      }
     </div>
   </div>
   }

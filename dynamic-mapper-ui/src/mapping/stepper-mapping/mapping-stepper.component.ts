@@ -32,12 +32,12 @@ import {
   ViewChild,
   ViewEncapsulation
 } from '@angular/core';
-import { FormControl, FormGroup } from '@angular/forms';
+import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { EditorComponent } from '@c8y/ngx-components/editor';
 import { Alert, AlertService, BottomDrawerService, C8yStepper, CoreModule } from '@c8y/ngx-components';
 import { FormlyFieldConfig } from '@ngx-formly/core';
 import { BsModalService } from 'ngx-bootstrap/modal';
-import { debounceTime, distinctUntilChanged, map, Observable, shareReplay, Subject, takeUntil } from 'rxjs';
+import { debounceTime, distinctUntilChanged, map, Observable, ReplaySubject, shareReplay, Subject, takeUntil } from 'rxjs';
 import { Mode } from 'vanilla-jsoneditor';
 import {
   API,
@@ -170,7 +170,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   readonly SnoopStatus = SnoopStatus;
   readonly MappingTypeDescriptions = MappingTypeDescriptions;
 
-  updateTestingTemplate = new EventEmitter<Mapping>();
+  updateTestingTemplate = new ReplaySubject<Mapping>(1);
   updateSourceEditor = new EventEmitter<EditorUpdateEvent>();
   updateTargetEditor = new EventEmitter<EditorUpdateEvent>();
 
@@ -429,11 +429,11 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       extensionName: new FormControl({
         value: this.mapping?.extension?.extensionName,
         disabled: this.stepperConfiguration.editorMode === EditorMode.READ_ONLY
-      }),
+      }, Validators.required),
       eventName: new FormControl({
         value: this.mapping?.extension?.eventName,
         disabled: this.stepperConfiguration.editorMode === EditorMode.READ_ONLY
-      }),
+      }, Validators.required),
       snoopedTemplateIndex: new FormControl({
         value: '-1',
         disabled: !this.stepperConfiguration.showEditorSource ||
@@ -869,7 +869,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     const testMapping = structuredClone(this.mapping);
     testMapping.sourceTemplate = JSON.stringify(this.sourceTemplate);
     testMapping.targetTemplate = JSON.stringify(this.targetTemplate);
-    this.updateTestingTemplate.emit(testMapping);
+    this.updateTestingTemplate.next(testMapping);
   }
 
   private handleTestMappingStep(): void {
@@ -878,7 +878,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       testMapping.sourceTemplate = JSON.stringify(this.sourceTemplate);
       testMapping.targetTemplate = JSON.stringify(this.targetTemplate);
       testMapping.code = stringToBase64(this.mappingCode);
-      this.updateTestingTemplate.emit(testMapping);
+      this.updateTestingTemplate.next(testMapping);
     }
   }
 
@@ -891,6 +891,17 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   onNextStep(event: StepperStepChange): void {
     this.stepperForward = true;
+
+    if (this.currentStepIndex === STEP_SELECT_TEMPLATES && this.stepperViewModel.showExtensionSelectors) {
+      const extensionName = this.templateForm.get('extensionName');
+      const eventName = this.templateForm.get('eventName');
+      extensionName?.markAsTouched();
+      eventName?.markAsTouched();
+      if (extensionName?.invalid || eventName?.invalid) {
+        return;
+      }
+    }
+
     if (this.stepperConfiguration.advanceFromStepToEndStep != null &&
       this.stepperConfiguration.advanceFromStepToEndStep === this.currentStepIndex) {
       this.goToLastStep();
