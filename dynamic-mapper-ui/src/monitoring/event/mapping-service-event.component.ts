@@ -20,8 +20,9 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { EventService, IEvent, IResultList } from '@c8y/client';
+import { EventService, IEvent, IResultList, InventoryService } from '@c8y/client';
 import { CoreModule, Pagination } from '@c8y/ngx-components';
+import { saveAs } from 'file-saver';
 import { BsDatepickerModule } from 'ngx-bootstrap/datepicker';
 import { BehaviorSubject, catchError, from, Observable, of, Subject, switchMap, takeUntil, tap } from 'rxjs';
 import {
@@ -43,6 +44,7 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
 
   constructor(
     private eventService: EventService,
+    private inventoryService: InventoryService,
     private sharedService: SharedService,
     private fb: FormBuilder
   ) {
@@ -203,6 +205,29 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
       case 'info':
       default: return 'label-primary';
     }
+  }
+
+  extractManagedObjectId(event: IEvent): string | null {
+    return event?.['d11r_system']?.['id'] ?? null;
+  }
+
+  async downloadMapping(event: IEvent): Promise<void> {
+    const moId = this.extractManagedObjectId(event);
+    if (!moId) return;
+    const { data } = await this.inventoryService.detail(moId);
+    const mapping = data['d11r_mapping'];
+    const json = JSON.stringify(mapping ? [mapping] : [data], undefined, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    saveAs(blob, `mapping-${moId}.json`);
+  }
+
+  async downloadMappingMo(event: IEvent): Promise<void> {
+    const moId = this.extractManagedObjectId(event);
+    if (!moId) return;
+    const { data } = await this.inventoryService.detail(moId);
+    const json = JSON.stringify(data, undefined, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    saveAs(blob, `mo-mapping-${moId}.json`);
   }
 
   private onDateChange(field: 'dateFrom' | 'dateTo', date: Date): void {

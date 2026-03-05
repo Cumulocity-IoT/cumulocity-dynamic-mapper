@@ -104,6 +104,16 @@
               <span>
                 {{ event.text }}
               </span>
+              @if (event.type === 'd11r_mappingLoadingErrorEvent' && extractManagedObjectId(event)) {
+              <button class="btn btn-xs btn-default m-l-8" title="Download raw mapping JSON for manual editing"
+                (click)="downloadMapping(event)">
+                <i c8yIcon="download-archive"></i> Download mapping
+              </button>
+              <button class="btn btn-xs btn-default m-l-8" title="Download managed object JSON"
+                (click)="downloadMappingMo(event)">
+                <i c8yIcon="download-archive"></i> Download MO
+              </button>
+              }
             </div>
             <div class="col-md-2">
               @if (getEventMetadata(event); as metadata) {

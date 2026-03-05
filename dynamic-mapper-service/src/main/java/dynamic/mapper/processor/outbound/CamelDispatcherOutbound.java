@@ -38,6 +38,7 @@ import org.apache.camel.support.DefaultExchange;
 import com.dashjoin.jsonata.json.Json;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.client.AConnectorClient;
+import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
@@ -129,7 +130,7 @@ public class CamelDispatcherOutbound implements NotificationCallback {
         String tenant = getTenantFromNotificationHeaders(notification.getNotificationHeaders());
 
         // Check connector connection status (skip for testing)
-        if (!testing && !connectorClient.isConnected()) {
+        if (!testing && !connectorClient.isConnected() && connectorClient.getConnectorType() != ConnectorType.TEST) {
             log.warn("{} - Notification message received but connector {} is not connected. Ignoring message..",
                     tenant, connectorClient.getConnectorName());
             return result;
