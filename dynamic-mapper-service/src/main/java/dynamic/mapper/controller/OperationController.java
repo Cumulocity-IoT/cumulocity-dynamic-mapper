@@ -63,7 +63,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.model.Direction;
+import dynamic.mapper.model.LoggingEventType;
 import dynamic.mapper.model.SnoopStatus;
+import org.joda.time.DateTime;
 import dynamic.mapper.service.ConnectorConfigurationService;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.service.ServiceConfigurationService;
@@ -384,7 +386,6 @@ public class OperationController {
         ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
         log.debug("{} - Init system code template", tenant);
 
-        // Initialize code templates from properties if not already set
         serviceConfigurationService.initCodeTemplates(serviceConfiguration, true);
 
         try {
@@ -394,6 +395,13 @@ public class OperationController {
             log.error("{} - Error saving service configuration with code templates: {}", tenant, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
+
+        c8YAgent.createOperationEvent(
+                "System code templates re-initialized",
+                LoggingEventType.CODE_TEMPLATE_INIT_EVENT_TYPE,
+                DateTime.now(),
+                tenant,
+                null);
 
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }

@@ -29,7 +29,7 @@ import { BsModalService } from 'ngx-bootstrap/modal';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { BehaviorSubject } from 'rxjs';
 import { base64ToString, stringToBase64 } from '../../mapping/shared/util';
-import { Direction, Feature, ManageTemplateComponent, Operation, createCustomUuid } from '../../shared';
+import { ConfirmationModalComponent, Direction, Feature, ManageTemplateComponent, Operation, createCustomUuid } from '../../shared';
 import { SharedService } from '../../shared/service/shared.service';
 import { CodeTemplate, CodeTemplateMap, TemplateType } from '../shared/configuration.model';
 import { createCompletionProviderFlowFunction, createCompletionProviderSubstitutionAsCode } from '../../mapping/shared/stepper.model';
@@ -251,13 +251,29 @@ export class CodeComponent implements OnInit {
   }
 
   async onInitSystemCodeTemplate() {
-    const response = await this.sharedService.runOperation({ operation: Operation.INIT_CODE_TEMPLATES });
+    const modalRef = this.bsModalService.show(ConfirmationModalComponent, {
+      initialState: {
+        title: 'Re-initialize system code templates',
+        message:
+          'This will reset all system code templates (inbound, outbound, smart function) to their factory defaults. ' +
+          'Your shared code will NOT be affected. Any customizations made to system templates will be lost. ' +
+          'Do you want to proceed?',
+        labels: { ok: 'Re-initialize', cancel: 'Cancel' }
+      }
+    });
 
-    if (response.status === HttpStatusCode.Created) {
-      this.alertService.success(gettext('Reset system code template.'));
-    } else {
-      this.alertService.danger(gettext('Failed to reset system code template!'));
-    }
+    modalRef.content!.closeSubject.subscribe(async (confirmed: boolean) => {
+      if (confirmed) {
+        const response = await this.sharedService.runOperation({ operation: Operation.INIT_CODE_TEMPLATES });
+        if (response.status === HttpStatusCode.Created) {
+          this.alertService.success(gettext('System code templates re-initialized.'));
+          await this.updateCodeTemplateEntries();
+        } else {
+          this.alertService.danger(gettext('Failed to re-initialize system code templates!'));
+        }
+      }
+      modalRef.hide();
+    });
   }
 
   async onSaveCodeTemplate() {

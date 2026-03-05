@@ -76,6 +76,11 @@ public class MappingStatusService {
     // Structure: <Tenant, Initialized>
     private final Map<String, Boolean> initialized = new ConcurrentHashMap<>();
 
+    // Tracks moIds per tenant for which a loading error event has already been sent this session,
+    // to prevent flooding the service event log with the same error on every mapping reload.
+    // Structure: <"tenant:moId", Boolean>
+    private final Set<String> reportedLoadingErrors = ConcurrentHashMap.newKeySet();
+
     /**
      * Initializes or resets status tracking for a specific tenant.
      *
@@ -304,12 +309,19 @@ public class MappingStatusService {
                 return;
             }
 
+            String moId = mo.getId().getValue();
+            String deduplicationKey = tenant + ":" + moId;
+            if (!reportedLoadingErrors.add(deduplicationKey)) {
+                log.debug("{} - Suppressing duplicate loading error event for MO: {}", tenant, moId);
+                return;
+            }
+
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
             String date = LocalDateTime.now().format(formatter);
 
             Map<String, String> eventData = Map.of(
                     "message", message != null ? message : "Unknown error",
-                    "id", mo.getId().getValue(),
+                    "id", moId,
                     "date", date);
 
             configurationRegistry.getC8yAgent().createOperationEvent(
@@ -320,7 +332,7 @@ public class MappingStatusService {
                     eventData);
 
             log.warn("{} - Mapping loading error event created for MO: {} with message: {}",
-                    tenant, mo.getId().getValue(), message);
+                    tenant, moId, message);
         } catch (Exception e) {
             log.error("{} - Failed to send mapping loading error for MO: {}",
                     tenant, mo != null && mo.getId() != null ? mo.getId().getValue() : "unknown", e);
