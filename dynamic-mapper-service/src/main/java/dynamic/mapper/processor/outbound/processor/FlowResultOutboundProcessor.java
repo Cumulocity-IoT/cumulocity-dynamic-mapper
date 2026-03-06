@@ -35,6 +35,7 @@ import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.AbstractFlowResultProcessor;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.CumulocityObject;
+import dynamic.mapper.processor.model.DeviceContext;
 import dynamic.mapper.processor.model.DeviceMessage;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ExternalIdInfo;
@@ -146,10 +147,11 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             // Convert payload to JSON string for the request
             String payloadJson = objectMapper.writeValueAsString(payload);
 
-            // Create the request - pass action from DeviceMessage for WebHook internal mode
-            DynamicMapperRequest request = ProcessingResultHelper.createAndAddDynamicMapperRequest(context,
-                    payloadJson, deviceMessage.getAction(), mapping);
-            // Add to thread-safe output collector
+            // Create the request without adding to context (will be added via OutputCollector, matching inbound pattern)
+            DynamicMapperRequest request = ProcessingResultHelper.createDynamicMapperRequest(
+                    context.getDeviceContext(), context.getRoutingContext(), payloadJson,
+                    deviceMessage.getAction(), mapping);
+            // Add to thread-safe output collector (syncOutputToContext copies to context.requests once)
             output.addRequest(request);
 
             // Override resolvedPublishTopic if DeviceMessage provides a topic
@@ -326,10 +328,11 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             // Convert payload to JSON string for the request
             String payloadJson = objectMapper.writeValueAsString(payload);
 
-            DynamicMapperRequest c8yRequest = ProcessingResultHelper.createAndAddDynamicMapperRequest(context,
-                    payloadJson,
+            // Create the request without adding to context (will be added via OutputCollector, matching inbound pattern)
+            DynamicMapperRequest c8yRequest = ProcessingResultHelper.createDynamicMapperRequest(
+                    context.getDeviceContext(), context.getRoutingContext(), payloadJson,
                     cumulocityMessage.getAction(), mapping);
-            // Add to thread-safe output collector
+            // Add to thread-safe output collector (syncOutputToContext copies to context.requests once)
             output.addRequest(c8yRequest);
             c8yRequest.setApi(targetAPI);
             c8yRequest.setSourceId(resolvedDeviceId);

@@ -19,15 +19,6 @@
 ~
 -->
 
-<!-- <div class="p-16 p-t-0 flex-no-shrink separator-bottom col-xs-12">
-  <div class="d-flex">
-    <div class="col-lg-6 col-lg-offset-3">
-      <h4 class="text-center text-medium">Test mapping & create test device</h4>
-    </div>
-  </div>
-</div> -->
-
-
 <div class="col-xs-12 flex-grow inner-scroll">
   <div class="card-block p-b-0">
     <div class="d-flex">
@@ -55,7 +46,7 @@
             @if ((selectedResult$ | async) > 0) {
             <ng-container class="m-r-8">
               <div class="m-l-auto">
-                @if (testingModel.api && mapping.direction !== Direction.OUTBOUND) {
+                @if (testingModel.api) {
                 <span class="tag tag--success m-b-4">{{
                   testingModel.api
                   }}</span>

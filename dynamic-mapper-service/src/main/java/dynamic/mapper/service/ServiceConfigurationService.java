@@ -380,7 +380,7 @@ public class ServiceConfigurationService {
                 decodedCode = createNewHeader(codeTemplate) + decodedCode;
             } else {
                 String header = decodedCode.substring(0, headerEnd);
-                String codeBody = decodedCode.substring(headerEnd);
+                String codeBody = stripStaleTemplateHeaders(decodedCode.substring(headerEnd));
 
                 // Determine name and description based on overrideHeaderWithMetadata flag
                 String name = overrideHeaderWithMetadata ? codeTemplate.name : extractAnnotation(header, "@name");
@@ -629,6 +629,39 @@ public class ServiceConfigurationService {
             // Replace the entire annotation line to ensure correct spacing
             return content.substring(0, annotationIndex) + annotation + " " + value + content.substring(lineEndIndex);
         }
+    }
+
+    /**
+     * Removes any stale template metadata JSDoc blocks from the code body.
+     * A block is considered a stale template header if it contains {@code @templateType},
+     * which is unique to dynamically generated template metadata headers.
+     * This handles cases where a previous save prepended a new header without
+     * removing an older one embedded in the body.
+     */
+    private String stripStaleTemplateHeaders(String codeBody) {
+        if (codeBody == null || !codeBody.contains("@templateType")) {
+            return codeBody;
+        }
+        StringBuilder result = new StringBuilder(codeBody);
+        int searchFrom = 0;
+        while (true) {
+            int blockStart = result.indexOf("/**", searchFrom);
+            if (blockStart == -1) break;
+            int blockEnd = result.indexOf("*/", blockStart + 3);
+            if (blockEnd == -1) break;
+            String block = result.substring(blockStart, blockEnd + 2);
+            if (block.contains("@templateType")) {
+                log.warn("Removing stale template metadata header found in code body");
+                int removeEnd = blockEnd + 2;
+                while (removeEnd < result.length() && result.charAt(removeEnd) == '\n') {
+                    removeEnd++;
+                }
+                result.delete(blockStart, removeEnd);
+            } else {
+                searchFrom = blockEnd + 2;
+            }
+        }
+        return result.toString();
     }
 
     private String decode(String encodedString) {
