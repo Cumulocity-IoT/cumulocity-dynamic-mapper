@@ -55,6 +55,7 @@ export class CodeComponent implements OnInit {
   TemplateType = TemplateType;
   codeTemplateEntries: CodeTemplate[] = [];
   codeTemplateEntries$: BehaviorSubject<CodeTemplate[]> = new BehaviorSubject<CodeTemplate[]>([]);
+  isLoading = false;
 
   editorOptions: EditorComponent['editorOptions'] = {
     minimap: { enabled: true },
@@ -193,6 +194,7 @@ export class CodeComponent implements OnInit {
   }
 
   async updateCodeTemplateEntries(): Promise<void> {
+    this.isLoading = true;
     const defaultSet = this.getDefaultTemplateSet();
     this.codeTemplates = await this.sharedService.getCodeTemplates();
 
@@ -212,6 +214,7 @@ export class CodeComponent implements OnInit {
 
     this.codeTemplateEntries$.next(this.codeTemplateEntries);
     this.decodeCodeTemplates();
+    this.isLoading = false;
   }
 
   private getDefaultTemplateSet(): string[] {

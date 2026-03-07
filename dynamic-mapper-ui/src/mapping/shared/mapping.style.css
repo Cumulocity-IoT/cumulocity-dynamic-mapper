@@ -73,7 +73,7 @@ c8y-data-grid button[title='Reload'] {
   font-size: 12px;
   padding: 8px 12px;
   border-radius: 4px;
-  height: 200px;
+  height: 300px;
   overflow-y: auto;
   white-space: pre-wrap;
   word-break: break-all;
