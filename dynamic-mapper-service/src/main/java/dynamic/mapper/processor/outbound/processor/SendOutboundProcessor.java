@@ -165,8 +165,7 @@ public class SendOutboundProcessor extends BaseProcessor {
             }
 
         } catch (Exception e) {
-            log.error("{} - Error during publishing outbound messages: ", tenant, e);
-            log.error("{} - Failed to process requests: {}", tenant, e.getMessage(), e);
+            log.error("{} - Failed to process outbound requests: {}", tenant, e.getMessage(), e);
             if (context.getCurrentRequest() != null) {
                 context.getCurrentRequest().setError(e);
             }

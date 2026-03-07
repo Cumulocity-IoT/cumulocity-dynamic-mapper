@@ -63,7 +63,7 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
                 .description("Processing time of inbound messages").register(Metrics.globalRegistry);
         this.inboundProcessingCounter = Counter.builder("dynmapper_inbound_message_total")
                 .tag("tenant", connectorClient.getTenant()).description("Total number of inbound messages")
-                .tag("connector", connectorClient.getTenant()).register(Metrics.globalRegistry);
+                .tag("connector", connectorClient.getConnectorIdentifier()).register(Metrics.globalRegistry);
     }
 
     @Override

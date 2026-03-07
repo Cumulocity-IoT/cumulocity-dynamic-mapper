@@ -31,7 +31,6 @@ import com.cumulocity.sdk.client.ProcessingMode;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
-import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.AbstractEnrichmentProcessor;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.DataPrepContext;
@@ -58,7 +57,7 @@ public class EnrichmentInboundProcessor extends AbstractEnrichmentProcessor {
 
     @Override
     protected void performPreEnrichmentSetup(ProcessingContext<?> context, String connectorIdentifier) {
-        context.setQos(determineQos(connectorIdentifier));
+        context.setQos(context.getMapping().getQos());
     }
 
     @Override
@@ -165,14 +164,4 @@ public class EnrichmentInboundProcessor extends AbstractEnrichmentProcessor {
         mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
     }
 
-    private Qos determineQos(String connectorIdentifier) {
-        // Determine QoS based on connector type
-        if ("mqtt".equalsIgnoreCase(connectorIdentifier)) {
-            return Qos.AT_LEAST_ONCE;
-        } else if ("kafka".equalsIgnoreCase(connectorIdentifier)) {
-            return Qos.EXACTLY_ONCE;
-        } else {
-            return Qos.AT_MOST_ONCE; // Default for HTTP, etc.
-        }
-    }
 }

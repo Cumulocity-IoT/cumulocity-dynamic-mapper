@@ -61,8 +61,6 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
     protected final MappingService mappingService;
     protected final FlowStateStore flowStateStore;
 
-    private Context.Builder graalContextBuilder;
-
     protected AbstractEnrichmentProcessor(
             ConfigurationRegistry configurationRegistry,
             MappingService mappingService,
@@ -156,11 +154,7 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
      * Create GraalVM context with appropriate security settings.
      */
     protected Context createGraalContext(Engine graalEngine) throws Exception {
-        if (graalContextBuilder == null) {
-            graalContextBuilder = Context.newBuilder("js");
-        }
-
-        Context graalContext = graalContextBuilder
+        return Context.newBuilder("js")
                 .engine(graalEngine)
                 .allowHostAccess(configurationRegistry.getHostAccess())
                 .allowHostClassLookup(className ->
@@ -175,7 +169,6 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
                         className.equals("java.util.HashMap") ||
                         className.equals("java.util.HashSet"))
                 .build();
-        return graalContext;
     }
 
     /**

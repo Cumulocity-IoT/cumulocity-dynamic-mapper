@@ -208,18 +208,18 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
 
             // Populate Cumulocity-specific request with source identifier
             if (request.getApi() != null && resolvedExternalId != null && !resolvedExternalId.isEmpty()) {
-                log.info("{} - Populating source identifier: resolvedExternalId={}, api.identifier={}",
+                log.debug("{} - Populating source identifier: resolvedExternalId={}, api.identifier={}",
                         tenant, resolvedExternalId, request.getApi().identifier);
                 String cumulocityPayload = populateSourceIdentifier(payloadJson, request, tenant);
                 request.setRequestCumulocity(cumulocityPayload);
-                log.info("{} - Set requestCumulocity: {}", tenant, cumulocityPayload);
+                log.debug("{} - Set requestCumulocity: {}", tenant, cumulocityPayload);
             } else {
                 log.warn("{} - Skipping populateSourceIdentifier: api={}, resolvedExternalId={}",
                         tenant, request.getApi(), resolvedExternalId);
             }
 
             // For PUT/PATCH/DELETE methods, append ID to path and remove from body
-            log.info("{} - Checking PUT/PATCH/DELETE adjustment: api={}, apiName={}, resolvedExternalId={}, method={}, action={}, publishTopic={}",
+            log.debug("{} - Checking PUT/PATCH/DELETE adjustment: api={}, apiName={}, resolvedExternalId={}, method={}, action={}, publishTopic={}",
                     tenant, request.getApi(), request.getApi() != null ? request.getApi().name : "null",
                     resolvedExternalId, request.getMethod(), deviceMessage.getAction(), context.getResolvedPublishTopic());
 
@@ -233,7 +233,7 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
                 request.setMethod(RequestMethod.POST);
                 // For POST, use the base API path without ID in pathCumulocity
                 request.setPathCumulocity(request.getApi().path);
-                log.info("{} - ✅ Converted measurement from {} to POST, using base path: {}",
+                log.debug("{} - ✅ Converted measurement from {} to POST, using base path: {}",
                         tenant, request.getMethod(), request.getApi().path);
                 // The ID will remain in the body which is correct for POST
             } else if (request.getApi() != null && resolvedExternalId != null &&
@@ -251,14 +251,14 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
                     request.setRequestCumulocity(bodyWithoutId);
                 }
 
-                log.info("{} - ✅ Adjusted pathCumulocity for {} method: {} -> {}",
+                log.debug("{} - ✅ Adjusted pathCumulocity for {} method: {} -> {}",
                         tenant, request.getMethod(), request.getApi().path, pathWithId);
             } else if (request.getMethod() == RequestMethod.POST) {
                 // For POST requests, use the base API path without ID in pathCumulocity
                 // This overrides any ID that JavaScript may have appended to the topic
                 if (request.getApi() != null) {
                     request.setPathCumulocity(request.getApi().path);
-                    log.info("{} - ✅ Using base API path for POST in pathCumulocity: {}", tenant, request.getApi().path);
+                    log.debug("{} - ✅ Using base API path for POST in pathCumulocity: {}", tenant, request.getApi().path);
                 }
             }
 
@@ -350,18 +350,18 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
 
             // Populate Cumulocity-specific request with source identifier
             if (c8yRequest.getApi() != null && resolvedDeviceId != null && !resolvedDeviceId.isEmpty()) {
-                log.info("{} - Populating source identifier: resolvedDeviceId={}, api.identifier={}",
+                log.debug("{} - Populating source identifier: resolvedDeviceId={}, api.identifier={}",
                         tenant, resolvedDeviceId, c8yRequest.getApi().identifier);
                 String cumulocityPayload = populateSourceIdentifier(payloadJson, c8yRequest, tenant);
                 c8yRequest.setRequestCumulocity(cumulocityPayload);
-                log.info("{} - Set requestCumulocity: {}", tenant, cumulocityPayload);
+                log.debug("{} - Set requestCumulocity: {}", tenant, cumulocityPayload);
             } else {
                 log.warn("{} - Skipping populateSourceIdentifier: api={}, resolvedDeviceId={}",
                         tenant, c8yRequest.getApi(), resolvedDeviceId);
             }
 
             // For PUT/PATCH/DELETE methods, append ID to path and remove from body
-            log.info("{} - Checking PUT/PATCH/DELETE adjustment: api={}, apiName={}, resolvedDeviceId={}, method={}, action={}, publishTopic={}",
+            log.debug("{} - Checking PUT/PATCH/DELETE adjustment: api={}, apiName={}, resolvedDeviceId={}, method={}, action={}, publishTopic={}",
                     tenant, c8yRequest.getApi(), c8yRequest.getApi() != null ? c8yRequest.getApi().name : "null",
                     resolvedDeviceId, c8yRequest.getMethod(), cumulocityMessage.getAction(),
                     context.getResolvedPublishTopic());
@@ -376,7 +376,7 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
                 c8yRequest.setMethod(RequestMethod.POST);
                 // For POST, use the base API path without ID in pathCumulocity
                 c8yRequest.setPathCumulocity(c8yRequest.getApi().path);
-                log.info("{} - ✅ Converted measurement from {} to POST, using base path: {}",
+                log.debug("{} - ✅ Converted measurement from {} to POST, using base path: {}",
                         tenant, c8yRequest.getMethod(), c8yRequest.getApi().path);
                 // The ID will remain in the body which is correct for POST
             } else if (c8yRequest.getApi() != null && resolvedDeviceId != null &&
@@ -394,14 +394,14 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
                     c8yRequest.setRequestCumulocity(bodyWithoutId);
                 }
 
-                log.info("{} - ✅ Adjusted pathCumulocity for {} method: {} -> {}",
+                log.debug("{} - ✅ Adjusted pathCumulocity for {} method: {} -> {}",
                         tenant, c8yRequest.getMethod(), c8yRequest.getApi().path, pathWithId);
             } else if (c8yRequest.getMethod() == RequestMethod.POST) {
                 // For POST requests, use the base API path without ID in pathCumulocity
                 // This overrides any ID that JavaScript may have appended to the topic
                 if (c8yRequest.getApi() != null) {
                     c8yRequest.setPathCumulocity(c8yRequest.getApi().path);
-                    log.info("{} - ✅ Using base API path for POST in pathCumulocity: {}", tenant, c8yRequest.getApi().path);
+                    log.debug("{} - ✅ Using base API path for POST in pathCumulocity: {}", tenant, c8yRequest.getApi().path);
                 }
             }
 
@@ -444,7 +444,7 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             });
 
             if (mapping.getDebug() || context.getServiceConfiguration().getLogPayload()) {
-                log.info("{} - Resolved topic from {} to {}",
+                log.debug("{} - Resolved topic from {} to {}",
                         tenant, splitTopicInAsListOriginal, splitTopicInAsList);
             }
 

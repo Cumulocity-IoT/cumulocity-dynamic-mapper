@@ -162,11 +162,7 @@ public class FlowProcessorOutboundProcessor extends AbstractFlowProcessor {
 
         // Empty array check
         if (result.hasArrayElements()) {
-            if (result.getArraySize() == 0) {
-                return true;
-            } else {
-                return false;
-            }
+            return result.getArraySize() == 0;
         }
 
         // Empty object check (if applicable)

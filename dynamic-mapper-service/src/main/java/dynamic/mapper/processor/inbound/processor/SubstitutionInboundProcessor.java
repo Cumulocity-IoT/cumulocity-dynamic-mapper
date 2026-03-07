@@ -150,21 +150,18 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
                     throw e;
                 }
             }
+        }
 
-            // Create requests based on cardinality
-            // TODO: if (mapping.createNonExistingDevice) process sequentially
-            // else clone context and add multiContext to exchange
-            // then in pipeline split and process in parallel
-            // Set processing mode flag based on createNonExistingDevice
-            if (!mapping.getCreateNonExistingDevice()) {
-                // Mark for parallel processing
-                exchange.getIn().setHeader("parallelProcessing", true);
-                log.debug("Marked requests for parallel processing for mapping: {}", mapping.getName());
-            } else {
-                // Mark for sequential processing
-                exchange.getIn().setHeader("parallelProcessing", false);
-                log.debug("Marked requests for sequential processing for mapping: {}", mapping.getName());
-            }
+        // Set processing mode flag based on createNonExistingDevice (once, outside loop)
+        // TODO: if (mapping.createNonExistingDevice) process sequentially
+        // else clone context and add multiContext to exchange
+        // then in pipeline split and process in parallel
+        if (!mapping.getCreateNonExistingDevice()) {
+            exchange.getIn().setHeader("parallelProcessing", true);
+            log.debug("Marked requests for parallel processing for mapping: {}", mapping.getName());
+        } else {
+            exchange.getIn().setHeader("parallelProcessing", false);
+            log.debug("Marked requests for sequential processing for mapping: {}", mapping.getName());
         }
     }
 
@@ -267,7 +264,7 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
                             break;
                         case "processingMode":
                             if (value instanceof String) {
-                                context.setProcessingMode(ProcessingMode.parse((String) substitute.getValue()));
+                                context.setProcessingMode(ProcessingMode.parse((String) value));
                             }
                             break;
                         case "deviceName":
@@ -328,8 +325,8 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
         if (context.getMapping().getDebug() || context.getServiceConfiguration().getLogPayload()) {
             log.info("{} - Transformed message sent: API: {}, numberDevices: {}, message: {}", tenant,
                     context.getApi(),
-                    payloadTarget.jsonString(),
-                    size);
+                    size,
+                    payloadTarget.jsonString());
         }
         return context;
     }

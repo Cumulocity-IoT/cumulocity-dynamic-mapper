@@ -153,7 +153,7 @@ public abstract class CommonProcessor implements Processor {
             }
             String externalIdValue = externalSource.getExternalId();
             String type = externalSources.get(0).getType();
-            var adHocDeviceid = ProcessingResultHelper.createImplicitDevice(
+            ProcessingResultHelper.createImplicitDevice(
                     new ID(type, externalIdValue),
                     context,
                     log,
