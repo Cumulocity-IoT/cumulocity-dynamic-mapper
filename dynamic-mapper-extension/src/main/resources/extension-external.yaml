@@ -28,6 +28,11 @@
 
 extensions:
   # Inbound Extensions (Device → Cumulocity)
+  - eventName: SparkplugBMeasurement
+    className: dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionSparkplugBMeasurement
+    description: Custom measurement processor for Sparkplug B protobuf message formats
+    version: "1.0"
+
   - eventName: ProtobufCustomEvent
     className: dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionCustomEvent
     description: Custom event processor for protobuf message formats

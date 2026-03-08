@@ -27,6 +27,7 @@ run_protoc_extension () {
     # For inbound extensions: dynamic.mapper.processor.extension.external.inbound
     # For outbound extensions: dynamic.mapper.processor.extension.external.outbound
     protoc --proto_path=src/main/resources/protobuf --java_out=src/main/java --descriptor_set_out=src/main/resources/protobuf/CustomEvent.desc CustomEvent.proto
+    protoc --proto_path=src/main/resources/protobuf --java_out=src/main/java --descriptor_set_out=src/main/resources/protobuf/sparkplug_b.desc sparkplug_b.proto
 }
 run_protoc_backend () {
     # Generate protobuf classes for internal extensions

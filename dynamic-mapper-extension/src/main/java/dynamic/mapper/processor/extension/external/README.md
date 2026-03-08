@@ -10,10 +10,13 @@ external/
 │   ├── ProcessorExtensionCustomEvent.java
 │   ├── ProcessorExtensionCustomAlarm.java
 │   ├── ProcessorExtensionCustomMeasurement.java
+│   ├── ProcessorExtensionSparkplugBMeasurement.java (Protobuf / SparkplugB)
+│   ├── ProcessorExtensionSmartInbound01..06.java (SMART function examples)
 │   └── CustomEventOuter.java (Protobuf definition)
 │
 └── outbound/         # Extensions for Cumulocity → device processing
-    └── ProcessorExtensionAlarmToCustomJson.java
+    ├── ProcessorExtensionAlarmToCustomJson.java
+    └── ProcessorExtensionSmartOutbound01..03.java (SMART function examples)
 ```
 
 ## Directory Purpose
@@ -70,22 +73,33 @@ The framework validates that external extensions are in the allowed package:
 ### Inbound Extension
 
 1. Create class in `external/inbound/` package
-2. Implement `ProcessorExtensionSource<byte[]>`
-3. Override `extractFromSource(ProcessingContext<byte[]> context)`
-4. Extract device data and add substitutions
+2. Implement `ProcessorExtensionInbound<byte[]>`
+3. Override `onMessage(Message<byte[]> message, JavaExtensionContext context)`
+4. Parse device payload, build `CumulocityObject[]` using the builder API, and return it
 5. Register in `extension-external.properties`
 
 ```java
 package dynamic.mapper.processor.extension.external.inbound;
 
-public class ProcessorExtensionMyDevice implements ProcessorExtensionSource<byte[]> {
-    @Override
-    public void extractFromSource(ProcessingContext<byte[]> context) {
-        // Parse device payload
-        byte[] payload = context.getPayload();
+import dynamic.mapper.processor.extension.ProcessorExtensionInbound;
+import dynamic.mapper.processor.model.CumulocityObject;
+import dynamic.mapper.processor.model.JavaExtensionContext;
+import dynamic.mapper.processor.model.Message;
 
-        // Extract data and add substitutions
-        context.addSubstitution("temperature", "25.5", TYPE.NUMBER, RepairStrategy.DEFAULT, false);
+public class ProcessorExtensionMyDevice implements ProcessorExtensionInbound<byte[]> {
+    @Override
+    public CumulocityObject[] onMessage(Message<byte[]> message, JavaExtensionContext context) {
+        // Parse device payload
+        byte[] payload = message.getPayload();
+        String deviceId = "...";   // extracted from payload or topic
+
+        return new CumulocityObject[] {
+            CumulocityObject.measurement()
+                .type("c8y_Temperature")
+                .fragment("c8y_Temperature", "T", 25.5, "C")
+                .externalId(deviceId, context.getMapping().getExternalIdType())
+                .build()
+        };
     }
 }
 ```
@@ -93,25 +107,31 @@ public class ProcessorExtensionMyDevice implements ProcessorExtensionSource<byte
 ### Outbound Extension
 
 1. Create class in `external/outbound/` package
-2. Implement `ProcessorExtensionSource<byte[]>` (for extraction phase)
-3. Override `extractFromSource(ProcessingContext<byte[]> context)`
-4. Parse Cumulocity data and create device-specific substitutions
+2. Implement `ProcessorExtensionOutbound<Object>`
+3. Override `onMessage(Message<Object> message, JavaExtensionContext context)`
+4. Parse Cumulocity payload, build `DeviceMessage[]` using the builder API, and return it
 5. Register in `extension-external.properties`
 
 ```java
 package dynamic.mapper.processor.extension.external.outbound;
 
-public class ProcessorExtensionMyDeviceCommand implements ProcessorExtensionSource<byte[]> {
+import dynamic.mapper.processor.extension.ProcessorExtensionOutbound;
+import dynamic.mapper.processor.model.DeviceMessage;
+import dynamic.mapper.processor.model.JavaExtensionContext;
+import dynamic.mapper.processor.model.Message;
+
+public class ProcessorExtensionMyDeviceCommand implements ProcessorExtensionOutbound<Object> {
     @Override
-    public void extractFromSource(ProcessingContext<byte[]> context) {
+    public DeviceMessage[] onMessage(Message<Object> message, JavaExtensionContext context) {
         // Parse Cumulocity operation/alarm/event
-        Map<String, Object> c8yData = parsePayload(context.getPayload());
+        String customJson = convertToDeviceFormat(message.getPayload());
 
-        // Convert to device format
-        String deviceCommand = convertToDeviceFormat(c8yData);
-
-        // Add substitutions for template processing
-        context.addSubstitution("deviceCommand", deviceCommand, TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
+        return new DeviceMessage[] {
+            DeviceMessage.forTopic(context.getMapping().getPublishTopic())
+                .payload(customJson)
+                .retain(false)
+                .build()
+        };
     }
 }
 ```
@@ -160,33 +180,35 @@ This is validated at runtime to prevent misuse.
 ### Parsing JSON
 ```java
 Map<String, Object> jsonData = (Map<String, Object>) Json.parseJson(
-    new String(context.getPayload(), "UTF-8"));
+    new String(message.getPayload(), "UTF-8"));
 ```
 
 ### Parsing Protobuf
 ```java
-MyProtoMessage message = MyProtoMessage.parseFrom(context.getPayload());
+MyProtoMessage proto = MyProtoMessage.parseFrom(message.getPayload());
 ```
 
-### Extracting Device Identity
+### Extracting Device Identity via External ID
 ```java
-context.addSubstitution(
-    context.getMapping().getGenericDeviceIdentifier(),
-    deviceId,
-    TYPE.TEXTUAL,
-    RepairStrategy.DEFAULT,
-    false
-);
+CumulocityObject.measurement()
+    .externalId(deviceId, context.getMapping().getExternalIdType())
+    .build();
 ```
 
 ### Creating Timestamps
 ```java
-context.addSubstitution("time",
-    new DateTime(timestamp).toString(),
-    TYPE.TEXTUAL,
-    RepairStrategy.DEFAULT,
-    false
-);
+CumulocityObject.measurement()
+    .time(new DateTime(timestamp).toString())
+    .build();
+```
+
+### Looking Up a Device in the Inventory
+```java
+ExternalId extId = new ExternalId(deviceId, "c8y_Serial");
+Map<String, Object> device = context.getManagedObjectAsMap(extId);
+if (device != null) {
+    String deviceName = (String) device.get("name");
+}
 ```
 
 ## Deployment
