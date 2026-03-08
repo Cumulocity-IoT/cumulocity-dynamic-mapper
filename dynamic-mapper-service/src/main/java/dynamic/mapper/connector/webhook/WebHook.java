@@ -376,7 +376,7 @@ public class WebHook extends AConnectorClient {
         for (int i = 0; i < requests.size(); i++) {
             DynamicMapperRequest request = requests.get(i);
 
-            log.info("{} - 🔍 Processing request ({}/{}): method={}, api={}, hasRequest={}, hasRequestCumulocity={}",
+            log.info("{} - Processing request ({}/{}): method={}, api={}, hasRequest={}, hasRequestCumulocity={}",
                     tenant, i + 1, requests.size(),
                     request != null ? request.getMethod() : "null",
                     request != null && request.getApi() != null ? request.getApi().name : "null",
@@ -470,7 +470,7 @@ public class WebHook extends AConnectorClient {
 
                 if (response != null && response.getStatusCode().is2xxSuccessful()) {
                     // Always log success with method info to verify correct build is deployed
-                    log.info("{} - ✅ Published successfully ({}/{}): method={}, status={}, API={}, path={}",
+                    log.info("{} - Published successfully ({}/{}): method={}, status={}, API={}, path={}",
                             tenant, i + 1, requests.size(), method, response.getStatusCode(),
                             request.getApi() != null ? request.getApi().name : "EXTERNAL", fullPath);
 
