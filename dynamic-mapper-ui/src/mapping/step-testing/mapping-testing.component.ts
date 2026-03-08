@@ -58,6 +58,7 @@ interface TestingModel {
   response?: any;
   errorMsg?: string;
   api?: any;
+  publishTopic?: string;
   logs?: string[];
 }
 
@@ -255,6 +256,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     if (result) {
       this.testingModel.request = sortObjectKeys(result.request);
       this.testingModel.api = result.api;
+      this.testingModel.publishTopic = result.publishTopic;
 
       // Clear response if not present (test mode) - show empty object
       if (result.response) {

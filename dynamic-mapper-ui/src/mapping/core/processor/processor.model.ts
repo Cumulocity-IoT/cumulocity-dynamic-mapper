@@ -30,6 +30,7 @@ export interface DynamicMapperRequest {
   predecessor?: number;
   method?: string;
   api?: string;
+  publishTopic?: string;
   sourceId?: any;
   externalId?: string;
   externalIdType?: string;
