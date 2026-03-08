@@ -281,22 +281,22 @@ export class MappingComponent implements OnInit, OnDestroy {
         callback: this.deleteMappingWithConfirmation.bind(this),
         showIf: item => (!item['mapping']['active'] && (this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole))
       },
-      {
-        type: 'APPLY_MAPPING_FILTER',
-        text: 'Apply filter',
-        icon: 'filter',
-        callback: this.editMessageFilter.bind(this),
-        showIf: item => ((item['mapping']['mappingType'] == MappingType.JSON && item['mapping']['direction'] == Direction.INBOUND) ||
-          item['mapping']['direction'] == Direction.OUTBOUND) && (this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole)
-      },
-      {
-        type: 'UPDATE_CODE',
-        text: 'Update code',
-        icon: 'source-code',
-        callback: this.updateCode.bind(this),
-        showIf: item => ((item['mapping']['transformationType'] == TransformationType.SMART_FUNCTION) ||
-          item['mapping']['transformationType'] == TransformationType.SUBSTITUTION_AS_CODE) && (this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole)
-      },
+      // {
+      //   type: 'APPLY_MAPPING_FILTER',
+      //   text: 'Apply filter',
+      //   icon: 'filter',
+      //   callback: this.editMessageFilter.bind(this),
+      //   showIf: item => ((item['mapping']['mappingType'] == MappingType.JSON && item['mapping']['direction'] == Direction.INBOUND) ||
+      //     item['mapping']['direction'] == Direction.OUTBOUND) && (this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole)
+      // },
+      // {
+      //   type: 'UPDATE_CODE',
+      //   text: 'Update code',
+      //   icon: 'source-code',
+      //   callback: this.updateCode.bind(this),
+      //   showIf: item => ((item['mapping']['transformationType'] == TransformationType.SMART_FUNCTION) ||
+      //     item['mapping']['transformationType'] == TransformationType.SUBSTITUTION_AS_CODE) && (this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole)
+      // },
       {
         type: 'ENABLE_DEBUG',
         text: 'Enable debugging',
@@ -305,7 +305,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         showIf: item => !item['mapping']['debug'] && (this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole)
       },
       {
-        type: 'ENABLE_DEBUG',
+        type: 'DISABLE_DEBUG',
         text: 'Disable debugging',
         icon: 'bug1',
         callback: this.toggleDebugMapping.bind(this),
