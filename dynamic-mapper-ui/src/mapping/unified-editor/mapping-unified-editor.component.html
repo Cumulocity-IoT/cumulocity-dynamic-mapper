@@ -29,23 +29,23 @@
 
   <!-- Tab registration – tabs skipped by advanceFromStepToEndStep are omitted -->
   @if (isTabVisible(0)) {
-  <c8y-tab [label]="'Connector'" [tabsOutlet]="'unified-editor'" [isActive]="activeTabIndex === 0"
+  <c8y-tab [label]="'Connector'" [priority]="50" [tabsOutlet]="'unified-editor'" [isActive]="activeTabIndex === 0"
     (onSelect)="onTabSelected(0)"></c8y-tab>
   }
   @if (isTabVisible(1)) {
-  <c8y-tab [label]="'General Settings'" [tabsOutlet]="'unified-editor'" [isActive]="activeTabIndex === 1"
+  <c8y-tab [label]="'General Settings'" [priority]="40" [tabsOutlet]="'unified-editor'" [isActive]="activeTabIndex === 1"
     (onSelect)="onTabSelected(1)"></c8y-tab>
   }
   @if (isTabVisible(2)) {
-  <c8y-tab [label]="'Templates'" [tabsOutlet]="'unified-editor'" [isActive]="activeTabIndex === 2"
+  <c8y-tab [label]="'Templates'" [priority]="30" [tabsOutlet]="'unified-editor'" [isActive]="activeTabIndex === 2"
     (onSelect)="onTabSelected(2)"></c8y-tab>
   }
   @if (isTabVisible(3)) {
-  <c8y-tab [label]="'Substitutions & Code'" [tabsOutlet]="'unified-editor'" [isActive]="activeTabIndex === 3"
+  <c8y-tab [label]="'Substitutions & Code'" [priority]="20" [tabsOutlet]="'unified-editor'" [isActive]="activeTabIndex === 3"
     (onSelect)="onTabSelected(3)"></c8y-tab>
   }
   @if (isTabVisible(4)) {
-  <c8y-tab [label]="'Testing'" [tabsOutlet]="'unified-editor'" [isActive]="activeTabIndex === 4"
+  <c8y-tab [label]="'Testing'" [priority]="10" [tabsOutlet]="'unified-editor'" [isActive]="activeTabIndex === 4"
     (onSelect)="onTabSelected(4)"></c8y-tab>
   }
 
@@ -54,23 +54,6 @@
 
   <!-- Tab 0: Connector -->
   @if (activeTabIndex === 0 && isTabVisible(0)) {
-  <!-- <div class="p-16 p-t-0 flex-no-shrink separator-bottom col-xs-12">
-        <div class="d-flex">
-          <div class="col-lg-10 col-lg-offset-1">
-            <h4 class="text-medium text-center">
-              @if (stepperConfiguration.editorMode !== EditorMode.READ_ONLY) {
-              <span>Select connector for mapping (at least one is required)</span>
-              }
-              @if (stepperConfiguration.editorMode === EditorMode.READ_ONLY) {
-              <div>
-                Selected connectors
-                <span class="label label-primary text-12">{{ 'Read Only' }}</span>
-              </div>
-              }
-            </h4>
-          </div>
-        </div>
-      </div> -->
   <div class="col-xs-12 flex-grow no-gutter">
     <d11r-mapping-connector [stepperConfiguration]="stepperConfiguration" [directions]="[mapping.direction]"
       [deploymentMapEntry]="deploymentMapEntry" (deploymentMapEntryChange)="deploymentMapEntryChange($event)">
@@ -89,9 +72,6 @@
 
   <!-- Tab 2: Templates -->
   @if (activeTabIndex === 2 && isTabVisible(2)) {
-  <!-- <div class="fit-h d-col">
-      <div class="col-lg-12 flex-grow no-gutter">
-        <div class="inner-scroll fit-h"> -->
   <div class="card-block p-b-0">
     <div [formGroup]="templateForm">
       <div class="d-flex">
@@ -213,9 +193,6 @@
     </div>
     }
   </div>
-  <!-- </div>
-      </div>
-    </div> -->
   }
 
   <!-- Tab 3: Substitutions -->
