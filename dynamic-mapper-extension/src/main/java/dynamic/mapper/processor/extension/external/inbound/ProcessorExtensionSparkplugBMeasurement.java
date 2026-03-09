@@ -58,13 +58,15 @@ public class ProcessorExtensionSparkplugBMeasurement implements ProcessorExtensi
                     continue;
                 //For C8Y only numeric values are allowed in measurements, so we validate and convert the metric value accordingly
                 Number numberMetric = validateMetricValueForMeasurement(getMetricValue(metric));
+                //Name is in most messages not part of payload, but alias is
+                String metricName = metric.getName() != null ? metric.getName() : String.valueOf(metric.getAlias());
                 if(numberMetric != null) {
                     CumulocityObject measurement = CumulocityObject.measurement()
                             .type("SparkplugMetrics")
                             .time(new DateTime(metric.getTimestamp()))
                             //There is no data on series in sparkplug b, so we use the metric name as fragment and a fixed value for series here "T"
                             //There is no unit of measure information in sparkplug b, so we ignore it with null
-                            .fragment(metric.getName(), "T", numberMetric, null)
+                            .fragment(metricName, "T", numberMetric, null)
                             .externalId(deviceMetaData.deviceId(), externalIdType)
                             .build();
                     cumulocityMessages.add(measurement);
@@ -74,7 +76,7 @@ public class ProcessorExtensionSparkplugBMeasurement implements ProcessorExtensi
                             .type("SparkplugMetrics")
                             .time(new DateTime(metric.getTimestamp()))
                             .text("Received non-numeric metric value for metric %s, value: %s".formatted(metric.getName(), getMetricValue(metric)))
-                            .property(metric.getName(), getMetricValue(metric))
+                            .property(metricName, getMetricValue(metric))
                             .externalId(deviceMetaData.deviceId(), externalIdType)
                             .build();
                     cumulocityMessages.add(event);
