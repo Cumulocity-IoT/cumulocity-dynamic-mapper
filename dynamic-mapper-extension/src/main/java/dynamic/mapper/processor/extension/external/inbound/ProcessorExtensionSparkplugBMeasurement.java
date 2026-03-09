@@ -66,7 +66,7 @@ public class ProcessorExtensionSparkplugBMeasurement implements ProcessorExtensi
                             .time(new DateTime(metric.getTimestamp()))
                             //There is no data on series in sparkplug b, so we use the metric name as fragment and a fixed value for series here "T"
                             //There is no unit of measure information in sparkplug b, so we ignore it with null
-                            .fragment(metricName, "T", numberMetric, null)
+                            .fragment("SparkplugMetrics", metricName, numberMetric, null)
                             .externalId(deviceMetaData.deviceId(), externalIdType)
                             .build();
                     cumulocityMessages.add(measurement);
