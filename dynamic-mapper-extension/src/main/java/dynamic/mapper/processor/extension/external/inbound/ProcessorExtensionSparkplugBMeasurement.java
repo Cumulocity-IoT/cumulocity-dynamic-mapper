@@ -59,7 +59,7 @@ public class ProcessorExtensionSparkplugBMeasurement implements ProcessorExtensi
                 //For C8Y only numeric values are allowed in measurements, so we validate and convert the metric value accordingly
                 Number numberMetric = validateMetricValueForMeasurement(getMetricValue(metric));
                 //Name is in most messages not part of payload, but alias is
-                String metricName = metric.getName() != null ? metric.getName() : String.valueOf(metric.getAlias());
+                String metricName = metric.hasName() ? metric.getName() : String.valueOf(metric.getAlias());
                 if(numberMetric != null) {
                     CumulocityObject measurement = CumulocityObject.measurement()
                             .type("SparkplugMetrics")
