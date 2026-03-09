@@ -169,6 +169,17 @@ public class ExtensibleOutboundProcessor extends AbstractExtensibleProcessor {
                 context.setIgnoreFurtherProcessing(true);
             }
 
+        } catch (AbstractMethodError e) {
+            String message = String.format(
+                "%s - Extension '%s' (class: %s) is incompatible with the current interface. " +
+                "The extension JAR was compiled against an older version of ProcessorExtensionOutbound " +
+                "whose onMessage() signature has changed. " +
+                "Please recompile the extension against the current dynamic-mapper-service JAR and redeploy it.",
+                tenant,
+                extensionEntry.getEventName(),
+                extensionEntry.getFqnClassName());
+            log.error(message, e);
+            throw new ProcessingException(message, e);
         } catch (Exception e) {
             String message = String.format(
                     "Tenant %s - Error in outbound extension processing: %s",

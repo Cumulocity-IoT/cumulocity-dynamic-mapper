@@ -5,33 +5,12 @@
 
 package dynamic.mapper.processor.extension.external.inbound;
 
-import com.google.protobuf.AbstractParser;
-import com.google.protobuf.ByteString;
-import com.google.protobuf.CodedInputStream;
-import com.google.protobuf.CodedOutputStream;
-import com.google.protobuf.Descriptors;
-import com.google.protobuf.ExtensionRegistry;
-import com.google.protobuf.ExtensionRegistryLite;
-import com.google.protobuf.Generated;
-import com.google.protobuf.GeneratedFile;
-import com.google.protobuf.GeneratedMessage;
-import com.google.protobuf.Internal;
-import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.Message;
-import com.google.protobuf.MessageOrBuilder;
-import com.google.protobuf.Parser;
-import com.google.protobuf.RuntimeVersion;
-import com.google.protobuf.UninitializedMessageException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.ByteBuffer;
-
-@Generated
-public final class CustomEventOuter extends GeneratedFile {
+@com.google.protobuf.Generated
+public final class CustomEventOuter extends com.google.protobuf.GeneratedFile {
   private CustomEventOuter() {}
   static {
-    RuntimeVersion.validateProtobufGencodeVersion(
-      RuntimeVersion.RuntimeDomain.PUBLIC,
+    com.google.protobuf.RuntimeVersion.validateProtobufGencodeVersion(
+      com.google.protobuf.RuntimeVersion.RuntimeDomain.PUBLIC,
       /* major= */ 4,
       /* minor= */ 33,
       /* patch= */ 4,
@@ -39,17 +18,17 @@ public final class CustomEventOuter extends GeneratedFile {
       "CustomEventOuter");
   }
   public static void registerAllExtensions(
-      ExtensionRegistryLite registry) {
+      com.google.protobuf.ExtensionRegistryLite registry) {
   }
 
   public static void registerAllExtensions(
-      ExtensionRegistry registry) {
+      com.google.protobuf.ExtensionRegistry registry) {
     registerAllExtensions(
-        (ExtensionRegistryLite) registry);
+        (com.google.protobuf.ExtensionRegistryLite) registry);
   }
   public interface CustomEventOrBuilder extends
       // @@protoc_insertion_point(interface_extends:processor.protobuf.CustomEvent)
-      MessageOrBuilder {
+      com.google.protobuf.MessageOrBuilder {
 
     /**
      * <code>int64 timestamp = 1;</code>
@@ -61,73 +40,73 @@ public final class CustomEventOuter extends GeneratedFile {
      * <code>string txt = 2;</code>
      * @return The txt.
      */
-    String getTxt();
+    java.lang.String getTxt();
     /**
      * <code>string txt = 2;</code>
      * @return The bytes for txt.
      */
-    ByteString
+    com.google.protobuf.ByteString
         getTxtBytes();
 
     /**
      * <code>string unit = 3;</code>
      * @return The unit.
      */
-    String getUnit();
+    java.lang.String getUnit();
     /**
      * <code>string unit = 3;</code>
      * @return The bytes for unit.
      */
-    ByteString
+    com.google.protobuf.ByteString
         getUnitBytes();
 
     /**
      * <code>string externalIdType = 4;</code>
      * @return The externalIdType.
      */
-    String getExternalIdType();
+    java.lang.String getExternalIdType();
     /**
      * <code>string externalIdType = 4;</code>
      * @return The bytes for externalIdType.
      */
-    ByteString
+    com.google.protobuf.ByteString
         getExternalIdTypeBytes();
 
     /**
      * <code>string externalId = 5;</code>
      * @return The externalId.
      */
-    String getExternalId();
+    java.lang.String getExternalId();
     /**
      * <code>string externalId = 5;</code>
      * @return The bytes for externalId.
      */
-    ByteString
+    com.google.protobuf.ByteString
         getExternalIdBytes();
 
     /**
      * <code>string eventType = 6;</code>
      * @return The eventType.
      */
-    String getEventType();
+    java.lang.String getEventType();
     /**
      * <code>string eventType = 6;</code>
      * @return The bytes for eventType.
      */
-    ByteString
+    com.google.protobuf.ByteString
         getEventTypeBytes();
   }
   /**
    * Protobuf type {@code processor.protobuf.CustomEvent}
    */
   public static final class CustomEvent extends
-      GeneratedMessage implements
+      com.google.protobuf.GeneratedMessage implements
       // @@protoc_insertion_point(message_implements:processor.protobuf.CustomEvent)
       CustomEventOrBuilder {
   private static final long serialVersionUID = 0L;
     static {
-      RuntimeVersion.validateProtobufGencodeVersion(
-        RuntimeVersion.RuntimeDomain.PUBLIC,
+      com.google.protobuf.RuntimeVersion.validateProtobufGencodeVersion(
+        com.google.protobuf.RuntimeVersion.RuntimeDomain.PUBLIC,
         /* major= */ 4,
         /* minor= */ 33,
         /* patch= */ 4,
@@ -135,7 +114,7 @@ public final class CustomEventOuter extends GeneratedFile {
         "CustomEvent");
     }
     // Use CustomEvent.newBuilder() to construct.
-    private CustomEvent(GeneratedMessage.Builder<?> builder) {
+    private CustomEvent(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
     }
     private CustomEvent() {
@@ -146,13 +125,13 @@ public final class CustomEventOuter extends GeneratedFile {
       eventType_ = "";
     }
 
-    public static final Descriptors.Descriptor
+    public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return dynamic.mapper.processor.extension.external.inbound.CustomEventOuter.internal_static_processor_protobuf_CustomEvent_descriptor;
     }
 
-    @Override
-    protected GeneratedMessage.FieldAccessorTable
+    @java.lang.Override
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
       return dynamic.mapper.processor.extension.external.inbound.CustomEventOuter.internal_static_processor_protobuf_CustomEvent_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
@@ -165,27 +144,27 @@ public final class CustomEventOuter extends GeneratedFile {
      * <code>int64 timestamp = 1;</code>
      * @return The timestamp.
      */
-    @Override
+    @java.lang.Override
     public long getTimestamp() {
       return timestamp_;
     }
 
     public static final int TXT_FIELD_NUMBER = 2;
     @SuppressWarnings("serial")
-    private volatile Object txt_ = "";
+    private volatile java.lang.Object txt_ = "";
     /**
      * <code>string txt = 2;</code>
      * @return The txt.
      */
-    @Override
-    public String getTxt() {
-      Object ref = txt_;
-      if (ref instanceof String) {
-        return (String) ref;
+    @java.lang.Override
+    public java.lang.String getTxt() {
+      java.lang.Object ref = txt_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
       } else {
-        ByteString bs = 
-            (ByteString) ref;
-        String s = bs.toStringUtf8();
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
         txt_ = s;
         return s;
       }
@@ -194,37 +173,37 @@ public final class CustomEventOuter extends GeneratedFile {
      * <code>string txt = 2;</code>
      * @return The bytes for txt.
      */
-    @Override
-    public ByteString
+    @java.lang.Override
+    public com.google.protobuf.ByteString
         getTxtBytes() {
-      Object ref = txt_;
-      if (ref instanceof String) {
-        ByteString b = 
-            ByteString.copyFromUtf8(
-                (String) ref);
+      java.lang.Object ref = txt_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         txt_ = b;
         return b;
       } else {
-        return (ByteString) ref;
+        return (com.google.protobuf.ByteString) ref;
       }
     }
 
     public static final int UNIT_FIELD_NUMBER = 3;
     @SuppressWarnings("serial")
-    private volatile Object unit_ = "";
+    private volatile java.lang.Object unit_ = "";
     /**
      * <code>string unit = 3;</code>
      * @return The unit.
      */
-    @Override
-    public String getUnit() {
-      Object ref = unit_;
-      if (ref instanceof String) {
-        return (String) ref;
+    @java.lang.Override
+    public java.lang.String getUnit() {
+      java.lang.Object ref = unit_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
       } else {
-        ByteString bs = 
-            (ByteString) ref;
-        String s = bs.toStringUtf8();
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
         unit_ = s;
         return s;
       }
@@ -233,37 +212,37 @@ public final class CustomEventOuter extends GeneratedFile {
      * <code>string unit = 3;</code>
      * @return The bytes for unit.
      */
-    @Override
-    public ByteString
+    @java.lang.Override
+    public com.google.protobuf.ByteString
         getUnitBytes() {
-      Object ref = unit_;
-      if (ref instanceof String) {
-        ByteString b = 
-            ByteString.copyFromUtf8(
-                (String) ref);
+      java.lang.Object ref = unit_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         unit_ = b;
         return b;
       } else {
-        return (ByteString) ref;
+        return (com.google.protobuf.ByteString) ref;
       }
     }
 
     public static final int EXTERNALIDTYPE_FIELD_NUMBER = 4;
     @SuppressWarnings("serial")
-    private volatile Object externalIdType_ = "";
+    private volatile java.lang.Object externalIdType_ = "";
     /**
      * <code>string externalIdType = 4;</code>
      * @return The externalIdType.
      */
-    @Override
-    public String getExternalIdType() {
-      Object ref = externalIdType_;
-      if (ref instanceof String) {
-        return (String) ref;
+    @java.lang.Override
+    public java.lang.String getExternalIdType() {
+      java.lang.Object ref = externalIdType_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
       } else {
-        ByteString bs = 
-            (ByteString) ref;
-        String s = bs.toStringUtf8();
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
         externalIdType_ = s;
         return s;
       }
@@ -272,37 +251,37 @@ public final class CustomEventOuter extends GeneratedFile {
      * <code>string externalIdType = 4;</code>
      * @return The bytes for externalIdType.
      */
-    @Override
-    public ByteString
+    @java.lang.Override
+    public com.google.protobuf.ByteString
         getExternalIdTypeBytes() {
-      Object ref = externalIdType_;
-      if (ref instanceof String) {
-        ByteString b = 
-            ByteString.copyFromUtf8(
-                (String) ref);
+      java.lang.Object ref = externalIdType_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         externalIdType_ = b;
         return b;
       } else {
-        return (ByteString) ref;
+        return (com.google.protobuf.ByteString) ref;
       }
     }
 
     public static final int EXTERNALID_FIELD_NUMBER = 5;
     @SuppressWarnings("serial")
-    private volatile Object externalId_ = "";
+    private volatile java.lang.Object externalId_ = "";
     /**
      * <code>string externalId = 5;</code>
      * @return The externalId.
      */
-    @Override
-    public String getExternalId() {
-      Object ref = externalId_;
-      if (ref instanceof String) {
-        return (String) ref;
+    @java.lang.Override
+    public java.lang.String getExternalId() {
+      java.lang.Object ref = externalId_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
       } else {
-        ByteString bs = 
-            (ByteString) ref;
-        String s = bs.toStringUtf8();
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
         externalId_ = s;
         return s;
       }
@@ -311,37 +290,37 @@ public final class CustomEventOuter extends GeneratedFile {
      * <code>string externalId = 5;</code>
      * @return The bytes for externalId.
      */
-    @Override
-    public ByteString
+    @java.lang.Override
+    public com.google.protobuf.ByteString
         getExternalIdBytes() {
-      Object ref = externalId_;
-      if (ref instanceof String) {
-        ByteString b = 
-            ByteString.copyFromUtf8(
-                (String) ref);
+      java.lang.Object ref = externalId_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         externalId_ = b;
         return b;
       } else {
-        return (ByteString) ref;
+        return (com.google.protobuf.ByteString) ref;
       }
     }
 
     public static final int EVENTTYPE_FIELD_NUMBER = 6;
     @SuppressWarnings("serial")
-    private volatile Object eventType_ = "";
+    private volatile java.lang.Object eventType_ = "";
     /**
      * <code>string eventType = 6;</code>
      * @return The eventType.
      */
-    @Override
-    public String getEventType() {
-      Object ref = eventType_;
-      if (ref instanceof String) {
-        return (String) ref;
+    @java.lang.Override
+    public java.lang.String getEventType() {
+      java.lang.Object ref = eventType_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
       } else {
-        ByteString bs = 
-            (ByteString) ref;
-        String s = bs.toStringUtf8();
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
         eventType_ = s;
         return s;
       }
@@ -350,23 +329,23 @@ public final class CustomEventOuter extends GeneratedFile {
      * <code>string eventType = 6;</code>
      * @return The bytes for eventType.
      */
-    @Override
-    public ByteString
+    @java.lang.Override
+    public com.google.protobuf.ByteString
         getEventTypeBytes() {
-      Object ref = eventType_;
-      if (ref instanceof String) {
-        ByteString b = 
-            ByteString.copyFromUtf8(
-                (String) ref);
+      java.lang.Object ref = eventType_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         eventType_ = b;
         return b;
       } else {
-        return (ByteString) ref;
+        return (com.google.protobuf.ByteString) ref;
       }
     }
 
     private byte memoizedIsInitialized = -1;
-    @Override
+    @java.lang.Override
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized == 1) return true;
@@ -376,62 +355,62 @@ public final class CustomEventOuter extends GeneratedFile {
       return true;
     }
 
-    @Override
-    public void writeTo(CodedOutputStream output)
-                        throws IOException {
+    @java.lang.Override
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
       if (timestamp_ != 0L) {
         output.writeInt64(1, timestamp_);
       }
-      if (!GeneratedMessage.isStringEmpty(txt_)) {
-        GeneratedMessage.writeString(output, 2, txt_);
+      if (!com.google.protobuf.GeneratedMessage.isStringEmpty(txt_)) {
+        com.google.protobuf.GeneratedMessage.writeString(output, 2, txt_);
       }
-      if (!GeneratedMessage.isStringEmpty(unit_)) {
-        GeneratedMessage.writeString(output, 3, unit_);
+      if (!com.google.protobuf.GeneratedMessage.isStringEmpty(unit_)) {
+        com.google.protobuf.GeneratedMessage.writeString(output, 3, unit_);
       }
-      if (!GeneratedMessage.isStringEmpty(externalIdType_)) {
-        GeneratedMessage.writeString(output, 4, externalIdType_);
+      if (!com.google.protobuf.GeneratedMessage.isStringEmpty(externalIdType_)) {
+        com.google.protobuf.GeneratedMessage.writeString(output, 4, externalIdType_);
       }
-      if (!GeneratedMessage.isStringEmpty(externalId_)) {
-        GeneratedMessage.writeString(output, 5, externalId_);
+      if (!com.google.protobuf.GeneratedMessage.isStringEmpty(externalId_)) {
+        com.google.protobuf.GeneratedMessage.writeString(output, 5, externalId_);
       }
-      if (!GeneratedMessage.isStringEmpty(eventType_)) {
-        GeneratedMessage.writeString(output, 6, eventType_);
+      if (!com.google.protobuf.GeneratedMessage.isStringEmpty(eventType_)) {
+        com.google.protobuf.GeneratedMessage.writeString(output, 6, eventType_);
       }
       getUnknownFields().writeTo(output);
     }
 
-    @Override
+    @java.lang.Override
     public int getSerializedSize() {
       int size = memoizedSize;
       if (size != -1) return size;
 
       size = 0;
       if (timestamp_ != 0L) {
-        size += CodedOutputStream
+        size += com.google.protobuf.CodedOutputStream
           .computeInt64Size(1, timestamp_);
       }
-      if (!GeneratedMessage.isStringEmpty(txt_)) {
-        size += GeneratedMessage.computeStringSize(2, txt_);
+      if (!com.google.protobuf.GeneratedMessage.isStringEmpty(txt_)) {
+        size += com.google.protobuf.GeneratedMessage.computeStringSize(2, txt_);
       }
-      if (!GeneratedMessage.isStringEmpty(unit_)) {
-        size += GeneratedMessage.computeStringSize(3, unit_);
+      if (!com.google.protobuf.GeneratedMessage.isStringEmpty(unit_)) {
+        size += com.google.protobuf.GeneratedMessage.computeStringSize(3, unit_);
       }
-      if (!GeneratedMessage.isStringEmpty(externalIdType_)) {
-        size += GeneratedMessage.computeStringSize(4, externalIdType_);
+      if (!com.google.protobuf.GeneratedMessage.isStringEmpty(externalIdType_)) {
+        size += com.google.protobuf.GeneratedMessage.computeStringSize(4, externalIdType_);
       }
-      if (!GeneratedMessage.isStringEmpty(externalId_)) {
-        size += GeneratedMessage.computeStringSize(5, externalId_);
+      if (!com.google.protobuf.GeneratedMessage.isStringEmpty(externalId_)) {
+        size += com.google.protobuf.GeneratedMessage.computeStringSize(5, externalId_);
       }
-      if (!GeneratedMessage.isStringEmpty(eventType_)) {
-        size += GeneratedMessage.computeStringSize(6, eventType_);
+      if (!com.google.protobuf.GeneratedMessage.isStringEmpty(eventType_)) {
+        size += com.google.protobuf.GeneratedMessage.computeStringSize(6, eventType_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSize = size;
       return size;
     }
 
-    @Override
-    public boolean equals(final Object obj) {
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -456,7 +435,7 @@ public final class CustomEventOuter extends GeneratedFile {
       return true;
     }
 
-    @Override
+    @java.lang.Override
     public int hashCode() {
       if (memoizedHashCode != 0) {
         return memoizedHashCode;
@@ -464,7 +443,7 @@ public final class CustomEventOuter extends GeneratedFile {
       int hash = 41;
       hash = (19 * hash) + getDescriptor().hashCode();
       hash = (37 * hash) + TIMESTAMP_FIELD_NUMBER;
-      hash = (53 * hash) + Internal.hashLong(
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
           getTimestamp());
       hash = (37 * hash) + TXT_FIELD_NUMBER;
       hash = (53 * hash) + getTxt().hashCode();
@@ -482,78 +461,78 @@ public final class CustomEventOuter extends GeneratedFile {
     }
 
     public static dynamic.mapper.processor.extension.external.inbound.CustomEventOuter.CustomEvent parseFrom(
-        ByteBuffer data)
-        throws InvalidProtocolBufferException {
+        java.nio.ByteBuffer data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
     public static dynamic.mapper.processor.extension.external.inbound.CustomEventOuter.CustomEvent parseFrom(
-        ByteBuffer data,
-        ExtensionRegistryLite extensionRegistry)
-        throws InvalidProtocolBufferException {
+        java.nio.ByteBuffer data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
     public static dynamic.mapper.processor.extension.external.inbound.CustomEventOuter.CustomEvent parseFrom(
-        ByteString data)
-        throws InvalidProtocolBufferException {
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
     public static dynamic.mapper.processor.extension.external.inbound.CustomEventOuter.CustomEvent parseFrom(
-        ByteString data,
-        ExtensionRegistryLite extensionRegistry)
-        throws InvalidProtocolBufferException {
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
     public static dynamic.mapper.processor.extension.external.inbound.CustomEventOuter.CustomEvent parseFrom(byte[] data)
-        throws InvalidProtocolBufferException {
+        throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
     public static dynamic.mapper.processor.extension.external.inbound.CustomEventOuter.CustomEvent parseFrom(
         byte[] data,
-        ExtensionRegistryLite extensionRegistry)
-        throws InvalidProtocolBufferException {
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-    public static dynamic.mapper.processor.extension.external.inbound.CustomEventOuter.CustomEvent parseFrom(InputStream input)
-        throws IOException {
-      return GeneratedMessage
+    public static dynamic.mapper.processor.extension.external.inbound.CustomEventOuter.CustomEvent parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessage
           .parseWithIOException(PARSER, input);
     }
     public static dynamic.mapper.processor.extension.external.inbound.CustomEventOuter.CustomEvent parseFrom(
-        InputStream input,
-        ExtensionRegistryLite extensionRegistry)
-        throws IOException {
-      return GeneratedMessage
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessage
           .parseWithIOException(PARSER, input, extensionRegistry);
     }
 
-    public static dynamic.mapper.processor.extension.external.inbound.CustomEventOuter.CustomEvent parseDelimitedFrom(InputStream input)
-        throws IOException {
-      return GeneratedMessage
+    public static dynamic.mapper.processor.extension.external.inbound.CustomEventOuter.CustomEvent parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessage
           .parseDelimitedWithIOException(PARSER, input);
     }
 
     public static dynamic.mapper.processor.extension.external.inbound.CustomEventOuter.CustomEvent parseDelimitedFrom(
-        InputStream input,
-        ExtensionRegistryLite extensionRegistry)
-        throws IOException {
-      return GeneratedMessage
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessage
           .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
     }
     public static dynamic.mapper.processor.extension.external.inbound.CustomEventOuter.CustomEvent parseFrom(
-        CodedInputStream input)
-        throws IOException {
-      return GeneratedMessage
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessage
           .parseWithIOException(PARSER, input);
     }
     public static dynamic.mapper.processor.extension.external.inbound.CustomEventOuter.CustomEvent parseFrom(
-        CodedInputStream input,
-        ExtensionRegistryLite extensionRegistry)
-        throws IOException {
-      return GeneratedMessage
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessage
           .parseWithIOException(PARSER, input, extensionRegistry);
     }
 
-    @Override
+    @java.lang.Override
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder() {
       return DEFAULT_INSTANCE.toBuilder();
@@ -561,15 +540,15 @@ public final class CustomEventOuter extends GeneratedFile {
     public static Builder newBuilder(dynamic.mapper.processor.extension.external.inbound.CustomEventOuter.CustomEvent prototype) {
       return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
     }
-    @Override
+    @java.lang.Override
     public Builder toBuilder() {
       return this == DEFAULT_INSTANCE
           ? new Builder() : new Builder().mergeFrom(this);
     }
 
-    @Override
+    @java.lang.Override
     protected Builder newBuilderForType(
-        GeneratedMessage.BuilderParent parent) {
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
@@ -577,16 +556,16 @@ public final class CustomEventOuter extends GeneratedFile {
      * Protobuf type {@code processor.protobuf.CustomEvent}
      */
     public static final class Builder extends
-        GeneratedMessage.Builder<Builder> implements
+        com.google.protobuf.GeneratedMessage.Builder<Builder> implements
         // @@protoc_insertion_point(builder_implements:processor.protobuf.CustomEvent)
         dynamic.mapper.processor.extension.external.inbound.CustomEventOuter.CustomEventOrBuilder {
-      public static final Descriptors.Descriptor
+      public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
         return dynamic.mapper.processor.extension.external.inbound.CustomEventOuter.internal_static_processor_protobuf_CustomEvent_descriptor;
       }
 
-      @Override
-      protected GeneratedMessage.FieldAccessorTable
+      @java.lang.Override
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
         return dynamic.mapper.processor.extension.external.inbound.CustomEventOuter.internal_static_processor_protobuf_CustomEvent_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
@@ -599,11 +578,11 @@ public final class CustomEventOuter extends GeneratedFile {
       }
 
       private Builder(
-          GeneratedMessage.BuilderParent parent) {
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
 
       }
-      @Override
+      @java.lang.Override
       public Builder clear() {
         super.clear();
         bitField0_ = 0;
@@ -616,18 +595,18 @@ public final class CustomEventOuter extends GeneratedFile {
         return this;
       }
 
-      @Override
-      public Descriptors.Descriptor
+      @java.lang.Override
+      public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
         return dynamic.mapper.processor.extension.external.inbound.CustomEventOuter.internal_static_processor_protobuf_CustomEvent_descriptor;
       }
 
-      @Override
+      @java.lang.Override
       public dynamic.mapper.processor.extension.external.inbound.CustomEventOuter.CustomEvent getDefaultInstanceForType() {
         return dynamic.mapper.processor.extension.external.inbound.CustomEventOuter.CustomEvent.getDefaultInstance();
       }
 
-      @Override
+      @java.lang.Override
       public dynamic.mapper.processor.extension.external.inbound.CustomEventOuter.CustomEvent build() {
         dynamic.mapper.processor.extension.external.inbound.CustomEventOuter.CustomEvent result = buildPartial();
         if (!result.isInitialized()) {
@@ -636,7 +615,7 @@ public final class CustomEventOuter extends GeneratedFile {
         return result;
       }
 
-      @Override
+      @java.lang.Override
       public dynamic.mapper.processor.extension.external.inbound.CustomEventOuter.CustomEvent buildPartial() {
         dynamic.mapper.processor.extension.external.inbound.CustomEventOuter.CustomEvent result = new dynamic.mapper.processor.extension.external.inbound.CustomEventOuter.CustomEvent(this);
         if (bitField0_ != 0) { buildPartial0(result); }
@@ -666,8 +645,8 @@ public final class CustomEventOuter extends GeneratedFile {
         }
       }
 
-      @Override
-      public Builder mergeFrom(Message other) {
+      @java.lang.Override
+      public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof dynamic.mapper.processor.extension.external.inbound.CustomEventOuter.CustomEvent) {
           return mergeFrom((dynamic.mapper.processor.extension.external.inbound.CustomEventOuter.CustomEvent)other);
         } else {
@@ -711,18 +690,18 @@ public final class CustomEventOuter extends GeneratedFile {
         return this;
       }
 
-      @Override
+      @java.lang.Override
       public final boolean isInitialized() {
         return true;
       }
 
-      @Override
+      @java.lang.Override
       public Builder mergeFrom(
-          CodedInputStream input,
-          ExtensionRegistryLite extensionRegistry)
-          throws IOException {
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
         if (extensionRegistry == null) {
-          throw new NullPointerException();
+          throw new java.lang.NullPointerException();
         }
         try {
           boolean done = false;
@@ -770,7 +749,7 @@ public final class CustomEventOuter extends GeneratedFile {
               } // default:
             } // switch (tag)
           } // while (!done)
-        } catch (InvalidProtocolBufferException e) {
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
           throw e.unwrapIOException();
         } finally {
           onChanged();
@@ -784,7 +763,7 @@ public final class CustomEventOuter extends GeneratedFile {
        * <code>int64 timestamp = 1;</code>
        * @return The timestamp.
        */
-      @Override
+      @java.lang.Override
       public long getTimestamp() {
         return timestamp_;
       }
@@ -811,38 +790,38 @@ public final class CustomEventOuter extends GeneratedFile {
         return this;
       }
 
-      private Object txt_ = "";
+      private java.lang.Object txt_ = "";
       /**
        * <code>string txt = 2;</code>
        * @return The txt.
        */
-      public String getTxt() {
-        Object ref = txt_;
-        if (!(ref instanceof String)) {
-          ByteString bs =
-              (ByteString) ref;
-          String s = bs.toStringUtf8();
+      public java.lang.String getTxt() {
+        java.lang.Object ref = txt_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
           txt_ = s;
           return s;
         } else {
-          return (String) ref;
+          return (java.lang.String) ref;
         }
       }
       /**
        * <code>string txt = 2;</code>
        * @return The bytes for txt.
        */
-      public ByteString
+      public com.google.protobuf.ByteString
           getTxtBytes() {
-        Object ref = txt_;
+        java.lang.Object ref = txt_;
         if (ref instanceof String) {
-          ByteString b = 
-              ByteString.copyFromUtf8(
-                  (String) ref);
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
           txt_ = b;
           return b;
         } else {
-          return (ByteString) ref;
+          return (com.google.protobuf.ByteString) ref;
         }
       }
       /**
@@ -851,7 +830,7 @@ public final class CustomEventOuter extends GeneratedFile {
        * @return This builder for chaining.
        */
       public Builder setTxt(
-          String value) {
+          java.lang.String value) {
         if (value == null) { throw new NullPointerException(); }
         txt_ = value;
         bitField0_ |= 0x00000002;
@@ -874,7 +853,7 @@ public final class CustomEventOuter extends GeneratedFile {
        * @return This builder for chaining.
        */
       public Builder setTxtBytes(
-          ByteString value) {
+          com.google.protobuf.ByteString value) {
         if (value == null) { throw new NullPointerException(); }
         checkByteStringIsUtf8(value);
         txt_ = value;
@@ -883,38 +862,38 @@ public final class CustomEventOuter extends GeneratedFile {
         return this;
       }
 
-      private Object unit_ = "";
+      private java.lang.Object unit_ = "";
       /**
        * <code>string unit = 3;</code>
        * @return The unit.
        */
-      public String getUnit() {
-        Object ref = unit_;
-        if (!(ref instanceof String)) {
-          ByteString bs =
-              (ByteString) ref;
-          String s = bs.toStringUtf8();
+      public java.lang.String getUnit() {
+        java.lang.Object ref = unit_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
           unit_ = s;
           return s;
         } else {
-          return (String) ref;
+          return (java.lang.String) ref;
         }
       }
       /**
        * <code>string unit = 3;</code>
        * @return The bytes for unit.
        */
-      public ByteString
+      public com.google.protobuf.ByteString
           getUnitBytes() {
-        Object ref = unit_;
+        java.lang.Object ref = unit_;
         if (ref instanceof String) {
-          ByteString b = 
-              ByteString.copyFromUtf8(
-                  (String) ref);
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
           unit_ = b;
           return b;
         } else {
-          return (ByteString) ref;
+          return (com.google.protobuf.ByteString) ref;
         }
       }
       /**
@@ -923,7 +902,7 @@ public final class CustomEventOuter extends GeneratedFile {
        * @return This builder for chaining.
        */
       public Builder setUnit(
-          String value) {
+          java.lang.String value) {
         if (value == null) { throw new NullPointerException(); }
         unit_ = value;
         bitField0_ |= 0x00000004;
@@ -946,7 +925,7 @@ public final class CustomEventOuter extends GeneratedFile {
        * @return This builder for chaining.
        */
       public Builder setUnitBytes(
-          ByteString value) {
+          com.google.protobuf.ByteString value) {
         if (value == null) { throw new NullPointerException(); }
         checkByteStringIsUtf8(value);
         unit_ = value;
@@ -955,38 +934,38 @@ public final class CustomEventOuter extends GeneratedFile {
         return this;
       }
 
-      private Object externalIdType_ = "";
+      private java.lang.Object externalIdType_ = "";
       /**
        * <code>string externalIdType = 4;</code>
        * @return The externalIdType.
        */
-      public String getExternalIdType() {
-        Object ref = externalIdType_;
-        if (!(ref instanceof String)) {
-          ByteString bs =
-              (ByteString) ref;
-          String s = bs.toStringUtf8();
+      public java.lang.String getExternalIdType() {
+        java.lang.Object ref = externalIdType_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
           externalIdType_ = s;
           return s;
         } else {
-          return (String) ref;
+          return (java.lang.String) ref;
         }
       }
       /**
        * <code>string externalIdType = 4;</code>
        * @return The bytes for externalIdType.
        */
-      public ByteString
+      public com.google.protobuf.ByteString
           getExternalIdTypeBytes() {
-        Object ref = externalIdType_;
+        java.lang.Object ref = externalIdType_;
         if (ref instanceof String) {
-          ByteString b = 
-              ByteString.copyFromUtf8(
-                  (String) ref);
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
           externalIdType_ = b;
           return b;
         } else {
-          return (ByteString) ref;
+          return (com.google.protobuf.ByteString) ref;
         }
       }
       /**
@@ -995,7 +974,7 @@ public final class CustomEventOuter extends GeneratedFile {
        * @return This builder for chaining.
        */
       public Builder setExternalIdType(
-          String value) {
+          java.lang.String value) {
         if (value == null) { throw new NullPointerException(); }
         externalIdType_ = value;
         bitField0_ |= 0x00000008;
@@ -1018,7 +997,7 @@ public final class CustomEventOuter extends GeneratedFile {
        * @return This builder for chaining.
        */
       public Builder setExternalIdTypeBytes(
-          ByteString value) {
+          com.google.protobuf.ByteString value) {
         if (value == null) { throw new NullPointerException(); }
         checkByteStringIsUtf8(value);
         externalIdType_ = value;
@@ -1027,38 +1006,38 @@ public final class CustomEventOuter extends GeneratedFile {
         return this;
       }
 
-      private Object externalId_ = "";
+      private java.lang.Object externalId_ = "";
       /**
        * <code>string externalId = 5;</code>
        * @return The externalId.
        */
-      public String getExternalId() {
-        Object ref = externalId_;
-        if (!(ref instanceof String)) {
-          ByteString bs =
-              (ByteString) ref;
-          String s = bs.toStringUtf8();
+      public java.lang.String getExternalId() {
+        java.lang.Object ref = externalId_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
           externalId_ = s;
           return s;
         } else {
-          return (String) ref;
+          return (java.lang.String) ref;
         }
       }
       /**
        * <code>string externalId = 5;</code>
        * @return The bytes for externalId.
        */
-      public ByteString
+      public com.google.protobuf.ByteString
           getExternalIdBytes() {
-        Object ref = externalId_;
+        java.lang.Object ref = externalId_;
         if (ref instanceof String) {
-          ByteString b = 
-              ByteString.copyFromUtf8(
-                  (String) ref);
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
           externalId_ = b;
           return b;
         } else {
-          return (ByteString) ref;
+          return (com.google.protobuf.ByteString) ref;
         }
       }
       /**
@@ -1067,7 +1046,7 @@ public final class CustomEventOuter extends GeneratedFile {
        * @return This builder for chaining.
        */
       public Builder setExternalId(
-          String value) {
+          java.lang.String value) {
         if (value == null) { throw new NullPointerException(); }
         externalId_ = value;
         bitField0_ |= 0x00000010;
@@ -1090,7 +1069,7 @@ public final class CustomEventOuter extends GeneratedFile {
        * @return This builder for chaining.
        */
       public Builder setExternalIdBytes(
-          ByteString value) {
+          com.google.protobuf.ByteString value) {
         if (value == null) { throw new NullPointerException(); }
         checkByteStringIsUtf8(value);
         externalId_ = value;
@@ -1099,38 +1078,38 @@ public final class CustomEventOuter extends GeneratedFile {
         return this;
       }
 
-      private Object eventType_ = "";
+      private java.lang.Object eventType_ = "";
       /**
        * <code>string eventType = 6;</code>
        * @return The eventType.
        */
-      public String getEventType() {
-        Object ref = eventType_;
-        if (!(ref instanceof String)) {
-          ByteString bs =
-              (ByteString) ref;
-          String s = bs.toStringUtf8();
+      public java.lang.String getEventType() {
+        java.lang.Object ref = eventType_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
           eventType_ = s;
           return s;
         } else {
-          return (String) ref;
+          return (java.lang.String) ref;
         }
       }
       /**
        * <code>string eventType = 6;</code>
        * @return The bytes for eventType.
        */
-      public ByteString
+      public com.google.protobuf.ByteString
           getEventTypeBytes() {
-        Object ref = eventType_;
+        java.lang.Object ref = eventType_;
         if (ref instanceof String) {
-          ByteString b = 
-              ByteString.copyFromUtf8(
-                  (String) ref);
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
           eventType_ = b;
           return b;
         } else {
-          return (ByteString) ref;
+          return (com.google.protobuf.ByteString) ref;
         }
       }
       /**
@@ -1139,7 +1118,7 @@ public final class CustomEventOuter extends GeneratedFile {
        * @return This builder for chaining.
        */
       public Builder setEventType(
-          String value) {
+          java.lang.String value) {
         if (value == null) { throw new NullPointerException(); }
         eventType_ = value;
         bitField0_ |= 0x00000020;
@@ -1162,7 +1141,7 @@ public final class CustomEventOuter extends GeneratedFile {
        * @return This builder for chaining.
        */
       public Builder setEventTypeBytes(
-          ByteString value) {
+          com.google.protobuf.ByteString value) {
         if (value == null) { throw new NullPointerException(); }
         checkByteStringIsUtf8(value);
         eventType_ = value;
@@ -1184,58 +1163,58 @@ public final class CustomEventOuter extends GeneratedFile {
       return DEFAULT_INSTANCE;
     }
 
-    private static final Parser<CustomEvent>
-        PARSER = new AbstractParser<CustomEvent>() {
-      @Override
+    private static final com.google.protobuf.Parser<CustomEvent>
+        PARSER = new com.google.protobuf.AbstractParser<CustomEvent>() {
+      @java.lang.Override
       public CustomEvent parsePartialFrom(
-          CodedInputStream input,
-          ExtensionRegistryLite extensionRegistry)
-          throws InvalidProtocolBufferException {
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
         Builder builder = newBuilder();
         try {
           builder.mergeFrom(input, extensionRegistry);
-        } catch (InvalidProtocolBufferException e) {
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
           throw e.setUnfinishedMessage(builder.buildPartial());
-        } catch (UninitializedMessageException e) {
+        } catch (com.google.protobuf.UninitializedMessageException e) {
           throw e.asInvalidProtocolBufferException().setUnfinishedMessage(builder.buildPartial());
-        } catch (IOException e) {
-          throw new InvalidProtocolBufferException(e)
+        } catch (java.io.IOException e) {
+          throw new com.google.protobuf.InvalidProtocolBufferException(e)
               .setUnfinishedMessage(builder.buildPartial());
         }
         return builder.buildPartial();
       }
     };
 
-    public static Parser<CustomEvent> parser() {
+    public static com.google.protobuf.Parser<CustomEvent> parser() {
       return PARSER;
     }
 
-    @Override
-    public Parser<CustomEvent> getParserForType() {
+    @java.lang.Override
+    public com.google.protobuf.Parser<CustomEvent> getParserForType() {
       return PARSER;
     }
 
-    @Override
+    @java.lang.Override
     public dynamic.mapper.processor.extension.external.inbound.CustomEventOuter.CustomEvent getDefaultInstanceForType() {
       return DEFAULT_INSTANCE;
     }
 
   }
 
-  private static final Descriptors.Descriptor
+  private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_processor_protobuf_CustomEvent_descriptor;
   private static final 
-    GeneratedMessage.FieldAccessorTable
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_processor_protobuf_CustomEvent_fieldAccessorTable;
 
-  public static Descriptors.FileDescriptor
+  public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
     return descriptor;
   }
-  private static  Descriptors.FileDescriptor
+  private static  com.google.protobuf.Descriptors.FileDescriptor
       descriptor;
   static {
-    String[] descriptorData = {
+    java.lang.String[] descriptorData = {
       "\n\021CustomEvent.proto\022\022processor.protobuf\"" +
       "z\n\013CustomEvent\022\021\n\ttimestamp\030\001 \001(\003\022\013\n\003txt" +
       "\030\002 \001(\t\022\014\n\004unit\030\003 \001(\t\022\026\n\016externalIdType\030\004" +
@@ -1244,16 +1223,16 @@ public final class CustomEventOuter extends GeneratedFile {
       "n.external.inboundB\020CustomEventOuterb\006pr" +
       "oto3"
     };
-    descriptor = Descriptors.FileDescriptor
+    descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
-        new Descriptors.FileDescriptor[] {
+        new com.google.protobuf.Descriptors.FileDescriptor[] {
         });
     internal_static_processor_protobuf_CustomEvent_descriptor =
       getDescriptor().getMessageType(0);
     internal_static_processor_protobuf_CustomEvent_fieldAccessorTable = new
-      GeneratedMessage.FieldAccessorTable(
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_processor_protobuf_CustomEvent_descriptor,
-        new String[] { "Timestamp", "Txt", "Unit", "ExternalIdType", "ExternalId", "EventType", });
+        new java.lang.String[] { "Timestamp", "Txt", "Unit", "ExternalIdType", "ExternalId", "EventType", });
     descriptor.resolveAllFeaturesImmutable();
   }
 

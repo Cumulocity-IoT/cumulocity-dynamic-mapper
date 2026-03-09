@@ -131,7 +131,21 @@ public class ExtensibleInboundProcessor extends AbstractExtensibleProcessor {
         );
 
         // 3. Call new pattern method
-        CumulocityObject[] results = extension.onMessage(message, prepContext);
+        CumulocityObject[] results;
+        try {
+            results = extension.onMessage(message, prepContext);
+        } catch (AbstractMethodError e) {
+            String errorMsg = String.format(
+                "%s - Extension '%s' (class: %s) is incompatible with the current interface. " +
+                "The extension JAR was compiled against an older version of ProcessorExtensionInbound " +
+                "whose onMessage() signature has changed. " +
+                "Please recompile the extension against the current dynamic-mapper-service JAR and redeploy it.",
+                tenant,
+                extensionEntry.getEventName(),
+                extensionEntry.getFqnClassName());
+            log.error(errorMsg, e);
+            throw new ProcessingException(errorMsg, e);
+        }
 
         // 4. Store results in context for processing by ExtensibleResultInboundProcessor
         if (results != null && results.length > 0) {
