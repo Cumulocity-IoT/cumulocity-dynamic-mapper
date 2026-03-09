@@ -75,7 +75,7 @@ public class ProcessorExtensionSparkplugBMeasurement implements ProcessorExtensi
                     CumulocityObject event = CumulocityObject.event()
                             .type("SparkplugMetrics")
                             .time(new DateTime(metric.getTimestamp()))
-                            .text("Received non-numeric metric value for metric %s, value: %s".formatted(metric.getName(), getMetricValue(metric)))
+                            .text("Received non-numeric metric value for metric %s, value: %s".formatted(metricName, getMetricValue(metric)))
                             .property(metricName, getMetricValue(metric))
                             .externalId(deviceMetaData.deviceId(), externalIdType)
                             .build();
