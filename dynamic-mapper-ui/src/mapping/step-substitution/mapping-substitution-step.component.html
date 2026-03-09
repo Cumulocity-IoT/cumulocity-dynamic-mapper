@@ -1,5 +1,5 @@
 <!-- mapping-substitution-step.component.html -->
-<div class="inner-scroll">
+<div [class]="stepperConfiguration.showCodeEditor ? 'fit-h d-col' : 'inner-scroll'">
   @if (!(stepperConfiguration.showCodeEditor)) {
   <div class="card-block p-b-0">
     <!-- Template Editors Section -->

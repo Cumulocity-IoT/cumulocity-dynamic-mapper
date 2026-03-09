@@ -429,10 +429,12 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       extensionName: new FormControl({
         value: this.mapping?.extension?.extensionName,
         disabled: this.stepperConfiguration.editorMode === EditorMode.READ_ONLY
+             || !this.stepperViewModel.showExtensionSelectors
       }, Validators.required),
       eventName: new FormControl({
         value: this.mapping?.extension?.eventName,
         disabled: this.stepperConfiguration.editorMode === EditorMode.READ_ONLY
+             || !this.stepperViewModel.showExtensionSelectors
       }, Validators.required),
       snoopedTemplateIndex: new FormControl({
         value: '-1',
