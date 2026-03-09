@@ -50,19 +50,40 @@ public class ProcessorExtensionSparkplugBMeasurement implements ProcessorExtensi
                     new DateTime(payloadProtobuf.getTimestamp()));
 
             String externalIdType = context.getMapping().getExternalIdType();
-            ArrayList<CumulocityObject> cumulocityMeasurements = new ArrayList<>();
+            ArrayList<CumulocityObject> cumulocityMessages= new ArrayList<>();
 
             for (SparkplugBProto.Payload.Metric metric : payloadProtobuf.getMetricsList()) {
-                CumulocityObject measurement = CumulocityObject.measurement()
-                        .type("metrics")
-                        .time(new DateTime(metric.getTimestamp()))
-                        .fragment(metric.getName(), "T", getMetricValue(metric), getMetricUnit(metric))
-                        .externalId(deviceMetaData.deviceId(), externalIdType)
-                        .build();
-                cumulocityMeasurements.add(measurement);
+                //Ignore Null values
+                if(metric.getIsNull())
+                    continue;
+                //For C8Y only numeric values are allowed in measurements, so we validate and convert the metric value accordingly
+                Number numberMetric = validateMetricValueForMeasurement(getMetricValue(metric));
+                if(numberMetric != null) {
+                    CumulocityObject measurement = CumulocityObject.measurement()
+                            .type("SparkplugMetrics")
+                            .time(new DateTime(metric.getTimestamp()))
+                            //There is no data on series in sparkplug b, so we use the metric name as fragment and a fixed value for series here "T"
+                            //There is no unit of measure information in sparkplug b, so we ignore it with null
+                            .fragment(metric.getName(), "T", numberMetric, null)
+                            .externalId(deviceMetaData.deviceId(), externalIdType)
+                            .build();
+                    cumulocityMessages.add(measurement);
+                } else {
+                    //For non-numeric values we create events instead of measurements, so that the data is not lost but can still be used in C8Y
+                    CumulocityObject event = CumulocityObject.event()
+                            .type("SparkplugMetrics")
+                            .time(new DateTime(metric.getTimestamp()))
+                            .text("Received non-numeric metric value for metric %s, value: %s".formatted(metric.getName(), getMetricValue(metric)))
+                            .property(metric.getName(), getMetricValue(metric))
+                            .externalId(deviceMetaData.deviceId(), externalIdType)
+                            .build();
+                    cumulocityMessages.add(event);
+
+                }
+
             }
 
-            return cumulocityMeasurements.toArray(new CumulocityObject[0]);
+            return cumulocityMessages.toArray(new CumulocityObject[0]);
 
         } catch (InvalidProtocolBufferException e) {
             String errorMsg = "Failed to parse protobuf event: " + e.getMessage();
@@ -95,6 +116,14 @@ public class ProcessorExtensionSparkplugBMeasurement implements ProcessorExtensi
         return new DeviceMetaData(splitTopic[4], splitTopic[1], splitTopic[2], splitTopic[3]);
     }
 
+    private Number validateMetricValueForMeasurement(Object metricValue) {
+        if (metricValue instanceof Number) {
+            return ((Number) metricValue).doubleValue();
+        } else {
+            return null;
+        }
+    }
+
     private Object getMetricValue(SparkplugBProto.Payload.Metric metric) {
         if (metric.hasBooleanValue()) {
             return metric.getBooleanValue();
@@ -110,7 +139,7 @@ public class ProcessorExtensionSparkplugBMeasurement implements ProcessorExtensi
             return metric.getStringValue();
         }
     }
-
+    //FIXME That's not a unit but a type which is not useful in C8Y
     private String getMetricUnit(SparkplugBProto.Payload.Metric metric) {
         if (metric.hasBooleanValue()) {
             return "bool";
