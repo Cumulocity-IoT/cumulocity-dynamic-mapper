@@ -2,7 +2,7 @@
 
 This project demonstrates how to write **type-safe Smart Functions** for the Cumulocity Dynamic Mapper using TypeScript, and how to compile them to JavaScript for deployment.
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [Overview](#overview)
 - [Project Structure](#project-structure)
@@ -13,7 +13,7 @@ This project demonstrates how to write **type-safe Smart Functions** for the Cum
 - [Development Workflow](#development-workflow)
 - [Deployment](#deployment)
 
-## 🎯 Overview
+## Overview
 
 This project provides:
 
@@ -34,7 +34,7 @@ This project provides:
 
 This project imports from that location to ensure types are always in sync. See [TYPE_MANAGEMENT.md](TYPE_MANAGEMENT.md) for details.
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 dynamic-mapper-smart-function/
@@ -60,7 +60,7 @@ dynamic-mapper-smart-function/
 └── README.md                           # This file
 ```
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -77,7 +77,7 @@ cd dynamic-mapper-smart-function
 npm install
 ```
 
-## 🔨 Building TypeScript to JavaScript
+## Building TypeScript to JavaScript
 
 ### Compile Once
 
@@ -130,7 +130,7 @@ After building, the compiled JavaScript files in `dist/examples/` can be used di
 
 2. **Or copy the content** and paste it into the Dynamic Mapper UI Smart Function editor.
 
-## 📚 Examples
+## Examples
 
 ### Example 1: Basic Inbound Smart Function
 
@@ -206,7 +206,7 @@ Demonstrates:
 - Custom device payload formats
 - Using Kafka transport fields
 
-## 🧪 Testing
+## Testing
 
 ### Run All Tests
 
@@ -247,7 +247,7 @@ describe('Inbound Basic Smart Function', () => {
 });
 ```
 
-## 💻 Development Workflow
+## Development Workflow
 
 ### 1. Write Smart Function in TypeScript
 
@@ -303,7 +303,7 @@ npm run build
 
 Copy the compiled JavaScript from `dist/examples/my-smart-function.js` to the Dynamic Mapper.
 
-## 📦 Deployment
+## Deployment
 
 ### Option 1: Copy Compiled JavaScript
 
@@ -342,7 +342,7 @@ npm install --save-dev webpack webpack-cli
 npm run bundle
 ```
 
-## 🎓 Learning Resources
+## Learning Resources
 
 ### TypeScript Benefits
 
@@ -417,11 +417,11 @@ Adjust TypeScript target in `tsconfig.json`:
 }
 ```
 
-## 📄 License
+## License
 
 Apache-2.0
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please:
 
@@ -429,7 +429,7 @@ Contributions are welcome! Please:
 2. Follow the existing code style
 3. Update documentation as needed
 
-## 📞 Support
+## Support
 
 For questions or issues:
 
@@ -438,5 +438,3 @@ For questions or issues:
 - Open an issue in the GitHub repository
 
 ---
-
-**Happy coding with TypeScript Smart Functions! 🚀**
