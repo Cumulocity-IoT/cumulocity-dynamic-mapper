@@ -2,7 +2,7 @@
 * can you compate the different typeScript APIs:
     * approach I , used in the project so far: /Users/ck/work/git/cumulocity-dynamic-mapper/dynamic-mapper-smart-function/src/types/smart-function-dynamic-mapper.types.ts
     * approach II, proposed by another team: https://matj-sag.github.io/c8y-smart/modules/dynamicmapper.html
-* The following document contains a result from a comparission with an earlier version from th eother team: attic/guides/IDP_COMPATIBILITY_PROPOSAL.md
+* The following document contains a result from a comparisons with an earlier version from th eother team: attic/guides/IDP_COMPATIBILITY_PROPOSAL.md
 
 ---
 
