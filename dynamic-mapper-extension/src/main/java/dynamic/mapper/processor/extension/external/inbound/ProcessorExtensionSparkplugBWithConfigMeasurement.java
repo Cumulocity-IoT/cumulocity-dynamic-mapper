@@ -16,9 +16,9 @@ import org.slf4j.LoggerFactory;
  * Sparkplug B measurement processor that reads fragment name and unit from
  * the extension configuration supplied via the mapping UI.
  *
- * <p>Expected configuration keys (nested under {@code units} in the YAML):
+ * <p>Expected configuration keys:
  * <ul>
- *   <li>{@code unit1} – unit string for numeric metrics (e.g. "V")</li>
+ *   <li>{@code units.unit1} – unit string for numeric metrics (e.g. "V")</li>
  *   <li>{@code fragment} – fragment / type name used in the C8Y measurement (e.g. "Energy")</li>
  * </ul>
  *
@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
  * units:
  *   unit1: V
  *   unit2: A
- *   fragment: Energy
+ * fragment: Energy
  * </pre>
  */
 public class ProcessorExtensionSparkplugBWithConfigMeasurement implements ProcessorExtensionInbound<byte[]> {
@@ -65,11 +65,11 @@ public class ProcessorExtensionSparkplugBWithConfigMeasurement implements Proces
                 if (units.get(CONFIG_KEY_UNIT1) instanceof String u) {
                     unit1 = u;
                 }
-                if (units.get(CONFIG_KEY_FRAGMENT) instanceof String f) {
-                    fragment = f;
-                }
             } else {
                 log.debug("{} - No 'units' configuration found, using defaults", context.getTenant());
+            }
+            if (config.get(CONFIG_KEY_FRAGMENT) instanceof String f) {
+                fragment = f;
             }
 
             log.debug("{} - Parsing protobuf message, payload size: {} bytes",

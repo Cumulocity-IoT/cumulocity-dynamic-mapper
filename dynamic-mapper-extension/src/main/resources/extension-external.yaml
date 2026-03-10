@@ -39,7 +39,7 @@ extensions:
       units:
         unit1: V
         unit2: A
-        fragment: Energy
+      fragment: Energy
     description: Custom measurement processor for Sparkplug B with configurable fragment and unit
     version: "1.0"
 

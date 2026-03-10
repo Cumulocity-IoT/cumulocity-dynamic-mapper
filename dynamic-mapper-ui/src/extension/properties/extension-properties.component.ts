@@ -20,6 +20,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { IManagedObject } from '@c8y/client';
+import * as jsYaml from 'js-yaml';
 
 import { CoreModule, PropertiesListItem } from '@c8y/ngx-components';
 import { NODE3, SharedModule } from '../../shared';
@@ -33,6 +34,7 @@ interface ExtensionEntry {
   extensionType: string;
   direction: string;
   loaded: boolean;
+  configuration?: Record<string, any>;
 }
 
 interface ExtensionWithEntries extends IManagedObject {
@@ -95,5 +97,16 @@ export class ExtensionPropertiesComponent implements OnInit {
     );
 
     return properties;
+  }
+
+  configurationToYaml(configuration: Record<string, any> | undefined): string {
+    if (!configuration) {
+      return '';
+    }
+    try {
+      return jsYaml.dump(configuration, { indent: 2 });
+    } catch {
+      return JSON.stringify(configuration, null, 2);
+    }
   }
 }

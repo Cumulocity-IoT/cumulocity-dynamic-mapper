@@ -38,7 +38,7 @@
       <div class="d-contents p-l-24 p-r-24">
         <c8y-list-group class="separator-top" role="list">
           @for (entry of extension['extensionEntries']; track entry; let i = $index) {
-          <c8y-li role="listitem" class="p-t-8 p-b-8" #li>
+          <c8y-li role="listitem" class="p-t-4" #li>
 
             <!-- <div class="d-flex">
               <div class="col-md-8"> -->
@@ -61,6 +61,13 @@
                 [properties]="getEntryProperties(entry)"
                 [emptyLabel]="'--'"
               ></c8y-properties-list>
+              @if (entry.configuration) {
+              <div class="p-t-8 p-b-8">
+                <label class="text-muted m-b-4" translate>Default Configuration (YAML)</label>
+                <textarea class="form-control" c8y-textarea-autoresize readonly="true"
+                  style="font-family: monospace; font-size: var(--c8y-font-size-small); line-height: var(--c8y-line-height-small);">{{ configurationToYaml(entry.configuration) }}</textarea>
+              </div>
+              }
             </c8y-list-item-collapse>
           </c8y-li>
           }
