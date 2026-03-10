@@ -2,7 +2,7 @@
 
 This project demonstrates how to write **type-safe Smart Functions** for the Cumulocity Dynamic Mapper using TypeScript, and how to compile them to JavaScript for deployment.
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [Overview](#overview)
 - [Project Structure](#project-structure)
@@ -13,39 +13,50 @@ This project demonstrates how to write **type-safe Smart Functions** for the Cum
 - [Development Workflow](#development-workflow)
 - [Deployment](#deployment)
 
-## 🎯 Overview
+## Overview
 
 This project provides:
 
 - ✅ **Complete TypeScript type definitions** for Smart Function Runtime API
-  - **Single source of truth:** Types are maintained in the UI project and referenced here
-  - No duplication, always in sync
+  - Types are maintained in `src/types/` within this project
+  - `dataprep.types.ts` — IDP DataPrep base types (standard Cumulocity)
+  - `smart-function-dynamic-mapper.types.ts` — Dynamic Mapper extensions
 - ✅ **Example Smart Functions** (inbound and outbound) in TypeScript
 - ✅ **Unit tests** demonstrating how to test Smart Functions
 - ✅ **Build configuration** to compile TypeScript to JavaScript
 - ✅ **Mock helpers** for local testing
 
-### Type Management
+### Type Organization
 
-**Important:** Type definitions are maintained in a single location:
+Type definitions are split across two files:
+
 ```
-../dynamic-mapper-ui/src/mapping/core/processor/smart-function-runtime.types.ts
+src/types/
+├── dataprep.types.ts                       # IDP DataPrep base types (DataPrepContext, ExternalId)
+├── smart-function-dynamic-mapper.types.ts  # Dynamic Mapper extensions + all exports
+└── index.ts                                # Re-exports everything
 ```
 
-This project imports from that location to ensure types are always in sync. See [TYPE_MANAGEMENT.md](TYPE_MANAGEMENT.md) for details.
+Import all types from `'../types'` (the `index.ts` barrel):
 
-## 📁 Project Structure
+```typescript
+import { SmartFunctionIn, DynamicMapperDeviceMessage, SmartFunctionContext } from '../types';
+```
+
+## Project Structure
 
 ```
 dynamic-mapper-smart-function/
 ├── src/
 │   ├── types/                          # Type definitions
-│   │   ├── smart-function-runtime.types.ts  # Complete type definitions
+│   │   ├── dataprep.types.ts           # IDP DataPrep base types
+│   │   ├── smart-function-dynamic-mapper.types.ts  # DM-specific types + helpers
 │   │   └── index.ts                    # Type exports
 │   ├── examples/                       # Example Smart Functions
 │   │   ├── inbound-basic.ts           # Basic inbound example
 │   │   ├── inbound-enrichment.ts      # Inbound with device lookup
 │   │   ├── inbound-with-state.ts      # Inbound with state management
+│   │   ├── inbound-typed.ts           # Typed inbound + outbound examples
 │   │   ├── outbound-basic.ts          # Basic outbound example
 │   │   └── outbound-with-transformation.ts  # Outbound with transformation
 │   ├── __tests__/                      # Unit tests
@@ -60,7 +71,7 @@ dynamic-mapper-smart-function/
 └── README.md                           # This file
 ```
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -77,7 +88,7 @@ cd dynamic-mapper-smart-function
 npm install
 ```
 
-## 🔨 Building TypeScript to JavaScript
+## Building TypeScript to JavaScript
 
 ### Compile Once
 
@@ -85,35 +96,24 @@ npm install
 npm run build
 ```
 
-This will:
-1. Clean the `dist/` directory
-2. Compile all TypeScript files to JavaScript
-3. Generate type declaration files (`.d.ts`)
-4. Generate source maps for debugging
+This uses `zshy` to compile TypeScript to JavaScript and generate declaration files.
 
 **Output:**
 ```
 dist/
 ├── types/
-│   ├── smart-function-runtime.types.js
-│   ├── smart-function-runtime.types.d.ts
+│   ├── dataprep.types.js
+│   ├── smart-function-dynamic-mapper.types.js
 │   └── index.js
 ├── examples/
 │   ├── inbound-basic.js               ← Use this in Dynamic Mapper!
 │   ├── inbound-enrichment.js
 │   ├── inbound-with-state.js
+│   ├── inbound-typed.js
 │   ├── outbound-basic.js              ← Use this in Dynamic Mapper!
 │   └── outbound-with-transformation.js
 └── index.js
 ```
-
-### Watch Mode (Development)
-
-```bash
-npm run build:watch
-```
-
-This will automatically recompile when you save TypeScript files.
 
 ### Using Compiled JavaScript
 
@@ -130,7 +130,7 @@ After building, the compiled JavaScript files in `dist/examples/` can be used di
 
 2. **Or copy the content** and paste it into the Dynamic Mapper UI Smart Function editor.
 
-## 📚 Examples
+## Examples
 
 ### Example 1: Basic Inbound Smart Function
 
@@ -138,15 +138,18 @@ After building, the compiled JavaScript files in `dist/examples/` can be used di
 
 ```typescript
 import {
-  SmartFunction,
-  SmartFunctionInputMessage,
-  SmartFunctionRuntimeContext,
+  SmartFunctionIn,
+  DynamicMapperDeviceMessage,
+  SmartFunctionContext,
   CumulocityObject,
 } from '../types';
 
-const onMessage: SmartFunction = (msg, context): CumulocityObject[] => {
-  const payload = msg.getPayload();
-  const clientId = context.getClientId();
+const onMessage: SmartFunctionIn = (
+  msg: DynamicMapperDeviceMessage,
+  context: SmartFunctionContext
+): CumulocityObject[] => {
+  const payload = msg.payload;
+  const clientId = context.getClientId() || payload['clientId'];
 
   return [{
     cumulocityType: "measurement",
@@ -175,7 +178,7 @@ export default onMessage;
 **TypeScript:** [`src/examples/inbound-enrichment.ts`](src/examples/inbound-enrichment.ts)
 
 Shows how to:
-- Look up devices using `getManagedObject()`
+- Look up devices using `getManagedObject()` and `getManagedObjectByExternalId()`
 - Create different measurements based on device configuration
 - Handle missing devices gracefully
 
@@ -185,28 +188,36 @@ Shows how to:
 
 Demonstrates:
 - Using `setState()` and `getState()`
-- Tracking statistics across invocations
-- Calculating min/max values
+- Tracking statistics across invocations (min/max/count)
+- State persists per mapping across messages, cleared on mapping deletion
 
-### Example 4: Basic Outbound Smart Function
+### Example 4: Typed Smart Functions
+
+**TypeScript:** [`src/examples/inbound-typed.ts`](src/examples/inbound-typed.ts)
+
+Demonstrates the generic type parameters on `SmartFunctionIn<T>` and `SmartFunctionOut<T>`:
+- `SmartFunctionIn<'managedObject' | 'event'>` — restricts allowed return types at compile time
+- `SmartFunctionOut<'measurement'>` — narrows `msg.cumulocityType` in outbound functions
+
+### Example 5: Basic Outbound Smart Function
 
 **TypeScript:** [`src/examples/outbound-basic.ts`](src/examples/outbound-basic.ts)
 
 Shows how to:
-- Convert Cumulocity measurements to device messages
-- Encode payloads as `Uint8Array`
-- Use topic placeholders
+- Access a Cumulocity payload (pre-deserialized `SmartFunctionPayload`)
+- Convert data and encode the result as `Uint8Array`
+- Use the `_externalId_` topic placeholder
 
-### Example 5: Outbound with Data Transformation
+### Example 6: Outbound with Data Transformation
 
 **TypeScript:** [`src/examples/outbound-with-transformation.ts`](src/examples/outbound-with-transformation.ts)
 
 Demonstrates:
 - Complex data transformation
 - Custom device payload formats
-- Using Kafka transport fields
+- Using Kafka `transportFields`
 
-## 🧪 Testing
+## Testing
 
 ### Run All Tests
 
@@ -224,13 +235,14 @@ npm run test:watch
 
 ```typescript
 import { onMessage } from '../examples/inbound-basic';
-import { createMockInputMessage, createMockRuntimeContext } from '../types';
+import { createMockInputMessage, createMockRuntimeContext, CumulocityObject } from '../types';
 
 describe('Inbound Basic Smart Function', () => {
   it('should create a temperature measurement', () => {
     // Arrange
     const mockMsg = createMockInputMessage({
-      sensorData: { temp_val: 25.5 }
+      sensorData: { temp_val: 25.5 },
+      clientId: 'SENSOR-001'
     });
 
     const mockContext = createMockRuntimeContext({
@@ -241,13 +253,15 @@ describe('Inbound Basic Smart Function', () => {
     const result = onMessage(mockMsg, mockContext);
 
     // Assert
-    expect(result[0].cumulocityType).toBe('measurement');
-    expect(result[0].payload.c8y_Steam.Temperature.value).toBe(25.5);
+    expect(Array.isArray(result)).toBe(true);
+    const action = (result as CumulocityObject[])[0];
+    expect(action.cumulocityType).toBe('measurement');
+    expect((action.payload as any).c8y_Steam.Temperature.value).toBe(25.5);
   });
 });
 ```
 
-## 💻 Development Workflow
+## Development Workflow
 
 ### 1. Write Smart Function in TypeScript
 
@@ -255,12 +269,13 @@ Create a new file in `src/examples/`:
 
 ```typescript
 // src/examples/my-smart-function.ts
-import { SmartFunction } from '../types';
+import { SmartFunctionIn } from '../types';
 
-const onMessage: SmartFunction = (msg, context) => {
+const onMessage: SmartFunctionIn = (msg, context) => {
   // Your logic here with full type safety and IntelliSense!
-  const payload = msg.getPayload();
+  const payload = msg.payload;
   // ...
+  return [];
 };
 
 export default onMessage;
@@ -303,7 +318,7 @@ npm run build
 
 Copy the compiled JavaScript from `dist/examples/my-smart-function.js` to the Dynamic Mapper.
 
-## 📦 Deployment
+## Deployment
 
 ### Option 1: Copy Compiled JavaScript
 
@@ -330,56 +345,62 @@ If the Dynamic Mapper supports file upload:
 2. Navigate to `dist/examples/`
 3. Upload the desired `.js` file
 
-### Option 3: Bundle Everything
-
-Create a single JavaScript file with all dependencies:
-
-```bash
-# Add webpack or rollup to bundle
-npm install --save-dev webpack webpack-cli
-
-# Configure webpack and build
-npm run bundle
-```
-
-## 🎓 Learning Resources
+## Learning Resources
 
 ### TypeScript Benefits
 
 **Before (JavaScript):**
 ```javascript
 function onMessage(msg, context) {
-  const payload = msg.getPayload();
+  const payload = msg.payload;
   // No autocomplete, no type checking
-  const device = context.getManagedObject({ ... }); // Typo not caught!
+  const device = context.getManagedObjectByExternalId({ ... }); // Typo not caught!
 }
 ```
 
 **After (TypeScript):**
 ```typescript
-const onMessage: SmartFunction = (msg, context) => {
-  const payload = msg.getPayload(); // ✅ Autocomplete!
-  const device = context.getManagedObject({ ... }); // ❌ Compile error: Method doesn't exist!
-}
+const onMessage: SmartFunctionIn = (msg, context) => {
+  const payload = msg.payload;  // ✅ Autocomplete!
+  const device = context.getManagedObjectByExternalId({ ... }); // ❌ Compile error if wrong!
+};
 ```
 
 ### Available Types
 
-- **`SmartFunction`** - Main function signature
-- **`SmartFunctionInputMessage`** - Input message with methods
-- **`SmartFunctionPayload`** - Payload with `.get()` and object access
-- **`SmartFunctionRuntimeContext`** - Runtime context with all methods
-- **`CumulocityObject`** - Inbound action type
-- **`DeviceMessage`** - Outbound action type
-- **`C8yMeasurement`**, **`C8yEvent`**, **`C8yAlarm`**, etc. - Domain objects
+**Smart Function signatures:**
+- **`SmartFunctionIn<T>`** — Inbound function: device message → Cumulocity objects
+- **`SmartFunctionOut<T>`** — Outbound function: Cumulocity event → device messages
+- **`SmartFunction`** — Union of `SmartFunctionIn | SmartFunctionOut`
+
+**Message types:**
+- **`DynamicMapperDeviceMessage`** — Inbound message with pre-deserialized `payload`
+- **`OutboundMessage<T>`** — Outbound trigger from Cumulocity (pre-deserialized payload)
+- **`SmartFunctionPayload`** — Payload with bracket-notation and `.get()` access
+
+**Context:**
+- **`SmartFunctionContext`** — Runtime context: state, config, device lookups
+- **`DataPrepContext`** — IDP base context (`getState` / `setState`)
+
+**Output types:**
+- **`CumulocityObject<T>`** — Inbound action (create/update/delete in C8Y)
+- **`DeviceMessage<T>`** — Outbound message to broker
+
+**Domain objects:**
+- **`C8yMeasurement`**, **`C8yEvent`**, **`C8yAlarm`**, **`C8yOperation`**, **`C8yManagedObject`**
+
+**Identifiers:**
+- **`ExternalId`** — `{ externalId, type }` for device lookup
+- **`ExternalSource`** — Extended external ID with `autoCreateDeviceMO`, `parentId`, etc.
 
 ### Mock Helpers
 
-- **`createMockPayload(data)`** - Create mock payload
-- **`createMockInputMessage(data, topic?, messageId?)`** - Create mock message
-- **`createMockRuntimeContext(options)`** - Create mock context
+- **`createMockPayload(data)`** — Create mock `SmartFunctionPayload`
+- **`createMockInputMessage(data, topic?, clientId?)`** — Create mock `DynamicMapperDeviceMessage`
+- **`createMockOutboundMessage(data, cumulocityType?, sourceId?)`** — Create mock `OutboundMessage`
+- **`createMockRuntimeContext(options)`** — Create mock `SmartFunctionContext`
 
-## 🛠️ Troubleshooting
+## Troubleshooting
 
 ### Build Errors
 
@@ -387,8 +408,8 @@ const onMessage: SmartFunction = (msg, context) => {
 
 Make sure you're importing from the correct path:
 ```typescript
-import { SmartFunction } from '../types';  // ✅ Correct
-import { SmartFunction } from './types';   // ❌ Wrong
+import { SmartFunctionIn } from '../types';  // ✅ Correct
+import { SmartFunctionIn } from './types';   // ❌ Wrong
 ```
 
 **Error: Type 'X' is not assignable to type 'Y'**
@@ -417,11 +438,11 @@ Adjust TypeScript target in `tsconfig.json`:
 }
 ```
 
-## 📄 License
+## License
 
 Apache-2.0
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please:
 
@@ -429,14 +450,9 @@ Contributions are welcome! Please:
 2. Follow the existing code style
 3. Update documentation as needed
 
-## 📞 Support
+## Support
 
 For questions or issues:
 
 - Check the [User Guide](../USERGUIDE.md)
-- Review [Smart Function Typings documentation](../SMART_FUNCTION_TYPINGS.md)
 - Open an issue in the GitHub repository
-
----
-
-**Happy coding with TypeScript Smart Functions! 🚀**
