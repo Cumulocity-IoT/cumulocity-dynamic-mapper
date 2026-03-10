@@ -33,6 +33,16 @@ extensions:
     description: Custom measurement processor for Sparkplug B protobuf message formats
     version: "1.0"
 
+  - eventName: SparkplugBWithConfigMeasurement
+    className: dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionSparkplugBWithConfigMeasurement
+    configuration:
+      units:
+        unit1: V
+        unit2: A
+        fragment: Energy
+    description: Custom measurement processor for Sparkplug B with configurable fragment and unit
+    version: "1.0"
+
   - eventName: ProtobufCustomEvent
     className: dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionCustomEvent
     description: Custom event processor for protobuf message formats

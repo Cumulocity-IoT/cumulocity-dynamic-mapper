@@ -28,6 +28,7 @@ import dynamic.mapper.processor.extension.ProcessorExtensionOutbound;
 
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
+import java.util.Map;
 
 @Getter
 @Setter
@@ -49,6 +50,12 @@ public class ExtensionEntry implements Serializable {
     private String description;
 
     private String version;
+
+    /**
+     * Optional YAML configuration string provided by the user in the UI.
+     * Parsed and exposed via JavaExtensionContext.getConfigAsMap().
+     */
+    private Map<String, Object> configuration;
 
     @NotNull
     private Boolean loaded;

@@ -205,6 +205,7 @@ public class ExtensionManager {
                     .fqnClassName(definition.getClassName())
                     .description(definition.getDescription())
                     .version(definition.getVersion())
+                    .configuration(definition.getConfiguration())
                     .loaded(true)
                     .message("Loaded successfully")
                     .direction(Direction.UNSPECIFIED)

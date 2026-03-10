@@ -242,6 +242,8 @@ export interface ExtensionEntry {
   message?: string;
   extensionType: ExtensionType;
   direction?: Direction;
+  /** Optional configuration passed to the extension via getConfigAsMap() */
+  configuration?: Record<string, any>;
 }
 
 export enum ExtensionType {

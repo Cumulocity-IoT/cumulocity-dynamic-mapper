@@ -94,6 +94,7 @@ import { MappingConnectorComponent } from '../step-connector/mapping-connector.c
 import { MappingSubstitutionStepComponent } from '../step-substitution/mapping-substitution-step.component';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { StepperViewModel, StepperViewModelFactory } from '../stepper-mapping/stepper-view.model';
+import * as jsYaml from 'js-yaml';
 
 /**
  * Update event for JSON editors with schema information
@@ -235,6 +236,8 @@ export class MappingUnifiedEditorComponent implements OnInit, OnDestroy {
   // Cached properties for c8y-select components
   extensionItems: string[] = [];
   extensionEventItems$: Observable<string[]>;
+  /** True when the selected extension event has a configuration block defined */
+  hasExtensionConfiguration = false;
   snoopedTemplateItems: Array<{ label: string, value: string }> = [];
   codeTemplateItems: Array<{ label: string, value: string }> = [];
 
@@ -438,7 +441,8 @@ export class MappingUnifiedEditorComponent implements OnInit, OnDestroy {
       queueMicrotask(() => {
         this.templateForm.patchValue({
           extensionName: this.mapping.extension.extensionName,
-          eventName: this.mapping.extension.eventName
+          eventName: this.mapping.extension.eventName,
+          extensionConfiguration: this.configurationToYaml(this.mapping.extension.configuration)
         });
         this.cdr.markForCheck();
       });
@@ -510,6 +514,10 @@ export class MappingUnifiedEditorComponent implements OnInit, OnDestroy {
         value: this.mapping?.extension?.eventName,
         disabled: this.stepperConfiguration.editorMode === EditorMode.READ_ONLY
       }, Validators.required),
+      extensionConfiguration: new FormControl({
+        value: this.configurationToYaml(this.mapping?.extension?.configuration),
+        disabled: this.stepperConfiguration.editorMode === EditorMode.READ_ONLY
+      }),
       snoopedTemplateIndex: new FormControl({
         value: '-1',
         disabled: !this.stepperConfiguration.showEditorSource ||
@@ -522,6 +530,16 @@ export class MappingUnifiedEditorComponent implements OnInit, OnDestroy {
         disabled: undefined
       })
     });
+
+    // Subscribe to extension configuration changes
+    this.templateForm.get('extensionConfiguration')?.valueChanges
+      .pipe(debounceTime(300), takeUntil(this.destroy$))
+      .subscribe(yaml => {
+        if (!this.mapping.extension) {
+          this.mapping.extension = {} as any;
+        }
+        this.mapping.extension.configuration = this.yamlToConfiguration(yaml);
+      });
 
     this.templateForm.get('extensionName')?.valueChanges
       .pipe(distinctUntilChanged(), debounceTime(100), takeUntil(this.destroy$))
@@ -617,10 +635,15 @@ export class MappingUnifiedEditorComponent implements OnInit, OnDestroy {
         this.extensions,
         this.mapping
       );
+      // Show config textarea if the mapping already has configuration
+      if (this.mapping.extension.configuration) {
+        this.hasExtensionConfiguration = true;
+      }
       queueMicrotask(() => {
         this.templateForm.patchValue({
           extensionName: this.mapping.extension.extensionName,
-          eventName: this.mapping.extension.eventName
+          eventName: this.mapping.extension.eventName,
+          extensionConfiguration: this.configurationToYaml(this.mapping.extension.configuration)
         });
         this.cdr.markForCheck();
       });
@@ -653,7 +676,8 @@ export class MappingUnifiedEditorComponent implements OnInit, OnDestroy {
       queueMicrotask(() => {
         this.templateForm.patchValue({
           extensionName: this.mapping.extension.extensionName,
-          eventName: this.mapping.extension.eventName
+          eventName: this.mapping.extension.eventName,
+          extensionConfiguration: this.configurationToYaml(this.mapping.extension.configuration)
         });
         this.cdr.markForCheck();
       });
@@ -940,8 +964,39 @@ export class MappingUnifiedEditorComponent implements OnInit, OnDestroy {
           this.mapping.extension.fqnClassName = eventEntry.fqnClassName;
           this.mapping.extension.loaded = eventEntry.loaded;
           this.mapping.extension.message = eventEntry.message;
+          // Show config textarea only if the extension definition has configuration
+          this.hasExtensionConfiguration = !!eventEntry.configuration;
+          // Pre-fill configuration from the extension definition if not already set
+          if (!this.mapping.extension.configuration && eventEntry.configuration) {
+            this.mapping.extension.configuration = eventEntry.configuration;
+            this.templateForm.get('extensionConfiguration')?.setValue(
+              this.configurationToYaml(eventEntry.configuration), { emitEvent: false });
+          }
         }
       }
+    }
+  }
+
+  configurationToYaml(configuration: Record<string, any> | undefined): string {
+    if (!configuration) {
+      return '';
+    }
+    try {
+      return jsYaml.dump(configuration, { indent: 2 });
+    } catch {
+      return '';
+    }
+  }
+
+  yamlToConfiguration(yaml: string): Record<string, any> | undefined {
+    if (!yaml?.trim()) {
+      return undefined;
+    }
+    try {
+      const parsed = jsYaml.load(yaml);
+      return (parsed && typeof parsed === 'object') ? parsed as Record<string, any> : undefined;
+    } catch {
+      return undefined;
     }
   }
 
