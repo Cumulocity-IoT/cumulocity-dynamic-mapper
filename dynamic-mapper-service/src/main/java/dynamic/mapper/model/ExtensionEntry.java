@@ -22,6 +22,7 @@
 package dynamic.mapper.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;
 import dynamic.mapper.processor.extension.ProcessorExtensionInbound;
 import dynamic.mapper.processor.extension.ProcessorExtensionOutbound;
@@ -36,6 +37,7 @@ import java.util.Map;
 @ToString
 @Builder
 @AllArgsConstructor
+@JsonIgnoreProperties({"loaded", "message"})
 public class ExtensionEntry implements Serializable {
 
     @NotNull
@@ -57,10 +59,8 @@ public class ExtensionEntry implements Serializable {
      */
     private Map<String, Object> parameter;
 
-    @NotNull
     private Boolean loaded;
 
-    @NotNull
     private String message;
 
     @NotNull
