@@ -158,4 +158,30 @@ public interface JavaExtensionContext extends DataPrepContext {
      * @param log The log message
      */
     void addLog(String log);
+
+    /**
+     * Store a value in persistent flow state using plain Java objects (no GraalVM dependency).
+     *
+     * <p>State is persisted across message invocations for the same mapping so that Java
+     * Extensions can accumulate data such as counters, running averages, or last-seen values.</p>
+     *
+     * @param key   state key (non-null)
+     * @param value any serialisable Java object; {@code null} removes the key
+     */
+    void setNativeState(String key, Object value);
+
+    /**
+     * Retrieve a value from persistent flow state as a plain Java object.
+     *
+     * @param key the state key
+     * @return the stored value, or {@code null} if not present
+     */
+    Object getNativeState(String key);
+
+    /**
+     * Return an unmodifiable view of the entire flow state map.
+     *
+     * @return all current state entries (never {@code null})
+     */
+    Map<String, Object> getNativeStateAll();
 }

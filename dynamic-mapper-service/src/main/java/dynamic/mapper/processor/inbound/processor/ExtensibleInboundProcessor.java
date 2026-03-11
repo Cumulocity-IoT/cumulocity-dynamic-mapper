@@ -40,6 +40,7 @@ import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.TransformationType;
 import dynamic.mapper.service.ExtensionInboundRegistry;
 import dynamic.mapper.service.MappingService;
+import dynamic.mapper.service.cache.FlowStateStore;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -57,6 +58,9 @@ public class ExtensibleInboundProcessor extends AbstractExtensibleProcessor {
 
     @Autowired
     private C8YAgent c8yAgent;
+
+    @Autowired
+    private FlowStateStore flowStateStore;
 
     public ExtensibleInboundProcessor(
             MappingService mappingService,
@@ -120,14 +124,18 @@ public class ExtensibleInboundProcessor extends AbstractExtensibleProcessor {
         // 1. Create Message wrapper
         Message<byte[]> message = Message.from(context);
 
-        // 2. Create JavaExtensionContext
+        // 2. Create JavaExtensionContext with persistent native state
+        Mapping mapping = context.getMapping();
+        java.util.Map<String, Object> initialState = flowStateStore.loadState(tenant, mapping.getIdentifier());
         JavaExtensionContext prepContext = new JavaExtensionContextImpl(
             context.getFlowContext(),
             c8yAgent,
             tenant,
             context.getTesting(),
-            context.getMapping(),
-            context
+            mapping,
+            context,
+            flowStateStore,
+            initialState
         );
 
         // 3. Call new pattern method

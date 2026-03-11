@@ -94,6 +94,9 @@ public class BootstrapService {
     @Autowired
     private ExtensionManager extensionManager;
 
+    @Autowired
+    private dynamic.mapper.service.cache.FlowStateStore flowStateStore;
+
     public BootstrapService(
             ConnectorRegistry connectorRegistry,
             ConfigurationRegistry configurationRegistry,
@@ -611,6 +614,10 @@ public class BootstrapService {
                 log.info("{} - Inventory cache cleared. Old Size: {}, New size: {}",
                         tenant, cacheSize, c8YAgent.getInventoryCache(tenant).getCacheSize());
             }
+        }
+
+        if (serviceConfig.getFlowStateRetention() != null) {
+            flowStateStore.clearExpiredEntries(tenant, serviceConfig.getFlowStateRetention());
         }
     }
 

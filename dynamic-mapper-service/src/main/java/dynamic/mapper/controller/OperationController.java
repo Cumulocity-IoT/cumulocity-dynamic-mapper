@@ -128,6 +128,9 @@ public class OperationController {
     private InventoryFacade inventoryFacade;
 
     @Autowired
+    private dynamic.mapper.service.cache.FlowStateStore flowStateStore;
+
+    @Autowired
     private ExtensionManager extensionManager;
 
     private ObjectMapper objectMapper;
@@ -591,6 +594,10 @@ public class OperationController {
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } else if ("MOCK_INVENTORY_CACHE".equals(cacheId)) {
             inventoryFacade.clearInventoryCache();
+            log.info("{} - Cache cleared: {}", tenant, cacheId);
+            return ResponseEntity.status(HttpStatus.CREATED).build();
+        } else if ("FLOW_STATE_CACHE".equals(cacheId)) {
+            flowStateStore.clearTenantState(tenant);
             log.info("{} - Cache cleared: {}", tenant, cacheId);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         }

@@ -35,6 +35,13 @@
     {{ 'Clear inventory cache' | translate }}
   </button>
 </c8y-action-bar-item>
+<c8y-action-bar-item [placement]="'right'">
+  <button class="btn btn-link" title="{{ 'Clear flow state' | translate }}" (click)="clickedClearFlowStateCache()"
+    [disabled]="!feature?.userHasMappingAdminRole">
+    <i c8yIcon="clear"></i>
+    {{ 'Clear flow state' | translate }}
+  </button>
+</c8y-action-bar-item>
 }
 
 
@@ -416,6 +423,25 @@
                 [ngClass]="{ updated: editable2updated }">
                 <input class="form-control" name="inventoryCacheRetention" type="number"
                   formControlName="inventoryCacheRetention" />
+                <span></span>
+              </label>
+            </div>
+          </c8y-li>
+
+          <c8y-li>
+            <c8y-li-icon icon="time-machine"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'Minutes lifetime flow state' | translate }}</p>
+                <p>
+                  <small translate>Set time in minutes after which the complete flow state for Smart Functions and Java
+                    Extensions is cleared. Set to 0 to disable TTL.</small>
+                </p>
+              </div>
+              <label class="editable m-l-auto" title="{{ 'Hours lifetime flow state' | translate }}"
+                [ngClass]="{ updated: editable2updated }">
+                <input class="form-control" name="flowStateRetention" type="number" min="0"
+                  formControlName="flowStateRetention" />
                 <span></span>
               </label>
             </div>

@@ -66,6 +66,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     inboundExternalIdCacheRetention: 0,
     inventoryCacheSize: 0,
     inventoryCacheRetention: 0,
+    flowStateRetention: 1440,
     inventoryFragmentsToCache: ['type'],  // always add type
     maxCPUTimeMS: 5000,  // 5 seconds
     jsonataAgent: undefined,
@@ -121,6 +122,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
       inboundExternalIdCacheRetention: [''],
       inventoryCacheRetention: [''],
       inventoryCacheSize: [''],
+      flowStateRetention: [''],
       inventoryFragmentsToCache: [''],
       maxCPUTimeMS: [''],
       jsonataAgent: [{ value: '', disabled: true }],
@@ -170,6 +172,10 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
 
   async clickedClearInventoryCache() {
     await this.clearCache('INVENTORY_CACHE');
+  }
+
+  async clickedClearFlowStateCache() {
+    await this.clearCache('FLOW_STATE_CACHE');
   }
 
   private async clearCache(cacheId: string): Promise<void> {

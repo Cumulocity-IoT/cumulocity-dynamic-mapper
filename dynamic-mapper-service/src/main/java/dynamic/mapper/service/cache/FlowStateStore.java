@@ -20,6 +20,8 @@
  */
 package dynamic.mapper.service.cache;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -56,6 +58,9 @@ public class FlowStateStore {
     private final ConcurrentHashMap<String, ConcurrentHashMap<String, ConcurrentHashMap<String, Object>>> store =
             new ConcurrentHashMap<>();
 
+    // Tracks the last time state was saved per tenant for TTL expiry
+    private final ConcurrentHashMap<String, Instant> lastSavedAt = new ConcurrentHashMap<>();
+
     /**
      * Loads the persisted state for a mapping.
      *
@@ -89,7 +94,28 @@ public class FlowStateStore {
                 .computeIfAbsent(mappingIdentifier, k -> new ConcurrentHashMap<>());
         mappingState.clear();
         mappingState.putAll(state);
+        lastSavedAt.put(tenant, Instant.now());
         log.debug("{} - Saved flow state for mapping {}: {} keys", tenant, mappingIdentifier, state.size());
+    }
+
+    /**
+     * Clears all state for a tenant if it has not been updated within the given retention window.
+     * Called by the scheduled cache-cleanup job.
+     *
+     * @param tenant           the tenant identifier
+     * @param retentionMinutes number of minutes after the last save before state is expired; 0 disables TTL
+     */
+    public void clearExpiredEntries(String tenant, int retentionMinutes) {
+        if (retentionMinutes <= 0 || tenant == null) {
+            return;
+        }
+        Instant lastSaved = lastSavedAt.get(tenant);
+        if (lastSaved != null &&
+                Duration.between(lastSaved, Instant.now()).compareTo(Duration.ofMinutes(retentionMinutes)) >= 0) {
+            clearTenantState(tenant);
+            lastSavedAt.remove(tenant);
+            log.info("{} - Cleared expired flow state (TTL: {} minutes)", tenant, retentionMinutes);
+        }
     }
 
     /**

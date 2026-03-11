@@ -63,6 +63,7 @@ public class ServiceConfiguration implements Cloneable {
         this.jsonataAgent = null;
         this.javaScriptAgent = null;
         this.smartFunctionAgent = null;
+        this.flowStateRetention = 1440;
     }
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Enable logging of message payloads for debugging purposes. Caution: May expose sensitive data in logs.", example = "false")
@@ -159,6 +160,11 @@ public class ServiceConfiguration implements Cloneable {
     @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "Name of javaScript SmartFunction agent to be used when generating Cumulocity API requests as JavaScript code. The needs to be defined in the AI Agent Manager.", example = "smartFunctionAgent")
     @JsonSetter(nulls = Nulls.SKIP)
     private String smartFunctionAgent;
+
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Retention time in minutes for Smart Function and Java Extension flow state entries. Set to 0 to disable TTL.", example = "1440", minimum = "0")
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    private Integer flowStateRetention;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Suppress deprecation warning in UI.", example = "false")
     @NotNull

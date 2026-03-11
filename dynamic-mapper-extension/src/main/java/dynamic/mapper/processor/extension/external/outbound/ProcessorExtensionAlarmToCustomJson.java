@@ -21,7 +21,6 @@
 
 package dynamic.mapper.processor.extension.external.outbound;
 
-import com.dashjoin.jsonata.json.Json;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.extension.ProcessorExtensionOutbound;

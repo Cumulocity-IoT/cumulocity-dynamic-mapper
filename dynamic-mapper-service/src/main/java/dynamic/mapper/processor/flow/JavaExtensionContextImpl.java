@@ -27,8 +27,13 @@ import dynamic.mapper.processor.model.DataPrepContext;
 import dynamic.mapper.processor.model.JavaExtensionContext;
 import dynamic.mapper.processor.model.ExternalId;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.service.cache.FlowStateStore;
 import lombok.extern.slf4j.Slf4j;
 import org.graalvm.polyglot.Value;
+
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Simple implementation of JavaExtensionContext for Java extensions.
@@ -49,14 +54,52 @@ public class JavaExtensionContextImpl implements JavaExtensionContext {
     private final Mapping mapping;
     private final ProcessingContext<?> processingContext;
 
+    // Native (non-GraalVM) state for Java Extensions
+    private final Map<String, Object> nativeState;
+    private final FlowStateStore flowStateStore;
+    private final String mappingIdentifier;
+
     /**
-     * Constructor for full context with data prep support.
+     * Full constructor with data prep support and persistent native state.
      *
-     * @param dataPrepContext The underlying data preparation context
-     * @param c8yAgent The Cumulocity agent
-     * @param tenant The tenant identifier
-     * @param testing Whether this is a test execution
-     * @param mapping The mapping configuration
+     * @param dataPrepContext   The underlying data preparation context (may be null for EXTENSION_JAVA)
+     * @param c8yAgent          The Cumulocity agent
+     * @param tenant            The tenant identifier
+     * @param testing           Whether this is a test execution
+     * @param mapping           The mapping configuration
+     * @param processingContext The processing context for warnings/logs
+     * @param flowStateStore    Store for persisting native state across invocations (may be null)
+     * @param initialState      Pre-loaded native state from the store (may be null)
+     */
+    public JavaExtensionContextImpl(
+            DataPrepContext dataPrepContext,
+            C8YAgent c8yAgent,
+            String tenant,
+            Boolean testing,
+            Mapping mapping,
+            ProcessingContext<?> processingContext,
+            FlowStateStore flowStateStore,
+            Map<String, Object> initialState) {
+        this.dataPrepContext = dataPrepContext;
+        this.c8yAgent = c8yAgent;
+        this.tenant = tenant != null ? tenant : "unknown";
+        this.testing = testing != null ? testing : false;
+        this.mapping = mapping;
+        this.processingContext = processingContext;
+        this.flowStateStore = flowStateStore;
+        this.mappingIdentifier = mapping != null ? mapping.getIdentifier() : null;
+        this.nativeState = (initialState != null && !initialState.isEmpty())
+                ? new HashMap<>(initialState) : new HashMap<>();
+    }
+
+    /**
+     * Backward-compatible constructor without native state persistence.
+     *
+     * @param dataPrepContext   The underlying data preparation context
+     * @param c8yAgent          The Cumulocity agent
+     * @param tenant            The tenant identifier
+     * @param testing           Whether this is a test execution
+     * @param mapping           The mapping configuration
      * @param processingContext The processing context for warnings/logs
      */
     public JavaExtensionContextImpl(
@@ -66,22 +109,17 @@ public class JavaExtensionContextImpl implements JavaExtensionContext {
             Boolean testing,
             Mapping mapping,
             ProcessingContext<?> processingContext) {
-        this.dataPrepContext = dataPrepContext;
-        this.c8yAgent = c8yAgent;
-        this.tenant = tenant != null ? tenant : "unknown";
-        this.testing = testing != null ? testing : false;
-        this.mapping = mapping;
-        this.processingContext = processingContext;
+        this(dataPrepContext, c8yAgent, tenant, testing, mapping, processingContext, null, null);
     }
 
     /**
      * Simplified constructor without data prep context.
      * State management and inventory lookups will not be available.
      *
-     * @param c8yAgent The Cumulocity agent
-     * @param tenant The tenant identifier
-     * @param testing Whether this is a test execution
-     * @param mapping The mapping configuration
+     * @param c8yAgent          The Cumulocity agent
+     * @param tenant            The tenant identifier
+     * @param testing           Whether this is a test execution
+     * @param mapping           The mapping configuration
      * @param processingContext The processing context for warnings/logs
      */
     public JavaExtensionContextImpl(
@@ -90,7 +128,7 @@ public class JavaExtensionContextImpl implements JavaExtensionContext {
             Boolean testing,
             Mapping mapping,
             ProcessingContext<?> processingContext) {
-        this(null, c8yAgent, tenant, testing, mapping, processingContext);
+        this(null, c8yAgent, tenant, testing, mapping, processingContext, null, null);
     }
 
     // ==================== JavaExtensionContext Methods ====================
@@ -254,5 +292,36 @@ public class JavaExtensionContextImpl implements JavaExtensionContext {
         if (dataPrepContext != null) {
             dataPrepContext.clearState();
         }
+        // Persist native state to FlowStateStore
+        if (flowStateStore != null && mappingIdentifier != null) {
+            flowStateStore.saveState(tenant, mappingIdentifier, new HashMap<>(nativeState));
+        }
+        nativeState.clear();
+    }
+
+    // ==================== Native (Java) State Methods ====================
+
+    @Override
+    public void setNativeState(String key, Object value) {
+        if (key == null) {
+            log.warn("{} - Cannot set native state with null key", tenant);
+            return;
+        }
+        if (value == null) {
+            nativeState.remove(key);
+        } else {
+            nativeState.put(key, value);
+        }
+        log.debug("{} - Native flow state set: {}={}", tenant, key, value);
+    }
+
+    @Override
+    public Object getNativeState(String key) {
+        return nativeState.get(key);
+    }
+
+    @Override
+    public Map<String, Object> getNativeStateAll() {
+        return Collections.unmodifiableMap(nativeState);
     }
 }
