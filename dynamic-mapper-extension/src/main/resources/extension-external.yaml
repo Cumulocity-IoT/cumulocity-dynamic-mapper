@@ -113,3 +113,8 @@ extensions:
     className: dynamic.mapper.processor.extension.external.outbound.ProcessorExtensionSmartOutbound03
     description: Measurement processor with Kafka key generation support
     version: "2.0"
+
+  - eventName: AlarmToSparkplugB
+    className: dynamic.mapper.processor.extension.external.outbound.ProcessorExtensionAlarmToSparkplugB
+    description: Alarm to Sparkplug B Alarm via metrics and Protobuf converter
+    version: "2.0"
