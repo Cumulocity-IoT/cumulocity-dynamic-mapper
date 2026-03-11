@@ -756,6 +756,11 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
     }
 
     @Override
+    public Boolean supportsWildcardInTopic(Direction direction) {
+        return true;
+    }
+
+    @Override
     public List<Direction> supportedDirections() {
         return Arrays.asList(Direction.INBOUND, Direction.OUTBOUND);
     }
