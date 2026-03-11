@@ -34,7 +34,7 @@ interface ExtensionEntry {
   extensionType: string;
   direction: string;
   loaded: boolean;
-  configuration?: Record<string, any>;
+  parameter?: Record<string, any>;
 }
 
 interface ExtensionWithEntries extends IManagedObject {

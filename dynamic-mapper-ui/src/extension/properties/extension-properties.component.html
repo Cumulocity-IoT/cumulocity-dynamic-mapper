@@ -61,11 +61,11 @@
                 [properties]="getEntryProperties(entry)"
                 [emptyLabel]="'--'"
               ></c8y-properties-list>
-              @if (entry.configuration) {
+              @if (entry.parameter) {
               <div class="p-t-8 p-b-8">
-                <label class="text-muted m-b-4" translate>Default Configuration (YAML)</label>
+                <label class="text-muted m-b-4" translate>Default Parameter (YAML)</label>
                 <textarea class="form-control" c8y-textarea-autoresize readonly="true"
-                  style="font-family: monospace; font-size: var(--c8y-font-size-small); line-height: var(--c8y-line-height-small);">{{ configurationToYaml(entry.configuration) }}</textarea>
+                  style="font-family: monospace; font-size: var(--c8y-font-size-small); line-height: var(--c8y-line-height-small);">{{ configurationToYaml(entry.parameter) }}</textarea>
               </div>
               }
             </c8y-list-item-collapse>

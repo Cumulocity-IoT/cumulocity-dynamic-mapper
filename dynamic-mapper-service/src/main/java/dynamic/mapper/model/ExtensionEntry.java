@@ -52,10 +52,10 @@ public class ExtensionEntry implements Serializable {
     private String version;
 
     /**
-     * Optional YAML configuration string provided by the user in the UI.
-     * Parsed and exposed via JavaExtensionContext.getConfigAsMap().
+     * Optional parameter map provided by the user in the UI.
+     * Exposed via JavaExtensionContext.getConfigAsMap() under the key "parameter".
      */
-    private Map<String, Object> configuration;
+    private Map<String, Object> parameter;
 
     @NotNull
     private Boolean loaded;

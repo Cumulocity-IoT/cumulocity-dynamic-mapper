@@ -56,9 +56,20 @@ import java.util.Map;
  * </pre>
  *
  * <p>Output: c8y_VoltageMeasurement or c8y_CurrentMeasurement based on device config</p>
+ *
+ * <p>Supported parameter keys (under the top-level {@code parameter} map):
+ * <ul>
+ *   <li>{@code voltageUnit} – unit for voltage measurements (default: "V")</li>
+ *   <li>{@code currentUnit} – unit for current measurements (default: "A")</li>
+ *   <li>{@code defaultSensorType} – fallback sensor type when device config is absent (default: "voltage")</li>
+ * </ul>
  */
 @Slf4j
 public class ProcessorExtensionSmartInbound02 implements ProcessorExtensionInbound<byte[]> {
+
+    private static final String DEFAULT_VOLTAGE_UNIT = "V";
+    private static final String DEFAULT_CURRENT_UNIT = "A";
+    private static final String DEFAULT_SENSOR_TYPE = "voltage";
 
     @Override
     public CumulocityObject[] onMessage(Message<byte[]> message, JavaExtensionContext context) {
@@ -79,12 +90,25 @@ public class ProcessorExtensionSmartInbound02 implements ProcessorExtensionInbou
 
             String tenant = context.getTenant();
 
+            // Read optional parameters
+            String voltageUnit = DEFAULT_VOLTAGE_UNIT;
+            String currentUnit = DEFAULT_CURRENT_UNIT;
+            String defaultSensorType = DEFAULT_SENSOR_TYPE;
+            @SuppressWarnings("unchecked")
+            Map<String, Object> parameter = (Map<String, Object>) context.getConfigAsMap().get("parameter");
+            if (parameter != null) {
+                log.info("{} - Extension parameter defined: {}", context.getTenant(), parameter);
+                if (parameter.get("voltageUnit") instanceof String v) voltageUnit = v;
+                if (parameter.get("currentUnit") instanceof String c) currentUnit = c;
+                if (parameter.get("defaultSensorType") instanceof String d) defaultSensorType = d;
+            }
+
             // Lookup device from inventory cache for enrichment (same pattern as JavaScript Smart Functions)
             ExternalId externalId = new ExternalId(clientId, "c8y_Serial");
             Map<String, Object> deviceByExternalId = context.getManagedObjectAsMap(externalId);
 
             // Determine measurement type based on device configuration (enrichment)
-            String sensorType = "voltage"; // default
+            String sensorType = defaultSensorType;
 
             if (deviceByExternalId != null) {
                 log.debug("{} - Device found for enrichment: {}", tenant, deviceByExternalId);
@@ -122,7 +146,7 @@ public class ProcessorExtensionSmartInbound02 implements ProcessorExtensionInbou
                     CumulocityObject.measurement()
                         .type("c8y_VoltageMeasurement")
                         .time(new DateTime().toString())
-                        .fragment("c8y_Voltage", "voltage", value.doubleValue(), "V")
+                        .fragment("c8y_Voltage", "voltage", value.doubleValue(), voltageUnit)
                         .externalId(clientId, "c8y_Serial")
                         .deviceName(clientId)
                         .deviceType("c8y_VoltageSensor")
@@ -135,7 +159,7 @@ public class ProcessorExtensionSmartInbound02 implements ProcessorExtensionInbou
                     CumulocityObject.measurement()
                         .type("c8y_CurrentMeasurement")
                         .time(new DateTime().toString())
-                        .fragment("c8y_Current", "current", value.doubleValue(), "A")
+                        .fragment("c8y_Current", "current", value.doubleValue(), currentUnit)
                         .externalId(clientId, "c8y_Serial")
                         .deviceName(clientId)
                         .deviceType("c8y_CurrentSensor")

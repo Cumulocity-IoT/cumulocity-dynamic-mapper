@@ -71,9 +71,9 @@ public class ExtensionConfig {
         private String version;
 
         /**
-         * Optional default configuration map for this extension entry.
-         * Values are passed to the extension via JavaExtensionContext.getConfigAsMap().
+         * Optional default parameter map for this extension entry.
+         * Exposed via JavaExtensionContext.getConfigAsMap() under the key "parameter".
          */
-        private Map<String, Object> configuration;
+        private Map<String, Object> parameter;
     }
 }

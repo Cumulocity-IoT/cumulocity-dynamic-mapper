@@ -218,8 +218,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   // Cached properties for c8y-select components (to avoid recreating arrays on every change detection)
   extensionItems: string[] = [];
   extensionEventItems$: Observable<string[]>;
-  /** True when the selected extension event has a configuration block defined */
-  hasExtensionConfiguration = false;
+  /** True when the selected extension event has a parameter block defined */
+  hasExtensionParameter = false;
   snoopedTemplateItems: Array<{label: string, value: string}> = [];
   codeTemplateItems: Array<{label: string, value: string}> = [];
 
@@ -439,8 +439,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         disabled: this.stepperConfiguration.editorMode === EditorMode.READ_ONLY
              || !this.stepperViewModel.showExtensionSelectors
       }, Validators.required),
-      extensionConfiguration: new FormControl({
-        value: this.configurationToYaml(this.mapping?.extension?.configuration),
+      extensionParameter: new FormControl({
+        value: this.configurationToYaml(this.mapping?.extension?.parameter),
         disabled: this.stepperConfiguration.editorMode === EditorMode.READ_ONLY
       }),
       snoopedTemplateIndex: new FormControl({
@@ -456,14 +456,14 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       })
     });
 
-    // Subscribe to extension configuration changes
-    this.templateForm.get('extensionConfiguration')?.valueChanges
+    // Subscribe to extension parameter changes
+    this.templateForm.get('extensionParameter')?.valueChanges
       .pipe(debounceTime(300), takeUntil(this.destroy$))
       .subscribe(yaml => {
         if (!this.mapping.extension) {
           this.mapping.extension = {} as any;
         }
-        this.mapping.extension.configuration = this.yamlToConfiguration(yaml);
+        this.mapping.extension.parameter = this.yamlToConfiguration(yaml);
       });
 
     // Master-Detail: Subscribe to extension name changes to update available events
@@ -773,13 +773,13 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
           this.mapping.extension.fqnClassName = eventEntry.fqnClassName;
           this.mapping.extension.loaded = eventEntry.loaded;
           this.mapping.extension.message = eventEntry.message;
-          // Show config textarea only if the extension definition has configuration
-          this.hasExtensionConfiguration = !!eventEntry.configuration;
-          // Pre-fill configuration from the extension definition if not already set
-          if (!this.mapping.extension.configuration && eventEntry.configuration) {
-            this.mapping.extension.configuration = eventEntry.configuration;
-            this.templateForm.get('extensionConfiguration')?.setValue(
-              this.configurationToYaml(eventEntry.configuration), { emitEvent: false });
+          // Show parameter textarea only if the extension definition has a parameter block
+          this.hasExtensionParameter = !!eventEntry.parameter;
+          // Pre-fill parameter from the extension definition if not already set
+          if (!this.mapping.extension.parameter && eventEntry.parameter) {
+            this.mapping.extension.parameter = eventEntry.parameter;
+            this.templateForm.get('extensionParameter')?.setValue(
+              this.configurationToYaml(eventEntry.parameter), { emitEvent: false });
           }
         }
       }
@@ -849,9 +849,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         this.mapping
       );
 
-      // Show config textarea if the mapping already has configuration
-      if (this.mapping.extension.configuration) {
-        this.hasExtensionConfiguration = true;
+      // Show parameter textarea if the mapping already has a parameter block
+      if (this.mapping.extension.parameter) {
+        this.hasExtensionParameter = true;
       }
 
       // Use queueMicrotask to ensure items are rendered before setting values
@@ -860,7 +860,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         this.templateForm.patchValue({
           extensionName: this.mapping.extension.extensionName,
           eventName: this.mapping.extension.eventName,
-          extensionConfiguration: this.configurationToYaml(this.mapping.extension.configuration)
+          extensionParameter: this.configurationToYaml(this.mapping.extension.parameter)
         });
         this.cdr.markForCheck();
       });
@@ -902,7 +902,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         this.templateForm.patchValue({
           extensionName: this.mapping.extension.extensionName,
           eventName: this.mapping.extension.eventName,
-          extensionConfiguration: this.configurationToYaml(this.mapping.extension.configuration)
+          extensionParameter: this.configurationToYaml(this.mapping.extension.parameter)
         });
         this.cdr.markForCheck();
       });

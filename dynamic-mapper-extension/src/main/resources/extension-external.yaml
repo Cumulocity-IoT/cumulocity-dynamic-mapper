@@ -35,7 +35,7 @@ extensions:
 
   - eventName: SparkplugBWithConfigMeasurement
     className: dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionSparkplugBWithConfigMeasurement
-    configuration:
+    parameter:
       units:
         unit1: V
         unit2: A
@@ -61,11 +61,19 @@ extensions:
   # Smart Function Equivalents - Inbound
   - eventName: TemperatureMeasurement
     className: dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionSmartInbound01
+    parameter:
+      fragment: c8y_Steam
+      series: Temperature
+      unit: C
     description: Temperature measurement processor demonstrating smart function pattern
     version: "2.0"
 
   - eventName: DynamicSensorMeasurement
     className: dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionSmartInbound02
+    parameter:
+      voltageUnit: V
+      currentUnit: A
+      defaultSensorType: voltage
     description: Dynamic sensor measurement processor with flexible data handling
     version: "2.0"
 

@@ -16,13 +16,13 @@ import org.slf4j.LoggerFactory;
  * Sparkplug B measurement processor that reads fragment name and unit from
  * the extension configuration supplied via the mapping UI.
  *
- * <p>Expected configuration keys:
+ * <p>Expected parameter keys (under the top-level {@code parameter} map):
  * <ul>
  *   <li>{@code units.unit1} – unit string for numeric metrics (e.g. "V")</li>
  *   <li>{@code fragment} – fragment / type name used in the C8Y measurement (e.g. "Energy")</li>
  * </ul>
  *
- * <p>Example mapping configuration YAML:
+ * <p>Example mapping parameter YAML:
  * <pre>
  * units:
  *   unit1: V
@@ -54,22 +54,29 @@ public class ProcessorExtensionSparkplugBWithConfigMeasurement implements Proces
                 return new CumulocityObject[0];
             }
 
-            // Read configuration values supplied from the mapping UI
+            // Read parameter values supplied from the mapping UI (under the "parameter" key)
             Map<String, Object> config = context.getConfigAsMap();
             String unit1 = DEFAULT_FRAGMENT;
             String fragment = DEFAULT_FRAGMENT;
 
             @SuppressWarnings("unchecked")
-            Map<String, Object> units = (Map<String, Object>) config.get(CONFIG_KEY_UNITS);
-            if (units != null) {
-                if (units.get(CONFIG_KEY_UNIT1) instanceof String u) {
-                    unit1 = u;
+            Map<String, Object> parameter = (Map<String, Object>) config.get("parameter");
+            if (parameter != null) {
+                log.info("{} - Extension parameter defined: {}", context.getTenant(), parameter);
+                @SuppressWarnings("unchecked")
+                Map<String, Object> units = (Map<String, Object>) parameter.get(CONFIG_KEY_UNITS);
+                if (units != null) {
+                    if (units.get(CONFIG_KEY_UNIT1) instanceof String u) {
+                        unit1 = u;
+                    }
+                } else {
+                    log.debug("{} - No 'units' parameter found, using defaults", context.getTenant());
+                }
+                if (parameter.get(CONFIG_KEY_FRAGMENT) instanceof String f) {
+                    fragment = f;
                 }
             } else {
-                log.debug("{} - No 'units' configuration found, using defaults", context.getTenant());
-            }
-            if (config.get(CONFIG_KEY_FRAGMENT) instanceof String f) {
-                fragment = f;
+                log.debug("{} - No 'parameter' map found, using defaults", context.getTenant());
             }
 
             log.debug("{} - Parsing protobuf message, payload size: {} bytes",
