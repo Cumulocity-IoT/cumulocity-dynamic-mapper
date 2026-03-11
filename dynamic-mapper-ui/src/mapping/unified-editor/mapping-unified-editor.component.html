@@ -262,6 +262,19 @@
         <span class="help-block"><small translate>Event name is required.</small></span>
       }
     </div>
+    @if (hasExtensionParameter) {
+      <div class="form-group">
+        <label translate>Extension Parameter (YAML)</label>
+        <textarea
+          class="form-control"
+          formControlName="extensionParameter"
+          rows="6"
+          placeholder="parameter:&#10;  key: value"
+          style="font-family: monospace; font-size: var(--c8y-font-size-small);">
+        </textarea>
+        <small class="text-muted" translate>Optional YAML parameter passed to the extension.</small>
+      </div>
+    }
   </div>
   }
   @if (stepperViewModel.showInternalExtensionNote) {
@@ -290,6 +303,19 @@
         <span class="help-block"><small translate>Event name is required.</small></span>
       }
     </div>
+    @if (hasExtensionParameter) {
+      <div class="form-group">
+        <label translate>Extension Parameter (YAML)</label>
+        <textarea
+          class="form-control"
+          formControlName="extensionParameter"
+          rows="6"
+          placeholder="parameter:&#10;  key: value"
+          style="font-family: monospace; font-size: var(--c8y-font-size-small);">
+        </textarea>
+        <small class="text-muted" translate>Optional YAML parameter passed to the extension.</small>
+      </div>
+    }
   </div>
   }
   @if (stepperViewModel.showInternalExtensionNote) {

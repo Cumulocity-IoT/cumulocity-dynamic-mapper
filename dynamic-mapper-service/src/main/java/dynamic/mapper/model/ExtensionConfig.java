@@ -23,6 +23,7 @@ package dynamic.mapper.model;
 
 import lombok.*;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Configuration model for YAML-based extension definitions.
@@ -68,5 +69,11 @@ public class ExtensionConfig {
          * Version of the extension implementation
          */
         private String version;
+
+        /**
+         * Optional default parameter map for this extension entry.
+         * Exposed via JavaExtensionContext.getConfigAsMap() under the key "parameter".
+         */
+        private Map<String, Object> parameter;
     }
 }

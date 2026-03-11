@@ -131,6 +131,10 @@ public class JavaExtensionContextImpl implements JavaExtensionContext {
             config.put("mappingName", mapping.getName());
             config.put("targetAPI", mapping.getTargetAPI() != null ? mapping.getTargetAPI().toString() : null);
             config.put("debug", mapping.getDebug());
+            // Add extension parameter provided by the user in the UI under the "parameter" key
+            if (mapping.getExtension() != null && mapping.getExtension().getParameter() != null) {
+                config.put("parameter", mapping.getExtension().getParameter());
+            }
         }
         if (processingContext != null) {
             config.put("topic", processingContext.getTopic());
