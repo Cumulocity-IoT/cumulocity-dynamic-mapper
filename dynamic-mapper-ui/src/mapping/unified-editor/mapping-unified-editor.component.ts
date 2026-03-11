@@ -964,13 +964,13 @@ export class MappingUnifiedEditorComponent implements OnInit, OnDestroy {
           this.mapping.extension.fqnClassName = eventEntry.fqnClassName;
           this.mapping.extension.loaded = eventEntry.loaded;
           this.mapping.extension.message = eventEntry.message;
-          // Show config textarea only if the extension definition has configuration
-          this.hasExtensionParameter = !!eventEntry.configuration;
-          // Pre-fill configuration from the extension definition if not already set
-          if (!this.mapping.extension.parameter && eventEntry.configuration) {
-            this.mapping.extension.parameter = eventEntry.configuration;
+          // Show parameter textarea only if the extension definition has a parameter block
+          this.hasExtensionParameter = !!eventEntry.parameter;
+          // Pre-fill parameter from the extension definition if not already set
+          if (!this.mapping.extension.parameter && eventEntry.parameter) {
+            this.mapping.extension.parameter = eventEntry.parameter;
             this.templateForm.get('extensionParameter')?.setValue(
-              this.configurationToYaml(eventEntry.configuration), { emitEvent: false });
+              this.configurationToYaml(eventEntry.parameter), { emitEvent: false });
           }
         }
       }

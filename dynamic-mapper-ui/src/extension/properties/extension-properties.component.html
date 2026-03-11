@@ -52,6 +52,9 @@
                 {{ entry.direction | formatStringAsWords }}
               </span>
               }
+              @if (entry.parameter) {
+              <span class="label label-info m-l-4" translate>Configurable</span>
+              }
             </div>
             <!-- </div>
             </div> -->
