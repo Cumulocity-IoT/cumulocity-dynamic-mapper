@@ -44,8 +44,10 @@ import {
  * Demonstrates:
  * - Accessing Cumulocity payload data
  * - Creating device messages with proper typing
- * - Using topic placeholders (_externalId_)
+ * - Using context.getConfig().externalId for the outbound topic
  * - Converting data to Uint8Array for transmission
+ *
+ * Requires the mapping to have 'useExternalId' enabled and an 'externalIdType' configured.
  */
 const onMessage: SmartFunctionOut = (
   msg: OutboundMessage,
@@ -54,17 +56,17 @@ const onMessage: SmartFunctionOut = (
   // Access payload directly — already pre-deserialized from JSON
   const payload = msg.payload;
 
+  // context.getConfig().externalId contains the resolved external ID of the source device.
+  // Requires the mapping to have 'useExternalId' enabled and an 'externalIdType' configured.
+  const externalId = context.getConfig().externalId;
+
   // Log context and payload for debugging
   console.log('Config:', context.getConfig());
   console.log('Payload Raw:', payload);
-  console.log('Payload messageId:', payload['messageId']);
+  console.log('ExternalId:', externalId);
 
-  // Example 1: Using _externalId_ placeholder (recommended)
-  // The placeholder is automatically resolved using the externalId type from externalSource
-  // Uncomment to use:
-  /*
   return {
-    topic: 'measurements/_externalId_',
+    topic: `measurements/${externalId}`,
     payload: new TextEncoder().encode(
       JSON.stringify({
         time: new Date().toISOString(),
@@ -76,25 +78,7 @@ const onMessage: SmartFunctionOut = (
         },
       })
     ),
-    transportFields: { key: payload['source']['id'] }, // Kafka record key
-    externalSource: [{ type: 'c8y_Serial' }],
-  };
-  */
-
-  // Example 2: Using explicit device ID in topic (current implementation)
-  return {
-    topic: `measurements/${payload['source']['id']}`,
-    payload: new TextEncoder().encode(
-      JSON.stringify({
-        time: new Date().toISOString(),
-        c8y_Steam: {
-          Temperature: {
-            unit: 'C',
-            value: payload['c8y_TemperatureMeasurement']['T']['value'],
-          },
-        },
-      })
-    ),
+    transportFields: { key: externalId }, // Kafka record key
   };
 };
 

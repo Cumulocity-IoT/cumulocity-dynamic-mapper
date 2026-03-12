@@ -163,6 +163,20 @@ export interface SmartFunctionContext extends DataPrepContext {
   getClientId(): string | undefined;
 
   /**
+   * Returns the resolved external ID of the source device for outbound mappings.
+   *
+   * Only populated when the mapping has `useExternalId` enabled and a non-empty
+   * `externalIdType` configured. Equivalent to `context.getConfig().externalId`.
+   *
+   * @returns The resolved external identifier, or undefined if not available
+   *
+   * @example
+   * const externalId = context.getExternalId();
+   * return { topic: `measurements/${externalId}`, payload: ... };
+   */
+  getExternalId(): string | undefined;
+
+  /**
    * Looks up a device from the inventory cache by internal Cumulocity device ID.
    *
    * @param c8ySourceId - The internal Cumulocity device ID to look up
@@ -708,11 +722,10 @@ export interface DeviceMessage<T extends C8yObjectType = C8yObjectType> {
   /**
    * The topic on the transport (e.g., MQTT topic).
    *
-   * Special placeholder: Use `_externalId_` in the topic to automatically
-   * reference the external ID of the device. The placeholder will be resolved
-   * using the externalId type specified in the `externalSource` field.
+   * Use `context.getConfig().externalId` to include the device's external ID in the topic.
+   * Requires the mapping to have `useExternalId` enabled and an `externalIdType` configured.
    *
-   * @example "measurements/_externalId_"
+   * @example `measurements/${context.getConfig().externalId}`
    * @example "measurements/12345"
    */
   topic: string;
@@ -758,8 +771,8 @@ export interface DeviceMessage<T extends C8yObjectType = C8yObjectType> {
   time?: Date;
 
   /**
-   * External source configuration for resolving the `_externalId_` placeholder.
-   * Defines which external ID type should be used to lookup the device.
+   * External source configuration for device identity lookup.
+   * Defines which external ID type should be used to resolve the device.
    *
    * @example [{ type: "c8y_Serial" }]
    */
@@ -1078,6 +1091,9 @@ export function createMockRuntimeContext(options: {
     },
     getClientId() {
       return options.clientId;
+    },
+    getExternalId() {
+      return options.config?.['externalId'];
     },
     getManagedObject(c8ySourceId: string) {
       return options.devices?.[c8ySourceId] || null;

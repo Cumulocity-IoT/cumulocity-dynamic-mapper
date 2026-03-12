@@ -184,4 +184,15 @@ public interface JavaExtensionContext extends DataPrepContext {
      * @return all current state entries (never {@code null})
      */
     Map<String, Object> getNativeStateAll();
+
+    /**
+     * Get the resolved external ID for this outbound invocation.
+     *
+     * <p>Only populated for outbound mappings when {@code useExternalId} is enabled and
+     * a non-empty {@code externalIdType} is configured. Set by the enrichment processor
+     * after resolving the C8Y global ID to the configured external ID type.</p>
+     *
+     * @return the resolved external identifier, or {@code null} if not available
+     */
+    String getExternalId();
 }

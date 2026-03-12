@@ -134,7 +134,7 @@ public class TestController {
         String payload = context.getPayload();
         Boolean send = context.getSend();
         String tenant = contextService.getContext().getTenant();
-        log.info("{} - Test mapping: {}, {}, {}", tenant, mapping.getIdentifier(), send,
+        log.info("{} - Test mapping: {}, {}, {}, {}", tenant, mapping.getName(), mapping.getId(), send,
                 payload);
         try {
             AConnectorClient connectorClient = connectorRegistry

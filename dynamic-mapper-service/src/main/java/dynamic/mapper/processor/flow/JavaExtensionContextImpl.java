@@ -59,6 +59,9 @@ public class JavaExtensionContextImpl implements JavaExtensionContext {
     private final FlowStateStore flowStateStore;
     private final String mappingIdentifier;
 
+    // Resolved external ID for outbound mappings (set by EnrichmentOutboundProcessor)
+    private String externalId;
+
     /**
      * Full constructor with data prep support and persistent native state.
      *
@@ -164,6 +167,9 @@ public class JavaExtensionContextImpl implements JavaExtensionContext {
         java.util.Map<String, Object> config = new java.util.HashMap<>();
         config.put("tenant", tenant);
         config.put("clientId", getClientId());
+        if (externalId != null) {
+            config.put("externalId", externalId);
+        }
         if (mapping != null) {
             config.put("mappingId", mapping.getId());
             config.put("mappingName", mapping.getName());
@@ -178,6 +184,26 @@ public class JavaExtensionContextImpl implements JavaExtensionContext {
             config.put("topic", processingContext.getTopic());
         }
         return config;
+    }
+
+    /**
+     * Set the resolved external ID for this outbound invocation.
+     * Called by EnrichmentOutboundProcessor after resolving the C8Y global ID.
+     *
+     * @param externalId The resolved external identifier of the source device
+     */
+    public void setExternalId(String externalId) {
+        this.externalId = externalId;
+    }
+
+    /**
+     * Get the resolved external ID for this outbound invocation.
+     *
+     * @return The resolved external identifier, or null if not available
+     */
+    @Override
+    public String getExternalId() {
+        return externalId;
     }
 
     @Override

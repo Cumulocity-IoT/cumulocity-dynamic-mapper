@@ -1995,11 +1995,8 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
               <tr>
                 <td><code>externalSource</code></td>
                 <td>No</td>
-                <td>Array specifying the external ID type: <code>[&#123;type: "c8y_Serial"&#125;]</code>. When
-                  specified, you
-                  can use <code>_externalId_</code> placeholder in the topic string, which will be automatically
-                  resolved to
-                  the actual external ID.</td>
+                <td>Array specifying the external ID type: <code>[&#123;type: "c8y_Serial"&#125;]</code>. Defines which
+                  external ID type should be used to resolve the device identity.</td>
               </tr>
               <tr>
                 <td><code>transportFields</code></td>
@@ -2052,11 +2049,12 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
         <div class="admonition info" style="max-width: 100%;">
           <div class="title">Info</div>
           <div class="content">
-            <strong>Dynamic Topic Resolution:</strong> Use the <code>_externalId_</code> placeholder in your topic
-            string
-            to automatically include the device's external ID. For example:
-            <code>topic: "measurements/_externalId_"</code>
-            will resolve to <code>"measurements/device-serial-123"</code> at runtime.
+            <strong>Dynamic Topic Resolution:</strong> Use <code>context.getConfig().externalId</code> to include the
+            device's resolved external ID in the topic. For example:
+            <code>topic: `measurements/$&#123;context.getConfig().externalId&#125;`</code>
+            resolves to <code>"measurements/device-serial-123"</code> at runtime.
+            Requires the mapping to have <strong>Use External Id</strong> enabled and an <strong>External Id
+              Type</strong> configured.
           </div>
         </div>
         <div class="p-b-8 text-14">
@@ -2073,16 +2071,18 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
 &#125;</code></pre>
         </div>
         <div class="p-b-8 text-14">
-          <strong>Example: Using <code>_externalId_</code> placeholder</strong><br /><br />
+          <strong>Example: Using <code>context.getConfig().externalId</code> in the topic</strong><br /><br />
           <pre><code class="language-javascript">function onMessage(msg, context) &#123;
   var payload = msg.getPayload();
+  // context.getConfig().externalId contains the resolved external ID of the source device.
+  // Requires the mapping to have 'useExternalId' enabled and an 'externalIdType' configured.
+  var externalId = context.getConfig().externalId;
   return [&#123;
-    topic: "measurements/_externalId_",  // Automatically resolved to external ID
+    topic: "measurements/" + externalId,
     payload: &#123;
       "time": new Date().toISOString(),
       "c8y_Steam": &#123; "Temperature": &#123; "unit": "C", "value": payload["c8y_TemperatureMeasurement"]["T"]["value"] &#125; &#125;
-    &#125;,
-    externalSource: [&#123; "type": "c8y_Serial" &#125;]  // Specifies which external ID type to use
+    &#125;
   &#125;];
 &#125;</code></pre>
         </div>

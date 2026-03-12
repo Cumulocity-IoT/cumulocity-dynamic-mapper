@@ -36,6 +36,7 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.AbstractEnrichmentProcessor;
 import dynamic.mapper.processor.ProcessingException;
+import dynamic.mapper.processor.flow.JavaExtensionContextImpl;
 import dynamic.mapper.processor.model.DataPrepContext;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.TransformationType;
@@ -94,6 +95,7 @@ public class EnrichmentOutboundProcessor extends AbstractEnrichmentProcessor {
         // Declared here so externalId can be added after resolution below
         Map<String, Object> config = null;
         dynamic.mapper.processor.model.SmartFunctionContext sfContext = null;
+        JavaExtensionContextImpl javaExtContext = null;
 
         if (isSmartFunction) {
             if (flowContext instanceof dynamic.mapper.processor.model.SmartFunctionContext) {
@@ -109,6 +111,9 @@ public class EnrichmentOutboundProcessor extends AbstractEnrichmentProcessor {
                 config.put(ProcessingContext.DEBUG, mapping.getDebug());
                 config.put(ProcessingContext.RETAIN, false);
                 // externalId is added below after resolution
+            } else if (flowContext instanceof JavaExtensionContextImpl) {
+                javaExtContext = (JavaExtensionContextImpl) flowContext;
+                // externalId is set directly on javaExtContext below after resolution
             }
         } else {
             if (payloadObject instanceof Map) {
@@ -137,6 +142,9 @@ public class EnrichmentOutboundProcessor extends AbstractEnrichmentProcessor {
                 identityFragment.put("externalId", externalId.getExternalId());
                 if (config != null) {
                     config.put("externalId", externalId.getExternalId());
+                }
+                if (javaExtContext != null) {
+                    javaExtContext.setExternalId(externalId.getExternalId());
                 }
             }
         }
