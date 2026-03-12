@@ -54,15 +54,29 @@ import java.util.Map;
  * <p>Output (Sparkplug B DCMD protobuf payload on topic spBv1.0/{group}/DCMD/{node}/{device}
  * with metrics):</p>
  * <ul>
- *   <li>{@code Alarms/c8y_TemperatureAlarm} — Boolean, true=ACTIVE / false=CLEARED</li>
- *   <li>{@code Alarms/c8y_TemperatureAlarm/Message} — String, alarm text</li>
- *   <li>{@code Alarms/c8y_TemperatureAlarm/Severity} — String, CRITICAL/MAJOR/MINOR/WARNING</li>
- *   <li>{@code Alarms/c8y_TemperatureAlarm/Status} — String, ACTIVE/ACKNOWLEDGED/CLEARED</li>
+ *   <li>{@code <metricPrefix>/c8y_TemperatureAlarm} — Boolean, true=ACTIVE / false=CLEARED</li>
+ *   <li>{@code <metricPrefix>/c8y_TemperatureAlarm/Message} — String, alarm text</li>
+ *   <li>{@code <metricPrefix>/c8y_TemperatureAlarm/Severity} — String, CRITICAL/MAJOR/MINOR/WARNING</li>
+ *   <li>{@code <metricPrefix>/c8y_TemperatureAlarm/Status} — String, ACTIVE/ACKNOWLEDGED/CLEARED</li>
  * </ul>
  *
  * <p>The publish topic must follow the Sparkplug B convention:
  * {@code spBv1.0/{groupId}/DCMD/{edgeNodeId}/{deviceId}}.
  * It is taken from the mapping's configured publish topic.</p>
+ *
+ * <p>Supported parameters (under the top-level {@code parameter} map):
+ * <ul>
+ *   <li>{@code metricPrefix} – namespace prefix for alarm metrics (default: {@value #DEFAULT_METRIC_PREFIX})</li>
+ *   <li>{@code qos} – MQTT QoS level as string "0", "1", or "2" (default: {@value #DEFAULT_QOS})</li>
+ *   <li>{@code retain} – MQTT retain flag as boolean (default: {@value #DEFAULT_RETAIN})</li>
+ * </ul>
+ *
+ * <p>Example mapping parameter YAML:
+ * <pre>
+ * metricPrefix: Alarms
+ * qos: "1"
+ * retain: false
+ * </pre>
  */
 @Slf4j
 public class ProcessorExtensionAlarmToSparkplugB implements ProcessorExtensionOutbound<Object> {
@@ -71,6 +85,14 @@ public class ProcessorExtensionAlarmToSparkplugB implements ProcessorExtensionOu
     private static final int DATATYPE_BOOLEAN = 11;
     /** Sparkplug B DataType constant for String (12) */
     private static final int DATATYPE_STRING = 12;
+
+    private static final String DEFAULT_METRIC_PREFIX = "Alarms";
+    private static final String DEFAULT_QOS = "1";
+    private static final boolean DEFAULT_RETAIN = false;
+
+    private static final String PARAM_METRIC_PREFIX = "metricPrefix";
+    private static final String PARAM_QOS = "qos";
+    private static final String PARAM_RETAIN = "retain";
 
     @Override
     public DeviceMessage[] onMessage(Message<Object> message, JavaExtensionContext context) throws ProcessingException {
@@ -89,6 +111,29 @@ public class ProcessorExtensionAlarmToSparkplugB implements ProcessorExtensionOu
             Map<String, Object> source = (Map<String, Object>) alarmPayload.getOrDefault("source", new HashMap<>());
             String sourceId = (String) source.getOrDefault("id", "");
 
+            // Read parameters supplied from the mapping UI (under the "parameter" key)
+            Map<String, Object> config = context.getConfigAsMap();
+            String metricPrefix = DEFAULT_METRIC_PREFIX;
+            String qos = DEFAULT_QOS;
+            boolean retain = DEFAULT_RETAIN;
+
+            @SuppressWarnings("unchecked")
+            Map<String, Object> parameter = (Map<String, Object>) config.get("parameter");
+            if (parameter != null) {
+                log.info("{} - Extension parameter defined: {}", context.getTenant(), parameter);
+                if (parameter.get(PARAM_METRIC_PREFIX) instanceof String p) {
+                    metricPrefix = p;
+                }
+                if (parameter.get(PARAM_QOS) instanceof String q) {
+                    qos = q;
+                }
+                if (parameter.get(PARAM_RETAIN) instanceof Boolean r) {
+                    retain = r;
+                }
+            } else {
+                log.debug("{} - No 'parameter' map found, using defaults", context.getTenant());
+            }
+
             log.info("{} - Converting alarm to Sparkplug B: type={}, severity={}, status={}, sourceId={}",
                     context.getTenant(), alarmType, severity, status, sourceId);
 
@@ -99,7 +144,7 @@ public class ProcessorExtensionAlarmToSparkplugB implements ProcessorExtensionOu
             boolean isActive = "ACTIVE".equalsIgnoreCase(status);
 
             // Metric name prefix following ISA-95 convention
-            String alarmMetricBase = "Alarms/" + alarmType;
+            String alarmMetricBase = metricPrefix + "/" + alarmType;
 
             // Build Sparkplug B payload with four metrics
             SparkplugBProto.Payload sparkplugPayload = SparkplugBProto.Payload.newBuilder()
@@ -142,8 +187,8 @@ public class ProcessorExtensionAlarmToSparkplugB implements ProcessorExtensionOu
             return new DeviceMessage[] {
                 DeviceMessage.forTopic(context.getMapping().getPublishTopic())
                     .payload(protoBytes)
-                    .retain(false)
-                    .transportField("qos", "1")
+                    .retain(retain)
+                    .transportField("qos", qos)
                     .sourceId(sourceId)
                     .build()
             };
