@@ -989,7 +989,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     }
 
     // When steps were skipped via advanceFromStepToEndStep, jump back to that step
-    // instead of landing on the first skipped step (e.g. "Define substitutions")
+    // instead of landing on the first skipped step (e.g. "Transformation")
     if (this.stepperConfiguration.advanceFromStepToEndStep != null &&
         event.stepper.selectedIndex === event.stepper.steps.length - 1) {
       event.stepper.steps.forEach((step, index) => {

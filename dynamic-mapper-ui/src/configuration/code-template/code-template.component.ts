@@ -94,13 +94,13 @@ export class CodeComponent implements OnInit {
         pattern: /INBOUND_SUBSTITUTION_AS_CODE/,
         type: TemplateType.INBOUND_SUBSTITUTION_AS_CODE,
         direction: Direction.INBOUND,
-        help: `The templates <b>Inbound</b> are available in the code editor and can be customized according to your requirements per mapping. They serve as sample to building substitutions in JavaScript. The function <code>function extractFromSource(ctx)</code> is called during the evaluation at runtime to define substitutions.`
+        help: `The templates <b>Inbound</b> are available in the code editor and can be customized according to your requirements per mapping. They serve as sample to building substitutions in JavaScript. The function <code>function extractFromSource(ctx)</code> is called during the evaluation at runtime to Transformation.`
       },
       {
         pattern: /OUTBOUND_SUBSTITUTION_AS_CODE/,
         type: TemplateType.OUTBOUND_SUBSTITUTION_AS_CODE,
         direction: Direction.OUTBOUND,
-        help: `The templates <b>Outbound</b> are available in the code editor and can be customized according to your requirements per mapping. They serve as sample to building substitutions in JavaScript. The function <code>function extractFromSource(ctx)</code> is called during the evaluation at runtime to define substitutions.`
+        help: `The templates <b>Outbound</b> are available in the code editor and can be customized according to your requirements per mapping. They serve as sample to building substitutions in JavaScript. The function <code>function extractFromSource(ctx)</code> is called during the evaluation at runtime to Transformation.`
       },
       {
         pattern: /INBOUND_SMART_FUNCTION/,

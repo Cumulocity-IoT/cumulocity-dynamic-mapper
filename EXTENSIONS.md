@@ -817,4 +817,4 @@ context.addSubstitution(context.getMapping().getGenericDeviceIdentifier(),
 ```
 
 4. Package the class as a JAR file and upload it via the UI: Configuration -> Processor extension -> Add extension (button)
-5. To use the extension, select a mapping of type "Extension Source" and choose the extension uploaded in step 5 in the "Define Substitutions" section.
+5. To use the extension, select a mapping of type "Extension Source" and choose the extension uploaded in step 5 in the "Transformation" section.
