@@ -504,7 +504,14 @@ public class WebHook extends AConnectorClient {
         if (!baseUrlEndsWithSlash && !contextPath.startsWith("/")) {
             contextPath = "/" + contextPath;
         }
+        if(hasURLParameters(baseUrl)) {
+            return baseUrl.split("\\?")[0] + contextPath + "?" + baseUrl.split("\\?")[1];
+        }
         return baseUrl + contextPath;
+    }
+
+    private boolean hasURLParameters(String url) {
+        return url.contains("?");
     }
 
     /**
