@@ -99,6 +99,7 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
       'define-mapping': 'define-mapping',
       'define-subscription-for-outbound': 'define-subscription-for-outbound',
       'transformation-types': 'transformation-types',
+      'flow-state': 'flow-state',
       'code-templates': 'code-templates',
       'metadata': 'metadata',
       'unknown-payload': 'unknown-payload',

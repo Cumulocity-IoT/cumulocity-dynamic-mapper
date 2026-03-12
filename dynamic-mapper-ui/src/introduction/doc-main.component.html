@@ -659,6 +659,126 @@
             </a></strong>
         </div>
       </div>
+
+      <!-- ==================== SECTION: FLOW STATE   ==================== -->
+      <div class="card-header" id="flow-state">
+        <h3>
+          {{ 'Using state in Java Extension and Smart Function' | translate }}
+        </h3>
+      </div>
+      <div class="card-block">
+        <div class="p-b-8 text-16">
+          Both <b>Java Extensions</b> and <b>Smart Functions</b> can maintain persistent state across multiple message
+          invocations for the same mapping. This enables stateful processing patterns such as message counters, running
+          averages, min/max tracking, deduplication, and rate limiting — without requiring an external database.
+        </div>
+        <div class="p-b-8 text-16">
+          State is scoped per <b>tenant</b> and <b>mapping</b>. All devices processed by the same mapping share the
+          same state bucket. To separate state per device, prefix your keys with the client ID (see examples below).
+        </div>
+        <div class="admonition info" style="max-width: 100%;">
+          <div class="title">Info — Lifetime &amp; TTL</div>
+          <div class="content">
+            <p>State is held <b>in-memory</b> and does not survive a microservice restart.</p>
+            <p>
+              The <b>Minutes lifetime flow state</b> setting (in Service Configuration → Caching) controls automatic
+              expiry. The timer measures the time since the <em>last write</em> to that tenant's state store. If no
+              state has been written for longer than the configured duration, the <b>entire state</b> for that tenant
+              is cleared on the next scheduled cleanup cycle (which runs every minute).
+            </p>
+            <p>
+              For example, with a value of <code>1440</code> (the default, equal to 24 hours): if no mapping has
+              written any state for 24 hours, all stored state for that tenant is discarded. This prevents unbounded
+              memory growth when mappings are inactive.
+            </p>
+            <p>
+              Set to <code>0</code> to disable automatic expiry entirely. Flow state can also be cleared immediately
+              via the <b>Clear flow state</b> button on the Caching configuration page.
+            </p>
+          </div>
+        </div>
+
+        <h4 class="p-t-16 p-b-8">{{ 'State in Smart Functions (JavaScript)' | translate }}</h4>
+        <div class="p-b-8 text-16">
+          Smart Functions use <code>context.getState(key)</code> and <code>context.setState(key, value)</code>.
+          GraalVM automatically converts between JavaScript and Java types, so you can pass native JavaScript values
+          directly. <code>getState</code> returns <code>null</code> (not <code>undefined</code>) when a key is absent.
+        </div>
+        <div class="p-b-4 text-16"><strong>Global counter (shared across all devices):</strong></div>
+        <pre><code class="language-javascript">function onMessage(message, context) &#123;
+  // Increment a counter shared by all devices using this mapping
+  const count = context.getState("messageCount");
+  context.setState("messageCount", count !== null ? count + 1 : 1);
+
+  // ... rest of processing
+&#125;</code></pre>
+
+        <div class="p-b-4 p-t-16 text-16"><strong>Per-device counter (prefix key with clientId):</strong></div>
+        <pre><code class="language-javascript">function onMessage(message, context) &#123;
+  const clientId = context.getClientId();
+  const key = clientId + ".messageCount";
+
+  const count = context.getState(key);
+  context.setState(key, count !== null ? count + 1 : 1);
+
+  // ... rest of processing
+&#125;</code></pre>
+
+        <h4 class="p-t-16 p-b-8">{{ 'State in Java Extensions' | translate }}</h4>
+        <div class="p-b-8 text-16">
+          Java Extensions use <code>context.getNativeState(key)</code> and <code>context.setNativeState(key, value)</code>,
+          which work with plain Java objects (no GraalVM dependency). Setting a key to <code>null</code> removes it.
+          State is persisted to the <code>FlowStateStore</code> automatically after each invocation.
+        </div>
+        <div class="p-b-4 text-16"><strong>Global counter (shared across all devices):</strong></div>
+        <pre><code class="language-java">&#64;Override
+public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtensionContext context) &#123;
+    // Increment a counter shared by all devices using this mapping
+    Integer count = (Integer) context.getNativeState("messageCount");
+    context.setNativeState("messageCount", count == null ? 1 : count + 1);
+
+    // ... rest of processing
+&#125;</code></pre>
+
+        <div class="p-b-4 p-t-16 text-16"><strong>Per-device counter (prefix key with clientId):</strong></div>
+        <pre><code class="language-java">&#64;Override
+public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtensionContext context) &#123;
+    String clientId = context.getClientId();
+    String key = clientId + ".messageCount";
+
+    Integer count = (Integer) context.getNativeState(key);
+    context.setNativeState(key, count == null ? 1 : count + 1);
+
+    // ... rest of processing
+&#125;</code></pre>
+
+        <div class="p-b-4 p-t-16 text-16"><strong>Available state methods in Java Extensions:</strong></div>
+        <div class="table-responsive table-width-100">
+          <table class="table table-striped" style="table-layout: fixed;">
+            <thead class="thead-light">
+              <tr>
+                <th style="width: 35%;">Method</th>
+                <th style="width: 65%;">Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>setNativeState(key, value)</code></td>
+                <td>Store any Java object. Passing <code>null</code> as value removes the key.</td>
+              </tr>
+              <tr>
+                <td><code>getNativeState(key)</code></td>
+                <td>Retrieve a stored value, or <code>null</code> if not present.</td>
+              </tr>
+              <tr>
+                <td><code>getNativeStateAll()</code></td>
+                <td>Return an unmodifiable view of the entire state map for this mapping.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- ==================== SECTION: CODE TEMPLATES ==================== -->
       <div class="card-header" id="code-templates">
         <h3>

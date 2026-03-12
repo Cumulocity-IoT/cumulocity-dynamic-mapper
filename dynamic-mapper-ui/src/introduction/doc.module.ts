@@ -101,6 +101,12 @@ import { DocNavigationFactory } from './doc-navigation.factory';
       }
     }),
     hookRoute({
+      path: 'c8y-pkg-dynamic-mapper/landing/flow-state',
+      component: DocMainComponent, resolve: {
+        feature: featureResolver
+      }
+    }),
+    hookRoute({
       path: 'c8y-pkg-dynamic-mapper/landing/code-templates',
       component: DocMainComponent, resolve: {
         feature: featureResolver

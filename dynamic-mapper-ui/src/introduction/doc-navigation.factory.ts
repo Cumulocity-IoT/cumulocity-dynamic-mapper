@@ -125,6 +125,14 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       priority: 604,
       preventDuplicates: true
     }),
+    flowStateNode: new NavigatorNode({
+      parent: gettext('Introduction'),
+      icon: 'empty',
+      label: gettext('Flow State'),
+      path: '/c8y-pkg-dynamic-mapper/landing/flow-state',
+      priority: 603.5,
+      preventDuplicates: true
+    }),
     codeTemplatesNode: new NavigatorNode({
       parent: gettext('Introduction'),
       icon: 'empty',
