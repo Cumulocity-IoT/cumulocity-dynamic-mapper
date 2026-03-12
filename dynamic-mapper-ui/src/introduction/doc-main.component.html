@@ -2404,6 +2404,91 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
         </div>
         <br />
 
+        <h5 class="p-t-16 p-b-8"><strong>Extension Parameters</strong></h5>
+        <div class="p-b-8 text-16">
+          Java Extensions can receive runtime configuration through a <strong>parameter map</strong>. This allows the
+          same extension class to behave differently depending on the mapping it is used in — without recompiling or
+          redeploying the extension.
+        </div>
+        <div class="p-b-8 text-16">
+          Parameters are accessible inside the extension via <code>context.getConfigAsMap()</code>, which returns a map
+          containing both runtime context (tenant, clientId, topic, mapping metadata) and the user-supplied
+          <code>parameter</code> map nested under the key <strong>"parameter"</strong>.
+        </div>
+
+        <h6 class="p-t-8 p-b-4"><strong>1. Define default parameters in extension-external.yaml</strong></h6>
+        <div class="p-b-8 text-14">
+          Default parameter values can be declared directly in the extension registration YAML. These defaults apply
+          whenever no per-mapping override is provided:
+        </div>
+        <pre><code class="language-yaml">extensions:
+  - eventName: SparkplugBWithConfigMeasurement
+    className: dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionSparkplugBWithConfigMeasurement
+    description: Sparkplug B processor with configurable fragment and unit
+    version: "1.0"
+    parameter:
+      units:
+        unit1: V
+        unit2: A
+      fragment: Energy
+</code></pre>
+
+        <h6 class="p-t-8 p-b-4"><strong>2. Override parameters per mapping in the UI</strong></h6>
+        <div class="p-b-8 text-14">
+          When creating or editing a mapping in the mapping stepper, a <b>Parameter</b> YAML field is shown for
+          mappings that use a Java Extension. Values entered here override or extend the defaults from the YAML
+          registration file and are stored as part of the mapping. This lets different mappings using the same extension
+          class operate with entirely different configuration:
+        </div>
+        <pre><code class="language-yaml">units:
+  unit1: W
+fragment: Power
+</code></pre>
+
+        <h6 class="p-t-8 p-b-4"><strong>3. Read parameters inside the extension</strong></h6>
+        <div class="p-b-8 text-14">
+          Call <code>context.getConfigAsMap()</code> to retrieve the full config. The user-supplied parameter map is
+          nested under the <strong>"parameter"</strong> key:
+        </div>
+        <pre><code class="language-java">&#64;Override
+public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtensionContext context) &#123;
+    Map&lt;String, Object&gt; config = context.getConfigAsMap();
+
+    // The "parameter" key contains the per-mapping (or YAML default) parameters
+    &#64;SuppressWarnings("unchecked")
+    Map&lt;String, Object&gt; parameter = (Map&lt;String, Object&gt;) config.get("parameter");
+
+    String fragment = "SparkplugMetrics"; // default fallback
+    String unit     = "°C";              // default fallback
+
+    if (parameter != null) &#123;
+        if (parameter.get("fragment") instanceof String f) &#123;
+            fragment = f;
+        &#125;
+        &#64;SuppressWarnings("unchecked")
+        Map&lt;String, Object&gt; units = (Map&lt;String, Object&gt;) parameter.get("units");
+        if (units != null &amp;&amp; units.get("unit1") instanceof String u) &#123;
+            unit = u;
+        &#125;
+    &#125;
+
+    // Use fragment and unit to build CumulocityObject...
+&#125;</code></pre>
+
+        <div class="admonition info m-t-8" style="max-width: 100%;">
+          <div class="title">getConfigAsMap() — full content</div>
+          <div class="content">
+            In addition to <code>parameter</code>, the map returned by <code>getConfigAsMap()</code> also contains:
+            <ul class="m-t-4 m-b-0">
+              <li><strong>tenant</strong> — current tenant identifier</li>
+              <li><strong>clientId</strong> — MQTT/connector client ID</li>
+              <li><strong>topic</strong> — incoming message topic</li>
+              <li><strong>mappingId</strong>, <strong>mappingName</strong>, <strong>targetAPI</strong>, <strong>debug</strong> — mapping metadata</li>
+            </ul>
+          </div>
+        </div>
+        <br />
+
         <h5 class="p-t-16 p-b-8"><strong>Key Benefits of Java Extensions</strong></h5>
         <ul class="text-16 p-b-8">
           <li><strong>Type Safety:</strong> Compile-time type checking prevents runtime errors and improves code
