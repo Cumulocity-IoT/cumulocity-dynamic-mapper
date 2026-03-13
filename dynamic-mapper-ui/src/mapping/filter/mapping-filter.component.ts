@@ -96,6 +96,8 @@ export class MappingFilterComponent implements OnInit, OnDestroy, AfterViewInit 
                 <li>to convert a UNIX timestamp to ISO date format use:
                   <code>$fromMillis($number(deviceTimestamp))</code>
                 </li>
+                <li>to concat strings use "&"
+                </li>
                 <li>to join substring starting at position 5 of property <code>txt</code> with
                   device
                   identifier use: <code>$join([$substring(txt,5), "-", id])</code></li>

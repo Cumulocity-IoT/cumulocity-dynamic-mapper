@@ -950,9 +950,10 @@ export class MappingComponent implements OnInit, OnDestroy {
     }
     this.isConnectionToMQTTEstablished = true;
 
-    this.mappingService.updateDefinedDeploymentMapEntry(
+    await this.mappingService.updateDefinedDeploymentMapEntry(
       this.deploymentMapEntry
     );
+    this.mappingService.refreshMappings(this.stepperConfiguration.direction);
 
     this.showConfigMapping = false;
     this.showSnoopingMapping = false;
