@@ -155,7 +155,7 @@ export class MappingFilterDrawerComponent implements OnInit, OnDestroy, AfterVie
         resultType: getTypeOf(r),
         result: JSON.stringify(r, null, 4)
       };
-      if (this.filterModel.sourceExpression.result != 'true') throw Error('The filter expression must return true');
+      if (this.filterModel.sourceExpression.result !== 'true' && this.filterModel.sourceExpression.result !== 'false') throw Error('The filter expression must evaluate to a boolean value: either true or false');
 
       this.valid = true;
 

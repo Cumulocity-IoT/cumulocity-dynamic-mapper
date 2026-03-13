@@ -100,8 +100,8 @@ export class MappingStepperService {
             const resultExpression: JSON = await this.mappingService.evaluateExpression(sourceTemplate, path);
             const resultType = getTypeOf(resultExpression);
 
-            if ((path && resultType != 'Boolean') || (path && resultType == 'Boolean' && !resultExpression)) {
-                throw Error('The filter expression must return true');
+            if (path && resultType != 'Boolean') {
+                throw Error('The filter expression must evaluate to a boolean value: either true or false');
             }
 
             return {
