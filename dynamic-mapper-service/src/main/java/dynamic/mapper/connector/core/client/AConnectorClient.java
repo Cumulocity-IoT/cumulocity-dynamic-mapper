@@ -638,7 +638,7 @@ public abstract class AConnectorClient {
         boolean isDeployed = isDeployedInConnector(mapping);
         if (mapping.getActive() && isDeployed) {
             mappingSubscriptionManager.addSubscriptionInbound(mapping, mapping.getQos());
-        } else if (activationChanged) {
+        } else if (activationChanged && !mapping.getActive()) {
             mappingSubscriptionManager.removeSubscriptionInbound(mapping);
         }
     }

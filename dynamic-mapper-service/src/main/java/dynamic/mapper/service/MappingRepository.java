@@ -37,6 +37,8 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -49,6 +51,11 @@ public class MappingRepository {
 
     private final ConfigurationRegistry configurationRegistry;
     private final MappingService mappingService;
+
+    // Tracks moIds for which a loading warning has already been logged this session,
+    // to prevent flooding the log on every mapping reload.
+    // Structure: <"tenant:moId">
+    private final Set<String> reportedLoadingWarnings = ConcurrentHashMap.newKeySet();
 
     public MappingRepository(ConfigurationRegistry configurationRegistry,
                             @Lazy MappingService mappingService) {
@@ -255,14 +262,19 @@ public class MappingRepository {
 
             if (MappingType.EXTENSION_JAVA.equals(mapping.getMappingType()) && mapping.getExtension() == null) {
                 String moId = mo.getId() != null ? mo.getId().getValue() : null;
+                String deduplicationKey = tenant + ":" + moId;
                 String errorMsg = String.format(
                         "Mapping %s [%s] has mappingType EXTENSION_JAVA but no extension defined - skipping",
                         mapping.getName(), moId);
-                log.warn("{} - {}", tenant, errorMsg);
-                try {
-                    mappingService.sendMappingLoadingError(tenant, mo, errorMsg);
-                } catch (Exception notifyEx) {
-                    log.warn("{} - Failed to send mapping loading error for MO {}: {}", tenant, moId, notifyEx.getMessage());
+                if (reportedLoadingWarnings.add(deduplicationKey)) {
+                    log.warn("{} - {}", tenant, errorMsg);
+                    try {
+                        mappingService.sendMappingLoadingError(tenant, mo, errorMsg);
+                    } catch (Exception notifyEx) {
+                        log.warn("{} - Failed to send mapping loading error for MO {}: {}", tenant, moId, notifyEx.getMessage());
+                    }
+                } else {
+                    log.debug("{} - {}", tenant, errorMsg);
                 }
                 return Optional.empty();
             }

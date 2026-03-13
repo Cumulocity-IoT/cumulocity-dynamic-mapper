@@ -40,6 +40,9 @@ public abstract class CommonProcessor implements Processor {
      */
     protected boolean evaluateInventoryFilter(String tenant, String filterExpression, String sourceId,
             Boolean testing) {
+        if (filterExpression == null || filterExpression.trim().isEmpty()) {
+            return true;
+        }
         try {
             Map<String, Object> cachedInventoryContent = configurationRegistry.getC8yAgent()
                     .getMOFromInventoryCache(tenant, sourceId, testing);
