@@ -432,12 +432,12 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       extensionName: new FormControl({
         value: this.mapping?.extension?.extensionName,
         disabled: this.stepperConfiguration.editorMode === EditorMode.READ_ONLY
-             || !this.stepperViewModel.showExtensionSelectors
+             || !(this.stepperViewModel.showExtensionSelectorsSource || this.stepperViewModel.showExtensionSelectorsTarget)
       }, Validators.required),
       eventName: new FormControl({
         value: this.mapping?.extension?.eventName,
         disabled: this.stepperConfiguration.editorMode === EditorMode.READ_ONLY
-             || !this.stepperViewModel.showExtensionSelectors
+             || !(this.stepperViewModel.showExtensionSelectorsSource || this.stepperViewModel.showExtensionSelectorsTarget)
       }, Validators.required),
       extensionParameter: new FormControl({
         value: this.configurationToYaml(this.mapping?.extension?.parameter),
@@ -930,13 +930,13 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   private handleTestMappingStep(): void {
+    const testMapping = structuredClone(this.mapping);
+    testMapping.sourceTemplate = JSON.stringify(this.sourceTemplate);
+    testMapping.targetTemplate = JSON.stringify(this.targetTemplate);
     if (this.mapping.code || this.mappingCode) {
-      const testMapping = structuredClone(this.mapping);
-      testMapping.sourceTemplate = JSON.stringify(this.sourceTemplate);
-      testMapping.targetTemplate = JSON.stringify(this.targetTemplate);
       testMapping.code = stringToBase64(this.mappingCode);
-      this.updateTestingTemplate.next(testMapping);
     }
+    this.updateTestingTemplate.next(testMapping);
   }
 
   private updateTemplatesInEditors(): void {
@@ -949,7 +949,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   onNextStep(event: StepperStepChange): void {
     this.stepperForward = true;
 
-    if (this.currentStepIndex === STEP_SELECT_TEMPLATES && this.stepperViewModel.showExtensionSelectors) {
+    if (this.currentStepIndex === STEP_SELECT_TEMPLATES && (this.stepperViewModel.showExtensionSelectorsSource || this.stepperViewModel.showExtensionSelectorsTarget)) {
       const extensionName = this.templateForm.get('extensionName');
       const eventName = this.templateForm.get('eventName');
       extensionName?.markAsTouched();

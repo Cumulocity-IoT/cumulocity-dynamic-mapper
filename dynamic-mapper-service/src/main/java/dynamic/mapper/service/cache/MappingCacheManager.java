@@ -155,6 +155,26 @@ public class MappingCacheManager {
     }
 
     /**
+     * Checks if an inbound mapping with the given identifier exists in cache.
+     * Uses the stable identifier (UUID) rather than the mutable MO id.
+     */
+    public boolean containsInboundMappingByIdentifier(String tenant, String identifier) {
+        if (identifier == null) return false;
+        return getCacheInbound(tenant).values().stream()
+                .anyMatch(m -> identifier.equals(m.getIdentifier()));
+    }
+
+    /**
+     * Retrieves an inbound mapping by its stable identifier (UUID).
+     */
+    public Optional<Mapping> getInboundMappingByIdentifier(String tenant, String identifier) {
+        if (identifier == null) return Optional.empty();
+        return getCacheInbound(tenant).values().stream()
+                .filter(m -> identifier.equals(m.getIdentifier()))
+                .findFirst();
+    }
+
+    /**
      * Gets all inbound mappings for a tenant
      */
     public Map<String, Mapping> getAllInboundMappings(String tenant) {
@@ -238,6 +258,26 @@ public class MappingCacheManager {
      */
     public boolean containsOutboundMapping(String tenant, String mappingId) {
         return getCacheOutbound(tenant).containsKey(mappingId);
+    }
+
+    /**
+     * Checks if an outbound mapping with the given identifier exists in cache.
+     * Uses the stable identifier (UUID) rather than the mutable MO id.
+     */
+    public boolean containsOutboundMappingByIdentifier(String tenant, String identifier) {
+        if (identifier == null) return false;
+        return getCacheOutbound(tenant).values().stream()
+                .anyMatch(m -> identifier.equals(m.getIdentifier()));
+    }
+
+    /**
+     * Retrieves an outbound mapping by its stable identifier (UUID).
+     */
+    public Optional<Mapping> getOutboundMappingByIdentifier(String tenant, String identifier) {
+        if (identifier == null) return Optional.empty();
+        return getCacheOutbound(tenant).values().stream()
+                .filter(m -> identifier.equals(m.getIdentifier()))
+                .findFirst();
     }
 
     /**

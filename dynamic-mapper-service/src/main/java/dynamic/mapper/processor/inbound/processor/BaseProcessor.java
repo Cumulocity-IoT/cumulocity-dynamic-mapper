@@ -54,6 +54,9 @@ public abstract class BaseProcessor extends CommonProcessor {
     protected void validateProcessingCache(ProcessingContext<?> context) {
         // if there are too few devices identified, then we replicate the first device
         Map<String, List<SubstituteValue>> processingCache = context.getProcessingCache();
+        if (processingCache == null || processingCache.isEmpty()) {
+            return;
+        }
         String entryWithMaxSubstitutes = processingCache.entrySet()
                 .stream()
                 .map(entry -> new AbstractMap.SimpleEntry<String, Integer>(entry.getKey(), entry.getValue().size()))

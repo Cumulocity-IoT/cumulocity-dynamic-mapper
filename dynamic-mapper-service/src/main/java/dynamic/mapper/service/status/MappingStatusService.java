@@ -402,28 +402,28 @@ public class MappingStatusService {
     }
 
     private Boolean shouldIncludeStatus(String tenant, MappingStatus status) {
-        if (status == null || status.id == null) {
+        if (status == null || status.identifier == null) {
             log.warn("{} - Skipping null or invalid status", tenant);
             return false;
         }
 
-        return "UNSPECIFIED".equals(status.id) ||
-                cacheManager.containsInboundMapping(tenant, status.id) ||
-                cacheManager.containsOutboundMapping(tenant, status.id);
+        return MappingStatus.IDENT_UNSPECIFIED_MAPPING.equals(status.identifier) ||
+                cacheManager.containsInboundMappingByIdentifier(tenant, status.identifier) ||
+                cacheManager.containsOutboundMappingByIdentifier(tenant, status.identifier);
     }
 
     private void enrichStatusWithName(String tenant, MappingStatus status) {
-        if (status == null || status.id == null) {
+        if (status == null || status.identifier == null) {
             log.warn("{} - Cannot enrich null or invalid status", tenant);
             return;
         }
 
         try {
-            if ("UNSPECIFIED".equals(status.id)) {
+            if (MappingStatus.IDENT_UNSPECIFIED_MAPPING.equals(status.identifier)) {
                 status.name = "Unspecified";
             } else {
-                cacheManager.getInboundMapping(tenant, status.id)
-                        .or(() -> cacheManager.getOutboundMapping(tenant, status.id))
+                cacheManager.getInboundMappingByIdentifier(tenant, status.identifier)
+                        .or(() -> cacheManager.getOutboundMappingByIdentifier(tenant, status.identifier))
                         .ifPresent(mapping -> {
                             if (mapping.getName() != null) {
                                 status.name = mapping.getName();
@@ -431,7 +431,7 @@ public class MappingStatusService {
                         });
             }
         } catch (Exception e) {
-            log.warn("{} - Error enriching status name for id: {}", tenant, status.id, e);
+            log.warn("{} - Error enriching status name for identifier: {}", tenant, status.identifier, e);
         }
     }
 
