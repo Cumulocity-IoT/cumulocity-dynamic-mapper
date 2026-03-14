@@ -29,6 +29,7 @@ import {
     ExtensionType,
     Mapping,
     SAMPLE_TEMPLATES_C8Y,
+    StepperConfiguration,
     TransformationType,
     countDeviceIdentifiers,
     createCustomUuid,
@@ -56,6 +57,18 @@ export class MappingStepperService {
     isButtonDisabled$ = new BehaviorSubject<boolean>(true);
     sourceCustomMessage$ = new Subject<string>();
     targetCustomMessage$ = new Subject<string>();
+
+    /**
+     * Emits whenever a mapping property relevant to template rendering changes
+     * (e.g. useExternalId, createNonExistingDevice, eventWithAttachment).
+     * Components subscribe once and re-expand their working templates accordingly,
+     * removing the need for per-property @Output() events on MappingStepPropertiesComponent.
+     */
+    readonly mappingPropertyChanged$ = new Subject<Mapping>();
+
+    notifyMappingPropertyChanged(mapping: Mapping): void {
+        this.mappingPropertyChanged$.next(mapping);
+    }
 
     async evaluateSourceExpression(sourceTemplate: any, path: string): Promise<{
         resultType: string;
@@ -393,6 +406,7 @@ export class MappingStepperService {
         this.extensionEvents$.complete();
         this.sourceCustomMessage$.complete();
         this.targetCustomMessage$.complete();
+        this.mappingPropertyChanged$.complete();
     }
 
 }

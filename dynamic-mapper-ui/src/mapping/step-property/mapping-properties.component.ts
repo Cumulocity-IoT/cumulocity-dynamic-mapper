@@ -46,6 +46,7 @@ import {
   StepperConfiguration
 } from '../../shared';
 import { MappingService } from '../core/mapping.service';
+import { MappingStepperService } from '../service/mapping-stepper.service';
 import { ValidationError } from '../shared/mapping.model';
 import { EditorMode } from '../shared/stepper.model';
 import { deriveSampleTopicFromTopic, getTypeOf } from '../shared/util';
@@ -91,6 +92,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
   private readonly alertService = inject(AlertService);
   private readonly sharedService = inject(SharedService);
   private readonly mappingService = inject(MappingService);
+  private readonly stepperService = inject(MappingStepperService);
   private readonly formatStringPipe = inject(FormatStringPipe);
 
   async ngOnInit(): Promise<void> {
@@ -244,6 +246,33 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
         fieldGroupClassName: 'row',
         fieldGroup: [
           {
+            className: 'col-lg-6',
+            key: 'mappingType',
+            type: 'input',
+            wrappers: ['c8y-form-field'],
+            templateOptions: {
+              label: 'Mapping type',
+              disabled: true,
+              required: false
+            },
+          },
+                    {
+            className: 'col-lg-6',
+            key: 'transformationType',
+            type: 'input',
+            wrappers: ['c8y-form-field'],
+            templateOptions: {
+              label: 'Transformation type',
+              disabled: true,
+              required: false
+            },
+          }
+        ]
+      },
+      {
+        fieldGroupClassName: 'row',
+        fieldGroup: [
+          {
             className: 'col-lg-3',
             key: 'targetAPI',
             type: 'select',
@@ -392,7 +421,11 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
               description:
                 'If this is enabled then the device id is identified by its  external id which is looked up and translated using the externalIdType.',
               indeterminate: false,
-              hideLabel: true
+              hideLabel: true,
+              change: () => {
+                this.mapping.useExternalId = !!this.propertyFormly.get('useExternalId').value;
+                this.stepperService.notifyMappingPropertyChanged(this.mapping);
+              }
             }
           },
           {

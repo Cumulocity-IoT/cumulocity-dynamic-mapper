@@ -669,7 +669,10 @@ export function definesDeviceIdentifier(
     }
   } else {
     if (mapping.useExternalId) {
-      return sub?.pathSource === `${MappingTokens.IDENTITY}.externalId`;
+      // When useExternalId is true, either _IDENTITY_.externalId or
+      // _IDENTITY_.c8ySourceId is acceptable as the source identifier.
+      return sub?.pathSource === `${MappingTokens.IDENTITY}.externalId`
+          || sub?.pathSource === `${MappingTokens.IDENTITY}.c8ySourceId`;
     } else {
       return sub?.pathSource === `${MappingTokens.IDENTITY}.c8ySourceId`;
     }

@@ -22,77 +22,105 @@ import { API, Direction, Feature, Mapping, MappingType } from './mapping.model';
 import { SharedService } from '../service/shared.service';
 import { inject } from '@angular/core';
 
-export const SAMPLE_TEMPLATES_C8Y = {
-  MEASUREMENT: `{                                               
+const SAMPLE_TIME_PLACEHOLDER = '__SAMPLE_NOW__';
+const HEX_PAYLOAD_PLACEHOLDER = '__HEX_PAYLOAD_NOW__';
+
+function generateHexPayload(): string {
+  const now = new Date().toISOString();
+  const csv = `65, 4.5, "${now}","c8y_FuelMeasurement"`;
+  const hexPairs = Array.from(csv).map(c => c.charCodeAt(0).toString(16).padStart(2, '0'));
+  const groups: string[] = [];
+  for (let i = 0; i < hexPairs.length; i += 2) {
+    groups.push(hexPairs[i] + (hexPairs[i + 1] ?? ''));
+  }
+  return `{"payload":"${groups.join(' ')} "}`;
+}
+
+function withCurrentTime(template: string): string {
+  if (template === HEX_PAYLOAD_PLACEHOLDER) {
+    return generateHexPayload();
+  }
+  return template.replace(SAMPLE_TIME_PLACEHOLDER, new Date().toISOString());
+}
+
+function dynamicTemplates<T extends Record<string, string>>(base: T): T {
+  return new Proxy(base, {
+    get(target, prop: string) {
+      const value = target[prop];
+      return typeof value === 'string' ? withCurrentTime(value) : value;
+    }
+  });
+}
+
+export const SAMPLE_TEMPLATES_C8Y = dynamicTemplates({
+  MEASUREMENT: `{
     "c8y_TemperatureMeasurement": {
         "T": {
             "value": 110,
               "unit": "C" }
           },
-      "time":"2022-08-05T00:14:49.389+02:00",
+      "time":"${SAMPLE_TIME_PLACEHOLDER}",
       "type": "c8y_TemperatureMeasurement"
   }`,
-  ALARM: `{                                            
+  ALARM: `{
     "severity": "MAJOR",
     "status": "ACTIVE",
     "text": "This is a new test alarm!",
-    "time": "2022-08-05T00:14:49.389+02:00",
+    "time": "${SAMPLE_TIME_PLACEHOLDER}",
     "type": "c8y_TestAlarm"
   }`,
-  EVENT: `{ 
+  EVENT: `{
     "text": "This is a new test event.",
-    "time": "2022-08-05T00:14:49.389+02:00",
+    "time": "${SAMPLE_TIME_PLACEHOLDER}",
     "type": "c8y_TestEvent"
  }`,
-  INVENTORY: `{ 
+  INVENTORY: `{
     "c8y_IsDevice": {},
     "name": "Vibration Sensor",
     "com_cumulocity_model_Agent": {},
     "type": "maker_Vibration_Sensor"
  }`,
-  OPERATION: `{ 
+  OPERATION: `{
    "description": "New camera operation!",
    "type": "maker_Vibration_Sensor"
 }`
-};
+});
 
-export const SAMPLE_TEMPLATES_EXTERNAL = {
-  MEASUREMENT: `{                                               
+export const SAMPLE_TEMPLATES_EXTERNAL = dynamicTemplates({
+  MEASUREMENT: `{
     "Temperature": {
         "value": 110,
         "unit": "C" },
-      "time":"2022-08-05T00:14:49.389+02:00",
+      "time":"${SAMPLE_TIME_PLACEHOLDER}",
       "deviceId":"909090"
   }`,
-  ALARM: `{                                            
+  ALARM: `{
     "deviceId":"909090",
     "alarmType": "TestAlarm",
     "description": "This is a new test alarm!",
     "severity": "MAJOR",
     "status": "ACTIVE",
-    "time": "2022-08-05T00:14:49.389+02:00"
+    "time": "${SAMPLE_TIME_PLACEHOLDER}"
   }`,
-  EVENT: `{ 
+  EVENT: `{
     "deviceId":"909090",
     "description": "This is a new test event.",
-    "time": "2022-08-05T00:14:49.389+02:00",
+    "time": "${SAMPLE_TIME_PLACEHOLDER}",
     "eventType": "TestEvent"
  }`,
-  INVENTORY: `{ 
+  INVENTORY: `{
     "name": "Vibration Sensor",
     "type": "maker_Vibration_Sensor",
     "id": "909090"
  }`,
-  OPERATION: `{ 
+  OPERATION: `{
    "deviceId": "909090",
    "description": "New camera operation!",
    "type": "maker_Vibration_Sensor"
   }`,
-  FLAT_FILE:
-    '{"payload":"165, 14.5, \\"2022-08-06T00:14:50.000+02:00\\",\\"c8y_FuelMeasurement\\""}',
-  HEX:
-    '{"payload":"3635 2c20 342e 352c 2022 3230 3232 2d30 382d 3036 5430 303a 3135 3a35 302e 3030 302b 3032 3a30 3022 2c22 6338 795f 4675 656c 4d65 6173 7572 656d 656e 7422 "}'
-};
+  FLAT_FILE: `{"payload":"165, 14.5, \\"${SAMPLE_TIME_PLACEHOLDER}\\",\\"c8y_FuelMeasurement\\""}`,
+  HEX: HEX_PAYLOAD_PLACEHOLDER
+});
 
 export const SCHEMA_EVENT = {
   definitions: {},

@@ -518,6 +518,13 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         this.templateForm.setErrors({ 'incorrect': true });
       }
     });
+
+    this.stepperService.mappingPropertyChanged$.pipe(takeUntil(this.destroy$)).subscribe(mapping => {
+      if (mapping.direction === Direction.OUTBOUND && this.sourceTemplate) {
+        this.sourceTemplate = expandC8YTemplate(this.sourceTemplate, mapping);
+        this.editorSourceStepSubstitution?.set(this.sourceTemplate);
+      }
+    });
   }
 
   deploymentMapEntryChange(deploymentMapEntry: DeploymentMapEntry): void {
@@ -1087,6 +1094,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     }
   }
 
+
   onValueCodeChange(value: string): void {
     this.mappingCode = value;
   }
@@ -1223,15 +1231,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.editorSourceStepSubstitution?.setSelectionToPath(this.substitutionModel.pathSource),
       this.editorTargetStepSubstitution?.setSelectionToPath(this.substitutionModel.pathTarget)
     ]);
-  }
-
-  onUpdateSubstitutionValidity(): void {
-    this.stepperService.updateSubstitutionValidity(
-      this.mapping,
-      this.stepperConfiguration.allowNoDefinedIdentifier,
-      this.currentStepIndex,
-      this.stepperConfiguration.showCodeEditor
-    );
   }
 
   private manualResize(source: string): void {

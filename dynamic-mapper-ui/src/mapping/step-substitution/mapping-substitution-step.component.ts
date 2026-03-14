@@ -59,9 +59,6 @@ export class MappingSubstitutionStepComponent implements OnInit {
   @Input() currentStepIndex: number;
 
   @Output() mappingCodeChange = new EventEmitter<string>();
-  @Output() codeTemplateSelected = new EventEmitter<void>();
-  @Output() createCodeTemplate = new EventEmitter<void>();
-  @Output() updateSubstitutionValidity = new EventEmitter<void>();
 
   @ViewChild('editorSourceStepSubstitution', { static: false })
   editorSourceStepSubstitution!: JsonEditorComponent;
@@ -88,10 +85,14 @@ export class MappingSubstitutionStepComponent implements OnInit {
   readonly Direction = Direction;
 
   get identitySubstitutionHint(): string {
+    const side = this.mapping?.direction === Direction.OUTBOUND ? 'source' : 'target';
+    if (this.mapping?.direction === Direction.OUTBOUND && this.mapping?.useExternalId) {
+      return `One substitution with ${side} <code class="text-warning text-10">_IDENTITY_.externalId</code>`
+           + ` or <code class="text-warning text-10">_IDENTITY_.c8ySourceId</code> must exist.`;
+    }
     const path = this.mapping?.useExternalId
       ? '_IDENTITY_.externalId'
       : '_IDENTITY_.c8ySourceId';
-    const side = this.mapping?.direction === Direction.OUTBOUND ? 'source' : 'target';
     return `One substitution with ${side} <code class="text-warning text-10">${path}</code> must exist.`;
   }
 
@@ -312,7 +313,7 @@ export class MappingSubstitutionStepComponent implements OnInit {
       this.mapping,
       this.stepperConfiguration,
       this.expertMode,
-      () => this.updateSubstitutionValidity.emit()
+      () => this.stepperService.updateSubstitutionValidity(this.mapping, this.stepperConfiguration.allowNoDefinedIdentifier, this.currentStepIndex, this.stepperConfiguration.showCodeEditor)
     );
 
     this.selectedSubstitution = -1;
@@ -324,7 +325,7 @@ export class MappingSubstitutionStepComponent implements OnInit {
       this.substitutionModel,
       this.mapping,
       this.stepperConfiguration,
-      () => this.updateSubstitutionValidity.emit()
+      () => this.stepperService.updateSubstitutionValidity(this.mapping, this.stepperConfiguration.allowNoDefinedIdentifier, this.currentStepIndex, this.stepperConfiguration.showCodeEditor)
     );
   }
 
@@ -332,7 +333,7 @@ export class MappingSubstitutionStepComponent implements OnInit {
     this.substitutionService.deleteSubstitution(
       selected,
       this.mapping,
-      () => this.updateSubstitutionValidity.emit()
+      () => this.stepperService.updateSubstitutionValidity(this.mapping, this.stepperConfiguration.allowNoDefinedIdentifier, this.currentStepIndex, this.stepperConfiguration.showCodeEditor)
     );
   }
 
@@ -385,7 +386,7 @@ export class MappingSubstitutionStepComponent implements OnInit {
               this.mapping,
               this.stepperConfiguration,
               this.expertMode,
-              () => this.updateSubstitutionValidity.emit()
+              () => this.stepperService.updateSubstitutionValidity(this.mapping, this.stepperConfiguration.allowNoDefinedIdentifier, this.currentStepIndex, this.stepperConfiguration.showCodeEditor)
             );
           });
         } else {

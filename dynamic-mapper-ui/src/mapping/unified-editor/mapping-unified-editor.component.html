@@ -19,60 +19,55 @@
 ~
 -->
 
-<c8y-title translate>Edit Mapping</c8y-title>
+<c8y-title translate>{{mapping.name}}</c8y-title>
 
 <div class="card card--fullpage content-fullpage d-col">
 
   <!-- Tab header bar rendered by the outlet (must come before c8y-tab registrations) -->
-  <c8y-tabs-outlet orientation="horizontal" outletName="unified-editor"
-    class="col-xs-12 flex-no-shrink"></c8y-tabs-outlet>
+  <c8y-tabs-outlet orientation="horizontal" outletName="unified-editor" class="flex-no-shrink"></c8y-tabs-outlet>
 
   <!-- Tab registration – tabs skipped by advanceFromStepToEndStep are omitted -->
   @if (isTabVisible(0)) {
-  <c8y-tab  [icon]="'c8y-device-management'" [label]="'Connector'" [priority]="50" [tabsOutlet]="'unified-editor'" [isActive]="activeTabIndex === 0"
-    (onSelect)="onTabSelected(0)"></c8y-tab>
+  <c8y-tab [icon]="'c8y-device-management'" [label]="'Connector'" [priority]="50" [tabsOutlet]="'unified-editor'"
+    [isActive]="activeTabIndex === 0" (onSelect)="onTabSelected(0)"></c8y-tab>
   }
   @if (isTabVisible(1)) {
-  <c8y-tab [icon]="'settings'"  [label]="'General Settings'" [priority]="40" [tabsOutlet]="'unified-editor'" [isActive]="activeTabIndex === 1"
-    (onSelect)="onTabSelected(1)"></c8y-tab>
+  <c8y-tab [icon]="'settings'" [label]="'General Settings'" [priority]="40" [tabsOutlet]="'unified-editor'"
+    [isActive]="activeTabIndex === 1" (onSelect)="onTabSelected(1)"></c8y-tab>
   }
   @if (isTabVisible(2)) {
-  <c8y-tab [icon]="'document-body'" [label]="'Templates'" [priority]="30" [tabsOutlet]="'unified-editor'" [isActive]="activeTabIndex === 2"
-    (onSelect)="onTabSelected(2)"></c8y-tab>
+  <c8y-tab [icon]="'document-body'" [label]="'Templates'" [priority]="30" [tabsOutlet]="'unified-editor'"
+    [isActive]="activeTabIndex === 2" (onSelect)="onTabSelected(2)"></c8y-tab>
   }
   @if (isTabVisible(3)) {
-  <c8y-tab [icon]="'code'" [label]="'Transformation'" [priority]="20" [tabsOutlet]="'unified-editor'" [isActive]="activeTabIndex === 3"
-    (onSelect)="onTabSelected(3)"></c8y-tab>
+  <c8y-tab [icon]="'code'" [label]="'Transformation'" [priority]="20" [tabsOutlet]="'unified-editor'"
+    [isActive]="activeTabIndex === 3" (onSelect)="onTabSelected(3)"></c8y-tab>
   }
   @if (isTabVisible(4)) {
-  <c8y-tab [icon]="'play-arrow'" [label]="'Testing'" [priority]="10" [tabsOutlet]="'unified-editor'" [isActive]="activeTabIndex === 4"
-    (onSelect)="onTabSelected(4)"></c8y-tab>
+  <c8y-tab [icon]="'play-arrow'" [label]="'Testing'" [priority]="10" [tabsOutlet]="'unified-editor'"
+    [isActive]="activeTabIndex === 4" (onSelect)="onTabSelected(4)"></c8y-tab>
   }
 
   <!-- Tab content – [hidden] keeps all components alive so editors/forms retain state -->
   <div class="card-block flex-grow overflow-auto">
 
-  <!-- Tab 0: Connector -->
-  @if (activeTabIndex === 0 && isTabVisible(0)) {
-  <div class="col-xs-12 flex-grow no-gutter">
+    <!-- Tab 0: Connector -->
+    @if (activeTabIndex === 0 && isTabVisible(0)) {
     <d11r-mapping-connector [stepperConfiguration]="stepperConfiguration" [directions]="[mapping.direction]"
       [deploymentMapEntry]="deploymentMapEntry" (deploymentMapEntryChange)="deploymentMapEntryChange($event)">
     </d11r-mapping-connector>
-  </div>
-  }
+    }
 
-  <!-- Tab 1: General Settings -->
-  @if (activeTabIndex === 1 && isTabVisible(1)) {
-  <div class="fit-h d-col">
+    <!-- Tab 1: General Settings -->
+    @if (activeTabIndex === 1 && isTabVisible(1)) {
     <d11r-mapping-properties [mapping]="mapping" [stepperConfiguration]="stepperConfiguration"
-      [propertyFormly]="propertyFormly" [codeFormly]="codeFormly" (targetAPIChanged)="onTargetAPIChanged($event)" [feature]="feature">
+      [propertyFormly]="propertyFormly" [codeFormly]="codeFormly" (targetAPIChanged)="onTargetAPIChanged($event)"
+      [feature]="feature">
     </d11r-mapping-properties>
-  </div>
-  }
+    }
 
-  <!-- Tab 2: Templates -->
-  @if (activeTabIndex === 2 && isTabVisible(2)) {
-  <div class="card-block p-b-0">
+    <!-- Tab 2: Templates -->
+    @if (activeTabIndex === 2 && isTabVisible(2)) {
     <div [formGroup]="templateForm">
       <div class="d-flex">
         <div class="col-lg-5 col-lg-offset-1 column-right-border">
@@ -192,18 +187,16 @@
       </div>
     </div>
     }
-  </div>
-  }
+    }
 
-  <!-- Tab 3: Substitutions -->
-  @if (activeTabIndex === 3 && isTabVisible(3)) {
-  <div class="fit-h d-col">
+    <!-- Tab 3: Substitutions -->
+    @if (activeTabIndex === 3 && isTabVisible(3)) {
     <d11r-mapping-substitution-step [mapping]="mapping" [stepperConfiguration]="stepperConfiguration"
       [sourceTemplate]="sourceTemplate" [targetTemplate]="targetTemplate" [sourceSystem]="sourceSystem"
       [targetSystem]="targetSystem" [feature]="feature" [aiAgentDeployed]="aiAgentDeployed" [aiAgent]="aiAgent"
       [updateSourceEditor]="updateSourceEditor" [updateTargetEditor]="updateTargetEditor" [mappingCode]="mappingCode"
       [codeEditorLabel]="codeEditorLabel" [codeEditorHelp]="codeEditorHelp" [currentStepIndex]="currentStepIndex"
-      (mappingCodeChange)="mappingCode = $event" (updateSubstitutionValidity)="onUpdateSubstitutionValidity()">
+      (mappingCodeChange)="mappingCode = $event">
 
       @if (stepperViewModel.showCodeEditorSection) {
       <ng-container codeEditor>
@@ -212,17 +205,14 @@
       </ng-container>
       }
     </d11r-mapping-substitution-step>
-  </div>
-  }
+    }
 
-  <!-- Tab 4: Testing -->
-  @if (activeTabIndex === 4 && isTabVisible(4)) {
-  <div class="fit-h d-col">
+    <!-- Tab 4: Testing -->
+    @if (activeTabIndex === 4 && isTabVisible(4)) {
     <d11r-mapping-testing #mappingTestingStep [updateTestingTemplate]="updateTestingTemplate" [mapping]="mapping"
       [stepperConfiguration]="stepperConfiguration" (sourceTemplateChanged)="onTestingSourceTemplateChanged($event)">
     </d11r-mapping-testing>
-  </div>
-  }
+    }
 
   </div> <!-- end scrollable content -->
 
@@ -246,12 +236,13 @@
 <ng-template #extensionTemplateSource let-form="form">
   @if (stepperViewModel.showExtensionSelectorsSource) {
   <div [formGroup]="form">
-    <div class="form-group p-b-8" [class.has-error]="form.get('extensionName')?.invalid && form.get('extensionName')?.touched">
+    <div class="form-group p-b-8"
+      [class.has-error]="form.get('extensionName')?.invalid && form.get('extensionName')?.touched">
       <label translate>Extensions for {{ MappingTypeLabels[mapping.mappingType] }}</label>
       <c8y-select [items]="extensionItems" formControlName="extensionName" [filterItems]="true"
         aria-label="Extension Name"></c8y-select>
       @if (form.get('extensionName')?.invalid && form.get('extensionName')?.touched) {
-        <span class="help-block"><small translate>Extension name is required.</small></span>
+      <span class="help-block"><small translate>Extension name is required.</small></span>
       }
     </div>
     <div class="form-group" [class.has-error]="form.get('eventName')?.invalid && form.get('eventName')?.touched">
@@ -259,21 +250,18 @@
       <c8y-select [items]="extensionEventItems$ | async" formControlName="eventName" [filterItems]="true"
         aria-label="Event Name"></c8y-select>
       @if (form.get('eventName')?.invalid && form.get('eventName')?.touched) {
-        <span class="help-block"><small translate>Event name is required.</small></span>
+      <span class="help-block"><small translate>Event name is required.</small></span>
       }
     </div>
     @if (hasExtensionParameter) {
-      <div class="form-group">
-        <label translate>Extension Parameter (YAML)</label>
-        <textarea
-          class="form-control"
-          formControlName="extensionParameter"
-          rows="6"
-          placeholder="parameter:&#10;  key: value"
-          style="font-family: monospace; font-size: var(--c8y-font-size-small);">
+    <div class="form-group">
+      <label translate>Extension Parameter (YAML)</label>
+      <textarea class="form-control" formControlName="extensionParameter" rows="6"
+        placeholder="parameter:&#10;  key: value"
+        style="font-family: monospace; font-size: var(--c8y-font-size-small);">
         </textarea>
-        <small class="text-muted" translate>Optional YAML parameter passed to the extension.</small>
-      </div>
+      <small class="text-muted" translate>Optional YAML parameter passed to the extension.</small>
+    </div>
     }
   </div>
   }
@@ -287,12 +275,13 @@
 <ng-template #extensionTemplateTarget let-form="form">
   @if (stepperViewModel.showExtensionSelectorsTarget) {
   <div [formGroup]="form">
-    <div class="form-group p-b-8" [class.has-error]="form.get('extensionName')?.invalid && form.get('extensionName')?.touched">
+    <div class="form-group p-b-8"
+      [class.has-error]="form.get('extensionName')?.invalid && form.get('extensionName')?.touched">
       <label translate>Extensions for {{ MappingTypeLabels[mapping.mappingType] }}</label>
       <c8y-select [items]="extensionItems" formControlName="extensionName" [filterItems]="true"
         aria-label="Extension Name"></c8y-select>
       @if (form.get('extensionName')?.invalid && form.get('extensionName')?.touched) {
-        <span class="help-block"><small translate>Extension name is required.</small></span>
+      <span class="help-block"><small translate>Extension name is required.</small></span>
       }
     </div>
     <div class="form-group" [class.has-error]="form.get('eventName')?.invalid && form.get('eventName')?.touched">
@@ -300,21 +289,18 @@
       <c8y-select [items]="extensionEventItems$ | async" formControlName="eventName" [filterItems]="true"
         aria-label="Event Name"></c8y-select>
       @if (form.get('eventName')?.invalid && form.get('eventName')?.touched) {
-        <span class="help-block"><small translate>Event name is required.</small></span>
+      <span class="help-block"><small translate>Event name is required.</small></span>
       }
     </div>
     @if (hasExtensionParameter) {
-      <div class="form-group">
-        <label translate>Extension Parameter (YAML)</label>
-        <textarea
-          class="form-control"
-          formControlName="extensionParameter"
-          rows="6"
-          placeholder="parameter:&#10;  key: value"
-          style="font-family: monospace; font-size: var(--c8y-font-size-small);">
+    <div class="form-group">
+      <label translate>Extension Parameter (YAML)</label>
+      <textarea class="form-control" formControlName="extensionParameter" rows="6"
+        placeholder="parameter:&#10;  key: value"
+        style="font-family: monospace; font-size: var(--c8y-font-size-small);">
         </textarea>
-        <small class="text-muted" translate>Optional YAML parameter passed to the extension.</small>
-      </div>
+      <small class="text-muted" translate>Optional YAML parameter passed to the extension.</small>
+    </div>
     }
   </div>
   }
@@ -364,8 +350,8 @@
         </button>
       </div>
     </div>
-    <c8y-editor [editorOptions]="editorOptions" class="form-control flex-grow" style="min-height: 630px" monacoEditorMarkerValidator
-      [ngModel]="mappingCode" (ngModelChange)="onValueCodeChange($event)">
+    <c8y-editor [editorOptions]="editorOptions" class="form-control flex-grow" style="min-height: 630px"
+      monacoEditorMarkerValidator [ngModel]="mappingCode" (ngModelChange)="onValueCodeChange($event)">
     </c8y-editor>
   </div>
   @if (stepperViewModel.showInternalExtensionNote) {
