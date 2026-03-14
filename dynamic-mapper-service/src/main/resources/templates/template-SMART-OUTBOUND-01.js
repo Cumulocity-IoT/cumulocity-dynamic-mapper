@@ -6,7 +6,20 @@
  * @defaultTemplate true
  * @internal true
  * @readonly true
- * 
+ *
+ * Sample Cumulocity measurement payload (source)
+ * {
+ *     "time": "2025-01-01T12:00:00.000Z",
+ *     "type": "c8y_TemperatureMeasurement",
+ *     "c8y_TemperatureMeasurement": {
+ *         "T": {
+ *             "value": 23.5,
+ *             "unit": "C"
+ *         }
+ *     },
+ *     "source": { "id": "12345" }
+ * }
+ * publishTopic 'measurements/berlin_01'
 */
 
 function onMessage(msg, context) {

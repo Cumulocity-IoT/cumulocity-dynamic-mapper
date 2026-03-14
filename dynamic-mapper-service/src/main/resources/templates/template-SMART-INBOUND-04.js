@@ -6,7 +6,24 @@
  * @defaultTemplate false
  * @internal true
  * @readonly true
- * 
+ *
+ * Sample payload (telemetry)
+ * {
+ *     "messageId": "msg-001",
+ *     "clientId": "sensor-berlin-01",
+ *     "payloadType": "telemetry",
+ *     "sensorData": {
+ *         "temp_val": 23.5
+ *     }
+ * }
+ * Sample payload (error)
+ * {
+ *     "messageId": "msg-002",
+ *     "clientId": "sensor-berlin-01",
+ *     "payloadType": "error",
+ *     "logMessage": "Sensor malfunction detected"
+ * }
+ * topic 'testSmartInbound/sensor-berlin-01'
 */
 
 function onMessage(msg, context) {

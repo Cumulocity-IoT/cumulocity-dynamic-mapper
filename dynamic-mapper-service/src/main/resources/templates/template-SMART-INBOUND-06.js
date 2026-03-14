@@ -10,6 +10,16 @@
  * @readonly true
  * @since 6.1.6
  *
+ * Sample payload
+ * {
+ *     "messageId": "msg-001",
+ *     "clientId": "child-sensor-01",
+ *     "sensorData": {
+ *         "temp_val": 23.5
+ *     }
+ * }
+ * topic 'testSmartInbound/child-sensor-01'
+ *
  * Prerequisites:
  * - Enable inventory cache in connector configuration
  * - Add "assetParents" to inventoryFragmentsToCache list
@@ -31,7 +41,7 @@ function onMessage(msg, context) {
     var clientId = context.getClientId() || payload["clientId"];
 
     // Lookup the originating device using external ID
-    var originatingDevice = context.getManagedObject({
+    var originatingDevice = context.getManagedObjectByExternalId({
         externalId: clientId,
         type: "c8y_Serial"
     });

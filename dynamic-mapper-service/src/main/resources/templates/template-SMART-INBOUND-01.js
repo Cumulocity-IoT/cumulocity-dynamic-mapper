@@ -6,7 +6,17 @@
  * @defaultTemplate true
  * @internal true
  * @readonly true
- * 
+ *
+ * Sample payload
+ * {
+ *     "messageId": "msg-001",
+ *     "clientId": "sensor-berlin-01",
+ *     "deviceId": "12345",
+ *     "sensorData": {
+ *         "temp_val": 23.5
+ *     }
+ * }
+ * topic 'testSmartInbound/sensor-berlin-01'
 */
 
 function onMessage(msg, context) {
@@ -19,11 +29,12 @@ function onMessage(msg, context) {
     // Get clientId from context first, fall back to payload
     var clientId = context.getClientId() || payload["clientId"];
 
-    // lookup device for enrichment
-    var deviceByDeviceId = context.getManagedObjectByDeviceId(payload["deviceId"]);
+    // lookup device by c8y internal id for enrichment
+    var deviceByDeviceId = context.getManagedObject(payload["deviceId"]);
     console.log("Device (by device id): " + deviceByDeviceId);
 
-    var deviceByExternalId = context.getManagedObject({ externalId: clientId, type: "c8y_Serial" } );
+    // lookup device by externalId for enrichment
+    var deviceByExternalId = context.getManagedObjectByExternalId({ externalId: clientId, type: "c8y_Serial" });
     console.log("Device (by external id): " + deviceByExternalId);
 
     return [{

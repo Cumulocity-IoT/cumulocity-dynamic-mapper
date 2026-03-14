@@ -6,7 +6,16 @@
  * @defaultTemplate false
  * @internal true
  * @readonly true
- * 
+ *
+ * Sample payload
+ * {
+ *     "messageId": "msg-001",
+ *     "clientId": "sensor-berlin-01",
+ *     "sensorData": {
+ *         "temp_val": 23.5
+ *     }
+ * }
+ * topic 'testSmartInbound/sensor-berlin-01'
 */
 
 function onMessage(msg, context) {
