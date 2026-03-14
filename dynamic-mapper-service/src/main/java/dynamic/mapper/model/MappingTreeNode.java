@@ -25,7 +25,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.ToString;
-import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.commons.lang3.mutable.MutableInt;
@@ -42,7 +41,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import dynamic.mapper.util.Utils;;
+import dynamic.mapper.util.Utils;
 
 /**
  * Represents a node in the mapping tree structure.
@@ -76,8 +75,9 @@ public class MappingTreeNode {
     private final Lock readLock = treeLock.readLock();
     private final Lock writeLock = treeLock.writeLock();
 
-    // Helper class for context
-    @Value
+    // Helper class for context; children list is mutable (nodes are added during tree building)
+    @AllArgsConstructor
+    @Getter
     private static class MappingContext {
         String currentLevel;
         String currentPathMonitoring;
@@ -178,8 +178,7 @@ public class MappingTreeNode {
     }
 
     // Private implementation methods
-    private List<MappingTreeNode> resolveTopicPath(List<String> topicLevels, Integer currentTopicLevelIndex)
-            throws ResolveException {
+    private List<MappingTreeNode> resolveTopicPath(List<String> topicLevels, Integer currentTopicLevelIndex) {
         List<MappingTreeNode> results = new ArrayList<>();
 
         if (currentTopicLevelIndex < topicLevels.size()) {
@@ -187,23 +186,13 @@ public class MappingTreeNode {
 
             // Process exact matches
             getChildrenOptional(currentLevel)
-                    .ifPresent(nodes -> nodes.forEach(node -> {
-                        try {
-                            results.addAll(node.resolveTopicPath(topicLevels, currentTopicLevelIndex + 1));
-                        } catch (ResolveException e) {
-                            log.error("Error resolving topic path", e);
-                        }
-                    }));
+                    .ifPresent(nodes -> nodes.forEach(node ->
+                            results.addAll(node.resolveTopicPath(topicLevels, currentTopicLevelIndex + 1))));
 
             // Process single wildcard matches
             getChildrenOptional(Mapping.TOPIC_WILDCARD_SINGLE)
-                    .ifPresent(nodes -> nodes.forEach(node -> {
-                        try {
-                            results.addAll(node.resolveTopicPath(topicLevels, currentTopicLevelIndex + 1));
-                        } catch (ResolveException e) {
-                            log.error("Error resolving topic path", e);
-                        }
-                    }));
+                    .ifPresent(nodes -> nodes.forEach(node ->
+                            results.addAll(node.resolveTopicPath(topicLevels, currentTopicLevelIndex + 1))));
 
             // Process multi wildcard matches
             getChildrenOptional(Mapping.TOPIC_WILDCARD_MULTI)
@@ -242,11 +231,11 @@ public class MappingTreeNode {
                 levels);
     }
 
-    private Boolean isLastLevel(MappingContext context) {
+    private boolean isLastLevel(MappingContext context) {
         return context.level == context.levels.size() - 1;
     }
 
-    private Boolean isIntermediateLevel(MappingContext context) {
+    private boolean isIntermediateLevel(MappingContext context) {
         return context.level < context.levels.size() - 1;
     }
 
@@ -269,7 +258,7 @@ public class MappingTreeNode {
         return createAndLinkInnerNode(context);
     }
 
-    private Boolean deleteMapping(Mapping mapping, List<String> levels, int currentLevel, MutableInt branchingLevel)
+    private boolean deleteMapping(Mapping mapping, List<String> levels, int currentLevel, MutableInt branchingLevel)
             throws ResolveException {
         if (!hasChildren()) {
             return false;
@@ -286,22 +275,17 @@ public class MappingTreeNode {
         return parentPath + level;
     }
 
-    private Boolean hasChildren() {
+    private boolean hasChildren() {
         return !childNodes.isEmpty();
     }
 
     private void updateChildNodes(MappingContext context, MappingTreeNode child) {
-        context.children.add(child);
-        childNodes.put(context.currentLevel, context.children);
+        childNodes.computeIfAbsent(context.currentLevel, k -> new ArrayList<>()).add(child);
     }
 
     private MappingTreeNode findOrCreateInnerNode(MappingContext context) throws ResolveException {
         List<MappingTreeNode> innerNodes = findInnerNodes(context.children);
         validateInnerNodes(innerNodes);
-        if (innerNodes.size() > 1) {
-            log.warn(TENANT_LOG_PREFIX + "Something wrong innerNode size should never be > 1 [{}]", tenant,
-                    innerNodes.size());
-        }
         return innerNodes.isEmpty() ? createAndLinkInnerNode(context) : innerNodes.get(0);
     }
 
@@ -323,17 +307,17 @@ public class MappingTreeNode {
         return child;
     }
 
-    private Boolean deleteMappingNode(Mapping mapping, MappingContext context, MutableInt branchingLevel) {
+    private boolean deleteMappingNode(Mapping mapping, MappingContext context, MutableInt branchingLevel) {
         logMappingNodeDeletion(mapping, context, branchingLevel);
         return processChildNodesForDeletion(mapping, context, branchingLevel);
     }
 
-    private Boolean deleteInnerNode(Mapping mapping, MappingContext context, MutableInt branchingLevel) {
+    private boolean deleteInnerNode(Mapping mapping, MappingContext context, MutableInt branchingLevel) {
         logInnerNodeDeletion(context, branchingLevel);
         return processInnerNodeDeletion(mapping, context, branchingLevel);
     }
 
-    private Boolean processInnerNodeDeletion(Mapping mapping, MappingContext context, MutableInt branchingLevel) {
+    private boolean processInnerNodeDeletion(Mapping mapping, MappingContext context, MutableInt branchingLevel) {
         MutableBoolean foundMapping = new MutableBoolean(false);
 
         if (!childNodes.containsKey(context.currentLevel)) {
@@ -350,7 +334,7 @@ public class MappingTreeNode {
         return foundMapping.booleanValue();
     }
 
-    private Boolean processInnerNodeChild(MappingTreeNode node, Mapping mapping, MappingContext context,
+    private boolean processInnerNodeChild(MappingTreeNode node, Mapping mapping, MappingContext context,
             MutableInt branchingLevel, MutableBoolean foundMapping) {
         if (node.getMappingNode() || foundMapping.booleanValue()) {
             return false;
@@ -368,7 +352,7 @@ public class MappingTreeNode {
         }
     }
 
-    private Boolean processChildNodesForDeletion(Mapping mapping, MappingContext context, MutableInt branchingLevel) {
+    private boolean processChildNodesForDeletion(Mapping mapping, MappingContext context, MutableInt branchingLevel) {
         MutableBoolean foundMapping = new MutableBoolean(false);
         Set<Entry<String, List<MappingTreeNode>>> childNodesEntrySet = childNodes.entrySet();
 
@@ -378,7 +362,7 @@ public class MappingTreeNode {
         return foundMapping.booleanValue();
     }
 
-    private Boolean processMappingNodeEntry(Entry<String, List<MappingTreeNode>> entry, Mapping mapping,
+    private boolean processMappingNodeEntry(Entry<String, List<MappingTreeNode>> entry, Mapping mapping,
             MappingContext context, MutableInt branchingLevel, MutableBoolean foundMapping) {
         List<MappingTreeNode> nodes = entry.getValue();
         nodes.removeIf(node -> shouldRemoveNode(node, mapping, context, branchingLevel));
@@ -390,7 +374,7 @@ public class MappingTreeNode {
         return false;
     }
 
-    private Boolean shouldRemoveNode(MappingTreeNode node, Mapping mapping, MappingContext context,
+    private boolean shouldRemoveNode(MappingTreeNode node, Mapping mapping, MappingContext context,
             MutableInt branchingLevel) {
         return Optional.ofNullable(node.getMapping())
                 .map(m -> m.getId().equals(mapping.getId()))
@@ -409,7 +393,7 @@ public class MappingTreeNode {
         }
     }
 
-    private Boolean shouldDeleteNode(boolean deleted, int currentLevel, MutableInt branchingLevel) {
+    private boolean shouldDeleteNode(boolean deleted, int currentLevel, MutableInt branchingLevel) {
         if (currentLevel < branchingLevel.getValue()) {
             log.debug(TENANT_LOG_PREFIX + "Deleting innerNode stopped: currentLevel [{}], branchingLevel [{}]",
                     tenant, currentLevel, branchingLevel);
