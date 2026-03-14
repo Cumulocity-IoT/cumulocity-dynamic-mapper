@@ -130,7 +130,8 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
                     context.setSourceId(resolvedExternalId);
                     log.debug("{} - Resolved external ID: {}", tenant, resolvedExternalId);
                 } catch (ProcessingException e) {
-                    log.warn("{} - Could not resolve external ID for device message: {}", tenant, e.getMessage());
+                    log.warn("{} - Could not resolve external ID for device '{}' with externalIdType '{}': {}",
+                            tenant, context.getSourceId(), context.getMapping().getExternalIdType(), e.getMessage());
                     // Fall back to context sourceId if resolution failed
                     if (resolvedExternalId == null || resolvedExternalId.isEmpty()) {
                         resolvedExternalId = context.getSourceId();

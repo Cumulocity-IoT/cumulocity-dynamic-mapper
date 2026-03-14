@@ -15,6 +15,7 @@ import { FormlyFieldConfig } from '@ngx-formly/core';
 import { debounceTime, distinctUntilChanged, Observable } from 'rxjs';
 import {
   COLOR_HIGHLIGHTED,
+  Direction,
   JsonEditorComponent,
   Mapping,
   StepperConfiguration,
@@ -84,6 +85,15 @@ export class MappingSubstitutionStepComponent implements OnInit {
 
   readonly COLOR_HIGHLIGHTED = COLOR_HIGHLIGHTED;
   readonly EditorMode = EditorMode;
+  readonly Direction = Direction;
+
+  get identitySubstitutionHint(): string {
+    const path = this.mapping?.useExternalId
+      ? '_IDENTITY_.externalId'
+      : '_IDENTITY_.c8ySourceId';
+    const side = this.mapping?.direction === Direction.OUTBOUND ? 'source' : 'target';
+    return `One substitution with ${side} <code class="text-warning text-10">${path}</code> must exist.`;
+  }
 
   templateForm: FormGroup = new FormGroup({});
   substitutionFormly: FormGroup = new FormGroup({});

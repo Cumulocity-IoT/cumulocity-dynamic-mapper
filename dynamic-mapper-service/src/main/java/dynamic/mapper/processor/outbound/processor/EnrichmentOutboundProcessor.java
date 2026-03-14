@@ -75,11 +75,24 @@ public class EnrichmentOutboundProcessor extends AbstractEnrichmentProcessor {
                 || TransformationType.EXTENSION_JAVA.equals(mapping.getTransformationType());
 
         String identifier = context.getApi().identifier;
+        if (context.getTesting() && payloadObject instanceof Map) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> payloadMap = (Map<String, Object>) payloadObject;
+            normalizeTestPayload(tenant, payloadMap, identifier);
+        }
         String payloadAsString = toPrettyJsonString(payloadObject);
         Object sourceId = extractContent(context, payloadObject, payloadAsString, identifier);
         if (sourceId == null) {
-            throw new ProcessingException(
-                    String.format("Could not extract source ID from payload using path '%s'", identifier));
+            if (context.getTesting()) {
+                // Test payload may not contain the source identifier (e.g. no source.id on a
+                // MEASUREMENT). Fall back to a mock ID so the test can proceed without error.
+                sourceId = "MOCK_DEVICE_ID";
+                log.warn("{} - Test mode: payload has no '{}' field, falling back to mock source id '{}'",
+                        tenant, identifier, sourceId);
+            } else {
+                throw new ProcessingException(
+                        String.format("Could not extract source ID from payload using path '%s'", identifier));
+            }
         }
         context.setSourceId(sourceId.toString());
 

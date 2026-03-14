@@ -102,9 +102,9 @@ public class ManagementSubscriptionClient implements NotificationCallback {
         
         Future<?> future = virtualThreadPool.submit(
             new UpdateSubscriptionDeviceGroupTask(
-                configurationRegistry, 
-                message, 
-                groupCacheManager.getCache()
+                configurationRegistry,
+                message,
+                groupCacheManager
             )
         );
         

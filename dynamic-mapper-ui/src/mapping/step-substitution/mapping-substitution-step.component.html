@@ -161,20 +161,7 @@
             </d11r-mapping-substitution-grid>
           </div>
           @if (!(isSubstitutionValid$ | async)) {
-          <span class="text-warning text-12 p-l-8">
-            One substitution for
-            @if (mapping.useExternalId) {
-            <code class="text-warning text-10">
-                  _IDENTITY_.externalId
-                </code>
-            }
-            @if (!mapping.useExternalId) {
-            <code class="text-warning text-10">
-                  _IDENTITY_.c8ySourceId
-                </code>
-            }
-            must exist.
-          </span>
+          <span class="text-warning text-12 p-l-8" [innerHTML]="identitySubstitutionHint"></span>
           }
         </div>
       </div>

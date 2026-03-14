@@ -214,6 +214,33 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
     }
 
     /**
+     * Normalizes an outbound test payload to look like a real C8Y notification.
+     * The UI injects _IDENTITY_.c8ySourceId but the enrichment processor expects
+     * the API-specific identifier field (e.g. source.id for EVENT/ALARM/MEASUREMENT,
+     * id for INVENTORY, deviceId for OPERATION). Mutates the map in-place.
+     */
+    @SuppressWarnings("unchecked")
+    protected void normalizeTestPayload(String tenant, Map<String, Object> payloadMap, String identifier) {
+        Object identityToken = payloadMap.get(Mapping.TOKEN_IDENTITY);
+        if (!(identityToken instanceof Map)) {
+            return;
+        }
+        Object c8ySourceId = ((Map<String, Object>) identityToken).get("c8ySourceId");
+        if (c8ySourceId == null) {
+            return;
+        }
+        if (identifier.contains(".")) {
+            String[] parts = identifier.split("\\.", 2);
+            Map<String, Object> nested = new HashMap<>();
+            nested.put(parts[1], c8ySourceId.toString());
+            payloadMap.put(parts[0], nested);
+        } else {
+            payloadMap.put(identifier, c8ySourceId.toString());
+        }
+        log.debug("{} - Normalized test payload: injected '{}' = '{}'", tenant, identifier, c8ySourceId);
+    }
+
+    /**
      * Extract content from payload using JSONata expression.
      * Used by outbound enrichment to extract device identifiers.
      */

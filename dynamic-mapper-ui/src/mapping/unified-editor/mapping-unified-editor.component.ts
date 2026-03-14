@@ -333,6 +333,7 @@ export class MappingUnifiedEditorComponent implements OnInit, OnDestroy {
     this.activeTabIndex = this.mapping.mappingType === MappingType.PROTOBUF_INTERNAL || this.mapping.transformationType === TransformationType.EXTENSION_JAVA
       ? TAB_GENERAL_SETTINGS
       : TAB_DEFINE_TRANSFORMATION;
+    this.currentStepIndex = this.activeTabIndex;
 
     // Initialize view model from stepper configuration
     this.stepperViewModel = StepperViewModelFactory.create(this.stepperConfiguration);

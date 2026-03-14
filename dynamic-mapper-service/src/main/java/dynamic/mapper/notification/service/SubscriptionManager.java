@@ -140,6 +140,8 @@ public class SubscriptionManager {
             try {
                 NotificationSubscriptionRepresentation nsr = createSubscriptionByMO(
                         tenant, mor, API.INVENTORY, Utils.MANAGEMENT_SUBSCRIPTION);
+                // Add group to cache so UpdateSubscriptionDeviceGroupTask can find it
+                connectionManager.addGroupToCache(tenant, mor);
                 log.info("{} - Successfully created group subscription", tenant);
                 return nsr;
             } catch (Exception e) {

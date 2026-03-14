@@ -428,6 +428,12 @@ public class MappingStatusService {
                             if (mapping.getName() != null) {
                                 status.name = mapping.getName();
                             }
+                            if (mapping.getMappingTopic() != null) {
+                                status.mappingTopic = mapping.getMappingTopic();
+                            }
+                            if (mapping.getPublishTopic() != null) {
+                                status.publishTopic = mapping.getPublishTopic();
+                            }
                         });
             }
         } catch (Exception e) {

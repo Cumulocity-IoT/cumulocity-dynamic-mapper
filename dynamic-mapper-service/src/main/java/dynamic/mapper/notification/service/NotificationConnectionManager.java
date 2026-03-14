@@ -322,6 +322,13 @@ public class NotificationConnectionManager {
         }
     }
 
+    public void addGroupToCache(String tenant, ManagedObjectRepresentation mor) {
+        NotificationCallback callback = managementCallbacks.get(tenant);
+        if (callback instanceof ManagementSubscriptionClient) {
+            ((ManagementSubscriptionClient) callback).addGroupToCache(mor);
+        }
+    }
+
     public void removeGroupFromCache(String tenant, ManagedObjectRepresentation mor) {
         NotificationCallback callback = managementCallbacks.get(tenant);
         if (callback instanceof ManagementSubscriptionClient) {

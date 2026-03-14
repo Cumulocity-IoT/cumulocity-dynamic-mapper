@@ -21,16 +21,15 @@
 
 package dynamic.mapper.notification.task;
 
-import com.cumulocity.rest.representation.inventory.ManagedObjectReferenceRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionRepresentation;
 import dynamic.mapper.core.ConfigurationRegistry;
-import dynamic.mapper.notification.Utils;
+import dynamic.mapper.notification.GroupCacheManager;
 import dynamic.mapper.notification.GroupCacheManager.CachedGroup;
+import dynamic.mapper.notification.Utils;
 import dynamic.mapper.processor.model.C8YMessage;
 import lombok.extern.slf4j.Slf4j;
 
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
@@ -45,18 +44,19 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
 
     private final C8YMessage c8yMessage;
     private final ConfigurationRegistry configurationRegistry;
-    private final Map<String, CachedGroup> groupCache;
+    private final GroupCacheManager groupCacheManager;
 
     public UpdateSubscriptionDeviceGroupTask(
             ConfigurationRegistry configurationRegistry,
             C8YMessage c8yMessage,
-            Map<String, CachedGroup> groupCache) {
+            GroupCacheManager groupCacheManager) {
         this.c8yMessage = c8yMessage;
         this.configurationRegistry = configurationRegistry;
-        this.groupCache = groupCache;
+        this.groupCacheManager = groupCacheManager;
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public SubscriptionUpdateResult call() {
         String tenant = c8yMessage.getTenant();
         String groupId = c8yMessage.getSourceId();
@@ -69,34 +69,46 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
         }
 
         try {
-            // Get cached group state
-            CachedGroup cachedGroup = groupCache.get(groupId);
+            // Get cached group state (null means group is not subscribed by this service)
+            CachedGroup cachedGroup = groupCacheManager.getCache().get(groupId);
             if (cachedGroup == null) {
                 log.warn("{} - Group {} not found in cache, skipping subscription update", tenant, groupId);
                 return SubscriptionUpdateResult.empty();
             }
 
+            Map<String, Object> payload = c8yMessage.getParsedPayload();
+
+            // Guard: if the payload contains no childAssets key this is a property update
+            // (e.g. group name/description changed), NOT a membership change.
+            // Without this check payloadChildIds would be empty, making toRemove equal to
+            // ALL cached devices and causing a mass-unsubscription.
+            if (payload == null || !payload.containsKey("childAssets")) {
+                log.debug("{} - Group {} UPDATE has no childAssets field — property change only, skipping subscription delta",
+                        tenant, groupId);
+                return SubscriptionUpdateResult.empty();
+            }
+
             // Extract child device IDs from cache and payload
-            Set<String> cachedChildIds = extractChildIdsFromGroup(cachedGroup.getGroup());
-            Set<String> payloadChildIds = extractChildIdsFromPayload(c8yMessage.getParsedPayload());
+            Set<String> cachedChildIds = groupCacheManager.getSubscribedDevices(groupId);
+            Set<String> payloadChildIds = extractChildIdsFromPayload(payload);
 
             // Calculate differences
             Set<String> toAdd = calculateToAdd(payloadChildIds, cachedChildIds);
             Set<String> toRemove = calculateToRemove(cachedChildIds, payloadChildIds);
 
-            log.debug("{} - Group {} changes: +{} devices, -{} devices",
+            log.debug("{} - Group {} membership delta: +{} to subscribe, -{} to remove",
                     tenant, groupId, toAdd.size(), toRemove.size());
 
             if (toAdd.isEmpty() && toRemove.isEmpty()) {
-                log.debug("{} - No changes detected for group {}", tenant, groupId);
+                log.debug("{} - No membership changes detected for group {}", tenant, groupId);
                 return SubscriptionUpdateResult.empty();
             }
 
             // Process subscription changes
             SubscriptionUpdateResult result = processSubscriptionChanges(tenant, groupId, toAdd, toRemove);
 
-            // Update cache with fresh data
-            updateGroupCache(tenant, groupId);
+            // Update cache with the authoritative membership from the payload
+            groupCacheManager.updateSubscribedDevices(groupId, payloadChildIds);
 
             log.info("{} - Updated group {} subscriptions: {} added, {} removed, {} failed",
                     tenant, groupId, result.getAddedCount(), result.getRemovedCount(), result.getFailedCount());
@@ -107,31 +119,6 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
             log.error("{} - Error updating group {} subscription: {}", tenant, groupId, e.getMessage(), e);
             return SubscriptionUpdateResult.withError(e);
         }
-    }
-
-    /**
-     * Extract child device IDs from cached group ManagedObject
-     */
-    private Set<String> extractChildIdsFromGroup(ManagedObjectRepresentation group) {
-        Set<String> childIds = new HashSet<>();
-
-        if (group == null) {
-            return childIds;
-        }
-
-        try {
-            if (group.getChildAssets() != null && group.getChildAssets().getReferences() != null) {
-                for (ManagedObjectReferenceRepresentation child : group.getChildAssets().getReferences()) {
-                    if (child != null && child.getManagedObject() != null && child.getManagedObject().getId() != null) {
-                        childIds.add(child.getManagedObject().getId().getValue());
-                    }
-                }
-            }
-        } catch (Exception e) {
-            log.warn("Failed to extract cached child assets: {}", e.getMessage());
-        }
-
-        return childIds;
     }
 
     /**
@@ -261,22 +248,4 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
         return resultBuilder.build();
     }
 
-    /**
-     * Update group cache with latest data from C8Y
-     */
-    private void updateGroupCache(String tenant, String groupId) {
-        try {
-            ManagedObjectRepresentation updatedGroup = configurationRegistry.getC8yAgent()
-                    .getManagedObjectForId(tenant, groupId, false);
-
-            if (updatedGroup != null) {
-                groupCache.put(groupId, new CachedGroup(updatedGroup, LocalDateTime.now()));
-                log.debug("{} - Updated group cache for {}", tenant, groupId);
-            } else {
-                log.warn("{} - Could not retrieve updated group {} for cache update", tenant, groupId);
-            }
-        } catch (Exception e) {
-            log.warn("{} - Failed to update group cache for {}: {}", tenant, groupId, e.getMessage());
-        }
-    }
 }
