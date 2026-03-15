@@ -112,15 +112,16 @@
             rules from your payload examples. Simply describe what you want to achieve in natural language, and the AI
             generates the corresponding JSONata expressions or JavaScript code.
             <br />
-            Configure an AI provider (Anthropic, ChatGPT, etc.) in the service configuration
-            to automatically generate substitutions and transformation code. This significantly accelerates the
-            integration process.
+            In the <b>Service Configuration → AI</b> section, assign an AI agent (defined in the Cumulocity
+            AI Agent Manager) separately for JSONata, JavaScript, and Smart Function transformations.
+            This significantly accelerates the integration process.
           </div>
         </div>
         <div class="p-b-8 text-16">
-          When you configure an AI Provider, e.g. Anthropic, ChatGPT, ... substitutions or JavaScript code can be
-          generated. This significantly reduces the effort to integrate your devices. The use and configuration of the
-          Cumulocity AI Agent is introduced <a
+          When you configure AI agents in <b>Service Configuration → AI</b>, substitutions or JavaScript code can be
+          generated automatically. Each transformation type (JSONata, JavaScript, Smart Function) can use a different
+          agent. The underlying AI provider (Anthropic, OpenAI, etc.) is configured in the AI Agent Manager, not here.
+          The use and configuration of the Cumulocity AI Agent Manager is introduced <a
             href="https://community.cumulocity.com/t/introducing-the-ai-agent-manager-powering-enterprise-aiot-on-cumulocity/12567"
             target="_blank">here</a>. <br />
           The following screenshot shows a prompt to generate a list of substitutions (mapping rules):
@@ -193,30 +194,38 @@
           After establishing connectivity, define a mapping to transform your data. When creating a mapping, you need to
           make two key decisions:
         </div>
-        <h5 class="p-t-8 p-b-4 text-16"><strong>Step 2.1 Select the Payload Type</strong></h5>
+        <div class="admonition info" style="max-width: 100%;">
+          <div class="title">Info — Expert Mode</div>
+          <div class="content">
+            By default the mapping creation dialog shows only the <strong>JSON</strong> payload type with the standard
+            transformation types. Enable <strong>Expert Mode</strong> in the dialog to unlock all payload formats
+            (Flat File, Hexadecimal, Protobuf, Extension) and the full list of transformation types.
+          </div>
+        </div>
+        <h5 class="p-t-8 p-b-4 text-16"><strong>Step 2.1: Select the Payload Type</strong></h5>
         <div class="p-b-8 text-16">
           Choose the format that matches your incoming or outgoing data:
         </div>
         <ul class="text-16 p-b-16">
           <li><strong>JSON</strong> - The most common format for structured data (recommended for most use cases)</li>
-          <li><strong>Flat File (CSV)</strong> - For comma-separated or delimiter-based data</li>
-          <li><strong>Hexadecimal</strong> - For binary data encoded as hex strings</li>
-          <li><strong>Protobuf</strong> - For Protocol Buffer serialized data</li>
-          <li><strong>Extension</strong> - For custom payload formats using extensions</li>
+          <li><strong>Flat File (CSV)</strong> - For comma-separated or delimiter-based data <small class="text-muted">(requires Expert Mode)</small></li>
+          <li><strong>Hexadecimal</strong> - For binary data encoded as hex strings <small class="text-muted">(requires Expert Mode)</small></li>
+          <li><strong>Protobuf</strong> - For Protocol Buffer serialized data <small class="text-muted">(requires Expert Mode)</small></li>
+          <li><strong>Extension</strong> - For custom payload formats using extensions <small class="text-muted">(requires Expert Mode)</small></li>
         </ul>
-        <h5 class="p-t-8 p-b-4 text-16"><strong>Step 2.2 Choose the Transformation Type</strong></h5>
+        <h5 class="p-t-8 p-b-4 text-16"><strong>Step 2.2: Choose the Transformation Type</strong></h5>
         <div class="p-b-8 text-16">
-          Select how you want to define the data transformation logic:
+          The Transformation Type selector is visible only when <strong>Expert Mode</strong> is enabled. Select how you
+          want to define the data transformation logic:
         </div>
         <ul class="text-16 p-b-16">
           <li>
             <strong>JSONata Expressions</strong> - Use declarative JSONata expressions for straightforward field
-            mappings
-            and transformations.
+            mappings and transformations.
             Ideal for simple to moderately complex transformations without programming knowledge.
           </li>
           <li>
-            <strong>JavaScript Substitutions</strong> - Write JavaScript code snippets for individual field
+            <strong>JavaScript Substitutions</strong> <span class="label label-warning text-10">deprecated</span> - Write JavaScript code snippets for individual field
             transformations.
             Provides more flexibility than JSONata while keeping substitution-based structure.
           </li>
@@ -232,7 +241,7 @@
             [routerLink]="ROUTE_CODE_TEMPLATES_INBOUND_SMART_FUNCTION"> Code
             Templates
           </a> to see
-          JavaScript codes samples
+          JavaScript code samples
           of transformations.
         </div>
         <div class="p-b-8 text-16">
@@ -243,7 +252,7 @@
           The intuitive stepper wizard will guide you through the mapping configuration process.
         </div>
         <div class="admonition info" style="max-width: 100%;">
-          <div class="title">Tip</div>
+          <div class="title">Info</div>
           <div class="content">
             If you're unsure about your device's payload structure, enable <b>Snooping Mode</b>
             when
@@ -382,7 +391,7 @@
         <p class="image-description m-l-48"><b>Description:</b> Creating a new connector.</p>
         <br />
         <div class="p-b-8 text-16">The <strong>Webhook</strong> connector has a setting
-          <strong>Cumulocity Internal</strong> which can be used when Cumulocity MEA should be processed and send
+          <strong>Cumulocity Internal</strong> which can be used when Cumulocity MEA should be processed and sent
           back
           to Cumulocity Core as transformed MEA, e.g. receive an <code>EVENT</code> of type <code>c8y_Uplink</code> and
           use a
@@ -416,7 +425,7 @@
           <div class="title">Important</div>
           <div class="content">
             If any of the templates: source or target is a JSON array - instead of a JSON object -
-            then you have to choose <strong>Smart Function</strong> as a transformation tape.
+            then you have to choose <strong>Smart Function</strong> as a transformation type.
             <br />
             This is due to the internal handling of metadata, e.g. <code>_IDENTITY_.externalId</code> that is added to
             the
@@ -465,7 +474,7 @@
           In the second step of the wizard you define the most important properties for the mapping, e.g. Mapping Name,
           Target API, Mapping Topic (topic to which this mapping should listen for, this supports wildcards:
           <code>#</code>, <code>+</code>). The
-          Mapping Topic Samples is a samples topic replacing all wildcards from the Mapping Topic, e.g.
+          Mapping Topic Sample is a sample topic replacing all wildcards from the Mapping Topic, e.g.
           <code>datalogger/+</code> becomes <code>datalogger/logger_13579</code>, this helps in the later steps to use
           concrete values instead of the abstract wildcards.
         </div>
@@ -488,7 +497,7 @@
         <div class="p-b-8 text-16">
           The following screenshot shows the <strong>Transformation</strong> step for transformation type
           <strong>Substitution as JSONata Expression</strong>. This step shows a JavaScript editor if you choose
-          <strong>Substitution as JavaScript</strong> or <strong>Smart Function (JavaScript)</strong>.
+          <strong>Substitution as JavaScript (deprecated)</strong> or <strong>Smart Function (JavaScript)</strong>.
         </div>
         <br />
         <img width="80%" class="m-l-48 m-b-48 m-b-16"
@@ -543,22 +552,22 @@
         </p>
         <ul class="text-16">
           <li>
-            <b>Subscriptions static</b>: Specify device groups. When a device group is added, subscriptions for all
-            assigned devices are created. When a device is added/removed from a chosen group, the subscription is
-            created/deleted (dynamic). The filter applies to child assets and child devices.
+            <b>Subscriptions static</b>: Select specific individual devices using a tree or table view. Subscriptions
+            are created explicitly for the chosen devices and are not updated automatically when devices are added or
+            removed from a group.
           </li>
           <li>
-            <b>Subscriptions dynamic</b>: Specify device groups. When a device group is added, subscriptions for all
-            assigned devices are created. When a device is added/removed from a chosen group, the subscription is
-            created/deleted (dynamic). The filter applies to child assets and child devices. Another variant is to
-            configure
-            a list of device types. If a device of the configured device types is created, a subscription is
-            automatically
-            created.
+            <b>Subscriptions dynamic (by group)</b>: Specify device groups. When a group is added, subscriptions for
+            all assigned devices are created. When a device is added to or removed from a chosen group, the
+            subscription is automatically created or deleted. The filter applies to child assets and child devices.
+          </li>
+          <li>
+            <b>Subscriptions dynamic (by device type)</b>: Specify a list of device types. When a new device of one
+            of the configured types is registered, a subscription is automatically created for it.
           </li>
         </ul>
         <div class="admonition info" style="max-width: 100%;">
-          <div class="title">Tip</div>
+          <div class="title">Info</div>
           <div class="content">
             Use <b>dynamic subscriptions</b> with device types when you have many devices of the
             same type. This automatically creates subscriptions for new devices as they're added to the system, reducing
@@ -577,7 +586,7 @@
       <!-- ==================== SECTION: TRANSFORMATION TYPES ==================== -->
       <div class="card-header" id="transformation-types">
         <h3>
-          {{ 'Transformation Types' | translate }}
+          {{ 'Transformation types' | translate }}
         </h3>
       </div>
       <div class="card-block">
@@ -1089,7 +1098,7 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
           Start by clicking <b>Add mapping</b> (Mapping → Inbound Mapping → Action Add mapping).
         </div>
         <div class="admonition info" style="max-width: 100%;">
-          <div class="title">Tip</div>
+          <div class="title">Info</div>
           <div class="content">
             <strong>Snooping Best Practices:</strong>
             <ul class="m-t-8 m-b-0">
@@ -1430,7 +1439,7 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
         <div class="admonition info" style="max-width: 100%;">
           <div class="title">Info</div>
           <div class="content">
-            <strong>Tip:</strong> To configure roles, navigate to <b>Administration → Role Management</b> in Cumulocity.
+            To configure roles, navigate to <b>Administration → Role Management</b> in Cumulocity.
             Look for "Dynamic Mapper" permissions and assign them to global roles or specific user groups based on your
             organization's needs.
           </div>
@@ -1559,8 +1568,7 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
         <div class="admonition caution" style="max-width: 100%;">
           <div class="title">Caution</div>
           <div class="content">
-            The JavaScript editor is only available if you select <code>Define substitutions as
-          JavaScript</code> when creating the mapping. You cannot switch between transformation types after creating
+            The JavaScript editor is only available if you select <code>Substitution as JavaScript (deprecated)</code> when creating the mapping. You cannot switch between transformation types after creating
             the
             mapping.
           </div>
@@ -2389,7 +2397,7 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
 &#125;</code></pre>
         <br />
         <div class="p-b-8 text-14">
-          The extension needs to be registered in <b>extension-external.yaml</b> :
+          Register the extension in <b>extension-external.yaml</b>:
         </div>
         <pre><code class="language-yaml">extensions:
   # Smart Function Equivalents - Inbound 
@@ -2400,7 +2408,7 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
 </code></pre>
         <br />
         <div class="p-b-8 text-14">
-          The configuration file <b>extension-external.yaml</b> and the compiled extension class need to be packaged in a zip archive, which must be uploaded, see section <b>Managing Installed Java Extensions</b>.
+          Package the configuration file <b>extension-external.yaml</b> and the compiled extension class into a zip archive, then upload it as described in <b>Managing Installed Java Extensions</b>.
         </div>
         <br />
 
