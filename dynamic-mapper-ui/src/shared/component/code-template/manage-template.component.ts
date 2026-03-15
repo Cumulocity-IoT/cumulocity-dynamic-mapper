@@ -40,19 +40,15 @@ export class ManageTemplateComponent implements OnInit, OnDestroy {
   @Input() action: string = 'CREATE';
   @Input() codeTemplate: Partial<CodeTemplate>;
 
-  closeSubject: Subject<Partial<CodeTemplate>> = new Subject();
+  readonly closeSubject = new Subject<Partial<CodeTemplate>>();
   labels: ModalLabels = { ok: 'Submit', cancel: 'Cancel' };
 
-  valid: boolean = false;
   title: string;
-
-  constructor() { }
 
   ngOnInit(): void {
     const capitalizePipe = new CapitalizeCasePipe();
     const action = capitalizePipe.transform(this.action);
     this.title = `${action} code template`;
-    this.closeSubject = new Subject();
   }
 
   onDismiss() {

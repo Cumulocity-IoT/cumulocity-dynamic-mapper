@@ -458,19 +458,19 @@ describe('MappingStepperComponent', () => {
     });
 
     it('should emit updateSourceEditor event on editor initialization', () => {
-      spyOn(component.updateSourceEditor, 'emit');
+      spyOn(component.updateSourceEditor, 'next');
 
       component.onEditorSourceInitialized();
 
-      expect(component.updateSourceEditor.emit).toHaveBeenCalled();
+      expect(component.updateSourceEditor.next).toHaveBeenCalled();
     });
 
     it('should emit updateTargetEditor event on editor initialization', () => {
-      spyOn(component.updateTargetEditor, 'emit');
+      spyOn(component.updateTargetEditor, 'next');
 
       component.onEditorTargetInitialized();
 
-      expect(component.updateTargetEditor.emit).toHaveBeenCalled();
+      expect(component.updateTargetEditor.next).toHaveBeenCalled();
     });
   });
 

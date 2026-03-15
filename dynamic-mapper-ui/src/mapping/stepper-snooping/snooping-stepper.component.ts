@@ -126,10 +126,10 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy, AfterViewIni
     this.isButtonDisabled$.complete();
   }
 
-  deploymentMapEntryChange(): void {
+  deploymentMapEntryChange(entry: DeploymentMapEntry): void {
+    this.deploymentMapEntry = entry;
     this.isButtonDisabled$.next(
-      !this.deploymentMapEntry?.connectors ||
-      this.deploymentMapEntry?.connectors?.length === 0
+      !entry?.connectors || entry.connectors.length === 0
     );
   }
 

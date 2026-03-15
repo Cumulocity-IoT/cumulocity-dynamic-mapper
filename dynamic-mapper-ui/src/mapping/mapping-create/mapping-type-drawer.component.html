@@ -144,7 +144,7 @@
     <!-- Footer Buttons -->
     <div class="card-footer text-center sticky-buttons">
       <div class="form-group">
-        <button type="button" class="btn btn-primary" (click)="onSave()" [disabled]="!valid || !formGroup.valid">
+        <button type="button" class="btn btn-primary" (click)="onSave()" [disabled]="!formGroup.valid">
           {{ 'Save' | translate }}
         </button>
         <button type="button" class="btn btn-default" (click)="onCancel()">

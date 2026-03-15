@@ -32,7 +32,7 @@ import { FormGroup } from '@angular/forms';
 import { Alert, AlertService, CoreModule } from '@c8y/ngx-components';
 import { FormlyFieldConfig } from '@ngx-formly/core';
 import { PopoverModule } from 'ngx-bootstrap/popover';
-import { BehaviorSubject, debounceTime, distinctUntilChanged } from 'rxjs';
+import { debounceTime, distinctUntilChanged, Subject, takeUntil } from 'rxjs';
 import {
   API,
   Direction,
@@ -42,7 +42,6 @@ import {
   MappingTypeLabels,
   Qos,
   SharedService,
-  SnoopStatus,
   StepperConfiguration
 } from '../../shared';
 import { MappingService } from '../core/mapping.service';
@@ -71,23 +70,21 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
   @Input() mapping: Mapping;
   @Input() stepperConfiguration: StepperConfiguration;
   @Input() propertyFormly: FormGroup;
-  @Input() codeFormly: FormGroup;
-  @Input() feature: Feature;
   @Output() targetAPIChanged = new EventEmitter<string>();
-  @Output() snoopStatusChanged = new EventEmitter<SnoopStatus>();
 
   readonly ValidationError = ValidationError;
   readonly MappingTypeLabels = MappingTypeLabels;
   readonly Direction = Direction;
   readonly EditorMode = EditorMode;
   readonly readOnlyHelp = ' To edit this mapping deactivate the mapping first in mapping list.';
-  readonly selectedResult$ = new BehaviorSubject<number>(0);
 
   propertyFormlyFields: FormlyFieldConfig[] = [];
   sourceSystem: string;
   targetSystem: string;
-  filterMappingModel: FilterExpressionModel;
   filterInventoryModel: FilterExpressionModel;
+
+  private feature: Feature;
+  private readonly destroy$ = new Subject<void>();
 
   private readonly alertService = inject(AlertService);
   private readonly sharedService = inject(SharedService);
@@ -97,7 +94,6 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
 
   async ngOnInit(): Promise<void> {
     this.feature = await this.sharedService.getFeatures();
-
     this.initializeDirection();
     this.initializeFilterModels();
 
@@ -191,11 +187,9 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             hooks: {
               onInit: (field: FormlyFieldConfig) => {
                 field.formControl.valueChanges.pipe(
-                  // Wait for 1500ms pause in typing before processing
                   debounceTime(1500),
-
-                  // Only trigger if the value has actually changed
-                  distinctUntilChanged()
+                  distinctUntilChanged(),
+                  takeUntil(this.destroy$)
                 ).subscribe(path => {
                   this.updateFilterInventoryExpressionResult(path);
                 });
@@ -217,7 +211,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
               required: true
             },
             hideExpression:
-              this.stepperConfiguration.direction == Direction.OUTBOUND
+              this.stepperConfiguration.direction === Direction.OUTBOUND
           },
           {
             className: 'col-lg-6',
@@ -463,30 +457,8 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    this.selectedResult$.complete();
-  }
-
-  async updateFilterMappingExpressionResult(path: string) {
-    try {
-      const resultExpression: JSON = await this.mappingService.evaluateExpression(
-        JSON.parse('{}'),
-        path
-      );
-      this.filterMappingModel.filterExpression = {
-        resultType: getTypeOf(resultExpression),
-        result: JSON.stringify(resultExpression, null, 4),
-        valid: true
-      };
-      if (path && this.filterMappingModel.filterExpression.resultType !== 'Boolean') throw Error('The filter expression must return of boolean type');
-      this.mapping.filterMapping = path;
-    } catch (error) {
-      this.filterMappingModel.filterExpression.valid = false;
-      this.propertyFormly
-        .get('filterMapping')
-        .setErrors({ validationError: { message: error.message } });
-      this.propertyFormly.get('filterMapping').markAsTouched();
-    }
-    this.filterMappingModel = { ...this.filterMappingModel };
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   async updateFilterInventoryExpressionResult(path: string) {
@@ -542,18 +514,8 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
   }
 
   private initializeFilterModels(): void {
-    const emptyFilterExpression = {
-      result: '',
-      resultType: 'empty',
-      valid: false
-    };
-
-    this.filterMappingModel = {
-      filterExpression: { ...emptyFilterExpression }
-    };
-
     this.filterInventoryModel = {
-      filterExpression: { ...emptyFilterExpression }
+      filterExpression: { result: '', resultType: 'empty', valid: false }
     };
   }
 

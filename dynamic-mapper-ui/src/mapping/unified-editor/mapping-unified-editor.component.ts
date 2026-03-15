@@ -22,7 +22,6 @@ import {
   ChangeDetectorRef,
   Component,
   ElementRef,
-  EventEmitter,
   inject,
   OnDestroy,
   OnInit,
@@ -190,8 +189,8 @@ export class MappingUnifiedEditorComponent implements OnInit, OnDestroy {
   readonly MappingTypeDescriptions = MappingTypeDescriptions;
 
   updateTestingTemplate = new ReplaySubject<Mapping>(1);
-  updateSourceEditor = new EventEmitter<EditorUpdateEvent>();
-  updateTargetEditor = new EventEmitter<EditorUpdateEvent>();
+  updateSourceEditor = new Subject<EditorUpdateEvent>();
+  updateTargetEditor = new Subject<EditorUpdateEvent>();
 
   templateForm!: FormGroup;
   templateModel: { stepperConfiguration?: StepperConfiguration; mapping?: Mapping } = {};
@@ -205,7 +204,6 @@ export class MappingUnifiedEditorComponent implements OnInit, OnDestroy {
   selectedPathFilterFilterMapping?: string;
   substitutionModel: SubstitutionModel = {};
   propertyFormly = new FormGroup({});
-  codeFormly = new FormGroup({});
   isGenerateSubstitutionOpen = false;
 
   codeTemplateDecoded?: CodeTemplate;
@@ -726,14 +724,14 @@ export class MappingUnifiedEditorComponent implements OnInit, OnDestroy {
   }
 
   onEditorSourceInitialized(): void {
-    this.updateSourceEditor.emit({
+    this.updateSourceEditor.next({
       schema: getSchema(this.mapping.targetAPI, this.mapping.direction, false, false),
       identifier: API[this.mapping.targetAPI].identifier
     });
   }
 
   onEditorTargetInitialized(): void {
-    this.updateTargetEditor.emit({
+    this.updateTargetEditor.next({
       schema: getSchema(this.mapping.targetAPI, this.mapping.direction, true, false),
       identifier: API[this.mapping.targetAPI].identifier
     });
@@ -1013,12 +1011,12 @@ export class MappingUnifiedEditorComponent implements OnInit, OnDestroy {
       this.mapping.targetTemplate = SAMPLE_TEMPLATES_C8Y[changedTargetAPI];
       this.mapping.sourceTemplate = getExternalTemplate(this.mapping);
       const schemaTarget = getSchema(this.mapping.targetAPI, this.mapping.direction, true, false);
-      this.updateTargetEditor.emit({ schema: schemaTarget });
+      this.updateTargetEditor.next({ schema: schemaTarget });
     } else {
       this.mapping.sourceTemplate = SAMPLE_TEMPLATES_C8Y[changedTargetAPI];
       this.mapping.targetTemplate = getExternalTemplate(this.mapping);
       const schemaSource = getSchema(this.mapping.targetAPI, this.mapping.direction, false, false);
-      this.updateSourceEditor.emit({ schema: schemaSource });
+      this.updateSourceEditor.next({ schema: schemaSource });
     }
   }
 

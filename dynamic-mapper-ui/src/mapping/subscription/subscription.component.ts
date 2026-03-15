@@ -44,7 +44,6 @@ import {
   API,
   Direction,
   Feature,
-  MappingType,
   Operation,
   SharedModule
 } from '../../shared';
@@ -52,7 +51,7 @@ import {
 import { ActivatedRoute, Router } from '@angular/router';
 import { IIdentified } from '@c8y/client';
 import { Subject } from 'rxjs';
-import { DeploymentMapEntry, SharedService } from '../../shared';
+import { SharedService } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { Device, NotificationSubscriptionResponse } from '../shared/mapping.model';
 import { SubscriptionService } from '../core/subscription.service';
@@ -100,12 +99,10 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
   subscribedDevices: Device[] = [];
   subscribedDeviceGroups: Device[] = [];
   subscribedDeviceTypes: string[] = [];
-  devices: IIdentified[] = [];
   Direction = Direction;
 
   path: 'static' | 'dynamic' | 'deviceToClientMap' | null = null;
   titleSubscription = 'Subscription devices mapping outbound';
-  deploymentMapEntry?: DeploymentMapEntry;
 
   readonly displayOptions: DisplayOptions = {
     bordered: true,
@@ -143,8 +140,6 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
     }
   ];
 
-  value?: string;
-  mappingType?: MappingType;
   private readonly destroy$ = new Subject<void>();
 
   readonly pagination: Pagination = {
@@ -242,9 +237,9 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
     let continueDelete: boolean = false;
     for (let index = 0; index < ids.length; index++) {
       const device2Delete = this.subscriptionDevices?.devices.find(
-        (de) => de.id == ids[index]
+        (de) => de.id === ids[index]
       );
-      if (index == 0) {
+      if (index === 0) {
         continueDelete = await this.deleteSubscriptionWithConfirmation(
           device2Delete,
           true,
@@ -363,6 +358,5 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
-    this.mappingService.stopChangedMappingEvents();
   }
 }

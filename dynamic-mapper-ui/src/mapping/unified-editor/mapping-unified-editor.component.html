@@ -61,8 +61,7 @@
     <!-- Tab 1: General Settings -->
     @if (activeTabIndex === 1 && isTabVisible(1)) {
     <d11r-mapping-properties [mapping]="mapping" [stepperConfiguration]="stepperConfiguration"
-      [propertyFormly]="propertyFormly" [codeFormly]="codeFormly" (targetAPIChanged)="onTargetAPIChanged($event)"
-      [feature]="feature">
+      [propertyFormly]="propertyFormly" (targetAPIChanged)="onTargetAPIChanged($event)">
     </d11r-mapping-properties>
     }
 

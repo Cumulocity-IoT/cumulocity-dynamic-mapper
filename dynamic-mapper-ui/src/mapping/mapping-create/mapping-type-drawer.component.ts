@@ -18,11 +18,6 @@
  * @authors Christof Strack
  */
 
-/*
- * Copyright (c) 2025 Cumulocity GmbH
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import { Component, inject, Input, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
 import { AbstractControl, FormBuilder, FormGroup, ValidationErrors } from '@angular/forms';
 import { BottomDrawerRef, BottomDrawerService, CoreModule, ModalLabels } from '@c8y/ngx-components';
@@ -104,7 +99,6 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   isLoading = true;
   isLoadingCodeTemplates = false;
   showTransformationType = false;
-  valid = true;
 
   // Promise for modal result
   private _resolve: (value: SaveResult) => void;

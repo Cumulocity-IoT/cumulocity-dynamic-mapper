@@ -21,18 +21,15 @@ import {
   Component,
   inject,
   Input,
-  OnDestroy,
   OnInit,
   ViewEncapsulation
 } from '@angular/core';
-import { DeviceGridService, } from '@c8y/ngx-components/device-grid';
 import { Mapping, Substitution, MappingType, SharedService, isSubstitutionsAsCode } from '../../shared';
 import { AlertService, BottomDrawerRef, CoreModule } from '@c8y/ngx-components';
 import { AiChatComponent, AiChatMessageComponent } from '@c8y/ngx-components/ai/ai-chat';
 import { AIAgentService } from '../core/ai-agent.service';
 import { AgentObjectDefinition, AgentTextDefinition } from '../shared/ai-prompt.model';
 import { ServiceConfiguration } from '../../configuration';
-import { Subject } from 'rxjs';
 import { base64ToBytes } from '../shared/util';
 
 
@@ -45,20 +42,18 @@ import { base64ToBytes } from '../shared/util';
   imports:[CoreModule, AiChatComponent, AiChatMessageComponent],
   host: { class: 'd-contents' }
 })
-export class AIPromptComponent implements OnInit, OnDestroy {
+export class AIPromptComponent implements OnInit {
 
-  alertService = inject(AlertService);
-  aiAgentService = inject(AIAgentService);
-  sharedService = inject(SharedService);
-  bottomDrawerRef = inject(BottomDrawerRef);
-  deviceGridService = inject(DeviceGridService);
+  private readonly alertService = inject(AlertService);
+  private readonly aiAgentService = inject(AIAgentService);
+  private readonly sharedService = inject(SharedService);
+  private readonly bottomDrawerRef = inject(BottomDrawerRef);
 
   @Input() mapping: Mapping;
   @Input() aiAgent: AgentObjectDefinition | AgentTextDefinition | null;
 
   private _save: (value: Substitution[] | string) => void;
   private _cancel: (reason?: any) => void;
-  destroy$: Subject<void> = new Subject<void>();
   valid: boolean = false;
 
   result: Promise<Substitution[] | string> = new Promise((resolve, reject) => {
@@ -122,11 +117,6 @@ export class AIPromptComponent implements OnInit, OnDestroy {
     await this.sendMessage();
   }
 
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
-  }
-
   save() {
     if (this.isCodeMapping) {
       this._save(this.generatedCode);
@@ -177,7 +167,6 @@ export class AIPromptComponent implements OnInit, OnDestroy {
       try {
         this.aiAgent.agent.variables = JSON.parse(this.testVars);
       } catch (ex) {
-        console.log(ex);
         this.alertService.danger('Invalid JSON in test variables');
         this.isLoadingChat = false;
         return;
@@ -247,7 +236,6 @@ export class AIPromptComponent implements OnInit, OnDestroy {
           }
         } else {
           this.valid = false;
-          console.log('No JavaScript code block found in response');
         }
       }
     } catch (error) {
@@ -293,7 +281,6 @@ export class AIPromptComponent implements OnInit, OnDestroy {
         }
       } else {
         this.valid = false;
-        console.log('No JSON block found in response');
       }
     } catch (error) {
       this.valid = false;

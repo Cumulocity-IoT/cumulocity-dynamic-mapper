@@ -21,7 +21,6 @@ import {
   Component,
   EventEmitter,
   Input,
-  OnInit,
   Output,
   ViewEncapsulation
 } from '@angular/core';
@@ -35,34 +34,31 @@ import { CoreModule } from '@c8y/ngx-components';
   standalone: true,
   imports:[CoreModule]
 })
-export class TypeSelectorComponent implements OnInit {
-  @Input() set typeList(list) {
-    this.typeListInternal = list;
+export class TypeSelectorComponent {
+  @Input() set typeList(list: string[]) {
+    this.typeListInternal = [...list];
     if (this.typeListInternal.length === 0) {
       this.add();
     }
   }
-  get typeList() {
+  get typeList(): string[] {
     return this.typeListInternal;
   }
 
   @Output() cancel = new EventEmitter<any>();
   @Output() commit = new EventEmitter<string[]>();
 
-  typeListInternal: string[];
+  typeListInternal: string[] = [];
 
   trackByFn(index: any, _item: any) {
     return index;
-  }
-
-  ngOnInit(): void {
   }
 
   add() {
     this.typeListInternal.push("");
   }
 
-  remove(index) {
+  remove(index: number) {
     this.typeListInternal.splice(index, 1);
   }
 

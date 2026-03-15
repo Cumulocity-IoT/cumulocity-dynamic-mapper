@@ -213,45 +213,16 @@ export class MappingComponent implements OnInit, OnDestroy {
       this.isLoading = false;
     }
 
-    // Check outbound mapping subscriptions
-    // if (this.stepperConfiguration.direction === Direction.OUTBOUND) {
-    //   try {
-    //     const mappings = await this.mappingService.getMappings(Direction.OUTBOUND);
-    //     const numberOutboundMappings = mappings.length;
-
-    //     // Get dynamic devices
-    //     const dynamicResult = await this.subscriptionService.getSubscriptionDevice(
-    //       this.subscriptionService.DYNAMIC_DEVICE_SUBSCRIPTION
-    //     );
-    //     const hasDynamicDevices = dynamicResult.devices.length > 0;
-
-    //     // Get static devices
-    //     const staticResult = await this.subscriptionService.getSubscriptionDevice(
-    //       this.subscriptionService.STATIC_DEVICE_SUBSCRIPTION
-    //     );
-    //     const hasStaticDevices = staticResult.devices.length > 0;
-
-    //     // Show warning if no devices are subscribed but mappings exist
-    //     if (!hasDynamicDevices && !hasStaticDevices && numberOutboundMappings > 0) {
-    //       this.alertService.warning(
-    //         "No device subscriptions found for your outbound mappings. " +
-    //         "You need to subscribe your outbound mappings to at least one device to process data!"
-    //       );
-    //     }
-    //   } catch (error) {
-    //     console.error('Error verifying outbound mapping subscriptions:', error);
-    //     this.alertService.danger('Failed to verify outbound mapping subscriptions');
-    //   }
-    // }
   }
 
   private async validateSubscriptionOutbound(): Promise<boolean> {
     let valid = true;
-    if (this.stepperConfiguration.direction == Direction.OUTBOUND) {
-      const result = await Promise.all([this.subscriptionService.getSubscriptionDevice(this.subscriptionService.DYNAMIC_DEVICE_SUBSCRIPTION), this.subscriptionService.getSubscriptionDevice(this.subscriptionService.STATIC_DEVICE_SUBSCRIPTION)])
-      if (result[0].devices?.length == 0 && result[1].devices?.length == 0)
+    if (this.stepperConfiguration.direction === Direction.OUTBOUND) {
+      const result = await Promise.all([this.subscriptionService.getSubscriptionDevice(this.subscriptionService.DYNAMIC_DEVICE_SUBSCRIPTION), this.subscriptionService.getSubscriptionDevice(this.subscriptionService.STATIC_DEVICE_SUBSCRIPTION)]);
+      if (result[0].devices?.length === 0 && result[1].devices?.length === 0) {
         this.alertService.info("To enable the outbound mapping, a subscription is required. Please proceed with creating the necessary 'Subscription outbound'.");
-      valid = false;
+        valid = false;
+      }
     }
     return valid;
   }
@@ -281,22 +252,6 @@ export class MappingComponent implements OnInit, OnDestroy {
         callback: this.deleteMappingWithConfirmation.bind(this),
         showIf: item => (!item['mapping']['active'] && (this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole))
       },
-      // {
-      //   type: 'APPLY_MAPPING_FILTER',
-      //   text: 'Apply filter',
-      //   icon: 'filter',
-      //   callback: this.editMessageFilter.bind(this),
-      //   showIf: item => ((item['mapping']['mappingType'] == MappingType.JSON && item['mapping']['direction'] == Direction.INBOUND) ||
-      //     item['mapping']['direction'] == Direction.OUTBOUND) && (this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole)
-      // },
-      // {
-      //   type: 'UPDATE_CODE',
-      //   text: 'Update code',
-      //   icon: 'source-code',
-      //   callback: this.updateCode.bind(this),
-      //   showIf: item => ((item['mapping']['transformationType'] == TransformationType.SMART_FUNCTION) ||
-      //     item['mapping']['transformationType'] == TransformationType.SUBSTITUTION_AS_CODE) && (this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole)
-      // },
       {
         type: 'ENABLE_DEBUG',
         text: 'Enable debugging',
@@ -718,8 +673,8 @@ export class MappingComponent implements OnInit, OnDestroy {
       ];
     mapping.lastUpdate = Date.now();
     if (
-      (mapping.snoopStatus == SnoopStatus.ENABLED ||
-        mapping.snoopStatus == SnoopStatus.STARTED) &&
+      (mapping.snoopStatus === SnoopStatus.ENABLED ||
+        mapping.snoopStatus === SnoopStatus.STARTED) &&
       snoopSupported
     ) {
       const initialState = {

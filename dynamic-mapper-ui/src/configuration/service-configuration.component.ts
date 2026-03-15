@@ -74,8 +74,6 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     smartFunctionAgent: undefined,
     suppressDeprecationWarning: false,
   };
-  editable2updated: boolean = false;
-
   agents$: BehaviorSubject<string[]> = new BehaviorSubject([]);
   destroy$: Subject<void> = new Subject<void>();
   aiAgentDeployed: boolean = false;

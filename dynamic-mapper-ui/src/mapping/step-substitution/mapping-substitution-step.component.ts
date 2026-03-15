@@ -1,9 +1,9 @@
 // mapping-substitution-step.component.ts
 import {
   Component,
-  EventEmitter,
   Input,
   Output,
+  EventEmitter,
   ViewChild,
   OnInit,
   ElementRef,
@@ -51,8 +51,8 @@ export class MappingSubstitutionStepComponent implements OnInit {
   @Input() feature: Feature;
   @Input() aiAgentDeployed: boolean;
   @Input() aiAgent: AgentObjectDefinition | AgentTextDefinition | null;
-  @Input() updateSourceEditor: EventEmitter<any>;
-  @Input() updateTargetEditor: EventEmitter<any>;
+  @Input() updateSourceEditor: Observable<any>;
+  @Input() updateTargetEditor: Observable<any>;
   @Input() mappingCode: string;
   @Input() codeEditorLabel: string;
   @Input() codeEditorHelp: string;

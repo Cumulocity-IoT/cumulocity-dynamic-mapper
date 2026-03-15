@@ -70,7 +70,6 @@ import {
   checkTransformationType,
   expandC8YTemplate,
   expandExternalTemplate,
-  isExpression,
   reduceSourceTemplate,
   splitTopicExcludingSeparator,
   stringToBase64,
@@ -143,8 +142,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   @ViewChild('editorSourceStepTemplate', { static: false }) editorSourceStepTemplate!: JsonEditorComponent;
   @ViewChild('editorTargetStepTemplate', { static: false }) editorTargetStepTemplate!: JsonEditorComponent;
   @ViewChild('mappingTestingStep', { static: false }) mappingTestingStep!: MappingStepTestingComponent;
-  @ViewChild('editorSourceStepSubstitution', { static: false }) editorSourceStepSubstitution!: JsonEditorComponent;
-  @ViewChild('editorTargetStepSubstitution', { static: false }) editorTargetStepSubstitution!: JsonEditorComponent;
   @ViewChild(SubstitutionRendererComponent, { static: false }) substitutionChild!: SubstitutionRendererComponent;
   @ViewChild('stepper', { static: false }) stepper!: C8yStepper;
   @ViewChild('codeEditor', { static: false }) codeEditor!: EditorComponent;
@@ -172,8 +169,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   readonly MappingTypeDescriptions = MappingTypeDescriptions;
 
   updateTestingTemplate = new ReplaySubject<Mapping>(1);
-  updateSourceEditor = new EventEmitter<EditorUpdateEvent>();
-  updateTargetEditor = new EventEmitter<EditorUpdateEvent>();
+  updateSourceEditor = new Subject<EditorUpdateEvent>();
+  updateTargetEditor = new Subject<EditorUpdateEvent>();
 
   templateForm!: FormGroup;
   templateModel: { stepperConfiguration?: StepperConfiguration; mapping?: Mapping } = {};
@@ -187,7 +184,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   selectedPathFilterFilterMapping?: string;
   substitutionModel: SubstitutionModel = {};
   propertyFormly = new FormGroup({});
-  codeFormly = new FormGroup({});
   isGenerateSubstitutionOpen = false;
 
   codeTemplateDecoded?: CodeTemplate;
@@ -522,7 +518,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.stepperService.mappingPropertyChanged$.pipe(takeUntil(this.destroy$)).subscribe(mapping => {
       if (mapping.direction === Direction.OUTBOUND && this.sourceTemplate) {
         this.sourceTemplate = expandC8YTemplate(this.sourceTemplate, mapping);
-        this.editorSourceStepSubstitution?.set(this.sourceTemplate);
       }
     });
   }
@@ -537,14 +532,14 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   onEditorSourceInitialized(): void {
-    this.updateSourceEditor.emit({
+    this.updateSourceEditor.next({
       schema: getSchema(this.mapping.targetAPI, this.mapping.direction, false, false),
       identifier: API[this.mapping.targetAPI].identifier
     });
   }
 
   onEditorTargetInitialized(): void {
-    this.updateTargetEditor.emit({
+    this.updateTargetEditor.next({
       schema: getSchema(this.mapping.targetAPI, this.mapping.direction, true, false),
       identifier: API[this.mapping.targetAPI].identifier
     });
@@ -949,8 +944,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   private updateTemplatesInEditors(): void {
     this.sourceTemplate = this.sourceTemplateUpdated ? this.sourceTemplateUpdated : this.sourceTemplate;
     this.targetTemplate = this.targetTemplateUpdated ? this.targetTemplateUpdated : this.targetTemplate;
-    this.editorSourceStepSubstitution?.set(this.sourceTemplate);
-    this.editorTargetStepSubstitution?.set(this.targetTemplate);
   }
 
   onNextStep(event: StepperStepChange): void {
@@ -1085,12 +1078,12 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.mapping.targetTemplate = SAMPLE_TEMPLATES_C8Y[changedTargetAPI];
       this.mapping.sourceTemplate = getExternalTemplate(this.mapping);
       const schemaTarget = getSchema(this.mapping.targetAPI, this.mapping.direction, true, false);
-      this.updateTargetEditor.emit({ schema: schemaTarget });
+      this.updateTargetEditor.next({ schema: schemaTarget });
     } else {
       this.mapping.sourceTemplate = SAMPLE_TEMPLATES_C8Y[changedTargetAPI];
       this.mapping.targetTemplate = getExternalTemplate(this.mapping);
       const schemaSource = getSchema(this.mapping.targetAPI, this.mapping.direction, false, false);
-      this.updateSourceEditor.emit({ schema: schemaSource });
+      this.updateSourceEditor.next({ schema: schemaSource });
     }
   }
 
@@ -1217,20 +1210,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.isGenerateSubstitutionOpen = false;
   }
 
-  async onSelectSubstitution(selected: number): Promise<void> {
-    if (selected < 0 || selected >= this.mapping.substitutions.length) return;
-
-    this.selectedSubstitution = selected;
-    this.substitutionModel = {
-      ...this.mapping.substitutions[selected],
-      stepperConfiguration: this.stepperConfiguration
-    };
-    this.substitutionModel.pathSourceIsExpression = isExpression(this.substitutionModel.pathSource);
-
-    await Promise.all([
-      this.editorSourceStepSubstitution?.setSelectionToPath(this.substitutionModel.pathSource),
-      this.editorTargetStepSubstitution?.setSelectionToPath(this.substitutionModel.pathTarget)
-    ]);
+  onSelectSubstitution(_selected: number): void {
+    // no-op: selection state is managed entirely within MappingSubstitutionStepComponent
   }
 
   private manualResize(source: string): void {

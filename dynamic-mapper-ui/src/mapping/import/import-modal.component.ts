@@ -19,7 +19,6 @@
  */
 import {
   ApplicationRef,
-  ChangeDetectorRef,
   Component,
   NgZone,
   OnDestroy,
@@ -47,7 +46,6 @@ import { createCustomUuid, Mapping } from '../../shared';
 })
 export class ImportMappingsComponent implements OnDestroy {
   @ViewChild(DropAreaComponent) dropAreaComponent;
-  private importCanceled: boolean = false;
   progress$: BehaviorSubject<number> = new BehaviorSubject<number>(null);
   isLoading: boolean = false;
   isAppCreated: boolean = false;
@@ -59,7 +57,6 @@ export class ImportMappingsComponent implements OnDestroy {
   constructor(
     private mappingService: MappingService,
     private alertService: AlertService,
-    private cdr: ChangeDetectorRef,
     private ngZone: NgZone,
     private appRef: ApplicationRef
   ) { }
@@ -113,15 +110,11 @@ export class ImportMappingsComponent implements OnDestroy {
       this.alertService.warning(`Import completed with errors. ${successCount} succeeded, ${errors.length} failed.`);
     }
 
-    console.log('Import completed:', { successCount, errors: errors.length, total: countMappings });
-
     // Use NgZone.run to ensure the view updates run inside Angular's zone
     this.ngZone.run(() => {
       this.isLoading = false;
       this.progress$.next(100);
       this.isAppCreated = true;
-      console.log('isAppCreated set to:', this.isAppCreated);
-      console.log('Triggering change detection...');
 
       // Force application-wide change detection for dynamically created modal
       this.appRef.tick();
@@ -129,7 +122,6 @@ export class ImportMappingsComponent implements OnDestroy {
   }
 
   onDismiss() {
-    this.cancelFileUpload();
     this.closeSubject.next(true);
     this.closeSubject.complete();
   }
@@ -139,11 +131,7 @@ export class ImportMappingsComponent implements OnDestroy {
     this.closeSubject.complete();
   }
 
-  private cancelFileUpload() {
-    this.importCanceled = true;
-  }
-
   ngOnDestroy() {
-    this.progress$.unsubscribe();
+    this.progress$.complete();
   }
 }

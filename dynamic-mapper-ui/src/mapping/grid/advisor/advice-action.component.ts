@@ -19,14 +19,13 @@
  */
 import {
   Component,
-  Input,
   OnDestroy,
   OnInit,
   ViewEncapsulation
 } from '@angular/core';
 import { CoreModule, ModalLabels } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
-import { Feature, Mapping, MappingEnriched, SharedService } from '../../../shared';
+import { Feature, SharedService } from '../../../shared';
 import { AdvisorAction } from '../../shared/stepper.model';
 
 @Component({
@@ -37,21 +36,18 @@ import { AdvisorAction } from '../../shared/stepper.model';
   imports: [CoreModule]
 })
 export class AdviceActionComponent implements OnInit, OnDestroy {
-  @Input() enrichedMapping: MappingEnriched;
-  mapping: Mapping;
-  closeSubject: Subject<string> = new Subject();
+  readonly closeSubject = new Subject<string>();
   labels: ModalLabels = { ok: 'Select', cancel: 'Cancel' };
 
   selectedAction: AdvisorAction;
   valid: boolean = false;
   AdvisorAction = AdvisorAction;
 
-  feature: Feature;
+  private feature: Feature;
 
-  constructor(private sharedService: SharedService,) { }
+  constructor(private sharedService: SharedService) { }
 
   async ngOnInit(): Promise<void> {
-    this.closeSubject = new Subject();
     this.feature = await this.sharedService.getFeatures();
   }
 

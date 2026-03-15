@@ -19,7 +19,7 @@
  */
 import { CommonModule } from '@angular/common';
 import { HttpStatusCode } from '@angular/common/http';
-import { Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
+import { AfterViewInit, Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AlertService, CoreModule } from '@c8y/ngx-components';
@@ -29,7 +29,7 @@ import { BsModalService } from 'ngx-bootstrap/modal';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { BehaviorSubject } from 'rxjs';
 import { base64ToString, stringToBase64 } from '../../mapping/shared/util';
-import { ConfirmationModalComponent, Direction, Feature, ManageTemplateComponent, Operation, createCustomUuid } from '../../shared';
+import { ConfirmationModalComponent, Feature, ManageTemplateComponent, Operation, createCustomUuid } from '../../shared';
 import { SharedService } from '../../shared/service/shared.service';
 import { CodeTemplate, CodeTemplateMap, TemplateType } from '../shared/configuration.model';
 import { createCompletionProviderFlowFunction, createCompletionProviderSubstitutionAsCode } from '../../mapping/shared/stepper.model';
@@ -42,7 +42,7 @@ import { createCompletionProviderFlowFunction, createCompletionProviderSubstitut
   standalone: true,
   imports: [CoreModule, CommonModule, PopoverModule, EditorComponent, FormsModule]
 })
-export class CodeComponent implements OnInit {
+export class CodeComponent implements OnInit, AfterViewInit {
   @ViewChild(EditorComponent, { static: false }) codeEditor!: EditorComponent;
 
   codeTemplateDecoded!: CodeTemplate;
@@ -51,7 +51,6 @@ export class CodeComponent implements OnInit {
   template!: string;
   defaultTemplate!: string;
   templateType!: TemplateType;
-  direction!: Direction;
   TemplateType = TemplateType;
   codeTemplateEntries: CodeTemplate[] = [];
   codeTemplateEntries$: BehaviorSubject<CodeTemplate[]> = new BehaviorSubject<CodeTemplate[]>([]);
@@ -78,7 +77,7 @@ export class CodeComponent implements OnInit {
   ) { }
 
   async ngOnInit(): Promise<void> {
-    this.feature = await this.route.snapshot.data['feature'];
+    this.feature = this.route.snapshot.data['feature'];
     this.determineTemplateTypeFromUrl();
     this.template = this.defaultTemplate;
 
@@ -93,25 +92,21 @@ export class CodeComponent implements OnInit {
       {
         pattern: /INBOUND_SUBSTITUTION_AS_CODE/,
         type: TemplateType.INBOUND_SUBSTITUTION_AS_CODE,
-        direction: Direction.INBOUND,
         help: `The templates <b>Inbound</b> are available in the code editor and can be customized according to your requirements per mapping. They serve as sample to building substitutions in JavaScript. The function <code>function extractFromSource(ctx)</code> is called during the evaluation at runtime to Transformation.`
       },
       {
         pattern: /OUTBOUND_SUBSTITUTION_AS_CODE/,
         type: TemplateType.OUTBOUND_SUBSTITUTION_AS_CODE,
-        direction: Direction.OUTBOUND,
         help: `The templates <b>Outbound</b> are available in the code editor and can be customized according to your requirements per mapping. They serve as sample to building substitutions in JavaScript. The function <code>function extractFromSource(ctx)</code> is called during the evaluation at runtime to Transformation.`
       },
       {
         pattern: /INBOUND_SMART_FUNCTION/,
         type: TemplateType.INBOUND_SMART_FUNCTION,
-        direction: Direction.INBOUND,
         help: `The templates <b>Inbound for Smart Function</b> are available in the code editor and can be customized according to your requirements per mapping. They serve as sample for a predefined Smart Function for data transformation and create payload for Cumulocity API calls. The function <code>function onMessage(msg, context)</code> is called during evaluation at runtime to define the payload.`
       },
       {
         pattern: /OUTBOUND_SMART_FUNCTION/,
         type: TemplateType.OUTBOUND_SMART_FUNCTION,
-        direction: Direction.OUTBOUND,
         help: `The templates <b>Outbound for Smart Function</b> are available in the code editor and can be customized according to your requirements per mapping. They serve as sample for a Smart Function (JavaScript) to create Broker Payload. The function <code>function onMessage(msg, context)</code> is called during evaluation at runtime to define the payload.`
       }
     ];
@@ -120,7 +115,6 @@ export class CodeComponent implements OnInit {
 
     if (matchedConfig) {
       this.templateType = matchedConfig.type;
-      this.direction = matchedConfig.direction;
       this.defaultTemplate = matchedConfig.type.toString();
       this.codeEditorHelp = matchedConfig.help;
     } else {

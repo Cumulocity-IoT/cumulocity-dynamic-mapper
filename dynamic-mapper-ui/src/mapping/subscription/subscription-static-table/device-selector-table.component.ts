@@ -28,7 +28,7 @@ import {
 import { IIdentified } from '@c8y/client';
 import { Column, ColumnDataType, CoreModule } from '@c8y/ngx-components';
 import { AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
-import { DeviceGridModule, DeviceGridService, GroupDeviceGridColumn, NameDeviceGridColumn, RegistrationDateDeviceGridColumn, SystemIdDeviceGridColumn, TypeDeviceGridColumn } from '@c8y/ngx-components/device-grid';
+import { DeviceGridModule, DeviceGridService, GroupDeviceGridColumn, NameDeviceGridColumn, RegistrationDateDeviceGridColumn, SystemIdDeviceGridColumn } from '@c8y/ngx-components/device-grid';
 
 @Component({
   selector: 'd11r-device-selector-table',
@@ -52,7 +52,6 @@ export class DeviceSelectorTableComponent implements OnInit {
   }
   ngOnInit(): void {
     this.columns = this.getColumns();
-    console.log(this.deviceList);
   }
 
   clickedUpdateSubscription() {
@@ -102,7 +101,6 @@ export class DeviceSelectorTableComponent implements OnInit {
       new GroupDeviceGridColumn(),
       new RegistrationDateDeviceGridColumn(),
       new SystemIdDeviceGridColumn(),
-     //new TypeDeviceGridColumn(),
       {
         header: 'Type',
         name: 'type',

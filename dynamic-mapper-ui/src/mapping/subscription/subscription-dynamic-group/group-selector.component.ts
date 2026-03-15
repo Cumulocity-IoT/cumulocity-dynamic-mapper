@@ -21,13 +21,12 @@ import {
   Component,
   EventEmitter,
   Input,
-  OnInit,
   Output,
   ViewEncapsulation
 } from '@angular/core';
 import { IIdentified } from '@c8y/client';
 import { CoreModule } from '@c8y/ngx-components';
-import { AssetSelectionChangeEvent, AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
+import { AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
 
 @Component({
   selector: 'd11r-group-selector',
@@ -38,21 +37,11 @@ import { AssetSelectionChangeEvent, AssetSelectorModule } from '@c8y/ngx-compone
   imports: [CoreModule, AssetSelectorModule]
 
 })
-export class GroupSelectorComponent implements OnInit {
+export class GroupSelectorComponent {
   @Input() deviceList: IIdentified[];
 
   @Output() cancel = new EventEmitter<any>();
   @Output() commit = new EventEmitter<IIdentified[]>();
-
-  constructor() {
-  }
-
-  ngOnInit(): void {
-  }
-
-  selectionChanged(event: AssetSelectionChangeEvent) {
-    // console.log(event);
-  }
 
   clickedUpdateSubscription() {
     this.commit.emit(this.deviceList);
