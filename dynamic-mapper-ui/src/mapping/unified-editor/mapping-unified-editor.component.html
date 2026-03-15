@@ -312,8 +312,8 @@
 
 <ng-template #extensionTemplateSourceGraals let-form="form">
   <div class="form-group p-b-8 fit-h">
-    <div class="d-flex p-b-8">
-      <div class="col-lg-6">
+    <div class="row d-flex show-grid p-b-8">
+      <div class="col-lg-5">
         <div class="d-flex">
           <label translate style="margin-top:4px">{{codeEditorLabel}}</label>
           <span class="hidden-xs hidden-sm">
@@ -325,7 +325,7 @@
           </span>
         </div>
       </div>
-      <div class="col-lg-2" style="padding-top: 2px;">
+      <div class="flex-grow _col-lg-2" style="padding-top: 2px;">
         <button type="button" name="generateSubstitution" class="btn btn-ai btn-sm"
           (click)="openGenerateSubstitutionDrawer()" translate title="Generate substitutions"
           [disabled]="!stepperViewModel.config.showEditorSource || stepperViewModel.config.editorMode === EditorMode.READ_ONLY || !aiAgentDeployed">
@@ -337,16 +337,19 @@
           placement="right" container="body" triggers="focus" type="button"></button>
         }
       </div>
-      <div class="col-lg-2">
-        <c8y-select [items]="codeTemplateItems" [(ngModel)]="templateId" (ngModelChange)="onSelectCodeTemplate()"
-          name="templateSelect" [filterItems]="true" labelProperty="label" placeholder="Select template..."
-          aria-label="Code Template" style="max-width: 200px">
-        </c8y-select>
-      </div>
-      <div class="col-lg-2" style="padding-top: 2px;">
-        <button type="button" name="update" class="btn btn-default btn-sm" (click)="onCreateCodeTemplate()" translate>
-          Create new code template
-        </button>
+      <div class="text-right _col-lg-5" style="padding-right:12px">
+        <div class="input-group">
+          <c8y-select [items]="codeTemplateItems" [(ngModel)]="templateId" (ngModelChange)="onSelectCodeTemplate()"
+            name="templateSelect" [filterItems]="true" labelProperty="label" placeholder="Select template..."
+            aria-label="Code Template" style="min-width: 300px">
+          </c8y-select>
+          <div class="input-group-btn">
+            <button type="button" name="update" class="btn btn-default btn-sm" (click)="onCreateCodeTemplate()"
+              translate>
+              Create new code template
+            </button>
+          </div>
+        </div>
       </div>
     </div>
     <c8y-editor [editorOptions]="editorOptions" class="form-control flex-grow" style="min-height: 630px"
