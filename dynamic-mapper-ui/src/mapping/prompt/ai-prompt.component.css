@@ -1,7 +1,4 @@
-/* Custom styles for the AI prompt component */
-/* The c8y-ai-chat component handles most chat styling, so these are minimal overrides */
-
-/* Sparkles icon with rotating rainbow border — mirrors btn-ai-hint */
+/* Sparkles icon with rotating rainbow border */
 .ai-icon-wrap {
   position: relative;
   overflow: hidden;
@@ -55,73 +52,8 @@
   }
 }
 
-.agent-tabs-content{
-  box-sizing: border-box;
-}
-
-.split-view {
-
-  @media (max-width: 991px) {
-    &--4-8 {
-      position: relative;
-      display: flex !important;
-      overflow: hidden;
-      flex-direction: column;
-      margin-bottom: 0 !important;
-      height: calc(100vh - 108px);
-      .has-action-bar & {
-        height: calc(100vh - 168px);
-      }
-    }
-
-    &--4-8 {
-      height: calc(100vh - 166px);
-    }
-
-    &__list {
-      flex-grow: 1;
-      height: auto;
-    }
-
-    &__detail {
-      position: absolute;
-      top: 0;
-      left: 100%;
-      z-index: 100;
-      min-height: calc(100vh - 160px);
-      height: 100%;
-      width: 100%;
-      transition: left 0.35s ease-in-out;
-
-      &--selected {
-        left: 0;
-      }
-    }
-  }
-
-  @media (max-width: 768px) {
-    &--4-8 {
-      height: calc(100vh - 82px) !important;
-    }
-  }
-
-  @media (min-width: 992px) {
-    &--4-8 {
-      display: grid !important;
-      grid-template-rows: min-content auto;
-    }
-
-    &--4-8 {
-      grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
-    }
-  }
-}
-
-.agent-tabs-nav .component-tabs{
-  padding-top: 0;
-}
-
-.text-pre{
-  white-space-collapse: preserve!important;
-  text-wrap-mode: wrap!important;
+/* Reduce font size of code blocks rendered inside the AI chat. */
+::ng-deep c8y-ai-chat pre code {
+  font-size: 10px;
+  line-height: 1.45;
 }

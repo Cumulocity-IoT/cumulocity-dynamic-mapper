@@ -42,7 +42,8 @@ import { base64ToBytes } from '../shared/util';
   styleUrls: ['./ai-prompt.component.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
-  imports:[CoreModule, AiChatComponent, AiChatMessageComponent]
+  imports:[CoreModule, AiChatComponent, AiChatMessageComponent],
+  host: { class: 'd-contents' }
 })
 export class AIPromptComponent implements OnInit, OnDestroy {
 
