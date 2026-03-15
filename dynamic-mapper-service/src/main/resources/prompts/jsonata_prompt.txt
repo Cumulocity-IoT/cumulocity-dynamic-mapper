@@ -10,27 +10,29 @@ export interface Substitution {
   [x: string]: any;
 
   /**
-   * JSONPath expression to extract data from the source payload.
-   * Supports standard JSONPath syntax including:
-   * - Root reference: $
-   * - Property access: $.temperature, $.device.id
-   * - Array access: $.readings[0], $.sensors[*].value
-   * - Wildcards: $.devices.*.name
-   * - Filters: $.readings[?(@.type == 'temperature')]
+   * JSONata expression to extract and transform data from the source payload.
+   * Uses JSONata syntax (https://docs.jsonata.org/):
+   * - Simple property access: temperature, device.id  (no $ prefix)
+   * - Array access: readings[0].value, sensors.value
+   * - Filters: readings[type = 'temperature']
+   * - Functions (prefix with $): $sum(values.value), $fromMillis(ts)
+   * - Chaining: mea.values[0].timestamp.$fromMillis()
    *
-   * @example "$.device.temperature"
+   * @example "device.temperature"
+   * @example "mea.values[0].timestamp.$fromMillis()"
    */
   pathSource: string;
 
   /**
-   * JSONPath expression defining where to place the extracted data in the target payload.
-   * Can reference:
-   * - Static paths: $.temperature.value
+   * Dot-notation path defining where to place the extracted data in the target payload.
+   * Uses plain dot-notation (no $ prefix). Can reference:
+   * - Static paths: c8y_TemperatureMeasurement.T.value
+   * - Top-level fields: time, type
    * - Device identity: _IDENTITY_.c8ySourceId, _IDENTITY_.externalId
    * - Topic levels: _TOPIC_LEVEL_[0], _TOPIC_LEVEL_[1]
-   * - Context data: _CONTEXT_DATA_.timestamp
    *
-   * @example "$.c8y_TemperatureMeasurement.T.value"
+   * @example "c8y_TemperatureMeasurement.T.value"
+   * @example "_IDENTITY_.externalId"
    */
   pathTarget: string;
 
@@ -44,7 +46,7 @@ export interface Substitution {
   expandArray: boolean;
 }
 
-#Mapping
+# Mapping
 export interface Mapping {
   [x: string]: any;
 

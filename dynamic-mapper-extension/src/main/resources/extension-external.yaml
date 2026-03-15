@@ -38,7 +38,7 @@ extensions:
     description: Custom measurement processor for Sparkplug B with configurable fragment and unit
     version: "1.0"
 
-  - eventName: ProtobufCustomEvent
+  - eventName: ProtobufEvent
     className: dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionCustomEvent
     description: Custom event processor for protobuf message formats
     version: "2.0"
@@ -104,7 +104,7 @@ extensions:
     description: Measurement to JSON array converter for batch processing
     version: "2.0"
 
-  - eventName: MeasurementWithKafkaKey
+  - eventName: MeasurementToKafkaJson
     className: dynamic.mapper.processor.extension.external.outbound.ProcessorExtensionSmartOutbound03
     description: Measurement processor with Kafka key generation support
     version: "2.0"
