@@ -147,6 +147,8 @@ public class EnrichmentOutboundProcessor extends AbstractEnrichmentProcessor {
                     new GId(sourceId.toString()), mapping.getExternalIdType(),
                     context.getTesting());
             if (externalId == null) {
+                log.warn("{} - External id for device '{}' with type '{}' not found — config.externalId will be null in JS context",
+                        tenant, sourceId, mapping.getExternalIdType());
                 if (context.getSendPayload()) {
                     throw new RuntimeException(String.format("External id %s for type %s not found!",
                             sourceId.toString(), mapping.getExternalIdType()));

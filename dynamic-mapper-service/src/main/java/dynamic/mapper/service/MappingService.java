@@ -43,6 +43,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.joda.time.DateTime;
 import org.springframework.stereotype.Service;
+import org.springframework.validation.annotation.Validated;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -52,6 +53,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Delegates to specialized services for specific concerns.
  */
 @Slf4j
+@Validated
 @Service
 @RequiredArgsConstructor
 public class MappingService {

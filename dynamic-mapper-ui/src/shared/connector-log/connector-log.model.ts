@@ -48,6 +48,7 @@ export enum LoggingEventType {
   MAPPING_MIGRATION_EVENT_TYPE = 'MAPPING_MIGRATION_EVENT_TYPE',
   MAPPING_FAILURE_EVENT_TYPE = 'MAPPING_FAILURE_EVENT_TYPE',
   NOTIFICATION_EVENT_TYPE = 'NOTIFICATION_EVENT_TYPE',
+  SUBSCRIPTION_DEDUPLICATION_EVENT_TYPE = 'SUBSCRIPTION_DEDUPLICATION_EVENT_TYPE',
   ALL = 'ALL'
 }
 
@@ -139,6 +140,14 @@ export const LoggingEventTypeMap: Record<LoggingEventType, LoggingEventTypeDetai
     componentDisplayName: 'Connector',
     severity: 'warning',
     description: 'Notification connector status events'
+  },
+  [LoggingEventType.SUBSCRIPTION_DEDUPLICATION_EVENT_TYPE]: {
+    name: 'SUBSCRIPTION_DEDUPLICATION_EVENT_TYPE',
+    type: 'd11r_subscriptionDeduplicationEvent',
+    component: 'd11r_connector',
+    componentDisplayName: 'Connector',
+    severity: 'info',
+    description: 'Duplicate subscription removed to prevent multiply processed messages'
   },
   [LoggingEventType.ALL]: {
     name: 'ALL',

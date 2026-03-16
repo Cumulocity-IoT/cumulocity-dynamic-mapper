@@ -142,9 +142,15 @@ public abstract class CommonProcessor implements Processor {
                 .convertToExternalIdList(deviceMessage.getExternalSource());
 
         if (externalSources == null || externalSources.isEmpty()) {
-            throw new ProcessingException(
-                    "External source is empty, cannot resolve device identifier. Define externalSource in the message or use a generic device identifier in the mapping.");
-
+            String mappingExternalIdType = context.getMapping().getExternalIdType();
+            if (mappingExternalIdType != null && !mappingExternalIdType.isEmpty()) {
+                log.debug("{} - No externalSource in DeviceMessage, falling back to mapping externalIdType: {}",
+                        tenant, mappingExternalIdType);
+                externalSources = List.of(new ExternalId(null, mappingExternalIdType));
+            } else {
+                throw new ProcessingException(
+                        "External source is empty, cannot resolve device identifier. Define externalSource in the message or use a generic device identifier in the mapping.");
+            }
         }
         // Use the first external source for resolution
         ExternalId externalSource = externalSources.get(0);

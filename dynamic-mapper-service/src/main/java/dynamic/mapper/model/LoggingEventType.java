@@ -43,6 +43,8 @@ public enum LoggingEventType {
             "Mapping", "error", "Mapping processing failures and errors"),
     NOTIFICATION_EVENT_TYPE("NOTIFICATION_EVENT_TYPE", "d11r_notificationStatusEvent", "d11r_connector",
             "Connector", "warning", "Notification connector status events"),
+    SUBSCRIPTION_DEDUPLICATION_EVENT_TYPE("SUBSCRIPTION_DEDUPLICATION_EVENT_TYPE", "d11r_subscriptionDeduplicationEvent", "d11r_connector",
+            "Connector", "info", "Duplicate subscription removed to prevent multiply processed messages"),
     CODE_TEMPLATE_INIT_EVENT_TYPE("CODE_TEMPLATE_INIT_EVENT_TYPE", "d11r_codeTemplateInitEvent", "d11r_system",
             "System", "info", "System code templates have been re-initialized"),
     ALL("ALL", "ALL", "d11r_AnyComponent",

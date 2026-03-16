@@ -93,10 +93,7 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
 
         if (serviceConfiguration.getLogPayload() || mapping.getDebug()) {
             String payload = toPrettyJsonString(payloadObject);
-            log.info("{} - Incoming payload (patched) in onMessage(): {} {} {} {}", tenant,
-                    payload,
-                    serviceConfiguration.getLogPayload(), mapping.getDebug(),
-                    serviceConfiguration.getLogPayload() || mapping.getDebug());
+            log.info("{} - Incoming payload (patched) in onMessage(): {}", tenant, payload);
         }
 
         if (mapping.getCode() != null) {

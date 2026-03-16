@@ -82,6 +82,17 @@
   }
 </c8y-action-bar-item>
 
+<div class="alert alert-info a-i-center" role="alert" style="min-width: stretch;">
+  <i c8yIcon="info-circle" class="m-r-8"></i>
+  <span translate>Subscriptions are processed asynchronously. Verify the result in the list below or</span>
+  &nbsp;
+  <button class="btn btn-link p-0" (click)="navigateToServiceEvents()">
+    {{ 'check Service Events' | translate }}
+  </button>
+  &nbsp;
+  <span translate>for subscription and deduplication details.</span>
+</div>
+
 @if (subscriptionDevices?.devices) {
   <div class="card">
     <div class="card-block content-fullpage border-top border-bottom">

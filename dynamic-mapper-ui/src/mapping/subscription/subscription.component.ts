@@ -44,6 +44,7 @@ import {
   API,
   Direction,
   Feature,
+  NODE2,
   Operation,
   SharedModule
 } from '../../shared';
@@ -280,13 +281,12 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
       api: API.ALL.name,
       devices: deviceList as Device[]
     };
-    // console.log('Changed deviceList:', this.subscription.devices);
     try {
       await this.subscriptionService.updateSubscriptionDevice(
         subscriptionDevices
       );
       this.loadSubscriptionDevice();
-      this.alertService.success(gettext('Subscriptions updated successfully'));
+      this.alertService.info(gettext('Subscription request submitted. Subscriptions are processed asynchronously – verify the result in the list below and check Service Events for details.'));
     } catch (error) {
       this.alertService.danger(
         gettext('Failed to update subscriptions:') + error
@@ -307,8 +307,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
       );
       this.loadSubscriptionByDeviceGroup();
       this.loadSubscriptionDevice();
-
-      this.alertService.success(gettext('Subscriptions updated successfully'));
+      this.alertService.info(gettext('Subscription request submitted. Subscriptions are processed asynchronously – verify the result in the list below and check Service Events for details.'));
     } catch (error) {
       this.alertService.danger(
         gettext('Failed to update subscriptions:') + error
@@ -328,14 +327,17 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
       );
       this.loadSubscriptionByDeviceType();
       this.loadSubscriptionDevice();
-
-      this.alertService.success(gettext('Subscriptions updated successfully'));
+      this.alertService.info(gettext('Subscription request submitted. Subscriptions are processed asynchronously – verify the result in the list below and check Service Events for details.'));
     } catch (error) {
       this.alertService.danger(
         gettext('Failed to update subscriptions:') + error
       );
     }
     this.showConfigSubscription4 = false;
+  }
+
+  navigateToServiceEvents(): void {
+    this.router.navigate([`/c8y-pkg-dynamic-mapper/${NODE2}/monitoring/serviceEvent`]);
   }
 
   async onReload(): Promise<void> {

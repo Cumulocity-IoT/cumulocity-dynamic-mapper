@@ -27,12 +27,16 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.*;
 import com.cumulocity.sdk.client.SDKException;
 import com.cumulocity.sdk.client.messaging.notifications.*;
+import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.API;
+import dynamic.mapper.model.LoggingEventType;
 import dynamic.mapper.model.NotificationSubscriptionResponse;
 import dynamic.mapper.notification.Utils;
 import lombok.extern.slf4j.Slf4j;
+import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -60,6 +64,13 @@ public class SubscriptionManager {
     @Autowired
     @Qualifier("virtualThreadPool")
     private ExecutorService virtualThreadPool;
+
+    private ConfigurationRegistry configurationRegistry;
+
+    @Autowired
+    public void setConfigurationRegistry(@Lazy ConfigurationRegistry configurationRegistry) {
+        this.configurationRegistry = configurationRegistry;
+    }
 
     // Circuit breaker
     private final Set<String> processingDevices = Collections.synchronizedSet(new HashSet<>());
@@ -103,6 +114,13 @@ public class SubscriptionManager {
         return virtualThreadPool.submit(() -> {
             try {
                 return subscriptionsService.callForTenant(tenant, () -> {
+                    // Deduplication: enforce priority order group/dynamic (2/3) > static (1)
+                    if (checkAndHandleDeduplication(tenant, deviceId, subscription)) {
+                        log.info("{} - Skipping subscription for device {} due to deduplication (subscription={})",
+                                tenant, deviceId, subscription);
+                        return null;
+                    }
+
                     log.info("{} - Creating subscription for device: {}", tenant, deviceId);
 
                     // Create subscription
@@ -499,6 +517,87 @@ public class SubscriptionManager {
         } catch (Exception e) {
             log.error("Error creating type subscription: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to create type subscription: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Enforces subscription priority order: dynamic/group (priority 2/3) > static (priority 1).
+     *
+     * Rules:
+     * - Requesting STATIC  and DYNAMIC already exists → skip (return true)
+     * - Requesting DYNAMIC and DYNAMIC already exists → skip (return true)
+     * - Requesting DYNAMIC and STATIC  already exists → remove static, proceed (return false)
+     *
+     * @return true if the new subscription should be skipped, false if it should proceed
+     */
+    private boolean checkAndHandleDeduplication(String tenant, String deviceId, String requestedSubscription) {
+        boolean hasDynamic = hasSubscriptionForDevice(tenant, deviceId, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
+        boolean hasStatic = hasSubscriptionForDevice(tenant, deviceId, Utils.STATIC_DEVICE_SUBSCRIPTION);
+
+        if (Utils.STATIC_DEVICE_SUBSCRIPTION.equals(requestedSubscription)) {
+            // Static is lowest priority: skip if a dynamic subscription already exists
+            if (hasDynamic) {
+                logDeduplicationEvent(tenant, deviceId,
+                        Utils.STATIC_DEVICE_SUBSCRIPTION, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
+                return true;
+            }
+        } else if (Utils.DYNAMIC_DEVICE_SUBSCRIPTION.equals(requestedSubscription)) {
+            // Dynamic already covers this device: skip duplicate
+            if (hasDynamic) {
+                logDeduplicationEvent(tenant, deviceId,
+                        Utils.DYNAMIC_DEVICE_SUBSCRIPTION, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
+                return true;
+            }
+            // Remove lower-priority static subscription before creating dynamic one
+            if (hasStatic) {
+                int removed = deleteSubscriptionsForDevice(tenant, deviceId, Utils.STATIC_DEVICE_SUBSCRIPTION);
+                log.info("{} - Removed {} static subscription(s) for device {} before creating dynamic subscription",
+                        tenant, removed, deviceId);
+                logDeduplicationEvent(tenant, deviceId,
+                        Utils.STATIC_DEVICE_SUBSCRIPTION, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
+            }
+        }
+        return false;
+    }
+
+    private boolean hasSubscriptionForDevice(String tenant, String deviceId, String subscriptionName) {
+        try {
+            GId id = new GId();
+            id.setValue(deviceId);
+            Iterator<NotificationSubscriptionRepresentation> it = subscriptionAPI
+                    .getSubscriptionsByFilter(
+                            new NotificationSubscriptionFilter()
+                                    .bySubscription(subscriptionName)
+                                    .bySource(id)
+                                    .byContext("mo"))
+                    .get().allPages().iterator();
+            return it.hasNext();
+        } catch (Exception e) {
+            log.warn("{} - Error checking existing subscription for device {}: {}", tenant, deviceId, e.getMessage());
+            return false;
+        }
+    }
+
+    private void logDeduplicationEvent(String tenant, String deviceId,
+            String removedSubscription, String keptSubscription) {
+        String message = String.format(
+                "Subscription deduplication for device %s: skipped/removed '%s', kept '%s'",
+                deviceId, removedSubscription, keptSubscription);
+        log.info("{} - {}", tenant, message);
+
+        try {
+            Map<String, String> eventMap = Map.of(
+                    "deviceId", deviceId,
+                    "removedSubscription", removedSubscription,
+                    "keptSubscription", keptSubscription);
+            configurationRegistry.getC8yAgent().createOperationEvent(
+                    message,
+                    LoggingEventType.SUBSCRIPTION_DEDUPLICATION_EVENT_TYPE,
+                    DateTime.now(),
+                    tenant,
+                    eventMap);
+        } catch (Exception e) {
+            log.warn("{} - Failed to create deduplication event for device {}: {}", tenant, deviceId, e.getMessage());
         }
     }
 
