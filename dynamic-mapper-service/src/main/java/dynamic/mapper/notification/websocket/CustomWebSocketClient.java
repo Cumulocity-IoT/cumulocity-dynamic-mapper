@@ -185,7 +185,7 @@ public class CustomWebSocketClient extends WebSocketClient {
             // If the original publish was QoS > 0 but got downgraded, we should still
             // acknowledge
             if (notification.getAckHeader() != null) {
-                log.info(
+                log.debug(
                         "{} - END: Sending manual ack for Notification message. API: {} api, QoS: {}, Connector InternalWebSocket",
                         tenant, notification.getApi(), mappingQos);
                 send(notification.getAckHeader()); // ack message
