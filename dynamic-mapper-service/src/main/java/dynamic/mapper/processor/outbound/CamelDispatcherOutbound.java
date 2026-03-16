@@ -96,7 +96,7 @@ public class CamelDispatcherOutbound implements NotificationCallback {
         if (connectorClient.getConnectorType() == ConnectorType.TEST) {
             log.debug("{} - Skipping live notification for TEST connector — only processes via TestController",
                     connectorClient.getTenant());
-            return ProcessingResultWrapper.builder().build();
+            return ProcessingResultWrapper.builder().consolidatedQos(Qos.AT_MOST_ONCE).build();
         }
         return processNotification(notification, null);
     }
