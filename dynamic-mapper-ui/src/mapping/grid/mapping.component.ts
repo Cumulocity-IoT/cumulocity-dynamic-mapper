@@ -338,6 +338,20 @@ export class MappingComponent implements OnInit, OnDestroy {
         showIf: () => this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole
       },
       {
+        type: 'DEBUG_ENABLE',
+        text: 'Enable debug',
+        icon: 'bug',
+        callback: this.enableDebugMappingBulk.bind(this),
+        showIf: () => this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole
+      },
+      {
+        type: 'DEBUG_DISABLE',
+        text: 'Disable debug',
+        icon: 'ban',
+        callback: this.disableDebugMappingBulk.bind(this),
+        showIf: () => this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole
+      },
+      {
         type: 'EXPORT',
         text: 'Export mapping',
         icon: 'export',
@@ -955,6 +969,30 @@ export class MappingComponent implements OnInit, OnDestroy {
   private deactivateMappingBulk(ids: string[]) {
     this.mappingBulkOpsService.deactivateBulk(
       ids,
+      this.mappingsEnriched$,
+      this.stepperConfiguration.direction,
+      this.mappingGrid,
+      this.destroy$,
+      (loading) => this.isLoading = loading
+    );
+  }
+
+  private enableDebugMappingBulk(ids: string[]) {
+    this.mappingBulkOpsService.debugBulk(
+      ids,
+      true,
+      this.mappingsEnriched$,
+      this.stepperConfiguration.direction,
+      this.mappingGrid,
+      this.destroy$,
+      (loading) => this.isLoading = loading
+    );
+  }
+
+  private disableDebugMappingBulk(ids: string[]) {
+    this.mappingBulkOpsService.debugBulk(
+      ids,
+      false,
       this.mappingsEnriched$,
       this.stepperConfiguration.direction,
       this.mappingGrid,

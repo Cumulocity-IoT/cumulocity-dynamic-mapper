@@ -154,6 +154,60 @@ export class MappingBulkOperationsService {
   }
 
   /**
+   * Enables or disables debug for multiple mappings in bulk
+   */
+  debugBulk(
+    ids: string[],
+    debug: boolean,
+    mappingsEnriched$: BehaviorSubject<MappingEnriched[]>,
+    direction: Direction,
+    mappingGrid: DataGridComponent,
+    destroy$: Subject<void>,
+    setLoading: (loading: boolean) => void
+  ): void {
+    const action = debug ? 'Enabled' : 'Disabled';
+    setLoading(true);
+    mappingsEnriched$
+      .pipe(
+        take(1),
+        takeUntil(destroy$),
+        finalize(() => {
+          setLoading(false);
+        })
+      )
+      .subscribe(async (ms) => {
+        try {
+          const mappings2Update = ms
+            .filter((m) => ids.includes(m.id))
+            .map((me) => me.mapping);
+
+          let successCount = 0;
+          const errors: string[] = [];
+          for (const mapping of mappings2Update) {
+            try {
+              const parameter = { id: mapping.id, debug };
+              await this.mappingService.changeDebuggingMapping(parameter);
+              successCount++;
+            } catch (error) {
+              errors.push(mapping.name);
+            }
+          }
+
+          if (errors.length === 0) {
+            this.alertService.success(`${action} debug for ${successCount} mapping(s) successfully.`);
+          } else {
+            this.alertService.warning(`${action} debug for ${successCount} mapping(s). Failed for: ${errors.join(', ')}.`);
+          }
+          this.mappingService.refreshMappings(direction);
+        } catch (error) {
+          this.alertService.danger(`Failed to ${action.toLowerCase()} debug for mappings`, error);
+        }
+      });
+
+    mappingGrid.setAllItemsSelected(false);
+  }
+
+  /**
    * Exports multiple mappings in bulk
    * @param ids Array of mapping IDs to export
    * @param mappingsEnriched$ Observable of enriched mappings
