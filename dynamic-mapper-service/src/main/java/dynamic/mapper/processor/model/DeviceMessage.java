@@ -66,8 +66,15 @@ public class DeviceMessage {
      */
     private CumulocityType cumulocityType;
 
-    /** External ID to lookup (and optionally create), optional */
-    private Object externalSource; // ExternalSource[] | ExternalSource
+    /**
+     * External identity descriptor for device lookup, optional.
+     * At runtime this is a raw JSON structure (Map, array of Maps, or ExternalId)
+     * that gets normalised to List&lt;ExternalId&gt; via
+     * JavaScriptInteropHelper.convertToExternalIdList().
+     * The richer {@link ExternalSource} shape (with autoCreateDeviceMO, parentId,
+     * childReference, clientId) is reserved for future use.
+     */
+    private Object externalSource;
 
     /** Identifier for the source/dest transport e.g. "mqtt", "opc-ua" etc. */
     private String transportId;

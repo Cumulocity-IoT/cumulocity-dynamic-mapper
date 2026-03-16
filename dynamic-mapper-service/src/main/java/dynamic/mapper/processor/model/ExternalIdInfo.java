@@ -42,11 +42,11 @@ public class ExternalIdInfo {
      * @param externalSources List of external sources
      * @return ExternalIdInfo with extracted information, or empty values if no sources provided
      */
-    public static ExternalIdInfo from(List<ExternalId> externalSources) {
-        if (externalSources == null || externalSources.isEmpty()) {
+    public static ExternalIdInfo from(List<ExternalId> externalIds) {
+        if (externalIds == null || externalIds.isEmpty()) {
             return ExternalIdInfo.builder().build();
         }
-        ExternalId source = externalSources.get(0);
+        ExternalId source = externalIds.get(0);
         return ExternalIdInfo.builder()
                 .externalId(source.getExternalId())
                 .externalType(source.getType())

@@ -771,12 +771,13 @@ export interface DeviceMessage<T extends C8yObjectType = C8yObjectType> {
   time?: Date;
 
   /**
-   * External source configuration for device identity lookup.
-   * Defines which external ID type should be used to resolve the device.
+   * External identity descriptor for device lookup.
+   * Use {@link ExternalId}[] for simple lookups, {@link ExternalSource}[] for
+   * advanced scenarios (device creation, child references).
    *
-   * @example [{ type: "c8y_Serial" }]
+   * @example [{ externalId: "DEVICE-001", type: "c8y_Serial" }]
    */
-  externalSource?: Array<{ type: string }>;
+  externalSource?: ExternalId[] | ExternalSource[];
 
   /**
    * What kind of operation is being performed.

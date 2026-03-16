@@ -170,11 +170,11 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
             } else if (externalSources != null && !externalSources.isEmpty()) {
                 // create implicitDevice if enabled
                 if (mapping.getCreateNonExistingDevice()) {
-                    ExternalId externalSource = externalSources.get(0);
-                    if (externalSource != null && externalSource.getType() != null
-                            && externalSource.getExternalId() != null) {
-                        ID identity = new ID(externalSource.getType(),
-                                externalSource.getExternalId());
+                    ExternalId externalId = externalSources.get(0);
+                    if (externalId != null && externalId.getType() != null
+                            && externalId.getExternalId() != null) {
+                        ID identity = new ID(externalId.getType(),
+                                externalId.getExternalId());
                         String sourceId = ProcessingResultHelper.createImplicitDevice(identity, context, log,
                                 c8yAgent,
                                 objectMapper);
@@ -182,19 +182,19 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
                         resolvedDeviceId = sourceId; // Set this so it's used below
                         // Update externalIdInfo with created device info
                         externalIdInfo = ExternalIdInfo.builder()
-                                .externalType(externalSource.getType())
-                                .externalId(externalSource.getExternalId())
+                                .externalType(externalId.getType())
+                                .externalId(externalId.getExternalId())
                                 .build();
-                        context.setExternalId(externalSource.getExternalId());
+                        context.setExternalId(externalId.getExternalId());
                         ProcessingResultHelper.setHierarchicalValue(payload, targetAPI.identifier, sourceId);
                     }
                 } else {
                     // No device ID and not creating implicit devices - skip this message
-                    ExternalId externalSource = externalSources.get(0);
+                    ExternalId externalId = externalSources.get(0);
                     String warnMsg = String.format(
                             "Device with externalId '%s' (type '%s') not found in inventory and createNonExistingDevice is disabled - no request created for mapping '%s'. Enable createNonExistingDevice or use an existing externalId.",
-                            externalSource != null ? externalSource.getExternalId() : "unknown",
-                            externalSource != null ? externalSource.getType() : "unknown",
+                            externalId != null ? externalId.getExternalId() : "unknown",
+                            externalId != null ? externalId.getType() : "unknown",
                             mapping.getIdentifier());
                     log.warn("{} - {}", tenant, warnMsg);
                     output.addWarning(warnMsg);
