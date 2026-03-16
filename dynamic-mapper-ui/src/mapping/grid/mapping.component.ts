@@ -366,8 +366,8 @@ export class MappingComponent implements OnInit, OnDestroy {
             })
           )
           .subscribe({
-            next: (filterMapping) => {
-              this.alertService.success(`Applied filter ${filterMapping} to mapping ${mapping.name}`);
+            next: () => {
+              // this.alertService.success(`Applied filter to mapping ${mapping.name}`);
             },
             error: (error) => {
               this.alertService.danger('Failed to apply mapping filter', error);
@@ -402,7 +402,7 @@ export class MappingComponent implements OnInit, OnDestroy {
           )
           .subscribe({
             next: () => {
-              this.alertService.success(`Updated code for mapping ${mapping.name}`);
+              // this.alertService.success(`Updated code for mapping ${mapping.name}`);
             },
             error: (error) => {
               this.alertService.danger('Failed to update code', error);
@@ -786,7 +786,6 @@ export class MappingComponent implements OnInit, OnDestroy {
   async activateMapping(m: MappingEnriched) {
     const { mapping } = m;
     const newActive = !mapping.active;
-    const action = newActive ? 'Activated' : 'Deactivated';
     const parameter = { id: mapping.id, active: newActive };
     const response =
       await this.mappingService.changeActivationMapping(parameter);
@@ -797,7 +796,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         `Mapping ${mapping.name} could only activate partially. It failed for the following connectors: ${failedList}`
       );
     } else {
-      this.alertService.success(`${action} for mapping: ${mapping.name} was successful`);
+      // this.alertService.success(`${action} for mapping: ${mapping.name} was successful`);
     }
     this.mappingService.refreshMappings(this.stepperConfiguration.direction);
 
@@ -809,8 +808,6 @@ export class MappingComponent implements OnInit, OnDestroy {
   async toggleDebugMapping(m: MappingEnriched) {
     const { mapping } = m;
     const newDebug = !mapping.debug;
-    const action = newDebug ? 'Activated' : 'Deactivated';
-    this.alertService.success(`Debugging ${action} for mapping: ${mapping.id} was successful`);
     const parameter = { id: mapping.id, debug: newDebug };
     await this.mappingService.changeDebuggingMapping(parameter);
     this.mappingService.refreshMappings(this.stepperConfiguration.direction);
@@ -818,19 +815,16 @@ export class MappingComponent implements OnInit, OnDestroy {
 
   async toggleSnoopStatusMapping(m: MappingEnriched) {
     const { mapping } = m;
-    let newSnoop, action;
+    let newSnoop;
     // toggle snoopStatus
     if (
       mapping.snoopStatus === SnoopStatus.NONE ||
       mapping.snoopStatus === SnoopStatus.STOPPED
     ) {
       newSnoop = SnoopStatus.ENABLED;
-      action = 'Activated';
     } else {
       newSnoop = SnoopStatus.NONE;
-      action = 'Deactivated';
     }
-    this.alertService.success(`Snooping ${action} for mapping: ${mapping.name}`);
     const parameter = { id: mapping.id, snoopStatus: newSnoop };
     await this.mappingService.changeSnoopStatusMapping(parameter);
     this.mappingService.refreshMappings(this.stepperConfiguration.direction);
@@ -838,9 +832,7 @@ export class MappingComponent implements OnInit, OnDestroy {
 
   async resetSnoop(m: MappingEnriched) {
     const { mapping } = m;
-    this.alertService.success(
-      `Reset snooped messages for mapping: ${mapping.name}`
-    );
+    // this.alertService.success(`Reset snooped messages for mapping: ${mapping.name}`);
     const parameter = { id: mapping.id };
     await this.mappingService.resetSnoop(parameter);
     this.mappingService.refreshMappings(this.stepperConfiguration.direction);
@@ -978,8 +970,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       this.stepperConfiguration.direction,
       this.mappingGrid,
       this.destroy$,
-      (loading) => this.isLoading = loading,
-      this.deleteMappingWithConfirmation.bind(this)
+      (loading) => this.isLoading = loading
     );
     this.isConnectionToMQTTEstablished = true;
   }

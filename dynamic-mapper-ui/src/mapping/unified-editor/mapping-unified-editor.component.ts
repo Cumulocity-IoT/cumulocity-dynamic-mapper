@@ -1115,7 +1115,7 @@ export class MappingUnifiedEditorComponent implements OnInit, OnDestroy {
 
           this.alertService.success('Generated JavaScript code successfully.');
         } else {
-          this.raiseAlert({ type: 'warning', text: 'No valid JavaScript code was generated.' });
+          // this.raiseAlert({ type: 'warning', text: 'No valid JavaScript code was generated.' });
         }
       } else {
         if (Array.isArray(result) && result.length > 0) {
@@ -1138,7 +1138,7 @@ export class MappingUnifiedEditorComponent implements OnInit, OnDestroy {
             );
           });
         } else {
-          this.raiseAlert({ type: 'warning', text: 'No substitutions were generated.' });
+          // this.raiseAlert({ type: 'warning', text: 'No substitutions were generated.' });
         }
       }
     } catch (error) {

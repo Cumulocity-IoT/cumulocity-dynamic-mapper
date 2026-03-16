@@ -23,6 +23,7 @@ import { saveAs } from 'file-saver';
 import { BehaviorSubject, finalize, take, takeUntil, Subject } from 'rxjs';
 import { Direction, Mapping, MappingEnriched } from '../../shared';
 import { MappingService } from './mapping.service';
+import { ConfirmationModalService } from '../../shared/service/confirmation-modal.service';
 
 /**
  * Service responsible for handling bulk operations on mappings.
@@ -34,6 +35,7 @@ import { MappingService } from './mapping.service';
 export class MappingBulkOperationsService {
   private readonly mappingService = inject(MappingService);
   private readonly alertService = inject(AlertService);
+  private readonly confirmationService = inject(ConfirmationModalService);
 
   /**
    * Activates multiple mappings in bulk
@@ -67,12 +69,23 @@ export class MappingBulkOperationsService {
             .filter((m) => ids.includes(m.id))
             .map((me) => me.mapping);
 
+          let successCount = 0;
+          const errors: string[] = [];
           for (const mapping of mappings2Activate) {
-            const parameter = { id: mapping.id, active: true };
-            await this.mappingService.changeActivationMapping(parameter);
-            this.alertService.success(`Activated mapping: ${mapping.name} successfully`);
+            try {
+              const parameter = { id: mapping.id, active: true };
+              await this.mappingService.changeActivationMapping(parameter);
+              successCount++;
+            } catch (error) {
+              errors.push(mapping.name);
+            }
           }
 
+          if (errors.length === 0) {
+            this.alertService.success(`Activated ${successCount} mapping(s) successfully.`);
+          } else {
+            this.alertService.warning(`Activated ${successCount} mapping(s). Failed for: ${errors.join(', ')}.`);
+          }
           this.mappingService.refreshMappings(direction);
         } catch (error) {
           this.alertService.danger('Failed to activate mappings', error);
@@ -114,12 +127,23 @@ export class MappingBulkOperationsService {
             .filter((m) => ids.includes(m.id))
             .map((me) => me.mapping);
 
+          let successCount = 0;
+          const errors: string[] = [];
           for (const mapping of mappings2Deactivate) {
-            const parameter = { id: mapping.id, active: false };
-            await this.mappingService.changeActivationMapping(parameter);
-            this.alertService.success(`Deactivated mapping: ${mapping.name} successfully`);
+            try {
+              const parameter = { id: mapping.id, active: false };
+              await this.mappingService.changeActivationMapping(parameter);
+              successCount++;
+            } catch (error) {
+              errors.push(mapping.name);
+            }
           }
 
+          if (errors.length === 0) {
+            this.alertService.success(`Deactivated ${successCount} mapping(s) successfully.`);
+          } else {
+            this.alertService.warning(`Deactivated ${successCount} mapping(s). Failed for: ${errors.join(', ')}.`);
+          }
           this.mappingService.refreshMappings(direction);
         } catch (error) {
           this.alertService.danger('Failed to deactivate mappings', error);
@@ -186,12 +210,12 @@ export class MappingBulkOperationsService {
     direction: Direction,
     mappingGrid: DataGridComponent,
     destroy$: Subject<void>,
-    setLoading: (loading: boolean) => void,
-    deleteCallback: (m: MappingEnriched, confirmation: boolean, multiple: boolean) => Promise<boolean>
+    setLoading: (loading: boolean) => void
   ): Promise<void> {
-    setLoading(true);
-    let continueDelete: boolean = false;
+    const confirmed = await this.confirmationService.confirmDeletion('mapping', true);
+    if (!confirmed) return;
 
+    setLoading(true);
     mappingsEnriched$
       .pipe(
         take(1),
@@ -206,18 +230,21 @@ export class MappingBulkOperationsService {
             .filter((m) => ids.includes(m.id))
             .map((me) => me.mapping);
 
-          for (let index = 0; index < mappings2Delete.length; index++) {
-            const mapping = mappings2Delete[index];
-            const enrichedMapping: MappingEnriched = {
-              id: mapping.id,
-              mapping: mapping
-            };
-
-            if (index === 0) {
-              continueDelete = await deleteCallback(enrichedMapping, true, true);
-            } else if (continueDelete) {
-              await deleteCallback(enrichedMapping, false, false);
+          let successCount = 0;
+          const errors: string[] = [];
+          for (const mapping of mappings2Delete) {
+            try {
+              await this.mappingService.deleteMapping(mapping.id);
+              successCount++;
+            } catch (error) {
+              errors.push(mapping.name);
             }
+          }
+
+          if (errors.length === 0) {
+            this.alertService.success(`Deleted ${successCount} mapping(s) successfully.`);
+          } else {
+            this.alertService.warning(`Deleted ${successCount} mapping(s). Failed for: ${errors.join(', ')}.`);
           }
         } catch (error) {
           this.alertService.danger('Failed to delete mappings', error);

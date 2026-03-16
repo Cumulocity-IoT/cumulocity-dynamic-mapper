@@ -29,7 +29,6 @@ import {
   AlertService,
   CoreModule,
   DropAreaComponent,
-  gettext,
   ModalLabels
 } from '@c8y/ngx-components';
 import { BehaviorSubject, Subject } from 'rxjs';
@@ -92,22 +91,20 @@ export class ImportMappingsComponent implements OnDestroy {
         m.lastUpdate = Date.now();
         m.active = false;
         await this.mappingService.createMapping(m);
-        this.alertService.success(gettext(`Mapping ${m.name} imported successfully`));
         successCount++;
         this.progress$.next((100 * (i + 1)) / countMappings);
       } catch (ex) {
         const errorMsg = `Failed to import mapping ${m.name}`;
         errors.push(errorMsg);
-        this.alertService.warning(`${errorMsg}: ${ex}`);
       }
     }
 
-    // Only set error message if ALL imports failed
-    if (errors.length > 0 && successCount === 0) {
+    if (errors.length === 0) {
+      this.alertService.success(`Imported ${successCount} mapping(s) successfully.`);
+    } else if (successCount === 0) {
       this.errorMessage = `Failed to import mappings. ${errors.length} error(s) occurred.`;
-    } else if (errors.length > 0) {
-      // Some succeeded, some failed
-      this.alertService.warning(`Import completed with errors. ${successCount} succeeded, ${errors.length} failed.`);
+    } else {
+      this.alertService.warning(`Import completed: ${successCount} succeeded, ${errors.length} failed.`);
     }
 
     // Use NgZone.run to ensure the view updates run inside Angular's zone

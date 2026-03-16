@@ -385,7 +385,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       this.alertService.info(`Sending mapping result was successful: ${responseId}`);
       this.testResult.emit(true);
     } else {
-      this.alertService.success(`Test of mapping ${this.testMapping.name} was successful.`);
+      // this.alertService.success(`Test of mapping ${this.testMapping.name} was successful.`);
     }
   }
 
