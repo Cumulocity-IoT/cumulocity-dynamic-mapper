@@ -62,7 +62,8 @@ export const mappingEditResolver: ResolveFn<MappingEditData> = async (route) => 
     direction,
     editorMode: mapping.active ? EditorMode.READ_ONLY : EditorMode.UPDATE,
     substitutionsAsCode: isSubstitutionsAsCode(mapping),
-    snoopStatus: mapping.snoopStatus
+    snoopStatus: mapping.snoopStatus,
+    hasDeployedConnector: deploymentMapEntry.connectors.length > 0
   };
 
   const stepperConfiguration = StepperConfigurationResolver.resolve(

@@ -31,6 +31,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
 import org.apache.camel.CamelContext;
+import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Engine;
 import org.graalvm.polyglot.HostAccess;
 import org.graalvm.polyglot.Source;
@@ -347,6 +348,24 @@ public class ConfigurationRegistry {
 
         graalSourceShared.put(tenant, sharedSource);
         graalSourceSystem.put(tenant, systemSource);
+
+        // Warm up the GraalVM JIT by running a throw-away Context through the shared/system
+        // sources and a trivial onMessage stub. This triggers Graal's JIT compiler at startup
+        // so the first real mapping test executes in ~1s instead of ~7s.
+        try (Context warmupCtx = Context.newBuilder("js")
+                .engine(eng)
+                .allowHostAccess(getHostAccess())
+                .allowHostClassLookup(className -> false)
+                .build()) {
+            warmupCtx.eval(sharedSource);
+            warmupCtx.eval(systemSource);
+            warmupCtx.eval(Source.newBuilder("js",
+                    "function __warmup__(msg, ctx) { return []; } __warmup__({}, null);",
+                    "__warmup__.js").buildLiteral());
+            log.info("{} - GraalVM JIT warm-up complete", tenant);
+        } catch (Exception e) {
+            log.warn("{} - GraalVM warm-up failed (non-fatal): {}", tenant, e.getMessage());
+        }
 
         log.info("{} - Created cached GraalVM sources for shared and system code", tenant);
     }
