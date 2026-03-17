@@ -1816,6 +1816,7 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
               <li><code>context.getManagedObject(&#123;externalId, type&#125;)</code> - Lookup device properties by external ID</li>
               <li><code>context.getTesting()</code> - Returns <code>true</code> if running in test mode</li>
               <li><code>context.setState(key, value)</code> / <code>context.getState(key)</code> - Store/retrieve values across message processing</li>
+              <li><code>context.getConfig()</code> - Returns the mapping configuration as a JavaScript object. For inbound mappings this includes the <code>topic</code> field (the configured subscription topic pattern, e.g. <code>"testDevice/+/data"</code>), which can be split to derive positional segment meanings. For outbound mappings it additionally provides the resolved <code>externalId</code> of the source device.</li>
             </ul>
             <p class="m-t-8">
               <strong>Example:</strong> <code>var publisherClientId = context.getClientId();</code>
@@ -1922,6 +1923,52 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
             <strong>Note:</strong> Using <code>action: "patch"</code> is useful when you want to update only specific
             properties of an inventory object without affecting other existing properties. This is more efficient than
             fetching the entire object, modifying it, and sending it back with <code>action: "update"</code>.
+          </p>
+        </div>
+        <div class="p-b-8 text-14">
+          <strong>Example: Extracting the device identity from the MQTT topic using <code>context.getConfig()</code></strong><br /><br />
+          <p class="p-b-8 text-14">
+            The live topic of an inbound message (e.g. <code>testDevice/sensor-berlin-01/data</code>) is accessible via
+            <code>payload["_TOPIC_LEVEL_"]</code> as an array. When you need to know the <em>position</em> of the
+            device-identity segment relative to the <em>configured</em> subscription topic pattern, use
+            <code>context.getConfig()["topic"]</code> which returns the pattern string (e.g.
+            <code>"testDevice/+/data"</code>). Splitting it lets you derive the correct index without hardcoding it.
+            <br /><br />
+            Alternatively, split the configured topic directly to find the identity segment:
+          </p>
+          <pre><code class="language-javascript">function onMessage(msg, context) &#123;
+  var payload = msg.getPayload();
+
+  // context.getConfig()["topic"] returns the mapping's subscription topic pattern,
+  // e.g. "testDevice/+/data". Split it to derive the device-identity segment index.
+  var config = context.getConfig();
+  var topicSegments = config["topic"] ? config["topic"].split("/") : [];
+  // Find the first wildcard segment — that position carries the device identity at runtime.
+  var identityIndex = topicSegments.indexOf("+");
+
+  // payload["_TOPIC_LEVEL_"] contains the live topic segments of the received message.
+  var externalId = identityIndex >= 0 ? payload["_TOPIC_LEVEL_"][identityIndex] : null;
+
+  if (!externalId) &#123;
+    console.error("Cannot determine externalId: no wildcard segment in topic pattern. Config: " + JSON.stringify(config));
+    return [];
+  &#125;
+
+  return [&#123;
+    cumulocityType: "measurement",
+    action: "create",
+    payload: &#123;
+      "time": payload["time"] ? payload["time"] : msg.time,
+      "type": "c8y_TemperatureMeasurement",
+      "c8y_Steam": &#123; "Temperature": &#123; "unit": "C", "value": payload["temp"] &#125; &#125;
+    &#125;,
+    externalSource: [&#123; "type": "c8y_Serial", "externalId": externalId &#125;]
+  &#125;];
+&#125;</code></pre>
+          <p class="p-t-8 text-14">
+            <strong>Note:</strong> <code>context.getConfig()["topic"]</code> is the <em>configured pattern</em> (with
+            wildcards like <code>+</code>), not the live topic of the received message. Use
+            <code>payload["_TOPIC_LEVEL_"]</code> to access the actual runtime topic segments.
           </p>
         </div>
         <h5 class="p-t-8 p-b-4"><strong>Metadata Properties for Outbound Smart Functions</strong></h5>

@@ -158,7 +158,7 @@ export class MappingStatusActivationRendererComponent implements OnInit {
 
   private handleActivationSuccess(newActive: boolean, mappingName: string): void {
     const action = newActive ? 'Activated' : 'Deactivated';
-    this.alertService.success(`${action} for mapping: ${mappingName} was successful`);
+   // this.alertService.success(`${action} for mapping: ${mappingName} was successful`);
   }
 
   private async refreshAllMappings(): Promise<void> {

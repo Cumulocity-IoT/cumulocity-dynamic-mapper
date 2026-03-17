@@ -306,9 +306,15 @@ export interface DataPrepContext {
      * Does NOT persist across invocations (unlike getState/setState).
      * @returns {Record<string, any>} The mapping configuration object.
      *
+     * Use config.topic to access the full MQTT topic of the current message.
+     * To extract a device identifier from the topic, split it by '/':
+     *
      * @example
      * const config = context.getConfig();
      * console.log("Mapping:", config.mappingName, "Target:", config.targetAPI);
+     * // Extract externalId from topic segment, e.g. 'testSmartInbound/sensor-berlin-01'
+     * var topicSegments = config["topic"].split("/");
+     * var externalId = topicSegments[1]; // 'sensor-berlin-01'
      */
     getConfig(): Record<string, any>;
 

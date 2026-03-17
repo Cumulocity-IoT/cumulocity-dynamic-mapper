@@ -23,11 +23,9 @@ package dynamic.mapper.controller;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.Valid;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
@@ -58,12 +56,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.extern.slf4j.Slf4j;
@@ -97,35 +95,6 @@ public class TestController {
     private Boolean externalExtensionsEnabled;
 
 
-    @RequestMapping(value = "/test/payload", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<List<? extends ProcessingContext<?>>> testPayload(@RequestParam boolean send,
-            @RequestParam String topic, @RequestParam String connectorIdentifier,
-            @Valid @RequestBody Map<String, Object> payload) {
-        List<? extends ProcessingContext<?>> result = null;
-        String tenant = contextService.getContext().getTenant();
-        log.info("{} - Test payload: {}, {}, {}", tenant, topic, send,
-                payload);
-        try {
-            try {
-                AConnectorClient connectorClient = connectorRegistry
-                        .getClientForTenant(tenant, connectorIdentifier);
-                String payloadMessage = new ObjectMapper().writeValueAsString(payload);
-                ConnectorMessage testMessage = createTestMessage(tenant, connectorClient, topic, send, payloadMessage);
-                ProcessingResultWrapper<?> processingResult = connectorClient.getDispatcher().onMessage(testMessage);
-                if (processingResult.getProcessingResult() != null) {
-                    // Wait for the future to complete and get the result
-                    result = (List<? extends ProcessingContext<?>>) processingResult.getProcessingResult().get();
-                }
-            } catch (ConnectorRegistryException e) {
-                throw new RuntimeException(e);
-            }
-            return new ResponseEntity<>(result, HttpStatus.OK);
-        } catch (Exception ex) {
-            log.error("{} - Error transforming payload: {}", tenant, ex);
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getLocalizedMessage());
-        }
-    }
-
     @RequestMapping(value = "/test/mapping", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<TestResult> testMapping(
             @RequestBody TestContext context) {
@@ -137,6 +106,25 @@ public class TestController {
         log.info("{} - Test mapping: {}, {}, {}, {}", tenant, mapping.getName(), mapping.getId(), send,
                 payload);
         try {
+            // Create test device in C8Y inventory before dispatching (INBOUND + send only)
+            if (Boolean.TRUE.equals(send) && Boolean.TRUE.equals(context.getCreateTestDevice())
+                    && mapping.getDirection().equals(Direction.INBOUND)) {
+                String externalId = extractIdentityFromSourceTemplate(mapping.getSourceTemplate());
+                if (externalId == null) {
+                    externalId = deriveExternalIdFromTopic(mapping.getMappingTopicSample());
+                }
+                String externalIdType = (mapping.getExternalIdType() != null && !mapping.getExternalIdType().isEmpty())
+                        ? mapping.getExternalIdType()
+                        : "c8y_Serial";
+                String deviceName = externalId;
+                String testDeviceId = c8YAgent.createTestDevice(tenant, deviceName, externalId, externalIdType);
+                if (testDeviceId != null) {
+                    result.setTestDeviceId(testDeviceId);
+                    log.info("{} - Created test device: id={}, externalId={}, type={}", tenant, testDeviceId,
+                            externalId, externalIdType);
+                }
+            }
+
             AConnectorClient connectorClient = connectorRegistry
                     .getClientForTenant(tenant, TestClient.TEST_CONNECTOR_IDENTIFIER);
 
@@ -297,6 +285,44 @@ public class TestController {
 
         // Return 200 OK with empty body
         return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Extracts the externalId from the mapping's source template at path _IDENTITY_.externalId.
+     * This is the value the identity resolver will look up in C8Y when processing the test message.
+     * Returns null if absent or not parseable.
+     */
+    private String extractIdentityFromSourceTemplate(String sourceTemplate) {
+        if (sourceTemplate == null || sourceTemplate.isEmpty()) {
+            return null;
+        }
+        try {
+            JsonNode root = new ObjectMapper().readTree(sourceTemplate);
+            JsonNode extId = root.path("_IDENTITY_").path("externalId");
+            if (!extId.isMissingNode() && !extId.isNull() && extId.isTextual()) {
+                return extId.asText();
+            }
+        } catch (Exception e) {
+            log.warn("Could not extract identity from source template: {}", e.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * Derives an externalId candidate from a mapping topic sample by taking the last non-empty segment.
+     * E.g. "testSmartInbound/sensor-berlin-01" → "sensor-berlin-01"
+     */
+    private String deriveExternalIdFromTopic(String topicSample) {
+        if (topicSample == null || topicSample.isEmpty()) {
+            return "test-device";
+        }
+        String[] segments = topicSample.split("/");
+        for (int i = segments.length - 1; i >= 0; i--) {
+            if (!segments[i].isEmpty() && !segments[i].equals("#") && !segments[i].equals("+")) {
+                return segments[i];
+            }
+        }
+        return "test-device";
     }
 
     private ConnectorMessage createTestMessage(String tenant, AConnectorClient connectorClient, String topic,

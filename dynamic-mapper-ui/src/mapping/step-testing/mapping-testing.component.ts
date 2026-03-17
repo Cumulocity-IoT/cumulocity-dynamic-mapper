@@ -115,6 +115,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
   // State
   testingModel: TestingModel = { results: [], selectedResult: -1 };
+  createTestDevice = false;
   testMapping!: Mapping;
   sourceTemplate: any;
   sourceSystem = '';
@@ -339,7 +340,8 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     const testContext: TestContext = {
       mapping: this.testMapping,
       payload: extractedPayload,
-      send: sendPayload
+      send: sendPayload,
+      createTestDevice: sendPayload && this.createTestDevice
     };
 
     const result = await this.testingService.testMapping(testContext);
@@ -381,8 +383,14 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     }
 
     if (sendPayload) {
-      const responseId = result.requests?.[0]?.response?.id;
-      this.alertService.info(`Sending mapping result was successful: ${responseId}`);
+      const rawResponse = result.requests?.[0]?.response;
+      const parsedResponse = typeof rawResponse === 'string' ? JSON.parse(rawResponse) : rawResponse;
+      const responseId = parsedResponse?.id;
+      const responseLabel = responseId ?? result.requests?.[0]?.sourceId ?? 'unknown';
+      this.alertService.info(`Sending mapping result was successful: ${responseLabel}`);
+      if (result.testDeviceId) {
+        this.alertService.info(`Test device created in inventory: ${result.testDeviceId}`);
+      }
       this.testResult.emit(true);
     } else {
       // this.alertService.success(`Test of mapping ${this.testMapping.name} was successful.`);

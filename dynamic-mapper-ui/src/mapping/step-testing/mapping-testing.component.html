@@ -168,6 +168,13 @@
           <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
             popover="{{'Send Test Message is only supported for mappings that use an external id!'}}" triggers="focus"
             type="button" container="body" allow></button>
+          @if (mapping.direction !== Direction.OUTBOUND) {
+          <label class="c8y-checkbox m-l-16 m-b-0" title="Create a real device in C8Y inventory before sending (tagged d11r_testDevice)">
+            <input type="checkbox" [(ngModel)]="createTestDevice" [disabled]="disableTestSending()" />
+            <span></span>
+            <span translate>Create test device</span>
+          </label>
+          }
         </div>
       </div>
     </div>

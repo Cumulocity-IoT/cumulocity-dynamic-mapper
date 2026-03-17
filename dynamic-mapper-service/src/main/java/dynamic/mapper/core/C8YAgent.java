@@ -648,6 +648,52 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         return result;
     }
 
+    public static final String MAPPING_TEST_DEVICE_TYPE = "d11r_testDevice";
+
+    /**
+     * Creates a real managed object in C8Y inventory tagged with {@code d11r_testDevice} so it
+     * is visible in the Test Devices grid and can be cleaned up after testing.
+     *
+     * @return the internal C8Y ID of the created managed object, or {@code null} on failure
+     */
+    public String createTestDevice(String tenant, String deviceName, String externalId, String externalIdType) {
+        String resolvedType = (externalIdType != null && !externalIdType.isEmpty()) ? externalIdType : "c8y_Serial";
+        // Upsert: if the externalId is already registered, return the existing device ID
+        ID id = new ID();
+        id.setType(resolvedType);
+        id.setValue(externalId);
+        ExternalIDRepresentation existing = resolveExternalId2GlobalId(tenant, id, false);
+        if (existing != null) {
+            String existingId = existing.getManagedObject().getId().getValue();
+            log.info("{} - Test device with externalId={} already exists: id={}, reusing it", tenant, externalId,
+                    existingId);
+            return existingId;
+        }
+
+        return subscriptionsService.callForTenant(tenant, () -> {
+            MicroserviceCredentials contextCredentials = removeAppKeyHeaderFromContext(contextService.getContext());
+            return contextService.callWithinContext(contextCredentials, () -> {
+                ManagedObjectRepresentation mor = new ManagedObjectRepresentation();
+                mor.setName(deviceName);
+                mor.set(new IsDevice());
+                mor.set(new HashMap<String, String>(), MAPPING_TEST_DEVICE_TYPE);
+                try {
+                    c8ySemaphore.acquire();
+                    mor = inventoryApi.create(mor, false);
+                    log.info("{} - Test device created: id={}, name={}", tenant, mor.getId().getValue(), deviceName);
+                    identityApi.create(mor, id, false);
+                    return mor.getId().getValue();
+                } catch (InterruptedException e) {
+                    log.error("{} - Failed to acquire semaphore for creating test device", tenant, e);
+                    Thread.currentThread().interrupt();
+                    return null;
+                } finally {
+                    c8ySemaphore.release();
+                }
+            });
+        });
+    }
+
     public ManagedObjectRepresentation upsertDevice(String tenant, ID identity, ProcessingContext<?> context,
             int requestIndex)
             throws ProcessingException {
@@ -682,6 +728,10 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                         agentFragments.put("maintainer", "Open-Source");
                         mor.set(agentFragments, "c8y_Agent");
                         mor.set(new IsDevice());
+                        // Tag as test device when created during a test send
+                        if (Boolean.TRUE.equals(context.getSendPayload())) {
+                            mor.set(new HashMap<String, String>(), MAPPING_TEST_DEVICE_TYPE);
+                        }
                         // remove id only if not testing
                         if (!testing) {
                             mor.setId(null);

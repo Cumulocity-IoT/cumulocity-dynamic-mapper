@@ -10,13 +10,13 @@
  * Sample payload
  * {
  *     "messageId": "msg-001",
- *     "externalId": "sensor-berlin-01",
  *     "deviceId": "12345",
  *     "sensorData": {
  *         "val": 230.5
  *     }
  * }
  * topic 'testSmartInbound/sensor-berlin-01'
+ * The externalId is extracted from context.getConfig().topic split by '/' at index 1, e.g. "sensor-berlin-01".
  * Note: The device inventory must have c8y_Sensor.type.voltage=true or c8y_Sensor.type.current=true
 */
 
@@ -26,9 +26,16 @@ function onMessage(msg, context) {
     console.log("Payload Raw:" + payload);
     console.log("Payload messageId: " +  payload["messageId"]);
 
-    // externalId comes from payload; context.getClientId() is the MQTT client ID
-    // and must NOT be used as a fallback here — it may be a different device
-    var externalId = payload["externalId"];
+    // Extract externalId from the topic via context.getConfig().
+    // For topic 'testSmartInbound/sensor-berlin-01', index 1 gives 'sensor-berlin-01'.
+    var config = context.getConfig();
+    var topicSegments = config["topic"] ? config["topic"].split("/") : [];
+    var externalId = topicSegments[1] || null;
+
+    if (!externalId) {
+        console.error("Cannot determine externalId: topic segment [1] is missing. Config: " + JSON.stringify(config));
+        return [];
+    }
 
     // lookup device by c8y internal id for enrichment
     try {

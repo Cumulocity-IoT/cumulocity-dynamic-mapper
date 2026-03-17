@@ -63,6 +63,16 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
         try {
             processSmartMapping(context);
         } catch (Exception e) {
+            // Salvage any console.log() messages written before the exception so they
+            // are included in the test/error response even when processing fails.
+            if (context.getFlowContext() != null) {
+                OutputCollector salvage = new OutputCollector();
+                extractLogs(context.getFlowContext(), salvage, tenant);
+                if (!salvage.getLogs().isEmpty()) {
+                    context.getLogs().addAll(salvage.getLogs());
+                }
+            }
+
             int lineNumber = extractJsLineNumber(e);
             String errorMessage = String.format("%s, line %s", e.getMessage(), lineNumber);
             log.error("{} - Error in {} for mapping {}: {}", tenant, getProcessorName(), mapping.getName(),

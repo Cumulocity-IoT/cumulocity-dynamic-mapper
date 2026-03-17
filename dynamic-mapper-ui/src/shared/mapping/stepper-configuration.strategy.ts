@@ -59,7 +59,7 @@ const CONFIGURATION_OVERRIDES: StepperConfigurationOverride[] = [
     condition: (ctx) => ctx.substitutionsAsCode,
     properties: {
       showCodeEditor: true,
-      allowTestSending: false,
+      allowTestSending: true,
       allowTestTransformation: true
       // Note: advanceFromStepToEndStep intentionally not set here
       // It will be removed in post-processing if substitutionsAsCode is true
@@ -69,7 +69,7 @@ const CONFIGURATION_OVERRIDES: StepperConfigurationOverride[] = [
     condition: (ctx) => ctx.transformationType === TransformationType.SMART_FUNCTION,
     properties: {
       showEditorTarget: false,
-      allowTestSending: false,
+      allowTestSending: true,
       allowTestTransformation: true
     }
   },
@@ -80,7 +80,7 @@ const CONFIGURATION_OVERRIDES: StepperConfigurationOverride[] = [
     properties: {
       showProcessorExtensionsTarget: true,
       showEditorTarget: false,
-      allowTestSending: false,
+      allowTestSending: true,
       allowTestTransformation: true,
       advanceFromStepToEndStep: 2
     }
@@ -101,7 +101,7 @@ const CONFIGURATION_OVERRIDES: StepperConfigurationOverride[] = [
     properties: {
       showEditorTarget: false,
       showFilterExpression: false,
-      allowTestSending: false,
+      allowTestSending: true,
       allowTestTransformation: true
     }
   },

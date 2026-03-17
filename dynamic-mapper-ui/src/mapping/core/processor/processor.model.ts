@@ -44,6 +44,7 @@ export interface TestContext {
   mapping: Mapping;
   payload: string;
   send?: boolean;
+  createTestDevice?: boolean;
 }
 
 export interface TestResult {
@@ -52,6 +53,7 @@ export interface TestResult {
   errors: string[];
   warnings?: string[];
   logs?: string[];
+  testDeviceId?: string;
 }
 
 export enum ProcessingType {
