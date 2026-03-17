@@ -612,9 +612,21 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
     this.sourceTemplateUpdated = updatedContentAsJson;
 
+    // Parse previousContent to use as baseline — this avoids false positives when
+    // the user reformats the document (both sides have identical protected-field values).
+    // Fall back to this.sourceTemplate if previousContent is unavailable.
+    let baselineAsJson = this.sourceTemplate;
+    if (previousContent) {
+      if ('text' in previousContent && previousContent['text']) {
+        try { baselineAsJson = JSON.parse(previousContent['text']); } catch { /* keep fallback */ }
+      } else if ('json' in previousContent) {
+        baselineAsJson = previousContent['json'];
+      }
+    }
+
     // Just validate and show warning, don't block
     const hasProtectedChanges = this.stepperConfiguration.allowTemplateExpansion && !validateProtectedFields(
-      this.sourceTemplate,
+      baselineAsJson,
       updatedContentAsJson
     );
 
@@ -656,9 +668,19 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
     this.targetTemplateUpdated = updatedContentAsJson;
 
+    // Parse previousContent to use as baseline — avoids false positives on reformat.
+    let baselineAsJson = this.targetTemplate;
+    if (previousContent) {
+      if ('text' in previousContent && previousContent['text']) {
+        try { baselineAsJson = JSON.parse(previousContent['text']); } catch { /* keep fallback */ }
+      } else if ('json' in previousContent) {
+        baselineAsJson = previousContent['json'];
+      }
+    }
+
     // Just validate and show warning, don't block
     const hasProtectedChanges = this.stepperConfiguration.allowTemplateExpansion && !validateProtectedFields(
-      this.targetTemplate,
+      baselineAsJson,
       updatedContentAsJson
     );
 

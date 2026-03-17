@@ -58,8 +58,10 @@ const onMessage: SmartFunctionOut = (
   console.log('Config:', context.getConfig());
   console.log('Processing Cumulocity payload:', payload);
 
-  // Extract measurement data
-  const sourceId = payload['source']?.['id'] || 'unknown';
+  // Extract device ID — prefer msg.sourceId (populated by the runtime from the processing
+  // context) over payload['source']['id'] to avoid failures when the source template
+  // does not include the 'source' field.
+  const sourceId = msg.sourceId ?? payload['source']?.['id'] ?? 'unknown';
   const measurementType = payload['type'] || 'unknown';
 
   // Build custom device payload

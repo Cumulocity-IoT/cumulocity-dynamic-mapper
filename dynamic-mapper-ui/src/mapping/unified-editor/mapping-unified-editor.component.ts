@@ -784,7 +784,7 @@ export class MappingUnifiedEditorComponent implements OnInit, OnDestroy {
   }
 
   onSourceTemplateChanged(contentChanges: ContentChanges): void {
-    const { updatedContent } = contentChanges;
+    const { previousContent, updatedContent } = contentChanges;
 
     let updatedContentAsJson;
 
@@ -802,8 +802,18 @@ export class MappingUnifiedEditorComponent implements OnInit, OnDestroy {
 
     this.sourceTemplateUpdated = updatedContentAsJson;
 
+    // Parse previousContent to use as baseline — avoids false positives on reformat.
+    let baselineAsJson = this.sourceTemplate;
+    if (previousContent) {
+      if ('text' in previousContent && previousContent['text']) {
+        try { baselineAsJson = JSON.parse(previousContent['text']); } catch { /* keep fallback */ }
+      } else if ('json' in previousContent) {
+        baselineAsJson = previousContent['json'];
+      }
+    }
+
     const hasProtectedChanges = this.stepperConfiguration.allowTemplateExpansion && !validateProtectedFields(
-      this.sourceTemplate,
+      baselineAsJson,
       updatedContentAsJson
     );
 
@@ -824,7 +834,7 @@ export class MappingUnifiedEditorComponent implements OnInit, OnDestroy {
   }
 
   onTargetTemplateChanged(contentChanges: ContentChanges): void {
-    const { updatedContent } = contentChanges;
+    const { previousContent, updatedContent } = contentChanges;
 
     let updatedContentAsJson;
 
@@ -842,8 +852,18 @@ export class MappingUnifiedEditorComponent implements OnInit, OnDestroy {
 
     this.targetTemplateUpdated = updatedContentAsJson;
 
+    // Parse previousContent to use as baseline — avoids false positives on reformat.
+    let baselineAsJson = this.targetTemplate;
+    if (previousContent) {
+      if ('text' in previousContent && previousContent['text']) {
+        try { baselineAsJson = JSON.parse(previousContent['text']); } catch { /* keep fallback */ }
+      } else if ('json' in previousContent) {
+        baselineAsJson = previousContent['json'];
+      }
+    }
+
     const hasProtectedChanges = this.stepperConfiguration.allowTemplateExpansion && !validateProtectedFields(
-      this.targetTemplate,
+      baselineAsJson,
       updatedContentAsJson
     );
 

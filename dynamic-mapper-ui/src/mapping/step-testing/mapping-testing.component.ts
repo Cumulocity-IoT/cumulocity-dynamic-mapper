@@ -91,7 +91,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   // Editor configurations
   readonly editorOptionsDefault = {
     mode: 'tree',
-    removeModes: ['text', 'table'],
+  removeModes: ['table'],
     mainMenuBar: true,
     navigationBar: false,
     statusBar: false,
@@ -100,8 +100,8 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
   readonly editorOptionsSource = {
     mode: 'tree',
-    removeModes: ['table'],
     mainMenuBar: true,
+    removeModes: ['table'],
     navigationBar: false,
     statusBar: false,
     readOnly: false
