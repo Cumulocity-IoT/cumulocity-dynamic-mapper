@@ -179,9 +179,9 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
   // ===== PRIVATE METHODS =====
 
-  private requiresRawPayload(): boolean {
-    return this.testMapping.mappingType === MappingType.HEX ||
-           this.testMapping.mappingType === MappingType.FLAT_FILE;
+  protected requiresRawPayload(): boolean {
+    return this.testMapping?.mappingType === MappingType.HEX ||
+           this.testMapping?.mappingType === MappingType.FLAT_FILE;
   }
 
   private initializeMapping(): void {
@@ -221,12 +221,16 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   }
 
   private resetTestingModel(): void {
+    const logs: string[] = this.requiresRawPayload()
+      ? ['INFO Validate the mapping logic with real payloads. The specific parsing of whitespace and line terminators (CR/LF) may differ from the test environment, potentially altering the results.']
+      : [];
     this.testingModel = {
       payload: this.sourceTemplate,
       results: [],
       selectedResult: -1,
       request: {},
       response: {},
+      logs,
     };
   }
 
@@ -283,8 +287,6 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
   private async executeTest(sendPayload: boolean): Promise<void> {
     try {
-      this.showTestWarning();
-
       const result = await this.performTest(sendPayload);
       await this.handleTestResult(result, sendPayload);
 
@@ -296,14 +298,6 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     }
   }
 
-  private showTestWarning(): void {
-    if (this.requiresRawPayload()) {
-      this.alertService.info(
-        "Validate the mapping logic with real payloads. The specific parsing of whitespace and " +
-        "line terminators (CR/LF) may differ from the test environment, potentially altering the results."
-      );
-    }
-  }
 
   private parseRequestResponse(req: DynamicMapperRequest): DynamicMapperRequest {
     return {
@@ -348,7 +342,8 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
     // Convert request and response from JSON string to object for all items
     this.testingModel.results = result.requests.map(req => this.parseRequestResponse(req));
-    this.testingModel.logs = result.logs;
+    const staticLogs = this.testingModel.logs?.filter(l => l.startsWith('INFO')) ?? [];
+    this.testingModel.logs = [...staticLogs, ...(result.logs ?? [])];
 
     return result;
   }
@@ -387,10 +382,8 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       const parsedResponse = typeof rawResponse === 'string' ? JSON.parse(rawResponse) : rawResponse;
       const responseId = parsedResponse?.id;
       const responseLabel = responseId ?? result.requests?.[0]?.sourceId ?? 'unknown';
-      this.alertService.info(`Sending mapping result was successful: ${responseLabel}`);
-      if (result.testDeviceId) {
-        this.alertService.info(`Test device created in inventory: ${result.testDeviceId}`);
-      }
+      const deviceInfo = result.testDeviceId ? `, test device: ${result.testDeviceId}` : '';
+      this.alertService.info(`Sending mapping result was successful: ${responseLabel}${deviceInfo}`);
       this.testResult.emit(true);
     } else {
       // this.alertService.success(`Test of mapping ${this.testMapping.name} was successful.`);
@@ -467,6 +460,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     if (line.startsWith('JS ERROR:')) return 'error';
     if (line.startsWith('JS WARN:')) return 'warn';
     if (line.startsWith('JS DEBUG:')) return 'debug';
+    if (line.startsWith('INFO')) return 'info';
     return 'log';
   }
 

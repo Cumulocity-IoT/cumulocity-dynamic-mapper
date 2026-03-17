@@ -101,6 +101,10 @@ c8y-data-grid button[title='Reload'] {
   color: #e06c75;
 }
 
+.log-info {
+  color: #61afef;
+}
+
 .log-empty {
   /* color: #555; */
   color: #d4d4d4;

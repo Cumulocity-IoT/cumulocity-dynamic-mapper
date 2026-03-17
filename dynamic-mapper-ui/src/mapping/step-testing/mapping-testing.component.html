@@ -123,7 +123,7 @@
       </div>
     </div>
     }
-    @if (isSubstitutionsAsCode(mapping)) {
+    @if (isSubstitutionsAsCode(mapping) || requiresRawPayload()) {
     <div class="d-flex">
       <div class="col-lg-10 col-lg-offset-1 col-md-10 col-md-offset-1">
         <div class="form-group">
@@ -143,7 +143,6 @@
       </div>
     </div>
     }
-
     <div class="d-flex sticky-buttons">
       <div class="_col-lg-10">
         <div class="btn-group">
