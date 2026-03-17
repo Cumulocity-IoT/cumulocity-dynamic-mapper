@@ -355,7 +355,15 @@ public class ConfigurationRegistry {
         try (Context warmupCtx = Context.newBuilder("js")
                 .engine(eng)
                 .allowHostAccess(getHostAccess())
-                .allowHostClassLookup(className -> false)
+                .allowHostClassLookup(className ->
+                        className.equals("dynamic.mapper.processor.model.SubstitutionContext")
+                        || className.equals("dynamic.mapper.processor.model.SubstitutionResult")
+                        || className.equals("dynamic.mapper.processor.model.SubstituteValue")
+                        || className.equals("dynamic.mapper.processor.model.SubstituteValue$TYPE")
+                        || className.equals("dynamic.mapper.processor.model.RepairStrategy")
+                        || className.equals("java.util.ArrayList")
+                        || className.equals("java.util.HashMap")
+                        || className.equals("java.util.HashSet"))
                 .build()) {
             warmupCtx.eval(sharedSource);
             warmupCtx.eval(systemSource);
