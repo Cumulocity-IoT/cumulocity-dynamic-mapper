@@ -53,7 +53,7 @@
 }
 
 /* Reduce font size of code blocks rendered inside the AI chat. */
-::ng-deep c8y-ai-chat pre code {
-  font-size: 10px;
-  line-height: 1.45;
+d11r-mapping-ai-prompt c8y-ai-chat pre code {
+  font-size: 12px !important;
+  line-height: 1.25 !important;
 }

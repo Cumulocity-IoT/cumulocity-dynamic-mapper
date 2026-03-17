@@ -68,6 +68,8 @@ export class AIPromptComponent implements OnInit {
   isLoading = false;
   isLoadingChat = false;
   newMessage = '';
+  /** Bound to [prompt] on c8y-ai-chat so the textarea stays empty during auto-send. */
+  chatInput = '';
   testVars: string = '';
   serviceConfiguration: ServiceConfiguration;
   agentType: MappingType;

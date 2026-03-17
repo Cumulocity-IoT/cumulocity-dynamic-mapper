@@ -35,15 +35,15 @@
       </svg>
     </span>
     <span class="m-t-8">Generate substitutions with agent:</span>
-    <span class="label label-primary m-l-8 m-t-8 m-b-8 text-16">{{aiAgent.name}}</span>
+    <span class="label label-success m-l-8 m-t-8 m-b-8 text-16">{{aiAgent.name}}</span>
   </h4>
 </div>
 
 <div class="card-inner-scroll fit-h">
   @if (aiAgent) {
-  <c8y-ai-chat [isLoading]="isLoadingChat" [disabled]="false" [prompt]="newMessage"
+  <c8y-ai-chat [isLoading]="isLoadingChat" [disabled]="false" [prompt]="chatInput"
     (onMessage)="handleMessage($event)" [config]="chatConfig">
-    @for (message of getCompatibleMessages(); track message) {
+    @for (message of getCompatibleMessages(); track $index) {
     <c8y-ai-chat-message [message]="formatMessage(message)">
     </c8y-ai-chat-message>
     }
