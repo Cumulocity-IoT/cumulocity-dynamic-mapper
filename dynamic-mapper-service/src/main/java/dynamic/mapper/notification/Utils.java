@@ -44,7 +44,7 @@ public class Utils {
     public static final String CACHE_INVENTORY_SUBSCRIPTION = "DynamicMapperCacheInventorySubscription";
     public static final int CONNECTION_TIMEOUT_SECONDS = 30;
     public static final int RECONNECT_INTERVAL_SECONDS = 60;
-    public static final int CONFLICT_RETRY_COUNT = 5;
+    public static final int CONFLICT_RETRY_COUNT = 10;
     public static final int CONFLICT_RETRY_DELAY_SECONDS = 10;
 
     /**
