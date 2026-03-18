@@ -106,7 +106,8 @@ public class SendOutboundProcessor extends BaseProcessor {
      * Set operation status to EXECUTING before sending the outbound message.
      */
     private void autoAckOperation(ProcessingContext<Object> context, String tenant, Mapping mapping, OperationStatus operationStatus) {
-        if (!API.OPERATION.equals(context.getApi()) || !Boolean.TRUE.equals(mapping.getAutoAckOperation())) {
+        if (!API.OPERATION.equals(context.getApi()) || !Boolean.TRUE.equals(mapping.getAutoAckOperation())
+                || Boolean.TRUE.equals(context.getTesting())) {
             return;
         }
         try {

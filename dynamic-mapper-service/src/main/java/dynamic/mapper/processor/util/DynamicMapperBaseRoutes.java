@@ -48,6 +48,11 @@ public abstract class DynamicMapperBaseRoutes extends RouteBuilder {
         try {
             ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
             if (context != null && context.getMapping() != null && context.getMapping().getSnoopStatus() != null) {
+                // Never snoop in test mode — test messages must go through the normal
+                // processing pipeline so the JS function is executed and results are returned.
+                if (Boolean.TRUE.equals(context.getTesting())) {
+                    return false;
+                }
                 return context.getMapping().getSnoopStatus().equals(SnoopStatus.ENABLED)
                         || context.getMapping().getSnoopStatus().equals(SnoopStatus.STARTED);
             }

@@ -249,6 +249,9 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
                 .choice()
                 .when(exchange -> shouldIgnoreFurtherProcessing(exchange))
                 .to("log:outbound-flow-function-filtered-message?level=DEBUG")
+                // Still call SendOutboundProcessor so it can auto-ack the operation as
+                // FAILED when a JS error caused processing to be skipped.
+                .process(outboundSendProcessor)
                 .process(consolidationProcessor)
                 .stop()
                 .otherwise()
