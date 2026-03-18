@@ -131,7 +131,9 @@
             <label>Console output</label>
           </div>
           <div class="console-output">
-            @if (testingModel.logs?.length) {
+            @if (isLoading) {
+            <span class="log-loading">Processing</span>
+            } @else if (testingModel.logs?.length) {
             @for (line of testingModel.logs; track $index) {
             <div [class]="'log-line log-' + getLogLevel(line)">{{ line }}</div>
             }
@@ -147,7 +149,10 @@
       <div class="_col-lg-10">
         <div class="btn-group">
           <button type="button m-r-4" class="btn btn-default btn-sm m-r-8" (click)="onTestTransformation()"
-            [disabled]="!stepperConfiguration.allowTestTransformation || (testingModel.results.length > 0)">
+            [disabled]="!stepperConfiguration.allowTestTransformation || (testingModel.results.length > 0) || isLoading">
+            @if (isLoading && !isSubstitutionsAsCode(mapping) && !requiresRawPayload()) {
+            <i class="fa fa-circle-o-notch fa-spin m-r-4"></i>
+            }
             Transform Test Message
           </button>
           <button type="button" class="btn btn-default btn-sm m-r-8" (click)="onNextTestResult()"
@@ -161,7 +166,10 @@
             [disabled]="!stepperConfiguration.allowTestTransformation || testingModel.results.length == 0">
             Reset Transform
           </button>
-          <button type="button" class="btn btn-default btn-sm" [disabled]="disableTestSending()" (click)="onSendTest()">
+          <button type="button" class="btn btn-default btn-sm" [disabled]="disableTestSending() || isLoading" (click)="onSendTest()">
+            @if (isLoading && !isSubstitutionsAsCode(mapping) && !requiresRawPayload()) {
+            <i class="fa fa-circle-o-notch fa-spin m-r-4"></i>
+            }
             Send Test Message
           </button>
           <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"

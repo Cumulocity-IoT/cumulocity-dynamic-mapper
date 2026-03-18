@@ -122,6 +122,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   targetSystem = '';
   selectedResult$ = new BehaviorSubject<number>(0);
   hasResponse = true; // Tracks if current result has a response
+  isLoading = false; // Tracks whether a test request is in progress
 
   async ngOnInit(): Promise<void> {
     this.initializeMapping();
@@ -286,6 +287,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   }
 
   private async executeTest(sendPayload: boolean): Promise<void> {
+    this.isLoading = true;
     try {
       const result = await this.performTest(sendPayload);
       await this.handleTestResult(result, sendPayload);
@@ -295,6 +297,8 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       }
     } catch (error) {
       this.handleError('Test execution failed', error);
+    } finally {
+      this.isLoading = false;
     }
   }
 
