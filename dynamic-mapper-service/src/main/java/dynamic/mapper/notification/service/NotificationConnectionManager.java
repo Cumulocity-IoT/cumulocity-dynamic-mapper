@@ -531,7 +531,29 @@ public class NotificationConnectionManager {
 
             boolean connected = client.connectBlocking(Utils.CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
             if (!connected) {
-                log.error("{} - WebSocket connection timeout for connector {}", tenant, connectorId.getName());
+                // After an ungraceful microservice restart, Cumulocity still considers the
+                // previous consumer active and rejects the new connection with HTTP 409.
+                // Unsubscribe the stale consumer and retry once with the same token.
+                if (client.isConflict()) {
+                    log.warn("{} - WebSocket 409 Conflict for connector {} — unsubscribing stale consumer and retrying",
+                            tenant, connectorId.getName());
+                    tokenManager.unsubscribeToken(token);
+
+                    CustomWebSocketClient retryClient = new CustomWebSocketClient(
+                            tenant, configurationRegistry, webSocketUrl, callback, connectorId);
+                    retryClient.setConnectionLostTimeout(Utils.CONNECTION_TIMEOUT_SECONDS);
+
+                    boolean retryConnected = retryClient.connectBlocking(Utils.CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+                    if (retryConnected) {
+                        log.info("{} - Successfully connected WebSocket for connector {} after handover",
+                                tenant, connectorId.getName());
+                        startReconnectScheduler();
+                        return retryClient;
+                    }
+                    log.error("{} - WebSocket retry also failed for connector {}", tenant, connectorId.getName());
+                } else {
+                    log.error("{} - WebSocket connection timeout for connector {}", tenant, connectorId.getName());
+                }
                 return null;
             }
 

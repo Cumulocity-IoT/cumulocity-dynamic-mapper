@@ -88,6 +88,18 @@ public class TokenManager {
         cacheInventoryTokens.put(tenant, token);
     }
 
+    public void unsubscribeToken(String token) {
+        if (token == null) {
+            return;
+        }
+        try {
+            tokenApi.unsubscribe(new Token(token));
+            log.debug("Unsubscribed stale consumer for token");
+        } catch (Exception e) {
+            log.warn("Error unsubscribing stale consumer (may not exist): {}", e.getMessage());
+        }
+    }
+
     public void unsubscribeDeviceSubscriber(String tenant) {
         if (tenant == null) {
             return;

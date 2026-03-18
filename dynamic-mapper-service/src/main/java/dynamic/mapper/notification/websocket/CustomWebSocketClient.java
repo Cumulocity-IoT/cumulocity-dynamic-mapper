@@ -52,6 +52,9 @@ public class CustomWebSocketClient extends WebSocketClient {
     @Getter
     private ConnectorId connectorId;
 
+    @Getter
+    private volatile String lastCloseReason;
+
     private ExecutorService virtualThreadPool;
     ServiceConfiguration serviceConfiguration;
 
@@ -199,9 +202,14 @@ public class CustomWebSocketClient extends WebSocketClient {
     public void onClose(int statusCode, String reason, boolean remote) {
         log.info("{} - WebSocket closed{}statusCode: {}, reason: {}", tenant, remote ? "by server, " : ", ",
                 statusCode, reason);
+        this.lastCloseReason = reason;
         if (this.executorService != null)
             this.executorService.shutdownNow();
         this.callback.onClose(statusCode, reason);
+    }
+
+    public boolean isConflict() {
+        return lastCloseReason != null && lastCloseReason.contains("409");
     }
 
     @Override
