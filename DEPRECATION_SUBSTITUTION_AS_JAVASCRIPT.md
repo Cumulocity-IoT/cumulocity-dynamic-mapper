@@ -388,10 +388,13 @@ Use the mapping test functionality to:
 
 ## Timeline
 
-- **Release 6.1.5**: Substitution as JavaScript marked as deprecated
-- **Future Release**: Feature will be removed completely
+| Release | Date (planned) | Action |
+|---------|---------------|--------|
+| **6.1.5** | Released | `SUBSTITUTION_AS_CODE` marked as **deprecated**. Existing mappings continue to work. Labels in the UI show "(deprecated)". |
+| **6.2** | Current release | **Creation of new mappings** with `SUBSTITUTION_AS_CODE` is **disabled** in the UI. Existing mappings are still loaded and executed normally. |
+| **6.3** | ~May 2026 | `SUBSTITUTION_AS_CODE` mappings are **no longer loaded** by the service and are **hidden** in the UI. All such mappings must be migrated before this release. |
 
-We recommend migrating all mappings using Substitution as JavaScript to Smart Functions as soon as possible to ensure continued compatibility with future releases.
+We recommend migrating all mappings using Substitution as JavaScript to Smart Functions as soon as possible to ensure continued compatibility with future releases. **All migrations must be completed before release 6.3.**
 
 ## Additional Resources
 

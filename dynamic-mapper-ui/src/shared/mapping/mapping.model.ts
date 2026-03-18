@@ -395,7 +395,6 @@ export const MappingTypeDescriptionMap: Record<
         supportedTransformationTypes: [
           TransformationType.DEFAULT,
           TransformationType.JSONATA,
-          TransformationType.SUBSTITUTION_AS_CODE,
           TransformationType.SMART_FUNCTION
         ]
       },
@@ -406,7 +405,6 @@ export const MappingTypeDescriptionMap: Record<
         supportedTransformationTypes: [
           TransformationType.DEFAULT,
           TransformationType.JSONATA,
-          TransformationType.SUBSTITUTION_AS_CODE,
           TransformationType.SMART_FUNCTION,
           TransformationType.EXTENSION_JAVA
         ]
@@ -434,7 +432,6 @@ export const MappingTypeDescriptionMap: Record<
         supportedTransformationTypes: [
           TransformationType.DEFAULT,
           TransformationType.JSONATA,
-          TransformationType.SUBSTITUTION_AS_CODE,
           TransformationType.SMART_FUNCTION
         ]
       },
@@ -445,7 +442,6 @@ export const MappingTypeDescriptionMap: Record<
         supportedTransformationTypes: [
           TransformationType.DEFAULT,
           TransformationType.JSONATA,
-          TransformationType.SUBSTITUTION_AS_CODE,
           TransformationType.SMART_FUNCTION
         ]
       },
@@ -466,7 +462,6 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
         supportedTransformationTypes: [
           TransformationType.DEFAULT,
           TransformationType.JSONATA,
-          TransformationType.SUBSTITUTION_AS_CODE,
           TransformationType.SMART_FUNCTION
         ]
       },
@@ -477,7 +472,6 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
         supportedTransformationTypes: [
           TransformationType.DEFAULT,
           TransformationType.JSONATA,
-          TransformationType.SUBSTITUTION_AS_CODE,
           TransformationType.SMART_FUNCTION
         ]
       }
