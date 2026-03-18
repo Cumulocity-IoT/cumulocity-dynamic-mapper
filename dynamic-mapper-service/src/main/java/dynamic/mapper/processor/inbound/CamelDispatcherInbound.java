@@ -88,8 +88,9 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
      */
     private ProcessingResultWrapper<?> processMessage(ConnectorMessage connectorMessage, Mapping testMapping) {
         Timer.Sample timer = Timer.start(Metrics.globalRegistry);
-        // testing=true uses mock identity/inventory (source.id=10000). When sendPayload=true
-        // we need real C8Y APIs so the created test device is resolved correctly.
+        // Inbound: testing=true routes identity/inventory lookups to mocks.
+        // When sendPayload=true the user created a real test device in C8Y beforehand,
+        // so we must use real C8Y services to resolve its identity — testing is disabled.
         boolean testing = testMapping != null && !Boolean.TRUE.equals(connectorMessage.getSendPayload());
         String topic = connectorMessage.getTopic();
         String tenant = connectorMessage.getTenant();

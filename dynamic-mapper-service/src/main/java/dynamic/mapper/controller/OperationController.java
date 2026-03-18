@@ -539,15 +539,18 @@ public class OperationController {
                 tenant);
         AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
                 connectorIdentifier);
-        // Wait until client is connected before subscribing - otherwise "old"
-        // notification messages will be ignored
-        if (client.supportedDirections().contains(Direction.OUTBOUND)) {
+        // Wait for initialization to complete for all connector types before returning,
+        // so the frontend sees the final status on the next poll rather than CONNECTING.
+        if (connectTask != null) {
             try {
                 connectTask.get(10, TimeUnit.SECONDS);
             } catch (Exception e) {
                 log.error("{} - Error waiting for client to connect: {}", tenant, e.getMessage());
                 throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
             }
+        }
+        // Reconnect outbound notification subscriptions after the connector is ready
+        if (client.supportedDirections().contains(Direction.OUTBOUND)) {
             configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
         }
 
@@ -564,7 +567,6 @@ public class OperationController {
 
         AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
                 connectorIdentifier);
-        // client.submitDisconnect();
         bootstrapService.disableConnector(tenant, client.getConnectorIdentifier());
         // We might need to Reconnect other Notification Clients for other connectors
         configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);

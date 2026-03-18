@@ -111,6 +111,24 @@ c8y-data-grid button[title='Reload'] {
   font-style: italic;
 }
 
+.log-loading {
+  color: #61afef;
+  font-style: italic;
+}
+
+.log-loading::after {
+  content: '';
+  display: inline-block;
+  animation: loading-dots 1.4s infinite;
+}
+
+@keyframes loading-dots {
+  0%   { content: '.'; }
+  33%  { content: '..'; }
+  66%  { content: '...'; }
+  100% { content: '....'; }
+}
+
 .sticky-buttons {
   z-index: 10;
   bottom: 0;

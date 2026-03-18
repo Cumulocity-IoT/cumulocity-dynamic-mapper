@@ -46,6 +46,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 @Component
 @Slf4j
@@ -134,7 +135,6 @@ public class ConnectorRegistry {
             Iterator<Entry<String, AConnectorClient>> iterator = connectorMap.entrySet().iterator();
             while (iterator.hasNext()) {
                 Entry<String, AConnectorClient> entryNext = iterator.next();
-                entryNext.getValue().disconnect();
                 entryNext.getValue().stopHousekeepingAndClose();
                 iterator.remove();
             }
@@ -153,8 +153,14 @@ public class ConnectorRegistry {
                 AConnectorClient client = connectorMap.get(identifier);
                 // to avoid memory leaks
                 client.setDispatcher(null);
-                // Disconnect asynchronously, then stop housekeeping
-                client.submitDisconnect();
+                // Await async disconnect before stopping housekeeping so the second
+                // disconnect() call inside close() is a no-op (idempotent via isConnected guard)
+                try {
+                    client.submitDisconnect().get(5, TimeUnit.SECONDS);
+                } catch (Exception e) {
+                    log.warn("{} - Timeout or error waiting for disconnect of {}: {}", tenant, identifier,
+                            e.getMessage());
+                }
                 client.stopHousekeepingAndClose();
 
                 // store last connector status for monitoring

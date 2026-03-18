@@ -127,6 +127,21 @@ public class EnrichmentOutboundProcessor extends AbstractEnrichmentProcessor {
             } else if (flowContext instanceof JavaExtensionContextImpl) {
                 javaExtContext = (JavaExtensionContextImpl) flowContext;
                 // externalId is set directly on javaExtContext below after resolution
+            } else if (TransformationType.EXTENSION_JAVA.equals(mapping.getTransformationType())
+                    && context.getTesting()
+                    && payloadObject instanceof Map) {
+                // Test mode: flowContext is null for EXTENSION_JAVA (created later in ExtensibleOutboundProcessor).
+                // Java extensions typically read source.id directly from the payload. Inject a mock source
+                // so the extension can build a meaningful topic instead of "measurements/null".
+                @SuppressWarnings("unchecked")
+                Map<String, Object> payloadMap = (Map<String, Object>) payloadObject;
+                if (!payloadMap.containsKey("source")) {
+                    Map<String, Object> mockSource = new HashMap<>();
+                    mockSource.put("id", sourceId.toString());
+                    payloadMap.put("source", mockSource);
+                    log.debug("{} - Test mode: injected mock source.id '{}' into payload for Java extension",
+                            tenant, sourceId);
+                }
             }
         } else {
             if (payloadObject instanceof Map) {
@@ -147,11 +162,21 @@ public class EnrichmentOutboundProcessor extends AbstractEnrichmentProcessor {
                     new GId(sourceId.toString()), mapping.getExternalIdType(),
                     context.getTesting());
             if (externalId == null) {
-                log.warn("{} - External id for device '{}' with type '{}' not found — config.externalId will be null in JS context",
-                        tenant, sourceId, mapping.getExternalIdType());
-                if (context.getSendPayload()) {
+                if (!context.getTesting()) {
+                    // Production: a missing external ID is a hard error — the broker topic cannot be resolved.
                     throw new RuntimeException(String.format("External id %s for type %s not found!",
                             sourceId.toString(), mapping.getExternalIdType()));
+                }
+                // Test mode: source is synthetic, so use sourceId as fallback to keep topic templates resolvable.
+                String fallbackExternalId = sourceId.toString();
+                log.warn("{} - External id for device '{}' with type '{}' not found — using fallback '{}' in JS context",
+                        tenant, sourceId, mapping.getExternalIdType(), fallbackExternalId);
+                identityFragment.put("externalId", fallbackExternalId);
+                if (config != null) {
+                    config.put("externalId", fallbackExternalId);
+                }
+                if (javaExtContext != null) {
+                    javaExtContext.setExternalId(fallbackExternalId);
                 }
             } else {
                 identityFragment.put("externalId", externalId.getExternalId());

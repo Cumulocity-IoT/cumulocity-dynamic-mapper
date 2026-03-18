@@ -141,7 +141,8 @@ public class TestController {
                 processingResultWrapper = connectorRegistry.getDispatcher(tenant, TestClient.TEST_CONNECTOR_IDENTIFIER)
                         .onTestNotification(
                                 testNotification,
-                                mapping);
+                                mapping,
+                                Boolean.TRUE.equals(send));
             }
 
             if (processingResultWrapper != null && processingResultWrapper.getProcessingResult() != null) {

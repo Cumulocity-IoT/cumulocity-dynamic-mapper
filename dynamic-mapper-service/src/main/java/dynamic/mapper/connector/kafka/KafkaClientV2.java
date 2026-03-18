@@ -692,11 +692,6 @@ public class KafkaClientV2 extends AConnectorClient {
     }
 
     @Override
-    public void close() {
-        disconnect();
-    }
-
-    @Override
     protected boolean isPhysicallyConnected() {
         if (kafkaProducer == null) {
             return false;

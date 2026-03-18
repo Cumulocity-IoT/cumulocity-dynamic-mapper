@@ -574,11 +574,6 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         }
     }
 
-    @Override
-    public void close() {
-        disconnect();
-    }
-
     /**
      * Delete resources permanently - called only when connector is being deleted,
      * not just disconnected

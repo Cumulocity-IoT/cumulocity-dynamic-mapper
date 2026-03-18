@@ -28,6 +28,7 @@ export interface StepperConfigurationContext {
   editorMode: EditorMode;
   substitutionsAsCode: boolean;
   snoopStatus?: SnoopStatus;
+  hasDeployedConnector?: boolean;
 }
 
 export interface StepperConfigurationOverride {
@@ -45,6 +46,12 @@ const CONFIGURATION_OVERRIDES: StepperConfigurationOverride[] = [
     condition: (ctx) => ctx.direction === Direction.OUTBOUND,
     properties: {
       allowTestSending: false
+    }
+  },
+  {
+    condition: (ctx) => ctx.direction === Direction.OUTBOUND && ctx.hasDeployedConnector === true,
+    properties: {
+      allowTestSending: true
     }
   },
   {

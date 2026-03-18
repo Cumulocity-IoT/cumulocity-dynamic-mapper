@@ -30,6 +30,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
 import dynamic.mapper.configuration.*;
+import dynamic.mapper.model.Direction;
+import dynamic.mapper.model.Mapping;
+import dynamic.mapper.processor.model.TransformationType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;
@@ -287,6 +290,7 @@ public class BootstrapService {
         }
 
         mappingService.createResources(tenant);
+        configurationRegistry.warmupMappingCodes(tenant, buildMappingCodeMap(tenant));
 
         connectorRegistry.initializeResources(tenant);
 
@@ -308,6 +312,32 @@ public class BootstrapService {
         aiAgentService.initializeAIAgents();
 
         initResourcesForOutbound(tenant, serviceConfiguration);
+    }
+
+    private Map<String, String> buildMappingCodeMap(String tenant) {
+        Map<String, String> result = new HashMap<>();
+        for (Direction direction : Direction.values()) {
+            if (direction == Direction.UNSPECIFIED) continue;
+            for (Mapping mapping : mappingService.getMappings(tenant, direction)) {
+                if (mapping.getCode() == null || mapping.getCode().isBlank()) continue;
+                try {
+                    byte[] decoded = java.util.Base64.getDecoder().decode(mapping.getCode());
+                    String code = new String(decoded)
+                            .replaceAll("(?m)^export\\s+(default\\s+|\\{[^}]*}[;]?).*$", "").trim();
+                    if (TransformationType.SMART_FUNCTION.equals(mapping.getTransformationType())) {
+                        String id = Mapping.SMART_FUNCTION_NAME + "_" + mapping.getIdentifier();
+                        result.put(id + ".js", code.replaceFirst(Mapping.SMART_FUNCTION_NAME, id));
+                    } else if (TransformationType.SUBSTITUTION_AS_CODE.equals(mapping.getTransformationType())) {
+                        String id = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.getIdentifier();
+                        result.put(id + ".js", code.replaceFirst(Mapping.EXTRACT_FROM_SOURCE, id));
+                    }
+                } catch (Exception e) {
+                    log.warn("{} - Could not prepare mapping code for warm-up [{}]: {}", tenant,
+                            mapping.getName(), e.getMessage());
+                }
+            }
+        }
+        return result;
     }
 
     private ServiceConfiguration initializeServiceConfiguration(String tenant) {
@@ -563,7 +593,7 @@ public class BootstrapService {
     }
 
     // DO NOT REMOVE DeviceIsolationMQTTService feature
-    @Scheduled(cron = "* 30 * * * *")
+    @Scheduled(cron = "0 30 * * * *")
     public void sendDeviceToClientMap() {
         subscriptionsService.runForEachTenant(() -> {
             String tenant = subscriptionsService.getTenant();
@@ -606,7 +636,7 @@ public class BootstrapService {
 
             int retentionDaysInventory = serviceConfig.getInventoryCacheRetention();
 
-            if (shouldClearCache(cacheRetentionStartInbound, retentionDaysInventory)) {
+            if (shouldClearCache(cacheRetentionStartInventory, retentionDaysInventory)) {
                 int cacheSize = c8YAgent.getInventoryCache(tenant).getCacheSize();
                 c8YAgent.clearInventoryCache(tenant, false, cacheSize);
                 cacheInventoryRetentionStartMap.put(tenant, Instant.now());

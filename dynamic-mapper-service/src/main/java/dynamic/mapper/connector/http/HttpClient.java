@@ -201,11 +201,6 @@ public class HttpClient extends AConnectorClient {
     }
 
     @Override
-    public void close() {
-        disconnect();
-    }
-
-    @Override
     public void publishMEAO(ProcessingContext<?> context) {
         // HTTP connector is inbound only - no outbound publishing
         log.warn("{} - HTTP connector does not support outbound publishing", tenant);

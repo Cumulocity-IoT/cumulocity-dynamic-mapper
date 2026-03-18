@@ -31,6 +31,7 @@ import com.cumulocity.model.operation.OperationStatus;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.operation.OperationRepresentation;
 import dynamic.mapper.connector.core.client.AConnectorClient;
+import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.model.API;
@@ -42,7 +43,7 @@ import dynamic.mapper.service.MappingService;
 import dynamic.mapper.util.Utils;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -142,16 +143,25 @@ public class SendOutboundProcessor extends BaseProcessor {
             return;
         }
 
+        if (!context.getSendPayload()) {
+            log.warn("{} - Not sending messages: sendPayload is false", tenant);
+            return;
+        }
+
         try {
+            // Outbound testing with send=true: publish via all real (non-TEST) connectors
+            // that have the mapping deployed, mirroring how inbound send=true uses real C8Y.
+            // Identity enrichment still uses mocks (testing=true) since the source payload
+            // is always synthetic for outbound tests.
+            if (Boolean.TRUE.equals(context.getTesting())) {
+                publishToRealConnectors(context, tenant);
+                return;
+            }
+
             AConnectorClient connectorClient = connectorRegistry.getClientForTenant(tenant, connectorIdentifier);
 
             if (!connectorClient.isConnected()) {
                 log.warn("{} - Not sending messages: connector not connected", tenant);
-                return;
-            }
-
-            if (!context.getSendPayload()) {
-                log.warn("{} - Not sending messages: sendPayload is false", tenant);
                 return;
             }
 
@@ -170,7 +180,49 @@ public class SendOutboundProcessor extends BaseProcessor {
                 context.getCurrentRequest().setError(e);
             }
         }
+    }
 
+    /**
+     * Publish to all real (non-TEST) connectors that have the mapping deployed and are connected.
+     * Used for outbound "Send Test Message" so the payload reaches the actual broker.
+     */
+    private void publishToRealConnectors(ProcessingContext<Object> context, String tenant) {
+        Mapping mapping = context.getMapping();
+        Map<String, AConnectorClient> allClients;
+        try {
+            allClients = connectorRegistry.getClientsForTenant(tenant);
+        } catch (Exception e) {
+            log.error("{} - Failed to look up connectors for outbound test send: {}", tenant, e.getMessage(), e);
+            return;
+        }
+
+        int publishCount = 0;
+        for (AConnectorClient client : allClients.values()) {
+            if (client.getConnectorType() == ConnectorType.TEST) {
+                continue;
+            }
+            if (!client.isConnected()) {
+                log.warn("{} - Skipping connector '{}': not connected", tenant, client.getConnectorName());
+                continue;
+            }
+            if (!client.isMappingOutboundDeployed(mapping.getIdentifier())) {
+                log.debug("{} - Mapping '{}' not deployed on connector '{}', skipping",
+                        tenant, mapping.getName(), client.getConnectorName());
+                continue;
+            }
+            try {
+                client.publishMEAO(context);
+                publishCount++;
+                log.info("{} - Published outbound test message via connector: {}", tenant, client.getConnectorName());
+            } catch (Exception e) {
+                log.error("{} - Failed to publish via connector '{}': {}", tenant, client.getConnectorName(), e.getMessage(), e);
+            }
+        }
+
+        if (publishCount == 0) {
+            log.warn("{} - No connected real connector found to publish outbound test message for mapping: {}",
+                    tenant, mapping.getName());
+        }
     }
 
     /**

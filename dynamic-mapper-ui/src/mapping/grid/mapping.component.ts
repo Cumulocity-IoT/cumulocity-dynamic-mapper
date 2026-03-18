@@ -787,6 +787,9 @@ export class MappingComponent implements OnInit, OnDestroy {
       identifier: this.mappingToUpdate.identifier,
       connectors: deploymentMapEntry.connectors
     };
+    if (mapping.direction === Direction.OUTBOUND && deploymentMapEntry.connectors.length > 0) {
+      this.stepperConfiguration = { ...this.stepperConfiguration, allowTestSending: true };
+    }
 
     // update view state
     const isInactiveSnoop = mapping.snoopStatus === SnoopStatus.NONE ||
