@@ -525,18 +525,8 @@ public class ConfigurationController {
                     List<ConnectorConfiguration> connectorConfigurationList = connectorConfigurationService
                             .getConnectorConfigurations(tenant);
                     for (ConnectorConfiguration connectorConfiguration : connectorConfigurationList) {
-                        if (bootstrapService.initializeConnectorByConfiguration(connectorConfiguration,
-                                serviceConfiguration,
-                                tenant) != null) {
-                            Future<?> future = bootstrapService
-                                    .initializeConnectorByConfiguration(connectorConfiguration, serviceConfiguration,
-                                            tenant);
-                            if (future != null) {
-                                // You could handle the future asynchronously if needed
-                                // For example, you could submit a task to a thread pool to handle completion
-                            }
-                        }
-                        // Optionally add error handling in a separate thread if needed
+                        bootstrapService.initializeConnectorByConfiguration(connectorConfiguration,
+                                serviceConfiguration, tenant);
                     }
                     configurationRegistry.getNotificationSubscriber().initializeDeviceClient(tenant);
                     configurationRegistry.getNotificationSubscriber().initializeManagementClient(tenant);

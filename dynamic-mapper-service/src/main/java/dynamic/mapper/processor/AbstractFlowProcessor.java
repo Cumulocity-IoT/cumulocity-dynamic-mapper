@@ -136,6 +136,7 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
                 String decodedCodeAdapted = decodedCode.replaceFirst("onMessage", identifier);
 
                 Source source = Source.newBuilder("js", decodedCodeAdapted, identifier + ".js")
+                        .cached(true)
                         .buildLiteral();
                 graalContext.eval(source);
 

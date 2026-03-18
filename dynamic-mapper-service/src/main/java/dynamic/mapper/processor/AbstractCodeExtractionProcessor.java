@@ -161,6 +161,7 @@ public abstract class AbstractCodeExtractionProcessor extends CommonProcessor {
                         Mapping.EXTRACT_FROM_SOURCE,
                         identifier);
                 Source source = Source.newBuilder("js", decodedCodeAdapted, identifier + ".js")
+                        .cached(true)
                         .buildLiteral();
                 graalContext.eval(source);
 

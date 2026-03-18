@@ -98,7 +98,7 @@ public class CamelDispatcherOutbound implements NotificationCallback {
                     connectorClient.getTenant());
             return ProcessingResultWrapper.builder().consolidatedQos(Qos.AT_MOST_ONCE).build();
         }
-        return processNotification(notification, null);
+        return processNotification(notification, null, true);
     }
 
     @Override
@@ -116,16 +116,19 @@ public class CamelDispatcherOutbound implements NotificationCallback {
     }
 
     @Override
-    public ProcessingResultWrapper<?> onTestNotification(Notification notification, Mapping mapping) {
-        return processNotification(notification, mapping);
+    public ProcessingResultWrapper<?> onTestNotification(Notification notification, Mapping mapping, boolean send) {
+        return processNotification(notification, mapping, send);
     }
 
     /**
      * Process notification with optional test mapping
      */
-    private ProcessingResultWrapper<?> processNotification(Notification notification, Mapping testMapping) {
+    private ProcessingResultWrapper<?> processNotification(Notification notification, Mapping testMapping, boolean send) {
+        // Outbound: testing=true always routes identity lookups to mocks, even when sendPayload=true.
+        // Unlike inbound, the outbound source payload is always synthetic (built from a template),
+        // so there is no real C8Y source device to resolve — mocks are required regardless of send.
         boolean testing = testMapping != null;
-        
+
         Qos consolidatedQos = Qos.AT_LEAST_ONCE;
         ProcessingResultWrapper<?> result = ProcessingResultWrapper.builder()
                 .consolidatedQos(consolidatedQos)
@@ -155,10 +158,10 @@ public class CamelDispatcherOutbound implements NotificationCallback {
         }
 
         // Convert Notification to C8YMessage
-        C8YMessage c8yMessage = convertNotificationToC8YMessage(notification, tenant, !testing);
-        
+        C8YMessage c8yMessage = convertNotificationToC8YMessage(notification, tenant, send);
+
         // Process the message
-        return processMessage(c8yMessage, testMapping);
+        return processMessage(c8yMessage, testMapping, testing);
     }
 
     /**
@@ -200,8 +203,7 @@ public class CamelDispatcherOutbound implements NotificationCallback {
     /**
      * Process C8Y message using Camel routes
      */
-    private ProcessingResultWrapper<?> processMessage(C8YMessage c8yMessage, Mapping testMapping) {
-        boolean testing = testMapping != null;
+    private ProcessingResultWrapper<?> processMessage(C8YMessage c8yMessage, Mapping testMapping, boolean testing) {
         String tenant = c8yMessage.getTenant();
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
 

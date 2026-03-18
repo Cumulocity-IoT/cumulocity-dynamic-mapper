@@ -109,12 +109,17 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
     // console.log('Current Polling Interval:', this.currentPollingInterval);
     this.customClasses = this.shouldHideBulkActionsAndReadOnly ? 'hide-bulk-actions' : '';
     this.feature = await this.featurePromise;
-    this.toggleIntervalForm.get('refreshInterval')?.valueChanges.subscribe(value => {
-      this.currentPollingInterval = value;
-      this.onRefreshIntervalChange(value);
-    });
-
-    this.onRefreshIntervalToggleChange();
+    // Fix 4: single consolidated subscription for interval changes
+    this.toggleIntervalForm.get('refreshInterval')?.valueChanges
+      .pipe(takeUntil(this.destroy$), filter(Boolean))
+      .subscribe(value => {
+        this.currentPollingInterval = value;
+        this.onRefreshIntervalChange(value);
+        setTimeout(() => {
+          this.nextTriggerCountdown$.next(this.currentPollingInterval);
+          this.resetCountdown();
+        });
+      });
   }
 
   ngAfterViewInit(): void {
@@ -195,7 +200,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
   }
 
   private setupConfigurationsSubscription(): void {
-    combineLatest([this.selected$, this.configurations$]).subscribe(([selected, configurations]) => {
+    combineLatest([this.selected$, this.configurations$]).pipe(takeUntil(this.destroy$)).subscribe(([selected, configurations]) => {
       this.configurations = configurations;
       if (this.selectable) {
         this.updateDeploymentMapEntry(selected, configurations);
@@ -406,16 +411,6 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
     this.resetCountdown();
   }
 
-  private onRefreshIntervalToggleChange(): void {
-    this.toggleIntervalForm
-      .get('refreshInterval')
-      .valueChanges.pipe(takeUntil(this.destroy$), filter(Boolean))
-      .subscribe(() => setTimeout(() => {
-        this.nextTriggerCountdown$.next(this.currentPollingInterval);
-        this.resetCountdown()
-      }));
-  }
-
   trackUserClickOnIntervalToggle(event: Event): void {
     const target = event.target;
     this.shouldRefreshAutomatic = (target as HTMLInputElement).checked;
@@ -425,6 +420,5 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
     } else {
       this.countdownIntervalComponent.start()
     }
-    console.log('ShouldRefreshAutomatic', this.shouldRefreshAutomatic)
   }
 }
