@@ -84,7 +84,7 @@ extensions:
 
   - eventName: MeasurementWithSourceIdOverride
     className: dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionSmartInbound06
-    description: Measurement processor with sourceId override to route data to parent devices (since 6.1.6)
+    description: Measurement processor with sourceId override to route data to parent devices (since 6.2)
     version: "2.0"
 
   # Outbound Extensions (Cumulocity → Device)

@@ -36,7 +36,7 @@ import java.util.Map;
 /**
  * Java Extension demonstrating sourceId override to route measurements to parent devices.
  *
- * <p>This extension demonstrates the Smart Function pattern with sourceId override (since 6.1.6):</p>
+ * <p>This extension demonstrates the Smart Function pattern with sourceId override (since 6.2):</p>
  * <ul>
  *   <li>Looking up originating device using externalId from inventory cache</li>
  *   <li>Extracting parent device information from assetParents</li>
