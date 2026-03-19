@@ -171,6 +171,6 @@ public class ServiceConfiguration implements Cloneable {
     @JsonSetter(nulls = Nulls.SKIP)
     private Boolean suppressDeprecationWarning;
 
-    @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "Holds the version string of the last accepted SUBSTITUTION_AS_CODE deprecation notice (e.g. '6.2'). If the value matches the current release version the notice is not shown again. A new version string triggers a new acceptance.", example = "6.2")
+    @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "Holds the version string of the last accepted SUBSTITUTION_AS_CODE deprecation notice (e.g. '6.2.0'). If the value matches the current release version the notice is not shown again. A new version string triggers a new acceptance.", example = "6.2")
     private String acceptedDeprecationNotice;
 }

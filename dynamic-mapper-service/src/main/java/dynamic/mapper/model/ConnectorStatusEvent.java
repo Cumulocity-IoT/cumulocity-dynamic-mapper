@@ -28,23 +28,30 @@ import java.util.Date;
 
 import jakarta.validation.constraints.NotNull;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 @Data
+@Schema(description = "Status event representing the current connection state of a connector")
 public class ConnectorStatusEvent implements Serializable {
 	@NotNull
+	@Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Display name of the connector", example = "MQTT Broker")
 	public String connectorName;
 
 	@NotNull
+	@Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Unique identifier of the connector", example = "mqtt-broker-01")
 	public String connectorIdentifier;
 
 	@NotNull
+	@Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Current connection status", implementation = ConnectorStatus.class, example = "CONNECTED")
 	public ConnectorStatus status;
 
 	@NotNull
+	@Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Status message or error description", example = "Connected successfully")
 	public String message;
 
 	@NotNull
+	@Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Timestamp of the status event in yyyy-MM-dd HH:mm:ss format", example = "2024-01-15 10:30:00")
 	public String date;
 
 	public ConnectorStatusEvent() {

@@ -6,7 +6,7 @@ All URIs are relative to *http://localhost:8080*
 |------------- | ------------- | -------------|
 | [**echoHealth**](TestControllerApi.md#echoHealth) | **GET** /webhook |  |
 | [**echoInput**](TestControllerApi.md#echoInput) | **POST** /webhook/echo/** |  |
-| [**forwardPayload**](TestControllerApi.md#forwardPayload) | **POST** /test/{method} |  |
+| [**testMapping**](TestControllerApi.md#testMapping) | **POST** /test/mapping | Test a mapping |
 
 
 <a name="echoHealth"></a>
@@ -56,24 +56,23 @@ No authorization required
 - **Content-Type**: application/json
 - **Accept**: */*
 
-<a name="forwardPayload"></a>
-# **forwardPayload**
-> List forwardPayload(method, topic, connectorIdentifier, request\_body)
+<a name="testMapping"></a>
+# **testMapping**
+> TestResult testMapping(TestContext)
 
+Test a mapping
 
+    Executes a mapping test with a sample payload. Can optionally send the result to Cumulocity IoT. Supports both INBOUND and OUTBOUND mapping directions.
 
 ### Parameters
 
 |Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
-| **method** | **String**|  | [default to null] |
-| **topic** | **URI**|  | [default to null] |
-| **connectorIdentifier** | **String**|  | [default to null] |
-| **request\_body** | [**Map**](../Models/object.md)|  | |
+| **TestContext** | [**TestContext**](../Models/TestContext.md)| Test context containing the mapping and payload to test | |
 
 ### Return type
 
-[**List**](../Models/ProcessingContextObject.md)
+[**TestResult**](../Models/TestResult.md)
 
 ### Authorization
 

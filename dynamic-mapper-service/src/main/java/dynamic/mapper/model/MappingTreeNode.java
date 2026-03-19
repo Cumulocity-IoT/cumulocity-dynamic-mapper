@@ -42,6 +42,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import dynamic.mapper.util.Utils;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
  * Represents a node in the mapping tree structure.
@@ -52,6 +53,7 @@ import dynamic.mapper.util.Utils;
 @ToString
 @AllArgsConstructor
 @Builder(toBuilder = true)
+@Schema(description = "Node in the hierarchical mapping tree, used to resolve MQTT topic patterns to mappings")
 public class MappingTreeNode {
     // Constants
     private static final String TENANT_LOG_PREFIX = "{} - ";

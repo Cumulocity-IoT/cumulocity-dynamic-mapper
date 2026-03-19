@@ -7,6 +7,15 @@ All URIs are relative to *http://localhost:8080*
 
 | Class | Method | HTTP request | Description |
 |------------ | ------------- | ------------- | -------------|
+| *CacheControllerApi* | [**getCacheSize**](Apis/CacheControllerApi.md#getcachesize) | **GET** /cache | Get cache size |
+| *ClientRelationControllerApi* | [**addOrUpdateClientRelations**](Apis/ClientRelationControllerApi.md#addorupdateclientrelations) | **PUT** /relation/client/{clientId} | Add or update client relations |
+*ClientRelationControllerApi* | [**clearAllClientRelations**](Apis/ClientRelationControllerApi.md#clearallclientrelations) | **DELETE** /relation/client | Clear all client relations |
+*ClientRelationControllerApi* | [**getAllClientRelations**](Apis/ClientRelationControllerApi.md#getallclientrelations) | **GET** /relation/client | Get all client relations |
+*ClientRelationControllerApi* | [**getAllClients**](Apis/ClientRelationControllerApi.md#getallclients) | **GET** /relation/clients | Get all clients |
+*ClientRelationControllerApi* | [**getClientForDevice**](Apis/ClientRelationControllerApi.md#getclientfordevice) | **GET** /relation/device/{deviceId}/client | Get client for device |
+*ClientRelationControllerApi* | [**getDevicesForClient**](Apis/ClientRelationControllerApi.md#getdevicesforclient) | **GET** /relation/client/{clientId}/devices | Get devices for client |
+*ClientRelationControllerApi* | [**removeAllRelationsForClient**](Apis/ClientRelationControllerApi.md#removeallrelationsforclient) | **DELETE** /relation/client/{clientId}/delete | Remove all relations for client |
+*ClientRelationControllerApi* | [**removeRelationForDevice**](Apis/ClientRelationControllerApi.md#removerelationfordevice) | **DELETE** /relation/device/{deviceId} | Remove relation for device |
 | *ConfigurationControllerApi* | [**createCodeTemplate**](Apis/ConfigurationControllerApi.md#createcodetemplate) | **POST** /configuration/code | Create a new code template |
 *ConfigurationControllerApi* | [**createConnectorConfiguration**](Apis/ConfigurationControllerApi.md#createconnectorconfiguration) | **POST** /configuration/connector/instance | Create a new connector configuration |
 *ConfigurationControllerApi* | [**deleteCodeTemplate**](Apis/ConfigurationControllerApi.md#deletecodetemplate) | **DELETE** /configuration/code/{id} | Delete a code template |
@@ -25,10 +34,15 @@ All URIs are relative to *http://localhost:8080*
 *DeploymentControllerApi* | [**getDeploymentMapEntry**](Apis/DeploymentControllerApi.md#getdeploymentmapentry) | **GET** /deployment/defined/{mappingIdentifier} | Get deployment configuration for mapping |
 *DeploymentControllerApi* | [**getMappingsDeployed**](Apis/DeploymentControllerApi.md#getmappingsdeployed) | **GET** /deployment/effective | Get effective deployments |
 *DeploymentControllerApi* | [**updateDeploymentMapEntry**](Apis/DeploymentControllerApi.md#updatedeploymentmapentry) | **PUT** /deployment/defined/{mappingIdentifier} | Update deployment configuration for mapping |
-| *DeviceSubscriptionControllerApi* | [**subscriptionCreate**](Apis/DeviceSubscriptionControllerApi.md#subscriptioncreate) | **POST** /subscription | Create device notification subscription |
+| *DeviceSubscriptionControllerApi* | [**deleteGroupSubscription**](Apis/DeviceSubscriptionControllerApi.md#deletegroupsubscription) | **DELETE** /subscription/group/{groupId} | Delete device group notification subscription |
+*DeviceSubscriptionControllerApi* | [**getGroupSubscriptions**](Apis/DeviceSubscriptionControllerApi.md#getgroupsubscriptions) | **GET** /subscription/group | Get group notification subscriptions |
+*DeviceSubscriptionControllerApi* | [**getTypeSubscriptions**](Apis/DeviceSubscriptionControllerApi.md#gettypesubscriptions) | **GET** /subscription/type | Get device type notification subscriptions |
+*DeviceSubscriptionControllerApi* | [**subscriptionCreate**](Apis/DeviceSubscriptionControllerApi.md#subscriptioncreate) | **POST** /subscription | Create device notification subscription |
 *DeviceSubscriptionControllerApi* | [**subscriptionDelete**](Apis/DeviceSubscriptionControllerApi.md#subscriptiondelete) | **DELETE** /subscription/{deviceId} | Delete device notification subscription |
 *DeviceSubscriptionControllerApi* | [**subscriptionUpdate**](Apis/DeviceSubscriptionControllerApi.md#subscriptionupdate) | **PUT** /subscription | Update device notification subscription |
 *DeviceSubscriptionControllerApi* | [**subscriptionsGet**](Apis/DeviceSubscriptionControllerApi.md#subscriptionsget) | **GET** /subscription | Get device notification subscriptions |
+*DeviceSubscriptionControllerApi* | [**updateGroupSubscription**](Apis/DeviceSubscriptionControllerApi.md#updategroupsubscription) | **PUT** /subscription/group | Update group notification subscription |
+*DeviceSubscriptionControllerApi* | [**updateTypeSubscription**](Apis/DeviceSubscriptionControllerApi.md#updatetypesubscription) | **PUT** /subscription/type | Update device type notification subscription |
 | *ExtensionControllerApi* | [**deleteProcessorExtension**](Apis/ExtensionControllerApi.md#deleteprocessorextension) | **DELETE** /extension/{extensionName} | Delete a processor extension |
 *ExtensionControllerApi* | [**getProcessorExtension**](Apis/ExtensionControllerApi.md#getprocessorextension) | **GET** /extension/{extensionName} | Get a specific processor extension |
 *ExtensionControllerApi* | [**getProcessorExtensions**](Apis/ExtensionControllerApi.md#getprocessorextensions) | **GET** /extension | Get all processor extensions |
@@ -49,8 +63,7 @@ All URIs are relative to *http://localhost:8080*
 | *OperationControllerApi* | [**runOperation**](Apis/OperationControllerApi.md#runoperation) | **POST** /operation | Execute a service operation |
 | *TestControllerApi* | [**echoHealth**](Apis/TestControllerApi.md#echohealth) | **GET** /webhook |  |
 *TestControllerApi* | [**echoInput**](Apis/TestControllerApi.md#echoinput) | **POST** /webhook/echo/** |  |
-*TestControllerApi* | [**forwardPayload**](Apis/TestControllerApi.md#forwardpayload) | **POST** /test/{method} |  |
-| *WatsonControllerApi* | [**createMapping**](Apis/WatsonControllerApi.md#createmapping) | **POST** /watson/mapping |  |
+*TestControllerApi* | [**testMapping**](Apis/TestControllerApi.md#testmapping) | **POST** /test/mapping | Test a mapping |
 
 
 <a name="documentation-for-models"></a>
@@ -68,27 +81,21 @@ All URIs are relative to *http://localhost:8080*
  - [ConnectorPropertyCondition](./Models/ConnectorPropertyCondition.md)
  - [ConnectorSpecification](./Models/ConnectorSpecification.md)
  - [ConnectorStatusEvent](./Models/ConnectorStatusEvent.md)
- - [Context](./Models/Context.md)
  - [Device](./Models/Device.md)
- - [Engine](./Models/Engine.md)
  - [Extension](./Models/Extension.md)
  - [ExtensionEntry](./Models/ExtensionEntry.md)
  - [Feature](./Models/Feature.md)
- - [Instrument](./Models/Instrument.md)
- - [Language](./Models/Language.md)
  - [Mapping](./Models/Mapping.md)
  - [MappingStatus](./Models/MappingStatus.md)
  - [MappingTreeNode](./Models/MappingTreeNode.md)
- - [ProcessingContextObject](./Models/ProcessingContextObject.md)
+ - [NotificationSubscriptionRequest](./Models/NotificationSubscriptionRequest.md)
+ - [NotificationSubscriptionResponse](./Models/NotificationSubscriptionResponse.md)
  - [ServiceConfiguration](./Models/ServiceConfiguration.md)
  - [ServiceOperation](./Models/ServiceOperation.md)
- - [Source](./Models/Source.md)
- - [SourceSection](./Models/SourceSection.md)
- - [SourceSection_code](./Models/SourceSection_code.md)
- - [Source_characters](./Models/Source_characters.md)
  - [SubstituteValue](./Models/SubstituteValue.md)
  - [Substitution](./Models/Substitution.md)
- - [Value](./Models/Value.md)
+ - [TestContext](./Models/TestContext.md)
+ - [TestResult](./Models/TestResult.md)
 
 
 <a name="documentation-for-authorization"></a>
