@@ -15,7 +15,7 @@
       - [Enable snooping payloads on source topic](#enable-snooping-payloads-on-source-topic)
       - [Map Device Identifier](#map-device-identifier)
       - [Define templates and substitutions for source and target payload](#define-templates-and-substitutions-for-source-and-target-payload)
-      - [Substitutions defined as code (javascript)](#substitutions-defined-as-code-javascript)
+      - [Substitutions defined as code (javascript) — DEPRECATED](#substitutions-defined-as-code-javascript)
       - [Defining the payload transformation using a Smart Function (JavaScript)](#defining-the-payload-transformation-using-a-smart-function-javascript)
     - [Using metadata in source templates and target templates](#using-metadata-in-source-templates-and-target-templates)
     - [Apply a filter for a mapping](#apply-a-filter-for-a-mapping)
@@ -223,7 +223,11 @@ Further example for JSONata expressions are:
 When you start with a new mapping the first considerations are about the payload format and the transformation type to use:
 
 1. In which format is the inbound payload sent? This defines the payload type to choose: JSON, Flat File, Hexadecimal, Protobuf
-2. How to define the transformation of inbound to Cumulocity format? This defines the transformation type: JSONata, Smart Functions, ...
+2. How to define the transformation of inbound to Cumulocity format? This defines the transformation type:
+   - **Default Transformation** — built-in field mapping without scripting
+   - **Substitution as JSONata Expression** — uses JSONata expressions for field substitutions
+   - **Smart Function (JavaScript)** — full JavaScript transformation function *(recommended for new mappings)*
+   - **Java Extension** — custom Java processor extension
 
 <p align="center">
 <img src="resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_Payload.png"  style="width: 70%;" />
@@ -234,7 +238,7 @@ When you start with a new mapping the first considerations are about the payload
 <p align="center">
 <img src="resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_TransformationType.png"  style="width: 70%;" />
 </p>
-<p class="image-description"><b>Description:</b> Screenshot showing available transformation types.</p>
+<p class="image-description"><b>Description:</b> Screenshot showing available transformation types. Note: creation of <em>Substitution as JavaScript</em> is disabled as of version 6.2 (deprecated).</p>
 <br/>
 
 Creation of the new mapping starts by pressing `Add Mapping`. On the next modal UI you can choose the mapping type depending on the structure of your payload. Currently there is support for:
@@ -468,29 +472,40 @@ In the sample below, e.g. a warning is shown since the required property `source
 
 #### Substitutions defined as code (javascript)
 
+> **⚠ DEPRECATED as of version 6.1.5**
+>
+> Creation of new mappings using this transformation type has been **disabled in version 6.2**. Existing mappings continue to work but **must be migrated to Smart Functions before version 6.3** (planned ~May 2026), when this type will be removed entirely.
+>
+> For migration steps and a timeline, see [DEPRECATION_SUBSTITUTION_AS_JAVASCRIPT.md](DEPRECATION_SUBSTITUTION_AS_JAVASCRIPT.md).
+> For new mappings, use [Smart Functions](#defining-the-payload-transformation-using-a-smart-function-javascript) instead.
+
+*The following screenshots and code example are provided for reference only, to help with migrating existing mappings.*
+
 When you choose to define the substitutions in javascript code, see following screenshot, then the flow in the stepper is different.
 
 <p align="center">
 <img src="resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_CodeBasedSubstitution.png"  style="width: 70%;" />
 </p>
+<p class="image-description"><b>Description:</b> Screenshot showing the deprecated <em>Substitution as JavaScript</em> option. This option is no longer available for new mappings as of version 6.2.</p>
 <br/>
 
-In step 4 of the mapping stepper 
+In step 4 of the mapping stepper
 
 <p align="center">
 <img src="resources/image/Dynamic_Mapper_Mapping_Stepper_SubstitutionAsJavaScript.png"  style="width: 70%;" />
 </p>
+<p class="image-description"><b>Description:</b> Screenshot showing the JavaScript editor for the deprecated substitution type. Shown for reference only.</p>
 <br/>
 
 a javascript editor allows you to define your substitutions:
 
-```
+```javascript
 function extractFromSource(ctx) {
 
     //This is the source message as json
     const sourceObject = JSON.parse(ctx.getPayload());
     // for (var key in sourceObject) {
-    //     console.log(`key: ${key}, value: ${sourceObject[key]}`);  
+    //     console.log(`key: ${key}, value: ${sourceObject[key]}`);
     // }
 
     //Define a new Measurement Value for Temperatures by assigning from source
@@ -503,10 +518,10 @@ function extractFromSource(ctx) {
     const fragmentTemperature = {
         T: fragmentTemperatureSeries
     };
-   
+
     // Substitution: String key, Object value, MappingSubstitution.SubstituteValue.TYPE type, RepairStrategy repairStrategy
     //Define time mapping time -> time
-    
+
     //Define temperature fragment mapping temperature -> c8y_Temperature.T.value/unit
     const temperature = new Substitution('c8y_TemperatureMeasurement', fragmentTemperature, 'OBJECT', 'DEFAULT');
 
@@ -516,6 +531,8 @@ function extractFromSource(ctx) {
     return new SubstitutionResult([deviceIdentifier, temperature]);
 }
 ```
+
+> **Note:** The `Substitution` / `SubstitutionResult` API used above belongs to the deprecated transformation type. For new mappings, use a [Smart Function](#defining-the-payload-transformation-using-a-smart-function-javascript) with the `onMessage(inputMsg, context)` signature instead.
 
 The code that you write in the web editor is evaluated together with the shared code:
 
@@ -599,7 +616,11 @@ then three requests are generated:
 ### Auto-generate substitutions & javaScript code
 
 When AI features are enabled of Dynamic Mapper, you can use the button `Generate Substitutions` to generate the substitutions or the code for the mapping automatically based on the provided source and target template. If the suggested output is not as expected, you can re-prompt the AI agent to re-fine the substitutions or code.
-Important is that in the end the response of the AI agent should either contain a valid JSON Array of substitutions or a valid JavaScript code that returns a `SubstitutionResult` object and can be `Saved` to the Mapping.
+The response of the AI agent should contain either:
+- A valid JSON Array of substitutions (for Default or JSONata transformation types), or
+- Valid JavaScript code for a **Smart Function** using the `onMessage(inputMsg, context)` signature (recommended for new mappings)
+
+The result can then be `Saved` to the mapping. Note: AI generation of `SubstitutionResult`-based JavaScript (the deprecated Substitution as JavaScript type) is no longer supported for new mappings.
 
 ### Using metadata in source templates and target templates
 
@@ -722,9 +743,8 @@ Important is that in the end the response of the AI agent should either contain 
           <td>Topic to be used when sending messages. For a WebHook this defines the context path. The context path
             is then
             appended to the URL that is defined in the WebHook connector properties. This property has to be used
-            for all
-            transformation types other than Smart Functions.i.e. Substitution as JSONata Expression, Substitution as
-            JavaScript code.</td>
+            for all transformation types other than Smart Functions, i.e. Substitution as JSONata Expression.
+            Note: Substitution as JavaScript code is deprecated as of version 6.2.</td>
         </tr>
         <tr>
           <td>Target template <small class="text-muted">(external broker)</small></td>

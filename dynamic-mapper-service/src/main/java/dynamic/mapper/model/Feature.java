@@ -66,7 +66,7 @@ public class Feature {
     @JsonSetter(nulls = Nulls.SKIP)
     private Boolean suppressDeprecationWarning;
 
-    @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "Holds the version string of the last accepted SUBSTITUTION_AS_CODE deprecation notice (e.g. '6.2'). If the value matches the current release version the notice is not shown again.", example = "6.2")
+    @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "Holds the version string of the last accepted SUBSTITUTION_AS_CODE deprecation notice (e.g. '6.2.0'). If the value matches the current release version the notice is not shown again.", example = "6.2")
     @JsonSetter(nulls = Nulls.SKIP)
     private String acceptedDeprecationNotice;
 }
