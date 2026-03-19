@@ -96,6 +96,8 @@ import { MappingStepperComponent } from '../stepper-mapping/mapping-stepper.comp
 import { SnoopingStepperComponent } from '../stepper-snooping/snooping-stepper.component';
 import { MappingFilterDrawerComponent } from '../filter/mapping-filter-drawer.component';
 import { CodeEditorDrawerComponent } from '../../shared/component/code-explorer/code-editor-drawer.component';
+import { DeprecationNoticeModalComponent } from '../deprecation-notice/deprecation-notice-modal.component';
+import { DEPRECATION_NOTICE_VERSION } from '../../shared';
 @Component({
   selector: 'd11r-mapping-mapping-grid',
   templateUrl: 'mapping.component.html',
@@ -197,8 +199,17 @@ export class MappingComponent implements OnInit, OnDestroy {
           this.mappingsCount = maps.length;
         });
 
-      // Check and show deprecation warning for this direction
-      await this.mappingService.checkAndShowDeprecationWarning(this.stepperConfiguration.direction);
+      // Show deprecation notice modal once per session if not yet permanently accepted.
+      // Both suppressDeprecationWarning (legacy) and acceptedDeprecationNotice (versioned) suppress it.
+      const noticeAccepted =
+        this.feature?.suppressDeprecationWarning ||
+        this.feature?.acceptedDeprecationNotice === DEPRECATION_NOTICE_VERSION;
+      // const noticeAccepted = false;
+
+      if (!noticeAccepted && !this.mappingService.deprecationModalShown) {
+        this.mappingService.deprecationModalShown = true;
+        this.bsModalService.show(DeprecationNoticeModalComponent, { class: 'modal-lg' });
+      }
 
       // Start listening to mapping changes
       await this.mappingService.startChangedMappingEvents();

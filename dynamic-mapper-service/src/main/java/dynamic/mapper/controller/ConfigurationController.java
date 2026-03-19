@@ -156,6 +156,7 @@ public class ConfigurationController {
         feature.setPulsarAvailable(configurationRegistry.isPulsarAvailable(tenant));
         feature.setDeviceIsolationMQTTServiceEnabled(serviceConfiguration.getDeviceIsolationMQTTServiceEnabled());
         feature.setSuppressDeprecationWarning(serviceConfiguration.getSuppressDeprecationWarning());
+        feature.setAcceptedDeprecationNotice(serviceConfiguration.getAcceptedDeprecationNotice());
         return new ResponseEntity<Feature>(feature, HttpStatus.OK);
     }
 

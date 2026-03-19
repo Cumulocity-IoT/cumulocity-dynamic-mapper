@@ -54,8 +54,7 @@ import {
 
 import {
   EventRealtimeService,
-  RealtimeSubjectService,
-  AlertService
+  RealtimeSubjectService
 } from '@c8y/ngx-components';
 
 @Injectable({
@@ -78,11 +77,11 @@ export class MappingService {
   private _agentId: string;
   private readonly JSONATA = require('jsonata');
   private deprecationWarningsShown: Set<Direction> = new Set();
+  deprecationModalShown = false;
 
   constructor(
     private readonly sharedService: SharedService,
-    private readonly client: FetchClient,
-    private readonly alertService: AlertService
+    private readonly client: FetchClient
   ) {
     this.eventRealtimeService = new EventRealtimeService(inject(RealtimeSubjectService));
     this.reloadInbound$ = this.sharedService.reloadInbound$;
@@ -323,7 +322,8 @@ export class MappingService {
   }
 
   async checkAndShowDeprecationWarning(direction: Direction): Promise<void> {
-    // Only show the warning once per direction per session
+    // Kept for backward compatibility; deprecation notice is now shown
+    // as a modal dialog in MappingComponent on first load.
     if (this.deprecationWarningsShown.has(direction)) {
       return;
     }
@@ -340,10 +340,6 @@ export class MappingService {
 
     if (deprecatedMappings.length > 0) {
       this.deprecationWarningsShown.add(direction);
-      const mappingNames = deprecatedMappings.map(m => m.name).join(', ');
-      this.alertService.warning(
-        `Deprecated: ${deprecatedMappings.length} mapping(s) use 'Substitution as JavaScript' (deprecated since 6.1.5): ${mappingNames}. Please migrate to Smart Functions.`
-      );
     }
   }
 

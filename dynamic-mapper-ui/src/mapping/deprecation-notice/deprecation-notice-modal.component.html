@@ -1,0 +1,127 @@
+<!--
+~ Copyright (c) 2022-2025 Cumulocity GmbH.
+~
+~ SPDX-License-Identifier: Apache-2.0
+~
+~  Licensed under the Apache License, Version 2.0 (the "License");
+~  you may not use this file except in compliance with the License.
+~  You may obtain a copy of the License at
+~
+~       http://www.apache.org/licenses/LICENSE-2.0
+~
+~  Unless required by applicable law or agreed to in writing, software
+~  distributed under the License is distributed on an "AS IS" BASIS,
+~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+~  See the License for the specific language governing permissions and
+~  limitations under the License.
+~
+~  @authors Christof Strack
+~
+-->
+
+<c8y-modal [customFooter]="true" (onDismiss)="onDismiss()" [headerClasses]="'modal-header dialog-header'">
+  <ng-container c8y-modal-title>
+    <span [c8yIcon]="'warning'"></span>
+    <h4 class="modal-title">
+      {{ 'Deprecation Notice: Substitution as JavaScript' | translate }}
+    </h4>
+  </ng-container>
+
+  <div class="p-24 animated fadeIn">
+    <p class="text-medium">
+      {{ 'The transformation type ' | translate }}
+      <strong>{{ 'Substitution as JavaScript' | translate }}</strong>
+      {{ ' (SUBSTITUTION_AS_CODE) is being phased out across Dynamic Mapper releases 6.2 through 6.3.' | translate }}
+    </p>
+
+    <!-- Timeline Table -->
+    <h5 class="m-t-16 m-b-8">{{ 'Deprecation Timeline' | translate }}</h5>
+    <table class="table table-bordered table-condensed">
+      <thead>
+        <tr>
+          <th>{{ 'Release' | translate }}</th>
+          <th>{{ 'Action' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>6.1.5</strong></td>
+          <td>{{ 'Marked as deprecated. Existing mappings continue to work. Labels show "(deprecated)".' | translate }}
+          </td>
+        </tr>
+        <tr class="bg-warning-subtle">
+          <td><strong>6.2 <span class="label label-warning m-l-4">{{ 'Current' | translate }}</span></strong></td>
+          <td>{{ 'Creation of new mappings with this type is disabled. Existing mappings still load and execute.' |
+            translate }}</td>
+        </tr>
+        <tr class="bg-danger-subtle">
+          <td><strong>6.3 <span class="label label-danger m-l-4">~May 2026</span></strong></td>
+          <td>{{ 'Mappings of this type will no longer be loaded or shown in the UI. All mappings must be migrated
+            before this release.' | translate }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Migration Target -->
+    <div class="alert alert-info m-t-16" style="min-width:stretch">
+      <i c8yIcon="info-circle" class="m-r-8"></i>
+      <strong>{{ 'Recommended migration target: ' | translate }}</strong>
+      {{ 'Smart Function (JavaScript)' | translate }}
+      <span class="text-muted m-l-4">(TransformationType.SMART_FUNCTION)</span>
+    </div>
+
+    <!-- Migration Steps -->
+    <h5 class="m-t-16 m-b-8">{{ 'How to migrate' | translate }}</h5>
+    <ol class="m-l-16">
+      <li>{{ 'Identify affected mappings — look for mappings using "Substitution as JavaScript (deprecated)" in the
+        Transformation Type.' | translate }}</li>
+      <li>{{ 'Open each mapping and change the transformation type to "Smart Function".' | translate }}</li>
+      <li>{{ 'Adapt the JavaScript code to the Smart Function API (direct payload creation instead of substitution
+        objects).' | translate }}</li>
+      <li>{{ 'Use the built-in Test feature to verify the migrated mapping.' | translate }}</li>
+      <li>{{ 'Activate the mapping.' | translate }}</li>
+    </ol>
+
+    <p class="text-muted m-t-16">
+      <i c8yIcon="warning" class="m-r-4"></i>
+      {{ 'Complete all migrations before release 6.3 (~May 2026).' | translate }}
+    </p>
+
+    <!-- Affected Mappings List -->
+    <h5 class="m-t-16 m-b-8">{{ 'Affected mappings requiring migration' | translate }}</h5>
+    @if (isLoading) {
+    <div class="text-center p-16">
+      <c8y-loading></c8y-loading>
+    </div>
+    } @else if (affectedMappings.length > 0) {
+    <ul class="list-group">
+      @for (mapping of affectedMappings; track mapping.id) {
+      <li class="list-group-item d-flex a-i-center">
+        <i c8yIcon="c8y-connector-out" class="m-r-8 text-muted"></i>
+        <span class="flex-grow">
+          <strong>{{ mapping.name }}</strong>
+          <span class="text-muted m-l-8">({{ mapping.direction | lowercase }})</span>
+        </span>
+        <span class="label label-warning m-l-8">{{ 'needs migration' | translate }}</span>
+      </li>
+      }
+    </ul>
+    } @else {
+    <div class="alert alert-success m-t-16">
+      <i c8yIcon="ok-circle" class="m-r-8"></i>
+      {{ 'No affected mappings found. You are ready for release 6.3.' | translate }}
+    </div>
+    }
+  </div>
+
+  <!-- Footer Buttons -->
+  <div class="modal-footer" c8y-modal-footer-custom>
+    <button class="btn btn-default" (click)="onDismiss()">
+      {{ 'Close' | translate }}
+    </button>
+    <button class="btn btn-primary" (click)="onAccept()" [disabled]="isPending"
+      [ngClass]="{ 'btn-pending': isPending }">
+      {{ 'Accept & don\'t show again' | translate }}
+    </button>
+  </div>
+</c8y-modal>

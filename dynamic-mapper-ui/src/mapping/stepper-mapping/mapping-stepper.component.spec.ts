@@ -109,6 +109,7 @@ describe('MappingStepperComponent', () => {
     pulsarAvailable: false,
     deviceIsolationMQTTServiceEnabled: false,
     suppressDeprecationWarning: false,
+    acceptedDeprecationNotice: null,
   };
 
   beforeEach(async () => {

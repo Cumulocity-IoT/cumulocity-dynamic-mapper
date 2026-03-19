@@ -42,6 +42,7 @@ export interface ServiceConfiguration {
   javaScriptAgent: string;
   smartFunctionAgent: string;
   suppressDeprecationWarning?: boolean;
+  acceptedDeprecationNotice?: string;
 }
 
 export enum TemplateType {

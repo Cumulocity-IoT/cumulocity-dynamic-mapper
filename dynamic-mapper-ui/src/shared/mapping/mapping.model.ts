@@ -604,7 +604,14 @@ export interface Feature {
   pulsarAvailable: boolean;
   deviceIsolationMQTTServiceEnabled: boolean;
   suppressDeprecationWarning: boolean;
+  /** Version string of the last accepted deprecation notice, e.g. '6.2'. */
+  acceptedDeprecationNotice: string;
 }
+
+/** Version of the current SUBSTITUTION_AS_CODE deprecation notice.
+ *  When the user accepts the notice this value is persisted in ServiceConfiguration.
+ *  Bump this constant when a new deprecation notice is introduced (e.g. '6.3'). */
+export const DEPRECATION_NOTICE_VERSION = '6.2';
 
 export function getDeviceIdentifiers(mapping: Mapping): Substitution[] {
   return mapping.substitutions
