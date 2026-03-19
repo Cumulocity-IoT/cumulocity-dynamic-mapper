@@ -36,6 +36,7 @@ export class DeprecationNoticeModalComponent implements OnInit, OnDestroy {
   readonly closeSubject = new Subject<boolean>();
   isPending = false;
   isLoading = true;
+  isClosing = false;
   affectedMappings: Mapping[] = [];
 
   @ViewChild('modal', { static: false }) private modal: any;
@@ -69,14 +70,17 @@ export class DeprecationNoticeModalComponent implements OnInit, OnDestroy {
   }
 
   onDismiss(): void {
+    if (this.isClosing) return;
+    this.isClosing = true;
     this.closeSubject.next(false);
     this.closeSubject.complete();
     this.modal?._dismiss();
   }
 
   async onAccept(): Promise<void> {
-    if (this.isPending) return;
+    if (this.isPending || this.isClosing) return;
     this.isPending = true;
+    this.isClosing = true;
     try {
       await this.sharedService.updateServiceConfiguration({
         acceptedDeprecationNotice: DEPRECATION_NOTICE_VERSION
@@ -90,6 +94,7 @@ export class DeprecationNoticeModalComponent implements OnInit, OnDestroy {
         'Could not save acceptance. The notice may appear again next time.'
       );
       this.isPending = false;
+      this.isClosing = false;
     }
   }
 }
