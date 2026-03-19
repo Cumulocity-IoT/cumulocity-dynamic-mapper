@@ -63,7 +63,7 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
                 .description("Processing time of inbound messages").register(Metrics.globalRegistry);
         this.inboundProcessingCounter = Counter.builder("dynmapper_inbound_message_total")
                 .tag("tenant", connectorClient.getTenant()).description("Total number of inbound messages")
-                .tag("connector", connectorClient.getTenant()).register(Metrics.globalRegistry);
+                .tag("connector", connectorClient.getConnectorIdentifier()).register(Metrics.globalRegistry);
     }
 
     @Override
@@ -88,7 +88,10 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
      */
     private ProcessingResultWrapper<?> processMessage(ConnectorMessage connectorMessage, Mapping testMapping) {
         Timer.Sample timer = Timer.start(Metrics.globalRegistry);
-        boolean testing = testMapping != null;
+        // Inbound: testing=true routes identity/inventory lookups to mocks.
+        // When sendPayload=true the user created a real test device in C8Y beforehand,
+        // so we must use real C8Y services to resolve its identity — testing is disabled.
+        boolean testing = testMapping != null && !Boolean.TRUE.equals(connectorMessage.getSendPayload());
         String topic = connectorMessage.getTopic();
         String tenant = connectorMessage.getTenant();
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);

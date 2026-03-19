@@ -29,6 +29,7 @@ import {
     ExtensionType,
     Mapping,
     SAMPLE_TEMPLATES_C8Y,
+    StepperConfiguration,
     TransformationType,
     countDeviceIdentifiers,
     createCustomUuid,
@@ -56,6 +57,18 @@ export class MappingStepperService {
     isButtonDisabled$ = new BehaviorSubject<boolean>(true);
     sourceCustomMessage$ = new Subject<string>();
     targetCustomMessage$ = new Subject<string>();
+
+    /**
+     * Emits whenever a mapping property relevant to template rendering changes
+     * (e.g. useExternalId, createNonExistingDevice, eventWithAttachment).
+     * Components subscribe once and re-expand their working templates accordingly,
+     * removing the need for per-property @Output() events on MappingStepPropertiesComponent.
+     */
+    readonly mappingPropertyChanged$ = new Subject<Mapping>();
+
+    notifyMappingPropertyChanged(mapping: Mapping): void {
+        this.mappingPropertyChanged$.next(mapping);
+    }
 
     async evaluateSourceExpression(sourceTemplate: any, path: string): Promise<{
         resultType: string;
@@ -100,8 +113,8 @@ export class MappingStepperService {
             const resultExpression: JSON = await this.mappingService.evaluateExpression(sourceTemplate, path);
             const resultType = getTypeOf(resultExpression);
 
-            if ((path && resultType != 'Boolean') || (path && resultType == 'Boolean' && !resultExpression)) {
-                throw Error('The filter expression must return true');
+            if (path && resultType != 'Boolean') {
+                throw Error('The filter expression must evaluate to a boolean value: either true or false');
             }
 
             return {
@@ -127,7 +140,7 @@ export class MappingStepperService {
         this.isSubstitutionValid$.next(isValid);
     }
 
-    expandTemplates(mapping: Mapping, direction: Direction): {
+    expandTemplates(mapping: Mapping, direction: Direction, allowTemplateExpansion?: boolean): {
         sourceTemplate: any;
         targetTemplate: any;
     } {
@@ -138,30 +151,34 @@ export class MappingStepperService {
             false
         );
 
-        const expandSource = (template: any) =>
-            direction === Direction.INBOUND
+        const expand = (template: any) => {
+            if (!allowTemplateExpansion) return template;
+            return direction === Direction.INBOUND
                 ? expandExternalTemplate(template, mapping, levels)
                 : expandC8YTemplate(template, mapping);
+        };
 
-        const expandTarget = (template: any) =>
-            direction === Direction.INBOUND
+        const expandTarget = (template: any) => {
+            if (!allowTemplateExpansion) return template;
+            return direction === Direction.INBOUND
                 ? expandC8YTemplate(template, mapping)
                 : expandExternalTemplate(template, mapping, levels);
+        };
 
         if (direction === Direction.INBOUND) {
             return {
-                sourceTemplate: expandSource(JSON.parse(getExternalTemplate(mapping))),
+                sourceTemplate: expand(JSON.parse(getExternalTemplate(mapping))),
                 targetTemplate: expandTarget(JSON.parse(SAMPLE_TEMPLATES_C8Y[mapping.targetAPI]))
             };
         } else {
             return {
-                sourceTemplate: expandSource(JSON.parse(SAMPLE_TEMPLATES_C8Y[mapping.targetAPI])),
+                sourceTemplate: expand(JSON.parse(SAMPLE_TEMPLATES_C8Y[mapping.targetAPI])),
                 targetTemplate: expandTarget(JSON.parse(getExternalTemplate(mapping)))
             };
         }
     }
 
-    expandExistingTemplates(mapping: Mapping, direction: Direction): {
+    expandExistingTemplates(mapping: Mapping, direction: Direction, allowTemplateExpansion?: boolean): {
         sourceTemplate: any;
         targetTemplate: any;
     } {
@@ -172,18 +189,22 @@ export class MappingStepperService {
             false
         );
 
-        const expandSource = (template: any) =>
-            direction === Direction.INBOUND
+        const expand = (template: any) => {
+            if (!allowTemplateExpansion) return template;
+            return direction === Direction.INBOUND
                 ? expandExternalTemplate(template, mapping, levels)
                 : expandC8YTemplate(template, mapping);
+        };
 
-        const expandTarget = (template: any) =>
-            direction === Direction.INBOUND
+        const expandTarget = (template: any) => {
+            if (!allowTemplateExpansion) return template;
+            return direction === Direction.INBOUND
                 ? expandC8YTemplate(template, mapping)
                 : expandExternalTemplate(template, mapping, levels);
+        };
 
         return {
-            sourceTemplate: expandSource(JSON.parse(mapping.sourceTemplate)),
+            sourceTemplate: expand(JSON.parse(mapping.sourceTemplate)),
             targetTemplate: expandTarget(JSON.parse(mapping.targetTemplate))
         };
     }
@@ -385,6 +406,7 @@ export class MappingStepperService {
         this.extensionEvents$.complete();
         this.sourceCustomMessage$.complete();
         this.targetCustomMessage$.complete();
+        this.mappingPropertyChanged$.complete();
     }
 
 }

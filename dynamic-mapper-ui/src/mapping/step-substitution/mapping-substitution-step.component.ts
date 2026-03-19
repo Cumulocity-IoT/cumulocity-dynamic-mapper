@@ -1,9 +1,9 @@
 // mapping-substitution-step.component.ts
 import {
   Component,
-  EventEmitter,
   Input,
   Output,
+  EventEmitter,
   ViewChild,
   OnInit,
   ElementRef,
@@ -15,6 +15,7 @@ import { FormlyFieldConfig } from '@ngx-formly/core';
 import { debounceTime, distinctUntilChanged, Observable } from 'rxjs';
 import {
   COLOR_HIGHLIGHTED,
+  Direction,
   JsonEditorComponent,
   Mapping,
   StepperConfiguration,
@@ -50,17 +51,14 @@ export class MappingSubstitutionStepComponent implements OnInit {
   @Input() feature: Feature;
   @Input() aiAgentDeployed: boolean;
   @Input() aiAgent: AgentObjectDefinition | AgentTextDefinition | null;
-  @Input() updateSourceEditor: EventEmitter<any>;
-  @Input() updateTargetEditor: EventEmitter<any>;
+  @Input() updateSourceEditor: Observable<any>;
+  @Input() updateTargetEditor: Observable<any>;
   @Input() mappingCode: string;
   @Input() codeEditorLabel: string;
   @Input() codeEditorHelp: string;
   @Input() currentStepIndex: number;
 
   @Output() mappingCodeChange = new EventEmitter<string>();
-  @Output() codeTemplateSelected = new EventEmitter<void>();
-  @Output() createCodeTemplate = new EventEmitter<void>();
-  @Output() updateSubstitutionValidity = new EventEmitter<void>();
 
   @ViewChild('editorSourceStepSubstitution', { static: false })
   editorSourceStepSubstitution!: JsonEditorComponent;
@@ -84,6 +82,19 @@ export class MappingSubstitutionStepComponent implements OnInit {
 
   readonly COLOR_HIGHLIGHTED = COLOR_HIGHLIGHTED;
   readonly EditorMode = EditorMode;
+  readonly Direction = Direction;
+
+  get identitySubstitutionHint(): string {
+    const side = this.mapping?.direction === Direction.OUTBOUND ? 'source' : 'target';
+    if (this.mapping?.direction === Direction.OUTBOUND && this.mapping?.useExternalId) {
+      return `One substitution with ${side} <code class="text-warning text-10">_IDENTITY_.externalId</code>`
+           + ` or <code class="text-warning text-10">_IDENTITY_.c8ySourceId</code> must exist.`;
+    }
+    const path = this.mapping?.useExternalId
+      ? '_IDENTITY_.externalId'
+      : '_IDENTITY_.c8ySourceId';
+    return `One substitution with ${side} <code class="text-warning text-10">${path}</code> must exist.`;
+  }
 
   templateForm: FormGroup = new FormGroup({});
   substitutionFormly: FormGroup = new FormGroup({});
@@ -161,6 +172,8 @@ export class MappingSubstitutionStepComponent implements OnInit {
                 <li>to convert a UNIX timestamp to ISO date format use:
                   <code>$fromMillis($number(deviceTimestamp))</code>
                 </li>
+                <li>to concat strings use "&"
+                </li>
                 <li>to join substring starting at position 5 of property <code>txt</code> with
                   device
                   identifier use: <code>$join([$substring(txt,5), "-", id])</code></li>
@@ -193,6 +206,8 @@ export class MappingSubstitutionStepComponent implements OnInit {
               <ol>
                 <li>to convert a UNIX timestamp to ISO date format use:
                   <code>$fromMillis($number(deviceTimestamp))</code>
+                </li>
+                <li>to concat strings use "&"
                 </li>
                 <li>to join substring starting at position 5 of property <code>txt</code> with
                   device
@@ -298,7 +313,7 @@ export class MappingSubstitutionStepComponent implements OnInit {
       this.mapping,
       this.stepperConfiguration,
       this.expertMode,
-      () => this.updateSubstitutionValidity.emit()
+      () => this.stepperService.updateSubstitutionValidity(this.mapping, this.stepperConfiguration.allowNoDefinedIdentifier, this.currentStepIndex, this.stepperConfiguration.showCodeEditor)
     );
 
     this.selectedSubstitution = -1;
@@ -310,7 +325,7 @@ export class MappingSubstitutionStepComponent implements OnInit {
       this.substitutionModel,
       this.mapping,
       this.stepperConfiguration,
-      () => this.updateSubstitutionValidity.emit()
+      () => this.stepperService.updateSubstitutionValidity(this.mapping, this.stepperConfiguration.allowNoDefinedIdentifier, this.currentStepIndex, this.stepperConfiguration.showCodeEditor)
     );
   }
 
@@ -318,7 +333,7 @@ export class MappingSubstitutionStepComponent implements OnInit {
     this.substitutionService.deleteSubstitution(
       selected,
       this.mapping,
-      () => this.updateSubstitutionValidity.emit()
+      () => this.stepperService.updateSubstitutionValidity(this.mapping, this.stepperConfiguration.allowNoDefinedIdentifier, this.currentStepIndex, this.stepperConfiguration.showCodeEditor)
     );
   }
 
@@ -371,7 +386,7 @@ export class MappingSubstitutionStepComponent implements OnInit {
               this.mapping,
               this.stepperConfiguration,
               this.expertMode,
-              () => this.updateSubstitutionValidity.emit()
+              () => this.stepperService.updateSubstitutionValidity(this.mapping, this.stepperConfiguration.allowNoDefinedIdentifier, this.currentStepIndex, this.stepperConfiguration.showCodeEditor)
             );
           });
         } else {

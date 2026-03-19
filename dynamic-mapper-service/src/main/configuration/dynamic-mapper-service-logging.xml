@@ -31,8 +31,14 @@
               class="io.opentelemetry.instrumentation.logback.appender.v1_0.OpenTelemetryAppender">
     </appender>
 
-    <root level="INFO">
+    <appender name="ASYNC" class="ch.qos.logback.classic.AsyncAppender">
         <appender-ref ref="CONSOLE" />
-        <appender-ref ref="OpenTelemetry"/>
+        <!--<appender-ref ref="OpenTelemetry"/>-->
+        <queueSize>512</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="ASYNC" />
     </root>
 </configuration>

@@ -27,7 +27,7 @@ import {
   TransformationType
 } from '../../shared';
 import { ValidationFormlyError } from './mapping.model';
-import { TOKEN_CONTEXT_DATA, TOKEN_IDENTITY, TOKEN_TOPIC_LEVEL } from '../core/processor/processor.model';
+import { MappingTokens } from '../core/processor/processor.model';
 
 export const CONTEXT_DATA_KEY_NAME = 'key';
 export const CONTEXT_DATA_RETAIN = 'retain';
@@ -470,12 +470,17 @@ function findFieldInObject(obj: any, fieldName: string): any {
 }
 
 
+function isTokenExpansionAllowed(mapping: Mapping): boolean {
+  return mapping.transformationType !== TransformationType.SMART_FUNCTION &&
+    mapping.transformationType !== TransformationType.EXTENSION_JAVA;
+}
+
 export function expandExternalTemplate(
   template: object,
   mapping: Mapping,
   levels: string[]
 ): object {
-  if (Array.isArray(template)) {
+  if (Array.isArray(template) || !isTokenExpansionAllowed(mapping)) {
     return template;
   } else {
     // Define the context data with specific values
@@ -504,6 +509,9 @@ export function expandExternalTemplate(
 }
 
 export function expandC8YTemplate(template: object, mapping: Mapping): object {
+  if (!isTokenExpansionAllowed(mapping)) {
+    return template;
+  }
   let result;
   if (mapping.useExternalId) {
     result = {
@@ -517,7 +525,7 @@ export function expandC8YTemplate(template: object, mapping: Mapping): object {
   } else {
     result = {
       ...template,
-      [TOKEN_IDENTITY]: {
+      [MappingTokens.IDENTITY]: {
         c8ySourceId: '909090'
       }
     };
@@ -525,7 +533,7 @@ export function expandC8YTemplate(template: object, mapping: Mapping): object {
   if (mapping.direction == Direction.INBOUND) {
     result = {
       ...result,
-      [TOKEN_CONTEXT_DATA]: {
+      [MappingTokens.CONTEXT_DATA]: {
         'api': mapping.targetAPI,
         'processingMode': 'PERSISTENT'
       }
@@ -534,8 +542,8 @@ export function expandC8YTemplate(template: object, mapping: Mapping): object {
     if (mapping.createNonExistingDevice) {
       result = {
         ...result,
-        [TOKEN_CONTEXT_DATA]: {
-          ...result[TOKEN_CONTEXT_DATA], // Spread existing properties
+        [MappingTokens.CONTEXT_DATA]: {
+          ...result[MappingTokens.CONTEXT_DATA], // Spread existing properties
           'deviceName': 'generatedDevice',
           'deviceType': 'c8y_GeneratedDeviceType'
         }
@@ -544,20 +552,20 @@ export function expandC8YTemplate(template: object, mapping: Mapping): object {
 
     // Handle attachment properties independently
     if (mapping.eventWithAttachment) {
-      // Initialize [TOKEN_CONTEXT_DATA] if it doesn't exist yet
-      if (!result[TOKEN_CONTEXT_DATA]) {
-        result[TOKEN_CONTEXT_DATA] = {};
+      // Initialize [MappingTokens.CONTEXT_DATA] if it doesn't exist yet
+      if (!result[MappingTokens.CONTEXT_DATA]) {
+        result[MappingTokens.CONTEXT_DATA] = {};
       }
 
       // Add attachment properties
-      result[TOKEN_CONTEXT_DATA].attachmentName = 'TestImage.jpeg';
-      result[TOKEN_CONTEXT_DATA].attachmentType = 'image/jpeg';
-      result[TOKEN_CONTEXT_DATA].attachmentData = '';
+      result[MappingTokens.CONTEXT_DATA].attachmentName = 'TestImage.jpeg';
+      result[MappingTokens.CONTEXT_DATA].attachmentType = 'image/jpeg';
+      result[MappingTokens.CONTEXT_DATA].attachmentData = '';
     }
   }
 
   if (mapping.direction == Direction.OUTBOUND) {
-    result[TOKEN_IDENTITY].c8ySourceId = '909090';
+    result[MappingTokens.IDENTITY].c8ySourceId = '909090';
   }
 
   return result;
@@ -570,8 +578,15 @@ export function randomIdAsString() {
 export function patchC8YTemplateForTesting(template: object, mapping: Mapping) {
   const identifier = randomIdAsString();
   _.set(template, API[mapping.targetAPI].identifier, identifier);
-  _.set(template, `${TOKEN_IDENTITY}.c8ySourceId`, identifier);
-  _.set(template, `${TOKEN_CONTEXT_DATA}.publishTopic`, mapping.publishTopic);
+  // For SMART_FUNCTION and EXTENSION_JAVA the source template must stay clean (allowSourceExpansion=false):
+  // no MappingTokens should appear in source or target templates
+  const allowSourceExpansion =
+    mapping.transformationType !== TransformationType.SMART_FUNCTION &&
+    mapping.transformationType !== TransformationType.EXTENSION_JAVA;
+  if (allowSourceExpansion) {
+    _.set(template, `${MappingTokens.IDENTITY}.c8ySourceId`, identifier);
+    _.set(template, `${MappingTokens.CONTEXT_DATA}.publishTopic`, mapping.publishTopic);
+  }
 }
 
 export function reduceSourceTemplate(
@@ -579,9 +594,9 @@ export function reduceSourceTemplate(
   returnPatched: boolean
 ): string {
   if (!returnPatched) {
-    delete template[TOKEN_IDENTITY];
-    delete template[TOKEN_TOPIC_LEVEL];
-    delete template[TOKEN_CONTEXT_DATA];
+    delete template[MappingTokens.IDENTITY];
+    delete template[MappingTokens.CONTEXT_DATA];
+    delete template[MappingTokens.TOPIC_LEVEL];
   }
   const tt = JSON.stringify(template);
   return tt;
@@ -592,9 +607,9 @@ export function reduceTargetTemplate(
   patched: boolean
 ): string {
   if (template && !patched) {
-    delete template[TOKEN_IDENTITY];
-    delete template[TOKEN_TOPIC_LEVEL];
-    delete template[TOKEN_CONTEXT_DATA];
+    delete template[MappingTokens.IDENTITY];
+    delete template[MappingTokens.CONTEXT_DATA];
+    delete template[MappingTokens.TOPIC_LEVEL];
   }
   const tt = JSON.stringify(template);
   return tt;
@@ -664,16 +679,14 @@ export /**
 * Creates a new object with sorted keys, optionally placing specified keys at the end
 * @param {Object} obj - The original object
 * @param {Object} options - Configuration options
-* @param {boolean} [options.specialKeysAtEnd=false] - Whether to place special keys at the end
-* @param {string[]} [options.specialKeys=['_CONTEXT_DATA_', '_TOPIC_LEVEL_']] - Keys to place at the end
+* @param {boolean} [options.underscoreKeysAtEnd=true] - Whether to place keys starting with "_" at the end
 * @param {Function} [options.sortFn=null] - Optional custom sort function for keys
 * @returns {Object} - New object with sorted keys
 */
   function sortObjectKeys(obj, options = {}) {
   // Set default options
   const defaultOptions = {
-    specialKeysAtEnd: true,
-    specialKeys: ['_CONTEXT_DATA_', '_TOPIC_LEVEL_'],
+    underscoreKeysAtEnd: true,
     sortFn: null
   };
 
@@ -681,15 +694,15 @@ export /**
 
   // Get the keys of the object
   let keys = Object.keys(obj);
-  let specialKeysPresent = [];
+  let underscoreKeys = [];
 
-  // If we need to place special keys at the end, remove them temporarily
-  if (config.specialKeysAtEnd) {
-    // Extract special keys that exist in the object
-    specialKeysPresent = keys.filter(key => config.specialKeys.includes(key));
+  // If we need to place underscore keys at the end, separate them
+  if (config.underscoreKeysAtEnd) {
+    // Extract keys starting with "_"
+    underscoreKeys = keys.filter(key => key.startsWith('_'));
 
-    // Remove special keys from the main keys array
-    keys = keys.filter(key => !config.specialKeys.includes(key));
+    // Remove underscore keys from the main keys array
+    keys = keys.filter(key => !key.startsWith('_'));
   }
 
   // Sort the remaining keys
@@ -699,15 +712,11 @@ export /**
     keys.sort();
   }
 
-  // Add special keys back at the end in their original order
-  if (config.specialKeysAtEnd) {
-    // Sort special keys according to their order in the specialKeys array
-    specialKeysPresent.sort((a, b) => {
-      return config.specialKeys.indexOf(a) - config.specialKeys.indexOf(b);
-    });
-
-    // Append special keys to the end
-    keys = [...keys, ...specialKeysPresent];
+  // Sort underscore keys alphabetically among themselves
+  if (config.underscoreKeysAtEnd) {
+    underscoreKeys.sort();
+    // Append underscore keys to the end
+    keys = [...keys, ...underscoreKeys];
   }
 
   // Create a new object with the sorted keys

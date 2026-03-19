@@ -79,7 +79,6 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
             String errorMessage = String.format("Tenant %s - Error in substitution processor for mapping: %s",
                     tenant, mapping.getName());
             log.error(errorMessage, e);
-            context.addError(new ProcessingException("Substitution failed", e));
             MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
             context.addError(new ProcessingException(errorMessage, e));
             mappingStatus.errors++;
@@ -234,11 +233,13 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
                     1);
         }
         // Create alarms for messages reported during processing substitutions
-        ManagedObjectRepresentation sourceMor = new ManagedObjectRepresentation();
-        sourceMor.setId(new GId(context.getSourceId()));
-        context.getAlarms()
-                .forEach(alarm -> c8yAgent.createAlarm("WARNING", alarm, Utils.MAPPER_PROCESSING_ALARM, new DateTime(),
-                        sourceMor, tenant));
+        if (context.getSourceId() != null && !context.getAlarms().isEmpty()) {
+            ManagedObjectRepresentation sourceMor = new ManagedObjectRepresentation();
+            sourceMor.setId(new GId(context.getSourceId()));
+            context.getAlarms()
+                    .forEach(alarm -> c8yAgent.createAlarm("WARNING", alarm, Utils.MAPPER_PROCESSING_ALARM, new DateTime(),
+                            sourceMor, tenant));
+        }
 
     }
 

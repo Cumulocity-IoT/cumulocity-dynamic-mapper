@@ -57,6 +57,7 @@ import org.springframework.web.server.ResponseStatusException;
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.model.Feature;
@@ -124,6 +125,9 @@ public class ConfigurationController {
     @Autowired
     private ConfigurationRegistry configurationRegistry;
 
+    @Autowired
+    private ObjectMapper objectMapper;
+
     @Value("${APP.externalExtensionsEnabled}")
     private Boolean externalExtensionsEnabled;
 
@@ -155,6 +159,8 @@ public class ConfigurationController {
         feature.setUserHasMappingAdminRole(Utils.userHasMappingAdminRole());
         feature.setPulsarAvailable(configurationRegistry.isPulsarAvailable(tenant));
         feature.setDeviceIsolationMQTTServiceEnabled(serviceConfiguration.getDeviceIsolationMQTTServiceEnabled());
+        feature.setSuppressDeprecationWarning(serviceConfiguration.getSuppressDeprecationWarning());
+        feature.setAcceptedDeprecationNotice(serviceConfiguration.getAcceptedDeprecationNotice());
         return new ResponseEntity<Feature>(feature, HttpStatus.OK);
     }
 
@@ -497,17 +503,17 @@ public class ConfigurationController {
     @PreAuthorize("hasRole('ROLE_DYNAMIC_MAPPER_ADMIN')")
     @PutMapping(value = "/service", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<HttpStatus> updateServiceConfiguration(
-            @Valid @RequestBody ServiceConfiguration serviceConfiguration) {
+            @RequestBody Map<String, Object> updates) {
         String tenant = contextService.getContext().getTenant();
         ServiceConfiguration currentServiceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
 
-        log.info("{} - Update service configuration: {}", tenant, serviceConfiguration.toString());
-        // existing code templates
-        ServiceConfiguration mergeServiceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
-        Map<String, CodeTemplate> codeTemplates = mergeServiceConfiguration.getCodeTemplates();
+        log.info("{} - Update service configuration with partial updates: {}", tenant, updates);
 
         try {
-            serviceConfiguration.setCodeTemplates(codeTemplates);
+            ServiceConfiguration existingConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
+            ServiceConfiguration serviceConfiguration = objectMapper
+                    .readerForUpdating(existingConfiguration)
+                    .readValue(objectMapper.writeValueAsBytes(updates));
             serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
             if (!serviceConfiguration.getOutboundMappingEnabled()
                     && configurationRegistry.getNotificationSubscriber().getDeviceConnectionStatus(tenant) != null
@@ -524,18 +530,8 @@ public class ConfigurationController {
                     List<ConnectorConfiguration> connectorConfigurationList = connectorConfigurationService
                             .getConnectorConfigurations(tenant);
                     for (ConnectorConfiguration connectorConfiguration : connectorConfigurationList) {
-                        if (bootstrapService.initializeConnectorByConfiguration(connectorConfiguration,
-                                serviceConfiguration,
-                                tenant) != null) {
-                            Future<?> future = bootstrapService
-                                    .initializeConnectorByConfiguration(connectorConfiguration, serviceConfiguration,
-                                            tenant);
-                            if (future != null) {
-                                // You could handle the future asynchronously if needed
-                                // For example, you could submit a task to a thread pool to handle completion
-                            }
-                        }
-                        // Optionally add error handling in a separate thread if needed
+                        bootstrapService.initializeConnectorByConfiguration(connectorConfiguration,
+                                serviceConfiguration, tenant);
                     }
                     configurationRegistry.getNotificationSubscriber().initializeDeviceClient(tenant);
                     configurationRegistry.getNotificationSubscriber().initializeManagementClient(tenant);

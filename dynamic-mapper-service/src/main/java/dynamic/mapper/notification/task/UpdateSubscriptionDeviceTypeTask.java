@@ -26,6 +26,7 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionRepresentation;
 
 import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.model.API;
 import dynamic.mapper.notification.Utils;
 import dynamic.mapper.processor.model.C8YMessage;
 import lombok.extern.slf4j.Slf4j;
@@ -80,10 +81,10 @@ public class UpdateSubscriptionDeviceTypeTask implements Callable<SubscriptionUp
             ManagedObjectRepresentation newMO = createManagedObjectRepresentation(
                     deviceId, deviceName, typeInfo);
 
-            // Subscribe the device
+            // Subscribe the device with API.ALL to receive all notifications for this device
             Future<NotificationSubscriptionRepresentation> future = configurationRegistry
                     .getNotificationSubscriber()
-                    .subscribeDeviceAndConnect(tenant, newMO, c8yMessage.getApi(), Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
+                    .subscribeDeviceAndConnect(tenant, newMO, API.ALL, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
 
             // Pre-populate inventory cache for this device to ensure inventory filters work correctly
             log.debug("{} - Pre-populating inventory cache for new device {} of type {}",

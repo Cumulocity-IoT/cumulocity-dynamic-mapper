@@ -21,7 +21,7 @@ import { HttpStatusCode } from '@angular/common/http';
 import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AlertService, CoreModule } from '@c8y/ngx-components';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { PopoverModule } from 'ngx-bootstrap/popover';
@@ -45,10 +45,12 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
   private fb = inject(FormBuilder);
   private route = inject(ActivatedRoute);
   private aiAgentService = inject(AIAgentService);
+  private readonly router = inject(Router);
 
   version: string = packageJson.version;
   serviceForm: FormGroup;
   feature: Feature;
+  section: string;
 
   serviceConfiguration: ServiceConfiguration = {
     logPayload: true,
@@ -64,14 +66,14 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     inboundExternalIdCacheRetention: 0,
     inventoryCacheSize: 0,
     inventoryCacheRetention: 0,
+    flowStateRetention: 1440,
     inventoryFragmentsToCache: ['type'],  // always add type
     maxCPUTimeMS: 5000,  // 5 seconds
     jsonataAgent: undefined,
     javaScriptAgent: undefined,
     smartFunctionAgent: undefined,
+    suppressDeprecationWarning: false,
   };
-  editable2updated: boolean = false;
-
   agents$: BehaviorSubject<string[]> = new BehaviorSubject([]);
   destroy$: Subject<void> = new Subject<void>();
   aiAgentDeployed: boolean = false;
@@ -81,12 +83,26 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     this.feature = this.route.snapshot.data['feature'];
     this.initializeForm();
     await this.loadData();
+    this.initializeSettingsSection();
     this.subscribeToAIAgents();
   }
 
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  private initializeSettingsSection(): void {
+    const href = this.router.url;
+    if (href.includes('/serviceConfiguration/general')) {
+      this.section = "general";
+    } else if (href.includes('/serviceConfiguration/ai')) {
+      this.section = "ai";
+    } else if (href.includes('/serviceConfiguration/caching')) {
+      this.section = "caching";
+    } else {
+      this.section = "logging";
+    }
   }
 
   private initializeForm(): void {
@@ -104,11 +120,13 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
       inboundExternalIdCacheRetention: [''],
       inventoryCacheRetention: [''],
       inventoryCacheSize: [''],
+      flowStateRetention: [''],
       inventoryFragmentsToCache: [''],
       maxCPUTimeMS: [''],
       jsonataAgent: [{ value: '', disabled: true }],
       javaScriptAgent: [{ value: '', disabled: true }],
       smartFunctionAgent: [{ value: '', disabled: true }],
+      suppressDeprecationWarning: [''],
     });
   }
 
@@ -152,6 +170,10 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
 
   async clickedClearInventoryCache() {
     await this.clearCache('INVENTORY_CACHE');
+  }
+
+  async clickedClearFlowStateCache() {
+    await this.clearCache('FLOW_STATE_CACHE');
   }
 
   private async clearCache(cacheId: string): Promise<void> {

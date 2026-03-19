@@ -19,43 +19,33 @@
 ~
 -->
 
-<div class="flex-col flex-nowrap no-align-items p-48 fit-h col-md-12 col-md-offset-0 c8y-stepper--no-btns">
-  <div class="card card--fullpage">
-    <div class="card-header separator" style="justify-content: center">
-      <h4 class="card-title d-flex">
-        <i [c8yIcon]="'bot'" class="icon-32 m-r-16"></i>
-        <span class="m-t-8">Generate substitutions</span>
-        <span class="label label-primary m-l-8 m-t-8 m-b-8 text-16">{{aiAgent.name}}</span>
-      </h4>
-    </div>
+<div class="card-header separator" style="justify-content: center">
+  <h4 class="card-title d-flex">
+    <i class="btn btn-ai btn-sm btn-ai-hint ai-icon m-r-8" style="margin-top:4px;"><span></span></i>
+    <span class="m-t-8">Generate substitutions with agent:</span>
+    <span class="label label-success m-l-8 m-t-8 m-b-8 text-16">{{aiAgent.name}}</span>
+  </h4>
+</div>
 
-    <div class="card-inner-scroll fit-h">
-      <div class="card-block p-0">
-        @if (aiAgent) {
-          <c8y-ai-chat
-            [isLoading]="isLoadingChat"
-            [disabled]="false"
-            [(prompt)]="newMessage"
-            (onMessage)="handleMessage($event)"
-            [config]="chatConfig"
-          >
-            @for (message of getCompatibleMessages(); track message) {
-              <c8y-ai-chat-message [message]="formatMessage(message)">
-              </c8y-ai-chat-message>
-            }
-          </c8y-ai-chat>
-        }
-      </div>
-    </div>
-    <div class="card-footer d-block text-center">
-      <div class="form-group">
-        <button type="button" name="update" class="btn btn-primary" (click)="save()" [disabled]="!valid" translate>
-          Save
-        </button>
-        <button type="button" name="update" class="btn btn-primary" (click)="cancel()" translate>
-          Cancel
-        </button>
-      </div>
-    </div>
+<div class="card-inner-scroll fit-h">
+  @if (aiAgent) {
+  <c8y-ai-chat [isLoading]="isLoadingChat" [disabled]="false" [prompt]="chatInput"
+    (onMessage)="handleMessage($event)" [config]="chatConfig">
+    @for (message of getCompatibleMessages(); track $index) {
+    <c8y-ai-chat-message [message]="formatMessage(message)">
+    </c8y-ai-chat-message>
+    }
+  </c8y-ai-chat>
+  }
+</div>
+
+<div class="card-footer separator text-center flex-no-shrink">
+  <div class="form-group">
+    <button type="button" name="update" class="btn btn-primary" (click)="save()" [disabled]="!valid" translate>
+      Save
+    </button>
+    <button type="button" name="update" class="btn btn-primary" (click)="cancel()" translate>
+      Cancel
+    </button>
   </div>
 </div>

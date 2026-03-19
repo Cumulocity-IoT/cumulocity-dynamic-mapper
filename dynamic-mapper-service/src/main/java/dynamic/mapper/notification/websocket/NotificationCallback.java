@@ -54,7 +54,7 @@ public interface NotificationCallback {
      * @param notification the notification received.
      * @param mapping      the mapping to test.
      */
-    ProcessingResultWrapper<?> onTestNotification(Notification notification, Mapping mapping);
+    ProcessingResultWrapper<?> onTestNotification(Notification notification, Mapping mapping, boolean send);
 
     /**
      * Called on receiving an exception from the WebSocket connection. This may be

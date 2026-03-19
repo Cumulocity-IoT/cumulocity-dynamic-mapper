@@ -34,12 +34,15 @@ export interface ServiceConfiguration {
   inboundExternalIdCacheRetention: number;
   inventoryCacheSize: number;
   inventoryCacheRetention: number;
+  flowStateRetention: number;
   inventoryFragmentsToCache?: string[];
   codeTemplates?: any;
   maxCPUTimeMS: number;
   jsonataAgent: string;
   javaScriptAgent: string;
   smartFunctionAgent: string;
+  suppressDeprecationWarning?: boolean;
+  acceptedDeprecationNotice?: string;
 }
 
 export enum TemplateType {

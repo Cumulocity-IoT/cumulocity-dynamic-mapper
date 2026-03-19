@@ -30,8 +30,8 @@ import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.AbstractExtensibleProcessor;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.extension.ProcessorExtensionOutbound;
-import dynamic.mapper.processor.flow.SimpleDataPreparationContext;
-import dynamic.mapper.processor.model.DataPreparationContext;
+import dynamic.mapper.processor.flow.JavaExtensionContextImpl;
+import dynamic.mapper.processor.model.JavaExtensionContext;
 import dynamic.mapper.processor.model.DeviceMessage;
 import dynamic.mapper.processor.model.Message;
 import dynamic.mapper.processor.model.ProcessingContext;
@@ -146,9 +146,9 @@ public class ExtensibleOutboundProcessor extends AbstractExtensibleProcessor {
             // 1. Create Message wrapper
             Message<Object> message = Message.from(context);
 
-            // 2. Create DataPreparationContext
+            // 2. Create JavaExtensionContext
             // Note: For outbound, C8YAgent is typically not needed, but we provide it for consistency
-            DataPreparationContext prepContext = new SimpleDataPreparationContext(
+            JavaExtensionContext prepContext = new JavaExtensionContextImpl(
                 context.getFlowContext(),
                 null, // c8yAgent not typically needed for outbound
                 tenant,
@@ -169,6 +169,17 @@ public class ExtensibleOutboundProcessor extends AbstractExtensibleProcessor {
                 context.setIgnoreFurtherProcessing(true);
             }
 
+        } catch (AbstractMethodError e) {
+            String message = String.format(
+                "%s - Extension '%s' (class: %s) is incompatible with the current interface. " +
+                "The extension JAR was compiled against an older version of ProcessorExtensionOutbound " +
+                "whose onMessage() signature has changed. " +
+                "Please recompile the extension against the current dynamic-mapper-service JAR and redeploy it.",
+                tenant,
+                extensionEntry.getEventName(),
+                extensionEntry.getFqnClassName());
+            log.error(message, e);
+            throw new ProcessingException(message, e);
         } catch (Exception e) {
             String message = String.format(
                     "Tenant %s - Error in outbound extension processing: %s",

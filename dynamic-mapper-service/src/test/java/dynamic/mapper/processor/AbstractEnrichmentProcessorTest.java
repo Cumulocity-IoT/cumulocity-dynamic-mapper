@@ -29,6 +29,7 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
+import dynamic.mapper.service.cache.FlowStateStore;
 import org.apache.camel.Exchange;
 import org.apache.camel.Message;
 import org.graalvm.polyglot.Context;
@@ -53,7 +54,7 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.model.DataPrepContext;
-import dynamic.mapper.processor.model.SimpleFlowContext;
+import dynamic.mapper.processor.model.SmartFunctionContext;
 import dynamic.mapper.configuration.CodeTemplate;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
@@ -75,6 +76,9 @@ class AbstractEnrichmentProcessorTest {
 
     @Mock
     private MappingService mappingService;
+
+    @Mock
+    private FlowStateStore flowStateStore;
 
     @Mock
     private Exchange exchange;
@@ -112,8 +116,9 @@ class AbstractEnrichmentProcessorTest {
 
         public TestableAbstractEnrichmentProcessor(
                 ConfigurationRegistry configurationRegistry,
-                MappingService mappingService) {
-            super(configurationRegistry, mappingService);
+                MappingService mappingService,
+                FlowStateStore flowStateStore) {
+            super(configurationRegistry, mappingService, flowStateStore);
         }
 
         @Override
@@ -153,7 +158,7 @@ class AbstractEnrichmentProcessorTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        processor = new TestableAbstractEnrichmentProcessor(configurationRegistry, mappingService);
+        processor = new TestableAbstractEnrichmentProcessor(configurationRegistry, mappingService, flowStateStore);
 
         // Create real GraalVM engine (not mocked)
         graalEngine = Engine.newBuilder()
@@ -359,7 +364,7 @@ class AbstractEnrichmentProcessorTest {
     void testProcessHandlesEnrichmentError() throws Exception {
         // Given - Create processor that throws during enrichPayload
         TestableAbstractEnrichmentProcessor errorProcessor = new TestableAbstractEnrichmentProcessor(
-                configurationRegistry, mappingService) {
+                configurationRegistry, mappingService, flowStateStore) {
             @Override
             protected void enrichPayload(ProcessingContext<?> context) {
                 throw new RuntimeException("Enrichment failed");
@@ -550,7 +555,7 @@ class AbstractEnrichmentProcessorTest {
         // Given
         graalContext = Context.newBuilder("js").allowAllAccess(true).build();
         processingContext.setGraalContext(graalContext);
-        flowContext = new SimpleFlowContext(graalContext, TEST_TENANT, c8yAgent, false);
+        flowContext = new SmartFunctionContext(graalContext, TEST_TENANT, c8yAgent, false);
 
         String key = "testKey";
         String value = "testValue";
@@ -587,7 +592,7 @@ class AbstractEnrichmentProcessorTest {
         // Given
         graalContext = Context.newBuilder("js").allowAllAccess(true).build();
         processingContext.setGraalContext(graalContext);
-        flowContext = new SimpleFlowContext(graalContext, TEST_TENANT, c8yAgent, false);
+        flowContext = new SmartFunctionContext(graalContext, TEST_TENANT, c8yAgent, false);
 
         String key = "testKey";
 
@@ -604,7 +609,7 @@ class AbstractEnrichmentProcessorTest {
     void testPerformPreEnrichmentSetupDefaultImplementation() {
         // Given - Create instance that uses default implementation
         AbstractEnrichmentProcessor defaultProcessor = new AbstractEnrichmentProcessor(
-                configurationRegistry, mappingService) {
+                configurationRegistry, mappingService, flowStateStore) {
             @Override
             protected void enrichPayload(ProcessingContext<?> context) {
             }

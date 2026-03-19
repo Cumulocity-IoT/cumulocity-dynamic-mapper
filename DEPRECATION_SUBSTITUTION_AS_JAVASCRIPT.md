@@ -18,25 +18,272 @@ Substitution as JavaScript extended the capabilities of JSONata expressions by:
 - **Dynamic logic**: Enabling complex transformation logic beyond simple path-based substitutions
 - **Runtime flexibility**: Defining the target API dynamically at runtime based on payload content or business logic
 
-### Example of Substitution as JavaScript
+### Examples of Substitution as JavaScript
+
+#### Example 1: Creating a Single Measurement
+
+**Using Substitution as JavaScript (Deprecated):**
 
 ```javascript
-// Example: Creating substitution objects programmatically
-function createSubstitutions(payload) {
-    var substitutions = [];
+/**
+ * Sample to generate one measurement
+ * payload:
+ * {
+ *     "temperature": 139.0,
+ *     "unit": "C",
+ *     "externalId": "berlin_01"
+ * }
+ * topic: 'testGraalsSingle/berlin_01'
+ */
+function extractFromSource(ctx) {
+    // This is the source message as json
+    const sourceObject = JSON.parse(ctx.getPayload());
 
-    if (payload.temperature > 30) {
-        substitutions.push({
-            pathSource: "$.temperature",
-            pathTarget: "$.c8y_TemperatureMeasurement.T.value",
-            repairStrategy: "DEFAULT",
-            expandArray: false
+    // Define a new Measurement Value for Temperatures by assigning from source
+    const fragmentTemperatureSeries = {
+        value: sourceObject['temperature'],
+        unit: sourceObject['unit']
+    };
+
+    // Assign Values to Series
+    const fragmentTemperature = {
+        T: fragmentTemperatureSeries
+    };
+
+    // Create a new SubstitutionResult with the HashMap
+    const result = new SubstitutionResult();
+
+    // Define temperature fragment mapping temperature -> c8y_Temperature.T.value/unit
+    const temperature = new SubstitutionValue(fragmentTemperature, TYPE.OBJECT, RepairStrategy.DEFAULT, false);
+    // Add temperature with key 'c8y_TemperatureMeasurement' to result.getSubstitutions()
+    addSubstitution(result, 'c8y_TemperatureMeasurement', temperature);
+
+    // Define Device Identifier
+    const deviceIdentifier = new SubstitutionValue(sourceObject['_TOPIC_LEVEL_'][1], TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
+    // Add deviceIdentifier with key ctx.getGenericDeviceIdentifier() to result.getSubstitutions()
+    addSubstitution(result, ctx.getGenericDeviceIdentifier(), deviceIdentifier);
+
+    return result;
+}
+```
+
+**Migrated to Smart Function:**
+
+```javascript
+/**
+ * Sample to generate one measurement using Smart Function
+ * payload:
+ * {
+ *     "temperature": 139.0,
+ *     "unit": "C",
+ *     "externalId": "berlin_01"
+ * }
+ * topic: 'testGraalsSingle/berlin_01'
+ */
+function onMessage(inputMsg, context) {
+    const msg = inputMsg;
+    const payload = JSON.parse(msg.getPayload());
+
+    // Extract device identifier from topic
+    const topicLevels = msg.getTopic().split('/');
+    const deviceId = topicLevels[1]; // 'berlin_01'
+
+    // Directly create the measurement payload - no substitution objects needed!
+    return [{
+        cumulocityType: "measurement",
+        action: "create",
+        payload: {
+            "time": new Date().toISOString(),
+            "type": "c8y_TemperatureMeasurement",
+            "c8y_TemperatureMeasurement": {
+                "T": {
+                    "value": payload.temperature,
+                    "unit": payload.unit
+                }
+            }
+        },
+        externalSource: [{
+            "type": "c8y_Serial",
+            "externalId": deviceId
+        }]
+    }];
+}
+```
+
+**Key Improvements:**
+- Direct payload creation instead of substitution objects
+- Clear visibility of the exact measurement structure being sent
+- More intuitive and maintainable code
+- No need to understand `SubstitutionResult` or `SubstitutionValue` abstractions
+
+#### Example 2: Creating Multiple Measurements from an Array
+
+**Using Substitution as JavaScript (Deprecated):**
+
+```javascript
+/**
+ * Sample to generate multiple measurements
+ * payload:
+ * {
+ *     "temperature": [139.0, 150.0],
+ *     "externalId": "berlin_01"
+ * }
+ * topic: 'testGraalsMulti/berlin_01'
+ */
+function extractFromSource(ctx) {
+    // This is the source message as json
+    const sourceObject = JSON.parse(ctx.getPayload());
+
+    const tempArray = sourceObject['temperature'];
+
+    // Create a new SubstitutionResult with the HashMaps
+    const result = new SubstitutionResult();
+
+    // Loop through all temperature array entries
+    for (let i = 0; i < tempArray.length; i++) {
+        const temperatureValue = new SubstitutionValue(
+            tempArray[i],
+            TYPE.NUMBER,
+            RepairStrategy.DEFAULT,
+            true
+        );
+        addSubstitution(result, 'c8y_TemperatureMeasurement.T.value', temperatureValue);
+    }
+
+    // Define Device Identifier
+    const deviceIdentifier = new SubstitutionValue(sourceObject['_TOPIC_LEVEL_'][1], TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
+    addSubstitution(result, ctx.getGenericDeviceIdentifier(), deviceIdentifier);
+
+    return result;
+}
+```
+
+**Migrated to Smart Function:**
+
+```javascript
+/**
+ * Sample to generate multiple measurements using Smart Function
+ * payload:
+ * {
+ *     "temperature": [139.0, 150.0],
+ *     "externalId": "berlin_01"
+ * }
+ * topic: 'testGraalsMulti/berlin_01'
+ */
+function onMessage(inputMsg, context) {
+    const msg = inputMsg;
+    const payload = JSON.parse(msg.getPayload());
+
+    // Extract device identifier from topic
+    const topicLevels = msg.getTopic().split('/');
+    const deviceId = topicLevels[1]; // 'berlin_01'
+
+    const tempArray = payload.temperature;
+    const results = [];
+
+    // Create a separate measurement for each temperature value
+    for (let i = 0; i < tempArray.length; i++) {
+        results.push({
+            cumulocityType: "measurement",
+            action: "create",
+            payload: {
+                "time": new Date().toISOString(),
+                "type": "c8y_TemperatureMeasurement",
+                "c8y_TemperatureMeasurement": {
+                    "T": {
+                        "value": tempArray[i],
+                        "unit": "C"
+                    }
+                }
+            },
+            externalSource: [{
+                "type": "c8y_Serial",
+                "externalId": deviceId
+            }]
         });
     }
 
-    return substitutions;
+    return results;
 }
 ```
+
+**Key Improvements:**
+- Each measurement is explicitly created as a separate object in the results array
+- No need for `expandArray` flags or understanding substitution semantics
+- Clear loop that directly constructs the measurement payloads
+- Easy to understand that multiple measurements will be created
+
+#### Example 3: Overriding the Target API
+
+**Using Substitution as JavaScript (Deprecated):**
+
+```javascript
+/**
+ * Snippet shows overriding API: ALARM, EVENT, MEASUREMENT, ...
+ */
+function extractFromSource(ctx) {
+    // This is the source message as json
+    const sourceObject = JSON.parse(ctx.getPayload());
+
+    // Create a new SubstitutionResult with the HashMap
+    const result = new SubstitutionResult();
+
+    // Override API to send to ALARMS endpoint instead of default
+    const api = new SubstitutionValue('ALARMS', TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
+    addSubstitution(result, '_CONTEXT_DATA_.api', api);
+
+    // Define Device Identifier
+    const deviceIdentifier = new SubstitutionValue(sourceObject['_TOPIC_LEVEL_'][1], TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
+    addSubstitution(result, ctx.getGenericDeviceIdentifier(), deviceIdentifier);
+
+    return result;
+}
+```
+
+**Migrated to Smart Function:**
+
+```javascript
+/**
+ * Snippet shows creating different API types: alarm, event, measurement, ...
+ * payload:
+ * {
+ *     "severity": "MAJOR",
+ *     "text": "Temperature threshold exceeded",
+ *     "externalId": "berlin_01"
+ * }
+ */
+function onMessage(inputMsg, context) {
+    const msg = inputMsg;
+    const payload = JSON.parse(msg.getPayload());
+
+    // Extract device identifier from topic
+    const topicLevels = msg.getTopic().split('/');
+    const deviceId = topicLevels[1]; // 'berlin_01'
+
+    // Simply specify the cumulocityType - no need to override context data!
+    return [{
+        cumulocityType: "alarm",  // Can be "alarm", "event", "measurement", "inventory"
+        action: "create",
+        payload: {
+            "time": new Date().toISOString(),
+            "type": "c8y_TemperatureAlarm",
+            "severity": payload.severity,
+            "text": payload.text,
+            "status": "ACTIVE"
+        },
+        externalSource: [{
+            "type": "c8y_Serial",
+            "externalId": deviceId
+        }]
+    }];
+}
+```
+
+**Key Improvements:**
+- No need to manipulate `_CONTEXT_DATA_.api` - just set the `cumulocityType` field
+- Direct and explicit specification of the target API type
+- Clear payload structure for the alarm (or event, measurement, etc.)
+- Easy to switch between different API types by changing `cumulocityType`
 
 ## Shortcomings
 
@@ -105,19 +352,18 @@ Mappings using Substitution as JavaScript are marked as:
 - **Transformation Type**: `SUBSTITUTION_AS_CODE`
 - **Label in UI**: "Substitution as JavaScript (deprecated)"
 
-### Step 2: Understand the Existing Logic
+### Step 2: Export Each Affected Mapping
 
-Review your existing Substitution as JavaScript code and identify:
-- What substitutions are being created
-- What conditions determine the substitutions
-- What the final payload structure should be
+Use the *Export mapping* action in the Mapping grid to save a copy of each affected mapping as JSON. This preserves the original configuration and JavaScript code as a reference during migration.
 
-### Step 3: Convert to Smart Function
+### Step 3: Recreate as Smart Function
 
-Create a Smart Function that:
+Create a new mapping with the `SMART_FUNCTION` transformation type and adapt the JavaScript code:
 1. Accepts the `onMessage(inputMsg, context)` signature
 2. Extracts data from the payload using `msg.getPayload()`
-3. Directly constructs and returns the target payload array
+3. Directly constructs and returns the target payload array instead of substitution objects
+
+Refer to the built-in code templates and the examples in this document for guidance.
 
 ### Step 4: Test Thoroughly
 
@@ -125,6 +371,14 @@ Use the mapping test functionality to:
 - Verify the payload structure matches expectations
 - Test edge cases and conditional logic
 - Validate device identification and enrichment
+
+### Step 5: Activate the New Mapping
+
+Once tested, activate the new Smart Function mapping.
+
+### Step 6: Delete the Original Deprecated Mapping
+
+After confirming the new mapping works correctly in production, delete the original `SUBSTITUTION_AS_CODE` mapping to keep the mapping list clean and avoid duplicate processing.
 
 ## Comparison Table
 
@@ -141,10 +395,13 @@ Use the mapping test functionality to:
 
 ## Timeline
 
-- **Release 6.1.5**: Substitution as JavaScript marked as deprecated
-- **Future Release**: Feature will be removed completely
+| Release | Date (planned) | Action |
+|---------|---------------|--------|
+| **6.1.5** | Released | `SUBSTITUTION_AS_CODE` marked as **deprecated**. Existing mappings continue to work. Labels in the UI show "(deprecated)". |
+| **6.2** | Current release | **Creation of new mappings** with `SUBSTITUTION_AS_CODE` is **disabled** in the UI. Existing mappings are still loaded and executed normally. |
+| **6.3** | ~May 2026 | `SUBSTITUTION_AS_CODE` mappings are **no longer loaded** by the service and are **hidden** in the UI. All such mappings must be migrated before this release. |
 
-We recommend migrating all mappings using Substitution as JavaScript to Smart Functions as soon as possible to ensure continued compatibility with future releases.
+We recommend migrating all mappings using Substitution as JavaScript to Smart Functions as soon as possible to ensure continued compatibility with future releases. **All migrations must be completed before release 6.3.**
 
 ## Additional Resources
 

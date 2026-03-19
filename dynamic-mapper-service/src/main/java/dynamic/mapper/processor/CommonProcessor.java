@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Map;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
+import org.graalvm.polyglot.PolyglotException;
+import org.graalvm.polyglot.SourceSection;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.cumulocity.model.ID;
 import com.cumulocity.model.idtype.GId;
@@ -38,6 +40,9 @@ public abstract class CommonProcessor implements Processor {
      */
     protected boolean evaluateInventoryFilter(String tenant, String filterExpression, String sourceId,
             Boolean testing) {
+        if (filterExpression == null || filterExpression.trim().isEmpty()) {
+            return true;
+        }
         try {
             Map<String, Object> cachedInventoryContent = configurationRegistry.getC8yAgent()
                     .getMOFromInventoryCache(tenant, sourceId, testing);
@@ -60,6 +65,29 @@ public abstract class CommonProcessor implements Processor {
             log.debug("Inventory filter evaluation error for {}: {}", filterExpression, e.getMessage());
             return false;
         }
+    }
+
+    /**
+     * Extracts the JavaScript source line number from an exception.
+     * For GraalVM PolyglotException, walks the guest (JS) stack frames to find the
+     * first frame with a source location. Falls back to the Java stack frame line
+     * number for non-polyglot exceptions.
+     */
+    protected static int extractJsLineNumber(Exception e) {
+        if (e instanceof PolyglotException) {
+            for (PolyglotException.StackFrame frame : ((PolyglotException) e).getPolyglotStackTrace()) {
+                if (frame.isGuestFrame()) {
+                    SourceSection loc = frame.getSourceLocation();
+                    if (loc != null) {
+                        return loc.getStartLine();
+                    }
+                }
+            }
+        }
+        if (e.getStackTrace().length > 0) {
+            return e.getStackTrace()[0].getLineNumber();
+        }
+        return 0;
     }
 
     protected String resolveDeviceIdentifier(CumulocityObject cumulocityMessage, ProcessingContext<?> context,
@@ -114,9 +142,15 @@ public abstract class CommonProcessor implements Processor {
                 .convertToExternalIdList(deviceMessage.getExternalSource());
 
         if (externalSources == null || externalSources.isEmpty()) {
-            throw new ProcessingException(
-                    "External source is empty, cannot resolve device identifier. Define externalSource in the message or use a generic device identifier in the mapping.");
-
+            String mappingExternalIdType = context.getMapping().getExternalIdType();
+            if (mappingExternalIdType != null && !mappingExternalIdType.isEmpty()) {
+                log.debug("{} - No externalSource in DeviceMessage, falling back to mapping externalIdType: {}",
+                        tenant, mappingExternalIdType);
+                externalSources = List.of(new ExternalId(null, mappingExternalIdType));
+            } else {
+                throw new ProcessingException(
+                        "External source is empty, cannot resolve device identifier. Define externalSource in the message or use a generic device identifier in the mapping.");
+            }
         }
         // Use the first external source for resolution
         ExternalId externalSource = externalSources.get(0);
@@ -128,7 +162,7 @@ public abstract class CommonProcessor implements Processor {
             }
             String externalIdValue = externalSource.getExternalId();
             String type = externalSources.get(0).getType();
-            var adHocDeviceid = ProcessingResultHelper.createImplicitDevice(
+            ProcessingResultHelper.createImplicitDevice(
                     new ID(type, externalIdValue),
                     context,
                     log,

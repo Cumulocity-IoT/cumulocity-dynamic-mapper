@@ -29,14 +29,12 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 import { BsModalService } from 'ngx-bootstrap/modal';
-import { BehaviorSubject } from 'rxjs';
 import { ConnectorConfigurationService } from '../../connector';
 import {
   ConnectorConfiguration,
   ConnectorGridComponent,
   DeploymentMapEntry,
   Direction,
-  Feature,
   SharedService,
   StepperConfiguration
 } from '../../shared';
@@ -54,16 +52,13 @@ export class MappingConnectorComponent implements OnInit, OnDestroy {
   @ViewChild(ConnectorGridComponent) connectorGrid!: ConnectorGridComponent;
   @Input() stepperConfiguration: StepperConfiguration;
   @Input() directions: Direction[] = [Direction.INBOUND, Direction.OUTBOUND];
+  @Input() deploymentMapEntry: DeploymentMapEntry;
   @Output() deploymentMapEntryChange = new EventEmitter<DeploymentMapEntry>();
 
   readonly Direction = Direction;
   readonly EditorMode = EditorMode;
-  readonly selectedResult$ = new BehaviorSubject<number>(0);
 
-  feature: Feature;
   readOnly: boolean;
-
-  private _deploymentMapEntry: DeploymentMapEntry;
 
   constructor(
     private readonly sharedService: SharedService,
@@ -71,23 +66,15 @@ export class MappingConnectorComponent implements OnInit, OnDestroy {
     public readonly connectorConfigurationService: ConnectorConfigurationService
   ) {}
 
-  @Input()
-  get deploymentMapEntry(): DeploymentMapEntry {
-    return this._deploymentMapEntry;
-  }
-
-  set deploymentMapEntry(value: DeploymentMapEntry) {
-    this._deploymentMapEntry = value;
-    this.deploymentMapEntryChange.emit(value);
-  }
-
   async ngOnInit(): Promise<void> {
     this.readOnly = this.stepperConfiguration.editorMode === EditorMode.READ_ONLY;
-    this.feature = await this.sharedService.getFeatures();
   }
 
-  ngOnDestroy(): void {
-    this.selectedResult$.complete();
+  ngOnDestroy(): void {}
+
+  onDeploymentMapEntryChanged(value: DeploymentMapEntry): void {
+    this.deploymentMapEntry = value;
+    this.deploymentMapEntryChange.emit(value);
   }
 
   async onConfigurationAddOrUpdate(config: ConnectorConfiguration): Promise<void> {

@@ -24,7 +24,8 @@ package dynamic.mapper.processor.extension.external.inbound;
 import com.dashjoin.jsonata.json.Json;
 import dynamic.mapper.processor.extension.ProcessorExtensionInbound;
 import dynamic.mapper.processor.model.CumulocityObject;
-import dynamic.mapper.processor.model.DataPreparationContext;
+import dynamic.mapper.processor.model.JavaExtensionContext;
+import dynamic.mapper.processor.model.ExternalId;
 import dynamic.mapper.processor.model.Message;
 import lombok.extern.slf4j.Slf4j;
 import org.joda.time.DateTime;
@@ -55,12 +56,23 @@ import java.util.Map;
  * </pre>
  *
  * <p>Output: c8y_VoltageMeasurement or c8y_CurrentMeasurement based on device config</p>
+ *
+ * <p>Supported parameter keys (under the top-level {@code parameter} map):
+ * <ul>
+ *   <li>{@code voltageUnit} – unit for voltage measurements (default: "V")</li>
+ *   <li>{@code currentUnit} – unit for current measurements (default: "A")</li>
+ *   <li>{@code defaultSensorType} – fallback sensor type when device config is absent (default: "voltage")</li>
+ * </ul>
  */
 @Slf4j
 public class ProcessorExtensionSmartInbound02 implements ProcessorExtensionInbound<byte[]> {
 
+    private static final String DEFAULT_VOLTAGE_UNIT = "V";
+    private static final String DEFAULT_CURRENT_UNIT = "A";
+    private static final String DEFAULT_SENSOR_TYPE = "voltage";
+
     @Override
-    public CumulocityObject[] onMessage(Message<byte[]> message, DataPreparationContext context) {
+    public CumulocityObject[] onMessage(Message<byte[]> message, JavaExtensionContext context) {
         try {
             // Parse JSON payload
             String jsonString = new String(message.getPayload(), "UTF-8");
@@ -70,12 +82,56 @@ public class ProcessorExtensionSmartInbound02 implements ProcessorExtensionInbou
             log.info("{} - Processing smart inbound message with enrichment, messageId: {}",
                     context.getTenant(), payload.get("messageId"));
 
-            String clientId = (String) payload.get("clientId");
+            // Get clientId from context first, fall back to payload
+            String clientId = context.getClientId();
+            if (clientId == null) {
+                clientId = (String) payload.get("clientId");
+            }
 
-            // In a real implementation, you would use C8YAgent to lookup device properties
-            // For demonstration, we'll use a simple approach with configuration from the payload
-            // Example: payload could include a "sensorType" field
-            String sensorType = (String) payload.getOrDefault("sensorType", "voltage");
+            String tenant = context.getTenant();
+
+            // Read optional parameters
+            String voltageUnit = DEFAULT_VOLTAGE_UNIT;
+            String currentUnit = DEFAULT_CURRENT_UNIT;
+            String defaultSensorType = DEFAULT_SENSOR_TYPE;
+            @SuppressWarnings("unchecked")
+            Map<String, Object> parameter = (Map<String, Object>) context.getConfigAsMap().get("parameter");
+            if (parameter != null) {
+                log.info("{} - Extension parameter defined: {}", context.getTenant(), parameter);
+                if (parameter.get("voltageUnit") instanceof String v) voltageUnit = v;
+                if (parameter.get("currentUnit") instanceof String c) currentUnit = c;
+                if (parameter.get("defaultSensorType") instanceof String d) defaultSensorType = d;
+            }
+
+            // Lookup device from inventory cache for enrichment (same pattern as JavaScript Smart Functions)
+            ExternalId externalId = new ExternalId(clientId, "c8y_Serial");
+            Map<String, Object> deviceByExternalId = context.getManagedObjectAsMap(externalId);
+
+            // Determine measurement type based on device configuration (enrichment)
+            String sensorType = defaultSensorType;
+
+            if (deviceByExternalId != null) {
+                log.debug("{} - Device found for enrichment: {}", tenant, deviceByExternalId);
+
+                // Try to extract sensor type from device configuration (c8y_Sensor.type.voltage or .current)
+                Object c8ySensorObj = deviceByExternalId.get("c8y_Sensor");
+                if (c8ySensorObj instanceof Map) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> c8ySensor = (Map<String, Object>) c8ySensorObj;
+                    Object typeObj = c8ySensor.get("type");
+                    if (typeObj instanceof Map) {
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> typeMap = (Map<String, Object>) typeObj;
+                        if (Boolean.TRUE.equals(typeMap.get("voltage"))) {
+                            sensorType = "voltage";
+                        } else if (Boolean.TRUE.equals(typeMap.get("current"))) {
+                            sensorType = "current";
+                        }
+                    }
+                }
+            } else {
+                log.warn("{} - No device found for enrichment, using default sensor type", tenant);
+            }
 
             // Extract sensor value
             @SuppressWarnings("unchecked")
@@ -90,7 +146,7 @@ public class ProcessorExtensionSmartInbound02 implements ProcessorExtensionInbou
                     CumulocityObject.measurement()
                         .type("c8y_VoltageMeasurement")
                         .time(new DateTime().toString())
-                        .fragment("c8y_Voltage", "voltage", value.doubleValue(), "V")
+                        .fragment("c8y_Voltage", "voltage", value.doubleValue(), voltageUnit)
                         .externalId(clientId, "c8y_Serial")
                         .deviceName(clientId)
                         .deviceType("c8y_VoltageSensor")
@@ -103,7 +159,7 @@ public class ProcessorExtensionSmartInbound02 implements ProcessorExtensionInbou
                     CumulocityObject.measurement()
                         .type("c8y_CurrentMeasurement")
                         .time(new DateTime().toString())
-                        .fragment("c8y_Current", "current", value.doubleValue(), "A")
+                        .fragment("c8y_Current", "current", value.doubleValue(), currentUnit)
                         .externalId(clientId, "c8y_Serial")
                         .deviceName(clientId)
                         .deviceType("c8y_CurrentSensor")

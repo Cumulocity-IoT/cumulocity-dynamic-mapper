@@ -24,7 +24,7 @@ package dynamic.mapper.processor.extension.external.inbound;
 import com.dashjoin.jsonata.json.Json;
 import dynamic.mapper.processor.extension.ProcessorExtensionInbound;
 import dynamic.mapper.processor.model.CumulocityObject;
-import dynamic.mapper.processor.model.DataPreparationContext;
+import dynamic.mapper.processor.model.JavaExtensionContext;
 import dynamic.mapper.processor.model.Message;
 import lombok.extern.slf4j.Slf4j;
 import org.joda.time.DateTime;
@@ -60,7 +60,7 @@ import java.util.Map;
 public class ProcessorExtensionSmartInbound03 implements ProcessorExtensionInbound<byte[]> {
 
     @Override
-    public CumulocityObject[] onMessage(Message<byte[]> message, DataPreparationContext context) {
+    public CumulocityObject[] onMessage(Message<byte[]> message, JavaExtensionContext context) {
         try {
             // Parse JSON payload
             String jsonString = new String(message.getPayload(), "UTF-8");
@@ -70,8 +70,13 @@ public class ProcessorExtensionSmartInbound03 implements ProcessorExtensionInbou
             log.info("{} - Processing smart inbound message with implicit device creation, messageId: {}",
                     context.getTenant(), payload.get("messageId"));
 
+            // Get clientId from context first, fall back to payload
+            String clientId = context.getClientId();
+            if (clientId == null) {
+                clientId = (String) payload.get("clientId");
+            }
+
             // Extract data
-            String clientId = (String) payload.get("clientId");
             @SuppressWarnings("unchecked")
             Map<String, Object> sensorData = (Map<String, Object>) payload.get("sensorData");
             Number tempVal = (Number) sensorData.get("temp_val");

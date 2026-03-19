@@ -434,52 +434,22 @@ void setUp() throws Exception {
     }
 
     @Test
-    void testDiagnostic_UnderstandDoubleRequests() throws Exception {
-        // Clear any existing requests
+    void testNoDoubleRequests_regression() throws Exception {
+        // Regression test for: FlowResultOutboundProcessor was calling both
+        // createAndAddDynamicMapperRequest (which adds to context) and output.addRequest(),
+        // then syncOutputToContext copied output back to context → each request appeared twice.
+        TestableFlowResultOutboundProcessor fullProcessor = createFullProcessingProcessor();
+
         processingContext.getRequests().clear();
 
-        log.info("=== DIAGNOSTIC TEST ===");
-        log.info("Initial requests: {}", processingContext.getRequests().size());
-
-        // Create a simple device message
-
-        DeviceMessage deviceMsg = new DeviceMessage();
-        deviceMsg.setTopic("test/topic");
-        deviceMsg.setClientId("diagnostic-client");
-
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("test", "value");
-        deviceMsg.setPayload(payload);
-
-        // Single external source
-        List<ExternalSource> externalSources = new ArrayList<>();
-        ExternalSource es = new ExternalSource();
-        es.setType("c8y_Serial");
-
-        es.setExternalId("diagnostic-device");
-        es.setClientId("diagnostic-client");
-        externalSources.add(es);
-        deviceMsg.setExternalSource(externalSources);
-
+        DeviceMessage deviceMsg = createTemperatureMeasurementDeviceMessage();
+        deviceMsg.setTopic("measurement/measurements/" + TEST_DEVICE_ID);
         processingContext.setFlowResult(deviceMsg);
 
-        log.info("Before processing - requests: {}", processingContext.getRequests().size());
+        fullProcessor.process(exchange);
 
-        // Process
-        processor.process(exchange);
-
-        log.info("After processing - requests: {}", processingContext.getRequests().size());
-
-        // Print all requests
-        for (int i = 0; i < processingContext.getRequests().size(); i++) {
-            DynamicMapperRequest req = processingContext.getRequests().get(i);
-            log.info("Request #{}: sourceId={}, externalId={}, method={}, api={}, predecessor={}",
-                    i, req.getSourceId(), req.getExternalId(), req.getMethod(),
-                    req.getApi(), req.getPredecessor());
-        }
-
-        // Don't fail, just observe
-        log.info("=== END DIAGNOSTIC ===");
+        assertEquals(1, processingContext.getRequests().size(),
+                "Should produce exactly 1 request, not 2 (regression: double-add via createAndAddDynamicMapperRequest + output.addRequest)");
     }
 
     // Helper methods for creating test data
@@ -594,6 +564,7 @@ void setUp() throws Exception {
 
         // Then
         assertFalse(processingContext.getRequests().isEmpty(), "Should have created requests");
+        assertEquals(1, processingContext.getRequests().size(), "Should have exactly one request (no duplicates)");
         DynamicMapperRequest request = processingContext.getRequests().get(0);
 
         assertEquals(RequestMethod.POST, request.getMethod(), "Should use POST method");
@@ -711,6 +682,7 @@ void setUp() throws Exception {
 
         // Then
         assertFalse(processingContext.getRequests().isEmpty(), "Should have created requests");
+        assertEquals(1, processingContext.getRequests().size(), "Should have exactly one request (no duplicates)");
         DynamicMapperRequest request = processingContext.getRequests().get(0);
 
         assertEquals(RequestMethod.POST, request.getMethod(),
@@ -740,6 +712,7 @@ void setUp() throws Exception {
 
         // Then
         assertFalse(processingContext.getRequests().isEmpty(), "Should have created requests");
+        assertEquals(1, processingContext.getRequests().size(), "Should have exactly one request (no duplicates)");
         DynamicMapperRequest request = processingContext.getRequests().get(0);
 
         assertEquals(RequestMethod.POST, request.getMethod(),
@@ -770,6 +743,7 @@ void setUp() throws Exception {
 
         // Then
         assertFalse(processingContext.getRequests().isEmpty(), "Should have created requests");
+        assertEquals(1, processingContext.getRequests().size(), "Should have exactly one request (no duplicates)");
         DynamicMapperRequest request = processingContext.getRequests().get(0);
 
         assertEquals(RequestMethod.POST, request.getMethod(), "Should use POST method");

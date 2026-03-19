@@ -6,6 +6,15 @@
  * @defaultTemplate false
  * @internal true
  * @readonly true
+ *
+ * Sample payload to override API and create an alarm
+ * payload
+ * {
+ *     "severity": "MAJOR",
+ *     "text": "Temperature threshold exceeded",
+ *     "externalId": "berlin_01"
+ * }
+ * topic 'testGraalsAlarm/berlin_01'
 */
 
 function extractFromSource(ctx) {

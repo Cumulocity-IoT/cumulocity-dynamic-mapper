@@ -172,7 +172,7 @@ public class MappingResolverService {
 
     private void logMappingSkipped(String tenant, Mapping mapping, String reason, String details) {
         if (mapping.getDebug()) {
-            log.info("{} - Outbound mapping {}/{} not resolved - {}: {}", 
+            log.debug("{} - Outbound mapping {}/{} not resolved - {}: {}",
                 tenant, mapping.getName(), mapping.getIdentifier(), reason, details);
         }
     }

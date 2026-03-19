@@ -39,13 +39,16 @@ export enum ConnectorStatus {
 }
 
 export enum LoggingEventType {
-  STATUS_SUBSCRIPTION_EVENT_TYPE = 'STATUS_SUBSCRIPTION_EVENT_TYPE',
-  STATUS_CONNECTOR_EVENT_TYPE = 'STATUS_CONNECTOR_EVENT_TYPE',
+  SUBSCRIPTION_EVENT_TYPE = 'SUBSCRIPTION_EVENT_TYPE',
+  CACHE_EVENT_TYPE = 'CACHE_EVENT_TYPE',
+  CONNECTOR_EVENT_TYPE = 'CONNECTOR_EVENT_TYPE',
   MAPPING_LOADING_ERROR_EVENT_TYPE = 'MAPPING_LOADING_ERROR_EVENT_TYPE',
-  STATUS_MAPPING_ACTIVATION_ERROR_EVENT_TYPE = 'STATUS_MAPPING_ACTIVATION_ERROR_EVENT_TYPE',
-  STATUS_MAPPING_CHANGED_EVENT_TYPE = 'STATUS_MAPPING_CHANGED_EVENT_TYPE',
-  STATUS_MAPPING_FAILURE_EVENT_TYPE = 'STATUS_MAPPING_FAILURE_EVENT_TYPE',
-  STATUS_NOTIFICATION_EVENT_TYPE = 'STATUS_NOTIFICATION_EVENT_TYPE',
+  MAPPING_ACTIVATION_ERROR_EVENT_TYPE = 'MAPPING_ACTIVATION_ERROR_EVENT_TYPE',
+  MAPPING_CHANGED_EVENT_TYPE = 'MAPPING_CHANGED_EVENT_TYPE',
+  MAPPING_MIGRATION_EVENT_TYPE = 'MAPPING_MIGRATION_EVENT_TYPE',
+  MAPPING_FAILURE_EVENT_TYPE = 'MAPPING_FAILURE_EVENT_TYPE',
+  NOTIFICATION_EVENT_TYPE = 'NOTIFICATION_EVENT_TYPE',
+  SUBSCRIPTION_DEDUPLICATION_EVENT_TYPE = 'SUBSCRIPTION_DEDUPLICATION_EVENT_TYPE',
   ALL = 'ALL'
 }
 
@@ -53,48 +56,106 @@ export interface LoggingEventTypeDetails {
   name: string;
   type?: string;
   component: string;
+  componentDisplayName?: string;
+  severity?: 'info' | 'warning' | 'error';
+  description?: string;
+}
+
+export interface EventMetadata {
+  component: string;
+  componentDisplayName: string;
+  severity: 'info' | 'warning' | 'error';
+  description: string;
 }
 
 export const LoggingEventTypeMap: Record<LoggingEventType, LoggingEventTypeDetails> = {
-  [LoggingEventType.STATUS_SUBSCRIPTION_EVENT_TYPE]: {
-    name: 'STATUS_SUBSCRIPTION_EVENT_TYPE',
+  [LoggingEventType.SUBSCRIPTION_EVENT_TYPE]: {
+    name: 'SUBSCRIPTION_EVENT_TYPE',
     type: 'd11r_subscriptionEvent',
-    component: 'd11r_connector'
+    component: 'd11r_connector',
+    componentDisplayName: 'Connector',
+    severity: 'info',
+    description: 'Subscription lifecycle events for connectors'
   },
-  [LoggingEventType.STATUS_CONNECTOR_EVENT_TYPE]: {
-    name: 'STATUS_CONNECTOR_EVENT_TYPE',
+    [LoggingEventType.CACHE_EVENT_TYPE]: {
+    name: 'CACHE_EVENT_TYPE',
+    type: 'd11r_cacheEvent',
+    component: 'd11r_cache',
+    componentDisplayName: 'Cache',
+    severity: 'info',
+    description: 'Cache event'
+  },
+  [LoggingEventType.CONNECTOR_EVENT_TYPE]: {
+    name: 'CONNECTOR_EVENT_TYPE',
     type: 'd11r_connectorStatusEvent',
-    component: 'd11r_connector'
+    component: 'd11r_connector',
+    componentDisplayName: 'Connector',
+    severity: 'info',
+    description: 'Connector status and connection events'
   },
   [LoggingEventType.MAPPING_LOADING_ERROR_EVENT_TYPE]: {
     name: 'MAPPING_LOADING_ERROR_EVENT_TYPE',
     type: 'd11r_mappingLoadingErrorEvent',
-    component: 'd11r_mapping'
+    component: 'd11r_system',
+    componentDisplayName: 'System',
+    severity: 'error',
+    description: 'Errors occurring during mapping configuration loading'
   },
-  [LoggingEventType.STATUS_MAPPING_ACTIVATION_ERROR_EVENT_TYPE]: {
-    name: 'STATUS_MAPPING_ACTIVATION_ERROR_EVENT_TYPE',
+  [LoggingEventType.MAPPING_ACTIVATION_ERROR_EVENT_TYPE]: {
+    name: 'MAPPING_ACTIVATION_ERROR_EVENT_TYPE',
     type: 'd11r_mappingActivationErrorEvent',
-    component: 'd11r_mapping'
+    component: 'd11r_mapping',
+    componentDisplayName: 'Mapping',
+    severity: 'error',
+    description: 'Errors during mapping activation'
   },
-  [LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE]: {
-    name: 'STATUS_MAPPING_CHANGED_EVENT_TYPE',
+  [LoggingEventType.MAPPING_CHANGED_EVENT_TYPE]: {
+    name: 'MAPPING_CHANGED_EVENT_TYPE',
     type: 'd11r_mappingChangedEvent',
-    component: 'd11r_mapping'
+    component: 'd11r_mapping',
+    componentDisplayName: 'Mapping',
+    severity: 'info',
+    description: 'Mapping configuration change notifications'
   },
-    [LoggingEventType.STATUS_MAPPING_FAILURE_EVENT_TYPE]: {
-    name: 'STATUS_MAPPING_FAILURE_EVENT_TYPE',
+  [LoggingEventType.MAPPING_MIGRATION_EVENT_TYPE]: {
+    name: 'MAPPING_MIGRATION_EVENT_TYPE',
+    type: 'd11r_mappingMigrationEvent',
+    component: 'd11r_mapping',
+    componentDisplayName: 'Mapping',
+    severity: 'info',
+    description: 'Automatic mapping migration notifications'
+  },
+  [LoggingEventType.MAPPING_FAILURE_EVENT_TYPE]: {
+    name: 'MAPPING_FAILURE_EVENT_TYPE',
     type: 'd11r_mappingFailureEvent',
-    component: 'd11r_mapping'
+    component: 'd11r_mapping',
+    componentDisplayName: 'Mapping',
+    severity: 'error',
+    description: 'Mapping processing failures and errors'
   },
-  [LoggingEventType.STATUS_NOTIFICATION_EVENT_TYPE]: {
-    name: 'STATUS_NOTIFICATION_EVENT_TYPE',
+  [LoggingEventType.NOTIFICATION_EVENT_TYPE]: {
+    name: 'NOTIFICATION_EVENT_TYPE',
     type: 'd11r_notificationStatusEvent',
-    component: 'd11r_connector'
+    component: 'd11r_connector',
+    componentDisplayName: 'Connector',
+    severity: 'warning',
+    description: 'Notification connector status events'
+  },
+  [LoggingEventType.SUBSCRIPTION_DEDUPLICATION_EVENT_TYPE]: {
+    name: 'SUBSCRIPTION_DEDUPLICATION_EVENT_TYPE',
+    type: 'd11r_subscriptionDeduplicationEvent',
+    component: 'd11r_connector',
+    componentDisplayName: 'Connector',
+    severity: 'info',
+    description: 'Duplicate subscription removed to prevent multiply processed messages'
   },
   [LoggingEventType.ALL]: {
     name: 'ALL',
     type: 'ALL',
-    component: 'd11r_AnyComponent'
+    component: 'd11r_AnyComponent',
+    componentDisplayName: 'All Components',
+    severity: 'info',
+    description: 'All event types'
   }
 };
 

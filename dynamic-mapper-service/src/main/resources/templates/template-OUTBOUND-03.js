@@ -6,6 +6,15 @@
  * @defaultTemplate false
  * @internal true
  * @readonly true
+ *
+ * Sample Cumulocity managed object payload (source)
+ * {
+ *     "time": "2025-01-01T12:00:00.000Z",
+ *     "type": "c8y_ConfigurationUpdate",
+ *     "bytes": [72, 101, 108, 108, 111],
+ *     "source": { "id": "12345" }
+ * }
+ * publishTopic 'devices/config/12345'
  */
 
 function extractFromSource(ctx) {

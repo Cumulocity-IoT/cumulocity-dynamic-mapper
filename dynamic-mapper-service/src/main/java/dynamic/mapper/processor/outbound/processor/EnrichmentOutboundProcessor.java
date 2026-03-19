@@ -36,10 +36,12 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.AbstractEnrichmentProcessor;
 import dynamic.mapper.processor.ProcessingException;
+import dynamic.mapper.processor.flow.JavaExtensionContextImpl;
 import dynamic.mapper.processor.model.DataPrepContext;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.TransformationType;
 import dynamic.mapper.service.MappingService;
+import dynamic.mapper.service.cache.FlowStateStore;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -55,37 +57,92 @@ public class EnrichmentOutboundProcessor extends AbstractEnrichmentProcessor {
     public EnrichmentOutboundProcessor(
             ConfigurationRegistry configurationRegistry,
             MappingService mappingService,
-            C8YAgent c8yAgent) {
-        super(configurationRegistry, mappingService);
+            C8YAgent c8yAgent,
+            FlowStateStore flowStateStore) {
+        super(configurationRegistry, mappingService, flowStateStore);
         this.c8yAgent = c8yAgent;
     }
 
     @Override
-    protected void enrichPayload(ProcessingContext<?> context) {
+    protected void enrichPayload(ProcessingContext<?> context) throws ProcessingException {
         /*
          * Enrich payload with _IDENTITY_ property containing source device information
          */
         String tenant = context.getTenant();
         Object payloadObject = context.getPayload();
         Mapping mapping = context.getMapping();
+        boolean isSmartFunction = TransformationType.SMART_FUNCTION.equals(mapping.getTransformationType())
+                || TransformationType.EXTENSION_JAVA.equals(mapping.getTransformationType());
 
-        String identifier = context.getTesting() ? "_IDENTITY_.c8ySourceId" : context.getApi().identifier;
+        String identifier = context.getApi().identifier;
+        if (context.getTesting() && payloadObject instanceof Map) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> payloadMap = (Map<String, Object>) payloadObject;
+            normalizeTestPayload(tenant, payloadMap, identifier);
+        }
         String payloadAsString = toPrettyJsonString(payloadObject);
         Object sourceId = extractContent(context, payloadObject, payloadAsString, identifier);
+        if (sourceId == null) {
+            if (context.getTesting()) {
+                // Test payload may not contain the source identifier (e.g. no source.id on a
+                // MEASUREMENT). Fall back to a mock ID so the test can proceed without error.
+                sourceId = "MOCK_DEVICE_ID";
+                log.warn("{} - Test mode: payload has no '{}' field, falling back to mock source id '{}'",
+                        tenant, identifier, sourceId);
+            } else {
+                throw new ProcessingException(
+                        String.format("Could not extract source ID from payload using path '%s'", identifier));
+            }
+        }
         context.setSourceId(sourceId.toString());
 
         Map<String, String> identityFragment = new HashMap<>();
         identityFragment.put("c8ySourceId", sourceId.toString());
         identityFragment.put("externalIdType", mapping.getExternalIdType());
 
-        // Add topic levels to DataPrepContext if available
+        // For SMART_FUNCTION/EXTENSION_JAVA: populate read-only config — never expand the payload Map
+        // _IDENTITY_ and _TOPIC_LEVEL_ are template-substitution tokens not relevant here;
+        // the function/extension reads device identity directly from the C8Y payload.
         DataPrepContext flowContext = context.getFlowContext();
-        if (flowContext != null && context.getGraalContext() != null
-                && TransformationType.SMART_FUNCTION.equals(context.getMapping().getTransformationType())) {
-            addToFlowContext(flowContext, context, Mapping.TOKEN_IDENTITY, identityFragment);
-            List<String> splitTopicExAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
-            addToFlowContext(flowContext, context, Mapping.TOKEN_TOPIC_LEVEL, splitTopicExAsList);
-            addToFlowContext(flowContext, context, ProcessingContext.RETAIN, false);
+
+        // Declared here so externalId can be added after resolution below
+        Map<String, Object> config = null;
+        dynamic.mapper.processor.model.SmartFunctionContext sfContext = null;
+        JavaExtensionContextImpl javaExtContext = null;
+
+        if (isSmartFunction) {
+            if (flowContext instanceof dynamic.mapper.processor.model.SmartFunctionContext) {
+                sfContext = (dynamic.mapper.processor.model.SmartFunctionContext) flowContext;
+
+                config = new HashMap<>();
+                config.put("tenant", tenant);
+                config.put("topic", context.getTopic());
+                config.put("clientId", context.getClientId());
+                config.put("mappingName", mapping.getName());
+                config.put("mappingId", mapping.getId());
+                config.put("targetAPI", mapping.getTargetAPI().toString());
+                config.put(ProcessingContext.DEBUG, mapping.getDebug());
+                config.put(ProcessingContext.RETAIN, false);
+                // externalId is added below after resolution
+            } else if (flowContext instanceof JavaExtensionContextImpl) {
+                javaExtContext = (JavaExtensionContextImpl) flowContext;
+                // externalId is set directly on javaExtContext below after resolution
+            } else if (TransformationType.EXTENSION_JAVA.equals(mapping.getTransformationType())
+                    && context.getTesting()
+                    && payloadObject instanceof Map) {
+                // Test mode: flowContext is null for EXTENSION_JAVA (created later in ExtensibleOutboundProcessor).
+                // Java extensions typically read source.id directly from the payload. Inject a mock source
+                // so the extension can build a meaningful topic instead of "measurements/null".
+                @SuppressWarnings("unchecked")
+                Map<String, Object> payloadMap = (Map<String, Object>) payloadObject;
+                if (!payloadMap.containsKey("source")) {
+                    Map<String, Object> mockSource = new HashMap<>();
+                    mockSource.put("id", sourceId.toString());
+                    payloadMap.put("source", mockSource);
+                    log.debug("{} - Test mode: injected mock source.id '{}' into payload for Java extension",
+                            tenant, sourceId);
+                }
+            }
         } else {
             if (payloadObject instanceof Map) {
                 @SuppressWarnings("unchecked")
@@ -105,21 +162,44 @@ public class EnrichmentOutboundProcessor extends AbstractEnrichmentProcessor {
                     new GId(sourceId.toString()), mapping.getExternalIdType(),
                     context.getTesting());
             if (externalId == null) {
-                if (context.getSendPayload()) {
+                if (!context.getTesting()) {
+                    // Production: a missing external ID is a hard error — the broker topic cannot be resolved.
                     throw new RuntimeException(String.format("External id %s for type %s not found!",
                             sourceId.toString(), mapping.getExternalIdType()));
                 }
+                // Test mode: source is synthetic, so use sourceId as fallback to keep topic templates resolvable.
+                String fallbackExternalId = sourceId.toString();
+                log.warn("{} - External id for device '{}' with type '{}' not found — using fallback '{}' in JS context",
+                        tenant, sourceId, mapping.getExternalIdType(), fallbackExternalId);
+                identityFragment.put("externalId", fallbackExternalId);
+                if (config != null) {
+                    config.put("externalId", fallbackExternalId);
+                }
+                if (javaExtContext != null) {
+                    javaExtContext.setExternalId(fallbackExternalId);
+                }
             } else {
                 identityFragment.put("externalId", externalId.getExternalId());
+                if (config != null) {
+                    config.put("externalId", externalId.getExternalId());
+                }
+                if (javaExtContext != null) {
+                    javaExtContext.setExternalId(externalId.getExternalId());
+                }
             }
+        }
+
+        // Set config after all values (including externalId) are populated
+        if (sfContext != null && config != null) {
+            sfContext.setConfig(config);
         }
     }
 
     @Override
     protected void handleEnrichmentError(String tenant, Mapping mapping, Exception e,
             ProcessingContext<?> context, MappingStatus mappingStatus) {
-        String errorMessage = String.format("%s - Error in enrichment phase for mapping: %s", tenant,
-                mapping.getName());
+        String errorMessage = String.format("%s - Error in enrichment phase for mapping: %s: %s", tenant,
+                mapping.getName(), e.getMessage());
         log.error(errorMessage, e);
         context.addError(new ProcessingException(errorMessage, e));
         context.setIgnoreFurtherProcessing(true);

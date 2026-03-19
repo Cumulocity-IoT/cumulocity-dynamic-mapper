@@ -17,15 +17,15 @@
  *
  * @authors Christof Strack
  */
-import { inject, Injectable } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { FetchClient, IFetchResponse } from '@c8y/client';
 import {
   BehaviorSubject,
   Observable,
   Subject,
-  Subscription,
   combineLatest,
   from,
+  merge,
   of,
   timer
 } from 'rxjs';
@@ -38,7 +38,6 @@ import {
   startWith,
   distinctUntilChanged,
   tap,
-  takeWhile,
 } from 'rxjs/operators';
 import { BASE_URL, ConnectorConfiguration, ConnectorSpecification, ConnectorStatus, ConnectorStatusEvent, PATH_CONFIGURATION_CONNECTION_ENDPOINT, PATH_STATUS_CONNECTORS_ENDPOINT, PollingInterval } from '..';
 
@@ -49,6 +48,7 @@ interface ConnectorConfigurationState {
   isLoading: boolean;
   error: string | null;
 }
+
 @Injectable({ providedIn: 'root' })
 export class ConnectorConfigurationService {
 
@@ -76,13 +76,12 @@ export class ConnectorConfigurationService {
     { label: '1 minute', value: 60000, seconds: 60 }
   ];
 
-  private countdownSubscription: Subscription | null = null;
+  // Countdown active flag — controls whether the visual countdown in the grid is running
   private isCountdownActive = true;
-  private lastTriggerTime = 0;
-  private currentInterval = 0;
 
-  // Countdown state
-  private readonly nextTriggerCountdown$ = new BehaviorSubject<number>(0);
+  // Last successfully loaded status map — returned on poll error to preserve stale data
+  // instead of resetting all connectors to UNKNOWN.
+  private lastStatusMap: { [identifier: string]: ConnectorStatusEvent } = {};
 
   // Configuration
   private readonly CONFIG = {
@@ -103,13 +102,12 @@ export class ConnectorConfigurationService {
   ) {}
 
   cleanUp(): void {
-    console.log('ConnectorConfigurationService destroyed');
+    // destroy$ must be completed before all subjects so takeUntil unsubscribes streams first
     this.destroy$.next();
     this.destroy$.complete();
     this.state$.complete();
     this.refreshTrigger$.complete();
     this.pollingInterval$.complete();
-    this.nextTriggerCountdown$.complete();
   }
 
   // Public API
@@ -134,14 +132,8 @@ export class ConnectorConfigurationService {
     return this.specifications$;
   }
 
-  // Countdown API
-  getNextTriggerCountdown(): Observable<number> {
-    return this.nextTriggerCountdown$.asObservable();
-  }
-
   // Polling configuration methods
   setPollingInterval(interval: number): void {
-    // console.log(`Setting polling interval to ${interval} ms`);
     this.pollingInterval$.next(interval);
   }
 
@@ -163,9 +155,10 @@ export class ConnectorConfigurationService {
     return found ? found.label : `${current / 1000} seconds`;
   }
 
+  // Fix 3: only emit on the refresh trigger — do NOT reset the polling timer by
+  // re-emitting to pollingInterval$, which would restart the auto-poll countdown.
   refreshConfigurations(): void {
     this.refreshTrigger$.next();
-    this.setPollingInterval(this.getCurrentPollingIntervalValue());
   }
 
   resetCache(): void {
@@ -177,36 +170,21 @@ export class ConnectorConfigurationService {
     });
   }
 
-  // Add these public methods to control countdown
+  // Countdown control — called by the grid to pause/resume the visual countdown component.
   startCountdown(): void {
-    if (this.isCountdownActive) {
-      // console.log('⏸️ Countdown already active');
-      return;
-    }
-
     this.isCountdownActive = true;
-    console.log('▶️ Starting countdown');
-
-    // Use the current interval and last trigger time to resume countdown
-    this.createCountdownSubscription();
   }
 
   stopCountdown(): void {
-    if (!this.isCountdownActive) {
-      console.log('⏸️ Countdown already stopped');
-      return;
-    }
-
     this.isCountdownActive = false;
-    console.log('⏹️ Stopping countdown');
+  }
 
-    if (this.countdownSubscription) {
-      this.countdownSubscription.unsubscribe();
-      this.countdownSubscription = null;
-    }
+  isCountdownRunning(): boolean {
+    return this.isCountdownActive;
+  }
 
-    // Optionally reset the countdown display
-    this.nextTriggerCountdown$.next(0);
+  toggleCountdown(): void {
+    this.isCountdownActive = !this.isCountdownActive;
   }
 
   // CRUD Operations
@@ -221,9 +199,7 @@ export class ConnectorConfigurationService {
         }
       );
 
-      // Refresh configurations after successful creation
       this.refreshConfigurations();
-
       return response;
     } catch (error) {
       console.error('Failed to create connector configuration:', error);
@@ -305,7 +281,6 @@ export class ConnectorConfigurationService {
         this.handleError('Failed to load configurations', error);
         return of([]);
       }),
-      // tap( configs => console.log ("Configuration", configs)),
       distinctUntilChanged(),
       shareReplay(1),
       takeUntil(this.destroy$)
@@ -327,80 +302,18 @@ export class ConnectorConfigurationService {
   }
 
   private createStatusStream(): Observable<{ [identifier: string]: ConnectorStatusEvent }> {
-    return this.pollingInterval$.pipe(
-      switchMap(interval => {
-        // console.log(`🔄 Creating status stream with ${interval}ms interval`);
-        this.currentInterval = interval;
-
-        return timer(0, interval).pipe(
-          tap(() => {
-            this.lastTriggerTime = Date.now();
-            // console.log(`⏰ Timer triggered - loading connector status`);
-
-            // Only start countdown if it should be active
-            if (this.isCountdownActive) {
-              this.restartCountdown();
-            }
-          })
-        );
-      }),
+    const timerTrigger$ = this.pollingInterval$.pipe(
+      switchMap(interval => timer(0, interval))
+    );
+    return merge(timerTrigger$, this.refreshTrigger$).pipe(
       switchMap(() => this.loadConnectorStatus()),
       catchError(error => {
         console.error('Failed to load connector status:', error);
-        return of({});
+        return of(this.lastStatusMap);
       }),
       shareReplay(1),
       takeUntil(this.destroy$)
     );
-  }
-
-  private restartCountdown(): void {
-    // Clean up existing countdown
-    if (this.countdownSubscription) {
-      this.countdownSubscription.unsubscribe();
-    }
-
-    // Create new countdown subscription
-    this.createCountdownSubscription();
-  }
-
-  private createCountdownSubscription(): void {
-    if (!this.isCountdownActive || !this.currentInterval) {
-      return;
-    }
-
-    this.countdownSubscription = timer(0, 1000).pipe(
-      map(() => {
-        const elapsed = Date.now() - this.lastTriggerTime;
-        const remaining = Math.max(0, Math.ceil((this.currentInterval - elapsed) / 1000));
-        return remaining;
-      }),
-      tap(remaining => {
-        this.nextTriggerCountdown$.next(remaining * 1000); // in ms
-        // console.log(`⏰ Next trigger in: ${remaining} seconds`);
-      }),
-      takeWhile(remaining => remaining > 0, true), // Include the final 0
-      takeUntil(this.destroy$)
-    ).subscribe({
-      complete: () => {
-        // Countdown completed naturally
-        //console.log('⏰ Countdown cycle completed');
-      }
-    });
-  }
-
-  // Optional: Method to check countdown status
-  isCountdownRunning(): boolean {
-    return this.isCountdownActive;
-  }
-
-  // Optional: Method to toggle countdown
-  toggleCountdown(): void {
-    if (this.isCountdownActive) {
-      this.stopCountdown();
-    } else {
-      this.startCountdown();
-    }
   }
 
   private createSpecificationsStream(): Observable<ConnectorSpecification[]> {
@@ -423,11 +336,15 @@ export class ConnectorConfigurationService {
     );
   }
 
+  // Fix 6: cache each successful result; on error return stale data so connectors
+  // keep their last known status instead of all flipping to UNKNOWN.
   private loadConnectorStatus(): Observable<{ [identifier: string]: ConnectorStatusEvent }> {
     return from(this.fetchConnectorStatus()).pipe(
+      tap(statusMap => { this.lastStatusMap = statusMap; }),
       catchError(error => {
         console.error('Failed to fetch connector status:', error);
-        return of({});
+        this.updateState({ error: 'Status poll failed — showing last known status' });
+        return of(this.lastStatusMap);
       })
     );
   }

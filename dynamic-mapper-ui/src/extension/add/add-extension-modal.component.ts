@@ -21,7 +21,7 @@ import { Component, OnDestroy, ViewChild, ViewEncapsulation } from '@angular/cor
 import { ApplicationService, IApplication, IManagedObject } from '@c8y/client';
 import { AlertService, CoreModule, DropAreaComponent, ModalLabels } from '@c8y/ngx-components';
 import { gettext } from '@c8y/ngx-components/gettext';
-import { Observable, Subject, Subscription } from 'rxjs';
+import { Subject, Subscription } from 'rxjs';
 import { ERROR_MESSAGES } from '../share/extension.constants';
 import { ExtensionService } from '../extension.service';
 

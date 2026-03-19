@@ -55,4 +55,7 @@ public class TestResult {
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Was the test successful")
     @NotNull
     private Boolean success = false;
+
+    @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "ID of the test device created in C8Y inventory (only set when createTestDevice=true)")
+    private String testDeviceId;
 }

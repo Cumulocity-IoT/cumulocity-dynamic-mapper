@@ -28,7 +28,17 @@
 
 extensions:
   # Inbound Extensions (Device → Cumulocity)
-  - eventName: ProtobufCustomEvent
+  - eventName: SparkplugBMeasurement
+    className: dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionSparkplugBMeasurement
+    parameter:
+      units:
+        unit1: V
+        unit2: A
+      fragment: Energy
+    description: Custom measurement processor for Sparkplug B with configurable fragment and unit
+    version: "1.0"
+
+  - eventName: ProtobufEvent
     className: dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionCustomEvent
     description: Custom event processor for protobuf message formats
     version: "2.0"
@@ -46,17 +56,35 @@ extensions:
   # Smart Function Equivalents - Inbound
   - eventName: TemperatureMeasurement
     className: dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionSmartInbound01
+    parameter:
+      fragment: c8y_Steam
+      series: Temperature
+      unit: C
     description: Temperature measurement processor demonstrating smart function pattern
     version: "2.0"
 
   - eventName: DynamicSensorMeasurement
     className: dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionSmartInbound02
+    parameter:
+      voltageUnit: V
+      currentUnit: A
+      defaultSensorType: voltage
     description: Dynamic sensor measurement processor with flexible data handling
     version: "2.0"
 
   - eventName: MeasurementWithImplicitDevice
     className: dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionSmartInbound03
     description: Measurement processor with implicit device creation support
+    version: "2.0"
+
+  - eventName: ConditionalMeasurementOrEvent
+    className: dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionSmartInbound04
+    description: Conditional processor creating either measurement or event based on payload type
+    version: "2.0"
+
+  - eventName: MeasurementWithSourceIdOverride
+    className: dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionSmartInbound06
+    description: Measurement processor with sourceId override to route data to parent devices (since 6.2)
     version: "2.0"
 
   # Outbound Extensions (Cumulocity → Device)
@@ -76,7 +104,16 @@ extensions:
     description: Measurement to JSON array converter for batch processing
     version: "2.0"
 
-  - eventName: MeasurementWithKafkaKey
+  - eventName: MeasurementToKafkaJson
     className: dynamic.mapper.processor.extension.external.outbound.ProcessorExtensionSmartOutbound03
     description: Measurement processor with Kafka key generation support
+    version: "2.0"
+
+  - eventName: AlarmToSparkplugB
+    className: dynamic.mapper.processor.extension.external.outbound.ProcessorExtensionAlarmToSparkplugB
+    parameter:
+      metricPrefix: Alarms
+      qos: "1"
+      retain: false
+    description: Alarm to Sparkplug B Alarm via metrics and Protobuf converter
     version: "2.0"

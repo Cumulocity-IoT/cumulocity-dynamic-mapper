@@ -453,7 +453,7 @@ class CamelPipelineOutboundIntegrationTest {
         );
 
         // When - Process test notification (uses testMapping parameter)
-        ProcessingResultWrapper<?> result = dispatcher.onTestNotification(notification, mapping);
+        ProcessingResultWrapper<?> result = dispatcher.onTestNotification(notification, mapping, false);
 
         // Then - Verify test notification processed
         assertNotNull(result, "Should return processing result");

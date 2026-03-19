@@ -24,7 +24,7 @@ package dynamic.mapper.processor.extension.external.outbound;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.extension.ProcessorExtensionOutbound;
-import dynamic.mapper.processor.model.DataPreparationContext;
+import dynamic.mapper.processor.model.JavaExtensionContext;
 import dynamic.mapper.processor.model.DeviceMessage;
 import dynamic.mapper.processor.model.Message;
 import lombok.extern.slf4j.Slf4j;
@@ -78,7 +78,7 @@ public class ProcessorExtensionSmartOutbound01 implements ProcessorExtensionOutb
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
-    public DeviceMessage[] onMessage(Message<Object> message, DataPreparationContext context) throws ProcessingException {
+    public DeviceMessage[] onMessage(Message<Object> message, JavaExtensionContext context) throws ProcessingException {
         try {
             // Get the Cumulocity measurement payload
             @SuppressWarnings("unchecked")

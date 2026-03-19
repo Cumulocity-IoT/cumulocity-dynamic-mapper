@@ -24,24 +24,33 @@ import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
 @Component({
   selector: 'd11r-mapping-renderer-status',
   template: `
-    @if (context.value.debug) {
-      <span class="text-10 label label-primary">debug</span>
-    }
-    @switch (context.value.snoopStatus) {
-      @case ('STARTED') {
-        <span class="text-10 label label-primary">snoop: started</span>
+      @if (context.value.debug) {
+        <div class="d-flex flex-col">
+        <span class="text-12 label label-success">debug</span>
+      </div>
       }
-      @case ('STOPPED') {
-        <span class="text-10 label label-primary">snoop: stopped</span>
+      @switch (context.value.snoopStatus) {
+        @case ('STARTED') {
+          <div class="d-flex flex-col">
+            <span class="text-12 label label-success">snoop: started</span>
+          </div>
+        }
+        @case ('STOPPED') {
+          <div class="d-flex flex-col">
+            <span class="text-12 label label-success">snoop: stopped</span>
+          </div>
+        }
+        @case ('ENABLED') {
+          <div class="d-flex flex-col">
+            <span class="text-12 label label-success">snoop: pending</span>
+          </div>
+        }
+
       }
-      @case ('ENABLED') {
-        <span class="text-10 label label-primary">snoop: pending</span>
-      }
-    }
     `,
   standalone: true,
   imports: [CoreModule]
 })
 export class StatusRendererComponent {
-  constructor(public readonly context: CellRendererContext) {}
+  constructor(public readonly context: CellRendererContext) { }
 }

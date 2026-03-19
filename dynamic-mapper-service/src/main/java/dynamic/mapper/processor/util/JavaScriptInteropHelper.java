@@ -16,7 +16,7 @@ import dynamic.mapper.processor.model.CumulocityType;
 import dynamic.mapper.processor.model.Destination;
 import dynamic.mapper.processor.model.DeviceMessage;
 import dynamic.mapper.processor.model.ExternalId;
-import dynamic.mapper.processor.model.ExternalSource;
+
 import dynamic.mapper.processor.model.ProcessingContext;
 
 /**
@@ -113,6 +113,9 @@ public class JavaScriptInteropHelper {
                 msg.setContextData(contextDataMap);
             }
         }
+        if (value.hasMember("sourceId") && !value.getMember("sourceId").isNull()) {
+            msg.setSourceId(value.getMember("sourceId").asString());
+        }
 
         return msg;
     }
@@ -178,6 +181,9 @@ public class JavaScriptInteropHelper {
         // Handle action
         if (value.hasMember("action")) {
             msg.setAction(value.getMember("action").asString());
+        }
+        if (value.hasMember("sourceId") && !value.getMember("sourceId").isNull()) {
+            msg.setSourceId(value.getMember("sourceId").asString());
         }
 
         return msg;
@@ -282,57 +288,22 @@ public class JavaScriptInteropHelper {
                 if (item instanceof ExternalId) {
                     result.add((ExternalId) item);
                 } else if (item instanceof Map) {
-                    ExternalId externalSource = JavaScriptInteropHelper
+                    ExternalId externalId = JavaScriptInteropHelper
                             .convertMapToExternalId((Map<String, Object>) item);
-                    if (externalSource != null) {
-                        result.add(externalSource);
+                    if (externalId != null) {
+                        result.add(externalId);
                     }
                 }
             }
         } else if (obj instanceof Map) {
-            ExternalId externalSource = JavaScriptInteropHelper
+            ExternalId externalId = JavaScriptInteropHelper
                     .convertMapToExternalId((Map<String, Object>) obj);
-            if (externalSource != null) {
-                result.add(externalSource);
+            if (externalId != null) {
+                result.add(externalId);
             }
         }
 
         return result;
-    }
-
-    static ExternalSource convertMapToExternalSource(Map<String, Object> map) {
-        // ... (keep existing implementation)
-        if (map == null) {
-            return null;
-        }
-
-        ExternalSource externalSource = new ExternalSource();
-
-        if (map.containsKey("externalId")) {
-            externalSource.setExternalId(String.valueOf(map.get("externalId")));
-        }
-        if (map.containsKey("type")) {
-            externalSource.setType(String.valueOf(map.get("type")));
-        }
-        if (map.containsKey("autoCreateDeviceMO")) {
-            externalSource.setAutoCreateDeviceMO((Boolean) map.get("autoCreateDeviceMO"));
-        }
-        if (map.containsKey("parentId")) {
-            externalSource.setParentId(String.valueOf(map.get("parentId")));
-        }
-        if (map.containsKey("childReference")) {
-            externalSource.setChildReference(String.valueOf(map.get("childReference")));
-        }
-        if (map.containsKey("clientId")) {
-            externalSource.setClientId(String.valueOf(map.get("clientId")));
-        }
-
-        // Only return if we have the required fields
-        if (externalSource.getExternalId() != null && externalSource.getType() != null) {
-            return externalSource;
-        }
-
-        return null;
     }
 
     static ExternalId convertMapToExternalId(Map<String, Object> map) {

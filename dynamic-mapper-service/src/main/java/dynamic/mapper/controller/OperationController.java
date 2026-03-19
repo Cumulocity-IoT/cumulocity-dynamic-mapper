@@ -63,7 +63,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.model.Direction;
+import dynamic.mapper.model.LoggingEventType;
 import dynamic.mapper.model.SnoopStatus;
+import org.joda.time.DateTime;
 import dynamic.mapper.service.ConnectorConfigurationService;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.service.ServiceConfigurationService;
@@ -126,6 +128,9 @@ public class OperationController {
     private InventoryFacade inventoryFacade;
 
     @Autowired
+    private dynamic.mapper.service.cache.FlowStateStore flowStateStore;
+
+    @Autowired
     private ExtensionManager extensionManager;
 
     private ObjectMapper objectMapper;
@@ -143,6 +148,7 @@ public class OperationController {
             - `RELOAD_MAPPINGS`: Reloads all mappings for the current tenant.
             - `ACTIVATE_MAPPING`: Activates or deactivates a mapping.
             - `APPLY_MAPPING_FILTER`: Applies a filter to a mapping.
+            - `UPDATE_CODE`: UPdate code for Smart Function or Substitution as Code.
             - `DEBUG_MAPPING`: Enables or disables debug mode for a mapping.
             - `SNOOP_MAPPING`: Enables or disables snooping for a mapping.
             - `SNOOP_RESET`: Resets snooping for a mapping.
@@ -265,6 +271,13 @@ public class OperationController {
                                 "User does not have permission to apply mapping filter");
                     }
                     return handleApplyMappingFilter(tenant, parameters);
+
+                case UPDATE_CODE:
+                    if (!Utils.userHasMappingCreateRole()) {
+                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                "User does not have permission to change transformation code");
+                    }
+                    return handleApplyUpdateCode(tenant, parameters);
                 case DEBUG_MAPPING:
                     if (!Utils.userHasMappingCreateRole()) {
                         throw new ResponseStatusException(HttpStatus.FORBIDDEN,
@@ -376,7 +389,6 @@ public class OperationController {
         ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
         log.debug("{} - Init system code template", tenant);
 
-        // Initialize code templates from properties if not already set
         serviceConfigurationService.initCodeTemplates(serviceConfiguration, true);
 
         try {
@@ -386,6 +398,13 @@ public class OperationController {
             log.error("{} - Error saving service configuration with code templates: {}", tenant, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
+
+        c8YAgent.createOperationEvent(
+                "System code templates re-initialized",
+                LoggingEventType.CODE_TEMPLATE_INIT_EVENT_TYPE,
+                DateTime.now(),
+                tenant,
+                null);
 
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
@@ -463,6 +482,13 @@ public class OperationController {
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
+    private ResponseEntity<?> handleApplyUpdateCode(String tenant, Map<String, String> parameters) throws Exception {
+        String id = parameters.get("id");
+        String code = parameters.get("code");
+        mappingService.setCodeMapping(tenant, id, code);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
     private ResponseEntity<?> handleDebugMapping(String tenant, Map<String, String> parameters) throws Exception {
         String id = parameters.get("id");
         Boolean debugBoolean = Boolean.parseBoolean(parameters.get("debug"));
@@ -513,15 +539,18 @@ public class OperationController {
                 tenant);
         AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
                 connectorIdentifier);
-        // Wait until client is connected before subscribing - otherwise "old"
-        // notification messages will be ignored
-        if (client.supportedDirections().contains(Direction.OUTBOUND)) {
+        // Wait for initialization to complete for all connector types before returning,
+        // so the frontend sees the final status on the next poll rather than CONNECTING.
+        if (connectTask != null) {
             try {
                 connectTask.get(10, TimeUnit.SECONDS);
             } catch (Exception e) {
                 log.error("{} - Error waiting for client to connect: {}", tenant, e.getMessage());
                 throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
             }
+        }
+        // Reconnect outbound notification subscriptions after the connector is ready
+        if (client.supportedDirections().contains(Direction.OUTBOUND)) {
             configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
         }
 
@@ -538,7 +567,6 @@ public class OperationController {
 
         AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
                 connectorIdentifier);
-        // client.submitDisconnect();
         bootstrapService.disableConnector(tenant, client.getConnectorIdentifier());
         // We might need to Reconnect other Notification Clients for other connectors
         configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
@@ -568,6 +596,10 @@ public class OperationController {
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } else if ("MOCK_INVENTORY_CACHE".equals(cacheId)) {
             inventoryFacade.clearInventoryCache();
+            log.info("{} - Cache cleared: {}", tenant, cacheId);
+            return ResponseEntity.status(HttpStatus.CREATED).build();
+        } else if ("FLOW_STATE_CACHE".equals(cacheId)) {
+            flowStateStore.clearTenantState(tenant);
             log.info("{} - Cache cleared: {}", tenant, cacheId);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         }

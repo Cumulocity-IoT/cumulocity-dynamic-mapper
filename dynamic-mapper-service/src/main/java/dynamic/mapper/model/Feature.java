@@ -27,6 +27,9 @@ import lombok.ToString;
 
 import jakarta.validation.constraints.NotNull;
 
+import com.fasterxml.jackson.annotation.JsonSetter;
+import com.fasterxml.jackson.annotation.Nulls;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 
 @Getter
@@ -57,4 +60,13 @@ public class Feature {
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Flag to check if the device isolation for messages on over the Cumulocity MQTT Service is enabled", example = "true")
     @NotNull
     private Boolean deviceIsolationMQTTServiceEnabled;
+
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Suppress deprecation warning in UI.", example = "false")
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    private Boolean suppressDeprecationWarning;
+
+    @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "Holds the version string of the last accepted SUBSTITUTION_AS_CODE deprecation notice (e.g. '6.2'). If the value matches the current release version the notice is not shown again.", example = "6.2")
+    @JsonSetter(nulls = Nulls.SKIP)
+    private String acceptedDeprecationNotice;
 }

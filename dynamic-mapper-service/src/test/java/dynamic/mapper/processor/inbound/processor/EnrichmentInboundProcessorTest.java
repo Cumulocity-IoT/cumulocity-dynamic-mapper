@@ -27,6 +27,7 @@ import static org.mockito.Mockito.*;
 
 import java.lang.reflect.Field;
 
+import dynamic.mapper.service.cache.FlowStateStore;
 import org.apache.camel.Exchange;
 import org.apache.camel.Message;
 import org.junit.jupiter.api.BeforeEach;
@@ -61,6 +62,9 @@ class EnrichmentInboundProcessorTest {
     private MappingService mappingService;
 
     @Mock
+    private FlowStateStore flowStateStore;
+
+    @Mock
     private Exchange exchange;
 
     @Mock
@@ -74,6 +78,15 @@ class EnrichmentInboundProcessorTest {
 
     @Mock
     private ProcessingContext<Object> processingContext;
+
+    @Mock
+    private dynamic.mapper.processor.model.RoutingContext routingContext;
+
+    @Mock
+    private dynamic.mapper.processor.model.PayloadContext<Object> payloadContext;
+
+    @Mock
+    private dynamic.mapper.processor.model.ProcessingState processingState;
 
     private EnrichmentInboundProcessor processor;
 
@@ -104,7 +117,7 @@ class EnrichmentInboundProcessorTest {
         );
 
         // Create the processor
-        processor = new EnrichmentInboundProcessor(configurationRegistry, mappingService);
+        processor = new EnrichmentInboundProcessor(configurationRegistry, mappingService, flowStateStore);
 
         // Setup basic exchange and message mocks
         when(exchange.getIn()).thenReturn(message);
@@ -118,6 +131,14 @@ class EnrichmentInboundProcessorTest {
         when(processingContext.getServiceConfiguration()).thenReturn(serviceConfiguration);
         when(processingContext.getTenant()).thenReturn(TEST_TENANT);
         when(processingContext.getMapping()).thenReturn(mapping);
+
+        // Mock focused contexts
+        when(processingContext.getRoutingContext()).thenReturn(routingContext);
+        when(processingContext.getPayloadContext()).thenReturn(payloadContext);
+        when(processingContext.getProcessingState()).thenReturn(processingState);
+
+        // Mock routing context
+        when(routingContext.getTenant()).thenReturn(TEST_TENANT);
 
         // Setup mapping status mocks - this is crucial!
         when(mappingService.getMappingStatus(eq(TEST_TENANT), eq(mapping))).thenReturn(mappingStatus);
@@ -210,7 +231,7 @@ class EnrichmentInboundProcessorTest {
     @Test
     void testConstructorInitialization() {
         // Given & When
-        EnrichmentInboundProcessor newProcessor = new EnrichmentInboundProcessor(configurationRegistry, mappingService);
+        EnrichmentInboundProcessor newProcessor = new EnrichmentInboundProcessor(configurationRegistry, mappingService, flowStateStore);
 
         // Then
         assertNotNull(newProcessor);
@@ -269,7 +290,7 @@ class EnrichmentInboundProcessorTest {
     @Test
     void testWithMinimalMocking() throws Exception {
         // Create a completely fresh processor with minimal mocking
-        EnrichmentInboundProcessor freshProcessor = new EnrichmentInboundProcessor(configurationRegistry, mappingService);
+        EnrichmentInboundProcessor freshProcessor = new EnrichmentInboundProcessor(configurationRegistry, mappingService, flowStateStore);
 
         // Only inject mappingService if the field exists
         try {

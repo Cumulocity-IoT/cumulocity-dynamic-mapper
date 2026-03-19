@@ -27,6 +27,7 @@ public enum MappingType {
     HEX("HEX"),
     PROTOBUF_INTERNAL("PROTOBUF_INTERNAL"),
     EXTENSION_JAVA("EXTENSION_JAVA"),
+    CODE_BASED("CODE_BASED"),
     ;
 
     public final String name;

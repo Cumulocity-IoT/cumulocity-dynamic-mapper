@@ -38,6 +38,7 @@ import org.apache.camel.support.DefaultExchange;
 import com.dashjoin.jsonata.json.Json;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.client.AConnectorClient;
+import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
@@ -64,7 +65,6 @@ public class CamelDispatcherOutbound implements NotificationCallback {
     private ConfigurationRegistry configurationRegistry;
     private ProducerTemplate producerTemplate;
     private CamelContext camelContext;
-
     /**
      * Constructor matching DispatcherInbound signature
      */
@@ -93,7 +93,12 @@ public class CamelDispatcherOutbound implements NotificationCallback {
 
     @Override
     public ProcessingResultWrapper<?> onNotification(Notification notification) {
-        return processNotification(notification, null);
+        if (connectorClient.getConnectorType() == ConnectorType.TEST) {
+            log.debug("{} - Skipping live notification for TEST connector — only processes via TestController",
+                    connectorClient.getTenant());
+            return ProcessingResultWrapper.builder().consolidatedQos(Qos.AT_MOST_ONCE).build();
+        }
+        return processNotification(notification, null, true);
     }
 
     @Override
@@ -111,16 +116,19 @@ public class CamelDispatcherOutbound implements NotificationCallback {
     }
 
     @Override
-    public ProcessingResultWrapper<?> onTestNotification(Notification notification, Mapping mapping) {
-        return processNotification(notification, mapping);
+    public ProcessingResultWrapper<?> onTestNotification(Notification notification, Mapping mapping, boolean send) {
+        return processNotification(notification, mapping, send);
     }
 
     /**
      * Process notification with optional test mapping
      */
-    private ProcessingResultWrapper<?> processNotification(Notification notification, Mapping testMapping) {
+    private ProcessingResultWrapper<?> processNotification(Notification notification, Mapping testMapping, boolean send) {
+        // Outbound: testing=true always routes identity lookups to mocks, even when sendPayload=true.
+        // Unlike inbound, the outbound source payload is always synthetic (built from a template),
+        // so there is no real C8Y source device to resolve — mocks are required regardless of send.
         boolean testing = testMapping != null;
-        
+
         Qos consolidatedQos = Qos.AT_LEAST_ONCE;
         ProcessingResultWrapper<?> result = ProcessingResultWrapper.builder()
                 .consolidatedQos(consolidatedQos)
@@ -130,7 +138,7 @@ public class CamelDispatcherOutbound implements NotificationCallback {
         String tenant = getTenantFromNotificationHeaders(notification.getNotificationHeaders());
 
         // Check connector connection status (skip for testing)
-        if (!testing && !connectorClient.isConnected()) {
+        if (!testing && !connectorClient.isConnected() && connectorClient.getConnectorType() != ConnectorType.TEST) {
             log.warn("{} - Notification message received but connector {} is not connected. Ignoring message..",
                     tenant, connectorClient.getConnectorName());
             return result;
@@ -150,10 +158,10 @@ public class CamelDispatcherOutbound implements NotificationCallback {
         }
 
         // Convert Notification to C8YMessage
-        C8YMessage c8yMessage = convertNotificationToC8YMessage(notification, tenant, !testing);
-        
+        C8YMessage c8yMessage = convertNotificationToC8YMessage(notification, tenant, send);
+
         // Process the message
-        return processMessage(c8yMessage, testMapping);
+        return processMessage(c8yMessage, testMapping, testing);
     }
 
     /**
@@ -195,8 +203,7 @@ public class CamelDispatcherOutbound implements NotificationCallback {
     /**
      * Process C8Y message using Camel routes
      */
-    private ProcessingResultWrapper<?> processMessage(C8YMessage c8yMessage, Mapping testMapping) {
-        boolean testing = testMapping != null;
+    private ProcessingResultWrapper<?> processMessage(C8YMessage c8yMessage, Mapping testMapping, boolean testing) {
         String tenant = c8yMessage.getTenant();
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
 

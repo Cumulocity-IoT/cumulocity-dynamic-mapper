@@ -112,15 +112,16 @@
             rules from your payload examples. Simply describe what you want to achieve in natural language, and the AI
             generates the corresponding JSONata expressions or JavaScript code.
             <br />
-            Configure an AI provider (Anthropic, ChatGPT, etc.) in the service configuration
-            to automatically generate substitutions and transformation code. This significantly accelerates the
-            integration process.
+            In the <b>Service Configuration → AI</b> section, assign an AI agent (defined in the Cumulocity
+            AI Agent Manager) separately for JSONata, JavaScript, and Smart Function transformations.
+            This significantly accelerates the integration process.
           </div>
         </div>
         <div class="p-b-8 text-16">
-          When you configure an AI Provider, e.g. Anthropic, ChatGPT, ... substitutions or JavaScript code can be
-          generated. This significantly reduces the effort to integrate your devices. The use and configuration of the
-          Cumulocity AI Agent is introduced <a
+          When you configure AI agents in <b>Service Configuration → AI</b>, substitutions or JavaScript code can be
+          generated automatically. Each transformation type (JSONata, JavaScript, Smart Function) can use a different
+          agent. The underlying AI provider (Anthropic, OpenAI, etc.) is configured in the AI Agent Manager, not here.
+          The use and configuration of the Cumulocity AI Agent Manager is introduced <a
             href="https://community.cumulocity.com/t/introducing-the-ai-agent-manager-powering-enterprise-aiot-on-cumulocity/12567"
             target="_blank">here</a>. <br />
           The following screenshot shows a prompt to generate a list of substitutions (mapping rules):
@@ -193,30 +194,38 @@
           After establishing connectivity, define a mapping to transform your data. When creating a mapping, you need to
           make two key decisions:
         </div>
-        <h5 class="p-t-8 p-b-4 text-16"><strong>Step 2.1 Select the Payload Type</strong></h5>
+        <div class="admonition info" style="max-width: 100%;">
+          <div class="title">Info — Expert Mode</div>
+          <div class="content">
+            By default the mapping creation dialog shows only the <strong>JSON</strong> payload type with the standard
+            transformation types. Enable <strong>Expert Mode</strong> in the dialog to unlock all payload formats
+            (Flat File, Hexadecimal, Protobuf, Extension) and the full list of transformation types.
+          </div>
+        </div>
+        <h5 class="p-t-8 p-b-4 text-16"><strong>Step 2.1: Select the Payload Type</strong></h5>
         <div class="p-b-8 text-16">
           Choose the format that matches your incoming or outgoing data:
         </div>
         <ul class="text-16 p-b-16">
           <li><strong>JSON</strong> - The most common format for structured data (recommended for most use cases)</li>
-          <li><strong>Flat File (CSV)</strong> - For comma-separated or delimiter-based data</li>
-          <li><strong>Hexadecimal</strong> - For binary data encoded as hex strings</li>
-          <li><strong>Protobuf</strong> - For Protocol Buffer serialized data</li>
-          <li><strong>Extension</strong> - For custom payload formats using extensions</li>
+          <li><strong>Flat File (CSV)</strong> - For comma-separated or delimiter-based data <small class="text-muted">(requires Expert Mode)</small></li>
+          <li><strong>Hexadecimal</strong> - For binary data encoded as hex strings <small class="text-muted">(requires Expert Mode)</small></li>
+          <li><strong>Protobuf</strong> - For Protocol Buffer serialized data <small class="text-muted">(requires Expert Mode)</small></li>
+          <li><strong>Extension</strong> - For custom payload formats using extensions <small class="text-muted">(requires Expert Mode)</small></li>
         </ul>
-        <h5 class="p-t-8 p-b-4 text-16"><strong>Step 2.2 Choose the Transformation Type</strong></h5>
+        <h5 class="p-t-8 p-b-4 text-16"><strong>Step 2.2: Choose the Transformation Type</strong></h5>
         <div class="p-b-8 text-16">
-          Select how you want to define the data transformation logic:
+          The Transformation Type selector is visible only when <strong>Expert Mode</strong> is enabled. Select how you
+          want to define the data transformation logic:
         </div>
         <ul class="text-16 p-b-16">
           <li>
             <strong>JSONata Expressions</strong> - Use declarative JSONata expressions for straightforward field
-            mappings
-            and transformations.
+            mappings and transformations.
             Ideal for simple to moderately complex transformations without programming knowledge.
           </li>
           <li>
-            <strong>JavaScript Substitutions</strong> - Write JavaScript code snippets for individual field
+            <strong>JavaScript Substitutions</strong> <span class="label label-warning text-10">deprecated</span> - Write JavaScript code snippets for individual field
             transformations.
             Provides more flexibility than JSONata while keeping substitution-based structure.
           </li>
@@ -232,7 +241,7 @@
             [routerLink]="ROUTE_CODE_TEMPLATES_INBOUND_SMART_FUNCTION"> Code
             Templates
           </a> to see
-          JavaScript codes samples
+          JavaScript code samples
           of transformations.
         </div>
         <div class="p-b-8 text-16">
@@ -243,7 +252,7 @@
           The intuitive stepper wizard will guide you through the mapping configuration process.
         </div>
         <div class="admonition info" style="max-width: 100%;">
-          <div class="title">Tip</div>
+          <div class="title">Info</div>
           <div class="content">
             If you're unsure about your device's payload structure, enable <b>Snooping Mode</b>
             when
@@ -382,7 +391,7 @@
         <p class="image-description m-l-48"><b>Description:</b> Creating a new connector.</p>
         <br />
         <div class="p-b-8 text-16">The <strong>Webhook</strong> connector has a setting
-          <strong>Cumulocity Internal</strong> which can be used when Cumulocity MEA should be processed and send
+          <strong>Cumulocity Internal</strong> which can be used when Cumulocity MEA should be processed and sent
           back
           to Cumulocity Core as transformed MEA, e.g. receive an <code>EVENT</code> of type <code>c8y_Uplink</code> and
           use a
@@ -416,7 +425,7 @@
           <div class="title">Important</div>
           <div class="content">
             If any of the templates: source or target is a JSON array - instead of a JSON object -
-            then you have to choose <strong>Smart Function</strong> as a transformation tape.
+            then you have to choose <strong>Smart Function</strong> as a transformation type.
             <br />
             This is due to the internal handling of metadata, e.g. <code>_IDENTITY_.externalId</code> that is added to
             the
@@ -426,7 +435,7 @@
         <div class="p-b-8 text-16">
           Now you start adding a mapping by clicking <a [routerLink]="ROUTE_INBOUND"> Inbound </a> <b>Add Mapping</b>.
           <br />
-          The following two screenshots the selection of the <strong>Payload Type</strong> and
+          The following two screenshots show the selection of the <strong>Payload Type</strong> and
           <strong>Transformation Type</strong>.
         </div>
         <img width="80%" class="m-l-48 m-b-48 m-b-16"
@@ -454,7 +463,7 @@
             substitutions.
           </li>
           <li>
-            Define substitutions for copying content from the source to the target payload. These will be applied at
+            Transformation for copying content from the source to the target payload. These will be applied at
             runtime.
           </li>
           <li>
@@ -465,7 +474,7 @@
           In the second step of the wizard you define the most important properties for the mapping, e.g. Mapping Name,
           Target API, Mapping Topic (topic to which this mapping should listen for, this supports wildcards:
           <code>#</code>, <code>+</code>). The
-          Mapping Topic Samples is a samples topic replacing all wildcards from the Mapping Topic, e.g.
+          Mapping Topic Sample is a sample topic replacing all wildcards from the Mapping Topic, e.g.
           <code>datalogger/+</code> becomes <code>datalogger/logger_13579</code>, this helps in the later steps to use
           concrete values instead of the abstract wildcards.
         </div>
@@ -486,9 +495,9 @@
           </div>
         </div>
         <div class="p-b-8 text-16">
-          The following screenshot shows the <strong>Define Substitutions</strong> step for transformation type
+          The following screenshot shows the <strong>Transformation</strong> step for transformation type
           <strong>Substitution as JSONata Expression</strong>. This step shows a JavaScript editor if you choose
-          <strong>Substitution as JavaScript</strong> or <strong>Smart Function (JavaScript)</strong>.
+          <strong>Substitution as JavaScript (deprecated)</strong> or <strong>Smart Function (JavaScript)</strong>.
         </div>
         <br />
         <img width="80%" class="m-l-48 m-b-48 m-b-16"
@@ -543,22 +552,22 @@
         </p>
         <ul class="text-16">
           <li>
-            <b>Subscriptions static</b>: Specify device groups. When a device group is added, subscriptions for all
-            assigned devices are created. When a device is added/removed from a chosen group, the subscription is
-            created/deleted (dynamic). The filter applies to child assets and child devices.
+            <b>Subscriptions static</b>: Select specific individual devices using a tree or table view. Subscriptions
+            are created explicitly for the chosen devices and are not updated automatically when devices are added or
+            removed from a group.
           </li>
           <li>
-            <b>Subscriptions dynamic</b>: Specify device groups. When a device group is added, subscriptions for all
-            assigned devices are created. When a device is added/removed from a chosen group, the subscription is
-            created/deleted (dynamic). The filter applies to child assets and child devices. Another variant is to
-            configure
-            a list of device types. If a device of the configured device types is created, a subscription is
-            automatically
-            created.
+            <b>Subscriptions dynamic (by group)</b>: Specify device groups. When a group is added, subscriptions for
+            all assigned devices are created. When a device is added to or removed from a chosen group, the
+            subscription is automatically created or deleted. The filter applies to child assets and child devices.
+          </li>
+          <li>
+            <b>Subscriptions dynamic (by device type)</b>: Specify a list of device types. When a new device of one
+            of the configured types is registered, a subscription is automatically created for it.
           </li>
         </ul>
         <div class="admonition info" style="max-width: 100%;">
-          <div class="title">Tip</div>
+          <div class="title">Info</div>
           <div class="content">
             Use <b>dynamic subscriptions</b> with device types when you have many devices of the
             same type. This automatically creates subscriptions for new devices as they're added to the system, reducing
@@ -577,7 +586,7 @@
       <!-- ==================== SECTION: TRANSFORMATION TYPES ==================== -->
       <div class="card-header" id="transformation-types">
         <h3>
-          {{ 'Transformation Types' | translate }}
+          {{ 'Transformation types' | translate }}
         </h3>
       </div>
       <div class="card-block">
@@ -626,7 +635,7 @@
               <i class="fa fa-book m-r-8"></i>Learn more about Smart Functions and metadata usage →
             </a></strong>
         </div>
-        <h4 class="p-t-16 p-b-8" id="javascript-substitution">{{ 'Defining a substitution using JavaScript' | translate
+        <h4 class="p-t-16 p-b-8" id="javascript-substitution">{{ 'Defining a substitution using JavaScript (deprecated)' | translate
           }}
         </h4>
         <div class="p-b-8 text-16">
@@ -659,6 +668,126 @@
             </a></strong>
         </div>
       </div>
+
+      <!-- ==================== SECTION: FLOW STATE   ==================== -->
+      <div class="card-header" id="flow-state">
+        <h3>
+          {{ 'Using state in Java Extension and Smart Function' | translate }}
+        </h3>
+      </div>
+      <div class="card-block">
+        <div class="p-b-8 text-16">
+          Both <b>Java Extensions</b> and <b>Smart Functions</b> can maintain persistent state across multiple message
+          invocations for the same mapping. This enables stateful processing patterns such as message counters, running
+          averages, min/max tracking, deduplication, and rate limiting — without requiring an external database.
+        </div>
+        <div class="p-b-8 text-16">
+          State is scoped per <b>tenant</b> and <b>mapping</b>. All devices processed by the same mapping share the
+          same state bucket. To separate state per device, prefix your keys with the client ID (see examples below).
+        </div>
+        <div class="admonition info" style="max-width: 100%;">
+          <div class="title">Info — Lifetime &amp; TTL</div>
+          <div class="content">
+            <p>State is held <b>in-memory</b> and does not survive a microservice restart.</p>
+            <p>
+              The <b>Minutes lifetime flow state</b> setting (in Service Configuration → Caching) controls automatic
+              expiry. The timer measures the time since the <em>last write</em> to that tenant's state store. If no
+              state has been written for longer than the configured duration, the <b>entire state</b> for that tenant
+              is cleared on the next scheduled cleanup cycle (which runs every minute).
+            </p>
+            <p>
+              For example, with a value of <code>1440</code> (the default, equal to 24 hours): if no mapping has
+              written any state for 24 hours, all stored state for that tenant is discarded. This prevents unbounded
+              memory growth when mappings are inactive.
+            </p>
+            <p>
+              Set to <code>0</code> to disable automatic expiry entirely. Flow state can also be cleared immediately
+              via the <b>Clear flow state</b> button on the Caching configuration page.
+            </p>
+          </div>
+        </div>
+
+        <h4 class="p-t-16 p-b-8">{{ 'State in Smart Functions (JavaScript)' | translate }}</h4>
+        <div class="p-b-8 text-16">
+          Smart Functions use <code>context.getState(key)</code> and <code>context.setState(key, value)</code>.
+          GraalVM automatically converts between JavaScript and Java types, so you can pass native JavaScript values
+          directly. <code>getState</code> returns <code>null</code> (not <code>undefined</code>) when a key is absent.
+        </div>
+        <div class="p-b-4 text-16"><strong>Global counter (shared across all devices):</strong></div>
+        <pre><code class="language-javascript">function onMessage(message, context) &#123;
+  // Increment a counter shared by all devices using this mapping
+  const count = context.getState("messageCount");
+  context.setState("messageCount", count !== null ? count + 1 : 1);
+
+  // ... rest of processing
+&#125;</code></pre>
+
+        <div class="p-b-4 p-t-16 text-16"><strong>Per-device counter (prefix key with clientId):</strong></div>
+        <pre><code class="language-javascript">function onMessage(message, context) &#123;
+  const clientId = context.getClientId();
+  const key = clientId + ".messageCount";
+
+  const count = context.getState(key);
+  context.setState(key, count !== null ? count + 1 : 1);
+
+  // ... rest of processing
+&#125;</code></pre>
+
+        <h4 class="p-t-16 p-b-8">{{ 'State in Java Extensions' | translate }}</h4>
+        <div class="p-b-8 text-16">
+          Java Extensions use <code>context.getNativeState(key)</code> and <code>context.setNativeState(key, value)</code>,
+          which work with plain Java objects (no GraalVM dependency). Setting a key to <code>null</code> removes it.
+          State is persisted to the <code>FlowStateStore</code> automatically after each invocation.
+        </div>
+        <div class="p-b-4 text-16"><strong>Global counter (shared across all devices):</strong></div>
+        <pre><code class="language-java">&#64;Override
+public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtensionContext context) &#123;
+    // Increment a counter shared by all devices using this mapping
+    Integer count = (Integer) context.getNativeState("messageCount");
+    context.setNativeState("messageCount", count == null ? 1 : count + 1);
+
+    // ... rest of processing
+&#125;</code></pre>
+
+        <div class="p-b-4 p-t-16 text-16"><strong>Per-device counter (prefix key with clientId):</strong></div>
+        <pre><code class="language-java">&#64;Override
+public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtensionContext context) &#123;
+    String clientId = context.getClientId();
+    String key = clientId + ".messageCount";
+
+    Integer count = (Integer) context.getNativeState(key);
+    context.setNativeState(key, count == null ? 1 : count + 1);
+
+    // ... rest of processing
+&#125;</code></pre>
+
+        <div class="p-b-4 p-t-16 text-16"><strong>Available state methods in Java Extensions:</strong></div>
+        <div class="table-responsive table-width-100">
+          <table class="table table-striped" style="table-layout: fixed;">
+            <thead class="thead-light">
+              <tr>
+                <th style="width: 35%;">Method</th>
+                <th style="width: 65%;">Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>setNativeState(key, value)</code></td>
+                <td>Store any Java object. Passing <code>null</code> as value removes the key.</td>
+              </tr>
+              <tr>
+                <td><code>getNativeState(key)</code></td>
+                <td>Retrieve a stored value, or <code>null</code> if not present.</td>
+              </tr>
+              <tr>
+                <td><code>getNativeStateAll()</code></td>
+                <td>Return an unmodifiable view of the entire state map for this mapping.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- ==================== SECTION: CODE TEMPLATES ==================== -->
       <div class="card-header" id="code-templates">
         <h3>
@@ -785,6 +914,12 @@
                 <td>Key from Kafka message header</td>
               </tr>
               <tr>
+                <td>Source template <small class="text-muted">(MQTT 5 only)</small></td>
+                <td><code>_CONTEXT_DATA_.clientId</code></td>
+                <td>map-from</td>
+                <td>Client ID from MQTT 5 user properties. The publisher must include <code>clientId</code> as a user property when publishing the message. Not available for MQTT 3.1.1 connections.</td>
+              </tr>
+              <tr>
                 <td>Target template <small class="text-muted">(Cumulocity)</small></td>
                 <td><code>_IDENTITY_.externalId</code></td>
                 <td>map-to</td>
@@ -828,6 +963,38 @@
         <p class="image-description m-l-48"><b>Description:</b> Screenshot showing the metadata added for inbound
           mappings.
         </p>
+        <br />
+        <div class="admonition info" style="max-width: 100%;">
+          <div class="title">Info - MQTT 5 User Properties</div>
+          <div class="content">
+            <strong>Publisher Client ID with MQTT 5:</strong>
+            <p class="m-t-8">
+              When using MQTT 5 connectors, publishers can include their client ID as a user property, which the mapper
+              will automatically extract and make available as <code>_CONTEXT_DATA_.clientId</code>. This allows you to
+              identify which client published a message.
+            </p>
+            <p class="m-t-8">
+              <strong>Example - Publisher side (MQTT 5):</strong>
+            </p>
+            <pre class="m-t-8"><code class="language-java">Mqtt5Publish.builder()
+    .topic("devices/data")
+    .payload(payloadBytes)
+    .userProperties()
+        .add("clientId", "device-sensor-123")
+        .applyUserProperties()
+    .build();</code></pre>
+            <p class="m-t-8">
+              <strong>Example - Mapper side:</strong><br/>
+              In your mapping, you can then reference <code>_CONTEXT_DATA_.clientId</code> in the source template to
+              access the publisher's client ID. For example, you could map it to the external device ID:
+              <code>[ _CONTEXT_DATA_.clientId → _IDENTITY_.externalId ]</code>
+            </p>
+            <p class="m-t-8">
+              <strong>Note:</strong> This feature is only available for MQTT 5 connections. MQTT 3.1.1 does not support
+              user properties, so the client ID must be included in the message payload or topic instead.
+            </p>
+          </div>
+        </div>
         <br />
         <div class="p-b-8 text-16">The following table lists all metadata nodes for outbound mappings:
           <br />
@@ -931,7 +1098,7 @@
           Start by clicking <b>Add mapping</b> (Mapping → Inbound Mapping → Action Add mapping).
         </div>
         <div class="admonition info" style="max-width: 100%;">
-          <div class="title">Tip</div>
+          <div class="title">Info</div>
           <div class="content">
             <strong>Snooping Best Practices:</strong>
             <ul class="m-t-8 m-b-0">
@@ -1272,7 +1439,7 @@
         <div class="admonition info" style="max-width: 100%;">
           <div class="title">Info</div>
           <div class="content">
-            <strong>Tip:</strong> To configure roles, navigate to <b>Administration → Role Management</b> in Cumulocity.
+            To configure roles, navigate to <b>Administration → Role Management</b> in Cumulocity.
             Look for "Dynamic Mapper" permissions and assign them to global roles or specific user groups based on your
             organization's needs.
           </div>
@@ -1377,7 +1544,7 @@
   <!-- ========================================================================== -->
   @case ('javascript') {
   <div>
-    <c8y-title>{{ 'Defining a substitution using JavaScript' | translate }}</c8y-title>
+    <c8y-title>{{ 'Defining a substitution using JavaScript (deprecated)' | translate }}</c8y-title>
     <a id="top"></a>
     <div class="text-right m-b-16">
       <a (click)="scrollToElement('top')" class="to-the-top" role="button" aria-label="Scroll to top"
@@ -1388,7 +1555,7 @@
     <div>
       <div class="card-header" id="javascript-substitution">
         <h4>
-          {{ 'Defining a substitution using JavaScript' | translate }}
+          {{ 'Defining a substitution using JavaScript (deprecated)' | translate }}
         </h4>
       </div>
       <div class="card-block">
@@ -1401,8 +1568,7 @@
         <div class="admonition caution" style="max-width: 100%;">
           <div class="title">Caution</div>
           <div class="content">
-            The JavaScript editor is only available if you select <code>Define substitutions as
-          JavaScript</code> when creating the mapping. You cannot switch between transformation types after creating
+            The JavaScript editor is only available if you select <code>Substitution as JavaScript (deprecated)</code> when creating the mapping. You cannot switch between transformation types after creating
             the
             mapping.
           </div>
@@ -1489,7 +1655,9 @@
   var payload = msg.getPayload(); // contains payload
   console.log("Context" + context.getStateAll());
   console.log("Payload Raw:" + msg.getPayload());
-  console.log("Payload messageId" + msg.getPayload().get('messageId'));
+  console.log("Payload messageId" + payload['messageId']);
+  // Get externalId from context first, fall back to payload
+  var externalId = context.getClientId() || payload["externalId"];
   // insert transformation logic here
   // then return result
   return [&#123;
@@ -1500,16 +1668,18 @@
       "type": "c8y_TemperatureMeasurement",
       "c8y_Steam": &#123; "Temperature": &#123; "unit": "C", "value": payload["sensorData"]["temp_val"] &#125; &#125;
     &#125;,
-    externalSource: [&#123; "type": "c8y_Serial", "externalId": payload.get("clientId") &#125;]
+    externalSource: [&#123; "type": "c8y_Serial", "externalId": clientId &#125;]
   &#125;];
 &#125;</code></pre>
         <div class="p-b-8 text-14">
           The <b>Smart Function</b> allows enriching the payload with inventory data from the device, e.g.:
         </div>
-        <pre><code class="language-javascript">// lookup device for enrichment
-var deviceByDeviceId = context.getManagedObjectByDeviceId(payload.get("deviceId"));
+        <pre><code class="language-javascript">// Get externalId from context first, fall back to payload
+var externalId = context.getClientId() || payload["externalId"];
+// lookup device for enrichment
+var deviceByDeviceId = context.getManagedObject(payload["deviceId"]);
 console.log("Device (by device id): " + deviceByDeviceId);
-var deviceByExternalId = context.getManagedObject(&#123; externalId: payload.get("clientId"), type: "c8y_Serial" &#125;);
+var deviceByExternalId = context.getManagedObjectByExternalId(&#123; externalId: externalId, type: "c8y_Serial" &#125;);
 console.log("Device (by external id): " + deviceByExternalId);</code></pre>
         <div class="admonition important" style="max-width: 100%;">
           <div class="title">Important</div>
@@ -1603,8 +1773,55 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
                   </ul>
                 </td>
               </tr>
+              <tr class="table-info">
+                <td colspan="3" style="text-align: center; font-weight: bold; background-color: #e7f3ff;">
+                  Context Methods for Accessing Incoming Metadata
+                </td>
+              </tr>
+              <tr>
+                <td><code>context.getClientId()</code></td>
+                <td>Access</td>
+                <td>Returns the publisher's client ID from MQTT 5 user properties. Returns <code>null</code> if not available. <strong>MQTT 5 only</strong> - the publisher must include <code>clientId</code> as a user property.
+                  <br/><strong>Example:</strong> <code>var clientId = context.getClientId();</code>
+                </td>
+              </tr>
+              <tr>
+                <td><code>context.getManagedObjectByDeviceId()</code></td>
+                <td>Access</td>
+                <td>Lookup device properties by device ID. Returns device object or <code>null</code>.
+                  <br/><strong>Example:</strong> <code>var device = context.getManagedObjectByDeviceId("12345");</code>
+                </td>
+              </tr>
+              <tr>
+                <td><code>context.getManagedObject()</code></td>
+                <td>Access</td>
+                <td>Lookup device properties by external ID. Requires object with <code>externalId</code> and <code>type</code>.
+                  <br/><strong>Example:</strong> <code>var device = context.getManagedObject(&#123;externalId: "sensor-01", type: "c8y_Serial"&#125;);</code>
+                </td>
+              </tr>
             </tbody>
           </table>
+        </div>
+        <div class="admonition info" style="max-width: 100%;">
+          <div class="title">Info - Context Methods for Accessing Metadata</div>
+          <div class="content">
+            <strong>Available Context Methods:</strong>
+            <p class="m-t-8">
+              In addition to the properties you return, Smart Functions can access incoming metadata through the
+              <code>context</code> object:
+            </p>
+            <ul class="m-t-8 m-b-0">
+              <li><code>context.getClientId()</code> - Returns the publisher's client ID from MQTT 5 user properties (MQTT 5 only, returns <code>null</code> if not available)</li>
+              <li><code>context.getManagedObjectByDeviceId(deviceId)</code> - Lookup device properties by device ID</li>
+              <li><code>context.getManagedObject(&#123;externalId, type&#125;)</code> - Lookup device properties by external ID</li>
+              <li><code>context.getTesting()</code> - Returns <code>true</code> if running in test mode</li>
+              <li><code>context.setState(key, value)</code> / <code>context.getState(key)</code> - Store/retrieve values across message processing</li>
+              <li><code>context.getConfig()</code> - Returns the mapping configuration as a JavaScript object. For inbound mappings this includes the <code>topic</code> field (the configured subscription topic pattern, e.g. <code>"testDevice/+/data"</code>), which can be split to derive positional segment meanings. For outbound mappings it additionally provides the resolved <code>externalId</code> of the source device.</li>
+            </ul>
+            <p class="m-t-8">
+              <strong>Example:</strong> <code>var publisherClientId = context.getClientId();</code>
+            </p>
+          </div>
         </div>
         <div class="admonition caution" style="max-width: 100%;">
           <div class="title">Caution</div>
@@ -1620,6 +1837,8 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
           <strong>Example: Basic inbound Smart Function with device identification</strong><br /><br />
           <pre><code class="language-javascript">function onMessage(msg, context) &#123;
   var payload = msg.getPayload();
+  // Get externalId from context first, fall back to payload
+  var externalId = context.getClientId() || payload["externalId"];
   return [&#123;
     cumulocityType: "measurement",
     action: "create",
@@ -1628,7 +1847,7 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
       "type": "c8y_TemperatureMeasurement",
       "c8y_Steam": &#123; "Temperature": &#123; "unit": "C", "value": payload["sensorData"]["temp_val"] &#125; &#125;
     &#125;,
-    externalSource: [&#123; "type": "c8y_Serial", "externalId": payload.get("clientId") &#125;]
+    externalSource: [&#123; "type": "c8y_Serial", "externalId": externalId &#125;]
   &#125;];
 &#125;</code></pre>
         </div>
@@ -1636,6 +1855,8 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
           <strong>Example: Implicitly creating a device with name and type</strong><br /><br />
           <pre><code class="language-javascript">function onMessage(msg, context) &#123;
   var payload = msg.getPayload();
+  // Get externalId from context first, fall back to payload
+  var externalId = context.getClientId() || payload["externalId"];
   return [&#123;
     cumulocityType: "measurement",
     action: "create",
@@ -1644,7 +1865,7 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
       "type": "c8y_TemperatureMeasurement",
       "c8y_Steam": &#123; "Temperature": &#123; "unit": "C", "value": payload["sensorData"]["temp_val"] &#125; &#125;
     &#125;,
-    externalSource: [&#123; "type": "c8y_Serial", "externalId": payload.get("clientId") &#125;],
+    externalSource: [&#123; "type": "c8y_Serial", "externalId": externalId &#125;],
     contextData: &#123; "deviceName": "Temperature-Sensor-01", "deviceType": "sensor-type" &#125;
   &#125;];
 &#125;</code></pre>
@@ -1653,6 +1874,8 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
           <strong>Example: Conditionally creating measurements or events</strong><br /><br />
           <pre><code class="language-javascript">function onMessage(msg, context) &#123;
   var payload = msg.getPayload();
+  // Get externalId from context first, fall back to payload
+  var externalId = context.getClientId() || payload["externalId"];
   const payloadType = payload["payloadType"];
   if (payloadType == "telemetry") &#123;
     return [&#123;
@@ -1663,7 +1886,7 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
         "type": "c8y_TemperatureMeasurement",
         "c8y_Steam": &#123; "Temperature": &#123; "unit": "C", "value": payload["sensorData"]["temp_val"] &#125; &#125;
       &#125;,
-      externalSource: [&#123; "type": "c8y_Serial", "externalId": payload.get("clientId") &#125;]
+      externalSource: [&#123; "type": "c8y_Serial", "externalId": externalId &#125;]
     &#125;];
   &#125; else &#123;
     // Create an event for error cases
@@ -1676,7 +1899,7 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
         "text": payload["logMessage"],
         "severity": "MAJOR"
       &#125;,
-      externalSource: [&#123; "type": "c8y_Serial", "externalId": payload.get("clientId") &#125;]
+      externalSource: [&#123; "type": "c8y_Serial", "externalId": externalId &#125;]
     &#125;];
   &#125;
 &#125;</code></pre>
@@ -1693,13 +1916,59 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
       "c8y_Notes": "Last updated: " + new Date().toISOString(),
       "customData": &#123; "temperature": payload["temp"], "humidity": payload["hum"] &#125;
     &#125;,
-    externalSource: [&#123; "type": "c8y_Serial", "externalId": payload.get("deviceId") &#125;]
+    externalSource: [&#123; "type": "c8y_Serial", "externalId": payload["deviceId"] &#125;]
   &#125;];
 &#125;</code></pre>
           <p class="p-t-8 text-14">
             <strong>Note:</strong> Using <code>action: "patch"</code> is useful when you want to update only specific
             properties of an inventory object without affecting other existing properties. This is more efficient than
             fetching the entire object, modifying it, and sending it back with <code>action: "update"</code>.
+          </p>
+        </div>
+        <div class="p-b-8 text-14">
+          <strong>Example: Extracting the device identity from the MQTT topic using <code>context.getConfig()</code></strong><br /><br />
+          <p class="p-b-8 text-14">
+            The live topic of an inbound message (e.g. <code>testDevice/sensor-berlin-01/data</code>) is accessible via
+            <code>payload["_TOPIC_LEVEL_"]</code> as an array. When you need to know the <em>position</em> of the
+            device-identity segment relative to the <em>configured</em> subscription topic pattern, use
+            <code>context.getConfig()["topic"]</code> which returns the pattern string (e.g.
+            <code>"testDevice/+/data"</code>). Splitting it lets you derive the correct index without hardcoding it.
+            <br /><br />
+            Alternatively, split the configured topic directly to find the identity segment:
+          </p>
+          <pre><code class="language-javascript">function onMessage(msg, context) &#123;
+  var payload = msg.getPayload();
+
+  // context.getConfig()["topic"] returns the mapping's subscription topic pattern,
+  // e.g. "testDevice/+/data". Split it to derive the device-identity segment index.
+  var config = context.getConfig();
+  var topicSegments = config["topic"] ? config["topic"].split("/") : [];
+  // Find the first wildcard segment — that position carries the device identity at runtime.
+  var identityIndex = topicSegments.indexOf("+");
+
+  // payload["_TOPIC_LEVEL_"] contains the live topic segments of the received message.
+  var externalId = identityIndex >= 0 ? payload["_TOPIC_LEVEL_"][identityIndex] : null;
+
+  if (!externalId) &#123;
+    console.error("Cannot determine externalId: no wildcard segment in topic pattern. Config: " + JSON.stringify(config));
+    return [];
+  &#125;
+
+  return [&#123;
+    cumulocityType: "measurement",
+    action: "create",
+    payload: &#123;
+      "time": payload["time"] ? payload["time"] : msg.time,
+      "type": "c8y_TemperatureMeasurement",
+      "c8y_Steam": &#123; "Temperature": &#123; "unit": "C", "value": payload["temp"] &#125; &#125;
+    &#125;,
+    externalSource: [&#123; "type": "c8y_Serial", "externalId": externalId &#125;]
+  &#125;];
+&#125;</code></pre>
+          <p class="p-t-8 text-14">
+            <strong>Note:</strong> <code>context.getConfig()["topic"]</code> is the <em>configured pattern</em> (with
+            wildcards like <code>+</code>), not the live topic of the received message. Use
+            <code>payload["_TOPIC_LEVEL_"]</code> to access the actual runtime topic segments.
           </p>
         </div>
         <h5 class="p-t-8 p-b-4"><strong>Metadata Properties for Outbound Smart Functions</strong></h5>
@@ -1781,11 +2050,8 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
               <tr>
                 <td><code>externalSource</code></td>
                 <td>No</td>
-                <td>Array specifying the external ID type: <code>[&#123;type: "c8y_Serial"&#125;]</code>. When
-                  specified, you
-                  can use <code>_externalId_</code> placeholder in the topic string, which will be automatically
-                  resolved to
-                  the actual external ID.</td>
+                <td>Array specifying the external ID type: <code>[&#123;type: "c8y_Serial"&#125;]</code>. Defines which
+                  external ID type should be used to resolve the device identity.</td>
               </tr>
               <tr>
                 <td><code>transportFields</code></td>
@@ -1838,11 +2104,12 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
         <div class="admonition info" style="max-width: 100%;">
           <div class="title">Info</div>
           <div class="content">
-            <strong>Dynamic Topic Resolution:</strong> Use the <code>_externalId_</code> placeholder in your topic
-            string
-            to automatically include the device's external ID. For example:
-            <code>topic: "measurements/_externalId_"</code>
-            will resolve to <code>"measurements/device-serial-123"</code> at runtime.
+            <strong>Dynamic Topic Resolution:</strong> Use <code>context.getConfig().externalId</code> to include the
+            device's resolved external ID in the topic. For example:
+            <code>topic: `measurements/$&#123;context.getConfig().externalId&#125;`</code>
+            resolves to <code>"measurements/device-serial-123"</code> at runtime.
+            Requires the mapping to have <strong>Use External Id</strong> enabled and an <strong>External Id
+              Type</strong> configured.
           </div>
         </div>
         <div class="p-b-8 text-14">
@@ -1859,16 +2126,18 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
 &#125;</code></pre>
         </div>
         <div class="p-b-8 text-14">
-          <strong>Example: Using <code>_externalId_</code> placeholder</strong><br /><br />
+          <strong>Example: Using <code>context.getConfig().externalId</code> in the topic</strong><br /><br />
           <pre><code class="language-javascript">function onMessage(msg, context) &#123;
   var payload = msg.getPayload();
+  // context.getConfig().externalId contains the resolved external ID of the source device.
+  // Requires the mapping to have 'useExternalId' enabled and an 'externalIdType' configured.
+  var externalId = context.getConfig().externalId;
   return [&#123;
-    topic: "measurements/_externalId_",  // Automatically resolved to external ID
+    topic: "measurements/" + externalId,
     payload: &#123;
       "time": new Date().toISOString(),
       "c8y_Steam": &#123; "Temperature": &#123; "unit": "C", "value": payload["c8y_TemperatureMeasurement"]["T"]["value"] &#125; &#125;
-    &#125;,
-    externalSource: [&#123; "type": "c8y_Serial" &#125;]  // Specifies which external ID type to use
+    &#125;
   &#125;];
 &#125;</code></pre>
         </div>
@@ -1971,6 +2240,12 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
             then <code>payload["_TOPIC_LEVEL_"][1]</code> returns <code>"12345"</code>.
           </li>
           <li>
+            <strong>Publisher Client ID</strong> (inbound, MQTT 5 only): Access the MQTT client ID of the message publisher using
+            <code>context.getClientId()</code>. This returns the <code>clientId</code> from MQTT 5 user properties, or <code>null</code> if not available.
+            <strong>Note:</strong> The publisher must include the <code>clientId</code> as a user property when publishing.
+            Not available for MQTT 3.1.1 connections.
+          </li>
+          <li>
             <strong>External ID</strong> (outbound only): Access the device's external ID using
             <code>payload["_IDENTITY_"]["externalId"]</code>.
           </li>
@@ -1998,12 +2273,33 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
   &#125;];
 &#125;</code></pre>
         </div>
+        <div class="p-b-8 text-14">
+          <strong>Example: Using publisher client ID from MQTT 5 user properties (inbound)</strong><br /><br />
+          <pre><code class="language-javascript">function onMessage(msg, context) &#123;
+  var payload = msg.getPayload();
+  // Get client ID from MQTT 5 user properties
+  var publisherClientId = context.getClientId();
+  console.log("Publisher Client ID: " + publisherClientId);
+
+  // Use it as external device ID
+  return [&#123;
+    cumulocityType: "measurement",
+    action: "create",
+    payload: &#123;
+      "time": new Date().toISOString(),
+      "type": "c8y_TemperatureMeasurement",
+      "c8y_Steam": &#123; "Temperature": &#123; "unit": "C", "value": payload["temp"] &#125; &#125;
+    &#125;,
+    externalSource: [&#123; "type": "c8y_Serial", "externalId": publisherClientId &#125;]
+  &#125;];
+&#125;</code></pre>
+        </div>
         <div class="admonition caution" style="max-width: 100%;">
           <div class="title">Caution</div>
           <div class="content">
             <strong>Best Practice:</strong> Always validate metadata values before using them. Check if
             <code>_TOPIC_LEVEL_</code> exists and has the expected index before accessing it. Similarly, verify external
-            IDs and source IDs are present in outbound mappings.
+            IDs and source IDs are present in outbound mappings. For <code>context.getClientId()</code>, always check if the value is not <code>null</code> before using it, as it's only available for MQTT 5 connections when the publisher includes it as a user property.
           </div>
         </div>
         <div class="p-b-8 text-16">
@@ -2111,8 +2407,13 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
             log.info("&#123;&#125; - Processing smart inbound message, messageId: &#123;&#125;",
                     context.getTenant(), payload.get("messageId"));
 
+            // Get clientId from context first, fall back to payload
+            String clientId = context.getClientId();
+            if (clientId == null) &#123;
+                clientId = (String) payload.get("clientId");
+            &#125;
+
             // Extract data
-            String clientId = (String) payload.get("clientId");
             @SuppressWarnings("unchecked")
             Map&lt;String, Object&gt; sensorData = (Map&lt;String, Object&gt;) payload.get("sensorData");
             Number tempVal = (Number) sensorData.get("temp_val");
@@ -2143,7 +2444,7 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
 &#125;</code></pre>
         <br />
         <div class="p-b-8 text-14">
-          The extension needs to be registered in <b>extension-external.yaml</b> :
+          Register the extension in <b>extension-external.yaml</b>:
         </div>
         <pre><code class="language-yaml">extensions:
   # Smart Function Equivalents - Inbound 
@@ -2154,7 +2455,92 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
 </code></pre>
         <br />
         <div class="p-b-8 text-14">
-          The configuration file <b>extension-external.yaml</b> and the compiled extension class need to be packaged in a zip archive, which must be uploaded, see section <b>Managing Installed Java Extensions</b>.
+          Package the configuration file <b>extension-external.yaml</b> and the compiled extension class into a zip archive, then upload it as described in <b>Managing Installed Java Extensions</b>.
+        </div>
+        <br />
+
+        <h5 class="p-t-16 p-b-8"><strong>Extension Parameters</strong></h5>
+        <div class="p-b-8 text-16">
+          Java Extensions can receive runtime configuration through a <strong>parameter map</strong>. This allows the
+          same extension class to behave differently depending on the mapping it is used in — without recompiling or
+          redeploying the extension.
+        </div>
+        <div class="p-b-8 text-16">
+          Parameters are accessible inside the extension via <code>context.getConfigAsMap()</code>, which returns a map
+          containing both runtime context (tenant, clientId, topic, mapping metadata) and the user-supplied
+          <code>parameter</code> map nested under the key <strong>"parameter"</strong>.
+        </div>
+
+        <h6 class="p-t-8 p-b-4"><strong>1. Define default parameters in extension-external.yaml</strong></h6>
+        <div class="p-b-8 text-14">
+          Default parameter values can be declared directly in the extension registration YAML. These defaults apply
+          whenever no per-mapping override is provided:
+        </div>
+        <pre><code class="language-yaml">extensions:
+  - eventName: SparkplugBWithConfigMeasurement
+    className: dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionSparkplugBWithConfigMeasurement
+    description: Sparkplug B processor with configurable fragment and unit
+    version: "1.0"
+    parameter:
+      units:
+        unit1: V
+        unit2: A
+      fragment: Energy
+</code></pre>
+
+        <h6 class="p-t-8 p-b-4"><strong>2. Override parameters per mapping in the UI</strong></h6>
+        <div class="p-b-8 text-14">
+          When creating or editing a mapping in the mapping stepper, a <b>Parameter</b> YAML field is shown for
+          mappings that use a Java Extension. Values entered here override or extend the defaults from the YAML
+          registration file and are stored as part of the mapping. This lets different mappings using the same extension
+          class operate with entirely different configuration:
+        </div>
+        <pre><code class="language-yaml">units:
+  unit1: W
+fragment: Power
+</code></pre>
+
+        <h6 class="p-t-8 p-b-4"><strong>3. Read parameters inside the extension</strong></h6>
+        <div class="p-b-8 text-14">
+          Call <code>context.getConfigAsMap()</code> to retrieve the full config. The user-supplied parameter map is
+          nested under the <strong>"parameter"</strong> key:
+        </div>
+        <pre><code class="language-java">&#64;Override
+public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtensionContext context) &#123;
+    Map&lt;String, Object&gt; config = context.getConfigAsMap();
+
+    // The "parameter" key contains the per-mapping (or YAML default) parameters
+    &#64;SuppressWarnings("unchecked")
+    Map&lt;String, Object&gt; parameter = (Map&lt;String, Object&gt;) config.get("parameter");
+
+    String fragment = "SparkplugMetrics"; // default fallback
+    String unit     = "°C";              // default fallback
+
+    if (parameter != null) &#123;
+        if (parameter.get("fragment") instanceof String f) &#123;
+            fragment = f;
+        &#125;
+        &#64;SuppressWarnings("unchecked")
+        Map&lt;String, Object&gt; units = (Map&lt;String, Object&gt;) parameter.get("units");
+        if (units != null &amp;&amp; units.get("unit1") instanceof String u) &#123;
+            unit = u;
+        &#125;
+    &#125;
+
+    // Use fragment and unit to build CumulocityObject...
+&#125;</code></pre>
+
+        <div class="admonition info m-t-8" style="max-width: 100%;">
+          <div class="title">getConfigAsMap() — full content</div>
+          <div class="content">
+            In addition to <code>parameter</code>, the map returned by <code>getConfigAsMap()</code> also contains:
+            <ul class="m-t-4 m-b-0">
+              <li><strong>tenant</strong> — current tenant identifier</li>
+              <li><strong>clientId</strong> — MQTT/connector client ID</li>
+              <li><strong>topic</strong> — incoming message topic</li>
+              <li><strong>mappingId</strong>, <strong>mappingName</strong>, <strong>targetAPI</strong>, <strong>debug</strong> — mapping metadata</li>
+            </ul>
+          </div>
         </div>
         <br />
 

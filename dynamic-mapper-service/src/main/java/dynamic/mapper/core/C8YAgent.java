@@ -33,6 +33,8 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicReference;
 
+import com.cumulocity.rest.representation.user.UserRepresentation;
+import com.cumulocity.sdk.client.user.UserApi;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -112,6 +114,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
 
     @Autowired
     private AlarmApi alarmApi;
+
+    @Autowired
+    private UserApi userApi;
 
     @Autowired
     private DeviceControlApi deviceControlApi;
@@ -314,6 +319,16 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                 if (properties != null) {
                     er.setProperty(loggingType.getComponent(), properties);
                 }
+
+                // Add metadata fragment for self-contained events
+                Map<String, String> metadata = Map.of(
+                    "component", loggingType.getComponent(),
+                    "componentDisplayName", loggingType.getComponentDisplayName(),
+                    "severity", loggingType.getSeverity(),
+                    "description", loggingType.getDescription()
+                );
+                er.setProperty("d11r_metadata", metadata);
+
                 try {
                     c8ySemaphore.acquire();
                     // this.initializeMapperServiceObject(tenant), add the new mo to the
@@ -362,7 +377,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
             StringBuffer error = new StringBuffer("");
             DynamicMapperRequest currentRequest = context.getRequests().get(requestIndex);
             String payload = currentRequest.getRequest();
-            API targetAPI = context.getMapping().getTargetAPI();
+            // API is now always initialized when creating DynamicMapperRequest
+            API targetAPI = currentRequest.getApi();
             AbstractExtensibleRepresentation result = subscriptionsService.callForTenant(tenant, () -> {
                 MicroserviceCredentials contextCredentials = removeAppKeyHeaderFromContext(contextService.getContext());
                 return contextService.callWithinContext(contextCredentials, () -> {
@@ -475,7 +491,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         DynamicMapperRequest currentRequest = context.getRequests().get(requestIndex);
         String payload = currentRequest.getRequest();
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
-        API targetAPI = context.getMapping().getTargetAPI();
+        // API is now always initialized when creating DynamicMapperRequest
+        API targetAPI = currentRequest.getApi();
         AbstractExtensibleRepresentation result = subscriptionsService.callForTenant(tenant, () -> {
             MicroserviceCredentials contextCredentials = removeAppKeyHeaderFromContext(contextService.getContext());
             return contextService.callWithinContext(contextCredentials, () -> {
@@ -631,6 +648,52 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         return result;
     }
 
+    public static final String MAPPING_TEST_DEVICE_TYPE = "d11r_testDevice";
+
+    /**
+     * Creates a real managed object in C8Y inventory tagged with {@code d11r_testDevice} so it
+     * is visible in the Test Devices grid and can be cleaned up after testing.
+     *
+     * @return the internal C8Y ID of the created managed object, or {@code null} on failure
+     */
+    public String createTestDevice(String tenant, String deviceName, String externalId, String externalIdType) {
+        String resolvedType = (externalIdType != null && !externalIdType.isEmpty()) ? externalIdType : "c8y_Serial";
+        // Upsert: if the externalId is already registered, return the existing device ID
+        ID id = new ID();
+        id.setType(resolvedType);
+        id.setValue(externalId);
+        ExternalIDRepresentation existing = resolveExternalId2GlobalId(tenant, id, false);
+        if (existing != null) {
+            String existingId = existing.getManagedObject().getId().getValue();
+            log.info("{} - Test device with externalId={} already exists: id={}, reusing it", tenant, externalId,
+                    existingId);
+            return existingId;
+        }
+
+        return subscriptionsService.callForTenant(tenant, () -> {
+            MicroserviceCredentials contextCredentials = removeAppKeyHeaderFromContext(contextService.getContext());
+            return contextService.callWithinContext(contextCredentials, () -> {
+                ManagedObjectRepresentation mor = new ManagedObjectRepresentation();
+                mor.setName(deviceName);
+                mor.set(new IsDevice());
+                mor.set(new HashMap<String, String>(), MAPPING_TEST_DEVICE_TYPE);
+                try {
+                    c8ySemaphore.acquire();
+                    mor = inventoryApi.create(mor, false);
+                    log.info("{} - Test device created: id={}, name={}", tenant, mor.getId().getValue(), deviceName);
+                    identityApi.create(mor, id, false);
+                    return mor.getId().getValue();
+                } catch (InterruptedException e) {
+                    log.error("{} - Failed to acquire semaphore for creating test device", tenant, e);
+                    Thread.currentThread().interrupt();
+                    return null;
+                } finally {
+                    c8ySemaphore.release();
+                }
+            });
+        });
+    }
+
     public ManagedObjectRepresentation upsertDevice(String tenant, ID identity, ProcessingContext<?> context,
             int requestIndex)
             throws ProcessingException {
@@ -639,7 +702,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         Boolean testing = context.getTesting();
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         AtomicReference<ProcessingException> pe = new AtomicReference<>();
-        API targetAPI = context.getMapping().getTargetAPI();
+        // API is now always initialized when creating DynamicMapperRequest
+        API targetAPI = currentRequest.getApi();
+        String clientId = context.getClientId();
         ManagedObjectRepresentation device = subscriptionsService.callForTenant(tenant, () -> {
             MicroserviceCredentials contextCredentials = removeAppKeyHeaderFromContext(contextService.getContext());
             return contextService.callWithinContext(contextCredentials, () -> {
@@ -654,6 +719,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                         // append external id to name
                         mor.setName(mor.getName());
                         mor.set(new Agent());
+                        if(clientId != null && !clientId.isEmpty() && userExists(tenant, "device_"+clientId))
+                            mor.setOwner("device_"+clientId);
                         HashMap<String, String> agentFragments = new HashMap<>();
                         agentFragments.put("name", "Dynamic Mapper");
                         agentFragments.put("version", version);
@@ -661,6 +728,10 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                         agentFragments.put("maintainer", "Open-Source");
                         mor.set(agentFragments, "c8y_Agent");
                         mor.set(new IsDevice());
+                        // Tag as test device when created during a test send
+                        if (Boolean.TRUE.equals(context.getSendPayload())) {
+                            mor.set(new HashMap<String, String>(), MAPPING_TEST_DEVICE_TYPE);
+                        }
                         // remove id only if not testing
                         if (!testing) {
                             mor.setId(null);
@@ -719,9 +790,13 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     }
 
     public ManagedObjectRepresentation getManagedObjectForId(String tenant, String deviceId, Boolean testing) {
+        return getManagedObjectForId(tenant, deviceId, testing, false);
+    }
+
+    public ManagedObjectRepresentation getManagedObjectForId(String tenant, String deviceId, Boolean testing, boolean withParents) {
         ManagedObjectRepresentation device = subscriptionsService.callForTenant(tenant, () -> {
             try {
-                return inventoryApi.get(GId.asGId(deviceId), testing);
+                return inventoryApi.get(GId.asGId(deviceId), testing, withParents);
             } catch (SDKException exception) {
                 log.warn("{} - Device with id {} not found!", tenant, deviceId);
             }
@@ -773,7 +848,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                     entry("connectorIdentifier", "000000"),
                     entry("date", date));
             createOperationEvent("Connector status: " + connectorStatus.name(),
-                    LoggingEventType.STATUS_NOTIFICATION_EVENT_TYPE, DateTime.now(),
+                    LoggingEventType.NOTIFICATION_EVENT_TYPE, DateTime.now(),
                     tenant,
                     stMap);
         }
@@ -813,7 +888,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     }
 
     public void clearInboundExternalIdCache(String tenant, boolean recreate, int inboundExternalIdCacheSize) {
-        cacheManager.clearInboundExternalIdCache(tenant, recreate, inboundExternalIdCacheSize);
+        cacheManager.clearInboundExternalIdCache(tenant, recreate, inboundExternalIdCacheSize, configurationRegistry);
     }
 
     public void removeDeviceFromInboundExternalIdCache(String tenant, ID identity) {
@@ -862,6 +937,26 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     public int uploadEventAttachment(final BinaryInfo binaryInfo, final String eventId,
             boolean overwrites) throws ProcessingException {
         return binaryAttachmentService.uploadEventAttachment(binaryInfo, eventId, overwrites, c8ySemaphore);
+    }
+
+    public boolean userExists(String tenant, String username) {
+        try {
+            UserRepresentation user = userApi.getUser(tenant, username);
+            if(user != null) {
+                return true;
+            } else {
+                log.info("{} - User {} not found!", tenant, username);
+                return false;
+            }
+        } catch (SDKException e) {
+            if (e.getHttpStatus() == 404) {
+                return false;
+            } else {
+                log.error("{} - Error while checking if user {} exists: {}", tenant, username, e.getMessage());
+                return false;
+            }
+        }
+
     }
 
 }

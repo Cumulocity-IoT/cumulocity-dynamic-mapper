@@ -162,11 +162,14 @@ class CodeExtractionOutboundProcessorTest {
         Map<String, Object> payload = new HashMap<>();
         payload.put("id", "12345");
 
+        var state = processingContext.getProcessingState();
+
         // When
-        processor.processSubstitutionResult(result, processingContext, payload, mapping, TEST_TENANT);
+        processor.processSubstitutionResult(result, processingContext.getRoutingContext(),
+                processingContext.getPayloadContext(), state, payload, mapping, TEST_TENANT, processingContext);
 
         // Then
-        Map<String, List<SubstituteValue>> cache = processingContext.getProcessingCache();
+        Map<String, List<SubstituteValue>> cache = state.getProcessingCache();
         assertTrue(cache.containsKey("deviceId"), "Cache should contain deviceId");
         assertTrue(cache.containsKey("command"), "Cache should contain command");
 
@@ -184,11 +187,14 @@ class CodeExtractionOutboundProcessorTest {
 
         Map<String, Object> payload = new HashMap<>();
 
+        var state = processingContext.getProcessingState();
+
         // When
-        processor.processSubstitutionResult(result, processingContext, payload, mapping, TEST_TENANT);
+        processor.processSubstitutionResult(result, processingContext.getRoutingContext(),
+                processingContext.getPayloadContext(), state, payload, mapping, TEST_TENANT, processingContext);
 
         // Then
-        assertTrue(processingContext.getIgnoreFurtherProcessing(),
+        assertTrue(state.shouldIgnoreFurtherProcessing(),
                 "Should ignore further processing when result is empty");
 
         log.info("✅ Successfully handled empty substitution result");
@@ -201,11 +207,14 @@ class CodeExtractionOutboundProcessorTest {
 
         Map<String, Object> payload = new HashMap<>();
 
+        var state = processingContext.getProcessingState();
+
         // When
-        processor.processSubstitutionResult(result, processingContext, payload, mapping, TEST_TENANT);
+        processor.processSubstitutionResult(result, processingContext.getRoutingContext(),
+                processingContext.getPayloadContext(), state, payload, mapping, TEST_TENANT, processingContext);
 
         // Then
-        assertTrue(processingContext.getIgnoreFurtherProcessing(),
+        assertTrue(state.shouldIgnoreFurtherProcessing(),
                 "Should ignore further processing with null result");
 
         log.info("✅ Successfully handled null substitution result");
@@ -219,11 +228,14 @@ class CodeExtractionOutboundProcessorTest {
 
         Map<String, Object> payload = new HashMap<>();
 
+        var state = processingContext.getProcessingState();
+
         // When
-        processor.processSubstitutionResult(result, processingContext, payload, mapping, TEST_TENANT);
+        processor.processSubstitutionResult(result, processingContext.getRoutingContext(),
+                processingContext.getPayloadContext(), state, payload, mapping, TEST_TENANT, processingContext);
 
         // Then
-        assertTrue(processingContext.getIgnoreFurtherProcessing(),
+        assertTrue(state.shouldIgnoreFurtherProcessing(),
                 "Should ignore further processing with null substitutions");
 
         log.info("✅ Successfully handled null substitutions");
@@ -244,11 +256,14 @@ class CodeExtractionOutboundProcessorTest {
 
         Map<String, Object> payload = new HashMap<>();
 
+        var state = processingContext.getProcessingState();
+
         // When
-        processor.processSubstitutionResult(result, processingContext, payload, mapping, TEST_TENANT);
+        processor.processSubstitutionResult(result, processingContext.getRoutingContext(),
+                processingContext.getPayloadContext(), state, payload, mapping, TEST_TENANT, processingContext);
 
         // Then
-        Map<String, List<SubstituteValue>> cache = processingContext.getProcessingCache();
+        Map<String, List<SubstituteValue>> cache = state.getProcessingCache();
         assertTrue(cache.containsKey("commands"), "Cache should contain commands");
 
         // Array expansion should result in multiple cache entries
@@ -273,8 +288,11 @@ class CodeExtractionOutboundProcessorTest {
 
         Map<String, Object> payload = new HashMap<>();
 
+        var state = processingContext.getProcessingState();
+
         // When
-        processor.processSubstitutionResult(result, processingContext, payload, mapping, TEST_TENANT);
+        processor.processSubstitutionResult(result, processingContext.getRoutingContext(),
+                processingContext.getPayloadContext(), state, payload, mapping, TEST_TENANT, processingContext);
 
         // Then
         Set<String> alarms = processingContext.getAlarms();
@@ -304,11 +322,14 @@ class CodeExtractionOutboundProcessorTest {
 
         Map<String, Object> payload = new HashMap<>();
 
+        var state = processingContext.getProcessingState();
+
         // When
-        processor.processSubstitutionResult(result, processingContext, payload, mapping, TEST_TENANT);
+        processor.processSubstitutionResult(result, processingContext.getRoutingContext(),
+                processingContext.getPayloadContext(), state, payload, mapping, TEST_TENANT, processingContext);
 
         // Then
-        Map<String, List<SubstituteValue>> cache = processingContext.getProcessingCache();
+        Map<String, List<SubstituteValue>> cache = state.getProcessingCache();
         assertEquals(3, cache.size(), "Should have three substitutions in cache");
         assertTrue(cache.containsKey("deviceId"));
         assertTrue(cache.containsKey("command"));
@@ -336,11 +357,14 @@ class CodeExtractionOutboundProcessorTest {
         Map<String, Object> payload = new HashMap<>();
         payload.put("id", "op-123");
 
+        var state = processingContext.getProcessingState();
+
         // When
-        processor.processSubstitutionResult(result, processingContext, payload, mapping, TEST_TENANT);
+        processor.processSubstitutionResult(result, processingContext.getRoutingContext(),
+                processingContext.getPayloadContext(), state, payload, mapping, TEST_TENANT, processingContext);
 
         // Then
-        Map<String, List<SubstituteValue>> cache = processingContext.getProcessingCache();
+        Map<String, List<SubstituteValue>> cache = state.getProcessingCache();
         assertTrue(cache.containsKey("deviceId"));
         assertTrue(cache.containsKey("configuration"));
 
@@ -360,11 +384,14 @@ class CodeExtractionOutboundProcessorTest {
         Map<String, Object> payload = new HashMap<>();
         payload.put("test", "data");
 
+        var state = processingContext.getProcessingState();
+
         // When
-        processor.processSubstitutionResult(result, processingContext, payload, mapping, TEST_TENANT);
+        processor.processSubstitutionResult(result, processingContext.getRoutingContext(),
+                processingContext.getPayloadContext(), state, payload, mapping, TEST_TENANT, processingContext);
 
         // Then - No exception should be thrown
-        assertFalse(processingContext.getIgnoreFurtherProcessing(),
+        assertFalse(state.shouldIgnoreFurtherProcessing(),
                 "Should continue processing with valid result");
 
         log.info("✅ Successfully processed with debug logging enabled");
@@ -385,6 +412,7 @@ class CodeExtractionOutboundProcessorTest {
                 "Error message should contain original exception message");
 
         // In testing mode, should not ignore further processing
+        // Note: handleProcessingError modifies context directly, not through state
         assertFalse(processingContext.getIgnoreFurtherProcessing(),
                 "Should not ignore further processing in testing mode");
 
@@ -409,6 +437,7 @@ class CodeExtractionOutboundProcessorTest {
         assertEquals(1, processingContext.getErrors().size(), "Should have one error");
 
         // In production mode, should ignore further processing
+        // Note: handleProcessingError modifies context directly, not through state
         assertTrue(processingContext.getIgnoreFurtherProcessing(),
                 "Should ignore further processing in production mode");
 
@@ -475,11 +504,14 @@ class CodeExtractionOutboundProcessorTest {
 
         Map<String, Object> payload = new HashMap<>();
 
+        var state = processingContext.getProcessingState();
+
         // When
-        processor.processSubstitutionResult(result, processingContext, payload, mapping, TEST_TENANT);
+        processor.processSubstitutionResult(result, processingContext.getRoutingContext(),
+                processingContext.getPayloadContext(), state, payload, mapping, TEST_TENANT, processingContext);
 
         // Then
-        Map<String, List<SubstituteValue>> cache = processingContext.getProcessingCache();
+        Map<String, List<SubstituteValue>> cache = state.getProcessingCache();
         assertEquals(1, cache.size(), "Should only have the one substitution");
         assertFalse(cache.containsKey(Mapping.KEY_TIME),
                 "Outbound processor should not add default time");
@@ -500,11 +532,14 @@ class CodeExtractionOutboundProcessorTest {
         Map<String, Object> payload = new HashMap<>();
         payload.put("test", "data");
 
+        var state = processingContext.getProcessingState();
+
         // When
-        processor.processSubstitutionResult(result, processingContext, payload, mapping, TEST_TENANT);
+        processor.processSubstitutionResult(result, processingContext.getRoutingContext(),
+                processingContext.getPayloadContext(), state, payload, mapping, TEST_TENANT, processingContext);
 
         // Then - Should process successfully with payload logging enabled
-        assertFalse(processingContext.getIgnoreFurtherProcessing(),
+        assertFalse(state.shouldIgnoreFurtherProcessing(),
                 "Should continue processing with valid result");
 
         log.info("✅ Successfully processed with payload logging enabled");

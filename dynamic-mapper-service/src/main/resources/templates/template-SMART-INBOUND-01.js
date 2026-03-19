@@ -6,7 +6,17 @@
  * @defaultTemplate true
  * @internal true
  * @readonly true
- * 
+ *
+ * Sample payload
+ * {
+ *     "messageId": "msg-001",
+ *     "clientId": "sensor-berlin-01",
+ *     "deviceId": "12345",
+ *     "sensorData": {
+ *         "temp_val": 23.5
+ *     }
+ * }
+ * topic 'testSmartInbound/sensor-berlin-01'
 */
 
 function onMessage(msg, context) {
@@ -14,19 +24,22 @@ function onMessage(msg, context) {
 
     console.log("Context" + context.getStateAll());
     console.log("Payload Raw:" + payload);
-    console.log("Payload messageId" +  payload.get("messageId"));
+    console.log("Payload messageId" +  payload["messageId"]);
 
-    // lookup device for enrichment
-    var deviceByDeviceId = context.getManagedObjectByDeviceId(payload.get("deviceId"));
+    // Get clientId from context first, fall back to payload
+    var clientId = context.getClientId() || payload["clientId"];
+
+    // lookup device by c8y internal id for enrichment
+    var deviceByDeviceId = context.getManagedObject(payload["deviceId"]);
     console.log("Device (by device id): " + deviceByDeviceId);
 
-    var deviceByExternalId = context.getManagedObject({ externalId: payload.get("clientId"), type: "c8y_Serial" } );
+    // lookup device by externalId for enrichment
+    var deviceByExternalId = context.getManagedObjectByExternalId({ externalId: clientId, type: "c8y_Serial" });
     console.log("Device (by external id): " + deviceByExternalId);
 
     return [{
         cumulocityType: "measurement",
         action: "create",
-        
         payload: {
             "time":  new Date().toISOString(),
             "type": "c8y_TemperatureMeasurement",
@@ -37,7 +50,6 @@ function onMessage(msg, context) {
                 }
             }
         },
-
-        externalSource: [{"type":"c8y_Serial", "externalId": payload.get("clientId")}]
+        externalSource: [{"type":"c8y_Serial", "externalId": clientId}]
     }];
 }

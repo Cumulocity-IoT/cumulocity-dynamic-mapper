@@ -22,9 +22,11 @@
 package dynamic.mapper.service;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.Base64;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -89,119 +91,101 @@ public class ServiceConfigurationService {
         this.tenantOptionApi = tenantOptionApi;
     }
 
-    /*
-     * enhance this method to
-     * 1. load all templates in the directory templates, they are javascript files
-     * 2. parse the header of the file for the
-     * annotation @name, @internal, @templateType, @defaultTemplate, @readonly
-     * 3. the first template with the value defaultTemplate set to true for every
-     * category in TemplateType should be registered with its own key instead of
-     * createCustomUuid
-     */
     public void initCodeTemplates(ServiceConfiguration configuration, Boolean overrideSystem) {
-        Map<String, CodeTemplate> codeTemplates = new HashMap<>();
-        Map<TemplateType, Boolean> defaultTemplateRegistered = new HashMap<>();
-
+        Map<String, CodeTemplate> codeTemplates;
         if (overrideSystem) {
             codeTemplates = configuration.getCodeTemplates();
-            codeTemplates.entrySet().removeIf(entry -> entry.getValue().internal);
+            codeTemplates.entrySet().removeIf(entry ->
+                    entry.getValue().internal && entry.getValue().templateType != TemplateType.SHARED);
+        } else {
+            codeTemplates = new HashMap<>();
         }
 
+        Map<TemplateType, Boolean> defaultTemplateRegistered = new EnumMap<>(TemplateType.class);
+        for (TemplateType type : TemplateType.values()) {
+            defaultTemplateRegistered.put(type, false);
+        }
+
+        Resource[] resources;
         try {
-            // Initialize the defaultTemplateRegistered map with false for each template
-            // type
-            for (TemplateType type : TemplateType.values()) {
-                defaultTemplateRegistered.put(type, false);
-            }
+            ResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
+            resources = resolver.getResources("classpath:templates/template*.js");
+        } catch (IOException e) {
+            log.error("Failed to load template resources", e);
+            configuration.setCodeTemplates(codeTemplates);
+            return;
+        }
 
-            // Get all template files from the resources
-            Resource[] resources;
+        for (Resource resource : resources) {
             try {
-                ResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
-                resources = resolver.getResources("classpath:templates/template*.js");
-            } catch (IOException e) {
-                log.error("Failed to load template resources", e);
-                throw e;
+                loadTemplate(resource, codeTemplates, defaultTemplateRegistered);
+            } catch (Exception e) {
+                log.error("Failed to process template file: {}", resource.getFilename(), e);
             }
-
-            for (Resource resource : resources) {
-                try {
-                    String fileName = resource.getFilename();
-                    if (fileName == null || !fileName.startsWith("template")) {
-                        continue;
-                    }
-
-                    // Read the file content
-                    String content = new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-
-                    // Parse the header annotations
-                    String name = extractAnnotation(content, "@name");
-                    String description = extractAnnotation(content, "@description");
-                    boolean internal = Boolean.parseBoolean(extractAnnotation(content, "@internal"));
-                    String templateTypeStr = extractAnnotation(content, "@templateType");
-
-                    // MIGRATION: derive direction from templateType if not found in annotations
-                    String directionAsString = extractAnnotation(content, "@direction");
-                    if (directionAsString == null || directionAsString.isEmpty()) {
-                        directionAsString = templateTypeStr;
-                    }
-
-                    // Convert direction string to enum
-                    Direction direction = null;
-                    try {
-                        direction = Direction.valueOf(directionAsString);
-                    } catch (Exception e) {
-                        // ignore as it is an optional field
-                    }
-
-                    boolean defaultTemplate = Boolean.parseBoolean(extractAnnotation(content, "@defaultTemplate"));
-                    boolean readonly = Boolean.parseBoolean(extractAnnotation(content, "@readonly"));
-
-                    // Convert templateType string to enum
-                    TemplateType templateType = null;
-                    try {
-                        templateType = TemplateType.valueOf(templateTypeStr);
-                    } catch (Exception e) {
-                        log.warn("Invalid template type in file {}: {}", fileName, templateTypeStr);
-                        continue;
-                    }
-
-                    // Determine the ID for the template
-                    String templateId;
-                    if (defaultTemplate && !defaultTemplateRegistered.get(templateType)) {
-                        // Use the template type as ID for the first default template of each type
-                        templateId = templateType.name();
-                        defaultTemplateRegistered.put(templateType, true);
-                    } else {
-                        // Generate a random ID for non-default templates
-                        templateId = createCustomUuid();
-                    }
-
-                    // Create and add the template
-                    CodeTemplate template = new CodeTemplate(
-                            templateId,
-                            name,
-                            description,
-                            templateType,
-                            direction,
-                            encode(content),
-                            internal,
-                            readonly,
-                            defaultTemplate);
-
-                    codeTemplates.put(templateId, template);
-
-                    log.info("Loaded template: {} ({})", name, templateId);
-
-                } catch (Exception e) {
-                    log.error("Failed to process template file: {}", resource.getFilename(), e);
-                }
-            }
-        } catch (Exception e) {
-            log.error("Failed to initialize code templates", e);
         }
 
         configuration.setCodeTemplates(codeTemplates);
+    }
+
+    private void loadTemplate(Resource resource, Map<String, CodeTemplate> codeTemplates,
+            Map<TemplateType, Boolean> defaultTemplateRegistered) throws IOException {
+        String fileName = resource.getFilename();
+        if (fileName == null) {
+            return;
+        }
+
+        String content;
+        try (InputStream is = resource.getInputStream()) {
+            content = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+        }
+
+        String name = extractAnnotation(content, "@name");
+        String description = extractAnnotation(content, "@description");
+        boolean internal = Boolean.parseBoolean(extractAnnotation(content, "@internal"));
+        String templateTypeStr = extractAnnotation(content, "@templateType");
+
+        TemplateType templateType;
+        try {
+            templateType = TemplateType.valueOf(templateTypeStr);
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid template type in file {}: {}", fileName, templateTypeStr);
+            return;
+        }
+
+        // MIGRATION: derive direction from templateType if not found in annotations
+        String directionAsString = extractAnnotation(content, "@direction");
+        if (directionAsString == null || directionAsString.isEmpty()) {
+            directionAsString = templateTypeStr;
+        }
+        Direction direction = null;
+        try {
+            direction = Direction.valueOf(directionAsString);
+        } catch (IllegalArgumentException e) {
+            // direction is optional
+        }
+
+        boolean defaultTemplate = Boolean.parseBoolean(extractAnnotation(content, "@defaultTemplate"));
+        boolean readonly = Boolean.parseBoolean(extractAnnotation(content, "@readonly"));
+
+        String templateId;
+        if (defaultTemplate && !defaultTemplateRegistered.get(templateType)) {
+            templateId = templateType.name();
+            defaultTemplateRegistered.put(templateType, true);
+        } else {
+            templateId = createCustomUuid();
+        }
+
+        if (codeTemplates.containsKey(templateId)) {
+            log.info("Preserving existing template: {} ({}), skipping classpath version", name, templateId);
+            return;
+        }
+
+        CodeTemplate template = new CodeTemplate(
+                templateId, name, description, templateType, direction,
+                encode(content), internal, readonly, defaultTemplate);
+        codeTemplates.put(templateId, template);
+
+        log.info("Loaded template: {} ({})", name, templateId);
     }
 
     /*
@@ -245,7 +229,7 @@ public class ServiceConfigurationService {
             log.info("Successfully migrated {} templates", templatesToAdd.size());
 
         } catch (Exception e) {
-            log.error("Failed to initialize code templates", e);
+            log.error("Failed to migrate code templates", e);
         }
     }
 
@@ -293,42 +277,16 @@ public class ServiceConfigurationService {
         try {
             return new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         } catch (IOException e) {
-            // Log the error
-            // logger.error("Failed to read mapping file", e);
-
-            // You can return a default value
-            return "{}"; // Empty JSON object
-
-            // Or rethrow as an unchecked exception
-            // throw new RuntimeException("Failed to read mapping file", e);
+            log.error("Failed to read mapping file", e);
+            return "{}";
         }
     }
 
-    /**
-     * Encodes a given template string to Base64.
-     * 
-     * @param template The string to be encoded
-     * @return Base64 encoded template as string
-     */
     private String encode(String template) {
         if (template == null) {
             return "";
         }
-
-        try {
-            // Convert string to byte array
-            byte[] templateBytes = template.getBytes(StandardCharsets.UTF_8);
-
-            // Encode to Base64
-            byte[] encodedBytes = Base64.getEncoder().encode(templateBytes);
-
-            // Convert encoded bytes back to string
-            return new String(encodedBytes, StandardCharsets.UTF_8);
-        } catch (Exception e) {
-            // Log exception or handle as appropriate for your application
-            // logger.error("Failed to encode template", e);
-            return "";
-        }
+        return Base64.getEncoder().encodeToString(template.getBytes(StandardCharsets.UTF_8));
     }
 
     public void saveServiceConfiguration(String tenant, final ServiceConfiguration configuration)
@@ -363,10 +321,9 @@ public class ServiceConfigurationService {
                 log.warn("{} - No configuration found, returning empty element!", tenant);
                 rt = initialize(tenant);
             } catch (Exception e) {
-                String exceptionMsg = e.getCause() == null ? e.getMessage() : e.getCause().getMessage();
-                String msg = String.format("Failed to convert service object. Error: %s",
-                        exceptionMsg);
-                log.warn(msg);
+                Throwable cause = e.getCause() != null ? e.getCause() : e;
+                log.warn("Failed to convert service object. Error: {}", cause.getMessage());
+                rt = initialize(tenant);
             }
             return rt;
         });
@@ -383,8 +340,7 @@ public class ServiceConfigurationService {
         try {
             saveServiceConfiguration(tenant, configuration);
         } catch (JsonProcessingException e) {
-            log.warn("{} - failed to initializes ServiceConfiguration!", tenant);
-            e.printStackTrace();
+            log.warn("{} - failed to initialize ServiceConfiguration!", tenant, e);
         }
         return configuration;
     }
@@ -395,21 +351,10 @@ public class ServiceConfigurationService {
                 .collect(Collectors.joining());
     }
 
-    /*
-     * method should update the annotation in the code header with the values that
-     * are defined in the codeTemplate
-     * extractAnnotation(content, "@internal");
-     * extractAnnotation(content, "@templateType");
-     * extractAnnotation(content, "@defaultTemplate");
-     * extractAnnotation(content, "@readonly");
-     */
     /**
      * Updates the annotation values in the code header to match the values in the
-     * CodeTemplate object.
-     * Ensures that the header's metadata is consistent with the object's
-     * properties.
-     * 
-     * @param codeTemplate The CodeTemplate object whose header needs to be updated
+     * CodeTemplate object. Ensures that the header's metadata is consistent with
+     * the object's properties.
      */
     public void rectifyHeaderInCodeTemplate(CodeTemplate codeTemplate, Boolean overrideHeaderWithMetadata) {
         if (codeTemplate == null || codeTemplate.code == null || codeTemplate.code.isEmpty()) {
@@ -435,7 +380,7 @@ public class ServiceConfigurationService {
                 decodedCode = createNewHeader(codeTemplate) + decodedCode;
             } else {
                 String header = decodedCode.substring(0, headerEnd);
-                String codeBody = decodedCode.substring(headerEnd);
+                String codeBody = stripStaleTemplateHeaders(decodedCode.substring(headerEnd));
 
                 // Determine name and description based on overrideHeaderWithMetadata flag
                 String name = overrideHeaderWithMetadata ? codeTemplate.name : extractAnnotation(header, "@name");
@@ -534,7 +479,7 @@ public class ServiceConfigurationService {
                 String betweenHeaders = trimmed.substring(firstHeaderEnd + 2, secondHeaderStart).trim();
 
                 // If there's only whitespace between headers, we likely have corruption
-                if (betweenHeaders.isEmpty() || betweenHeaders.matches("^\\s*$")) {
+                if (betweenHeaders.isEmpty()) {
                     log.warn("Detected duplicate JSDoc headers for template: {}. Cleaning...", codeTemplate.name);
 
                     // Find the end of the second header
@@ -649,25 +594,10 @@ public class ServiceConfigurationService {
     }
 
     /**
-     * Updates a specific annotation in the header text.
-     * If the annotation exists, it updates its value; otherwise, it adds the
-     * annotation.
-     * 
-     * @param header     The header text to modify
-     * @param annotation The annotation to update (e.g., "@name")
-     * @param value      The new value for the annotation
-     * @return The updated header text
-     */
-    /**
      * Updates an annotation in the content with a new value.
-     * If the annotation doesn't exist, it will be added at the beginning of the
-     * file.
+     * If the annotation doesn't exist, it will be added inside the existing
+     * comment block, or a new block will be created.
      * Ensures exactly one space between the annotation and its value.
-     * 
-     * @param content    The content to update
-     * @param annotation The annotation to update
-     * @param value      The new value for the annotation
-     * @return The updated content
      */
     private String updateAnnotation(String content, String annotation, String value) {
         // Find the annotation in the content
@@ -702,20 +632,45 @@ public class ServiceConfigurationService {
     }
 
     /**
-     * Decodes a Base64 encoded string back to a regular string.
-     * 
-     * @param encodedString The Base64 encoded string
-     * @return The decoded string
+     * Removes any stale template metadata JSDoc blocks from the code body.
+     * A block is considered a stale template header if it contains {@code @templateType},
+     * which is unique to dynamically generated template metadata headers.
+     * This handles cases where a previous save prepended a new header without
+     * removing an older one embedded in the body.
      */
+    private String stripStaleTemplateHeaders(String codeBody) {
+        if (codeBody == null || !codeBody.contains("@templateType")) {
+            return codeBody;
+        }
+        StringBuilder result = new StringBuilder(codeBody);
+        int searchFrom = 0;
+        while (true) {
+            int blockStart = result.indexOf("/**", searchFrom);
+            if (blockStart == -1) break;
+            int blockEnd = result.indexOf("*/", blockStart + 3);
+            if (blockEnd == -1) break;
+            String block = result.substring(blockStart, blockEnd + 2);
+            if (block.contains("@templateType")) {
+                log.warn("Removing stale template metadata header found in code body");
+                int removeEnd = blockEnd + 2;
+                while (removeEnd < result.length() && result.charAt(removeEnd) == '\n') {
+                    removeEnd++;
+                }
+                result.delete(blockStart, removeEnd);
+            } else {
+                searchFrom = blockEnd + 2;
+            }
+        }
+        return result.toString();
+    }
+
     private String decode(String encodedString) {
         if (encodedString == null || encodedString.isEmpty()) {
             return "";
         }
-
         try {
-            byte[] decodedBytes = Base64.getDecoder().decode(encodedString);
-            return new String(decodedBytes, StandardCharsets.UTF_8);
-        } catch (Exception e) {
+            return new String(Base64.getDecoder().decode(encodedString), StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException e) {
             log.error("Failed to decode string", e);
             return "";
         }

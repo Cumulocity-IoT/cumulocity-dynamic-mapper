@@ -46,7 +46,7 @@ import { TranslatePipe } from '@ngx-translate/core';
         <input
           type="checkbox"
           [checked]="context.value"
-          [disabled]="isInputDisabled"
+          [disabled]="isInputDisabled || isLoading"
           (change)="onConfigurationToggle()"
         />
         <span></span>
@@ -72,6 +72,7 @@ export class ConnectorStatusEnabledRendererComponent implements OnInit {
   }
 
   feature: Feature | null = null;
+  isLoading = false;
   private featurePromise: Promise<Feature>;
 
   async ngOnInit() {
@@ -87,27 +88,27 @@ export class ConnectorStatusEnabledRendererComponent implements OnInit {
     if (!this.feature) {
       return true;
     }
-    const disabled = this.context.item.readOnly || !this.feature?.userHasMappingAdminRole;
-    if (disabled) {
-      console.log("Please verify:", this.context.item, this.feature, this.context.item.readOnly, this.feature?.userHasMappingAdminRole);
-    }
-    return disabled;
+    return this.context.item.readOnly || !this.feature?.userHasMappingAdminRole;
   }
 
   async onConfigurationToggle() {
-    const configuration = this.context.item;
-    const response1 = await this.sharedService.runOperation(
-      configuration.enabled ? { operation: Operation.DISCONNECT, parameter: { connectorIdentifier: configuration.identifier } } : {
-        operation: Operation.CONNECT,
-        parameter: { connectorIdentifier: configuration.identifier }
+    this.isLoading = true;
+    this.cdr.detectChanges();
+    try {
+      const configuration = this.context.item;
+      const response1 = await this.sharedService.runOperation(
+        configuration.enabled
+          ? { operation: Operation.DISCONNECT, parameter: { connectorIdentifier: configuration.identifier } }
+          : { operation: Operation.CONNECT, parameter: { connectorIdentifier: configuration.identifier } }
+      );
+      if (response1.status === HttpStatusCode.Created) {
+        this.alertService.success(gettext('Connection updated successfully.'));
+      } else {
+        this.alertService.danger(gettext('Failed to establish connection!'));
       }
-    );
-    // console.log('Details toggle activation to broker', response1);
-    if (response1.status === HttpStatusCode.Created) {
-      // if (response1.status === HttpStatusCode.Created && response2.status === HttpStatusCode.Created) {
-      this.alertService.success(gettext('Connection updated successfully.'));
-    } else {
-      this.alertService.danger(gettext('Failed to establish connection!'));
+    } finally {
+      this.isLoading = false;
+      this.cdr.detectChanges();
     }
     this.reloadData();
     this.sharedService.refreshMappings(Direction.INBOUND);

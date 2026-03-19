@@ -6,6 +6,15 @@
  * @defaultTemplate false
  * @internal true
  * @readonly true
+ *
+ * Sample Cumulocity event payload (source)
+ * {
+ *     "time": "2025-01-01T12:00:00.000Z",
+ *     "type": "c8y_ThresholdEvent",
+ *     "text": "Temperature threshold exceeded",
+ *     "source": { "id": "12345" }
+ * }
+ * publishTopic 'events/event'  (overridden dynamically)
  */
 
 function extractFromSource(ctx) {

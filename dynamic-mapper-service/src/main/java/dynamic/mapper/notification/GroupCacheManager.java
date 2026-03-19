@@ -24,8 +24,12 @@ package dynamic.mapper.notification;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+
+import com.cumulocity.rest.representation.inventory.ManagedObjectReferenceRepresentation;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -65,22 +69,75 @@ public class GroupCacheManager {
         return Collections.unmodifiableMap(groupCache);
     }
 
+    /**
+     * Returns the device IDs that were last seen as members of the given group.
+     * Returns an empty set if the group is not cached or has never been updated.
+     */
+    public Set<String> getSubscribedDevices(String groupId) {
+        CachedGroup entry = groupCache.get(groupId);
+        if (entry == null) {
+            return new HashSet<>();
+        }
+        return entry.getSubscribedDeviceIds();
+    }
+
+    /**
+     * Updates the tracked device membership for a group after a notification is processed.
+     * Creates a new CachedGroup entry preserving the existing MO (if any).
+     */
+    public void updateSubscribedDevices(String groupId, Set<String> deviceIds) {
+        CachedGroup existing = groupCache.get(groupId);
+        ManagedObjectRepresentation groupMO = (existing != null) ? existing.getGroup() : null;
+        groupCache.put(groupId, new CachedGroup(groupMO, LocalDateTime.now(), new HashSet<>(deviceIds)));
+        log.debug("{} - Updated subscribed devices for group {}: {} devices", tenant, groupId, deviceIds.size());
+    }
+
     public void addGroup(ManagedObjectRepresentation groupMO) {
         if (groupMO == null || groupMO.getId() == null) {
             log.warn("{} - Cannot add null group to cache", tenant);
             return;
         }
-        
+
         String groupId = groupMO.getId().getValue();
-        
+
         if (groupCache.size() >= MAX_CACHE_SIZE) {
             log.warn("{} - Cache size limit reached, cleaning up old entries", tenant);
             cleanupOldestEntries();
         }
-        
-        CachedGroup cachedGroup = new CachedGroup(groupMO, LocalDateTime.now());
-        groupCache.put(groupId, cachedGroup);
-        log.debug("{} - Added group {} to cache", tenant, groupId);
+
+        // Preserve existing subscribedDeviceIds across reconnects; if none, try to
+        // extract them from the MO's childAssets.references (best-effort — C8Y may or
+        // may not embed the first page of references inline).
+        Set<String> deviceIds = getSubscribedDevices(groupId);
+        if (deviceIds.isEmpty()) {
+            deviceIds = extractChildIdsFromMO(groupMO);
+        }
+
+        groupCache.put(groupId, new CachedGroup(groupMO, LocalDateTime.now(), deviceIds));
+        log.debug("{} - Cached group {} with {} known member device(s)", tenant, groupId, deviceIds.size());
+    }
+
+    /**
+     * Best-effort extraction of child device IDs from a ManagedObject returned by
+     * the C8Y inventory API. The API may embed the first page of childAssets
+     * references inline; if not, the returned set will be empty and the state will
+     * be populated on the first UPDATE notification instead.
+     */
+    private Set<String> extractChildIdsFromMO(ManagedObjectRepresentation groupMO) {
+        Set<String> childIds = new HashSet<>();
+        try {
+            if (groupMO.getChildAssets() != null && groupMO.getChildAssets().getReferences() != null) {
+                for (ManagedObjectReferenceRepresentation ref : groupMO.getChildAssets().getReferences()) {
+                    if (ref != null && ref.getManagedObject() != null
+                            && ref.getManagedObject().getId() != null) {
+                        childIds.add(ref.getManagedObject().getId().getValue());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.debug("{} - Could not extract child IDs from group MO: {}", tenant, e.getMessage());
+        }
+        return childIds;
     }
 
     public void removeGroup(ManagedObjectRepresentation groupMO) {
@@ -146,10 +203,18 @@ public class GroupCacheManager {
     public static class CachedGroup {
         private final ManagedObjectRepresentation group;
         private final LocalDateTime lastUpdated;
+        private final Set<String> subscribedDeviceIds;
 
         public CachedGroup(ManagedObjectRepresentation group, LocalDateTime lastUpdated) {
             this.group = group;
             this.lastUpdated = lastUpdated;
+            this.subscribedDeviceIds = new HashSet<>();
+        }
+
+        public CachedGroup(ManagedObjectRepresentation group, LocalDateTime lastUpdated, Set<String> subscribedDeviceIds) {
+            this.group = group;
+            this.lastUpdated = lastUpdated;
+            this.subscribedDeviceIds = subscribedDeviceIds;
         }
     }
 }

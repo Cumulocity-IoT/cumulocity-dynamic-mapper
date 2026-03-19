@@ -26,5 +26,4 @@ import lombok.Data;
 @Data
 public class Agent {
     private String system;
-    private int maxSteps;
 }

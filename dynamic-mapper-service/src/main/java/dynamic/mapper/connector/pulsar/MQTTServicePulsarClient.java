@@ -279,8 +279,8 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         int delayStep = 10000;
 
         while (attempt < maxAttempts && !isConnected() && shouldConnect()) {
-            //Do not have a delay on first start, then for each attempt +5s
-            if(attempt > 0) {
+            // Do not have a delay on first start, then for each attempt +5s
+            if (attempt > 0) {
                 delay = delay + delayStep;
                 log.info("{} - Pulsar Connection Attempt {} with delay {}", tenant, attempt, delay);
                 try {
@@ -325,7 +325,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                 }
                 attempt++;
             } catch (Exception e) {
-                if(serviceConfiguration.getLogConnectorErrorInBackend())
+                if (serviceConfiguration.getLogConnectorErrorInBackend())
                     log.error("{} - Error connecting MQTT Service Pulsar connector: {}", tenant, e.getMessage(), e);
                 else
                     log.error("{} - Error connecting MQTT Service Pulsar connector: {}", tenant, e.getMessage());
@@ -379,7 +379,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                     .topic(towardsPlatformTopic)
                     .subscriptionName(subscriptionName)
                     .autoUpdatePartitions(false)
-                    //Prevents a default exclusive consumer blocking other instances during restart
+                    // Prevents a default exclusive consumer blocking other instances during restart
                     .subscriptionType(SubscriptionType.Failover)
                     .messageListener(mqttServiceCallback)
                     .subscribe();
@@ -574,15 +574,12 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         }
     }
 
-    @Override
-    public void close() {
-        disconnect();
-    }
-
     /**
-     * Delete resources permanently - called only when connector is being deleted, not just disconnected
+     * Delete resources permanently - called only when connector is being deleted,
+     * not just disconnected
      * This removes the subscription from the broker by calling unsubscribe()
-     * If the consumer is already closed, it will temporarily reconnect to perform the unsubscribe
+     * If the consumer is already closed, it will temporarily reconnect to perform
+     * the unsubscribe
      */
     public void deleteResources() {
         if (towardsPlatformTopic == null) {
@@ -756,6 +753,11 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
     }
 
     @Override
+    public Boolean supportsWildcardInTopic(Direction direction) {
+        return true;
+    }
+
+    @Override
     public List<Direction> supportedDirections() {
         return Arrays.asList(Direction.INBOUND, Direction.OUTBOUND);
     }
@@ -817,26 +819,31 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                 .property("enableTls", ConnectorPropertyBuilder.optionalBoolean()
                         .order(1)
                         .readonly(true)
+                        .hidden(true)
                         .defaultValue(false))
 
                 .property("useSelfSignedCertificate", ConnectorPropertyBuilder.optionalBoolean()
                         .order(2)
                         .readonly(true)
+                        .hidden(true)
                         .defaultValue(false)
                         .condition("enableTls", "true"))
 
                 .property("fingerprintSelfSignedCertificate", ConnectorPropertyBuilder.optionalString()
                         .order(3)
-                        .readonly(true))
+                        .readonly(true)
+                        .hidden(true))
 
                 .property("nameCertificate", ConnectorPropertyBuilder.optionalString()
                         .order(4)
-                        .readonly(true))
+                        .readonly(true)
+                        .hidden(true))
 
                 // Authentication (pre-configured, read-only)
                 .property("authenticationMethod", ConnectorPropertyBuilder.optionalOption()
                         .order(5)
                         .readonly(true)
+                        .hidden(true)
                         .defaultValue("basic")
                         .optionsWithLabels("none", "None", "token", "Token", "oauth2", "OAuth2",
                                 "tls", "TLS", "basic", "Basic"))
@@ -844,28 +851,33 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                 .property("authenticationParams", ConnectorPropertyBuilder.optionalSensitive()
                         .order(6)
                         .readonly(true)
+                        .hidden(true)
                         .condition("authenticationMethod", "token", "oauth2", "tls", "basic"))
 
                 // Timeouts (read-only)
                 .property("connectionTimeoutSeconds", ConnectorPropertyBuilder.requiredNumeric()
                         .order(7)
                         .readonly(true)
+                        .hidden(true)
                         .defaultValue(DEFAULT_CONNECTION_TIMEOUT))
 
                 .property("operationTimeoutSeconds", ConnectorPropertyBuilder.requiredNumeric()
                         .order(8)
                         .readonly(true)
+                        .hidden(true)
                         .defaultValue(DEFAULT_OPERATION_TIMEOUT))
 
                 .property("keepAliveIntervalSeconds", ConnectorPropertyBuilder.requiredNumeric()
                         .order(9)
                         .readonly(true)
+                        .hidden(true)
                         .defaultValue(DEFAULT_KEEP_ALIVE))
 
                 // Subscription settings (read-only)
                 .property("subscriptionType", ConnectorPropertyBuilder.optionalOption()
                         .order(10)
                         .readonly(true)
+                        .hidden(true)
                         .defaultValue("Shared")
                         .optionsWithLabels("Exclusive", "Exclusive", "Shared", "Shared",
                                 "Failover", "Failover", "Key_Shared", "Key Shared"))
@@ -873,7 +885,8 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                 .property("subscriptionName", ConnectorPropertyBuilder.optionalString()
                         .order(11)
                         .description("Pulsar subscription name")
-                        .readonly(true))
+                        .readonly(true)
+                        .hidden(true))
 
                 // Wildcard support (read-only)
                 .property("supportsWildcardInTopicInbound", ConnectorPropertyBuilder.optionalBoolean()
@@ -886,15 +899,17 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                         .readonly(true)
                         .defaultValue(true))
 
-                // Pulsar-specific settings (read-only)
+                // Pulsar-specific settings (read-only, hidden)
                 .property("pulsarTenant", ConnectorPropertyBuilder.optionalString()
                         .order(14)
                         .readonly(true)
+                        .hidden(true)
                         .defaultValue("public"))
 
                 .property("pulsarNamespace", ConnectorPropertyBuilder.optionalString()
                         .order(15)
                         .readonly(true)
+                        .hidden(true)
                         .defaultValue(PULSAR_NAMESPACE))
 
                 .build();

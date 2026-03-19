@@ -43,4 +43,7 @@ public class TestContext {
     @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "Send payload to backend")
     @NotNull
     private Boolean send = false;
+
+    @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "Create a test device in C8Y inventory before sending (tagged with d11r_testDevice)")
+    private Boolean createTestDevice = false;
 }

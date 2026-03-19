@@ -67,16 +67,76 @@ c8y-data-grid button[title='Reload'] {
 }
 
 .console-output {
-  height: 100px;
-  overflow: auto;
+  background-color: #1e1e1e;
+  color: #d4d4d4;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 12px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  height: 300px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  border: 1px solid #333;
+}
+
+.log-line {
+  line-height: 1.5;
+  padding: 1px 0;
+}
+
+.log-debug {
+  color: #888888;
+}
+
+.log-log {
+  color: #d4d4d4;
+}
+
+.log-warn {
+  color: #e5c07b;
+}
+
+.log-error {
+  color: #e06c75;
+}
+
+.log-info {
+  color: #61afef;
+}
+
+.log-empty {
+  /* color: #555; */
+  color: #d4d4d4;
+  font-style: italic;
+}
+
+.log-loading {
+  color: #61afef;
+  font-style: italic;
+}
+
+.log-loading::after {
+  content: '';
+  display: inline-block;
+  animation: loading-dots 1.4s infinite;
+}
+
+@keyframes loading-dots {
+  0%   { content: '.'; }
+  33%  { content: '..'; }
+  66%  { content: '...'; }
+  100% { content: '....'; }
 }
 
 .sticky-buttons {
   z-index: 10;
   bottom: 0;
   position: sticky;
-  padding-bottom: 70px;
+  /* padding-bottom: 70px; */
+  padding-top: 8px;
   /* padding: 0 var(--c8y-component-padding, var(--c8y-root-component-padding)); */
   background: var(--c8y-component-background-default, var(--c8y-root-component-background-default));
   margin-top: auto;
+  justify-content: center;
 }

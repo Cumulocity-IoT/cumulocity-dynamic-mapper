@@ -20,7 +20,6 @@
 import * as _ from 'lodash';
 import { ChangeDetectorRef, Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { AlertService, BottomDrawerService, CoreModule } from '@c8y/ngx-components';
-import { BsModalService } from 'ngx-bootstrap/modal';
 import { firstValueFrom, Observable, Subject, Subscription, takeUntil, tap } from 'rxjs';
 import packageJson from '../../../package.json';
 import {
@@ -60,7 +59,7 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
   feature: Feature;
   filterStatusLog = {
     connectorIdentifier: 'ALL',
-    type: LoggingEventType.STATUS_CONNECTOR_EVENT_TYPE,
+    type: LoggingEventType.CONNECTOR_EVENT_TYPE,
   };
   LoggingEventTypeMap = LoggingEventTypeMap;
   LoggingEventType = LoggingEventType;
@@ -74,7 +73,6 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly alertService = inject(AlertService);
   private readonly sharedService = inject(SharedService);
-  private readonly bsModalService = inject(BsModalService);
   private readonly bottomDrawerService = inject(BottomDrawerService);
   private readonly connectorConfigurationService = inject(ConnectorConfigurationService);
   private readonly cdr = inject(ChangeDetectorRef);

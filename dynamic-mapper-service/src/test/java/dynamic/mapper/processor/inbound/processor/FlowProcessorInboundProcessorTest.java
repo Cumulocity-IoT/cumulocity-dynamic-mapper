@@ -53,7 +53,7 @@ import dynamic.mapper.model.Qos;
 import dynamic.mapper.model.SnoopStatus;
 import dynamic.mapper.processor.model.CumulocityObject;
 import dynamic.mapper.processor.model.CumulocityType;
-import dynamic.mapper.processor.model.SimpleFlowContext;
+import dynamic.mapper.processor.model.SmartFunctionContext;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ExternalId;
 import dynamic.mapper.processor.model.DataPrepContext;
@@ -219,7 +219,7 @@ class FlowProcessorInboundProcessorTest {
         payload.put("sensorData", sensorData);
 
         Context mockGraalContext = mock(Context.class);
-        SimpleFlowContext flowContext = new SimpleFlowContext(
+        SmartFunctionContext flowContext = new SmartFunctionContext(
                 mockGraalContext,
                 TEST_TENANT,
                 inventoryEnrichmentClient,

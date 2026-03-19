@@ -1,0 +1,21 @@
+@for (domain of domains; track domain) {
+<div class="card">
+  <div class="d-flex-sm d-col-xs p-t-24 p-l-16 p-r-16 p-b-16 m-0 bg-level-1" style="flex-wrap: nowrap;">
+    <div class="col-sm-3 m-b-24 col-xs-12 d-flex gap-16 text-default a-i-center j-c-center a-s-stretch">
+      <div class="text-center d-col">
+        <i class="m-b-8 icon-40 c8y-icon-duocolor" [c8yIcon]="kpisByDomain.get(domain)[0].domainIcon"></i>
+        <span class="tag tag--info">Cache</span>
+      </div>
+      <span class="h4">{{ getDomainDisplayName(domain) }}</span>
+    </div>
+    @for (kpi of kpisByDomain.get(domain); track kpi.id) {
+    <div class="col-sm-3 m-b-24 col-xs-12 a-i-stretch d-flex">
+      <a class="card m-b-0 fit-w" [routerLink]="['kpi', kpi.domain, kpi.id]"
+        style="text-decoration: none; color: inherit;">
+        <d11r-kpi-item [kpi]="kpi"></d11r-kpi-item>
+      </a>
+    </div>
+    }
+  </div>
+</div>
+}

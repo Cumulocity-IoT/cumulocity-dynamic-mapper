@@ -431,11 +431,6 @@ public class PulsarConnectorClient extends AConnectorClient {
     }
 
     @Override
-    public void close() {
-        disconnect();
-    }
-
-    @Override
     protected boolean isPhysicallyConnected() {
         return pulsarClient != null && !pulsarClient.isClosed();
     }

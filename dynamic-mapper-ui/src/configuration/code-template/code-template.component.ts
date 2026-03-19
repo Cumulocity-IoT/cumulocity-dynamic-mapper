@@ -19,7 +19,7 @@
  */
 import { CommonModule } from '@angular/common';
 import { HttpStatusCode } from '@angular/common/http';
-import { Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
+import { AfterViewInit, Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AlertService, CoreModule } from '@c8y/ngx-components';
@@ -29,7 +29,7 @@ import { BsModalService } from 'ngx-bootstrap/modal';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { BehaviorSubject } from 'rxjs';
 import { base64ToString, stringToBase64 } from '../../mapping/shared/util';
-import { Direction, Feature, ManageTemplateComponent, Operation, createCustomUuid } from '../../shared';
+import { ConfirmationModalComponent, Feature, ManageTemplateComponent, Operation, createCustomUuid } from '../../shared';
 import { SharedService } from '../../shared/service/shared.service';
 import { CodeTemplate, CodeTemplateMap, TemplateType } from '../shared/configuration.model';
 import { createCompletionProviderFlowFunction, createCompletionProviderSubstitutionAsCode } from '../../mapping/shared/stepper.model';
@@ -42,26 +42,26 @@ import { createCompletionProviderFlowFunction, createCompletionProviderSubstitut
   standalone: true,
   imports: [CoreModule, CommonModule, PopoverModule, EditorComponent, FormsModule]
 })
-export class CodeComponent implements OnInit {
-  @ViewChild(EditorComponent, { static: false }) codeEditor: EditorComponent;
+export class CodeComponent implements OnInit, AfterViewInit {
+  @ViewChild(EditorComponent, { static: false }) codeEditor!: EditorComponent;
 
-  codeTemplateDecoded: CodeTemplate;
+  codeTemplateDecoded!: CodeTemplate;
   codeTemplatesDecoded: Map<string, CodeTemplate> = new Map<string, CodeTemplate>();
-  codeTemplates: CodeTemplateMap;
-  template: string;
-  defaultTemplate: string;
-  templateType: TemplateType;
-  direction: Direction;
+  codeTemplates!: CodeTemplateMap;
+  template!: string;
+  defaultTemplate!: string;
+  templateType!: TemplateType;
   TemplateType = TemplateType;
   codeTemplateEntries: CodeTemplate[] = [];
   codeTemplateEntries$: BehaviorSubject<CodeTemplate[]> = new BehaviorSubject<CodeTemplate[]>([]);
+  isLoading = false;
 
   editorOptions: EditorComponent['editorOptions'] = {
     minimap: { enabled: true },
     //  renderValidationDecorations: "on",
     language: 'javascript',
   };
-  feature: Feature;
+  feature!: Feature;
   private completionProviderDisposable: any;
 
 
@@ -77,12 +77,12 @@ export class CodeComponent implements OnInit {
   ) { }
 
   async ngOnInit(): Promise<void> {
-    this.feature = await this.route.snapshot.data['feature'];
+    this.feature = this.route.snapshot.data['feature'];
     this.determineTemplateTypeFromUrl();
     this.template = this.defaultTemplate;
 
     await this.updateCodeTemplateEntries();
-    this.codeTemplateDecoded = this.codeTemplatesDecoded.get(this.template);
+    this.codeTemplateDecoded = this.codeTemplatesDecoded.get(this.template)!;
     this.onSelectCodeTemplate();
   }
 
@@ -92,25 +92,21 @@ export class CodeComponent implements OnInit {
       {
         pattern: /INBOUND_SUBSTITUTION_AS_CODE/,
         type: TemplateType.INBOUND_SUBSTITUTION_AS_CODE,
-        direction: Direction.INBOUND,
-        help: `The templates <b>Inbound</b> are available in the code editor and can be customized according to your requirements per mapping. They serve as sample to building substitutions in JavaScript. The function <code>function extractFromSource(ctx)</code> is called during the evaluation at runtime to define substitutions.`
+        help: `The templates <b>Inbound</b> are available in the code editor and can be customized according to your requirements per mapping. They serve as sample to building substitutions in JavaScript. The function <code>function extractFromSource(ctx)</code> is called during the evaluation at runtime to Transformation.`
       },
       {
         pattern: /OUTBOUND_SUBSTITUTION_AS_CODE/,
         type: TemplateType.OUTBOUND_SUBSTITUTION_AS_CODE,
-        direction: Direction.OUTBOUND,
-        help: `The templates <b>Outbound</b> are available in the code editor and can be customized according to your requirements per mapping. They serve as sample to building substitutions in JavaScript. The function <code>function extractFromSource(ctx)</code> is called during the evaluation at runtime to define substitutions.`
+        help: `The templates <b>Outbound</b> are available in the code editor and can be customized according to your requirements per mapping. They serve as sample to building substitutions in JavaScript. The function <code>function extractFromSource(ctx)</code> is called during the evaluation at runtime to Transformation.`
       },
       {
         pattern: /INBOUND_SMART_FUNCTION/,
         type: TemplateType.INBOUND_SMART_FUNCTION,
-        direction: Direction.INBOUND,
         help: `The templates <b>Inbound for Smart Function</b> are available in the code editor and can be customized according to your requirements per mapping. They serve as sample for a predefined Smart Function for data transformation and create payload for Cumulocity API calls. The function <code>function onMessage(msg, context)</code> is called during evaluation at runtime to define the payload.`
       },
       {
         pattern: /OUTBOUND_SMART_FUNCTION/,
         type: TemplateType.OUTBOUND_SMART_FUNCTION,
-        direction: Direction.OUTBOUND,
         help: `The templates <b>Outbound for Smart Function</b> are available in the code editor and can be customized according to your requirements per mapping. They serve as sample for a Smart Function (JavaScript) to create Broker Payload. The function <code>function onMessage(msg, context)</code> is called during evaluation at runtime to define the payload.`
       }
     ];
@@ -119,7 +115,6 @@ export class CodeComponent implements OnInit {
 
     if (matchedConfig) {
       this.templateType = matchedConfig.type;
-      this.direction = matchedConfig.direction;
       this.defaultTemplate = matchedConfig.type.toString();
       this.codeEditorHelp = matchedConfig.help;
     } else {
@@ -193,14 +188,15 @@ export class CodeComponent implements OnInit {
   }
 
   async updateCodeTemplateEntries(): Promise<void> {
+    this.isLoading = true;
     const defaultSet = this.getDefaultTemplateSet();
     this.codeTemplates = await this.sharedService.getCodeTemplates();
 
     this.codeTemplateEntries = Object.entries(this.codeTemplates)
       .map(([key, template]) => ({
         key,
-        id: undefined,
-        code: undefined,
+        id: undefined as any,
+        code: undefined as any,
         name: template.name,
         description: template.description,
         templateType: template.templateType,
@@ -212,6 +208,7 @@ export class CodeComponent implements OnInit {
 
     this.codeTemplateEntries$.next(this.codeTemplateEntries);
     this.decodeCodeTemplates();
+    this.isLoading = false;
   }
 
   private getDefaultTemplateSet(): string[] {
@@ -251,13 +248,29 @@ export class CodeComponent implements OnInit {
   }
 
   async onInitSystemCodeTemplate() {
-    const response = await this.sharedService.runOperation({ operation: Operation.INIT_CODE_TEMPLATES });
+    const modalRef = this.bsModalService.show(ConfirmationModalComponent, {
+      initialState: {
+        title: 'Re-initialize system code templates',
+        message:
+          'This will reset all system code templates (inbound, outbound, smart function) to their factory defaults. ' +
+          'Your shared code will NOT be affected. Any customizations made to system templates will be lost. ' +
+          'Do you want to proceed?',
+        labels: { ok: 'Re-initialize', cancel: 'Cancel' }
+      }
+    });
 
-    if (response.status === HttpStatusCode.Created) {
-      this.alertService.success(gettext('Reset system code template.'));
-    } else {
-      this.alertService.danger(gettext('Failed to reset system code template!'));
-    }
+    modalRef.content!.closeSubject.subscribe(async (confirmed: boolean) => {
+      if (confirmed) {
+        const response = await this.sharedService.runOperation({ operation: Operation.INIT_CODE_TEMPLATES });
+        if (response.status === HttpStatusCode.Created) {
+          this.alertService.success(gettext('System code templates re-initialized.'));
+          await this.updateCodeTemplateEntries();
+        } else {
+          this.alertService.danger(gettext('Failed to re-initialize system code templates!'));
+        }
+      }
+      modalRef.hide();
+    });
   }
 
   async onSaveCodeTemplate() {
@@ -286,7 +299,7 @@ export class CodeComponent implements OnInit {
     if (!this.codeTemplateDecoded) return;
 
     await this.openTemplateModal('RENAME', this.codeTemplateDecoded.name, async (updatedTemplate) => {
-      this.codeTemplateDecoded.name = updatedTemplate.name;
+      this.codeTemplateDecoded.name = updatedTemplate.name!;
       const encodedCode = stringToBase64(this.codeTemplateDecoded.code);
       await this.sharedService.updateCodeTemplate(this.template, {
         ...this.codeTemplateDecoded,
@@ -303,7 +316,7 @@ export class CodeComponent implements OnInit {
       const encodedCode = stringToBase64(this.codeTemplateDecoded.code);
       await this.sharedService.createCodeTemplate({
         ...this.codeTemplateDecoded,
-        name: updatedTemplate.name,
+        name: updatedTemplate.name!,
         code: encodedCode,
         id: createCustomUuid(),
         internal: false,
@@ -325,7 +338,7 @@ export class CodeComponent implements OnInit {
 
     const modalRef = this.bsModalService.show(ManageTemplateComponent, { initialState });
 
-    modalRef.content.closeSubject.subscribe(async (codeTemplate: Partial<CodeTemplate>) => {
+    modalRef.content!.closeSubject.subscribe(async (codeTemplate: Partial<CodeTemplate>) => {
       if (codeTemplate) {
         await onSuccess(codeTemplate);
       }
@@ -340,7 +353,7 @@ export class CodeComponent implements OnInit {
   }
 
   onSelectCodeTemplate(): void {
-    this.codeTemplateDecoded = this.codeTemplatesDecoded.get(this.template);
+    this.codeTemplateDecoded = this.codeTemplatesDecoded.get(this.template)!;
   }
 
 }

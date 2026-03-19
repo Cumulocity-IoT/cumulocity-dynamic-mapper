@@ -26,6 +26,7 @@ import { featureResolver, NODE2 } from '../shared/mapping/util';
 import { MappingServiceEventComponent } from './event/mapping-service-event.component';
 import { MonitoringNavigationFactory } from './monitoring-navigation.factory';
 import { StatisticTabFactory } from './statistic-tab.factory';
+import { CacheStatisticComponent } from './cache/cache-statistic.component';
 
 @NgModule({
   providers: [
@@ -48,6 +49,12 @@ import { StatisticTabFactory } from './statistic-tab.factory';
     hookRoute({
       path: `c8y-pkg-dynamic-mapper/${NODE2}/monitoring/serviceEvent`,
       component: MappingServiceEventComponent
+    }),
+        hookRoute({
+      path: `c8y-pkg-dynamic-mapper/${NODE2}/monitoring/cache`,
+      component: CacheStatisticComponent, resolve: {
+        feature: featureResolver
+      }
     }),
     hookNavigator(MonitoringNavigationFactory),
     hookTab(StatisticTabFactory),

@@ -34,6 +34,7 @@ import {
   ChangeDetectorRef,
   SimpleChanges
 } from '@angular/core';
+import { Observable, Subject, takeUntil } from 'rxjs';
 import {
   JsonEditor,
   createJSONEditor,
@@ -81,7 +82,7 @@ export class JsonEditorComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
   @Input()
-  updateEditor: EventEmitter<any>;
+  updateEditor: Observable<any>;
   @Input()
   class: string;
 
@@ -98,6 +99,7 @@ export class JsonEditorComponent implements OnInit, OnDestroy, AfterViewInit {
   initRan: boolean = true;
   identifier: string;
   private isReverting: boolean = false; // Flag to prevent emission during revert
+  private readonly destroy$ = new Subject<void>();
 
   constructor(
     private cdr: ChangeDetectorRef
@@ -165,7 +167,7 @@ export class JsonEditorComponent implements OnInit, OnDestroy, AfterViewInit {
     });
 
     this.class = `jsoneditor2 ${this.class}`;
-    this.updateEditor?.subscribe((update) => {
+    this.updateEditor?.pipe(takeUntil(this.destroy$)).subscribe((update) => {
       this.setSchema(update.schema);
       this.identifier = update.identifier;
     });
@@ -173,6 +175,8 @@ export class JsonEditorComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
     this.editor?.destroy();
   }
 

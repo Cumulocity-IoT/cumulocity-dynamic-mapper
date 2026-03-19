@@ -21,18 +21,15 @@ import {
   Component,
   inject,
   Input,
-  OnDestroy,
   OnInit,
   ViewEncapsulation
 } from '@angular/core';
-import { DeviceGridService, } from '@c8y/ngx-components/device-grid';
 import { Mapping, Substitution, MappingType, SharedService, isSubstitutionsAsCode } from '../../shared';
 import { AlertService, BottomDrawerRef, CoreModule } from '@c8y/ngx-components';
 import { AiChatComponent, AiChatMessageComponent } from '@c8y/ngx-components/ai/ai-chat';
 import { AIAgentService } from '../core/ai-agent.service';
 import { AgentObjectDefinition, AgentTextDefinition } from '../shared/ai-prompt.model';
 import { ServiceConfiguration } from '../../configuration';
-import { Subject } from 'rxjs';
 import { base64ToBytes } from '../shared/util';
 
 
@@ -42,22 +39,21 @@ import { base64ToBytes } from '../shared/util';
   styleUrls: ['./ai-prompt.component.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
-  imports:[CoreModule, AiChatComponent, AiChatMessageComponent]
+  imports:[CoreModule, AiChatComponent, AiChatMessageComponent],
+  host: { class: 'd-contents' }
 })
-export class AIPromptComponent implements OnInit, OnDestroy {
+export class AIPromptComponent implements OnInit {
 
-  alertService = inject(AlertService);
-  aiAgentService = inject(AIAgentService);
-  sharedService = inject(SharedService);
-  bottomDrawerRef = inject(BottomDrawerRef);
-  deviceGridService = inject(DeviceGridService);
+  private readonly alertService = inject(AlertService);
+  private readonly aiAgentService = inject(AIAgentService);
+  private readonly sharedService = inject(SharedService);
+  private readonly bottomDrawerRef = inject(BottomDrawerRef);
 
   @Input() mapping: Mapping;
   @Input() aiAgent: AgentObjectDefinition | AgentTextDefinition | null;
 
   private _save: (value: Substitution[] | string) => void;
   private _cancel: (reason?: any) => void;
-  destroy$: Subject<void> = new Subject<void>();
   valid: boolean = false;
 
   result: Promise<Substitution[] | string> = new Promise((resolve, reject) => {
@@ -72,6 +68,8 @@ export class AIPromptComponent implements OnInit, OnDestroy {
   isLoading = false;
   isLoadingChat = false;
   newMessage = '';
+  /** Bound to [prompt] on c8y-ai-chat so the textarea stays empty during auto-send. */
+  chatInput = '';
   testVars: string = '';
   serviceConfiguration: ServiceConfiguration;
   agentType: MappingType;
@@ -101,63 +99,24 @@ export class AIPromptComponent implements OnInit, OnDestroy {
       this.aiAgent?.agent?.variables || {},
     );
 
+    const mappingForAI = this.buildMappingForAI();
+
     if (this.isCodeMapping) {
-      // For CODE mappings, include existing JavaScript code if available
-      const existingCode = this.extractExistingJavaScriptCode(this.mapping);
-      const mappingWithoutSubstitutions = { ...this.mapping };
-      delete mappingWithoutSubstitutions.substitutions;
-      mappingWithoutSubstitutions.code = existingCode;
-      mappingWithoutSubstitutions.sourceTemplate = JSON.parse(mappingWithoutSubstitutions.sourceTemplate);
-      mappingWithoutSubstitutions.targetTemplate = JSON.parse(mappingWithoutSubstitutions.targetTemplate);
-
-      // this.newMessage = JSON.stringify({
-      //   sourceTemplate: JSON.parse(this.mapping.sourceTemplate),
-      //   targetTemplate: JSON.parse(this.mapping.targetTemplate),
-      //   existingCode: existingCode,
-      //   mappingType: 'JavaScript'
-      // }, null, 2);
-
+      mappingForAI.code = this.extractExistingJavaScriptCode(this.mapping);
       this.newMessage = "Map for the following mapping the source template to the target template:\n\n" +
         "**Complete Mapping:**\n\n" +
         "```json\n" +
-        JSON.stringify(mappingWithoutSubstitutions, null, 2)
-      "\n```\n";
-      // +  "**Source:**\n\n" +
-      // "```json\n" +
-      // JSON.stringify(JSON.parse(this.mapping.sourceTemplate), null, 2) +
-      // "\n```\n\n" +
-      // "**Target:**\n\n" +
-      // "```json\n" +
-      // JSON.stringify(JSON.parse(this.mapping.targetTemplate), null, 2) +
-      // "\n```\n";
+        JSON.stringify(mappingForAI, null, 2) +
+        "\n```\n";
     } else {
-      // Include the complete mapping but remove existing substitutions
-      const mappingWithoutSubstitutions = { ...this.mapping };
-      delete mappingWithoutSubstitutions.substitutions;
-      mappingWithoutSubstitutions.sourceTemplate = JSON.parse(mappingWithoutSubstitutions.sourceTemplate);
-      mappingWithoutSubstitutions.targetTemplate = JSON.parse(mappingWithoutSubstitutions.targetTemplate);
-
       this.newMessage = "Map for the following mapping the source template to the target template:\n\n" +
         "```json\n" +
-        JSON.stringify(mappingWithoutSubstitutions, null, 2)
-        + "\n```\n";
-      // + "**Source:**\n\n" +
-      // "```json\n" +
-      // JSON.stringify(JSON.parse(this.mapping.sourceTemplate), null, 2) +
-      // "\n```\n\n" +
-      // "**Target:**\n\n" +
-      // "```json\n" +
-      // JSON.stringify(JSON.parse(this.mapping.targetTemplate), null, 2) +
-      // "\n```\n";
+        JSON.stringify(mappingForAI, null, 2) +
+        "\n```\n";
     }
 
     // Call sendMessage() automatically
     await this.sendMessage();
-  }
-
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
   }
 
   save() {
@@ -172,6 +131,14 @@ export class AIPromptComponent implements OnInit, OnDestroy {
   cancel() {
     this._cancel("User canceled");
     this.bottomDrawerRef.close();
+  }
+
+  private buildMappingForAI(): any {
+    const m = { ...this.mapping };
+    delete m.substitutions;
+    m.sourceTemplate = JSON.parse(m.sourceTemplate as any);
+    m.targetTemplate = JSON.parse(m.targetTemplate as any);
+    return m;
   }
 
   private extractExistingJavaScriptCode(mapping: Mapping): string {
@@ -202,7 +169,6 @@ export class AIPromptComponent implements OnInit, OnDestroy {
       try {
         this.aiAgent.agent.variables = JSON.parse(this.testVars);
       } catch (ex) {
-        console.log(ex);
         this.alertService.danger('Invalid JSON in test variables');
         this.isLoadingChat = false;
         return;
@@ -272,7 +238,6 @@ export class AIPromptComponent implements OnInit, OnDestroy {
           }
         } else {
           this.valid = false;
-          console.log('No JavaScript code block found in response');
         }
       }
     } catch (error) {
@@ -318,7 +283,6 @@ export class AIPromptComponent implements OnInit, OnDestroy {
         }
       } else {
         this.valid = false;
-        console.log('No JSON block found in response');
       }
     } catch (error) {
       this.valid = false;

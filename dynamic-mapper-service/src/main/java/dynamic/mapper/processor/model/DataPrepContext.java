@@ -61,60 +61,98 @@ public interface DataPrepContext {
     Value getStateKeySet();
 
     /**
-     * Retrieves the entire configuration map for the context.
-     * 
-     * @return A Value containing the context's configuration as a JS object.
+     * Retrieves the mapping configuration for the current invocation.
+     *
+     * <p>The config is read-only and contains mapping metadata such as
+     * {@code mappingId}, {@code mappingName}, {@code tenant}, {@code topic},
+     * {@code targetAPI}, {@code debug}, {@code clientId} and related flags.
+     * It is populated by the enrichment processor before the Smart Function is called
+     * and does <em>not</em> persist across invocations (unlike state).</p>
+     *
+     * <p>For outbound SMART_FUNCTION, the config also contains {@code externalId} — the
+     * resolved external identifier of the source device. This field is only present when
+     * the mapping has {@code useExternalId} enabled and a non-empty {@code externalIdType}
+     * configured. Use it to build broker topics directly in JavaScript:
+     * <pre>
+     *   const externalId = context.getConfig().externalId;
+     *   return [{ topic: `measurements/${externalId}`, payload: { ... } }];
+     * </pre>
+     * </p>
+     *
+     * <p>Implementations that do not support GraalVM (e.g. Java extensions) may return
+     * {@code null}; use {@link JavaExtensionContext#getConfigAsMap()} for Java-native access.</p>
+     *
+     * @return A GraalVM {@link Value} wrapping the config map, or {@code null} if not available.
      */
-    Value getConfig();
+    default Value getConfig() {
+        return null;
+    }
 
     /**
      * Lookup DTM Asset properties
-     * 
+     *
      * @param assetId The asset ID to lookup.
      * @return A Value containing the asset properties as a JS object.
      */
     Value getDTMAsset(String assetId);
 
     /**
-     * Lookup Inventory Device properties
-     * 
-     * @param deviceId The device ID to lookup.
+     * Lookup Inventory Device properties by internal Cumulocity device ID.
+     *
+     * @param c8ySourceId The internal Cumulocity device ID to lookup.
      * @return A Value containing the device properties as a JS object.
      */
-    Value getManagedObjectByDeviceId(String deviceId);
+    Value getManagedObject(String c8ySourceId);
 
     /**
-     * Lookup Inventory Device properties by external id
-     * 
-     * @param externalId The externalId Id to lookup.
+     * Lookup Inventory Device properties by external id.
+     *
+     * @param externalId The externalId to lookup.
      * @return A Value containing the device properties as a JS object.
      */
-    Value getManagedObject(ExternalId externalId);
+    Value getManagedObjectByExternalId(ExternalId externalId);
 
-
-        /**
-     * Lookup Inventory Device properties by external id
-     * 
+    /**
+     * Lookup Inventory Device properties by external id.
+     *
      * @param externalIdValue A Value object containing externalId and type properties
      * @return A Value containing the device properties as a JS object.
      */
-    Value getManagedObject(Value externalIdValue);
+    Value getManagedObjectByExternalId(Value externalIdValue);
 
     /**
      * Log message
-     * 
+     *
      * @param message Message to log
-     * 
+     *
      */
     public void addLogMessage(String message);
 
     /**
+     * Alias for {@link #addLogMessage(String)} for backward compatibility with
+     * JavaScript mappings that use {@code context.logMessage(...)}.
+     *
+     * @param message Message to log
+     */
+    default void logMessage(String message) {
+        addLogMessage(message);
+    }
+
+    /**
      * Testing cycle indicator
-     * 
+     *
      * @return Is context used in a testing cycle
-     * 
+     *
      */
     public Boolean getTesting();
+
+    /**
+     * Get the client ID from the connector message
+     *
+     * @return The client ID from the inbound message, or null if not available
+     * @since 6.2
+     */
+    String getClientId();
 
     void clearState();
 }

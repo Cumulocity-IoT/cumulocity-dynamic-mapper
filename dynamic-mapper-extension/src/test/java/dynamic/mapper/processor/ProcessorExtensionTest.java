@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.processor.flow.SimpleDataPreparationContext;
+import dynamic.mapper.processor.flow.JavaExtensionContextImpl;
 import dynamic.mapper.processor.model.CumulocityObject;
 import dynamic.mapper.processor.model.CumulocityType;
 import dynamic.mapper.processor.model.Message;
@@ -62,8 +62,8 @@ public class ProcessorExtensionTest {
     // Create Message wrapper
     Message<byte[]> message = new Message<>(payload, "test/topic", "test-client", java.util.Map.of());
 
-    // Use SimpleDataPreparationContext with minimal setup
-    SimpleDataPreparationContext context = new SimpleDataPreparationContext(
+    // Use JavaExtensionContextImpl with minimal setup
+    JavaExtensionContextImpl context = new JavaExtensionContextImpl(
         null,  // flowContext
         null,  // c8yAgent
         "test-tenant",

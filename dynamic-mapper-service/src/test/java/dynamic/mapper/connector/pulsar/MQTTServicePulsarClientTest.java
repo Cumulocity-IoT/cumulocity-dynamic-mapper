@@ -448,7 +448,7 @@ class MQTTServicePulsarClientTest {
                 TEST_TENANT);
 
         assertTrue(mqttServicePulsarClient.supportsWildcardInTopic(Direction.INBOUND));
-        assertFalse(mqttServicePulsarClient.supportsWildcardInTopic(Direction.OUTBOUND));
+        assertTrue(mqttServicePulsarClient.supportsWildcardInTopic(Direction.OUTBOUND));
     }
 
     @Test

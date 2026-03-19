@@ -22,13 +22,13 @@ package dynamic.mapper.processor.util;
 
 import org.springframework.stereotype.Component;
 
-import dynamic.mapper.processor.inbound.processor.BaseProcessor;
+import dynamic.mapper.processor.CommonProcessor;
 import dynamic.mapper.processor.model.ProcessingContext;
 
 import org.apache.camel.Exchange;
 
 @Component
-public class ConsolidationProcessor extends BaseProcessor {
+public class ConsolidationProcessor extends CommonProcessor {
     
     @Override
     public void process(Exchange exchange) throws Exception {

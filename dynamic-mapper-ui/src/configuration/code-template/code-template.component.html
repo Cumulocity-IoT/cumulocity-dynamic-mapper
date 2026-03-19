@@ -28,9 +28,9 @@
         required>
         <option [ngValue]="null" disabled>Select template...</option>
         @for (item of codeTemplateEntries$ | async; track item) {
-          <option [ngValue]="item['key']">
-            {{ item.name }} ({{ item.readonly? 'readonly': 'editable' }})
-          </option>
+        <option [ngValue]="item['key']">
+          {{ item.name }} ({{ item.readonly? 'readonly': 'editable' }})
+        </option>
         }
       </select>
     </div>
@@ -48,7 +48,8 @@
     <i c8yIcon="duplicate"></i>
     {{ 'Duplicate' | translate }}
   </button>
-  <button class="btn btn-link" title="{{ 'Reset' | translate }}" (click)="onInitSystemCodeTemplate()" [disabled]="!feature?.userHasMappingAdminRole">
+  <button class="btn btn-link" title="{{ 'Reset' | translate }}" (click)="onInitSystemCodeTemplate()"
+    [disabled]="!feature?.userHasMappingAdminRole">
     <i c8yIcon="reset"></i>
     {{ 'Init system code templates' | translate }}
   </button>
@@ -58,6 +59,9 @@
   </button>
 </c8y-action-bar-item>
 <div class="card content-fullpage d-grid">
+  @if (isLoading) {
+  <c8y-loading></c8y-loading>
+  } @else {
   <div class="card-block">
     <c8y-form-group class="fit-h">
       <div class="d-flex">
@@ -67,7 +71,7 @@
             <div [innerHtml]="codeEditorHelp"></div>
           </ng-template>
           <button type="button" placement="right" [popover]="popTemplateCodeHelp" triggers="click" class="btn-help"
-          containerClass="wide-popover" aria-label="Help content"></button>
+            containerClass="wide-popover" aria-label="Help content"></button>
         </span>
       </div>
       <c8y-editor [editorOptions]="editorOptions" monacoEditorMarkerValidator [ngModel]="codeTemplateDecoded?.code"
@@ -83,4 +87,5 @@
       </button>
     </div>
   </div>
+  }
 </div>

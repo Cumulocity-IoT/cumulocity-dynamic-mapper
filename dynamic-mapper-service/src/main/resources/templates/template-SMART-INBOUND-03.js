@@ -6,7 +6,16 @@
  * @defaultTemplate false
  * @internal true
  * @readonly true
- * 
+ *
+ * Sample payload
+ * {
+ *     "messageId": "msg-001",
+ *     "clientId": "sensor-berlin-01",
+ *     "sensorData": {
+ *         "temp_val": 23.5
+ *     }
+ * }
+ * topic 'testSmartInbound/sensor-berlin-01'
 */
 
 function onMessage(msg, context) {
@@ -14,12 +23,14 @@ function onMessage(msg, context) {
 
     console.log("Context" + context.getStateAll());
     console.log("Payload Raw:" + payload);
-    console.log("Payload messageId" +  payload.get("messageId"));
+    console.log("Payload messageId" +  payload["messageId"]);
+
+    // Get clientId from context first, fall back to payload
+    var clientId = context.getClientId() || payload["clientId"];
 
     return [{
         cumulocityType: "measurement",
         action: "create",
-        
         payload: {
             "time":  new Date().toISOString(),
             "type": "c8y_TemperatureMeasurement",
@@ -30,7 +41,7 @@ function onMessage(msg, context) {
                 }
             }
         },
-        externalSource: [{"type":"c8y_Serial", "externalId": payload.get("clientId")}],
+        externalSource: [{"type":"c8y_Serial", "externalId": clientId}],
         contextData: {"deviceName":"Test-Sensor", "deviceType": "sensor-type"} // specify the name and type of the new implicitly created device
     }];
 }

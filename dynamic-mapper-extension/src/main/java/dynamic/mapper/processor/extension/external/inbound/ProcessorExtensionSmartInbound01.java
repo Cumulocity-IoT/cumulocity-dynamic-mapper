@@ -24,7 +24,7 @@ package dynamic.mapper.processor.extension.external.inbound;
 import com.dashjoin.jsonata.json.Json;
 import dynamic.mapper.processor.extension.ProcessorExtensionInbound;
 import dynamic.mapper.processor.model.CumulocityObject;
-import dynamic.mapper.processor.model.DataPreparationContext;
+import dynamic.mapper.processor.model.JavaExtensionContext;
 import dynamic.mapper.processor.model.Message;
 import lombok.extern.slf4j.Slf4j;
 import org.joda.time.DateTime;
@@ -54,12 +54,23 @@ import java.util.Map;
  * </pre>
  *
  * <p>Output: Cumulocity c8y_TemperatureMeasurement</p>
+ *
+ * <p>Supported parameter keys (under the top-level {@code parameter} map):
+ * <ul>
+ *   <li>{@code fragment} – measurement fragment name (default: "c8y_Steam")</li>
+ *   <li>{@code series} – series name within the fragment (default: "Temperature")</li>
+ *   <li>{@code unit} – unit of the measurement value (default: "C")</li>
+ * </ul>
  */
 @Slf4j
 public class ProcessorExtensionSmartInbound01 implements ProcessorExtensionInbound<byte[]> {
 
+    private static final String DEFAULT_FRAGMENT = "c8y_Steam";
+    private static final String DEFAULT_SERIES = "Temperature";
+    private static final String DEFAULT_UNIT = "C";
+
     @Override
-    public CumulocityObject[] onMessage(Message<byte[]> message, DataPreparationContext context) {
+    public CumulocityObject[] onMessage(Message<byte[]> message, JavaExtensionContext context) {
         try {
             // Parse JSON payload
             String jsonString = new String(message.getPayload(), "UTF-8");
@@ -69,14 +80,32 @@ public class ProcessorExtensionSmartInbound01 implements ProcessorExtensionInbou
             log.info("{} - Processing smart inbound message, messageId: {}",
                     context.getTenant(), payload.get("messageId"));
 
+            // Get clientId from context first, fall back to payload
+            String clientId = context.getClientId();
+            if (clientId == null) {
+                clientId = (String) payload.get("clientId");
+            }
+
+            // Read optional parameters
+            String fragment = DEFAULT_FRAGMENT;
+            String series = DEFAULT_SERIES;
+            String unit = DEFAULT_UNIT;
+            @SuppressWarnings("unchecked")
+            Map<String, Object> parameter = (Map<String, Object>) context.getConfigAsMap().get("parameter");
+            if (parameter != null) {
+                log.info("{} - Extension parameter defined: {}", context.getTenant(), parameter);
+                if (parameter.get("fragment") instanceof String f) fragment = f;
+                if (parameter.get("series") instanceof String s) series = s;
+                if (parameter.get("unit") instanceof String u) unit = u;
+            }
+
             // Extract data
-            String clientId = (String) payload.get("clientId");
             @SuppressWarnings("unchecked")
             Map<String, Object> sensorData = (Map<String, Object>) payload.get("sensorData");
             Number tempVal = (Number) sensorData.get("temp_val");
 
-            log.debug("{} - Creating temperature measurement: {} C for device: {}",
-                    context.getTenant(), tempVal, clientId);
+            log.debug("{} - Creating temperature measurement: {} {} for device: {}",
+                    context.getTenant(), tempVal, unit, clientId);
 
             // Build measurement using builder pattern
             // Note: deviceName and deviceType are needed for implicit device creation
@@ -84,7 +113,7 @@ public class ProcessorExtensionSmartInbound01 implements ProcessorExtensionInbou
                 CumulocityObject.measurement()
                     .type("c8y_TemperatureMeasurement")
                     .time(new DateTime().toString())
-                    .fragment("c8y_Steam", "Temperature", tempVal.doubleValue(), "C")
+                    .fragment(fragment, series, tempVal.doubleValue(), unit)
                     .externalId(clientId, "c8y_Serial")
                     .deviceName(clientId)           // Use clientId as device name
                     .deviceType("c8y_TemperatureSensor")  // Device type for implicit creation

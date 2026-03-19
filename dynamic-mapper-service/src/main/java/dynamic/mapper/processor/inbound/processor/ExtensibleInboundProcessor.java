@@ -32,14 +32,15 @@ import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.AbstractExtensibleProcessor;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.extension.ProcessorExtensionInbound;
-import dynamic.mapper.processor.flow.SimpleDataPreparationContext;
+import dynamic.mapper.processor.flow.JavaExtensionContextImpl;
 import dynamic.mapper.processor.model.CumulocityObject;
-import dynamic.mapper.processor.model.DataPreparationContext;
+import dynamic.mapper.processor.model.JavaExtensionContext;
 import dynamic.mapper.processor.model.Message;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.TransformationType;
 import dynamic.mapper.service.ExtensionInboundRegistry;
 import dynamic.mapper.service.MappingService;
+import dynamic.mapper.service.cache.FlowStateStore;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -57,6 +58,9 @@ public class ExtensibleInboundProcessor extends AbstractExtensibleProcessor {
 
     @Autowired
     private C8YAgent c8yAgent;
+
+    @Autowired
+    private FlowStateStore flowStateStore;
 
     public ExtensibleInboundProcessor(
             MappingService mappingService,
@@ -120,18 +124,36 @@ public class ExtensibleInboundProcessor extends AbstractExtensibleProcessor {
         // 1. Create Message wrapper
         Message<byte[]> message = Message.from(context);
 
-        // 2. Create DataPreparationContext
-        DataPreparationContext prepContext = new SimpleDataPreparationContext(
+        // 2. Create JavaExtensionContext with persistent native state
+        Mapping mapping = context.getMapping();
+        java.util.Map<String, Object> initialState = flowStateStore.loadState(tenant, mapping.getIdentifier());
+        JavaExtensionContext prepContext = new JavaExtensionContextImpl(
             context.getFlowContext(),
             c8yAgent,
             tenant,
             context.getTesting(),
-            context.getMapping(),
-            context
+            mapping,
+            context,
+            flowStateStore,
+            initialState
         );
 
         // 3. Call new pattern method
-        CumulocityObject[] results = extension.onMessage(message, prepContext);
+        CumulocityObject[] results;
+        try {
+            results = extension.onMessage(message, prepContext);
+        } catch (AbstractMethodError e) {
+            String errorMsg = String.format(
+                "%s - Extension '%s' (class: %s) is incompatible with the current interface. " +
+                "The extension JAR was compiled against an older version of ProcessorExtensionInbound " +
+                "whose onMessage() signature has changed. " +
+                "Please recompile the extension against the current dynamic-mapper-service JAR and redeploy it.",
+                tenant,
+                extensionEntry.getEventName(),
+                extensionEntry.getFqnClassName());
+            log.error(errorMsg, e);
+            throw new ProcessingException(errorMsg, e);
+        }
 
         // 4. Store results in context for processing by ExtensibleResultInboundProcessor
         if (results != null && results.length > 0) {

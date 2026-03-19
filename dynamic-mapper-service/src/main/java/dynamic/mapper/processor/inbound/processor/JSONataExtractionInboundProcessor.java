@@ -2,23 +2,14 @@ package dynamic.mapper.processor.inbound.processor;
 
 import static com.dashjoin.jsonata.Jsonata.jsonata;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
-import org.joda.time.DateTime;
 import org.springframework.stereotype.Component;
 
-import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Substitution;
 import dynamic.mapper.processor.AbstractJSONataExtractionProcessor;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.RepairStrategy;
-import dynamic.mapper.processor.model.SubstituteValue;
-import dynamic.mapper.processor.model.SubstituteValue.TYPE;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -51,29 +42,6 @@ public class JSONataExtractionInboundProcessor extends AbstractJSONataExtraction
                     substitution.getPathSource(), payloadAsString, e);
         }
         return extractedSourceContent;
-    }
-
-    @Override
-    protected void postProcessSubstitutions(ProcessingContext<?> context,
-                                           Map<String, List<SubstituteValue>> processingCache)
-            throws ProcessingException {
-        Mapping mapping = context.getMapping();
-
-        // Check if a time substitution exists
-        boolean substitutionTimeExists = processingCache.containsKey(Mapping.KEY_TIME);
-
-        // If no substitution for the time property exists, then use the system time
-        // (for APIs that require time: MEASUREMENT, EVENT, ALARM)
-        if (!substitutionTimeExists && mapping.getTargetAPI() != API.INVENTORY
-                && mapping.getTargetAPI() != API.OPERATION) {
-            List<SubstituteValue> processingCacheEntry = processingCache.getOrDefault(
-                    Mapping.KEY_TIME,
-                    new ArrayList<>());
-            processingCacheEntry.add(
-                    new SubstituteValue(new DateTime().toString(),
-                            TYPE.TEXTUAL, RepairStrategy.CREATE_IF_MISSING, false));
-            processingCache.put(Mapping.KEY_TIME, processingCacheEntry);
-        }
     }
 
     @Override

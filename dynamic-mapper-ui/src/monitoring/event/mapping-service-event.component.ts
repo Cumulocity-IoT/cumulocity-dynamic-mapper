@@ -20,11 +20,13 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { EventService, IEvent, IResultList } from '@c8y/client';
+import { EventService, IEvent, IResultList, InventoryService } from '@c8y/client';
 import { CoreModule, Pagination } from '@c8y/ngx-components';
+import { saveAs } from 'file-saver';
 import { BsDatepickerModule } from 'ngx-bootstrap/datepicker';
-import { BehaviorSubject, from, Observable, Subject, switchMap, takeUntil } from 'rxjs';
+import { BehaviorSubject, catchError, from, Observable, of, Subject, switchMap, takeUntil, tap } from 'rxjs';
 import {
+  EventMetadata,
   LoggingEventTypeMap,
   SharedModule,
   SharedService
@@ -42,6 +44,7 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
 
   constructor(
     private eventService: EventService,
+    private inventoryService: InventoryService,
     private sharedService: SharedService,
     private fb: FormBuilder
   ) {
@@ -68,6 +71,10 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
   destroy$ = new Subject<void>();
   reload$ = new Subject<void>();
 
+  // State management
+  readonly isLoading$ = new BehaviorSubject<boolean>(true);
+  readonly error$ = new BehaviorSubject<string | null>(null);
+
   private createForm(): void {
     this.filterForm = this.fb.group({
       type: new FormControl('ALL'),
@@ -79,6 +86,9 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.setupFormSubscriptions();
     this.setupEventsObservable();
+
+    // Trigger initial load
+    this.filterSubject$.next();
   }
 
   private setupFormSubscriptions(): void {
@@ -107,6 +117,10 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
 
   private setupEventsObservable(): void {
     this.events$ = this.filterSubject$.pipe(
+      tap(() => {
+        this.isLoading$.next(true);
+        this.error$.next(null);
+      }),
       switchMap(() => from(this.sharedService.getDynamicMappingServiceAgent())),
       switchMap((mappingServiceId) =>
         this.eventService.list({
@@ -114,6 +128,13 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
           source: mappingServiceId,
         })
       ),
+      tap(() => this.isLoading$.next(false)),
+      catchError(error => {
+        console.error('Error loading service events:', error);
+        this.isLoading$.next(false);
+        this.error$.next('Failed to load service events. Please try again.');
+        return of({ data: [], paging: {} } as IResultList<IEvent>);
+      }),
       takeUntil(this.destroy$)
     );
   }
@@ -122,15 +143,91 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
     this.destroy$.next();
     this.destroy$.complete();
     this.reload$.complete();
+    this.isLoading$.complete();
+    this.error$.complete();
   }
 
   onFilterMappingServiceEventSelect(event: string): void {
+    if (!event) {
+      return;
+    }
+
     if (event === 'ALL') {
       delete this.baseFilter['type'];
     } else {
-      this.baseFilter['type'] = LoggingEventTypeMap[event].type;
+      const eventType = LoggingEventTypeMap[event];
+      if (eventType?.type) {
+        this.baseFilter['type'] = eventType.type;
+      }
     }
     this.filterSubject$.next();
+  }
+
+  resetFilters(): void {
+    this.filterForm.patchValue({
+      type: 'ALL',
+      dateFrom: null,
+      dateTo: null
+    });
+    delete this.baseFilter['type'];
+    delete this.baseFilter['dateFrom'];
+    delete this.baseFilter['dateTo'];
+    this.filterSubject$.next();
+  }
+
+  getEventMetadata(event: IEvent): EventMetadata | null {
+    // Try to get metadata from event first (new events with d11r_metadata fragment)
+    const metadata = event['d11r_metadata'];
+    if (metadata) {
+      return metadata as EventMetadata;
+    }
+
+    // Fallback: lookup for old events without metadata
+    const entry = Object.entries(LoggingEventTypeMap).find(
+      ([_, details]) => details.type === event.type
+    );
+    if (entry && entry[1]) {
+      return {
+        component: entry[1].component || '',
+        componentDisplayName: entry[1].componentDisplayName || 'Unknown',
+        severity: entry[1].severity || 'info',
+        description: entry[1].description || ''
+      };
+    }
+    return null;
+  }
+
+  getSeverityClass(severity: string): string {
+    switch (severity) {
+      // case 'error': return 'label-danger';
+      case 'error': return 'label-warning';
+      case 'warning': return 'label-warning';
+      case 'info':
+      default: return 'label-primary';
+    }
+  }
+
+  extractManagedObjectId(event: IEvent): string | null {
+    return event?.['d11r_system']?.['id'] ?? null;
+  }
+
+  async downloadMapping(event: IEvent): Promise<void> {
+    const moId = this.extractManagedObjectId(event);
+    if (!moId) return;
+    const { data } = await this.inventoryService.detail(moId);
+    const mapping = data['d11r_mapping'];
+    const json = JSON.stringify(mapping ? [mapping] : [data], undefined, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    saveAs(blob, `mapping-${moId}.json`);
+  }
+
+  async downloadMappingMo(event: IEvent): Promise<void> {
+    const moId = this.extractManagedObjectId(event);
+    if (!moId) return;
+    const { data } = await this.inventoryService.detail(moId);
+    const json = JSON.stringify(data, undefined, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    saveAs(blob, `mo-mapping-${moId}.json`);
   }
 
   private onDateChange(field: 'dateFrom' | 'dateTo', date: Date): void {

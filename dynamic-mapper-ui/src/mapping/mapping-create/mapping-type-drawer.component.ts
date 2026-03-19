@@ -18,18 +18,11 @@
  * @authors Christof Strack
  */
 
-/*
- * Copyright (c) 2025 Cumulocity GmbH
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import { Component, inject, Input, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
-import { FormBuilder, FormGroup } from '@angular/forms';
-import { BottomDrawerRef, CoreModule, ModalLabels } from '@c8y/ngx-components';
-import { BsModalService } from 'ngx-bootstrap/modal';
+import { AbstractControl, FormBuilder, FormGroup, ValidationErrors } from '@angular/forms';
+import { BottomDrawerRef, BottomDrawerService, CoreModule, ModalLabels } from '@c8y/ngx-components';
 import { Subject, takeUntil } from 'rxjs';
 import {
-  CodeExplorerComponent,
   Direction,
   MappingType,
   MappingTypeDescriptionMap,
@@ -40,10 +33,8 @@ import {
   TransformationTypeDescriptions,
   TransformationTypeLabels
 } from '../../shared';
+import { CodeEditorDrawerComponent } from '../../shared/component/code-explorer/code-editor-drawer.component';
 import { CodeTemplate } from '../../configuration';
-import { base64ToString } from '../shared/util';
-
-import { CustomSelectComponent } from '../../shared/component/select/custom-select.component';
 
 // Types
 interface SelectOption<T> {
@@ -69,7 +60,7 @@ interface SaveResult {
   templateUrl: './mapping-type-drawer.component.html',
   encapsulation: ViewEncapsulation.None,
   standalone: true,
-  imports: [CoreModule, CustomSelectComponent]
+  imports: [CoreModule]
 })
 export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   @Input() direction: Direction;
@@ -78,7 +69,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   private readonly bottomDrawerRef = inject(BottomDrawerRef);
   private readonly sharedService = inject(SharedService);
   private readonly fb = inject(FormBuilder);
-  private readonly bsModalService = inject(BsModalService);
+  private readonly bottomDrawerService = inject(BottomDrawerService);
   private readonly destroy$ = new Subject<void>();
 
   // Constants - Remove 'as const' to allow normal type checking
@@ -108,7 +99,6 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   isLoading = true;
   isLoadingCodeTemplates = false;
   showTransformationType = false;
-  valid = true;
 
   // Promise for modal result
   private _resolve: (value: SaveResult) => void;
@@ -140,6 +130,9 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   }
 
   onSave(): void {
+    if (this.shouldShowTransformationType()) {
+      this.formGroup.get('transformationType')?.markAsTouched();
+    }
     if (!this.formGroup.valid) return;
 
     const { mappingType, transformationType, snoop, codeTemplate } = this.formGroup.getRawValue();
@@ -158,13 +151,12 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     const codeTemplate = this.formGroup.get('codeTemplate')?.value as CodeTemplateOption;
     if (!codeTemplate?.value) return;
 
-    this.bsModalService.show(CodeExplorerComponent, {
+    this.bottomDrawerService.openDrawer(CodeEditorDrawerComponent, {
       initialState: {
-        templateCode: base64ToString(codeTemplate.value.code),
-        templateName: codeTemplate.description,
-        labels: { ok: 'Cancel', cancel: 'Cancel' }
-      },
-      class: 'modal-lg'
+        encodedCode: codeTemplate.value.code,
+        sourceSystem: 'Template',
+        action: 'view'
+      }
     });
   }
 
@@ -245,6 +237,8 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
 
     if (expertMode) {
       transformationControl?.enable();
+      // Clear value so user must explicitly select a transformation type
+      transformationControl?.setValue(null, { emitEvent: false });
     } else {
       transformationControl?.disable();
       this.resetToDefaultsIfNeeded();
@@ -252,6 +246,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
 
     this.updateMappingTypeOptions();
     this.updateTransformationTypeOptions();
+    this.updateTransformationTypeValidators();
   }
 
   private onMappingTypeChange(option: MappingTypeOption): void {
@@ -263,6 +258,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     if (!config.snoopSupported) snoopControl?.setValue(false);
 
     this.updateTransformationTypeOptions();
+    this.updateTransformationTypeValidators();
   }
 
   private async onTransformationTypeChange(option: TransformationTypeOption): Promise<void> {
@@ -334,12 +330,40 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
       this.createTransformationTypeOption(type)
     );
 
-    // Reset if current selection is not available
+    // Preserve current selection only if it is still valid in the new options list.
+    // Never auto-select: user must explicitly pick when the selection is cleared.
     const currentTransformation = this.formGroup?.get('transformationType')?.value as TransformationTypeOption;
-    if (currentTransformation?.value && !config.supportedTransformationTypes.includes(currentTransformation.value)) {
-      const defaultType = this.getDefaultTransformationType(config.supportedTransformationTypes);
-      this.formGroup.patchValue({ transformationType: this.createTransformationTypeOption(defaultType) });
+    const matchingOption = this.transformationTypeOptions.find(o => o.value === currentTransformation?.value);
+
+    if (matchingOption) {
+      // Still valid — update reference so c8y-select can match it
+      this.formGroup.patchValue({ transformationType: matchingOption }, { emitEvent: false });
+    } else {
+      // No longer valid (or never set) — clear and require explicit selection
+      this.formGroup.patchValue({ transformationType: null }, { emitEvent: false });
+      this.codeTemplateOptions = [];
     }
+  }
+
+  private readonly transformationTypeValidator = (control: AbstractControl): ValidationErrors | null => {
+    const option = control.value as TransformationTypeOption;
+    if (!option?.value) {
+      return { required: true };
+    }
+    const isInOptions = this.transformationTypeOptions.some(o => o.value === option.value);
+    return isInOptions ? null : { invalidSelection: true };
+  };
+
+  private updateTransformationTypeValidators(): void {
+    const transformationControl = this.formGroup.get('transformationType');
+    if (!transformationControl) return;
+
+    if (this.shouldShowTransformationType()) {
+      transformationControl.setValidators([this.transformationTypeValidator]);
+    } else {
+      transformationControl.clearValidators();
+    }
+    transformationControl.updateValueAndValidity({ emitEvent: false });
   }
 
   private async loadCodeTemplates(transformationType: TransformationType): Promise<void> {

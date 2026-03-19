@@ -38,17 +38,17 @@
         <div class="col-lg-10 col-lg-offset-1">
           <h4 class="text-medium text-center">
             @if (
-              stepperConfiguration.editorMode !== EditorMode.READ_ONLY
-              ) {
-              <span>Select connector for mapping (at least one is required)</span>
+            stepperConfiguration.editorMode !== EditorMode.READ_ONLY
+            ) {
+            <span>Select connector for mapping (at least one is required)</span>
             }
             @if (
-              stepperConfiguration.editorMode === EditorMode.READ_ONLY
-              ) {
-              <div>
-                Selected connectors
-                <span class="label label-primary text-12">{{ 'Read Only' }}</span>
-              </div>
+            stepperConfiguration.editorMode === EditorMode.READ_ONLY
+            ) {
+            <div>
+              Selected connectors
+              <span class="label label-primary text-12">{{ 'Read Only' }}</span>
+            </div>
             }
           </h4>
         </div>
@@ -57,17 +57,17 @@
     <div class="col-xs-12 flex-grow no-gutter">
       <d11r-mapping-connector [stepperConfiguration]="stepperConfiguration" [directions]="[mapping.direction]"
         [deploymentMapEntry]="deploymentMapEntry"
-      (deploymentMapEntryChange)="deploymentMapEntryChange($event)"></d11r-mapping-connector>
+        (deploymentMapEntryChange)="deploymentMapEntryChange($event)"></d11r-mapping-connector>
     </div>
     <c8y-stepper-buttons class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0"
       [disabled]="isButtonDisabled$ | async" (onCancel)="cancel.emit()" (onNext)="onNextStep($event)"
-    [labels]="labels"></c8y-stepper-buttons>
+      [labels]="labels"></c8y-stepper-buttons>
   </cdk-step>
 
   <cdk-step label="General settings" [stepControl]="propertyFormly">
     <div class="col-xs-12 flex-grow no-gutter">
       <d11r-mapping-properties [mapping]="mapping" [stepperConfiguration]="stepperConfiguration"
-        [propertyFormly]="propertyFormly" [codeFormly]="codeFormly" (targetAPIChanged)="onTargetAPIChanged($event)">
+        [propertyFormly]="propertyFormly" (targetAPIChanged)="onTargetAPIChanged($event)">
       </d11r-mapping-properties>
     </div>
 
@@ -93,20 +93,15 @@
             <div class="d-flex" #buttonsStep2>
               <div class="col-lg-5 col-lg-offset-1 column-right-border">
                 <div class="form-group">
-                  <c8y-select
-                    [items]="snoopedTemplateItems"
-                    formControlName="snoopedTemplateIndex"
-                    [filterItems]="true"
-                    labelProperty="label"
-                    placeholder="Select snooped template"
-                    aria-label="Snooped Template"
+                  <c8y-select [items]="snoopedTemplateItems" formControlName="snoopedTemplateIndex" [filterItems]="true"
+                    labelProperty="label" placeholder="Select snooped template" aria-label="Snooped Template"
                     style="width: 50%">
                   </c8y-select>
                   <div>
                     <small class="text-muted">{{stepperViewModel.showSourceEditor?
                       'Template is described internally by the chosen mapping
                       type.': 'Use sample templates for the source.'
-                    }}</small>
+                      }}</small>
                   </div>
                 </div>
               </div>
@@ -132,16 +127,15 @@
                     <label translate>Source Template - {{ sourceSystem }}</label>
                   </div>
                   @if (stepperViewModel.showSourceEditor) {
-                    <d11r-mapping-json-editor
-                      [updateEditor]="updateSourceEditor" [options]="editorOptionsSourceTemplate"
-                      [class]="'jse-main-small'" (initialized)="onEditorSourceInitialized()"
-                      (contentChanged)="onSourceTemplateChanged($event)" [data]="sourceTemplate"
-                      (pathChanged)="onSelectedPathFilterMappingChanged($event)"
+                  <d11r-mapping-json-editor [updateEditor]="updateSourceEditor" [options]="editorOptionsSourceTemplate"
+                    [class]="'jse-main-small'" (initialized)="onEditorSourceInitialized()"
+                    (contentChanged)="onSourceTemplateChanged($event)" [data]="sourceTemplate"
+                    (pathChanged)="onSelectedPathFilterMappingChanged($event)"
                     #editorSourceStepTemplate></d11r-mapping-json-editor>
                   }
                   @if (stepperViewModel.showExtensionSelectors) {
-                    <ng-container *ngTemplateOutlet="extensionTemplateSource; context: { form: templateForm }">
-                    </ng-container>
+                  <ng-container *ngTemplateOutlet="extensionTemplateSource; context: { form: templateForm }">
+                  </ng-container>
                   }
                 </div>
               </div>
@@ -153,22 +147,21 @@
                     </div>
                   </div>
                   @if (stepperViewModel.showTargetEditor) {
-                    <d11r-mapping-json-editor
-                      [updateEditor]="updateTargetEditor" [options]="editorOptionsTargetTemplate"
-                      [class]="'jse-main-small'" (initialized)="onEditorTargetInitialized()"
-                      (contentChanged)="onTargetTemplateChanged($event)" [data]="targetTemplate"
-                      #editorTargetStepTemplate>
-                    </d11r-mapping-json-editor>
+                  <d11r-mapping-json-editor [updateEditor]="updateTargetEditor" [options]="editorOptionsTargetTemplate"
+                    [class]="'jse-main-small'" (initialized)="onEditorTargetInitialized()"
+                    (contentChanged)="onTargetTemplateChanged($event)" [data]="targetTemplate"
+                    #editorTargetStepTemplate>
+                  </d11r-mapping-json-editor>
                   }
                   @if (stepperViewModel.showExtensionSelectors) {
-                    <ng-container *ngTemplateOutlet="extensionTemplateTarget; context: { form: templateForm }">
-                    </ng-container>
+                  <ng-container *ngTemplateOutlet="extensionTemplateTarget; context: { form: templateForm }">
+                  </ng-container>
                   }
                   <div>
                     @if (!stepperViewModel.showTargetContent) {
-                      <small class="text-muted">{{
-                        'Template is described internally by the chosen mapping
-                        type.'
+                    <small class="text-muted">{{
+                      'Template is described internally by the chosen mapping
+                      type.'
                       }}</small>
                     }
                   </div>
@@ -178,61 +171,61 @@
           </div>
           <div>
             @if (!(isContentChangeValid$ | async)) {
-              <div class="d-flex">
-                <div class="col-lg-10 col-lg-offset-1 p-b-16">
-                  <span class="text-warning text-12 p-l-8 p-b-12">
-                    <!-- Protected fields warning -->
-                    @if (sourceTemplateUpdated && !validateProtectedFields(sourceTemplate, sourceTemplateUpdated)) {
-                      Changing <code>_IDENTITY_</code>, <code>_TOPIC_LEVEL_</code> or <code>_CONTEXT_DATA_</code>
-                      directly in templates is not supported. Use substitutions in the next step instead. Changes are
-                      reverted!
-                    }
-                    <!-- Transformation type warning -->
-                    @if (sourceTemplateUpdated && !checkTransformationType(mapping.transformationType, sourceTemplateUpdated)) {
-                      @if (sourceTemplateUpdated && !validateProtectedFields(sourceTemplate, sourceTemplateUpdated)) {
-                        <span
-                          >
-                          <br />
-                        </span>
-                      }
-                      Array templates require transformation type <code>SMART_FUNCTION</code>.
-                      Please change the transformation type or modify the template structure.
-                    }
+            <div class="d-flex">
+              <div class="col-lg-10 col-lg-offset-1 p-b-16">
+                <span class="text-warning text-12 p-l-8 p-b-12">
+                  <!-- Protected fields warning -->
+                  @if (sourceTemplateUpdated && !validateProtectedFields(sourceTemplate, sourceTemplateUpdated)) {
+                  Changing <code>_IDENTITY_</code>, <code>_TOPIC_LEVEL_</code> or <code>_CONTEXT_DATA_</code>
+                  directly in templates is not supported. Use substitutions in the next step instead. Changes are
+                  reverted!
+                  }
+                  <!-- Transformation type warning -->
+                  @if (sourceTemplateUpdated && !checkTransformationType(mapping.transformationType,
+                  sourceTemplateUpdated)) {
+                  @if (sourceTemplateUpdated && !validateProtectedFields(sourceTemplate, sourceTemplateUpdated)) {
+                  <span>
+                    <br />
                   </span>
-                </div>
+                  }
+                  Array templates require transformation type <code>SMART_FUNCTION</code>.
+                  Please change the transformation type or modify the template structure.
+                  }
+                </span>
               </div>
+            </div>
             }
             @if (stepperViewModel.showFilterControls) {
-              <div class="d-flex">
-                <div class="col-lg-5 col-lg-offset-1">
-                  <button type="button" name="updateFilterExecutionMapping" class="btn btn-default btn-sm m-b-4"
-                    (click)="onOverwriteFilterMapping()" translate title="Update Filter Execution Mapping"
-                    [disabled]="!selectedPathFilterFilterMapping">
-                    <i c8yIcon="filter"></i>Update Filter Execution Mapping
-                  </button>
-                </div>
+            <div class="d-flex">
+              <div class="col-lg-5 col-lg-offset-1">
+                <button type="button" name="updateFilterExecutionMapping" class="btn btn-default btn-sm m-b-4"
+                  (click)="onOverwriteFilterMapping()" translate title="Update Filter Execution Mapping"
+                  [disabled]="!selectedPathFilterFilterMapping">
+                  <i c8yIcon="filter"></i>Update Filter Execution Mapping
+                </button>
               </div>
-              <div class="d-flex">
-                <div class="col-lg-5 col-lg-offset-1">
-                  <formly-form [form]="filterFormly" [fields]="filterFormlyFields" [model]="filterModel"></formly-form>
-                </div>
+            </div>
+            <div class="d-flex">
+              <div class="col-lg-5 col-lg-offset-1">
+                <formly-form [form]="filterFormly" [fields]="filterFormlyFields" [model]="filterModel"></formly-form>
               </div>
-              <div class="d-flex">
-                <div class="col-lg-5 col-lg-offset-1">
-                  <div class="form-group m-b-4" style="margin-left: 0px">
-                    <label translate style="padding-left: 6px">Filter Result [{{
-                      filterModel.filterExpression?.resultType
+            </div>
+            <div class="d-flex">
+              <div class="col-lg-5 col-lg-offset-1">
+                <div class="form-group m-b-4" style="margin-left: 0px">
+                  <label translate style="padding-left: 6px">Filter Result [{{
+                    filterModel.filterExpression?.resultType
                     }}]</label>
-                    <textarea class="form-control" #filterModelFilterExpression c8y-textarea-autoresize readonly="true"
-                      style="
+                  <textarea class="form-control" #filterModelFilterExpression c8y-textarea-autoresize readonly="true"
+                    style="
                                 font-size: var(--c8y-font-size-small);
                                 line-height: var(--c8y-line-height-small);
                               ">{{
                       filterModel.filterExpression?.result
                     }}</textarea>
-                  </div>
                 </div>
               </div>
+            </div>
             }
           </div>
         </div>
@@ -240,24 +233,24 @@
     </div>
     <c8y-stepper-buttons class="col-xs-12 d-block card-footer p-24 separator" (onCancel)="cancel.emit()"
       (onNext)="onNextStep($event)" (onBack)="onBackStep($event)"
-    [labels]="{ next: 'Next', cancel: 'Cancel' }"></c8y-stepper-buttons>
+      [labels]="{ next: 'Next', cancel: 'Cancel' }"></c8y-stepper-buttons>
   </cdk-step>
 
-  <cdk-step label="Define substitutions" [stepControl]="templateForm">
+  <cdk-step label="Transformation" [stepControl]="templateForm">
     <div class="col-lg-12 flex-grow no-gutter">
       <d11r-mapping-substitution-step [mapping]="mapping" [stepperConfiguration]="stepperConfiguration"
         [sourceTemplate]="sourceTemplate" [targetTemplate]="targetTemplate" [sourceSystem]="sourceSystem"
         [targetSystem]="targetSystem" [feature]="feature" [aiAgentDeployed]="aiAgentDeployed" [aiAgent]="aiAgent"
         [updateSourceEditor]="updateSourceEditor" [updateTargetEditor]="updateTargetEditor" [mappingCode]="mappingCode"
         [codeEditorLabel]="codeEditorLabel" [codeEditorHelp]="codeEditorHelp" [currentStepIndex]="currentStepIndex"
-        (mappingCodeChange)="mappingCode = $event" (updateSubstitutionValidity)="onUpdateSubstitutionValidity()">
+        (mappingCodeChange)="mappingCode = $event">
 
         <!-- Project code editor content if needed -->
         @if (stepperViewModel.showCodeEditorSection) {
-          <ng-container codeEditor>
-            <ng-container *ngTemplateOutlet="extensionTemplateSourceGraals; context: { form: templateForm }">
-            </ng-container>
+        <ng-container codeEditor>
+          <ng-container *ngTemplateOutlet="extensionTemplateSourceGraals; context: { form: templateForm }">
           </ng-container>
+        </ng-container>
         }
       </d11r-mapping-substitution-step>
     </div>
@@ -272,7 +265,8 @@
     <div class="col-xs-12 flex-grow no-gutter">
       <d11r-mapping-testing #mappingTestingStep [updateTestingTemplate]="
               updateTestingTemplate
-            " [mapping]="mapping" [stepperConfiguration]="stepperConfiguration"></d11r-mapping-testing>
+            " [mapping]="mapping" [stepperConfiguration]="stepperConfiguration"
+        (sourceTemplateChanged)="onTestingSourceTemplateChanged($event)"></d11r-mapping-testing>
     </div>
     <c8y-stepper-buttons class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0"
       (onCustom)="onCommitButton()" (onCancel)="cancel.emit()" (onBack)="onBackStep($event)"
@@ -285,39 +279,50 @@
 
 <ng-template #extensionTemplateSource let-form="form">
   @if (stepperViewModel.showExtensionSelectorsSource) {
-    <div [formGroup]="form">
-      <div class="form-group p-b-8">
-        <label translate>Extensions for {{ MappingTypeLabels[mapping.mappingType] }}</label>
-        <c8y-select
-          [items]="extensionItems"
-          formControlName="extensionName"
-          [filterItems]="true"
-          aria-label="Extension Name">
-        </c8y-select>
-      </div>
-      <div class="form-group">
-        <label translate>Events for {{ mapping?.extension?.extensionName }}</label>
-        <c8y-select
-          [items]="extensionEventItems$ | async"
-          formControlName="eventName"
-          [filterItems]="true"
-          aria-label="Event Name">
-        </c8y-select>
-      </div>
+  <div [formGroup]="form">
+    <div class="form-group p-b-8"
+      [class.has-error]="form.get('extensionName')?.invalid && form.get('extensionName')?.touched">
+      <label translate>Extensions for {{ MappingTypeLabels[mapping.mappingType] }}</label>
+      <c8y-select [items]="extensionItems" formControlName="extensionName" [filterItems]="true"
+        aria-label="Extension Name">
+      </c8y-select>
+      @if (form.get('extensionName')?.invalid && form.get('extensionName')?.touched) {
+      <span class="help-block"><small translate>Extension name is required.</small></span>
+      }
     </div>
+    <div class="form-group" [class.has-error]="form.get('eventName')?.invalid && form.get('eventName')?.touched">
+      <label translate>Events for {{ mapping?.extension?.extensionName }}</label>
+      <c8y-select [items]="extensionEventItems$ | async" formControlName="eventName" [filterItems]="true"
+        aria-label="Event Name">
+      </c8y-select>
+      @if (form.get('eventName')?.invalid && form.get('eventName')?.touched) {
+      <span class="help-block"><small translate>Event name is required.</small></span>
+      }
+    </div>
+    @if (hasExtensionParameter) {
+    <div class="form-group">
+      <label translate>Extension Parameter (YAML)</label>
+      <textarea class="form-control" formControlName="extensionParameter" rows="6"
+        placeholder="parameter:&#10;  key: value"
+        style="font-family: monospace; font-size: var(--c8y-font-size-small);">
+          </textarea>
+      <small class="text-muted" translate>Optional YAML parameter passed to the extension.</small>
+    </div>
+    }
+  </div>
   }
   @if (stepperViewModel.showInternalExtensionNote) {
-    <div class="p-t-48">
-      <small class="text-muted">Template is described internally by the chosen
+  <div class="p-t-48">
+    <small class="text-muted">Template is described internally by the chosen
       mapping type</small>
-    </div>
+  </div>
   }
 </ng-template>
 
 <ng-template #extensionTemplateSourceGraals let-form="form">
   <div class="form-group p-b-8 fit-h">
-    <div class="d-flex p-b-8">
-      <div class="col-lg-6">
+    <div class="row d-flex p-b-8">
+      <div class="col-lg-5">
         <div class="d-flex">
           <label translate style="margin-top:4px"> {{codeEditorLabel}}</label>
           <span class="hidden-xs hidden-sm">
@@ -325,84 +330,91 @@
               <div [innerHtml]="codeEditorHelp"></div>
             </ng-template>
             <button type="button" placement="right" [popover]="popupTemplateCodeHelp" triggers="focus" class="btn-help"
-            aria-label="Help content"></button>
+              aria-label="Help content"></button>
           </span>
         </div>
       </div>
-      <ng-container>
-        <div class="col-lg-2" style="padding-top: 2px;">
-          <button type="button" name="generateSubstitution" class="btn btn-default btn-sm"
-            (click)="openGenerateSubstitutionDrawer()" translate title="Generate substitutions" [disabled]="
+      <!-- <ng-container> -->
+      <div class="flex-grow _col-lg-2" style="padding-top: 2px;">
+        <button type="button" name="generateSubstitution" class="btn btn-ai btn-sm"
+          (click)="openGenerateSubstitutionDrawer()" translate title="Generate substitutions" [disabled]="
                             !stepperViewModel.config.showEditorSource ||
                               stepperViewModel.config.editorMode ===
                                 EditorMode.READ_ONLY || !aiAgentDeployed
                         ">
-            <i c8yIcon="bot"></i><span id="updateButton">&nbsp;Generate substitutions</span>
-          </button>
-          @if (!aiAgentDeployed) {
-            <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
-              popover="{{'Generate substitutions is disabled if AI Agent is not deployed in this tenant or no agent is defined.'| translate}}"
-            placement="right" container="body" triggers="focus" type="button"></button>
-          }
-        </div>
-        <div class="col-lg-2">
-          <c8y-select
-            [items]="codeTemplateItems"
-            [(ngModel)]="templateId"
-            (ngModelChange)="onSelectCodeTemplate()"
-            name="templateSelect"
-            [filterItems]="true"
-            labelProperty="label"
-            placeholder="Select template..."
-            aria-label="Code Template"
-            style="max-width: 200px">
+          <span id="updateButton">Generate substitutions</span>
+        </button>
+        @if (!aiAgentDeployed) {
+        <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
+          popover="{{'Generate substitutions is disabled if AI Agent is not deployed in this tenant or no agent is defined.'| translate}}"
+          placement="right" container="body" triggers="focus" type="button"></button>
+        }
+      </div>
+      <div class="text-right _col-lg-5" style="padding-right:12px">
+        <div class="input-group">
+          <c8y-select [items]="codeTemplateItems" [(ngModel)]="templateId" (ngModelChange)="onSelectCodeTemplate()"
+            name="templateSelect" [filterItems]="true" labelProperty="label" placeholder="Select template..."
+            aria-label="Code Template" style="min-width: 300px">
           </c8y-select>
+          <div class="input-group-btn">
+            <button type="button" name="update" class="btn btn-default btn-sm" (click)="onCreateCodeTemplate()"
+              translate>
+              Create new code template
+            </button>
+          </div>
         </div>
-        <div class="col-lg-2" style="padding-top: 2px;">
-          <button type="button" name="update" class="btn btn-default btn-sm" (click)="onCreateCodeTemplate()" translate>
-            Create new code template
-          </button>
-        </div>
-      </ng-container>
+      </div>
+      <!-- </ng-container> -->
     </div>
-    <c8y-editor [editorOptions]="editorOptions" class="form-control fit-h" monacoEditorMarkerValidator
-      [ngModel]="mappingCode" (ngModelChange)="onValueCodeChange($event)">
+    <c8y-editor [editorOptions]="editorOptions" class="form-control flex-grow" style="min-height: 630px"
+      monacoEditorMarkerValidator [ngModel]="mappingCode" (ngModelChange)="onValueCodeChange($event)">
     </c8y-editor>
   </div>
   @if (stepperViewModel.showInternalExtensionNote) {
-    <div class="p-t-48">
-      <small class="text-muted">Template is described internally by the chosen
+  <div class="p-t-48">
+    <small class="text-muted">Template is described internally by the chosen
       mapping type</small>
-    </div>
+  </div>
   }
 </ng-template>
 <ng-template #extensionTemplateTarget let-form="form">
   @if (stepperViewModel.showExtensionSelectorsTarget) {
-    <div [formGroup]="form">
-      <div class="form-group p-b-8">
-        <label translate>Extensions for {{ MappingTypeLabels[mapping.mappingType] }}</label>
-        <c8y-select
-          [items]="extensionItems"
-          formControlName="extensionName"
-          [filterItems]="true"
-          aria-label="Extension Name">
-        </c8y-select>
-      </div>
-      <div class="form-group">
-        <label translate>Events for {{ mapping?.extension?.extensionName }}</label>
-        <c8y-select
-          [items]="extensionEventItems$ | async"
-          formControlName="eventName"
-          [filterItems]="true"
-          aria-label="Event Name">
-        </c8y-select>
-      </div>
+  <div [formGroup]="form">
+    <div class="form-group p-b-8"
+      [class.has-error]="form.get('extensionName')?.invalid && form.get('extensionName')?.touched">
+      <label translate>Extensions for {{ MappingTypeLabels[mapping.mappingType] }}</label>
+      <c8y-select [items]="extensionItems" formControlName="extensionName" [filterItems]="true"
+        aria-label="Extension Name">
+      </c8y-select>
+      @if (form.get('extensionName')?.invalid && form.get('extensionName')?.touched) {
+      <span class="help-block"><small translate>Extension name is required.</small></span>
+      }
     </div>
+    <div class="form-group" [class.has-error]="form.get('eventName')?.invalid && form.get('eventName')?.touched">
+      <label translate>Events for {{ mapping?.extension?.extensionName }}</label>
+      <c8y-select [items]="extensionEventItems$ | async" formControlName="eventName" [filterItems]="true"
+        aria-label="Event Name">
+      </c8y-select>
+      @if (form.get('eventName')?.invalid && form.get('eventName')?.touched) {
+      <span class="help-block"><small translate>Event name is required.</small></span>
+      }
+    </div>
+    @if (hasExtensionParameter) {
+    <div class="form-group">
+      <label translate>Extension Parameter (YAML)</label>
+      <textarea class="form-control" formControlName="extensionParameter" rows="6"
+        placeholder="parameter:&#10;  key: value"
+        style="font-family: monospace; font-size: var(--c8y-font-size-small);">
+          </textarea>
+      <small class="text-muted" translate>Optional YAML parameter passed to the extension.</small>
+    </div>
+    }
+  </div>
   }
   @if (stepperViewModel.showInternalExtensionNote) {
-    <div class="p-t-48">
-      <small class="text-muted">Template is described internally by the chosen
+  <div class="p-t-48">
+    <small class="text-muted">Template is described internally by the chosen
       mapping type</small>
-    </div>
+  </div>
   }
 </ng-template>

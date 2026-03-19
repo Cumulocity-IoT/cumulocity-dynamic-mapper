@@ -59,6 +59,10 @@ Here are the **core features** summarized:
 </p>
 <br/>
 
+## FAQ
+
+Please check the [FAQ](/FAQ.md) for frequently asked questions about the Dynamic Mapper.
+
 ## Installation
 
 Please check the [Installation Guide](/INSTALLATION.md) to find out how you can install the Dynamic Mapper.

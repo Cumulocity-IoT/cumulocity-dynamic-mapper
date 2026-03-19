@@ -157,7 +157,7 @@ public abstract class AConnectorClient {
     private CompletableFuture<Void> initializeTask;
     private CompletableFuture<Void> connectTask;
     private CompletableFuture<Void> disconnectTask;
-    private ScheduledExecutorService housekeepingExecutor;
+    private ScheduledThreadPoolExecutor housekeepingExecutor;
 
     // Abstract methods to be implemented by subclasses
     public abstract boolean initialize();
@@ -166,7 +166,15 @@ public abstract class AConnectorClient {
 
     public abstract void disconnect();
 
-    public abstract void close();
+    /**
+     * Release the connector. Default implementation delegates to {@link #disconnect()}.
+     * Subclasses that own additional resources (e.g. channel references, thread pools)
+     * should override this method, call {@code super.close()} or {@code disconnect()} first,
+     * then release those resources.
+     */
+    public void close() {
+        disconnect();
+    }
 
     public abstract boolean isConfigValid(ConnectorConfiguration configuration);
 
@@ -402,7 +410,7 @@ public abstract class AConnectorClient {
                 connectorIdentifier,
                 this::sendConnectorLifecycle, connectorRegistry);
 
-        this.housekeepingExecutor = Executors.newScheduledThreadPool(1, r -> {
+        this.housekeepingExecutor = new ScheduledThreadPoolExecutor(1, r -> {
             Thread t = new Thread(r, "housekeeping-" + connectorIdentifier);
             t.setDaemon(true);
             return t;
@@ -473,10 +481,14 @@ public abstract class AConnectorClient {
 
         if (disconnectTask == null || disconnectTask.isDone()) {
             log.debug("{} - Disconnecting connector: {}", tenant, connectorName);
+            // Set DISCONNECTING synchronously before the async task runs.
+            // This prevents a race where stopHousekeepingAndClose() → close() → disconnect()
+            // completes synchronously (setting DISCONNECTED) before the async task starts,
+            // causing the async task's updateStatus(DISCONNECTING) to overwrite DISCONNECTED.
+            connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTING, true, true);
             disconnectTask = CompletableFuture
                     .runAsync(() -> {
                         try {
-                            connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTING, true, true);
                             disconnect();
                             connectionStateManager.setConnected(false);
                             log.info("{} - Connector disconnected successfully", tenant);
@@ -491,15 +503,20 @@ public abstract class AConnectorClient {
     }
 
     /**
-     * Start housekeeping tasks
+     * Start housekeeping tasks.
+     * Idempotent: no-op if already scheduled (executor has pending tasks).
      */
     public void submitHousekeeping() {
-        log.debug("{} - Starting housekeeping for connector: {}", tenant, connectorName);
-        housekeepingExecutor.scheduleAtFixedRate(
-                this::runHousekeeping,
-                HOUSEKEEPING_INTERVAL_SECONDS,
-                HOUSEKEEPING_INTERVAL_SECONDS,
-                TimeUnit.SECONDS);
+        if (!housekeepingExecutor.isShutdown() && housekeepingExecutor.getQueue().isEmpty()) {
+            log.debug("{} - Starting housekeeping for connector: {}", tenant, connectorName);
+            housekeepingExecutor.scheduleAtFixedRate(
+                    this::runHousekeeping,
+                    HOUSEKEEPING_INTERVAL_SECONDS,
+                    HOUSEKEEPING_INTERVAL_SECONDS,
+                    TimeUnit.SECONDS);
+        } else {
+            log.debug("{} - Housekeeping already scheduled, skipping", tenant);
+        }
     }
 
     /**
@@ -638,7 +655,7 @@ public abstract class AConnectorClient {
         boolean isDeployed = isDeployedInConnector(mapping);
         if (mapping.getActive() && isDeployed) {
             mappingSubscriptionManager.addSubscriptionInbound(mapping, mapping.getQos());
-        } else if (activationChanged) {
+        } else if (activationChanged && !mapping.getActive()) {
             mappingSubscriptionManager.removeSubscriptionInbound(mapping);
         }
     }
@@ -973,7 +990,7 @@ public abstract class AConnectorClient {
             String message = "Connector status: " + status;
             c8yAgent.createOperationEvent(
                     message,
-                    LoggingEventType.STATUS_CONNECTOR_EVENT_TYPE,
+                    LoggingEventType.CONNECTOR_EVENT_TYPE,
                     DateTime.now(),
                     tenant,
                     statusMap);
@@ -1064,7 +1081,7 @@ public abstract class AConnectorClient {
 
         c8yAgent.createOperationEvent(
                 message,
-                LoggingEventType.STATUS_SUBSCRIPTION_EVENT_TYPE,
+                LoggingEventType.SUBSCRIPTION_EVENT_TYPE,
                 DateTime.now(),
                 tenant,
                 eventMap);

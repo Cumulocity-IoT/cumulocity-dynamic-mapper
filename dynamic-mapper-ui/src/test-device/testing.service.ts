@@ -32,6 +32,7 @@ import {
   BuiltInActionType,
   BulkActionControl,
   Column,
+  ColumnDataType,
   Pagination
 } from '@c8y/ngx-components';
 
@@ -80,6 +81,7 @@ export class TestingDeviceService {
         path: 'id',
         filterable: true,
         sortable: true,
+        dataType: ColumnDataType.Numeric,
         cellRendererComponent: DeviceIdCellRendererComponent
       },
       {
@@ -87,21 +89,24 @@ export class TestingDeviceService {
         header: 'Name',
         path: 'name',
         filterable: true,
-        sortable: true
+        sortable: true,
+        dataType: ColumnDataType.TextShort
       },
       {
         name: 'creationTime',
         header: 'Date Created',
         path: 'creationTime',
-        filterable: true,
-        sortable: true
+        filterable: false,
+        sortable: true,
+        dataType: ColumnDataType.TextLong
       },
       {
         name: 'type',
         header: 'Type',
         path: 'type',
         filterable: true,
-        sortable: true
+        sortable: true,
+        dataType: ColumnDataType.TextShort
       },
     ];
 

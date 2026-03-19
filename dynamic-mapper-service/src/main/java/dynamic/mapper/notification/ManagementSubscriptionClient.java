@@ -102,9 +102,9 @@ public class ManagementSubscriptionClient implements NotificationCallback {
         
         Future<?> future = virtualThreadPool.submit(
             new UpdateSubscriptionDeviceGroupTask(
-                configurationRegistry, 
-                message, 
-                groupCacheManager.getCache()
+                configurationRegistry,
+                message,
+                groupCacheManager
             )
         );
         
@@ -161,7 +161,7 @@ public class ManagementSubscriptionClient implements NotificationCallback {
     }
 
     @Override
-    public ProcessingResultWrapper<?> onTestNotification(Notification notification, Mapping mapping) {
+    public ProcessingResultWrapper<?> onTestNotification(Notification notification, Mapping mapping, boolean send) {
         throw new UnsupportedOperationException("Unimplemented method 'onTestNotification'");
     }
 }

@@ -71,9 +71,22 @@ public class MQTT5Callback implements Consumer<Mqtt5Publish> {
                     return bytes;
                 })
                 .orElse(null);
+
+        // Extract client ID from MQTT 5 user properties
+        String publisherClientId = mqttMessage.getUserProperties().asList().stream()
+                .filter(property -> "clientId".equals(property.getName().toString()))
+                .map(property -> property.getValue().toString())
+                .findFirst()
+                .orElse(null);
+
+        if (publisherClientId != null && serviceConfiguration.getLogPayload()) {
+            log.info("{} - Publisher client ID from user properties: {}", tenant, publisherClientId);
+        }
+
         ConnectorMessage connectorMessage = ConnectorMessage.builder()
                 .tenant(tenant)
                 .topic(topic)
+                .clientId(publisherClientId)
                 .sendPayload(true)
                 .connectorIdentifier(connectorIdentifier)
                 .payload(payloadBytes)

@@ -322,6 +322,13 @@ public class NotificationConnectionManager {
         }
     }
 
+    public void addGroupToCache(String tenant, ManagedObjectRepresentation mor) {
+        NotificationCallback callback = managementCallbacks.get(tenant);
+        if (callback instanceof ManagementSubscriptionClient) {
+            ((ManagementSubscriptionClient) callback).addGroupToCache(mor);
+        }
+    }
+
     public void removeGroupFromCache(String tenant, ManagedObjectRepresentation mor) {
         NotificationCallback callback = managementCallbacks.get(tenant);
         if (callback instanceof ManagementSubscriptionClient) {
@@ -524,7 +531,42 @@ public class NotificationConnectionManager {
 
             boolean connected = client.connectBlocking(Utils.CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
             if (!connected) {
-                log.error("{} - WebSocket connection timeout for connector {}", tenant, connectorId.getName());
+                // After an ungraceful microservice restart, Cumulocity still considers the
+                // previous consumer active and rejects the new connection with HTTP 409.
+                // Wait and retry — do NOT unsubscribe, as that would drop any backlogged messages.
+                if (client.isConflict()) {
+                    for (int attempt = 1; attempt <= Utils.CONFLICT_RETRY_COUNT; attempt++) {
+                        log.warn("{} - WebSocket 409 Conflict for connector {} — waiting {}s before retry {}/{}",
+                                tenant, connectorId.getName(), Utils.CONFLICT_RETRY_DELAY_SECONDS,
+                                attempt, Utils.CONFLICT_RETRY_COUNT);
+                        try {
+                            TimeUnit.SECONDS.sleep(Utils.CONFLICT_RETRY_DELAY_SECONDS);
+                        } catch (InterruptedException ie) {
+                            Thread.currentThread().interrupt();
+                            return null;
+                        }
+                        CustomWebSocketClient retryClient = new CustomWebSocketClient(
+                                tenant, configurationRegistry, webSocketUrl, callback, connectorId);
+                        retryClient.setConnectionLostTimeout(Utils.CONNECTION_TIMEOUT_SECONDS);
+                        boolean retryConnected = retryClient.connectBlocking(Utils.CONNECTION_TIMEOUT_SECONDS,
+                                TimeUnit.SECONDS);
+                        if (retryConnected) {
+                            log.info("{} - Successfully connected WebSocket for connector {} on retry {}/{}",
+                                    tenant, connectorId.getName(), attempt, Utils.CONFLICT_RETRY_COUNT);
+                            startReconnectScheduler();
+                            return retryClient;
+                        }
+                        if (!retryClient.isConflict()) {
+                            log.error("{} - WebSocket retry {}/{} failed for connector {} (not a conflict)",
+                                    attempt, Utils.CONFLICT_RETRY_COUNT, tenant, connectorId.getName());
+                            return null;
+                        }
+                    }
+                    log.error("{} - WebSocket still getting 409 for connector {} after {} retries",
+                            tenant, connectorId.getName(), Utils.CONFLICT_RETRY_COUNT);
+                } else {
+                    log.error("{} - WebSocket connection failed for connector {}", tenant, connectorId.getName());
+                }
                 return null;
             }
 

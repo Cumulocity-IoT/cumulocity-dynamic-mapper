@@ -21,17 +21,15 @@
 
 import { Component, OnDestroy, OnInit, ViewChild, AfterViewChecked } from '@angular/core';
 import { MappingService } from '../mapping/core/mapping.service';
-import { CodeExplorerComponent, Direction, Feature, JsonEditorComponent, NODE1, NODE3 } from '../shared';
+import { Direction, Feature, JsonEditorComponent, NODE1, NODE3 } from '../shared';
 import { BehaviorSubject, from, Subject, Subscription } from 'rxjs';
 import { ConnectorConfigurationService } from '../connector';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
-import { AlertService, CoreModule } from '@c8y/ngx-components';
+import { AlertService, BottomDrawerService, CoreModule } from '@c8y/ngx-components';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { BsModalService } from 'ngx-bootstrap/modal';
 import { SharedService } from '../shared/service/shared.service';
 import { CodeTemplate, CodeTemplateMap } from '../configuration/shared/configuration.model';
-import { base64ToString } from '../mapping/shared/util';
+import { CodeEditorDrawerComponent } from '../shared/component/code-explorer/code-editor-drawer.component';
 
 import hljs from 'highlight.js/lib/core';
 import javascript from 'highlight.js/lib/languages/javascript';
@@ -46,7 +44,7 @@ hljs.registerLanguage('yaml', yaml);
 @Component({
   selector: 'd11r-landing',
   templateUrl: './doc-main.component.html',
-  styleUrl: './doc-shared.css',
+  styleUrls: ['./doc-shared.css'],
   standalone: true,
   imports: [
     CoreModule,
@@ -60,14 +58,11 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
     private mappingService: MappingService,
     private alertService: AlertService,
     private connectorConfigurationService: ConnectorConfigurationService,
-    private sanitizer: DomSanitizer,
     private route: ActivatedRoute,
-    private bsModalService: BsModalService,
+    private bottomDrawerService: BottomDrawerService,
     private sharedService: SharedService
   ) {
-    this.linkSVG = this.sanitizer.bypassSecurityTrustUrl(
-      'image/Dynamic_Mapper_Snooping_Stepper_Process.svg'
-    );
+
   }
   @ViewChild('editorTest', { static: false }) editorTest: JsonEditorComponent;
 
@@ -75,7 +70,7 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
 
   ROUTE_INBOUND: string = `/c8y-pkg-dynamic-mapper/${NODE1}/mappings/inbound`;
   ROUTE_ADD_CONNECTOR: string = `/c8y-pkg-dynamic-mapper/${NODE3}/connectorConfiguration`;
-  ROUTE_SERVICE_CONFIGURATION: string = `/c8y-pkg-dynamic-mapper/${NODE3}/serviceConfiguration`;
+  ROUTE_SERVICE_CONFIGURATION: string = `/c8y-pkg-dynamic-mapper/${NODE3}/serviceConfiguration/general`;
   ROUTE_OUTBOUND: string =
     `/c8y-pkg-dynamic-mapper/${NODE1}/mappings/outbound`;
   ROUTE_CONNECTORS: string = `/c8y-pkg-dynamic-mapper/${NODE3}/connectorConfiguration`;
@@ -83,7 +78,6 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
   countMappingInbound$: Subject<any> = new BehaviorSubject<any>(0);
   countMappingOutbound$: Subject<any> = new BehaviorSubject<any>(0);
   countConnector$: Subject<any> = new BehaviorSubject<any>(0);
-  linkSVG: SafeResourceUrl;
 
   feature: Feature;
 
@@ -105,6 +99,7 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
       'define-mapping': 'define-mapping',
       'define-subscription-for-outbound': 'define-subscription-for-outbound',
       'transformation-types': 'transformation-types',
+      'flow-state': 'flow-state',
       'code-templates': 'code-templates',
       'metadata': 'metadata',
       'unknown-payload': 'unknown-payload',
@@ -203,12 +198,12 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   openCodeExplorer(template: CodeTemplate): void {
-    this.bsModalService.show(CodeExplorerComponent, {
+    this.bottomDrawerService.openDrawer(CodeEditorDrawerComponent, {
       initialState: {
-        templateCode: base64ToString(template.code),
-        templateName: template.name
-      },
-      class: 'modal-lg'
+        encodedCode: template.code,
+        sourceSystem: 'Template',
+        action: 'view'
+      }
     });
   }
 

@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 
 import com.cumulocity.model.ID;
 import com.cumulocity.model.idtype.GId;
+import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -221,12 +222,11 @@ public class SendInboundProcessor extends BaseProcessor {
             }
 
             if (context.getSendPayload()) {
-                // Send the request to C8Y
-                c8yAgent.createMEAO(context, requestIndex);
-
-                // Note: adHocRequest would be returned from createMEAO if needed
-                // For now, just set a placeholder response
-                request.setResponse("{}"); // This should be the actual response from C8Y
+                // Send the request to C8Y and capture the actual response
+                AbstractExtensibleRepresentation meaoResult = c8yAgent.createMEAO(context, requestIndex);
+                if (meaoResult != null) {
+                    request.setResponse(objectMapper.writeValueAsString(meaoResult));
+                }
             }
 
         } catch (Exception e) {

@@ -22,7 +22,6 @@ import {
   ActionControl,
   BulkActionControl,
   Column,
-  CommonModule,
   CoreModule,
   DataGridComponent,
   DataSourceModifier,

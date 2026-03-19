@@ -31,13 +31,13 @@ import com.cumulocity.sdk.client.ProcessingMode;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
-import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.AbstractEnrichmentProcessor;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.DataPrepContext;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.TransformationType;
 import dynamic.mapper.service.MappingService;
+import dynamic.mapper.service.cache.FlowStateStore;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -50,60 +50,62 @@ public class EnrichmentInboundProcessor extends AbstractEnrichmentProcessor {
 
     public EnrichmentInboundProcessor(
             ConfigurationRegistry configurationRegistry,
-            MappingService mappingService) {
-        super(configurationRegistry, mappingService);
+            MappingService mappingService,
+            FlowStateStore flowStateStore) {
+        super(configurationRegistry, mappingService, flowStateStore);
     }
 
     @Override
     protected void performPreEnrichmentSetup(ProcessingContext<?> context, String connectorIdentifier) {
-        context.setQos(determineQos(connectorIdentifier));
+        context.setQos(context.getMapping().getQos());
     }
 
     @Override
     @SuppressWarnings("unchecked")
     protected void enrichPayload(ProcessingContext<?> context) {
         /*
-         * Patch payload with _TOPIC_LEVEL_ property and add enrichment data to DataPrepContext
+         * Enrich payload with _TOPIC_LEVEL_ (non-SMART_FUNCTION only) and add metadata to DataPrepContext
          */
         String tenant = context.getTenant();
         Object payloadObject = context.getPayload();
         Mapping mapping = context.getMapping();
+        boolean isSmartFunction = TransformationType.SMART_FUNCTION.equals(mapping.getTransformationType())
+                || TransformationType.EXTENSION_JAVA.equals(mapping.getTransformationType());
 
-        // Process topic levels
-        List<String> splitTopicAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
-
-        // Add topic levels to DataPrepContext if available
+        // For SMART_FUNCTION: populate read-only config — never expand the payload Map
         DataPrepContext flowContext = context.getFlowContext();
-        if (flowContext != null && context.getGraalContext() != null
-                && TransformationType.SMART_FUNCTION.equals(context.getMapping().getTransformationType())) {
-            addToFlowContext(flowContext, context, Mapping.TOKEN_TOPIC_LEVEL, splitTopicAsList);
+        if (isSmartFunction) {
+            if (flowContext instanceof dynamic.mapper.processor.model.SmartFunctionContext) {
+                dynamic.mapper.processor.model.SmartFunctionContext sfContext =
+                        (dynamic.mapper.processor.model.SmartFunctionContext) flowContext;
+                sfContext.setClientId(context.getClientId());
 
-            // Add basic context information
-            addToFlowContext(flowContext, context, "tenant", tenant);
-            addToFlowContext(flowContext, context, "topic", context.getTopic());
-            addToFlowContext(flowContext, context, "client", context.getClientId());
-            addToFlowContext(flowContext, context, "mappingName", mapping.getName());
-            addToFlowContext(flowContext, context, "mappingId", mapping.getId());
-            addToFlowContext(flowContext, context, "targetAPI", mapping.getTargetAPI().toString());
-            addToFlowContext(flowContext, context, ProcessingContext.GENERIC_DEVICE_IDENTIFIER, mapping.getGenericDeviceIdentifier());
-            addToFlowContext(flowContext, context, ProcessingContext.DEBUG, mapping.getDebug());
+                Map<String, Object> config = new HashMap<>();
+                config.put("tenant", tenant);
+                config.put("topic", context.getTopic());
+                config.put("clientId", context.getClientId());
+                config.put("mappingName", mapping.getName());
+                config.put("mappingId", mapping.getId());
+                config.put("targetAPI", mapping.getTargetAPI().toString());
+                config.put(ProcessingContext.DEBUG, mapping.getDebug());
 
-            if (context.getMapping().getEventWithAttachment()) {
-                addToFlowContext(flowContext, context, ProcessingContext.ATTACHMENT_TYPE, "");
-                addToFlowContext(flowContext, context, ProcessingContext.ATTACHMENT_NAME, "");
-                addToFlowContext(flowContext, context, ProcessingContext.ATTACHMENT_DATA, "");
-                addToFlowContext(flowContext, context, ProcessingContext.EVENT_WITH_ATTACHMENT, true);
+                if (context.getMapping().getEventWithAttachment()) {
+                    config.put(ProcessingContext.ATTACHMENT_TYPE, "");
+                    config.put(ProcessingContext.ATTACHMENT_NAME, "");
+                    config.put(ProcessingContext.ATTACHMENT_DATA, "");
+                    config.put(ProcessingContext.EVENT_WITH_ATTACHMENT, true);
+                }
+                if (context.getMapping().getCreateNonExistingDevice()) {
+                    config.put(ProcessingContext.DEVICE_NAME, context.getDeviceName());
+                    config.put(ProcessingContext.DEVICE_TYPE, context.getDeviceType());
+                    config.put(ProcessingContext.CREATE_NON_EXISTING_DEVICE, true);
+                }
+                sfContext.setConfig(config);
             }
-            if (context.getMapping().getCreateNonExistingDevice()) {
-                addToFlowContext(flowContext, context, ProcessingContext.DEVICE_NAME, context.getDeviceName());
-                addToFlowContext(flowContext, context, ProcessingContext.DEVICE_TYPE, context.getDeviceType());
-                addToFlowContext(flowContext, context, ProcessingContext.CREATE_NON_EXISTING_DEVICE, true);
-            }
-
         } else if (payloadObject instanceof Map) {
             Map<String, Object> payloadMap = (Map<String, Object>) payloadObject;
+            List<String> splitTopicAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
 
-            // Keep original behavior - add to payload
             payloadMap.put(Mapping.TOKEN_TOPIC_LEVEL, splitTopicAsList);
 
             // Process message context
@@ -118,13 +120,11 @@ public class EnrichmentInboundProcessor extends AbstractEnrichmentProcessor {
                     contextData.put(ProcessingContext.DEVICE_TYPE, context.getDeviceType());
                 }
 
-                // Add to payload (original behavior)
                 payloadMap.put(Mapping.TOKEN_CONTEXT_DATA, contextData);
             }
 
             // Handle attachment properties independently
             if (context.getMapping().getEventWithAttachment()) {
-                // Get or create the context data map from payload
                 Map<String, String> contextData;
                 if (payloadMap.containsKey(Mapping.TOKEN_CONTEXT_DATA)) {
                     contextData = (Map<String, String>) payloadMap.get(Mapping.TOKEN_CONTEXT_DATA);
@@ -133,7 +133,6 @@ public class EnrichmentInboundProcessor extends AbstractEnrichmentProcessor {
                     payloadMap.put(Mapping.TOKEN_CONTEXT_DATA, contextData);
                 }
 
-                // Add attachment properties to payload context data
                 contextData.put(ProcessingContext.ATTACHMENT_TYPE, "");
                 contextData.put(ProcessingContext.ATTACHMENT_NAME, "");
                 contextData.put(ProcessingContext.ATTACHMENT_DATA, "");
@@ -165,14 +164,4 @@ public class EnrichmentInboundProcessor extends AbstractEnrichmentProcessor {
         mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
     }
 
-    private Qos determineQos(String connectorIdentifier) {
-        // Determine QoS based on connector type
-        if ("mqtt".equalsIgnoreCase(connectorIdentifier)) {
-            return Qos.AT_LEAST_ONCE;
-        } else if ("kafka".equalsIgnoreCase(connectorIdentifier)) {
-            return Qos.EXACTLY_ONCE;
-        } else {
-            return Qos.AT_MOST_ONCE; // Default for HTTP, etc.
-        }
-    }
 }

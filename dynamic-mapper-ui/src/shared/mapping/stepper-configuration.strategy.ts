@@ -28,6 +28,7 @@ export interface StepperConfigurationContext {
   editorMode: EditorMode;
   substitutionsAsCode: boolean;
   snoopStatus?: SnoopStatus;
+  hasDeployedConnector?: boolean;
 }
 
 export interface StepperConfigurationOverride {
@@ -48,6 +49,12 @@ const CONFIGURATION_OVERRIDES: StepperConfigurationOverride[] = [
     }
   },
   {
+    condition: (ctx) => ctx.direction === Direction.OUTBOUND && ctx.hasDeployedConnector === true,
+    properties: {
+      allowTestSending: true
+    }
+  },
+  {
     condition: (ctx) =>
       ctx.direction === Direction.OUTBOUND &&
       ctx.snoopStatus === SnoopStatus.ENABLED,
@@ -59,7 +66,7 @@ const CONFIGURATION_OVERRIDES: StepperConfigurationOverride[] = [
     condition: (ctx) => ctx.substitutionsAsCode,
     properties: {
       showCodeEditor: true,
-      allowTestSending: false,
+      allowTestSending: true,
       allowTestTransformation: true
       // Note: advanceFromStepToEndStep intentionally not set here
       // It will be removed in post-processing if substitutionsAsCode is true
@@ -69,7 +76,7 @@ const CONFIGURATION_OVERRIDES: StepperConfigurationOverride[] = [
     condition: (ctx) => ctx.transformationType === TransformationType.SMART_FUNCTION,
     properties: {
       showEditorTarget: false,
-      allowTestSending: false,
+      allowTestSending: true,
       allowTestTransformation: true
     }
   },
@@ -80,8 +87,8 @@ const CONFIGURATION_OVERRIDES: StepperConfigurationOverride[] = [
     properties: {
       showProcessorExtensionsTarget: true,
       showEditorTarget: false,
-      allowTestSending: false,
-      allowTestTransformation: false,
+      allowTestSending: true,
+      allowTestTransformation: true,
       advanceFromStepToEndStep: 2
     }
   },
@@ -101,8 +108,8 @@ const CONFIGURATION_OVERRIDES: StepperConfigurationOverride[] = [
     properties: {
       showEditorTarget: false,
       showFilterExpression: false,
-      allowTestSending: false,
-      allowTestTransformation: false
+      allowTestSending: true,
+      allowTestTransformation: true
     }
   },
   {
@@ -112,6 +119,42 @@ const CONFIGURATION_OVERRIDES: StepperConfigurationOverride[] = [
     properties: {
       showEditorTarget: false,
       showFilterExpression: false
+    }
+  },
+  {
+    condition: (ctx) => ctx.transformationType === TransformationType.DEFAULT,
+    properties: {
+      allowTemplateExpansion: false
+    }
+  },
+  {
+    condition: (ctx) => ctx.transformationType === TransformationType.SUBSTITUTION_AS_CODE,
+    properties: {
+      allowTemplateExpansion: false
+    }
+  },
+  {
+    condition: (ctx) => ctx.transformationType === TransformationType.SMART_FUNCTION,
+    properties: {
+      allowTemplateExpansion: true
+    }
+  },
+  {
+    condition: (ctx) => ctx.transformationType === TransformationType.JSONATA,
+    properties: {
+      allowTemplateExpansion: true  // Allow expansion to show payload structure for easier substitution definition
+    }
+  },
+  {
+    condition: (ctx) => ctx.transformationType === TransformationType.EXTENSION_JAVA,
+    properties: {
+      allowTemplateExpansion: true
+    }
+  },
+  {
+    condition: (ctx) => ctx.transformationType === TransformationType.CODE_BASED,
+    properties: {
+      allowTemplateExpansion: false
     }
   }
 ];

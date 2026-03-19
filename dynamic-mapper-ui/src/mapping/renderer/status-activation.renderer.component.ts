@@ -21,7 +21,9 @@
 import { HttpStatusCode } from '@angular/common/http';
 import { ChangeDetectorRef, Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { AlertService, CellRendererContext, CoreModule } from '@c8y/ngx-components';
-import { Direction, Feature, SharedService, TransformationType } from '../../shared';
+import { BsModalService } from 'ngx-bootstrap/modal';
+import { DEPRECATION_NOTICE_VERSION, Direction, Feature, SharedService, TransformationType } from '../../shared';
+import { DeprecationNoticeModalComponent } from '../deprecation-notice/deprecation-notice-modal.component';
 import { MappingService } from '../core/mapping.service';
 import { SubscriptionService } from '../core/subscription.service';
 
@@ -60,7 +62,8 @@ export class MappingStatusActivationRendererComponent implements OnInit {
     private readonly mappingService: MappingService,
     private readonly sharedService: SharedService,
     private readonly subscriptionService: SubscriptionService,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly bsModalService: BsModalService
   ) {}
 
   get canEdit(): boolean {
@@ -121,13 +124,15 @@ export class MappingStatusActivationRendererComponent implements OnInit {
     await this.refreshAllMappings();
   }
 
-  handleDeprecation(mapping: any) {
-    if (mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE) {
-      this.alertService.warning(
-        "This mapping uses 'Substitution as JavaScript' which is deprecated since release 6.1.5 and will be removed in a future release. " +
-        "Please migrate to 'Smart Functions' for continued support. Smart Functions provide a more intuitive approach by focusing on the target payload rather than substitution objects."
-      );
-    }
+  handleDeprecation(mapping: any): void {
+    if (mapping.transformationType !== TransformationType.SUBSTITUTION_AS_CODE) return;
+
+    const noticeAccepted =
+      this.feature?.suppressDeprecationWarning ||
+      this.feature?.acceptedDeprecationNotice === DEPRECATION_NOTICE_VERSION;
+    if (noticeAccepted) return;
+
+    this.bsModalService.show(DeprecationNoticeModalComponent, { class: 'modal-lg' });
   }
 
   private async validateSubscriptionOutbound(): Promise<boolean> {
@@ -157,7 +162,7 @@ export class MappingStatusActivationRendererComponent implements OnInit {
 
   private handleActivationSuccess(newActive: boolean, mappingName: string): void {
     const action = newActive ? 'Activated' : 'Deactivated';
-    this.alertService.success(`${action} for mapping: ${mappingName} was successful`);
+   // this.alertService.success(`${action} for mapping: ${mappingName} was successful`);
   }
 
   private async refreshAllMappings(): Promise<void> {

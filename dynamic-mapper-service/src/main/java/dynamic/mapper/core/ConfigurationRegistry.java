@@ -31,6 +31,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
 import org.apache.camel.CamelContext;
+import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Engine;
 import org.graalvm.polyglot.HostAccess;
 import org.graalvm.polyglot.Source;
@@ -348,6 +349,32 @@ public class ConfigurationRegistry {
         graalSourceShared.put(tenant, sharedSource);
         graalSourceSystem.put(tenant, systemSource);
 
+        // Warm up the GraalVM JIT by running a throw-away Context through the shared/system
+        // sources and a trivial onMessage stub. This triggers Graal's JIT compiler at startup
+        // so the first real mapping test executes in ~1s instead of ~7s.
+        try (Context warmupCtx = Context.newBuilder("js")
+                .engine(eng)
+                .allowHostAccess(getHostAccess())
+                .allowHostClassLookup(className ->
+                        className.equals("dynamic.mapper.processor.model.SubstitutionContext")
+                        || className.equals("dynamic.mapper.processor.model.SubstitutionResult")
+                        || className.equals("dynamic.mapper.processor.model.SubstituteValue")
+                        || className.equals("dynamic.mapper.processor.model.SubstituteValue$TYPE")
+                        || className.equals("dynamic.mapper.processor.model.RepairStrategy")
+                        || className.equals("java.util.ArrayList")
+                        || className.equals("java.util.HashMap")
+                        || className.equals("java.util.HashSet"))
+                .build()) {
+            warmupCtx.eval(sharedSource);
+            warmupCtx.eval(systemSource);
+            warmupCtx.eval(Source.newBuilder("js",
+                    "function __warmup__(msg, ctx) { return []; } __warmup__({}, null);",
+                    "__warmup__.js").buildLiteral());
+            log.info("{} - GraalVM JIT warm-up complete", tenant);
+        } catch (Exception e) {
+            log.warn("{} - GraalVM warm-up failed (non-fatal): {}", tenant, e.getMessage());
+        }
+
         log.info("{} - Created cached GraalVM sources for shared and system code", tenant);
     }
 
@@ -381,6 +408,53 @@ public class ConfigurationRegistry {
 
     public Source getGraalsSourceSystem(String tenant) {
         return graalSourceSystem.get(tenant);
+    }
+
+    /**
+     * Pre-compiles mapping-specific JavaScript into the Engine's Source cache.
+     * Call this after mappings are loaded so the first test for each existing
+     * mapping hits the cache instead of paying the full parse+compile cost.
+     *
+     * @param tenant         the tenant identifier
+     * @param sourceCodes    map of source name (e.g. "onMessage_<id>.js") → decoded+adapted JS code
+     */
+    public void warmupMappingCodes(String tenant, Map<String, String> sourceCodes) {
+        Engine eng = graalEngines.get(tenant);
+        if (eng == null || sourceCodes.isEmpty()) return;
+
+        try (Context warmupCtx = Context.newBuilder("js")
+                .engine(eng)
+                .allowHostAccess(getHostAccess())
+                .allowHostClassLookup(className ->
+                        className.equals("dynamic.mapper.processor.model.SubstitutionContext")
+                        || className.equals("dynamic.mapper.processor.model.SubstitutionResult")
+                        || className.equals("dynamic.mapper.processor.model.SubstituteValue")
+                        || className.equals("dynamic.mapper.processor.model.SubstituteValue$TYPE")
+                        || className.equals("dynamic.mapper.processor.model.RepairStrategy")
+                        || className.equals("java.util.ArrayList")
+                        || className.equals("java.util.HashMap")
+                        || className.equals("java.util.HashSet"))
+                .build()) {
+
+            warmupCtx.eval(graalSourceShared.get(tenant));
+            warmupCtx.eval(graalSourceSystem.get(tenant));
+
+            int warmed = 0;
+            for (Map.Entry<String, String> entry : sourceCodes.entrySet()) {
+                try {
+                    Source source = Source.newBuilder("js", entry.getValue(), entry.getKey())
+                            .cached(true)
+                            .buildLiteral();
+                    warmupCtx.eval(source);
+                    warmed++;
+                } catch (Exception e) {
+                    log.warn("{} - Failed to pre-compile mapping {}: {}", tenant, entry.getKey(), e.getMessage());
+                }
+            }
+            log.info("{} - GraalVM pre-compiled {} mapping JavaScript source(s)", tenant, warmed);
+        } catch (Exception e) {
+            log.warn("{} - Mapping code warm-up failed (non-fatal): {}", tenant, e.getMessage());
+        }
     }
 
     public void removeGraalsResources(String tenant) {

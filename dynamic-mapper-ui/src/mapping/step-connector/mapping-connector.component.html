@@ -36,11 +36,11 @@
           <i c8yIcon="plus-circle-o"></i>&nbsp;Add connector
         </button> -->
         <d11r-mapping-connector-grid
-          #connectorConfigurationStepper
           [selectable]="true"
           [directions]="directions"
           [readOnly]="readOnly"
-          [(deploymentMapEntry)]="deploymentMapEntry"
+          [deploymentMapEntry]="deploymentMapEntry"
+          (deploymentMapEntryChange)="onDeploymentMapEntryChanged($event)"
         ></d11r-mapping-connector-grid>
       </div>
     </div>

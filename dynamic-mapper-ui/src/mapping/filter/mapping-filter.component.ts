@@ -96,6 +96,8 @@ export class MappingFilterComponent implements OnInit, OnDestroy, AfterViewInit 
                 <li>to convert a UNIX timestamp to ISO date format use:
                   <code>$fromMillis($number(deviceTimestamp))</code>
                 </li>
+                <li>to concat strings use "&"
+                </li>
                 <li>to join substring starting at position 5 of property <code>txt</code> with
                   device
                   identifier use: <code>$join([$substring(txt,5), "-", id])</code></li>
@@ -153,7 +155,7 @@ export class MappingFilterComponent implements OnInit, OnDestroy, AfterViewInit 
         resultType: getTypeOf(r),
         result: JSON.stringify(r, null, 4)
       };
-      if (this.filterModel.sourceExpression.result != 'true') throw Error('The filter expression must return true');
+      if (this.filterModel.sourceExpression.result !== 'true' && this.filterModel.sourceExpression.result !== 'false') throw Error('The filter expression must evaluate to a boolean value: either true or false');
 
       this.valid = true;
 

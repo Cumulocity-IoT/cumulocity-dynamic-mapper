@@ -35,10 +35,14 @@ import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.AbstractFlowResultProcessor;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.CumulocityObject;
+import dynamic.mapper.processor.model.DeviceContext;
 import dynamic.mapper.processor.model.DeviceMessage;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ExternalIdInfo;
+import dynamic.mapper.processor.model.OutputCollector;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.model.ProcessingState;
+import dynamic.mapper.processor.model.RoutingContext;
 import dynamic.mapper.processor.util.APITopicUtil;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
 import dynamic.mapper.service.MappingService;
@@ -59,14 +63,19 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
     }
 
     @Override
-    protected void processMessage(Object message, ProcessingContext<?> context) throws ProcessingException {
-        String tenant = context.getTenant();
+    protected void processMessage(
+            Object message,
+            RoutingContext routing,
+            ProcessingState state,
+            OutputCollector output,
+            ProcessingContext<?> context) throws ProcessingException {
+        String tenant = routing.getTenant();
         Mapping mapping = context.getMapping();
 
         if (message instanceof DeviceMessage) {
-            processDeviceMessage((DeviceMessage) message, context, tenant, mapping);
+            processDeviceMessage((DeviceMessage) message, routing, state, output, context, tenant, mapping);
         } else if (message instanceof CumulocityObject) {
-            processCumulocityObject((CumulocityObject) message, context, tenant, mapping);
+            processCumulocityObject((CumulocityObject) message, routing, state, output, context, tenant, mapping);
         } else {
             log.debug("{} - Message is not a recognized type, skipping: {}", tenant,
                     message.getClass().getSimpleName());
@@ -75,10 +84,7 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
 
     @Override
     protected void handleProcessingError(Exception e, ProcessingContext<?> context, String tenant, Mapping mapping) {
-        int lineNumber = 0;
-        if (e.getStackTrace().length > 0) {
-            lineNumber = e.getStackTrace()[0].getLineNumber();
-        }
+        int lineNumber = extractJsLineNumber(e);
         String errorMessage = String.format(
                 "Tenant %s - Error in FlowResultOutboundProcessor: %s for mapping: %s, line %s",
                 tenant, mapping.getName(), e.getMessage(), lineNumber);
@@ -90,32 +96,51 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
         mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
     }
 
-    private void processDeviceMessage(DeviceMessage deviceMessage, ProcessingContext<?> context,
-            String tenant, Mapping mapping) throws ProcessingException {
+    /**
+     * NEW: Process DeviceMessage using focused contexts.
+     */
+    private void processDeviceMessage(
+            DeviceMessage deviceMessage,
+            RoutingContext routing,
+            ProcessingState state,
+            OutputCollector output,
+            ProcessingContext<?> context,
+            String tenant,
+            Mapping mapping) throws ProcessingException {
 
         try {
 
             // Clone the payload to modify it
             Map<String, Object> payload = clonePayload(deviceMessage.getPayload());
 
-            // Resolve device ID and set it hierarchically in the payload
-            String resolvedExternalId = context.getSourceId();  // defaults to sourceId in context
-            log.debug("{} - Initial context.sourceId before resolution: {}", tenant, resolvedExternalId);
-
-            try {
-                resolvedExternalId = resolveGlobalId2ExternalId(deviceMessage, context, tenant);
+            // Check if sourceId is explicitly set in DeviceMessage
+            String resolvedExternalId;
+            if (deviceMessage.getSourceId() != null && !deviceMessage.getSourceId().isEmpty()) {
+                // Use explicitly provided sourceId
+                resolvedExternalId = deviceMessage.getSourceId();
                 context.setSourceId(resolvedExternalId);
-                log.debug("{} - Resolved external ID: {}", tenant, resolvedExternalId);
-            } catch (ProcessingException e) {
-                log.warn("{} - Could not resolve external ID for device message: {}", tenant, e.getMessage());
-                // Fall back to context sourceId if resolution failed
-                if (resolvedExternalId == null || resolvedExternalId.isEmpty()) {
-                    resolvedExternalId = context.getSourceId();
-                    log.warn("{} - Using context sourceId as fallback: {}", tenant, resolvedExternalId);
-                }
-            }
+                log.debug("{} - Using explicit sourceId from DeviceMessage: {}", tenant, resolvedExternalId);
+            } else {
+                // Resolve device ID using existing logic
+                resolvedExternalId = context.getSourceId();  // defaults to sourceId in context
+                log.debug("{} - Initial context.sourceId before resolution: {}", tenant, resolvedExternalId);
 
-            log.debug("{} - Final resolvedExternalId to be used: {}", tenant, resolvedExternalId);
+                try {
+                    resolvedExternalId = resolveGlobalId2ExternalId(deviceMessage, context, tenant);
+                    context.setSourceId(resolvedExternalId);
+                    log.debug("{} - Resolved external ID: {}", tenant, resolvedExternalId);
+                } catch (ProcessingException e) {
+                    log.warn("{} - Could not resolve external ID for device '{}' with externalIdType '{}': {}",
+                            tenant, context.getSourceId(), context.getMapping().getExternalIdType(), e.getMessage());
+                    // Fall back to context sourceId if resolution failed
+                    if (resolvedExternalId == null || resolvedExternalId.isEmpty()) {
+                        resolvedExternalId = context.getSourceId();
+                        log.warn("{} - Using context sourceId as fallback: {}", tenant, resolvedExternalId);
+                    }
+                }
+
+                log.debug("{} - Final resolvedExternalId to be used: {}", tenant, resolvedExternalId);
+            }
 
             // Set resolved publish topic (from substituteInTargetAndSend logic)
             setResolvedPublishTopic(context, payload);
@@ -123,9 +148,12 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             // Convert payload to JSON string for the request
             String payloadJson = objectMapper.writeValueAsString(payload);
 
-            // Create the request - pass action from DeviceMessage for WebHook internal mode
-            DynamicMapperRequest request = ProcessingResultHelper.createAndAddDynamicMapperRequest(context,
-                    payloadJson, deviceMessage.getAction(), mapping);
+            // Create the request without adding to context (will be added via OutputCollector, matching inbound pattern)
+            DynamicMapperRequest request = ProcessingResultHelper.createDynamicMapperRequest(
+                    context.getDeviceContext(), context.getRoutingContext(), payloadJson,
+                    deviceMessage.getAction(), mapping);
+            // Add to thread-safe output collector (syncOutputToContext copies to context.requests once)
+            output.addRequest(request);
 
             // Override resolvedPublishTopic if DeviceMessage provides a topic
             String publishTopic = deviceMessage.getTopic();
@@ -181,18 +209,18 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
 
             // Populate Cumulocity-specific request with source identifier
             if (request.getApi() != null && resolvedExternalId != null && !resolvedExternalId.isEmpty()) {
-                log.info("{} - Populating source identifier: resolvedExternalId={}, api.identifier={}",
+                log.debug("{} - Populating source identifier: resolvedExternalId={}, api.identifier={}",
                         tenant, resolvedExternalId, request.getApi().identifier);
                 String cumulocityPayload = populateSourceIdentifier(payloadJson, request, tenant);
                 request.setRequestCumulocity(cumulocityPayload);
-                log.info("{} - Set requestCumulocity: {}", tenant, cumulocityPayload);
+                log.debug("{} - Set requestCumulocity: {}", tenant, cumulocityPayload);
             } else {
                 log.warn("{} - Skipping populateSourceIdentifier: api={}, resolvedExternalId={}",
                         tenant, request.getApi(), resolvedExternalId);
             }
 
             // For PUT/PATCH/DELETE methods, append ID to path and remove from body
-            log.info("{} - Checking PUT/PATCH/DELETE adjustment: api={}, apiName={}, resolvedExternalId={}, method={}, action={}, publishTopic={}",
+            log.debug("{} - Checking PUT/PATCH/DELETE adjustment: api={}, apiName={}, resolvedExternalId={}, method={}, action={}, publishTopic={}",
                     tenant, request.getApi(), request.getApi() != null ? request.getApi().name : "null",
                     resolvedExternalId, request.getMethod(), deviceMessage.getAction(), context.getResolvedPublishTopic());
 
@@ -206,7 +234,7 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
                 request.setMethod(RequestMethod.POST);
                 // For POST, use the base API path without ID in pathCumulocity
                 request.setPathCumulocity(request.getApi().path);
-                log.info("{} - ✅ Converted measurement from {} to POST, using base path: {}",
+                log.debug("{} - ✅ Converted measurement from {} to POST, using base path: {}",
                         tenant, request.getMethod(), request.getApi().path);
                 // The ID will remain in the body which is correct for POST
             } else if (request.getApi() != null && resolvedExternalId != null &&
@@ -224,14 +252,14 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
                     request.setRequestCumulocity(bodyWithoutId);
                 }
 
-                log.info("{} - ✅ Adjusted pathCumulocity for {} method: {} -> {}",
+                log.debug("{} - ✅ Adjusted pathCumulocity for {} method: {} -> {}",
                         tenant, request.getMethod(), request.getApi().path, pathWithId);
             } else if (request.getMethod() == RequestMethod.POST) {
                 // For POST requests, use the base API path without ID in pathCumulocity
                 // This overrides any ID that JavaScript may have appended to the topic
                 if (request.getApi() != null) {
                     request.setPathCumulocity(request.getApi().path);
-                    log.info("{} - ✅ Using base API path for POST in pathCumulocity: {}", tenant, request.getApi().path);
+                    log.debug("{} - ✅ Using base API path for POST in pathCumulocity: {}", tenant, request.getApi().path);
                 }
             }
 
@@ -246,8 +274,17 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
         }
     }
 
-    private void processCumulocityObject(CumulocityObject cumulocityMessage, ProcessingContext<?> context,
-            String tenant, Mapping mapping) throws ProcessingException {
+    /**
+     * NEW: Process CumulocityObject using focused contexts.
+     */
+    private void processCumulocityObject(
+            CumulocityObject cumulocityMessage,
+            RoutingContext routing,
+            ProcessingState state,
+            OutputCollector output,
+            ProcessingContext<?> context,
+            String tenant,
+            Mapping mapping) throws ProcessingException {
 
         try {
             // Get the API from the cumulocityType using unified API derivation
@@ -256,15 +293,22 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             // Clone the payload to modify it
             Map<String, Object> payload = clonePayload(cumulocityMessage.getPayload());
 
-            // Resolve device ID and set it hierarchically in the payload
-            String resolvedDeviceId = resolveDeviceIdentifier(cumulocityMessage, context, tenant);
+            // Check if sourceId is explicitly set in CumulocityObject
+            String resolvedDeviceId;
             ExternalIdInfo externalIdInfo = ExternalIdInfo.from(cumulocityMessage.getExternalSource());
 
             if (externalIdInfo.isPresent()) {
                 context.setExternalId(externalIdInfo.getExternalId());
             }
 
-            if (resolvedDeviceId != null) {
+            if (cumulocityMessage.getSourceId() != null && !cumulocityMessage.getSourceId().isEmpty()) {
+                // Use explicitly provided sourceId
+                resolvedDeviceId = cumulocityMessage.getSourceId();
+                context.setSourceId(resolvedDeviceId);
+                ProcessingResultHelper.setHierarchicalValue(payload, targetAPI.identifier, resolvedDeviceId);
+                log.debug("{} - Using explicit sourceId from CumulocityObject: {}", tenant, resolvedDeviceId);
+            } else if ((resolvedDeviceId = resolveDeviceIdentifier(cumulocityMessage, context, tenant)) != null) {
+                // Use resolved device ID from externalSource
                 ProcessingResultHelper.setHierarchicalValue(payload, targetAPI.identifier, resolvedDeviceId);
                 context.setSourceId(resolvedDeviceId);
             } else if (externalIdInfo.isPresent()) {
@@ -285,9 +329,12 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             // Convert payload to JSON string for the request
             String payloadJson = objectMapper.writeValueAsString(payload);
 
-            DynamicMapperRequest c8yRequest = ProcessingResultHelper.createAndAddDynamicMapperRequest(context,
-                    payloadJson,
+            // Create the request without adding to context (will be added via OutputCollector, matching inbound pattern)
+            DynamicMapperRequest c8yRequest = ProcessingResultHelper.createDynamicMapperRequest(
+                    context.getDeviceContext(), context.getRoutingContext(), payloadJson,
                     cumulocityMessage.getAction(), mapping);
+            // Add to thread-safe output collector (syncOutputToContext copies to context.requests once)
+            output.addRequest(c8yRequest);
             c8yRequest.setApi(targetAPI);
             c8yRequest.setSourceId(resolvedDeviceId);
             c8yRequest.setExternalIdType(externalIdInfo.getExternalType());
@@ -304,18 +351,18 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
 
             // Populate Cumulocity-specific request with source identifier
             if (c8yRequest.getApi() != null && resolvedDeviceId != null && !resolvedDeviceId.isEmpty()) {
-                log.info("{} - Populating source identifier: resolvedDeviceId={}, api.identifier={}",
+                log.debug("{} - Populating source identifier: resolvedDeviceId={}, api.identifier={}",
                         tenant, resolvedDeviceId, c8yRequest.getApi().identifier);
                 String cumulocityPayload = populateSourceIdentifier(payloadJson, c8yRequest, tenant);
                 c8yRequest.setRequestCumulocity(cumulocityPayload);
-                log.info("{} - Set requestCumulocity: {}", tenant, cumulocityPayload);
+                log.debug("{} - Set requestCumulocity: {}", tenant, cumulocityPayload);
             } else {
                 log.warn("{} - Skipping populateSourceIdentifier: api={}, resolvedDeviceId={}",
                         tenant, c8yRequest.getApi(), resolvedDeviceId);
             }
 
             // For PUT/PATCH/DELETE methods, append ID to path and remove from body
-            log.info("{} - Checking PUT/PATCH/DELETE adjustment: api={}, apiName={}, resolvedDeviceId={}, method={}, action={}, publishTopic={}",
+            log.debug("{} - Checking PUT/PATCH/DELETE adjustment: api={}, apiName={}, resolvedDeviceId={}, method={}, action={}, publishTopic={}",
                     tenant, c8yRequest.getApi(), c8yRequest.getApi() != null ? c8yRequest.getApi().name : "null",
                     resolvedDeviceId, c8yRequest.getMethod(), cumulocityMessage.getAction(),
                     context.getResolvedPublishTopic());
@@ -330,7 +377,7 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
                 c8yRequest.setMethod(RequestMethod.POST);
                 // For POST, use the base API path without ID in pathCumulocity
                 c8yRequest.setPathCumulocity(c8yRequest.getApi().path);
-                log.info("{} - ✅ Converted measurement from {} to POST, using base path: {}",
+                log.debug("{} - ✅ Converted measurement from {} to POST, using base path: {}",
                         tenant, c8yRequest.getMethod(), c8yRequest.getApi().path);
                 // The ID will remain in the body which is correct for POST
             } else if (c8yRequest.getApi() != null && resolvedDeviceId != null &&
@@ -348,14 +395,14 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
                     c8yRequest.setRequestCumulocity(bodyWithoutId);
                 }
 
-                log.info("{} - ✅ Adjusted pathCumulocity for {} method: {} -> {}",
+                log.debug("{} - ✅ Adjusted pathCumulocity for {} method: {} -> {}",
                         tenant, c8yRequest.getMethod(), c8yRequest.getApi().path, pathWithId);
             } else if (c8yRequest.getMethod() == RequestMethod.POST) {
                 // For POST requests, use the base API path without ID in pathCumulocity
                 // This overrides any ID that JavaScript may have appended to the topic
                 if (c8yRequest.getApi() != null) {
                     c8yRequest.setPathCumulocity(c8yRequest.getApi().path);
-                    log.info("{} - ✅ Using base API path for POST in pathCumulocity: {}", tenant, c8yRequest.getApi().path);
+                    log.debug("{} - ✅ Using base API path for POST in pathCumulocity: {}", tenant, c8yRequest.getApi().path);
                 }
             }
 
@@ -398,7 +445,7 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             });
 
             if (mapping.getDebug() || context.getServiceConfiguration().getLogPayload()) {
-                log.info("{} - Resolved topic from {} to {}",
+                log.debug("{} - Resolved topic from {} to {}",
                         tenant, splitTopicInAsListOriginal, splitTopicInAsList);
             }
 

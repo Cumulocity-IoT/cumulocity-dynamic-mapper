@@ -22,7 +22,7 @@
 package dynamic.mapper.processor.extension;
 
 import dynamic.mapper.processor.model.CumulocityObject;
-import dynamic.mapper.processor.model.DataPreparationContext;
+import dynamic.mapper.processor.model.JavaExtensionContext;
 import dynamic.mapper.processor.model.Message;
 
 import org.springframework.stereotype.Component;
@@ -31,13 +31,13 @@ import org.springframework.stereotype.Component;
  * Extension interface for complete inbound processing (Broker → Cumulocity).
  *
  * <p>This interface uses the return-value based SMART Function Pattern.
- * Implement {@link #onMessage(Message, DataPreparationContext)} to follow the functional
+ * Implement {@link #onMessage(Message, JavaExtensionContext)} to follow the functional
  * programming pattern used by SMART JavaScript functions.</p>
  *
  * <pre>
  * {@code
  * @Override
- * public CumulocityObject[] onMessage(Message<byte[]> message, DataPreparationContext context) {
+ * public CumulocityObject[] onMessage(Message<byte[]> message, JavaExtensionContext context) {
  *     // Parse input
  *     Map<?, ?> json = Json.parseJson(new String(message.getPayload(), "UTF-8"));
  *
@@ -68,7 +68,7 @@ import org.springframework.stereotype.Component;
  * @param <O> The type of the source payload (typically byte[] or String)
  * @see InboundExtension
  * @see Message
- * @see DataPreparationContext
+ * @see JavaExtensionContext
  * @see CumulocityObject
  */
 @Component
@@ -77,7 +77,7 @@ public interface ProcessorExtensionInbound<O> {
      * New pattern: Process an incoming message and return Cumulocity objects to create.
      *
      * <p>This method follows the SMART function pattern used by JavaScript extensions.
-     * It receives an immutable {@link Message} wrapper and a {@link DataPreparationContext}
+     * It receives an immutable {@link Message} wrapper and a {@link JavaExtensionContext}
      * for accessing state, inventory, and utility methods.</p>
      *
      * <p>The extension should parse the incoming message, perform any necessary transformations,
@@ -108,7 +108,7 @@ public interface ProcessorExtensionInbound<O> {
      * @return Array of CumulocityObject instances to create
      * @see CumulocityObject
      * @see Message
-     * @see DataPreparationContext
+     * @see JavaExtensionContext
      */
-    CumulocityObject[] onMessage(Message<O> message, DataPreparationContext context);
+    CumulocityObject[] onMessage(Message<O> message, JavaExtensionContext context);
 }

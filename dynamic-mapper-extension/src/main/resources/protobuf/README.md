@@ -39,7 +39,7 @@ When you modify a `.proto` file, regenerate the Java classes:
 ### From Repository Root
 
 ```bash
-cd /Users/ck/work/git/cumulocity-dynamic-mapper
+cd .../cumulocity-dynamic-mapper
 ./resources/script/protobuf/generate_protobuf.sh extension
 ```
 
@@ -90,7 +90,7 @@ message MyDeviceMessage {
 
 2. Regenerate Java classes:
 ```bash
-cd /Users/ck/work/git/cumulocity-dynamic-mapper
+cd .../cumulocity-dynamic-mapper
 ./resources/script/protobuf/generate_protobuf.sh extension
 ```
 
