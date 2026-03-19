@@ -15,11 +15,10 @@
 | **sourceTemplate** | **String** | JSON template for source data structure | [default to null] |
 | **targetTemplate** | **String** | JSON template for target data structure | [default to null] |
 | **mappingType** | **String** | Type of mapping transformation | [default to null] |
+| **transformationType** | **String** | Type of transformation processing to apply | [optional] [default to null] |
 | **substitutions** | [**List**](Substitution.md) | Array of field substitutions for data transformation | [default to null] |
 | **active** | **Boolean** | Whether the mapping is currently active | [default to null] |
 | **debug** | **Boolean** | Whether debug mode is enabled for this mapping | [default to null] |
-| **tested** | **Boolean** | Whether the mapping has been tested | [default to null] |
-| **supportsMessageContext** | **Boolean** | Whether the mapping supports message context | [default to null] |
 | **eventWithAttachment** | **Boolean** | Whether events can have attachments | [optional] [default to null] |
 | **createNonExistingDevice** | **Boolean** | Whether to create devices that don&#39;t exist | [optional] [default to null] |
 | **updateExistingDevice** | **Boolean** | Whether to update existing devices | [optional] [default to null] |
@@ -29,7 +28,7 @@
 | **snoopStatus** | **String** | Status of template snooping | [default to null] |
 | **snoopedTemplates** | **List** | List of templates captured during snooping | [default to null] |
 | **extension** | [**ExtensionEntry**](ExtensionEntry.md) | Extension configuration for custom processing | [optional] [default to null] |
-| **filterMapping** | **String** | Filter expression (condition) if mapping should be applied | [optional] [default to null] |
+| **filterMapping** | **String** | Filter expression for mapping conditions | [optional] [default to null] |
 | **filterInventory** | **String** | Filter expression for inventory queries | [optional] [default to null] |
 | **maxFailureCount** | **Long** | Maximum number of failures before disabling mapping | [default to null] |
 | **qos** | **String** | Quality of Service level for MQTT | [default to null] |

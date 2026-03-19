@@ -19,6 +19,13 @@
 | **inventoryFragmentsToCache** | **List** | List of inventory fragments to include in cache for better performance. Examples: c8y_IsDevice, c8y_Hardware, c8y_Mobile | [default to null] |
 | **maxCPUTimeMS** | **Integer** | Maximum CPU time in milliseconds allowed for code execution in mappings. Prevents infinite loops and excessive processing. | [default to null] |
 | **codeTemplates** | [**Map**](CodeTemplate.md) | Map of code templates used for custom processing logic in mappings | [optional] [default to null] |
+| **deviceIsolationMQTTServiceEnabled** | **Boolean** | Flag to check if the device isolation for messages over the Cumulocity MQTT Service is enabled | [default to null] |
+| **jsonataAgent** | **String** | Name of the JSONata agent to be used when generating substitutions. Must be defined in the AI Agent Manager. | [optional] [default to null] |
+| **javaScriptAgent** | **String** | Name of the JavaScript agent to be used when generating substitutions as JavaScript code. Must be defined in the AI Agent Manager. | [optional] [default to null] |
+| **smartFunctionAgent** | **String** | Name of the Smart Function agent to be used when generating Cumulocity API requests as JavaScript code. Must be defined in the AI Agent Manager. | [optional] [default to null] |
+| **flowStateRetention** | **Integer** | Retention time in minutes for Smart Function and Java Extension flow state entries. Set to 0 to disable TTL. | [default to null] |
+| **suppressDeprecationWarning** | **Boolean** | Suppress deprecation warning in UI. | [default to null] |
+| **acceptedDeprecationNotice** | **String** | Holds the version string of the last accepted SUBSTITUTION_AS_CODE deprecation notice (e.g. &#39;6.2.0&#39;). If the value matches the current release version the notice is not shown again. | [optional] [default to null] |
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

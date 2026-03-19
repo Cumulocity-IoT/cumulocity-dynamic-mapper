@@ -157,7 +157,7 @@ No authorization required
 
 <a name="getCodeTemplates"></a>
 # **getCodeTemplates**
-> CodeTemplate getCodeTemplates()
+> Map getCodeTemplates()
 
 Get all code templates
 
@@ -168,7 +168,7 @@ This endpoint does not need any parameter.
 
 ### Return type
 
-[**CodeTemplate**](../Models/CodeTemplate.md)
+[**Map**](../Models/CodeTemplate.md)
 
 ### Authorization
 

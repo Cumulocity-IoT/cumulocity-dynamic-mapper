@@ -4,15 +4,95 @@ All URIs are relative to *http://localhost:8080*
 
 | Method | HTTP request | Description |
 |------------- | ------------- | -------------|
+| [**deleteGroupSubscription**](DeviceSubscriptionControllerApi.md#deleteGroupSubscription) | **DELETE** /subscription/group/{groupId} | Delete device group notification subscription |
+| [**getGroupSubscriptions**](DeviceSubscriptionControllerApi.md#getGroupSubscriptions) | **GET** /subscription/group | Get group notification subscriptions |
+| [**getTypeSubscriptions**](DeviceSubscriptionControllerApi.md#getTypeSubscriptions) | **GET** /subscription/type | Get device type notification subscriptions |
 | [**subscriptionCreate**](DeviceSubscriptionControllerApi.md#subscriptionCreate) | **POST** /subscription | Create device notification subscription |
 | [**subscriptionDelete**](DeviceSubscriptionControllerApi.md#subscriptionDelete) | **DELETE** /subscription/{deviceId} | Delete device notification subscription |
 | [**subscriptionUpdate**](DeviceSubscriptionControllerApi.md#subscriptionUpdate) | **PUT** /subscription | Update device notification subscription |
 | [**subscriptionsGet**](DeviceSubscriptionControllerApi.md#subscriptionsGet) | **GET** /subscription | Get device notification subscriptions |
+| [**updateGroupSubscription**](DeviceSubscriptionControllerApi.md#updateGroupSubscription) | **PUT** /subscription/group | Update group notification subscription |
+| [**updateTypeSubscription**](DeviceSubscriptionControllerApi.md#updateTypeSubscription) | **PUT** /subscription/type | Update device type notification subscription |
 
+
+<a name="deleteGroupSubscription"></a>
+# **deleteGroupSubscription**
+> deleteGroupSubscription(groupId)
+
+Delete device group notification subscription
+
+    Removes notification subscription for a specific device group.  **Security:** Requires ROLE_DYNAMIC_MAPPER_ADMIN or ROLE_DYNAMIC_MAPPER_CREATE role. 
+
+### Parameters
+
+|Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **groupId** | **String**| ID of the device group to unsubscribe | [default to null] |
+
+### Return type
+
+null (empty response body)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: Not defined
+
+<a name="getGroupSubscriptions"></a>
+# **getGroupSubscriptions**
+> NotificationSubscriptionResponse getGroupSubscriptions()
+
+Get group notification subscriptions
+
+    Retrieves current notification subscriptions for device groups.
+
+### Parameters
+This endpoint does not need any parameter.
+
+### Return type
+
+[**NotificationSubscriptionResponse**](../Models/NotificationSubscriptionResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+<a name="getTypeSubscriptions"></a>
+# **getTypeSubscriptions**
+> NotificationSubscriptionResponse getTypeSubscriptions()
+
+Get device type notification subscriptions
+
+    Retrieves current notification subscriptions for device types.
+
+### Parameters
+This endpoint does not need any parameter.
+
+### Return type
+
+[**NotificationSubscriptionResponse**](../Models/NotificationSubscriptionResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
 
 <a name="subscriptionCreate"></a>
 # **subscriptionCreate**
-> C8YNotificationSubscription subscriptionCreate(C8YNotificationSubscription)
+> NotificationSubscriptionResponse subscriptionCreate(NotificationSubscriptionRequest)
 
 Create device notification subscription
 
@@ -22,11 +102,11 @@ Create device notification subscription
 
 |Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
-| **C8YNotificationSubscription** | [**C8YNotificationSubscription**](../Models/C8YNotificationSubscription.md)| Subscription configuration with devices and API types | |
+| **NotificationSubscriptionRequest** | [**NotificationSubscriptionRequest**](../Models/NotificationSubscriptionRequest.md)| Subscription configuration with devices and API types | |
 
 ### Return type
 
-[**C8YNotificationSubscription**](../Models/C8YNotificationSubscription.md)
+[**NotificationSubscriptionResponse**](../Models/NotificationSubscriptionResponse.md)
 
 ### Authorization
 
@@ -66,7 +146,7 @@ No authorization required
 
 <a name="subscriptionUpdate"></a>
 # **subscriptionUpdate**
-> C8YNotificationSubscription subscriptionUpdate(C8YNotificationSubscription)
+> NotificationSubscriptionResponse subscriptionUpdate(NotificationSubscriptionRequest)
 
 Update device notification subscription
 
@@ -76,11 +156,11 @@ Update device notification subscription
 
 |Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
-| **C8YNotificationSubscription** | [**C8YNotificationSubscription**](../Models/C8YNotificationSubscription.md)| Updated subscription configuration | |
+| **NotificationSubscriptionRequest** | [**NotificationSubscriptionRequest**](../Models/NotificationSubscriptionRequest.md)| Updated subscription configuration | |
 
 ### Return type
 
-[**C8YNotificationSubscription**](../Models/C8YNotificationSubscription.md)
+[**NotificationSubscriptionResponse**](../Models/NotificationSubscriptionResponse.md)
 
 ### Authorization
 
@@ -93,7 +173,7 @@ No authorization required
 
 <a name="subscriptionsGet"></a>
 # **subscriptionsGet**
-> C8YNotificationSubscription subscriptionsGet(deviceId, subscriptionName)
+> NotificationSubscriptionResponse subscriptionsGet(subscription)
 
 Get device notification subscriptions
 
@@ -103,12 +183,11 @@ Get device notification subscriptions
 
 |Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
-| **deviceId** | **String**| Filter subscriptions by specific device ID | [optional] [default to null] |
-| **subscriptionName** | **String**| Filter subscriptions by subscription name | [optional] [default to null] |
+| **subscription** | **String**| Name of the subscription | [default to null] |
 
 ### Return type
 
-[**C8YNotificationSubscription**](../Models/C8YNotificationSubscription.md)
+[**NotificationSubscriptionResponse**](../Models/NotificationSubscriptionResponse.md)
 
 ### Authorization
 
@@ -117,5 +196,59 @@ No authorization required
 ### HTTP request headers
 
 - **Content-Type**: Not defined
+- **Accept**: application/json
+
+<a name="updateGroupSubscription"></a>
+# **updateGroupSubscription**
+> NotificationSubscriptionResponse updateGroupSubscription(NotificationSubscriptionRequest)
+
+Update group notification subscription
+
+    Updates the notification subscription for a device group.  **Security:** Requires ROLE_DYNAMIC_MAPPER_ADMIN or ROLE_DYNAMIC_MAPPER_CREATE role. 
+
+### Parameters
+
+|Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **NotificationSubscriptionRequest** | [**NotificationSubscriptionRequest**](../Models/NotificationSubscriptionRequest.md)|  | |
+
+### Return type
+
+[**NotificationSubscriptionResponse**](../Models/NotificationSubscriptionResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+<a name="updateTypeSubscription"></a>
+# **updateTypeSubscription**
+> NotificationSubscriptionResponse updateTypeSubscription(NotificationSubscriptionRequest)
+
+Update device type notification subscription
+
+    Updates the notification subscription for device types.  **Security:** Requires ROLE_DYNAMIC_MAPPER_ADMIN or ROLE_DYNAMIC_MAPPER_CREATE role. 
+
+### Parameters
+
+|Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **NotificationSubscriptionRequest** | [**NotificationSubscriptionRequest**](../Models/NotificationSubscriptionRequest.md)|  | |
+
+### Return type
+
+[**NotificationSubscriptionResponse**](../Models/NotificationSubscriptionResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: application/json
 - **Accept**: application/json
 
