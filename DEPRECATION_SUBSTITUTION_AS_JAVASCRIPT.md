@@ -352,19 +352,18 @@ Mappings using Substitution as JavaScript are marked as:
 - **Transformation Type**: `SUBSTITUTION_AS_CODE`
 - **Label in UI**: "Substitution as JavaScript (deprecated)"
 
-### Step 2: Understand the Existing Logic
+### Step 2: Export Each Affected Mapping
 
-Review your existing Substitution as JavaScript code and identify:
-- What substitutions are being created
-- What conditions determine the substitutions
-- What the final payload structure should be
+Use the *Export mapping* action in the Mapping grid to save a copy of each affected mapping as JSON. This preserves the original configuration and JavaScript code as a reference during migration.
 
-### Step 3: Convert to Smart Function
+### Step 3: Recreate as Smart Function
 
-Create a Smart Function that:
+Create a new mapping with the `SMART_FUNCTION` transformation type and adapt the JavaScript code:
 1. Accepts the `onMessage(inputMsg, context)` signature
 2. Extracts data from the payload using `msg.getPayload()`
-3. Directly constructs and returns the target payload array
+3. Directly constructs and returns the target payload array instead of substitution objects
+
+Refer to the built-in code templates and the examples in this document for guidance.
 
 ### Step 4: Test Thoroughly
 
@@ -372,6 +371,14 @@ Use the mapping test functionality to:
 - Verify the payload structure matches expectations
 - Test edge cases and conditional logic
 - Validate device identification and enrichment
+
+### Step 5: Activate the New Mapping
+
+Once tested, activate the new Smart Function mapping.
+
+### Step 6: Delete the Original Deprecated Mapping
+
+After confirming the new mapping works correctly in production, delete the original `SUBSTITUTION_AS_CODE` mapping to keep the mapping list clean and avoid duplicate processing.
 
 ## Comparison Table
 

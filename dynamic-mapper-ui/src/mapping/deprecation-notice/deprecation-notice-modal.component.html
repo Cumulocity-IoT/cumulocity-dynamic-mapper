@@ -73,13 +73,12 @@
     <!-- Migration Steps -->
     <h5 class="m-t-16 m-b-8">{{ 'How to migrate' | translate }}</h5>
     <ol class="m-l-16">
-      <li>{{ 'Identify affected mappings — look for mappings using "Substitution as JavaScript (deprecated)" in the
-        Transformation Type.' | translate }}</li>
-      <li>{{ 'Open each mapping and change the transformation type to "Smart Function".' | translate }}</li>
-      <li>{{ 'Adapt the JavaScript code to the Smart Function API (direct payload creation instead of substitution
-        objects).' | translate }}</li>
+      <li>{{ 'Identify affected mappings — look for mappings using "Substitution as JavaScript (deprecated)" in the Transformation Type.' | translate }}</li>
+      <li>{{ 'Export each affected mapping.' | translate }}</li>
+      <li>{{ 'Recreate a new mapping with the Smart Function transformation type and adapt the JavaScript code to the Smart Function API (direct payload creation instead of substitution objects).' | translate }}</li>
       <li>{{ 'Use the built-in Test feature to verify the migrated mapping.' | translate }}</li>
       <li>{{ 'Activate the mapping.' | translate }}</li>
+      <li>{{ 'Delete the original deprecated mapping.' | translate }}</li>
     </ol>
 
     <p class="text-muted m-t-16">
