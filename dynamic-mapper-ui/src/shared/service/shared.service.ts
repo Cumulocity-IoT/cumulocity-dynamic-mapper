@@ -150,7 +150,7 @@ export class SharedService {
   }
 
   async updateServiceConfiguration(
-    configuration: ServiceConfiguration
+    configuration: Partial<ServiceConfiguration>
   ): Promise<IFetchResponse> {
     this._serviceConfiguration = undefined;
     this._featureCache = null;

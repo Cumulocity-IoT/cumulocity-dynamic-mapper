@@ -78,9 +78,7 @@ export class DeprecationNoticeModalComponent implements OnInit, OnDestroy {
     if (this.isPending) return;
     this.isPending = true;
     try {
-      const config = await this.sharedService.getServiceConfiguration();
       await this.sharedService.updateServiceConfiguration({
-        ...config,
         acceptedDeprecationNotice: DEPRECATION_NOTICE_VERSION
       });
       this.closeSubject.next(true);
