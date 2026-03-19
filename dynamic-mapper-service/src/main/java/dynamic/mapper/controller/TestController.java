@@ -59,6 +59,13 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -68,6 +75,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RestController
+@Tag(name = "Test Controller", description = "Endpoints for testing mappings and webhook echo utilities")
 public class TestController {
 
     @Autowired
@@ -95,6 +103,14 @@ public class TestController {
     private Boolean externalExtensionsEnabled;
 
 
+    @Operation(summary = "Test a mapping", description = "Executes a mapping transformation against a provided payload and returns the generated requests and any warnings or errors. Optionally sends the result to Cumulocity IoT.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Test executed successfully",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = TestResult.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid mapping or payload"),
+            @ApiResponse(responseCode = "404", description = "Test connector not found"),
+            @ApiResponse(responseCode = "500", description = "Test execution failed")
+    })
     @RequestMapping(value = "/test/mapping", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<TestResult> testMapping(
             @RequestBody TestContext context) {
@@ -250,6 +266,8 @@ public class TestController {
         return notification;
     }
 
+    @Operation(summary = "Echo webhook input", description = "Accepts any POST request and returns the body unchanged. Useful for testing outbound webhook mappings.")
+    @ApiResponse(responseCode = "200", description = "Input echoed back", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE))
     @PostMapping("/webhook/echo/**")
     public String echoInput(HttpServletRequest request, @RequestBody String input) {
         // Get the full URL path
@@ -269,6 +287,8 @@ public class TestController {
         return input;
     }
 
+    @Operation(summary = "Webhook health check", description = "Returns 200 OK to confirm the webhook echo endpoint is reachable.")
+    @ApiResponse(responseCode = "200", description = "Endpoint is healthy")
     @GetMapping("/webhook")
     public ResponseEntity<String> echoHealth(HttpServletRequest request) {
         // Get the full URL

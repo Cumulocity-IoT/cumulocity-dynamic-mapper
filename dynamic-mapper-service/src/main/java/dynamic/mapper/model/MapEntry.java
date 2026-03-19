@@ -20,28 +20,33 @@
  */
 package dynamic.mapper.model;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
+@Schema(description = "Maps a device ID to a client connector identifier for outbound message routing")
 public class MapEntry {
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Cumulocity device managed object ID", example = "12345")
     private String id;
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Connector client identifier associated with the device", example = "mqtt-broker-01")
     private String client;
-    
+
     public MapEntry(String id, String client) {
         this.id = id;
         this.client = client;
     }
-    
+
     // Getters and setters
     public String getId() {
         return id;
     }
-    
+
     public void setId(String id) {
         this.id = id;
     }
-    
+
     public String getClient() {
         return client;
     }
-    
+
     public void setClient(String client) {
         this.client = client;
     }

@@ -14,11 +14,19 @@ import com.cumulocity.microservice.context.credentials.UserCredentials;
 
 import dynamic.mapper.core.CacheManager;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RestController
 @RequestMapping("/cache")
+@Tag(name = "Cache Controller", description = "Endpoints for querying cache sizes")
 public class CacheController {
 
     @Autowired
@@ -27,8 +35,16 @@ public class CacheController {
     @Autowired
     private ContextService<UserCredentials> contextService;
 
+    @Operation(summary = "Get cache size", description = "Returns the current number of entries in the specified cache. Supported values for cacheId: INVENTORY_CACHE, INBOUND_ID_CACHE.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Cache size returned successfully",
+                    content = @Content(mediaType = "application/json", schema = @Schema(type = "integer", example = "42"))),
+            @ApiResponse(responseCode = "400", description = "Unknown cacheId")
+    })
     @GetMapping
-    public ResponseEntity<Integer> getCacheSize(@RequestParam("cacheId") String cacheId) {
+    public ResponseEntity<Integer> getCacheSize(
+            @Parameter(description = "Identifier of the cache to query. Allowed values: INVENTORY_CACHE, INBOUND_ID_CACHE", required = true, example = "INVENTORY_CACHE")
+            @RequestParam("cacheId") String cacheId) {
         String tenant = contextService.getContext().getTenant();
         log.info("{} - Get cache size for {}", tenant, cacheId);
 

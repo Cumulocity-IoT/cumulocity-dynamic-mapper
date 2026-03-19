@@ -36,7 +36,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import dynamic.mapper.processor.model.MappingType;
-import dynamic.mapper.processor.model.ProcessingType;
 import dynamic.mapper.processor.model.TransformationType;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
@@ -137,7 +136,7 @@ public class Mapping implements Serializable {
     private MappingType mappingType;
 
     @Builder.Default
-    @Schema(description = "Type of processing the transformation", implementation = ProcessingType.class, example = "SUBSTITUTION_AS_CODE")
+    @Schema(description = "Type of processing the transformation", implementation = TransformationType.class, example = "DEFAULT")
     @NotNull
     private TransformationType transformationType = TransformationType.DEFAULT;
 
