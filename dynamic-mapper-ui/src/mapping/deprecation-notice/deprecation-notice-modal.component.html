@@ -19,7 +19,7 @@
 ~
 -->
 
-<c8y-modal [customFooter]="true" (onDismiss)="onDismiss()" [headerClasses]="'modal-header dialog-header'">
+<c8y-modal [customFooter]="true" (onDismiss)="onDismiss()" [headerClasses]="'modal-header dialog-header'" #modal>
   <ng-container c8y-modal-title>
     <span [c8yIcon]="'warning'"></span>
     <h4 class="modal-title">

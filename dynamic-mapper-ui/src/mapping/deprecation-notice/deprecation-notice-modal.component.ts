@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 
-import { ChangeDetectorRef, Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { AlertService, CoreModule } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
 import { DEPRECATION_NOTICE_VERSION, Direction, Mapping, SharedService, TransformationType } from '../../shared';
@@ -37,6 +37,8 @@ export class DeprecationNoticeModalComponent implements OnInit, OnDestroy {
   isPending = false;
   isLoading = true;
   affectedMappings: Mapping[] = [];
+
+  @ViewChild('modal', { static: false }) private modal: any;
 
   constructor(
     private sharedService: SharedService,
@@ -69,6 +71,7 @@ export class DeprecationNoticeModalComponent implements OnInit, OnDestroy {
   onDismiss(): void {
     this.closeSubject.next(false);
     this.closeSubject.complete();
+    this.modal?._dismiss();
   }
 
   async onAccept(): Promise<void> {
@@ -80,15 +83,15 @@ export class DeprecationNoticeModalComponent implements OnInit, OnDestroy {
         ...config,
         acceptedDeprecationNotice: DEPRECATION_NOTICE_VERSION
       });
+      this.closeSubject.next(true);
+      this.closeSubject.complete();
+      this.modal?._dismiss();
     } catch (error) {
       console.error('Failed to save deprecation notice acceptance:', error);
       this.alertService.warning(
         'Could not save acceptance. The notice may appear again next time.'
       );
-    } finally {
       this.isPending = false;
-      this.closeSubject.next(true);
-      this.closeSubject.complete();
     }
   }
 }
