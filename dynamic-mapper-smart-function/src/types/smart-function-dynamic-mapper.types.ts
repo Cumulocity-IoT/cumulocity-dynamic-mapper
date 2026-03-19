@@ -31,7 +31,7 @@
  * - Documentation of the complete Smart Function API surface
  *
  * @module SmartFunctionRuntime
- * @since 6.1.6
+ * @since 6.2
  */
 
 import { DataPrepContext, ExternalId } from './dataprep.types';
@@ -670,7 +670,7 @@ export interface CumulocityObject<T extends C8yObjectType = C8yObjectType> {
    *
    * Useful for routing data to a different device than the one that originated it.
    *
-   * @since 6.1.6
+   * @since 6.2
    * @example "12345"
    */
   sourceId?: string;
@@ -800,7 +800,7 @@ export interface DeviceMessage<T extends C8yObjectType = C8yObjectType> {
    * Explicitly set the Cumulocity device ID for this message.
    * Overrides automatic device resolution when set.
    *
-   * @since 6.1.6
+   * @since 6.2
    * @example "12345"
    */
   sourceId?: string;

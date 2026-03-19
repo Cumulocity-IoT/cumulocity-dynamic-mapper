@@ -95,7 +95,7 @@ public interface JavaExtensionContext extends DataPrepContext {
      *
      * @param externalId The external ID of the device to lookup
      * @return Map containing the device properties from cache, or null if not found
-     * @since 6.1.6
+     * @since 6.2
      */
     Map<String, Object> getManagedObjectAsMap(ExternalId externalId);
 
@@ -112,7 +112,7 @@ public interface JavaExtensionContext extends DataPrepContext {
      * is called and does <em>not</em> persist across invocations (unlike state).</p>
      *
      * @return Map containing the mapping configuration, never {@code null}
-     * @since 6.1.6
+     * @since 6.2
      */
     Map<String, Object> getConfigAsMap();
 

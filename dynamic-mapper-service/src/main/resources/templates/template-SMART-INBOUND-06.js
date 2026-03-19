@@ -8,7 +8,7 @@
  * @defaultTemplate false
  * @internal true
  * @readonly true
- * @since 6.1.6
+ * @since 6.2
  *
  * Sample payload
  * {

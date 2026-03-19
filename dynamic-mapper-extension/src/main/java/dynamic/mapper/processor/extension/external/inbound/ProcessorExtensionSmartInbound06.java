@@ -68,7 +68,7 @@ import java.util.Map;
  *
  * <p>Output: Cumulocity c8y_TemperatureMeasurement routed to parent device (if parents exist)</p>
  *
- * @since 6.1.6
+ * @since 6.2
  */
 @Slf4j
 public class ProcessorExtensionSmartInbound06 implements ProcessorExtensionInbound<byte[]> {

@@ -150,7 +150,7 @@ public interface DataPrepContext {
      * Get the client ID from the connector message
      *
      * @return The client ID from the inbound message, or null if not available
-     * @since 6.1.6
+     * @since 6.2
      */
     String getClientId();
 

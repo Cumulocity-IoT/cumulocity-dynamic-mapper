@@ -26,7 +26,7 @@
  * {@link ./smart-function-dynamic-mapper.types} for the extended versions.
  *
  * @module DataPrepTypes
- * @since 6.1.6
+ * @since 6.2
  */
 
 // ============================================================================
