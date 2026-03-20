@@ -135,7 +135,16 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
                 decodedCode = decodedCode.replaceAll("(?m)^export\\s+(default\\s+|\\{[^}]*}[;]?).*$", "").trim();
                 String decodedCodeAdapted = decodedCode.replaceFirst("onMessage", identifier);
 
-                Source source = Source.newBuilder("js", decodedCodeAdapted, identifier + ".js")
+                // Wrap in IIFE so top-level declarations in bundled code (e.g. `const globalConfig`
+                // from Zod or other libraries) are scoped to the IIFE and cannot collide with
+                // declarations in sharedCode.js or systemCode.js evaluated in the same GraalVM context.
+                // The renamed onMessage function is explicitly promoted to globalThis so it remains
+                // accessible via graalContext.getBindings("js").getMember(identifier).
+                String wrappedCode = "(function() {\n"
+                        + decodedCodeAdapted + "\n"
+                        + "if (typeof " + identifier + " === 'function') globalThis['" + identifier + "'] = " + identifier + ";\n"
+                        + "})();";
+                Source source = Source.newBuilder("js", wrappedCode, identifier + ".js")
                         .cached(true)
                         .buildLiteral();
                 graalContext.eval(source);
