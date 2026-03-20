@@ -144,13 +144,15 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
                         + decodedCodeAdapted + "\n"
                         + "if (typeof " + identifier + " === 'function') globalThis['" + identifier + "'] = " + identifier + ";\n"
                         + "})();";
+                // Load shared code BEFORE evaluating mapping code so that symbols
+                // defined in sharedCode.js (e.g. Zod, helpers) are available when
+                // the mapping IIFE executes its top-level initialisation.
+                loadSharedCode(graalContext, context);
+
                 Source source = Source.newBuilder("js", wrappedCode, identifier + ".js")
                         .cached(true)
                         .buildLiteral();
                 graalContext.eval(source);
-
-                // Load shared code if available
-                loadSharedCode(graalContext, context);
 
                 onMessageFunction = bindings.getMember(identifier);
                 inputMessage = createInputMessage(graalContext, context);
