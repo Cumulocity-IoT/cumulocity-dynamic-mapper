@@ -123,6 +123,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
       flowStateRetention: [''],
       inventoryFragmentsToCache: [''],
       maxCPUTimeMS: [''],
+      supportESM: [''],
       jsonataAgent: [{ value: '', disabled: true }],
       javaScriptAgent: [{ value: '', disabled: true }],
       smartFunctionAgent: [{ value: '', disabled: true }],

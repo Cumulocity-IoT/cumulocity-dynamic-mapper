@@ -46,6 +46,7 @@ import dynamic.mapper.processor.model.SubstituteValue;
 import dynamic.mapper.processor.model.SubstitutionContext;
 import dynamic.mapper.processor.model.SubstitutionResult;
 import dynamic.mapper.processor.flow.JavaScriptConsole;
+import dynamic.mapper.processor.util.JavaScriptModuleStripper;
 import dynamic.mapper.processor.util.JavaScriptInteropHelper;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
@@ -147,41 +148,57 @@ public abstract class AbstractCodeExtractionProcessor extends CommonProcessor {
             if (mapping.getCode() != null) {
                 Context graalContext = context.getGraalContext();
 
-                String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.getIdentifier();
                 bindings = graalContext.getBindings("js");
 
                 // Register console for JavaScript code; writes directly to ProcessingContext.logs
                 bindings.putMember("console",
                         new JavaScriptConsole(context.getLogs()::add, tenant, mapping));
 
-                // Load main code
                 byte[] decodedBytes = Base64.getDecoder().decode(mapping.getCode());
                 String decodedCode = new String(decodedBytes);
-                String decodedCodeAdapted = decodedCode.replaceFirst(
-                        Mapping.EXTRACT_FROM_SOURCE,
-                        identifier);
-                // Wrap in IIFE so top-level declarations in bundled code (e.g. `const globalConfig`
-                // from Zod or other libraries) are scoped to the IIFE and cannot collide with
-                // declarations in sharedCode.js or systemCode.js evaluated in the same GraalVM context.
-                String wrappedCode = "(function() {\n"
-                        + decodedCodeAdapted + "\n"
-                        + "if (typeof " + identifier + " === 'function') globalThis['" + identifier + "'] = " + identifier + ";\n"
-                        + "})();";
-                Source source = Source.newBuilder("js", wrappedCode, identifier + ".js")
-                        .cached(true)
-                        .buildLiteral();
-                graalContext.eval(source);
 
-                sourceValue = bindings.getMember(identifier);
+                boolean supportESM = Boolean.TRUE.equals(serviceConfiguration.getSupportESM());
+                String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.getIdentifier();
+                Source source;
+                if (supportESM) {
+                    // ESM mode: load shared/system globals first, then evaluate the mapping
+                    // module and retrieve the exported function from the module namespace.
+                    if (context.getSharedSource() != null) {
+                        graalContext.eval(context.getSharedSource());
+                    }
+                    if (context.getSystemSource() != null) {
+                        graalContext.eval(context.getSystemSource());
+                    }
+                    source = Source.newBuilder("js", decodedCode, identifier + ".mjs")
+                            .cached(true)
+                            .buildLiteral();
+                    Value exports = graalContext.eval(source);
+                    sourceValue = exports.getMember(Mapping.EXTRACT_FROM_SOURCE);
+                } else {
+                    // Flat-script mode: strip ESM export/import declarations, then wrap in
+                    // an IIFE to scope top-level declarations (e.g. `const globalConfig`).
+                    // No rename needed: each message gets a fresh GraalVM context.
+                    decodedCode = JavaScriptModuleStripper.toPlainScript(decodedCode);
+                    String wrappedCode = "(function() {\n"
+                            + decodedCode + "\n"
+                            + "globalThis['" + Mapping.EXTRACT_FROM_SOURCE + "'] = " + Mapping.EXTRACT_FROM_SOURCE + ";\n"
+                            + "})();";
+                    source = Source.newBuilder("js", wrappedCode, identifier + ".js")
+                            .cached(true)
+                            .buildLiteral();
+                    graalContext.eval(source);
 
-                // Load shared code using cached Source - OPTIMIZED!
-                if (context.getSharedSource() != null) {
-                    graalContext.eval(context.getSharedSource());
-                }
+                    sourceValue = bindings.getMember(Mapping.EXTRACT_FROM_SOURCE);
 
-                // Load system code using cached Source - OPTIMIZED!
-                if (context.getSystemSource() != null) {
-                    graalContext.eval(context.getSystemSource());
+                    // Load shared code using cached Source - OPTIMIZED!
+                    if (context.getSharedSource() != null) {
+                        graalContext.eval(context.getSharedSource());
+                    }
+
+                    // Load system code using cached Source - OPTIMIZED!
+                    if (context.getSystemSource() != null) {
+                        graalContext.eval(context.getSystemSource());
+                    }
                 }
 
                 // Prepare payload - subclass-specific (pass focused contexts)

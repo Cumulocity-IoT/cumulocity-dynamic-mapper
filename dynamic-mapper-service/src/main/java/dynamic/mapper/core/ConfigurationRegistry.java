@@ -35,6 +35,7 @@ import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Engine;
 import org.graalvm.polyglot.HostAccess;
 import org.graalvm.polyglot.Source;
+import org.graalvm.polyglot.io.IOAccess;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
@@ -67,6 +68,7 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MapperServiceRepresentation;
 import dynamic.mapper.notification.NotificationSubscriber;
 import dynamic.mapper.processor.outbound.CamelDispatcherOutbound;
+import dynamic.mapper.processor.util.JavaScriptModuleStripper;
 import dynamic.mapper.service.ConnectorConfigurationService;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.service.ServiceConfigurationService;
@@ -88,6 +90,10 @@ public class ConfigurationRegistry {
 
     // Structure: < Tenant, Source>>
     private Map<String, Source> graalSourceSystem = new ConcurrentHashMap<>();
+
+    // Tracks whether each tenant has ESM support enabled, so updateGraalsSource*
+    // methods can build Sources with the correct file extension (.mjs vs .js).
+    private Map<String, Boolean> tenantESMFlags = new ConcurrentHashMap<>();
 
     private Map<String, MicroserviceCredentials> microserviceCredentials = new ConcurrentHashMap<>();
 
@@ -329,11 +335,18 @@ public class ConfigurationRegistry {
 
         graalEngines.put(tenant, eng);
 
+        boolean supportESM = Boolean.TRUE.equals(serviceConfiguration.getSupportESM());
+        tenantESMFlags.put(tenant, supportESM);
+
+        // Shared / system code is ALWAYS evaluated as a plain script (.js) so that every
+        // top-level declaration lands on globalThis and is visible to all mapping modules
+        // running in the same GraalVM context.  Only the per-mapping code is loaded as
+        // an ES module (.mjs) when supportESM is true.
         // Create cached sources at Engine level - these will be parsed once and reused
         String sharedCode = serviceConfiguration.getCodeTemplates()
                 .get(TemplateType.SHARED.name()).getCode();
         Source sharedSource = Source.newBuilder("js",
-                new String(Base64.getDecoder().decode(sharedCode)),
+                JavaScriptModuleStripper.toPlainScript(new String(Base64.getDecoder().decode(sharedCode))),
                 "sharedCode.js")
                 .cached(true)  // KEY: Engine-level caching
                 .buildLiteral();
@@ -341,7 +354,7 @@ public class ConfigurationRegistry {
         String systemCode = serviceConfiguration.getCodeTemplates()
                 .get(TemplateType.SYSTEM.name()).getCode();
         Source systemSource = Source.newBuilder("js",
-                new String(Base64.getDecoder().decode(systemCode)),
+                JavaScriptModuleStripper.toPlainScript(new String(Base64.getDecoder().decode(systemCode))),
                 "systemCode.js")
                 .cached(true)  // KEY: Engine-level caching
                 .buildLiteral();
@@ -352,7 +365,7 @@ public class ConfigurationRegistry {
         // Warm up the GraalVM JIT by running a throw-away Context through the shared/system
         // sources and a trivial onMessage stub. This triggers Graal's JIT compiler at startup
         // so the first real mapping test executes in ~1s instead of ~7s.
-        try (Context warmupCtx = Context.newBuilder("js")
+        Context.Builder warmupBuilder = Context.newBuilder("js")
                 .engine(eng)
                 .allowHostAccess(getHostAccess())
                 .allowHostClassLookup(className ->
@@ -363,8 +376,13 @@ public class ConfigurationRegistry {
                         || className.equals("dynamic.mapper.processor.model.RepairStrategy")
                         || className.equals("java.util.ArrayList")
                         || className.equals("java.util.HashMap")
-                        || className.equals("java.util.HashSet"))
-                .build()) {
+                        || className.equals("java.util.HashSet"));
+        if (supportESM) {
+            warmupBuilder.allowIO(IOAccess.ALL)
+                         .allowExperimentalOptions(true)
+                         .option("js.esm-eval-returns-exports", "true");
+        }
+        try (Context warmupCtx = warmupBuilder.build()) {
             warmupCtx.eval(sharedSource);
             warmupCtx.eval(systemSource);
             warmupCtx.eval(Source.newBuilder("js",
@@ -384,7 +402,7 @@ public class ConfigurationRegistry {
 
     public void updateGraalsSourceShared(String tenant, String code) {
         Source sharedSource = Source.newBuilder("js",
-                new String(Base64.getDecoder().decode(code)),
+                JavaScriptModuleStripper.toPlainScript(new String(Base64.getDecoder().decode(code))),
                 "sharedCode.js")
                 .cached(true)  // Engine-level caching
                 .buildLiteral();
@@ -398,7 +416,7 @@ public class ConfigurationRegistry {
 
     public void updateGraalsSourceSystem(String tenant, String code) {
         Source systemSource = Source.newBuilder("js",
-                new String(Base64.getDecoder().decode(code)),
+                JavaScriptModuleStripper.toPlainScript(new String(Base64.getDecoder().decode(code))),
                 "systemCode.js")
                 .cached(true)  // Engine-level caching
                 .buildLiteral();

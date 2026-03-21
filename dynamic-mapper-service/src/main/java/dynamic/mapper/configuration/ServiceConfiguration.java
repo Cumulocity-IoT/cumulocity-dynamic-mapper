@@ -64,6 +64,7 @@ public class ServiceConfiguration implements Cloneable {
         this.javaScriptAgent = null;
         this.smartFunctionAgent = null;
         this.flowStateRetention = 1440;
+        this.supportESM = false;
     }
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Enable logging of message payloads for debugging purposes. Caution: May expose sensitive data in logs.", example = "false")
@@ -173,4 +174,9 @@ public class ServiceConfiguration implements Cloneable {
 
     @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "Holds the version string of the last accepted SUBSTITUTION_AS_CODE deprecation notice (e.g. '6.2.0'). If the value matches the current release version the notice is not shown again. A new version string triggers a new acceptance.", example = "6.2")
     private String acceptedDeprecationNotice;
+
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Enable ECMAScript Module (ESM) support for JavaScript code. When true, mapping code may use 'export function' syntax and is evaluated as an ES module. When false (default), code runs in flat-script mode where export keywords are stripped.", example = "false")
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    private Boolean supportESM;
 }
