@@ -43,6 +43,7 @@ export interface ServiceConfiguration {
   smartFunctionAgent: string;
   suppressDeprecationWarning?: boolean;
   acceptedDeprecationNotice?: string;
+  supportESM?: boolean;
 }
 
 export enum TemplateType {
