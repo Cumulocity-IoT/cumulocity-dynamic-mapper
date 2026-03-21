@@ -392,7 +392,7 @@ class AbstractEnrichmentProcessorTest {
         when(configurationRegistry.getHostAccess()).thenReturn(HostAccess.ALL);
 
         // When
-        Context createdContext = processor.createGraalContext(graalEngine);
+        Context createdContext = processor.createGraalContext(graalEngine, false);
 
         // Then
         assertNotNull(createdContext, "Should create GraalVM context");

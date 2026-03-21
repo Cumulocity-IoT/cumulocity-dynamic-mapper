@@ -348,6 +348,24 @@
               </label>
             </div>
           </c8y-li>
+
+          <c8y-li>
+            <c8y-li-icon icon="module"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'Support ESM modules' | translate }}</p>
+                <p>
+                  <small translate>Enable ECMAScript Module (ESM) support for JavaScript mapping code. When enabled,
+                    code may use <code>export function</code> syntax and is evaluated as an ES module. When disabled
+                    (default), code runs in flat-script mode.</small>
+                </p>
+              </div>
+              <label class="c8y-switch c8y-switch--inline m-l-auto" title="{{ 'Support ESM modules' | translate }}">
+                <input name="supportESM" type="checkbox" formControlName="supportESM" />
+                <span></span>
+              </label>
+            </div>
+          </c8y-li>
           }
           @if (section == 'caching'){
           <c8y-li>

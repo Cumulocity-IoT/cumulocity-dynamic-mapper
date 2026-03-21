@@ -33,6 +33,7 @@ import dynamic.mapper.configuration.*;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.model.TransformationType;
+import dynamic.mapper.processor.util.JavaScriptModuleStripper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;
@@ -322,14 +323,15 @@ public class BootstrapService {
                 if (mapping.getCode() == null || mapping.getCode().isBlank()) continue;
                 try {
                     byte[] decoded = java.util.Base64.getDecoder().decode(mapping.getCode());
-                    String code = new String(decoded)
-                            .replaceAll("(?m)^export\\s+(default\\s+|\\{[^}]*}[;]?).*$", "").trim();
+                    // Strip all ESM export/import declarations so the warm-up context
+                    // can compile the code as a plain script regardless of supportESM.
+                    String code = JavaScriptModuleStripper.toPlainScript(new String(decoded));
                     if (TransformationType.SMART_FUNCTION.equals(mapping.getTransformationType())) {
                         String id = Mapping.SMART_FUNCTION_NAME + "_" + mapping.getIdentifier();
-                        result.put(id + ".js", code.replaceFirst(Mapping.SMART_FUNCTION_NAME, id));
+                        result.put(id + ".js", code);
                     } else if (TransformationType.SUBSTITUTION_AS_CODE.equals(mapping.getTransformationType())) {
                         String id = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.getIdentifier();
-                        result.put(id + ".js", code.replaceFirst(Mapping.EXTRACT_FROM_SOURCE, id));
+                        result.put(id + ".js", code);
                     }
                 } catch (Exception e) {
                     log.warn("{} - Could not prepare mapping code for warm-up [{}]: {}", tenant,
