@@ -33,6 +33,7 @@ import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.flow.JavaScriptConsole;
 import dynamic.mapper.processor.model.DataPrepContext;
+import dynamic.mapper.processor.util.JavaScriptModuleStripper;
 import dynamic.mapper.processor.model.OutputCollector;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.service.MappingService;
@@ -129,10 +130,9 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
                 // Load and execute the JavaScript code
                 byte[] decodedBytes = Base64.getDecoder().decode(mapping.getCode());
                 String decodedCode = new String(decodedBytes);
-                // Strip ES module export statements (e.g. from TypeScript-compiled .mjs output)
-                // so the code runs in GraalVM script mode without SyntaxErrors.
-                // Plain function declarations in template files are unaffected.
-                decodedCode = decodedCode.replaceAll("(?m)^export\\s+(default\\s+|\\{[^}]*}[;]?).*$", "").trim();
+                // Strip ES module export/import statements so the code runs in GraalVM
+                // script mode without SyntaxErrors.
+                decodedCode = JavaScriptModuleStripper.toPlainScript(decodedCode);
                 String decodedCodeAdapted = decodedCode.replaceFirst("onMessage", identifier);
 
                 // Wrap in IIFE so top-level declarations in bundled code (e.g. `const globalConfig`

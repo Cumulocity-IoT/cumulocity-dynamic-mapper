@@ -43,6 +43,7 @@ import org.springframework.stereotype.Component;
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dynamic.mapper.processor.util.JavaScriptModuleStripper;
 
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.configuration.ServiceConfiguration;
@@ -333,7 +334,7 @@ public class ConfigurationRegistry {
         String sharedCode = serviceConfiguration.getCodeTemplates()
                 .get(TemplateType.SHARED.name()).getCode();
         Source sharedSource = Source.newBuilder("js",
-                new String(Base64.getDecoder().decode(sharedCode)),
+                JavaScriptModuleStripper.toPlainScript(new String(Base64.getDecoder().decode(sharedCode))),
                 "sharedCode.js")
                 .cached(true)  // KEY: Engine-level caching
                 .buildLiteral();
@@ -341,7 +342,7 @@ public class ConfigurationRegistry {
         String systemCode = serviceConfiguration.getCodeTemplates()
                 .get(TemplateType.SYSTEM.name()).getCode();
         Source systemSource = Source.newBuilder("js",
-                new String(Base64.getDecoder().decode(systemCode)),
+                JavaScriptModuleStripper.toPlainScript(new String(Base64.getDecoder().decode(systemCode))),
                 "systemCode.js")
                 .cached(true)  // KEY: Engine-level caching
                 .buildLiteral();
@@ -384,7 +385,7 @@ public class ConfigurationRegistry {
 
     public void updateGraalsSourceShared(String tenant, String code) {
         Source sharedSource = Source.newBuilder("js",
-                new String(Base64.getDecoder().decode(code)),
+                JavaScriptModuleStripper.toPlainScript(new String(Base64.getDecoder().decode(code))),
                 "sharedCode.js")
                 .cached(true)  // Engine-level caching
                 .buildLiteral();
@@ -398,7 +399,7 @@ public class ConfigurationRegistry {
 
     public void updateGraalsSourceSystem(String tenant, String code) {
         Source systemSource = Source.newBuilder("js",
-                new String(Base64.getDecoder().decode(code)),
+                JavaScriptModuleStripper.toPlainScript(new String(Base64.getDecoder().decode(code))),
                 "systemCode.js")
                 .cached(true)  // Engine-level caching
                 .buildLiteral();
