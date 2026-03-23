@@ -71,30 +71,33 @@ public final class JavaScriptModuleStripper {
 
     /** {@code export function …}, {@code export async function …},
      *  {@code export class …}, {@code export const …}, etc.
-     *  Strips only the leading {@code export } keyword; the declaration is kept. */
+     *  Strips only the leading {@code export } keyword; the declaration is kept.
+     *  Possessive quantifiers prevent ReDoS on pathological whitespace inputs. */
     private static final Pattern INLINE_EXPORT = Pattern.compile(
-            "(?m)^(\\s*)export\\s+(async\\s+)?(function|class|const|let|var)\\b");
+            "(?m)^(\\s*+)export\\s++(async\\s++)?+(function|class|const|let|var)\\b");
 
-    /** Single-line {@code export { foo, bar };} — no embedded line comments. */
+    /** Single-line {@code export { foo, bar };} — no embedded line comments.
+     *  Possessive quantifiers on all whitespace/optional groups prevent ReDoS. */
     private static final Pattern EXPORT_BLOCK_SINGLE_LINE = Pattern.compile(
-            "(?m)^\\s*export\\s*\\{[^}\\n]*\\}\\s*(from\\s+['\"][^'\"]*['\"]\\s*)?;?\\s*$");
+            "(?m)^\\s*+export\\s*+\\{[^}\\n]*+\\}\\s*+(?:from\\s++['\"][^'\"]*+['\"]\\s*+)?+;?\\s*+$");
 
     /** A line that opens a multi-line export block: {@code export {}.
      *  The block does NOT close on the same line. */
     private static final Pattern EXPORT_BLOCK_OPEN = Pattern.compile(
-            "^\\s*export\\s*\\{[^}\\n]*$");
+            "^\\s*+export\\s*+\\{[^}\\n]*+$");
 
-    /** A line that closes an export/re-export block: {@code }; } or {@code } from '…';} */
+    /** A line that closes an export/re-export block: {@code }; } or {@code } from '…';}.
+     *  Possessive quantifiers prevent ReDoS when the line ends with many spaces. */
     private static final Pattern EXPORT_BLOCK_CLOSE = Pattern.compile(
-            "^\\s*\\}\\s*(from\\s+['\"][^'\"]*['\"]\\s*)?;?\\s*$");
+            "^\\s*+\\}\\s*+(?:from\\s++['\"][^'\"]*+['\"]\\s*+)?+;?\\s*+$");
 
     /** Single-line {@code export default …;} */
     private static final Pattern EXPORT_DEFAULT = Pattern.compile(
-            "(?m)^\\s*export\\s+default\\s+.*$");
+            "(?m)^\\s*+export\\s++default\\s++[^\\n]*$");
 
     /** {@code import … from '…';} and bare {@code import '…';} lines. */
     private static final Pattern IMPORT_LINE = Pattern.compile(
-            "(?m)^\\s*import\\s+.*$");
+            "(?m)^\\s*+import\\s++[^\\n]*$");
 
     /**
      * Strips all ESM {@code export} and {@code import} declarations from
