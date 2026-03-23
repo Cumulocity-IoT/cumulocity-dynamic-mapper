@@ -160,7 +160,14 @@ public abstract class AbstractCodeExtractionProcessor extends CommonProcessor {
                 String decodedCodeAdapted = decodedCode.replaceFirst(
                         Mapping.EXTRACT_FROM_SOURCE,
                         identifier);
-                Source source = Source.newBuilder("js", decodedCodeAdapted, identifier + ".js")
+                // Wrap in IIFE so top-level declarations in bundled code (e.g. `const globalConfig`
+                // from Zod or other libraries) are scoped to the IIFE and cannot collide with
+                // declarations in sharedCode.js or systemCode.js evaluated in the same GraalVM context.
+                String wrappedCode = "(function() {\n"
+                        + decodedCodeAdapted + "\n"
+                        + "if (typeof " + identifier + " === 'function') globalThis['" + identifier + "'] = " + identifier + ";\n"
+                        + "})();";
+                Source source = Source.newBuilder("js", wrappedCode, identifier + ".js")
                         .cached(true)
                         .buildLiteral();
                 graalContext.eval(source);
