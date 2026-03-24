@@ -27,9 +27,9 @@ import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.sdk.client.RestConnector;
 import com.dashjoin.jsonata.json.Json;
-import dynamic.mapper.model.*;
+import dynamic.mapper.configuration.ServiceConfiguration;import dynamic.mapper.model.*;
 
-import lombok.extern.slf4j.Slf4j;
+import dynamic.mapper.service.ServiceConfigurationService;import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
@@ -62,6 +62,9 @@ public class AIAgentService {
 
     @Autowired
     public RestConnector restConnector;
+
+    @Autowired
+    private ServiceConfigurationService serviceConfigurationService;
 
     private static final String DEFAULT_JSONATA_AGENT_NAME = "dynamic-mapper-jsonata-agent";
     private static final String DEFAULT_JAVASCRIPT_AGENT_NAME = "dynamic-mapper-javascript-agent";
@@ -145,15 +148,18 @@ public class AIAgentService {
                     log.info("{} - No AIAgents found, creating default agents",
                             contextService.getContext().getTenant());
                     createDefaultAIAgents(mcpServer);
+                    addingAIAgentsToServiceConfiguration();
                 } else {
                     if (agents.stream().anyMatch(agent -> agent.getName().equals(DEFAULT_JSONATA_AGENT_NAME)
                             || agent.getName().equals(DEFAULT_JAVASCRIPT_AGENT_NAME) || agent.getName().equals(DEFAULT_SMART_FUNCTION_AGENT_NAME))) {
                         log.info("{} - AIAgents already exists, not re-creating them",
                                 contextService.getContext().getTenant());
+                        addingAIAgentsToServiceConfiguration();
                     } else {
                         log.info("{} - AIAgents not found, creating AI agents...",
                                 contextService.getContext().getTenant());
                         createDefaultAIAgents(mcpServer);
+                        addingAIAgentsToServiceConfiguration();
                     }
                 }
             } else {
@@ -161,6 +167,25 @@ public class AIAgentService {
             }
         }
 
+    }
+
+
+    public void addingAIAgentsToServiceConfiguration() {
+        ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(contextService.getContext().getTenant());
+        if(serviceConfiguration != null){
+            if (serviceConfiguration .getJsonataAgent() == null)
+                serviceConfiguration.setJsonataAgent(DEFAULT_JSONATA_AGENT_NAME);
+            if (serviceConfiguration .getJavaScriptAgent() == null)
+                serviceConfiguration .setJavaScriptAgent(DEFAULT_JAVASCRIPT_AGENT_NAME);
+            if (serviceConfiguration .getSmartFunctionAgent() == null)
+                serviceConfiguration .setSmartFunctionAgent(DEFAULT_SMART_FUNCTION_AGENT_NAME);
+            try {
+                serviceConfigurationService.saveServiceConfiguration(contextService.getContext().getTenant(), serviceConfiguration);
+            } catch (Exception e) {
+                log.error("{} - Failed to update service configuration with AI agents",
+                        contextService.getContext().getTenant(), e);
+            }
+        }
     }
 
     public boolean checkAIAgentAvailable() {
