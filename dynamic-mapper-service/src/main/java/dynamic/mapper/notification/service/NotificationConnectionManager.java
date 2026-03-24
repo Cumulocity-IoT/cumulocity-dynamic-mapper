@@ -83,6 +83,9 @@ public class NotificationConnectionManager {
     @Value("${APP.additionalSubscriptionIdTest:}")
     private String additionalSubscriptionIdTest;
 
+    // Guards against concurrent management client initialization per tenant
+    private final Map<String, Semaphore> managementInitLocks = new ConcurrentHashMap<>();
+
     // Thread-safe collections
     private final Map<String, Map<String, CustomWebSocketClient>> staticDeviceClients = new ConcurrentHashMap<>();
     private final Map<String, Map<String, CustomWebSocketClient>> dynamicDeviceClients = new ConcurrentHashMap<>();
@@ -146,13 +149,25 @@ public class NotificationConnectionManager {
     }
 
     public void initializeManagementClient(String tenant) {
-        NotificationCallback managementCallback = managementCallbacks.computeIfAbsent(tenant,
-                k -> new ManagementSubscriptionClient(configurationRegistry, tenant));
+        CustomWebSocketClient existing = managementClients.get(tenant);
+        if (existing != null && existing.isOpen()) {
+            log.debug("{} - Management client already connected, skipping initialization", tenant);
+            return;
+        }
 
-        NotificationCallback cacheInventoryCallback = cacheInventoryCallbacks.computeIfAbsent(tenant,
-                k -> new CacheInventoryUpdateClient(configurationRegistry, tenant));
+        Semaphore lock = managementInitLocks.computeIfAbsent(tenant, k -> new Semaphore(1));
+        if (!lock.tryAcquire()) {
+            log.info("{} - Management client initialization already in progress, skipping", tenant);
+            return;
+        }
 
         try {
+            NotificationCallback managementCallback = managementCallbacks.computeIfAbsent(tenant,
+                    k -> new ManagementSubscriptionClient(configurationRegistry, tenant));
+
+            NotificationCallback cacheInventoryCallback = cacheInventoryCallbacks.computeIfAbsent(tenant,
+                    k -> new CacheInventoryUpdateClient(configurationRegistry, tenant));
+
             List<NotificationSubscriptionRepresentation> managementSubs = queryService
                     .getNotificationSubscriptionForDeviceGroup(tenant, null, null)
                     .get(30, TimeUnit.SECONDS);
@@ -171,6 +186,8 @@ public class NotificationConnectionManager {
             Thread.currentThread().interrupt();
         } catch (ExecutionException | TimeoutException | URISyntaxException e) {
             log.error("{} - Error initializing management client: {}", tenant, e.getMessage(), e);
+        } finally {
+            lock.release();
         }
     }
 
@@ -299,7 +316,7 @@ public class NotificationConnectionManager {
         }
 
         Map<String, CustomWebSocketClient> dynamicDeviceClientsForTenant = dynamicDeviceClients.get(tenant);
-        if (staticDeviceClientsForTenant != null) {
+        if (dynamicDeviceClientsForTenant != null) {
             CustomWebSocketClient client = dynamicDeviceClientsForTenant.remove(connectorIdentifier);
             if (client != null) {
                 try {
@@ -681,7 +698,6 @@ public class NotificationConnectionManager {
                             (deviceWSStatusCodes.get(tenant) != null && deviceWSStatusCodes.get(tenant) == 401)) {
                         log.info("{} - Re-initializing static device client", tenant);
                         initializeStaticDeviceClient(tenant);
-                        initializeManagementClient(tenant);
                         break;
                     } else {
                         client.reconnect();

@@ -166,6 +166,13 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
                     graalContext.eval(source);
                     onMessageFunction = bindings.getMember(Mapping.SMART_FUNCTION_NAME);
                 }
+
+                if (onMessageFunction == null || onMessageFunction.isNull()) {
+                    throw new ProcessingException(String.format(
+                            "Function '%s' not found in mapping code. Ensure the script defines and exports a function named '%s'.",
+                            Mapping.SMART_FUNCTION_NAME, Mapping.SMART_FUNCTION_NAME));
+                }
+
                 inputMessage = createInputMessage(graalContext, context);
 
                 // Execute the JavaScript function
