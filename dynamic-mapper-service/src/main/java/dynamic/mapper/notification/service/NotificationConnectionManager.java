@@ -395,6 +395,16 @@ public class NotificationConnectionManager {
             }
 
             String connectorId = dispatcher.getConnectorClient().getConnectorIdentifier();
+
+            Map<String, CustomWebSocketClient> staticClientsForTenant = staticDeviceClients.get(tenant);
+            if (staticClientsForTenant != null) {
+                CustomWebSocketClient existingClient = staticClientsForTenant.get(connectorId);
+                if (existingClient != null && existingClient.isOpen()) {
+                    log.debug("{} - Static device client already connected for connector {}, skipping", tenant, connectorId);
+                    continue;
+                }
+            }
+
             String tokenSeedForStatic = Utils.STATIC_DEVICE_SUBSCRIBER + connectorId + additionalSubscriptionIdTest;
 
             try {
@@ -430,6 +440,16 @@ public class NotificationConnectionManager {
             }
 
             String connectorId = dispatcher.getConnectorClient().getConnectorIdentifier();
+
+            Map<String, CustomWebSocketClient> dynamicClientsForTenant = dynamicDeviceClients.get(tenant);
+            if (dynamicClientsForTenant != null) {
+                CustomWebSocketClient existingClient = dynamicClientsForTenant.get(connectorId);
+                if (existingClient != null && existingClient.isOpen()) {
+                    log.debug("{} - Dynamic device client already connected for connector {}, skipping", tenant, connectorId);
+                    continue;
+                }
+            }
+
             String tokenSeedForDynamic = Utils.DYNAMIC_DEVICE_SUBSCRIBER + connectorId + additionalSubscriptionIdTest;
 
             try {
