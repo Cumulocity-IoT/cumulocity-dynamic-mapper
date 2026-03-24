@@ -257,10 +257,10 @@ public class NotificationSubscriptionController {
         validateOutboundMappingEnabled(tenant);
 
         try {
-            // Ensure management client is initialized for type subscriptions
+            // Ensure management WebSocket is up — it drives type-based device discovery.
+            // Device WebSocket clients are not needed here (type subscription only changes the C8Y filter).
             log.info("{} - Ensuring management client is initialized for type subscription", tenant);
             configurationRegistry.getNotificationSubscriber().initializeManagementClient(tenant);
-            configurationRegistry.getNotificationSubscriber().initializeDeviceClient(tenant);
 
             NotificationSubscriptionResponse response = configurationRegistry
                     .getNotificationSubscriber().updateSubscriptionByType(tenant, request.getTypes());
