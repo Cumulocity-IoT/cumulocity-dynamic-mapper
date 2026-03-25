@@ -49,6 +49,119 @@ import lombok.extern.slf4j.Slf4j;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+/**
+ * Processes the result of a Smart Function (JavaScript) outbound mapping.
+ * Converts each {@link DeviceMessage} or {@link CumulocityObject} returned by
+ * the JS function into a {@link DynamicMapperRequest} that is later dispatched
+ * by the connector.
+ *
+ * <h2>ID transformation rules</h2>
+ *
+ * Two distinct identifiers travel through this processor:
+ *
+ * <ul>
+ *   <li><b>internalSourceId</b> — the Cumulocity internal managed object ID
+ *       (e.g. {@code "326993962"}). Set by {@code EnrichmentOutboundProcessor}
+ *       from the triggering C8Y event/alarm/measurement {@code source.id}.
+ *       This value is used for the {@code source.id} / {@code id} field in every
+ *       Cumulocity REST API payload and must always be a numeric string.
+ *       It is never overwritten on the shared {@code ProcessingContext} because
+ *       one JS call can return a batch of messages (e.g. MEASUREMENT + INVENTORY)
+ *       that all share the same context instance.</li>
+ *
+ *   <li><b>brokerRoutingId</b> — the external device identifier (e.g. LoRa EUI
+ *       {@code "0080E11505710591"}). Resolved by
+ *       {@code resolveGlobalId2ExternalId()} from the internal ID via the C8Y
+ *       Identity Service. Used exclusively to replace the {@code _externalId_}
+ *       token in broker publish topics. Falls back to {@code internalSourceId}
+ *       when no external ID type is configured or resolution fails.</li>
+ * </ul>
+ *
+ * <h2>Connector-specific behavior</h2>
+ *
+ * <table border="1" cellpadding="4">
+ *   <tr>
+ *     <th>Connector</th>
+ *     <th>source.id / id in payload</th>
+ *     <th>Publish path / topic</th>
+ *     <th>brokerRoutingId used?</th>
+ *   </tr>
+ *   <tr>
+ *     <td><b>WebHook (cumulocityInternal=true)</b><br>
+ *         Internal Connector — calls C8Y REST API directly</td>
+ *     <td>{@code internalSourceId} injected by {@code populateSourceIdentifier()}
+ *         into {@code source.id} (EVENT/ALARM/MEASUREMENT) or {@code id}
+ *         (INVENTORY/OPERATION). Required by the C8Y REST API.</td>
+ *     <td>{@code request.pathCumulocity} = {@code api.path} for POST,
+ *         {@code api.path}/{@code internalSourceId} for PUT/PATCH/DELETE.
+ *         Derived by {@code APITopicUtil.deriveAPIFromTopic()} from the JS
+ *         return topic (e.g. {@code measurement/measurements/326993962}).</td>
+ *     <td>Only if the JS topic contains the {@code _externalId_} token.</td>
+ *   </tr>
+ *   <tr>
+ *     <td><b>WebHook (cumulocityInternal=false)</b><br>
+ *         External HTTP endpoint</td>
+ *     <td>{@code internalSourceId} is still injected, but the external system
+ *         may ignore this field.</td>
+ *     <td>JS {@code topic} (or mapping {@code publishTopic}) appended to the
+ *         connector's {@code baseUrl}. {@code _externalId_} replaced by
+ *         {@code brokerRoutingId} when present.</td>
+ *     <td>Yes — replaces {@code _externalId_} in the HTTP path.</td>
+ *   </tr>
+ *   <tr>
+ *     <td><b>MQTT / Kafka / Pulsar / RabbitMQ</b><br>
+ *         External message brokers</td>
+ *     <td>{@code internalSourceId} injected into the JSON payload, but broker
+ *         consumers typically ignore C8Y-specific fields.</td>
+ *     <td>JS {@code topic} (or mapping {@code publishTopic}) used as the
+ *         broker topic/partition key. {@code _externalId_} replaced by
+ *         {@code brokerRoutingId}.</td>
+ *     <td>Yes — the primary purpose for external brokers.</td>
+ *   </tr>
+ * </table>
+ *
+ * <h2>CumulocityObject vs DeviceMessage</h2>
+ *
+ * The JS function may return either type:
+ * <ul>
+ *   <li>{@link DeviceMessage} — generic message with a free-form topic and
+ *       payload; the API is derived from the topic prefix
+ *       ({@code measurement/measurements/...} → {@code API.MEASUREMENT}).</li>
+ *   <li>{@link CumulocityObject} — typed message with an explicit
+ *       {@code cumulocityType}; device resolution uses {@code externalSource}
+ *       rather than internal-to-external ID lookup.</li>
+ * </ul>
+ *
+ * <h2>Cross-device routing (sourceId override)</h2>
+ *
+ * By default the triggering device's internal ID (read from
+ * {@code context.getSourceId()}) is used as the C8Y managed object target for
+ * every message in the batch. A JS function can override this for an individual
+ * message by setting the optional {@code sourceId} property on the returned
+ * {@link DeviceMessage} or {@link CumulocityObject}:
+ *
+ * <pre>{@code
+ * return {
+ *   cumulocityType: "measurement",
+ *   sourceId: "987654321",   // child device internal ID
+ *   payload: { ... },
+ *   topic: "measurements/987654321"
+ * };
+ * }</pre>
+ *
+ * When {@code sourceId} is set:
+ * <ul>
+ *   <li>{@code internalSourceId} is updated to the provided value and used for
+ *       {@code source.id} / {@code id} in the Cumulocity REST payload.</li>
+ *   <li>{@code brokerRoutingId} is set to the same value; the
+ *       {@code externalSource} lookup via the Identity Service is skipped.</li>
+ * </ul>
+ *
+ * <b>Important:</b> The value must be a Cumulocity <em>internal</em> numeric
+ * managed object ID, not an external identifier such as a serial number or
+ * LoRa EUI. Passing an external ID here will cause a
+ * {@code 422 UNPROCESSABLE_ENTITY} from the Cumulocity REST API.
+ */
 @Slf4j
 @Component
 public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
@@ -109,40 +222,43 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             // Clone the payload to modify it
             Map<String, Object> payload = clonePayload(deviceMessage.getPayload());
 
-            // Check if sourceId is explicitly set in DeviceMessage
-            String resolvedExternalId;
-            // Preserve the original internal C8Y managed object ID captured during enrichment.
-            // resolveGlobalId2ExternalId() may convert it to an external EUI/identifier which
-            // is only valid for broker-topic routing, NOT for Cumulocity API payloads (source.id
-            // must always be the internal numeric managed object ID).
+            // internalSourceId: the internal C8Y managed object ID — must NOT be overwritten.
+            // The same context is reused for every DeviceMessage in the batch
+            // (one JS call can return [MEASUREMENT, INVENTORY, ...]), so writing back to
+            // context.sourceId would corrupt the value for every subsequent message.
+            //
+            // brokerRoutingId: used only for _externalId_ token replacement in broker topics.
+            // Defaults to internalSourceId; overridden by resolveGlobalId2ExternalId() when
+            // the mapping needs the external EUI/serial instead of the numeric internal ID.
             String internalSourceId = context.getSourceId();
-            if (deviceMessage.getSourceId() != null && !deviceMessage.getSourceId().isEmpty()) {
-                // Use explicitly provided sourceId
-                resolvedExternalId = deviceMessage.getSourceId();
-                internalSourceId = resolvedExternalId;
-                context.setSourceId(resolvedExternalId);
-                log.debug("{} - Using explicit sourceId from DeviceMessage: {}", tenant, resolvedExternalId);
-            } else {
-                // Resolve device ID using existing logic
-                resolvedExternalId = context.getSourceId();  // defaults to sourceId in context
-                log.debug("{} - Initial context.sourceId before resolution: {}", tenant, resolvedExternalId);
+            String brokerRoutingId = internalSourceId;
 
+            if (deviceMessage.getSourceId() != null && !deviceMessage.getSourceId().isEmpty()) {
+                // Cross-device routing: the JS function explicitly set sourceId on the returned
+                // DeviceMessage to target a different device than the one that triggered the
+                // mapping (e.g. a gateway receives an event but the resulting measurement should
+                // be stored under a child device).
+                //
+                // The provided value MUST be a Cumulocity internal numeric managed object ID.
+                // Passing an external ID (e.g. LoRa EUI, serial number) here will cause a
+                // 422 UNPROCESSABLE_ENTITY from the Cumulocity REST API.
+                //
+                // externalSource lookup is skipped — brokerRoutingId is set to the same value.
+                internalSourceId = deviceMessage.getSourceId();
+                brokerRoutingId = internalSourceId;
+                log.debug("{} - Using explicit sourceId from DeviceMessage: {}", tenant, internalSourceId);
+            } else {
+                // Derive the external ID (e.g. LoRa EUI) from the internal ID for broker-topic
+                // token replacement only. Falls back to internalSourceId if resolution fails.
                 try {
-                    resolvedExternalId = resolveGlobalId2ExternalId(deviceMessage, context, tenant);
-                    context.setSourceId(resolvedExternalId);
-                    log.debug("{} - Resolved external ID: {}", tenant, resolvedExternalId);
+                    brokerRoutingId = resolveGlobalId2ExternalId(deviceMessage, context, tenant);
+                    log.debug("{} - Resolved external ID for broker routing: {}", tenant, brokerRoutingId);
                 } catch (ProcessingException e) {
                     log.warn("{} - Could not resolve external ID for device '{}' with externalIdType '{}': {}",
-                            tenant, context.getSourceId(), context.getMapping().getExternalIdType(), e.getMessage());
-                    // Fall back to context sourceId if resolution failed
-                    if (resolvedExternalId == null || resolvedExternalId.isEmpty()) {
-                        resolvedExternalId = context.getSourceId();
-                        log.warn("{} - Using context sourceId as fallback: {}", tenant, resolvedExternalId);
-                    }
+                            tenant, internalSourceId, context.getMapping().getExternalIdType(), e.getMessage());
                 }
-
-                log.debug("{} - Final resolvedExternalId (broker routing): {}, internalSourceId (C8Y payload): {}",
-                        tenant, resolvedExternalId, internalSourceId);
+                log.debug("{} - internalSourceId (C8Y payload): {}, brokerRoutingId (broker topic): {}",
+                        tenant, internalSourceId, brokerRoutingId);
             }
 
             // Set resolved publish topic (from substituteInTargetAndSend logic)
@@ -164,8 +280,8 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             if (publishTopic != null && !publishTopic.isEmpty()) {
                 // Handle EXTERNAL_ID_TOKEN replacement in the topic
                 if (publishTopic.contains(EXTERNAL_ID_TOKEN)) {
-                    if (resolvedExternalId != null) {
-                        publishTopic = publishTopic.replace(EXTERNAL_ID_TOKEN, resolvedExternalId);
+                    if (brokerRoutingId != null) {
+                        publishTopic = publishTopic.replace(EXTERNAL_ID_TOKEN, brokerRoutingId);
                     } else {
                         log.warn("{} - Publish topic contains {} token but external ID could not be resolved",
                                 tenant, EXTERNAL_ID_TOKEN);
@@ -207,13 +323,13 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             request.setPublishTopic(context.getResolvedPublishTopic());
 
             // internalSourceId → source.id in the C8Y payload (must be the numeric managed object ID).
-            // resolvedExternalId (e.g. LoRa EUI) is only used for broker topic-token replacement above.
+            // brokerRoutingId (e.g. LoRa EUI) is only used for broker topic-token replacement above.
             finalizeRequest(request, internalSourceId, payloadJson, tenant);
 
             context.setRetain(deviceMessage.getRetain());
 
             log.debug("{} - Created outbound request: deviceId={}, topic={}",
-                    tenant, resolvedExternalId != null ? resolvedExternalId : "unresolved",
+                    tenant, brokerRoutingId != null ? brokerRoutingId : "unresolved",
                     context.getResolvedPublishTopic());
 
         } catch (Exception e) {

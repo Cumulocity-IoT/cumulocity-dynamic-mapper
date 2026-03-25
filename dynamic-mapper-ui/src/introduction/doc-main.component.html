@@ -1057,9 +1057,8 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
                 <td>map-to</td>
                 <td>Topic to be used when sending messages. For a Webhook this defines the context path. The context
                   path
-                  is then appended to the URL that is defined in the Webhook connector properties. This property can
-                  only be
-                  used for Smart Functions</td>
+                  is then appended to the URL that is defined in the Webhook connector properties. Supported for all
+                  transformation types.</td>
               </tr>
             </tbody>
           </table>
@@ -2127,7 +2126,32 @@ export &#123; onMessage &#125;;   // required in ESM mode</code></pre>
                 <td><code>externalSource</code></td>
                 <td>No</td>
                 <td>Array specifying the external ID type: <code>[&#123;type: "c8y_Serial"&#125;]</code>. Defines which
-                  external ID type should be used to resolve the device identity.</td>
+                  external ID type should be used to resolve the device identity for <code>_externalId_</code> token
+                  replacement in the broker topic. Ignored when <code>sourceId</code> is set explicitly.</td>
+              </tr>
+              <tr>
+                <td><code>sourceId</code></td>
+                <td>No</td>
+                <td>Explicitly sets the Cumulocity internal managed object ID for this message, overriding the device
+                  that triggered the mapping.
+                  <br /><br />
+                  <strong>Default behavior (omitted):</strong> The mapper uses the internal ID of the device that
+                  triggered the outbound mapping. For external broker connectors, it additionally resolves the external
+                  ID (e.g. LoRa EUI, serial) via <code>externalSource</code> for <code>_externalId_</code> token
+                  replacement in the broker topic.
+                  <br /><br />
+                  <strong>When set:</strong> The provided ID is used as the internal C8Y managed object ID for the
+                  Cumulocity REST API call (<code>source.id</code>) and also for broker topic routing. The
+                  <code>externalSource</code> lookup is skipped.
+                  <br /><br />
+                  <strong>Use case:</strong> Cross-device routing — when data from one device should be associated with
+                  a different device in Cumulocity. For example, a gateway device triggers the mapping but the resulting
+                  measurement should be stored under a child device:
+                  <code>sourceId: childDeviceInternalId</code>.
+                  <br /><br />
+                  <strong>Note:</strong> This must be a Cumulocity <em>internal</em> numeric managed object ID, not an
+                  external identifier like a serial number or LoRa EUI.
+                </td>
               </tr>
               <tr>
                 <td><code>transportFields</code></td>
