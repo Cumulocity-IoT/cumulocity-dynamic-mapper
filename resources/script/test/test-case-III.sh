@@ -105,6 +105,7 @@ echo "Created device: $DEVICE_NAME_ACTUAL (id=$DEVICE_ID)"
 c8y inventory children assign \
     --id "$GROUP_ID" \
     --child "$DEVICE_ID" \
+    --childType asset \
     --force
 echo "Assigned device $DEVICE_ID to group $GROUP_ID"
 

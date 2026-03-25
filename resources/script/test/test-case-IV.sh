@@ -87,6 +87,7 @@ echo "--- Step 2: Remove device $DEVICE_ID from group $GROUP_ID ('$GROUP_NAME') 
 c8y inventory children unassign \
     --id "$GROUP_ID" \
     --child "$DEVICE_ID" \
+    --childType asset \
     --force
 echo "Device removed from group."
 
