@@ -228,8 +228,17 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
                         .getManagedObjectForId(tenant, childId, false);
 
                 if (childMO == null) {
-                    log.warn("{} - Child device {} not found for unsubscription", tenant, childId);
-                    resultBuilder.addFailed(childId, "Device not found");
+                    log.warn("{} - Child device {} not found for unsubscription, deleting stale subscriptions",
+                            tenant, childId);
+                    int deleted = configurationRegistry.getNotificationSubscriber()
+                            .deleteSubscriptionsForDevice(tenant, childId, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
+                    if (deleted > 0) {
+                        log.info("{} - Deleted {} stale subscription(s) for non-existent device {}",
+                                tenant, deleted, childId);
+                        resultBuilder.addUnsubscription(childId);
+                    } else {
+                        resultBuilder.addFailed(childId, "Device not found");
+                    }
                     continue;
                 }
 

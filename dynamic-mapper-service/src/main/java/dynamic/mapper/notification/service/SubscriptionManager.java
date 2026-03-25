@@ -416,7 +416,7 @@ public class SubscriptionManager {
         }
     }
 
-    private int deleteSubscriptionsForDevice(String tenant, String deviceId, String subscriptionName) {
+    public int deleteSubscriptionsForDevice(String tenant, String deviceId, String subscriptionName) {
         try {
             GId id = new GId();
             id.setValue(deviceId);

@@ -44,6 +44,7 @@ import {
   API,
   Direction,
   Feature,
+  LabelTaggedRendererComponent,
   NODE2,
   Operation,
   SharedModule
@@ -97,7 +98,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
 
   subscriptionDevices?: NotificationSubscriptionResponse;
   subscriptionDeviceGroups?: NotificationSubscriptionResponse;
-  subscribedDevices: Device[] = [];
+  subscribedDevices: (Device & { groupNames?: string; subscriptionSource?: string })[] = [];
   subscribedDeviceGroups: Device[] = [];
   subscribedDeviceTypes: string[] = [];
   Direction = Direction;
@@ -138,6 +139,23 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
       filterable: true,
       sortable: true,
       dataType: ColumnDataType.TextShort,
+    },
+    {
+      header: 'Groups',
+      name: 'groupNames',
+      path: 'groupNames',
+      filterable: true,
+      sortable: true,
+      dataType: ColumnDataType.TextShort,
+    },
+    {
+      header: 'Subscription by',
+      name: 'subscriptionSource',
+      path: 'subscriptionSource',
+      filterable: true,
+      sortable: true,
+      dataType: ColumnDataType.TextShort,
+      cellRendererComponent: LabelTaggedRendererComponent
     }
   ];
 
@@ -168,6 +186,10 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
       this.loadSubscriptionByDeviceType()
     ]);
 
+    // Re-enrich now that groups and types are fully loaded
+    this.enrichDevicesWithSubscriptionSource();
+    this.subscriptionGrid?.reload();
+
     // Setup action controls based on user permissions
     this.feature = this.route.snapshot.data['feature'];
     if (this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole) {
@@ -185,8 +207,34 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
   async loadSubscriptionDevice(): Promise<void> {
     const subscription = this.path === "dynamic" ? this.subscriptionService.DYNAMIC_DEVICE_SUBSCRIPTION : this.subscriptionService.STATIC_DEVICE_SUBSCRIPTION;
     this.subscriptionDevices = await this.subscriptionService.getSubscriptionDevice(subscription);
-    this.subscribedDevices = this.subscriptionDevices.devices;
+    this.subscribedDevices = (this.subscriptionDevices.devices ?? []).map(d => ({
+      ...d,
+      groupNames: (d.groups ?? []).join(', ')
+    }));
+    this.enrichDevicesWithSubscriptionSource();
     this.subscriptionGrid?.reload();
+  }
+
+  private enrichDevicesWithSubscriptionSource(): void {
+    if (this.path === 'static') {
+      this.subscribedDevices = this.subscribedDevices.map(d => ({ ...d, subscriptionSource: 'Static' }));
+      return;
+    }
+    const subscribedGroupNames = new Set(
+      (this.subscribedDeviceGroups ?? []).map(g => g.name).filter(Boolean)
+    );
+    const subscribedTypesSet = new Set(this.subscribedDeviceTypes ?? []);
+    this.subscribedDevices = this.subscribedDevices.map(d => {
+      let subscriptionSource: string;
+      if ((d.groups ?? []).some(g => subscribedGroupNames.has(g))) {
+        subscriptionSource = 'Group';
+      } else if (d.type && subscribedTypesSet.has(d.type)) {
+        subscriptionSource = 'Type';
+      } else {
+        subscriptionSource = 'Dynamic';
+      }
+      return { ...d, subscriptionSource };
+    });
   }
 
   async loadSubscriptionByDeviceGroup(): Promise<void> {
