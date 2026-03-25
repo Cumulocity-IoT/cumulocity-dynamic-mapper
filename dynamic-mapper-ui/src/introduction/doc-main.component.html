@@ -1699,6 +1699,82 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
           transformation
           using JavaScript.</p>
         <div class="p-b-8"></div>
+        <h4 class="p-t-16 p-b-8">ECMAScript Module (ESM) Support</h4>
+        <div class="p-b-8 text-16">
+          By default, Smart Function code is evaluated in <b>flat-script mode</b>: any
+          <code>export</code> and <code>import</code> statements are stripped and the code is
+          wrapped in an IIFE so that <code>onMessage</code> is registered on
+          <code>globalThis</code>. When you enable <b>Support ESM modules</b> in
+          <a [routerLink]="ROUTE_SERVICE_CONFIGURATION"><b>Configuration → Service Configuration →
+          General</b></a>, the execution model changes to true ES module semantics.
+        </div>
+        <div class="admonition info" style="max-width: 100%;">
+          <div class="title">ESM mode — what changes</div>
+          <div class="content">
+            <ul class="m-t-4 m-b-0">
+              <li><b>Mapping code runs unmodified</b> — no <code>export</code>/<code>import</code>
+                  stripping, no IIFE wrapping. (Shared code is always converted to a plain script
+                  regardless of this setting.)</li>
+              <li><b>Strict mode enforced</b> — undeclared variables, duplicate parameters, and
+                  silent type coercions throw errors instead of failing silently.</li>
+              <li><b>Real module scope</b> — top-level <code>const</code> / <code>let</code> /
+                  <code>class</code> declarations are isolated to the module and do not pollute
+                  <code>globalThis</code>.</li>
+              <li><b>Top-level <code>await</code> supported</b> — useful for lazy
+                  one-time initialization before the first message arrives.</li>
+              <li><b><code>onMessage</code> must be exported</b> — use
+                  <code>export &#123; onMessage &#125;</code> or
+                  <code>export function onMessage(…)</code> so the runtime can locate the
+                  entry point.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="p-b-8 text-14">
+          Example Smart Function written for ESM mode:
+        </div>
+        <pre><code class="language-javascript">function onMessage(inputMsg, context) &#123;
+  const payload = inputMsg.getPayload();
+  const externalId = context.getClientId() || payload["externalId"];
+  return [&#123;
+    cumulocityType: "measurement",
+    action: "create",
+    payload: &#123;
+      "time": new Date().toISOString(),
+      "type": "c8y_TemperatureMeasurement",
+      "c8y_Steam": &#123; "Temperature": &#123; "unit": "C", "value": payload["temp_val"] &#125; &#125;
+    &#125;,
+    externalSource: [&#123; "type": "c8y_Serial", "externalId": externalId &#125;]
+  &#125;];
+&#125;
+
+export &#123; onMessage &#125;;   // required in ESM mode</code></pre>
+        <div class="admonition caution" style="max-width: 100%;">
+          <div class="title">Constraints</div>
+          <div class="content">
+            Static <code>import</code> statements (e.g.
+            <code>import &#123; helper &#125; from './utils.mjs'</code>) are <b>not supported</b>
+            even in ESM mode. All mapping and shared code is stored in the database and loaded as
+            in-memory literals — GraalJS cannot resolve module paths to real files on disk.
+            Helpers and libraries provided in the <b>Shared Code</b> template are available as
+            globals and can be used directly without an <code>import</code>.
+            Static imports would require a custom module resolver (future work).
+          </div>
+        </div>
+        <div class="admonition info" style="max-width: 100%;">
+          <div class="title">Flat-script mode (default, <code>supportESM = false</code>)</div>
+          <div class="content">
+            When ESM support is disabled the runtime automatically:
+            <ol class="m-t-4 m-b-0">
+              <li>Strips any <code>export</code> and <code>import</code> lines from the mapping code.</li>
+              <li>Wraps the code in an IIFE and registers <code>onMessage</code> on
+                  <code>globalThis</code>.</li>
+            </ol>
+            This means flat-script code does <b>not</b> need — and should not have — an
+            <code>export</code> statement. Existing mappings continue to work unchanged when the
+            setting is off.
+          </div>
+        </div>
+        <div class="p-b-8"></div>
         <h4 class="p-t-16 p-b-8">Using Metadata in Smart Functions</h4>
         <div class="p-b-8 text-16">
           When using <b>Smart Functions</b> as the <b>Transformation Type</b>, metadata is handled differently than in
