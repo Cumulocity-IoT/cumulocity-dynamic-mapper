@@ -115,9 +115,15 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
 
             // Check if sourceId is explicitly set in DeviceMessage
             String resolvedExternalId;
+            // Preserve the original internal C8Y managed object ID captured during enrichment.
+            // resolveGlobalId2ExternalId() may convert it to an external EUI/identifier which
+            // is only valid for broker-topic routing, NOT for Cumulocity API payloads (source.id
+            // must always be the internal numeric managed object ID).
+            String internalSourceId = context.getSourceId();
             if (deviceMessage.getSourceId() != null && !deviceMessage.getSourceId().isEmpty()) {
                 // Use explicitly provided sourceId
                 resolvedExternalId = deviceMessage.getSourceId();
+                internalSourceId = resolvedExternalId;
                 context.setSourceId(resolvedExternalId);
                 log.debug("{} - Using explicit sourceId from DeviceMessage: {}", tenant, resolvedExternalId);
             } else {
@@ -139,7 +145,8 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
                     }
                 }
 
-                log.debug("{} - Final resolvedExternalId to be used: {}", tenant, resolvedExternalId);
+                log.debug("{} - Final resolvedExternalId (broker routing): {}, internalSourceId (C8Y payload): {}",
+                        tenant, resolvedExternalId, internalSourceId);
             }
 
             // Set resolved publish topic (from substituteInTargetAndSend logic)
@@ -203,26 +210,28 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             // Set publishTopic on request from resolved topic
             request.setPublishTopic(context.getResolvedPublishTopic());
 
-            // Set sourceId on request BEFORE calling populateSourceIdentifier
-            // (populateSourceIdentifier needs request.getSourceId() to be set)
-            request.setSourceId(resolvedExternalId);
+            // Set sourceId on request to the internal C8Y managed object ID BEFORE calling
+            // populateSourceIdentifier. The Cumulocity REST API requires source.id / id to be
+            // the internal numeric ID, never an external identifier (EUI, serial, …).
+            // resolvedExternalId (the external EUI) is only used for broker-topic routing below.
+            request.setSourceId(internalSourceId);
 
             // Populate Cumulocity-specific request with source identifier
-            if (request.getApi() != null && resolvedExternalId != null && !resolvedExternalId.isEmpty()) {
-                log.debug("{} - Populating source identifier: resolvedExternalId={}, api.identifier={}",
-                        tenant, resolvedExternalId, request.getApi().identifier);
+            if (request.getApi() != null && internalSourceId != null && !internalSourceId.isEmpty()) {
+                log.debug("{} - Populating source identifier: internalSourceId={}, api.identifier={}",
+                        tenant, internalSourceId, request.getApi().identifier);
                 String cumulocityPayload = populateSourceIdentifier(payloadJson, request, tenant);
                 request.setRequestCumulocity(cumulocityPayload);
                 log.debug("{} - Set requestCumulocity: {}", tenant, cumulocityPayload);
             } else {
-                log.warn("{} - Skipping populateSourceIdentifier: api={}, resolvedExternalId={}",
-                        tenant, request.getApi(), resolvedExternalId);
+                log.warn("{} - Skipping populateSourceIdentifier: api={}, internalSourceId={}",
+                        tenant, request.getApi(), internalSourceId);
             }
 
             // For PUT/PATCH/DELETE methods, append ID to path and remove from body
-            log.debug("{} - Checking PUT/PATCH/DELETE adjustment: api={}, apiName={}, resolvedExternalId={}, method={}, action={}, publishTopic={}",
+            log.debug("{} - Checking PUT/PATCH/DELETE adjustment: api={}, apiName={}, internalSourceId={}, method={}, action={}, publishTopic={}",
                     tenant, request.getApi(), request.getApi() != null ? request.getApi().name : "null",
-                    resolvedExternalId, request.getMethod(), deviceMessage.getAction(), context.getResolvedPublishTopic());
+                    internalSourceId, request.getMethod(), deviceMessage.getAction(), context.getResolvedPublishTopic());
 
             // Special case: Measurements don't support PUT/PATCH - they are immutable time-series data
             if (request.getApi() == API.MEASUREMENT &&
@@ -237,12 +246,13 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
                 log.debug("{} - ✅ Converted measurement from {} to POST, using base path: {}",
                         tenant, request.getMethod(), request.getApi().path);
                 // The ID will remain in the body which is correct for POST
-            } else if (request.getApi() != null && resolvedExternalId != null &&
+            } else if (request.getApi() != null && internalSourceId != null &&
                 (request.getMethod() == RequestMethod.PUT ||
                  request.getMethod() == RequestMethod.PATCH ||
                  request.getMethod() == RequestMethod.DELETE)) {
 
-                String pathWithId = request.getApi().path + "/" + resolvedExternalId;
+                // pathCumulocity is the Cumulocity REST API path — must use the internal ID
+                String pathWithId = request.getApi().path + "/" + internalSourceId;
                 request.setPathCumulocity(pathWithId);
 
                 // Remove ID from the Cumulocity request body
