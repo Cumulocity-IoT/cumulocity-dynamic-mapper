@@ -390,31 +390,37 @@ public class WebHook extends AConnectorClient {
 
             // For cumulocityInternal, we need to determine the API endpoint
             if (cumulocityInternal) {
-                // Check if API is already set (from FlowResultOutboundProcessor)
-                if (derivedAPI == null) {
-                    // Fallback: Try to derive API from publishTopic if not already set
-                    String publishTopic = request.getPublishTopic() != null ? request.getPublishTopic() : context.getResolvedPublishTopic();
-                    if (publishTopic != null && !publishTopic.isEmpty()) {
-                        derivedAPI = APITopicUtil.deriveAPIFromTopic(publishTopic);
-                        if (derivedAPI != null) {
-                            request.setApi(derivedAPI);
-                            log.info("{} - Topic '{}' -> API {} ({}/{})",
-                                    tenant, publishTopic, derivedAPI.name, i + 1, requests.size());
+                // publishTopic takes precedence over the pre-set API from mapping.targetAPI
+                String publishTopic = request.getPublishTopic() != null ? request.getPublishTopic() : context.getResolvedPublishTopic();
+                if (publishTopic != null && !publishTopic.isEmpty()) {
+                    API topicDerivedAPI = APITopicUtil.deriveAPIFromTopic(publishTopic);
+                    if (topicDerivedAPI != null) {
+                        if (derivedAPI != null && derivedAPI != topicDerivedAPI) {
+                            log.info("{} - publishTopic '{}' -> API {} overrides pre-set API {} ({}/{})",
+                                    tenant, publishTopic, topicDerivedAPI.name, derivedAPI.name, i + 1, requests.size());
                         } else {
-                            log.warn("{} - Cannot derive API type from topic '{}' and no API set for cumulocityInternal connector ({}/{}), skipping",
-                                    tenant, publishTopic, i + 1, requests.size());
-                            request.setError(new Exception("Cannot derive API type from topic: " + publishTopic));
-                            continue;
+                            log.info("{} - Topic '{}' -> API {} ({}/{})",
+                                    tenant, publishTopic, topicDerivedAPI.name, i + 1, requests.size());
                         }
+                        derivedAPI = topicDerivedAPI;
+                        request.setApi(derivedAPI);
+                    } else if (derivedAPI != null) {
+                        log.info("{} - Cannot derive API from topic '{}', falling back to pre-set API {} ({}/{})",
+                                tenant, publishTopic, derivedAPI.name, i + 1, requests.size());
                     } else {
-                        log.warn("{} - No publishTopic available and no API set for cumulocityInternal connector ({}/{}), skipping",
-                                tenant, i + 1, requests.size());
-                        request.setError(new Exception("No publishTopic available and no API set for cumulocityInternal connector"));
+                        log.warn("{} - Cannot derive API type from topic '{}' and no API set for cumulocityInternal connector ({}/{}), skipping",
+                                tenant, publishTopic, i + 1, requests.size());
+                        request.setError(new Exception("Cannot derive API type from topic: " + publishTopic));
                         continue;
                     }
-                } else {
-                    log.debug("{} - Using pre-set API {} for cumulocityInternal connector ({}/{})",
+                } else if (derivedAPI != null) {
+                    log.debug("{} - No publishTopic available, using pre-set API {} ({}/{})",
                             tenant, derivedAPI.name, i + 1, requests.size());
+                } else {
+                    log.warn("{} - No publishTopic available and no API set for cumulocityInternal connector ({}/{}), skipping",
+                            tenant, i + 1, requests.size());
+                    request.setError(new Exception("No publishTopic available and no API set for cumulocityInternal connector"));
+                    continue;
                 }
 
                 // For Cumulocity internal, use the pre-populated requestCumulocity if available
