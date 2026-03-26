@@ -66,6 +66,7 @@ public class ProcessingContext<O> implements AutoCloseable {
     public static final String DEVICE_NAME = "deviceName";
     public static final String DEVICE_TYPE = "deviceType";
     public static final String DEVICE_FRAGMENTS = "deviceFragments";
+    public static final String DEVICE_GROUPS = "deviceGroups";
     public static final String EVENT_WITH_ATTACHMENT = "eventWithAttachment";
     public static final String PROCESSING_MODE = "processingMode";
     public static final String ATTACHMENT_DATA = "attachmentData";
@@ -183,6 +184,8 @@ public class ProcessingContext<O> implements AutoCloseable {
     private String deviceType;
 
     private Map<String, Object> deviceFragments;
+
+    private List<String> deviceGroups;
 
     private Object flowResult;
 
@@ -442,7 +445,8 @@ public class ProcessingContext<O> implements AutoCloseable {
             .externalId(this.externalId)
             .deviceName(this.deviceName)
             .deviceType(this.deviceType)
-            .deviceFragments(this.deviceFragments);
+            .deviceFragments(this.deviceFragments)
+            .deviceGroups(this.deviceGroups);
 
         // Add alarms if present
         if (this.alarms != null && !this.alarms.isEmpty()) {

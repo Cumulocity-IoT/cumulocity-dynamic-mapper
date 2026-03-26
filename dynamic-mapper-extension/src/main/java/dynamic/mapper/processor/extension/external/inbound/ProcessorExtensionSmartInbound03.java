@@ -38,12 +38,14 @@ import java.util.Map;
  * Java Extension equivalent of template-SMART-INBOUND-03.js
  *
  * <p>This extension demonstrates implicit device creation with custom managed object fragments
- * ({@code deviceFragments}):
+ * ({@code deviceFragments}) and automatic group assignment ({@code deviceGroups}):
  * <ul>
  *   <li>Creating a measurement with {@code contextData} for device creation</li>
  *   <li>Specifying {@code deviceName} and {@code deviceType} for implicit device creation</li>
  *   <li>Adding {@code deviceFragments} (e.g. {@code c8y_Hardware}, {@code c8y_SupportedOperations})
  *       that are merged into the device managed object when it is first created</li>
+ *   <li>Listing {@code deviceGroups} so the newly created device is added as a child asset
+ *       to the named groups (groups are created automatically if they do not exist)</li>
  * </ul>
  *
  * <p>Input JSON format:</p>
@@ -58,9 +60,10 @@ import java.util.Map;
  * </pre>
  *
  * <p>Output: {@code c8y_TemperatureMeasurement} with contextData specifying device name, type,
- * and additional managed object fragments.</p>
+ * additional managed object fragments, and group names.</p>
  * <p>If the device does not exist yet, it will be created automatically with name "Test-Sensor",
- * type "sensor-type", and the hardware / supported-operations fragments pre-populated.</p>
+ * type "sensor-type", hardware / supported-operations fragments pre-populated, and assigned
+ * to the groups "line 1" and "line 2".</p>
  */
 @Slf4j
 public class ProcessorExtensionSmartInbound03 implements ProcessorExtensionInbound<byte[]> {
@@ -103,17 +106,18 @@ public class ProcessorExtensionSmartInbound03 implements ProcessorExtensionInbou
             deviceFragments.put("c8y_SupportedOperations", supportedOps);
 
             // Build measurement with contextData for implicit device creation.
-            // deviceName, deviceType and deviceFragments are only applied when the device
-            // is created for the first time — they are ignored on subsequent messages.
+            // deviceName, deviceType, deviceFragments and deviceGroups are only applied when the
+            // device is created for the first time — they are ignored on subsequent messages.
             return new CumulocityObject[] {
                 CumulocityObject.measurement()
                     .type("c8y_TemperatureMeasurement")
                     .time(new DateTime().toString())
                     .fragment("c8y_Steam", "Temperature", tempVal.doubleValue(), "C")
                     .externalId(clientId, "c8y_Serial")
-                    .deviceName("Test-Sensor")           // display name of the implicitly created device
-                    .deviceType("sensor-type")            // managed object type
-                    .deviceFragments(deviceFragments)     // additional fragments merged into the device
+                    .deviceName("Test-Sensor")                                    // display name of the implicitly created device
+                    .deviceType("sensor-type")                                    // managed object type
+                    .deviceFragments(deviceFragments)                             // additional fragments merged into the device
+                    .deviceGroups(Arrays.asList("line 1", "line 2"))              // groups the device is assigned to as child asset
                     .build()
             };
 

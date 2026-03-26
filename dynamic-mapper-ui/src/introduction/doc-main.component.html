@@ -1848,6 +1848,9 @@ export &#123; onMessage &#125;;   // required in ESM mode</code></pre>
                     <li><code>deviceFragments</code>: Map of additional managed object fragments to merge into the
                       implicitly created device (e.g. <code>c8y_Hardware</code>, <code>c8y_SupportedOperations</code>).
                       The value of each key must be an object or array — nested structures are preserved.</li>
+                    <li><code>deviceGroups</code>: List of device group names the implicitly created device is
+                      assigned to as a child asset (e.g. <code>["line 1", "line 2"]</code>).
+                      Groups that do not exist yet are created automatically.</li>
                   </ul>
                 </td>
               </tr>
@@ -1904,13 +1907,13 @@ export &#123; onMessage &#125;;   // required in ESM mode</code></pre>
         <div class="admonition caution" style="max-width: 100%;">
           <div class="title">Caution</div>
           <div class="content">
-            When using <code>contextData.deviceName</code>, <code>contextData.deviceType</code>, or
-            <code>contextData.deviceFragments</code>,
+            When using <code>contextData.deviceName</code>, <code>contextData.deviceType</code>,
+            <code>contextData.deviceFragments</code>, or <code>contextData.deviceGroups</code>,
             make sure the mapping has the <b>Create non-existing devices</b> option enabled. Otherwise, the mapper will
             fail if the device doesn't exist yet.
             <br/><br/>
-            <code>deviceFragments</code> are only applied when the device is <em>first created</em>. They are not
-            merged again on subsequent messages once the device already exists.
+            <code>deviceFragments</code> and <code>deviceGroups</code> are only applied when the device is
+            <em>first created</em>. They are not re-applied on subsequent messages once the device already exists.
           </div>
         </div>
         <div class="p-b-8 text-14">
@@ -1947,9 +1950,10 @@ export &#123; onMessage &#125;;   // required in ESM mode</code></pre>
     &#125;,
     externalSource: [&#123; "type": "c8y_Serial", "externalId": externalId &#125;],
     contextData: &#123;
-      "deviceName": "Temperature-Sensor-01",   // display name of the implicitly created device
-      "deviceType": "sensor-type",             // managed object type
-      "deviceFragments": &#123;                    // additional fragments merged into the device on creation
+      "deviceName": "Temperature-Sensor-01",        // display name of the implicitly created device
+      "deviceType": "sensor-type",                  // managed object type
+      "deviceGroups": ["line 1", "line 2"],          // groups the device is assigned to as child asset
+      "deviceFragments": &#123;                          // additional fragments merged into the device on creation
         "c8y_Hardware": &#123;
           "model":        "SmartSensor v2",
           "serialNumber": externalId,

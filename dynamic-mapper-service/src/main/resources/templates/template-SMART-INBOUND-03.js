@@ -1,8 +1,10 @@
 /**
- * @name Create measurement and implicitly create device with deviceFragments
- * @description Creates one measurement and implicitly creates a device with deviceType, deviceName and
- *              custom managed object fragments (deviceFragments). The deviceFragments are merged into
- *              the device managed object when the device is created for the first time.
+ * @name Create measurement and implicitly create device with deviceFragments and deviceGroups
+ * @description Creates one measurement and implicitly creates a device with deviceType, deviceName,
+ *              custom managed object fragments (deviceFragments), and group assignment (deviceGroups).
+ *              The deviceFragments are merged into the device managed object when the device is created
+ *              for the first time. The deviceGroups list names the device groups the device is added to
+ *              as a child asset; missing groups are created automatically.
  * @templateType INBOUND_SMART_FUNCTION
  * @direction INBOUND
  * @defaultTemplate false
@@ -45,9 +47,10 @@ function onMessage(msg, context) {
         },
         externalSource: [{"type": "c8y_Serial", "externalId": clientId}],
         contextData: {
-            "deviceName": "Test-Sensor",       // display name of the implicitly created device
-            "deviceType": "sensor-type",       // managed object type of the implicitly created device
-            "deviceFragments": {               // additional fragments merged into the device managed object
+            "deviceName": "Test-Sensor",           // display name of the implicitly created device
+            "deviceType": "sensor-type",           // managed object type of the implicitly created device
+            "deviceGroups": ["line 1", "line 2"],  // groups the device is assigned to as child asset
+            "deviceFragments": {                   // additional fragments merged into the device managed object
                 "c8y_Hardware": {
                     "model":        "SmartSensor v2",
                     "serialNumber": clientId,

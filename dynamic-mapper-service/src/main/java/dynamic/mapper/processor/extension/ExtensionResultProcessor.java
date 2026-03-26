@@ -37,6 +37,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.RequestMethod;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -378,6 +379,12 @@ public class ExtensionResultProcessor {
             @SuppressWarnings("unchecked")
             Map<String, Object> deviceFragments = (Map<String, Object>) contextData.get("deviceFragments");
             context.setDeviceFragments(deviceFragments);
+        }
+
+        if (contextData.containsKey("deviceGroups")) {
+            @SuppressWarnings("unchecked")
+            List<String> deviceGroups = (List<String>) contextData.get("deviceGroups");
+            context.setDeviceGroups(deviceGroups);
         }
 
         // Note: Attachment handling for events would go here

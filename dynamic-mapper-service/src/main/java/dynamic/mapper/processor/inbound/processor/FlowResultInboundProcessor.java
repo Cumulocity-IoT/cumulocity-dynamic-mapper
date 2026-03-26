@@ -151,6 +151,11 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
                     Map<String, Object> deviceFragments = (Map<String, Object>) contextData.get("deviceFragments");
                     context.setDeviceFragments(deviceFragments);
                 }
+                if (contextData.get("deviceGroups") != null) {
+                    @SuppressWarnings("unchecked")
+                    List<String> deviceGroups = (List<String>) contextData.get("deviceGroups");
+                    context.setDeviceGroups(deviceGroups);
+                }
             }
 
             // Check if sourceId is explicitly set in CumulocityObject

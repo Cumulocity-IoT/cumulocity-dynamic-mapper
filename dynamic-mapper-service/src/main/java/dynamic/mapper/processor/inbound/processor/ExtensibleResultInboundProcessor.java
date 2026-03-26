@@ -365,5 +365,11 @@ public class ExtensibleResultInboundProcessor extends AbstractExtensibleResultPr
             Map<String, Object> deviceFragments = (Map<String, Object>) contextData.get("deviceFragments");
             context.setDeviceFragments(deviceFragments);
         }
+
+        if (contextData.containsKey("deviceGroups")) {
+            @SuppressWarnings("unchecked")
+            List<String> deviceGroups = (List<String>) contextData.get("deviceGroups");
+            context.setDeviceGroups(deviceGroups);
+        }
     }
 }

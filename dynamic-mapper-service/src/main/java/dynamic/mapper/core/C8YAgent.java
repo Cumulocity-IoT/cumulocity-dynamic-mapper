@@ -27,6 +27,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -787,6 +788,44 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         // throw new ProcessingException(error.toString());
         // }
         return device;
+    }
+
+    /**
+     * Assigns a newly created device to one or more named device groups.
+     * Groups that do not exist yet are created automatically.
+     * Errors for individual groups are logged as warnings and do not abort the others.
+     *
+     * @param tenant     the tenant context
+     * @param deviceId   the C8Y internal ID of the device
+     * @param groupNames list of group names to assign the device to
+     * @param testing    flag indicating test mode (child asset assignment skipped in test mode)
+     */
+    public void assignDeviceToGroups(String tenant, String deviceId, List<String> groupNames, Boolean testing) {
+        if (groupNames == null || groupNames.isEmpty()) {
+            return;
+        }
+        subscriptionsService.callForTenant(tenant, () -> {
+            MicroserviceCredentials credentials = removeAppKeyHeaderFromContext(contextService.getContext());
+            return contextService.callWithinContext(credentials, () -> {
+                for (String groupName : groupNames) {
+                    try {
+                        ManagedObjectRepresentation group = inventoryApi.findGroupByName(groupName, testing);
+                        if (group == null) {
+                            group = inventoryApi.createGroup(groupName, testing);
+                            log.info("{} - Created device group '{}' with id {}", tenant, groupName,
+                                    group.getId().getValue());
+                        }
+                        inventoryApi.addChildAsset(group.getId(), GId.asGId(deviceId), testing);
+                        log.info("{} - Device {} assigned to group '{}' ({})", tenant, deviceId, groupName,
+                                group.getId().getValue());
+                    } catch (Exception e) {
+                        log.warn("{} - Failed to assign device {} to group '{}': {}", tenant, deviceId, groupName,
+                                e.getMessage());
+                    }
+                }
+                return null;
+            });
+        });
     }
 
     public ManagedObjectRepresentation getManagedObjectForId(String tenant, String deviceId, Boolean testing) {

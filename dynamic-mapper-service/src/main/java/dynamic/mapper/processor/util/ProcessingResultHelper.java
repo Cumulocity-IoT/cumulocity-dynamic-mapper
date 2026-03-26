@@ -254,6 +254,12 @@ public class ProcessingResultHelper {
             context.getCurrentRequest().setResponse(response);
             context.getCurrentRequest().setSourceId(implicitDevice.getId().getValue());
 
+            // Assign device to groups if specified via contextData
+            if (context.getDeviceGroups() != null && !context.getDeviceGroups().isEmpty()) {
+                c8yAgent.assignDeviceToGroups(context.getTenant(), implicitDevice.getId().getValue(),
+                        context.getDeviceGroups(), context.getTesting());
+            }
+
             return implicitDevice.getId().getValue();
 
         } catch (Exception e) {
@@ -574,6 +580,12 @@ public class ProcessingResultHelper {
             String response = objectMapper.writeValueAsString(implicitDevice);
             deviceRequest.setResponse(response);
             deviceRequest.setSourceId(implicitDevice.getId().getValue());
+
+            // Assign device to groups if specified via contextData
+            if (device.getDeviceGroups() != null && !device.getDeviceGroups().isEmpty()) {
+                c8yAgent.assignDeviceToGroups(routing.getTenant(), implicitDevice.getId().getValue(),
+                        device.getDeviceGroups(), false);
+            }
 
             return implicitDevice.getId().getValue();
 

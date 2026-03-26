@@ -247,6 +247,18 @@ public class CumulocityObject {
         }
 
         /**
+         * Set device group names the implicitly created device should be assigned to.
+         * Groups are looked up by name; missing groups are created automatically.
+         *
+         * @param deviceGroups List of group names (e.g., ["line 1", "line 2"])
+         * @return This builder
+         */
+        public T deviceGroups(java.util.List<String> deviceGroups) {
+            this.contextData.put("deviceGroups", deviceGroups);
+            return self();
+        }
+
+        /**
          * Set the device name for implicit device creation.
          *
          * @param deviceName The device name
