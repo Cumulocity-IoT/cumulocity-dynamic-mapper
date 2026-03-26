@@ -331,33 +331,39 @@ public class ExtensibleResultInboundProcessor extends AbstractExtensibleResultPr
      * @param contextData Map of context data from CumulocityObject
      * @param context Processing context to update
      */
-    private void applyContextData(Map<String, String> contextData, ProcessingContext<?> context) {
+    private void applyContextData(Map<String, Object> contextData, ProcessingContext<?> context) {
         if (contextData == null) {
             return;
         }
 
         if (contextData.containsKey("deviceName")) {
-            context.setDeviceName(contextData.get("deviceName"));
+            context.setDeviceName((String) contextData.get("deviceName"));
         }
 
         if (contextData.containsKey("deviceType")) {
-            context.setDeviceType(contextData.get("deviceType"));
+            context.setDeviceType((String) contextData.get("deviceType"));
         }
 
         if (contextData.containsKey("processingMode")) {
-            String mode = contextData.get("processingMode");
+            String mode = (String) contextData.get("processingMode");
             context.setProcessingMode(ProcessingMode.parse(mode));
         }
 
         // Attachment handling for events
         if (contextData.containsKey("attachmentName")) {
-            context.getBinaryInfo().setName(contextData.get("attachmentName"));
+            context.getBinaryInfo().setName((String) contextData.get("attachmentName"));
         }
         if (contextData.containsKey("attachmentType")) {
-            context.getBinaryInfo().setType(contextData.get("attachmentType"));
+            context.getBinaryInfo().setType((String) contextData.get("attachmentType"));
         }
         if (contextData.containsKey("attachmentData")) {
-            context.getBinaryInfo().setData(contextData.get("attachmentData"));
+            context.getBinaryInfo().setData((String) contextData.get("attachmentData"));
+        }
+
+        if (contextData.containsKey("deviceFragments")) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> deviceFragments = (Map<String, Object>) contextData.get("deviceFragments");
+            context.setDeviceFragments(deviceFragments);
         }
     }
 }

@@ -126,25 +126,30 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
             Map<String, Object> payload = clonePayload(cumulocityMessage.getPayload());
 
             // contextData for generating device with defined name/type
-            Map<String, String> contextData = cumulocityMessage.getContextData();
+            Map<String, Object> contextData = cumulocityMessage.getContextData();
             if (contextData != null) {
                 if (contextData.get("deviceName") != null) {
-                    context.setDeviceName(contextData.get("deviceName"));
+                    context.setDeviceName((String) contextData.get("deviceName"));
                 }
                 if (contextData.get("deviceType") != null) {
-                    context.setDeviceType(contextData.get("deviceType"));
+                    context.setDeviceType((String) contextData.get("deviceType"));
                 }
                 if (contextData.get("processingMode") != null) {
-                    context.setProcessingMode(ProcessingMode.parse(contextData.get("processingMode")));
+                    context.setProcessingMode(ProcessingMode.parse((String) contextData.get("processingMode")));
                 }
                 if (contextData.get("attachmentName") != null) {
-                    context.getBinaryInfo().setName((String) (contextData.get("attachmentName")));
+                    context.getBinaryInfo().setName((String) contextData.get("attachmentName"));
                 }
                 if (contextData.get("attachmentType") != null) {
-                    context.getBinaryInfo().setType((String) (contextData.get("attachmentType")));
+                    context.getBinaryInfo().setType((String) contextData.get("attachmentType"));
                 }
                 if (contextData.get("attachmentData") != null) {
-                    context.getBinaryInfo().setData((String) (contextData.get("attachmentData")));
+                    context.getBinaryInfo().setData((String) contextData.get("attachmentData"));
+                }
+                if (contextData.get("deviceFragments") != null) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> deviceFragments = (Map<String, Object>) contextData.get("deviceFragments");
+                    context.setDeviceFragments(deviceFragments);
                 }
             }
 

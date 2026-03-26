@@ -109,7 +109,7 @@ public class JavaScriptInteropHelper {
             Object contextDataObj = convertValueToJavaObject(value.getMember("contextData"));
             if (contextDataObj instanceof Map) {
                 @SuppressWarnings("unchecked")
-                Map<String, String> contextDataMap = convertToStringMap((Map<String, Object>) contextDataObj);
+                Map<String, Object> contextDataMap = (Map<String, Object>) contextDataObj;
                 msg.setContextData(contextDataMap);
             }
         }
@@ -331,19 +331,5 @@ public class JavaScriptInteropHelper {
     /**
      * Converts a Map<String, Object> to Map<String, String>
      */
-    private static Map<String, String> convertToStringMap(Map<String, Object> map) {
-        if (map == null) {
-            return null;
-        }
-        Map<String, String> result = new HashMap<>();
-        for (Map.Entry<String, Object> entry : map.entrySet()) {
-            if (entry.getValue() != null) {
-                result.put(entry.getKey(), String.valueOf(entry.getValue()));
-            } else {
-                result.put(entry.getKey(), null);
-            }
-        }
-        return result;
-    }
 
 }

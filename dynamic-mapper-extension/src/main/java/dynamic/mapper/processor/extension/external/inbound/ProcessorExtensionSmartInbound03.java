@@ -29,16 +29,21 @@ import dynamic.mapper.processor.model.Message;
 import lombok.extern.slf4j.Slf4j;
 import org.joda.time.DateTime;
 
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
  * Java Extension equivalent of template-SMART-INBOUND-03.js
  *
- * <p>This extension demonstrates implicit device creation:</p>
+ * <p>This extension demonstrates implicit device creation with custom managed object fragments
+ * ({@code deviceFragments}):
  * <ul>
- *   <li>Creating a measurement with contextData for device creation</li>
- *   <li>Specifying deviceName and deviceType for implicit device creation</li>
- *   <li>Using builder pattern with contextData</li>
+ *   <li>Creating a measurement with {@code contextData} for device creation</li>
+ *   <li>Specifying {@code deviceName} and {@code deviceType} for implicit device creation</li>
+ *   <li>Adding {@code deviceFragments} (e.g. {@code c8y_Hardware}, {@code c8y_SupportedOperations})
+ *       that are merged into the device managed object when it is first created</li>
  * </ul>
  *
  * <p>Input JSON format:</p>
@@ -52,9 +57,10 @@ import java.util.Map;
  * }
  * </pre>
  *
- * <p>Output: c8y_TemperatureMeasurement with contextData specifying device name and type</p>
- * <p>If the device doesn't exist, it will be created automatically with name "Test-Sensor"
- * and type "sensor-type"</p>
+ * <p>Output: {@code c8y_TemperatureMeasurement} with contextData specifying device name, type,
+ * and additional managed object fragments.</p>
+ * <p>If the device does not exist yet, it will be created automatically with name "Test-Sensor",
+ * type "sensor-type", and the hardware / supported-operations fragments pre-populated.</p>
  */
 @Slf4j
 public class ProcessorExtensionSmartInbound03 implements ProcessorExtensionInbound<byte[]> {
@@ -84,16 +90,30 @@ public class ProcessorExtensionSmartInbound03 implements ProcessorExtensionInbou
             log.debug("{} - Creating measurement for device: {} (will be created if not exists)",
                     context.getTenant(), clientId);
 
-            // Build measurement with contextData for implicit device creation
-            // The deviceName and deviceType will be used if the device doesn't exist yet
+            // Build c8y_Hardware fragment for implicit device creation
+            Map<String, Object> hardware = new HashMap<>();
+            hardware.put("model", "SmartSensor v2");
+            hardware.put("serialNumber", clientId);
+            hardware.put("revision", "2.0");
+
+            // Build deviceFragments: additional managed object fragments merged on first creation
+            Map<String, Object> deviceFragments = new HashMap<>();
+            deviceFragments.put("c8y_Hardware", hardware);
+            List<String> supportedOps = Arrays.asList("c8y_Restart", "c8y_Configuration");
+            deviceFragments.put("c8y_SupportedOperations", supportedOps);
+
+            // Build measurement with contextData for implicit device creation.
+            // deviceName, deviceType and deviceFragments are only applied when the device
+            // is created for the first time — they are ignored on subsequent messages.
             return new CumulocityObject[] {
                 CumulocityObject.measurement()
                     .type("c8y_TemperatureMeasurement")
                     .time(new DateTime().toString())
                     .fragment("c8y_Steam", "Temperature", tempVal.doubleValue(), "C")
                     .externalId(clientId, "c8y_Serial")
-                    .deviceName("Test-Sensor")      // Used for implicit device creation
-                    .deviceType("sensor-type")       // Used for implicit device creation
+                    .deviceName("Test-Sensor")           // display name of the implicitly created device
+                    .deviceType("sensor-type")            // managed object type
+                    .deviceFragments(deviceFragments)     // additional fragments merged into the device
                     .build()
             };
 

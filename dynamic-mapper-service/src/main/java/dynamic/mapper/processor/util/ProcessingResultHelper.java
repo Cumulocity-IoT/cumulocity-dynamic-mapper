@@ -41,10 +41,8 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.model.DeviceContext;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
-import dynamic.mapper.processor.model.OutputCollector;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingResultWrapper;
-import dynamic.mapper.processor.model.RoutingContext;
 
 /**
  * Utility class for creating and managing processing results in the dynamic mapper system.
@@ -225,6 +223,11 @@ public class ProcessingResultHelper {
         // request.put(MappingRepresentation.MAPPING_GENERATED_DEVICE, new HashMap<>());
         request.put("c8y_IsDevice",  new HashMap<>());
         request.put("com_cumulocity_model_Agent",  new HashMap<>());
+
+        // Merge additional device fragments provided via contextData
+        if (context.getDeviceFragments() != null) {
+            request.putAll(context.getDeviceFragments());
+        }
 
         try {
             int predecessor = context.getRequests().size();
@@ -526,6 +529,11 @@ public class ProcessingResultHelper {
         request.put("c8y_IsDevice", new HashMap<>());
         request.put("com_cumulocity_model_Agent", new HashMap<>());
 
+        // Merge additional device fragments provided via contextData
+        if (device.getDeviceFragments() != null) {
+            request.putAll(device.getDeviceFragments());
+        }
+
         try {
             int predecessor = output.getRequestCount();
             String requestString = objectMapper.writeValueAsString(request);
@@ -555,6 +563,7 @@ public class ProcessingResultHelper {
                     .externalId(updatedDevice.getExternalId())
                     .deviceName(updatedDevice.getDeviceName())
                     .deviceType(updatedDevice.getDeviceType())
+                    .deviceFragments(updatedDevice.getDeviceFragments())
                     .requests(new ArrayList<>(output.getRequests()))
                     .build();
 

@@ -27,6 +27,7 @@ import lombok.Value;
 
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -62,6 +63,13 @@ public class DeviceContext {
      * The type of the device (e.g., "c8y_Device", "c8y_Gateway").
      */
     String deviceType;
+
+    /**
+     * Additional managed object fragments to set on the implicitly created device.
+     * Each key is a fragment name (e.g., "c8y_transportationProtocols") and the
+     * value is the fragment content.
+     */
+    Map<String, Object> deviceFragments;
 
     /**
      * Set of alarm types that have been raised for this device during processing.
@@ -134,6 +142,18 @@ public class DeviceContext {
     public DeviceContext withDeviceType(String newDeviceType) {
         return this.toBuilder()
             .deviceType(newDeviceType)
+            .build();
+    }
+
+    /**
+     * Creates a copy of this context with device fragments.
+     *
+     * @param newDeviceFragments map of fragment name → fragment content
+     * @return a new DeviceContext with the device fragments set
+     */
+    public DeviceContext withDeviceFragments(Map<String, Object> newDeviceFragments) {
+        return this.toBuilder()
+            .deviceFragments(newDeviceFragments)
             .build();
     }
 
