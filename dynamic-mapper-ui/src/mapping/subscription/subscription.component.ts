@@ -45,6 +45,7 @@ import {
   Direction,
   Feature,
   LabelTaggedRendererComponent,
+  LoggingEventType,
   NODE2,
   Operation,
   SharedModule
@@ -385,7 +386,9 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
   }
 
   navigateToServiceEvents(): void {
-    this.router.navigate([`/c8y-pkg-dynamic-mapper/${NODE2}/monitoring/serviceEvent`]);
+    this.router.navigate([`/c8y-pkg-dynamic-mapper/${NODE2}/monitoring/serviceEvent`], {
+      queryParams: { type: LoggingEventType.SUBSCRIPTION_DEDUPLICATION_EVENT_TYPE }
+    });
   }
 
   async onReload(): Promise<void> {
