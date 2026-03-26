@@ -1,5 +1,6 @@
 package dynamic.mapper.processor.inbound.processor;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -40,6 +41,34 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
             ObjectMapper objectMapper) {
         super(mappingService, objectMapper);
         this.c8yAgent = c8yAgent;
+    }
+
+    /**
+     * Moves CumulocityObject items that carry device-creation contextData to the front of the list.
+     * This guarantees that the implicit device (with its deviceName, deviceType, deviceFragments,
+     * deviceGroups) is always created before any other requests (e.g. an inventory update) that
+     * target the same device — regardless of the order returned by onMessage().
+     */
+    @Override
+    protected List<Object> reorderMessages(List<Object> messages) {
+        List<Object> withContextData = new ArrayList<>();
+        List<Object> withoutContextData = new ArrayList<>();
+        for (Object msg : messages) {
+            if (msg instanceof CumulocityObject && hasDeviceCreationContextData((CumulocityObject) msg)) {
+                withContextData.add(msg);
+            } else {
+                withoutContextData.add(msg);
+            }
+        }
+        List<Object> result = new ArrayList<>(withContextData);
+        result.addAll(withoutContextData);
+        return result;
+    }
+
+    private boolean hasDeviceCreationContextData(CumulocityObject obj) {
+        Map<String, Object> cd = obj.getContextData();
+        return cd != null && (cd.containsKey("deviceName") || cd.containsKey("deviceType")
+                || cd.containsKey("deviceGroups") || cd.containsKey("deviceFragments"));
     }
 
     @Override

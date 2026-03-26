@@ -21,6 +21,7 @@
 
 package dynamic.mapper.processor.inbound.processor;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -109,8 +110,24 @@ public class ExtensibleResultInboundProcessor extends AbstractExtensibleResultPr
             return;
         }
 
-        // Process each CumulocityObject using thread-safe output collector
+        // Move items with device-creation contextData to the front so the implicit device
+        // (with deviceName, deviceType, deviceFragments, deviceGroups) is always created
+        // before any other requests (e.g. inventory update) that target the same device.
+        List<CumulocityObject> withContextData = new ArrayList<>();
+        List<CumulocityObject> withoutContextData = new ArrayList<>();
         for (CumulocityObject c8yObj : results) {
+            Map<String, Object> cd = c8yObj.getContextData();
+            if (cd != null && (cd.containsKey("deviceName") || cd.containsKey("deviceType")
+                    || cd.containsKey("deviceGroups") || cd.containsKey("deviceFragments"))) {
+                withContextData.add(c8yObj);
+            } else {
+                withoutContextData.add(c8yObj);
+            }
+        }
+        withContextData.addAll(withoutContextData);
+
+        // Process each CumulocityObject using thread-safe output collector
+        for (CumulocityObject c8yObj : withContextData) {
             processCumulocityObject(c8yObj, output, context);
         }
 

@@ -123,12 +123,27 @@ public abstract class AbstractFlowResultProcessor extends CommonProcessor {
             return;
         }
 
+        // Allow subclasses to reorder (e.g. device-creation items first)
+        messagesToProcess = reorderMessages(messagesToProcess);
+
         // Process each message using focused contexts
         for (Object message : messagesToProcess) {
             processMessage(message, routing, state, output, context);
         }
 
         handleEmptyRequests(output, state, tenant);
+    }
+
+    /**
+     * Hook for subclasses to reorder messages before processing.
+     * Default implementation preserves the original order.
+     * Override to e.g. move device-creation items to the front.
+     *
+     * @param messages the normalized list of messages
+     * @return the (potentially reordered) list
+     */
+    protected List<Object> reorderMessages(List<Object> messages) {
+        return messages;
     }
 
     /**

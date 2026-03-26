@@ -1850,7 +1850,9 @@ export &#123; onMessage &#125;;   // required in ESM mode</code></pre>
                       The value of each key must be an object or array — nested structures are preserved.</li>
                     <li><code>deviceGroups</code>: List of device group names the implicitly created device is
                       assigned to as a child asset (e.g. <code>["line 1", "line 2"]</code>).
-                      Groups that do not exist yet are created automatically.</li>
+                      Groups that do not exist yet are created automatically.
+                      Group lookup is by name; if multiple groups share the same name the device is assigned
+                      to the first match returned by the platform and a warning is logged.</li>
                   </ul>
                 </td>
               </tr>
