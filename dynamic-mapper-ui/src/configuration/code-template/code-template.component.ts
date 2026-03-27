@@ -34,6 +34,16 @@ import { SharedService } from '../../shared/service/shared.service';
 import { CodeTemplate, CodeTemplateMap, TemplateType } from '../shared/configuration.model';
 import { createCompletionProviderFlowFunction, createCompletionProviderSubstitutionAsCode } from '../../mapping/shared/stepper.model';
 
+interface CodeTemplateEntry {
+  key: string;
+  name: string;
+  description?: string;
+  templateType: TemplateType;
+  internal: boolean;
+  readonly: boolean;
+  defaultTemplate: boolean;
+}
+
 @Component({
   selector: 'd11r-shared-code',
   templateUrl: 'code-template.component.html',
@@ -52,8 +62,8 @@ export class CodeComponent implements OnInit, AfterViewInit {
   defaultTemplate!: string;
   templateType!: TemplateType;
   TemplateType = TemplateType;
-  codeTemplateEntries: CodeTemplate[] = [];
-  codeTemplateEntries$: BehaviorSubject<CodeTemplate[]> = new BehaviorSubject<CodeTemplate[]>([]);
+  codeTemplateEntries: CodeTemplateEntry[] = [];
+  codeTemplateEntries$: BehaviorSubject<CodeTemplateEntry[]> = new BehaviorSubject<CodeTemplateEntry[]>([]);
   isLoading = false;
 
   editorOptions: EditorComponent['editorOptions'] = {
@@ -193,10 +203,8 @@ export class CodeComponent implements OnInit, AfterViewInit {
     this.codeTemplates = await this.sharedService.getCodeTemplates();
 
     this.codeTemplateEntries = Object.entries(this.codeTemplates)
-      .map(([key, template]) => ({
+      .map(([key, template]): CodeTemplateEntry => ({
         key,
-        id: undefined as any,
-        code: undefined as any,
         name: template.name,
         description: template.description,
         templateType: template.templateType,
@@ -204,7 +212,7 @@ export class CodeComponent implements OnInit, AfterViewInit {
         readonly: template.readonly,
         defaultTemplate: template.defaultTemplate
       }))
-      .filter(temp => defaultSet.includes(temp.templateType));
+      .filter(entry => defaultSet.includes(entry.templateType));
 
     this.codeTemplateEntries$.next(this.codeTemplateEntries);
     this.decodeCodeTemplates();
@@ -234,9 +242,11 @@ export class CodeComponent implements OnInit, AfterViewInit {
           defaultTemplate: false
         });
       } catch (error) {
+        console.error(`Failed to decode code template [${key}]:`, error);
         this.codeTemplatesDecoded.set(key, {
           id: key,
           name: template.name,
+          description: template.description ?? '',
           templateType: template.templateType,
           code: '// Code Template not valid!',
           internal: template.internal,
@@ -277,36 +287,50 @@ export class CodeComponent implements OnInit, AfterViewInit {
     if (!this.codeTemplateDecoded) return;
 
     const encodedCode = stringToBase64(this.codeTemplateDecoded.code);
-    await this.sharedService.updateCodeTemplate(this.template, {
+    const response = await this.sharedService.updateCodeTemplate(this.template, {
       ...this.codeTemplateDecoded,
       code: encodedCode
     });
 
-    this.alertService.success(gettext('Saved code template'));
-    await this.updateCodeTemplateEntries();
+    if (response.ok) {
+      this.alertService.success(gettext('Saved code template'));
+      await this.updateCodeTemplateEntries();
+    } else {
+      this.alertService.danger(gettext('Failed to save code template'));
+    }
   }
 
   async onDeleteCodeTemplate() {
     if (!this.codeTemplateDecoded) return;
 
-    await this.sharedService.deleteCodeTemplate(this.template);
-    this.alertService.success(gettext('Deleted code template'));
-    this.template = this.defaultTemplate;
-    await this.updateCodeTemplateEntries();
+    const response = await this.sharedService.deleteCodeTemplate(this.template);
+    if (response.ok) {
+      this.alertService.success(gettext('Deleted code template'));
+      this.template = this.defaultTemplate;
+      await this.updateCodeTemplateEntries();
+    } else {
+      this.alertService.danger(gettext('Failed to delete code template'));
+    }
   }
 
   async onRenameCodeTemplate() {
     if (!this.codeTemplateDecoded) return;
 
+    // Preserve the current template selection after rename
+    const currentTemplate = this.template;
     await this.openTemplateModal('RENAME', this.codeTemplateDecoded.name, async (updatedTemplate) => {
       this.codeTemplateDecoded.name = updatedTemplate.name!;
       const encodedCode = stringToBase64(this.codeTemplateDecoded.code);
-      await this.sharedService.updateCodeTemplate(this.template, {
+      const response = await this.sharedService.updateCodeTemplate(currentTemplate, {
         ...this.codeTemplateDecoded,
         code: encodedCode
       });
-      this.alertService.success(gettext('Renamed code template'));
-    });
+      if (response.ok) {
+        this.alertService.success(gettext('Renamed code template'));
+      } else {
+        this.alertService.danger(gettext('Failed to rename code template'));
+      }
+    }, currentTemplate);
   }
 
   async onDuplicateCodeTemplate() {
@@ -314,7 +338,7 @@ export class CodeComponent implements OnInit, AfterViewInit {
 
     await this.openTemplateModal('COPY', `${this.codeTemplateDecoded.name} - Copy`, async (updatedTemplate) => {
       const encodedCode = stringToBase64(this.codeTemplateDecoded.code);
-      await this.sharedService.createCodeTemplate({
+      const response = await this.sharedService.createCodeTemplate({
         ...this.codeTemplateDecoded,
         name: updatedTemplate.name!,
         code: encodedCode,
@@ -322,14 +346,19 @@ export class CodeComponent implements OnInit, AfterViewInit {
         internal: false,
         readonly: false
       });
-      this.alertService.success(gettext('Copied code template'));
+      if (response.ok) {
+        this.alertService.success(gettext('Copied code template'));
+      } else {
+        this.alertService.danger(gettext('Failed to copy code template'));
+      }
     });
   }
 
   private async openTemplateModal(
     action: string,
     defaultName: string,
-    onSuccess: (template: Partial<CodeTemplate>) => Promise<void>
+    onSuccess: (template: Partial<CodeTemplate>) => Promise<void>,
+    postActionTemplate?: string
   ): Promise<void> {
     const initialState = {
       action,
@@ -342,7 +371,7 @@ export class CodeComponent implements OnInit, AfterViewInit {
       if (codeTemplate) {
         await onSuccess(codeTemplate);
       }
-      this.template = this.defaultTemplate;
+      this.template = postActionTemplate ?? this.defaultTemplate;
       await this.updateCodeTemplateEntries();
     });
   }

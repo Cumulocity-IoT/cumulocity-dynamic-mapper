@@ -33,6 +33,7 @@ import org.graalvm.polyglot.Engine;
 import org.graalvm.polyglot.Value;
 import org.graalvm.polyglot.io.IOAccess;
 
+import dynamic.mapper.configuration.CodeTemplate;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.configuration.TemplateType;
 import dynamic.mapper.core.ConfigurationRegistry;
@@ -105,10 +106,17 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
                 context.setSystemSource(configurationRegistry.getGraalsSourceSystem(tenant));
 
                 // Keep Base64 strings for backward compatibility if needed
-                context.setSharedCode(serviceConfiguration.getCodeTemplates()
-                        .get(TemplateType.SHARED.name()).getCode());
-                context.setSystemCode(serviceConfiguration.getCodeTemplates()
-                        .get(TemplateType.SYSTEM.name()).getCode());
+                CodeTemplate sharedTemplate = serviceConfiguration.getCodeTemplates().get(TemplateType.SHARED.name());
+                CodeTemplate systemTemplate = serviceConfiguration.getCodeTemplates().get(TemplateType.SYSTEM.name());
+                if (sharedTemplate == null || systemTemplate == null) {
+                    log.error("{} - SHARED or SYSTEM code template missing for mapping [{}] — re-initialize code templates",
+                            tenant, mapping.getIdentifier());
+                    handleGraalVMError(tenant, mapping,
+                            new IllegalStateException("SHARED or SYSTEM code template not found"), context);
+                    return;
+                }
+                context.setSharedCode(sharedTemplate.getCode());
+                context.setSystemCode(systemTemplate.getCode());
             } catch (Exception e) {
                 handleGraalVMError(tenant, mapping, e, context);
                 return;
@@ -124,10 +132,17 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
                 context.setSystemSource(configurationRegistry.getGraalsSourceSystem(tenant));
 
                 // Keep Base64 strings for backward compatibility if needed
-                context.setSharedCode(serviceConfiguration.getCodeTemplates()
-                        .get(TemplateType.SHARED.name()).getCode());
-                context.setSystemCode(serviceConfiguration.getCodeTemplates()
-                        .get(TemplateType.SYSTEM.name()).getCode());
+                CodeTemplate sharedTemplate = serviceConfiguration.getCodeTemplates().get(TemplateType.SHARED.name());
+                CodeTemplate systemTemplate = serviceConfiguration.getCodeTemplates().get(TemplateType.SYSTEM.name());
+                if (sharedTemplate == null || systemTemplate == null) {
+                    log.error("{} - SHARED or SYSTEM code template missing for mapping [{}] — re-initialize code templates",
+                            tenant, mapping.getIdentifier());
+                    handleGraalVMError(tenant, mapping,
+                            new IllegalStateException("SHARED or SYSTEM code template not found"), context);
+                    return;
+                }
+                context.setSharedCode(sharedTemplate.getCode());
+                context.setSystemCode(systemTemplate.getCode());
 
                 context.setGraalContext(graalContext);
                 context.setFlowState(new HashMap<String, Object>());

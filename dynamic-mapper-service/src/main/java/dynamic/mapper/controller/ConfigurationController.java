@@ -677,7 +677,7 @@ public class ConfigurationController {
             **Security:** Requires `ROLE_DYNAMIC_MAPPER_ADMIN`
             """)
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Code template updated successfully", content = @Content),
+            @ApiResponse(responseCode = "200", description = "Code template updated successfully", content = @Content),
             @ApiResponse(responseCode = "403", description = "Insufficient permissions", content = @Content),
             @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
@@ -709,7 +709,7 @@ public class ConfigurationController {
             log.error("{} - Error updating code template [{}]", tenant, id, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
-        return new ResponseEntity<HttpStatus>(HttpStatus.CREATED);
+        return new ResponseEntity<HttpStatus>(HttpStatus.OK);
     }
 
     @Operation(summary = "Create code template", description = """
@@ -732,7 +732,8 @@ public class ConfigurationController {
             ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
             Map<String, CodeTemplate> codeTemplates = serviceConfiguration.getCodeTemplates();
             if (codeTemplates.containsKey(codeTemplate.id)) {
-                throw new Exception(String.format("Template with id %s already exists", codeTemplate.id));
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        String.format("Template with id '%s' already exists", codeTemplate.id));
             }
             serviceConfigurationService.rectifyHeaderInCodeTemplate(codeTemplate, true);
             codeTemplates.put(codeTemplate.id, codeTemplate);
@@ -749,12 +750,15 @@ public class ConfigurationController {
             }
 
             log.debug("{} - Create code template", tenant);
+        } catch (ResponseStatusException ex) {
+            log.warn("{} - Error creating code template: {}", tenant, ex.getReason());
+            throw ex;
         } catch (JsonProcessingException ex) {
             log.error("{} - Error creating code template", tenant, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         } catch (Exception ex) {
             log.error("{} - Error creating code template", tenant, ex);
-            throw new ResponseStatusException(HttpStatus.CONFLICT, ex.getLocalizedMessage());
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
         return new ResponseEntity<HttpStatus>(HttpStatus.CREATED);
     }

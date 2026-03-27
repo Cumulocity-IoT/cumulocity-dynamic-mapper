@@ -249,8 +249,8 @@ export class SharedService {
     return await response.json();
   }
 
-  async deleteCodeTemplate(templateId: string): Promise<any> {
-    const response = await this.client.fetch(
+  async deleteCodeTemplate(templateId: string): Promise<Response> {
+    return await this.client.fetch(
       `${BASE_URL}/${PATH_CONFIGURATION_CODE_TEMPLATE_ENDPOINT}/${templateId}`,
       {
         headers: {
@@ -259,7 +259,6 @@ export class SharedService {
         method: 'DELETE'
       }
     );
-    return await response.json();
   }
 
   async updateCodeTemplate(id: string, codeTemplate: CodeTemplate) {

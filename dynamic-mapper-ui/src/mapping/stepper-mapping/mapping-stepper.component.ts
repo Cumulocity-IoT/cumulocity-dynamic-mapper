@@ -76,7 +76,7 @@ import {
   validateProtectedFields
 } from '../shared/util';
 import { SubstitutionRendererComponent } from '../substitution/substitution-grid.component';
-import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType } from '../../configuration/shared/configuration.model';
+import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType, toTemplateType } from '../../configuration/shared/configuration.model';
 import { ManageTemplateComponent } from '../../shared/component/code-template/manage-template.component';
 import { AIPromptComponent } from '../prompt/ai-prompt.component';
 import { AgentObjectDefinition, AgentTextDefinition } from '../shared/ai-prompt.model';
@@ -1140,7 +1140,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   async onCreateCodeTemplate(): Promise<void> {
-    const templateType = `${this.stepperConfiguration.direction.toString()}_${this.mapping?.transformationType.toString()}` as TemplateType;
+    const templateType = toTemplateType(this.stepperConfiguration.direction!, this.mapping!.transformationType);
     const initialState = {
       action: 'CREATE',
       codeTemplate: { name: `New code template - ${templateType}`, templateType }
