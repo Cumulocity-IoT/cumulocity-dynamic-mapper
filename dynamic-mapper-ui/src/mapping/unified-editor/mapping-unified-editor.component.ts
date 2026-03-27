@@ -19,6 +19,7 @@
  */
 
 import {
+  AfterViewInit,
   ChangeDetectorRef,
   Component,
   ElementRef,
@@ -64,7 +65,7 @@ import {
   MappingType
 } from '../../shared';
 import { ValidationError } from '../shared/mapping.model';
-import { EditorMode } from '../shared/stepper.model';
+import { createCompletionProviderFlowFunction, createCompletionProviderSubstitutionAsCode, EditorMode } from '../shared/stepper.model';
 import { MappingService } from '../core/mapping.service';
 import { MappingEditData } from '../core/mapping-edit.resolver';
 import { gettext } from '@c8y/ngx-components/gettext';
@@ -146,7 +147,7 @@ const TAB_TEST_MAPPING = 4;
     JsonEditorComponent
   ]
 })
-export class MappingUnifiedEditorComponent implements OnInit, OnDestroy {
+export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnDestroy {
   mapping!: Mapping;
   stepperConfiguration!: StepperConfiguration;
   deploymentMapEntry!: DeploymentMapEntry;
@@ -293,6 +294,7 @@ export class MappingUnifiedEditorComponent implements OnInit, OnDestroy {
   codeEditorHelp!: string;
   codeEditorLabel!: string;
 
+  private completionProviderDisposable: any;
   private readonly destroy$ = new Subject<void>();
 
   private updateExtensionItems(): void {
@@ -496,11 +498,27 @@ export class MappingUnifiedEditorComponent implements OnInit, OnDestroy {
     this.updateCodeTemplateEntries();
   }
 
+  ngAfterViewInit(): void {
+    this.registerCompletionProvider();
+  }
+
   ngOnDestroy(): void {
+    this.completionProviderDisposable?.dispose();
     this.globalContextService.unregister('mapping-unified-editor');
     this.stepperService.cleanup();
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  async registerCompletionProvider(): Promise<void> {
+    if (this.completionProviderDisposable) {
+      this.completionProviderDisposable.dispose();
+    }
+    const monacoModule = await import('monaco-editor');
+    const monaco = (monacoModule as any).default || monacoModule;
+    const d1 = createCompletionProviderFlowFunction(monaco);
+    const d2 = createCompletionProviderSubstitutionAsCode(monaco);
+    this.completionProviderDisposable = { dispose: () => { d1.dispose(); d2.dispose(); } };
   }
 
   private setTemplateForm(): void {

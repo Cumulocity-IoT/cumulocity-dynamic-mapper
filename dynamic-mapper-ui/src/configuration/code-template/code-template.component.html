@@ -80,7 +80,7 @@
         </span>
       </div>
       <c8y-editor [editorOptions]="editorOptions" monacoEditorMarkerValidator [ngModel]="codeTemplateDecoded?.code"
-        (ngModelChange)="onValueCodeChange($event)" class="form-control fit-h">
+        (ngModelChange)="onValueCodeChange($event)" (editorInit)="registerCompletionProvider()" class="form-control fit-h">
       </c8y-editor>
     </c8y-form-group>
   </div>

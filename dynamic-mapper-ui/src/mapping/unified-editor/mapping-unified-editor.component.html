@@ -353,7 +353,8 @@
       </div>
     </div>
     <c8y-editor [editorOptions]="editorOptions" class="form-control flex-grow" style="min-height: 630px"
-      monacoEditorMarkerValidator [ngModel]="mappingCode" (ngModelChange)="onValueCodeChange($event)">
+      monacoEditorMarkerValidator [ngModel]="mappingCode" (ngModelChange)="onValueCodeChange($event)"
+      (editorInit)="registerCompletionProvider()">
     </c8y-editor>
   </div>
   @if (stepperViewModel.showInternalExtensionNote) {

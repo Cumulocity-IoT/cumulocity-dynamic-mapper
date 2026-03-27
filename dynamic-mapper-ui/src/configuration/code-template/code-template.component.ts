@@ -19,7 +19,7 @@
  */
 import { CommonModule } from '@angular/common';
 import { HttpStatusCode } from '@angular/common/http';
-import { AfterViewInit, Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
+import { AfterViewInit, Component, OnDestroy, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AlertService, CoreModule } from '@c8y/ngx-components';
@@ -52,7 +52,7 @@ interface CodeTemplateEntry {
   standalone: true,
   imports: [CoreModule, CommonModule, PopoverModule, EditorComponent, FormsModule]
 })
-export class CodeComponent implements OnInit, AfterViewInit {
+export class CodeComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild(EditorComponent, { static: false }) codeEditor!: EditorComponent;
 
   codeTemplateDecoded!: CodeTemplate;
@@ -142,58 +142,33 @@ export class CodeComponent implements OnInit, AfterViewInit {
     this.registerCompletionProvider();
   }
 
-  private registerCompletionProvider(): void {
-    if (!this.codeEditor || !this.codeEditor.editor) {
+  ngOnDestroy(): void {
+    this.completionProviderDisposable?.dispose();
+  }
+
+  registerCompletionProvider(): void {
+    if (!this.codeEditor || !this.codeEditor.editor || !this.codeEditor.monaco) {
       return;
     }
 
-    const monaco = (window as any).monaco;
-    if (!monaco) {
-      console.warn('Monaco editor not available');
-      return;
-    }
+    const monaco = this.codeEditor.monaco;
 
     // Dispose previous provider if exists
     if (this.completionProviderDisposable) {
       this.completionProviderDisposable.dispose();
     }
 
-    // Determine which completion provider to register based on template type
-    let completionProvider: any;
-
     if (this.templateType === TemplateType.INBOUND_SMART_FUNCTION ||
         this.templateType === TemplateType.OUTBOUND_SMART_FUNCTION) {
-      // Register Flow Function completion provider (SMART_FUNCTION)
-      completionProvider = createCompletionProviderFlowFunction(monaco);
+      this.completionProviderDisposable = createCompletionProviderFlowFunction(monaco);
     } else if (this.templateType === TemplateType.INBOUND_SUBSTITUTION_AS_CODE ||
                this.templateType === TemplateType.OUTBOUND_SUBSTITUTION_AS_CODE) {
-      // Register Substitution as Code completion provider
-      completionProvider = createCompletionProviderSubstitutionAsCode(monaco);
+      this.completionProviderDisposable = createCompletionProviderSubstitutionAsCode(monaco);
     } else {
       // For SHARED and SYSTEM templates, register both providers
-      const smartFunctionProvider = createCompletionProviderFlowFunction(monaco);
-      const substitutionProvider = createCompletionProviderSubstitutionAsCode(monaco);
-
-      // Register both providers
-      const disposable1 = monaco.languages.registerCompletionItemProvider('javascript', smartFunctionProvider);
-      const disposable2 = monaco.languages.registerCompletionItemProvider('javascript', substitutionProvider);
-
-      // Store combined disposable
-      this.completionProviderDisposable = {
-        dispose: () => {
-          disposable1.dispose();
-          disposable2.dispose();
-        }
-      };
-      return;
-    }
-
-    // Register single provider
-    if (completionProvider) {
-      this.completionProviderDisposable = monaco.languages.registerCompletionItemProvider(
-        'javascript',
-        completionProvider
-      );
+      const d1 = createCompletionProviderFlowFunction(monaco);
+      const d2 = createCompletionProviderSubstitutionAsCode(monaco);
+      this.completionProviderDisposable = { dispose: () => { d1.dispose(); d2.dispose(); } };
     }
   }
 
@@ -383,6 +358,7 @@ export class CodeComponent implements OnInit, AfterViewInit {
 
   onSelectCodeTemplate(): void {
     this.codeTemplateDecoded = this.codeTemplatesDecoded.get(this.template)!;
+    this.editorOptions = { ...this.editorOptions, readOnly: !!this.codeTemplateDecoded?.readonly };
   }
 
 }
