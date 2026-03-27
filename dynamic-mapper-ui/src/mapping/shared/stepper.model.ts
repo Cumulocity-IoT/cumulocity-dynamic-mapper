@@ -65,7 +65,7 @@ type ClassOrEnum = ClassDefinition | EnumDefinition;
  * @param {Monaco} monaco - The Monaco instance
  * @returns {{ dispose: () => void }} Combined disposable for both providers
  */
-export function createCompletionProviderFlowFunction(monaco) {
+export function createCompletionProviderFlowFunction(monaco: any): { dispose: () => void } {
   // Register flow-specific classes and interfaces
   const customClasses: ClassOrEnum[] = [
     {
@@ -142,15 +142,19 @@ export function createCompletionProviderFlowFunction(monaco) {
       properties: [],
       methods: [
         { name: 'setState', parameters: ['key', 'value'], returnType: 'void', documentation: 'Persists a value by key. State survives across message invocations for the same mapping and is cleared when the mapping is deleted.' },
-        { name: 'getState', parameters: ['key'], returnType: 'any', documentation: 'Retrieves a persisted state value. Returns the value stored by a previous invocation, or null on first call.' },
-        { name: 'clearState', parameters: [], returnType: 'void', documentation: 'Clears all persisted state for the current mapping.' },
+        { name: 'getState', parameters: ['key', 'defaultValue?'], returnType: 'any', documentation: 'Retrieves a persisted state value. Returns the value stored by a previous invocation, or the defaultValue (if provided) on first call.' },
+        { name: 'getStateAll', parameters: [], returnType: 'Record<string, any>', documentation: 'Returns all persisted state entries for the current mapping as a plain object.' },
+        { name: 'getStateKeySet', parameters: [], returnType: 'string[]', documentation: 'Returns the set of all keys currently stored in the mapping state.' },
+        { name: 'clearState', parameters: [], returnType: 'void', documentation: 'Clears all persisted state for the current mapping. On clearState the state is flushed to the persistent store.' },
         { name: 'getConfig', parameters: [], returnType: 'Record<string, any>', documentation: 'Returns the mapping configuration object.' },
-        { name: 'getClientId', parameters: [], returnType: 'string', documentation: 'Returns the transport/MQTT client ID associated with this mapping.' },
+        { name: 'getClientId', parameters: [], returnType: 'string | undefined', documentation: 'Returns the transport/MQTT client ID associated with this mapping, or undefined if not set.' },
+        { name: 'getExternalId', parameters: [], returnType: 'string | undefined', documentation: 'Returns the external ID of the device derived from the mapping config (requires useExternalId enabled and externalIdType configured), or undefined if not available.' },
         { name: 'getTesting', parameters: [], returnType: 'boolean', documentation: 'Returns true if the mapping is currently being tested (not in production).' },
-        { name: 'addLogMessage', parameters: ['message'], returnType: 'void', documentation: 'Adds a log message that will be included in the processing result for debugging.' },
+        { name: 'addLogMessage', parameters: ['message'], returnType: 'void', documentation: 'Adds a log message stored under _LOGS_ in state. Visible in the processing result for debugging.' },
+        { name: 'logMessage', parameters: ['message'], returnType: 'void', documentation: 'Alias for addLogMessage(). Adds a log message stored under _LOGS_ in state.' },
         { name: 'getDTMAsset', parameters: ['assetId'], returnType: 'Record<string, any>', documentation: 'Lookup DTM Asset properties by asset ID.' },
-        { name: 'getManagedObject', parameters: ['c8ySourceId'], returnType: 'any', documentation: 'Lookup a device from inventory cache by internal Cumulocity device ID.' },
-        { name: 'getManagedObjectByExternalId', parameters: ['externalId'], returnType: 'any', documentation: 'Lookup a device from inventory cache by external ID.' }
+        { name: 'getManagedObject', parameters: ['c8ySourceId'], returnType: 'C8yManagedObject | null', documentation: 'Lookup a device from inventory cache by internal Cumulocity device ID. Returns null if not found.' },
+        { name: 'getManagedObjectByExternalId', parameters: ['externalId: ExternalId'], returnType: 'C8yManagedObject | null', documentation: 'Lookup a device from inventory cache by ExternalId object ({ externalId, type }). Returns null if not found.' }
       ],
       documentation: 'Context object providing state management, configuration access, and device lookup capabilities'
     },
@@ -232,7 +236,7 @@ export function createCompletionProviderFlowFunction(monaco) {
     },
     {
       name: 'createDeviceMessage',
-      parameters: ['payload', 'topic'],
+      parameters: ['topic', 'payload'],
       returnType: 'DeviceMessage',
       documentation: 'Creates a new DeviceMessage with Uint8Array payload and topic. Use TextEncoder for string conversion.',
       description: 'Create new device message'
@@ -326,7 +330,7 @@ export function createCompletionProviderFlowFunction(monaco) {
   // Register completion and hover providers
   const completionDisposable = monaco.languages.registerCompletionItemProvider('javascript', {
     triggerCharacters: ['.', ' ', '('],
-    provideCompletionItems: function (model, position, context, token) {
+    provideCompletionItems: function (model: any, position: any, _context: any, _token: any) {
       const textUntilPosition = model.getValueInRange({
         startLineNumber: position.lineNumber,
         startColumn: 1,
@@ -620,7 +624,7 @@ export function createCompletionProviderFlowFunction(monaco) {
   });
 
   const hoverDisposable = monaco.languages.registerHoverProvider('javascript', {
-    provideHover: function(model, position) {
+    provideHover: function(model: any, position: any) {
       const word = model.getWordAtPosition(position);
       if (!word) return null;
       const w = word.word;
@@ -677,7 +681,7 @@ export function createCompletionProviderFlowFunction(monaco) {
  * @param {Monaco} monaco - The Monaco instance
  * @returns {{ dispose: () => void }} Combined disposable for both providers
  */
-export function createCompletionProviderSubstitutionAsCode(monaco) {
+export function createCompletionProviderSubstitutionAsCode(monaco: any): { dispose: () => void } {
   // Register our custom classes and enums
   const customClasses: ClassOrEnum[] = [
     {
@@ -744,7 +748,7 @@ export function createCompletionProviderSubstitutionAsCode(monaco) {
         { name: 'put', parameters: ['key', 'value'], returnType: 'any', documentation: 'Adds a key-value pair to the map.' },
         { name: 'get', parameters: ['key'], returnType: 'any', documentation: 'Gets the value for the specified key.' },
         { name: 'containsKey', parameters: ['key'], returnType: 'boolean', documentation: 'Returns whether the map contains the specified key.' },
-        { name: 'keySet', parameters: [], returnType: 'Array', documentation: 'Returns an array of keys in the map.' }
+        { name: 'keySet', parameters: [], returnType: 'Array<string>', documentation: 'Returns an array of keys in the map.' }
       ],
       documentation: 'A JavaScript implementation of Java HashMap.'
     },
@@ -818,7 +822,7 @@ export function createCompletionProviderSubstitutionAsCode(monaco) {
   // Register completion and hover providers
   const completionDisposable = monaco.languages.registerCompletionItemProvider('javascript', {
     triggerCharacters: ['.', ' ', '('],
-    provideCompletionItems: function (model, position, context, token) {
+    provideCompletionItems: function (model: any, position: any, _context: any, _token: any) {
       const textUntilPosition = model.getValueInRange({
         startLineNumber: position.lineNumber,
         startColumn: 1,
@@ -1085,7 +1089,7 @@ export function createCompletionProviderSubstitutionAsCode(monaco) {
   });
 
   const hoverDisposable = monaco.languages.registerHoverProvider('javascript', {
-    provideHover: function(model, position) {
+    provideHover: function(model: any, position: any) {
       const word = model.getWordAtPosition(position);
       if (!word) return null;
       const w = word.word;
