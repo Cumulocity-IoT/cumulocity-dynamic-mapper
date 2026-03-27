@@ -685,12 +685,13 @@ public class ConfigurationController {
     @PutMapping(value = "/code/{id}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<HttpStatus> updateCodeTemplate(
             @Parameter(description = "The unique ID of the code template", example = "custom-template") @PathVariable String id,
+            @Parameter(description = "When true, the name/description from the request body override what is in the code header (use for rename operations)") @RequestParam(value = "override", required = false, defaultValue = "false") boolean overrideMetadata,
             @Valid @RequestBody CodeTemplate codeTemplate) {
         String tenant = contextService.getContext().getTenant();
         try {
             ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
             Map<String, CodeTemplate> codeTemplates = serviceConfiguration.getCodeTemplates();
-            serviceConfigurationService.rectifyHeaderInCodeTemplate(codeTemplate, false);
+            serviceConfigurationService.rectifyHeaderInCodeTemplate(codeTemplate, overrideMetadata);
             codeTemplates.put(id, codeTemplate);
             serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
             configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);

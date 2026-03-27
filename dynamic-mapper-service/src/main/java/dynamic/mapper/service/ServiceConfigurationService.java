@@ -382,16 +382,43 @@ public class ServiceConfigurationService {
                 String header = decodedCode.substring(0, headerEnd);
                 String codeBody = stripStaleTemplateHeaders(decodedCode.substring(headerEnd));
 
-                // Determine name and description based on overrideHeaderWithMetadata flag
-                String name = overrideHeaderWithMetadata ? codeTemplate.name : extractAnnotation(header, "@name");
-                String description = overrideHeaderWithMetadata ? codeTemplate.description : extractAnnotation(header, "@description");
-
-                // Fall back to template values if extraction returned empty
-                if (name == null || name.isEmpty()) {
-                    name = codeTemplate.name;
+                // Determine name and description based on overrideHeaderWithMetadata flag.
+                // override=true (rename): payload metadata wins → write into header.
+                // override=false (save):  header annotation wins → read from header and sync back to object.
+                String name;
+                String description;
+                if (overrideHeaderWithMetadata) {
+                    // Explicit rename: payload name/description must be non-empty
+                    name = (codeTemplate.name != null && !codeTemplate.name.isEmpty())
+                            ? codeTemplate.name
+                            : extractAnnotation(header, "@name");
+                    description = (codeTemplate.description != null && !codeTemplate.description.isEmpty())
+                            ? codeTemplate.description
+                            : extractAnnotation(header, "@description");
+                    if (name == null || name.isEmpty()) {
+                        log.warn("Rename requested but no name provided for template [{}]; keeping existing header name", codeTemplate.id);
+                        name = extractAnnotation(header, "@name");
+                    }
+                } else {
+                    // Regular save: trust the header annotation, fall back to object only when header has no value
+                    name = extractAnnotation(header, "@name");
+                    description = extractAnnotation(header, "@description");
+                    if (name == null || name.isEmpty()) {
+                        log.debug("No @name in header for template [{}]; falling back to object name '{}'", codeTemplate.id, codeTemplate.name);
+                        name = codeTemplate.name;
+                    }
+                    if (description == null || description.isEmpty()) {
+                        description = codeTemplate.description;
+                    }
                 }
-                if (description == null || description.isEmpty()) {
-                    description = codeTemplate.description;
+
+                // Guard: never write a null or blank name/description into the header
+                if (name == null || name.isEmpty()) {
+                    log.warn("Could not resolve name for template [{}]; skipping header @name update", codeTemplate.id);
+                    name = codeTemplate.name != null ? codeTemplate.name : codeTemplate.id;
+                }
+                if (description == null) {
+                    description = "";
                 }
 
                 // Update header annotations
@@ -399,7 +426,7 @@ public class ServiceConfigurationService {
                 header = updateAnnotation(header, "@description", description);
                 header = updateAnnotation(header, "@templateType", codeTemplate.templateType.name());
 
-                // Update name and description in the template object
+                // Sync resolved name/description back to the object so callers see the final state
                 codeTemplate.name = name;
                 codeTemplate.description = description;
 

@@ -261,17 +261,17 @@ export class SharedService {
     );
   }
 
-  async updateCodeTemplate(id: string, codeTemplate: CodeTemplate) {
-    const response = await this.client.fetch(
-      `${BASE_URL}/${PATH_CONFIGURATION_CODE_TEMPLATE_ENDPOINT}/${id}`,
-      {
-        headers: {
-          'content-type': 'application/json'
-        },
-        body: JSON.stringify(codeTemplate),
-        method: 'PUT'
-      }
-    );
+  async updateCodeTemplate(id: string, codeTemplate: CodeTemplate, overrideMetadata = false) {
+    const url = overrideMetadata
+      ? `${BASE_URL}/${PATH_CONFIGURATION_CODE_TEMPLATE_ENDPOINT}/${id}?override=true`
+      : `${BASE_URL}/${PATH_CONFIGURATION_CODE_TEMPLATE_ENDPOINT}/${id}`;
+    const response = await this.client.fetch(url, {
+      headers: {
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify(codeTemplate),
+      method: 'PUT'
+    });
     return response;
   }
 

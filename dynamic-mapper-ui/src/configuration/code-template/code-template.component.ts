@@ -92,8 +92,6 @@ export class CodeComponent implements OnInit, AfterViewInit, OnDestroy {
     this.template = this.defaultTemplate;
 
     await this.updateCodeTemplateEntries();
-    this.codeTemplateDecoded = this.codeTemplatesDecoded.get(this.template)!;
-    this.onSelectCodeTemplate();
   }
 
   private determineTemplateTypeFromUrl(): void {
@@ -191,6 +189,7 @@ export class CodeComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.codeTemplateEntries$.next(this.codeTemplateEntries);
     this.decodeCodeTemplates();
+    this.onSelectCodeTemplate();
     this.isLoading = false;
   }
 
@@ -299,7 +298,7 @@ export class CodeComponent implements OnInit, AfterViewInit, OnDestroy {
       const response = await this.sharedService.updateCodeTemplate(currentTemplate, {
         ...this.codeTemplateDecoded,
         code: encodedCode
-      });
+      }, true);
       if (response.ok) {
         this.alertService.success(gettext('Renamed code template'));
       } else {
