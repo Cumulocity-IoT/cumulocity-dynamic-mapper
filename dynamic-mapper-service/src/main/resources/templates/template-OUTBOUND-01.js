@@ -2,7 +2,6 @@
  * @description Default template
  * @name Default template using external identifier
  * @templateType OUTBOUND_SUBSTITUTION_AS_CODE
- * @direction OUTBOUND
  * @defaultTemplate true
  * @internal true
  * @readonly true

@@ -2,7 +2,6 @@
  * @name Smart Function using device data for enrichment
  * @description Creates either c8y_CurrentMeasurement or c8y_VoltageMeasurement, depending on the inventory data (enrichment)
  * @templateType INBOUND_SMART_FUNCTION
- * @direction INBOUND
  * @defaultTemplate false
  * @internal true
  * @readonly true

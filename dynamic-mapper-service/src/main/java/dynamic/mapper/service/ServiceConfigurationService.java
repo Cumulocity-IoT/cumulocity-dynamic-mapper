@@ -25,10 +25,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -139,10 +142,14 @@ public class ServiceConfigurationService {
             content = new String(is.readAllBytes(), StandardCharsets.UTF_8);
         }
 
-        String name = extractAnnotation(content, "@name");
-        String description = extractAnnotation(content, "@description");
-        boolean internal = Boolean.parseBoolean(extractAnnotation(content, "@internal"));
-        String templateTypeStr = extractAnnotation(content, "@templateType");
+        // Scope annotation parsing to the JSDoc header only, not the full file
+        int headerEnd = findJSDocHeaderEnd(content);
+        String header = (headerEnd != -1) ? content.substring(0, headerEnd) : content;
+
+        String name = extractAnnotation(header, "@name");
+        String description = extractAnnotation(header, "@description");
+        boolean internal = Boolean.parseBoolean(extractAnnotation(header, "@internal"));
+        String templateTypeStr = extractAnnotation(header, "@templateType");
 
         TemplateType templateType;
         try {
@@ -152,20 +159,27 @@ public class ServiceConfigurationService {
             return;
         }
 
-        // MIGRATION: derive direction from templateType if not found in annotations
-        String directionAsString = extractAnnotation(content, "@direction");
-        if (directionAsString == null || directionAsString.isEmpty()) {
-            directionAsString = templateTypeStr;
-        }
+        // Derive direction from @direction annotation; fall back to templateType prefix
+        String directionAsString = extractAnnotation(header, "@direction");
         Direction direction = null;
-        try {
-            direction = Direction.valueOf(directionAsString);
-        } catch (IllegalArgumentException e) {
-            // direction is optional
+        if (directionAsString != null && !directionAsString.isEmpty()) {
+            try {
+                direction = Direction.valueOf(directionAsString);
+            } catch (IllegalArgumentException e) {
+                log.debug("Could not parse @direction '{}' in file {}; deriving from templateType", directionAsString, fileName);
+            }
+        }
+        if (direction == null) {
+            // Derive from templateType prefix: INBOUND_* → INBOUND, OUTBOUND_* → OUTBOUND
+            if (templateTypeStr.startsWith("INBOUND")) {
+                direction = Direction.INBOUND;
+            } else if (templateTypeStr.startsWith("OUTBOUND")) {
+                direction = Direction.OUTBOUND;
+            }
         }
 
-        boolean defaultTemplate = Boolean.parseBoolean(extractAnnotation(content, "@defaultTemplate"));
-        boolean readonly = Boolean.parseBoolean(extractAnnotation(content, "@readonly"));
+        boolean defaultTemplate = Boolean.parseBoolean(extractAnnotation(header, "@defaultTemplate"));
+        boolean readonly = Boolean.parseBoolean(extractAnnotation(header, "@readonly"));
 
         String templateId;
         if (defaultTemplate && !defaultTemplateRegistered.get(templateType)) {
@@ -183,6 +197,10 @@ public class ServiceConfigurationService {
         CodeTemplate template = new CodeTemplate(
                 templateId, name, description, templateType, direction,
                 encode(content), internal, readonly, defaultTemplate);
+
+        // Migrate header to two-section format on load so the divider is always present
+        rectifyHeaderInCodeTemplate(template);
+
         codeTemplates.put(templateId, template);
 
         log.info("Loaded template: {} ({})", name, templateId);
@@ -356,109 +374,61 @@ public class ServiceConfigurationService {
      * CodeTemplate object. Ensures that the header's metadata is consistent with
      * the object's properties.
      */
-    public void rectifyHeaderInCodeTemplate(CodeTemplate codeTemplate, Boolean overrideHeaderWithMetadata) {
+    /**
+     * Synchronizes the JSDoc header inside the code with the POJO fields.
+     * The POJO is always the single source of truth — header annotations are
+     * a write-only artefact generated from the POJO, never parsed back.
+     */
+    public void rectifyHeaderInCodeTemplate(CodeTemplate codeTemplate) {
         if (codeTemplate == null || codeTemplate.code == null || codeTemplate.code.isEmpty()) {
             log.warn("Cannot rectify header: CodeTemplate or its code is null or empty");
             return;
         }
 
         try {
-            // First decode the Base64 encoded code
             String decodedCode = decode(codeTemplate.code);
             if (decodedCode.isEmpty()) {
                 log.warn("Cannot rectify header: Failed to decode template code");
                 return;
             }
 
-            // Validate and clean corrupted headers before processing
+            // Remove any corrupted or duplicate headers
             decodedCode = cleanCorruptedHeader(decodedCode, codeTemplate);
 
-            // Extract the header section - look for JSDoc block at the start of the file
             int headerEnd = findJSDocHeaderEnd(decodedCode);
             if (headerEnd == -1) {
-                // No proper header found, create a new one
+                // No header present — prepend one generated from POJO fields
                 decodedCode = createNewHeader(codeTemplate) + decodedCode;
             } else {
                 String header = decodedCode.substring(0, headerEnd);
                 String codeBody = stripStaleTemplateHeaders(decodedCode.substring(headerEnd));
 
-                // Determine name and description based on overrideHeaderWithMetadata flag.
-                // override=true (rename): payload metadata wins → write into header.
-                // override=false (save):  header annotation wins → read from header and sync back to object.
-                String name;
-                String description;
-                if (overrideHeaderWithMetadata) {
-                    // Explicit rename: payload name/description must be non-empty
-                    name = (codeTemplate.name != null && !codeTemplate.name.isEmpty())
-                            ? codeTemplate.name
-                            : extractAnnotation(header, "@name");
-                    description = (codeTemplate.description != null && !codeTemplate.description.isEmpty())
-                            ? codeTemplate.description
-                            : extractAnnotation(header, "@description");
-                    if (name == null || name.isEmpty()) {
-                        log.warn("Rename requested but no name provided for template [{}]; keeping existing header name", codeTemplate.id);
-                        name = extractAnnotation(header, "@name");
-                    }
-                } else {
-                    // Regular save: trust the header annotation, fall back to object only when header has no value
-                    name = extractAnnotation(header, "@name");
-                    description = extractAnnotation(header, "@description");
-                    if (name == null || name.isEmpty()) {
-                        log.debug("No @name in header for template [{}]; falling back to object name '{}'", codeTemplate.id, codeTemplate.name);
-                        name = codeTemplate.name;
-                    }
-                    if (description == null || description.isEmpty()) {
-                        description = codeTemplate.description;
-                    }
-                }
+                // POJO is the source of truth: write user-editable fields into header
+                String name = (codeTemplate.name != null && !codeTemplate.name.isEmpty())
+                        ? codeTemplate.name : codeTemplate.id;
+                String description = codeTemplate.description != null ? codeTemplate.description : "";
 
-                // Guard: never write a null or blank name/description into the header
-                if (name == null || name.isEmpty()) {
-                    log.warn("Could not resolve name for template [{}]; skipping header @name update", codeTemplate.id);
-                    name = codeTemplate.name != null ? codeTemplate.name : codeTemplate.id;
-                }
-                if (description == null) {
-                    description = "";
-                }
-
-                // Update header annotations
                 header = updateAnnotation(header, "@name", name);
                 header = updateAnnotation(header, "@description", description);
-                header = updateAnnotation(header, "@templateType", codeTemplate.templateType.name());
 
-                // Sync resolved name/description back to the object so callers see the final state
-                codeTemplate.name = name;
-                codeTemplate.description = description;
-
-                // Handle direction annotation - use codeTemplate.direction if available
-                Direction direction = codeTemplate.direction;
-                if (direction == null) {
-                    // MIGRATION: Try to extract from header for backward compatibility
-                    String directionAsString = extractAnnotation(header, "@direction");
-                    if (directionAsString != null && !directionAsString.isEmpty()) {
-                        try {
-                            direction = Direction.valueOf(directionAsString);
-                        } catch (IllegalArgumentException e) {
-                            log.debug("Could not parse direction from header: {}", directionAsString);
-                        }
-                    }
+                // Replace the entire system section (from divider to closing */) with
+                // freshly generated content so users can never accidentally corrupt it
+                int markerPos = header.indexOf(SYSTEM_SECTION_MARKER);
+                if (markerPos != -1) {
+                    // Replace from the marker to end of header (which ends with */)
+                    header = header.substring(0, markerPos) + buildSystemSection(codeTemplate);
+                } else {
+                    // No divider yet — migrate to two-section format.
+                    // Preserve any free-form lines (sample payloads, docs) that sit between
+                    // the old system annotations so they are not lost.
+                    header = migrateHeaderToTwoSections(header, name, description, codeTemplate);
                 }
 
-                // Only add @direction annotation if direction is not null
-                if (direction != null) {
-                    header = updateAnnotation(header, "@direction", direction.name());
-                }
-
-                // Update boolean annotations
-                header = updateAnnotation(header, "@defaultTemplate", String.valueOf(codeTemplate.defaultTemplate));
-                header = updateAnnotation(header, "@internal", String.valueOf(codeTemplate.internal));
-                header = updateAnnotation(header, "@readonly", String.valueOf(codeTemplate.readonly));
-
-                // Combine updated header with code body
-                decodedCode = header + codeBody;
+                // Normalize to exactly one blank line between header closing */ and code body,
+                // preventing an extra newline from accumulating on every save
+                decodedCode = header + "\n\n" + codeBody.replaceAll("^\n+", "");
             }
 
-            // Re-encode the updated code and set it back to the template
             codeTemplate.code = encode(decodedCode);
             log.info("Successfully rectified header for template: {}", codeTemplate.name);
 
@@ -598,25 +568,95 @@ public class ServiceConfigurationService {
         return -1;
     }
 
+    private static final Set<String> SYSTEM_ANNOTATIONS =
+            Set.of("@name", "@description", "@templateType", "@direction", "@defaultTemplate", "@internal", "@readonly");
+    // Note: @direction is included for migration stripping (redundant — derivable from @templateType prefix)
+
+    /**
+     * Migrates a legacy single-section header (all annotations mixed with free-form
+     * text) to the new two-section format. System annotations are stripped from
+     * their original positions and free-form documentation lines are preserved
+     * between {@code @description} and the new system section divider.
+     */
+    private String migrateHeaderToTwoSections(String header, String name, String description,
+            CodeTemplate codeTemplate) {
+        // Split the raw header into individual lines
+        String[] lines = header.split("\n", -1);
+        List<String> freeFormLines = new ArrayList<>();
+        for (String line : lines) {
+            String trimmed = line.trim();
+            // Skip the JSDoc opener/closer and any line that IS a system annotation
+            if (trimmed.equals("/**") || trimmed.equals("*/") || trimmed.equals("*")) {
+                continue;
+            }
+            boolean isSystemAnnotation = SYSTEM_ANNOTATIONS.stream()
+                    .anyMatch(ann -> trimmed.startsWith("* " + ann) || trimmed.equals("*" + ann));
+            if (!isSystemAnnotation) {
+                freeFormLines.add(line);
+            }
+        }
+
+        // Strip trailing blank comment lines from the free-form block
+        while (!freeFormLines.isEmpty()) {
+            String t = freeFormLines.get(freeFormLines.size() - 1).trim();
+            if (t.isEmpty() || t.equals("*")) {
+                freeFormLines.remove(freeFormLines.size() - 1);
+            } else {
+                break;
+            }
+        }
+
+        StringBuilder newHeader = new StringBuilder();
+        newHeader.append("/**\n");
+        newHeader.append(" * @name ").append(name).append("\n");
+        newHeader.append(" * @description ").append(description).append("\n");
+        if (!freeFormLines.isEmpty()) {
+            newHeader.append(" *\n");
+            for (String line : freeFormLines) {
+                newHeader.append(line).append("\n");
+            }
+        }
+        newHeader.append(" *\n");
+        newHeader.append(buildSystemSection(codeTemplate));
+        return newHeader.toString();
+    }
+
+    private static final String SYSTEM_SECTION_MARKER =
+            " * --- system metadata (auto-generated, do not edit below this line) ---";
+
+    /**
+     * Builds the system-managed section of a JSDoc header from POJO fields.
+     * This section is auto-generated on every save and should not be edited manually.
+     */
+    private String buildSystemSection(CodeTemplate codeTemplate) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(SYSTEM_SECTION_MARKER).append("\n");
+        sb.append(" * @templateType ").append(codeTemplate.templateType.name()).append("\n");
+        sb.append(" * @defaultTemplate ").append(codeTemplate.defaultTemplate).append("\n");
+        sb.append(" * @internal ").append(codeTemplate.internal).append("\n");
+        sb.append(" * @readonly ").append(codeTemplate.readonly).append("\n");
+        sb.append(" */");
+        return sb.toString();
+    }
+
     /**
      * Creates a new header block with annotations for a CodeTemplate.
-     * 
+     * The header is split into a user-editable section (name, description) and
+     * a system-managed section separated by a visual divider.
+     *
      * @param codeTemplate The CodeTemplate to create the header for
      * @return A properly formatted header block with annotations
      */
     private String createNewHeader(CodeTemplate codeTemplate) {
+        String name = (codeTemplate.name != null && !codeTemplate.name.isEmpty())
+                ? codeTemplate.name : codeTemplate.id;
+        String description = codeTemplate.description != null ? codeTemplate.description : "";
         StringBuilder header = new StringBuilder();
         header.append("/**\n");
-        header.append(" * @name ").append(codeTemplate.name).append("\n");
-        header.append(" * @description ").append(codeTemplate.description).append("\n");
-        header.append(" * @templateType ").append(codeTemplate.templateType.name()).append("\n");
-        if (codeTemplate.direction != null) {
-            header.append(" * @direction ").append(codeTemplate.direction).append("\n");
-        }
-        header.append(" * @defaultTemplate ").append(codeTemplate.defaultTemplate).append("\n");
-        header.append(" * @internal ").append(codeTemplate.internal).append("\n");
-        header.append(" * @readonly ").append(codeTemplate.readonly).append("\n");
-        header.append(" */\n\n");
+        header.append(" * @name ").append(name).append("\n");
+        header.append(" * @description ").append(description).append("\n");
+        header.append(" *\n");
+        header.append(buildSystemSection(codeTemplate)).append("\n\n");
         return header.toString();
     }
 

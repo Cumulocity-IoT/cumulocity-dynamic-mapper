@@ -290,21 +290,21 @@ export class CodeComponent implements OnInit, AfterViewInit, OnDestroy {
   async onRenameCodeTemplate() {
     if (!this.codeTemplateDecoded) return;
 
-    // Preserve the current template selection after rename
     const currentTemplate = this.template;
     await this.openTemplateModal('RENAME', this.codeTemplateDecoded.name, async (updatedTemplate) => {
       this.codeTemplateDecoded.name = updatedTemplate.name!;
+      this.codeTemplateDecoded.description = updatedTemplate.description ?? this.codeTemplateDecoded.description;
       const encodedCode = stringToBase64(this.codeTemplateDecoded.code);
       const response = await this.sharedService.updateCodeTemplate(currentTemplate, {
         ...this.codeTemplateDecoded,
         code: encodedCode
-      }, true);
+      });
       if (response.ok) {
-        this.alertService.success(gettext('Renamed code template'));
+        this.alertService.success(gettext('Updated code template metadata'));
       } else {
-        this.alertService.danger(gettext('Failed to rename code template'));
+        this.alertService.danger(gettext('Failed to update code template metadata'));
       }
-    }, currentTemplate);
+    }, currentTemplate, this.codeTemplateDecoded.description);
   }
 
   async onDuplicateCodeTemplate() {
@@ -332,11 +332,12 @@ export class CodeComponent implements OnInit, AfterViewInit, OnDestroy {
     action: string,
     defaultName: string,
     onSuccess: (template: Partial<CodeTemplate>) => Promise<void>,
-    postActionTemplate?: string
+    postActionTemplate?: string,
+    defaultDescription?: string
   ): Promise<void> {
     const initialState = {
       action,
-      codeTemplate: { name: defaultName }
+      codeTemplate: { name: defaultName, description: defaultDescription ?? '' }
     };
 
     const modalRef = this.bsModalService.show(ManageTemplateComponent, { initialState });

@@ -6,7 +6,6 @@
  *              for the first time. The deviceGroups list names the device groups the device is added to
  *              as a child asset; missing groups are created automatically.
  * @templateType INBOUND_SMART_FUNCTION
- * @direction INBOUND
  * @defaultTemplate false
  * @internal true
  * @readonly true

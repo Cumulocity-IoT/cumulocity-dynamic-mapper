@@ -2,7 +2,6 @@
  * @name Sample persistent state - running statistics
  * @description Tracks message count and running average temperature across invocations
  * @templateType INBOUND_SMART_FUNCTION
- * @direction INBOUND
  * @defaultTemplate false
  * @internal true
  * @readonly true

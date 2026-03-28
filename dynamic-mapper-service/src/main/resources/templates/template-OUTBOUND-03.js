@@ -2,7 +2,6 @@
  * @name Template overriding method: POST, PATCH
  * @description This sample shows how to perform a partial update using the PATCH method
  * @templateType OUTBOUND_SUBSTITUTION_AS_CODE
- * @direction OUTBOUND
  * @defaultTemplate false
  * @internal true
  * @readonly true

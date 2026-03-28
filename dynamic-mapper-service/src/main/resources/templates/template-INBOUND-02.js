@@ -2,7 +2,6 @@
  * @name Template creates multiple measurements
  * @description Template creates multiple measurements from an array of values
  * @templateType INBOUND_SUBSTITUTION_AS_CODE
- * @direction INBOUND
  * @defaultTemplate false
  * @internal true
  * @readonly true

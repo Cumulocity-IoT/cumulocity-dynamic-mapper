@@ -685,13 +685,17 @@ public class ConfigurationController {
     @PutMapping(value = "/code/{id}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<HttpStatus> updateCodeTemplate(
             @Parameter(description = "The unique ID of the code template", example = "custom-template") @PathVariable String id,
-            @Parameter(description = "When true, the name/description from the request body override what is in the code header (use for rename operations)") @RequestParam(value = "override", required = false, defaultValue = "false") boolean overrideMetadata,
             @Valid @RequestBody CodeTemplate codeTemplate) {
+        if (codeTemplate.id != null && !id.equals(codeTemplate.id)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    String.format("Path id '%s' does not match body id '%s'", id, codeTemplate.id));
+        }
+        codeTemplate.id = id;
         String tenant = contextService.getContext().getTenant();
         try {
             ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
             Map<String, CodeTemplate> codeTemplates = serviceConfiguration.getCodeTemplates();
-            serviceConfigurationService.rectifyHeaderInCodeTemplate(codeTemplate, overrideMetadata);
+            serviceConfigurationService.rectifyHeaderInCodeTemplate(codeTemplate);
             codeTemplates.put(id, codeTemplate);
             serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
             configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
@@ -736,7 +740,7 @@ public class ConfigurationController {
                 throw new ResponseStatusException(HttpStatus.CONFLICT,
                         String.format("Template with id '%s' already exists", codeTemplate.id));
             }
-            serviceConfigurationService.rectifyHeaderInCodeTemplate(codeTemplate, true);
+            serviceConfigurationService.rectifyHeaderInCodeTemplate(codeTemplate);
             codeTemplates.put(codeTemplate.id, codeTemplate);
             serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
             configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);

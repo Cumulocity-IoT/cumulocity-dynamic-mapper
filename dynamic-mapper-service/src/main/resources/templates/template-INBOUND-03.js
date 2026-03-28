@@ -2,7 +2,6 @@
  * @name Snippet shows overriding API
  * @description Snippet shows overriding API: ALARM, EVENT MEASUREMENT, ...
  * @templateType INBOUND_SUBSTITUTION_AS_CODE
- * @direction INBOUND
  * @defaultTemplate false
  * @internal true
  * @readonly true

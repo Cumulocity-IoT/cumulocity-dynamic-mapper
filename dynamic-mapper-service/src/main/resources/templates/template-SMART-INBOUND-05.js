@@ -2,7 +2,6 @@
  * @name Sample parsing payload as CSV
  * @description Create measurement parsing payload as CSV
  * @templateType INBOUND_SMART_FUNCTION
- * @direction INBOUND
  * @defaultTemplate false
  * @internal true
  * @readonly true

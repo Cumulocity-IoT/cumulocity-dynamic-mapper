@@ -43,10 +43,10 @@
     <i c8yIcon="minus-circle"></i>
     {{ 'Delete' | translate }}
   </button>
-  <button class="btn btn-link" title="{{ 'Rename' | translate }}" (click)="onRenameCodeTemplate()"
+  <button class="btn btn-link" title="{{ 'Edit metadata' | translate }}" (click)="onRenameCodeTemplate()"
     [disabled]="codeTemplateDecoded?.internal || !feature?.userHasMappingAdminRole">
     <i c8yIcon="edit"></i>
-    {{ 'Rename' | translate }}
+    {{ 'Edit' | translate }}
   </button>
   <button class="btn btn-link" title="{{ 'Duplicate' | translate }}" (click)="onDuplicateCodeTemplate()"
     [disabled]="codeTemplateDecoded?.templateType === TemplateType.SHARED || codeTemplateDecoded?.templateType === TemplateType.SYSTEM || !feature?.userHasMappingAdminRole">

@@ -2,7 +2,6 @@
  * @name Default template, one measurement
  * @description Default template, one measurement
  * @templateType INBOUND_SUBSTITUTION_AS_CODE
- * @direction INBOUND
  * @defaultTemplate true
  * @internal true
  * @readonly true
