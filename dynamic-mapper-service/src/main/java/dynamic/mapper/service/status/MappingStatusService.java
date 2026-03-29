@@ -452,7 +452,16 @@ public class MappingStatusService {
         updateMor.setAttrs(fragment);
 
         subscriptionsService.runForTenant(tenant, () -> {
-            inventoryApi.update(updateMor, false);
+            try {
+                inventoryApi.update(updateMor, false);
+            } catch (jakarta.ws.rs.ProcessingException e) {
+                if (e.getCause() instanceof org.apache.http.NoHttpResponseException) {
+                    log.warn("{} - Stale connection detected, retrying inventory update", tenant);
+                    inventoryApi.update(updateMor, false);
+                } else {
+                    throw e;
+                }
+            }
         });
     }
 }
