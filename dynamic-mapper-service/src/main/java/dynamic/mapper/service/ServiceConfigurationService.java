@@ -403,25 +403,20 @@ public class ServiceConfigurationService {
                 String header = decodedCode.substring(0, headerEnd);
                 String codeBody = stripStaleTemplateHeaders(decodedCode.substring(headerEnd));
 
-                // POJO is the source of truth: write user-editable fields into header
-                String name = (codeTemplate.name != null && !codeTemplate.name.isEmpty())
-                        ? codeTemplate.name : codeTemplate.id;
-                String description = codeTemplate.description != null ? codeTemplate.description : "";
-
-                header = updateAnnotation(header, "@name", name);
-                header = updateAnnotation(header, "@description", description);
-
-                // Replace the entire system section (from divider to closing */) with
-                // freshly generated content so users can never accidentally corrupt it
+                // Replace the system section (/** to end-of-marker line) with freshly
+                // generated content. Everything after the marker line (free-form docs + */)
+                // is preserved unchanged.
                 int markerPos = header.indexOf(SYSTEM_SECTION_MARKER);
                 if (markerPos != -1) {
-                    // Replace from the marker to end of header (which ends with */)
-                    header = header.substring(0, markerPos) + buildSystemSection(codeTemplate);
+                    int markerLineEnd = header.indexOf('\n', markerPos);
+                    if (markerLineEnd == -1) markerLineEnd = header.length();
+                    String tail = header.substring(markerLineEnd); // \n * docs... */
+                    header = buildSystemSection(codeTemplate) + tail;
                 } else {
                     // No divider yet — migrate to two-section format.
                     // Preserve any free-form lines (sample payloads, docs) that sit between
                     // the old system annotations so they are not lost.
-                    header = migrateHeaderToTwoSections(header, name, description, codeTemplate);
+                    header = migrateHeaderToTwoSections(header, codeTemplate);
                 }
 
                 // Normalize to exactly one blank line between header closing */ and code body,
@@ -578,14 +573,13 @@ public class ServiceConfigurationService {
      * their original positions and free-form documentation lines are preserved
      * between {@code @description} and the new system section divider.
      */
-    private String migrateHeaderToTwoSections(String header, String name, String description,
-            CodeTemplate codeTemplate) {
+    private String migrateHeaderToTwoSections(String header, CodeTemplate codeTemplate) {
         // Split the raw header into individual lines
         String[] lines = header.split("\n", -1);
         List<String> freeFormLines = new ArrayList<>();
         for (String line : lines) {
             String trimmed = line.trim();
-            // Skip the JSDoc opener/closer and any line that IS a system annotation
+            // Skip the JSDoc opener/closer, blank comment lines, and system annotations
             if (trimmed.equals("/**") || trimmed.equals("*/") || trimmed.equals("*")) {
                 continue;
             }
@@ -607,96 +601,53 @@ public class ServiceConfigurationService {
         }
 
         StringBuilder newHeader = new StringBuilder();
-        newHeader.append("/**\n");
-        newHeader.append(" * @name ").append(name).append("\n");
-        newHeader.append(" * @description ").append(description).append("\n");
+        newHeader.append(buildSystemSection(codeTemplate)).append("\n");
         if (!freeFormLines.isEmpty()) {
             newHeader.append(" *\n");
             for (String line : freeFormLines) {
                 newHeader.append(line).append("\n");
             }
         }
-        newHeader.append(" *\n");
-        newHeader.append(buildSystemSection(codeTemplate));
+        newHeader.append(" */");
         return newHeader.toString();
     }
 
     private static final String SYSTEM_SECTION_MARKER =
-            " * --- system metadata (auto-generated, do not edit below this line) ---";
+            " * --- metadata above is auto-generated, add your documentation below ---";
 
     /**
      * Builds the system-managed section of a JSDoc header from POJO fields.
      * This section is auto-generated on every save and should not be edited manually.
      */
     private String buildSystemSection(CodeTemplate codeTemplate) {
+        String name = (codeTemplate.name != null && !codeTemplate.name.isEmpty())
+                ? codeTemplate.name : codeTemplate.id;
+        String description = codeTemplate.description != null ? codeTemplate.description : "";
         StringBuilder sb = new StringBuilder();
-        sb.append(SYSTEM_SECTION_MARKER).append("\n");
+        sb.append("/**\n");
+        sb.append(" * @name ").append(name).append("\n");
+        sb.append(" * @description ").append(description).append("\n");
         sb.append(" * @templateType ").append(codeTemplate.templateType.name()).append("\n");
         sb.append(" * @defaultTemplate ").append(codeTemplate.defaultTemplate).append("\n");
         sb.append(" * @internal ").append(codeTemplate.internal).append("\n");
         sb.append(" * @readonly ").append(codeTemplate.readonly).append("\n");
-        sb.append(" */");
+        sb.append(SYSTEM_SECTION_MARKER);
         return sb.toString();
     }
 
     /**
-     * Creates a new header block with annotations for a CodeTemplate.
-     * The header is split into a user-editable section (name, description) and
-     * a system-managed section separated by a visual divider.
+     * Creates a new header block for a CodeTemplate with no pre-existing header.
+     * The user-editable area above the divider is empty; all metadata lives in
+     * the system-managed section below the divider.
      *
      * @param codeTemplate The CodeTemplate to create the header for
-     * @return A properly formatted header block with annotations
+     * @return A properly formatted header block
      */
     private String createNewHeader(CodeTemplate codeTemplate) {
-        String name = (codeTemplate.name != null && !codeTemplate.name.isEmpty())
-                ? codeTemplate.name : codeTemplate.id;
-        String description = codeTemplate.description != null ? codeTemplate.description : "";
-        StringBuilder header = new StringBuilder();
-        header.append("/**\n");
-        header.append(" * @name ").append(name).append("\n");
-        header.append(" * @description ").append(description).append("\n");
-        header.append(" *\n");
-        header.append(buildSystemSection(codeTemplate)).append("\n\n");
-        return header.toString();
+        // System section first, then empty user-doc area, then closing */
+        return buildSystemSection(codeTemplate) + "\n */\n\n";
     }
 
-    /**
-     * Updates an annotation in the content with a new value.
-     * If the annotation doesn't exist, it will be added inside the existing
-     * comment block, or a new block will be created.
-     * Ensures exactly one space between the annotation and its value.
-     */
-    private String updateAnnotation(String content, String annotation, String value) {
-        // Find the annotation in the content
-        int annotationIndex = content.indexOf(annotation);
-
-        if (annotationIndex == -1) {
-            // Annotation not found, add it at the beginning of the file, after any comment
-            // block
-            if (content.trim().startsWith("/**")) {
-                // There's already a comment block, add the annotation inside it
-                int commentEndIndex = content.indexOf("*/");
-                if (commentEndIndex != -1) {
-                    // Insert before the end of the comment with proper formatting
-                    return content.substring(0, commentEndIndex)
-                            + " * " + annotation + " " + value + "\n"
-                            + content.substring(commentEndIndex);
-                }
-            }
-
-            // No comment block or couldn't find end of comment, add a new comment block
-            return "/**\n * " + annotation + " " + value + "\n */\n" + content;
-        } else {
-            // Find the end of the current line
-            int lineEndIndex = content.indexOf('\n', annotationIndex);
-            if (lineEndIndex == -1) {
-                lineEndIndex = content.length();
-            }
-
-            // Replace the entire annotation line to ensure correct spacing
-            return content.substring(0, annotationIndex) + annotation + " " + value + content.substring(lineEndIndex);
-        }
-    }
 
     /**
      * Removes any stale template metadata JSDoc blocks from the code body.
