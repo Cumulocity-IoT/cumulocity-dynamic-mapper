@@ -112,25 +112,22 @@ public class ExtensionManager {
                     URL[] urls = { tempFile.toURI().toURL() };
                     externalClassLoader = new URLClassLoader(urls, App.class.getClassLoader());
 
-                    // Track the classloader for cleanup
-                    tenantExtensionClassLoaders.computeIfAbsent(tenant, k -> new java.util.concurrent.ConcurrentHashMap<>())
-                            .put(extName, externalClassLoader);
-
                     registerExtensionInProcessor(tenant, extension.getId().getValue(), extName, externalClassLoader,
                             external);
+
+                    // Only track the classloader after successful registration so a failed
+                    // registration does not leave a closed loader in the map.
+                    tenantExtensionClassLoaders.computeIfAbsent(tenant, k -> new java.util.concurrent.ConcurrentHashMap<>())
+                            .put(extName, externalClassLoader);
                 } else {
                     registerExtensionInProcessor(tenant, extension.getId().getValue(), extName, internalClassloader,
                             external);
                 }
             } catch (IOException e) {
                 log.error("{} - IO Exception occurred when loading extension: ", tenant, e);
-                // Close classloader if registration failed
                 closeClassLoader(externalClassLoader, tenant, extName);
-            } catch (SecurityException e) {
-                log.error("{} - Security Exception occurred when loading extension: ", tenant, e);
-                closeClassLoader(externalClassLoader, tenant, extName);
-            } catch (IllegalArgumentException e) {
-                log.error("{} - Invalid argument Exception occurred when loading extension: ", tenant, e);
+            } catch (RuntimeException e) {
+                log.error("{} - Unexpected error loading extension: ", tenant, e);
                 closeClassLoader(externalClassLoader, tenant, extName);
             } finally {
                 if (downloadInputStream != null) {
@@ -371,7 +368,7 @@ public class ExtensionManager {
         } else {
             ie = internalExtension.get(0);
         }
-        log.debug("{} - Internal extension: {} registered: {}", tenant,
+        log.debug("{} - Internal extension: {} registered: {} ({})", tenant,
                 ExtensionsComponent.PROCESSOR_EXTENSION_INTERNAL_NAME,
                 ie.getId().getValue(), ie);
     }

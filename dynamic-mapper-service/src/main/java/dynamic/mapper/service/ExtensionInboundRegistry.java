@@ -1,6 +1,5 @@
 package dynamic.mapper.service;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -76,13 +75,16 @@ public class ExtensionInboundRegistry {
     }
 
     public void deleteExtensions(String tenant) {
-        tenantExtensionProcessors.put(tenant, new HashMap<>());
-
+        tenantExtensionProcessors.put(tenant, new ConcurrentHashMap<>());
     }
 
     public void updateStatusExtension(String tenant, String extName) {
         Map<String, Extension> extensions = getExtensions(tenant);
         Extension ext = extensions.get(extName);
+        if (ext == null) {
+            log.warn("{} - Cannot update status: extension {} not found in registry", tenant, extName);
+            return;
+        }
         ext.setLoaded(ExtensionStatus.COMPLETE);
         long countDefined = ext.getExtensionEntries().size();
         long countLoaded = ext.getExtensionEntries().entrySet().stream()

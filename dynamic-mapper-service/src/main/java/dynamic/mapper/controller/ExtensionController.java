@@ -23,10 +23,8 @@ package dynamic.mapper.controller;
 
 import java.util.Map;
 
-import dynamic.mapper.connector.core.registry.ConnectorRegistry;
-import dynamic.mapper.core.*;
+import dynamic.mapper.core.ExtensionManager;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -42,9 +40,6 @@ import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.model.Extension;
-import dynamic.mapper.service.ConnectorConfigurationService;
-import dynamic.mapper.service.MappingService;
-import dynamic.mapper.service.ServiceConfigurationService;
 import jakarta.validation.constraints.NotBlank;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -62,41 +57,17 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 public class ExtensionController {
 
     @Autowired
-    ConnectorRegistry connectorRegistry;
-
-    @Autowired
-    MappingService mappingService;
-
-    @Autowired
-    ConnectorConfigurationService connectorConfigurationService;
-
-    @Autowired
-    ServiceConfigurationService serviceConfigurationService;
-
-    @Autowired
-    BootstrapService bootstrapService;
-
-    @Autowired
-    C8YAgent c8YAgent;
-
-    @Autowired
     private ContextService<UserCredentials> contextService;
 
     @Autowired
-    private ConfigurationRegistry configurationRegistry;
-
-    @Autowired
     private ExtensionManager extensionManager;
-
-    @Value("${APP.externalExtensionsEnabled}")
-    private Boolean externalExtensionsEnabled;
 
     @Operation(summary = "Get all processor extensions", description = "Retrieves all available processor extensions for the current tenant. Extensions provide custom data transformation and processing capabilities that can be used in mappings.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Extensions retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(type = "object", description = "Map of extension names to their configurations"))),
             @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
-    @GetMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, Extension>> getProcessorExtensions() {
         String tenant = contextService.getContext().getTenant();
         Map<String, Extension> result = extensionManager.getProcessorExtensions(tenant);
@@ -111,7 +82,7 @@ public class ExtensionController {
             @ApiResponse(responseCode = "404", description = "Extension not found", content = @Content(mediaType = "application/json", schema = @Schema(type = "object", description = "Error details indicating the extension was not found"))),
             @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
-    @GetMapping(value = "/{extensionName}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/{extensionName}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Extension> getProcessorExtension(
             @PathVariable @NotBlank String extensionName) {
         String tenant = contextService.getContext().getTenant();
@@ -136,7 +107,7 @@ public class ExtensionController {
             @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
     @PreAuthorize("hasRole('ROLE_DYNAMIC_MAPPER_ADMIN')")
-    @DeleteMapping(value = "/{extensionName}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @DeleteMapping(value = "/{extensionName}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Extension> deleteProcessorExtension(@PathVariable String extensionName) {
         String tenant = contextService.getContext().getTenant();
         Extension result = extensionManager.deleteProcessorExtension(tenant, extensionName);

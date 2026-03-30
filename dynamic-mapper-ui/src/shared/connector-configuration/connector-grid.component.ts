@@ -402,7 +402,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
   private initForm() {
     return this.fb.group({
       intervalToggle: this.shouldRefreshAutomatic,
-      refreshInterval: this.connectorConfigurationService.getCurrentPollingInterval().value
+      refreshInterval: this.connectorConfigurationService.getCurrentPollingIntervalValue()
     });
   }
 
