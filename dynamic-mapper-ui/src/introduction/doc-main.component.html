@@ -1676,8 +1676,8 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
         <pre><code class="language-javascript">// Get externalId from context first, fall back to payload
 var externalId = context.getClientId() || payload["externalId"];
 // lookup device for enrichment
-var deviceByDeviceId = context.getManagedObject(payload["deviceId"]);
-console.log("Device (by device id): " + deviceByDeviceId);
+var deviceBySourceId = context.getManagedObject(payload["c8ySourceId"]);
+console.log("Device (by C8Y source id): " + deviceBySourceId);
 var deviceByExternalId = context.getManagedObjectByExternalId(&#123; externalId: externalId, type: "c8y_Serial" &#125;);
 console.log("Device (by external id): " + deviceByExternalId);</code></pre>
         <div class="admonition important" style="max-width: 100%;">
@@ -1869,17 +1869,17 @@ export &#123; onMessage &#125;;   // required in ESM mode</code></pre>
                 </td>
               </tr>
               <tr>
-                <td><code>context.getManagedObjectByDeviceId()</code></td>
+                <td><code>context.getManagedObject()</code></td>
                 <td>Access</td>
-                <td>Lookup device properties by device ID. Returns device object or <code>null</code>.
-                  <br/><strong>Example:</strong> <code>var device = context.getManagedObjectByDeviceId("12345");</code>
+                <td>Lookup device properties by Cumulocity internal source ID. Returns device object or <code>null</code>.
+                  <br/><strong>Example:</strong> <code>var device = context.getManagedObject("12345");</code>
                 </td>
               </tr>
               <tr>
-                <td><code>context.getManagedObject()</code></td>
+                <td><code>context.getManagedObjectByExternalId()</code></td>
                 <td>Access</td>
                 <td>Lookup device properties by external ID. Requires object with <code>externalId</code> and <code>type</code>.
-                  <br/><strong>Example:</strong> <code>var device = context.getManagedObject(&#123;externalId: "sensor-01", type: "c8y_Serial"&#125;);</code>
+                  <br/><strong>Example:</strong> <code>var device = context.getManagedObjectByExternalId(&#123;externalId: "sensor-01", type: "c8y_Serial"&#125;);</code>
                 </td>
               </tr>
             </tbody>
@@ -1895,8 +1895,8 @@ export &#123; onMessage &#125;;   // required in ESM mode</code></pre>
             </p>
             <ul class="m-t-8 m-b-0">
               <li><code>context.getClientId()</code> - Returns the publisher's client ID from MQTT 5 user properties (MQTT 5 only, returns <code>null</code> if not available)</li>
-              <li><code>context.getManagedObjectByDeviceId(deviceId)</code> - Lookup device properties by device ID</li>
-              <li><code>context.getManagedObject(&#123;externalId, type&#125;)</code> - Lookup device properties by external ID</li>
+              <li><code>context.getManagedObject(c8ySourceId)</code> - Lookup device properties by Cumulocity internal source ID</li>
+              <li><code>context.getManagedObjectByExternalId(&#123;externalId, type&#125;)</code> - Lookup device properties by external ID</li>
               <li><code>context.getTesting()</code> - Returns <code>true</code> if running in test mode</li>
               <li><code>context.setState(key, value)</code> / <code>context.getState(key)</code> - Store/retrieve values across message processing</li>
               <li><code>context.getConfig()</code> - Returns the mapping configuration as a JavaScript object. For inbound mappings this includes the <code>topic</code> field (the configured subscription topic pattern, e.g. <code>"testDevice/+/data"</code>), which can be split to derive positional segment meanings. For outbound mappings it additionally provides the resolved <code>externalId</code> of the source device.</li>
@@ -2519,7 +2519,7 @@ export &#123; onMessage &#125;;   // required in ESM mode</code></pre>
         <pre><code class="language-java">public class ProcessorExtensionSmartInbound01 implements ProcessorExtensionInbound&lt;byte[]&gt; &#123;
 
     @Override
-    public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, DataPreparationContext context) &#123;
+    public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtensionContext context) &#123;
         try &#123;
             // Parse JSON payload
             String jsonString = new String(message.getPayload(), "UTF-8");
