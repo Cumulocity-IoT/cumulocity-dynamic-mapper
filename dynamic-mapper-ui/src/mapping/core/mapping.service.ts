@@ -66,7 +66,7 @@ export class MappingService {
 
   // Observables and subjects
   private readonly updateMappingEnriched$ = new Subject<MappingEnriched>();
-  private readonly unsubscribe$ = new Subject<void>();
+  private unsubscribe$ = new Subject<void>();
 
   mappingsOutboundEnriched$: Observable<MappingEnriched[]>;
   mappingsInboundEnriched$: Observable<MappingEnriched[]>;
@@ -166,6 +166,7 @@ export class MappingService {
         method: 'GET'
       }
     );
+    if (!response.ok) throw new Error(response.statusText);
     const result: Mapping[] = await response.json();
     return result;
   }
@@ -180,15 +181,14 @@ export class MappingService {
         method: 'DELETE'
       }
     );
-    const data = await response;
-    if (!data.ok) throw new Error(data.statusText)!;
+    if (!response.ok) throw new Error(response.statusText);
     this.reloadInbound$.next();
     this.reloadOutbound$.next();
-    return data.text();
+    return response.text();
   }
 
   async updateMapping(mapping: Mapping): Promise<Mapping> {
-    const response = this.client.fetch(
+    const response = await this.client.fetch(
       `${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${mapping.id}`,
       {
         headers: {
@@ -198,31 +198,29 @@ export class MappingService {
         method: 'PUT'
       }
     );
-    const data = await response;
-    if (!data.ok) {
-      const error = await data.json();
+    if (!response.ok) {
+      const error = await response.json();
       throw new Error(error.message)!;
     }
-    const m = await data.json();
+    const m = await response.json();
     this.reloadInbound$.next();
     this.reloadOutbound$.next();
     return m;
   }
 
   async createMapping(mapping: Mapping): Promise<Mapping> {
-    const response = this.client.fetch(`${BASE_URL}/${PATH_MAPPING_ENDPOINT}`, {
+    const response = await this.client.fetch(`${BASE_URL}/${PATH_MAPPING_ENDPOINT}`, {
       headers: {
         'content-type': 'application/json'
       },
       body: JSON.stringify(mapping),
       method: 'POST'
     });
-    const data = await response;
-    if (!data.ok) {
-      const errorTxt = await data.json();
+    if (!response.ok) {
+      const errorTxt = await response.json();
       throw new Error(errorTxt.message ?? 'Could not be imported');
     }
-    const m = await data.json();
+    const m = await response.json();
     this.reloadInbound$.next();
     this.reloadOutbound$.next();
     return m;
@@ -408,6 +406,7 @@ export class MappingService {
       this.eventRealtimeService.stop();
       this.unsubscribe$.next();
       this.unsubscribe$.complete();
+      this.unsubscribe$ = new Subject<void>();
     }
   }
 
