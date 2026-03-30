@@ -21,10 +21,14 @@
 
 package dynamic.mapper.core.facade;
 
+import java.util.HashMap;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.cumulocity.model.idtype.GId;
+import com.cumulocity.rest.representation.CumulocityMediaType;
+import com.cumulocity.rest.representation.inventory.ManagedObjectReferenceRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.sdk.client.Platform;
 import com.cumulocity.sdk.client.RestOperations;
@@ -236,5 +240,66 @@ public class InventoryFacade {
 
     public void clearInventoryCache() {
        inventoryMock.clear();
+    }
+
+    /**
+     * Finds a device group by name.
+     *
+     * @param name the group name to search for
+     * @param testing flag indicating test mode
+     * @return the matching ManagedObjectRepresentation, or null if not found
+     */
+    public ManagedObjectRepresentation findGroupByName(String name, Boolean testing) {
+        InventoryFilter filter = new InventoryFilter().byType("c8y_DeviceGroup");
+        ManagedObjectCollection collection = getManagedObjectsByFilter(filter, testing);
+        ManagedObjectRepresentation first = null;
+        for (ManagedObjectRepresentation mor : collection.get().allPages()) {
+            if (name.equals(mor.getName())) {
+                if (first == null) {
+                    first = mor;
+                } else {
+                    log.warn("Multiple device groups found with name '{}' — using first match (id={}), ignoring id={}",
+                            name, first.getId().getValue(), mor.getId().getValue());
+                }
+            }
+        }
+        return first;
+    }
+
+    /**
+     * Creates a new device group with the given name.
+     *
+     * @param name the name for the new group
+     * @param testing flag indicating test mode
+     * @return the created ManagedObjectRepresentation
+     */
+    public ManagedObjectRepresentation createGroup(String name, Boolean testing) {
+        ManagedObjectRepresentation group = new ManagedObjectRepresentation();
+        group.setName(name);
+        group.setType("c8y_DeviceGroup");
+        group.set(new HashMap<>(), "c8y_IsDeviceGroup");
+        return create(group, testing);
+    }
+
+    /**
+     * Adds a device as a child asset of a group.
+     * In testing mode the call is skipped (mock does not support child assets).
+     *
+     * @param groupId the ID of the parent group
+     * @param deviceId the ID of the device to add
+     * @param testing flag indicating test mode
+     */
+    public void addChildAsset(GId groupId, GId deviceId, Boolean testing) {
+        if (Boolean.TRUE.equals(testing)) {
+            log.debug("Skipping child asset assignment in testing mode: group={}, device={}", groupId, deviceId);
+            return;
+        }
+        String url = "/inventory/managedObjects/" + groupId.getValue() + "/childAssets";
+        ManagedObjectReferenceRepresentation ref = new ManagedObjectReferenceRepresentation();
+        ManagedObjectRepresentation deviceMO = new ManagedObjectRepresentation();
+        deviceMO.setId(deviceId);
+        ref.setManagedObject(deviceMO);
+        RestOperations rest = platform.rest();
+        rest.post(url, CumulocityMediaType.APPLICATION_JSON_TYPE, ref);
     }
 }

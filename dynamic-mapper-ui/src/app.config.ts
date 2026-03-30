@@ -19,12 +19,17 @@
  */
 
 import { ApplicationConfig, importProvidersFrom } from '@angular/core';
+// provideAnimations is needed to initialize AnimationBuilder before standalone
+// components (NavigatorNodeComponent via CollapseModule from ngx-bootstrap) inject it.
+// Without this, Angular 20 raises NG0200 circular dependency on AnimationBuilder.
+// eslint-disable-next-line @typescript-eslint/no-deprecated
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { CoreModule, RouterModule } from '@c8y/ngx-components';
 import { DynamicMapperModule } from './dynamic-mapper.module';
 
 export const appConfig: ApplicationConfig = {
   providers: [
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     provideAnimations(),
     importProvidersFrom(RouterModule.forRoot()),
     importProvidersFrom(CoreModule.forRoot()),

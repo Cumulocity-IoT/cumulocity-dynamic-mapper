@@ -31,7 +31,9 @@ import org.apache.camel.Exchange;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Engine;
 import org.graalvm.polyglot.Value;
+import org.graalvm.polyglot.io.IOAccess;
 
+import dynamic.mapper.configuration.CodeTemplate;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.configuration.TemplateType;
 import dynamic.mapper.core.ConfigurationRegistry;
@@ -91,11 +93,12 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
         performPreEnrichmentSetup(context, connectorIdentifier);
 
         // Prepare GraalVM context if code exists
+        boolean supportESM = Boolean.TRUE.equals(serviceConfiguration.getSupportESM());
         if (mapping.getCode() != null
                 && mapping.isSubstitutionAsCode()) {
             try {
                 var graalEngine = configurationRegistry.getGraalEngine(tenant);
-                var graalContext = createGraalContext(graalEngine);
+                var graalContext = createGraalContext(graalEngine, supportESM);
                 context.setGraalContext(graalContext);
 
                 // Set cached Source objects for performance
@@ -103,10 +106,17 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
                 context.setSystemSource(configurationRegistry.getGraalsSourceSystem(tenant));
 
                 // Keep Base64 strings for backward compatibility if needed
-                context.setSharedCode(serviceConfiguration.getCodeTemplates()
-                        .get(TemplateType.SHARED.name()).getCode());
-                context.setSystemCode(serviceConfiguration.getCodeTemplates()
-                        .get(TemplateType.SYSTEM.name()).getCode());
+                CodeTemplate sharedTemplate = serviceConfiguration.getCodeTemplates().get(TemplateType.SHARED.name());
+                CodeTemplate systemTemplate = serviceConfiguration.getCodeTemplates().get(TemplateType.SYSTEM.name());
+                if (sharedTemplate == null || systemTemplate == null) {
+                    log.error("{} - SHARED or SYSTEM code template missing for mapping [{}] — re-initialize code templates",
+                            tenant, mapping.getIdentifier());
+                    handleGraalVMError(tenant, mapping,
+                            new IllegalStateException("SHARED or SYSTEM code template not found"), context);
+                    return;
+                }
+                context.setSharedCode(sharedTemplate.getCode());
+                context.setSystemCode(systemTemplate.getCode());
             } catch (Exception e) {
                 handleGraalVMError(tenant, mapping, e, context);
                 return;
@@ -115,17 +125,24 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
                 TransformationType.SMART_FUNCTION.equals(mapping.getTransformationType())) {
             try {
                 var graalEngine = configurationRegistry.getGraalEngine(tenant);
-                var graalContext = createGraalContext(graalEngine);
+                var graalContext = createGraalContext(graalEngine, supportESM);
 
                 // Set cached Source objects for performance
                 context.setSharedSource(configurationRegistry.getGraalsSourceShared(tenant));
                 context.setSystemSource(configurationRegistry.getGraalsSourceSystem(tenant));
 
                 // Keep Base64 strings for backward compatibility if needed
-                context.setSharedCode(serviceConfiguration.getCodeTemplates()
-                        .get(TemplateType.SHARED.name()).getCode());
-                context.setSystemCode(serviceConfiguration.getCodeTemplates()
-                        .get(TemplateType.SYSTEM.name()).getCode());
+                CodeTemplate sharedTemplate = serviceConfiguration.getCodeTemplates().get(TemplateType.SHARED.name());
+                CodeTemplate systemTemplate = serviceConfiguration.getCodeTemplates().get(TemplateType.SYSTEM.name());
+                if (sharedTemplate == null || systemTemplate == null) {
+                    log.error("{} - SHARED or SYSTEM code template missing for mapping [{}] — re-initialize code templates",
+                            tenant, mapping.getIdentifier());
+                    handleGraalVMError(tenant, mapping,
+                            new IllegalStateException("SHARED or SYSTEM code template not found"), context);
+                    return;
+                }
+                context.setSharedCode(sharedTemplate.getCode());
+                context.setSystemCode(systemTemplate.getCode());
 
                 context.setGraalContext(graalContext);
                 context.setFlowState(new HashMap<String, Object>());
@@ -152,9 +169,14 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
 
     /**
      * Create GraalVM context with appropriate security settings.
+     *
+     * @param graalEngine the shared GraalVM engine for the tenant
+     * @param supportESM  when {@code true}, enables ESM module evaluation
+     *                    ({@code js.esm-eval-returns-exports}) and full IO access
+     *                    so that mapping code may use {@code export function} syntax
      */
-    protected Context createGraalContext(Engine graalEngine) throws Exception {
-        return Context.newBuilder("js")
+    protected Context createGraalContext(Engine graalEngine, boolean supportESM) throws Exception {
+        Context.Builder builder = Context.newBuilder("js")
                 .engine(graalEngine)
                 .allowHostAccess(configurationRegistry.getHostAccess())
                 .allowHostClassLookup(className ->
@@ -167,8 +189,15 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
                         // Allow base collection classes needed for return values
                         || className.equals("java.util.ArrayList") ||
                         className.equals("java.util.HashMap") ||
-                        className.equals("java.util.HashSet"))
-                .build();
+                        className.equals("java.util.HashSet"));
+
+        if (supportESM) {
+            builder.allowIO(IOAccess.ALL)
+                   .allowExperimentalOptions(true)
+                   .option("js.esm-eval-returns-exports", "true");
+        }
+
+        return builder.build();
     }
 
     /**

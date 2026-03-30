@@ -26,6 +26,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import jakarta.validation.constraints.NotNull;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 @Getter
@@ -39,6 +41,8 @@ public class Device {
     private String name;
 
     private String type;
+
+    private List<String> groups = new ArrayList<>();
 
 
 

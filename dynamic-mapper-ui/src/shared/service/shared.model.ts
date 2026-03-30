@@ -42,5 +42,5 @@ export enum Operation {
 export class ServiceOperation{
   tenant?: string;
   operation:Operation;
-  parameter?: any
+  parameter?: Record<string, string>;
 }

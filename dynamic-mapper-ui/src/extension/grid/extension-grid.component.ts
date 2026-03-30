@@ -134,12 +134,14 @@ export class ExtensionGridComponent implements OnInit, OnDestroy {
   private initializeExtensionsStream(): void {
     this.extensions$ = this.reload$.pipe(
       tap(() => this.updateState({ reloading: true })),
-      switchMap(() => this.loadExtensionsWithRetry()),
+      switchMap(() => this.loadExtensionsWithRetry().pipe(
+        catchError(error => {
+          this.alertService.warning('Failed to load extensions', error);
+          this.updateState({ reloading: false });
+          return of([]);
+        })
+      )),
       tap(() => this.updateState({ reloading: false })),
-      catchError(error => {
-        this.alertService.warning('Failed to load extensions', error);
-        return [];
-      }),
       shareReplay(1),
       takeUntil(this.destroy$)
     );
@@ -150,8 +152,8 @@ export class ExtensionGridComponent implements OnInit, OnDestroy {
 
   private loadExtensionsWithRetry(): Observable<IManagedObject[]> {
     return this.extensionService.getEnrichedProcessorExtensions(undefined).pipe(
-      retry(3),
-      timeout(10000)
+      timeout(10000),
+      retry(3)
     );
   }
 

@@ -40,12 +40,11 @@
           [(ngModel)]="codeTemplate.name"
           />
       </c8y-form-group>
-      @if (action === 'CREATE') {
+      @if (action === 'CREATE' || action === 'RENAME') {
         <c8y-form-group>
           <label>Description</label>
           <input
             class="form-control"
-            required
             [(ngModel)]="codeTemplate.description"
             />
         </c8y-form-group>

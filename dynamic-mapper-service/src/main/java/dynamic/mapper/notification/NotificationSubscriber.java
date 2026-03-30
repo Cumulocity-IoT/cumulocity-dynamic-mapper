@@ -132,6 +132,10 @@ public class NotificationSubscriber {
         subscriptionManager.unsubscribeByDeviceGroup(tenant, mor);
     }
 
+    public int deleteSubscriptionsForDevice(String tenant, String deviceId, String subscriptionName) {
+        return subscriptionManager.deleteSubscriptionsForDevice(tenant, deviceId, subscriptionName);
+    }
+
     public void unsubscribeAllDevices(String tenant) {
         subscriptionManager.unsubscribeAllDevices(tenant);
     }

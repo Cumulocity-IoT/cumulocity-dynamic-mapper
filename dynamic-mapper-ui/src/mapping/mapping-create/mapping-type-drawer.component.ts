@@ -34,7 +34,8 @@ import {
   TransformationTypeLabels
 } from '../../shared';
 import { CodeEditorDrawerComponent } from '../../shared/component/code-explorer/code-editor-drawer.component';
-import { CodeTemplate } from '../../configuration';
+import { CodeTemplate, ServiceConfiguration } from '../../configuration';
+import { base64ToString, stringToBase64 } from '../shared/util';
 
 // Types
 interface SelectOption<T> {
@@ -99,6 +100,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   isLoading = true;
   isLoadingCodeTemplates = false;
   showTransformationType = false;
+  private serviceConfiguration: ServiceConfiguration;
 
   // Promise for modal result
   private _resolve: (value: SaveResult) => void;
@@ -111,6 +113,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
 
   async ngOnInit(): Promise<void> {
     try {
+      this.serviceConfiguration = await this.sharedService.getServiceConfiguration();
       await this.initializeForm();
       this.setupFormSubscriptions();
     } finally {
@@ -137,27 +140,63 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
 
     const { mappingType, transformationType, snoop, codeTemplate } = this.formGroup.getRawValue();
     const snoopSupported = this.getConfigForMappingType(mappingType.value).snoopSupported;
+    const resolvedType: TransformationType = transformationType?.value || TransformationType.DEFAULT;
 
     this._resolve({
       mappingType: mappingType.value,
-      transformationType: transformationType?.value || TransformationType.DEFAULT,
+      transformationType: resolvedType,
       snoop: snoop && snoopSupported,
       codeTemplate: codeTemplate?.value
+        ? this.applyESMToTemplate(codeTemplate.value, resolvedType)
+        : undefined
     });
     this.bottomDrawerRef.close();
   }
 
   viewCode(): void {
-    const codeTemplate = this.formGroup.get('codeTemplate')?.value as CodeTemplateOption;
-    if (!codeTemplate?.value) return;
+    const codeTemplateOption = this.formGroup.get('codeTemplate')?.value as CodeTemplateOption;
+    const transformationTypeOption = this.formGroup.get('transformationType')?.value as TransformationTypeOption;
+    if (!codeTemplateOption?.value) return;
+
+    const displayTemplate = transformationTypeOption?.value
+      ? this.applyESMToTemplate(codeTemplateOption.value, transformationTypeOption.value)
+      : codeTemplateOption.value;
 
     this.bottomDrawerService.openDrawer(CodeEditorDrawerComponent, {
       initialState: {
-        encodedCode: codeTemplate.value.code,
+        encodedCode: displayTemplate.code,
         sourceSystem: 'Template',
         action: 'view'
       }
     });
+  }
+
+  /**
+   * When supportESM is enabled, appends the appropriate `export { … }` statement
+   * to the template code so the mapping runs as an ES module in GraalJS.
+   * The code field is base64-encoded; this method decodes, patches, and re-encodes it.
+   * Returns the original template unchanged if ESM is off or the export is already present.
+   */
+  private applyESMToTemplate(template: CodeTemplate, transformationType: TransformationType): CodeTemplate {
+    if (!this.serviceConfiguration?.supportESM) return template;
+
+    const exportName =
+      transformationType === TransformationType.SMART_FUNCTION ? 'onMessage' :
+      transformationType === TransformationType.SUBSTITUTION_AS_CODE ? 'extractFromSource' :
+      null;
+
+    if (!exportName) return template;
+
+    const decoded = base64ToString(template.code);
+    const exportStatement = `export { ${exportName} };`;
+    if (decoded.includes(exportStatement)) return template;
+
+    const patched =
+      decoded.trimEnd() +
+      '\n\n// ── ESM export (added automatically because Support ESM is enabled) ──────────\n' +
+      exportStatement + '\n';
+
+    return { ...template, code: stringToBase64(patched) };
   }
 
   // Template helpers

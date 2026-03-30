@@ -1057,9 +1057,8 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
                 <td>map-to</td>
                 <td>Topic to be used when sending messages. For a Webhook this defines the context path. The context
                   path
-                  is then appended to the URL that is defined in the Webhook connector properties. This property can
-                  only be
-                  used for Smart Functions</td>
+                  is then appended to the URL that is defined in the Webhook connector properties. Supported for all
+                  transformation types.</td>
               </tr>
             </tbody>
           </table>
@@ -1677,8 +1676,8 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
         <pre><code class="language-javascript">// Get externalId from context first, fall back to payload
 var externalId = context.getClientId() || payload["externalId"];
 // lookup device for enrichment
-var deviceByDeviceId = context.getManagedObject(payload["deviceId"]);
-console.log("Device (by device id): " + deviceByDeviceId);
+var deviceBySourceId = context.getManagedObject(payload["c8ySourceId"]);
+console.log("Device (by C8Y source id): " + deviceBySourceId);
 var deviceByExternalId = context.getManagedObjectByExternalId(&#123; externalId: externalId, type: "c8y_Serial" &#125;);
 console.log("Device (by external id): " + deviceByExternalId);</code></pre>
         <div class="admonition important" style="max-width: 100%;">
@@ -1698,6 +1697,82 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
         <p class="image-description m-l-48"><b>Description:</b> Screenshot showing step 4 for defining complete
           transformation
           using JavaScript.</p>
+        <div class="p-b-8"></div>
+        <h4 class="p-t-16 p-b-8">ECMAScript Module (ESM) Support</h4>
+        <div class="p-b-8 text-16">
+          By default, Smart Function code is evaluated in <b>flat-script mode</b>: any
+          <code>export</code> and <code>import</code> statements are stripped and the code is
+          wrapped in an IIFE so that <code>onMessage</code> is registered on
+          <code>globalThis</code>. When you enable <b>Support ESM modules</b> in
+          <a [routerLink]="ROUTE_SERVICE_CONFIGURATION"><b>Configuration → Service Configuration →
+          General</b></a>, the execution model changes to true ES module semantics.
+        </div>
+        <div class="admonition info" style="max-width: 100%;">
+          <div class="title">ESM mode — what changes</div>
+          <div class="content">
+            <ul class="m-t-4 m-b-0">
+              <li><b>Mapping code runs unmodified</b> — no <code>export</code>/<code>import</code>
+                  stripping, no IIFE wrapping. (Shared code is always converted to a plain script
+                  regardless of this setting.)</li>
+              <li><b>Strict mode enforced</b> — undeclared variables, duplicate parameters, and
+                  silent type coercions throw errors instead of failing silently.</li>
+              <li><b>Real module scope</b> — top-level <code>const</code> / <code>let</code> /
+                  <code>class</code> declarations are isolated to the module and do not pollute
+                  <code>globalThis</code>.</li>
+              <li><b>Top-level <code>await</code> supported</b> — useful for lazy
+                  one-time initialization before the first message arrives.</li>
+              <li><b><code>onMessage</code> must be exported</b> — use
+                  <code>export &#123; onMessage &#125;</code> or
+                  <code>export function onMessage(…)</code> so the runtime can locate the
+                  entry point.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="p-b-8 text-14">
+          Example Smart Function written for ESM mode:
+        </div>
+        <pre><code class="language-javascript">function onMessage(inputMsg, context) &#123;
+  const payload = inputMsg.getPayload();
+  const externalId = context.getClientId() || payload["externalId"];
+  return [&#123;
+    cumulocityType: "measurement",
+    action: "create",
+    payload: &#123;
+      "time": new Date().toISOString(),
+      "type": "c8y_TemperatureMeasurement",
+      "c8y_Steam": &#123; "Temperature": &#123; "unit": "C", "value": payload["temp_val"] &#125; &#125;
+    &#125;,
+    externalSource: [&#123; "type": "c8y_Serial", "externalId": externalId &#125;]
+  &#125;];
+&#125;
+
+export &#123; onMessage &#125;;   // required in ESM mode</code></pre>
+        <div class="admonition caution" style="max-width: 100%;">
+          <div class="title">Constraints</div>
+          <div class="content">
+            Static <code>import</code> statements (e.g.
+            <code>import &#123; helper &#125; from './utils.mjs'</code>) are <b>not supported</b>
+            even in ESM mode. All mapping and shared code is stored in the database and loaded as
+            in-memory literals — GraalJS cannot resolve module paths to real files on disk.
+            Helpers and libraries provided in the <b>Shared Code</b> template are available as
+            globals and can be used directly without an <code>import</code>.
+            Static imports would require a custom module resolver (future work).
+          </div>
+        </div>
+        <div class="admonition info" style="max-width: 100%;">
+          <div class="title">Flat-script mode (default, <code>supportESM = false</code>)</div>
+          <div class="content">
+            When ESM support is disabled the runtime automatically:
+            <ol class="m-t-4 m-b-0">
+              <li>Strips any <code>export</code> and <code>import</code> lines from the mapping code.</li>
+              <li>Wraps the code in an IIFE and registers <code>onMessage</code> on
+                  <code>globalThis</code>.</li>
+            </ol>
+            This means flat-script code does <b>not</b> need — and should not have — an
+            <code>export</code> statement. Existing mappings continue to work unchanged when the
+            setting is off.
+          </div>
+        </div>
         <div class="p-b-8"></div>
         <h4 class="p-t-16 p-b-8">Using Metadata in Smart Functions</h4>
         <div class="p-b-8 text-16">
@@ -1770,6 +1845,14 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
                     <li><code>deviceName</code>: Name for implicitly created devices</li>
                     <li><code>deviceType</code>: Type for implicitly created devices</li>
                     <li><code>processingMode</code>: Set to <code>"persistent"</code> or <code>"transient"</code></li>
+                    <li><code>deviceFragments</code>: Map of additional managed object fragments to merge into the
+                      implicitly created device (e.g. <code>c8y_Hardware</code>, <code>c8y_SupportedOperations</code>).
+                      The value of each key must be an object or array — nested structures are preserved.</li>
+                    <li><code>deviceGroups</code>: List of device group names the implicitly created device is
+                      assigned to as a child asset (e.g. <code>["line 1", "line 2"]</code>).
+                      Groups that do not exist yet are created automatically.
+                      Group lookup is by name; if multiple groups share the same name the device is assigned
+                      to the first match returned by the platform and a warning is logged.</li>
                   </ul>
                 </td>
               </tr>
@@ -1786,17 +1869,17 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
                 </td>
               </tr>
               <tr>
-                <td><code>context.getManagedObjectByDeviceId()</code></td>
+                <td><code>context.getManagedObject()</code></td>
                 <td>Access</td>
-                <td>Lookup device properties by device ID. Returns device object or <code>null</code>.
-                  <br/><strong>Example:</strong> <code>var device = context.getManagedObjectByDeviceId("12345");</code>
+                <td>Lookup device properties by Cumulocity internal source ID. Returns device object or <code>null</code>.
+                  <br/><strong>Example:</strong> <code>var device = context.getManagedObject("12345");</code>
                 </td>
               </tr>
               <tr>
-                <td><code>context.getManagedObject()</code></td>
+                <td><code>context.getManagedObjectByExternalId()</code></td>
                 <td>Access</td>
                 <td>Lookup device properties by external ID. Requires object with <code>externalId</code> and <code>type</code>.
-                  <br/><strong>Example:</strong> <code>var device = context.getManagedObject(&#123;externalId: "sensor-01", type: "c8y_Serial"&#125;);</code>
+                  <br/><strong>Example:</strong> <code>var device = context.getManagedObjectByExternalId(&#123;externalId: "sensor-01", type: "c8y_Serial"&#125;);</code>
                 </td>
               </tr>
             </tbody>
@@ -1812,8 +1895,8 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
             </p>
             <ul class="m-t-8 m-b-0">
               <li><code>context.getClientId()</code> - Returns the publisher's client ID from MQTT 5 user properties (MQTT 5 only, returns <code>null</code> if not available)</li>
-              <li><code>context.getManagedObjectByDeviceId(deviceId)</code> - Lookup device properties by device ID</li>
-              <li><code>context.getManagedObject(&#123;externalId, type&#125;)</code> - Lookup device properties by external ID</li>
+              <li><code>context.getManagedObject(c8ySourceId)</code> - Lookup device properties by Cumulocity internal source ID</li>
+              <li><code>context.getManagedObjectByExternalId(&#123;externalId, type&#125;)</code> - Lookup device properties by external ID</li>
               <li><code>context.getTesting()</code> - Returns <code>true</code> if running in test mode</li>
               <li><code>context.setState(key, value)</code> / <code>context.getState(key)</code> - Store/retrieve values across message processing</li>
               <li><code>context.getConfig()</code> - Returns the mapping configuration as a JavaScript object. For inbound mappings this includes the <code>topic</code> field (the configured subscription topic pattern, e.g. <code>"testDevice/+/data"</code>), which can be split to derive positional segment meanings. For outbound mappings it additionally provides the resolved <code>externalId</code> of the source device.</li>
@@ -1826,11 +1909,13 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
         <div class="admonition caution" style="max-width: 100%;">
           <div class="title">Caution</div>
           <div class="content">
-            When using <code>contextData.deviceName</code> and
-            <code>contextData.deviceType</code>,
+            When using <code>contextData.deviceName</code>, <code>contextData.deviceType</code>,
+            <code>contextData.deviceFragments</code>, or <code>contextData.deviceGroups</code>,
             make sure the mapping has the <b>Create non-existing devices</b> option enabled. Otherwise, the mapper will
-            fail if
-            the device doesn't exist.
+            fail if the device doesn't exist yet.
+            <br/><br/>
+            <code>deviceFragments</code> and <code>deviceGroups</code> are only applied when the device is
+            <em>first created</em>. They are not re-applied on subsequent messages once the device already exists.
           </div>
         </div>
         <div class="p-b-8 text-14">
@@ -1852,7 +1937,7 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
 &#125;</code></pre>
         </div>
         <div class="p-b-8 text-14">
-          <strong>Example: Implicitly creating a device with name and type</strong><br /><br />
+          <strong>Example: Implicitly creating a device with name, type and custom fragments</strong><br /><br />
           <pre><code class="language-javascript">function onMessage(msg, context) &#123;
   var payload = msg.getPayload();
   // Get externalId from context first, fall back to payload
@@ -1866,7 +1951,19 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
       "c8y_Steam": &#123; "Temperature": &#123; "unit": "C", "value": payload["sensorData"]["temp_val"] &#125; &#125;
     &#125;,
     externalSource: [&#123; "type": "c8y_Serial", "externalId": externalId &#125;],
-    contextData: &#123; "deviceName": "Temperature-Sensor-01", "deviceType": "sensor-type" &#125;
+    contextData: &#123;
+      "deviceName": "Temperature-Sensor-01",        // display name of the implicitly created device
+      "deviceType": "sensor-type",                  // managed object type
+      "deviceGroups": ["line 1", "line 2"],          // groups the device is assigned to as child asset
+      "deviceFragments": &#123;                          // additional fragments merged into the device on creation
+        "c8y_Hardware": &#123;
+          "model":        "SmartSensor v2",
+          "serialNumber": externalId,
+          "revision":     "2.0"
+        &#125;,
+        "c8y_SupportedOperations": ["c8y_Restart", "c8y_Configuration"]
+      &#125;
+    &#125;
   &#125;];
 &#125;</code></pre>
         </div>
@@ -2051,7 +2148,32 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
                 <td><code>externalSource</code></td>
                 <td>No</td>
                 <td>Array specifying the external ID type: <code>[&#123;type: "c8y_Serial"&#125;]</code>. Defines which
-                  external ID type should be used to resolve the device identity.</td>
+                  external ID type should be used to resolve the device identity for <code>_externalId_</code> token
+                  replacement in the broker topic. Ignored when <code>sourceId</code> is set explicitly.</td>
+              </tr>
+              <tr>
+                <td><code>sourceId</code></td>
+                <td>No</td>
+                <td>Explicitly sets the Cumulocity internal managed object ID for this message, overriding the device
+                  that triggered the mapping.
+                  <br /><br />
+                  <strong>Default behavior (omitted):</strong> The mapper uses the internal ID of the device that
+                  triggered the outbound mapping. For external broker connectors, it additionally resolves the external
+                  ID (e.g. LoRa EUI, serial) via <code>externalSource</code> for <code>_externalId_</code> token
+                  replacement in the broker topic.
+                  <br /><br />
+                  <strong>When set:</strong> The provided ID is used as the internal C8Y managed object ID for the
+                  Cumulocity REST API call (<code>source.id</code>) and also for broker topic routing. The
+                  <code>externalSource</code> lookup is skipped.
+                  <br /><br />
+                  <strong>Use case:</strong> Cross-device routing — when data from one device should be associated with
+                  a different device in Cumulocity. For example, a gateway device triggers the mapping but the resulting
+                  measurement should be stored under a child device:
+                  <code>sourceId: childDeviceInternalId</code>.
+                  <br /><br />
+                  <strong>Note:</strong> This must be a Cumulocity <em>internal</em> numeric managed object ID, not an
+                  external identifier like a serial number or LoRa EUI.
+                </td>
               </tr>
               <tr>
                 <td><code>transportFields</code></td>
@@ -2397,7 +2519,7 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
         <pre><code class="language-java">public class ProcessorExtensionSmartInbound01 implements ProcessorExtensionInbound&lt;byte[]&gt; &#123;
 
     @Override
-    public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, DataPreparationContext context) &#123;
+    public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtensionContext context) &#123;
         try &#123;
             // Parse JSON payload
             String jsonString = new String(message.getPayload(), "UTF-8");

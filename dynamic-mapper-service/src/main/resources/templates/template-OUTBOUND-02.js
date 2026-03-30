@@ -2,7 +2,6 @@
  * @name Template using C8Y source id
  * @description This sample show how to create a new outgoing payload using C8Y source id
  * @templateType OUTBOUND_SUBSTITUTION_AS_CODE
- * @direction OUTBOUND
  * @defaultTemplate false
  * @internal true
  * @readonly true

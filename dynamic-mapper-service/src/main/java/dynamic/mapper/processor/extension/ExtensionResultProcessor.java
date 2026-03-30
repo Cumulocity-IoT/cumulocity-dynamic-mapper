@@ -37,6 +37,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.RequestMethod;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -360,18 +361,30 @@ public class ExtensionResultProcessor {
      * @param contextData Map of context data from CumulocityObject
      * @param context Processing context to update
      */
-    private void applyContextData(Map<String, String> contextData, ProcessingContext<?> context) {
+    private void applyContextData(Map<String, Object> contextData, ProcessingContext<?> context) {
         if (contextData.containsKey("deviceName")) {
-            context.setDeviceName(contextData.get("deviceName"));
+            context.setDeviceName((String) contextData.get("deviceName"));
         }
 
         if (contextData.containsKey("deviceType")) {
-            context.setDeviceType(contextData.get("deviceType"));
+            context.setDeviceType((String) contextData.get("deviceType"));
         }
 
         if (contextData.containsKey("processingMode")) {
-            String mode = contextData.get("processingMode");
+            String mode = (String) contextData.get("processingMode");
             context.setProcessingMode(ProcessingMode.valueOf(mode));
+        }
+
+        if (contextData.containsKey("deviceFragments")) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> deviceFragments = (Map<String, Object>) contextData.get("deviceFragments");
+            context.setDeviceFragments(deviceFragments);
+        }
+
+        if (contextData.containsKey("deviceGroups")) {
+            @SuppressWarnings("unchecked")
+            List<String> deviceGroups = (List<String>) contextData.get("deviceGroups");
+            context.setDeviceGroups(deviceGroups);
         }
 
         // Note: Attachment handling for events would go here

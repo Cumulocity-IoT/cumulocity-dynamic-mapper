@@ -20,6 +20,7 @@
 
 import { CdkStep } from '@angular/cdk/stepper';
 import {
+  AfterViewInit,
   ChangeDetectorRef,
   Component,
   ElementRef,
@@ -64,7 +65,7 @@ import {
   Substitution
 } from '../../shared';
 import { ValidationError } from '../shared/mapping.model';
-import { EditorMode, STEP_DEFINE_SUBSTITUTIONS, STEP_GENERAL_SETTINGS, STEP_SELECT_TEMPLATES, STEP_TEST_MAPPING } from '../shared/stepper.model';
+import { createCompletionProviderFlowFunction, createCompletionProviderSubstitutionAsCode, EditorMode, STEP_DEFINE_SUBSTITUTIONS, STEP_GENERAL_SETTINGS, STEP_SELECT_TEMPLATES, STEP_TEST_MAPPING } from '../shared/stepper.model';
 import {
   base64ToString,
   checkTransformationType,
@@ -76,7 +77,7 @@ import {
   validateProtectedFields
 } from '../shared/util';
 import { SubstitutionRendererComponent } from '../substitution/substitution-grid.component';
-import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType } from '../../configuration/shared/configuration.model';
+import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType, toTemplateType } from '../../configuration/shared/configuration.model';
 import { ManageTemplateComponent } from '../../shared/component/code-template/manage-template.component';
 import { AIPromptComponent } from '../prompt/ai-prompt.component';
 import { AgentObjectDefinition, AgentTextDefinition } from '../shared/ai-prompt.model';
@@ -129,7 +130,7 @@ interface StepperStepChange {
   providers: [MappingStepperService, SubstitutionManagementService],
   imports: [CoreModule, CommonModule, EditorComponent, PopoverModule, MappingStepPropertiesComponent, MappingConnectorComponent, MappingSubstitutionStepComponent, MappingStepTestingComponent, JsonEditorComponent]
 })
-export class MappingStepperComponent implements OnInit, OnDestroy {
+export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy {
   @Input() mapping!: Mapping;
   @Input() stepperConfiguration!: StepperConfiguration;
   @Input() deploymentMapEntry!: DeploymentMapEntry;
@@ -291,6 +292,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   stepperForward = true;
   currentStepIndex!: number;
 
+  private completionProviderDisposable: any;
   private readonly destroy$ = new Subject<void>();
   codeEditorHelp!: string;
   codeEditorLabel!: string;
@@ -414,13 +416,25 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   ngAfterViewInit(): void {
-    // Monaco is now loaded in ngOnInit
+    this.registerCompletionProvider();
   }
 
   ngOnDestroy(): void {
+    this.completionProviderDisposable?.dispose();
     this.stepperService.cleanup();
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  async registerCompletionProvider(): Promise<void> {
+    if (this.completionProviderDisposable) {
+      this.completionProviderDisposable.dispose();
+    }
+    const monacoModule = await import('monaco-editor');
+    const monaco = (monacoModule as any).default || monacoModule;
+    const d1 = createCompletionProviderFlowFunction(monaco);
+    const d2 = createCompletionProviderSubstitutionAsCode(monaco);
+    this.completionProviderDisposable = { dispose: () => { d1.dispose(); d2.dispose(); } };
   }
 
   private setTemplateForm(): void {
@@ -1140,7 +1154,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   async onCreateCodeTemplate(): Promise<void> {
-    const templateType = `${this.stepperConfiguration.direction.toString()}_${this.mapping?.transformationType.toString()}` as TemplateType;
+    const templateType = toTemplateType(this.stepperConfiguration.direction!, this.mapping!.transformationType);
     const initialState = {
       action: 'CREATE',
       codeTemplate: { name: `New code template - ${templateType}`, templateType }

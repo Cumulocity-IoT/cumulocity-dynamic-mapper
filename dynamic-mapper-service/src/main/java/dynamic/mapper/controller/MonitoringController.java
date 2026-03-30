@@ -22,8 +22,6 @@
 package dynamic.mapper.controller;
 
 import java.util.AbstractMap;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -54,7 +52,6 @@ import dynamic.mapper.model.MappingTreeNode;
 import dynamic.mapper.service.ConnectorConfigurationService;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.service.ServiceConfigurationService;
-import dynamic.mapper.model.ConnectorStatus;
 import dynamic.mapper.model.ConnectorStatusEvent;
 import dynamic.mapper.model.MappingStatus;
 
@@ -214,45 +211,6 @@ public class MonitoringController {
         }
     }
 
-    /**
-     * Helper method to log all current connector statuses
-     */
-    private void logCurrentStatuses(String tenant, String stage, Map<String, ConnectorStatusEvent> statuses) {
-        log.info("{} - {} - Summary of {} connectors:", tenant, stage, statuses.size());
-
-        // Group by status for clearer logging
-        Map<ConnectorStatus, List<String>> statusGroups = new HashMap<>();
-        for (ConnectorStatusEvent event : statuses.values()) {
-            statusGroups.computeIfAbsent(event.getStatus(), k -> new ArrayList<>())
-                    .add(event.getConnectorName());
-        }
-
-        // Log each status group
-        for (Map.Entry<ConnectorStatus, List<String>> entry : statusGroups.entrySet()) {
-            log.info("{} - {} - Status {}: {} connector(s) - {}",
-                    tenant,
-                    stage,
-                    entry.getKey(),
-                    entry.getValue().size(),
-                    String.join(", ", entry.getValue()));
-        }
-
-        // Also log individual details
-        for (Map.Entry<String, ConnectorStatusEvent> entry : statuses.entrySet()) {
-            ConnectorStatusEvent event = entry.getValue();
-            String message = event.getMessage() != null && !event.getMessage().isEmpty()
-                    ? " [" + event.getMessage() + "]"
-                    : "";
-            log.info("{} - {} - Connector: {} ({}), Status: {}{}",
-                    tenant,
-                    stage,
-                    event.getConnectorName(),
-                    entry.getKey(),
-                    event.getStatus(),
-                    message);
-        }
-    }
-
     @Operation(summary = "Get mapping statistics", description = "Retrieves statistics for all mappings including message counts, error counts, snooping status, and loading errors. Useful for monitoring mapping performance and health.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Mapping statistics retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(type = "array", description = "List of mapping statistics", implementation = MappingStatus.class))),
@@ -280,7 +238,7 @@ public class MonitoringController {
             @ApiResponse(responseCode = "200", description = "Mapping tree retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = MappingTreeNode.class))),
             @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
-    @GetMapping(value = "/tree", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/tree", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<MappingTreeNode> getInboundMappingTree() {
         String tenant = contextService.getContext().getTenant();
         MappingTreeNode result = mappingService.getResolverMappingInbound(tenant);

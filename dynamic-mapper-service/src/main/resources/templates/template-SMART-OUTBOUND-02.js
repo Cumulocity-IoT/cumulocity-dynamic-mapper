@@ -2,7 +2,6 @@
  * @name Creates one measurement as array
  * @description Creates one measurement as array
  * @templateType OUTBOUND_SMART_FUNCTION
- * @direction OUTBOUND
  * @defaultTemplate false
  * @internal true
  * @readonly true

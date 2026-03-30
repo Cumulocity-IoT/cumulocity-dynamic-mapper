@@ -2,7 +2,6 @@
  * @name Creates one measurement and key for messages to Kafka connectors
  * @description Creates one measurement as array, set key for messages to Kafka connectors
  * @templateType OUTBOUND_SMART_FUNCTION
- * @direction OUTBOUND
  * @defaultTemplate false
  * @internal true
  * @readonly true

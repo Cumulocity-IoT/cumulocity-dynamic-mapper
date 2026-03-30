@@ -146,8 +146,11 @@ export class AddExtensionComponent implements OnDestroy {
 
   private cancelFileUpload() {
     this.uploadCanceled = true;
-    this.extensionService.cancelProcessorExtensionCreation(this.app);
+    const appToCancel = this.app;
     this.app = null;
+    if (appToCancel) {
+      this.extensionService.cancelProcessorExtensionCreation(appToCancel);
+    }
   }
 
 }

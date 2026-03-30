@@ -2,7 +2,6 @@
  * @name Default template for Smart Function
  * @description Default template for Smart Function, creates one measurement
  * @templateType INBOUND_SMART_FUNCTION
- * @direction INBOUND
  * @defaultTemplate true
  * @internal true
  * @readonly true

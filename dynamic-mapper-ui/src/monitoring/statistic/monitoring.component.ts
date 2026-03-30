@@ -25,7 +25,6 @@ import {
   ColumnDataType,
   CommonModule,
   CoreModule,
-  DisplayOptions,
   Pagination
 } from '@c8y/ngx-components';
 import { BehaviorSubject, catchError, map, of, Subject, takeUntil } from 'rxjs';
@@ -79,17 +78,9 @@ export class MonitoringComponent implements OnInit, OnDestroy {
 
   readonly mappingStatus$ = this.state$.pipe(
     map(state => state.mappingStatuses),
-    map(statuses => statuses.filter(st => (st.direction == this.direction || st.direction == null))))
+    map(statuses => statuses.filter(st => st.direction === this.direction)))
   readonly isLoading$ = this.state$.pipe(map(state => state.isLoading));
   readonly error$ = this.state$.pipe(map(state => state.error));
-
-  readonly displayOptions: DisplayOptions = {
-    bordered: true,
-    striped: true,
-    filter: false,
-    gridHeader: true,
-    hover: true
-  };
 
   private readonly baseColumns: Column[] = [
     {
@@ -291,21 +282,23 @@ export class MonitoringComponent implements OnInit, OnDestroy {
     try {
       this.updateState({ isLoading: true });
 
-      const response = await this.sharedService.runOperation({
+      const resetResponse = await this.sharedService.runOperation({
         operation: Operation.RESET_STATISTICS_MAPPING
       });
 
-      if (response.status >= 200 && response.status < 300) {
-        this.alertService.success(
-          gettext('Mapping statistic reset successfully.')
-        );
-      } else {
-        throw new Error(`Reset failed with status: ${response.status}`);
+      if (resetResponse.status < 200 || resetResponse.status >= 300) {
+        throw new Error(`Reset failed with status: ${resetResponse.status}`);
       }
 
-      await this.sharedService.runOperation({
+      const refreshResponse = await this.sharedService.runOperation({
         operation: Operation.REFRESH_STATUS_MAPPING
       });
+
+      if (refreshResponse.status < 200 || refreshResponse.status >= 300) {
+        throw new Error(`Refresh after reset failed with status: ${refreshResponse.status}`);
+      }
+
+      this.alertService.success(gettext('Mapping statistic reset successfully.'));
     } catch (error) {
       this.handleError('Failed to reset mapping statistic', error);
     } finally {

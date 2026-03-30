@@ -4,7 +4,6 @@
  *              This template shows how to send a child device's measurement to its parent
  *              by looking up the parent from assetParents in the inventory cache.
  * @templateType INBOUND_SMART_FUNCTION
- * @direction INBOUND
  * @defaultTemplate false
  * @internal true
  * @readonly true

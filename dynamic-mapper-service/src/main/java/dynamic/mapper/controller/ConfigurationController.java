@@ -677,7 +677,7 @@ public class ConfigurationController {
             **Security:** Requires `ROLE_DYNAMIC_MAPPER_ADMIN`
             """)
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Code template updated successfully", content = @Content),
+            @ApiResponse(responseCode = "200", description = "Code template updated successfully", content = @Content),
             @ApiResponse(responseCode = "403", description = "Insufficient permissions", content = @Content),
             @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
@@ -686,11 +686,16 @@ public class ConfigurationController {
     public ResponseEntity<HttpStatus> updateCodeTemplate(
             @Parameter(description = "The unique ID of the code template", example = "custom-template") @PathVariable String id,
             @Valid @RequestBody CodeTemplate codeTemplate) {
+        if (codeTemplate.id != null && !id.equals(codeTemplate.id)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    String.format("Path id '%s' does not match body id '%s'", id, codeTemplate.id));
+        }
+        codeTemplate.id = id;
         String tenant = contextService.getContext().getTenant();
         try {
             ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
             Map<String, CodeTemplate> codeTemplates = serviceConfiguration.getCodeTemplates();
-            serviceConfigurationService.rectifyHeaderInCodeTemplate(codeTemplate, false);
+            serviceConfigurationService.rectifyHeaderInCodeTemplate(codeTemplate);
             codeTemplates.put(id, codeTemplate);
             serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
             configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
@@ -709,7 +714,7 @@ public class ConfigurationController {
             log.error("{} - Error updating code template [{}]", tenant, id, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
-        return new ResponseEntity<HttpStatus>(HttpStatus.CREATED);
+        return new ResponseEntity<HttpStatus>(HttpStatus.OK);
     }
 
     @Operation(summary = "Create code template", description = """
@@ -732,9 +737,10 @@ public class ConfigurationController {
             ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
             Map<String, CodeTemplate> codeTemplates = serviceConfiguration.getCodeTemplates();
             if (codeTemplates.containsKey(codeTemplate.id)) {
-                throw new Exception(String.format("Template with id %s already exists", codeTemplate.id));
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        String.format("Template with id '%s' already exists", codeTemplate.id));
             }
-            serviceConfigurationService.rectifyHeaderInCodeTemplate(codeTemplate, true);
+            serviceConfigurationService.rectifyHeaderInCodeTemplate(codeTemplate);
             codeTemplates.put(codeTemplate.id, codeTemplate);
             serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
             configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
@@ -749,12 +755,15 @@ public class ConfigurationController {
             }
 
             log.debug("{} - Create code template", tenant);
+        } catch (ResponseStatusException ex) {
+            log.warn("{} - Error creating code template: {}", tenant, ex.getReason());
+            throw ex;
         } catch (JsonProcessingException ex) {
             log.error("{} - Error creating code template", tenant, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         } catch (Exception ex) {
             log.error("{} - Error creating code template", tenant, ex);
-            throw new ResponseStatusException(HttpStatus.CONFLICT, ex.getLocalizedMessage());
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
         return new ResponseEntity<HttpStatus>(HttpStatus.CREATED);
     }

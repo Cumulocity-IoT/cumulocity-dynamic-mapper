@@ -116,6 +116,8 @@ export interface Device {
   name?: string;
   /** Device type classification */
   type?: string;
+  /** Names of device groups this device belongs to */
+  groups?: string[];
 }
 
 /**

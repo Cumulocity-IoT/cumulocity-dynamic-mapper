@@ -20,12 +20,9 @@
 import { HttpStatusCode } from '@angular/common/http';
 import { Component, ViewChild } from '@angular/core';
 import { AlertService, CoreModule } from '@c8y/ngx-components';
-import { Observable } from 'rxjs';
 import packageJson from '../../package.json';
 import {
   ConnectorConfiguration,
-  ConnectorSpecification,
-  ConnectorStatus,
   Feature,
   Operation,
   SharedService
@@ -46,11 +43,7 @@ import { PopoverModule } from 'ngx-bootstrap/popover';
 export class ConnectorConfigurationComponent {
   @ViewChild(ConnectorGridComponent) connectorGridComponent!: ConnectorGridComponent;
   version: string = packageJson.version;
-  monitoring$: Observable<ConnectorStatus>;
   feature: Feature;
-  specifications: ConnectorSpecification[] = [];
-  configurations: ConnectorConfiguration[];
-  showConfigConnector: boolean = false;
 
   constructor(
     private alertService: AlertService,

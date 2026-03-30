@@ -20,6 +20,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { EventService, IEvent, IResultList, InventoryService } from '@c8y/client';
 import { CoreModule, Pagination } from '@c8y/ngx-components';
 import { saveAs } from 'file-saver';
@@ -27,6 +28,7 @@ import { BsDatepickerModule } from 'ngx-bootstrap/datepicker';
 import { BehaviorSubject, catchError, from, Observable, of, Subject, switchMap, takeUntil, tap } from 'rxjs';
 import {
   EventMetadata,
+  LoggingEventType,
   LoggingEventTypeMap,
   SharedModule,
   SharedService
@@ -46,7 +48,8 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
     private eventService: EventService,
     private inventoryService: InventoryService,
     private sharedService: SharedService,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private route: ActivatedRoute
   ) {
     this.createForm();
   }
@@ -87,8 +90,15 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
     this.setupFormSubscriptions();
     this.setupEventsObservable();
 
-    // Trigger initial load
-    this.filterSubject$.next();
+    // Pre-select filter from query param (e.g. when navigated from subscription page)
+    const typeParam = this.route.snapshot.queryParamMap.get('type');
+    if (typeParam && typeParam in LoggingEventType) {
+      this.filterForm.get('type').setValue(typeParam, { emitEvent: false });
+      this.onFilterMappingServiceEventSelect(typeParam);
+    } else {
+      // Trigger initial load with default filter
+      this.filterSubject$.next();
+    }
   }
 
   private setupFormSubscriptions(): void {

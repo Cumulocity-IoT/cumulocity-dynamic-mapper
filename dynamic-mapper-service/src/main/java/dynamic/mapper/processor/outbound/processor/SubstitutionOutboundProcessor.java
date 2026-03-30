@@ -199,7 +199,7 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
                 String publishTopic = payloadTarget
                         .read(String.format("$.%s.%s", Mapping.TOKEN_CONTEXT_DATA, "publishTopic"));
                 if (publishTopic != null && !publishTopic.equals(""))
-                    context.setTopic(publishTopic);
+                    context.setResolvedPublishTopic(publishTopic);
             } catch (Exception e) {
                 // publishTopic is not defined or unknown, so we continue using the value
                 // defined in the mapping

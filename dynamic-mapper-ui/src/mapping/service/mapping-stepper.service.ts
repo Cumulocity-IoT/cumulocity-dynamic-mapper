@@ -39,7 +39,7 @@ import { MappingService } from '../core/mapping.service';
 import { SharedService } from '../../shared';
 import { ExtensionService } from '../../extension';
 import { AIAgentService } from '../core/ai-agent.service';
-import { CodeTemplate, ServiceConfiguration, TemplateType } from '../../configuration/shared/configuration.model';
+import { CodeTemplate, ServiceConfiguration, TemplateType, toTemplateType } from '../../configuration/shared/configuration.model';
 import { base64ToString, stringToBase64, expandC8YTemplate, expandExternalTemplate, splitTopicExcludingSeparator, getTypeOf } from '../shared/util';
 
 @Injectable()
@@ -342,7 +342,7 @@ export class MappingStepperService {
     async createCodeTemplate(name: string, description: string, code: string, direction: Direction, transformationType: TransformationType): Promise<any> {
         const encodedCode = stringToBase64(code);
         const id = createCustomUuid();
-        const templateType = `${direction.toString()}_${transformationType.toString()}` as TemplateType;
+        const templateType = toTemplateType(direction, transformationType);
 
         return await this.sharedService.createCodeTemplate({
             id,

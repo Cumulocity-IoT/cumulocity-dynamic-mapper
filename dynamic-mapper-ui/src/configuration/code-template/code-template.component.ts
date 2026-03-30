@@ -19,7 +19,7 @@
  */
 import { CommonModule } from '@angular/common';
 import { HttpStatusCode } from '@angular/common/http';
-import { AfterViewInit, Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
+import { AfterViewInit, Component, OnDestroy, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AlertService, CoreModule } from '@c8y/ngx-components';
@@ -34,6 +34,16 @@ import { SharedService } from '../../shared/service/shared.service';
 import { CodeTemplate, CodeTemplateMap, TemplateType } from '../shared/configuration.model';
 import { createCompletionProviderFlowFunction, createCompletionProviderSubstitutionAsCode } from '../../mapping/shared/stepper.model';
 
+interface CodeTemplateEntry {
+  key: string;
+  name: string;
+  description?: string;
+  templateType: TemplateType;
+  internal: boolean;
+  readonly: boolean;
+  defaultTemplate: boolean;
+}
+
 @Component({
   selector: 'd11r-shared-code',
   templateUrl: 'code-template.component.html',
@@ -42,7 +52,7 @@ import { createCompletionProviderFlowFunction, createCompletionProviderSubstitut
   standalone: true,
   imports: [CoreModule, CommonModule, PopoverModule, EditorComponent, FormsModule]
 })
-export class CodeComponent implements OnInit, AfterViewInit {
+export class CodeComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild(EditorComponent, { static: false }) codeEditor!: EditorComponent;
 
   codeTemplateDecoded!: CodeTemplate;
@@ -52,8 +62,8 @@ export class CodeComponent implements OnInit, AfterViewInit {
   defaultTemplate!: string;
   templateType!: TemplateType;
   TemplateType = TemplateType;
-  codeTemplateEntries: CodeTemplate[] = [];
-  codeTemplateEntries$: BehaviorSubject<CodeTemplate[]> = new BehaviorSubject<CodeTemplate[]>([]);
+  codeTemplateEntries: CodeTemplateEntry[] = [];
+  codeTemplateEntries$: BehaviorSubject<CodeTemplateEntry[]> = new BehaviorSubject<CodeTemplateEntry[]>([]);
   isLoading = false;
 
   editorOptions: EditorComponent['editorOptions'] = {
@@ -82,8 +92,6 @@ export class CodeComponent implements OnInit, AfterViewInit {
     this.template = this.defaultTemplate;
 
     await this.updateCodeTemplateEntries();
-    this.codeTemplateDecoded = this.codeTemplatesDecoded.get(this.template)!;
-    this.onSelectCodeTemplate();
   }
 
   private determineTemplateTypeFromUrl(): void {
@@ -132,58 +140,33 @@ export class CodeComponent implements OnInit, AfterViewInit {
     this.registerCompletionProvider();
   }
 
-  private registerCompletionProvider(): void {
-    if (!this.codeEditor || !this.codeEditor.editor) {
+  ngOnDestroy(): void {
+    this.completionProviderDisposable?.dispose();
+  }
+
+  registerCompletionProvider(): void {
+    if (!this.codeEditor || !this.codeEditor.editor || !this.codeEditor.monaco) {
       return;
     }
 
-    const monaco = (window as any).monaco;
-    if (!monaco) {
-      console.warn('Monaco editor not available');
-      return;
-    }
+    const monaco = this.codeEditor.monaco;
 
     // Dispose previous provider if exists
     if (this.completionProviderDisposable) {
       this.completionProviderDisposable.dispose();
     }
 
-    // Determine which completion provider to register based on template type
-    let completionProvider: any;
-
     if (this.templateType === TemplateType.INBOUND_SMART_FUNCTION ||
         this.templateType === TemplateType.OUTBOUND_SMART_FUNCTION) {
-      // Register Flow Function completion provider (SMART_FUNCTION)
-      completionProvider = createCompletionProviderFlowFunction(monaco);
+      this.completionProviderDisposable = createCompletionProviderFlowFunction(monaco);
     } else if (this.templateType === TemplateType.INBOUND_SUBSTITUTION_AS_CODE ||
                this.templateType === TemplateType.OUTBOUND_SUBSTITUTION_AS_CODE) {
-      // Register Substitution as Code completion provider
-      completionProvider = createCompletionProviderSubstitutionAsCode(monaco);
+      this.completionProviderDisposable = createCompletionProviderSubstitutionAsCode(monaco);
     } else {
       // For SHARED and SYSTEM templates, register both providers
-      const smartFunctionProvider = createCompletionProviderFlowFunction(monaco);
-      const substitutionProvider = createCompletionProviderSubstitutionAsCode(monaco);
-
-      // Register both providers
-      const disposable1 = monaco.languages.registerCompletionItemProvider('javascript', smartFunctionProvider);
-      const disposable2 = monaco.languages.registerCompletionItemProvider('javascript', substitutionProvider);
-
-      // Store combined disposable
-      this.completionProviderDisposable = {
-        dispose: () => {
-          disposable1.dispose();
-          disposable2.dispose();
-        }
-      };
-      return;
-    }
-
-    // Register single provider
-    if (completionProvider) {
-      this.completionProviderDisposable = monaco.languages.registerCompletionItemProvider(
-        'javascript',
-        completionProvider
-      );
+      const d1 = createCompletionProviderFlowFunction(monaco);
+      const d2 = createCompletionProviderSubstitutionAsCode(monaco);
+      this.completionProviderDisposable = { dispose: () => { d1.dispose(); d2.dispose(); } };
     }
   }
 
@@ -193,10 +176,8 @@ export class CodeComponent implements OnInit, AfterViewInit {
     this.codeTemplates = await this.sharedService.getCodeTemplates();
 
     this.codeTemplateEntries = Object.entries(this.codeTemplates)
-      .map(([key, template]) => ({
+      .map(([key, template]): CodeTemplateEntry => ({
         key,
-        id: undefined as any,
-        code: undefined as any,
         name: template.name,
         description: template.description,
         templateType: template.templateType,
@@ -204,10 +185,11 @@ export class CodeComponent implements OnInit, AfterViewInit {
         readonly: template.readonly,
         defaultTemplate: template.defaultTemplate
       }))
-      .filter(temp => defaultSet.includes(temp.templateType));
+      .filter(entry => defaultSet.includes(entry.templateType));
 
     this.codeTemplateEntries$.next(this.codeTemplateEntries);
     this.decodeCodeTemplates();
+    this.onSelectCodeTemplate();
     this.isLoading = false;
   }
 
@@ -234,9 +216,11 @@ export class CodeComponent implements OnInit, AfterViewInit {
           defaultTemplate: false
         });
       } catch (error) {
+        console.error(`Failed to decode code template [${key}]:`, error);
         this.codeTemplatesDecoded.set(key, {
           id: key,
           name: template.name,
+          description: template.description ?? '',
           templateType: template.templateType,
           code: '// Code Template not valid!',
           internal: template.internal,
@@ -277,36 +261,50 @@ export class CodeComponent implements OnInit, AfterViewInit {
     if (!this.codeTemplateDecoded) return;
 
     const encodedCode = stringToBase64(this.codeTemplateDecoded.code);
-    await this.sharedService.updateCodeTemplate(this.template, {
+    const response = await this.sharedService.updateCodeTemplate(this.template, {
       ...this.codeTemplateDecoded,
       code: encodedCode
     });
 
-    this.alertService.success(gettext('Saved code template'));
-    await this.updateCodeTemplateEntries();
+    if (response.ok) {
+      this.alertService.success(gettext('Saved code template'));
+      await this.updateCodeTemplateEntries();
+    } else {
+      this.alertService.danger(gettext('Failed to save code template'));
+    }
   }
 
   async onDeleteCodeTemplate() {
     if (!this.codeTemplateDecoded) return;
 
-    await this.sharedService.deleteCodeTemplate(this.template);
-    this.alertService.success(gettext('Deleted code template'));
-    this.template = this.defaultTemplate;
-    await this.updateCodeTemplateEntries();
+    const response = await this.sharedService.deleteCodeTemplate(this.template);
+    if (response.ok) {
+      this.alertService.success(gettext('Deleted code template'));
+      this.template = this.defaultTemplate;
+      await this.updateCodeTemplateEntries();
+    } else {
+      this.alertService.danger(gettext('Failed to delete code template'));
+    }
   }
 
   async onRenameCodeTemplate() {
     if (!this.codeTemplateDecoded) return;
 
+    const currentTemplate = this.template;
     await this.openTemplateModal('RENAME', this.codeTemplateDecoded.name, async (updatedTemplate) => {
       this.codeTemplateDecoded.name = updatedTemplate.name!;
+      this.codeTemplateDecoded.description = updatedTemplate.description ?? this.codeTemplateDecoded.description;
       const encodedCode = stringToBase64(this.codeTemplateDecoded.code);
-      await this.sharedService.updateCodeTemplate(this.template, {
+      const response = await this.sharedService.updateCodeTemplate(currentTemplate, {
         ...this.codeTemplateDecoded,
         code: encodedCode
       });
-      this.alertService.success(gettext('Renamed code template'));
-    });
+      if (response.ok) {
+        this.alertService.success(gettext('Updated code template metadata'));
+      } else {
+        this.alertService.danger(gettext('Failed to update code template metadata'));
+      }
+    }, currentTemplate, this.codeTemplateDecoded.description);
   }
 
   async onDuplicateCodeTemplate() {
@@ -314,7 +312,7 @@ export class CodeComponent implements OnInit, AfterViewInit {
 
     await this.openTemplateModal('COPY', `${this.codeTemplateDecoded.name} - Copy`, async (updatedTemplate) => {
       const encodedCode = stringToBase64(this.codeTemplateDecoded.code);
-      await this.sharedService.createCodeTemplate({
+      const response = await this.sharedService.createCodeTemplate({
         ...this.codeTemplateDecoded,
         name: updatedTemplate.name!,
         code: encodedCode,
@@ -322,18 +320,24 @@ export class CodeComponent implements OnInit, AfterViewInit {
         internal: false,
         readonly: false
       });
-      this.alertService.success(gettext('Copied code template'));
+      if (response.ok) {
+        this.alertService.success(gettext('Copied code template'));
+      } else {
+        this.alertService.danger(gettext('Failed to copy code template'));
+      }
     });
   }
 
   private async openTemplateModal(
     action: string,
     defaultName: string,
-    onSuccess: (template: Partial<CodeTemplate>) => Promise<void>
+    onSuccess: (template: Partial<CodeTemplate>) => Promise<void>,
+    postActionTemplate?: string,
+    defaultDescription?: string
   ): Promise<void> {
     const initialState = {
       action,
-      codeTemplate: { name: defaultName }
+      codeTemplate: { name: defaultName, description: defaultDescription ?? '' }
     };
 
     const modalRef = this.bsModalService.show(ManageTemplateComponent, { initialState });
@@ -342,7 +346,7 @@ export class CodeComponent implements OnInit, AfterViewInit {
       if (codeTemplate) {
         await onSuccess(codeTemplate);
       }
-      this.template = this.defaultTemplate;
+      this.template = postActionTemplate ?? this.defaultTemplate;
       await this.updateCodeTemplateEntries();
     });
   }
@@ -354,6 +358,7 @@ export class CodeComponent implements OnInit, AfterViewInit {
 
   onSelectCodeTemplate(): void {
     this.codeTemplateDecoded = this.codeTemplatesDecoded.get(this.template)!;
+    this.editorOptions = { ...this.editorOptions, readOnly: !!this.codeTemplateDecoded?.readonly };
   }
 
 }

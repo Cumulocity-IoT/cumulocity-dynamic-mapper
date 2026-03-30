@@ -35,7 +35,6 @@ import {
   PROCESSOR_EXTENSION_TYPE
 } from '../shared';
 import { IFetchWithProgress } from '@c8y/ngx-components';
-import { Stream } from 'stream';
 
 interface ExtensionFilter {
   pageSize: number;
@@ -234,7 +233,7 @@ export class ExtensionService {
     }
   }
 
-  uploadProcessorExtensionWithProgress$(file: Stream | Buffer | File | Blob, app: Partial<IManagedObject>): Observable<IFetchWithProgress> {
+  uploadProcessorExtensionWithProgress$(file: File | Blob, app: Partial<IManagedObject>): Observable<IFetchWithProgress> {
     const uploadStartTimestamp = new Date().getTime();
     const subject = new BehaviorSubject<IFetchWithProgress>({
       percentage: 0,
@@ -249,15 +248,16 @@ export class ExtensionService {
         percentage: Math.round((event.loaded / event.total) * 100),
         totalBytes: event.total,
         bufferedBytes: event.loaded,
-        bytesPerSecond: Math.round(event.loaded / Math.round(duration / 1000))
+        bytesPerSecond: Math.round(event.loaded / Math.max(1, Math.round(duration / 1000)))
       });
     };
 
     const xhr = this.inventoryBinaryService.createWithProgress(file, onProgress, app);
     const uploadPromise = this.inventoryBinaryService.getXMLHttpResponse(xhr);
-    uploadPromise.then(() => {
-      subject.complete();
-    });
+    uploadPromise.then(
+      () => subject.complete(),
+      (error) => subject.error(error)
+    );
 
     return subject.asObservable();
   }

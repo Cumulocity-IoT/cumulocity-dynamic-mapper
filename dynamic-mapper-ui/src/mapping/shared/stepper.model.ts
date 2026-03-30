@@ -61,11 +61,11 @@ interface EnumDefinition extends BaseClass {
 type ClassOrEnum = ClassDefinition | EnumDefinition;
 
 /**
- * Creates a completion provider for custom JavaScript classes in Monaco Editor for Flow Functions
+ * Registers completion and hover providers for Flow Function JavaScript in Monaco Editor
  * @param {Monaco} monaco - The Monaco instance
- * @returns {Object} The completion provider
+ * @returns {{ dispose: () => void }} Combined disposable for both providers
  */
-export function createCompletionProviderFlowFunction(monaco) {
+export function createCompletionProviderFlowFunction(monaco: any): { dispose: () => void } {
   // Register flow-specific classes and interfaces
   const customClasses: ClassOrEnum[] = [
     {
@@ -76,7 +76,9 @@ export function createCompletionProviderFlowFunction(monaco) {
         { name: 'cumulocityType', type: '"measurement" | "event" | "alarm" | "operation" | "managedObject"', documentation: 'Which type in the C8Y API is being modified (measurement, event, alarm, operation, managedObject). Singular not plural. Serves as discriminator for CumulocityObject.' },
         { name: 'action', type: '"create" | "update"| "delete" | "patch"', documentation: 'What kind of operation is being performed on this type.' },
         { name: 'externalSource', type: 'ExternalId[] | ExternalId', documentation: 'External Id to lookup and optionally create. Use ExternalId for simple lookups.' },
-        { name: 'destination', type: '"cumulocity" | "iceflow" | "streaming-analytics"', documentation: 'Destination for the message.' }
+        { name: 'destination', type: '"cumulocity" | "iceflow" | "streaming-analytics"', documentation: 'Destination for the message.' },
+        { name: 'contextData', type: 'Record<string, any>', documentation: 'Additional context data passed along with the message for downstream processing.' },
+        { name: 'sourceId', type: 'string', documentation: 'Internal Cumulocity source/device ID. Set this to override automatic device resolution.' }
       ],
       methods: [],
       documentation: 'A request going to or coming from Cumulocity core (or IceFlow/offloading).'
@@ -93,7 +95,9 @@ export function createCompletionProviderFlowFunction(monaco) {
         { name: 'clientId', type: 'string', documentation: 'Transport/MQTT client Id.' },
         { name: 'transportFields', type: 'Record<string, any>', documentation: 'Dictionary of transport-specific fields/properties/headers. For Kafka, use "key" to define record key.' },
         { name: 'time', type: 'Date', documentation: 'Timestamp of incoming message; does nothing when sending.' },
-        { name: 'externalSource', type: 'Array<{type: string}>', documentation: 'External source config for resolving _externalId_ placeholder. Defines which external ID type to use.' }
+        { name: 'externalSource', type: 'Array<{type: string}>', documentation: 'External source config for resolving _externalId_ placeholder. Defines which external ID type to use.' },
+        { name: 'retain', type: 'boolean', documentation: 'Whether the message should be retained on the broker (MQTT retain flag).' },
+        { name: 'sourceId', type: 'string', documentation: 'Internal Cumulocity source/device ID associated with this device message.' }
       ],
       methods: [],
       documentation: 'A message received from a device or sent to a device. Payload is now Uint8Array (changed in v2.0).'
@@ -138,10 +142,19 @@ export function createCompletionProviderFlowFunction(monaco) {
       properties: [],
       methods: [
         { name: 'setState', parameters: ['key', 'value'], returnType: 'void', documentation: 'Persists a value by key. State survives across message invocations for the same mapping and is cleared when the mapping is deleted.' },
-        { name: 'getState', parameters: ['key'], returnType: 'any', documentation: 'Retrieves a persisted state value. Returns the value stored by a previous invocation, or null on first call.' },
+        { name: 'getState', parameters: ['key', 'defaultValue?'], returnType: 'any', documentation: 'Retrieves a persisted state value. Returns the value stored by a previous invocation, or the defaultValue (if provided) on first call.' },
+        { name: 'getStateAll', parameters: [], returnType: 'Record<string, any>', documentation: 'Returns all persisted state entries for the current mapping as a plain object.' },
+        { name: 'getStateKeySet', parameters: [], returnType: 'string[]', documentation: 'Returns the set of all keys currently stored in the mapping state.' },
+        { name: 'clearState', parameters: [], returnType: 'void', documentation: 'Clears all persisted state for the current mapping. On clearState the state is flushed to the persistent store.' },
+        { name: 'getConfig', parameters: [], returnType: 'Record<string, any>', documentation: 'Returns the mapping configuration object.' },
+        { name: 'getClientId', parameters: [], returnType: 'string | undefined', documentation: 'Returns the transport/MQTT client ID associated with this mapping, or undefined if not set.' },
+        { name: 'getExternalId', parameters: [], returnType: 'string | undefined', documentation: 'Returns the external ID of the device derived from the mapping config (requires useExternalId enabled and externalIdType configured), or undefined if not available.' },
+        { name: 'getTesting', parameters: [], returnType: 'boolean', documentation: 'Returns true if the mapping is currently being tested (not in production).' },
+        { name: 'addLogMessage', parameters: ['message'], returnType: 'void', documentation: 'Adds a log message stored under _LOGS_ in state. Visible in the processing result for debugging.' },
+        { name: 'logMessage', parameters: ['message'], returnType: 'void', documentation: 'Alias for addLogMessage(). Adds a log message stored under _LOGS_ in state.' },
         { name: 'getDTMAsset', parameters: ['assetId'], returnType: 'Record<string, any>', documentation: 'Lookup DTM Asset properties by asset ID.' },
-        { name: 'getManagedObject', parameters: ['c8ySourceId'], returnType: 'any', documentation: 'Lookup a device from inventory cache by internal Cumulocity device ID.' },
-        { name: 'getManagedObjectByExternalId', parameters: ['externalId'], returnType: 'any', documentation: 'Lookup a device from inventory cache by external ID.' }
+        { name: 'getManagedObject', parameters: ['c8ySourceId'], returnType: 'C8yManagedObject | null', documentation: 'Lookup a device from inventory cache by internal Cumulocity device ID. Returns null if not found.' },
+        { name: 'getManagedObjectByExternalId', parameters: ['externalId: ExternalId'], returnType: 'C8yManagedObject | null', documentation: 'Lookup a device from inventory cache by ExternalId object ({ externalId, type }). Returns null if not found.' }
       ],
       documentation: 'Context object providing state management, configuration access, and device lookup capabilities'
     },
@@ -223,7 +236,7 @@ export function createCompletionProviderFlowFunction(monaco) {
     },
     {
       name: 'createDeviceMessage',
-      parameters: ['payload', 'topic'],
+      parameters: ['topic', 'payload'],
       returnType: 'DeviceMessage',
       documentation: 'Creates a new DeviceMessage with Uint8Array payload and topic. Use TextEncoder for string conversion.',
       description: 'Create new device message'
@@ -262,13 +275,62 @@ export function createCompletionProviderFlowFunction(monaco) {
       returnType: 'string',
       documentation: 'Converts Uint8Array to string using TextDecoder (for reading DeviceMessage payload).',
       description: 'Decode Uint8Array to string'
+    },
+    {
+      name: 'CumulocityObject.measurement',
+      parameters: ['payload'],
+      returnType: 'CumulocityObject',
+      documentation: 'Builder shortcut: creates a CumulocityObject with cumulocityType="measurement" and action="create".',
+      description: 'Build measurement CumulocityObject'
+    },
+    {
+      name: 'CumulocityObject.event',
+      parameters: ['payload'],
+      returnType: 'CumulocityObject',
+      documentation: 'Builder shortcut: creates a CumulocityObject with cumulocityType="event" and action="create".',
+      description: 'Build event CumulocityObject'
+    },
+    {
+      name: 'CumulocityObject.alarm',
+      parameters: ['payload'],
+      returnType: 'CumulocityObject',
+      documentation: 'Builder shortcut: creates a CumulocityObject with cumulocityType="alarm" and action="create".',
+      description: 'Build alarm CumulocityObject'
+    },
+    {
+      name: 'CumulocityObject.operation',
+      parameters: ['payload'],
+      returnType: 'CumulocityObject',
+      documentation: 'Builder shortcut: creates a CumulocityObject with cumulocityType="operation" and action="create".',
+      description: 'Build operation CumulocityObject'
+    },
+    {
+      name: 'CumulocityObject.managedObject',
+      parameters: ['payload'],
+      returnType: 'CumulocityObject',
+      documentation: 'Builder shortcut: creates a CumulocityObject with cumulocityType="managedObject" and action="create".',
+      description: 'Build managedObject CumulocityObject'
+    },
+    {
+      name: 'DeviceMessage.forTopic',
+      parameters: ['topic', 'payload'],
+      returnType: 'DeviceMessage',
+      documentation: 'Builder shortcut: creates a DeviceMessage for the given topic with an encoded payload.',
+      description: 'Build DeviceMessage for topic'
+    },
+    {
+      name: 'DeviceMessage.create',
+      parameters: ['payload'],
+      returnType: 'DeviceMessage',
+      documentation: 'Builder shortcut: creates a DeviceMessage with an encoded payload.',
+      description: 'Build DeviceMessage'
     }
   ];
 
-  // Return the provider object
-  return {
+  // Register completion and hover providers
+  const completionDisposable = monaco.languages.registerCompletionItemProvider('javascript', {
     triggerCharacters: ['.', ' ', '('],
-    provideCompletionItems: function (model, position, context, token) {
+    provideCompletionItems: function (model: any, position: any, _context: any, _token: any) {
       const textUntilPosition = model.getValueInRange({
         startLineNumber: position.lineNumber,
         startColumn: 1,
@@ -559,15 +621,67 @@ export function createCompletionProviderFlowFunction(monaco) {
 
       return { suggestions: [] };
     }
+  });
+
+  const hoverDisposable = monaco.languages.registerHoverProvider('javascript', {
+    provideHover: function(model: any, position: any) {
+      const word = model.getWordAtPosition(position);
+      if (!word) return null;
+      const w = word.word;
+      const range = {
+        startLineNumber: position.lineNumber,
+        endLineNumber: position.lineNumber,
+        startColumn: word.startColumn,
+        endColumn: word.endColumn
+      };
+
+      const func = utilityFunctions.find(f => f.name === w);
+      if (func) {
+        return { range, contents: [{ value: `\`\`\`typescript\n(function) ${func.name}(${func.parameters.join(', ')}): ${func.returnType}\n\`\`\`\n\n${func.documentation}`, isTrusted: true }] };
+      }
+
+      for (const cls of allClasses) {
+        if (cls.name === w) {
+          const kind = cls.isEnum ? 'enum' : 'class';
+          const dep = (cls as any).deprecated ? '\n\n⚠️ **DEPRECATED**' : '';
+          return { range, contents: [{ value: `\`\`\`typescript\n${kind} ${cls.name}\n\`\`\`\n\n${cls.documentation}${dep}`, isTrusted: true }] };
+        }
+        if (cls.isEnum) {
+          const enumDef = cls as EnumDefinition;
+          if (enumDef.values.includes(w)) {
+            return { range, contents: [{ value: `\`\`\`typescript\n(enum member) ${cls.name}.${w}\n\`\`\`\n\n${cls.documentation}`, isTrusted: true }] };
+          }
+        } else {
+          const classDef = cls as ClassDefinition;
+          const prop = classDef.properties.find(p => p.name === w);
+          if (prop) {
+            return { range, contents: [{ value: `\`\`\`typescript\n(property) ${cls.name}.${prop.name}: ${prop.type}\n\`\`\`\n\n${prop.documentation}`, isTrusted: true }] };
+          }
+          const method = classDef.methods.find(m => m.name === w);
+          if (method) {
+            return { range, contents: [{ value: `\`\`\`typescript\n(method) ${cls.name}.${method.name}(${method.parameters.join(', ')}): ${method.returnType}\n\`\`\`\n\n${method.documentation}`, isTrusted: true }] };
+          }
+        }
+      }
+
+      return null;
+    }
+  });
+
+  return {
+    dispose: () => {
+      completionDisposable.dispose();
+      hoverDisposable.dispose();
+    }
   };
 }
 
 /**
- * Creates a completion provider for custom JavaScript classes in Monaco Editor
+ * Registers completion and hover providers for Substitution-as-Code JavaScript in Monaco Editor
  * @param {Monaco} monaco - The Monaco instance
- * @returns {Object} The completion provider
+ * @returns {{ dispose: () => void }} Combined disposable for both providers
  */
-export function createCompletionProviderSubstitutionAsCode(monaco) {
+export function createCompletionProviderSubstitutionAsCode(monaco: any): { dispose: () => void } {
   // Register our custom classes and enums
   const customClasses: ClassOrEnum[] = [
     {
@@ -588,6 +702,7 @@ export function createCompletionProviderSubstitutionAsCode(monaco) {
       isEnum: true,
       values: [
         'ARRAY',
+        'BOOLEAN',
         'IGNORE',
         'NUMBER',
         'OBJECT',
@@ -596,7 +711,7 @@ export function createCompletionProviderSubstitutionAsCode(monaco) {
       documentation: 'Defines the data type for a substitute value.'
     },
     {
-      name: 'SubstituteValue',
+      name: 'SubstitutionValue',
       isEnum: false,
       properties: [
         { name: 'value', type: 'any', documentation: 'The value to substitute.' },
@@ -605,9 +720,9 @@ export function createCompletionProviderSubstitutionAsCode(monaco) {
         { name: 'expandArray', type: 'boolean', documentation: 'Whether to expand arrays.' }
       ],
       methods: [
-        { name: 'clone', parameters: [], returnType: 'SubstituteValue', documentation: 'Creates a clone of this SubstituteValue.' }
+        { name: 'clone', parameters: [], returnType: 'SubstitutionValue', documentation: 'Creates a clone of this SubstitutionValue.' }
       ],
-      documentation: 'Represents a value to substitute in the payload.'
+      documentation: 'Represents a value to substitute in the payload. Construct with: new SubstitutionValue(value, TYPE.xxx, RepairStrategy.xxx, expandArray)'
     },
     {
       name: 'ArrayList',
@@ -633,7 +748,7 @@ export function createCompletionProviderSubstitutionAsCode(monaco) {
         { name: 'put', parameters: ['key', 'value'], returnType: 'any', documentation: 'Adds a key-value pair to the map.' },
         { name: 'get', parameters: ['key'], returnType: 'any', documentation: 'Gets the value for the specified key.' },
         { name: 'containsKey', parameters: ['key'], returnType: 'boolean', documentation: 'Returns whether the map contains the specified key.' },
-        { name: 'keySet', parameters: [], returnType: 'Array', documentation: 'Returns an array of keys in the map.' }
+        { name: 'keySet', parameters: [], returnType: 'Array<string>', documentation: 'Returns an array of keys in the map.' }
       ],
       documentation: 'A JavaScript implementation of Java HashMap.'
     },
@@ -641,7 +756,8 @@ export function createCompletionProviderSubstitutionAsCode(monaco) {
       name: 'SubstitutionResult',
       isEnum: false,
       properties: [
-        { name: 'substitutions', type: 'HashMap', documentation: 'The substitutions map.' }
+        { name: 'substitutions', type: 'HashMap', documentation: 'The substitutions map.' },
+        { name: 'alarms', type: 'Set<string>', documentation: 'Set of alarm messages collected during substitution.' }
       ],
       methods: [
         { name: 'getSubstitutions', parameters: [], returnType: 'HashMap', documentation: 'Gets the substitutions map.' },
@@ -664,7 +780,6 @@ export function createCompletionProviderSubstitutionAsCode(monaco) {
       name: 'SubstitutionContext',
       isEnum: false,
       properties: [
-        { name: 'IDENTITY', type: 'string', documentation: 'The identity key (_IDENTITY_).' },
         { name: 'IDENTITY_EXTERNAL', type: 'string', documentation: 'The external identity key.' },
         { name: 'IDENTITY_C8Y', type: 'string', documentation: 'The C8Y identity key.' }
       ],
@@ -704,10 +819,10 @@ export function createCompletionProviderSubstitutionAsCode(monaco) {
     }
   ];
 
-  // Return the provider object
-  return {
+  // Register completion and hover providers
+  const completionDisposable = monaco.languages.registerCompletionItemProvider('javascript', {
     triggerCharacters: ['.', ' ', '('],
-    provideCompletionItems: function (model, position, context, token) {
+    provideCompletionItems: function (model: any, position: any, _context: any, _token: any) {
       const textUntilPosition = model.getValueInRange({
         startLineNumber: position.lineNumber,
         startColumn: 1,
@@ -941,10 +1056,10 @@ export function createCompletionProviderSubstitutionAsCode(monaco) {
             });
 
             suggestions.push({
-              label: 'new SubstituteValue()',
+              label: 'new SubstitutionValue()',
               kind: monaco.languages.CompletionItemKind.Value,
-              documentation: 'Create a new SubstituteValue',
-              insertText: 'new SubstituteValue(${1:value}, ${2:TYPE.TEXTUAL}, ${3:RepairStrategy.DEFAULT}, ${4:false})',
+              documentation: 'Create a new SubstitutionValue',
+              insertText: 'new SubstitutionValue(${1:value}, ${2:TYPE.TEXTUAL}, ${3:RepairStrategy.DEFAULT}, ${4:false})',
               insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
               range: range,
               sortText: '00-03' // High priority sorting
@@ -970,6 +1085,57 @@ export function createCompletionProviderSubstitutionAsCode(monaco) {
 
       // For other contexts, don't provide any suggestions
       return { suggestions: [] };
+    }
+  });
+
+  const hoverDisposable = monaco.languages.registerHoverProvider('javascript', {
+    provideHover: function(model: any, position: any) {
+      const word = model.getWordAtPosition(position);
+      if (!word) return null;
+      const w = word.word;
+      const range = {
+        startLineNumber: position.lineNumber,
+        endLineNumber: position.lineNumber,
+        startColumn: word.startColumn,
+        endColumn: word.endColumn
+      };
+
+      const func = utilityFunctions.find(f => f.name === w);
+      if (func) {
+        return { range, contents: [{ value: `\`\`\`typescript\n(function) ${func.name}(${func.parameters.join(', ')}): ${func.returnType}\n\`\`\`\n\n${func.documentation}`, isTrusted: true }] };
+      }
+
+      for (const cls of customClasses) {
+        if (cls.name === w) {
+          const kind = cls.isEnum ? 'enum' : 'class';
+          return { range, contents: [{ value: `\`\`\`typescript\n${kind} ${cls.name}\n\`\`\`\n\n${cls.documentation}`, isTrusted: true }] };
+        }
+        if (cls.isEnum) {
+          const enumDef = cls as EnumDefinition;
+          if (enumDef.values.includes(w)) {
+            return { range, contents: [{ value: `\`\`\`typescript\n(enum member) ${cls.name}.${w}\n\`\`\`\n\n${cls.documentation}`, isTrusted: true }] };
+          }
+        } else {
+          const classDef = cls as ClassDefinition;
+          const prop = classDef.properties.find(p => p.name === w);
+          if (prop) {
+            return { range, contents: [{ value: `\`\`\`typescript\n(property) ${cls.name}.${prop.name}: ${prop.type}\n\`\`\`\n\n${prop.documentation}`, isTrusted: true }] };
+          }
+          const method = classDef.methods.find(m => m.name === w);
+          if (method) {
+            return { range, contents: [{ value: `\`\`\`typescript\n(method) ${cls.name}.${method.name}(${method.parameters.join(', ')}): ${method.returnType}\n\`\`\`\n\n${method.documentation}`, isTrusted: true }] };
+          }
+        }
+      }
+
+      return null;
+    }
+  });
+
+  return {
+    dispose: () => {
+      completionDisposable.dispose();
+      hoverDisposable.dispose();
     }
   };
 }

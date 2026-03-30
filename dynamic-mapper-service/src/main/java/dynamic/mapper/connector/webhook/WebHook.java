@@ -73,6 +73,12 @@ import java.util.*;
 @Slf4j
 public class WebHook extends AConnectorClient {
 
+    private static final String[] READ_ONLY_FIELDS = {
+        "self", "id", "lastUpdated", "creationTime", "owner",
+        "childDevices", "childAssets", "childAdditions",
+        "deviceParents", "assetParents", "additionParents"
+    };
+
     protected WebClient webhookClient;
     protected String baseUrl;
     protected Boolean baseUrlEndsWithSlash;
@@ -128,6 +134,11 @@ public class WebHook extends AConnectorClient {
 
         // Initialize managers
         initializeManagers();
+    }
+
+    private boolean isCumulocityInternal() {
+        return Boolean.TRUE.equals(connectorConfiguration.getProperties()
+                .getOrDefault("cumulocityInternal", false));
     }
 
     /**
@@ -364,8 +375,7 @@ public class WebHook extends AConnectorClient {
             return;
         }
 
-        Boolean cumulocityInternal = (Boolean) connectorConfiguration.getProperties()
-                .getOrDefault("cumulocityInternal", false);
+        boolean cumulocityInternal = isCumulocityInternal();
 
         // Process each request
         for (int i = 0; i < requests.size(); i++) {
@@ -388,59 +398,26 @@ public class WebHook extends AConnectorClient {
             RequestMethod method = request.getMethod();
             API derivedAPI = request.getApi();
 
-            // For cumulocityInternal, we need to determine the API endpoint
+            // For cumulocityInternal, resolve API and path from the request metadata
             if (cumulocityInternal) {
-                // Check if API is already set (from FlowResultOutboundProcessor)
+                String publishTopic = request.getPublishTopic() != null
+                        ? request.getPublishTopic() : context.getResolvedPublishTopic();
+                derivedAPI = resolveApiForInternalRequest(request, derivedAPI, publishTopic, i + 1, requests.size());
                 if (derivedAPI == null) {
-                    // Fallback: Try to derive API from publishTopic if not already set
-                    String publishTopic = request.getPublishTopic() != null ? request.getPublishTopic() : context.getResolvedPublishTopic();
-                    if (publishTopic != null && !publishTopic.isEmpty()) {
-                        derivedAPI = APITopicUtil.deriveAPIFromTopic(publishTopic);
-                        if (derivedAPI != null) {
-                            request.setApi(derivedAPI);
-                            log.info("{} - Topic '{}' -> API {} ({}/{})",
-                                    tenant, publishTopic, derivedAPI.name, i + 1, requests.size());
-                        } else {
-                            log.warn("{} - Cannot derive API type from topic '{}' and no API set for cumulocityInternal connector ({}/{}), skipping",
-                                    tenant, publishTopic, i + 1, requests.size());
-                            request.setError(new Exception("Cannot derive API type from topic: " + publishTopic));
-                            continue;
-                        }
-                    } else {
-                        log.warn("{} - No publishTopic available and no API set for cumulocityInternal connector ({}/{}), skipping",
-                                tenant, i + 1, requests.size());
-                        request.setError(new Exception("No publishTopic available and no API set for cumulocityInternal connector"));
-                        continue;
-                    }
-                } else {
-                    log.debug("{} - Using pre-set API {} for cumulocityInternal connector ({}/{})",
-                            tenant, derivedAPI.name, i + 1, requests.size());
+                    // resolveApiForInternalRequest already logged and set error
+                    continue;
                 }
 
-                // For Cumulocity internal, use the pre-populated requestCumulocity if available
-                if (request.getRequestCumulocity() != null && !request.getRequestCumulocity().isEmpty()) {
-                    payload = request.getRequestCumulocity();
-                    log.debug("{} - Using requestCumulocity for internal API call ({}/{})",
-                            tenant, i + 1, requests.size());
-                }
-
-                // Use the pathCumulocity field for Cumulocity REST endpoint
-                // This field is set by FlowResultOutboundProcessor with proper ID handling
-                if (request.getPathCumulocity() != null && !request.getPathCumulocity().isEmpty()) {
-                    contextPath = request.getPathCumulocity();
-                    log.debug("{} - Using pathCumulocity: {} ({}/{})",
-                            tenant, contextPath, i + 1, requests.size());
-                } else {
-                    // Fallback to API base path if pathCumulocity is not set
-                    contextPath = derivedAPI.path;
-                    log.debug("{} - Using API base path as fallback: {} ({}/{})",
-                            tenant, contextPath, i + 1, requests.size());
-                }
-
-                // Default method to POST if not set
+                payload = request.getRequestCumulocity() != null && !request.getRequestCumulocity().isEmpty()
+                        ? request.getRequestCumulocity() : payload;
+                contextPath = request.getPathCumulocity() != null && !request.getPathCumulocity().isEmpty()
+                        ? request.getPathCumulocity() : derivedAPI.path;
                 if (method == null) {
                     method = RequestMethod.POST;
                 }
+
+                log.debug("{} - Internal request ({}/{}): api={}, path={}, method={}",
+                        tenant, i + 1, requests.size(), derivedAPI.name, contextPath, method);
             } else {
                 // For external webhooks, use publishTopic as the path
                 contextPath = request.getPublishTopic() != null ? request.getPublishTopic() : context.getResolvedPublishTopic();
@@ -489,6 +466,44 @@ public class WebHook extends AConnectorClient {
                 request.setError(e);
                 context.addError(new ProcessingException(error, e));
             }
+        }
+    }
+
+    /**
+     * Resolves the Cumulocity API for an internal (cumulocityInternal=true) request.
+     * The publishTopic takes precedence; falls back to the pre-set API on the request.
+     * Returns {@code null} and marks the request with an error if no API can be determined.
+     */
+    private API resolveApiForInternalRequest(DynamicMapperRequest request, API currentApi,
+            String publishTopic, int idx, int total) {
+        if (publishTopic != null && !publishTopic.isEmpty()) {
+            API topicApi = APITopicUtil.deriveAPIFromTopic(publishTopic);
+            if (topicApi != null) {
+                if (currentApi != null && currentApi != topicApi) {
+                    log.info("{} - publishTopic '{}' → API {} overrides pre-set API {} ({}/{})",
+                            tenant, publishTopic, topicApi.name, currentApi.name, idx, total);
+                } else {
+                    log.info("{} - Topic '{}' → API {} ({}/{})", tenant, publishTopic, topicApi.name, idx, total);
+                }
+                request.setApi(topicApi);
+                return topicApi;
+            } else if (currentApi != null) {
+                log.info("{} - Cannot derive API from topic '{}', keeping pre-set API {} ({}/{})",
+                        tenant, publishTopic, currentApi.name, idx, total);
+                return currentApi;
+            } else {
+                log.warn("{} - Cannot derive API from topic '{}' and no API set ({}/{}), skipping",
+                        tenant, publishTopic, idx, total);
+                request.setError(new Exception("Cannot derive API type from topic: " + publishTopic));
+                return null;
+            }
+        } else if (currentApi != null) {
+            log.debug("{} - No publishTopic, using pre-set API {} ({}/{})", tenant, currentApi.name, idx, total);
+            return currentApi;
+        } else {
+            log.warn("{} - No publishTopic and no API set ({}/{}), skipping", tenant, idx, total);
+            request.setError(new Exception("No publishTopic available and no API set for cumulocityInternal connector"));
+            return null;
         }
     }
 
@@ -569,10 +584,7 @@ public class WebHook extends AConnectorClient {
      * Execute PATCH request
      */
     private Mono<ResponseEntity<String>> executePatch(String path, String payload, ProcessingContext<?> context) {
-        Boolean cumulocityInternal = (Boolean) connectorConfiguration.getProperties()
-                .getOrDefault("cumulocityInternal", false);
-
-        if (cumulocityInternal) {
+        if (isCumulocityInternal()) {
             // For Cumulocity internal, do GET + merge + PUT
             return patchObject(path, payload, context);
         } else {
@@ -688,23 +700,8 @@ public class WebHook extends AConnectorClient {
      * These fields are returned in GET responses but cannot be updated via PUT.
      */
     private void removeReadOnlyFields(ObjectNode node, ProcessingContext<?> context) {
-        // List of read-only fields that Cumulocity rejects in PUT requests
-        String[] readOnlyFields = {
-            "self",
-            "id",
-            "lastUpdated",
-            "creationTime",
-            "owner",
-            "childDevices",
-            "childAssets",
-            "childAdditions",
-            "deviceParents",
-            "assetParents",
-            "additionParents"
-        };
-
         List<String> removedFields = new ArrayList<>();
-        for (String field : readOnlyFields) {
+        for (String field : READ_ONLY_FIELDS) {
             if (node.has(field)) {
                 node.remove(field);
                 removedFields.add(field);
@@ -779,10 +776,7 @@ public class WebHook extends AConnectorClient {
             return false;
         }
 
-        Boolean cumulocityInternal = (Boolean) configuration.getProperties()
-                .getOrDefault("cumulocityInternal", false);
-
-        if (cumulocityInternal) {
+        if (isCumulocityInternal()) {
             MicroserviceCredentials msc = configurationRegistry.getMicroserviceCredential(tenant);
             if (msc == null || StringUtils.isEmpty(msc.getUsername()) || StringUtils.isEmpty(msc.getPassword())) {
                 return false;

@@ -28,7 +28,7 @@
         required>
         <option [ngValue]="null" disabled>Select template...</option>
         @for (item of codeTemplateEntries$ | async; track item) {
-        <option [ngValue]="item['key']">
+        <option [ngValue]="item.key">
           {{ item.name }} ({{ item.readonly? 'readonly': 'editable' }})
         </option>
         }
@@ -42,6 +42,11 @@
     [disabled]="codeTemplateDecoded?.internal || !feature?.userHasMappingAdminRole">
     <i c8yIcon="minus-circle"></i>
     {{ 'Delete' | translate }}
+  </button>
+  <button class="btn btn-link" title="{{ 'Edit metadata' | translate }}" (click)="onRenameCodeTemplate()"
+    [disabled]="codeTemplateDecoded?.internal || !feature?.userHasMappingAdminRole">
+    <i c8yIcon="edit"></i>
+    {{ 'Edit' | translate }}
   </button>
   <button class="btn btn-link" title="{{ 'Duplicate' | translate }}" (click)="onDuplicateCodeTemplate()"
     [disabled]="codeTemplateDecoded?.templateType === TemplateType.SHARED || codeTemplateDecoded?.templateType === TemplateType.SYSTEM || !feature?.userHasMappingAdminRole">
@@ -75,7 +80,7 @@
         </span>
       </div>
       <c8y-editor [editorOptions]="editorOptions" monacoEditorMarkerValidator [ngModel]="codeTemplateDecoded?.code"
-        (ngModelChange)="onValueCodeChange($event)" class="form-control fit-h">
+        (ngModelChange)="onValueCodeChange($event)" (editorInit)="registerCompletionProvider()" class="form-control fit-h">
       </c8y-editor>
     </c8y-form-group>
   </div>

@@ -124,8 +124,8 @@ public class NotificationSubscriptionService {
             List<Device> toBeRemovedGroups = new ArrayList<>();
             List<Device> toBeCreatedGroups = new ArrayList<>();
 
-            deviceGroupsSubscription.getDevices().forEach(device -> toBeRemovedGroups.add(device));
-            request.getDevices().forEach(device -> toBeCreatedGroups.add(device));
+            toBeRemovedGroups.addAll(deviceGroupsSubscription.getDevices());
+            toBeCreatedGroups.addAll(request.getDevices());
 
             request.getDevices()
                     .forEach(device -> toBeRemovedGroups.removeIf(x -> x.getId().equals(device.getId())));
@@ -273,7 +273,7 @@ public class NotificationSubscriptionService {
                     .getManagedObjectForId(tenant, device.getId(), false);
             if (mor != null) {
                 configurationRegistry.getNotificationSubscriber()
-                        .unsubscribeDeviceAndDisconnect(tenant, mor, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
+                        .unsubscribeDeviceAndDisconnect(tenant, mor, Utils.STATIC_DEVICE_SUBSCRIPTION);
             }
         }
     }

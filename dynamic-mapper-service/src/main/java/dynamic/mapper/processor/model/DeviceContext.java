@@ -27,6 +27,8 @@ import lombok.Value;
 
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -62,6 +64,20 @@ public class DeviceContext {
      * The type of the device (e.g., "c8y_Device", "c8y_Gateway").
      */
     String deviceType;
+
+    /**
+     * Additional managed object fragments to set on the implicitly created device.
+     * Each key is a fragment name (e.g., "c8y_transportationProtocols") and the
+     * value is the fragment content.
+     */
+    Map<String, Object> deviceFragments;
+
+    /**
+     * Names of device groups the implicitly created device should be assigned to
+     * as a child asset (e.g., ["line 1", "line 2"]).
+     * Groups are looked up by name; missing groups are created automatically.
+     */
+    List<String> deviceGroups;
 
     /**
      * Set of alarm types that have been raised for this device during processing.
@@ -134,6 +150,30 @@ public class DeviceContext {
     public DeviceContext withDeviceType(String newDeviceType) {
         return this.toBuilder()
             .deviceType(newDeviceType)
+            .build();
+    }
+
+    /**
+     * Creates a copy of this context with device fragments.
+     *
+     * @param newDeviceFragments map of fragment name → fragment content
+     * @return a new DeviceContext with the device fragments set
+     */
+    public DeviceContext withDeviceFragments(Map<String, Object> newDeviceFragments) {
+        return this.toBuilder()
+            .deviceFragments(newDeviceFragments)
+            .build();
+    }
+
+    /**
+     * Creates a copy of this context with device group names.
+     *
+     * @param newDeviceGroups list of group names to assign the device to
+     * @return a new DeviceContext with the device groups set
+     */
+    public DeviceContext withDeviceGroups(List<String> newDeviceGroups) {
+        return this.toBuilder()
+            .deviceGroups(newDeviceGroups)
             .build();
     }
 

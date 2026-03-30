@@ -80,19 +80,17 @@ public class ConnectorRegistry {
             throw new ConnectorRegistryException("Tenant is missing!");
         if (client.getConnectorIdentifier() == null)
             throw new ConnectorRegistryException("Connector identifier is missing!");
-        if (connectorTenantMap.get(tenant) == null) {
-            Map<String, AConnectorClient> connectorMap = new HashMap<>();
-            connectorMap.put(client.getConnectorIdentifier(), client);
-            connectorTenantMap.put(tenant, connectorMap);
+
+        // computeIfAbsent is atomic on ConcurrentHashMap — no TOCTOU race for new tenants.
+        // ConcurrentHashMap as inner map so concurrent registrations for the same tenant are safe.
+        Map<String, AConnectorClient> connectorMap = connectorTenantMap
+                .computeIfAbsent(tenant, k -> new ConcurrentHashMap<>());
+
+        AConnectorClient existing = connectorMap.putIfAbsent(client.getConnectorIdentifier(), client);
+        if (existing == null) {
+            log.debug("{} - Adding new client with id {}...", tenant, client.getConnectorIdentifier());
         } else {
-            Map<String, AConnectorClient> connectorMap = connectorTenantMap.get(tenant);
-            if (connectorMap.get(client.getConnectorIdentifier()) == null) {
-                log.debug("{} - Adding new client with id {}...", tenant, client.getConnectorIdentifier());
-                connectorMap.put(client.getConnectorIdentifier(), client);
-                connectorTenantMap.put(tenant, connectorMap);
-            } else {
-                log.debug("{} - Client {} is already registered!", tenant, client.getConnectorIdentifier());
-            }
+            log.debug("{} - Client {} is already registered!", tenant, client.getConnectorIdentifier());
         }
     }
 
@@ -188,7 +186,10 @@ public class ConnectorRegistry {
     }
 
     public Map<String, ConnectorStatusEvent> getConnectorStatusMap(String tenant) {
-        return connectorStatusMaps.get(tenant);
+        // computeIfAbsent ensures the map always exists after initializeResources,
+        // and guards against races during startup where updateStatus is called before
+        // initializeResources has run for this tenant.
+        return connectorStatusMaps.computeIfAbsent(tenant, k -> new ConcurrentHashMap<>());
     }
 
     public void initializeResources(String tenant) {

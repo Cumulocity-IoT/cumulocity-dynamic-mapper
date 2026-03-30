@@ -632,7 +632,7 @@ class FlowProcessorInboundProcessorTest {
 
         // Setup bindings and function execution
         when(mockGraalContext.getBindings("js")).thenReturn(mockBindings);
-        when(mockBindings.getMember("onMessage_nlzm75nv")).thenReturn(mockOnMessageFunction);
+        when(mockBindings.getMember("onMessage")).thenReturn(mockOnMessageFunction);
 
         // Create the expected JavaScript result array that matches our sample code
         Value mockResult = createExpectedJavaScriptResult();
@@ -738,7 +738,7 @@ class FlowProcessorInboundProcessorTest {
         processingContext.setGraalContext(mockGraalContext);
 
         when(mockGraalContext.getBindings("js")).thenReturn(mockBindings);
-        when(mockBindings.getMember("onMessage_nlzm75nv")).thenReturn(mockOnMessageFunction);
+        when(mockBindings.getMember("onMessage")).thenReturn(mockOnMessageFunction);
 
         // Simulate JavaScript execution throwing an exception
         when(mockOnMessageFunction.execute(any(), any()))
@@ -1068,7 +1068,7 @@ class FlowProcessorInboundProcessorTest {
         processingContext.setFlowContext(mockFlowContext);
 
         when(mockGraalContext.getBindings("js")).thenReturn(mockBindings);
-        when(mockBindings.getMember("onMessage_nlzm75nv")).thenReturn(mockOnMessageFunction);
+        when(mockBindings.getMember("onMessage")).thenReturn(mockOnMessageFunction);
 
         // Create result with both CumulocityObject
         Value mockResult = createMultipleResultsJavaScriptResult();

@@ -28,6 +28,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -88,23 +89,47 @@ public class ConnectionStateManager {
     }
     
     public void updateStatus(ConnectorStatus status, boolean clearMessage, boolean sendEvent) {
-        ConnectorStatusEvent currentStatus = connectorStatus.get();
-        currentStatus.updateStatus(status, clearMessage);
-        connectorRegistry.getConnectorStatusMap(tenant).put(connectorIdentifier, currentStatus);
-        
+        // Copy-on-write: create a new event instead of mutating the shared object,
+        // so concurrent readers never see a partially-updated state.
+        ConnectorStatusEvent newStatus = new ConnectorStatusEvent(status);
+        newStatus.connectorName = connectorName;
+        newStatus.connectorIdentifier = connectorIdentifier;
+        if (!clearMessage) {
+            newStatus.setMessage(connectorStatus.get().getMessage());
+        }
+        connectorStatus.set(newStatus);
+
+        Map<String, ConnectorStatusEvent> statusMap = connectorRegistry.getConnectorStatusMap(tenant);
+        if (statusMap != null) {
+            statusMap.put(connectorIdentifier, newStatus);
+        } else {
+            log.warn("{} - Status map not initialised for tenant, skipping registry update (connector: {})",
+                    tenant, connectorIdentifier);
+        }
+
         if (sendEvent && !status.equals(previousStatus)) {
             previousStatus = status;
-            notifyStatusChange(currentStatus);
+            notifyStatusChange(newStatus);
         }
     }
-    
+
     public void updateStatusWithError(Exception e) {
-        ConnectorStatusEvent currentStatus = connectorStatus.get();
-        String errorMessage = buildErrorMessage(e);
-        currentStatus.setMessage(errorMessage);
-        currentStatus.updateStatus(ConnectorStatus.FAILED, false);
-        
-        notifyStatusChange(currentStatus);
+        // Copy-on-write: create a new event instead of mutating the shared object.
+        ConnectorStatusEvent newStatus = new ConnectorStatusEvent(ConnectorStatus.FAILED);
+        newStatus.connectorName = connectorName;
+        newStatus.connectorIdentifier = connectorIdentifier;
+        newStatus.setMessage(buildErrorMessage(e));
+        connectorStatus.set(newStatus);
+
+        Map<String, ConnectorStatusEvent> statusMap = connectorRegistry.getConnectorStatusMap(tenant);
+        if (statusMap != null) {
+            statusMap.put(connectorIdentifier, newStatus);
+        }
+
+        if (!ConnectorStatus.FAILED.equals(previousStatus)) {
+            previousStatus = ConnectorStatus.FAILED;
+            notifyStatusChange(newStatus);
+        }
     }
     
     private String buildErrorMessage(Exception e) {

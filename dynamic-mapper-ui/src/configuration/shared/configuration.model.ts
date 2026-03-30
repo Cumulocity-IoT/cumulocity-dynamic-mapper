@@ -1,4 +1,4 @@
-import { Direction } from "../../shared";
+import { Direction, TransformationType } from "../../shared";
 
 /*
  * Copyright (c) 2025 Cumulocity GmbH
@@ -43,6 +43,7 @@ export interface ServiceConfiguration {
   smartFunctionAgent: string;
   suppressDeprecationWarning?: boolean;
   acceptedDeprecationNotice?: string;
+  supportESM?: boolean;
 }
 
 export enum TemplateType {
@@ -51,7 +52,6 @@ export enum TemplateType {
   INBOUND_SUBSTITUTION_AS_CODE = "INBOUND_SUBSTITUTION_AS_CODE",
   OUTBOUND_SUBSTITUTION_AS_CODE = "OUTBOUND_SUBSTITUTION_AS_CODE",
   SHARED = "SHARED",
-  SUBSTITUTION_AS_CODE = 'SUBSTITUTION_AS_CODE',
   SYSTEM = "SYSTEM",
   INBOUND_SMART_FUNCTION = "INBOUND_SMART_FUNCTION",
   OUTBOUND_SMART_FUNCTION = "OUTBOUND_SMART_FUNCTION"
@@ -71,4 +71,20 @@ export interface CodeTemplate {
 
 export interface CodeTemplateMap {
   [key: string]: CodeTemplate;
+}
+
+const TEMPLATE_TYPE_LOOKUP = new Map<string, TemplateType>([
+  [`${Direction.INBOUND}_${TransformationType.SUBSTITUTION_AS_CODE}`, TemplateType.INBOUND_SUBSTITUTION_AS_CODE],
+  [`${Direction.OUTBOUND}_${TransformationType.SUBSTITUTION_AS_CODE}`, TemplateType.OUTBOUND_SUBSTITUTION_AS_CODE],
+  [`${Direction.INBOUND}_${TransformationType.SMART_FUNCTION}`, TemplateType.INBOUND_SMART_FUNCTION],
+  [`${Direction.OUTBOUND}_${TransformationType.SMART_FUNCTION}`, TemplateType.OUTBOUND_SMART_FUNCTION],
+]);
+
+export function toTemplateType(direction: Direction, transformationType: TransformationType): TemplateType {
+  const key = `${direction}_${transformationType}`;
+  const templateType = TEMPLATE_TYPE_LOOKUP.get(key);
+  if (!templateType) {
+    throw new Error(`No TemplateType mapping for direction='${direction}' transformationType='${transformationType}'`);
+  }
+  return templateType;
 }

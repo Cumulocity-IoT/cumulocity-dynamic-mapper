@@ -40,6 +40,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
 /**
  * Service for querying notification subscriptions.
@@ -317,12 +318,30 @@ public class SubscriptionQueryService {
 
         try {
             ManagedObjectRepresentation mor = configurationRegistry.getC8yAgent()
-                    .getManagedObjectForId(tenant, device.getId(), false);
+                    .getManagedObjectForId(tenant, device.getId(), false, true);
             if (mor != null) {
                 device.setName(mor.getName());
                 device.setType(mor.getType());
+                if (mor.getAssetParents() != null && mor.getAssetParents().getReferences() != null) {
+                    List<String> groups = mor.getAssetParents().getReferences().stream()
+                            .filter(ref -> ref.getManagedObject() != null
+                                    && ref.getManagedObject().getName() != null)
+                            .map(ref -> ref.getManagedObject().getName())
+                            .collect(Collectors.toList());
+                    device.setGroups(groups);
+                }
             } else {
-                log.warn("{} - Device {} in subscription does not exist", tenant, device.getId());
+                log.warn("{} - Device {} in subscription does not exist, deleting stale subscription {}",
+                        tenant, device.getId(), nsr.getId().getValue());
+                try {
+                    subscriptionAPI.delete(nsr);
+                    log.info("{} - Deleted stale subscription {} for non-existent device {}",
+                            tenant, nsr.getId().getValue(), device.getId());
+                } catch (Exception deleteEx) {
+                    log.warn("{} - Failed to delete stale subscription {} for device {}: {}",
+                            tenant, nsr.getId().getValue(), device.getId(), deleteEx.getMessage());
+                }
+                return;
             }
         } catch (Exception e) {
             log.warn("{} - Error retrieving device {}: {}", tenant, device.getId(), e.getMessage());

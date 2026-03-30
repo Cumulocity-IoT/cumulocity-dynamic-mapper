@@ -32,6 +32,7 @@ import org.graalvm.polyglot.Value;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.flow.JavaScriptConsole;
+import dynamic.mapper.processor.util.JavaScriptModuleStripper;
 import dynamic.mapper.processor.model.DataPrepContext;
 import dynamic.mapper.processor.util.JavaScriptModuleStripper;
 import dynamic.mapper.processor.model.OutputCollector;
@@ -127,34 +128,51 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
                     bindings.putMember("console", console);
                 }
 
-                // Load and execute the JavaScript code
-                byte[] decodedBytes = Base64.getDecoder().decode(mapping.getCode());
-                String decodedCode = new String(decodedBytes);
-                // Strip ES module export/import statements so the code runs in GraalVM
-                // script mode without SyntaxErrors.
-                decodedCode = JavaScriptModuleStripper.toPlainScript(decodedCode);
-                String decodedCodeAdapted = decodedCode.replaceFirst("onMessage", identifier);
-
-                // Wrap in IIFE so top-level declarations in bundled code (e.g. `const globalConfig`
-                // from Zod or other libraries) are scoped to the IIFE and cannot collide with
-                // declarations in sharedCode.js or systemCode.js evaluated in the same GraalVM context.
-                // The renamed onMessage function is explicitly promoted to globalThis so it remains
-                // accessible via graalContext.getBindings("js").getMember(identifier).
-                String wrappedCode = "(function() {\n"
-                        + decodedCodeAdapted + "\n"
-                        + "if (typeof " + identifier + " === 'function') globalThis['" + identifier + "'] = " + identifier + ";\n"
-                        + "})();";
-                // Load shared code BEFORE evaluating mapping code so that symbols
-                // defined in sharedCode.js (e.g. Zod, helpers) are available when
-                // the mapping IIFE executes its top-level initialisation.
+                // Load shared/system code first — populates globalThis with helpers/libraries
                 loadSharedCode(graalContext, context);
 
-                Source source = Source.newBuilder("js", wrappedCode, identifier + ".js")
-                        .cached(true)
-                        .buildLiteral();
-                graalContext.eval(source);
+                byte[] decodedBytes = Base64.getDecoder().decode(mapping.getCode());
+                String decodedCode = new String(decodedBytes);
 
-                onMessageFunction = bindings.getMember(identifier);
+                boolean supportESM = Boolean.TRUE.equals(serviceConfiguration.getSupportESM());
+                Source source;
+                if (supportESM) {
+                    // ESM mode: keep export keywords, evaluate as ES module.
+                    // The function is retrieved from the module namespace via
+                    // js.esm-eval-returns-exports (enabled in createGraalContext).
+                    source = Source.newBuilder("js", decodedCode, identifier + ".mjs")
+                            .cached(true)
+                            .buildLiteral();
+                } else {
+                    // Flat-script mode: strip ES module export/import statements so the code
+                    // runs without SyntaxErrors, then wrap in an IIFE to scope any top-level
+                    // declarations (e.g. `const globalConfig` from bundled libraries).
+                    // No rename needed: each message gets a fresh GraalVM context, so there
+                    // is no risk of onMessage() colliding with another mapping's function.
+                    decodedCode = JavaScriptModuleStripper.toPlainScript(decodedCode);
+                    String wrappedCode = "(function() {\n"
+                            + decodedCode + "\n"
+                            + "globalThis['" + Mapping.SMART_FUNCTION_NAME + "'] = " + Mapping.SMART_FUNCTION_NAME + ";\n"
+                            + "})();";
+                    source = Source.newBuilder("js", wrappedCode, identifier + ".js")
+                            .cached(true)
+                            .buildLiteral();
+                }
+
+                if (supportESM) {
+                    Value exports = graalContext.eval(source);
+                    onMessageFunction = exports.getMember(Mapping.SMART_FUNCTION_NAME);
+                } else {
+                    graalContext.eval(source);
+                    onMessageFunction = bindings.getMember(Mapping.SMART_FUNCTION_NAME);
+                }
+
+                if (onMessageFunction == null || onMessageFunction.isNull()) {
+                    throw new ProcessingException(String.format(
+                            "Function '%s' not found in mapping code. Ensure the script defines and exports a function named '%s'.",
+                            Mapping.SMART_FUNCTION_NAME, Mapping.SMART_FUNCTION_NAME));
+                }
+
                 inputMessage = createInputMessage(graalContext, context);
 
                 // Execute the JavaScript function

@@ -27,7 +27,8 @@ import {
   from,
   merge,
   of,
-  timer
+  timer,
+  NEVER
 } from 'rxjs';
 import {
   map,
@@ -41,28 +42,11 @@ import {
 } from 'rxjs/operators';
 import { BASE_URL, ConnectorConfiguration, ConnectorSpecification, ConnectorStatus, ConnectorStatusEvent, PATH_CONFIGURATION_CONNECTION_ENDPOINT, PATH_STATUS_CONNECTORS_ENDPOINT, PollingInterval } from '..';
 
-interface ConnectorConfigurationState {
-  configurations: ConnectorConfiguration[];
-  specifications: ConnectorSpecification[];
-  statusMap: { [identifier: string]: ConnectorStatusEvent };
-  isLoading: boolean;
-  error: string | null;
-}
-
 @Injectable({ providedIn: 'root' })
 export class ConnectorConfigurationService {
 
   // Subscription management
   private readonly destroy$ = new Subject<void>();
-
-  // State management
-  private readonly state$ = new BehaviorSubject<ConnectorConfigurationState>({
-    configurations: [],
-    specifications: [],
-    statusMap: {},
-    isLoading: false,
-    error: null
-  });
 
   // Triggers
   private readonly refreshTrigger$ = new Subject<void>();
@@ -76,22 +60,15 @@ export class ConnectorConfigurationService {
     { label: '1 minute', value: 60000, seconds: 60 }
   ];
 
-  // Countdown active flag — controls whether the visual countdown in the grid is running
-  private isCountdownActive = true;
+  // Controls whether the auto-refresh polling timer is active.
+  // When false, the status stream emits NEVER so no polls are fired.
+  private readonly pollingEnabled$ = new BehaviorSubject<boolean>(true);
 
   // Last successfully loaded status map — returned on poll error to preserve stale data
   // instead of resetting all connectors to UNKNOWN.
   private lastStatusMap: { [identifier: string]: ConnectorStatusEvent } = {};
 
-  // Configuration
-  private readonly CONFIG = {
-    CACHE_DURATION: 5 * 60 * 1000, // 5 minutes
-    RETRY_DELAY: 1000
-  } as const;
-
-  // Cache
-  private specificationsCache: ConnectorSpecification[] | null = null;
-  private cacheTimestamp: number = 0;
+  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes for specifications re-fetch
 
   private configurations$?: Observable<ConnectorConfiguration[]>;
   private configurationsWithStatus$?: Observable<ConnectorConfiguration[]>;
@@ -105,9 +82,13 @@ export class ConnectorConfigurationService {
     // destroy$ must be completed before all subjects so takeUntil unsubscribes streams first
     this.destroy$.next();
     this.destroy$.complete();
-    this.state$.complete();
     this.refreshTrigger$.complete();
     this.pollingInterval$.complete();
+    this.pollingEnabled$.complete();
+    // Nullify cached stream references so re-entry after cleanUp creates fresh streams
+    this.configurations$ = undefined;
+    this.configurationsWithStatus$ = undefined;
+    this.specifications$ = undefined;
   }
 
   // Public API
@@ -155,36 +136,21 @@ export class ConnectorConfigurationService {
     return found ? found.label : `${current / 1000} seconds`;
   }
 
-  // Fix 3: only emit on the refresh trigger — do NOT reset the polling timer by
-  // re-emitting to pollingInterval$, which would restart the auto-poll countdown.
   refreshConfigurations(): void {
     this.refreshTrigger$.next();
   }
 
   resetCache(): void {
-    this.specificationsCache = null;
-    this.cacheTimestamp = 0;
-    this.updateState({
-      specifications: [],
-      statusMap: {}
-    });
+    this.specifications$ = undefined;
   }
 
-  // Countdown control — called by the grid to pause/resume the visual countdown component.
-  startCountdown(): void {
-    this.isCountdownActive = true;
+  // Polling control — enables or disables the background status polling timer.
+  setPollingEnabled(enabled: boolean): void {
+    this.pollingEnabled$.next(enabled);
   }
 
-  stopCountdown(): void {
-    this.isCountdownActive = false;
-  }
-
-  isCountdownRunning(): boolean {
-    return this.isCountdownActive;
-  }
-
-  toggleCountdown(): void {
-    this.isCountdownActive = !this.isCountdownActive;
+  isPollingEnabled(): boolean {
+    return this.pollingEnabled$.value;
   }
 
   // CRUD Operations
@@ -276,11 +242,12 @@ export class ConnectorConfigurationService {
   private createConfigurationsStream(): Observable<ConnectorConfiguration[]> {
     return this.refreshTrigger$.pipe(
       startWith(null), // Initial load
-      switchMap(() => this.loadConfigurations()),
-      catchError(error => {
-        this.handleError('Failed to load configurations', error);
-        return of([]);
-      }),
+      switchMap(() => this.loadConfigurations().pipe(
+        catchError(error => {
+          this.handleError('Failed to load configurations', error);
+          return of([]);
+        })
+      )),
       distinctUntilChanged(),
       shareReplay(1),
       takeUntil(this.destroy$)
@@ -302,27 +269,30 @@ export class ConnectorConfigurationService {
   }
 
   private createStatusStream(): Observable<{ [identifier: string]: ConnectorStatusEvent }> {
-    const timerTrigger$ = this.pollingInterval$.pipe(
-      switchMap(interval => timer(0, interval))
+    const timerTrigger$ = combineLatest([this.pollingInterval$, this.pollingEnabled$]).pipe(
+      switchMap(([interval, enabled]) => enabled ? timer(0, interval) : NEVER)
     );
     return merge(timerTrigger$, this.refreshTrigger$).pipe(
-      switchMap(() => this.loadConnectorStatus()),
-      catchError(error => {
-        console.error('Failed to load connector status:', error);
-        return of(this.lastStatusMap);
-      }),
+      switchMap(() => this.loadConnectorStatus().pipe(
+        catchError(error => {
+          console.error('Failed to load connector status:', error);
+          return of(this.lastStatusMap);
+        })
+      )),
       shareReplay(1),
       takeUntil(this.destroy$)
     );
   }
 
   private createSpecificationsStream(): Observable<ConnectorSpecification[]> {
-    return timer(0, this.CONFIG.CACHE_DURATION).pipe(
-      switchMap(() => this.loadSpecifications()),
-      catchError(error => {
-        console.error('Failed to load specifications:', error);
-        return of([]);
-      }),
+    return timer(0, this.CACHE_DURATION).pipe(
+      switchMap(() => from(this.fetchSpecifications()).pipe(
+        catchError(error => {
+          console.error('Failed to load specifications:', error);
+          return of([]);
+        })
+      )),
+      shareReplay(1),
       takeUntil(this.destroy$)
     );
   }
@@ -336,34 +306,9 @@ export class ConnectorConfigurationService {
     );
   }
 
-  // Fix 6: cache each successful result; on error return stale data so connectors
-  // keep their last known status instead of all flipping to UNKNOWN.
   private loadConnectorStatus(): Observable<{ [identifier: string]: ConnectorStatusEvent }> {
     return from(this.fetchConnectorStatus()).pipe(
-      tap(statusMap => { this.lastStatusMap = statusMap; }),
-      catchError(error => {
-        console.error('Failed to fetch connector status:', error);
-        this.updateState({ error: 'Status poll failed — showing last known status' });
-        return of(this.lastStatusMap);
-      })
-    );
-  }
-
-  private loadSpecifications(): Observable<ConnectorSpecification[]> {
-    if (this.isSpecificationsCacheValid()) {
-      return of(this.specificationsCache!);
-    }
-
-    return from(this.fetchSpecifications()).pipe(
-      map(specs => {
-        this.specificationsCache = specs;
-        this.cacheTimestamp = Date.now();
-        return specs;
-      }),
-      catchError(error => {
-        console.error('Failed to fetch specifications:', error);
-        return of([]);
-      })
+      tap(statusMap => { this.lastStatusMap = statusMap; })
     );
   }
 
@@ -426,26 +371,8 @@ export class ConnectorConfigurationService {
     }));
   }
 
-  private isSpecificationsCacheValid(): boolean {
-    return this.specificationsCache !== null &&
-      (Date.now() - this.cacheTimestamp) < this.CONFIG.CACHE_DURATION;
-  }
-
-  private updateState(partialState: Partial<ConnectorConfigurationState>): void {
-    const currentState = this.state$.value;
-    this.state$.next({ ...currentState, ...partialState });
-  }
-
   private handleError(message: string, error: unknown): void {
-    console.error(message, error);
-
-    const errorMessage = error instanceof Error
-      ? error.message
-      : 'Unknown error occurred';
-
-    this.updateState({
-      error: `${message}: ${errorMessage}`,
-      isLoading: false
-    });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    console.error(`${message}: ${errorMessage}`, error);
   }
 }

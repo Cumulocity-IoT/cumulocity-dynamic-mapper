@@ -60,10 +60,12 @@
                   <small translate>Log payload in microservice log file.</small>
                 </p>
               </div>
-              <label class="c8y-switch c8y-switch--inline m-l-auto" title="{{ 'Log payload' | translate }}">
-                <input name="logPayload" type="checkbox" formControlName="logPayload" />
-                <span></span>
-              </label>
+              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
+                <label class="c8y-switch c8y-switch--inline" title="{{ 'Log payload' | translate }}">
+                  <input name="logPayload" type="checkbox" formControlName="logPayload" />
+                  <span></span>
+                </label>
+              </div>
             </div>
           </c8y-li>
           <c8y-li>
@@ -76,10 +78,12 @@
                     mapping.</small>
                 </p>
               </div>
-              <label class="c8y-switch c8y-switch--inline m-l-auto" title="{{ 'Log substitution' | translate }}">
-                <input name="logSubstitution" type="checkbox" formControlName="logSubstitution" />
-                <span></span>
-              </label>
+              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
+                <label class="c8y-switch c8y-switch--inline" title="{{ 'Log substitution' | translate }}">
+                  <input name="logSubstitution" type="checkbox" formControlName="logSubstitution" />
+                  <span></span>
+                </label>
+              </div>
             </div>
           </c8y-li>
           <c8y-li>
@@ -91,10 +95,12 @@
                   <small translate>Log errors when connecting in microservice log file.</small>
                 </p>
               </div>
-              <label class="c8y-switch c8y-switch--inline m-l-auto" title="{{ 'Log connector errors' | translate }}">
-                <input name="logConnectorErrorInBackend" type="checkbox" formControlName="logConnectorErrorInBackend" />
-                <span></span>
-              </label>
+              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
+                <label class="c8y-switch c8y-switch--inline" title="{{ 'Log connector errors' | translate }}">
+                  <input name="logConnectorErrorInBackend" type="checkbox" formControlName="logConnectorErrorInBackend" />
+                  <span></span>
+                </label>
+              </div>
             </div>
           </c8y-li>
           <c8y-li>
@@ -107,11 +113,12 @@
                     this can cause additional costs </small><i c8yIcon="euro"></i>
                 </p>
               </div>
-              <label class="c8y-switch c8y-switch--inline m-l-auto"
-                title="{{ 'Send connector lifecycle' | translate }}">
-                <input name="sendMappingStatus" type="checkbox" formControlName="sendConnectorLifecycle" />
-                <span></span>
-              </label>
+              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
+                <label class="c8y-switch c8y-switch--inline" title="{{ 'Send connector lifecycle' | translate }}">
+                  <input name="sendMappingStatus" type="checkbox" formControlName="sendConnectorLifecycle" />
+                  <span></span>
+                </label>
+              </div>
             </div>
           </c8y-li>
 
@@ -125,10 +132,12 @@
                     aware this can cause additional costs </small><i c8yIcon="euro"></i>
                 </p>
               </div>
-              <label class="c8y-switch c8y-switch--inline m-l-auto" title="{{ 'Send mapping status' | translate }}">
-                <input name="sendMappingStatus" type="checkbox" formControlName="sendMappingStatus" />
-                <span></span>
-              </label>
+              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
+                <label class="c8y-switch c8y-switch--inline" title="{{ 'Send mapping status' | translate }}">
+                  <input name="sendMappingStatus" type="checkbox" formControlName="sendMappingStatus" />
+                  <span></span>
+                </label>
+              </div>
             </div>
           </c8y-li>
 
@@ -142,11 +151,12 @@
                     aware this can cause additional costs </small><i c8yIcon="euro"></i>
                 </p>
               </div>
-              <label class="c8y-switch c8y-switch--inline m-l-auto"
-                title="{{ 'Send events on topic subscriptions' | translate }}">
-                <input name="sendSubscriptionEvents" type="checkbox" formControlName="sendSubscriptionEvents" />
-                <span></span>
-              </label>
+              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
+                <label class="c8y-switch c8y-switch--inline" title="{{ 'Send events on topic subscriptions' | translate }}">
+                  <input name="sendSubscriptionEvents" type="checkbox" formControlName="sendSubscriptionEvents" />
+                  <span></span>
+                </label>
+              </div>
             </div>
           </c8y-li>
 
@@ -160,11 +170,12 @@
                     Be aware this can cause additional costs </small><i c8yIcon="euro"></i>
                 </p>
               </div>
-              <label class="c8y-switch c8y-switch--inline m-l-auto"
-                title="{{ 'Send notification lifecycle' | translate }}">
-                <input name="sendNotificationLifecycle" type="checkbox" formControlName="sendNotificationLifecycle" />
-                <span></span>
-              </label>
+              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
+                <label class="c8y-switch c8y-switch--inline" title="{{ 'Send notification lifecycle' | translate }}">
+                  <input name="sendNotificationLifecycle" type="checkbox" formControlName="sendNotificationLifecycle" />
+                  <span></span>
+                </label>
+              </div>
             </div>
           </c8y-li>
           }
@@ -179,27 +190,28 @@
                     defined in the AI Agent Manager.</small>
                 </p>
               </div>
-              <label class="m-l-auto" title="{{ ' Name of jsonata agent' | translate }}"
-               >
-                <div class="c8y-select-wrapper p-r-4" style="width:200px">
-                  <select class="form-control" formControlName="jsonataAgent" name="jsonataAgent">
-                    <option value="" disabled selected>
-                      Select agent
-                    </option>
-                    @for (agent of (agents$| async); track agent) {
-                    <option [value]="agent">
-                      {{ agent }}
-                    </option>
-                    }
-                  </select>
-                </div>
-                <span></span>
-                @if (!aiAgentDeployed) {
-                <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
-                  popover="{{'Select box is disabled if AI Agent is not deployed in this tenant or no agent is defined.'| translate}}"
-                  placement="bottom" triggers="focus" type="button" container="body"></button>
-                }
-              </label>
+              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
+                <label title="{{ ' Name of jsonata agent' | translate }}">
+                  <div class="c8y-select-wrapper p-r-4">
+                    <select class="form-control" formControlName="jsonataAgent" name="jsonataAgent">
+                      <option value="" disabled selected>
+                        Select agent
+                      </option>
+                      @for (agent of (agents$| async); track agent) {
+                      <option [value]="agent">
+                        {{ agent }}
+                      </option>
+                      }
+                    </select>
+                  </div>
+                  <span></span>
+                  @if (!aiAgentDeployed) {
+                  <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
+                    popover="{{'Select box is disabled if AI Agent is not deployed in this tenant or no agent is defined.'| translate}}"
+                    placement="bottom" triggers="focus" type="button" container="body"></button>
+                  }
+                </label>
+              </div>
             </div>
           </c8y-li>
 
@@ -207,35 +219,35 @@
             <c8y-li-icon icon="bot"></c8y-li-icon>
             <div class="d-flex a-i-center">
               <div>
-                <p>{{ 'JavaScript AI Agent' |
-                  translate }}</p>
+                <p>{{ 'JavaScript AI Agent' | translate }}</p>
                 <p>
                   <small translate>Name of javaScript agent to be used when generating substitutions as JavaScript code.
                     The needs to be
                     defined in the AI Agent Manager.</small>
                 </p>
               </div>
-              <label class="m-l-auto" title="{{ ' Name of javaScript agent' | translate }}"
-               >
-                <div class="c8y-select-wrapper" style="width:200px">
-                  <select class="form-control" formControlName="javaScriptAgent" name="javaScriptAgent">
-                    <option value="" disabled selected>
-                      Select agent
-                    </option>
-                    @for (agent of (agents$| async); track agent) {
-                    <option [value]="agent">
-                      {{ agent }}
-                    </option>
-                    }
-                  </select>
-                </div>
-                <span></span>
-                @if (!aiAgentDeployed) {
-                <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
-                  popover="{{'Select box is disabled if AI Agent is not deployed in this tenant or no agent is defined.'| translate}}"
-                  placement="bottom" triggers="focus" type="button" container="body"></button>
-                }
-              </label>
+              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
+                <label title="{{ ' Name of javaScript agent' | translate }}">
+                  <div class="c8y-select-wrapper">
+                    <select class="form-control" formControlName="javaScriptAgent" name="javaScriptAgent">
+                      <option value="" disabled selected>
+                        Select agent
+                      </option>
+                      @for (agent of (agents$| async); track agent) {
+                      <option [value]="agent">
+                        {{ agent }}
+                      </option>
+                      }
+                    </select>
+                  </div>
+                  <span></span>
+                  @if (!aiAgentDeployed) {
+                  <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
+                    popover="{{'Select box is disabled if AI Agent is not deployed in this tenant or no agent is defined.'| translate}}"
+                    placement="bottom" triggers="focus" type="button" container="body"></button>
+                  }
+                </label>
+              </div>
             </div>
           </c8y-li>
 
@@ -243,8 +255,7 @@
             <c8y-li-icon icon="bot"></c8y-li-icon>
             <div class="d-flex a-i-center">
               <div>
-                <p>{{ 'SmartFunction AI Agent' |
-                  translate }}</p>
+                <p>{{ 'SmartFunction AI Agent' | translate }}</p>
                 <p>
                   <small translate>Name of smartFunction agent to be used when generating Cumulocity API payloads as
                     JavaScript code.
@@ -252,27 +263,28 @@
                     defined in the AI Agent Manager.</small>
                 </p>
               </div>
-              <label class="m-l-auto" title="{{ ' Name of smartFunction agent' | translate }}"
-               >
-                <div class="c8y-select-wrapper" style="width:200px">
-                  <select class="form-control" formControlName="smartFunctionAgent" name="smartFunctionAgent">
-                    <option value="" disabled selected>
-                      Select agent
-                    </option>
-                    @for (agent of (agents$| async); track agent) {
-                    <option [value]="agent">
-                      {{ agent }}
-                    </option>
-                    }
-                  </select>
-                </div>
-                <span></span>
-                @if (!aiAgentDeployed) {
-                <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
-                  popover="{{'Select box is disabled if AI Agent is not deployed in this tenant or no agent is defined.'| translate}}"
-                  placement="bottom" triggers="focus" type="button" container="body"></button>
-                }
-              </label>
+              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
+                <label title="{{ ' Name of smartFunction agent' | translate }}">
+                  <div class="c8y-select-wrapper">
+                    <select class="form-control" formControlName="smartFunctionAgent" name="smartFunctionAgent">
+                      <option value="" disabled selected>
+                        Select agent
+                      </option>
+                      @for (agent of (agents$| async); track agent) {
+                      <option [value]="agent">
+                        {{ agent }}
+                      </option>
+                      }
+                    </select>
+                  </div>
+                  <span></span>
+                  @if (!aiAgentDeployed) {
+                  <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
+                    popover="{{'Select box is disabled if AI Agent is not deployed in this tenant or no agent is defined.'| translate}}"
+                    placement="bottom" triggers="focus" type="button" container="body"></button>
+                  }
+                </label>
+              </div>
             </div>
           </c8y-li>
           }
@@ -287,10 +299,12 @@
                     the Dynamic Mapper microservice to this tenant.</small>
                 </p>
               </div>
-              <label class="c8y-switch c8y-switch--inline m-l-auto" title="{{ 'Outbound mappings' | translate }}">
-                <input name="outboundMappingEnabled" type="checkbox" formControlName="outboundMappingEnabled" />
-                <span></span>
-              </label>
+              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
+                <label class="c8y-switch c8y-switch--inline" title="{{ 'Outbound mappings' | translate }}">
+                  <input name="outboundMappingEnabled" type="checkbox" formControlName="outboundMappingEnabled" />
+                  <span></span>
+                </label>
+              </div>
             </div>
           </c8y-li>
 
@@ -305,12 +319,13 @@
                     Dynamic Mapper microservice to this tenant.</small>
                 </p>
               </div>
-              <label class="c8y-switch c8y-switch--inline m-l-auto"
-                title="{{ 'Device Isolation Cumulocity MQTT Service' | translate }}">
-                <input name="deviceIsolationMQTTServiceEnabled" type="checkbox"
-                  formControlName="deviceIsolationMQTTServiceEnabled" />
-                <span></span>
-              </label>
+              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
+                <label class="c8y-switch c8y-switch--inline" title="{{ 'Device Isolation Cumulocity MQTT Service' | translate }}">
+                  <input name="deviceIsolationMQTTServiceEnabled" type="checkbox"
+                    formControlName="deviceIsolationMQTTServiceEnabled" />
+                  <span></span>
+                </label>
+              </div>
             </div>
           </c8y-li>
 
@@ -323,11 +338,12 @@
                   <small translate>Suppress deprecation warnings for outdated mapping types and configurations.</small>
                 </p>
               </div>
-              <label class="c8y-switch c8y-switch--inline m-l-auto"
-                title="{{ 'Suppress deprecation warnings' | translate }}">
-                <input name="suppressDeprecationWarning" type="checkbox" formControlName="suppressDeprecationWarning" />
-                <span></span>
-              </label>
+              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
+                <label class="c8y-switch c8y-switch--inline" title="{{ 'Suppress deprecation warnings' | translate }}">
+                  <input name="suppressDeprecationWarning" type="checkbox" formControlName="suppressDeprecationWarning" />
+                  <span></span>
+                </label>
+              </div>
             </div>
           </c8y-li> -->
 
@@ -341,11 +357,32 @@
                     starving the CPU</small>
                 </p>
               </div>
-              <label class="editable m-l-auto" title="{{ ' maxCPU time in milliseconds ' | translate }}"
-               >
-                <input class="form-control" name="maxCPUTimeMS" type="number" formControlName="maxCPUTimeMS" />
-                <span></span>
-              </label>
+              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
+                <label class="editable" title="{{ ' maxCPU time in milliseconds ' | translate }}">
+                  <input class="form-control" name="maxCPUTimeMS" type="number" style="min-width:350px" formControlName="maxCPUTimeMS" />
+                  <span></span>
+                </label>
+              </div>
+            </div>
+          </c8y-li>
+
+          <c8y-li>
+            <c8y-li-icon icon="package"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'Support ESM modules' | translate }}</p>
+                <p>
+                  <small translate>Enable ECMAScript Module (ESM) support for JavaScript mapping code. When enabled,
+                    code may use <code>export function</code> syntax and is evaluated as an ES module. When disabled
+                    (default), code runs in flat-script mode.</small>
+                </p>
+              </div>
+              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
+                <label class="c8y-switch c8y-switch--inline" title="{{ 'Support ESM modules' | translate }}">
+                  <input name="supportESM" type="checkbox" formControlName="supportESM" />
+                  <span></span>
+                </label>
+              </div>
             </div>
           </c8y-li>
           }
@@ -360,12 +397,13 @@
                     to clear the cache to take effect</small>
                 </p>
               </div>
-              <label class="editable m-l-auto" title="{{ 'Size inbound Id cache' | translate }}"
-               >
-                <input class="form-control" name="inboundExternalIdCacheSize" type="number"
-                  formControlName="inboundExternalIdCacheSize" />
-                <span></span>
-              </label>
+              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
+                <label class="editable" title="{{ 'Size inbound Id cache' | translate }}">
+                  <input class="form-control" name="inboundExternalIdCacheSize" type="number" style="min-width:350px"
+                    formControlName="inboundExternalIdCacheSize" />
+                  <span></span>
+                </label>
+              </div>
             </div>
           </c8y-li>
 
@@ -380,12 +418,13 @@
                     external id to different device</small>
                 </p>
               </div>
-              <label class="editable m-l-auto" title="{{ 'Days lifetime ' | translate }}"
-               >
-                <input class="form-control" name="inboundExternalIdCacheRetention" type="number"
-                  formControlName="inboundExternalIdCacheRetention" />
-                <span></span>
-              </label>
+              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
+                <label class="editable" title="{{ 'Days lifetime ' | translate }}">
+                  <input class="form-control" name="inboundExternalIdCacheRetention" type="number" style="min-width:350px"
+                    formControlName="inboundExternalIdCacheRetention" />
+                  <span></span>
+                </label>
+              </div>
             </div>
           </c8y-li>
 
@@ -399,12 +438,13 @@
                     to clear the cache to take effect</small>
                 </p>
               </div>
-              <label class="editable m-l-auto" title="{{ 'Size inventory cache' | translate }}"
-               >
-                <input class="form-control" name="inventoryCacheSize" type="number"
-                  formControlName="inventoryCacheSize" />
-                <span></span>
-              </label>
+              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
+                <label class="editable" title="{{ 'Size inventory cache' | translate }}">
+                  <input class="form-control" name="inventoryCacheSize" type="number" style="min-width:350px"
+                    formControlName="inventoryCacheSize" />
+                  <span></span>
+                </label>
+              </div>
             </div>
           </c8y-li>
 
@@ -419,12 +459,13 @@
                     external id to different device</small>
                 </p>
               </div>
-              <label class="editable m-l-auto" title="{{ 'Days lifetime' | translate }}"
-               >
-                <input class="form-control" name="inventoryCacheRetention" type="number"
-                  formControlName="inventoryCacheRetention" />
-                <span></span>
-              </label>
+              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
+                <label class="editable" title="{{ 'Days lifetime' | translate }}">
+                  <input class="form-control" name="inventoryCacheRetention" type="number" style="min-width:350px"
+                    formControlName="inventoryCacheRetention" />
+                  <span></span>
+                </label>
+              </div>
             </div>
           </c8y-li>
 
@@ -438,12 +479,13 @@
                     Extensions is cleared. Set to 0 to disable TTL.</small>
                 </p>
               </div>
-              <label class="editable m-l-auto" title="{{ 'Hours lifetime flow state' | translate }}"
-               >
-                <input class="form-control" name="flowStateRetention" type="number" min="0"
-                  formControlName="flowStateRetention" />
-                <span></span>
-              </label>
+              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
+                <label class="editable" title="{{ 'Minutes lifetime flow state' | translate }}" >
+                  <input class="form-control" name="flowStateRetention" type="number" style="min-width:350px"
+                    formControlName="flowStateRetention" />
+                  <span></span>
+                </label>
+              </div>
             </div>
           </c8y-li>
 
@@ -457,12 +499,13 @@
                     'filterInventory'</small>
                 </p>
               </div>
-              <label class="editable m-l-auto" title="{{ 'Fragments from inventory to cache' | translate }}"
-               >
-                <input class="form-control" name="inventoryFragmentsToCache" type="string"
-                  formControlName="inventoryFragmentsToCache" />
-                <span></span>
-              </label>
+              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
+                <label class="editable" title="{{ 'Fragments from inventory to cache' | translate }}">
+                  <input class="form-control" name="inventoryFragmentsToCache" type="text" style="min-width:350px"
+                    formControlName="inventoryFragmentsToCache" />
+                  <span></span>
+                </label>
+              </div>
             </div>
           </c8y-li>
           }

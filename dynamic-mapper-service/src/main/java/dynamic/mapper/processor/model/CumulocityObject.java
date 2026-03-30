@@ -107,9 +107,11 @@ public class CumulocityObject {
      * attachment
      * attachmentData: specify data of attachment, when processing an EVENT with
      * attachment
+     * deviceFragments: specify additional managed object fragments to set on the
+     * implicitly created device (Map<String, Object>)
      *
      */
-    private Map<String, String> contextData;
+    private Map<String, Object> contextData;
 
     /**
      * Optional: Explicitly set the Cumulocity device ID (sourceId) for this object.
@@ -176,7 +178,7 @@ public class CumulocityObject {
         protected String action = "create";
         protected List<ExternalId> externalSource = new ArrayList<>();
         protected Destination destination = Destination.CUMULOCITY;
-        protected Map<String, String> contextData = new HashMap<>();
+        protected Map<String, Object> contextData = new HashMap<>();
         protected String sourceId;
 
         @SuppressWarnings("unchecked")
@@ -221,7 +223,7 @@ public class CumulocityObject {
         }
 
         /**
-         * Add a context data entry.
+         * Add a string context data entry.
          *
          * @param key The context data key
          * @param value The context data value
@@ -229,6 +231,30 @@ public class CumulocityObject {
          */
         public T contextData(String key, String value) {
             this.contextData.put(key, value);
+            return self();
+        }
+
+        /**
+         * Set device fragments to be applied when implicitly creating a device.
+         * Each key is a fragment name and the value is the fragment content.
+         *
+         * @param deviceFragments Map of fragment name → fragment content
+         * @return This builder
+         */
+        public T deviceFragments(Map<String, Object> deviceFragments) {
+            this.contextData.put("deviceFragments", deviceFragments);
+            return self();
+        }
+
+        /**
+         * Set device group names the implicitly created device should be assigned to.
+         * Groups are looked up by name; missing groups are created automatically.
+         *
+         * @param deviceGroups List of group names (e.g., ["line 1", "line 2"])
+         * @return This builder
+         */
+        public T deviceGroups(java.util.List<String> deviceGroups) {
+            this.contextData.put("deviceGroups", deviceGroups);
             return self();
         }
 

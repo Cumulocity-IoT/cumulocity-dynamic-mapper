@@ -198,7 +198,7 @@ public class MappingController {
         ),
         @ApiResponse(responseCode = "400", description = "Invalid mapping configuration", content = @Content),
         @ApiResponse(responseCode = "403", description = "Insufficient permissions to create mapping", content = @Content),
-        @ApiResponse(responseCode = "409", description = "Mapping already exists or conflicts with existing configuration", content = @Content),
+        @ApiResponse(responseCode = "422", description = "Mapping validation failed (duplicate topic, conflicting configuration)", content = @Content),
         @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
     @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
@@ -234,21 +234,21 @@ public class MappingController {
         } catch (MappingValidationException e) {
             log.warn("{} - Mapping validation failed: {}", tenant, e.getMessage());
             throw new ResponseStatusException(
-                HttpStatus.CONFLICT, 
+                HttpStatus.UNPROCESSABLE_ENTITY,
                 "Mapping validation failed: " + e.getMessage()
             );
-            
+
         } catch (IllegalArgumentException e) {
             log.warn("{} - Invalid mapping data: {}", tenant, e.getMessage());
             throw new ResponseStatusException(
-                HttpStatus.BAD_REQUEST, 
+                HttpStatus.BAD_REQUEST,
                 "Invalid mapping data: " + e.getMessage()
             );
-            
+
         } catch (Exception e) {
             log.error("{} - Failed to create mapping", tenant, e);
             throw new ResponseStatusException(
-                HttpStatus.INTERNAL_SERVER_ERROR, 
+                HttpStatus.INTERNAL_SERVER_ERROR,
                 "Failed to create mapping: " + e.getMessage()
             );
         }
@@ -286,7 +286,7 @@ public class MappingController {
         @ApiResponse(responseCode = "403", description = "Insufficient permissions to update mapping", content = @Content),
         @ApiResponse(responseCode = "404", description = "Mapping not found", content = @Content),
         @ApiResponse(responseCode = "406", description = "Active mappings cannot be updated", content = @Content),
-        @ApiResponse(responseCode = "409", description = "Mapping conflicts with existing configuration", content = @Content),
+        @ApiResponse(responseCode = "422", description = "Mapping validation failed (duplicate topic, conflicting configuration)", content = @Content),
         @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
     @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
@@ -323,14 +323,14 @@ public class MappingController {
         } catch (MappingValidationException e) {
             log.warn("{} - Mapping validation failed: {}", tenant, e.getMessage());
             throw new ResponseStatusException(
-                HttpStatus.CONFLICT, 
+                HttpStatus.UNPROCESSABLE_ENTITY,
                 "Mapping validation failed: " + e.getMessage()
             );
-            
+
         } catch (IllegalStateException e) {
             log.warn("{} - Cannot update mapping: {}", tenant, e.getMessage());
             throw new ResponseStatusException(
-                HttpStatus.NOT_ACCEPTABLE, 
+                HttpStatus.NOT_ACCEPTABLE,
                 "Cannot update mapping: " + e.getMessage()
             );
             
@@ -541,8 +541,9 @@ public class MappingController {
             }
         });
         
-        // Update cache (automatically updates resolver)
+        // Remove old entry then add updated one so stale topics are cleaned from the resolver tree
         try {
+            mappingService.removeFromMappingFromCaches(tenant, mapping);
             mappingService.addMappingInboundToCache(tenant, mapping.getId(), mapping);
             log.debug("{} - Updated inbound mapping in cache: {}", tenant, mapping.getId());
         } catch (Exception e) {

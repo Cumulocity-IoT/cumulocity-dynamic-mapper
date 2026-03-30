@@ -23,7 +23,7 @@ import { BsModalService, BsModalRef } from 'ngx-bootstrap/modal';
 import { AlertService } from '@c8y/ngx-components';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { firstValueFrom, Subject } from 'rxjs';
-import { CodeTemplate, CodeTemplateMap, TemplateType } from '../../configuration/shared/configuration.model';
+import { CodeTemplate, CodeTemplateMap, TemplateType, toTemplateType } from '../../configuration/shared/configuration.model';
 import { ManageTemplateComponent } from '../../shared/component/code-template/manage-template.component';
 import { Direction, SharedService, TransformationType } from '../../shared';
 import { MappingStepperService } from './mapping-stepper.service';
@@ -141,7 +141,7 @@ export class CodeTemplateManagementService {
     direction: Direction,
     transformationType: TransformationType
   ): Promise<{ success: boolean; templates?: CodeTemplateMap }> {
-    const templateType = `${direction.toString()}_${transformationType.toString()}` as TemplateType;
+    const templateType = toTemplateType(direction, transformationType);
 
     const initialState = {
       action: 'CREATE',
