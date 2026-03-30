@@ -132,6 +132,7 @@ public class MappingStatusService {
     public void removeTenantStatus(String tenant) {
         mappingStatuses.remove(tenant);
         initialized.remove(tenant);
+        reportedLoadingErrors.removeIf(key -> key.startsWith(tenant + ":"));
         log.debug("{} - Status tracking removed", tenant);
     }
 

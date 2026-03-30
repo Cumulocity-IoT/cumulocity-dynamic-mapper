@@ -149,13 +149,10 @@ export class MonitoringService {
           takeUntil(this.unsubscribe$)
         )
         .subscribe((status) => this.state$.next({ status, error: null }));
-
-
-      // Continue with monitoring setup...
     } catch (error) {
       console.error('Failed to start monitoring:', error);
-      // Handle error appropriately (emit error state, show notification, etc.)
-      throw error; // Re-throw to let caller handle
+      this.isMonitoring = false;
+      throw error;
     }
   }
 
@@ -164,5 +161,6 @@ export class MonitoringService {
     this.isMonitoring = false;
     this.unsubscribe$.next();
     this.unsubscribe$.complete();
+    this.unsubscribe$ = new Subject<void>();
   }
 }

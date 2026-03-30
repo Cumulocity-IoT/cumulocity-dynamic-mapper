@@ -503,6 +503,7 @@ public class OperationController {
 
     private ResponseEntity<?> handleResetStatusMapping(String tenant) throws Exception {
         mappingStatusService.initializeTenantStatus(tenant, true);
+        mappingService.sendMappingStatus(tenant);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
