@@ -329,12 +329,20 @@ public class OperationController {
                 case CLEAR_CACHE_DEVICE_TO_CLIENT:
                     if (!Utils.userHasMappingAdminRole()) {
                         throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "User does not have permission to initialize code templates");
+                                "User does not have permission to clear device-to-client cache");
                     }
                     return handleClearCacheDeviceToClient(tenant, parameters);
                 default:
                     throw new IllegalArgumentException("Unknown operation: " + operationType);
             }
+        } catch (ResponseStatusException ex) {
+            // Re-throw permission errors (403) and other explicit status responses as-is;
+            // the outer catch must not swallow them into 500.
+            throw ex;
+        } catch (IllegalArgumentException ex) {
+            // Covers NumberFormatException (bad int param), enum valueOf with unknown value, etc.
+            log.warn("{} - Bad operation parameter: {}", tenant, ex.getMessage());
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
         } catch (Exception ex) {
             log.error("{} - Error running operation: {}", tenant, ex.getMessage(), ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
@@ -348,7 +356,11 @@ public class OperationController {
 
     private ResponseEntity<?> handleAddSampleMappings(String tenant, Map<String, String> parameters)
             throws Exception {
-        Direction direction = Direction.valueOf(parameters.get("direction"));
+        String directionParam = parameters.get("direction");
+        if (directionParam == null || directionParam.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Parameter 'direction' is required");
+        }
+        Direction direction = Direction.valueOf(directionParam);
         if (direction.equals(Direction.INBOUND)) {
             String samples = serviceConfigurationService.getSampleMappingsInbound_01();
             List<Mapping> mappings = objectMapper.readValue(samples, new TypeReference<List<Mapping>>() {
@@ -412,7 +424,11 @@ public class OperationController {
     private ResponseEntity<?> handleCopySnoopedSourceTemplate(String tenant, Map<String, String> parameters)
             throws Exception {
         String id = parameters.get("id");
-        Integer index = Integer.parseInt(parameters.get("index"));
+        String indexParam = parameters.get("index");
+        if (indexParam == null || indexParam.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Parameter 'index' is required");
+        }
+        Integer index = Integer.parseInt(indexParam);
         mappingService.updateSourceTemplate(tenant, id, index);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
@@ -519,7 +535,11 @@ public class OperationController {
 
     private ResponseEntity<?> handleSnoopMapping(String tenant, Map<String, String> parameters) throws Exception {
         String id = parameters.get("id");
-        SnoopStatus newSnoop = SnoopStatus.valueOf(parameters.get("snoopStatus"));
+        String snoopStatusParam = parameters.get("snoopStatus");
+        if (snoopStatusParam == null || snoopStatusParam.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Parameter 'snoopStatus' is required");
+        }
+        SnoopStatus newSnoop = SnoopStatus.valueOf(snoopStatusParam);
         mappingService.setSnoopStatusMapping(tenant, id, newSnoop);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
@@ -527,31 +547,40 @@ public class OperationController {
     private ResponseEntity<?> handleConnect(String tenant, Map<String, String> parameters)
             throws JsonProcessingException, ConnectorRegistryException, ConnectorException {
         String connectorIdentifier = parameters.get("connectorIdentifier");
+        if (connectorIdentifier == null || connectorIdentifier.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Parameter 'connectorIdentifier' is required");
+        }
         ConnectorConfiguration configuration = connectorConfigurationService
                 .getConnectorConfiguration(connectorIdentifier, tenant);
-
-        configuration.setEnabled(true);
-        connectorConfigurationService.saveConnectorConfiguration(configuration);
 
         ServiceConfiguration serviceConfiguration = serviceConfigurationService
                 .getServiceConfiguration(tenant);
 
         Future<?> connectTask = bootstrapService.initializeConnectorByConfiguration(configuration, serviceConfiguration,
                 tenant);
-        AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
-                connectorIdentifier);
-        // Wait for initialization to complete for all connector types before returning,
-        // so the frontend sees the final status on the next poll rather than CONNECTING.
+
+        // Wait for initialization to complete before returning so the frontend sees the
+        // final status on the next poll rather than CONNECTING.
         if (connectTask != null) {
             try {
                 connectTask.get(10, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.warn("{} - Interrupted while waiting for connector to connect: {}", tenant, connectorIdentifier);
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Connect interrupted");
             } catch (Exception e) {
                 log.error("{} - Error waiting for client to connect: {}", tenant, e.getMessage());
                 throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
             }
         }
+
+        // Persist enabled=true only after a successful connect attempt
+        configuration.setEnabled(true);
+        connectorConfigurationService.saveConnectorConfiguration(configuration);
+
         // Reconnect outbound notification subscriptions after the connector is ready
-        if (client.supportedDirections().contains(Direction.OUTBOUND)) {
+        AConnectorClient client = connectorRegistry.getClientForTenant(tenant, connectorIdentifier);
+        if (client != null && client.supportedDirections().contains(Direction.OUTBOUND)) {
             configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
         }
 
@@ -561,15 +590,22 @@ public class OperationController {
     private ResponseEntity<?> handleDisconnect(String tenant, Map<String, String> parameters)
             throws JsonProcessingException, ConnectorRegistryException {
         String connectorIdentifier = parameters.get("connectorIdentifier");
+        if (connectorIdentifier == null || connectorIdentifier.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Parameter 'connectorIdentifier' is required");
+        }
         ConnectorConfiguration configuration = connectorConfigurationService
                 .getConnectorConfiguration(connectorIdentifier, tenant);
         configuration.setEnabled(false);
         connectorConfigurationService.saveConnectorConfiguration(configuration);
 
-        AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
-                connectorIdentifier);
+        AConnectorClient client = connectorRegistry.getClientForTenant(tenant, connectorIdentifier);
+        if (client == null) {
+            log.warn("{} - Cannot disconnect: no registered client for identifier {}", tenant, connectorIdentifier);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "No active connector found for identifier: " + connectorIdentifier);
+        }
         bootstrapService.disableConnector(tenant, client.getConnectorIdentifier());
-        // We might need to Reconnect other Notification Clients for other connectors
+        // Reconnect other notification clients for remaining connectors
         configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
 
         return ResponseEntity.status(HttpStatus.CREATED).build();

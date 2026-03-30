@@ -178,6 +178,9 @@ export class SharedService {
           method: 'GET'
         }
       );
+      if (!response.ok) {
+        throw new Error(`Failed to fetch service configuration: ${response.status}`);
+      }
       this._serviceConfiguration = await response.json();
     }
 
@@ -195,6 +198,9 @@ export class SharedService {
         method: 'GET'
       }
     );
+    if (!response.ok) {
+      throw new Error(`Failed to fetch code template ${id}: ${response.status}`);
+    }
     return await response.json();
   }
 
@@ -246,6 +252,9 @@ export class SharedService {
         method: 'GET'
       }
     );
+    if (!response.ok) {
+      throw new Error(`Failed to fetch code templates: ${response.status}`);
+    }
     return await response.json();
   }
 
