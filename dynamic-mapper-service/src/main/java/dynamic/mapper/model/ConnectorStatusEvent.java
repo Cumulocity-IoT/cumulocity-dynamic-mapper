@@ -22,9 +22,8 @@
 package dynamic.mapper.model;
 
 import java.io.Serializable;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 import jakarta.validation.constraints.NotNull;
 
@@ -34,6 +33,9 @@ import lombok.Data;
 @Data
 @Schema(description = "Status event representing the current connection state of a connector")
 public class ConnectorStatusEvent implements Serializable {
+
+	private static final DateTimeFormatter DATE_FORMAT =
+			DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 	@NotNull
 	@Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Display name of the connector", example = "MQTT Broker")
 	public String connectorName;
@@ -60,9 +62,7 @@ public class ConnectorStatusEvent implements Serializable {
 
 	public ConnectorStatusEvent(ConnectorStatus status) {
 		this.status = status;
-		DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-		Date now = new Date();
-		this.date = dateFormat.format(now);
+		this.date = LocalDateTime.now().format(DATE_FORMAT);
 		this.message = "";
 	}
 
@@ -75,9 +75,7 @@ public class ConnectorStatusEvent implements Serializable {
 	}
 
 	public void updateStatus(ConnectorStatus st, boolean clearMessage) {
-		DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-		Date now = new Date();
-		date = dateFormat.format(now);
+		date = LocalDateTime.now().format(DATE_FORMAT);
 		status = st;
 		if (clearMessage)
 			message = "";

@@ -20,7 +20,7 @@
 import { Component, EventEmitter, Input, OnInit, Output, ViewChild, AfterViewInit, ViewEncapsulation, OnDestroy, inject } from '@angular/core';
 import { ActionControl, AlertService, BottomDrawerService, Column, CoreModule, CountdownIntervalComponent, DataGridComponent, Pagination } from '@c8y/ngx-components';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
-import { BehaviorSubject, combineLatest, from, Observable, Subject, } from 'rxjs';
+import { BehaviorSubject, combineLatest, Observable, Subject } from 'rxjs';
 import { filter, map, take, takeUntil } from 'rxjs/operators';
 import { cloneDeep } from 'lodash';
 
@@ -144,9 +144,8 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
     this.nextTriggerCountdown$.next(this.currentPollingInterval);
     if (this.shouldRefreshAutomatic) {
       this.countdownIntervalComponent.start();
-      this.connectorConfigurationService.startCountdown();
+      this.connectorConfigurationService.setPollingEnabled(true);
     }
-    // console.log('CurrentPollingInterval', this.currentPollingInterval, this.shouldRefreshAutomatic);
   }
 
   private onRefreshIntervalChange(interval: number): void {
@@ -189,8 +188,8 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
   }
 
   private initializeSpecifications(): void {
-    from(this.connectorConfigurationService.getSpecifications())
-      .pipe(take(1))
+    this.connectorConfigurationService.getSpecifications()
+      .pipe(take(1), takeUntil(this.destroy$))
       .subscribe(specs => this.specifications = specs);
   }
 
@@ -414,11 +413,11 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
   trackUserClickOnIntervalToggle(event: Event): void {
     const target = event.target;
     this.shouldRefreshAutomatic = (target as HTMLInputElement).checked;
-    this.connectorConfigurationService.toggleCountdown();
+    this.connectorConfigurationService.setPollingEnabled(this.shouldRefreshAutomatic);
     if (!this.shouldRefreshAutomatic) {
       this.countdownIntervalComponent.stop();
     } else {
-      this.countdownIntervalComponent.start()
+      this.countdownIntervalComponent.start();
     }
   }
 }
