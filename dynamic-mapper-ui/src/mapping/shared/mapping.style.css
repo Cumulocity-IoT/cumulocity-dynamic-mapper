@@ -66,6 +66,15 @@ c8y-data-grid button[title='Reload'] {
   display: none;
 }
 
+/* Testing tab: host element fills the card-block scroll container exactly,
+   so the card-block itself does not scroll; only the inner content area scrolls */
+d11r-mapping-testing {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
 .console-output {
   background-color: #1e1e1e;
   color: #d4d4d4;
@@ -129,14 +138,3 @@ c8y-data-grid button[title='Reload'] {
   100% { content: '....'; }
 }
 
-.sticky-buttons {
-  z-index: 10;
-  bottom: 0;
-  position: sticky;
-  /* padding-bottom: 70px; */
-  padding-top: 8px;
-  /* padding: 0 var(--c8y-component-padding, var(--c8y-root-component-padding)); */
-  background: var(--c8y-component-background-default, var(--c8y-root-component-background-default));
-  margin-top: auto;
-  justify-content: center;
-}
