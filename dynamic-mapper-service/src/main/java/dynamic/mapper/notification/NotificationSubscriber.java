@@ -24,6 +24,7 @@ package dynamic.mapper.notification;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionRepresentation;
 
+import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Device;
@@ -37,7 +38,9 @@ import org.springframework.stereotype.Component;
 
 import jakarta.annotation.PreDestroy;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Future;
+import java.util.stream.Collectors;
 
 /**
  * Facade/Orchestrator for notification subscription management.
@@ -58,6 +61,9 @@ public class NotificationSubscriber {
 
     @Autowired
     private TokenManager tokenManager;
+
+    @Autowired
+    private MessagingManagementService messagingManagementService;
 
     @Autowired
     private ConnectorRegistry connectorRegistry;
@@ -202,6 +208,79 @@ public class NotificationSubscriber {
 
     public Integer getDeviceConnectionStatus(String tenant) {
         return connectionManager.getDeviceConnectionStatus(tenant);
+    }
+
+    // === Startup Cleanup ===
+
+    /**
+     * Unsubscribe orphaned Notifications 2.0 subscribers at startup.
+     * Queries existing subscribers from the Cumulocity messaging-management API for
+     * each of the four known subscriptions, then deletes any subscriber whose name
+     * does not match a current valid pattern (known connector ID + current suffix).
+     */
+    public void cleanupOrphanedSubscribers(String tenant, List<ConnectorConfiguration> allConfigs,
+            String currentSuffix) {
+        if (!isNotificationServiceAvailable(tenant)) {
+            log.debug("{} - Notification service not available, skipping orphaned subscriber cleanup", tenant);
+            return;
+        }
+
+        log.info("{} - Starting orphaned subscriber cleanup", tenant);
+
+        String suffix = currentSuffix != null ? currentSuffix : "";
+
+        Set<String> currentConnectorIds = allConfigs != null
+                ? allConfigs.stream().map(ConnectorConfiguration::getIdentifier).collect(Collectors.toSet())
+                : Set.of();
+
+        int cleaned = 0;
+
+        // Tenant-level subscriptions: valid subscriber = base + suffix (no connector ID)
+        cleaned += cleanupTenantSubscribers(tenant, Utils.MANAGEMENT_SUBSCRIPTION,
+                Utils.MANAGEMENT_SUBSCRIBER, suffix);
+        cleaned += cleanupTenantSubscribers(tenant, Utils.CACHE_INVENTORY_SUBSCRIPTION,
+                Utils.CACHE_INVENTORY_SUBSCRIBER, suffix);
+
+        // Per-connector subscriptions: valid subscriber = base + connectorId + suffix
+        cleaned += cleanupDeviceSubscribers(tenant, Utils.STATIC_DEVICE_SUBSCRIPTION,
+                Utils.STATIC_DEVICE_SUBSCRIBER, currentConnectorIds, suffix);
+        cleaned += cleanupDeviceSubscribers(tenant, Utils.DYNAMIC_DEVICE_SUBSCRIPTION,
+                Utils.DYNAMIC_DEVICE_SUBSCRIBER, currentConnectorIds, suffix);
+
+        log.info("{} - Orphaned subscriber cleanup completed, {} subscriber(s) cleaned", tenant, cleaned);
+    }
+
+    private int cleanupTenantSubscribers(String tenant, String subscriptionName,
+            String subscriberBase, String currentSuffix) {
+        String validName = subscriberBase + currentSuffix;
+        int cleaned = 0;
+        for (String subscriber : messagingManagementService.getSubscribers(tenant, subscriptionName)) {
+            if (!subscriber.equals(validName)) {
+                log.info("{} - Deleting orphaned subscriber '{}' from '{}'", tenant, subscriber, subscriptionName);
+                messagingManagementService.deleteSubscriber(tenant, subscriptionName, subscriber);
+                cleaned++;
+            }
+        }
+        return cleaned;
+    }
+
+    private int cleanupDeviceSubscribers(String tenant, String subscriptionName,
+            String subscriberBase, Set<String> currentConnectorIds, String currentSuffix) {
+        int cleaned = 0;
+        for (String subscriber : messagingManagementService.getSubscribers(tenant, subscriptionName)) {
+            if (!subscriber.startsWith(subscriberBase)) {
+                continue;
+            }
+            String rest = subscriber.substring(subscriberBase.length());
+            boolean isValid = currentConnectorIds.stream()
+                    .anyMatch(connId -> rest.equals(connId + currentSuffix));
+            if (!isValid) {
+                log.info("{} - Deleting orphaned subscriber '{}' from '{}'", tenant, subscriber, subscriptionName);
+                messagingManagementService.deleteSubscriber(tenant, subscriptionName, subscriber);
+                cleaned++;
+            }
+        }
+        return cleaned;
     }
 
     // === Connector Management Methods ===
