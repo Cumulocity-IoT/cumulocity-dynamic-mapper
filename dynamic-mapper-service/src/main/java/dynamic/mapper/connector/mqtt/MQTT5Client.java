@@ -48,6 +48,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.TimeUnit;
 
 /**
  * MQTT 5.0 Connector Client.
@@ -98,7 +99,10 @@ public class MQTT5Client extends AMQTTClient {
         Mqtt5ClientBuilder builder = Mqtt5Client.builder()
                 .serverHost(mqttHost)
                 .serverPort(mqttPort)
-                .identifier(clientId + (additionalSubscriptionIdTest != null ? additionalSubscriptionIdTest : ""));
+                .identifier(clientId + (additionalSubscriptionIdTest != null ? additionalSubscriptionIdTest : ""))
+                .transportConfig()
+                    .socketConnectTimeout(10, TimeUnit.SECONDS)
+                    .applyTransportConfig();
 
         // Add authentication if provided
         if (!StringUtils.isEmpty(user)) {
@@ -216,17 +220,10 @@ public class MQTT5Client extends AMQTTClient {
                 log.info("{} - MQTT5 client connected successfully to {}:{}",
                         tenant, mqttClient.getConfig().getServerHost(), mqttClient.getConfig().getServerPort());
 
-                // Log MQTT5 specific connection properties
                 if (ack.isSessionPresent()) {
                     log.info("{} - MQTT5 session present, reusing existing session", tenant);
                 } else {
                     log.info("{} - MQTT5 new session created", tenant);
-                }
-
-                // Log received properties if any
-                if (ack.getSessionExpiryInterval().isPresent()) {
-                    log.debug("{} - Session expiry interval: {} seconds",
-                            tenant, ack.getSessionExpiryInterval().getAsLong());
                 }
 
             } catch (Exception e) {

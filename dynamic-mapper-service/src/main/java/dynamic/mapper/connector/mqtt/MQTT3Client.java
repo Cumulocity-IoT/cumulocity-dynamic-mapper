@@ -47,6 +47,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.TimeUnit;
 
 /**
  * MQTT 3.1.1 Connector Client.
@@ -97,7 +98,10 @@ public class MQTT3Client extends AMQTTClient {
         Mqtt3ClientBuilder builder = Mqtt3Client.builder()
                 .serverHost(mqttHost)
                 .serverPort(mqttPort)
-                .identifier(clientId + (additionalSubscriptionIdTest != null ? additionalSubscriptionIdTest : ""));
+                .identifier(clientId + (additionalSubscriptionIdTest != null ? additionalSubscriptionIdTest : ""))
+                .transportConfig()
+                    .socketConnectTimeout(10, TimeUnit.SECONDS)
+                    .applyTransportConfig();
 
         // Add authentication if provided
         if (!StringUtils.isEmpty(user)) {
@@ -220,7 +224,7 @@ public class MQTT3Client extends AMQTTClient {
 
             } catch (Exception e) {
                 attempt++;
-                log.error("{} - Connection attempt {} failed: {}", tenant, attempt, e);
+                log.error("{} - Connection attempt {} failed: {}", tenant, attempt, e.getMessage());
 
                 if (attempt >= maxAttempts) {
                     connectionStateManager.updateStatusWithError(e);
