@@ -409,7 +409,7 @@ public class NotificationConnectionManager {
 
             try {
                 String token = tokenManager.createToken(Utils.STATIC_DEVICE_SUBSCRIPTION, tokenSeedForStatic);
-                tokenManager.storeDeviceToken(tenant, connectorId, token);
+                tokenManager.storeDeviceToken(tenant, connectorId + "_static", token);
 
                 ConnectorId connectorInfo = new ConnectorId(
                         dispatcher.getConnectorClient().getConnectorName(),
@@ -454,7 +454,7 @@ public class NotificationConnectionManager {
 
             try {
                 String token = tokenManager.createToken(Utils.DYNAMIC_DEVICE_SUBSCRIPTION, tokenSeedForDynamic);
-                tokenManager.storeDeviceToken(tenant, connectorId, token);
+                tokenManager.storeDeviceToken(tenant, connectorId + "_dynamic", token);
 
                 ConnectorId connectorInfo = new ConnectorId(
                         dispatcher.getConnectorClient().getConnectorName(),

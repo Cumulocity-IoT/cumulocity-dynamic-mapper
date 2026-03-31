@@ -131,15 +131,24 @@ public class TokenManager {
 
         Map<String, String> tenantTokens = deviceTokens.get(tenant);
         if (tenantTokens != null) {
-            String token = tenantTokens.remove(connectorIdentifier);
-            if (token != null) {
-                try {
-                    tokenApi.unsubscribe(new Token(token));
-                    log.info("{} - Unsubscribed connector {}", tenant, connectorIdentifier);
-                } catch (SDKException e) {
-                    log.error("{} - Could not unsubscribe connector {}: {}",
-                            tenant, connectorIdentifier, e.getMessage(), e);
-                }
+            // Unsubscribe static and dynamic subscribers (stored with suffixed keys)
+            unsubscribeTokenByKey(tenant, tenantTokens, connectorIdentifier + "_static", connectorIdentifier);
+            unsubscribeTokenByKey(tenant, tenantTokens, connectorIdentifier + "_dynamic", connectorIdentifier);
+            // Backward compat: plain key from before this fix
+            unsubscribeTokenByKey(tenant, tenantTokens, connectorIdentifier, connectorIdentifier);
+        }
+    }
+
+    private void unsubscribeTokenByKey(String tenant, Map<String, String> tenantTokens, String key,
+            String connectorIdentifier) {
+        String token = tenantTokens.remove(key);
+        if (token != null) {
+            try {
+                tokenApi.unsubscribe(new Token(token));
+                log.info("{} - Unsubscribed connector {} (key: {})", tenant, connectorIdentifier, key);
+            } catch (SDKException e) {
+                log.error("{} - Could not unsubscribe connector {} (key: {}): {}",
+                        tenant, connectorIdentifier, key, e.getMessage(), e);
             }
         }
     }
