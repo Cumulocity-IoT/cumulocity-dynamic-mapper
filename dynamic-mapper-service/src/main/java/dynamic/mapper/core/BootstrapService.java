@@ -295,6 +295,13 @@ public class BootstrapService {
 
         connectorRegistry.initializeResources(tenant);
 
+        // Clean up any orphaned Notifications 2.0 subscribers from a previous run
+        // (e.g. from connectors that were deleted or disabled without proper cleanup)
+        List<dynamic.mapper.configuration.ConnectorConfiguration> allConnectorConfigs =
+                connectorConfigurationService.getConnectorConfigurations(tenant);
+        configurationRegistry.getNotificationSubscriber()
+                .cleanupOrphanedSubscribers(tenant, allConnectorConfigs, additionalSubscriptionIdTest);
+
         // Wait for ALL connectors are successfully connected before handling Outbound
         // Mappings
         List<Future<?>> connectorTasks = initializeConnectors(tenant, serviceConfiguration);

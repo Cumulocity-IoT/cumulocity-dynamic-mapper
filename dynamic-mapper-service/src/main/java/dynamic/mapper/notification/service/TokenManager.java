@@ -153,6 +153,30 @@ public class TokenManager {
         }
     }
 
+    /**
+     * Unsubscribe a subscriber by name from a given subscription.
+     * Creates a temporary token for the subscriber, then immediately unsubscribes.
+     * This handles cleanup of orphaned subscribers after a restart when no stored
+     * token is available. Errors (e.g. 422 for non-alphanumeric subscriber names)
+     * are silently ignored at debug level.
+     */
+    public void unsubscribeBySubscriberName(String subscription, String subscriberName) {
+        if (subscription == null || subscriberName == null) {
+            return;
+        }
+        try {
+            // Create token directly (not via createToken()) to avoid its ERROR-level log on failure
+            NotificationTokenRequestRepresentation tokenRequest =
+                    new NotificationTokenRequestRepresentation(subscriberName, subscription, 1440, false);
+            String token = tokenApi.create(tokenRequest).getTokenString();
+            tokenApi.unsubscribe(new Token(token));
+            log.info("Unsubscribed orphaned subscriber '{}' from subscription '{}'", subscriberName, subscription);
+        } catch (Exception e) {
+            log.debug("Could not unsubscribe subscriber '{}' from subscription '{}': {}",
+                    subscriberName, subscription, e.getMessage());
+        }
+    }
+
     public void startTokenRefreshScheduler() {
         if (tokenRefreshExecutor == null || tokenRefreshExecutor.isShutdown()) {
             tokenRefreshExecutor = Executors.newScheduledThreadPool(1, r -> {
