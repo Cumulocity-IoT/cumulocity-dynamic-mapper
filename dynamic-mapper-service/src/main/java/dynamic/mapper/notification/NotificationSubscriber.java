@@ -255,10 +255,15 @@ public class NotificationSubscriber {
         String validName = subscriberBase + currentSuffix;
         int cleaned = 0;
         for (String subscriber : messagingManagementService.getSubscribers(tenant, subscriptionName)) {
-            if (!subscriber.equals(validName)) {
-                log.info("{} - Deleting orphaned subscriber '{}' from '{}'", tenant, subscriber, subscriptionName);
-                messagingManagementService.deleteSubscriber(tenant, subscriptionName, subscriber);
-                cleaned++;
+            if (!subscriber.isEmpty() && !subscriber.equals(validName)) {
+                log.info("{} - Deleting orphaned Tenant subscriber '{}' from '{}'", tenant, subscriber, subscriptionName);
+                try {
+                    messagingManagementService.deleteSubscriber(tenant, subscriptionName, subscriber);
+                    cleaned++;
+                } catch (Exception e) {
+                    log.warn("{} - Could not delete subscriber '{}' from subscription '{}': {}",
+                            tenant, subscriber, subscriptionName, e.getMessage());
+                }
             }
         }
         return cleaned;
@@ -275,9 +280,14 @@ public class NotificationSubscriber {
             boolean isValid = currentConnectorIds.stream()
                     .anyMatch(connId -> rest.equals(connId + currentSuffix));
             if (!isValid) {
-                log.info("{} - Deleting orphaned subscriber '{}' from '{}'", tenant, subscriber, subscriptionName);
-                messagingManagementService.deleteSubscriber(tenant, subscriptionName, subscriber);
-                cleaned++;
+                //log.info("{} - Deleting orphaned Device subscriber '{}' from '{}'", tenant, subscriber, subscriptionName);
+                try {
+                    messagingManagementService.deleteSubscriber(tenant, subscriptionName, subscriber);
+                    cleaned++;
+                } catch (Exception e) {
+                    log.warn("{} - Could not delete subscriber '{}' from subscription '{}': {}",
+                            tenant, subscriber, subscriptionName, e.getMessage());
+                }
             }
         }
         return cleaned;

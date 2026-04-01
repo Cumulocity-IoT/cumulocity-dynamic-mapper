@@ -87,14 +87,8 @@ public class MessagingManagementService {
         String url = clientProperties.getBaseURL()
                 + String.format(SUBSCRIBERS_PATH + "/%s", tenant, topicName, subscriberName);
         HttpEntity<Void> entity = new HttpEntity<>(buildAuthHeaders());
-
-        try {
-            restTemplate.exchange(url, HttpMethod.DELETE, entity, Void.class);
-            log.info("{} - Deleted subscriber '{}' from topic '{}'", tenant, subscriberName, topicName);
-        } catch (Exception e) {
-            log.warn("{} - Could not delete subscriber '{}' from topic '{}': {}",
-                    tenant, subscriberName, topicName, e.getMessage());
-        }
+        restTemplate.exchange(url, HttpMethod.DELETE, entity, Void.class);
+        log.info("{} - Deleted subscriber '{}' from topic '{}'", tenant, subscriberName, topicName);
     }
 
     private HttpHeaders buildAuthHeaders() {
@@ -115,7 +109,7 @@ public class MessagingManagementService {
             body.forEach(node -> result.add(node.asText()));
         // Handle wrapped object: {"subscribers": [...]}
         } else if (body.has("subscribers") && body.get("subscribers").isArray()) {
-            body.get("subscribers").forEach(node -> result.add(node.asText()));
+            body.get("subscribers").forEach(node -> result.add(node.get("name").asText()));
         }
         return result;
     }
