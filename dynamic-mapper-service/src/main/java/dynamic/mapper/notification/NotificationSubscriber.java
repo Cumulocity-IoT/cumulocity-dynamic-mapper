@@ -210,6 +210,10 @@ public class NotificationSubscriber {
         return connectionManager.getDeviceConnectionStatus(tenant);
     }
 
+    public void startTokenRefresh() {
+        tokenManager.startTokenRefreshScheduler();
+    }
+
     // === Startup Cleanup ===
 
     /**

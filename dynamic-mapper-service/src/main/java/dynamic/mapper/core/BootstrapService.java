@@ -545,6 +545,7 @@ public class BootstrapService {
             // configurationRegistry.getNotificationSubscriber().initializeDeviceClient(tenant);
             // configurationRegistry.getNotificationSubscriber().initializeManagementClient(tenant);
             configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
+            configurationRegistry.getNotificationSubscriber().startTokenRefresh();
         }
     }
 

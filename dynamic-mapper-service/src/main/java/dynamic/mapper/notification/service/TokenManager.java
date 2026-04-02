@@ -186,15 +186,15 @@ public class TokenManager {
             });
             tokenRefreshExecutor.scheduleAtFixedRate(this::refreshTokens,
                     TOKEN_REFRESH_INTERVAL_HOURS, TOKEN_REFRESH_INTERVAL_HOURS, TimeUnit.HOURS);
-            log.debug("Started token refresh scheduler");
+            log.info("Started token refresh scheduler");
         }
     }
 
     public void refreshTokens() {
-        log.debug("Starting token refresh cycle");
 
         subscriptionsService.runForEachTenant(() -> {
             String tenant = subscriptionsService.getTenant();
+            log.info("{} - Starting token refresh cycle", tenant);
             Map<String, String> tenantTokens = deviceTokens.get(tenant);
 
             if (tenantTokens == null || tenantTokens.isEmpty()) {
@@ -213,7 +213,7 @@ public class TokenManager {
                     String newToken = tokenApi.refresh(new Token(token)).getTokenString();
                     tenantTokens.put(connectorId, newToken);
                     refreshedCount++;
-                    log.debug("{} - Refreshed token for connector {}", tenant, connectorId);
+                    log.info("{} - Refreshed token for connector {}", tenant, connectorId);
                 } catch (IllegalArgumentException e) {
                     failedCount++;
                     log.warn("{} - Could not refresh token for connector {}: {}",
