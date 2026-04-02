@@ -138,6 +138,8 @@ public class MQTT3Client extends AMQTTClient {
         // Add listeners (using base class synchronization)
         mqttClient = builder
                 .addDisconnectedListener(context -> {
+                    //We should always log when a client is disconnected!
+                    log.info("{} - MQTT3 client disconnected (reason: {})", tenant, context.getCause().getMessage());
                     boolean wasConnected = connectionStateManager.isConnected();
                     connectionStateManager.setConnected(false);
 

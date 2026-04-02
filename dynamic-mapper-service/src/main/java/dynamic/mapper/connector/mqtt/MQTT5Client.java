@@ -140,6 +140,8 @@ public class MQTT5Client extends AMQTTClient {
         mqttClient = builder
                 .addDisconnectedListener(context -> {
                     boolean wasConnected = connectionStateManager.isConnected();
+                    //We should always log when a client is disconnected!
+                    log.info("{} - MQTT5 client disconnected (reason: {})", tenant, context.getCause().getMessage());
                     connectionStateManager.setConnected(false);
 
                     // Check if we should reconnect (using base class intentionalDisconnect flag)
@@ -165,7 +167,7 @@ public class MQTT5Client extends AMQTTClient {
                             }
                         });
                     } else {
-                        log.debug(
+                        log.info(
                                 "{} - Intentional disconnect or not reconnecting (intentional={}, disconnecting={}, enabled={}, wasConnected={})",
                                 tenant, intentionalDisconnect, isDisconnecting,
                                 connectorConfiguration.getEnabled(), wasConnected);
