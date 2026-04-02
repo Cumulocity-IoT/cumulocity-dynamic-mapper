@@ -66,7 +66,7 @@ public class ManagementSubscriptionClient implements NotificationCallback {
     @Override
     public void onOpen(URI serverUri) {
         log.info("{} - Management WebSocket connected", tenant);
-        notificationSubscriber.setDeviceConnectionStatus(tenant, 200);
+        notificationSubscriber.setManagementConnectionStatus(tenant, 200);
     }
 
     @Override
@@ -147,9 +147,9 @@ public class ManagementSubscriptionClient implements NotificationCallback {
         log.info("{} - WebSocket closed: status={}, reason={}", tenant, statusCode, reason);
         
         if (reason != null && reason.contains("401")) {
-            notificationSubscriber.setDeviceConnectionStatus(tenant, 401);
+            notificationSubscriber.setManagementConnectionStatus(tenant, 401);
         } else {
-            notificationSubscriber.setDeviceConnectionStatus(tenant, null);
+            notificationSubscriber.setManagementConnectionStatus(tenant, null);
         }
     }
 

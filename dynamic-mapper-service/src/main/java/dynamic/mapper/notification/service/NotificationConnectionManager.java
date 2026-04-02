@@ -93,7 +93,9 @@ public class NotificationConnectionManager {
     private final Map<String, CustomWebSocketClient> cacheInventoryClients = new ConcurrentHashMap<>();
     private final Map<String, NotificationCallback> managementCallbacks = new ConcurrentHashMap<>();
     private final Map<String, NotificationCallback> cacheInventoryCallbacks = new ConcurrentHashMap<>();
+    //FIXME As we have multiple WS connections the statusCode will only reflect the last connection attempt. We should consider a more granular status tracking if needed.
     private final Map<String, Integer> deviceWSStatusCodes = new ConcurrentHashMap<>();
+    private final Map<String, Integer> managementWSStatusCodes = new ConcurrentHashMap<>();
 
     // Scheduled executor for reconnection
     private volatile ScheduledExecutorService reconnectExecutor;
@@ -363,7 +365,21 @@ public class NotificationConnectionManager {
         }
     }
 
+    public void setManagementConnectionStatus(String tenant, Integer status) {
+        if (tenant != null) {
+            if (status != null) {
+                managementWSStatusCodes.put(tenant, status);
+            } else {
+                managementWSStatusCodes.remove(tenant);
+            }
+        }
+    }
+
     public Integer getDeviceConnectionStatus(String tenant) {
+        return tenant != null ? deviceWSStatusCodes.get(tenant) : null;
+    }
+
+    public Integer getManagementConnectionStatus(String tenant) {
         return tenant != null ? deviceWSStatusCodes.get(tenant) : null;
     }
 
@@ -689,8 +705,7 @@ public class NotificationConnectionManager {
 
             try {
                 reconnectDeviceClients(tenant);
-                reconnectManagementClient(tenant);
-                reconnectCacheInventoryClient(tenant);
+                reconnectManagementClients(tenant);
 
                 configurationRegistry.getC8yAgent().sendNotificationLifecycle(
                         tenant, ConnectorStatus.CONNECTED, null);
@@ -759,34 +774,51 @@ public class NotificationConnectionManager {
                 }
             }
         }
-
         if (reconnectedCount > 0) {
             log.info("{} - Reconnected {} dynamic device clients", tenant, reconnectedCount);
         }
 
     }
 
-    private void reconnectManagementClient(String tenant) {
+    private void reconnectManagementClients(String tenant) {
         CustomWebSocketClient managementClient = managementClients.get(tenant);
+        int reconnectedCount = 0;
+        boolean reinitializing = false;
         if (managementClient != null && !managementClient.isOpen()) {
             try {
-                managementClient.reconnect();
-                log.info("{} - Reconnected management client", tenant);
+                if (managementClient.getReadyState() == ReadyState.NOT_YET_CONNECTED ||
+                        (managementWSStatusCodes.get(tenant) != null && managementWSStatusCodes.get(tenant) == 401)) {
+                    log.info("{} - Re-initializing management WS client", tenant);
+                    initializeManagementClient(tenant);
+                    reinitializing = true;
+                } else {
+                    managementClient.reconnect();
+                    reconnectedCount++;
+                    log.info("{} - Reconnected management WS client", tenant);
+                }
             } catch (Exception e) {
-                log.warn("{} - Error reconnecting management client: {}", tenant, e.getMessage());
+                log.warn("{} - Error reconnecting management WS client: {}", tenant, e.getMessage());
             }
         }
-    }
-
-    private void reconnectCacheInventoryClient(String tenant) {
         CustomWebSocketClient cacheClient = cacheInventoryClients.get(tenant);
         if (cacheClient != null && !cacheClient.isOpen()) {
             try {
-                cacheClient.reconnect();
-                log.info("{} - Reconnected cache inventory client", tenant);
+                if (cacheClient.getReadyState() == ReadyState.NOT_YET_CONNECTED ||
+                        (managementWSStatusCodes.get(tenant) != null && managementWSStatusCodes.get(tenant) == 401)) {
+                    log.info("{} - Re-initializing cache inventory WS", tenant);
+                    if(!reinitializing)
+                        initializeManagementClient(tenant);
+                } else {
+                    cacheClient.reconnect();
+                    reconnectedCount++;
+                    log.info("{} - Reconnected cache inventory WS client", tenant);
+                }
             } catch (Exception e) {
-                log.warn("{} - Error reconnecting cache inventory client: {}", tenant, e.getMessage());
+                log.warn("{} - Error reconnecting cache inventory WS client: {}", tenant, e.getMessage());
             }
+        }
+        if (reconnectedCount > 0) {
+            log.info("{} - Reconnected {} management WS client", tenant, reconnectedCount);
         }
     }
 
