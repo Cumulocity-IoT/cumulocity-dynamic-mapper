@@ -177,7 +177,7 @@ public class TokenManager {
         }
     }
 
-    public void startTokenRefreshScheduler() {
+    public void startTokenRefreshScheduler(String tenant) {
         if (tokenRefreshExecutor == null || tokenRefreshExecutor.isShutdown()) {
             tokenRefreshExecutor = Executors.newScheduledThreadPool(1, r -> {
                 Thread t = new Thread(r, "token-refresh");
@@ -186,7 +186,7 @@ public class TokenManager {
             });
             tokenRefreshExecutor.scheduleAtFixedRate(this::refreshTokens,
                     TOKEN_REFRESH_INTERVAL_HOURS, TOKEN_REFRESH_INTERVAL_HOURS, TimeUnit.HOURS);
-            log.info("Started token refresh scheduler");
+            log.info("{} - Started token refresh scheduler", tenant);
         }
     }
 
