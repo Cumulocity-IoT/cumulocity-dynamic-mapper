@@ -155,6 +155,9 @@ public class MQTT5Client extends AMQTTClient {
 
                     if (shouldReconnect) {
                         log.warn("{} - Unexpected disconnection, attempting to reconnect", tenant);
+                        context.getReconnector().reconnect(true).delay(2, TimeUnit.SECONDS);
+                        //Own connect method deactivated in favor built-in reconnect
+                        /**
                         virtualThreadPool.submit(() -> {
                             try {
                                 Thread.sleep(5000);
@@ -166,6 +169,7 @@ public class MQTT5Client extends AMQTTClient {
                                 log.error("{} - Error during reconnection", tenant, e);
                             }
                         });
+                         **/
                     } else {
                         log.info(
                                 "{} - Intentional disconnect or not reconnecting (intentional={}, disconnecting={}, enabled={}, wasConnected={})",
