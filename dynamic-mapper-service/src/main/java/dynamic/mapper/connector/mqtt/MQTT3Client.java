@@ -151,10 +151,12 @@ public class MQTT3Client extends AMQTTClient {
                     }
 
                     if (shouldReconnect) {
-                        log.warn("{} - Unexpected disconnection, attempting to reconnect", tenant);
+                        int attempt = ++reconnectAttempt;
+                        long delay = Math.min((long) attempt * RECONNECT_DELAY_STEP_MS, RECONNECT_DELAY_MAX_MS);
+                        log.warn("{} - Unexpected disconnection, reconnect attempt {} in {} ms", tenant, attempt, delay);
                         virtualThreadPool.submit(() -> {
                             try {
-                                Thread.sleep(5000);
+                                Thread.sleep(delay);
                                 connect();
                             } catch (InterruptedException e) {
                                 Thread.currentThread().interrupt();
@@ -171,6 +173,7 @@ public class MQTT3Client extends AMQTTClient {
                     }
                 })
                 .addConnectedListener(context -> {
+                    reconnectAttempt = 0;
                     connectionStateManager.setConnected(true);
                     log.info("{} - MQTT3 client connected", tenant);
                 })
