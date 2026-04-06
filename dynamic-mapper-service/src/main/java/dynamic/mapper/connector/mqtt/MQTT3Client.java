@@ -148,9 +148,6 @@ public class MQTT3Client extends AMQTTClient {
                                 !isDisconnecting &&
                                 connectorConfiguration.getEnabled() &&
                                 wasConnected;
-                        if (shouldReconnect) {
-                            isConnecting = true;
-                        }
                     }
 
                     if (shouldReconnect) {
