@@ -56,6 +56,7 @@ public abstract class AMQTTClient extends AConnectorClient {
     protected MqttClientSslConfig mqttSslConfig; // MQTT-specific SSL config
     protected Boolean cleanSession = true; // MQTT 3.x uses cleanSession, MQTT 5 uses cleanStart
     protected volatile int reconnectAttempt = 0;
+    protected volatile long nextReconnectTimeMs = 0;
     protected static final int RECONNECT_DELAY_STEP_MS = 10000;
     protected static final int RECONNECT_DELAY_MAX_MS  = 300000; // 5 minutes
 
