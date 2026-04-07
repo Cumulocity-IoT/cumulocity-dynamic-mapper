@@ -890,6 +890,7 @@ public class NotificationConnectionManager {
         managementCallbacks.clear();
         cacheInventoryCallbacks.clear();
         deviceWSStatusCodes.clear();
+        managementWSStatusCodes.clear();
 
         log.info("ConnectionManager cleanup completed");
     }
