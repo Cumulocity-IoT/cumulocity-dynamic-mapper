@@ -34,6 +34,7 @@ import { MappingService } from '../core/mapping.service';
 })
 export class DeprecationNoticeModalComponent implements OnInit, OnDestroy {
   readonly closeSubject = new Subject<boolean>();
+  readonly currentVersion = DEPRECATION_NOTICE_VERSION;
   isPending = false;
   isLoading = true;
   isClosing = false;
