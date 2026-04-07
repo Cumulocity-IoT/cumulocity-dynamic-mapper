@@ -210,6 +210,18 @@ public class NotificationSubscriber {
         return connectionManager.getDeviceConnectionStatus(tenant);
     }
 
+    public void setManagementConnectionStatus(String tenant, Integer status) {
+        connectionManager.setManagementConnectionStatus(tenant, status);
+    }
+
+    public Integer getManagementConnectionStatus(String tenant) {
+        return connectionManager.getManagementConnectionStatus(tenant);
+    }
+
+    public void startTokenRefresh(String tenant) {
+        tokenManager.startTokenRefreshScheduler(tenant);
+    }
+
     // === Startup Cleanup ===
 
     /**

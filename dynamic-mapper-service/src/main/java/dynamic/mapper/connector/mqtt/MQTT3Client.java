@@ -138,6 +138,8 @@ public class MQTT3Client extends AMQTTClient {
         // Add listeners — detection only, housekeeping owns all reconnect scheduling
         mqttClient = builder
                 .addDisconnectedListener(context -> {
+                    //We should always log when a client is disconnected!
+                    log.info("{} - MQTT3 client disconnected (reason: {})", tenant, context.getCause().getMessage());
                     boolean wasConnected = connectionStateManager.isConnected();
                     connectionStateManager.setConnected(false);
 
@@ -151,7 +153,8 @@ public class MQTT3Client extends AMQTTClient {
                         nextReconnectTimeMs = System.currentTimeMillis(); // reconnect on next housekeeping cycle
                         log.warn("{} - Unexpected disconnection detected, housekeeping will reconnect", tenant);
                     } else {
-                        log.debug("{} - Intentional disconnect (intentional={}, disconnecting={}, enabled={}, wasConnected={})",
+                        log.info(
+                                "{} - Intentional disconnect or not reconnecting (intentional={}, disconnecting={}, enabled={}, wasConnected={})",
                                 tenant, intentionalDisconnect, isDisconnecting,
                                 connectorConfiguration.getEnabled(), wasConnected);
                     }
