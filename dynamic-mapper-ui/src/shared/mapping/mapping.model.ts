@@ -608,10 +608,11 @@ export interface Feature {
   acceptedDeprecationNotice: string;
 }
 
+import packageJson from '../../../package.json';
+
 /** Version of the current SUBSTITUTION_AS_CODE deprecation notice.
- *  When the user accepts the notice this value is persisted in ServiceConfiguration.
- *  Bump this constant when a new deprecation notice is introduced (e.g. '6.3.0'). */
-export const DEPRECATION_NOTICE_VERSION = '6.2.0';
+ *  Automatically derived from package.json — bump package.json version to update. */
+export const DEPRECATION_NOTICE_VERSION = packageJson.version;
 
 export function getDeviceIdentifiers(mapping: Mapping): Substitution[] {
   return mapping.substitutions
