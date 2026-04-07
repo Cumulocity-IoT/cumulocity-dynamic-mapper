@@ -186,9 +186,10 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
                     }
                 }
                 if(resend) {
-                    if (serviceConfiguration.getLogPayload())
-                        log.info("{} - Resending message to C8Y due to previous 422 error with payload {}", tenant, connectorMessage.getPayload());
-                    else
+                    if (serviceConfiguration.getLogPayload()) {
+                        String payload = new String(connectorMessage.getPayload(), java.nio.charset.StandardCharsets.UTF_8);
+                        log.info("{} - Resending message to C8Y due to previous 422 error with payload {}", tenant, payload);
+                    } else
                         log.info("{} - Resending message to C8Y due to previous 422 error", tenant);
                     exchange = createExchange(connectorMessage, resolvedMappings, testing);
                     resultExchange = producerTemplate.send("direct:processInboundMessage", exchange);
