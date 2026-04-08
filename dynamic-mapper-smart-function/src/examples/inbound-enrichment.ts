@@ -13,6 +13,20 @@ import {
 } from '../types';
 
 /**
+ * Device-specific managed object shape.
+ * Extend C8yManagedObject to get full type safety on custom fragments —
+ * no manual casting needed when accessing deeply nested properties.
+ */
+interface SensorDevice extends C8yManagedObject {
+  c8y_Sensor?: {
+    type?: {
+      voltage?: boolean;
+      current?: boolean;
+    };
+  };
+}
+
+/**
  * @name Smart Function with Device Enrichment (TypeScript)
  * @description Creates voltage or current measurement based on device configuration
  * @templateType INBOUND_SMART_FUNCTION
@@ -23,6 +37,36 @@ import {
  * - Conditional measurement creation based on device properties
  * - Error handling with try-catch
  * - Type-safe access to device fragments
+ *
+ * Sample payload (MQTT message body):
+ * {
+ *   "messageId": "msg-001",
+ *   "clientId": "sensor-berlin-01",
+ *   "deviceId": "12345",
+ *   "sensorData": {
+ *     "val": 230.5
+ *   }
+ * }
+ *
+ * Sample topic: testSmartInbound/sensor-berlin-01
+ *
+ * Required device inventory (on the managed object):
+ * {
+ *   "c8y_Sensor": { "type": { "voltage": true } }
+ *   // or: "c8y_Sensor": { "type": { "current": true } }
+ * }
+ *
+ * Expected output (voltage device):
+ * [{
+ *   "cumulocityType": "measurement",
+ *   "action": "create",
+ *   "payload": {
+ *     "time": "<ISO timestamp>",
+ *     "type": "c8y_VoltageMeasurement",
+ *     "c8y_Voltage": { "voltage": { "unit": "V", "value": 230.5 } }
+ *   },
+ *   "externalSource": [{ "type": "c8y_Serial", "externalId": "sensor-berlin-01" }]
+ * }]
  */
 
 /**
@@ -47,19 +91,19 @@ const onMessage: SmartFunctionIn = (
     return [];
   }
 
-  // Try to lookup device by device ID
-  let deviceByDeviceId: C8yManagedObject | null = null;
+  // Try to lookup device by device ID — typed so nested fragments are fully typed
+  let deviceByDeviceId: SensorDevice | null = null;
   try {
-    deviceByDeviceId = context.getManagedObject(payload['deviceId']);
+    deviceByDeviceId = context.getManagedObject<SensorDevice>(payload['deviceId']);
     console.log('Device (by device id):', deviceByDeviceId);
   } catch (e) {
     console.error('Error looking up device by ID:', e);
   }
 
-  // Try to lookup device by external ID
-  let deviceByExternalId: C8yManagedObject | null = null;
+  // Try to lookup device by external ID — typed so nested fragments are fully typed
+  let deviceByExternalId: SensorDevice | null = null;
   try {
-    deviceByExternalId = context.getManagedObjectByExternalId({
+    deviceByExternalId = context.getManagedObjectByExternalId<SensorDevice>({
       externalId: clientId,
       type: 'c8y_Serial',
     });
@@ -74,9 +118,9 @@ const onMessage: SmartFunctionIn = (
   }
 
   // Determine measurement type based on device configuration
-  // Type-safe access to nested device properties
-  const isVoltage = deviceByExternalId?.['c8y_Sensor']?.type?.voltage === true;
-  const isCurrent = deviceByExternalId?.['c8y_Sensor']?.type?.current === true;
+  // c8y_Sensor is now fully typed — no bracket notation or casting needed
+  const isVoltage = deviceByExternalId?.c8y_Sensor?.type?.voltage === true;
+  const isCurrent = deviceByExternalId?.c8y_Sensor?.type?.current === true;
 
   let measurementPayload: any;
 

@@ -380,8 +380,8 @@ describe('Smart Function Runtime Types', () => {
     it('should use _externalId_ placeholder in topic', () => {
       // Define Smart Function (Cumulocity → Broker)
       const onMessage: SmartFunctionOut = (msg, context) => {
-        // .get() works without casting — payload is SmartFunctionPayload
-        const temp = msg.payload.get('c8y_TemperatureMeasurement')?.['T']?.['value'];
+        // payload is now C8yPayloadTypeMap[T] — use bracket notation (preferred)
+        const temp = msg.payload['c8y_TemperatureMeasurement']?.['T']?.['value'];
 
         return {
           topic: 'measurements/_externalId_',
