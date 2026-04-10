@@ -47,6 +47,9 @@ export { DataPrepContext, ExternalId };
  *
  * In Dynamic Mapper, payloads are pre-deserialized from JSON for convenience.
  *
+ * @deprecated Use `Record<string, any>` directly. This interface was kept only for
+ * backward compatibility. The `.get()` method is a legacy alias for bracket notation.
+ *
  * @example
  * // Object-style access (preferred)
  * const temp = payload["sensorData"]["temp_val"];
@@ -92,8 +95,9 @@ export interface DynamicMapperDeviceMessage {
    *
    * Note: Differs from IDP standard (Uint8Array).
    * Dynamic Mapper automatically deserializes JSON payloads to objects.
+   * Use bracket notation to access properties: payload["key"].
    */
-  payload: SmartFunctionPayload;
+  payload: Record<string, any>;
 
   /** The topic on the transport (e.g., MQTT topic) */
   topic: string;
@@ -244,14 +248,27 @@ export interface SmartFunctionContext extends DataPrepContext {
   /**
    * Looks up DTM (Digital Twin Manager) Asset properties by asset ID.
    *
-   * @param assetId - The ID of the asset to look up
-   * @returns A record containing the asset properties
+   * The optional type parameter `TAsset` lets callers declare the expected asset
+   * shape and get full type safety on custom properties without casting.
+   * Defaults to {@link C8yManagedObject} so existing code is unaffected.
+   * Returns `null` when the asset is not found.
    *
-   * @example
+   * @typeParam TAsset - Expected asset shape (defaults to {@link C8yManagedObject})
+   * @param assetId - The ID of the asset to look up
+   * @returns The asset, or null if not found
+   *
+   * @example Basic (no type parameter — same as before)
    * const asset = context.getDTMAsset("asset-123");
    * console.log("Asset properties:", asset);
+   *
+   * @example Typed — custom properties are fully typed, no casting needed
+   * interface MyAsset extends C8yManagedObject {
+   *   c8y_Location: { lat: number; lng: number };
+   * }
+   * const asset = context.getDTMAsset<MyAsset>("asset-123");
+   * const lat: number = asset?.c8y_Location?.lat ?? 0;
    */
-  getDTMAsset(assetId: string): Record<string, any>;
+  getDTMAsset<TAsset extends C8yManagedObject = C8yManagedObject>(assetId: string): TAsset | null;
 
   /**
    * Retrieves read-only mapping configuration for the current invocation.
@@ -263,16 +280,22 @@ export interface SmartFunctionContext extends DataPrepContext {
    * This is populated before the Smart Function is called and does **not**
    * persist across invocations (unlike `getState` / `setState`).
    *
-   * @returns A record containing the mapping configuration
+   * The optional type parameter `TConfig` lets callers declare the exact shape
+   * of the config object for full type safety on known keys. Defaults to
+   * `Record<string, any>` so existing code is unaffected.
    *
-   * @example
+   * @typeParam TConfig - Expected config shape (defaults to `Record<string, any>`)
+   * @returns The mapping configuration object
+   *
+   * @example Basic (no type parameter — same as before)
    * const config = context.getConfig();
    * console.log("Mapping:", config.mappingName, "Target:", config.targetAPI);
-   * if (config.debug) {
-   *   console.log("Debug mode active for mapping", config.mappingId);
-   * }
+   *
+   * @example Typed — known keys are type-safe, no casting needed
+   * const config = context.getConfig<{ mappingName: string; externalId: string }>();
+   * return { topic: `measurements/${config.externalId}`, ... };
    */
-  getConfig(): Record<string, any>;
+  getConfig<TConfig extends Record<string, any> = Record<string, any>>(): TConfig;
 
   /**
    * Adds a warning message to the processing context.
@@ -1103,7 +1126,7 @@ export interface MappingError {
  *   sensorData: { temp_val: 30.0 }
  * });
  */
-export function createMockPayload(data: Record<string, any>): SmartFunctionPayload {
+export function createMockPayload(data: Record<string, any>): Record<string, any> {
   return {
     ...data,
     get(key: string) {
@@ -1196,8 +1219,8 @@ export function createMockRuntimeContext(options: {
     getStateAll() {
       return { ...state };
     },
-    getConfig() {
-      return options.config || {};
+    getConfig<TConfig extends Record<string, any> = Record<string, any>>() {
+      return (options.config || {}) as TConfig;
     },
     getClientId() {
       return options.clientId;
@@ -1212,8 +1235,8 @@ export function createMockRuntimeContext(options: {
       const key = `${externalId.externalId}:${externalId.type}`;
       return options.externalIdMap?.[key] || null;
     },
-    getDTMAsset(assetId: string) {
-      return options.dtmAssets?.[assetId] || {};
+    getDTMAsset<TAsset extends C8yManagedObject = C8yManagedObject>(assetId: string) {
+      return (options.dtmAssets?.[assetId] ?? null) as TAsset | null;
     },
     addWarning(warning: string) {
       console.warn('[MockContext]', warning);

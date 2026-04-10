@@ -54,15 +54,28 @@ export interface DataPrepContext {
    *
    * State does not survive a service restart (in-memory only).
    *
+   * The optional type parameter `TValue` lets callers declare the expected value
+   * type and avoid `as` casts on the result. Defaults to `any` so existing code
+   * that omits the type parameter continues to work unchanged.
+   *
+   * When `defaultValue` is provided and `TValue` is omitted, TypeScript infers
+   * `TValue` from the default — e.g. `getState('count', 0)` returns `number`.
+   *
+   * @typeParam TValue - Expected type of the stored value (defaults to `any`)
    * @param key - The state key
    * @param defaultValue - Optional default value if key doesn't exist
    * @returns The state value or default
    *
-   * @example
-   * // On first message: returns undefined; on subsequent messages: returns prior value
+   * @example No type parameter — same as before
    * const count = (context.getState('messageCount') as number | undefined) || 0;
+   *
+   * @example Typed — return type is inferred, no cast needed
+   * const count = context.getState<number>('messageCount') ?? 0;
+   *
+   * @example Inferred from defaultValue
+   * const count = context.getState('messageCount', 0); // returns number
    */
-  getState(key: string, defaultValue?: any): any;
+  getState<TValue = any>(key: string, defaultValue?: TValue): TValue;
 
   /**
    * Persists a state value by key.
@@ -71,6 +84,10 @@ export interface DataPrepContext {
    * of the same mapping. State is automatically cleared when the mapping is
    * deleted. For concurrent invocations of the same mapping, last-writer-wins.
    *
+   * The optional type parameter `TValue` constrains the stored value type.
+   * Defaults to `any` so existing code is unaffected.
+   *
+   * @typeParam TValue - Type of the value to store (defaults to `any`)
    * @param key - The state key
    * @param value - The value to store (primitives, objects, and arrays are supported)
    *
@@ -78,7 +95,7 @@ export interface DataPrepContext {
    * context.setState('messageCount', count + 1);
    * context.setState('lastTemperature', temperature);
    */
-  setState(key: string, value: any): void;
+  setState<TValue = any>(key: string, value: TValue): void;
 }
 
 // ============================================================================
