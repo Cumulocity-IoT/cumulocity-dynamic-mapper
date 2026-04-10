@@ -40,11 +40,29 @@ public interface DataPrepContext {
 
     /**
      * Retrieves a value from the context's state.
-     * 
+     *
      * @param key The key of the state item to retrieve.
      * @return The value associated with the key, or null if not found.
      */
     Value getState(String key);
+
+    /**
+     * Retrieves a value from the context's state, returning a default if absent.
+     *
+     * <p>Called by V2 Smart Functions as {@code context.getState('key', defaultValue)}.
+     * GraalVM resolves the 2-arg overload at runtime; the 1-arg variant is preserved
+     * for backward compatibility with V1 functions.</p>
+     *
+     * <p>The {@code defaultValue} parameter is typed as {@code Object} (not {@code Value})
+     * because GraalVM's polyglot overload resolution reliably converts any JS primitive to
+     * {@code Object}, whereas conversion to {@code org.graalvm.polyglot.Value} is not
+     * guaranteed when matching method overloads from JavaScript.</p>
+     *
+     * @param key          The key of the state item to retrieve.
+     * @param defaultValue Any Java or JavaScript value to return when the key is absent.
+     * @return The stored value wrapped as a GraalVM Value, or the default wrapped as a Value.
+     */
+    Value getState(String key, Object defaultValue);
 
     /**
      * Retrieves all values from the context's state.

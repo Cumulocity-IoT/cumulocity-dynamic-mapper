@@ -143,6 +143,17 @@ public class SmartFunctionContext implements DataPrepContext {
         return graalContext.asValue(javaValue);
     }
 
+    /**
+     * 2-arg overload called by V2 Smart Functions: {@code context.getState('key', defaultValue)}.
+     * GraalVM selects this method when JavaScript passes two arguments to {@code getState}.
+     * Uses {@code Object} (not {@code Value}) so GraalVM reliably matches any JS primitive.
+     */
+    @Override
+    public Value getState(String key, Object defaultValue) {
+        Value result = getState(key);
+        return result != null ? result : graalContext.asValue(defaultValue);
+    }
+
     @Override
     public Value getDTMAsset(String assetId) {
         if (graalContext == null) {
