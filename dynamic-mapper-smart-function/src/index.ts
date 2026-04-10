@@ -21,11 +21,9 @@ export { onMessage as outboundBasic } from './examples/outbound-basic';
 export { onMessage as outboundWithTransformation } from './examples/outbound-with-transformation';
 
 // Export V2 example Smart Functions
-export {
-  onMessageInbound as v2InboundTyped,
-  onMessageInboundEnrichment as v2InboundEnrichment,
-  onMessageOutbound as v2OutboundTyped,
-} from './examples/v2-typed';
+export { onMessage as v2InboundTyped } from './examples/v2-inbound-typed';
+export { onMessage as v2InboundEnrichment } from './examples/v2-inbound-enrichment';
+export { onMessage as v2OutboundTyped } from './examples/v2-outbound-typed';
 
 // Default exports for convenience
 import inboundBasicDefault from './examples/inbound-basic';
@@ -33,7 +31,9 @@ import inboundEnrichmentDefault from './examples/inbound-enrichment';
 import inboundWithStateDefault from './examples/inbound-with-state';
 import outboundBasicDefault from './examples/outbound-basic';
 import outboundWithTransformationDefault from './examples/outbound-with-transformation';
-import v2InboundDefault from './examples/v2-typed';
+import v2InboundTypedDefault from './examples/v2-inbound-typed';
+import v2InboundEnrichmentDefault from './examples/v2-inbound-enrichment';
+import v2OutboundTypedDefault from './examples/v2-outbound-typed';
 
 export const examples = {
   inbound: {
@@ -46,6 +46,8 @@ export const examples = {
     withTransformation: outboundWithTransformationDefault,
   },
   v2: {
-    inboundTyped: v2InboundDefault,
+    inboundTyped: v2InboundTypedDefault,
+    inboundEnrichment: v2InboundEnrichmentDefault,
+    outboundTyped: v2OutboundTypedDefault,
   },
 };
