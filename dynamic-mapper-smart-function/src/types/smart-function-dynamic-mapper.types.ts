@@ -787,8 +787,11 @@ export interface DeviceMessage<T extends C8yObjectType = C8yObjectType> {
    * For outbound messages, serialize your data to Uint8Array.
    *
    * @example
-   * // Convert string to Uint8Array
-   * payload: new TextEncoder().encode(JSON.stringify(myObject))
+   * // Convert string to Uint8Array (TextEncoder is not available in GraalJS)
+   * const s = JSON.stringify(myObject);
+   * const bytes = new Uint8Array(s.length);
+   * for (let i = 0; i < s.length; i++) bytes[i] = s.charCodeAt(i);
+   * payload: bytes
    */
   payload: Uint8Array;
 

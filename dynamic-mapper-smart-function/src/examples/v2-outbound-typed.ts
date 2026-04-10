@@ -63,16 +63,21 @@ export const onMessage: SmartFunctionOutV2<{
   const tempValue: number | undefined =
     msg.payload['c8y_TemperatureMeasurement']?.['T']?.['value'];
 
+  // TextEncoder is not available in GraalJS — encode the JSON string manually.
+  const json = JSON.stringify({
+    type: measurementType,
+    temperature: tempValue,
+    forwardedCount: count,
+    time: new Date().toISOString(),
+  });
+  const bytes = new Uint8Array(json.length);
+  for (let i = 0; i < json.length; i++) {
+    bytes[i] = json.charCodeAt(i);
+  }
+
   return {
     topic: `measurements/${externalId}`,
-    payload: new TextEncoder().encode(
-      JSON.stringify({
-        type: measurementType,
-        temperature: tempValue,
-        forwardedCount: count,
-        time: new Date().toISOString(),
-      })
-    ),
+    payload: bytes,
     transportFields: { key: externalId },
     cumulocityType: 'measurement',
   };
