@@ -67,13 +67,17 @@ public class FlowProcessorOutboundProcessor extends AbstractFlowProcessor {
 
     @Override
     protected Value createInputMessage(Context graalContext, ProcessingContext<?> context) {
-        // Use InputMessage (no Lombok) so GraalVM's allowPublicAccess(true) reliably exposes
-        // getPayload(), getTopic(), getSourceId() to JavaScript as msg.getPayload() etc.
+        // Resolve the TypeScript C8yObjectType string from the API enum so that V2 Smart
+        // Functions can do `switch (msg.cumulocityType) { case 'measurement': ... }` without
+        // casting. Inbound messages leave cumulocityType null via the 4-arg constructor.
+        String c8yObjectType = context.getApi() != null ? context.getApi().toC8yObjectType() : null;
+
         return graalContext.asValue(new dynamic.mapper.processor.model.InputMessage(
                 context.getPayload(),
                 context.getTopic(),
                 null,
-                context.getSourceId()));
+                context.getSourceId(),
+                c8yObjectType));
     }
 
     @Override
