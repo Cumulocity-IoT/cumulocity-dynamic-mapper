@@ -1074,7 +1074,7 @@ export type SmartFunction = SmartFunctionIn | SmartFunctionOut;
 //     FlowProcessorOutboundProcessor via InputMessage.cumulocityType).
 //
 //  2. Object generic on SmartFunctionInV2 / SmartFunctionOutV2 — callers specify
-//     only the parts they care about (mappings, config, state, input) without
+//     only the parts they care about (returns, config, state, input) without
 //     worrying about generic parameter order.
 //
 //  3. SmartFunctionContextV2 — config and state are both typed end-to-end from
@@ -1214,9 +1214,9 @@ export interface SmartFunctionContextV2<
  * without worrying about parameter order.
  *
  * @typeParam T - Object describing the function contract:
- *   - `mappings` — allowed return type(s); can be a tuple for exact order/count enforcement
- *   - `config`   — shape of the mapping config (enables typed `context.getConfig()`)
- *   - `state`    — shape of the persistent state (enables typed `getState`/`setState`)
+ *   - `returns` — allowed return type(s); can be a tuple for exact order/count enforcement
+ *   - `config`  — shape of the mapping config (enables typed `context.getConfig()`)
+ *   - `state`   — shape of the persistent state (enables typed `getState`/`setState`)
  *
  * @example Untyped (backward-compatible default)
  * const onMessage: SmartFunctionInV2 = (msg, context) => { ... };
@@ -1228,9 +1228,9 @@ export interface SmartFunctionContextV2<
  *
  * @example Tuple return — enforces exactly [measurement, managedObject] in that order
  * const onMessage: SmartFunctionInV2<{
- *   mappings: [CumulocityObject<'measurement'>, CumulocityObject<'managedObject'>];
- *   config:   { mappingName: string };
- *   state:    { messageCount: number };
+ *   returns: [CumulocityObject<'measurement'>, CumulocityObject<'managedObject'>];
+ *   config:  { mappingName: string };
+ *   state:   { messageCount: number };
  * }> = (msg, context) => {
  *   context.setState('messageCount', context.getState('messageCount', 0) + 1);
  *   return [ measurementObj, managedObjectObj ]; // TypeScript enforces order + count
@@ -1238,7 +1238,7 @@ export interface SmartFunctionContextV2<
  */
 export type SmartFunctionInV2<
   T extends {
-    mappings?: CumulocityObject | CumulocityObject[];
+    returns?: CumulocityObject | CumulocityObject[];
     config?: Record<string, any>;
     state?: Record<string, any>;
   } = {}
@@ -1248,8 +1248,8 @@ export type SmartFunctionInV2<
     T extends { config: infer TConfig extends Record<string, any> } ? TConfig : Record<string, any>,
     T extends { state: infer TState extends Record<string, any> } ? TState : Record<string, any>
   >
-) => T extends { mappings: infer TMappings extends CumulocityObject | CumulocityObject[] }
-  ? TMappings
+) => T extends { returns: infer TReturns extends CumulocityObject | CumulocityObject[] }
+  ? TReturns
   : CumulocityObject | CumulocityObject[];
 
 /**

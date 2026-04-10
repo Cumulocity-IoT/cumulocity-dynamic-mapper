@@ -68,7 +68,7 @@ export const onMessageInbound: SmartFunctionInV2<{
   // Tuple: enforces exactly one measurement followed by one managedObject.
   // Returning only a measurement, or returning them in the wrong order, is a
   // compile-time error — not a silent runtime bug.
-  mappings: [CumulocityObject<'measurement'>, CumulocityObject<'managedObject'>];
+  returns: [CumulocityObject<'measurement'>, CumulocityObject<'managedObject'>];
   config: {
     mappingName: string;
     tenant: string;
