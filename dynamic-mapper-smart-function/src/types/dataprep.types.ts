@@ -54,9 +54,19 @@ export interface DataPrepContext {
    *
    * State does not survive a service restart (in-memory only).
    *
-   * The optional type parameter `TValue` lets callers declare the expected value
+   * The optional type parameter `TValue` lets callers annotate the expected value
    * type and avoid `as` casts on the result. Defaults to `any` so existing code
    * that omits the type parameter continues to work unchanged.
+   *
+   * **Limitation:** Because `TValue` is a method-level generic (not class-level),
+   * TypeScript cannot enforce that `getState<T>` and `setState<T>` use the *same*
+   * type for the same key across calls. Nothing prevents:
+   * ```ts
+   * context.setState<string>('count', 'hello');
+   * context.getState<number>('count', 0);  // compiles, but wrong
+   * ```
+   * For cross-call consistency use {@link SmartFunctionContextV2} (V2), which
+   * declares the full state shape once via the class-level `TState` generic.
    *
    * When `defaultValue` is provided and `TValue` is omitted, TypeScript infers
    * `TValue` from the default — e.g. `getState('count', 0)` returns `number`.
@@ -66,13 +76,13 @@ export interface DataPrepContext {
    * @param defaultValue - Optional default value if key doesn't exist
    * @returns The state value or default
    *
-   * @example No type parameter — same as before
+   * @example No type parameter (V1 — same as before, no cast improvement)
    * const count = (context.getState('messageCount') as number | undefined) || 0;
    *
-   * @example Typed — return type is inferred, no cast needed
+   * @example Method-level type parameter — avoids cast, but not cross-call safe
    * const count = context.getState<number>('messageCount') ?? 0;
    *
-   * @example Inferred from defaultValue
+   * @example Inferred from defaultValue — preferred V1 style
    * const count = context.getState('messageCount', 0); // returns number
    */
   getState<TValue = any>(key: string, defaultValue?: TValue): TValue;
@@ -84,7 +94,8 @@ export interface DataPrepContext {
    * of the same mapping. State is automatically cleared when the mapping is
    * deleted. For concurrent invocations of the same mapping, last-writer-wins.
    *
-   * The optional type parameter `TValue` constrains the stored value type.
+   * The optional type parameter `TValue` constrains the stored value type at the
+   * call site only — see `getState` for the cross-call consistency limitation.
    * Defaults to `any` so existing code is unaffected.
    *
    * @typeParam TValue - Type of the value to store (defaults to `any`)
