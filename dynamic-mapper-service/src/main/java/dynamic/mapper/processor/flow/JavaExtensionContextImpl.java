@@ -251,7 +251,7 @@ public class JavaExtensionContextImpl implements JavaExtensionContext {
             return dataPrepContext.getState(key, defaultValue);
         }
         log.warn("{} - getState(key, default) called but DataPrepContext not available", tenant);
-        return null;
+        return Value.asValue(defaultValue);
     }
 
     @Override
