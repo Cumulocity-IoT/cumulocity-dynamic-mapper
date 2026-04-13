@@ -28,6 +28,7 @@ import java.util.Map;
 
 import org.apache.camel.Exchange;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.model.Mapping;
@@ -186,8 +187,19 @@ public abstract class AbstractFlowResultProcessor extends CommonProcessor {
         try {
             if (payload instanceof Map) {
                 return new HashMap<>((Map<String, Object>) payload);
+            } else if (payload instanceof List) {
+                // A JavaScript Uint8Array is converted by GraalVM to List<Integer>
+                // (one element per byte). Reassemble the raw bytes, decode as UTF-8,
+                // and parse the resulting JSON string as a Map.
+                List<?> byteList = (List<?>) payload;
+                byte[] bytes = new byte[byteList.size()];
+                for (int i = 0; i < byteList.size(); i++) {
+                    bytes[i] = ((Number) byteList.get(i)).byteValue();
+                }
+                return objectMapper.readValue(bytes,
+                        new TypeReference<Map<String, Object>>() {});
             } else {
-                // Convert object to map using Jackson
+                // Covers String (plain JSON) and other object types
                 return objectMapper.convertValue(payload, Map.class);
             }
         } catch (Exception e) {

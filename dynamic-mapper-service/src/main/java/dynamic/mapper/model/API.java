@@ -68,4 +68,34 @@ public enum API {
             throw new IllegalArgumentException(String.format("Not an alias: %s", value));
         return api;
     }
+
+    /**
+     * Returns the TypeScript {@code C8yObjectType} string for this API value.
+     *
+     * <p>Used to populate {@code msg.cumulocityType} in the outbound Smart Function
+     * input message so that V2 functions can narrow the payload type via a
+     * {@code switch (msg.cumulocityType)} statement without casting.</p>
+     *
+     * @return one of {@code "measurement"}, {@code "event"}, {@code "alarm"},
+     *         {@code "operation"}, {@code "managedObject"}, or {@code null} for
+     *         non-mappable values (ALL, EMPTY).
+     */
+    public String toC8yObjectType() {
+        switch (this) {
+            case MEASUREMENT:
+                return "measurement";
+            case EVENT:
+            case EVENT_WITH_CHILDREN:
+                return "event";
+            case ALARM:
+            case ALARM_WITH_CHILDREN:
+                return "alarm";
+            case OPERATION:
+                return "operation";
+            case INVENTORY:
+                return "managedObject";
+            default:
+                return null;
+        }
+    }
 }

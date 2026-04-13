@@ -24,6 +24,33 @@ import {
  *
  * State is scoped per tenant + mapping and is cleared when the mapping is deleted.
  * State does not survive a service restart (in-memory only).
+ *
+ * Sample payload (MQTT message body):
+ * {
+ *   "clientId": "sensor-berlin-01",
+ *   "temperature": 22.3
+ * }
+ *
+ * Sample topic: testSmartInbound/sensor-berlin-01
+ *
+ * Expected output (second message, after first message with temperature 20.0):
+ * [{
+ *   "cumulocityType": "measurement",
+ *   "action": "create",
+ *   "payload": {
+ *     "time": "<ISO timestamp>",
+ *     "type": "c8y_TemperatureMeasurement",
+ *     "c8y_Temperature": { "T": { "unit": "C", "value": 22.3 } },
+ *     "c8y_Statistics": {
+ *       "lastValue": 20.0,
+ *       "change": 2.3,
+ *       "maxValue": 22.3,
+ *       "minValue": 20.0,
+ *       "messageCount": 2
+ *     }
+ *   },
+ *   "externalSource": [{ "type": "c8y_Serial", "externalId": "sensor-berlin-01" }]
+ * }]
  */
 
 /**
