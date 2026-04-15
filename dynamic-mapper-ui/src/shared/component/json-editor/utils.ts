@@ -36,7 +36,7 @@ export function stringifyJSONPathCustom(path: JSONPath): string {
 }
 
 function escapeQuotesCustom(prop: string): string {
-    return prop.replace(/"/g, '\\"')
+    return prop.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
 }
 
 /**

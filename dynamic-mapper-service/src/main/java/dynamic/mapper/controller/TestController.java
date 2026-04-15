@@ -268,7 +268,7 @@ public class TestController {
 
     @Operation(summary = "Echo webhook input", description = "Accepts any POST request and returns the body unchanged. Useful for testing outbound webhook mappings.")
     @ApiResponse(responseCode = "200", description = "Input echoed back", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE))
-    @PostMapping("/webhook/echo/**")
+    @PostMapping(value = "/webhook/echo/**", produces = MediaType.TEXT_PLAIN_VALUE)
     public String echoInput(HttpServletRequest request, @RequestBody String input) {
         // Get the full URL path
         String fullPath = request.getRequestURI();
