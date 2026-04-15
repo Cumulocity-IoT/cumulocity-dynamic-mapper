@@ -74,6 +74,7 @@ public class DeserializationInboundProcessor extends BaseProcessor {
                 exchange.getIn().setHeader("processingContext", context);
             } catch (IOException e) {
                 handleDeserializationError(tenant, mapping, e, context);
+                exchange.getIn().setHeader("processingContext", context);
                 return;
             }
         } else {
@@ -94,6 +95,7 @@ public class DeserializationInboundProcessor extends BaseProcessor {
                 exchange.getIn().setHeader("processingContext", context);
             } catch (IOException e) {
                 handleDeserializationError(tenant, mapping, e, context);
+                exchange.getIn().setHeader("processingContext", context);
                 return;
             }
         }

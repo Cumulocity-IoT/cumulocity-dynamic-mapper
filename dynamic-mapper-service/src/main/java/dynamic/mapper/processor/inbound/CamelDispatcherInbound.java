@@ -160,6 +160,7 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
                 boolean resend = false;
                 if (contexts != null) {
                     for (ProcessingContext<?> context : contexts) {
+                        if (context == null) continue;
                         int httpStatus = 0;
                         if (context.hasError()) {
                             for (Exception error : context.getErrors()) {
