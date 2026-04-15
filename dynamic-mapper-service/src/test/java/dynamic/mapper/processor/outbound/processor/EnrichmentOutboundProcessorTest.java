@@ -383,12 +383,12 @@ class EnrichmentOutboundProcessorTest {
 
     @Test
     void testProcessWithNullProcessingContext() throws Exception {
-        // Given - Null processing context
+        // Given - Null processing context (simulates upstream deserialization failure)
         when(message.getHeader("processingContext", ProcessingContext.class)).thenReturn(null);
 
-        // When & Then
-        assertThrows(NullPointerException.class, () -> processor.process(exchange),
-                "Should throw exception with null processing context");
+        // When & Then - null context is handled gracefully, no exception thrown
+        assertDoesNotThrow(() -> processor.process(exchange),
+                "Should handle null processing context gracefully");
 
         log.info("✅ Null processing context handling test passed");
     }

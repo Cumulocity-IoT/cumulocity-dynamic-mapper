@@ -241,11 +241,11 @@ class DeserializationInboundProcessorTest {
         // When
         processor.process(exchange);
 
-        // Then - Error handling should be called, but no setHeader
+        // Then - Error handling should be called, and context with error is written to the header
         verify(mappingService).getMappingStatus(TEST_TENANT, mapping);
         verify(mappingService).increaseAndHandleFailureCount(eq(TEST_TENANT), eq(mapping), eq(mappingStatus));
-        // Verify setHeader is NOT called when deserialization fails
-        verify(message, never()).setHeader(eq("processingContext"), any(ProcessingContext.class));
+        // Verify setHeader IS called with the error context so downstream processors don't NPE
+        verify(message).setHeader(eq("processingContext"), any(ProcessingContext.class));
 
         assertEquals(1, mappingStatus.errors);
     }
