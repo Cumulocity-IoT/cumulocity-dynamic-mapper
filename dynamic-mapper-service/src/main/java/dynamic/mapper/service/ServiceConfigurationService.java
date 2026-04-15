@@ -275,62 +275,6 @@ public class ServiceConfigurationService {
         log.info("Loaded template: {} ({})", name, templateId);
     }
 
-    /*
-     * this step is required to use the new templateType:
-     * INBOUND_SUBSTITUTION_AS_CODE
-     * OUTBOUND_SUBSTITUTION_AS_CODE
-     * instead of
-     * INBOUND, // deprecated, use INBOUND_SUBSTITUTION_AS_CODE instead
-     * OUTBOUND, // deprecated, use OUTBOUND_SUBSTITUTION_AS_CODE instead
-     */
-    public void migrateCodeTemplates(ServiceConfiguration configuration) {
-        Map<String, CodeTemplate> codeTemplates = configuration.getCodeTemplates();
-        Map<String, CodeTemplate> templatesToAdd = new HashMap<>();
-
-        try {
-            // First pass: collect templates that need to be migrated
-            for (CodeTemplate template : codeTemplates.values()) {
-                TemplateType templateType = template.templateType;
-                String templateId = template.id;
-                String name = template.name;
-
-                // MIGRATION
-                if (templateType == TemplateType.INBOUND) {
-                    // Create a copy with updated templateType
-                    CodeTemplate migratedTemplate = createMigratedTemplate(template,
-                            TemplateType.INBOUND_SUBSTITUTION_AS_CODE);
-                    templatesToAdd.put(TemplateType.INBOUND_SUBSTITUTION_AS_CODE.name(), migratedTemplate);
-                    log.info("Prepared migration for template: {} ({})", name, templateId);
-                } else if (templateType == TemplateType.OUTBOUND) {
-                    // Create a copy with updated templateType
-                    CodeTemplate migratedTemplate = createMigratedTemplate(template,
-                            TemplateType.OUTBOUND_SUBSTITUTION_AS_CODE);
-                    templatesToAdd.put(TemplateType.OUTBOUND_SUBSTITUTION_AS_CODE.name(), migratedTemplate);
-                    log.info("Prepared migration for template: {} ({})", name, templateId);
-                }
-            }
-
-            // Second pass: add the migrated templates
-            codeTemplates.putAll(templatesToAdd);
-
-            log.info("Successfully migrated {} templates", templatesToAdd.size());
-
-        } catch (Exception e) {
-            log.error("Failed to migrate code templates", e);
-        }
-    }
-
-    private CodeTemplate createMigratedTemplate(CodeTemplate original, TemplateType newTemplateType) {
-        CodeTemplate migrated = (CodeTemplate) original.clone(); // assuming you implement Cloneable
-        migrated.templateType = newTemplateType;
-        // Set direction based on the original templateType
-        migrated.direction = (original.templateType == TemplateType.INBOUND)
-                ? Direction.INBOUND
-                : Direction.OUTBOUND;
-        migrated.id = newTemplateType.name(); // Use the enum name as ID
-        return migrated;
-    }
-
     /**
      * Extracts annotation value from the file content.
      * 

@@ -11,19 +11,18 @@ import org.springframework.stereotype.Component;
 
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.processor.inbound.processor.CodeExtractionInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.DeserializationInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.ExtensibleInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.ExtensibleResultInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.FilterInboundProcessor;
-import dynamic.mapper.processor.inbound.processor.FlowProcessorInboundProcessor;
+import dynamic.mapper.processor.inbound.processor.FlowInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.FlowResultInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.InternalProtobufProcessor;
 import dynamic.mapper.processor.inbound.processor.SendInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.SnoopingInboundProcessor;
-import dynamic.mapper.processor.inbound.processor.JSONataExtractionInboundProcessor;
+import dynamic.mapper.processor.inbound.processor.JSONataInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.EnrichmentInboundProcessor;
-import dynamic.mapper.processor.inbound.processor.SubstitutionInboundProcessor;
+import dynamic.mapper.processor.inbound.processor.SubstitutionResultInboundProcessor;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingResultWrapper;
@@ -52,13 +51,10 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
     private EnrichmentInboundProcessor enrichmentProcessor;
 
     @Autowired
-    private CodeExtractionInboundProcessor codeExtractionInboundProcessor;
+    private FlowInboundProcessor flowInboundProcessor;
 
     @Autowired
-    private FlowProcessorInboundProcessor flowProcessorInboundProcessor;
-
-    @Autowired
-    private SubstitutionInboundProcessor substitutionInboundProcessor;
+    private SubstitutionResultInboundProcessor substitutionInboundProcessor;
 
     @Autowired
     private SnoopingInboundProcessor snoopingInboundProcessor;
@@ -67,7 +63,7 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
     private DeserializationInboundProcessor deserializationInboundProcessor;
 
     @Autowired
-    private JSONataExtractionInboundProcessor jsonataExtractionInboundProcessor;
+    private JSONataInboundProcessor jsonataExtractionInboundProcessor;
 
     @Autowired
     private FlowResultInboundProcessor flowResultInboundProcessor;
@@ -197,10 +193,6 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
                 .when(exchange -> isJSONataExtraction(exchange))
                 .to("direct:processJSONataExtraction")
 
-                // 1c. SubstitutionAsCode extraction path
-                .when(exchange -> isSubstitutionAsCode(exchange))
-                .to("direct:processSubstitutionAsCodeExtraction")
-
                 // 1e. Flow function path
                 .when(exchange -> isFlowFunction(exchange))
                 .to("direct:processFlowFunction")
@@ -229,27 +221,6 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
                 .stop()
                 .otherwise()
                 .process(inboundSendProcessor)
-                .process(consolidationProcessor)
-                .end();
-
-        // 1c. SubstitutionAsCode extraction processing route
-        from("direct:processSubstitutionAsCodeExtraction")
-                .routeId("substitution-as-code-extraction-processor")
-                .process(codeExtractionInboundProcessor)
-                .process(substitutionInboundProcessor)
-                .choice()
-                .when(exchange -> shouldIgnoreFurtherProcessing(exchange))
-                .to("log:filtered-message?level=DEBUG")
-                .process(consolidationProcessor)
-                .stop()
-                .otherwise()
-                // Check if parallel processing is enabled
-                .choice()
-                .when(header("parallelProcessing").isEqualTo(true))
-                .to("direct:processRequestsInParallel")
-                .otherwise()
-                .process(inboundSendProcessor)
-                .end()
                 .process(consolidationProcessor)
                 .end();
 
@@ -299,7 +270,7 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
         // 1e. Flow function processing route
         from("direct:processFlowFunction")
                 .routeId("flow-function-processor")
-                .process(flowProcessorInboundProcessor)
+                .process(flowInboundProcessor)
                 .choice()
                 .when(exchange -> shouldIgnoreFurtherProcessing(exchange))
                 .to("log:flow-function-filtered-message?level=DEBUG")

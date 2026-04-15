@@ -65,7 +65,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-class FlowProcessorInboundProcessorTest {
+class FlowInboundProcessorTest {
 
     @Mock
     private MappingService mappingService;
@@ -82,7 +82,7 @@ class FlowProcessorInboundProcessorTest {
     @Mock
     private InventoryEnrichmentClient inventoryEnrichmentClient;
 
-    private FlowProcessorInboundProcessor processor;
+    private FlowInboundProcessor processor;
 
     private static final String TEST_TENANT = "testTenant";
     private Mapping mapping;
@@ -92,7 +92,7 @@ class FlowProcessorInboundProcessorTest {
     @BeforeEach
     void setUp() throws Exception {
         // FIX: Pass the mocked ConfigurationController to the constructor
-        processor = new FlowProcessorInboundProcessor(mappingService);
+        processor = new FlowInboundProcessor(mappingService);
 
         mapping = createSampleMapping();
         mappingStatus = new MappingStatus(
@@ -115,9 +115,9 @@ class FlowProcessorInboundProcessorTest {
         when(serviceConfiguration.getLogPayload()).thenReturn(false);
     }
 
-    private void injectMappingService(FlowProcessorInboundProcessor processor, MappingService mappingService)
+    private void injectMappingService(FlowInboundProcessor processor, MappingService mappingService)
             throws Exception {
-        Field field = FlowProcessorInboundProcessor.class.getDeclaredField("mappingService");
+        Field field = FlowInboundProcessor.class.getDeclaredField("mappingService");
         field.setAccessible(true);
         field.set(processor, mappingService);
     }
@@ -245,13 +245,13 @@ class FlowProcessorInboundProcessorTest {
         // basic flow
         try {
             processor.process(exchange);
-            log.info("FlowProcessorInboundProcessor processed SMART_FUNCTION mapping successfully");
+            log.info("FlowInboundProcessor processed SMART_FUNCTION mapping successfully");
         } catch (Exception e) {
             // Expected to fail due to missing GraalVM context, but should increment error
             // count
             verify(mappingService).increaseAndHandleFailureCount(eq(TEST_TENANT), eq(mapping),
                     any(MappingStatus.class));
-            log.info("FlowProcessorInboundProcessor correctly handled missing GraalVM context: {}", e.getMessage());
+            log.info("FlowInboundProcessor correctly handled missing GraalVM context: {}", e.getMessage());
         }
     }
 
@@ -264,7 +264,7 @@ class FlowProcessorInboundProcessorTest {
         processor.process(exchange);
 
         // Then - Should complete processing without executing JavaScript
-        log.info("FlowProcessorInboundProcessor handled mapping without code");
+        log.info("FlowInboundProcessor handled mapping without code");
     }
 
     @Test
@@ -277,7 +277,7 @@ class FlowProcessorInboundProcessorTest {
             processor.process(exchange);
         } catch (Exception e) {
             // Expected due to missing GraalVM context
-            log.info("FlowProcessorInboundProcessor correctly handled debug case: {}", e.getMessage());
+            log.info("FlowInboundProcessor correctly handled debug case: {}", e.getMessage());
         }
     }
 
@@ -291,7 +291,7 @@ class FlowProcessorInboundProcessorTest {
             processor.process(exchange);
         } catch (Exception e) {
             // Expected due to missing GraalVM context
-            log.info("FlowProcessorInboundProcessor correctly handled payload logging case: {}", e.getMessage());
+            log.info("FlowInboundProcessor correctly handled payload logging case: {}", e.getMessage());
         }
     }
 
@@ -307,7 +307,7 @@ class FlowProcessorInboundProcessorTest {
             processor.process(exchange);
         } catch (Exception e) {
             // Expected due to missing GraalVM context
-            log.info("FlowProcessorInboundProcessor correctly handled shared code case: {}", e.getMessage());
+            log.info("FlowInboundProcessor correctly handled shared code case: {}", e.getMessage());
         }
     }
 
@@ -323,7 +323,7 @@ class FlowProcessorInboundProcessorTest {
             processor.process(exchange);
         } catch (Exception e) {
             // Expected due to missing GraalVM context
-            log.info("FlowProcessorInboundProcessor correctly handled system code case: {}", e.getMessage());
+            log.info("FlowInboundProcessor correctly handled system code case: {}", e.getMessage());
         }
     }
 
@@ -435,7 +435,7 @@ class FlowProcessorInboundProcessorTest {
         processingContext.setGraalContext(mockGraalContext);
 
         // When - Call processResult directly using reflection
-        java.lang.reflect.Method processResultMethod = FlowProcessorInboundProcessor.class
+        java.lang.reflect.Method processResultMethod = FlowInboundProcessor.class
                 .getDeclaredMethod("processResult", Value.class, ProcessingContext.class, String.class);
         processResultMethod.setAccessible(true);
         processResultMethod.invoke(processor, mockResult, processingContext, TEST_TENANT);
@@ -469,7 +469,7 @@ class FlowProcessorInboundProcessorTest {
         processingContext.setGraalContext(mockGraalContext);
 
         // When - Call processResult directly using reflection
-        java.lang.reflect.Method processResultMethod = FlowProcessorInboundProcessor.class
+        java.lang.reflect.Method processResultMethod = FlowInboundProcessor.class
                 .getDeclaredMethod("processResult", Value.class, ProcessingContext.class, String.class);
         processResultMethod.setAccessible(true);
         processResultMethod.invoke(processor, mockResult, processingContext, TEST_TENANT);
@@ -492,7 +492,7 @@ class FlowProcessorInboundProcessorTest {
         processingContext.setGraalContext(mockGraalContext);
 
         // When - Call processResult directly using reflection
-        java.lang.reflect.Method processResultMethod = FlowProcessorInboundProcessor.class
+        java.lang.reflect.Method processResultMethod = FlowInboundProcessor.class
                 .getDeclaredMethod("processResult", Value.class, ProcessingContext.class, String.class);
         processResultMethod.setAccessible(true);
         processResultMethod.invoke(processor, mockResult, processingContext, TEST_TENANT);
@@ -523,7 +523,7 @@ class FlowProcessorInboundProcessorTest {
         processingContext.setGraalContext(mockGraalContext);
 
         // When - Call processResult directly using reflection
-        java.lang.reflect.Method processResultMethod = FlowProcessorInboundProcessor.class
+        java.lang.reflect.Method processResultMethod = FlowInboundProcessor.class
                 .getDeclaredMethod("processResult", Value.class, ProcessingContext.class, String.class);
         processResultMethod.setAccessible(true);
         processResultMethod.invoke(processor, mockResult, processingContext, TEST_TENANT);
@@ -989,7 +989,7 @@ class FlowProcessorInboundProcessorTest {
         processingContext.setGraalContext(mockGraalContext);
 
         // When - Call processResult directly using reflection
-        java.lang.reflect.Method processResultMethod = FlowProcessorInboundProcessor.class
+        java.lang.reflect.Method processResultMethod = FlowInboundProcessor.class
                 .getDeclaredMethod("processResult", Value.class, ProcessingContext.class, String.class);
         processResultMethod.setAccessible(true);
         processResultMethod.invoke(processor, mockResult, processingContext, TEST_TENANT);

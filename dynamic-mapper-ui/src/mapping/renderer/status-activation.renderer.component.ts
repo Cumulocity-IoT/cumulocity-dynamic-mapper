@@ -67,6 +67,10 @@ export class MappingStatusActivationRendererComponent implements OnInit {
   ) {}
 
   get canEdit(): boolean {
+    const mapping = this.context.item?.['mapping'];
+    if (mapping?.transformationType === TransformationType.SUBSTITUTION_AS_CODE) {
+      return false;
+    }
     return this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole;
   }
 

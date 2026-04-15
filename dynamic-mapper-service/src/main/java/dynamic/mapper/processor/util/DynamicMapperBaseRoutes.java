@@ -64,23 +64,6 @@ public abstract class DynamicMapperBaseRoutes extends RouteBuilder {
     }
 
     /**
-     * Check if this uses SubstitutionAsCode extraction
-     */
-    protected boolean isSubstitutionAsCode(Exchange exchange) {
-        try {
-            ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
-            if (context != null && context.getMapping() != null) {
-                Mapping mapping = context.getMapping();
-                return mapping.isSubstitutionAsCode();
-            }
-            return false; // Changed from true to false for better default
-        } catch (Exception e) {
-            log.warn("Error checking SubstitutionAsCode extraction: {}", e.getMessage());
-            return false;
-        }
-    }
-
-    /**
      * Check if this uses JSONata extraction
      */
     protected boolean isJSONataExtraction(Exchange exchange) {

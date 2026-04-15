@@ -23,64 +23,23 @@
   <ng-container c8y-modal-title>
     <span [c8yIcon]="'warning'"></span>
     <h4 class="modal-title">
-      {{ 'Deprecation Notice: Substitution as JavaScript' | translate }}
+      {{ 'Removed: Substitution as JavaScript' | translate }}
     </h4>
   </ng-container>
 
   <div class="p-24 animated fadeIn">
-    <p class="text-medium">
+    <div class="alert alert-danger m-b-16">
+      <i c8yIcon="warning" class="m-r-8"></i>
+      <strong>{{ 'Action required: ' | translate }}</strong>
       {{ 'The transformation type ' | translate }}
-      <strong>{{ 'Substitution as JavaScript' | translate }}</strong>
-      {{ ' (SUBSTITUTION_AS_CODE) is being phased out across Dynamic Mapper releases 6.2 through 6.3.' | translate }}
-    </p>
-
-    <!-- Timeline Table -->
-    <h5 class="m-t-16 m-b-8">{{ 'Deprecation Timeline' | translate }}</h5>
-    <table class="table table-bordered table-condensed">
-      <thead>
-        <tr>
-          <th>{{ 'Release' | translate }}</th>
-          <th>{{ 'Action' | translate }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td><strong>6.1.5</strong></td>
-          <td>{{ 'Marked as deprecated. Existing mappings continue to work. Labels show "(deprecated)".' | translate }}
-          </td>
-        </tr>
-        <tr [class.bg-warning-subtle]="currentVersion.startsWith('6.2')">
-          <td>
-            <strong>{{ currentVersion }}
-              @if (currentVersion.startsWith('6.2')) {
-              <span class="label label-warning m-l-4">{{ 'Current' | translate }}</span>
-              }
-            </strong>
-          </td>
-          <td>{{ 'Creation of new mappings with this type is disabled. Existing mappings still load and execute.' |
-            translate }}</td>
-        </tr>
-        <tr [class.bg-danger-subtle]="currentVersion.startsWith('6.3')">
-          <td>
-            <strong>6.3.0
-              @if (currentVersion.startsWith('6.3')) {
-              <span class="label label-warning m-l-4">{{ 'Current' | translate }}</span>
-              }
-              @else {
-              <span class="label label-danger m-l-4">~May 2026</span>
-              }
-            </strong>
-          </td>
-          <td>{{ 'Mappings of this type will no longer be loaded or shown in the UI. All mappings must be migrated
-            before this release.' | translate }}</td>
-        </tr>
-      </tbody>
-    </table>
+      <strong>{{ 'Substitution as JavaScript (SUBSTITUTION_AS_CODE)' | translate }}</strong>
+      {{ ' has been removed in release 6.3. Affected mappings are no longer executed. They can only be exported and deleted.' | translate }}
+    </div>
 
     <!-- Migration Target -->
     <div class="alert alert-info m-t-16" style="min-width:stretch">
       <i c8yIcon="info-circle" class="m-r-8"></i>
-      <strong>{{ 'Recommended migration target: ' | translate }}</strong>
+      <strong>{{ 'Migration target: ' | translate }}</strong>
       {{ 'Smart Function (JavaScript)' | translate }}
       <span class="text-muted m-l-4">(TransformationType.SMART_FUNCTION)</span>
     </div>
@@ -88,21 +47,15 @@
     <!-- Migration Steps -->
     <h5 class="m-t-16 m-b-8">{{ 'How to migrate' | translate }}</h5>
     <ol class="m-l-16">
-      <li>{{ 'Identify affected mappings — look for mappings using "Substitution as JavaScript (deprecated)" in the Transformation Type.' | translate }}</li>
-      <li>{{ 'Export each affected mapping.' | translate }}</li>
+      <li>{{ 'Export the affected mapping using the Export action in the mapping grid.' | translate }}</li>
       <li>{{ 'Recreate a new mapping with the Smart Function transformation type and adapt the JavaScript code to the Smart Function API (direct payload creation instead of substitution objects).' | translate }}</li>
       <li>{{ 'Use the built-in Test feature to verify the migrated mapping.' | translate }}</li>
-      <li>{{ 'Activate the mapping.' | translate }}</li>
+      <li>{{ 'Activate the new mapping.' | translate }}</li>
       <li>{{ 'Delete the original deprecated mapping.' | translate }}</li>
     </ol>
 
-    <p class="text-muted m-t-16">
-      <i c8yIcon="warning" class="m-r-4"></i>
-      {{ 'Complete all migrations before release 6.3 (~May 2026).' | translate }}
-    </p>
-
     <!-- Affected Mappings List -->
-    <h5 class="m-t-16 m-b-8">{{ 'Affected mappings requiring migration' | translate }}</h5>
+    <h5 class="m-t-16 m-b-8">{{ 'Affected mappings (export & delete only)' | translate }}</h5>
     @if (isLoading) {
     <div class="text-center p-16">
       <c8y-loading></c8y-loading>

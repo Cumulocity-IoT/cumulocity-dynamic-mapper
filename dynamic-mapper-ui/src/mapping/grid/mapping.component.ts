@@ -238,25 +238,29 @@ export class MappingComponent implements OnInit, OnDestroy {
     return valid;
   }
 
+  private isDeprecatedMapping(item: any): boolean {
+    return item['mapping']['transformationType'] === TransformationType.SUBSTITUTION_AS_CODE;
+  }
+
   private setupActionControls() {
     this.actionControls.push(
       {
         type: BuiltInActionType.Edit,
         callback: this.updateMapping.bind(this),
-        showIf: item => !item['mapping']['active'] && this.canManageMappings,
+        showIf: item => !item['mapping']['active'] && this.canManageMappings && !this.isDeprecatedMapping(item),
       },
       {
         type: 'VIEW',
         icon: 'eye',
         callback: this.updateMapping.bind(this),
-        showIf: item => item['mapping']['active'] || !this.canManageMappings
+        showIf: item => (item['mapping']['active'] || !this.canManageMappings) && !this.isDeprecatedMapping(item)
       },
       {
         text: 'Duplicate',
         type: 'DUPLICATE',
         icon: 'duplicate',
         callback: this.copyMapping.bind(this),
-        showIf: () => this.canManageMappings
+        showIf: item => this.canManageMappings && !this.isDeprecatedMapping(item)
       },
       {
         type: BuiltInActionType.Delete,
@@ -268,14 +272,14 @@ export class MappingComponent implements OnInit, OnDestroy {
         text: 'Enable debugging',
         icon: 'bug1',
         callback: this.toggleDebugMapping.bind(this),
-        showIf: item => !item['mapping']['debug'] && this.canManageMappings
+        showIf: item => !item['mapping']['debug'] && this.canManageMappings && !this.isDeprecatedMapping(item)
       },
       {
         type: 'DISABLE_DEBUG',
         text: 'Disable debugging',
         icon: 'bug1',
         callback: this.toggleDebugMapping.bind(this),
-        showIf: item => item['mapping']['debug'] && this.canManageMappings
+        showIf: item => item['mapping']['debug'] && this.canManageMappings && !this.isDeprecatedMapping(item)
       },
       {
         type: 'ENABLE_SNOOPING',
@@ -285,7 +289,8 @@ export class MappingComponent implements OnInit, OnDestroy {
         showIf: item =>
           item['snoopSupported'] &&
           (item['mapping']['snoopStatus'] === SnoopStatus.NONE ||
-            item['mapping']['snoopStatus'] === SnoopStatus.STOPPED) && this.canManageMappings
+            item['mapping']['snoopStatus'] === SnoopStatus.STOPPED) &&
+          this.canManageMappings && !this.isDeprecatedMapping(item)
       },
       {
         type: 'DISABLE_SNOOPING',
@@ -297,7 +302,8 @@ export class MappingComponent implements OnInit, OnDestroy {
           !(
             item['mapping']['snoopStatus'] === SnoopStatus.NONE ||
             item['mapping']['snoopStatus'] === SnoopStatus.STOPPED
-          ) && this.canManageMappings
+          ) &&
+          this.canManageMappings && !this.isDeprecatedMapping(item)
       },
       {
         type: 'RESET_SNOOP',
@@ -308,7 +314,8 @@ export class MappingComponent implements OnInit, OnDestroy {
           item['snoopSupported'] &&
           (item['mapping']['snoopStatus'] === SnoopStatus.STARTED ||
             item['mapping']['snoopStatus'] === SnoopStatus.ENABLED ||
-            item['mapping']['snoopStatus'] === SnoopStatus.STOPPED) && this.canManageMappings
+            item['mapping']['snoopStatus'] === SnoopStatus.STOPPED) &&
+          this.canManageMappings && !this.isDeprecatedMapping(item)
       },
       {
         type: 'EXPORT',
@@ -585,7 +592,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         this.snoopEnabled = true;
       }
       this.transformationType = resultOf.transformationType;
-      this.substitutionsAsCode = this.transformationType == TransformationType.SMART_FUNCTION || this.transformationType == TransformationType.SUBSTITUTION_AS_CODE;
+      this.substitutionsAsCode = this.transformationType == TransformationType.SMART_FUNCTION;
       this.mappingType = resultOf.mappingType;
       this.codeTemplate = resultOf.codeTemplate;
       this.addMapping();

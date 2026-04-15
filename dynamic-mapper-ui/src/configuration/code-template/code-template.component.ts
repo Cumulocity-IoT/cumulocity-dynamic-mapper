@@ -32,7 +32,7 @@ import { base64ToString, stringToBase64 } from '../../mapping/shared/util';
 import { ConfirmationModalComponent, Feature, ManageTemplateComponent, Operation, createCustomUuid } from '../../shared';
 import { SharedService } from '../../shared/service/shared.service';
 import { CodeTemplate, CodeTemplateMap, TemplateType } from '../shared/configuration.model';
-import { createCompletionProviderFlowFunction, createCompletionProviderSubstitutionAsCode } from '../../mapping/shared/stepper.model';
+import { createCompletionProviderFlowFunction } from '../../mapping/shared/stepper.model';
 
 interface CodeTemplateEntry {
   key: string;
@@ -98,16 +98,6 @@ export class CodeComponent implements OnInit, AfterViewInit, OnDestroy {
     const url = this.router.url;
     const templateConfigs = [
       {
-        pattern: /INBOUND_SUBSTITUTION_AS_CODE/,
-        type: TemplateType.INBOUND_SUBSTITUTION_AS_CODE,
-        help: `The templates <b>Inbound</b> are available in the code editor and can be customized according to your requirements per mapping. They serve as sample to building substitutions in JavaScript. The function <code>function extractFromSource(ctx)</code> is called during the evaluation at runtime to Transformation.`
-      },
-      {
-        pattern: /OUTBOUND_SUBSTITUTION_AS_CODE/,
-        type: TemplateType.OUTBOUND_SUBSTITUTION_AS_CODE,
-        help: `The templates <b>Outbound</b> are available in the code editor and can be customized according to your requirements per mapping. They serve as sample to building substitutions in JavaScript. The function <code>function extractFromSource(ctx)</code> is called during the evaluation at runtime to Transformation.`
-      },
-      {
         pattern: /INBOUND_SMART_FUNCTION/,
         type: TemplateType.INBOUND_SMART_FUNCTION,
         help: `The templates <b>Inbound for Smart Function</b> are available in the code editor and can be customized according to your requirements per mapping. They serve as sample for a predefined Smart Function for data transformation and create payload for Cumulocity API calls. The function <code>function onMessage(msg, context)</code> is called during evaluation at runtime to define the payload.`
@@ -128,7 +118,7 @@ export class CodeComponent implements OnInit, AfterViewInit, OnDestroy {
     } else {
       this.templateType = TemplateType.SHARED;
       this.defaultTemplate = TemplateType.SHARED.toString();
-      this.codeEditorHelp = `Shared code is evaluated across all mappings that utilize <b>Smart Function JavaScript</b> or <b>Substitutions as JavaScript</b> for creating substitutions. The system code shows the code with definitions of used wrapper classes used only for <b>Substitutions as JavaScript</b>.`;
+      this.codeEditorHelp = `Shared code is evaluated across all mappings that utilize <b>Smart Function JavaScript</b>. The system code shows internal definitions and wrapper classes used at runtime.`;
     }
   }
 
@@ -157,16 +147,10 @@ export class CodeComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     if (this.templateType === TemplateType.INBOUND_SMART_FUNCTION ||
-        this.templateType === TemplateType.OUTBOUND_SMART_FUNCTION) {
+        this.templateType === TemplateType.OUTBOUND_SMART_FUNCTION ||
+        this.templateType === TemplateType.SHARED ||
+        this.templateType === TemplateType.SYSTEM) {
       this.completionProviderDisposable = createCompletionProviderFlowFunction(monaco);
-    } else if (this.templateType === TemplateType.INBOUND_SUBSTITUTION_AS_CODE ||
-               this.templateType === TemplateType.OUTBOUND_SUBSTITUTION_AS_CODE) {
-      this.completionProviderDisposable = createCompletionProviderSubstitutionAsCode(monaco);
-    } else {
-      // For SHARED and SYSTEM templates, register both providers
-      const d1 = createCompletionProviderFlowFunction(monaco);
-      const d2 = createCompletionProviderSubstitutionAsCode(monaco);
-      this.completionProviderDisposable = { dispose: () => { d1.dispose(); d2.dispose(); } };
     }
   }
 

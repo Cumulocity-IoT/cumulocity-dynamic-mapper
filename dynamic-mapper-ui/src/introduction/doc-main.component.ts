@@ -93,22 +93,53 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
     });
 
     if (this.currentPage === 'main') {
-      const pathToFragmentMap: { [key: string]: string } = {
-        'overview': 'overview',
-        'getting-started': 'getting-started',
-        'managing-connectors': 'managing-connectors',
-        'define-mapping': 'define-mapping',
-        'define-subscription-for-outbound': 'define-subscription-for-outbound',
-        'transformation-types': 'transformation-types',
-        'flow-state': 'flow-state',
-        'code-templates': 'code-templates',
-        'metadata': 'metadata',
-        'unknown-payload': 'unknown-payload',
-        'reliability-settings': 'reliability-settings',
-        'access-control': 'access-control',
-        'monitoring': 'monitoring',
-        'troubleshooting': 'troubleshooting'
-      };
+      // Load code templates
+      const codeTemplatesMap: CodeTemplateMap = await this.sharedService.getCodeTemplates();
+      this.codeTemplates = Object.entries(codeTemplatesMap)
+        .map(([, template]) => template)
+        .sort((a, b) => {
+          // Sort by template type first, then by name
+          const typeOrder = {
+            'INBOUND_SMART_FUNCTION': 1,
+            'OUTBOUND_SMART_FUNCTION': 2,
+            'SHARED': 3,
+            'SYSTEM': 4
+          };
+          const typeComparison = (typeOrder[a.templateType] || 999) - (typeOrder[b.templateType] || 999);
+          if (typeComparison !== 0) return typeComparison;
+          return a.name.localeCompare(b.name);
+        });
+
+      from(this.mappingService.getMappings(Direction.INBOUND)).subscribe(
+        (mappings) => {
+          this.countMappingInbound$.next(!mappings ? 'no' : mappings.length);
+        }
+      );
+
+      from(this.mappingService.getMappings(Direction.OUTBOUND)).subscribe(
+        (count) => this.countMappingOutbound$.next(!count ? 'no' : count.length)
+      );
+
+      this.connectorConfigurationService.getConfigurations()
+        .subscribe((count) =>
+          this.countConnector$.next(!count ? 'no' : count.length)
+        );
+
+      if (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole) {
+        this.alertService.warning(
+          "You don't have any Dynamic Mapper permissions and therefore can only view mappings/connectors. Please contact your administrator."
+        );
+      } else if (!this.feature?.userHasMappingAdminRole) {
+        this.alertService.warning(
+          "You don't have the role 'Dynamic Mapper Admin' and therefore cannot create or edit connectors. Please contact your administrator."
+        );
+      } else if (!this.feature?.userHasMappingCreateRole) {
+        this.alertService.warning(
+          "You don't have the role 'Dynamic Mapper User' and therefore cannot edit mappings. Please contact your administrator."
+        );
+      }
+
+      // After data is loaded, check if we need to scroll to a specific section
       const pathSegment = path.split('/').pop() || '';
       const fragmentId = pathToFragmentMap[pathSegment];
       if (fragmentId) {
@@ -116,6 +147,30 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
       } else {
         setTimeout(() => { window.scrollTo(0, 0); }, 0);
       }
+    }
+  }
+
+  openCodeExplorer(template: CodeTemplate): void {
+    this.bottomDrawerService.openDrawer(CodeEditorDrawerComponent, {
+      initialState: {
+        encodedCode: template.code,
+        sourceSystem: 'Template',
+        action: 'view'
+      }
+    });
+  }
+
+  getTransformationTypeName(templateType: string): string {
+    switch (templateType) {
+      case 'INBOUND_SMART_FUNCTION':
+      case 'OUTBOUND_SMART_FUNCTION':
+        return 'Smart Functions';
+      case 'SHARED':
+        return 'Shared Code';
+      case 'SYSTEM':
+        return 'System Code';
+      default:
+        return templateType;
     }
   }
 

@@ -52,7 +52,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Slf4j
 @Component
-public class SubstitutionInboundProcessor extends BaseProcessor {
+public class SubstitutionResultInboundProcessor extends BaseProcessor {
 
     @Autowired
     private C8YAgent c8yAgent;

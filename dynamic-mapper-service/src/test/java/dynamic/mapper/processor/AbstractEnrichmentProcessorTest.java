@@ -242,7 +242,7 @@ class AbstractEnrichmentProcessorTest {
                 .direction(Direction.INBOUND)
                 .mappingType(MappingType.JSON)
                 .code(encodedCode)
-                .transformationType(TransformationType.SUBSTITUTION_AS_CODE)
+                .transformationType(TransformationType.SMART_FUNCTION)
                 .active(true)
                 .debug(false)
                 .qos(Qos.AT_LEAST_ONCE)
@@ -264,9 +264,8 @@ class AbstractEnrichmentProcessorTest {
     }
 
     @Test
-    void testProcessWithSubstitutionAsCodeCreatesGraalContext() throws Exception {
-        // Given
-        mapping.setTransformationType(TransformationType.SUBSTITUTION_AS_CODE);
+    void testProcessWithSmartFunctionCreatesGraalContext() throws Exception {
+        // Given - mapping already defaults to SMART_FUNCTION
 
         // When
         processor.process(exchange);
@@ -277,13 +276,12 @@ class AbstractEnrichmentProcessorTest {
         assertNotNull(processingContext.getSystemCode(), "Should have set system code");
         assertTrue(processor.wasEnrichPayloadCalled(), "Should have called enrichPayload");
 
-        log.info("✅ Successfully created GraalVM context for SUBSTITUTION_AS_CODE");
+        log.info("✅ Successfully created GraalVM context for SMART_FUNCTION");
     }
 
     @Test
     void testProcessWithSmartFunctionCreatesGraalContextAndFlowContext() throws Exception {
-        // Given
-        mapping.setTransformationType(TransformationType.SMART_FUNCTION);
+        // Given - mapping already defaults to SMART_FUNCTION
 
         // When
         processor.process(exchange);
@@ -644,8 +642,7 @@ class AbstractEnrichmentProcessorTest {
 
     @Test
     void testProcessSetsSharedAndSystemCode() throws Exception {
-        // Given
-        mapping.setTransformationType(TransformationType.SUBSTITUTION_AS_CODE);
+        // Given - mapping already defaults to SMART_FUNCTION
 
         // When
         processor.process(exchange);

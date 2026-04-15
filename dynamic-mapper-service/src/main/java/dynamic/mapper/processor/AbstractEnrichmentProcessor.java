@@ -97,38 +97,10 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
         // Hook for subclass-specific setup (e.g., QoS determination)
         performPreEnrichmentSetup(context, connectorIdentifier);
 
-        // Prepare GraalVM context if code exists
+        // Prepare GraalVM context if code exists (SMART_FUNCTION only)
         boolean supportESM = Boolean.TRUE.equals(serviceConfiguration.getSupportESM());
         if (mapping.getCode() != null
-                && mapping.isSubstitutionAsCode()) {
-            try {
-                var graalEngine = configurationRegistry.getGraalEngine(tenant);
-                var graalContext = createGraalContext(graalEngine, supportESM);
-                context.setGraalContext(graalContext);
-
-                // Set cached Source objects for performance
-                context.setSharedSource(configurationRegistry.getGraalsSourceShared(tenant));
-                context.setSystemSource(configurationRegistry.getGraalsSourceSystem(tenant));
-
-                // Keep Base64 strings for backward compatibility if needed
-                CodeTemplate sharedTemplate = serviceConfiguration.getCodeTemplates().get(TemplateType.SHARED.name());
-                CodeTemplate systemTemplate = serviceConfiguration.getCodeTemplates().get(TemplateType.SYSTEM.name());
-                if (sharedTemplate == null || systemTemplate == null) {
-                    log.error(
-                            "{} - SHARED or SYSTEM code template missing for mapping [{}] — re-initialize code templates",
-                            tenant, mapping.getIdentifier());
-                    handleGraalVMError(tenant, mapping,
-                            new IllegalStateException("SHARED or SYSTEM code template not found"), context);
-                    return;
-                }
-                context.setSharedCode(sharedTemplate.getCode());
-                context.setSystemCode(systemTemplate.getCode());
-            } catch (Exception e) {
-                handleGraalVMError(tenant, mapping, e, context);
-                return;
-            }
-        } else if (mapping.getCode() != null &&
-                TransformationType.SMART_FUNCTION.equals(mapping.getTransformationType())) {
+                && TransformationType.SMART_FUNCTION.equals(mapping.getTransformationType())) {
             try {
                 var graalEngine = configurationRegistry.getGraalEngine(tenant);
                 var graalContext = createGraalContext(graalEngine, supportESM);

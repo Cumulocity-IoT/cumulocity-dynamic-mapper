@@ -36,20 +36,6 @@ import { ConfigurationTabFactory } from './configuration-tab.factory';
       }
     }),
     hookRoute({
-      path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/INBOUND_SUBSTITUTION_AS_CODE`,
-      component: CodeComponent,
-      resolve: {
-        feature: featureResolver
-      }
-    }),
-    hookRoute({
-      path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/OUTBOUND_SUBSTITUTION_AS_CODE`,
-      component: CodeComponent,
-      resolve: {
-        feature: featureResolver
-      }
-    }),
-    hookRoute({
       path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/INBOUND_SMART_FUNCTION`,
       component: CodeComponent,
       resolve: {

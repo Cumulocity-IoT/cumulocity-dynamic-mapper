@@ -154,7 +154,9 @@ public class ServiceConfiguration implements Cloneable {
     @JsonSetter(nulls = Nulls.SKIP)
     private String jsonataAgent;
 
-    @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "Name of javaScript agent to be used when generating substitutions as JavaScript code. The needs to be defined in the AI Agent Manager.", example = "javaScriptAgent")
+    /** @deprecated Substitution As Code is no longer supported. This field is kept for backward compatibility with existing tenant configurations. */
+    @Deprecated(since = "6.3", forRemoval = false)
+    @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "Deprecated: Name of javaScript agent for Substitution As Code (no longer supported). Kept for backward compatibility.", example = "javaScriptAgent")
     @JsonSetter(nulls = Nulls.SKIP)
     private String javaScriptAgent;
 

@@ -62,7 +62,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-class JSONataExtractionInboundProcessorTest {
+class JSONataInboundProcessorTest {
 
     @Mock
     private MappingService mappingService;
@@ -76,7 +76,7 @@ class JSONataExtractionInboundProcessorTest {
     @Mock
     private ServiceConfiguration serviceConfiguration;
 
-    private JSONataExtractionInboundProcessor processor;
+    private JSONataInboundProcessor processor;
 
     private static final String TEST_TENANT = "testTenant";
 
@@ -87,7 +87,7 @@ class JSONataExtractionInboundProcessorTest {
     @BeforeEach
     void setUp() throws Exception {
         // Create the processor
-        processor = new JSONataExtractionInboundProcessor(mappingService);
+        processor = new JSONataInboundProcessor(mappingService);
 
         // Create test mapping with ALL required fields
         Mapping mapping = createCompleteMapping();
@@ -221,9 +221,9 @@ class JSONataExtractionInboundProcessorTest {
         };
     }
 
-    private void injectMappingService(JSONataExtractionInboundProcessor processor, MappingService mappingService)
+    private void injectMappingService(JSONataInboundProcessor processor, MappingService mappingService)
             throws Exception {
-        Field field = JSONataExtractionInboundProcessor.class.getDeclaredField("mappingService");
+        Field field = JSONataInboundProcessor.class.getDeclaredField("mappingService");
         field.setAccessible(true);
         field.set(processor, mappingService);
     }
@@ -395,7 +395,7 @@ class JSONataExtractionInboundProcessorTest {
         when(message.getHeader("processingContext", ProcessingContext.class)).thenReturn(processingContext);
 
         // Create a spy to control when exceptions are thrown
-        JSONataExtractionInboundProcessor processorSpy = spy(processor);
+        JSONataInboundProcessor processorSpy = spy(processor);
 
         // Make extractFromSource throw an exception
         doThrow(new RuntimeException("Test exception"))

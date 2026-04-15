@@ -215,41 +215,7 @@
             </div>
           </c8y-li>
 
-          <c8y-li>
-            <c8y-li-icon icon="bot"></c8y-li-icon>
-            <div class="d-flex a-i-center">
-              <div>
-                <p>{{ 'JavaScript AI Agent' | translate }}</p>
-                <p>
-                  <small translate>Name of javaScript agent to be used when generating substitutions as JavaScript code.
-                    The needs to be
-                    defined in the AI Agent Manager.</small>
-                </p>
-              </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
-                <label title="{{ ' Name of javaScript agent' | translate }}">
-                  <div class="c8y-select-wrapper">
-                    <select class="form-control" formControlName="javaScriptAgent" name="javaScriptAgent">
-                      <option value="" disabled selected>
-                        Select agent
-                      </option>
-                      @for (agent of (agents$| async); track agent) {
-                      <option [value]="agent">
-                        {{ agent }}
-                      </option>
-                      }
-                    </select>
-                  </div>
-                  <span></span>
-                  @if (!aiAgentDeployed) {
-                  <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
-                    popover="{{'Select box is disabled if AI Agent is not deployed in this tenant or no agent is defined.'| translate}}"
-                    placement="bottom" triggers="focus" type="button" container="body"></button>
-                  }
-                </label>
-              </div>
-            </div>
-          </c8y-li>
+          <!-- javaScriptAgent hidden: Substitution As Code deprecated since 6.3, field kept for backend compatibility -->
 
           <c8y-li>
             <c8y-li-icon icon="bot"></c8y-li-icon>
