@@ -145,9 +145,9 @@ public class ServiceConfigurationService {
             configuration.setCodeTemplates(codeTemplates);
         }
 
-        // Index existing internal-template names for O(1) duplicate check
+        // Index existing template names for O(1) duplicate check, regardless of origin,
+        // because templates are matched by @name.
         Set<String> existingNames = codeTemplates.values().stream()
-                .filter(t -> t.internal)
                 .map(t -> t.name != null ? t.name.toLowerCase() : "")
                 .collect(Collectors.toSet());
 
