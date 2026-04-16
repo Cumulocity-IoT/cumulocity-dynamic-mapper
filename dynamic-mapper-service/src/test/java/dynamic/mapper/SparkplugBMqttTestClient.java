@@ -137,9 +137,19 @@ public class SparkplugBMqttTestClient {
         this.mqttClient = mqttClient;
     }
 
+    private static void validateRequiredConfiguration() {
+        if (BROKER_HOST == null || BROKER_HOST.isBlank()) {
+            log.error("Missing required environment variable: BROKER_HOST");
+            log.error("Set BROKER_HOST to the MQTT broker hostname or IP address before starting this client.");
+            System.exit(1);
+        }
+    }
+
     // ── Entry point ────────────────────────────────────────────────────────
 
     public static void main(String[] args) throws Exception {
+        validateRequiredConfiguration();
+
         log.info("=== SparkPlugB MQTT Test Client ===");
         log.info("Broker host : {}", BROKER_HOST);
         log.info("Broker port : {}", BROKER_PORT);
