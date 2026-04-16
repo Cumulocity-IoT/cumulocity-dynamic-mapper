@@ -42,10 +42,12 @@ public class FlowProcessorInboundProcessor extends AbstractFlowProcessor {
         // getPayload(), getTopic(), getClientId() to JavaScript as msg.getPayload() etc.
         //
         // For ANY_PAYLOAD mappings the deserializer keeps the payload as raw byte[].
-        // Encode it as a Base64 string so JavaScript Smart Functions can decode it
-        // using a bundled library (e.g. protobufjs) via atob() or Buffer.from().
+        // Encode only those payloads as Base64 so JavaScript Smart Functions receive a
+        // stable text representation for ANY_PAYLOAD without changing the payload type
+        // for other byte-based mapping types.
         Object payload = context.getPayload();
-        if (payload instanceof byte[]) {
+        Object mappingType = context.getMapping() != null ? context.getMapping().getMappingType() : null;
+        if (payload instanceof byte[] && mappingType != null && "ANY_PAYLOAD".equals(mappingType.toString())) {
             payload = Base64.getEncoder().encodeToString((byte[]) payload);
         }
         return graalContext.asValue(new dynamic.mapper.processor.model.InputMessage(
