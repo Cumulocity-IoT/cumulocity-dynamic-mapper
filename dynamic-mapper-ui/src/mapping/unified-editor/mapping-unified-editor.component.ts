@@ -1085,7 +1085,18 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
 
       if (exportName) {
         const exportStatement = `export { ${exportName} };`;
-        if (!code.includes(exportStatement)) {
+        const escapedExportName = exportName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const namedExportRegex = new RegExp(
+          `export\\s*\\{[^}]*\\b${escapedExportName}\\b(?:\\s+as\\s+\\w+)?[^}]*\\}`,
+          'm'
+        );
+        const directExportRegex = new RegExp(
+          `export\\s+(?:default\\s+)?(?:async\\s+)?(?:function|const|let|var|class)\\s+${escapedExportName}\\b`,
+          'm'
+        );
+        const hasExistingExport = namedExportRegex.test(code) || directExportRegex.test(code);
+
+        if (!hasExistingExport) {
           code = code.trimEnd() +
             '\n\n// ── ESM export (added automatically because Support ESM is enabled) ──────────\n' +
             exportStatement + '\n';
