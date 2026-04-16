@@ -1,6 +1,7 @@
 package dynamic.mapper.processor.inbound.processor;
 
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 
 import org.graalvm.polyglot.Context;
@@ -39,8 +40,18 @@ public class FlowProcessorInboundProcessor extends AbstractFlowProcessor {
     protected Value createInputMessage(Context graalContext, ProcessingContext<?> context) {
         // Use InputMessage (no Lombok) so GraalVM's allowPublicAccess(true) reliably exposes
         // getPayload(), getTopic(), getClientId() to JavaScript as msg.getPayload() etc.
+        //
+        // For ANY_PAYLOAD mappings the deserializer keeps the payload as raw byte[].
+        // Encode only those payloads as Base64 so JavaScript Smart Functions receive a
+        // stable text representation for ANY_PAYLOAD without changing the payload type
+        // for other byte-based mapping types.
+        Object payload = context.getPayload();
+        Object mappingType = context.getMapping() != null ? context.getMapping().getMappingType() : null;
+        if (payload instanceof byte[] && mappingType != null && "ANY_PAYLOAD".equals(mappingType.toString())) {
+            payload = Base64.getEncoder().encodeToString((byte[]) payload);
+        }
         return graalContext.asValue(new dynamic.mapper.processor.model.InputMessage(
-                context.getPayload(),
+                payload,
                 context.getTopic(),
                 context.getClientId(),
                 null));

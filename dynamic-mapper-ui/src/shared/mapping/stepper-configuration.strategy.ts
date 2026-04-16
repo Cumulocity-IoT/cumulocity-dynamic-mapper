@@ -156,6 +156,16 @@ const CONFIGURATION_OVERRIDES: StepperConfigurationOverride[] = [
     properties: {
       allowTemplateExpansion: false
     }
+  },
+  {
+    // ANY_PAYLOAD carries binary data — testing and source editor must stay disabled
+    // even though SMART_FUNCTION overrides re-enable them above.
+    condition: (ctx) => ctx.mappingType === MappingType.ANY_PAYLOAD,
+    properties: {
+      allowTestSending: false,
+      allowTestTransformation: false,
+      showEditorSource: false
+    }
   }
 ];
 

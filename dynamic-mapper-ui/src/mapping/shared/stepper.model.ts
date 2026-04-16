@@ -162,13 +162,14 @@ export function createCompletionProviderFlowFunction(monaco: any): { dispose: ()
       name: 'InputMessage',
       isEnum: false,
       properties: [
-        { name: 'sourcePath', type: 'string', documentation: 'An unique source path, example: MQTT Topic.' },
-        { name: 'sourceId', type: 'string', documentation: 'The source id, example: MQTT client id.' },
-        { name: 'payload', type: 'any', documentation: 'The payload of the message.' },
-        { name: 'properties', type: 'Record<string, any>', documentation: 'A map of properties associated with the message.' }
+        { name: 'topic', type: 'string', documentation: 'The MQTT/broker topic on which the message arrived.' },
+        { name: 'clientId', type: 'string', documentation: 'The MQTT client ID of the sender (inbound only; null for outbound).' },
+        { name: 'sourceId', type: 'string', documentation: 'Internal Cumulocity device ID (outbound only; null for inbound).' },
+        { name: 'cumulocityType', type: '"measurement" | "event" | "alarm" | "operation" | "managedObject" | null', documentation: 'C8Y object type for outbound messages (null for inbound).' },
+        { name: 'payload', type: 'object | string', documentation: 'The deserialized message payload.\n\n**JSON / FLAT_FILE / HEX:** parsed object or string map.\n\n**ANY_PAYLOAD (SparkPlugB / protobuf):** Base64-encoded binary string. In Smart Functions, avoid browser-only APIs like `atob()`. Decode with a pure-JS Base64 decoder, for example:\n```js\nfunction decodeBase64(base64) {\n  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";\n  const clean = base64.replace(/=+$/, "");\n  const bytes = [];\n  let buffer = 0;\n  let bits = 0;\n\n  for (let i = 0; i < clean.length; i++) {\n    const value = chars.indexOf(clean.charAt(i));\n    if (value < 0) {\n      continue;\n    }\n    buffer = (buffer << 6) | value;\n    bits += 6;\n    if (bits >= 8) {\n      bits -= 8;\n      bytes.push((buffer >> bits) & 0xff);\n    }\n  }\n\n  return new Uint8Array(bytes);\n}\n\nconst bytes = decodeBase64(msg.payload);\n```' }
       ],
       methods: [],
-      documentation: 'Input message received by the flow function.'
+      documentation: 'Input message passed to the Smart Function as the first argument (`msg`).\n\nThe `payload` format depends on the mapping type:\n- **JSON**: parsed JSON object\n- **FLAT_FILE**: `{ payload: "..." }` string map\n- **HEX**: `{ payload: "0x..." }` hex string map\n- **ANY_PAYLOAD**: Base64-encoded binary string (for SparkPlugB, protobuf, etc.)'
     },
     {
       name: 'OutputMessage',

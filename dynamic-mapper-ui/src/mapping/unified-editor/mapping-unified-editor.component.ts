@@ -1073,9 +1073,38 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
 
   onSelectCodeTemplate(): void {
     const template = this.codeTemplatesDecoded.get(this.templateId);
-    if (template) {
-      this.mappingCode = template.code;
+    if (!template) return;
+
+    let code = template.code;
+
+    if (this.serviceConfiguration?.supportESM) {
+      const exportName =
+        this.mapping.transformationType === TransformationType.SMART_FUNCTION ? 'onMessage' :
+        this.mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE ? 'extractFromSource' :
+        null;
+
+      if (exportName) {
+        const exportStatement = `export { ${exportName} };`;
+        const escapedExportName = exportName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const namedExportRegex = new RegExp(
+          `export\\s*\\{[^}]*\\b${escapedExportName}\\b(?:\\s+as\\s+\\w+)?[^}]*\\}`,
+          'm'
+        );
+        const directExportRegex = new RegExp(
+          `export\\s+(?:default\\s+)?(?:async\\s+)?(?:function|const|let|var|class)\\s+${escapedExportName}\\b`,
+          'm'
+        );
+        const hasExistingExport = namedExportRegex.test(code) || directExportRegex.test(code);
+
+        if (!hasExistingExport) {
+          code = code.trimEnd() +
+            '\n\n// ── ESM export (added automatically because Support ESM is enabled) ──────────\n' +
+            exportStatement + '\n';
+        }
+      }
     }
+
+    this.mappingCode = code;
   }
 
   private updateCodeTemplateEntries(): void {

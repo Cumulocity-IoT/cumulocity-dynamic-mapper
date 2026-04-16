@@ -21,188 +21,128 @@
 
 package dynamic.mapper;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
-import org.apache.pulsar.client.api.AuthenticationFactory;
 import org.apache.pulsar.client.api.Consumer;
 import org.apache.pulsar.client.api.Message;
 import org.apache.pulsar.client.api.MessageListener;
 import org.apache.pulsar.client.api.Producer;
-import org.apache.pulsar.client.api.PulsarClient;
 import org.apache.pulsar.client.api.PulsarClientException;
 import org.apache.pulsar.client.api.SubscriptionType;
 
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Pulsar test client that consumes messages matching a topic pattern and
+ * optionally publishes test measurement payloads.
+ *
+ * <h3>Environment variables</h3>
+ * <pre>
+ *   PULSAR_BROKER_HOST  (default "pulsar://localhost:6650"; see AbstractPulsarTestClient)
+ *   AUTH_NAME           (default "none"; see AbstractPulsarTestClient)
+ *   AUTH_PARAMS         (required when AUTH_NAME != "none")
+ *   SUBSCRIPTION_NAME   (default "pulsar-test-subscription")
+ *   TOPIC               (default "persistent://public/default/measurement-kobu-webhook-001")
+ *   TOPIC_PATTERN       (default "persistent://public/default/measurement-kobu-webhook-[0-9]{3}")
+ * </pre>
+ */
 @Slf4j
-public class PulsarTestClient {
-    private PulsarClient client;
-    private Producer<byte[]> producer;
-    private Consumer<byte[]> consumer;
-    private ExecutorService executorService;
+public class PulsarTestClient extends AbstractPulsarTestClient {
 
-    // Environment variables - similar to Kafka client
-    static String PULSAR_BROKER_HOST = System.getenv().getOrDefault("PULSAR_BROKER_HOST", "pulsar://localhost:6650");
-    static String BROKER_USERNAME = System.getenv("BROKER_USERNAME");
-    static String BROKER_PASSWORD = System.getenv("BROKER_PASSWORD");
-    static String AUTH_NAME = System.getenv().getOrDefault("AUTH_NAME", "none"); // none, token, oauth2
-    static String AUTH_PARAMS = System.getenv("AUTH_PARAMS");
-    static String SUBSCRIPTION_NAME = System.getenv().getOrDefault("SUBSCRIPTION_NAME", "pulsar-test-subscription");
-    static String topic = System.getenv().getOrDefault("TOPIC", "persistent://public/default/measurement-kobu-webhook-001");
-    static String TOPIC_PATTERN = System.getenv().getOrDefault("TOPIC_PATTERN", "persistent://public/default/measurement-kobu-webhook-[0-9]{3}");
+    static final String SUBSCRIPTION_NAME = System.getenv().getOrDefault("SUBSCRIPTION_NAME",
+            "pulsar-test-subscription");
+    static final String TOPIC = System.getenv().getOrDefault("TOPIC",
+            "persistent://public/default/measurement-kobu-webhook-001");
+    static final String TOPIC_PATTERN = System.getenv().getOrDefault("TOPIC_PATTERN",
+            "persistent://public/default/measurement-kobu-webhook-[0-9]{3}");
 
-    public PulsarTestClient() {
-        this.executorService = Executors.newCachedThreadPool();
-    }
+    // ── Entry point ────────────────────────────────────────────────────────
 
     public static void main(String[] args) throws Exception {
-        log.info("Starting Pulsar Test Client...");
-        log.info("Broker Host: " + PULSAR_BROKER_HOST);
-        log.info("Topic: " + topic);
-        log.info("Topic Pattern: " + TOPIC_PATTERN);
-        log.info("Subscription: " + SUBSCRIPTION_NAME);
+        log.info("=== Pulsar Test Client ===");
+        log.info("Broker host   : {}", PULSAR_BROKER_HOST);
+        log.info("Topic         : {}", TOPIC);
+        log.info("Topic pattern : {}", TOPIC_PATTERN);
+        log.info("Subscription  : {}", SUBSCRIPTION_NAME);
+        log.info("=========================");
 
         PulsarTestClient testClient = new PulsarTestClient();
-        
         try {
-            // Initialize client
             testClient.initialize();
-            
-            // Start consumer in background
             testClient.startConsumer();
-            
-            // Send test messages
             // testClient.testSendMeasurement();
-            
-            // Keep consumer running for a while
-            log.info("Consumer running... Press Ctrl+C to stop");
-            Thread.sleep(60000); // Run for 1 minute
-            
+
+            log.info("Consumer running — press Ctrl+C to stop");
+            Thread.sleep(60_000);
         } catch (Exception e) {
-            System.err.println("Error: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Fatal error in Pulsar test client", e);
         } finally {
             testClient.cleanup();
         }
     }
 
-    private void initialize() throws PulsarClientException {
-        log.info("Initializing Pulsar client...");
-        
-        var clientBuilder = org.apache.pulsar.client.api.PulsarClient.builder()
-                .serviceUrl(PULSAR_BROKER_HOST)
-                .connectionTimeout(30, TimeUnit.SECONDS)
-                .operationTimeout(30, TimeUnit.SECONDS);
-
-        // Configure authentication if provided
-        if (!"none".equals(AUTH_NAME) && AUTH_PARAMS != null && !AUTH_PARAMS.isEmpty()) {
-            configureAuthentication(clientBuilder);
-        }
-
-        client = clientBuilder.build();
-        log.info("Pulsar client initialized successfully!");
-    }
-
-    private void configureAuthentication(org.apache.pulsar.client.api.ClientBuilder clientBuilder) {
-        log.info("Configuring authentication method: " + AUTH_NAME);
-        
-        try {
-            switch (AUTH_NAME.toLowerCase()) {
-                case "token":
-                    clientBuilder.authentication(AuthenticationFactory.token(AUTH_PARAMS));
-                    break;
-                case "oauth2":
-                    clientBuilder.authentication(
-                            AuthenticationFactory.create(
-                                    "org.apache.pulsar.client.impl.auth.oauth2.AuthenticationOAuth2",
-                                    AUTH_PARAMS));
-                    break;
-                case "tls":
-                    clientBuilder.authentication(
-                            AuthenticationFactory.create(
-                                    "org.apache.pulsar.client.impl.auth.AuthenticationTls",
-                                    AUTH_PARAMS));
-                    break;
-                case "basic":
-                    if (BROKER_USERNAME != null && BROKER_PASSWORD != null) {
-                        String basicAuth = String.format("{\"userId\":\"%s\",\"password\":\"%s\"}", 
-                                BROKER_USERNAME, BROKER_PASSWORD);
-                        clientBuilder.authentication(
-                                AuthenticationFactory.create(
-                                        "org.apache.pulsar.client.impl.auth.AuthenticationBasic",
-                                        basicAuth));
-                    }
-                    break;
-                default:
-                    log.info("Unknown authentication method: " + AUTH_NAME);
-                    break;
-            }
-        } catch (Exception e) {
-            System.err.println("Failed to configure authentication: " + e.getMessage());
-        }
-    }
+    // ── Consumer ───────────────────────────────────────────────────────────
 
     private void startConsumer() throws PulsarClientException {
-        log.info("Starting consumer for topic pattern: " + TOPIC_PATTERN);
-        
+        log.info("Starting consumer for topic pattern: {}", TOPIC_PATTERN);
+
         consumer = client.newConsumer()
                 .topicsPattern(Pattern.compile(TOPIC_PATTERN))
                 .subscriptionName(SUBSCRIPTION_NAME)
                 .subscriptionType(SubscriptionType.Shared)
                 .messageListener(new PulsarMessageListener())
                 .subscribe();
-        
-        log.info("Consumer started successfully!");
+
+        log.info("Consumer started");
     }
 
+    // ── Producer ───────────────────────────────────────────────────────────
+
+    @SuppressWarnings("unused")
     private void testSendMeasurement() throws PulsarClientException {
-        log.info("Connecting to Pulsar broker: " + PULSAR_BROKER_HOST + "!");
-        log.info("Publishing message on topic: " + topic);
+        log.info("Publishing message on topic: {}", TOPIC);
 
         producer = client.newProducer()
-                .topic(topic)
+                .topic(TOPIC)
                 .sendTimeout(30, TimeUnit.SECONDS)
                 .create();
 
-        String payload = "{ \"deviceId\": \"863859042393327\", \"version\": \"1\",\"deviceType\": \"20\", \"deviceTimestamp\": \"" + 
-                System.currentTimeMillis() + "\", \"deviceStatus\": \"BTR\", \"temperature\": 90 }";
+        String payload = String.format(
+                "{ \"deviceId\": \"863859042393327\", \"version\": \"1\", \"deviceType\": \"20\","
+                + " \"deviceTimestamp\": \"%d\", \"deviceStatus\": \"BTR\", \"temperature\": 90 }",
+                System.currentTimeMillis());
 
-        // Send message synchronously
         producer.send(payload.getBytes());
-        log.info("Message published: " + payload);
+        log.info("Message published: {}", payload);
 
-        // Send a few more test messages to different device IDs
         sendAdditionalTestMessages();
-        
+
         producer.close();
+        producer = null;
         log.info("Producer closed");
     }
 
     private void sendAdditionalTestMessages() throws PulsarClientException {
         log.info("Sending additional test messages...");
-        
+
         String[] deviceIds = {"001", "002", "003", "123", "999"};
-        
         for (String deviceId : deviceIds) {
             String testTopic = "persistent://public/default/measurement-kobu-webhook-" + deviceId;
-            
+
             try (Producer<byte[]> testProducer = client.newProducer()
                     .topic(testTopic)
                     .sendTimeout(10, TimeUnit.SECONDS)
                     .create()) {
-                
+
                 String payload = String.format(
-                        "{ \"deviceId\": \"86385904239332%s\", \"version\": \"1\", \"deviceType\": \"20\", " +
-                        "\"deviceTimestamp\": \"%d\", \"deviceStatus\": \"BTR\", \"temperature\": %d }",
+                        "{ \"deviceId\": \"86385904239332%s\", \"version\": \"1\", \"deviceType\": \"20\","
+                        + " \"deviceTimestamp\": \"%d\", \"deviceStatus\": \"BTR\", \"temperature\": %d }",
                         deviceId, System.currentTimeMillis(), 20 + Integer.parseInt(deviceId));
-                
+
                 testProducer.send(payload.getBytes());
-                log.info("Sent message to topic: " + testTopic);
-                
-                // Small delay between messages
+                log.info("Sent message to topic: {}", testTopic);
+
                 Thread.sleep(100);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -211,73 +151,23 @@ public class PulsarTestClient {
         }
     }
 
-    private void cleanup() {
-        log.info("Cleaning up resources...");
-        
-        try {
-            if (consumer != null) {
-                consumer.close();
-                log.info("Consumer closed");
-            }
-        } catch (PulsarClientException e) {
-            System.err.println("Error closing consumer: " + e.getMessage());
-        }
+    // ── Message listener ───────────────────────────────────────────────────
 
-        try {
-            if (producer != null) {
-                producer.close();
-                log.info("Producer closed");
-            }
-        } catch (PulsarClientException e) {
-            System.err.println("Error closing producer: " + e.getMessage());
-        }
-
-        try {
-            if (client != null) {
-                client.close();
-                log.info("Pulsar client closed");
-            }
-        } catch (PulsarClientException e) {
-            System.err.println("Error closing client: " + e.getMessage());
-        }
-
-        if (executorService != null) {
-            executorService.shutdown();
-            try {
-                if (!executorService.awaitTermination(5, TimeUnit.SECONDS)) {
-                    executorService.shutdownNow();
-                }
-            } catch (InterruptedException e) {
-                executorService.shutdownNow();
-            }
-        }
-        
-        log.info("Cleanup completed");
-    }
-
-    /**
-     * Message listener for consuming messages
-     */
     private static class PulsarMessageListener implements MessageListener<byte[]> {
         @Override
         public void received(Consumer<byte[]> consumer, Message<byte[]> message) {
             try {
-                String payload = new String(message.getData());
-                String topic = message.getTopicName();
+                String payload   = new String(message.getData());
+                String topic     = message.getTopicName();
                 String messageId = message.getMessageId().toString();
                 long publishTime = message.getPublishTime();
-                
-                System.out.printf("[RECEIVED] Topic: %s | MessageId: %s | PublishTime: %d%n", 
-                        topic, messageId, publishTime);
-                System.out.printf("[PAYLOAD] %s%n", payload);
-                log.info("----------------------------------------");
-                
-                // Acknowledge the message
+
+                log.info("[RECEIVED] topic={} | messageId={} | publishTime={}", topic, messageId, publishTime);
+                log.info("[PAYLOAD]  {}", payload);
+
                 consumer.acknowledge(message);
-                
             } catch (Exception e) {
-                System.err.println("Error processing message: " + e.getMessage());
-                // Negative acknowledgment to retry
+                log.error("Error processing message", e);
                 consumer.negativeAcknowledge(message);
             }
         }

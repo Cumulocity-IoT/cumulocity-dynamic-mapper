@@ -199,7 +199,7 @@
           <div class="content">
             By default the mapping creation dialog shows only the <strong>JSON</strong> payload type with the standard
             transformation types. Enable <strong>Expert Mode</strong> in the dialog to unlock all payload formats
-            (Flat File, Hexadecimal, Protobuf, Extension) and the full list of transformation types.
+            (Flat File, Hexadecimal, Protobuf, Any, Extension) and the full list of transformation types.
           </div>
         </div>
         <h5 class="p-t-8 p-b-4 text-16"><strong>Step 2.1: Select the Payload Type</strong></h5>
@@ -211,7 +211,8 @@
           <li><strong>Flat File (CSV)</strong> - For comma-separated or delimiter-based data <small class="text-muted">(requires Expert Mode)</small></li>
           <li><strong>Hexadecimal</strong> - For binary data encoded as hex strings <small class="text-muted">(requires Expert Mode)</small></li>
           <li><strong>Protobuf</strong> - For Protocol Buffer serialized data <small class="text-muted">(requires Expert Mode)</small></li>
-          <li><strong>Extension</strong> - For custom payload formats using extensions <small class="text-muted">(requires Expert Mode)</small></li>
+          <li><strong>Any</strong> - Raw binary payload (e.g. SparkPlugB/protobuf) passed as a Base64 string to a Smart Function for custom decoding. Only works with the Smart Function transformation type. <small class="text-muted">(requires Expert Mode)</small></li>
+          <li><strong>Extension</strong> - For custom payload formats using Java extensions <small class="text-muted">(requires Expert Mode)</small></li>
         </ul>
         <h5 class="p-t-8 p-b-4 text-16"><strong>Step 2.2: Choose the Transformation Type</strong></h5>
         <div class="p-b-8 text-16">

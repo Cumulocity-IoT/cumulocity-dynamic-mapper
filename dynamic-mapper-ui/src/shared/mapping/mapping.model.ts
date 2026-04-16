@@ -290,6 +290,7 @@ export enum MappingType {
   HEX = 'HEX',
   PROTOBUF_INTERNAL = 'PROTOBUF_INTERNAL',
   EXTENSION_JAVA = 'EXTENSION_JAVA',
+  ANY_PAYLOAD = 'ANY_PAYLOAD',
 }
 
 export const TransformationTypeLabels = {
@@ -323,6 +324,7 @@ export const MappingTypeLabels = {
   [MappingType.HEX]: 'Hexadecimal Payload',
   [MappingType.PROTOBUF_INTERNAL]: 'PROTOBUF Payload',
   [MappingType.EXTENSION_JAVA]: 'Payload parsed in Java Extension',
+  [MappingType.ANY_PAYLOAD]: 'Any Payload (e.g. SparkPlugB, XML)',
 } as const;
 
 export const MappingTypeDescriptions = {
@@ -331,6 +333,7 @@ export const MappingTypeDescriptions = {
   [MappingType.HEX]: 'Hexadecimal data processing and conversion',
   [MappingType.PROTOBUF_INTERNAL]: 'Payload is in PROTOBUF format and is parsed by an internal extension',
   [MappingType.EXTENSION_JAVA]: 'Custom extension for source data processing',
+  [MappingType.ANY_PAYLOAD]: 'Raw binary payload passed as Base64 to a Smart Function for custom decoding (e.g. SparkPlugB/protobuf, XML)',
 } as const;
 
 export interface MappingTypeProperties {
@@ -536,6 +539,40 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
       showFilterExpression: false,
       allowNoDefinedIdentifier: true,
       allowTestTransformation: true,
+      advanceFromStepToEndStep: 2
+    })
+  },
+  [MappingType.ANY_PAYLOAD]: {
+    key: MappingType.ANY_PAYLOAD,
+    enabled: true,
+    description:
+      'Payload is passed as raw bytes (Base64-encoded string) to a Smart Function for custom decoding. Use this for binary protocols such as SparkPlugB or custom protobuf schemas.',
+    properties: {
+      [Direction.INBOUND]: {
+        snoopSupported: false,
+        directionSupported: true,
+        substitutionsAsCodeSupported: false,
+        supportedTransformationTypes: [TransformationType.SMART_FUNCTION]
+      },
+      [Direction.OUTBOUND]: {
+        snoopSupported: false,
+        directionSupported: false,
+        substitutionsAsCodeSupported: false,
+        supportedTransformationTypes: []
+      },
+    },
+    // ANY_PAYLOAD: no source/target editors — the Smart Function handles everything.
+    // Testing is disabled because the payload is binary (Base64-encoded); there is
+    // no meaningful JSON source to display or test-send through the UI.
+    // Skip straight to the code editor (advanceFromStepToEndStep: 2).
+    stepperConfiguration: createStepperConfig({
+      showEditorSource: false,
+      showEditorTarget: false,
+      showFilterExpression: false,
+      allowDefiningSubstitutions: false,
+      allowNoDefinedIdentifier: true,
+      allowTestTransformation: false,
+      allowTestSending: false,
       advanceFromStepToEndStep: 2
     })
   }

@@ -98,6 +98,7 @@ public class MappingValidator {
             errors.addAll(validateTopics(mapping));
             errors.addAll(validateJSONTemplates(mapping));
             errors.addAll(validateExtension(mapping));
+            errors.addAll(validateMappingTypeConstraints(mapping));
             // errors.addAll(validateFilterOutboundUniqueness(existingMappings, mapping));
 
             if (!errors.isEmpty()) {
@@ -138,6 +139,7 @@ public class MappingValidator {
                 mapping.getSnoopStatus() == SnoopStatus.STARTED ||
                 mapping.getMappingType() == MappingType.EXTENSION_JAVA ||
                 mapping.getMappingType() == MappingType.PROTOBUF_INTERNAL ||
+                mapping.getMappingType() == MappingType.ANY_PAYLOAD ||
                 mapping.getTransformationType() == TransformationType.SMART_FUNCTION ||
                 mapping.getTransformationType() == TransformationType.SUBSTITUTION_AS_CODE ||
                 mapping.getDirection() == Direction.OUTBOUND;
@@ -300,7 +302,8 @@ public class MappingValidator {
 
         // Validate target template (skip for certain mapping types)
         boolean skipTargetValidation = mapping.getMappingType() == MappingType.EXTENSION_JAVA ||
-                mapping.getMappingType() == MappingType.PROTOBUF_INTERNAL;
+                mapping.getMappingType() == MappingType.PROTOBUF_INTERNAL ||
+                mapping.getMappingType() == MappingType.ANY_PAYLOAD;
 
         if (!skipTargetValidation && !isValidJSON(mapping.getTargetTemplate())) {
             errors.add(ValidationError.Target_Template_Must_Be_Valid_JSON);
@@ -316,6 +319,19 @@ public class MappingValidator {
         List<ValidationError> errors = new ArrayList<>();
         if (MappingType.EXTENSION_JAVA.equals(mapping.getMappingType()) && mapping.getExtension() == null) {
             errors.add(ValidationError.Extension_Must_Be_Defined_For_Extension_Java_Mapping);
+        }
+        return errors;
+    }
+
+    /**
+     * Validates constraints specific to certain MappingType values.
+     * ANY_PAYLOAD requires TransformationType.SMART_FUNCTION.
+     */
+    public List<ValidationError> validateMappingTypeConstraints(Mapping mapping) {
+        List<ValidationError> errors = new ArrayList<>();
+        if (MappingType.ANY_PAYLOAD.equals(mapping.getMappingType())
+                && !TransformationType.SMART_FUNCTION.equals(mapping.getTransformationType())) {
+            errors.add(ValidationError.Unparsed_MappingType_Requires_Smart_Function_Transformation_Type);
         }
         return errors;
     }

@@ -377,6 +377,17 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     if (matchingOption) {
       // Still valid — update reference so c8y-select can match it
       this.formGroup.patchValue({ transformationType: matchingOption }, { emitEvent: false });
+    } else if (this.transformationTypeOptions.length === 1) {
+      // Only one option available (e.g. ANY_PAYLOAD → SMART_FUNCTION) — auto-select it.
+      // Use emitEvent: false to avoid a second pass through the subscription, then manually
+      // trigger code-template loading if the type actually changed (the valueChanges event
+      // would have done this, but it is suppressed here).
+      const newOption = this.transformationTypeOptions[0];
+      const prevValue = (this.formGroup?.get('transformationType')?.value as TransformationTypeOption)?.value;
+      this.formGroup.patchValue({ transformationType: newOption }, { emitEvent: false });
+      if (prevValue !== newOption.value) {
+        this.onTransformationTypeChange(newOption);
+      }
     } else {
       // No longer valid (or never set) — clear and require explicit selection
       this.formGroup.patchValue({ transformationType: null }, { emitEvent: false });
