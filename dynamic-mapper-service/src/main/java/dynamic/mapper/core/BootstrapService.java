@@ -371,13 +371,15 @@ public class BootstrapService {
 
         Map<String, CodeTemplate> codeTemplates = serviceConfig.getCodeTemplates();
         if (codeTemplates == null || codeTemplates.isEmpty()) {
-            // Initialize code templates from properties if not already set
+            // First start: load all templates from classpath
             serviceConfigurationService.initCodeTemplates(serviceConfig, false);
             requiresSave = true;
+        } else {
+            // Subsequent starts: add any newly deployed internal templates
+            if (serviceConfigurationService.addMissingInternalTemplates(serviceConfig)) {
+                requiresSave = true;
+            }
         }
-        // else {
-        // serviceConfigurationService.migrateCodeTemplates(serviceConfig);
-        // }
 
         if (requiresSave) {
             try {

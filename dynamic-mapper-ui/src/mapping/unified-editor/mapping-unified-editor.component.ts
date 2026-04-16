@@ -1073,9 +1073,27 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
 
   onSelectCodeTemplate(): void {
     const template = this.codeTemplatesDecoded.get(this.templateId);
-    if (template) {
-      this.mappingCode = template.code;
+    if (!template) return;
+
+    let code = template.code;
+
+    if (this.serviceConfiguration?.supportESM) {
+      const exportName =
+        this.mapping.transformationType === TransformationType.SMART_FUNCTION ? 'onMessage' :
+        this.mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE ? 'extractFromSource' :
+        null;
+
+      if (exportName) {
+        const exportStatement = `export { ${exportName} };`;
+        if (!code.includes(exportStatement)) {
+          code = code.trimEnd() +
+            '\n\n// ── ESM export (added automatically because Support ESM is enabled) ──────────\n' +
+            exportStatement + '\n';
+        }
+      }
     }
+
+    this.mappingCode = code;
   }
 
   private updateCodeTemplateEntries(): void {

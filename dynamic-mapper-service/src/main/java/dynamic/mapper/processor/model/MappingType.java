@@ -28,6 +28,7 @@ public enum MappingType {
     PROTOBUF_INTERNAL("PROTOBUF_INTERNAL"),
     EXTENSION_JAVA("EXTENSION_JAVA"),
     CODE_BASED("CODE_BASED"),
+    ANY_PAYLOAD("ANY_PAYLOAD"),
     ;
 
     public final String name;

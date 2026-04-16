@@ -29,60 +29,80 @@ import org.apache.kafka.common.serialization.StringSerializer;
 
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Standalone Kafka test client that publishes a measurement payload to a
+ * configurable topic using SASL/SSL authentication.
+ *
+ * <h3>Environment variables</h3>
+ * <pre>
+ *   KAFKA_BROKER_HOST  (required)  e.g. "my-broker:9092"
+ *   BROKER_USERNAME    (required)  SASL username
+ *   BROKER_PASSWORD    (required)  SASL password
+ *   GROUP_ID           (optional)  consumer group id
+ *   TOPIC              (required)  target Kafka topic
+ *   SASL_MECHANISM     (default "SCRAM-SHA-512")
+ * </pre>
+ */
 @Slf4j
 public class KafkaTestClient {
-	KafkaProducer<String, String> testClient;
-	static String brokerHost = System.getenv("KAFKA_BROKER_HOST");
-	static String brokerUsername = System.getenv("BROKER_USERNAME");
-	static String brokerPassword = System.getenv("BROKER_PASSWORD");
-	static String groupId = System.getenv("GROUP_ID");
-	static String topic = System.getenv("TOPIC");
-	static String saslMechanism = System.getenv("SASL_MECHANISM");
 
-	public KafkaTestClient(KafkaProducer<String, String> sampleClient) {
-		testClient = sampleClient;
-	}
+    static final String brokerHost     = System.getenv("KAFKA_BROKER_HOST");
+    static final String brokerUsername = System.getenv("BROKER_USERNAME");
+    static final String brokerPassword = System.getenv("BROKER_PASSWORD");
+    static final String groupId        = System.getenv("GROUP_ID");
+    static final String topic          = System.getenv("TOPIC");
+    static final String saslMechanism  = System.getenv().getOrDefault("SASL_MECHANISM", "SCRAM-SHA-512");
 
-	public static void main(String[] args) {
+    final KafkaProducer<String, String> testClient;
 
-		String jaasTemplate = "org.apache.kafka.common.security.scram.ScramLoginModule required username=\"%s\" password=\"%s\";";
-		String jaasCfg = String.format(jaasTemplate, brokerUsername, brokerPassword);
-		log.info("JAASConfig: " + jaasCfg);
-		String serializer = StringSerializer.class.getName();
+    public KafkaTestClient(KafkaProducer<String, String> sampleClient) {
+        testClient = sampleClient;
+    }
 
-		Properties props = new Properties();
-		props.put("key.serializer", serializer);
-		props.put("value.serializer", serializer);
-		props.put("security.protocol", "SASL_SSL");
-		props.put("sasl.mechanism", "SCRAM-SHA-512");
-		// props.put("sasl.mechanism", sasl_mechanism);
-		// props.put("linger.ms", 1);
-		// props.put("enable.idempotence", false);
-		props.put("bootstrap.servers", brokerHost);
-		props.put("group.id", groupId);
-		props.put("sasl.jaas.config", jaasCfg);
+    public static void main(String[] args) {
+        log.info("=== Kafka Test Client ===");
+        log.info("Broker host    : {}", brokerHost);
+        log.info("Topic          : {}", topic);
+        log.info("SASL mechanism : {}", saslMechanism);
+        log.info("========================");
 
-		KafkaTestClient client = new KafkaTestClient(new KafkaProducer<>(props));
-		client.testSendMeasurement();
+        if (brokerHost == null || brokerUsername == null || brokerPassword == null || topic == null) {
+            log.error("KAFKA_BROKER_HOST, BROKER_USERNAME, BROKER_PASSWORD and TOPIC must all be set");
+            return;
+        }
 
-	}
+        String jaasTemplate =
+                "org.apache.kafka.common.security.scram.ScramLoginModule required username=\"%s\" password=\"%s\";";
+        String jaasCfg     = String.format(jaasTemplate, brokerUsername, brokerPassword);
+        String serializer  = StringSerializer.class.getName();
 
-	private void testSendMeasurement() {
+        Properties props = new Properties();
+        props.put("key.serializer",    serializer);
+        props.put("value.serializer",  serializer);
+        props.put("security.protocol", "SASL_SSL");
+        props.put("sasl.mechanism",    saslMechanism);
+        props.put("bootstrap.servers", brokerHost);
+        props.put("group.id",          groupId);
+        props.put("sasl.jaas.config",  jaasCfg);
 
-		String topic = KafkaTestClient.topic;
-		log.info("Connecting to Kafka broker: " + brokerHost + "!");
+        KafkaTestClient client = new KafkaTestClient(new KafkaProducer<>(props));
+        client.testSendMeasurement();
+    }
 
-		log.info("Publishing message on topic: " + topic);
+    private void testSendMeasurement() {
+        log.info("Connecting to Kafka broker: {}", brokerHost);
+        log.info("Publishing message on topic: {}", topic);
 
-		String payload = "{ \"deviceId\": \"863859042393327\", \"version\": \"1\",\"deviceType\": \"20\", \"deviceTimestamp\": \"1665473038000\", \"deviceStatus\": \"BTR\", \"temperature\": 90 }";
-		String key = "863859042393327";
+        String payload = String.format(
+                "{ \"deviceId\": \"863859042393327\", \"version\": \"1\", \"deviceType\": \"20\","
+                + " \"deviceTimestamp\": \"%d\", \"deviceStatus\": \"BTR\", \"temperature\": 90 }",
+                System.currentTimeMillis());
+        String key = "863859042393327";
 
-		testClient.send(new ProducerRecord<String, String>(topic, key, payload));
-		testClient.close();
+        testClient.send(new ProducerRecord<>(topic, key, payload));
+        testClient.close();
 
-		log.info("Message published");
-		log.info("Disconnected");
-
-	}
-
+        log.info("Message published");
+        log.info("Disconnected");
+    }
 }

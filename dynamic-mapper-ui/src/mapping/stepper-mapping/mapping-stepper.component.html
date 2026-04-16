@@ -137,6 +137,9 @@
                   <ng-container *ngTemplateOutlet="extensionTemplateSource; context: { form: templateForm }">
                   </ng-container>
                   }
+                  @if (!stepperViewModel.showSourceEditor && !stepperViewModel.showExtensionSelectorsSource) {
+                  <small class="text-muted">Template is not shown as the format is unknown.</small>
+                  }
                 </div>
               </div>
               <div class="col-lg-5 column-left-border" #rightTemplateStep2>

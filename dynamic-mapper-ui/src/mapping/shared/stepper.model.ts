@@ -162,13 +162,14 @@ export function createCompletionProviderFlowFunction(monaco: any): { dispose: ()
       name: 'InputMessage',
       isEnum: false,
       properties: [
-        { name: 'sourcePath', type: 'string', documentation: 'An unique source path, example: MQTT Topic.' },
-        { name: 'sourceId', type: 'string', documentation: 'The source id, example: MQTT client id.' },
-        { name: 'payload', type: 'any', documentation: 'The payload of the message.' },
-        { name: 'properties', type: 'Record<string, any>', documentation: 'A map of properties associated with the message.' }
+        { name: 'topic', type: 'string', documentation: 'The MQTT/broker topic on which the message arrived.' },
+        { name: 'clientId', type: 'string', documentation: 'The MQTT client ID of the sender (inbound only; null for outbound).' },
+        { name: 'sourceId', type: 'string', documentation: 'Internal Cumulocity device ID (outbound only; null for inbound).' },
+        { name: 'cumulocityType', type: '"measurement" | "event" | "alarm" | "operation" | "managedObject" | null', documentation: 'C8Y object type for outbound messages (null for inbound).' },
+        { name: 'payload', type: 'object | string', documentation: 'The deserialized message payload.\n\n**JSON / FLAT_FILE / HEX:** parsed object or string map.\n\n**ANY_PAYLOAD (SparkPlugB / protobuf):** Base64-encoded binary string. Decode with:\n```js\nconst bytes = Uint8Array.from(atob(msg.payload), c => c.charCodeAt(0));\n```' }
       ],
       methods: [],
-      documentation: 'Input message received by the flow function.'
+      documentation: 'Input message passed to the Smart Function as the first argument (`msg`).\n\nThe `payload` format depends on the mapping type:\n- **JSON**: parsed JSON object\n- **FLAT_FILE**: `{ payload: "..." }` string map\n- **HEX**: `{ payload: "0x..." }` hex string map\n- **ANY_PAYLOAD**: Base64-encoded binary string (for SparkPlugB, protobuf, etc.)'
     },
     {
       name: 'OutputMessage',
