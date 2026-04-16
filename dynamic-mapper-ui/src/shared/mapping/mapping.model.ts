@@ -324,7 +324,7 @@ export const MappingTypeLabels = {
   [MappingType.HEX]: 'Hexadecimal Payload',
   [MappingType.PROTOBUF_INTERNAL]: 'PROTOBUF Payload',
   [MappingType.EXTENSION_JAVA]: 'Payload parsed in Java Extension',
-  [MappingType.ANY_PAYLOAD]: 'Any Payload (e.g. SparkPlugB)',
+  [MappingType.ANY_PAYLOAD]: 'Any Payload (e.g. SparkPlugB, XML)',
 } as const;
 
 export const MappingTypeDescriptions = {
@@ -333,7 +333,7 @@ export const MappingTypeDescriptions = {
   [MappingType.HEX]: 'Hexadecimal data processing and conversion',
   [MappingType.PROTOBUF_INTERNAL]: 'Payload is in PROTOBUF format and is parsed by an internal extension',
   [MappingType.EXTENSION_JAVA]: 'Custom extension for source data processing',
-  [MappingType.ANY_PAYLOAD]: 'Raw binary payload passed as Base64 to a Smart Function for custom decoding (e.g. SparkPlugB/protobuf)',
+  [MappingType.ANY_PAYLOAD]: 'Raw binary payload passed as Base64 to a Smart Function for custom decoding (e.g. SparkPlugB/protobuf, XML)',
 } as const;
 
 export interface MappingTypeProperties {
