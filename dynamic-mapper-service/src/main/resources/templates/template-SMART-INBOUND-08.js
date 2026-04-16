@@ -1,6 +1,6 @@
 /**
  * @name SparkPlugB DDATA/NDATA decoder
- * @description Decodes a SparkPlugB B protobuf payload received via the ANY_PAYLOAD mapping type.
+ * @description Decodes a SparkPlugB protobuf payload received via the ANY_PAYLOAD mapping type.
  *              msg.payload is a Base64-encoded binary string containing the serialised
  *              sparkplug_b.proto Payload message. Each numeric or boolean metric is mapped
  *              to a fragment/series in a single Cumulocity measurement. String metrics are
