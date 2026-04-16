@@ -137,9 +137,9 @@ public class MappingValidator {
         // Skip device identifier validation for certain mapping types and conditions
         boolean skipDeviceIdentifierValidation = mapping.getSnoopStatus() == SnoopStatus.ENABLED ||
                 mapping.getSnoopStatus() == SnoopStatus.STARTED ||
-                mapping.getMappingType() == MappingType.EXTENSION_JAVA ||
                 mapping.getMappingType() == MappingType.PROTOBUF_INTERNAL ||
                 mapping.getMappingType() == MappingType.ANY_PAYLOAD ||
+                mapping.getTransformationType() == TransformationType.EXTENSION_JAVA ||
                 mapping.getTransformationType() == TransformationType.SMART_FUNCTION ||
                 mapping.getTransformationType() == TransformationType.SUBSTITUTION_AS_CODE ||
                 mapping.getDirection() == Direction.OUTBOUND;
@@ -301,7 +301,7 @@ public class MappingValidator {
         }
 
         // Validate target template (skip for certain mapping types)
-        boolean skipTargetValidation = mapping.getMappingType() == MappingType.EXTENSION_JAVA ||
+        boolean skipTargetValidation = mapping.getTransformationType() == TransformationType.EXTENSION_JAVA ||
                 mapping.getMappingType() == MappingType.PROTOBUF_INTERNAL ||
                 mapping.getMappingType() == MappingType.ANY_PAYLOAD;
 
@@ -317,7 +317,7 @@ public class MappingValidator {
      */
     public List<ValidationError> validateExtension(Mapping mapping) {
         List<ValidationError> errors = new ArrayList<>();
-        if (MappingType.EXTENSION_JAVA.equals(mapping.getMappingType()) && mapping.getExtension() == null) {
+        if (TransformationType.EXTENSION_JAVA.equals(mapping.getTransformationType()) && mapping.getExtension() == null) {
             errors.add(ValidationError.Extension_Must_Be_Defined_For_Extension_Java_Mapping);
         }
         return errors;

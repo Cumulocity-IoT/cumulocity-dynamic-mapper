@@ -289,6 +289,8 @@ export enum MappingType {
   FLAT_FILE = 'FLAT_FILE',
   HEX = 'HEX',
   PROTOBUF_INTERNAL = 'PROTOBUF_INTERNAL',
+  /** @deprecated Use ANY_PAYLOAD with TransformationType.EXTENSION_JAVA instead.
+   *  Retained for display of not-yet-migrated mappings only. */
   EXTENSION_JAVA = 'EXTENSION_JAVA',
   ANY_PAYLOAD = 'ANY_PAYLOAD',
 }
@@ -323,8 +325,9 @@ export const MappingTypeLabels = {
   [MappingType.FLAT_FILE]: 'Flat File Payload',
   [MappingType.HEX]: 'Hexadecimal Payload',
   [MappingType.PROTOBUF_INTERNAL]: 'PROTOBUF Payload',
-  [MappingType.EXTENSION_JAVA]: 'Payload parsed in Java Extension',
-  [MappingType.ANY_PAYLOAD]: 'Any Payload (e.g. SparkPlugB, XML)',
+  // eslint-disable-next-line deprecation/deprecation
+  [MappingType.EXTENSION_JAVA]: 'Payload parsed in Java Extension (deprecated — use Any Payload)',
+  [MappingType.ANY_PAYLOAD]: 'Any Payload (e.g. SparkPlugB, XML, Java Extension)',
 } as const;
 
 export const MappingTypeDescriptions = {
@@ -332,8 +335,9 @@ export const MappingTypeDescriptions = {
   [MappingType.FLAT_FILE]: 'Fixed-width or delimited flat file processing',
   [MappingType.HEX]: 'Hexadecimal data processing and conversion',
   [MappingType.PROTOBUF_INTERNAL]: 'Payload is in PROTOBUF format and is parsed by an internal extension',
-  [MappingType.EXTENSION_JAVA]: 'Custom extension for source data processing',
-  [MappingType.ANY_PAYLOAD]: 'Raw binary payload passed as Base64 to a Smart Function for custom decoding (e.g. SparkPlugB/protobuf, XML)',
+  // eslint-disable-next-line deprecation/deprecation
+  [MappingType.EXTENSION_JAVA]: 'Deprecated — use Any Payload with Java Extension transformation type instead',
+  [MappingType.ANY_PAYLOAD]: 'Raw binary or unknown payload processed by a Smart Function (JavaScript) or a Java Extension',
 } as const;
 
 export interface MappingTypeProperties {
@@ -512,11 +516,13 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
       advanceFromStepToEndStep: 2
     })
   },
+  // eslint-disable-next-line deprecation/deprecation
   [MappingType.EXTENSION_JAVA]: {
+    // eslint-disable-next-line deprecation/deprecation
     key: MappingType.EXTENSION_JAVA,
-    enabled: true,
-    description:
-      'Mapping handles payloads in custom format. It can be used if you want to process the message yourself. This requires that a custom processor extension in Java is implemented and uploaded through the "Processor extension" tab.',
+    // Hidden from the creation UI — existing mappings are migrated to ANY_PAYLOAD on load.
+    enabled: false,
+    description: 'Deprecated — use Any Payload with Java Extension transformation type instead.',
     properties: {
       [Direction.INBOUND]: {
         snoopSupported: false,
@@ -531,7 +537,6 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
         supportedTransformationTypes: [TransformationType.EXTENSION_JAVA]
       },
     },
-    // EXTENSION_JAVA configuration: shows processor extensions for source
     stepperConfiguration: createStepperConfig({
       showProcessorExtensionsSource: true,
       allowDefiningSubstitutions: false,
@@ -546,13 +551,15 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
     key: MappingType.ANY_PAYLOAD,
     enabled: true,
     description:
-      'Payload is passed as raw bytes (Base64-encoded string) to a Smart Function for custom decoding. Use this for binary protocols such as SparkPlugB or custom protobuf schemas.',
+      'Payload format is unknown or binary (e.g. SparkPlugB, protobuf, XML). ' +
+      'Use a Smart Function (JavaScript) for in-process decoding, or a Java Extension for server-side processing.',
     properties: {
       [Direction.INBOUND]: {
         snoopSupported: false,
         directionSupported: true,
         substitutionsAsCodeSupported: false,
-        supportedTransformationTypes: [TransformationType.SMART_FUNCTION]
+        // Both JS Smart Function and Java Extension are supported for inbound any-payload mappings.
+        supportedTransformationTypes: [TransformationType.SMART_FUNCTION, TransformationType.EXTENSION_JAVA]
       },
       [Direction.OUTBOUND]: {
         snoopSupported: false,
@@ -561,10 +568,10 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
         supportedTransformationTypes: []
       },
     },
-    // ANY_PAYLOAD: no source/target editors — the Smart Function handles everything.
-    // Testing is disabled because the payload is binary (Base64-encoded); there is
-    // no meaningful JSON source to display or test-send through the UI.
-    // Skip straight to the code editor (advanceFromStepToEndStep: 2).
+    // ANY_PAYLOAD base config: no source/target editors, no substitutions, skip to step 2.
+    // Per-transformation overrides in stepper-configuration.strategy.ts apply on top:
+    //   SMART_FUNCTION — testing disabled (binary payload cannot be test-sent as JSON)
+    //   EXTENSION_JAVA — testing enabled, processor-extension selector shown
     stepperConfiguration: createStepperConfig({
       showEditorSource: false,
       showEditorTarget: false,

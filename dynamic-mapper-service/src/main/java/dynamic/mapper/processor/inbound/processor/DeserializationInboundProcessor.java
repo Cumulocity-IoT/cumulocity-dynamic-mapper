@@ -38,7 +38,6 @@ public class DeserializationInboundProcessor extends BaseProcessor {
         deserializers.put(MappingType.FLAT_FILE, new FlatFilePayloadDeserializer());
         deserializers.put(MappingType.HEX, new HexPayloadDeserializer());
         deserializers.put(MappingType.PROTOBUF_INTERNAL, new BytePayloadDeserializer());
-        deserializers.put(MappingType.EXTENSION_JAVA, new BytePayloadDeserializer());
         deserializers.put(MappingType.ANY_PAYLOAD, new BytePayloadDeserializer());
 
         // Add more mappings as needed based on the MappingType enum values
@@ -58,7 +57,6 @@ public class DeserializationInboundProcessor extends BaseProcessor {
         // Create a ConnectorMessage from the context for deserialization
 
         if (MappingType.PROTOBUF_INTERNAL.equals(mapping.getMappingType())
-                || MappingType.EXTENSION_JAVA.equals(mapping.getMappingType())
                 || MappingType.ANY_PAYLOAD.equals(mapping.getMappingType())) {
             ProcessingContext<byte[]> context = createProcessingContextAsByteArray(tenant, mapping, connectorMessage,
                     serviceConfiguration, testing);

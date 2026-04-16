@@ -426,7 +426,7 @@ public class Mapping implements Serializable {
             result.add(ValidationError.Source_Template_Must_Be_Valid_JSON);
         }
 
-        if (!mapping.getMappingType().equals(MappingType.EXTENSION_JAVA)
+        if (!mapping.getTransformationType().equals(TransformationType.EXTENSION_JAVA)
                 && !mapping.getMappingType().equals(MappingType.PROTOBUF_INTERNAL)) {
             try {
                 if (mapping.targetTemplate.startsWith("{"))
