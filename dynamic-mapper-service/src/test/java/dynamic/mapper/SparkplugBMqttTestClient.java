@@ -116,8 +116,7 @@ public class SparkplugBMqttTestClient {
 
     // ── Connection settings ────────────────────────────────────────────────
     private static final String BROKER_HOST     = System.getenv("BROKER_HOST");
-    private static final int    BROKER_PORT      = Integer.parseInt(
-            System.getenv().getOrDefault("BROKER_PORT", "1883"));
+    private static final int    BROKER_PORT      = resolveBrokerPort();
     private static final String CLIENT_ID       = System.getenv().getOrDefault(
             "CLIENT_ID", "sparkplug-test-client");
     private static final String BROKER_USERNAME = System.getenv("BROKER_USERNAME");
@@ -132,6 +131,19 @@ public class SparkplugBMqttTestClient {
     private static final String DEVICE_ID    = "device-01";
 
     private final Mqtt3BlockingClient mqttClient;
+
+    private static int resolveBrokerPort() {
+        return parseBrokerPort(System.getenv().getOrDefault("BROKER_PORT", "1883"), 1883);
+    }
+
+    private static int parseBrokerPort(String brokerPortValue, int defaultPort) {
+        try {
+            return Integer.parseInt(brokerPortValue);
+        } catch (NumberFormatException ex) {
+            log.warn("Invalid BROKER_PORT '{}', falling back to default {}", brokerPortValue, defaultPort);
+            return defaultPort;
+        }
+    }
 
     public SparkplugBMqttTestClient(Mqtt3BlockingClient mqttClient) {
         this.mqttClient = mqttClient;
