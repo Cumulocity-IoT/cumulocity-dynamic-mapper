@@ -327,7 +327,7 @@ export const MappingTypeLabels = {
   [MappingType.PROTOBUF_INTERNAL]: 'PROTOBUF Payload',
   // eslint-disable-next-line deprecation/deprecation
   [MappingType.EXTENSION_JAVA]: 'Payload parsed in Java Extension (deprecated — use Any Payload)',
-  [MappingType.ANY_PAYLOAD]: 'Any Payload (e.g. SparkPlugB, XML, Java Extension)',
+  [MappingType.ANY_PAYLOAD]: 'Any Payload (e.g. SparkPlugB, Protobuf, XML)',
 } as const;
 
 export const MappingTypeDescriptions = {
@@ -337,7 +337,7 @@ export const MappingTypeDescriptions = {
   [MappingType.PROTOBUF_INTERNAL]: 'Payload is in PROTOBUF format and is parsed by an internal extension',
   // eslint-disable-next-line deprecation/deprecation
   [MappingType.EXTENSION_JAVA]: 'Deprecated — use Any Payload with Java Extension transformation type instead',
-  [MappingType.ANY_PAYLOAD]: 'Raw binary or unknown payload processed by a Smart Function (JavaScript) or a Java Extension',
+  [MappingType.ANY_PAYLOAD]: 'Payload format is unknown or binary (e.g. SparkPlugB, Protobuf, XML). Processed by a Smart Function (JavaScript) or a Java Extension.',
 } as const;
 
 export interface MappingTypeProperties {
@@ -551,7 +551,7 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
     key: MappingType.ANY_PAYLOAD,
     enabled: true,
     description:
-      'Payload format is unknown or binary (e.g. SparkPlugB, protobuf, XML). ' +
+      'Payload format is unknown or binary (e.g. SparkPlugB, Protobuf, XML). ' +
       'Use a Smart Function (JavaScript) for in-process decoding, or a Java Extension for server-side processing.',
     properties: {
       [Direction.INBOUND]: {
