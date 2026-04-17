@@ -114,7 +114,8 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
                 CodeTemplate sharedTemplate = serviceConfiguration.getCodeTemplates().get(TemplateType.SHARED.name());
                 CodeTemplate systemTemplate = serviceConfiguration.getCodeTemplates().get(TemplateType.SYSTEM.name());
                 if (sharedTemplate == null || systemTemplate == null) {
-                    log.error("{} - SHARED or SYSTEM code template missing for mapping [{}] — re-initialize code templates",
+                    log.error(
+                            "{} - SHARED or SYSTEM code template missing for mapping [{}] — re-initialize code templates",
                             tenant, mapping.getIdentifier());
                     handleGraalVMError(tenant, mapping,
                             new IllegalStateException("SHARED or SYSTEM code template not found"), context);
@@ -140,7 +141,8 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
                 CodeTemplate sharedTemplate = serviceConfiguration.getCodeTemplates().get(TemplateType.SHARED.name());
                 CodeTemplate systemTemplate = serviceConfiguration.getCodeTemplates().get(TemplateType.SYSTEM.name());
                 if (sharedTemplate == null || systemTemplate == null) {
-                    log.error("{} - SHARED or SYSTEM code template missing for mapping [{}] — re-initialize code templates",
+                    log.error(
+                            "{} - SHARED or SYSTEM code template missing for mapping [{}] — re-initialize code templates",
                             tenant, mapping.getIdentifier());
                     handleGraalVMError(tenant, mapping,
                             new IllegalStateException("SHARED or SYSTEM code template not found"), context);
@@ -178,7 +180,8 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
      * @param graalEngine the shared GraalVM engine for the tenant
      * @param supportESM  when {@code true}, enables ESM module evaluation
      *                    ({@code js.esm-eval-returns-exports}) and full IO access
-     *                    so that mapping code may use {@code export function} syntax
+     *                    so that mapping code may use {@code export function}
+     *                    syntax
      */
     protected Context createGraalContext(Engine graalEngine, boolean supportESM) throws Exception {
         Context.Builder builder = Context.newBuilder("js")
@@ -192,15 +195,19 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
                         || className.equals("dynamic.mapper.processor.model.SubstituteValue")
                         || className.equals("dynamic.mapper.processor.model.SubstituteValue$TYPE")
                         || className.equals("dynamic.mapper.processor.model.RepairStrategy")
+                        || className.equals("java.nio.charset.StandardCharsets")
+                        || className.equals("java.lang.String")
+                        || className.equals("java.util.Base64")
                         // Allow base collection classes needed for return values
-                        || className.equals("java.util.ArrayList") ||
-                        className.equals("java.util.HashMap") ||
-                        className.equals("java.util.HashSet"));
+                        || className.equals("java.util.ArrayList")
+                        || className.equals("java.util.Arrays")
+                        || className.equals("java.util.HashMap")
+                        || className.equals("java.util.HashSet"));
 
         if (supportESM) {
             builder.allowIO(IOAccess.ALL)
-                   .allowExperimentalOptions(true)
-                   .option("js.esm-eval-returns-exports", "true");
+                    .allowExperimentalOptions(true)
+                    .option("js.esm-eval-returns-exports", "true");
         }
 
         return builder.build();
@@ -251,7 +258,8 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
     /**
      * Normalizes an outbound test payload to look like a real C8Y notification.
      * The UI injects _IDENTITY_.c8ySourceId but the enrichment processor expects
-     * the API-specific identifier field (e.g. source.id for EVENT/ALARM/MEASUREMENT,
+     * the API-specific identifier field (e.g. source.id for
+     * EVENT/ALARM/MEASUREMENT,
      * id for INVENTORY, deviceId for OPERATION). Mutates the map in-place.
      */
     @SuppressWarnings("unchecked")
