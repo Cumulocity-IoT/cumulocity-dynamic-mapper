@@ -183,6 +183,7 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
     protected Context createGraalContext(Engine graalEngine, boolean supportESM) throws Exception {
         Context.Builder builder = Context.newBuilder("js")
                 .engine(graalEngine)
+                .option("js.text-encoding", "true")
                 .allowHostAccess(configurationRegistry.getHostAccess())
                 .allowHostClassLookup(className ->
                 // Allow only the specific SubstitutionContext class
