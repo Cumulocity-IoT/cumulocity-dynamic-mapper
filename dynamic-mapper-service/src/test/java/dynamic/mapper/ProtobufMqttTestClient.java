@@ -48,8 +48,11 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class ProtobufMqttTestClient {
 
+    private static final String BROKER_PORT_ENV = "BROKER_PORT";
+    private static final int DEFAULT_BROKER_PORT = 8883;
+
     static final String  brokerHost     = System.getenv("BROKER_HOST");
-    static final int     brokerPort     = Integer.parseInt(System.getenv().getOrDefault("BROKER_PORT", "8883"));
+    static final int     brokerPort     = resolveBrokerPort();
     static final String  clientId       = System.getenv().getOrDefault("CLIENT_ID", "protobuf-test-client");
     static final String  brokerUsername = System.getenv("BROKER_USERNAME");
     static final String  brokerPassword = System.getenv("BROKER_PASSWORD");
@@ -58,6 +61,16 @@ public class ProtobufMqttTestClient {
             System.getenv().getOrDefault("BROKER_SSL", brokerPort == 8883 ? "true" : "false"));
 
     final Mqtt3BlockingClient testClient;
+
+    private static int resolveBrokerPort() {
+        String rawPort = System.getenv().getOrDefault(BROKER_PORT_ENV, String.valueOf(DEFAULT_BROKER_PORT));
+        try {
+            return Integer.parseInt(rawPort.trim());
+        } catch (NumberFormatException ex) {
+            log.warn("Invalid {} value '{}'. Falling back to default port {}.", BROKER_PORT_ENV, rawPort, DEFAULT_BROKER_PORT);
+            return DEFAULT_BROKER_PORT;
+        }
+    }
 
     public ProtobufMqttTestClient(Mqtt3BlockingClient sampleClient) {
         testClient = sampleClient;
