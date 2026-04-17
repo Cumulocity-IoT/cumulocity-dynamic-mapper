@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import jakarta.validation.Valid;
@@ -556,27 +557,42 @@ public class OperationController {
         ServiceConfiguration serviceConfiguration = serviceConfigurationService
                 .getServiceConfiguration(tenant);
 
-        Future<?> connectTask = bootstrapService.initializeConnectorByConfiguration(configuration, serviceConfiguration,
-                tenant);
+        // Must be set and persisted before triggering the connection, because
+        // AConnectorClient.loadConfiguration() reloads from persistence inside submitConnect().
+        // If we save after, loadConfiguration() reads enabled=false and shouldConnect() returns false.
+        configuration.setEnabled(true);
+        connectorConfigurationService.saveConnectorConfiguration(configuration);
 
-        // Wait for initialization to complete before returning so the frontend sees the
-        // final status on the next poll rather than CONNECTING.
+        // If the client is already registered (e.g. DISCONNECTED after a failed startup),
+        // reconnect it directly. initializeConnectorByConfiguration uses putIfAbsent, so the
+        // old client would stay in the registry and the new one would be silently dropped,
+        // leaving the registered client's status unchanged.
+        AConnectorClient existingClient = connectorRegistry.getClientForTenant(tenant, connectorIdentifier);
+        Future<?> connectTask;
+        if (existingClient != null) {
+            log.info("{} - Client {} already registered, reconnecting existing client", tenant, connectorIdentifier);
+            connectTask = existingClient.reconnect();
+        } else {
+            connectTask = bootstrapService.initializeConnectorByConfiguration(configuration, serviceConfiguration,
+                    tenant);
+        }
+
+        // Wait up to 10s for fast connections; if still connecting after timeout just
+        // return success — the async task continues in the background.
         if (connectTask != null) {
             try {
                 connectTask.get(10, TimeUnit.SECONDS);
+            } catch (TimeoutException e) {
+                log.info("{} - Connector {} still connecting after 10s, returning success (async)", tenant,
+                        connectorIdentifier);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 log.warn("{} - Interrupted while waiting for connector to connect: {}", tenant, connectorIdentifier);
-                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Connect interrupted");
             } catch (Exception e) {
-                log.error("{} - Error waiting for client to connect: {}", tenant, e.getMessage());
+                log.error("{} - Connector {} failed to connect: {}", tenant, connectorIdentifier, e.getMessage(), e);
                 throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
             }
         }
-
-        // Persist enabled=true only after a successful connect attempt
-        configuration.setEnabled(true);
-        connectorConfigurationService.saveConnectorConfiguration(configuration);
 
         // Reconnect outbound notification subscriptions after the connector is ready
         AConnectorClient client = connectorRegistry.getClientForTenant(tenant, connectorIdentifier);
@@ -595,15 +611,22 @@ public class OperationController {
         }
         ConnectorConfiguration configuration = connectorConfigurationService
                 .getConnectorConfiguration(connectorIdentifier, tenant);
-        configuration.setEnabled(false);
-        connectorConfigurationService.saveConnectorConfiguration(configuration);
+        if (configuration == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "No connector configuration found for identifier: " + connectorIdentifier);
+        }
 
         AConnectorClient client = connectorRegistry.getClientForTenant(tenant, connectorIdentifier);
         if (client == null) {
-            log.warn("{} - Cannot disconnect: no registered client for identifier {}", tenant, connectorIdentifier);
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                    "No active connector found for identifier: " + connectorIdentifier);
+            // Connector is not actively running — mark as disabled and return success
+            log.info("{} - Connector {} is not active, marking as disabled", tenant, connectorIdentifier);
+            configuration.setEnabled(false);
+            connectorConfigurationService.saveConnectorConfiguration(configuration);
+            return ResponseEntity.status(HttpStatus.CREATED).build();
         }
+
+        configuration.setEnabled(false);
+        connectorConfigurationService.saveConnectorConfiguration(configuration);
         bootstrapService.disableConnector(tenant, client.getConnectorIdentifier());
         // Reconnect other notification clients for remaining connectors
         configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);

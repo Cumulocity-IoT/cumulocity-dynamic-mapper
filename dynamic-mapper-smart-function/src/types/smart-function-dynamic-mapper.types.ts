@@ -47,6 +47,9 @@ export { DataPrepContext, ExternalId };
  *
  * In Dynamic Mapper, payloads are pre-deserialized from JSON for convenience.
  *
+ * @deprecated Use `Record<string, any>` directly. This interface was kept only for
+ * backward compatibility. The `.get()` method is a legacy alias for bracket notation.
+ *
  * @example
  * // Object-style access (preferred)
  * const temp = payload["sensorData"]["temp_val"];
@@ -92,8 +95,9 @@ export interface DynamicMapperDeviceMessage {
    *
    * Note: Differs from IDP standard (Uint8Array).
    * Dynamic Mapper automatically deserializes JSON payloads to objects.
+   * Use bracket notation to access properties: payload["key"].
    */
-  payload: SmartFunctionPayload;
+  payload: Record<string, any>;
 
   /** The topic on the transport (e.g., MQTT topic) */
   topic: string;
@@ -179,50 +183,92 @@ export interface SmartFunctionContext extends DataPrepContext {
   /**
    * Looks up a device from the inventory cache by internal Cumulocity device ID.
    *
+   * The optional type parameter `TManagedObject` lets callers declare the exact
+   * shape of the returned object and get full type safety on custom fragments
+   * without any manual casting. The default is the base {@link C8yManagedObject},
+   * so existing code that omits the type parameter continues to work unchanged.
+   *
+   * @typeParam TManagedObject - Expected managed object shape (defaults to {@link C8yManagedObject})
    * @param c8ySourceId - The internal Cumulocity device ID to look up
    * @returns The managed object from inventory, or null if not found
    *
-   * @example
+   * @example Basic (no type parameter — same as before)
    * const device = context.getManagedObject("12345");
    * if (device) {
    *   console.log("Device name:", device.name);
-   *   console.log("Device type:", device.type);
    * }
+   *
+   * @example Typed — deep properties are fully typed, no casting needed
+   * interface MySensor extends C8yManagedObject {
+   *   c8y_Sensor: { type: { voltage: boolean; current: boolean } };
+   * }
+   * const device = context.getManagedObject<MySensor>("12345");
+   * const isVoltage: boolean = device?.c8y_Sensor?.type?.voltage ?? false;
    */
-  getManagedObject(c8ySourceId: string): C8yManagedObject | null;
+  getManagedObject<TManagedObject extends C8yManagedObject = C8yManagedObject>(
+    c8ySourceId: string
+  ): TManagedObject | null;
 
   /**
    * Looks up a device from the inventory cache by external ID.
    * This is the recommended way to look up devices by their external identifiers.
    *
+   * The optional type parameter `TManagedObject` lets callers declare the exact
+   * shape of the returned object and get full type safety on custom fragments
+   * without any manual casting. The default is the base {@link C8yManagedObject},
+   * so existing code that omits the type parameter continues to work unchanged.
+   *
+   * @typeParam TManagedObject - Expected managed object shape (defaults to {@link C8yManagedObject})
    * @param externalId - The external ID to look up (with type)
    * @returns The managed object from inventory, or null if not found
    *
-   * @example
+   * @example Basic (no type parameter — same as before)
    * const device = context.getManagedObjectByExternalId({
    *   externalId: "SENSOR-001",
    *   type: "c8y_Serial"
    * });
-   *
    * if (device) {
    *   console.log("Device:", device.name);
-   *   // Access custom fragments
-   *   const sensorType = device?.c8y_Sensor?.type;
    * }
+   *
+   * @example Typed — deep properties are fully typed, no casting needed
+   * interface MySensor extends C8yManagedObject {
+   *   c8y_Sensor: { type: { voltage: boolean; current: boolean } };
+   * }
+   * const device = context.getManagedObjectByExternalId<MySensor>({
+   *   externalId: "SENSOR-001",
+   *   type: "c8y_Serial"
+   * });
+   * const isVoltage: boolean = device?.c8y_Sensor?.type?.voltage ?? false;
    */
-  getManagedObjectByExternalId(externalId: ExternalId): C8yManagedObject | null;
+  getManagedObjectByExternalId<TManagedObject extends C8yManagedObject = C8yManagedObject>(
+    externalId: ExternalId
+  ): TManagedObject | null;
 
   /**
    * Looks up DTM (Digital Twin Manager) Asset properties by asset ID.
    *
-   * @param assetId - The ID of the asset to look up
-   * @returns A record containing the asset properties
+   * The optional type parameter `TAsset` lets callers declare the expected asset
+   * shape and get full type safety on custom properties without casting.
+   * Defaults to {@link C8yManagedObject} so existing code is unaffected.
+   * Returns `null` when the asset is not found.
    *
-   * @example
+   * @typeParam TAsset - Expected asset shape (defaults to {@link C8yManagedObject})
+   * @param assetId - The ID of the asset to look up
+   * @returns The asset, or null if not found
+   *
+   * @example Basic (no type parameter — same as before)
    * const asset = context.getDTMAsset("asset-123");
    * console.log("Asset properties:", asset);
+   *
+   * @example Typed — custom properties are fully typed, no casting needed
+   * interface MyAsset extends C8yManagedObject {
+   *   c8y_Location: { lat: number; lng: number };
+   * }
+   * const asset = context.getDTMAsset<MyAsset>("asset-123");
+   * const lat: number = asset?.c8y_Location?.lat ?? 0;
    */
-  getDTMAsset(assetId: string): Record<string, any>;
+  getDTMAsset<TAsset extends C8yManagedObject = C8yManagedObject>(assetId: string): TAsset | null;
 
   /**
    * Retrieves read-only mapping configuration for the current invocation.
@@ -234,16 +280,22 @@ export interface SmartFunctionContext extends DataPrepContext {
    * This is populated before the Smart Function is called and does **not**
    * persist across invocations (unlike `getState` / `setState`).
    *
-   * @returns A record containing the mapping configuration
+   * The optional type parameter `TConfig` lets callers declare the exact shape
+   * of the config object for full type safety on known keys. Defaults to
+   * `Record<string, any>` so existing code is unaffected.
    *
-   * @example
+   * @typeParam TConfig - Expected config shape (defaults to `Record<string, any>`)
+   * @returns The mapping configuration object
+   *
+   * @example Basic (no type parameter — same as before)
    * const config = context.getConfig();
    * console.log("Mapping:", config.mappingName, "Target:", config.targetAPI);
-   * if (config.debug) {
-   *   console.log("Debug mode active for mapping", config.mappingId);
-   * }
+   *
+   * @example Typed — known keys are type-safe, no casting needed
+   * const config = context.getConfig<{ mappingName: string; externalId: string }>();
+   * return { topic: `measurements/${config.externalId}`, ... };
    */
-  getConfig(): Record<string, any>;
+  getConfig<TConfig extends Record<string, any> = Record<string, any>>(): TConfig;
 
   /**
    * Adds a warning message to the processing context.
@@ -582,25 +634,46 @@ export interface ExternalSource {
  *   externalSource: [{ type: "c8y_Serial", externalId: "SENSOR-001" }]
  * }];
  */
-export interface CumulocityObject<T extends C8yObjectType = C8yObjectType> {
+export interface CumulocityObject<
+  T extends C8yObjectType = C8yObjectType,
+  TPayload extends C8yPayloadTypeMap[T] = C8yPayloadTypeMap[T]
+> {
   /**
    * The Cumulocity API object payload.
    * Should match the structure used in the C8Y REST API.
    *
-   * The type is derived from the `T` parameter via {@link C8yPayloadTypeMap}:
+   * The type is derived from `T` via {@link C8yPayloadTypeMap} by default:
    * - `CumulocityObject<'measurement'>` → `C8yMeasurement`
    * - `CumulocityObject<'event'>`       → `C8yEvent`
    * - `CumulocityObject<'alarm'>`       → `C8yAlarm`
    * - `CumulocityObject<'operation'>`   → `C8yOperation`
    * - `CumulocityObject<'managedObject'>` → `C8yManagedObject`
    *
-   * When `T` is the default union, the payload accepts any of the domain types.
+   * The optional second parameter `TPayload` lets you supply a more specific
+   * sub-type (e.g. an interface that extends `C8yAlarm` with custom fragments)
+   * for full type safety without casting.  Defaults to `C8yPayloadTypeMap[T]`
+   * so existing code that omits it is completely unaffected.
+   *
+   * @example Custom payload type for an alarm with a threshold fragment
+   * interface MyAlarm extends C8yAlarm {
+   *   c8y_CustomThreshold: { value: number };
+   * }
+   * const obj: CumulocityObject<'alarm', MyAlarm> = {
+   *   cumulocityType: 'alarm',
+   *   action: 'create',
+   *   payload: {
+   *     type: 'c8y_HighTemp', text: '...', severity: 'MAJOR',
+   *     status: 'ACTIVE', time: '...',
+   *     c8y_CustomThreshold: { value: 80 },  // ✅ typed, no cast needed
+   *   },
+   *   externalSource: [{ type: 'c8y_Serial', externalId: 'SENSOR-001' }],
+   * };
    *
    * Special notes:
    * - If providing an externalSource, you don't need to provide an "id"
    * - For update APIs, include an "id" field in the payload
    */
-  payload: C8yPayloadTypeMap[T];
+  payload: TPayload;
 
   /**
    * Which Cumulocity API type is being modified.
@@ -714,8 +787,11 @@ export interface DeviceMessage<T extends C8yObjectType = C8yObjectType> {
    * For outbound messages, serialize your data to Uint8Array.
    *
    * @example
-   * // Convert string to Uint8Array
-   * payload: new TextEncoder().encode(JSON.stringify(myObject))
+   * // Convert string to Uint8Array (TextEncoder is not available in GraalJS)
+   * const s = JSON.stringify(myObject);
+   * const bytes = new Uint8Array(s.length);
+   * for (let i = 0; i < s.length; i++) bytes[i] = s.charCodeAt(i);
+   * payload: bytes
    */
   payload: Uint8Array;
 
@@ -820,6 +896,12 @@ export interface DeviceMessage<T extends C8yObjectType = C8yObjectType> {
  * returned {@link CumulocityObject} array may contain. Defaults to the full
  * {@link C8yObjectType} union so existing code is unaffected.
  *
+ * The optional second parameter `TPayload` constrains the payload type of the
+ * returned objects, enabling full type safety on custom C8y fragments.
+ * Defaults to `C8yPayloadTypeMap[T]` so existing code is unaffected.
+ *
+ * @typeParam T       - Allowed `cumulocityType` values in the returned objects
+ * @typeParam TPayload - Expected payload shape (defaults to `C8yPayloadTypeMap[T]`)
  * @param msg - The incoming device message from the broker (pre-deserialized)
  * @param context - Runtime context providing state, config, and device lookups
  * @returns Cumulocity objects (measurements, events, alarms, etc.) or empty array
@@ -829,7 +911,7 @@ export interface DeviceMessage<T extends C8yObjectType = C8yObjectType> {
  * const onMessage: SmartFunctionIn = (msg, context) => { ... };
  *
  * @example
- * // Constrained: only 'managedObject' and 'event' are valid return types
+ * // Constrained to type only
  * const onMessage: SmartFunctionIn<'managedObject' | 'event'> = (msg, context) => {
  *   return [{
  *     cumulocityType: "managedObject", // ✅
@@ -839,11 +921,27 @@ export interface DeviceMessage<T extends C8yObjectType = C8yObjectType> {
  *     externalSource: [{ type: "c8y_Serial", externalId: clientId! }]
  *   }];
  * };
+ *
+ * @example
+ * // Constrained to type + custom payload shape
+ * interface MyAlarm extends C8yAlarm {
+ *   c8y_CustomThreshold: { value: number };
+ * }
+ * const onMessage: SmartFunctionIn<'alarm', MyAlarm> = (msg, context) => {
+ *   return [{
+ *     cumulocityType: 'alarm', action: 'create',
+ *     payload: { ..., c8y_CustomThreshold: { value: 80 } }, // ✅ typed
+ *     externalSource: [{ type: 'c8y_Serial', externalId: 'SENSOR-001' }],
+ *   }];
+ * };
  */
-export type SmartFunctionIn<T extends C8yObjectType = C8yObjectType> = (
+export type SmartFunctionIn<
+  T extends C8yObjectType = C8yObjectType,
+  TPayload extends C8yPayloadTypeMap[T] = C8yPayloadTypeMap[T]
+> = (
   msg: DynamicMapperDeviceMessage,
   context: SmartFunctionContext
-) => Array<CumulocityObject<T>> | CumulocityObject<T> | [];
+) => Array<CumulocityObject<T, TPayload>> | CumulocityObject<T, TPayload> | [];
 
 /**
  * Message received by an outbound Smart Function.
@@ -865,12 +963,31 @@ export type SmartFunctionIn<T extends C8yObjectType = C8yObjectType> = (
  *   ...
  * };
  */
-export interface OutboundMessage<T extends C8yObjectType = C8yObjectType> {
+export interface OutboundMessage<
+  T extends C8yObjectType = C8yObjectType,
+  TPayload extends C8yPayloadTypeMap[T] = C8yPayloadTypeMap[T]
+> {
   /**
    * The Cumulocity event/measurement/alarm payload, pre-deserialized.
-   * Access properties using bracket notation: payload["key"].
+   *
+   * Defaults to `C8yPayloadTypeMap[T]` (e.g. `C8yMeasurement` when
+   * `T = 'measurement'`), providing type safety for all well-known fields.
+   * Pass a more specific sub-type as the second parameter to get full type
+   * safety on custom fragments without any casting.
+   *
+   * All C8y domain types carry a `[fragment: string]: any` index signature,
+   * so `.get("key")` and arbitrary bracket notation continue to work even
+   * when `TPayload` is the base type.
+   *
+   * @example Typed access to a custom measurement series
+   * interface MySteamMeasurement extends C8yMeasurement {
+   *   c8y_Steam: { Temperature: { value: number; unit: string } };
+   * }
+   * const onMessage: SmartFunctionOut<'measurement', MySteamMeasurement> = (msg) => {
+   *   const temp: number = msg.payload.c8y_Steam.Temperature.value; // ✅ typed
+   * };
    */
-  payload: SmartFunctionPayload;
+  payload: TPayload;
 
   /** Cumulocity API type of the triggering event, if available. */
   cumulocityType?: T;
@@ -892,6 +1009,13 @@ export interface OutboundMessage<T extends C8yObjectType = C8yObjectType> {
  * event type(s), documenting which Cumulocity events this function handles.
  * Defaults to the full {@link C8yObjectType} union so existing code is unaffected.
  *
+ * The optional second parameter `TPayload` narrows `msg.payload` to a specific
+ * sub-type of the base C8y domain interface (e.g. a `C8yMeasurement` extension
+ * with custom fragments), enabling full type safety without bracket-notation
+ * casting.  Defaults to `C8yPayloadTypeMap[T]` so existing code is unaffected.
+ *
+ * @typeParam T       - Triggering Cumulocity event type(s)
+ * @typeParam TPayload - Expected payload shape (defaults to `C8yPayloadTypeMap[T]`)
  * @param msg - The incoming Cumulocity event, wrapped with SmartFunctionPayload access
  * @param context - Runtime context providing state, config, and device lookups
  * @returns Device messages to send to the broker or empty array
@@ -901,22 +1025,31 @@ export interface OutboundMessage<T extends C8yObjectType = C8yObjectType> {
  * const onMessage: SmartFunctionOut = (msg, context) => { ... };
  *
  * @example
- * // Constrained: only handles 'measurement' outbound events
+ * // Constrained to type only
  * const onMessage: SmartFunctionOut<'measurement'> = (msg, context) => {
  *   // msg.cumulocityType is narrowed to 'measurement'
- *   const sourceId = msg.payload["source"]["id"];
+ *   // msg.payload is C8yMeasurement — known fields are typed, fragments are any
+ *   const temp = msg.payload["c8y_TemperatureMeasurement"]?.["T"]?.["value"];
+ * };
  *
+ * @example
+ * // Constrained to type + custom payload shape — no bracket notation needed
+ * interface MySteamMeasurement extends C8yMeasurement {
+ *   c8y_Steam: { Temperature: { value: number; unit: string } };
+ * }
+ * const onMessage: SmartFunctionOut<'measurement', MySteamMeasurement> = (msg) => {
+ *   const temp: number = msg.payload.c8y_Steam.Temperature.value; // ✅ typed
  *   return {
- *     topic: `measurements/${sourceId}`,
- *     payload: new TextEncoder().encode(JSON.stringify({
- *       temp: msg.payload["c8y_TemperatureMeasurement"]?.["T"]?.["value"],
- *       timestamp: new Date().toISOString()
- *     }))
+ *     topic: `measurements/${msg.sourceId}`,
+ *     payload: new TextEncoder().encode(JSON.stringify({ temperature: temp })),
  *   };
  * };
  */
-export type SmartFunctionOut<T extends C8yObjectType = C8yObjectType> = (
-  msg: OutboundMessage<T>,
+export type SmartFunctionOut<
+  T extends C8yObjectType = C8yObjectType,
+  TPayload extends C8yPayloadTypeMap[T] = C8yPayloadTypeMap[T]
+> = (
+  msg: OutboundMessage<T, TPayload>,
   context: SmartFunctionContext
 ) => Array<DeviceMessage> | DeviceMessage | [];
 
@@ -931,6 +1064,254 @@ export type SmartFunctionOut<T extends C8yObjectType = C8yObjectType> = (
  * when the direction is known.
  */
 export type SmartFunction = SmartFunctionIn | SmartFunctionOut;
+
+// ============================================================================
+// V2 SMART FUNCTION TYPES
+// ============================================================================
+//
+// V2 introduces three improvements over the V1 positional-generic style:
+//
+//  1. OutboundMessage as a proper discriminated union — switch (msg.cumulocityType)
+//     automatically narrows msg.payload to the matching C8y domain type.
+//     This requires the Java runtime to set msg.cumulocityType (done in
+//     FlowProcessorOutboundProcessor via InputMessage.cumulocityType).
+//
+//  2. Object generic on SmartFunctionInV2 / SmartFunctionOutV2 — callers specify
+//     only the parts they care about (returns, config, state, input) without
+//     worrying about generic parameter order.
+//
+//  3. SmartFunctionContextV2 — config and state are both typed end-to-end from
+//     the object generic, eliminating as-casts on getConfig() and getState().
+//
+// V1 types are unchanged.  V2 types are purely additive.
+// ============================================================================
+
+/**
+ * Discriminated union mapping each {@link C8yObjectType} to a concrete outbound
+ * message shape.  When `T` is the full union TypeScript distributes the lookup,
+ * producing a true discriminated union:
+ *
+ * ```typescript
+ * switch (msg.cumulocityType) {
+ *   case 'measurement': msg.payload  // ← C8yMeasurement (auto-narrowed)
+ *   case 'alarm':       msg.payload  // ← C8yAlarm (auto-narrowed)
+ * }
+ * ```
+ *
+ * The Java runtime populates `msg.cumulocityType` in
+ * {@code FlowProcessorOutboundProcessor} so narrowing works at runtime.
+ */
+export type OutboundMessageByType = {
+  [T in C8yObjectType]: {
+    /** Pre-deserialized C8y payload, typed to the matching domain interface. */
+    payload: C8yPayloadTypeMap[T];
+    /**
+     * Required in V2 — the Java runtime always sets this for outbound messages.
+     * Enables discriminant narrowing without casting.
+     */
+    cumulocityType: T;
+    /** Internal Cumulocity device ID of the originating device, if available. */
+    sourceId?: string;
+  };
+};
+
+/**
+ * V2 outbound message type — a proper discriminated union over {@link C8yObjectType}.
+ *
+ * Defaults to the full union (all C8y types) so existing code is unaffected.
+ * Specify `T` to constrain and auto-narrow:
+ *
+ * @example
+ * // msg.payload is narrowed to C8yMeasurement automatically
+ * const onMessage: SmartFunctionOutV2<{ input: 'measurement' }> = (msg, context) => {
+ *   switch (msg.cumulocityType) {
+ *     case 'measurement': {
+ *       const temp = msg.payload.c8y_Temperature?.T?.value; // typed
+ *     }
+ *   }
+ * };
+ */
+export type OutboundMessageV2<T extends C8yObjectType = C8yObjectType> = OutboundMessageByType[T];
+
+/**
+ * V2 runtime context — config and state are typed end-to-end via class-level generics.
+ *
+ * Extends {@link DataPrepContext} so that the base `getState` / `setState` contract
+ * is honoured. The type parameters refine those signatures further.
+ *
+ * @typeParam TConfig - Shape of the mapping config object (defaults to `Record<string, any>`)
+ * @typeParam TState  - Shape of the persistent state object (defaults to `Record<string, any>`)
+ *
+ * @example
+ * type MyCtx = SmartFunctionContextV2<
+ *   { mappingName: string; externalId: string },
+ *   { lastTemperature: number; forwardedCount: number }
+ * >;
+ * const name: string = context.getConfig().mappingName;     // typed
+ * const last: number = context.getState('lastTemperature'); // typed
+ */
+export interface SmartFunctionContextV2<
+  TConfig extends Record<string, any> = Record<string, any>,
+  TState extends Record<string, any> = Record<string, any>
+> extends DataPrepContext {
+  /** Runtime identifier for Dynamic Mapper. */
+  readonly runtime: 'dynamic-mapper';
+
+  /**
+   * Retrieve a state value by key.
+   * Return type is inferred from `TState` — no casting needed.
+   */
+  getState<TKey extends keyof TState>(key: TKey, defaultValue?: TState[TKey]): TState[TKey];
+
+  /**
+   * Persist a state value by key.
+   * Value type is enforced by `TState` — wrong types are caught at compile time.
+   */
+  setState<TKey extends keyof TState>(key: TKey, value: TState[TKey]): void;
+
+  /** Returns the entire state object, typed as `TState`. */
+  getStateAll(): TState;
+
+  /** MQTT / transport client identifier. */
+  getClientId(): string | undefined;
+
+  /** Resolved external ID of the source device (outbound only). */
+  getExternalId(): string | undefined;
+
+  /**
+   * Look up a managed object by internal Cumulocity device ID.
+   * @typeParam TManagedObject - Expected shape (defaults to {@link C8yManagedObject})
+   */
+  getManagedObject<TManagedObject extends C8yManagedObject = C8yManagedObject>(
+    c8ySourceId: string
+  ): TManagedObject | null;
+
+  /**
+   * Look up a managed object by external ID.
+   * @typeParam TManagedObject - Expected shape (defaults to {@link C8yManagedObject})
+   */
+  getManagedObjectByExternalId<TManagedObject extends C8yManagedObject = C8yManagedObject>(
+    externalId: ExternalId
+  ): TManagedObject | null;
+
+  /**
+   * Look up a DTM asset by asset ID.
+   * @typeParam TAsset - Expected shape (defaults to {@link C8yManagedObject})
+   */
+  getDTMAsset<TAsset extends C8yManagedObject = C8yManagedObject>(assetId: string): TAsset | null;
+
+  /**
+   * Returns the mapping configuration object, typed as `TConfig`.
+   * All known keys are type-safe — no casting needed.
+   */
+  getConfig(): TConfig;
+
+  /** Add a non-fatal warning message visible in the Dynamic Mapper UI. */
+  addWarning(warning: string): void;
+}
+
+/**
+ * V2 inbound Smart Function signature.
+ *
+ * Uses an object generic so callers can specify only the parts they care about
+ * without worrying about parameter order.
+ *
+ * @typeParam T - Object describing the function contract:
+ *   - `returns` — allowed return type(s); can be a tuple for exact order/count enforcement
+ *   - `config`  — shape of the mapping config (enables typed `context.getConfig()`)
+ *   - `state`   — shape of the persistent state (enables typed `getState`/`setState`)
+ *
+ * @example Untyped (backward-compatible default)
+ * const onMessage: SmartFunctionInV2 = (msg, context) => { ... };
+ *
+ * @example Config only
+ * const onMessage: SmartFunctionInV2<{ config: { mappingName: string } }> = (msg, context) => {
+ *   console.log(context.getConfig().mappingName); // typed
+ * };
+ *
+ * @example Tuple return — enforces exactly [measurement, managedObject] in that order
+ * const onMessage: SmartFunctionInV2<{
+ *   returns: [CumulocityObject<'measurement'>, CumulocityObject<'managedObject'>];
+ *   config:  { mappingName: string };
+ *   state:   { messageCount: number };
+ * }> = (msg, context) => {
+ *   context.setState('messageCount', context.getState('messageCount', 0) + 1);
+ *   return [ measurementObj, managedObjectObj ]; // TypeScript enforces order + count
+ * };
+ */
+export type SmartFunctionInV2<
+  T extends {
+    returns?: CumulocityObject | CumulocityObject[];
+    config?: Record<string, any>;
+    state?: Record<string, any>;
+  } = {}
+> = (
+  msg: DynamicMapperDeviceMessage,
+  context: SmartFunctionContextV2<
+    T extends { config: infer TConfig extends Record<string, any> } ? TConfig : Record<string, any>,
+    T extends { state: infer TState extends Record<string, any> } ? TState : Record<string, any>
+  >
+) => T extends { returns: infer TReturns extends CumulocityObject | CumulocityObject[] }
+  ? TReturns
+  : CumulocityObject | CumulocityObject[];
+
+/**
+ * V2 outbound Smart Function signature.
+ *
+ * Uses an object generic so callers can specify only the parts they care about
+ * without worrying about parameter order.
+ *
+ * @typeParam T - Object describing the function contract:
+ *   - `input`   — the C8y event type triggering this function; narrows `msg.cumulocityType`
+ *                 and auto-narrows `msg.payload` to the matching domain type
+ *   - `message` — allowed return type(s)
+ *   - `config`  — shape of the mapping config
+ *   - `state`   — shape of the persistent state
+ *
+ * @example Untyped (backward-compatible default)
+ * const onMessage: SmartFunctionOutV2 = (msg, context) => { ... };
+ *
+ * @example Fully typed — payload is auto-narrowed, config + state are typed
+ * const onMessage: SmartFunctionOutV2<{
+ *   input:   'measurement';
+ *   config:  { externalId: string };
+ *   state:   { forwardedCount: number };
+ *   message: DeviceMessage;
+ * }> = (msg, context) => {
+ *   // msg.cumulocityType is narrowed to 'measurement'
+ *   // msg.payload        is narrowed to C8yMeasurement
+ *   const count = context.getState('forwardedCount', 0) + 1;
+ *   context.setState('forwardedCount', count);
+ *   return {
+ *     topic: `measurements/${context.getConfig().externalId}`,
+ *     payload: new TextEncoder().encode(JSON.stringify({ count })),
+ *   };
+ * };
+ */
+export type SmartFunctionOutV2<
+  T extends {
+    message?: DeviceMessage | DeviceMessage[];
+    config?: Record<string, any>;
+    state?: Record<string, any>;
+    input?: C8yObjectType;
+  } = {}
+> = (
+  msg: OutboundMessageV2<
+    T extends { input: infer TInput extends C8yObjectType } ? TInput : C8yObjectType
+  >,
+  context: SmartFunctionContextV2<
+    T extends { config: infer TConfig extends Record<string, any> } ? TConfig : Record<string, any>,
+    T extends { state: infer TState extends Record<string, any> } ? TState : Record<string, any>
+  >
+) => T extends { message: infer TMessage extends DeviceMessage | DeviceMessage[] }
+  ? TMessage
+  : DeviceMessage | DeviceMessage[];
+
+/**
+ * V2 Smart Function union — either inbound or outbound.
+ * Use the specific V2 types when the direction is known.
+ */
+export type SmartFunctionV2 = SmartFunctionInV2 | SmartFunctionOutV2;
 
 // ============================================================================
 // FLOW FUNCTION TYPES
@@ -996,7 +1377,7 @@ export interface MappingError {
  *   sensorData: { temp_val: 30.0 }
  * });
  */
-export function createMockPayload(data: Record<string, any>): SmartFunctionPayload {
+export function createMockPayload(data: Record<string, any>): Record<string, any> {
   return {
     ...data,
     get(key: string) {
@@ -1032,8 +1413,8 @@ export function createMockInputMessage(
 }
 
 /**
- * Mock outbound message for testing outbound Smart Functions.
- * Creates an OutboundMessage with a pre-deserialized SmartFunctionPayload
+ * Mock outbound message for testing V1 outbound Smart Functions.
+ * Creates an OutboundMessage with a pre-deserialized payload
  * that supports both bracket access and .get().
  *
  * @example
@@ -1051,6 +1432,99 @@ export function createMockOutboundMessage(
     payload: createMockPayload(payloadData),
     cumulocityType,
     sourceId
+  };
+}
+
+/**
+ * Mock outbound message for testing V2 outbound Smart Functions.
+ *
+ * Unlike {@link createMockOutboundMessage}, this helper returns a fully typed
+ * {@link OutboundMessageV2} where `cumulocityType` is **required** — mirroring
+ * the Java runtime which always sets `msg.cumulocityType` for outbound messages.
+ *
+ * The type parameter `T` constrains which `C8yObjectType` value is accepted,
+ * so the returned object is the exact discriminant branch of the union.
+ *
+ * @example
+ * const mockMsg = createMockOutboundMessageV2(
+ *   { source: { id: '12345' }, c8y_TemperatureMeasurement: { T: { value: 25.5, unit: 'C' } } },
+ *   'measurement'
+ * );
+ * // mockMsg.cumulocityType === 'measurement'  (required, not optional)
+ * // mockMsg.payload is typed as C8yMeasurement
+ */
+export function createMockOutboundMessageV2<T extends C8yObjectType>(
+  payloadData: C8yPayloadTypeMap[T],
+  cumulocityType: T,
+  sourceId?: string
+): OutboundMessageV2<T> {
+  // Type assertion is required: when T is still generic TypeScript evaluates
+  // OutboundMessageByType[T] as the intersection of all branches (→ never).
+  // The runtime value is correct — it satisfies exactly the T branch.
+  return { payload: payloadData, cumulocityType, sourceId } as OutboundMessageV2<T>;
+}
+
+/**
+ * Mock V2 runtime context for testing V2 Smart Functions.
+ * Returns a {@link SmartFunctionContextV2} with fully typed config and state.
+ *
+ * @typeParam TConfig - Shape of the config object
+ * @typeParam TState  - Shape of the state object
+ *
+ * @example
+ * const ctx = createMockRuntimeContextV2<
+ *   { externalId: string },
+ *   { forwardedCount: number }
+ * >({ config: { externalId: 'SENSOR-001' } });
+ *
+ * const id: string = ctx.getConfig().externalId;          // typed
+ * const n:  number = ctx.getState('forwardedCount', 0);   // typed
+ */
+export function createMockRuntimeContextV2<
+  TConfig extends Record<string, any> = Record<string, any>,
+  TState extends Record<string, any> = Record<string, any>
+>(options: {
+  clientId?: string;
+  config?: TConfig;
+  devices?: Record<string, C8yManagedObject>;
+  externalIdMap?: Record<string, C8yManagedObject>;
+  dtmAssets?: Record<string, C8yManagedObject>;
+}): SmartFunctionContextV2<TConfig, TState> {
+  const state = {} as TState;
+
+  return {
+    runtime: 'dynamic-mapper',
+    setState<TKey extends keyof TState>(key: TKey, value: TState[TKey]) {
+      state[key] = value;
+    },
+    getState<TKey extends keyof TState>(key: TKey, defaultValue?: TState[TKey]): TState[TKey] {
+      return (state[key] !== undefined ? state[key] : defaultValue) as TState[TKey];
+    },
+    getStateAll(): TState {
+      return { ...state };
+    },
+    getConfig(): TConfig {
+      return (options.config || {}) as TConfig;
+    },
+    getClientId() {
+      return options.clientId;
+    },
+    getExternalId() {
+      return (options.config as Record<string, any>)?.['externalId'];
+    },
+    getManagedObject<TManagedObject extends C8yManagedObject = C8yManagedObject>(c8ySourceId: string) {
+      return (options.devices?.[c8ySourceId] ?? null) as TManagedObject | null;
+    },
+    getManagedObjectByExternalId<TManagedObject extends C8yManagedObject = C8yManagedObject>(externalId: ExternalId) {
+      const key = `${externalId.externalId}:${externalId.type}`;
+      return (options.externalIdMap?.[key] ?? null) as TManagedObject | null;
+    },
+    getDTMAsset<TAsset extends C8yManagedObject = C8yManagedObject>(assetId: string) {
+      return (options.dtmAssets?.[assetId] ?? null) as TAsset | null;
+    },
+    addWarning(warning: string) {
+      console.warn('[MockContextV2]', warning);
+    }
   };
 }
 
@@ -1089,8 +1563,8 @@ export function createMockRuntimeContext(options: {
     getStateAll() {
       return { ...state };
     },
-    getConfig() {
-      return options.config || {};
+    getConfig<TConfig extends Record<string, any> = Record<string, any>>() {
+      return (options.config || {}) as TConfig;
     },
     getClientId() {
       return options.clientId;
@@ -1105,8 +1579,8 @@ export function createMockRuntimeContext(options: {
       const key = `${externalId.externalId}:${externalId.type}`;
       return options.externalIdMap?.[key] || null;
     },
-    getDTMAsset(assetId: string) {
-      return options.dtmAssets?.[assetId] || {};
+    getDTMAsset<TAsset extends C8yManagedObject = C8yManagedObject>(assetId: string) {
+      return (options.dtmAssets?.[assetId] ?? null) as TAsset | null;
     },
     addWarning(warning: string) {
       console.warn('[MockContext]', warning);

@@ -1127,11 +1127,43 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
     this.mappingCode = value;
   }
 
+  private hasEsmExport(code: string, exportName: string): boolean {
+    const escapedExportName = exportName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const namedExportPattern = new RegExp(
+      `\\bexport\\s*\\{[^}]*\\b${escapedExportName}\\b(?:\\s+as\\s+\\w+)?[^}]*\\}`,
+      'm'
+    );
+    const directExportPattern = new RegExp(
+      `\\bexport\\s+(?:async\\s+function|function|const|let|var|class)\\s+${escapedExportName}\\b`,
+      'm'
+    );
+
+    return namedExportPattern.test(code) || directExportPattern.test(code);
+  }
+
   onSelectCodeTemplate(): void {
     const template = this.codeTemplatesDecoded.get(this.templateId);
-    if (template) {
-      this.mappingCode = template.code;
+    if (!template) return;
+
+    let code = template.code;
+
+    if (this.serviceConfiguration?.supportESM) {
+      const exportName =
+        this.mapping.transformationType === TransformationType.SMART_FUNCTION ? 'onMessage' :
+        this.mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE ? 'extractFromSource' :
+        null;
+
+      if (exportName) {
+        const exportStatement = `export { ${exportName} };`;
+        if (!this.hasEsmExport(code, exportName)) {
+          code = code.trimEnd() +
+            '\n\n// ── ESM export (added automatically because Support ESM is enabled) ──────────\n' +
+            exportStatement + '\n';
+        }
+      }
     }
+
+    this.mappingCode = code;
   }
 
   private updateCodeTemplateEntries(): void {

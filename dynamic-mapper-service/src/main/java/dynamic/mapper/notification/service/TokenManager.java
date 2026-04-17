@@ -131,20 +131,53 @@ public class TokenManager {
 
         Map<String, String> tenantTokens = deviceTokens.get(tenant);
         if (tenantTokens != null) {
-            String token = tenantTokens.remove(connectorIdentifier);
-            if (token != null) {
-                try {
-                    tokenApi.unsubscribe(new Token(token));
-                    log.info("{} - Unsubscribed connector {}", tenant, connectorIdentifier);
-                } catch (SDKException e) {
-                    log.error("{} - Could not unsubscribe connector {}: {}",
-                            tenant, connectorIdentifier, e.getMessage(), e);
-                }
+            // Unsubscribe static and dynamic subscribers (stored with suffixed keys)
+            unsubscribeTokenByKey(tenant, tenantTokens, connectorIdentifier + "_static", connectorIdentifier);
+            unsubscribeTokenByKey(tenant, tenantTokens, connectorIdentifier + "_dynamic", connectorIdentifier);
+            // Backward compat: plain key from before this fix
+            unsubscribeTokenByKey(tenant, tenantTokens, connectorIdentifier, connectorIdentifier);
+        }
+    }
+
+    private void unsubscribeTokenByKey(String tenant, Map<String, String> tenantTokens, String key,
+            String connectorIdentifier) {
+        String token = tenantTokens.remove(key);
+        if (token != null) {
+            try {
+                tokenApi.unsubscribe(new Token(token));
+                log.info("{} - Unsubscribed connector {} (key: {})", tenant, connectorIdentifier, key);
+            } catch (SDKException e) {
+                log.error("{} - Could not unsubscribe connector {} (key: {}): {}",
+                        tenant, connectorIdentifier, key, e.getMessage(), e);
             }
         }
     }
 
-    public void startTokenRefreshScheduler() {
+    /**
+     * Unsubscribe a subscriber by name from a given subscription.
+     * Creates a temporary token for the subscriber, then immediately unsubscribes.
+     * This handles cleanup of orphaned subscribers after a restart when no stored
+     * token is available. Errors (e.g. 422 for non-alphanumeric subscriber names)
+     * are silently ignored at debug level.
+     */
+    public void unsubscribeBySubscriberName(String subscription, String subscriberName) {
+        if (subscription == null || subscriberName == null) {
+            return;
+        }
+        try {
+            // Create token directly (not via createToken()) to avoid its ERROR-level log on failure
+            NotificationTokenRequestRepresentation tokenRequest =
+                    new NotificationTokenRequestRepresentation(subscriberName, subscription, 1440, false);
+            String token = tokenApi.create(tokenRequest).getTokenString();
+            tokenApi.unsubscribe(new Token(token));
+            log.info("Unsubscribed orphaned subscriber '{}' from subscription '{}'", subscriberName, subscription);
+        } catch (Exception e) {
+            log.debug("Could not unsubscribe subscriber '{}' from subscription '{}': {}",
+                    subscriberName, subscription, e.getMessage());
+        }
+    }
+
+    public void startTokenRefreshScheduler(String tenant) {
         if (tokenRefreshExecutor == null || tokenRefreshExecutor.isShutdown()) {
             tokenRefreshExecutor = Executors.newScheduledThreadPool(1, r -> {
                 Thread t = new Thread(r, "token-refresh");
@@ -153,15 +186,15 @@ public class TokenManager {
             });
             tokenRefreshExecutor.scheduleAtFixedRate(this::refreshTokens,
                     TOKEN_REFRESH_INTERVAL_HOURS, TOKEN_REFRESH_INTERVAL_HOURS, TimeUnit.HOURS);
-            log.debug("Started token refresh scheduler");
+            log.info("{} - Started token refresh scheduler", tenant);
         }
     }
 
     public void refreshTokens() {
-        log.debug("Starting token refresh cycle");
 
         subscriptionsService.runForEachTenant(() -> {
             String tenant = subscriptionsService.getTenant();
+            log.info("{} - Starting token refresh cycle", tenant);
             Map<String, String> tenantTokens = deviceTokens.get(tenant);
 
             if (tenantTokens == null || tenantTokens.isEmpty()) {
@@ -180,7 +213,7 @@ public class TokenManager {
                     String newToken = tokenApi.refresh(new Token(token)).getTokenString();
                     tenantTokens.put(connectorId, newToken);
                     refreshedCount++;
-                    log.debug("{} - Refreshed token for connector {}", tenant, connectorId);
+                    log.info("{} - Refreshed token for connector {}", tenant, connectorId);
                 } catch (IllegalArgumentException e) {
                     failedCount++;
                     log.warn("{} - Could not refresh token for connector {}: {}",

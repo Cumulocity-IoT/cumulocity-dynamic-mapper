@@ -38,6 +38,30 @@ import {
  * - IntelliSense: Get autocomplete suggestions
  * - Documentation: Inline JSDoc comments
  * - Refactoring: Safe renaming and refactoring
+ *
+ * Sample payload (MQTT message body):
+ * {
+ *   "messageId": "msg-001",
+ *   "clientId": "sensor-berlin-01",
+ *   "deviceId": "12345",
+ *   "sensorData": {
+ *     "temp_val": 23.5
+ *   }
+ * }
+ *
+ * Sample topic: testSmartInbound/sensor-berlin-01
+ *
+ * Expected output:
+ * [{
+ *   "cumulocityType": "measurement",
+ *   "action": "create",
+ *   "payload": {
+ *     "time": "<ISO timestamp>",
+ *     "type": "c8y_TemperatureMeasurement",
+ *     "c8y_Steam": { "Temperature": { "unit": "C", "value": 23.5 } }
+ *   },
+ *   "externalSource": [{ "type": "c8y_Serial", "externalId": "sensor-berlin-01" }]
+ * }]
  */
 
 /**

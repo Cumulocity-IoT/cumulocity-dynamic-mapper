@@ -32,6 +32,41 @@ import {
  *   TypeScript enforces that ONLY 'managedObject' and 'event' objects may be returned.
  * @templateType INBOUND_SMART_FUNCTION
  * @direction INBOUND
+ *
+ * Sample payload (MQTT message body):
+ * {
+ *   "clientId": "sensor-berlin-01",
+ *   "deviceName": "Berlin Sensor 01",
+ *   "model": "SensorX-3000",
+ *   "revision": "2.1"
+ * }
+ *
+ * Sample topic: testSmartInbound/sensor-berlin-01
+ *
+ * Expected output:
+ * [
+ *   {
+ *     "cumulocityType": "managedObject",
+ *     "action": "create",
+ *     "payload": {
+ *       "name": "Berlin Sensor 01",
+ *       "type": "c8y_Device",
+ *       "c8y_IsDevice": {},
+ *       "c8y_Hardware": { "model": "SensorX-3000", "revision": "2.1" }
+ *     },
+ *     "externalSource": [{ "externalId": "sensor-berlin-01", "type": "c8y_Serial", "autoCreateDeviceMO": true }]
+ *   },
+ *   {
+ *     "cumulocityType": "event",
+ *     "action": "create",
+ *     "payload": {
+ *       "type": "c8y_DeviceRegistered",
+ *       "text": "Device Berlin Sensor 01 registered or updated",
+ *       "time": "<ISO timestamp>"
+ *     },
+ *     "externalSource": [{ "externalId": "sensor-berlin-01", "type": "c8y_Serial" }]
+ *   }
+ * ]
  */
 
 /**
@@ -100,6 +135,21 @@ export { onMessageInbound };
  *   is documented (and enforced) to handle only measurement outbound events.
  * @templateType OUTBOUND_SMART_FUNCTION
  * @direction OUTBOUND
+ *
+ * Sample payload (Cumulocity measurement triggering this function):
+ * {
+ *   "id": "98765",
+ *   "type": "c8y_TemperatureMeasurement",
+ *   "time": "2024-01-15T10:30:00.000Z",
+ *   "source": { "id": "12345" },
+ *   "c8y_TemperatureMeasurement": { "T": { "value": 23.5, "unit": "C" } }
+ * }
+ *
+ * Expected output (DeviceMessage):
+ * {
+ *   "topic": "measurements/12345",
+ *   "payload": <binary: {"temperature": 23.5, "time": "<ISO timestamp>"}>
+ * }
  */
 
 /**

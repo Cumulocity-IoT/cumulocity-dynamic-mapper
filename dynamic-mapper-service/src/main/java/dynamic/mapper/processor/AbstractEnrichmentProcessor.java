@@ -77,6 +77,11 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
         ProcessingContext<?> context = exchange.getIn().getHeader("processingContext",
                 ProcessingContext.class);
 
+        if (context == null) {
+            log.warn("processingContext header is null - deserialization likely failed upstream, skipping enrichment");
+            return;
+        }
+
         // Extract focused contexts
         RoutingContext routing = context.getRoutingContext();
 

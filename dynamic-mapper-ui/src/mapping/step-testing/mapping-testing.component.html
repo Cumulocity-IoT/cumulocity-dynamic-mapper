@@ -19,171 +19,174 @@
 ~
 -->
 
-<div class="col-xs-12 flex-grow inner-scroll">
-  <div class="card-block p-b-0">
-    <div class="d-flex">
-      <div class="col-lg-5 col-lg-offset-1 col-md-5 col-md-offset-1 column-right-border">
-        <div class="form-group">
-          <div style="display: flex">
-            <label for="testResult" translate>{{ sourceSystem }} Payload&nbsp;</label>
+<div class="col-xs-12 flex-grow d-col">
+  <!-- Scrollable content area -->
+  <div class="flex-grow overflow-auto">
+    <div class="card-block p-b-0">
+      <div class="d-flex">
+        <div class="col-lg-5 col-lg-offset-1 col-md-5 col-md-offset-1 column-right-border">
+          <div class="form-group">
+            <div style="display: flex">
+              <label for="testResult" translate>{{ sourceSystem }} Payload&nbsp;</label>
+            </div>
+            <d11r-mapping-json-editor [options]="editorOptionsSource" (contentChanged)="onSourceTemplateChanged($event)"
+              [data]="testingModel.payload" [class]="'jse-main-tiny'" #editorTestingPayload id="editorTestingPayload">
+            </d11r-mapping-json-editor>
+            <c8y-messages>
+              @if (testingModel.errorMsg) {
+              <c8y-message translate><span class="text-warning">{{ testingModel.errorMsg
+                  }}</span>
+              </c8y-message>
+              }
+            </c8y-messages>
           </div>
-          <d11r-mapping-json-editor [options]="editorOptionsSource" (contentChanged)="onSourceTemplateChanged($event)"
-            [data]="testingModel.payload" [class]="'jse-main-tiny'" #editorTestingPayload id="editorTestingPayload">
-          </d11r-mapping-json-editor>
-          <c8y-messages>
-            @if (testingModel.errorMsg) {
-            <c8y-message translate><span class="text-warning">{{ testingModel.errorMsg
-                }}</span>
-            </c8y-message>
-            }
-          </c8y-messages>
+        </div>
+        <div class="col-lg-5 col-md-5 column-left-border">
+          <div class="form-group">
+            <div style="display: flex">
+              <label for="testResult" translate>{{ targetSystem }} Request&nbsp;</label>
+              @if ((selectedResult$ | async) > 0) {
+              <ng-container class="m-r-8">
+                <div class="m-l-auto">
+                  @if (testingModel.api) {
+                  <span class="tag tag--success m-b-4">{{
+                    testingModel.api
+                    }}</span>
+                  }
+                  @if (testingModel.publishTopic) {
+                  <span class="tag tag--info m-b-4">{{
+                    testingModel.publishTopic
+                    }}</span>
+                  }
+                </div>
+                <div>
+                  <span class="badge badge-success">{{
+                    selectedResult$ | async
+                    }}</span>
+                </div>
+              </ng-container>
+              }
+            </div>
+            <d11r-mapping-json-editor [options]="editorOptionsDefault" [data]="testingModel.request"
+              [class]="'jse-main-tiny'" #editorTestingRequest id="editorTestingRequest">
+            </d11r-mapping-json-editor>
+            <c8y-messages>
+              @if (testingModel.errorMsg) {
+              <c8y-message translate><span class="text-warning">{{ testingModel.errorMsg
+                  }}</span>
+              </c8y-message>
+              }
+            </c8y-messages>
+          </div>
         </div>
       </div>
-      <div class="col-lg-5 col-md-5 column-left-border">
-        <div class="form-group">
-          <div style="display: flex">
-            <label for="testResult" translate>{{ targetSystem }} Request&nbsp;</label>
-            @if ((selectedResult$ | async) > 0) {
-            <ng-container class="m-r-8">
+      @if (mapping.direction !== Direction.OUTBOUND && !isSubstitutionsAsCode(mapping)) {
+      <div class="d-flex">
+        <div class="form-block legend col-lg-10 col-lg-offset-1 col-md-10 col-md-offset-1">
+        </div>
+      </div>
+      }
+      @if (mapping.direction !== Direction.OUTBOUND && !isSubstitutionsAsCode(mapping)) {
+      <div class="d-flex">
+        <div class="col-lg-5 col-lg-offset-1 col-md-5 col-md-offset-1 column-right-border"></div>
+        <div class="col-lg-5 column-left-border">
+          <div class="form-group">
+            <div style="display: flex">
+              <label>{{ targetSystem }} Response&nbsp;</label>
+              @if ((selectedResult$ | async) > 0) {
               <div class="m-l-auto">
-                @if (testingModel.api) {
-                <span class="tag tag--success m-b-4">{{
-                  testingModel.api
-                  }}</span>
-                }
-                @if (testingModel.publishTopic) {
-                <span class="tag tag--info m-b-4">{{
-                  testingModel.publishTopic
-                  }}</span>
-                }
-              </div>
-              <div>
-                <span class="badge badge-success">{{
+                <span class="badge badge-success m-r-8"> {{
                   selectedResult$ | async
                   }}</span>
               </div>
-            </ng-container>
-            }
-          </div>
-          <d11r-mapping-json-editor [options]="editorOptionsDefault" [data]="testingModel.request"
-            [class]="'jse-main-tiny'" #editorTestingRequest id="editorTestingRequest">
-          </d11r-mapping-json-editor>
-          <c8y-messages>
-            @if (testingModel.errorMsg) {
-            <c8y-message translate><span class="text-warning">{{ testingModel.errorMsg
-                }}</span>
-            </c8y-message>
-            }
-          </c8y-messages>
-        </div>
-      </div>
-    </div>
-    @if (mapping.direction !== Direction.OUTBOUND && !isSubstitutionsAsCode(mapping)) {
-    <div class="d-flex">
-      <div class="form-block legend col-lg-10 col-lg-offset-1 col-md-10 col-md-offset-1">
-      </div>
-    </div>
-    }
-    @if (mapping.direction !== Direction.OUTBOUND && !isSubstitutionsAsCode(mapping)) {
-    <div class="d-flex">
-      <div class="col-lg-5 col-lg-offset-1 col-md-5 col-md-offset-1 column-right-border"></div>
-      <div class="col-lg-5 column-left-border">
-        <div class="form-group">
-          <div style="display: flex">
-            <label>{{ targetSystem }} Response&nbsp;</label>
-            @if ((selectedResult$ | async) > 0) {
-            <div class="m-l-auto">
-              <span class="badge badge-success m-r-8"> {{
-                selectedResult$ | async
-                }}</span>
+              }
             </div>
-            }
-          </div>
-          <d11r-mapping-json-editor [options]="editorOptionsDefault" [class]="'jse-main-tiny'"
-            [data]="testingModel.response" #editorTestingResponse id="editorTestingResponse">
-          </d11r-mapping-json-editor>
-          @if (!hasResponse && testingModel.results.length > 0) {
-          <c8y-messages>
-            <c8y-message translate type="info">
-              <span class="text-info">
-                <i class="fa fa-info-circle"></i> No response in test mode.
-                Data operations (MEASUREMENT, EVENT, ALARM) are prepared but not executed.
-                Use "Send Test Message" to get actual responses.
-              </span>
-            </c8y-message>
-          </c8y-messages>
-          }
-        </div>
-      </div>
-    </div>
-    }
-    @if (isSubstitutionsAsCode(mapping)) {
-    <div class="d-flex">
-      <div class="legend form-block col-lg-10 col-lg-offset-1 col-md-10 col-md-offset-1">
-      </div>
-    </div>
-    }
-    @if (isSubstitutionsAsCode(mapping) || requiresRawPayload()) {
-    <div class="d-flex">
-      <div class="col-lg-10 col-lg-offset-1 col-md-10 col-md-offset-1">
-        <div class="form-group">
-          <div style="display: flex">
-            <label>Console output</label>
-          </div>
-          <div class="console-output">
-            @if (isLoading) {
-            <span class="log-loading">Processing</span>
-            } @else if (testingModel.logs?.length) {
-            @for (line of testingModel.logs; track $index) {
-            <div [class]="'log-line log-' + getLogLevel(line)">{{ line }}</div>
-            }
-            } @else {
-            <span class="log-empty">No output yet</span>
+            <d11r-mapping-json-editor [options]="editorOptionsDefault" [class]="'jse-main-tiny'"
+              [data]="testingModel.response" #editorTestingResponse id="editorTestingResponse">
+            </d11r-mapping-json-editor>
+            @if (!hasResponse && testingModel.results.length > 0) {
+            <c8y-messages>
+              <c8y-message translate type="info">
+                <span class="text-info">
+                  <i class="fa fa-info-circle"></i> No response in test mode.
+                  Data operations (MEASUREMENT, EVENT, ALARM) are prepared but not executed.
+                  Use "Send Test Message" to get actual responses.
+                </span>
+              </c8y-message>
+            </c8y-messages>
             }
           </div>
         </div>
       </div>
-    </div>
-    }
-    <div class="d-flex sticky-buttons">
-      <div class="_col-lg-10">
-        <div class="btn-group">
-          <button type="button m-r-4" class="btn btn-default btn-sm m-r-8" (click)="onTestTransformation()"
-            [disabled]="!stepperConfiguration.allowTestTransformation || (testingModel.results.length > 0) || isLoading">
-            @if (isLoading && !isSubstitutionsAsCode(mapping) && !requiresRawPayload()) {
-            <i class="fa fa-circle-o-notch fa-spin m-r-4"></i>
-            }
-            Transform Test Message
-          </button>
-          <button type="button" class="btn btn-default btn-sm m-r-8" (click)="onNextTestResult()"
-            [disabled]="!stepperConfiguration.allowTestTransformation || testingModel.results.length <= 1">
-            Show Next Test Result&nbsp;@if (testingModel.results.length > 0) {
-            <span class="badge badge-success">
-              total {{ testingModel.results.length }}</span>
-            }
-          </button>
-          <button type="button" class="btn btn-default btn-sm m-r-8" (click)="onResetTransformation()"
-            [disabled]="!stepperConfiguration.allowTestTransformation || testingModel.results.length == 0">
-            Reset Transform
-          </button>
-          <button type="button" class="btn btn-default btn-sm" [disabled]="disableTestSending() || isLoading" (click)="onSendTest()">
-            @if (isLoading && !isSubstitutionsAsCode(mapping) && !requiresRawPayload()) {
-            <i class="fa fa-circle-o-notch fa-spin m-r-4"></i>
-            }
-            Send Test Message
-          </button>
-          <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
-            popover="{{'Send Test Message is only supported for mappings that use an external id!'}}" triggers="focus"
-            type="button" container="body" allow></button>
-          @if (mapping.direction !== Direction.OUTBOUND) {
-          <label class="c8y-checkbox m-l-16 m-b-0" title="Create a real device in C8Y inventory before sending (tagged d11r_testDevice)">
-            <input type="checkbox" [(ngModel)]="createTestDevice" [disabled]="disableTestSending()" />
-            <span></span>
-            <span translate>Create test device</span>
-          </label>
-          }
+      }
+      @if (isSubstitutionsAsCode(mapping)) {
+      <div class="d-flex">
+        <div class="legend form-block col-lg-10 col-lg-offset-1 col-md-10 col-md-offset-1">
         </div>
       </div>
+      }
+      @if (isSubstitutionsAsCode(mapping) || requiresRawPayload() || testingModel.logs?.length > 0) {
+      <div class="d-flex">
+        <div class="col-lg-10 col-lg-offset-1 col-md-10 col-md-offset-1">
+          <div class="form-group">
+            <div style="display: flex">
+              <label>Console output</label>
+            </div>
+            <div class="console-output">
+              @if (isLoading) {
+              <span class="log-loading">Processing</span>
+              } @else if (testingModel.logs?.length) {
+              @for (line of testingModel.logs; track $index) {
+              <div [class]="'log-line log-' + getLogLevel(line)">{{ line }}</div>
+              }
+              } @else {
+              <span class="log-empty">No output yet</span>
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+      }
+    </div>
+  </div>
+
+  <!-- Pinned button bar — sits below the scroll area, always visible -->
+  <div class="d-flex separator p-t-8 p-b-8 flex-no-shrink" style="justify-content: center;">
+    <div class="btn-group">
+      <button type="button" class="btn btn-default btn-sm m-r-8" (click)="onTestTransformation()"
+        [disabled]="!stepperConfiguration.allowTestTransformation || (testingModel.results.length > 0) || isLoading">
+        @if (isLoading && !isSubstitutionsAsCode(mapping) && !requiresRawPayload()) {
+        <i class="fa fa-circle-o-notch fa-spin m-r-4"></i>
+        }
+        Transform Test Message
+      </button>
+      <button type="button" class="btn btn-default btn-sm m-r-8" (click)="onNextTestResult()"
+        [disabled]="!stepperConfiguration.allowTestTransformation || testingModel.results.length <= 1">
+        Show Next Test Result&nbsp;@if (testingModel.results.length > 0) {
+        <span class="badge badge-success">
+          total {{ testingModel.results.length }}</span>
+        }
+      </button>
+      <button type="button" class="btn btn-default btn-sm m-r-8" (click)="onResetTransformation()"
+        [disabled]="!stepperConfiguration.allowTestTransformation || testingModel.results.length == 0">
+        Reset Transform
+      </button>
+      <button type="button" class="btn btn-default btn-sm" [disabled]="disableTestSending() || isLoading" (click)="onSendTest()">
+        @if (isLoading && !isSubstitutionsAsCode(mapping) && !requiresRawPayload()) {
+        <i class="fa fa-circle-o-notch fa-spin m-r-4"></i>
+        }
+        Send Test Message
+      </button>
+      <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
+        popover="{{'Send Test Message is only supported for mappings that use an external id!'}}" triggers="focus"
+        type="button" container="body" allow></button>
+      @if (mapping.direction !== Direction.OUTBOUND) {
+      <label class="c8y-checkbox m-l-16 m-b-0" title="Create a real device in C8Y inventory before sending (tagged d11r_testDevice)">
+        <input type="checkbox" [(ngModel)]="createTestDevice" [disabled]="disableTestSending()" />
+        <span></span>
+        <span translate>Create test device</span>
+      </label>
+      }
     </div>
   </div>
 </div>

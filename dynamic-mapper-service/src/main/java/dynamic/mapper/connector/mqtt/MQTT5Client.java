@@ -48,6 +48,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.TimeUnit;
 
 /**
  * MQTT 5.0 Connector Client.
@@ -98,7 +99,10 @@ public class MQTT5Client extends AMQTTClient {
         Mqtt5ClientBuilder builder = Mqtt5Client.builder()
                 .serverHost(mqttHost)
                 .serverPort(mqttPort)
-                .identifier(clientId + (additionalSubscriptionIdTest != null ? additionalSubscriptionIdTest : ""));
+                .identifier(clientId + (additionalSubscriptionIdTest != null ? additionalSubscriptionIdTest : ""))
+                .transportConfig()
+                    .socketConnectTimeout(10, TimeUnit.SECONDS)
+                    .applyTransportConfig();
 
         // Add authentication if provided
         if (!StringUtils.isEmpty(user)) {
@@ -132,42 +136,32 @@ public class MQTT5Client extends AMQTTClient {
             log.debug("{} - Using WebSocket with path: {}", tenant, serverPath);
         }
 
-        // Add listeners (using base class synchronization)
+        // Add listeners — detection only, housekeeping owns all reconnect scheduling
         mqttClient = builder
                 .addDisconnectedListener(context -> {
                     boolean wasConnected = connectionStateManager.isConnected();
+                    //We should always log when a client is disconnected!
+                    log.info("{} - MQTT5 client disconnected (reason: {})", tenant, context.getCause().getMessage());
                     connectionStateManager.setConnected(false);
 
-                    // Check if we should reconnect (using base class intentionalDisconnect flag)
-                    boolean shouldReconnect;
+                    boolean unexpected;
                     synchronized (disconnectionLock) {
-                        shouldReconnect = !intentionalDisconnect &&
-                                !isDisconnecting &&
-                                connectorConfiguration.getEnabled() &&
-                                wasConnected;
+                        unexpected = !intentionalDisconnect && !isDisconnecting &&
+                                connectorConfiguration.getEnabled() && wasConnected;
                     }
 
-                    if (shouldReconnect) {
-                        log.warn("{} - Unexpected disconnection, attempting to reconnect", tenant);
-                        virtualThreadPool.submit(() -> {
-                            try {
-                                Thread.sleep(5000);
-                                connect();
-                            } catch (InterruptedException e) {
-                                Thread.currentThread().interrupt();
-                                log.debug("{} - Reconnection interrupted", tenant);
-                            } catch (Exception e) {
-                                log.error("{} - Error during reconnection", tenant, e);
-                            }
-                        });
+                    if (unexpected) {
+                        nextReconnectTimeMs = System.currentTimeMillis(); // reconnect on next housekeeping cycle
+                        log.warn("{} - Unexpected disconnection detected, housekeeping will reconnect", tenant);
                     } else {
-                        log.debug(
-                                "{} - Intentional disconnect or not reconnecting (intentional={}, disconnecting={}, enabled={}, wasConnected={})",
+                        log.info("{} - Intentional disconnect (intentional={}, disconnecting={}, enabled={}, wasConnected={})",
                                 tenant, intentionalDisconnect, isDisconnecting,
                                 connectorConfiguration.getEnabled(), wasConnected);
                     }
                 })
                 .addConnectedListener(context -> {
+                    reconnectAttempt = 0;
+                    nextReconnectTimeMs = Long.MAX_VALUE;
                     connectionStateManager.setConnected(true);
                     log.info("{} - MQTT5 client connected", tenant);
                 })
@@ -216,17 +210,10 @@ public class MQTT5Client extends AMQTTClient {
                 log.info("{} - MQTT5 client connected successfully to {}:{}",
                         tenant, mqttClient.getConfig().getServerHost(), mqttClient.getConfig().getServerPort());
 
-                // Log MQTT5 specific connection properties
                 if (ack.isSessionPresent()) {
                     log.info("{} - MQTT5 session present, reusing existing session", tenant);
                 } else {
                     log.info("{} - MQTT5 new session created", tenant);
-                }
-
-                // Log received properties if any
-                if (ack.getSessionExpiryInterval().isPresent()) {
-                    log.debug("{} - Session expiry interval: {} seconds",
-                            tenant, ack.getSessionExpiryInterval().getAsLong());
                 }
 
             } catch (Exception e) {
@@ -415,9 +402,15 @@ public class MQTT5Client extends AMQTTClient {
 
     @Override
     protected void connectorSpecificHousekeeping(String tenant) {
-        // MQTT5-specific housekeeping tasks
-        if (mqttClient != null && !mqttClient.getState().isConnected() && shouldConnect()) {
-            log.warn("{} - MQTT5 client is disconnected (state will be handled by connection manager)", tenant);
+        if (mqttClient != null && !mqttClient.getState().isConnected() && shouldConnect() && !isConnecting) {
+            long now = System.currentTimeMillis();
+            if (now >= nextReconnectTimeMs) {
+                int attempt = ++reconnectAttempt;
+                long delay = Math.min((long) attempt * RECONNECT_DELAY_STEP_MS, RECONNECT_DELAY_MAX_MS);
+                nextReconnectTimeMs = now + delay;
+                log.warn("{} - MQTT5 client disconnected, reconnect attempt {} (next in {} ms)", tenant, attempt, delay);
+                virtualThreadPool.submit(this::connect);
+            }
         }
     }
 

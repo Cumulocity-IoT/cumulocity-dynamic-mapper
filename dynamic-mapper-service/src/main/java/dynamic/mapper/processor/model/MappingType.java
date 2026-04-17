@@ -26,8 +26,12 @@ public enum MappingType {
     FLAT_FILE("FLAT_FILE"),
     HEX("HEX"),
     PROTOBUF_INTERNAL("PROTOBUF_INTERNAL"),
+    /** @deprecated Use {@link #ANY_PAYLOAD} with {@link TransformationType#EXTENSION_JAVA} instead.
+     *  Retained for on-the-fly data migration only; will be removed in a future release. */
+    @Deprecated
     EXTENSION_JAVA("EXTENSION_JAVA"),
     CODE_BASED("CODE_BASED"),
+    ANY_PAYLOAD("ANY_PAYLOAD"),
     ;
 
     public final String name;

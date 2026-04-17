@@ -246,6 +246,15 @@ public class JavaExtensionContextImpl implements JavaExtensionContext {
     }
 
     @Override
+    public Value getState(String key, Object defaultValue) {
+        if (dataPrepContext != null) {
+            return dataPrepContext.getState(key, defaultValue);
+        }
+        log.warn("{} - getState(key, default) called but DataPrepContext not available", tenant);
+        return Value.asValue(defaultValue);
+    }
+
+    @Override
     public Value getStateAll() {
         if (dataPrepContext != null) {
             return dataPrepContext.getStateAll();

@@ -28,6 +28,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingState;
 import dynamic.mapper.processor.model.RoutingContext;
@@ -79,6 +80,18 @@ public abstract class AbstractSnoopingProcessor extends CommonProcessor {
      * @param context The processing context containing the payload
      */
     protected void handleSnooping(String tenant, Mapping mapping, ProcessingContext<?> context) {
+        if (mapping == null) {
+            log.warn("{} - Skipping snooping — mapping is null", tenant);
+            return;
+        }
+
+        // ANY_PAYLOAD payloads are raw protobuf/binary data — snooping them as JSON templates is meaningless.
+        if (MappingType.ANY_PAYLOAD.equals(mapping.getMappingType())) {
+            log.debug("{} - Skipping snooping for mapping {} — ANY_PAYLOAD payloads cannot be stored as a template",
+                    tenant, mapping.getName());
+            return;
+        }
+
         try {
             MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
 

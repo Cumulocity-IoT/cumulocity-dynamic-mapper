@@ -9,7 +9,20 @@ import {
   OutboundMessage,
   SmartFunctionContext,
   DeviceMessage,
+  C8yMeasurement,
 } from '../types';
+
+/**
+ * Declare the exact measurement shape expected from Cumulocity.
+ * Extending C8yMeasurement gives full type safety on the custom fragments
+ * without any bracket-notation casting — the same pattern as getManagedObject<T>.
+ *
+ * Exported so TypeScript can reference it when this function is re-exported.
+ */
+export interface SteamAndHumidityMeasurement extends C8yMeasurement {
+  c8y_TemperatureMeasurement?: { T?: { value: number; unit: string } };
+  c8y_HumidityMeasurement?: { H?: { value: number; unit: string } };
+}
 
 /**
  * @name Smart Function with Data Transformation (TypeScript)
@@ -22,6 +35,31 @@ import {
  * - Custom payload formatting
  * - Using Kafka transport fields
  * - Type-safe payload construction
+ *
+ * Sample payload (Cumulocity measurement triggering this function):
+ * {
+ *   "id": "98765",
+ *   "type": "c8y_TemperatureMeasurement",
+ *   "time": "2024-01-15T10:30:00.000Z",
+ *   "source": { "id": "12345" },
+ *   "c8y_TemperatureMeasurement": { "T": { "value": 23.5, "unit": "C" } },
+ *   "c8y_HumidityMeasurement": { "H": { "value": 65.0, "unit": "%" } }
+ * }
+ *
+ * Expected output (DeviceMessage):
+ * {
+ *   "topic": "device/12345/measurements",
+ *   "payload": <binary: {
+ *     "timestamp": "<ISO timestamp>",
+ *     "deviceId": "12345",
+ *     "sensors": {
+ *       "temperature": { "value": 23.5, "unit": "C" },
+ *       "humidity": { "value": 65.0, "unit": "%" }
+ *     },
+ *     "metadata": { "type": "c8y_TemperatureMeasurement", "source": "cumulocity" }
+ *   }>,
+ *   "transportFields": { "key": "12345", "content-type": "application/json" }
+ * }
  */
 
 /**
@@ -48,9 +86,11 @@ interface CustomDevicePayload {
 
 /**
  * Smart Function that transforms Cumulocity measurements to custom device format.
+ * Uses `SmartFunctionOut<'measurement', SteamAndHumidityMeasurement>` so that
+ * `msg.payload` is fully typed — no bracket notation or manual casting needed.
  */
-const onMessage: SmartFunctionOut = (
-  msg: OutboundMessage,
+const onMessage: SmartFunctionOut<'measurement', SteamAndHumidityMeasurement> = (
+  msg: OutboundMessage<'measurement', SteamAndHumidityMeasurement>,
   context: SmartFunctionContext
 ): DeviceMessage => {
   const payload = msg.payload;
@@ -59,10 +99,10 @@ const onMessage: SmartFunctionOut = (
   console.log('Processing Cumulocity payload:', payload);
 
   // Extract device ID — prefer msg.sourceId (populated by the runtime from the processing
-  // context) over payload['source']['id'] to avoid failures when the source template
+  // context) over payload.source?.id to avoid failures when the source template
   // does not include the 'source' field.
-  const sourceId = msg.sourceId ?? payload['source']?.['id'] ?? 'unknown';
-  const measurementType = payload['type'] || 'unknown';
+  const sourceId = msg.sourceId ?? payload.source?.id ?? 'unknown';
+  const measurementType = payload.type || 'unknown';
 
   // Build custom device payload
   const customPayload: CustomDevicePayload = {
@@ -75,26 +115,22 @@ const onMessage: SmartFunctionOut = (
     },
   };
 
-  // Transform temperature data if available
-  if (payload['c8y_TemperatureMeasurement']) {
-    const tempData = payload['c8y_TemperatureMeasurement']['T'];
-    if (tempData) {
-      customPayload.sensors.temperature = {
-        value: tempData['value'],
-        unit: tempData['unit'] || 'C',
-      };
-    }
+  // Transform temperature data if available — fully typed, no bracket notation
+  const tempData = payload.c8y_TemperatureMeasurement?.T;
+  if (tempData) {
+    customPayload.sensors.temperature = {
+      value: tempData.value,
+      unit: tempData.unit || 'C',
+    };
   }
 
-  // Transform humidity data if available
-  if (payload['c8y_HumidityMeasurement']) {
-    const humData = payload['c8y_HumidityMeasurement']['H'];
-    if (humData) {
-      customPayload.sensors.humidity = {
-        value: humData['value'],
-        unit: humData['unit'] || '%',
-      };
-    }
+  // Transform humidity data if available — fully typed, no bracket notation
+  const humData = payload.c8y_HumidityMeasurement?.H;
+  if (humData) {
+    customPayload.sensors.humidity = {
+      value: humData.value,
+      unit: humData.unit || '%',
+    };
   }
 
   console.log('Transformed payload:', customPayload);

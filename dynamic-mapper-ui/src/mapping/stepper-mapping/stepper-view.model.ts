@@ -110,7 +110,9 @@ export class StepperViewModelFactory {
 
     return {
       // Consolidate OR conditions into computed properties
-      showSourceEditor: config.showEditorSource || config.showCodeEditor || false,
+      showSourceEditor: config.showEditorSource === false
+        ? false
+        : (config.showEditorSource || config.showCodeEditor || false),
       showTargetEditor: config.showEditorTarget || false,
       showExtensionSelectors,
       showExtensionSelectorsSource,

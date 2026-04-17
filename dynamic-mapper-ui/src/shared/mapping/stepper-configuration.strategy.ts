@@ -89,36 +89,24 @@ const CONFIGURATION_OVERRIDES: StepperConfigurationOverride[] = [
       showEditorTarget: false,
       allowTestSending: true,
       allowTestTransformation: true,
+      allowDefiningSubstitutions: false,
+      allowNoDefinedIdentifier: true,
       advanceFromStepToEndStep: 2
     }
   },
   {
     condition: (ctx) =>
-      ctx.mappingType === MappingType.EXTENSION_JAVA &&
-      ctx.transformationType === TransformationType.EXTENSION_JAVA &&
-      ctx.direction === Direction.OUTBOUND,
-    properties: {
-      showProcessorExtensionsSource: false
-    }
-  },
-  {
-    condition: (ctx) =>
       ctx.transformationType === TransformationType.EXTENSION_JAVA &&
       ctx.direction === Direction.INBOUND,
     properties: {
+      showProcessorExtensionsSource: true,
       showEditorTarget: false,
       showFilterExpression: false,
       allowTestSending: true,
-      allowTestTransformation: true
-    }
-  },
-  {
-    condition: (ctx) =>
-      ctx.mappingType === MappingType.EXTENSION_JAVA &&
-      ctx.direction === Direction.INBOUND,
-    properties: {
-      showEditorTarget: false,
-      showFilterExpression: false
+      allowTestTransformation: true,
+      allowDefiningSubstitutions: false,
+      allowNoDefinedIdentifier: true,
+      advanceFromStepToEndStep: 2
     }
   },
   {
@@ -155,6 +143,21 @@ const CONFIGURATION_OVERRIDES: StepperConfigurationOverride[] = [
     condition: (ctx) => ctx.transformationType === TransformationType.CODE_BASED,
     properties: {
       allowTemplateExpansion: false
+    }
+  },
+  {
+    // ANY_PAYLOAD + SMART_FUNCTION: binary payload cannot be test-sent as JSON,
+    // and the source editor is meaningless. Re-disable what the SMART_FUNCTION
+    // override above re-enabled.
+    // ANY_PAYLOAD + EXTENSION_JAVA is intentionally excluded — the EXTENSION_JAVA
+    // overrides above already set allowTestSending/allowTestTransformation correctly.
+    condition: (ctx) =>
+      ctx.mappingType === MappingType.ANY_PAYLOAD &&
+      ctx.transformationType === TransformationType.SMART_FUNCTION,
+    properties: {
+      allowTestSending: false,
+      allowTestTransformation: false,
+      showEditorSource: false
     }
   }
 ];

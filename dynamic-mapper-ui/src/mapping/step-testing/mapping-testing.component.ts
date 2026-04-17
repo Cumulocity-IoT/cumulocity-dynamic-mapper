@@ -347,7 +347,8 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     // Convert request and response from JSON string to object for all items
     this.testingModel.results = result.requests.map(req => this.parseRequestResponse(req));
     const staticLogs = this.testingModel.logs?.filter(l => l.startsWith('INFO')) ?? [];
-    this.testingModel.logs = [...staticLogs, ...(result.logs ?? [])];
+    const warningLogs = (result.warnings ?? []).map(w => `WARNING: ${w}`);
+    this.testingModel.logs = [...staticLogs, ...(result.logs ?? []), ...warningLogs];
 
     return result;
   }
@@ -373,12 +374,6 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
           return;
         }
       }
-      result.warnings
-        .filter(w => !w.includes('createNonExistingDevice is disabled'))
-        .forEach(warning => {
-          this.alertService.warning(`Test completed with warning: ${warning}`);
-        });
-      return;
     }
 
     if (sendPayload) {
@@ -462,7 +457,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
   getLogLevel(line: string): string {
     if (line.startsWith('JS ERROR:')) return 'error';
-    if (line.startsWith('JS WARN:')) return 'warn';
+    if (line.startsWith('JS WARN:') || line.startsWith('WARNING:')) return 'warn';
     if (line.startsWith('JS DEBUG:')) return 'debug';
     if (line.startsWith('INFO')) return 'info';
     return 'log';

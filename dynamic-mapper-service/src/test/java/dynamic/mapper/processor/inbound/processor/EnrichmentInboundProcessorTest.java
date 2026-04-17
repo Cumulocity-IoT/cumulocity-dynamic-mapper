@@ -243,8 +243,8 @@ class EnrichmentInboundProcessorTest {
         when(message.getHeader("processingContext", ProcessingContext.class)).thenReturn(null);
         mapping.setMappingType(MappingType.JSON);
 
-        // When & Then
-        assertThrows(Exception.class, () -> processor.process(exchange));
+        // When & Then - null context is handled gracefully (upstream deserialization failure)
+        assertDoesNotThrow(() -> processor.process(exchange));
     }
 
     @Test

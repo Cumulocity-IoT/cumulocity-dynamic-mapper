@@ -364,7 +364,7 @@ function mappings_delete() {
 function connectors_delete() {
   check_prerequisites
   echo 'Delete connectors'
-  c8y tenantoptions getForCategory --category $TENANT_OPTIONS_CATEGORY | jq 'keys| .[] | select(startswith("credentials.connection.configuration"))' -r | c8y tenantoptions delete --category $TENANT_OPTIONS_CATEGORY --key -.key
+  c8y tenantoptions getForCategory --category $TENANT_OPTIONS_CATEGORY | jq 'keys[] | select(startswith("credentials.connection.")) | {key: .}' | c8y tenantoptions delete --category $TENANT_OPTIONS_CATEGORY --key -.key
 }
 
 function connectors_list() {
@@ -376,7 +376,7 @@ function connectors_list() {
 function configurations_delete() {
   check_prerequisites
   echo 'Delete configurations'
-  c8y tenantoptions getForCategory --category $TENANT_OPTIONS_CATEGORY | jq 'keys| .[] | select(startswith("service.configuration"))' -r | c8y tenantoptions delete --category $TENANT_OPTIONS_CATEGORY --key -.key
+  c8y tenantoptions getForCategory --category $TENANT_OPTIONS_CATEGORY | jq 'keys[] | select(startswith("service.configuration")) | {key: .}' | c8y tenantoptions delete --category $TENANT_OPTIONS_CATEGORY --key -.key
 }
 
 function configurations_list() {

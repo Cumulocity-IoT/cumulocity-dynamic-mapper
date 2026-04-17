@@ -1029,21 +1029,15 @@ public abstract class AConnectorClient {
      * @return CompletableFuture for the connection task (never returns null)
      */
     public CompletableFuture<Void> reconnect() {
-        log.info("{} - Starting reconnection sequence", tenant);
+        log.info("{} - Starting reconnection sequence for {}", tenant, connectorName);
         return CompletableFuture.runAsync(() -> {
             try {
-                log.debug("{} - Reconnect: disconnecting", tenant);
                 submitDisconnect().get();
-
-                log.debug("{} - Reconnect: initializing", tenant);
                 submitInitialize().get();
-
-                log.debug("{} - Reconnect: connecting", tenant);
                 submitConnect().get();
-
-                log.info("{} - Reconnection completed successfully", tenant);
+                log.info("{} - Reconnection completed successfully for {}", tenant, connectorName);
             } catch (Exception e) {
-                log.error("{} - Reconnection failed: {}", tenant, e.getMessage(), e);
+                log.error("{} - Reconnection failed for {}: {}", tenant, connectorName, e.getMessage(), e);
                 connectionStateManager.updateStatusWithError(e);
                 throw new CompletionException(e);
             }

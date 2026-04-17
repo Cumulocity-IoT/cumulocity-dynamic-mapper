@@ -1,0 +1,19 @@
+<hivemq>
+  <listeners>
+    <tcp-listener>
+      <port>1883</port>
+      <bind-address>0.0.0.0</bind-address>
+    </tcp-listener>
+    <tls-tcp-listener>
+      <port>8883</port>
+      <bind-address>0.0.0.0</bind-address>
+      <tls>
+        <keystore>
+          <path>/opt/hivemq/conf/keystore.jks</path>
+          <password>changeme</password>
+          <private-key-password>changeme</private-key-password>
+        </keystore>
+      </tls>
+    </tls-tcp-listener>
+  </listeners>
+</hivemq>

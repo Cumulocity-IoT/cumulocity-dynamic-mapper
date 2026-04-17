@@ -130,6 +130,75 @@ public class ServiceConfigurationService {
         configuration.setCodeTemplates(codeTemplates);
     }
 
+    /**
+     * Scans classpath templates and adds any that are not yet present in the stored
+     * configuration (matched by {@code @name}).  Called on startup when templates
+     * already exist, so newly deployed internal templates are picked up automatically
+     * without requiring a manual "Reset System Templates" operation.
+     *
+     * @return {@code true} if at least one template was added (caller should persist)
+     */
+    public boolean addMissingInternalTemplates(ServiceConfiguration configuration) {
+        Map<String, CodeTemplate> codeTemplates = configuration.getCodeTemplates();
+        if (codeTemplates == null) {
+            codeTemplates = new HashMap<>();
+            configuration.setCodeTemplates(codeTemplates);
+        }
+
+        // Index existing template names for O(1) duplicate check, regardless of origin,
+        // because templates are matched by @name.
+        Set<String> existingNames = codeTemplates.values().stream()
+                .map(t -> t.name != null ? t.name.toLowerCase() : "")
+                .collect(Collectors.toSet());
+
+        // Track which templateTypes already have a default registered
+        Map<TemplateType, Boolean> defaultTemplateRegistered = new EnumMap<>(TemplateType.class);
+        for (TemplateType type : TemplateType.values()) {
+            boolean alreadyHasDefault = codeTemplates.values().stream()
+                    .anyMatch(t -> t.templateType == type && t.defaultTemplate);
+            defaultTemplateRegistered.put(type, alreadyHasDefault);
+        }
+
+        Resource[] resources;
+        try {
+            ResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
+            resources = resolver.getResources("classpath:templates/template*.js");
+        } catch (IOException e) {
+            log.error("Failed to load template resources during migration check", e);
+            return false;
+        }
+
+        boolean anyAdded = false;
+        for (Resource resource : resources) {
+            try {
+                if (resource.getFilename() == null) continue;
+
+                // Peek at the header only to extract the @name for duplicate check
+                String content;
+                try (InputStream is = resource.getInputStream()) {
+                    content = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+                }
+                int headerEnd = findJSDocHeaderEnd(content);
+                String header = (headerEnd != -1) ? content.substring(0, headerEnd) : content;
+                String name = extractAnnotation(header, "@name");
+
+                if (name != null && existingNames.contains(name.toLowerCase())) {
+                    continue; // Already stored — skip
+                }
+
+                int sizeBefore = codeTemplates.size();
+                loadTemplate(resource, codeTemplates, defaultTemplateRegistered);
+                if (codeTemplates.size() > sizeBefore) {
+                    log.info("Added new internal template on startup: {}", name);
+                    anyAdded = true;
+                }
+            } catch (Exception e) {
+                log.error("Failed to check/add template: {}", resource.getFilename(), e);
+            }
+        }
+        return anyAdded;
+    }
+
     private void loadTemplate(Resource resource, Map<String, CodeTemplate> codeTemplates,
             Map<TemplateType, Boolean> defaultTemplateRegistered) throws IOException {
         String fileName = resource.getFilename();

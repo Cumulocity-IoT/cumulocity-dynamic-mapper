@@ -255,16 +255,41 @@ public class MappingRepository {
                 }
             }
 
+            // Migrate deprecated EXTENSION_JAVA mappingType to ANY_PAYLOAD + TransformationType.EXTENSION_JAVA
+            if (MappingType.EXTENSION_JAVA.equals(mapping.getMappingType())) {
+                String moId = mo.getId() != null ? mo.getId().getValue() : "unknown";
+                log.info("{} - Migrating deprecated EXTENSION_JAVA mappingType for mapping {} to ANY_PAYLOAD with EXTENSION_JAVA transformation",
+                        tenant, moId);
+
+                mapping.setMappingType(MappingType.ANY_PAYLOAD);
+                mapping.setTransformationType(TransformationType.EXTENSION_JAVA);
+
+                try {
+                    mappingService.updateMapping(tenant, mapping, true, true);
+                    String migrationMsg = String.format(
+                            "Mapping %s [%s] was automatically migrated: mappingType EXTENSION_JAVA → ANY_PAYLOAD, transformationType → EXTENSION_JAVA",
+                            mapping.getName(), moId);
+                    configurationRegistry.getC8yAgent().createOperationEvent(
+                            migrationMsg,
+                            LoggingEventType.MAPPING_MIGRATION_EVENT_TYPE,
+                            DateTime.now(),
+                            tenant,
+                            null);
+                } catch (Exception updateEx) {
+                    log.warn("{} - Failed to persist migrated mapping {}: {}", tenant, moId, updateEx.getMessage());
+                }
+            }
+
             if (Direction.INBOUND.equals(mapping.getDirection()) && mapping.getMappingTopic() == null) {
                 log.warn("{} - Mapping {} has no mappingTopic, skipping", tenant, mapping.getId());
                 return Optional.empty();
             }
 
-            if (MappingType.EXTENSION_JAVA.equals(mapping.getMappingType()) && mapping.getExtension() == null) {
+            if (TransformationType.EXTENSION_JAVA.equals(mapping.getTransformationType()) && mapping.getExtension() == null) {
                 String moId = mo.getId() != null ? mo.getId().getValue() : null;
                 String deduplicationKey = tenant + ":" + moId;
                 String errorMsg = String.format(
-                        "Mapping %s [%s] has mappingType EXTENSION_JAVA but no extension defined - skipping",
+                        "Mapping %s [%s] has transformationType EXTENSION_JAVA but no extension defined - skipping",
                         mapping.getName(), moId);
                 if (reportedLoadingWarnings.add(deduplicationKey)) {
                     log.warn("{} - {}", tenant, errorMsg);

@@ -37,6 +37,26 @@ import {
  * - IntelliSense: Get autocomplete suggestions
  * - Documentation: Inline JSDoc comments
  * - Refactoring: Safe renaming and refactoring
+ *
+ * Sample payload (Cumulocity measurement triggering this function):
+ * {
+ *   "id": "98765",
+ *   "type": "c8y_TemperatureMeasurement",
+ *   "time": "2024-01-15T10:30:00.000Z",
+ *   "source": { "id": "12345" },
+ *   "c8y_TemperatureMeasurement": { "T": { "value": 23.5, "unit": "C" } }
+ * }
+ *
+ * Requires the mapping to have 'useExternalId' enabled with 'externalIdType' set
+ * (e.g. 'c8y_Serial'), so that context.getConfig().externalId resolves to the
+ * external ID of the source device (e.g. "sensor-berlin-01").
+ *
+ * Expected output (DeviceMessage):
+ * {
+ *   "topic": "measurements/sensor-berlin-01",
+ *   "payload": <binary: {"time": "<ISO timestamp>", "c8y_Steam": {"Temperature": {"unit": "C", "value": 23.5}}}>,
+ *   "transportFields": { "key": "sensor-berlin-01" }
+ * }
  */
 
 /**

@@ -58,3 +58,6 @@ USERGUIDE.html
 .claude/settings.json
 resources/test-env/amqp/setup.sh
 dynamic-mapper-service/src/main/resources/application-dev.properties
+resources/test-env/hivemq/keystore.jks
+resources/test-env/hivemq/hivemq-conf/keystore.jks
+CLAUDE.md

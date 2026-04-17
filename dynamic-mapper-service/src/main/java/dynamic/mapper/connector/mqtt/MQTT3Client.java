@@ -47,6 +47,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.TimeUnit;
 
 /**
  * MQTT 3.1.1 Connector Client.
@@ -97,7 +98,10 @@ public class MQTT3Client extends AMQTTClient {
         Mqtt3ClientBuilder builder = Mqtt3Client.builder()
                 .serverHost(mqttHost)
                 .serverPort(mqttPort)
-                .identifier(clientId + (additionalSubscriptionIdTest != null ? additionalSubscriptionIdTest : ""));
+                .identifier(clientId + (additionalSubscriptionIdTest != null ? additionalSubscriptionIdTest : ""))
+                .transportConfig()
+                    .socketConnectTimeout(10, TimeUnit.SECONDS)
+                    .applyTransportConfig();
 
         // Add authentication if provided
         if (!StringUtils.isEmpty(user)) {
@@ -131,45 +135,33 @@ public class MQTT3Client extends AMQTTClient {
             log.debug("{} - Using WebSocket with path: {}", tenant, serverPath);
         }
 
-        // Add listeners (using base class synchronization)
+        // Add listeners — detection only, housekeeping owns all reconnect scheduling
         mqttClient = builder
                 .addDisconnectedListener(context -> {
+                    //We should always log when a client is disconnected!
+                    log.info("{} - MQTT3 client disconnected (reason: {})", tenant, context.getCause().getMessage());
                     boolean wasConnected = connectionStateManager.isConnected();
                     connectionStateManager.setConnected(false);
 
-                    // Check if we should reconnect (using base class intentionalDisconnect flag)
-                    boolean shouldReconnect;
+                    boolean unexpected;
                     synchronized (disconnectionLock) {
-                        shouldReconnect = !intentionalDisconnect &&
-                                !isDisconnecting &&
-                                connectorConfiguration.getEnabled() &&
-                                wasConnected;
-                        if (shouldReconnect) {
-                            isConnecting = true;
-                        }
+                        unexpected = !intentionalDisconnect && !isDisconnecting &&
+                                connectorConfiguration.getEnabled() && wasConnected;
                     }
 
-                    if (shouldReconnect) {
-                        log.warn("{} - Unexpected disconnection, attempting to reconnect", tenant);
-                        virtualThreadPool.submit(() -> {
-                            try {
-                                Thread.sleep(5000);
-                                connect();
-                            } catch (InterruptedException e) {
-                                Thread.currentThread().interrupt();
-                                log.debug("{} - Reconnection interrupted", tenant);
-                            } catch (Exception e) {
-                                log.error("{} - Error during reconnection", tenant, e);
-                            }
-                        });
+                    if (unexpected) {
+                        nextReconnectTimeMs = System.currentTimeMillis(); // reconnect on next housekeeping cycle
+                        log.warn("{} - Unexpected disconnection detected, housekeeping will reconnect", tenant);
                     } else {
-                        log.debug(
+                        log.info(
                                 "{} - Intentional disconnect or not reconnecting (intentional={}, disconnecting={}, enabled={}, wasConnected={})",
                                 tenant, intentionalDisconnect, isDisconnecting,
                                 connectorConfiguration.getEnabled(), wasConnected);
                     }
                 })
                 .addConnectedListener(context -> {
+                    reconnectAttempt = 0;
+                    nextReconnectTimeMs = Long.MAX_VALUE;
                     connectionStateManager.setConnected(true);
                     log.info("{} - MQTT3 client connected", tenant);
                 })
@@ -220,7 +212,7 @@ public class MQTT3Client extends AMQTTClient {
 
             } catch (Exception e) {
                 attempt++;
-                log.error("{} - Connection attempt {} failed: {}", tenant, attempt, e);
+                log.error("{} - Connection attempt {} failed: {}", tenant, attempt, e.getMessage());
 
                 if (attempt >= maxAttempts) {
                     connectionStateManager.updateStatusWithError(e);
@@ -382,9 +374,15 @@ public class MQTT3Client extends AMQTTClient {
 
     @Override
     protected void connectorSpecificHousekeeping(String tenant) {
-        // MQTT3-specific housekeeping tasks
-        if (mqttClient != null && !mqttClient.getState().isConnected() && shouldConnect()) {
-            log.warn("{} - MQTT3 client is disconnected (state will be handled by connection manager)", tenant);
+        if (mqttClient != null && !mqttClient.getState().isConnected() && shouldConnect() && !isConnecting) {
+            long now = System.currentTimeMillis();
+            if (now >= nextReconnectTimeMs) {
+                int attempt = ++reconnectAttempt;
+                long delay = Math.min((long) attempt * RECONNECT_DELAY_STEP_MS, RECONNECT_DELAY_MAX_MS);
+                nextReconnectTimeMs = now + delay;
+                log.warn("{} - MQTT3 client disconnected, reconnect attempt {} (next in {} ms)", tenant, attempt, delay);
+                virtualThreadPool.submit(this::connect);
+            }
         }
     }
 

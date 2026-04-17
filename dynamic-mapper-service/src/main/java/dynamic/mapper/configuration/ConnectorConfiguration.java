@@ -32,7 +32,7 @@ import lombok.Data;
 import lombok.ToString;
 
 import jakarta.validation.constraints.NotNull;
-import java.io.*;
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -73,22 +73,15 @@ public class ConnectorConfiguration implements Cloneable, Serializable {
     @JsonProperty("properties")
     private Map<String, Object> properties = new HashMap<>();
 
-    public Object clone() {
-        Object result = null;
-        try {
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            ObjectOutputStream oos = new ObjectOutputStream(bos);
-            oos.writeObject(this);
-            oos.flush();
-            oos.close();
-            bos.close();
-            byte[] byteData = bos.toByteArray();
-            ByteArrayInputStream bais = new ByteArrayInputStream(byteData);
-            result = new ObjectInputStream(bais).readObject();
-        } catch (Exception e) {
-            return null;
-        }
-        return result;
+    @Override
+    public ConnectorConfiguration clone() {
+        ConnectorConfiguration cloned = new ConnectorConfiguration();
+        cloned.setIdentifier(this.identifier);
+        cloned.setConnectorType(this.connectorType);
+        cloned.setEnabled(this.enabled);
+        cloned.setName(this.name);
+        cloned.setProperties(new HashMap<>(this.properties));
+        return cloned;
     }
 
     /**
@@ -108,7 +101,7 @@ public class ConnectorConfiguration implements Cloneable, Serializable {
     }
 
     public ConnectorConfiguration getCleanedConfig(ConnectorSpecification connectorSpecification) {
-        ConnectorConfiguration clonedConfig = (ConnectorConfiguration) this.clone();
+        ConnectorConfiguration clonedConfig = this.clone();
         for (String property : clonedConfig.getProperties().keySet()) {
             if (connectorSpecification != null && connectorSpecification.isPropertySensitive(property)) {
                 clonedConfig.getProperties().replace(property, "****");
