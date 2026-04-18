@@ -20,9 +20,41 @@
 -->
 
 <!-- ================================================================================ -->
+<!-- SEARCH BAR — rendered into the Cumulocity action bar (stays fixed at top)  -->
+<!-- ================================================================================ -->
+<c8y-action-bar-item [placement]="'left'" itemClass="navbar-form">
+  <div class="d-flex a-i-center" style="gap: 8px;">
+    <div class="input-group" style="max-width: 320px;">
+      <span class="input-group-addon"><i c8yIcon="search"></i></span>
+      <input type="text" class="form-control" placeholder="Search documentation…"
+        [(ngModel)]="searchQuery" (input)="onSearch()" (keydown.escape)="clearSearch()" name="docSearch" />
+      @if (searchQuery) {
+      <span class="input-group-btn">
+        <button class="btn btn-default" type="button" (click)="clearSearch()" title="Clear search">
+          <i c8yIcon="times"></i>
+        </button>
+      </span>
+      }
+    </div>
+    @if (searchQuery.length >= 2) {
+      @if (searchMatchCount === 0) {
+        <span class="text-muted" style="font-size: 13px; white-space: nowrap;">No matches</span>
+      } @else {
+        <span style="font-size: 13px; white-space: nowrap;">{{ searchCurrentIndex + 1 }}&nbsp;/&nbsp;{{ searchMatchCount }}</span>
+        <button class="btn btn-xs btn-default" type="button" (click)="prevMatch()" title="Previous match">
+          <i c8yIcon="chevron-up"></i>
+        </button>
+        <button class="btn btn-xs btn-default" type="button" (click)="nextMatch()" title="Next match">
+          <i c8yIcon="chevron-down"></i>
+        </button>
+      }
+    }
+  </div>
+</c8y-action-bar-item>
+<!-- ================================================================================ -->
 <!-- PAGE SWITCHER - Routes between main, jsonata, javascript, and smartfunction -->
 <!-- ================================================================================ -->
-<div>
+<div #docContent>
   @switch (currentPage) {
   <!-- ========================================================================== -->
   <!-- ========================= MAIN LANDING PAGE ============================== -->
@@ -399,6 +431,173 @@
         </div>
         <br />
       </div>
+      <!-- ==================== SECTION: MONITORING ==================== -->
+      <div class="card-header" id="monitoring">
+        <h3>
+          {{ 'Monitoring' | translate }}
+        </h3>
+      </div>
+      <div class="card-block">
+        <div class="p-b-8 text-16">
+          The <strong>Monitoring</strong> section in the left navigation contains four views:
+          <strong>Statistic processed</strong>, <strong>Chart processed</strong>,
+          <strong>Cache statistic</strong>, and <strong>Service events</strong>.
+          Each gives a different operational perspective on what the mapper is doing at runtime.
+        </div>
+
+        <h4 class="p-t-16 p-b-8">Statistic processed (Inbound / Outbound)</h4>
+        <div class="p-b-8 text-16">
+          This view shows one row per active mapping in a data grid. The columns are:
+        </div>
+        <div class="table-responsive table-width-100">
+          <table class="table table-striped" style="table-layout: fixed;">
+            <thead class="thead-light">
+              <tr>
+                <th style="width: 25%;">Column</th>
+                <th style="width: 75%;">Meaning</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Name</strong></td>
+                <td>The mapping name. Click the name to open the mapping editor directly.</td>
+              </tr>
+              <tr>
+                <td><strong>Mapping topic</strong></td>
+                <td>The subscription topic pattern the mapping listens on (inbound) or the Cumulocity source object type (outbound).</td>
+              </tr>
+              <tr>
+                <td><strong>Publish topic</strong></td>
+                <td>The broker topic the mapping publishes to (outbound only).</td>
+              </tr>
+              <tr>
+                <td><strong>Received</strong></td>
+                <td>Total number of messages received and processed by this mapping since the last reset. Counts every message that matched the topic — including those that produced errors.</td>
+              </tr>
+              <tr>
+                <td><strong>Snooped total</strong></td>
+                <td>Total number of messages captured while the mapping was in Snooping mode.</td>
+              </tr>
+              <tr>
+                <td><strong>Snooped active</strong></td>
+                <td>Number of snooped messages currently stored and available as source-template candidates.</td>
+              </tr>
+              <tr>
+                <td><strong>Errors</strong></td>
+                <td>Number of messages that failed during transformation or Cumulocity API submission. A non-zero value means at least one message was dropped — check <strong>Service events</strong> to see the error detail.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="admonition info" style="max-width: 100%;">
+          <div class="title">Info</div>
+          <div class="content">
+            Counters accumulate since the last reset (or since microservice startup). Use the
+            <strong>Reset statistics</strong> button in the action bar to zero all counters —
+            useful for measuring throughput during a specific time window. Counters are lost on
+            microservice restart.
+          </div>
+        </div>
+
+        <h4 class="p-t-16 p-b-8">Chart processed</h4>
+        <div class="p-b-8 text-16">
+          A time-series chart showing the number of messages processed per mapping over time.
+          Each mapping appears as a separate line. Use this view to spot traffic spikes, identify
+          quiet mappings, and confirm that message flow resumes after a connector reconnect.
+          The chart updates live as messages arrive.
+        </div>
+
+        <h4 class="p-t-16 p-b-8">Cache statistic</h4>
+        <div class="p-b-8 text-16">
+          The Cache statistic view shows two cache panels side by side, each displaying two KPI cards:
+        </div>
+        <div class="table-responsive table-width-100">
+          <table class="table table-striped" style="table-layout: fixed;">
+            <thead class="thead-light">
+              <tr>
+                <th style="width: 20%;">Cache panel</th>
+                <th style="width: 20%;">KPI card</th>
+                <th style="width: 60%;">Meaning</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td rowspan="2"><strong>Inventory Cache</strong></td>
+                <td><strong># Entries</strong></td>
+                <td>Number of managed object fragments currently held in memory. Below the card the configured size limit is shown (default: 100 000). When the limit is reached, the least-recently-used entry is evicted to make room.</td>
+              </tr>
+              <tr>
+                <td><strong>% Percent</strong></td>
+                <td>Fill rate — <code>Entries / Limit × 100</code>. A value approaching 100 % means the cache is nearly full and evictions are occurring frequently, which may slow down message processing.</td>
+              </tr>
+              <tr>
+                <td rowspan="2"><strong>Inbound ID Cache</strong></td>
+                <td><strong># Entries</strong></td>
+                <td>Number of external-ID → internal managed object ID mappings currently cached. Each mapping is resolved once and then stored here, so subsequent messages skip the identity resolution REST call entirely.</td>
+              </tr>
+              <tr>
+                <td><strong>% Percent</strong></td>
+                <td>Fill rate for the ID cache, same calculation as above. A high fill rate with many devices indicates you may want to increase the cache limit in the service configuration.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="p-b-8 text-16">
+          The action bar at the top of the page provides three buttons:
+        </div>
+        <ul class="text-16 p-b-8">
+          <li>
+            <strong>Clear external ID cache</strong> — removes all cached external-ID-to-internal-ID resolutions. Use this after deleting or re-registering a device to prevent stale identity lookups. The cache is rebuilt automatically as new messages arrive.
+          </li>
+          <li>
+            <strong>Clear inventory cache</strong> — removes all cached managed object fragments. Use this after updating a device's managed object directly in Cumulocity (outside the mapper) so the mapper picks up the latest values. The fragments you configured under <strong>Service Configuration → Function → Fragments from inventory to cache</strong> are re-fetched on demand.
+          </li>
+          <li>
+            <strong>Reload</strong> — refreshes the KPI cards without clearing the caches, useful to get an up-to-date snapshot of the current fill levels.
+          </li>
+        </ul>
+        <div class="admonition caution" style="max-width: 100%;">
+          <div class="title">Caution</div>
+          <div class="content">
+            Both caches are held in memory and are lost on microservice restart. After a restart they
+            are rebuilt automatically as messages arrive — no manual action is needed.
+          </div>
+        </div>
+
+        <h4 class="p-t-16 p-b-8">Service events</h4>
+        <div class="p-b-8 text-16">
+          The Service events view is the primary place to diagnose individual message failures without
+          needing access to the microservice container logs. It displays a filterable list of events
+          emitted by the mapper backend. Each entry shows:
+        </div>
+        <ul class="text-16 p-b-8">
+          <li><strong>Type</strong> — event severity/category (e.g. <code>STATUS_MAPPING_CHANGED</code>, <code>STATUS_CONNECTOR_EVENT</code>, <code>MAPPING_FAILURE</code>)</li>
+          <li><strong>Timestamp</strong> — when the event occurred</li>
+          <li><strong>Message</strong> — the full error or status description, including the mapping name, tenant, and root cause</li>
+        </ul>
+        <div class="p-b-8 text-16">
+          Use the <strong>Type</strong> dropdown and <strong>Date from / Date to</strong> pickers to
+          narrow the event list to a specific time window or event category. This is particularly useful
+          when correlating errors with known message arrival times.
+        </div>
+        <div class="admonition caution" style="max-width: 100%;">
+          <div class="title">Caution</div>
+          <div class="content">
+            Service events are stored in an in-memory ring buffer and are lost on microservice restart.
+            For long-term audit trails, configure the Cumulocity platform's built-in audit log or forward
+            events to an external monitoring system.
+          </div>
+        </div>
+
+        <h4 class="p-t-16 p-b-8">Mapping Import and Export</h4>
+        <div class="p-b-8 text-16">
+          The Dynamic Mapper does not currently provide a built-in import/export UI for mappings.
+          Mappings are stored as Cumulocity managed objects (type <code>d11r_mapping</code>) and can be
+          backed up or migrated using the standard Cumulocity Inventory REST API or the migration scripts
+          provided in the
+          <a href="https://github.com/Cumulocity-IoT/cumulocity-dynamic-mapper" target="_blank">GitHub repository</a>.
+        </div>
+      </div>
       <!-- ==================== SECTION: DEFINING A MAPPING ==================== -->
       <div class="card-header" id="define-mapping">
         <h3>
@@ -448,6 +647,54 @@
           alt="Transformation type" />
         <p class="image-description m-l-48"><b>Description:</b> Screenshot showing available transformation types.</p>
         <br />
+        <h4 class="p-t-16 p-b-8" id="payload-types-detail">Payload Types in Detail</h4>
+        <div class="p-b-8 text-16">
+          The following describes each payload type and how it is processed by the mapper:
+        </div>
+        <h5 class="p-t-8 p-b-4"><strong>JSON (default)</strong></h5>
+        <div class="p-b-8 text-16">
+          The message body is parsed as a JSON object. Recommended for most IoT integrations.
+          All substitution-based transformation types (JSONata, JavaScript) and Smart Functions operate
+          on the parsed JSON object.
+        </div>
+        <h5 class="p-t-8 p-b-4"><strong>Flat File (CSV) <small class="text-muted">(Expert Mode)</small></strong></h5>
+        <div class="p-b-8 text-16">
+          The message body is a delimited text file (comma, semicolon, tab, or custom character).
+          The mapper converts each line into a JSON array of field values before applying substitutions.
+          Configure the delimiter in the mapping's general settings. Field values are then accessible as
+          <code>payload[0]</code>, <code>payload[1]</code>, etc. Example: a CSV line
+          <code>sensor01,23.5,°C</code> becomes <code>["sensor01", "23.5", "°C"]</code>.
+        </div>
+        <h5 class="p-t-8 p-b-4"><strong>Hexadecimal <small class="text-muted">(Expert Mode)</small></strong></h5>
+        <div class="p-b-8 text-16">
+          The message body is a hex-encoded string (e.g. <code>68656C6C6F</code>). The mapper passes
+          the raw hex string to your transformation. In a Smart Function receive it via
+          <code>msg.getPayload()</code> and decode it using the built-in <code>atob()</code> /
+          <code>btoa()</code> helpers (see <a (click)="scrollToElement('binary-helpers')" style="cursor: pointer;">Binary helpers in Smart Functions</a>).
+        </div>
+        <h5 class="p-t-8 p-b-4"><strong>Protobuf <small class="text-muted">(Expert Mode)</small></strong></h5>
+        <div class="p-b-8 text-16">
+          Protocol Buffer binary messages. The mapper deserializes the Protobuf payload into a JSON
+          representation using the schema registered in the mapping. Because Protobuf requires a compiled
+          schema, this payload type is typically used together with a <strong>Java Extension</strong>
+          that performs the schema-aware deserialization.
+        </div>
+        <h5 class="p-t-8 p-b-4"><strong>Any Payload <small class="text-muted">(Expert Mode)</small></strong></h5>
+        <div class="p-b-8 text-16">
+          Use this when the payload format is unknown, binary (SparkPlugB, CBOR, XML, custom binary), or
+          when you want full programmatic control. The raw payload bytes are passed to your
+          transformation as a Base64-encoded string. You must use a <strong>Smart Function</strong> or
+          <strong>Java Extension</strong> that decodes and interprets the bytes. In a Smart Function,
+          access the raw data via <code>msg.getPayload()</code> and decode it with <code>atob()</code>.
+        </div>
+        <div class="admonition important" style="max-width: 100%;">
+          <div class="title">Important</div>
+          <div class="content">
+            <strong>Payload type and transformation type cannot be changed after mapping creation.</strong>
+            If you need a different type, delete the mapping and create a new one. To avoid this,
+            enable <strong>Expert Mode</strong> in the creation dialog to see all options upfront.
+          </div>
+        </div>
         <div class="p-b-8 text-16">
           The stepper guides you through these steps to define a mapping using JSONata for substitutions:
         </div>
@@ -582,6 +829,51 @@
         <p class="image-description m-l-48"><b>Description:</b> Screenshot of subscribed devices to receive messages for
           outbound.</p>
         <br />
+        <h4 class="p-t-16 p-b-8">Inventory Filter and Execution Filter</h4>
+        <div class="p-b-8 text-16">
+          Two optional filters let you narrow which outbound messages are processed without writing any
+          transformation code:
+        </div>
+        <h5 class="p-t-8 p-b-4"><strong>Inventory Filter</strong></h5>
+        <div class="p-b-8 text-16">
+          Evaluated once against the device's managed object properties when the mapping is first
+          triggered for that device. If the expression returns <code>false</code>, the mapping is skipped
+          entirely for that device. The expression is a JSONata expression evaluated against the device's
+          inventory data.
+        </div>
+        <pre><code class="language-javascript">// Only process pressure sensors
+type == "c8y_PressureSensor"
+
+// Only process devices with a hardware serial number fragment
+$exists(c8y_Hardware.serialNumber)
+
+// Only process active devices of a specific model
+c8y_IsDevice = true and c8y_Hardware.model = "SmartSensor v2"</code></pre>
+        <h5 class="p-t-8 p-b-4"><strong>Execution Filter</strong></h5>
+        <div class="p-b-8 text-16">
+          Evaluated at runtime against each outgoing message payload. If the expression returns
+          <code>false</code>, the message is silently dropped and not forwarded to the broker. The
+          expression is a JSONata expression evaluated against the Cumulocity source object (measurement,
+          event, alarm, or managed object) that triggered the mapping.
+        </div>
+        <pre><code class="language-javascript">// Only forward high-temperature measurements
+c8y_TemperatureMeasurement.T.value > 95
+
+// Only forward critical alarms
+severity = "CRITICAL"
+
+// Only forward events of a specific type
+type = "c8y_Uplink"</code></pre>
+        <div class="admonition info" style="max-width: 100%;">
+          <div class="title">Info</div>
+          <div class="content">
+            Both filters use JSONata expression syntax. The
+            <strong>Inventory Filter</strong> operates on the device managed object, while the
+            <strong>Execution Filter</strong> operates on the triggering payload (measurement, event,
+            alarm). Use filters to reduce unnecessary broker traffic without modifying your transformation
+            logic.
+          </div>
+        </div>
       </div>
       <!-- ==================== SECTION: TRANSFORMATION TYPES ==================== -->
       <div class="card-header" id="transformation-types">
@@ -935,7 +1227,13 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
                 <td>Target template <small class="text-muted">(Cumulocity)</small></td>
                 <td><code>_CONTEXT_DATA_.processingMode</code></td>
                 <td>map-to</td>
-                <td>Define processing mode for payload: <code>persistent</code> or <code>transient</code></td>
+                <td>
+                  Override the Cumulocity processing mode for this payload:
+                  <ul class="m-t-4 m-b-0">
+                    <li><code>persistent</code> (default) — the object is stored in the database and persisted to disk. Use for all critical data.</li>
+                    <li><code>transient</code> — the object is processed and forwarded in real-time but <strong>not written to the database</strong>. Use for high-frequency telemetry that must reach subscribed real-time consumers but does not need to be stored (reduces storage cost and write load).</li>
+                  </ul>
+                </td>
               </tr>
               <tr>
                 <td>Target template <small class="text-muted">(Cumulocity)</small></td>
@@ -1323,6 +1621,28 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
             </tbody>
           </table>
         </div>
+        <div class="admonition info" style="max-width: 100%;">
+          <div class="title">Info — "not relevant" in the table above</div>
+          <div class="content">
+            <p>
+              <strong>"not relevant"</strong> in the Inbound column means the QoS setting on the mapping
+              has <em>no effect</em> on inbound behavior for that connector. The connector uses its own
+              fixed protocol-level acknowledgment mechanism regardless of the mapping QoS value:
+            </p>
+            <ul class="m-t-4 m-b-0">
+              <li><strong>Cumulocity MQTT Service (inbound)</strong> — acknowledgment is governed by the
+                Notification 2.0 subscription protocol; the mapping QoS is not used for inbound direction.</li>
+              <li><strong>Apache Pulsar (inbound)</strong> — messages are acknowledged by the Pulsar
+                consumer after successful processing; the QoS field is not applicable.</li>
+              <li><strong>Kafka (inbound)</strong> — consumer offsets are committed after processing;
+                the QoS field does not change this behavior.</li>
+              <li><strong>AMQP (inbound)</strong> — messages are acknowledged (basic.ack) after processing;
+                the QoS field is not applicable.</li>
+              <li><strong>Webhook (inbound)</strong> — Webhook is an outbound-only connector; inbound is
+                not applicable.</li>
+            </ul>
+          </div>
+        </div>
       </div>
       <!-- ==================== SECTION: MANAGING PERMISSIONS FOR DYNAMIC MAPPER FEATURES ==================== -->
       <div class="card-header" id="access-control">
@@ -1441,6 +1761,68 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
             To configure roles, navigate to <b>Administration → Role Management</b> in Cumulocity.
             Look for "Dynamic Mapper" permissions and assign them to global roles or specific user groups based on your
             organization's needs.
+          </div>
+        </div>
+      </div>
+      <!-- ==================== SECTION: TROUBLESHOOTING ==================== -->
+      <div class="card-header" id="troubleshooting">
+        <h3>
+          {{ 'Troubleshooting' | translate }}
+        </h3>
+      </div>
+      <div class="card-block">
+        <div class="p-b-8 text-16">
+          The following lists common problems and how to resolve them.
+        </div>
+        <h4 class="p-t-16 p-b-8">Messages arrive but no Cumulocity objects are created</h4>
+        <ul class="text-16 p-b-8">
+          <li>Check that the mapping is <strong>enabled</strong> (activated). A greyed-out mapping icon means it is disabled.</li>
+          <li>Verify the <strong>topic pattern</strong> matches the topic your device is publishing to. Wildcards <code>#</code> and <code>+</code> follow MQTT semantics.</li>
+          <li>Open <a [routerLink]="ROUTE_MONITORING"><strong>Monitoring → Statistics</strong></a> and check whether the message counter for the mapping increases. If it does not, the topic pattern is not matching.</li>
+          <li>If the counter increases but objects are not created, check the <strong>Event Log</strong> for transformation errors.</li>
+        </ul>
+        <h4 class="p-t-16 p-b-8">Transformation errors in the Event Log</h4>
+        <ul class="text-16 p-b-8">
+          <li><strong>"Device not found"</strong> — the <code>externalId</code> returned by your mapping does not match any registered device. Enable <strong>Create non-existing devices</strong> on the mapping or pre-register the device in Cumulocity.</li>
+          <li><strong>"Cannot evaluate expression"</strong> (JSONata) — the JSONata expression references a field that is missing or null in the source payload. Add a null-guard, e.g. <code>payload.value ? payload.value : 0</code>.</li>
+          <li><strong>Smart Function throws a JavaScript exception</strong> — the full stack trace is shown in the Event Log. Use <code>console.log()</code> in your function to emit diagnostic output visible in the Event Log.</li>
+          <li><strong>"Fragment not found in cache"</strong> — the managed object fragment accessed via <code>context.getManagedObject()</code> is not in the <a [routerLink]="ROUTE_SERVICE_CONFIGURATION"><strong>Fragments from inventory to cache</strong></a> list. Add the fragment name and restart the mapper or wait for the cache to refresh.</li>
+        </ul>
+        <h4 class="p-t-16 p-b-8">Outbound mapping does not trigger</h4>
+        <ul class="text-16 p-b-8">
+          <li>Verify that a <strong>subscription</strong> exists for the device. Without a subscription, no outbound messages are processed regardless of mapping state.</li>
+          <li>Check the <strong>Inventory Filter</strong> — if set, it must evaluate to <code>true</code> for the device's managed object.</li>
+          <li>Check the <strong>Execution Filter</strong> — if set, it must evaluate to <code>true</code> for the triggering payload.</li>
+          <li>Confirm the mapping's <strong>connector</strong> is connected (green status in <a [routerLink]="ROUTE_MONITORING"><strong>Monitoring → Statistics</strong></a>).</li>
+        </ul>
+        <h4 class="p-t-16 p-b-8">Smart Function returns stale device inventory data</h4>
+        <ul class="text-16 p-b-8">
+          <li>The mapper caches inventory fragments for performance. Navigate to
+            <a [routerLink]="ROUTE_SERVICE_CONFIGURATION"><strong>Service Configuration → Caching</strong></a>
+            and click <strong>Clear inventory cache</strong> to force a refresh.</li>
+          <li>Ensure the required fragment is listed in
+            <a [routerLink]="ROUTE_SERVICE_CONFIGURATION"><strong>Service Configuration → Function → Fragments from inventory to cache</strong></a>.
+            Only listed fragments are loaded into the cache.</li>
+        </ul>
+        <h4 class="p-t-16 p-b-8">Connector disconnects repeatedly</h4>
+        <ul class="text-16 p-b-8">
+          <li>Check the broker's access logs for authentication or authorization errors.</li>
+          <li>Verify the connector credentials, host, and port in the connector configuration.</li>
+          <li>For TLS connections, ensure the broker's certificate is trusted and the CA certificate is correctly configured in the connector.</li>
+          <li>Check the Event Log for TLS handshake or connection timeout errors.</li>
+        </ul>
+        <h4 class="p-t-16 p-b-8">Enabling debug mode for a mapping</h4>
+        <div class="p-b-8 text-16">
+          Debug mode logs detailed processing information for a specific mapping without enabling verbose
+          logging globally. In the mapping list, use the context menu (three-dot icon) to enable
+          <strong>Debug</strong> for a mapping. Debug output appears in the <strong>Event Log</strong>
+          and in the microservice logs. Disable debug mode after troubleshooting to avoid excessive log volume.
+        </div>
+        <div class="admonition caution" style="max-width: 100%;">
+          <div class="title">Caution</div>
+          <div class="content">
+            Debug mode logs full payload content. Do not leave it enabled in production if payloads
+            contain personally identifiable information (PII) or secrets.
           </div>
         </div>
       </div>
@@ -1592,6 +1974,77 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
         <p class="image-description m-l-48"><b>Description:</b> Screenshot showing the definition of substitutions using
           JavaScript.</p>
         <div class="p-b-8"></div>
+        <h4 class="p-t-16 p-b-8">SubstitutionValue, TYPE, and RepairStrategy</h4>
+        <div class="p-b-8 text-16">
+          JavaScript substitutions return a <code>SubstitutionResult</code> populated via
+          <code>addSubstitution(result, key, value)</code>. The <code>value</code> argument must be a
+          <code>SubstitutionValue</code> that declares the value, its type, a repair strategy, and
+          whether arrays should be expanded into multiple Cumulocity objects.
+        </div>
+        <pre><code class="language-javascript">// Construct a SubstitutionValue:
+// new SubstitutionValue(value, TYPE.xxx, RepairStrategy.xxx, expandArray)
+
+const result = new SubstitutionResult();
+addSubstitution(result, "source.id", new SubstitutionValue(
+  payload["deviceId"],          // value to substitute
+  TYPE.TEXTUAL,                 // type of the value
+  RepairStrategy.DEFAULT,       // what to do when value is missing/null
+  false                         // expand arrays into multiple objects?
+));
+return result;</code></pre>
+        <h5 class="p-t-8 p-b-4"><strong>TYPE enum</strong></h5>
+        <div class="p-b-8 text-16">Describes the data type of the extracted value:</div>
+        <div class="table-responsive table-width-100">
+          <table class="table table-striped" style="table-layout: fixed;">
+            <thead class="thead-light">
+              <tr><th style="width: 25%;">Value</th><th style="width: 75%;">Description</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>TYPE.TEXTUAL</code></td><td>String value</td></tr>
+              <tr><td><code>TYPE.NUMBER</code></td><td>Numeric value (integer or float)</td></tr>
+              <tr><td><code>TYPE.BOOLEAN</code></td><td>Boolean value (<code>true</code> / <code>false</code>)</td></tr>
+              <tr><td><code>TYPE.OBJECT</code></td><td>JSON object — copied as-is into the target</td></tr>
+              <tr><td><code>TYPE.ARRAY</code></td><td>JSON array — use with <code>expandArray: true</code> to generate multiple Cumulocity objects from one message</td></tr>
+              <tr><td><code>TYPE.IGNORE</code></td><td>The substitution is skipped; use for conditional mappings where you want to omit a field</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h5 class="p-t-8 p-b-4"><strong>RepairStrategy enum</strong></h5>
+        <div class="p-b-8 text-16">
+          Controls what the mapper does when the extracted value is <code>null</code>, missing, or an
+          array that needs to be mapped to a scalar target field:
+        </div>
+        <div class="table-responsive table-width-100">
+          <table class="table table-striped" style="table-layout: fixed;">
+            <thead class="thead-light">
+              <tr><th style="width: 35%;">Value</th><th style="width: 65%;">Description</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>RepairStrategy.DEFAULT</code></td><td>Use the value as-is; if <code>null</code>, the target field is set to <code>null</code></td></tr>
+              <tr><td><code>RepairStrategy.USE_FIRST_VALUE_OF_ARRAY</code></td><td>If the value is an array, take the first element for the target field</td></tr>
+              <tr><td><code>RepairStrategy.USE_LAST_VALUE_OF_ARRAY</code></td><td>If the value is an array, take the last element for the target field</td></tr>
+              <tr><td><code>RepairStrategy.IGNORE</code></td><td>If the value is <code>null</code> or missing, skip this substitution entirely (the target field keeps its template default)</td></tr>
+              <tr><td><code>RepairStrategy.REMOVE_IF_MISSING_OR_NULL</code></td><td>If the value is <code>null</code> or missing, remove the target field from the payload completely</td></tr>
+              <tr><td><code>RepairStrategy.CREATE_IF_MISSING</code></td><td>If the target field does not exist in the template, create it with the substituted value</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h5 class="p-t-8 p-b-4"><strong>expandArray</strong></h5>
+        <div class="p-b-8 text-16">
+          When <code>expandArray</code> is set to <code>true</code> and the substituted value is an
+          array, the mapper generates one Cumulocity object per array element. For example, a payload
+          with three temperature readings can produce three separate measurements in a single message:
+        </div>
+        <pre><code class="language-javascript">// Payload: &#123; "temps": [10.5, 30.0, 49.2] &#125;
+// With expandArray: true, this creates 3 separate measurements
+const result = new SubstitutionResult();
+addSubstitution(result, "c8y_Temp.T.value", new SubstitutionValue(
+  payload["temps"],
+  TYPE.ARRAY,
+  RepairStrategy.DEFAULT,
+  true   // expand: one measurement per element
+));
+return result;</code></pre>
       </div>
       <div class="p-b-8"></div>
     </div>
@@ -1774,6 +2227,111 @@ export &#123; onMessage &#125;;   // required in ESM mode</code></pre>
           </div>
         </div>
         <div class="p-b-8"></div>
+        <h4 class="p-t-16 p-b-8">Shared Code Templates</h4>
+        <div class="p-b-8 text-16">
+          The Dynamic Mapper supports <strong>Shared Code</strong> templates — reusable JavaScript
+          libraries that are automatically injected into the GraalVM context before every Smart Function
+          is executed. Functions and variables defined in a Shared Code template are available as globals
+          in all Smart Functions without any import statement.
+        </div>
+        <div class="admonition info" style="max-width: 100%;">
+          <div class="title">Info — How Shared Code is loaded</div>
+          <div class="content">
+            <ol class="m-t-4 m-b-0">
+              <li>Navigate to <a [routerLink]="ROUTE_CODE_TEMPLATES_INBOUND_SMART_FUNCTION"><strong>Configuration → Code Templates</strong></a>.</li>
+              <li>Select a template of type <strong>Shared</strong> from the dropdown (or create one via <strong>Duplicate</strong> from an existing template and rename it).</li>
+              <li>Write your helper functions in the editor and save. All functions declared at the top level are available globally in every Smart Function.</li>
+            </ol>
+            <p class="m-t-8">
+              Shared code is always evaluated in flat-script mode (even when ESM support is enabled),
+              so do <strong>not</strong> use <code>export</code> statements in shared templates.
+            </p>
+          </div>
+        </div>
+        <pre><code class="language-javascript">// Example Shared Code template content
+// These functions are available in all Smart Functions without import
+
+function parseTimestamp(raw) &#123;
+  return raw ? new Date(raw).toISOString() : new Date().toISOString();
+&#125;
+
+function celsiusToFahrenheit(celsius) &#123;
+  return (celsius * 9) / 5 + 32;
+&#125;</code></pre>
+        <div class="p-b-4 text-16">Then in any Smart Function:</div>
+        <pre><code class="language-javascript">function onMessage(msg, context) &#123;
+  var payload = msg.getPayload();
+  return [&#123;
+    cumulocityType: "measurement",
+    action: "create",
+    payload: &#123;
+      "time": parseTimestamp(payload["ts"]),          // from Shared Code
+      "type": "c8y_TemperatureMeasurement",
+      "c8y_Temp": &#123;
+        "F": &#123; "unit": "F", "value": celsiusToFahrenheit(payload["temp"]) &#125;  // from Shared Code
+      &#125;
+    &#125;,
+    externalSource: [&#123; "type": "c8y_Serial", "externalId": payload["deviceId"] &#125;]
+  &#125;];
+&#125;</code></pre>
+        <h4 class="p-t-16 p-b-8" id="binary-helpers">Binary Helpers: <code>atob</code>, <code>btoa</code>, and <code>TextEncoder</code></h4>
+        <div class="p-b-8 text-16">
+          Smart Functions running in GraalVM have access to browser-compatible Base64 and text encoding
+          helpers, provided automatically via the System code template. These are particularly useful
+          when working with <strong>Hexadecimal</strong>, <strong>Protobuf</strong>, or
+          <strong>Any Payload</strong> types.
+        </div>
+        <div class="table-responsive table-width-100">
+          <table class="table table-striped" style="table-layout: fixed;">
+            <thead class="thead-light">
+              <tr>
+                <th style="width: 30%;">Function</th>
+                <th style="width: 70%;">Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>btoa(str)</code></td>
+                <td>Encodes a UTF-8 string to a Base64 string. Equivalent to the browser <code>btoa()</code>.</td>
+              </tr>
+              <tr>
+                <td><code>atob(base64)</code></td>
+                <td>Decodes a Base64 string back to a UTF-8 string. Equivalent to the browser <code>atob()</code>.</td>
+              </tr>
+              <tr>
+                <td><code>new TextEncoder()</code></td>
+                <td>Encodes a JavaScript string to a <code>Uint8Array</code> of UTF-8 bytes. Use <code>.encode(str)</code> on the instance.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="p-b-4 text-16"><strong>Example: Decode a Base64-encoded binary payload (Any Payload type)</strong></div>
+        <pre><code class="language-javascript">function onMessage(msg, context) &#123;
+  // For "Any Payload" type the raw bytes arrive as a Base64 string
+  var base64Payload = msg.getPayload();
+  var decodedString = atob(base64Payload);    // decode to UTF-8 string
+  var parsed = JSON.parse(decodedString);     // parse if the inner format is JSON
+
+  return [&#123;
+    cumulocityType: "measurement",
+    action: "create",
+    payload: &#123;
+      "time": new Date().toISOString(),
+      "type": "c8y_TemperatureMeasurement",
+      "c8y_Temp": &#123; "T": &#123; "unit": "C", "value": parsed["temp"] &#125; &#125;
+    &#125;,
+    externalSource: [&#123; "type": "c8y_Serial", "externalId": parsed["deviceId"] &#125;]
+  &#125;];
+&#125;</code></pre>
+        <div class="p-b-4 p-t-8 text-16"><strong>Example: Encode a value to Base64 for outbound</strong></div>
+        <pre><code class="language-javascript">function onMessage(msg, context) &#123;
+  var payload = msg.getPayload();
+  var encoded = btoa(JSON.stringify(payload));   // produce Base64 for the broker
+  return [&#123;
+    topic: "devices/" + payload["source"]["id"] + "/raw",
+    payload: &#123; "data": encoded &#125;
+  &#125;];
+&#125;</code></pre>
         <h4 class="p-t-16 p-b-8">Using Metadata in Smart Functions</h4>
         <div class="p-b-8 text-16">
           When using <b>Smart Functions</b> as the <b>Transformation Type</b>, metadata is handled differently than in
@@ -1898,7 +2456,8 @@ export &#123; onMessage &#125;;   // required in ESM mode</code></pre>
               <li><code>context.getManagedObject(c8ySourceId)</code> - Lookup device properties by Cumulocity internal source ID</li>
               <li><code>context.getManagedObjectByExternalId(&#123;externalId, type&#125;)</code> - Lookup device properties by external ID</li>
               <li><code>context.getTesting()</code> - Returns <code>true</code> if running in test mode</li>
-              <li><code>context.setState(key, value)</code> / <code>context.getState(key)</code> - Store/retrieve values across message processing</li>
+              <li><code>context.setState(key, value)</code> / <code>context.getState(key)</code> - Store/retrieve a single value across message processing</li>
+              <li><code>context.getStateAll()</code> - Returns a read-only view of all state entries for this mapping as a Map-like object. Useful for inspecting or iterating all stored keys.</li>
               <li><code>context.getConfig()</code> - Returns the mapping configuration as a JavaScript object. For inbound mappings this includes the <code>topic</code> field (the configured subscription topic pattern, e.g. <code>"testDevice/+/data"</code>), which can be split to derive positional segment meanings. For outbound mappings it additionally provides the resolved <code>externalId</code> of the source device.</li>
             </ul>
             <p class="m-t-8">

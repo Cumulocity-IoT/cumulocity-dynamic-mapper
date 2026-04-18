@@ -496,3 +496,54 @@ svg {
   width: inherit;
   height: inherit;
 }
+
+/* ============================================================================ */
+/* SEARCH BAR                                                                   */
+/* ============================================================================ */
+
+.doc-search-bar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0 8px 0;
+  background-color: var(--c8y-body-background-color, #f5f5f5);
+  border-bottom: 1px solid #e0e0e0;
+  margin-bottom: 8px;
+}
+
+.doc-search-input-group {
+  max-width: 420px;
+  flex-shrink: 0;
+}
+
+.doc-search-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.doc-search-count {
+  font-size: 13px;
+  min-width: 52px;
+}
+
+/* ============================================================================ */
+/* SEARCH HIGHLIGHTS                                                             */
+/* ============================================================================ */
+
+mark.search-highlight {
+  background-color: #ffe066;
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
+  outline: none;
+}
+
+mark.search-highlight--current {
+  background-color: #ff9800;
+  color: #fff;
+  box-shadow: 0 0 0 2px #e65100;
+}

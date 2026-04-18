@@ -69,6 +69,14 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       priority: 611,
       preventDuplicates: true
     }),
+    monitoringNode: new NavigatorNode({
+      parent: gettext('Introduction'),
+      icon: 'empty',
+      label: gettext('Monitoring overview'),
+      path: '/c8y-pkg-dynamic-mapper/landing/monitoring',
+      priority: 610.5,
+      preventDuplicates: true
+    }),
     definingMappingNode: new NavigatorNode({
       parent: gettext('Introduction'),
       icon: 'empty',
@@ -171,6 +179,14 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       label: gettext('Managing permissions'),
       path: '/c8y-pkg-dynamic-mapper/landing/access-control',
       priority: 599,
+      preventDuplicates: true
+    }),
+    troubleshootingNode: new NavigatorNode({
+      parent: gettext('Introduction'),
+      icon: 'empty',
+      label: gettext('Troubleshooting'),
+      path: '/c8y-pkg-dynamic-mapper/landing/troubleshooting',
+      priority: 598,
       preventDuplicates: true
     }),
   } as const;

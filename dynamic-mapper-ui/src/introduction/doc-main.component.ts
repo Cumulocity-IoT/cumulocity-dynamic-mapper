@@ -19,9 +19,9 @@
  * @authors Christof Strack
  */
 
-import { Component, OnDestroy, OnInit, ViewChild, AfterViewChecked } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewChild, AfterViewChecked, ElementRef } from '@angular/core';
 import { MappingService } from '../mapping/core/mapping.service';
-import { Direction, Feature, JsonEditorComponent, NODE1, NODE3 } from '../shared';
+import { Direction, Feature, JsonEditorComponent, NODE1, NODE2, NODE3 } from '../shared';
 import { BehaviorSubject, from, Subject, Subscription } from 'rxjs';
 import { ConnectorConfigurationService } from '../connector';
 import { AlertService, BottomDrawerService, CoreModule } from '@c8y/ngx-components';
@@ -65,8 +65,14 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
 
   }
   @ViewChild('editorTest', { static: false }) editorTest: JsonEditorComponent;
+  @ViewChild('docContent', { static: false }) docContentRef: ElementRef<HTMLElement>;
 
   codeTemplates: CodeTemplate[] = [];
+
+  searchQuery: string = '';
+  searchMatchCount: number = 0;
+  searchCurrentIndex: number = -1;
+  private searchMatches: HTMLElement[] = [];
 
   ROUTE_INBOUND: string = `/c8y-pkg-dynamic-mapper/${NODE1}/mappings/inbound`;
   ROUTE_ADD_CONNECTOR: string = `/c8y-pkg-dynamic-mapper/${NODE3}/connectorConfiguration`;
@@ -75,6 +81,7 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
     `/c8y-pkg-dynamic-mapper/${NODE1}/mappings/outbound`;
   ROUTE_CONNECTORS: string = `/c8y-pkg-dynamic-mapper/${NODE3}/connectorConfiguration`;
   ROUTE_CODE_TEMPLATES_INBOUND_SMART_FUNCTION= `/c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/INBOUND_SMART_FUNCTION`;
+  ROUTE_MONITORING: string = `/c8y-pkg-dynamic-mapper/${NODE2}/monitoring/statistic/inbound`;
   countMappingInbound$: Subject<any> = new BehaviorSubject<any>(0);
   countMappingOutbound$: Subject<any> = new BehaviorSubject<any>(0);
   countConnector$: Subject<any> = new BehaviorSubject<any>(0);
@@ -104,7 +111,9 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
       'metadata': 'metadata',
       'unknown-payload': 'unknown-payload',
       'reliability-settings': 'reliability-settings',
-      'access-control': 'access-control'
+      'access-control': 'access-control',
+      'monitoring': 'monitoring',
+      'troubleshooting': 'troubleshooting'
     };
 
     if (path.includes('jsonata')) {
@@ -118,6 +127,8 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
     } else {
       this.currentPage = 'main';
     }
+    this.clearSearch();
+    this.highlightApplied = false;
 
     // Subscribe to fragment changes for navigation anchor scrolling (fallback for hash-based navigation)
     this.fragmentSubscription = this.route.fragment.subscribe(fragment => {
@@ -228,6 +239,98 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
       default:
         return templateType;
     }
+  }
+
+  onSearch(): void {
+    this.clearHighlights();
+    this.searchMatches = [];
+    this.searchCurrentIndex = -1;
+    const query = this.searchQuery.trim();
+    if (query.length < 2) {
+      this.searchMatchCount = 0;
+      return;
+    }
+    const root = this.docContentRef?.nativeElement;
+    if (!root) return;
+    this.searchMatches = this.applyHighlights(root, query);
+    this.searchMatchCount = this.searchMatches.length;
+    if (this.searchMatches.length > 0) {
+      this.searchCurrentIndex = 0;
+      this.scrollToMatch(0);
+    }
+  }
+
+  clearSearch(): void {
+    this.searchQuery = '';
+    this.clearHighlights();
+    this.searchMatches = [];
+    this.searchMatchCount = 0;
+    this.searchCurrentIndex = -1;
+  }
+
+  nextMatch(): void {
+    if (this.searchMatches.length === 0) return;
+    this.searchCurrentIndex = (this.searchCurrentIndex + 1) % this.searchMatches.length;
+    this.scrollToMatch(this.searchCurrentIndex);
+  }
+
+  prevMatch(): void {
+    if (this.searchMatches.length === 0) return;
+    this.searchCurrentIndex = (this.searchCurrentIndex - 1 + this.searchMatches.length) % this.searchMatches.length;
+    this.scrollToMatch(this.searchCurrentIndex);
+  }
+
+  private scrollToMatch(index: number): void {
+    this.searchMatches.forEach((m, i) => m.classList.toggle('search-highlight--current', i === index));
+    this.searchMatches[index]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  private clearHighlights(): void {
+    document.querySelectorAll('mark.search-highlight').forEach(mark => {
+      const parent = mark.parentNode;
+      if (parent) {
+        parent.replaceChild(document.createTextNode(mark.textContent || ''), mark);
+        parent.normalize();
+      }
+    });
+  }
+
+  private applyHighlights(root: HTMLElement, query: string): HTMLElement[] {
+    const matches: HTMLElement[] = [];
+    const regex = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode(node) {
+        const parent = (node as Text).parentElement;
+        if (!parent) return NodeFilter.FILTER_SKIP;
+        const tag = parent.tagName.toLowerCase();
+        if (tag === 'script' || tag === 'style') return NodeFilter.FILTER_SKIP;
+        if (parent.closest('mark')) return NodeFilter.FILTER_SKIP;
+        return (node.textContent?.trim()) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
+      }
+    });
+    const textNodes: Text[] = [];
+    while (walker.nextNode()) textNodes.push(walker.currentNode as Text);
+    textNodes.forEach(node => {
+      const text = node.textContent || '';
+      regex.lastIndex = 0;
+      if (!regex.test(text)) return;
+      regex.lastIndex = 0;
+      const fragment = document.createDocumentFragment();
+      let lastIndex = 0;
+      let match: RegExpExecArray | null;
+      while ((match = regex.exec(text)) !== null) {
+        if (match.index > lastIndex) fragment.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
+        const mark = document.createElement('mark');
+        mark.className = 'search-highlight';
+        mark.textContent = match[0];
+        fragment.appendChild(mark);
+        matches.push(mark);
+        lastIndex = regex.lastIndex;
+      }
+      if (lastIndex < text.length) fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+      node.parentNode?.replaceChild(fragment, node);
+    });
+    return matches;
   }
 
   scrollToElement(elementId: string): void {

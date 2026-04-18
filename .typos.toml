@@ -8,6 +8,8 @@ mor = "mor"
 MOR = "MOR"
 ser = "ser"
 bais = "bais"
+dashjoin = "dashjoin"
+CBOR = "CBOR"
 
 [files]
 extend-exclude = ["**/MQTT3ClientTest.java","**/AMQPClientTest.java","**/mappings**.json", "**/*Mappings**.json" , "**/profiler/*.json", "**/SparkplugBProto.java"]

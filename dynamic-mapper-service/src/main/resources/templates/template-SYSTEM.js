@@ -7,7 +7,7 @@
  * @readonly true
  */
  
-// Polyfill für atob und btoa mittels Java-Interop
+// Polyfill for atob and btoa using Java-Interop
 if (typeof btoa === 'undefined') {
     const Base64 = Java.type('java.util.Base64');
     const StandardCharsets = Java.type('java.nio.charset.StandardCharsets');
