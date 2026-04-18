@@ -20,7 +20,7 @@
 
 import { Injectable } from '@angular/core';
 import { ApplicationService } from '@c8y/client';
-import * as _ from 'lodash';
+import _ from 'lodash';
 import {
   AlertService,
   AppStateService,
@@ -74,7 +74,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       icon: 'empty',
       label: gettext('Monitoring overview'),
       path: '/c8y-pkg-dynamic-mapper/landing/monitoring',
-      priority: 610.5,
+      priority: 598.5,
       preventDuplicates: true
     }),
     definingMappingNode: new NavigatorNode({

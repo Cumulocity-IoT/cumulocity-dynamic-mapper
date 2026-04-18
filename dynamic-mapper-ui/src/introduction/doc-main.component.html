@@ -431,173 +431,6 @@
         </div>
         <br />
       </div>
-      <!-- ==================== SECTION: MONITORING ==================== -->
-      <div class="card-header" id="monitoring">
-        <h3>
-          {{ 'Monitoring' | translate }}
-        </h3>
-      </div>
-      <div class="card-block">
-        <div class="p-b-8 text-16">
-          The <strong>Monitoring</strong> section in the left navigation contains four views:
-          <strong>Statistic processed</strong>, <strong>Chart processed</strong>,
-          <strong>Cache statistic</strong>, and <strong>Service events</strong>.
-          Each gives a different operational perspective on what the mapper is doing at runtime.
-        </div>
-
-        <h4 class="p-t-16 p-b-8">Statistic processed (Inbound / Outbound)</h4>
-        <div class="p-b-8 text-16">
-          This view shows one row per active mapping in a data grid. The columns are:
-        </div>
-        <div class="table-responsive table-width-100">
-          <table class="table table-striped" style="table-layout: fixed;">
-            <thead class="thead-light">
-              <tr>
-                <th style="width: 25%;">Column</th>
-                <th style="width: 75%;">Meaning</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><strong>Name</strong></td>
-                <td>The mapping name. Click the name to open the mapping editor directly.</td>
-              </tr>
-              <tr>
-                <td><strong>Mapping topic</strong></td>
-                <td>The subscription topic pattern the mapping listens on (inbound) or the Cumulocity source object type (outbound).</td>
-              </tr>
-              <tr>
-                <td><strong>Publish topic</strong></td>
-                <td>The broker topic the mapping publishes to (outbound only).</td>
-              </tr>
-              <tr>
-                <td><strong>Received</strong></td>
-                <td>Total number of messages received and processed by this mapping since the last reset. Counts every message that matched the topic — including those that produced errors.</td>
-              </tr>
-              <tr>
-                <td><strong>Snooped total</strong></td>
-                <td>Total number of messages captured while the mapping was in Snooping mode.</td>
-              </tr>
-              <tr>
-                <td><strong>Snooped active</strong></td>
-                <td>Number of snooped messages currently stored and available as source-template candidates.</td>
-              </tr>
-              <tr>
-                <td><strong>Errors</strong></td>
-                <td>Number of messages that failed during transformation or Cumulocity API submission. A non-zero value means at least one message was dropped — check <strong>Service events</strong> to see the error detail.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="admonition info" style="max-width: 100%;">
-          <div class="title">Info</div>
-          <div class="content">
-            Counters accumulate since the last reset (or since microservice startup). Use the
-            <strong>Reset statistics</strong> button in the action bar to zero all counters —
-            useful for measuring throughput during a specific time window. Counters are lost on
-            microservice restart.
-          </div>
-        </div>
-
-        <h4 class="p-t-16 p-b-8">Chart processed</h4>
-        <div class="p-b-8 text-16">
-          A time-series chart showing the number of messages processed per mapping over time.
-          Each mapping appears as a separate line. Use this view to spot traffic spikes, identify
-          quiet mappings, and confirm that message flow resumes after a connector reconnect.
-          The chart updates live as messages arrive.
-        </div>
-
-        <h4 class="p-t-16 p-b-8">Cache statistic</h4>
-        <div class="p-b-8 text-16">
-          The Cache statistic view shows two cache panels side by side, each displaying two KPI cards:
-        </div>
-        <div class="table-responsive table-width-100">
-          <table class="table table-striped" style="table-layout: fixed;">
-            <thead class="thead-light">
-              <tr>
-                <th style="width: 20%;">Cache panel</th>
-                <th style="width: 20%;">KPI card</th>
-                <th style="width: 60%;">Meaning</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td rowspan="2"><strong>Inventory Cache</strong></td>
-                <td><strong># Entries</strong></td>
-                <td>Number of managed object fragments currently held in memory. Below the card the configured size limit is shown (default: 100 000). When the limit is reached, the least-recently-used entry is evicted to make room.</td>
-              </tr>
-              <tr>
-                <td><strong>% Percent</strong></td>
-                <td>Fill rate — <code>Entries / Limit × 100</code>. A value approaching 100 % means the cache is nearly full and evictions are occurring frequently, which may slow down message processing.</td>
-              </tr>
-              <tr>
-                <td rowspan="2"><strong>Inbound ID Cache</strong></td>
-                <td><strong># Entries</strong></td>
-                <td>Number of external-ID → internal managed object ID mappings currently cached. Each mapping is resolved once and then stored here, so subsequent messages skip the identity resolution REST call entirely.</td>
-              </tr>
-              <tr>
-                <td><strong>% Percent</strong></td>
-                <td>Fill rate for the ID cache, same calculation as above. A high fill rate with many devices indicates you may want to increase the cache limit in the service configuration.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="p-b-8 text-16">
-          The action bar at the top of the page provides three buttons:
-        </div>
-        <ul class="text-16 p-b-8">
-          <li>
-            <strong>Clear external ID cache</strong> — removes all cached external-ID-to-internal-ID resolutions. Use this after deleting or re-registering a device to prevent stale identity lookups. The cache is rebuilt automatically as new messages arrive.
-          </li>
-          <li>
-            <strong>Clear inventory cache</strong> — removes all cached managed object fragments. Use this after updating a device's managed object directly in Cumulocity (outside the mapper) so the mapper picks up the latest values. The fragments you configured under <strong>Service Configuration → Function → Fragments from inventory to cache</strong> are re-fetched on demand.
-          </li>
-          <li>
-            <strong>Reload</strong> — refreshes the KPI cards without clearing the caches, useful to get an up-to-date snapshot of the current fill levels.
-          </li>
-        </ul>
-        <div class="admonition caution" style="max-width: 100%;">
-          <div class="title">Caution</div>
-          <div class="content">
-            Both caches are held in memory and are lost on microservice restart. After a restart they
-            are rebuilt automatically as messages arrive — no manual action is needed.
-          </div>
-        </div>
-
-        <h4 class="p-t-16 p-b-8">Service events</h4>
-        <div class="p-b-8 text-16">
-          The Service events view is the primary place to diagnose individual message failures without
-          needing access to the microservice container logs. It displays a filterable list of events
-          emitted by the mapper backend. Each entry shows:
-        </div>
-        <ul class="text-16 p-b-8">
-          <li><strong>Type</strong> — event severity/category (e.g. <code>STATUS_MAPPING_CHANGED</code>, <code>STATUS_CONNECTOR_EVENT</code>, <code>MAPPING_FAILURE</code>)</li>
-          <li><strong>Timestamp</strong> — when the event occurred</li>
-          <li><strong>Message</strong> — the full error or status description, including the mapping name, tenant, and root cause</li>
-        </ul>
-        <div class="p-b-8 text-16">
-          Use the <strong>Type</strong> dropdown and <strong>Date from / Date to</strong> pickers to
-          narrow the event list to a specific time window or event category. This is particularly useful
-          when correlating errors with known message arrival times.
-        </div>
-        <div class="admonition caution" style="max-width: 100%;">
-          <div class="title">Caution</div>
-          <div class="content">
-            Service events are stored in an in-memory ring buffer and are lost on microservice restart.
-            For long-term audit trails, configure the Cumulocity platform's built-in audit log or forward
-            events to an external monitoring system.
-          </div>
-        </div>
-
-        <h4 class="p-t-16 p-b-8">Mapping Import and Export</h4>
-        <div class="p-b-8 text-16">
-          The Dynamic Mapper does not currently provide a built-in import/export UI for mappings.
-          Mappings are stored as Cumulocity managed objects (type <code>d11r_mapping</code>) and can be
-          backed up or migrated using the standard Cumulocity Inventory REST API or the migration scripts
-          provided in the
-          <a href="https://github.com/Cumulocity-IoT/cumulocity-dynamic-mapper" target="_blank">GitHub repository</a>.
-        </div>
-      </div>
       <!-- ==================== SECTION: DEFINING A MAPPING ==================== -->
       <div class="card-header" id="define-mapping">
         <h3>
@@ -1764,6 +1597,164 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
           </div>
         </div>
       </div>
+      <!-- ==================== SECTION: MONITORING ==================== -->
+      <div class="card-header" id="monitoring">
+        <h3>
+          {{ 'Monitoring' | translate }}
+        </h3>
+      </div>
+      <div class="card-block">
+        <div class="p-b-8 text-16">
+          The <strong>Monitoring</strong> section in the left navigation contains four views:
+          <strong>Statistic processed</strong>, <strong>Chart processed</strong>,
+          <strong>Cache statistic</strong>, and <strong>Service events</strong>.
+          Each gives a different operational perspective on what the mapper is doing at runtime.
+        </div>
+
+        <h4 class="p-t-16 p-b-8">Statistic processed (Inbound / Outbound)</h4>
+        <div class="p-b-8 text-16">
+          This view shows one row per active mapping in a data grid. The columns are:
+        </div>
+        <div class="table-responsive table-width-100">
+          <table class="table table-striped" style="table-layout: fixed;">
+            <thead class="thead-light">
+              <tr>
+                <th style="width: 25%;">Column</th>
+                <th style="width: 75%;">Meaning</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Name</strong></td>
+                <td>The mapping name. Click the name to open the mapping editor directly.</td>
+              </tr>
+              <tr>
+                <td><strong>Mapping topic</strong></td>
+                <td>The subscription topic pattern the mapping listens on (inbound) or the Cumulocity source object type (outbound).</td>
+              </tr>
+              <tr>
+                <td><strong>Publish topic</strong></td>
+                <td>The broker topic the mapping publishes to (outbound only).</td>
+              </tr>
+              <tr>
+                <td><strong>Received</strong></td>
+                <td>Total number of messages received and processed by this mapping since the last reset. Counts every message that matched the topic — including those that produced errors.</td>
+              </tr>
+              <tr>
+                <td><strong>Snooped total</strong></td>
+                <td>Total number of messages captured while the mapping was in Snooping mode.</td>
+              </tr>
+              <tr>
+                <td><strong>Snooped active</strong></td>
+                <td>Number of snooped messages currently stored and available as source-template candidates.</td>
+              </tr>
+              <tr>
+                <td><strong>Errors</strong></td>
+                <td>Number of messages that failed during transformation or Cumulocity API submission. A non-zero value means at least one message was dropped — check <strong>Service events</strong> to see the error detail.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="admonition info" style="max-width: 100%;">
+          <div class="title">Info</div>
+          <div class="content">
+            Counters accumulate since the last reset (or since microservice startup). Use the
+            <strong>Reset statistics</strong> button in the action bar to zero all counters —
+            useful for measuring throughput during a specific time window. Counters are lost on
+            microservice restart.
+          </div>
+        </div>
+
+        <h4 class="p-t-16 p-b-8">Chart processed</h4>
+        <div class="p-b-8 text-16">
+          A time-series chart showing the number of messages processed per mapping over time.
+          Each mapping appears as a separate line. Use this view to spot traffic spikes, identify
+          quiet mappings, and confirm that message flow resumes after a connector reconnect.
+          The chart updates live as messages arrive.
+        </div>
+
+        <h4 class="p-t-16 p-b-8">Cache statistic</h4>
+        <div class="p-b-8 text-16">
+          The Cache statistic view shows two cache panels side by side, each displaying two KPI cards:
+        </div>
+        <div class="table-responsive table-width-100">
+          <table class="table table-striped" style="table-layout: fixed;">
+            <thead class="thead-light">
+              <tr>
+                <th style="width: 20%;">Cache panel</th>
+                <th style="width: 20%;">KPI card</th>
+                <th style="width: 60%;">Meaning</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td rowspan="2"><strong>Inventory Cache</strong></td>
+                <td><strong># Entries</strong></td>
+                <td>Number of managed object fragments currently held in memory. Below the card the configured size limit is shown (default: 100 000). When the limit is reached, the least-recently-used entry is evicted to make room.</td>
+              </tr>
+              <tr>
+                <td><strong>% Percent</strong></td>
+                <td>Fill rate — <code>Entries / Limit × 100</code>. A value approaching 100 % means the cache is nearly full and evictions are occurring frequently, which may slow down message processing.</td>
+              </tr>
+              <tr>
+                <td rowspan="2"><strong>Inbound ID Cache</strong></td>
+                <td><strong># Entries</strong></td>
+                <td>Number of external-ID → internal managed object ID mappings currently cached. Each mapping is resolved once and then stored here, so subsequent messages skip the identity resolution REST call entirely.</td>
+              </tr>
+              <tr>
+                <td><strong>% Percent</strong></td>
+                <td>Fill rate for the ID cache, same calculation as above. A high fill rate with many devices indicates you may want to increase the cache limit in the service configuration.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="p-b-8 text-16">
+          The action bar at the top of the page provides three buttons:
+        </div>
+        <ul class="text-16 p-b-8">
+          <li>
+            <strong>Clear external ID cache</strong> — removes all cached external-ID-to-internal-ID resolutions. Use this after deleting or re-registering a device to prevent stale identity lookups. The cache is rebuilt automatically as new messages arrive.
+          </li>
+          <li>
+            <strong>Clear inventory cache</strong> — removes all cached managed object fragments. Use this after updating a device's managed object directly in Cumulocity (outside the mapper) so the mapper picks up the latest values. The fragments you configured under <strong>Service Configuration → Function → Fragments from inventory to cache</strong> are re-fetched on demand.
+          </li>
+          <li>
+            <strong>Reload</strong> — refreshes the KPI cards without clearing the caches, useful to get an up-to-date snapshot of the current fill levels.
+          </li>
+        </ul>
+        <div class="admonition caution" style="max-width: 100%;">
+          <div class="title">Caution</div>
+          <div class="content">
+            Both caches are held in memory and are lost on microservice restart. After a restart they
+            are rebuilt automatically as messages arrive — no manual action is needed.
+          </div>
+        </div>
+
+        <h4 class="p-t-16 p-b-8">Service events</h4>
+        <div class="p-b-8 text-16">
+          The Service events view is the primary place to diagnose individual message failures without
+          needing access to the microservice container logs. It displays a filterable list of events
+          emitted by the mapper backend. Each entry shows:
+        </div>
+        <ul class="text-16 p-b-8">
+          <li><strong>Type</strong> — event severity/category (e.g. <code>STATUS_MAPPING_CHANGED</code>, <code>STATUS_CONNECTOR_EVENT</code>, <code>MAPPING_FAILURE</code>)</li>
+          <li><strong>Timestamp</strong> — when the event occurred</li>
+          <li><strong>Message</strong> — the full error or status description, including the mapping name, tenant, and root cause</li>
+        </ul>
+        <div class="p-b-8 text-16">
+          Use the <strong>Type</strong> dropdown and <strong>Date from / Date to</strong> pickers to
+          narrow the event list to a specific time window or event category. This is particularly useful
+          when correlating errors with known message arrival times.
+        </div>
+        <div class="admonition caution" style="max-width: 100%;">
+          <div class="title">Caution</div>
+          <div class="content">
+            Service events are stored in an in-memory ring buffer and are lost on microservice restart.
+            For long-term audit trails, configure the Cumulocity platform's built-in audit log or forward
+            events to an external monitoring system.
+          </div>
+        </div>
+      </div>
       <!-- ==================== SECTION: TROUBLESHOOTING ==================== -->
       <div class="card-header" id="troubleshooting">
         <h3>
@@ -1845,9 +1836,9 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
     </div>
     <div>
       <div class="card-header" id="jsonata-substitution">
-        <h4>
+        <h3>
           {{ 'Defining a substitution using JSONata' | translate }}
-        </h4>
+        </h3>
       </div>
       <div class="card-block">
         <div class="p-b-8 text-16">
@@ -1935,9 +1926,9 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
     </div>
     <div>
       <div class="card-header" id="javascript-substitution">
-        <h4>
+        <h3>
           {{ 'Defining a substitution using JavaScript (deprecated)' | translate }}
-        </h4>
+        </h3>
       </div>
       <div class="card-block">
         <div class="p-b-8 text-16">
@@ -2066,9 +2057,9 @@ return result;</code></pre>
     </div>
     <div>
       <div class="card-header" id="javascript-smart-function">
-        <h4>
+        <h3>
           {{ 'Defining the payload transformation using a Smart Function (JavaScript)' | translate }}
-        </h4>
+        </h3>
       </div>
       <div class="card-block">
         <div class="p-b-8 text-16">
@@ -3008,9 +2999,9 @@ function celsiusToFahrenheit(celsius) &#123;
     </div>
     <div>
       <div class="card-header" id="java-extension">
-        <h4>
+        <h3>
           {{ 'Defining the payload transformation using Java Extensions' | translate }}
-        </h4>
+        </h3>
       </div>
       <div class="card-block">
         <div class="p-b-8 text-16">
