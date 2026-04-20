@@ -531,19 +531,6 @@ svg {
 }
 
 /* ============================================================================ */
-/* SEARCH HIGHLIGHTS                                                             */
+/* SEARCH HIGHLIGHTS — rules live in global styles.less (Angular encapsulation  */
+/* prevents scoped styles from applying to runtime-created mark elements)        */
 /* ============================================================================ */
-
-mark.search-highlight {
-  background-color: #ffe066;
-  color: inherit;
-  border-radius: 2px;
-  padding: 0 1px;
-  outline: none;
-}
-
-mark.search-highlight--current {
-  background-color: #ff9800;
-  color: #fff;
-  box-shadow: 0 0 0 2px #e65100;
-}

@@ -1,0 +1,145 @@
+<!--
+~ Copyright (c) 2022-2025 Cumulocity GmbH.
+~
+~ SPDX-License-Identifier: Apache-2.0
+~
+~  Licensed under the Apache License, Version 2.0 (the "License");
+~  you may not use this file except in compliance with the License.
+~  You may obtain a copy of the License at
+~
+~       http://www.apache.org/licenses/LICENSE-2.0
+~
+~  Unless required by applicable law or agreed to in writing, software
+~  distributed under the License is distributed on an "AS IS" BASIS,
+~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+~  See the License for the specific language governing permissions and
+~  limitations under the License.
+~
+~  @authors Christof Strack, Stefan Witschel
+~
+-->
+  <div>
+    <c8y-title>{{ 'Defining a substitution using JavaScript (deprecated)' | translate }}</c8y-title>
+    <a id="top"></a>
+    <div class="text-right m-b-16">
+      <a (click)="scrollToElement('top')" class="to-the-top" role="button" aria-label="Scroll to top"
+        style="cursor: pointer;">
+        <i class="dlt-c8y-icon-chevron-up m-r-4"></i> Top
+      </a>
+    </div>
+    <div>
+      <div class="card-header" id="javascript-substitution">
+        <h3>
+          {{ 'Defining a substitution using JavaScript (deprecated)' | translate }}
+        </h3>
+      </div>
+      <div class="card-block">
+        <div class="p-b-8 text-16">
+          JavaScript substitutions allow you to define individual field transformations directly in the mapping editor
+          using
+          JavaScript code.<br />
+          At runtime, the JavaScript code is evaluated and copies the value to the target payload path.
+        </div>
+        <div class="admonition caution" style="max-width: 100%;">
+          <div class="title">Caution</div>
+          <div class="content">
+            The JavaScript editor is only available if you select <code>Substitution as JavaScript (deprecated)</code> when creating the mapping. You cannot switch between transformation types after creating
+            the
+            mapping.
+          </div>
+        </div>
+        <div class="admonition info" style="max-width: 100%;">
+          <div class="title">Info</div>
+          <div class="content">
+            <strong>When to use JavaScript Substitutions:</strong> Choose JavaScript substitutions when you need:
+            <ul class="m-t-8 m-b-0">
+              <li>Familiar JavaScript syntax instead of learning JSONata</li>
+              <li>Complex string manipulations or regular expressions</li>
+              <li>Mathematical calculations or date operations</li>
+              <li>Conditional logic that's easier to express in imperative code</li>
+            </ul>
+            For complete control over the entire payload structure, consider using Smart Functions instead.
+          </div>
+        </div>
+        <br />
+        <img width="80%" class="m-l-48 m-b-48 m-b-16"
+          src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Substitution_JavaScript.png"
+          alt="JavaScript substitution" />
+        <p class="image-description m-l-48"><b>Description:</b> Screenshot showing the definition of substitutions using
+          JavaScript.</p>
+        <div class="p-b-8"></div>
+        <h4 class="p-t-16 p-b-8">SubstitutionValue, TYPE, and RepairStrategy</h4>
+        <div class="p-b-8 text-16">
+          JavaScript substitutions return a <code>SubstitutionResult</code> populated via
+          <code>addSubstitution(result, key, value)</code>. The <code>value</code> argument must be a
+          <code>SubstitutionValue</code> that declares the value, its type, a repair strategy, and
+          whether arrays should be expanded into multiple Cumulocity objects.
+        </div>
+        <pre><code class="language-javascript">// Construct a SubstitutionValue:
+// new SubstitutionValue(value, TYPE.xxx, RepairStrategy.xxx, expandArray)
+
+const result = new SubstitutionResult();
+addSubstitution(result, "source.id", new SubstitutionValue(
+  payload["deviceId"],          // value to substitute
+  TYPE.TEXTUAL,                 // type of the value
+  RepairStrategy.DEFAULT,       // what to do when value is missing/null
+  false                         // expand arrays into multiple objects?
+));
+return result;</code></pre>
+        <h5 class="p-t-8 p-b-4"><strong>TYPE enum</strong></h5>
+        <div class="p-b-8 text-16">Describes the data type of the extracted value:</div>
+        <div class="table-responsive table-width-100">
+          <table class="table table-striped" style="table-layout: fixed;">
+            <thead class="thead-light">
+              <tr><th style="width: 25%;">Value</th><th style="width: 75%;">Description</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>TYPE.TEXTUAL</code></td><td>String value</td></tr>
+              <tr><td><code>TYPE.NUMBER</code></td><td>Numeric value (integer or float)</td></tr>
+              <tr><td><code>TYPE.BOOLEAN</code></td><td>Boolean value (<code>true</code> / <code>false</code>)</td></tr>
+              <tr><td><code>TYPE.OBJECT</code></td><td>JSON object — copied as-is into the target</td></tr>
+              <tr><td><code>TYPE.ARRAY</code></td><td>JSON array — use with <code>expandArray: true</code> to generate multiple Cumulocity objects from one message</td></tr>
+              <tr><td><code>TYPE.IGNORE</code></td><td>The substitution is skipped; use for conditional mappings where you want to omit a field</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h5 class="p-t-8 p-b-4"><strong>RepairStrategy enum</strong></h5>
+        <div class="p-b-8 text-16">
+          Controls what the mapper does when the extracted value is <code>null</code>, missing, or an
+          array that needs to be mapped to a scalar target field:
+        </div>
+        <div class="table-responsive table-width-100">
+          <table class="table table-striped" style="table-layout: fixed;">
+            <thead class="thead-light">
+              <tr><th style="width: 35%;">Value</th><th style="width: 65%;">Description</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>RepairStrategy.DEFAULT</code></td><td>Use the value as-is; if <code>null</code>, the target field is set to <code>null</code></td></tr>
+              <tr><td><code>RepairStrategy.USE_FIRST_VALUE_OF_ARRAY</code></td><td>If the value is an array, take the first element for the target field</td></tr>
+              <tr><td><code>RepairStrategy.USE_LAST_VALUE_OF_ARRAY</code></td><td>If the value is an array, take the last element for the target field</td></tr>
+              <tr><td><code>RepairStrategy.IGNORE</code></td><td>If the value is <code>null</code> or missing, skip this substitution entirely (the target field keeps its template default)</td></tr>
+              <tr><td><code>RepairStrategy.REMOVE_IF_MISSING_OR_NULL</code></td><td>If the value is <code>null</code> or missing, remove the target field from the payload completely</td></tr>
+              <tr><td><code>RepairStrategy.CREATE_IF_MISSING</code></td><td>If the target field does not exist in the template, create it with the substituted value</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h5 class="p-t-8 p-b-4"><strong>expandArray</strong></h5>
+        <div class="p-b-8 text-16">
+          When <code>expandArray</code> is set to <code>true</code> and the substituted value is an
+          array, the mapper generates one Cumulocity object per array element. For example, a payload
+          with three temperature readings can produce three separate measurements in a single message:
+        </div>
+        <pre><code class="language-javascript">// Payload: &#123; "temps": [10.5, 30.0, 49.2] &#125;
+// With expandArray: true, this creates 3 separate measurements
+const result = new SubstitutionResult();
+addSubstitution(result, "c8y_Temp.T.value", new SubstitutionValue(
+  payload["temps"],
+  TYPE.ARRAY,
+  RepairStrategy.DEFAULT,
+  true   // expand: one measurement per element
+));
+return result;</code></pre>
+      </div>
+      <div class="p-b-8"></div>
+    </div>
+  </div>

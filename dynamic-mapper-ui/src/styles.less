@@ -91,3 +91,19 @@
 .hljs-deletion {
   color: #d16969 !important;
 }
+
+/* ============================================================================ */
+/* SEARCH HIGHLIGHTS (doc-main search bar)                                      */
+/* Must be global — mark elements are created via document.createElement()      */
+/* ============================================================================ */
+mark.search-highlight {
+  background-color: #a8d8ff;
+  color: #000;
+  border-radius: 2px;
+  padding: 0 2px;
+}
+
+mark.search-highlight--current {
+  background-color: #1976d2;
+  color: #fff;
+}

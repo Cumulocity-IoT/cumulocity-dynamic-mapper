@@ -120,7 +120,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
     javaScriptNode: new NavigatorNode({
       parent: gettext('Transformation Types'),
       icon: 'empty',
-      label: gettext('Substitution as JavaScript'),
+      label: gettext('Substitution as JavaScript (deprecated)'),
       path: '/c8y-pkg-dynamic-mapper/landing/javascript',
       priority: 605,
       preventDuplicates: true

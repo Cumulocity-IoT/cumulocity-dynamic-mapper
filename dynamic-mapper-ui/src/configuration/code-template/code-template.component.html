@@ -29,7 +29,7 @@
         <option [ngValue]="null" disabled>Select template...</option>
         @for (item of codeTemplateEntries$ | async; track item) {
         <option [ngValue]="item.key">
-          {{ item.name }} ({{ item.readonly? 'readonly': 'editable' }})
+          {{ item.name }} ({{ item.readonly ? 'read-only — duplicate to customise' : 'editable' }})
         </option>
         }
       </select>
@@ -38,7 +38,9 @@
 </c8y-action-bar-item>
 
 <c8y-action-bar-item [placement]="'right'">
-  <button class="btn btn-link" title="{{ 'Delete' | translate }}" (click)="onDeleteCodeTemplate()"
+  <button class="btn btn-link"
+    title="{{ 'Delete this custom template permanently. System templates cannot be deleted — use Init system code templates to restore them.' | translate }}"
+    (click)="onDeleteCodeTemplate()"
     [disabled]="codeTemplateDecoded?.internal || !feature?.userHasMappingAdminRole">
     <i c8yIcon="minus-circle"></i>
     {{ 'Delete' | translate }}
@@ -53,7 +55,9 @@
     <i c8yIcon="duplicate"></i>
     {{ 'Duplicate' | translate }}
   </button>
-  <button class="btn btn-link" title="{{ 'Reset' | translate }}" (click)="onInitSystemCodeTemplate()"
+  <button class="btn btn-link"
+    title="{{ 'Restore all system (read-only) templates to their factory defaults. Your custom templates are not affected.' | translate }}"
+    (click)="onInitSystemCodeTemplate()"
     [disabled]="!feature?.userHasMappingAdminRole">
     <i c8yIcon="reset"></i>
     {{ 'Init system code templates' | translate }}
@@ -68,6 +72,15 @@
   <c8y-loading></c8y-loading>
   } @else {
   <div class="card-block">
+    <div class="p-b-12 text-muted" style="font-size: 13px; line-height: 1.5;">
+      A <strong>Code Template</strong> is the JavaScript starting point that is copied into every new mapping that
+      uses this transformation type. Editing a template does <em>not</em> affect mappings already created from it
+      &mdash; each mapping holds its own independent copy. Select a template from the drop-down above to view or
+      edit its code.
+      <br />
+      <strong>Shared</strong> templates are evaluated before every Smart Function execution: helpers and constants
+      defined here are available as globals in all Smart Functions without any import statement.
+    </div>
     <c8y-form-group class="fit-h">
       <div class="d-flex">
         <label translate>JavaScript code</label>
