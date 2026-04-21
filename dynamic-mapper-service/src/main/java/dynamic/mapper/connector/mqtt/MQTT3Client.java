@@ -170,12 +170,14 @@ public class MQTT3Client extends AMQTTClient {
 
     @Override
     protected void createMqttCallback() {
+        String clientId = (String) connectorConfiguration.getProperties().get("clientId");
         mqttCallback = new MQTT3Callback(
                 tenant,
                 configurationRegistry,
                 dispatcher,
                 connectorIdentifier,
-                connectorName);
+                connectorName,
+                clientId);
     }
 
     @Override

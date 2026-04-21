@@ -48,16 +48,18 @@ public class MQTT3Callback implements Consumer<Mqtt3Publish> {
     private String tenant;
     private String connectorIdentifier;
     private String connectorName;
+    private String clientId;
     private ServiceConfiguration serviceConfiguration;
     private ExecutorService virtualThreadPool;
 
     MQTT3Callback(String tenant, ConfigurationRegistry configurationRegistry, GenericMessageCallback callback,
-            String connectorIdentifier, String connectorName
+            String connectorIdentifier, String connectorName, String clientId
 ) {
         this.genericMessageCallback = callback;
         this.tenant = tenant;
         this.connectorIdentifier = connectorIdentifier;
         this.connectorName = connectorName;
+        this.clientId = clientId;
         this.serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
     }
@@ -75,6 +77,7 @@ public class MQTT3Callback implements Consumer<Mqtt3Publish> {
         ConnectorMessage connectorMessage = ConnectorMessage.builder()
                 .tenant(tenant)
                 .topic(topic)
+                .clientId(clientId)
                 .sendPayload(true)
                 .connectorIdentifier(connectorIdentifier)
                 .payload(payloadBytes)
