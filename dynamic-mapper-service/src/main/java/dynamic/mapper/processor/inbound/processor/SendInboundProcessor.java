@@ -64,6 +64,10 @@ public class SendInboundProcessor extends BaseProcessor {
                 // Sequential mode: process all requests in context
                 processAllRequests(context);
             }
+            // After all requests are processed, store the SparkPlug B birth fragment if applicable.
+            // Deliberately outside the INVENTORY request path so it runs even when the Smart Function
+            // emits no INVENTORY object (e.g. emits only a MEASUREMENT, or emits nothing at all).
+            storeSparkPlugBBirthMessage(context);
         } catch (Exception e) {
             String errorMessage = String.format(
                     "%s - Error in SendInboundProcessor: %s for mapping: %s",
@@ -182,11 +186,8 @@ public class SendInboundProcessor extends BaseProcessor {
             String response = objectMapper.writeValueAsString(device);
             request.setResponse(response);
             request.setSourceId(device.getId().getValue());
-
-            // For SparkPlug B NBIRTH/DBIRTH messages: persist the decoded metric definitions
-            // as sparkPlugB_NBIRTH (Edge Node) or sparkPlugB_DBIRTH (Device) fragment on the
-            // managed object so that subsequent NDATA/DDATA messages can resolve metric aliases.
-            storeSparkPlugBBirthMessage(context, device.getId().getValue());
+            // Propagate the resolved device ID to context so storeSparkPlugBBirthMessage can use it.
+            context.setSourceId(device.getId().getValue());
 
         } catch (Exception e) {
             request.setError(e);
@@ -298,9 +299,17 @@ public class SendInboundProcessor extends BaseProcessor {
      * @param deviceId the C8Y internal ID of the managed object that was just upserted
      */
     @SuppressWarnings("unchecked")
-    private void storeSparkPlugBBirthMessage(ProcessingContext<Object> context, String deviceId) {
+    private void storeSparkPlugBBirthMessage(ProcessingContext<Object> context) {
         if (!dynamic.mapper.processor.model.MappingType.SPARKPLUGB
                 .equals(context.getMapping().getMappingType())) {
+            return;
+        }
+        // deviceId is populated by processInventoryRequest (via upsertDevice) or by
+        // FlowResultInboundProcessor when the Smart Function emits a non-INVENTORY object.
+        String deviceId = context.getSourceId();
+        if (deviceId == null) {
+            log.warn("{} - storeSparkPlugBBirthMessage: sourceId not set on context, cannot store birth fragment",
+                    context.getTenant());
             return;
         }
         String topic = context.getTopic();
