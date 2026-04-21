@@ -70,7 +70,7 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
       parent: gettext('Configuration'),
       label: gettext('Code template'),
       icon: 'source-code',
-      path: `/c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/INBOUND_SUBSTITUTION_AS_CODE`,
+      path: `/c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/INBOUND_SMART_FUNCTION`,
       priority: 460,
       preventDuplicates: true
     }),
