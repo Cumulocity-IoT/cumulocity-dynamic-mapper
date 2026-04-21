@@ -26,6 +26,8 @@ import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.core.C8YAgent;
+import dynamic.mapper.core.CacheManager;
+import dynamic.mapper.core.cache.InventoryCache;
 import dynamic.mapper.model.Mapping;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.tahu.protobuf.SparkplugBProto;
@@ -84,6 +86,10 @@ public class SparkPlugBDeserializer implements PayloadDeserializer<Object> {
     @Autowired
     @Lazy
     private C8YAgent c8yAgent;
+
+    @Autowired
+    @Lazy
+    private CacheManager cacheManager;
 
     @Override
     public Object deserializePayload(Mapping mapping, ConnectorMessage message) throws IOException {
@@ -192,7 +198,7 @@ public class SparkPlugBDeserializer implements PayloadDeserializer<Object> {
      */
     @SuppressWarnings("unchecked")
     private Map<Long, Map<String, Object>> loadAliasMap(String tenant, Mapping mapping,
-            String externalIdValue, String fragmentKey) {
+                                                        String externalIdValue, String fragmentKey) {
         String externalIdType = mapping.getExternalIdType();
         if (externalIdType == null || externalIdType.isEmpty()) {
             externalIdType = "c8y_Serial";
@@ -208,18 +214,57 @@ public class SparkPlugBDeserializer implements PayloadDeserializer<Object> {
             }
 
             String sourceId = extIdRep.getManagedObject().getId().getValue();
+
+            // Try to get from inventory cache first
+            Map<Long, Map<String, Object>> cachedFragment = loadFragmentFromCache(tenant, sourceId, fragmentKey);
+            if (cachedFragment != null) {
+                log.debug("{} - Loaded '{}' fragment from cache for sourceId={}", tenant, fragmentKey, sourceId);
+                return cachedFragment;
+            }
+
+            // Fallback to direct retrieval from C8YAgent
             ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(tenant, sourceId, false);
             if (mor == null) {
                 return null;
             }
 
-            Object nbirth = mor.get(fragmentKey);
-            if (nbirth instanceof Map) {
-                return (Map<Long, Map<String, Object>>) nbirth;
+            Object aliasMap = mor.get(fragmentKey);
+            if (aliasMap instanceof Map) {
+                return (Map<Long, Map<String, Object>>) aliasMap;
             }
         } catch (Exception e) {
             log.warn("{} - Failed to load '{}' fragment for alias resolution (externalId={}): {}",
                     tenant, fragmentKey, externalIdValue, e.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * Attempt to load a fragment from the inventory cache.
+     *
+     * @param tenant the tenant identifier
+     * @param sourceId the managed object source ID
+     * @param fragmentKey the fragment key to retrieve
+     * @return the fragment map, or {@code null} if not found in cache or cache is unavailable
+     */
+    @SuppressWarnings("unchecked")
+    private Map<Long, Map<String, Object>> loadFragmentFromCache(String tenant, String sourceId, String fragmentKey) {
+        try {
+            InventoryCache inventoryCache = cacheManager.getInventoryCache(tenant);
+            if (inventoryCache == null) {
+                return null;
+            }
+
+            Map<String, Object> cachedMO = inventoryCache.getMOBySource(sourceId);
+            if (cachedMO != null) {
+                Object fragment = cachedMO.get(fragmentKey);
+                if (fragment instanceof Map) {
+                    return (Map<Long, Map<String, Object>>) fragment;
+                }
+            }
+        } catch (Exception e) {
+            log.debug("{} - Failed to load fragment from inventory cache (sourceId={}): {}",
+                    tenant, sourceId, e.getMessage());
         }
         return null;
     }
