@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import jakarta.annotation.PostConstruct;
+
 import org.apache.camel.Exchange;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -18,6 +20,7 @@ import dynamic.mapper.processor.inbound.deserializer.FlatFilePayloadDeserializer
 import dynamic.mapper.processor.inbound.deserializer.HexPayloadDeserializer;
 import dynamic.mapper.processor.inbound.deserializer.JSONPayloadDeserializer;
 import dynamic.mapper.processor.inbound.deserializer.PayloadDeserializer;
+import dynamic.mapper.processor.inbound.deserializer.SparkPlugBDeserializer;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.service.MappingService;
@@ -30,6 +33,9 @@ public class DeserializationInboundProcessor extends BaseProcessor {
     @Autowired
     private MappingService mappingService;
 
+    @Autowired
+    private SparkPlugBDeserializer sparkPlugBDeserializer;
+
     private final Map<MappingType, PayloadDeserializer<?>> deserializers = new HashMap<>();
 
     public DeserializationInboundProcessor() {
@@ -39,8 +45,12 @@ public class DeserializationInboundProcessor extends BaseProcessor {
         deserializers.put(MappingType.HEX, new HexPayloadDeserializer());
         deserializers.put(MappingType.PROTOBUF_INTERNAL, new BytePayloadDeserializer());
         deserializers.put(MappingType.ANY_PAYLOAD, new BytePayloadDeserializer());
+    }
 
-        // Add more mappings as needed based on the MappingType enum values
+    @PostConstruct
+    private void registerSparkPlugBDeserializer() {
+        // SparkPlugBDeserializer is a Spring bean (needs C8YAgent), registered after injection
+        deserializers.put(MappingType.SPARKPLUGB, sparkPlugBDeserializer);
     }
 
     @Override

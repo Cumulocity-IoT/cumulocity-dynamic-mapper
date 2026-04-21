@@ -293,6 +293,7 @@ export enum MappingType {
    *  Retained for display of not-yet-migrated mappings only. */
   EXTENSION_JAVA = 'EXTENSION_JAVA',
   ANY_PAYLOAD = 'ANY_PAYLOAD',
+  SPARKPLUGB = 'SPARKPLUGB',
 }
 
 export const TransformationTypeLabels = {
@@ -328,6 +329,7 @@ export const MappingTypeLabels = {
   // eslint-disable-next-line deprecation/deprecation
   [MappingType.EXTENSION_JAVA]: 'Payload parsed in Java Extension (deprecated — use Any Payload)',
   [MappingType.ANY_PAYLOAD]: 'Any Payload (e.g. SparkPlugB, Protobuf, XML)',
+  [MappingType.SPARKPLUGB]: 'SparkPlug B Payload',
 } as const;
 
 export const MappingTypeDescriptions = {
@@ -338,6 +340,7 @@ export const MappingTypeDescriptions = {
   // eslint-disable-next-line deprecation/deprecation
   [MappingType.EXTENSION_JAVA]: 'Deprecated — use Any Payload with Java Extension transformation type instead',
   [MappingType.ANY_PAYLOAD]: 'Payload format is unknown or binary (e.g. SparkPlugB, Protobuf, XML). Processed by a Smart Function (JavaScript) or a Java Extension.',
+  [MappingType.SPARKPLUGB]: 'Payload is in SparkPlug B binary format. Decoded automatically by the mapper using the Eclipse Tahu library. Only Smart Function transformations are supported.',
 } as const;
 
 export interface MappingTypeProperties {
@@ -572,6 +575,41 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
     // Per-transformation overrides in stepper-configuration.strategy.ts apply on top:
     //   SMART_FUNCTION — testing disabled (binary payload cannot be test-sent as JSON)
     //   EXTENSION_JAVA — testing enabled, processor-extension selector shown
+    stepperConfiguration: createStepperConfig({
+      showEditorSource: false,
+      showEditorTarget: false,
+      showFilterExpression: false,
+      allowDefiningSubstitutions: false,
+      allowNoDefinedIdentifier: true,
+      allowTestTransformation: false,
+      allowTestSending: false,
+      advanceFromStepToEndStep: 2
+    })
+  },
+  [MappingType.SPARKPLUGB]: {
+    key: MappingType.SPARKPLUGB,
+    enabled: true,
+    description:
+      'Payload is in SparkPlug B binary format (NBIRTH, NDATA, DBIRTH, DDATA, …). ' +
+      'The mapper decodes the protobuf payload automatically using the Eclipse Tahu library and ' +
+      'passes a rich JSON object to your Smart Function. ' +
+      'NBIRTH / DBIRTH metric definitions are stored on the managed object so that subsequent ' +
+      'NDATA / DDATA messages can resolve metric aliases.',
+    properties: {
+      [Direction.INBOUND]: {
+        snoopSupported: false,
+        directionSupported: true,
+        substitutionsAsCodeSupported: false,
+        // Only Smart Function is supported for SparkPlug B — the decoder handles binary parsing.
+        supportedTransformationTypes: [TransformationType.SMART_FUNCTION]
+      },
+      [Direction.OUTBOUND]: {
+        snoopSupported: false,
+        directionSupported: false,
+        substitutionsAsCodeSupported: false,
+        supportedTransformationTypes: []
+      },
+    },
     stepperConfiguration: createStepperConfig({
       showEditorSource: false,
       showEditorTarget: false,

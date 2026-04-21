@@ -32,6 +32,7 @@ public enum MappingType {
     EXTENSION_JAVA("EXTENSION_JAVA"),
     CODE_BASED("CODE_BASED"),
     ANY_PAYLOAD("ANY_PAYLOAD"),
+    SPARKPLUGB("SPARKPLUGB"),
     ;
 
     public final String name;

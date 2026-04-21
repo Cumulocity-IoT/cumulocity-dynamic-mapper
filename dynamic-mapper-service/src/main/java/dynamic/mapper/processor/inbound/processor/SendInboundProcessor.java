@@ -183,6 +183,11 @@ public class SendInboundProcessor extends BaseProcessor {
             request.setResponse(response);
             request.setSourceId(device.getId().getValue());
 
+            // For SparkPlug B NBIRTH/DBIRTH messages: persist the decoded metric definitions
+            // as sparkPlugB_NBIRTH (Edge Node) or sparkPlugB_DBIRTH (Device) fragment on the
+            // managed object so that subsequent NDATA/DDATA messages can resolve metric aliases.
+            storeSparkPlugBBirthMessage(context, device.getId().getValue());
+
         } catch (Exception e) {
             request.setError(e);
             throw e;
@@ -276,6 +281,86 @@ public class SendInboundProcessor extends BaseProcessor {
                 }
             });
         }
+    }
+
+    /**
+     * For SparkPlug B BIRTH messages, persists the alias→metric-definition map as a named
+     * fragment on the managed object so that subsequent DATA messages can resolve aliases.
+     * <ul>
+     *   <li><b>NBIRTH</b> — stored as {@code sparkPlugB_NBIRTH} on the <b>Edge Node</b> MO
+     *       (identified by the Edge Node ID in the topic). The MO was just created/updated by
+     *       {@code upsertDevice}, so it is guaranteed to exist.</li>
+     *   <li><b>DBIRTH</b> — stored as {@code sparkPlugB_DBIRTH} on the <b>Device</b> MO
+     *       (identified by the Device ID in the topic).</li>
+     * </ul>
+     *
+     * @param context  the current processing context
+     * @param deviceId the C8Y internal ID of the managed object that was just upserted
+     */
+    @SuppressWarnings("unchecked")
+    private void storeSparkPlugBBirthMessage(ProcessingContext<Object> context, String deviceId) {
+        if (!dynamic.mapper.processor.model.MappingType.SPARKPLUGB
+                .equals(context.getMapping().getMappingType())) {
+            return;
+        }
+        String topic = context.getTopic();
+        if (topic == null) {
+            return;
+        }
+        // Topic format: spBv1.0/{group_id}/{message_type}/{edge_node_id}[/{device_id}]
+        String[] parts = topic.split("/");
+        if (parts.length < 3) {
+            return;
+        }
+        String messageType = parts[2];
+
+        // Determine which fragment key to use
+        final String fragmentKey;
+        if ("NBIRTH".equals(messageType)) {
+            // Node Birth → store NBIRTH on the Edge Node MO
+            fragmentKey = dynamic.mapper.processor.inbound.deserializer.SparkPlugBDeserializer.SPARKPLUGB_NBIRTH_FRAGMENT;
+        } else if ("DBIRTH".equals(messageType)) {
+            // Device Birth → store DBIRTH on the Device MO
+            fragmentKey = dynamic.mapper.processor.inbound.deserializer.SparkPlugBDeserializer.SPARKPLUGB_DBIRTH_FRAGMENT;
+        } else {
+            // NDATA, DDATA, NDEATH, DDEATH etc. — nothing to persist
+            return;
+        }
+
+        // Build the alias→metricDefinition map from the decoded payload
+        Object payload = context.getPayload();
+        if (!(payload instanceof java.util.Map)) {
+            return;
+        }
+        java.util.Map<String, Object> payloadMap = (java.util.Map<String, Object>) payload;
+        Object metricsObj = payloadMap.get("metrics");
+        if (!(metricsObj instanceof java.util.List)) {
+            return;
+        }
+
+        // Build alias → {name, dataType} map for efficient alias resolution in NDATA/DDATA
+        java.util.Map<Long, java.util.Map<String, Object>> aliasMap = new java.util.LinkedHashMap<>();
+        for (Object metricObj : (java.util.List<?>) metricsObj) {
+            if (!(metricObj instanceof java.util.Map)) {
+                continue;
+            }
+            java.util.Map<String, Object> metric = (java.util.Map<String, Object>) metricObj;
+            Object aliasObj = metric.get("alias");
+            Object nameObj = metric.get("name");
+            Object dataTypeObj = metric.get("dataType");
+            if (aliasObj instanceof Long) {
+                java.util.Map<String, Object> def = new java.util.LinkedHashMap<>();
+                if (nameObj != null) def.put("name", nameObj);
+                if (dataTypeObj != null) def.put("dataType", dataTypeObj);
+                aliasMap.put((Long) aliasObj, def);
+            }
+        }
+
+        String tenant = context.getTenant();
+        log.info("{} - Storing '{}' fragment ({} metric definitions) on MO {} ({})",
+                tenant, fragmentKey, aliasMap.size(), deviceId, messageType);
+        c8yAgent.storeManagedObjectFragment(tenant, deviceId, fragmentKey,
+                aliasMap, context.getTesting());
     }
 
 }
