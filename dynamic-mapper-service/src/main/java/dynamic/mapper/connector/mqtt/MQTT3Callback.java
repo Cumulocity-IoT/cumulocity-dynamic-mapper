@@ -77,7 +77,6 @@ public class MQTT3Callback implements Consumer<Mqtt3Publish> {
         ConnectorMessage connectorMessage = ConnectorMessage.builder()
                 .tenant(tenant)
                 .topic(topic)
-                .clientId(clientId)
                 .sendPayload(true)
                 .connectorIdentifier(connectorIdentifier)
                 .payload(payloadBytes)
