@@ -114,6 +114,7 @@ public class SparkPlugBDeserializer implements PayloadDeserializer<Object> {
 
         // For NDATA / NCMD: load NBIRTH from the Edge Node MO
         // For DDATA / DCMD: load DBIRTH from the Device MO
+        // For NBIRTH / DBIRTH: build inline alias map from the birth metrics themselves
         Map<Long, Map<String, Object>> aliasToMetricDef = null;
         String msgType = sparkplugTopic.getMessageType();
         if ("NDATA".equals(msgType) || "NCMD".equals(msgType)) {
@@ -128,6 +129,8 @@ public class SparkPlugBDeserializer implements PayloadDeserializer<Object> {
                 log.warn("{} - DDATA/DCMD message on topic '{}' has no Device ID; alias resolution skipped",
                         tenant, topic);
             }
+        } else if ("NBIRTH".equals(msgType) || "DBIRTH".equals(msgType)) {
+            aliasToMetricDef = buildAliasMapFromMetrics(protoPayload.getMetricsList());
         }
 
         // Convert protobuf metrics to a list of plain Map objects
@@ -309,14 +312,16 @@ public class SparkPlugBDeserializer implements PayloadDeserializer<Object> {
             if (pm.hasTimestamp()) {
                 metric.put("timestamp", pm.getTimestamp());
             }
-            if (pm.getDatatype() != 0) {
-                metric.put("dataType", pm.getDatatype());
-            } else if (alias != null && aliasToMetricDef != null) {
-                // Fallback: use stored dataType
+            // Resolve datatype: proto value takes priority, fall back to birth-map entry
+            int resolvedDatatype = pm.getDatatype();
+            if (resolvedDatatype == 0 && alias != null && aliasToMetricDef != null) {
                 Map<String, Object> def = aliasToMetricDef.get(alias);
-                if (def != null && def.get("dataType") != null) {
-                    metric.put("dataType", def.get("dataType"));
+                if (def != null && def.get("dataType") instanceof Number) {
+                    resolvedDatatype = ((Number) def.get("dataType")).intValue();
                 }
+            }
+            if (resolvedDatatype != 0) {
+                metric.put("dataType", resolveDataTypeName(resolvedDatatype));
             }
             if (pm.hasIsHistorical()) {
                 metric.put("isHistorical", pm.getIsHistorical());
@@ -325,7 +330,7 @@ public class SparkPlugBDeserializer implements PayloadDeserializer<Object> {
                 metric.put("isTransient", pm.getIsTransient());
             }
             if (!pm.getIsNull()) {
-                metric.put("value", extractValue(pm));
+                metric.put("value", extractValue(pm, resolvedDatatype));
             } else {
                 metric.put("value", null);
             }
@@ -336,57 +341,85 @@ public class SparkPlugBDeserializer implements PayloadDeserializer<Object> {
     }
 
     /**
-     * Extract the scalar value from a protobuf metric based on its datatype field.
-     * Returns {@code null} for complex types (DataSet, Template, File) and unknown
-     * types — the Smart Function can handle those via the raw bytes if needed.
+     * Extract the scalar value from a protobuf metric.
+     * Uses the supplied {@code resolvedDatatype} (which may come from the birth-map
+     * when NDATA/DDATA metrics omit the datatype field).
      */
-    private Object extractValue(SparkplugBProto.Payload.Metric pm) {
-        int datatype = pm.getDatatype();
-        // MetricDataType integer constants from SparkPlug B specification
-        switch (datatype) {
-            case 1:  // Int8
-                return (byte) pm.getIntValue();
-            case 2:  // Int16
-                return (short) pm.getIntValue();
-            case 3:  // Int32
-                return pm.getIntValue();
-            case 4:  // Int64
-                return pm.getLongValue();
-            case 5:  // UInt8
-                return (short) (pm.getIntValue() & 0xFF);
-            case 6:  // UInt16
-                return pm.getIntValue() & 0xFFFF;
-            case 7:  // UInt32
-                return Integer.toUnsignedLong(pm.getIntValue());
-            case 8:  // UInt64
-                return pm.getLongValue();
-            case 9:  // Float
-                return pm.getFloatValue();
-            case 10: // Double
-                return pm.getDoubleValue();
-            case 11: // Boolean
-                return pm.getBooleanValue();
-            case 12: // String
-            case 13: // DateTime (represented as long epoch-ms)
-                // datatype 13 is DateTime – return timestamp as Long
-                if (datatype == 13) return pm.getLongValue();
-                return pm.getStringValue();
-            case 14: // Text
-                return pm.getStringValue();
-            case 15: // UUID
-                return pm.getStringValue();
-            case 16: // DataSet – return null; Smart Function can inspect raw proto
-                return null;
-            case 17: // Bytes
-                return pm.getBytesValue().toByteArray();
-            case 18: // File – return null
-                return null;
-            case 19: // Template – return null
-                return null;
+    private Object extractValue(SparkplugBProto.Payload.Metric pm, int resolvedDatatype) {
+        switch (resolvedDatatype) {
+            case 1:  return (byte) pm.getIntValue();
+            case 2:  return (short) pm.getIntValue();
+            case 3:  return pm.getIntValue();
+            case 4:  return pm.getLongValue();
+            case 5:  return (short) (pm.getIntValue() & 0xFF);
+            case 6:  return pm.getIntValue() & 0xFFFF;
+            case 7:  return Integer.toUnsignedLong(pm.getIntValue());
+            case 8:  return pm.getLongValue();
+            case 9:  return pm.getFloatValue();
+            case 10: return pm.getDoubleValue();
+            case 11: return pm.getBooleanValue();
+            case 12: return pm.getStringValue();
+            case 13: return pm.getLongValue();   // DateTime as epoch-ms
+            case 14: return pm.getStringValue(); // Text
+            case 15: return pm.getStringValue(); // UUID
+            case 16: return null;                // DataSet
+            case 17: return pm.getBytesValue().toByteArray();
+            case 18: return null;                // File
+            case 19: return null;                // Template
             default:
-                log.debug("Unsupported SparkPlug B datatype {}, returning null", datatype);
+                log.debug("Unsupported SparkPlug B datatype {}, returning null", resolvedDatatype);
                 return null;
         }
+    }
+
+    /** Map SparkPlug B datatype integer to its specification name. */
+    private String resolveDataTypeName(int datatype) {
+        switch (datatype) {
+            case 1:  return "Int8";
+            case 2:  return "Int16";
+            case 3:  return "Int32";
+            case 4:  return "Int64";
+            case 5:  return "UInt8";
+            case 6:  return "UInt16";
+            case 7:  return "UInt32";
+            case 8:  return "UInt64";
+            case 9:  return "Float";
+            case 10: return "Double";
+            case 11: return "Boolean";
+            case 12: return "String";
+            case 13: return "DateTime";
+            case 14: return "Text";
+            case 15: return "UUID";
+            case 16: return "DataSet";
+            case 17: return "Bytes";
+            case 18: return "File";
+            case 19: return "Template";
+            default: return "Unknown(" + datatype + ")";
+        }
+    }
+
+    /**
+     * Build an alias→definition map from the metrics of a NBIRTH/DBIRTH payload.
+     * Used so that alias-only metrics within the same birth message can have their
+     * name resolved in-place during {@link #convertMetrics}.
+     */
+    private Map<Long, Map<String, Object>> buildAliasMapFromMetrics(
+            List<SparkplugBProto.Payload.Metric> metrics) {
+        Map<Long, Map<String, Object>> aliasMap = new LinkedHashMap<>();
+        for (SparkplugBProto.Payload.Metric pm : metrics) {
+            if (!pm.hasAlias()) {
+                continue;
+            }
+            Map<String, Object> def = new LinkedHashMap<>();
+            if (pm.hasName() && !pm.getName().isEmpty()) {
+                def.put("name", pm.getName());
+            }
+            if (pm.getDatatype() != 0) {
+                def.put("dataType", pm.getDatatype());
+            }
+            aliasMap.put(pm.getAlias(), def);
+        }
+        return aliasMap;
     }
 
     // ─── Inner helper ─────────────────────────────────────────────────────────
