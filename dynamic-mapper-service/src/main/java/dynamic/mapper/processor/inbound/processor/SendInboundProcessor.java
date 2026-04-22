@@ -304,6 +304,7 @@ public class SendInboundProcessor extends BaseProcessor {
                 .equals(context.getMapping().getMappingType())) {
             return;
         }
+
         String topic = context.getTopic();
         if (topic == null) {
             return;
@@ -330,7 +331,7 @@ public class SendInboundProcessor extends BaseProcessor {
             String externalIdType;
             if ("NBIRTH".equals(messageType)) {
                 externalIdValue = parts[3];
-                externalIdType = "spark_Node";
+                externalIdType = context.getMapping().getExternalIdType();
             } else {
                 // DBIRTH requires a device-level topic (5 parts)
                 if (parts.length < 5) {
@@ -339,7 +340,7 @@ public class SendInboundProcessor extends BaseProcessor {
                     return;
                 }
                 externalIdValue = parts[4];
-                externalIdType = "spark_Device";
+                externalIdType = context.getMapping().getExternalIdType();
             }
             com.cumulocity.model.ID identity = new com.cumulocity.model.ID(externalIdType, externalIdValue);
             com.cumulocity.rest.representation.identity.ExternalIDRepresentation resolved =
