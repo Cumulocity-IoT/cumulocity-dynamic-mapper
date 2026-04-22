@@ -215,19 +215,24 @@
             Ideal for simple to moderately complex transformations without programming knowledge.
           </li>
           <li>
-            <strong>JavaScript Substitutions</strong> <span class="label label-warning text-10">deprecated</span> - Write JavaScript code snippets for individual field
-            transformations.
-            Provides more flexibility than JSONata while keeping substitution-based structure.
-          </li>
-          <li>
             <strong>Smart Function (JavaScript)</strong> - Define the complete transformation logic using JavaScript.
             Offers maximum control and flexibility for complex transformations, calculations, and business logic.
             Allows access to device context and inventory data for enrichment.
           </li>
         </ul>
+        <div class="admonition important" style="max-width: 100%;">
+          <div class="title">Important — Release 6.3</div>
+          <div class="content">
+            <strong>Substitution as JavaScript (SUBSTITUTION_AS_CODE) has been removed in release 6.3.</strong>
+            Existing mappings of this type are no longer executed. They can only be <strong>exported</strong> and
+            <strong>deleted</strong>. No other operations (edit, activate, test) are available for these mappings.
+            Migrate to <strong>Smart Function (JavaScript)</strong> — see the migration guide in the
+            <a (click)="scrollToElement('javascript-substitution')" style="cursor: pointer;">Removed: Substitution as
+              JavaScript</a> section.
+          </div>
+        </div>
         <div class="p-b-8 text-16">
-          If you're using <strong>JavaScript Substitutions</strong> or <strong>Smart Function
-            (JavaScript)</strong> as Transformation Type, navigate to <a
+          If you're using <strong>Smart Function (JavaScript)</strong> as Transformation Type, navigate to <a
             [routerLink]="ROUTE_CODE_TEMPLATES_INBOUND_SMART_FUNCTION"> Code
             Templates
           </a> to see
@@ -535,7 +540,7 @@
         <div class="p-b-8 text-16">
           The following screenshot shows the <strong>Transformation</strong> step for transformation type
           <strong>Substitution as JSONata Expression</strong>. This step shows a JavaScript editor if you choose
-          <strong>Substitution as JavaScript (deprecated)</strong> or <strong>Smart Function (JavaScript)</strong>.
+          <strong>Smart Function (JavaScript)</strong>.
         </div>
         <br />
         <img width="80%" class="m-l-48 m-b-48 m-b-16"
@@ -683,12 +688,10 @@ type = "c8y_Uplink"</code></pre>
         <div class="admonition info" style="max-width: 100%;">
           <div class="title">Info</div>
           <div class="content">
-            <strong>Choosing a Transformation Type:</strong> Select JSONata for simple mappings, JavaScript
-            substitutions
-            when you need more computational power for individual fields, Smart Functions when you need complete
-            control
-            over the transformation logic or when working with array payloads, and Java Extensions when you need
-            enterprise-grade type safety, performance, and access to the full Java ecosystem.
+            <strong>Choosing a Transformation Type:</strong> Select JSONata for simple mappings, Smart Functions when
+            you need complete control over the transformation logic, JavaScript computations, or when working with array
+            payloads, and Java Extensions when you need enterprise-grade type safety, performance, and access to the
+            full Java ecosystem.
           </div>
         </div>
         <div class="p-t-8 p-b-4 text-16"><strong>Quick-reference decision guide:</strong></div>
@@ -714,8 +717,8 @@ type = "c8y_Uplink"</code></pre>
               </tr>
               <tr>
                 <td>Familiar imperative JavaScript syntax per-field</td>
-                <td><strong>Smart Function</strong> <span class="text-muted">(migrated from deprecated JS substitutions)</span></td>
-                <td>JavaScript Substitutions are deprecated; Smart Functions offer a superset of capabilities</td>
+                <td><strong>Smart Function</strong></td>
+                <td>JavaScript Substitutions have been removed in release 6.3; Smart Functions offer a superset of capabilities</td>
               </tr>
               <tr>
                 <td>Full control over the output payload</td>
@@ -767,18 +770,33 @@ type = "c8y_Uplink"</code></pre>
               <i class="fa fa-book m-r-8"></i>Learn more about Smart Functions and metadata usage →
             </a></strong>
         </div>
-        <h4 class="p-t-16 p-b-8" id="javascript-substitution">{{ 'Defining a substitution using JavaScript (deprecated)' | translate
+        <h4 class="p-t-16 p-b-8" id="javascript-substitution">{{ 'Removed: Substitution as JavaScript (release 6.3)' | translate
           }}
         </h4>
-        <div class="p-b-8 text-16">
-          JavaScript substitutions allow you to define individual field transformations using familiar JavaScript syntax
-          within a substitution-based structure. Use JavaScript substitutions when you need complex string
-          manipulations,
-          mathematical calculations, or conditional logic that's easier to express in imperative code.
+        <div class="admonition important" style="max-width: 100%;">
+          <div class="title">Removed in release 6.3</div>
+          <div class="content">
+            <strong>TransformationType.SUBSTITUTION_AS_CODE has been removed.</strong>
+            Existing mappings of this type are no longer executed. The only permitted operations are
+            <strong>Export</strong> and <strong>Delete</strong>. Editing, testing, activating, or duplicating such
+            mappings is not supported.
+          </div>
         </div>
+        <div class="p-b-8 text-16">
+          Migrate to <strong>Smart Function (JavaScript)</strong>:
+        </div>
+        <ol class="text-16 m-l-16">
+          <li>Export the affected mapping via the <strong>Export</strong> action in the mapping grid.</li>
+          <li>Create a new mapping with transformation type <strong>Smart Function (JavaScript)</strong>. Instead of
+            returning a <code>SubstitutionResult</code>, the function returns a fully-built Cumulocity object directly.
+            See <a [routerLink]="['/c8y-pkg-dynamic-mapper/landing/smartfunction']">Smart Functions →</a> for the API
+            and code templates.</li>
+          <li>Use the built-in <strong>Test</strong> feature to verify the migrated mapping.</li>
+          <li>Activate the new mapping and delete the original deprecated mapping.</li>
+        </ol>
         <div class="p-b-16 text-16">
           <strong><a [routerLink]="['/c8y-pkg-dynamic-mapper/landing/javascript']">
-              <i class="fa fa-book m-r-8"></i>Learn more about defining substitutions using JavaScript →
+              <i class="fa fa-book m-r-8"></i>View migration guide for Substitution as JavaScript →
             </a></strong>
         </div>
         <h4 class="p-t-16 p-b-8" id="java-extension">{{ 'Defining the payload transformation using Java Extensions' |
@@ -968,16 +986,16 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
                 <td>Yes (duplicate system template to customise)</td>
               </tr>
               <tr>
-                <td><code>INBOUND_SUBSTITUTION_AS_CODE</code> <span class="label label-warning">Deprecated</span></td>
+                <td><code>INBOUND_SUBSTITUTION_AS_CODE</code> <span class="label label-danger">Removed</span></td>
                 <td>Inbound</td>
-                <td>Legacy JavaScript substitution template (deprecated transformation type)</td>
-                <td>Yes</td>
+                <td>Removed transformation type (release 6.3). Existing mappings can only be exported and deleted.</td>
+                <td>No</td>
               </tr>
               <tr>
-                <td><code>OUTBOUND_SUBSTITUTION_AS_CODE</code> <span class="label label-warning">Deprecated</span></td>
+                <td><code>OUTBOUND_SUBSTITUTION_AS_CODE</code> <span class="label label-danger">Removed</span></td>
                 <td>Outbound</td>
-                <td>Legacy JavaScript substitution template (deprecated transformation type)</td>
-                <td>Yes</td>
+                <td>Removed transformation type (release 6.3). Existing mappings can only be exported and deleted.</td>
+                <td>No</td>
               </tr>
               <tr>
                 <td><code>SHARED</code></td>
@@ -1223,8 +1241,8 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
                   path
                   is then appended to the URL that is defined in the Webhook connector properties. This property has to
                   be
-                  used for all transformation types other than Smart Functions, i.e. Substitution as JSONata Expression,
-                  Substitution as JavaScript.</td>
+                  used for all transformation types other than Smart Functions, i.e. Substitution as JSONata
+                  Expression.</td>
               </tr>
               <tr>
                 <td>Target template <small class="text-muted">(external broker)</small></td>
