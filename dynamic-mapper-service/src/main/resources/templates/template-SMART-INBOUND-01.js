@@ -21,12 +21,12 @@
 function onMessage(msg, context) {
     var payload = msg.getPayload();
 
-    console.log("Context" + context.getStateAll());
-    console.log("Payload Raw:" + payload);
-    console.log("Payload messageId" +  payload["messageId"]);
+    console.log("Context: " + context.getConfig());
+    console.log("Payload Raw: " + payload);
+    console.log("Payload messageId: " +  payload["messageId"]);
 
     // Get clientId from context first, fall back to payload
-    var clientId = context.getClientId() || payload["clientId"];
+    var clientId = context.getConfig()["clientId"] || payload["clientId"];
 
     // lookup device by c8y internal id for enrichment
     var deviceByDeviceId = context.getManagedObject(payload["deviceId"]);
