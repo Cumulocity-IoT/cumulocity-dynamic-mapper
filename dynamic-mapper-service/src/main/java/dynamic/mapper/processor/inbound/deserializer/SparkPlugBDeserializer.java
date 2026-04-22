@@ -153,11 +153,13 @@ public class SparkPlugBDeserializer implements PayloadDeserializer<Object> {
         result.put("metrics", metrics);
 
         // Attach the stored birth map if it was loaded (useful for Smart Functions)
+        /**
         if (aliasToMetricDef != null) {
             String birthFragment = "NDATA".equals(msgType) || "NCMD".equals(msgType)
                     ? SPARKPLUGB_NBIRTH_FRAGMENT : SPARKPLUGB_DBIRTH_FRAGMENT;
             result.put(birthFragment, aliasToMetricDef);
         }
+         **/
 
         log.debug("{} - SparkPlug B payload decoded: messageType={}, metrics={}", tenant, msgType, metrics.size());
         return result;
@@ -199,7 +201,6 @@ public class SparkPlugBDeserializer implements PayloadDeserializer<Object> {
      *
      * @return alias→definition map, or {@code null} if the fragment cannot be found
      */
-    @SuppressWarnings("unchecked")
     private Map<Long, Map<String, Object>> loadAliasMap(String tenant, Mapping mapping,
                                                         String externalIdValue, String fragmentKey) {
         String externalIdType = mapping.getExternalIdType();
@@ -221,10 +222,11 @@ public class SparkPlugBDeserializer implements PayloadDeserializer<Object> {
             // Try to get from inventory cache first
             Map<Long, Map<String, Object>> cachedFragment = loadFragmentFromCache(tenant, sourceId, fragmentKey);
             if (cachedFragment != null) {
-                log.debug("{} - Loaded '{}' fragment from cache for sourceId={}", tenant, fragmentKey, sourceId);
+                log.info("{} - Loaded '{}' fragment from cache for sourceId={}", tenant, fragmentKey, sourceId);
                 return cachedFragment;
             }
 
+            log.info("{} - '{}' fragment not found in cache for sourceId={}, falling back to direct retrieval", tenant, fragmentKey, sourceId);
             // Fallback to direct retrieval from C8YAgent
             ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(tenant, sourceId, false);
             if (mor == null) {
@@ -233,7 +235,7 @@ public class SparkPlugBDeserializer implements PayloadDeserializer<Object> {
 
             Object aliasMap = mor.get(fragmentKey);
             if (aliasMap instanceof Map) {
-                return (Map<Long, Map<String, Object>>) aliasMap;
+                return normalizeAliasMapKeys((Map<?, ?>) aliasMap);
             }
         } catch (Exception e) {
             log.warn("{} - Failed to load '{}' fragment for alias resolution (externalId={}): {}",
@@ -250,7 +252,6 @@ public class SparkPlugBDeserializer implements PayloadDeserializer<Object> {
      * @param fragmentKey the fragment key to retrieve
      * @return the fragment map, or {@code null} if not found in cache or cache is unavailable
      */
-    @SuppressWarnings("unchecked")
     private Map<Long, Map<String, Object>> loadFragmentFromCache(String tenant, String sourceId, String fragmentKey) {
         try {
             InventoryCache inventoryCache = cacheManager.getInventoryCache(tenant);
@@ -262,7 +263,7 @@ public class SparkPlugBDeserializer implements PayloadDeserializer<Object> {
             if (cachedMO != null) {
                 Object fragment = cachedMO.get(fragmentKey);
                 if (fragment instanceof Map) {
-                    return (Map<Long, Map<String, Object>>) fragment;
+                    return normalizeAliasMapKeys((Map<?, ?>) fragment);
                 }
             }
         } catch (Exception e) {
@@ -270,6 +271,29 @@ public class SparkPlugBDeserializer implements PayloadDeserializer<Object> {
                     tenant, sourceId, e.getMessage());
         }
         return null;
+    }
+
+    /**
+     * Normalize alias map keys to Long.
+     * When the birth fragment is round-tripped through JSON (stored on a C8Y managed object
+     * and read back), numeric keys are deserialised as Strings. This method converts any
+     * String or Number key to Long so that Long-keyed lookups succeed.
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private Map<Long, Map<String, Object>> normalizeAliasMapKeys(Map raw) {
+        Map<Long, Map<String, Object>> normalized = new LinkedHashMap<>();
+        for (Object key : raw.keySet()) {
+            try {
+                Long longKey = key instanceof Long ? (Long) key : Long.parseLong(key.toString());
+                Object val = raw.get(key);
+                if (val instanceof Map) {
+                    normalized.put(longKey, (Map<String, Object>) val);
+                }
+            } catch (NumberFormatException ignored) {
+                log.debug("Skipping non-numeric alias map key: {}", key);
+            }
+        }
+        return normalized;
     }
 
     // ─── Metric conversion ────────────────────────────────────────────────────
@@ -294,7 +318,6 @@ public class SparkPlugBDeserializer implements PayloadDeserializer<Object> {
             // Name: may be absent in NDATA (alias-only encoding)
             String name = pm.hasName() ? pm.getName() : null;
             Long alias = pm.hasAlias() ? pm.getAlias() : null;
-
             // Resolve name from NBIRTH if missing
             if ((name == null || name.isEmpty()) && alias != null && aliasToMetricDef != null) {
                 Map<String, Object> def = aliasToMetricDef.get(alias);
