@@ -604,11 +604,12 @@
               <tr>
                 <td><code>NBIRTH</code></td>
                 <td>4</td>
-                <td><code>spark_Node</code></td>
+                <td><code>c8y_Serial</code></td>
                 <td><code>sparkPlugB_NBIRTH</code></td>
                 <td>Edge Node birth — metric definitions published when the node comes online. The mapper stores
                   the alias→metric-definition map on the Edge Node managed object so that subsequent NDATA
-                  messages can resolve aliases.</td>
+                  messages can resolve aliases.
+                  The Edge Node external ID is <code>[Group ID]_[Edge Node ID]</code>.</td>
               </tr>
               <tr class="table-light">
                 <td><code>NDATA</code></td>
@@ -622,11 +623,13 @@
               <tr>
                 <td><code>DBIRTH</code></td>
                 <td>5</td>
-                <td><code>spark_Device</code></td>
+                <td><code>c8y_Serial</code></td>
                 <td><code>sparkPlugB_DBIRTH</code></td>
                 <td>Device birth — metric definitions for a device attached to an Edge Node. The mapper stores
                   the alias→metric-definition map on the Device managed object so that subsequent DDATA
-                  messages can resolve aliases.</td>
+                  messages can resolve aliases.
+                  The Device external ID is <code>[Group ID]_[Edge Node ID]_[Device ID]</code>.
+                  This ensures uniqueness because the same device ID can exist under different groups or Edge Nodes.</td>
               </tr>
               <tr class="table-light">
                 <td><code>DDATA</code></td>
@@ -751,7 +754,8 @@
               <li class="m-b-4">
                 <strong>Smart Function returns nothing (or a non-INVENTORY object)</strong> — the mapper
                 derives the external ID directly from the topic
-                (<code>spark_Node</code> for NBIRTH, <code>spark_Device</code> for DBIRTH) and looks
+                (name <code>c8y_Serial</code>,  value <code>[Group ID]_[Edge Node ID]</code> for NBIRTH;
+                name <code>c8y_Serial</code>,  value <code>[Group ID]_[Edge Node ID]_[Device ID]</code> for DBIRTH) and looks
                 up the pre-existing MO in inventory. If found, the birth fragment is stored on it.
                 This covers re-boots of already-registered nodes/devices without requiring any
                 INVENTORY object from the Smart Function.
@@ -768,7 +772,7 @@
           <div class="title">Important — first boot</div>
           <div class="content">
             On the <strong>first ever boot</strong> of an Edge Node or Device (i.e. before a
-            <code>spark_Node</code> / <code>spark_Device</code> MO exists in inventory), choose one
+             MO exists in inventory), choose one
             of two approaches:
             <ul class="m-t-8">
               <li class="m-b-4">
@@ -795,32 +799,38 @@
         <pre class="text-14" style="background:#f8f9fa; padding: 16px; border-radius: 4px; overflow-x: auto;">function onMessage(msg, context) &#123;
   var payload  = msg.getPayload();
   var msgType  = payload.messageType;  // e.g. "NBIRTH", "NDATA", "DBIRTH", "DDATA"
+  var groupId  = payload.groupId;
   var nodeId   = payload.edgeNodeId;
   var deviceId = payload.deviceId;     // undefined for node-level messages
 
+  // External IDs follow the Sparkplug B namespace to ensure global uniqueness:
+  //   Edge Node: [Group ID]_[Edge Node ID]
+  //   Device:    [Group ID]_[Edge Node ID]_[Device ID]
+  var nodeExtId   = groupId + '_' + nodeId;
+  var deviceExtId = deviceId ? groupId + '_' + nodeId + '_' + deviceId : undefined;
+
   // ── Birth messages: create / update the managed object ──────────────────────
   if (msgType === 'NBIRTH' || msgType === 'DBIRTH') &#123;
-    var moType = msgType === 'NBIRTH' ? 'spark_Node' : 'spark_Device';
-    var extId  = msgType === 'NBIRTH' ? nodeId : deviceId;
+    var extId = msgType === 'NBIRTH' ? nodeExtId : deviceExtId;
     return [&#123;
       cumulocityType: 'INVENTORY',
-      externalSource: [&#123; externalId: extId, type: moType &#125;],
+      externalSource: [&#123; externalId: extId, type: 'c8y_Serial' &#125;],
       payload: &#123;
         name: extId,
-        type: moType
+        type: 'c8y_Serial'
       &#125;
     &#125;];
   &#125;
 
   // ── NDATA / DDATA: map metrics to measurements ───────────────────────────────
   if (msgType === 'NDATA' || msgType === 'DDATA') &#123;
-    var sourceId = context.getProperty('sourceId');
-    var results  = [];
+    var extId   = msgType === 'DDATA' ? deviceExtId : nodeExtId;
+    var results = [];
     (payload.metrics || []).forEach(function(metric) &#123;
       if (metric.name === 'Temperature') &#123;
         results.push(&#123;
           cumulocityType: 'MEASUREMENT',
-          externalSource: [&#123; externalId: deviceId || nodeId, type: msgType === 'DDATA' ? 'spark_Device' : 'spark_Node' &#125;],
+          externalSource: [&#123; externalId: extId, type: 'c8y_Serial' &#125;],
           payload: &#123;
             type: 'c8y_Temperature',
             time: new Date(payload.timestamp).toISOString(),

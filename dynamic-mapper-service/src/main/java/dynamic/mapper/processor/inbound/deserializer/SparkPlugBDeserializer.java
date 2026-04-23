@@ -59,11 +59,11 @@ import java.util.Map;
  * <p>
  * For NDATA messages the deserializer retrieves the previously stored NBIRTH
  * ({@value #SPARKPLUGB_NBIRTH_FRAGMENT}) from the <b>Edge Node</b> managed object
- * (identified by the Edge Node ID) and uses the alias→name mapping it contains.
+ * (identified by the external ID <b>[Group ID]_[Edge Node ID]</b>) and uses the alias→name mapping it contains.
  * <p>
  * For DDATA messages the deserializer retrieves the previously stored DBIRTH
  * ({@value #SPARKPLUGB_DBIRTH_FRAGMENT}) from the <b>Device</b> managed object
- * (identified by the Device ID) and uses the alias→name mapping it contains.
+ * (identified by the external ID <b>[Group ID]_[Edge Node ID]_[Device ID]</b>) and uses the alias→name mapping it contains.
  */
 @Slf4j
 @Component
@@ -71,7 +71,7 @@ public class SparkPlugBDeserializer implements PayloadDeserializer<Object> {
 
     /**
      * Fragment key used to store the NBIRTH alias→definition map on the
-     * <b>Edge Node</b> managed object (type {@code spark_Node}).
+     * <b>Edge Node</b> managed object (type {@code c8y_Serial}).
      * Retrieved when decoding subsequent NDATA / NCMD messages.
      */
     public static final String SPARKPLUGB_NBIRTH_FRAGMENT = "sparkPlugB_NBIRTH";
@@ -118,13 +118,17 @@ public class SparkPlugBDeserializer implements PayloadDeserializer<Object> {
         Map<Long, Map<String, Object>> aliasToMetricDef = null;
         String msgType = sparkplugTopic.getMessageType();
         if ("NDATA".equals(msgType) || "NCMD".equals(msgType)) {
-            aliasToMetricDef = loadAliasMap(tenant, mapping, sparkplugTopic.getEdgeNodeId(),
+            // ExternalId for an Edge Node is [Group ID]_[Edge Node ID]
+            String edgeNodeExternalId = sparkplugTopic.getGroupId() + "_" + sparkplugTopic.getEdgeNodeId();
+            aliasToMetricDef = loadAliasMap(tenant, mapping, edgeNodeExternalId,
                     SPARKPLUGB_NBIRTH_FRAGMENT);
         } else if ("DDATA".equals(msgType) || "DCMD".equals(msgType)) {
             // Device ID must be present for device-level messages
             String devId = sparkplugTopic.getDeviceId();
             if (devId != null) {
-                aliasToMetricDef = loadAliasMap(tenant, mapping, devId, SPARKPLUGB_DBIRTH_FRAGMENT);
+                // ExternalId for a Device is [Group ID]_[Edge Node ID]_[Device ID]
+                String deviceExternalId = sparkplugTopic.getGroupId() + "_" + sparkplugTopic.getEdgeNodeId() + "_" + devId;
+                aliasToMetricDef = loadAliasMap(tenant, mapping, deviceExternalId, SPARKPLUGB_DBIRTH_FRAGMENT);
             } else {
                 log.warn("{} - DDATA/DCMD message on topic '{}' has no Device ID; alias resolution skipped",
                         tenant, topic);
@@ -193,9 +197,9 @@ public class SparkPlugBDeserializer implements PayloadDeserializer<Object> {
      * Load the alias→metric-definition map from the named fragment on the managed object
      * identified by {@code externalIdValue}.
      * <ul>
-     *   <li>For NDATA / NCMD: {@code externalIdValue} = Edge Node ID,
+     *   <li>For NDATA / NCMD: {@code externalIdValue} = <b>[Group ID]_[Edge Node ID]</b>,
      *       {@code fragmentKey} = {@value #SPARKPLUGB_NBIRTH_FRAGMENT}</li>
-     *   <li>For DDATA / DCMD: {@code externalIdValue} = Device ID,
+     *   <li>For DDATA / DCMD: {@code externalIdValue} = <b>[Group ID]_[Edge Node ID]_[Device ID]</b>,
      *       {@code fragmentKey} = {@value #SPARKPLUGB_DBIRTH_FRAGMENT}</li>
      * </ul>
      *

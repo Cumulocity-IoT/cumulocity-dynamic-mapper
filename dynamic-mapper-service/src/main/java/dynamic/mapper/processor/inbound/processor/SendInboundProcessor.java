@@ -289,10 +289,10 @@ public class SendInboundProcessor extends BaseProcessor {
      * fragment on the managed object so that subsequent DATA messages can resolve aliases.
      * <ul>
      *   <li><b>NBIRTH</b> — stored as {@code sparkPlugB_NBIRTH} on the <b>Edge Node</b> MO
-     *       (identified by the Edge Node ID in the topic). The MO was just created/updated by
+     *       (identified by the external ID {@code [Group ID]_[Edge Node ID]}). The MO was just created/updated by
      *       {@code upsertDevice}, so it is guaranteed to exist.</li>
      *   <li><b>DBIRTH</b> — stored as {@code sparkPlugB_DBIRTH} on the <b>Device</b> MO
-     *       (identified by the Device ID in the topic).</li>
+     *       (identified by the external ID {@code [Group ID]_[Edge Node ID]_[Device ID]}).</li>
      * </ul>
      *
      * @param context  the current processing context
@@ -325,12 +325,13 @@ public class SendInboundProcessor extends BaseProcessor {
         String deviceId = context.getSourceId();
         if (deviceId == null) {
             // Derive external ID from topic:
-            //   NBIRTH → edge node ID (parts[3]), external-id type "spark_Node"
-            //   DBIRTH → device ID (parts[4]),    external-id type "spark_Device"
+            //   NBIRTH → [Group ID]_[Edge Node ID]  = parts[1] + "_" + parts[3]
+            //   DBIRTH → [Group ID]_[Edge Node ID]_[Device ID] = parts[1] + "_" + parts[3] + "_" + parts[4]
             String externalIdValue;
             String externalIdType;
             if ("NBIRTH".equals(messageType)) {
-                externalIdValue = parts[3];
+                // ExternalId for an Edge Node is [Group ID]_[Edge Node ID]
+                externalIdValue = parts[1] + "_" + parts[3];
                 externalIdType = context.getMapping().getExternalIdType();
             } else {
                 // DBIRTH requires a device-level topic (5 parts)
@@ -339,7 +340,8 @@ public class SendInboundProcessor extends BaseProcessor {
                             context.getTenant(), topic);
                     return;
                 }
-                externalIdValue = parts[4];
+                // ExternalId for a Device is [Group ID]_[Edge Node ID]_[Device ID]
+                externalIdValue = parts[1] + "_" + parts[3] + "_" + parts[4];
                 externalIdType = context.getMapping().getExternalIdType();
             }
             com.cumulocity.model.ID identity = new com.cumulocity.model.ID(externalIdType, externalIdValue);
