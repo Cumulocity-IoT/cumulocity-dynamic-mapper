@@ -144,7 +144,7 @@ export class DocOverviewComponent implements OnInit {
     const element = document.getElementById(elementId);
     if (element) {
       const elementPosition = element.getBoundingClientRect().top + window.scrollY;
-      const offsetPosition = elementPosition - 80;
+      const offsetPosition = elementPosition - 120;
       window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
     }
   }
