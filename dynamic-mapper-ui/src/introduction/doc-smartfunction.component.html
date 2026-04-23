@@ -420,8 +420,24 @@ function celsiusToFahrenheit(celsius) &#123;
               </tr>
               <tr>
                 <td><code>clientId</code></td>
-                <td>Access (all)</td>
-                <td>The connector client identifier.</td>
+                <td>Access (connector-dependent)</td>
+                <td>The publisher or producer client identifier. Its value depends on the connector type:
+                  <ul class="m-t-8 m-b-0">
+                    <li><strong>MQTT 5</strong>: The publisher's client ID read from the MQTT 5 user property
+                      named <code>clientId</code>. Returns <code>null</code> when the publisher does not include this
+                      user property. Same value as <code>context.getClientId()</code>.</li>
+                    <li><strong>MQTT 3</strong>: Always <code>null</code> — MQTT 3.1.1 does not carry a
+                      per-message publisher identity.</li>
+                    <li><strong>Kafka</strong>: Always <code>null</code> — Kafka identifies messages by topic,
+                      partition, and offset; use <code>payload["_KEY_"]</code> to access the record key
+                      instead.</li>
+                    <li><strong>HTTP / Webhook / AMQP</strong>: Always <code>null</code>.</li>
+                    <li><strong>Pulsar / MQTT-over-Pulsar</strong>: The value of the Pulsar message property
+                      <code>clientID</code>. May be <code>null</code> if the producer does not set it.</li>
+                  </ul>
+                  <strong>Example:</strong>
+                  <code>var id = context.getConfig().clientId || context.getConfig().topic;</code>
+                </td>
               </tr>
               <tr>
                 <td><code>mappingName</code></td>
@@ -766,11 +782,6 @@ function celsiusToFahrenheit(celsius) &#123;
                 <td><code>topic</code></td>
                 <td>Access (all)</td>
                 <td>The inbound topic that triggered the outbound mapping.</td>
-              </tr>
-              <tr>
-                <td><code>clientId</code></td>
-                <td>Access (all)</td>
-                <td>The connector client identifier.</td>
               </tr>
               <tr>
                 <td><code>mappingName</code></td>
