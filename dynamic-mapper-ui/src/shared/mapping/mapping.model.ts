@@ -340,7 +340,7 @@ export const MappingTypeDescriptions = {
   // eslint-disable-next-line deprecation/deprecation
   [MappingType.EXTENSION_JAVA]: 'Deprecated — use Any Payload with Java Extension transformation type instead',
   [MappingType.ANY_PAYLOAD]: 'Payload format is unknown or binary (e.g. SparkPlugB, Protobuf, XML). Processed by a Smart Function (JavaScript) or a Java Extension.',
-  [MappingType.SPARKPLUGB]: 'Payload is in SparkPlug B binary format. Decoded automatically by the mapper using the Eclipse Tahu library. Only Smart Function transformations are supported.',
+  [MappingType.SPARKPLUGB]: 'SparkPlug B binary payload. Inbound: decoded automatically via Eclipse Tahu; outbound NCMD/DCMD: metric object serialized to protobuf binary. Only Smart Function transformations are supported.',
 } as const;
 
 export interface MappingTypeProperties {
@@ -591,10 +591,14 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
     enabled: true,
     description:
       'Payload is in SparkPlug B binary format (NBIRTH, NDATA, DBIRTH, DDATA, …). ' +
-      'The mapper decodes the protobuf payload automatically using the Eclipse Tahu library and ' +
+      'For inbound mappings the mapper decodes the protobuf payload automatically using the Eclipse Tahu library and ' +
       'passes a rich JSON object to your Smart Function. ' +
+      'For outbound NCMD/DCMD mappings the metric object returned by your Smart Function is serialized ' +
+      'to SparkPlug B protobuf binary before publishing. ' +
       'NBIRTH / DBIRTH metric definitions are stored on the managed object so that subsequent ' +
-      'NDATA / DDATA messages can resolve metric aliases.',
+      'NDATA / DDATA messages can resolve metric aliases. ' +
+      'The aliasMap (metric name → alias) is available in the outbound Smart Function via ' +
+      'context.getConfig().aliasMap.',
     properties: {
       [Direction.INBOUND]: {
         snoopSupported: false,
@@ -605,9 +609,10 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
       },
       [Direction.OUTBOUND]: {
         snoopSupported: false,
-        directionSupported: false,
+        directionSupported: true,
         substitutionsAsCodeSupported: false,
-        supportedTransformationTypes: []
+        // Only Smart Function is supported — the serializer handles binary SparkPlug B encoding.
+        supportedTransformationTypes: [TransformationType.SMART_FUNCTION]
       },
     },
     stepperConfiguration: createStepperConfig({

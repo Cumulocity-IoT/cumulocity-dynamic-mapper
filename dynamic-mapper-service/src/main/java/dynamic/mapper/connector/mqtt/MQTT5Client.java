@@ -356,12 +356,14 @@ public class MQTT5Client extends AMQTTClient {
         for (int i = 0; i < requests.size(); i++) {
             DynamicMapperRequest request = requests.get(i);
 
-            if (request == null || request.getRequest() == null) {
+            if (request == null || (request.getRequest() == null && request.getBinaryPayload() == null)) {
                 log.warn("{} - Skipping null request or payload ({}/{})", tenant, i + 1, requests.size());
                 continue;
             }
 
-            String payload = request.getRequest();
+            byte[] payloadBytes = request.getBinaryPayload() != null
+                    ? request.getBinaryPayload()
+                    : request.getRequest().getBytes(StandardCharsets.UTF_8);
             String topic = request.getPublishTopic() != null ? request.getPublishTopic() : context.getResolvedPublishTopic();
 
             if (topic == null || topic.isEmpty()) {
@@ -375,7 +377,7 @@ public class MQTT5Client extends AMQTTClient {
                         .topic(topic)
                         .retain(context.getRetain() == null ? false : context.getRetain())
                         .qos(mqttQos)
-                        .payload(payload.getBytes(StandardCharsets.UTF_8));
+                        .payload(payloadBytes);
 
                 // MQTT5 specific: can add user properties, content type, etc.
                 // Example: messageBuilder.contentType("application/json");
@@ -385,8 +387,8 @@ public class MQTT5Client extends AMQTTClient {
                 mqttClient.publish(message);
 
                 if (context.getMapping().getDebug() || context.getServiceConfiguration().getLogPayload()) {
-                    log.info("{} - Published message ({}/{}): topic=[{}], QoS: {}, payload: {}",
-                            tenant, i + 1, requests.size(), topic, mqttQos, payload);
+                    log.info("{} - Published message ({}/{}): topic=[{}], QoS: {}, payload: {} bytes",
+                            tenant, i + 1, requests.size(), topic, mqttQos, payloadBytes.length);
                 } else {
                     log.debug("{} - Published message ({}/{}): topic=[{}], QoS: {}", tenant, i + 1, requests.size(), topic, mqttQos);
                 }

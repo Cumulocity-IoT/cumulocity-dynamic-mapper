@@ -83,6 +83,13 @@ public class SparkPlugBDeserializer implements PayloadDeserializer<Object> {
      */
     public static final String SPARKPLUGB_DBIRTH_FRAGMENT = "sparkPlugB_DBIRTH";
 
+    /**
+     * Fragment key used to track the active/online status of an Edge Node or Device.
+     * Set to {@code true} on NBIRTH / DBIRTH / NDATA / DDATA messages and
+     * {@code false} on NDEATH / DDEATH messages.
+     */
+    public static final String SPARKPLUGB_IS_ACTIVE_FRAGMENT = "sparkPlugB_isActive";
+
     @Autowired
     @Lazy
     private C8YAgent c8yAgent;

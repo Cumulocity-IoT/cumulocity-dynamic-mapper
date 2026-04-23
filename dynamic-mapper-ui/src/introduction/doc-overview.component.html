@@ -202,7 +202,7 @@
           <li><strong>Hexadecimal</strong> - For binary data encoded as hex strings <small class="text-muted">(requires Expert Mode)</small></li>
           <li><strong>Protobuf</strong> - For Protocol Buffer serialized data <small class="text-muted">(requires Expert Mode)</small></li>
           <li><strong>Any Payload</strong> - Payload format is unknown or binary (e.g. CBOR, XML, custom binary). Passed as a Base64-encoded string; processed by a <strong>Smart Function</strong> or a <strong>Java Extension</strong>. <small class="text-muted">(requires Expert Mode)</small></li>
-          <li><strong>SparkPlug B</strong> - Native support for the Eclipse Sparkplug B protocol over MQTT. The binary protobuf payload is automatically decoded; use a <strong>Smart Function</strong> to map metrics to Cumulocity objects. <small class="text-muted">(requires Expert Mode, inbound only)</small></li>
+          <li><strong>SparkPlug B</strong> - Native support for the Eclipse Sparkplug B protocol over MQTT. The binary protobuf payload is automatically decoded for inbound; outbound NCMD/DCMD messages are serialized to protobuf binary. Use a <strong>Smart Function</strong> in both directions. <small class="text-muted">(requires Expert Mode)</small></li>
         </ul>
         <h5 class="p-t-8 p-b-4 text-16"><strong>Step 2.2: Choose the Transformation Type</strong></h5>
         <div class="p-b-8 text-16">
@@ -484,13 +484,13 @@
           <strong>Java Extension</strong> that decodes and interprets the bytes. In a Smart Function,
           access the raw data via <code>msg.getPayload()</code> and decode it with <code>atob()</code>.
         </div>
-        <h5 class="p-t-8 p-b-4"><strong>SparkPlug B <small class="text-muted">(Expert Mode, inbound only)</small></strong></h5>
+        <h5 class="p-t-8 p-b-4"><strong>SparkPlug B <small class="text-muted">(Expert Mode)</small></strong></h5>
         <div class="p-b-8 text-16">
           Native first-class support for the <a href="https://sparkplug.eclipse.org/" target="_blank">Eclipse Sparkplug B</a>
-          protocol over MQTT. The binary protobuf payload is automatically decoded by the mapper using the
-          <a href="https://github.com/eclipse-tahu/tahu" target="_blank">Eclipse Tahu</a> library — no manual
-          Base64 decoding required. The decoded message (metrics, timestamps, sequence numbers) is passed
-          to your <strong>Smart Function</strong> as a plain JavaScript object.
+          protocol over MQTT. For <strong>inbound</strong> mappings the binary protobuf payload is automatically decoded by
+          the mapper using the <a href="https://github.com/eclipse-tahu/tahu" target="_blank">Eclipse Tahu</a> library —
+          no manual Base64 decoding required. For <strong>outbound</strong> (NCMD / DCMD) mappings, the metric object
+          returned by your Smart Function is automatically serialized to protobuf binary before publishing.
           See the <a (click)="scrollToElement('sparkplugb')" style="cursor: pointer;">SparkPlug B</a> section for
           the full protocol details, message types, and Smart Function API.
         </div>
@@ -576,11 +576,13 @@
           message lifecycle that the mapper understands and handles automatically.
         </div>
         <div class="admonition info" style="max-width: 100%;">
-          <div class="title">Inbound only</div>
+          <div class="title">Inbound &amp; Outbound</div>
           <div class="content">
-            The <strong>SparkPlug B</strong> payload type is supported for <strong>inbound mappings only</strong>
-            and requires a <strong>Generic MQTT</strong> connector.
-            Outbound SparkPlug B is not supported.
+            The <strong>SparkPlug B</strong> payload type is supported for both <strong>inbound</strong> and
+            <strong>outbound</strong> mappings and requires a <strong>Generic MQTT</strong> connector.
+            Inbound decodes NBIRTH / NDATA / DBIRTH / DDATA / NCMD / DCMD protobuf payloads automatically.
+            Outbound serializes the metric object returned by your Smart Function to SparkPlug B protobuf binary
+            before publishing NCMD or DCMD messages to the broker.
           </div>
         </div>
 
@@ -654,13 +656,17 @@
                 <td>—</td>
                 <td>—</td>
                 <td>Node/Device command — command messages sent to a node or device.
-                  Aliases are resolved like NDATA/DDATA respectively.</td>
+                  <strong>Inbound:</strong> aliases are resolved like NDATA/DDATA respectively and passed to the Smart Function.
+                  <strong>Outbound:</strong> the metric object returned by the Smart Function is serialized to protobuf binary
+                  by <code>SparkPlugBSerializer</code> before publishing. Use the
+                  <code>context.getConfig().aliasMap</code> to include numeric aliases in the outbound metrics.</td>
               </tr>
             </tbody>
           </table>
         </div>
 
         <h4 class="p-t-16 p-b-8">How the Mapper Processes SparkPlug B Messages</h4>
+        <h5 class="p-t-8 p-b-4">Inbound</h5>
         <ol class="text-16 m-l-16">
           <li class="m-b-8">
             <strong>Deserialization</strong> — The binary protobuf payload is decoded automatically by the mapper
@@ -683,6 +689,30 @@
             <strong>Smart Function execution</strong> — Your Smart Function receives the fully decoded and
             alias-resolved payload as a JavaScript object and returns one or more
             <code>CumulocityObject</code> instances.
+          </li>
+        </ol>
+        <h5 class="p-t-8 p-b-4">Outbound (NCMD / DCMD)</h5>
+        <ol class="text-16 m-l-16">
+          <li class="m-b-8">
+            <strong>Enrichment</strong> — The mapper resolves the device external ID and loads the
+            <code>sparkPlugB_NBIRTH</code> (or <code>sparkPlugB_DBIRTH</code>) alias map from the managed object.
+            The inverted map (metric name → alias) is available inside the Smart Function as
+            <code>context.getConfig().aliasMap</code>.
+          </li>
+          <li class="m-b-8">
+            <strong>Smart Function execution</strong> — Your <code>onMessage(msg, context)</code> function
+            receives the triggering Cumulocity payload (e.g. an operation) and returns an object with
+            <code>topic</code> and <code>payload</code> fields. The topic must be a valid SparkPlug B NCMD or
+            DCMD topic (<code>spBv1.0/&lt;GroupID&gt;/NCMD/&lt;EdgeNodeID&gt;</code>). The payload is a plain
+            JavaScript object with an optional <code>seq</code>, <code>timestamp</code>, and a
+            <code>metrics</code> array.
+          </li>
+          <li class="m-b-8">
+            <strong>Serialization</strong> — The mapper's <code>SparkPlugBSerializer</code> converts the
+            returned metric object to SparkPlug B protobuf binary bytes before publishing to the broker.
+            Include <code>alias</code> values in the metric entries (available from
+            <code>context.getConfig().aliasMap</code>) to produce compact messages that the edge node
+            can match by alias.
           </li>
         </ol>
 
@@ -716,7 +746,8 @@
             MQTT broker that receives Sparkplug B messages.
           </li>
           <li class="m-b-8">
-            <strong>Add Mapping</strong> — Navigate to <a [routerLink]="ROUTE_INBOUND">Inbound → Add Mapping</a>.
+            <strong>Add Mapping</strong> — For inbound, navigate to <a [routerLink]="ROUTE_INBOUND">Inbound → Add Mapping</a>.
+            For outbound NCMD/DCMD, navigate to <a [routerLink]="ROUTE_OUTBOUND">Outbound → Add Mapping</a>.
             Enable <strong>Expert Mode</strong> in the dialog.
           </li>
           <li class="m-b-8">
@@ -754,8 +785,8 @@
               <li class="m-b-4">
                 <strong>Smart Function returns nothing (or a non-INVENTORY object)</strong> — the mapper
                 derives the external ID directly from the topic
-                (name <code>c8y_Serial</code>,  value <code>[Group ID]_[Edge Node ID]</code> for NBIRTH;
-                name <code>c8y_Serial</code>,  value <code>[Group ID]_[Edge Node ID]_[Device ID]</code> for DBIRTH) and looks
+                (name <code>c8y_Serial</code>, value <code>[Group ID]_[Edge Node ID]</code> for NBIRTH;
+                name <code>c8y_Serial</code>, value <code>[Group ID]_[Edge Node ID]_[Device ID]</code> for DBIRTH) and looks
                 up the pre-existing MO in inventory. If found, the birth fragment is stored on it.
                 This covers re-boots of already-registered nodes/devices without requiring any
                 INVENTORY object from the Smart Function.
@@ -791,7 +822,7 @@
           </div>
         </div>
 
-        <h4 class="p-t-16 p-b-8">Smart Function Example</h4>
+        <h4 class="p-t-16 p-b-8">Smart Function Example — Inbound</h4>
         <div class="p-b-8 text-16">
           The following example handles all Sparkplug B message types and maps NDATA temperature metrics
           to Cumulocity measurements:
@@ -845,6 +876,69 @@
   // Death / CMD messages — nothing to do in this example
   return [];
 &#125;</pre>
+
+        <h4 class="p-t-16 p-b-8">Smart Function Example — Outbound NCMD</h4>
+        <div class="p-b-8 text-16">
+          The following example sends an NCMD (Node Command) from a Cumulocity operation. The mapper serializes
+          the returned metric object to SparkPlug B protobuf binary automatically.
+        </div>
+        <div class="p-b-8 text-16">
+          <code>context.getConfig().aliasMap</code> is a <code>&#123; metricName → alias &#125;</code> map
+          automatically loaded from the <code>sparkPlugB_NBIRTH</code> (or <code>sparkPlugB_DBIRTH</code>) fragment
+          stored on the device managed object during inbound BIRTH processing. Including the numeric alias in each
+          outbound metric lets the edge node match it without a full name lookup, reducing payload size. The
+          <code>metric()</code> helper below adds the alias only when one is available.
+        </div>
+        <div class="p-b-8 text-16">
+          <code>context.getConfig().isActive</code> reflects whether the Edge Node or Device is currently online
+          (<code>true</code> after NBIRTH / NDATA, <code>false</code> after NDEATH). Use it to suppress commands
+          to offline devices. Defaults to <code>true</code> when no status has been recorded yet.
+        </div>
+        <pre class="text-14" style="background:#f8f9fa; padding: 16px; border-radius: 4px; overflow-x: auto;">function onMessage(msg, context) &#123;
+  // context.getConfig().externalId is "GroupID_EdgeNodeID" when useExternalId is enabled.
+  const externalId = context.getConfig().externalId;
+  const parts      = externalId ? externalId.split('_') : [];
+  const groupId    = parts[0] || 'DefaultGroup';
+  const edgeNodeId = parts[1] || 'DefaultNode';
+
+  // Suppress commands to offline edge nodes (NDEATH received)
+  if (!context.getConfig().isActive) &#123;
+    return null;
+  &#125;
+
+  // aliasMap: metric name → alias string (loaded from sparkPlugB_NBIRTH on the MO)
+  const aliasMap = context.getConfig().aliasMap || &#123;&#125;;
+
+  // Helper: build a metric entry and add alias when available
+  function metric(name, type, value) &#123;
+    const entry = &#123; name, type, value &#125;;
+    if (aliasMap[name] !== undefined) &#123;
+      entry.alias = parseInt(aliasMap[name], 10);
+    &#125;
+    return entry;
+  &#125;
+
+  return &#123;
+    // NCMD topic: spBv1.0/&lt;GroupID&gt;/NCMD/&lt;EdgeNodeID&gt;
+    topic: `spBv1.0/$&#123;groupId&#125;/NCMD/$&#123;edgeNodeId&#125;`,
+    payload: &#123;
+      timestamp: Date.now(),
+      metrics: [
+        metric('Node Control/Rebirth', 'Boolean', false)
+      ]
+    &#125;
+  &#125;;
+&#125;</pre>
+        <div class="admonition info" style="max-width: 100%;">
+          <div class="title">Supported metric types</div>
+          <div class="content">
+            The <code>type</code> field in each metric entry is case-insensitive and supports:
+            <code>Int8</code>, <code>Int16</code>, <code>Int32</code>, <code>Int64</code>,
+            <code>UInt8</code>, <code>UInt16</code>, <code>UInt32</code>, <code>UInt64</code>,
+            <code>Float</code>, <code>Double</code>, <code>Boolean</code>, <code>String</code>,
+            <code>DateTime</code>, <code>Text</code>, <code>UUID</code>, <code>Bytes</code>.
+          </div>
+        </div>
 
       </div>
       <!-- ==================== SECTION: DEFINING A SUBSCRIPTION FOR OUTBOUND MAPPING ==================== -->

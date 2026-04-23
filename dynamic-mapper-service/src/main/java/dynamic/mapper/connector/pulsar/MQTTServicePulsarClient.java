@@ -675,12 +675,13 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
 
         DynamicMapperRequest request = context.getCurrentRequest();
 
-        if (context.getCurrentRequest() == null ||
-                context.getCurrentRequest().getRequest() == null) {
+        if (request == null || (request.getRequest() == null && request.getBinaryPayload() == null)) {
             log.warn("{} - No payload to publish for mapping: {}", tenant, context.getMapping().getName());
             return;
         }
-        String payload = request.getRequest();
+        byte[] payloadBytes = request.getBinaryPayload() != null
+                ? request.getBinaryPayload()
+                : request.getRequest().getBytes(StandardCharsets.UTF_8);
         String originalMqttTopic = context.getResolvedPublishTopic();
         Qos qos = Qos.AT_LEAST_ONCE; // MQTT Service uses AT_LEAST_ONCE
 
@@ -698,7 +699,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                 createTowardsDeviceProducer();
             }
 
-            sendMessageToDevice(deviceProducer, payload, originalMqttTopic, qos, context);
+            sendMessageToDevice(deviceProducer, payloadBytes, originalMqttTopic, qos, context);
 
         } catch (Exception e) {
             log.error("{} - Error publishing to MQTT Service: {}", tenant, e.getMessage(), e);
@@ -710,10 +711,8 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
     /**
      * Send message to device with topic as property
      */
-    private void sendMessageToDevice(Producer<byte[]> producer, String payload, String mqttTopic,
+    private void sendMessageToDevice(Producer<byte[]> producer, byte[] payloadBytes, String mqttTopic,
             Qos qos, ProcessingContext<?> context) throws PulsarClientException {
-
-        byte[] payloadBytes = payload.getBytes(StandardCharsets.UTF_8);
 
         if (qos == Qos.AT_MOST_ONCE) {
             producer.newMessage()

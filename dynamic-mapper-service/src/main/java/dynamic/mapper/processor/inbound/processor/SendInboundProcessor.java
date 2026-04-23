@@ -25,6 +25,7 @@ import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.service.MappingService;
+import dynamic.mapper.processor.inbound.deserializer.SparkPlugBDeserializer;
 import dynamic.mapper.util.Utils;
 import lombok.extern.slf4j.Slf4j;
 
@@ -68,6 +69,8 @@ public class SendInboundProcessor extends BaseProcessor {
             // Deliberately outside the INVENTORY request path so it runs even when the Smart Function
             // emits no INVENTORY object (e.g. emits only a MEASUREMENT, or emits nothing at all).
             storeSparkPlugBBirthMessage(context);
+            // Update the sparkPlugB_isActive flag: TRUE for BIRTH/DATA, FALSE for DEATH.
+            updateSparkPlugBActiveStatus(context);
         } catch (Exception e) {
             String errorMessage = String.format(
                     "%s - Error in SendInboundProcessor: %s for mapping: %s",
@@ -411,6 +414,93 @@ public class SendInboundProcessor extends BaseProcessor {
                 tenant, fragmentKey, aliasMap.size(), deviceId, messageType);
         c8yAgent.storeManagedObjectFragment(tenant, deviceId, fragmentKey,
                 aliasMap, context.getTesting());
+    }
+
+    /**
+     * Updates the {@code sparkPlugB_isActive} fragment on the managed object that corresponds
+     * to the SparkPlug B topic:
+     * <ul>
+     *   <li><b>NBIRTH / DBIRTH / NDATA / DDATA</b> → {@code true} (node/device is online and producing data)</li>
+     *   <li><b>NDEATH / DDEATH</b> → {@code false} (node/device has gone offline)</li>
+     *   <li>NCMD / DCMD / STATE — no change</li>
+     * </ul>
+     * The managed object is resolved via {@code context.getSourceId()} when set (BIRTH messages where
+     * the Smart Function returned an INVENTORY object), otherwise by looking up the external ID derived
+     * from the topic (same convention as {@link #storeSparkPlugBBirthMessage}).
+     */
+    private void updateSparkPlugBActiveStatus(ProcessingContext<Object> context) {
+        if (!dynamic.mapper.processor.model.MappingType.SPARKPLUGB
+                .equals(context.getMapping().getMappingType())) {
+            return;
+        }
+
+        String topic = context.getTopic();
+        if (topic == null) {
+            return;
+        }
+        String[] parts = topic.split("/");
+        if (parts.length < 4) {
+            return;
+        }
+        String messageType = parts[2];
+
+        boolean isActive;
+        if ("NBIRTH".equals(messageType) || "DBIRTH".equals(messageType)
+                || "NDATA".equals(messageType) || "DDATA".equals(messageType)) {
+            isActive = true;
+        } else if ("NDEATH".equals(messageType) || "DDEATH".equals(messageType)) {
+            isActive = false;
+        } else {
+            // NCMD / DCMD / STATE — not relevant for the active flag
+            return;
+        }
+
+        String tenant = context.getTenant();
+
+        // For BIRTH messages, context.getSourceId() is set by processInventoryRequest when the Smart Function
+        // returns an INVENTORY object. Reuse it to avoid an extra identity lookup.
+        String deviceId = context.getSourceId();
+
+        if (deviceId == null) {
+            // Derive external ID from the topic
+            boolean isNodeLevel = "NBIRTH".equals(messageType) || "NDATA".equals(messageType)
+                    || "NDEATH".equals(messageType);
+            String externalIdValue;
+            if (isNodeLevel) {
+                // Edge Node: [Group ID]_[Edge Node ID]
+                externalIdValue = parts[1] + "_" + parts[3];
+            } else {
+                // Device: [Group ID]_[Edge Node ID]_[Device ID]
+                if (parts.length < 5) {
+                    log.warn("{} - updateSparkPlugBActiveStatus: {} topic has fewer than 5 levels: {}",
+                            tenant, messageType, topic);
+                    return;
+                }
+                externalIdValue = parts[1] + "_" + parts[3] + "_" + parts[4];
+            }
+
+            String externalIdType = context.getMapping().getExternalIdType();
+            if (externalIdType == null || externalIdType.isEmpty()) {
+                externalIdType = "c8y_Serial";
+            }
+
+            ID identity = new ID(externalIdType, externalIdValue);
+            ExternalIDRepresentation resolved =
+                    c8yAgent.resolveExternalId2GlobalId(tenant, identity, context.getTesting());
+            if (resolved == null) {
+                log.debug("{} - updateSparkPlugBActiveStatus: no MO found for externalId={}, skipping",
+                        tenant, externalIdValue);
+                return;
+            }
+            deviceId = resolved.getManagedObject().getId().getValue();
+        }
+
+        log.info("{} - Setting {}={} on MO {} (messageType={})",
+                tenant, SparkPlugBDeserializer.SPARKPLUGB_IS_ACTIVE_FRAGMENT,
+                isActive, deviceId, messageType);
+        c8yAgent.storeManagedObjectFragment(tenant, deviceId,
+                SparkPlugBDeserializer.SPARKPLUGB_IS_ACTIVE_FRAGMENT,
+                isActive, context.getTesting());
     }
 
 }
