@@ -26,6 +26,7 @@
 
     <logger name="com.cumulocity.microservice.security.filter.provider.SpringSecurityContextProvider" level="ERROR" />
     <logger name="org.apache.pulsar.client" level="ERROR" />
+    <logger name="org.glassfish.jersey.client" level="WARN" />
 
     <appender name="OpenTelemetry"
               class="io.opentelemetry.instrumentation.logback.appender.v1_0.OpenTelemetryAppender">
