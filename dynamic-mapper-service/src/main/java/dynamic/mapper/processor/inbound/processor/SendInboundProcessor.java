@@ -349,6 +349,17 @@ public class SendInboundProcessor extends BaseProcessor {
                 deviceId = resolved.getManagedObject().getId().getValue();
                 log.debug("{} - storeSparkPlugBBirthMessage: resolved {} → C8Y ID {}",
                         context.getTenant(), externalIdValue, deviceId);
+            } else if (Boolean.TRUE.equals(context.getMapping().getCreateNonExistingDevice())) {
+                log.info("{} - storeSparkPlugBBirthMessage: MO for {}/{} does not exist, auto-creating device "
+                        + "(createNonExistingDevice=true)",
+                        context.getTenant(), externalIdType, externalIdValue);
+                deviceId = dynamic.mapper.processor.util.ProcessingResultHelper.createImplicitDevice(
+                        identity, context, log, c8yAgent, objectMapper);
+                if (deviceId == null) {
+                    log.error("{} - storeSparkPlugBBirthMessage: Failed to auto-create device for {}/{}",
+                            context.getTenant(), externalIdType, externalIdValue);
+                    return;
+                }
             } else {
                 log.error("{} - storeSparkPlugBBirthMessage: MO for {} '{}' does not exist and no INVENTORY "
                         + "request was produced by the Smart Function. The '{}' fragment cannot be stored. "

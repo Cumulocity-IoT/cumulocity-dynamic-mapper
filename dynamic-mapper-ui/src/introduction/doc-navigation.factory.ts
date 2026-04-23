@@ -85,6 +85,14 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       priority: 610,
       preventDuplicates: true
     }),
+    sparkPlugBNode: new NavigatorNode({
+      parent: gettext('Introduction'),
+      icon: 'empty',
+      label: gettext('SparkPlug B'),
+      path: '/c8y-pkg-dynamic-mapper/landing/sparkplugb',
+      priority: 609.5,
+      preventDuplicates: true
+    }),
     subscriptionOutboundNode: new NavigatorNode({
       parent: gettext('Introduction'),
       icon: 'empty',

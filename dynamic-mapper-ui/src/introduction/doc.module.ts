@@ -148,6 +148,12 @@ import { DocNavigationFactory } from './doc-navigation.factory';
         feature: featureResolver
       }
     }),
+    hookRoute({
+      path: 'c8y-pkg-dynamic-mapper/landing/sparkplugb',
+      component: DocMainComponent, resolve: {
+        feature: featureResolver
+      }
+    }),
     hookNavigator(DocNavigationFactory),
   ]
 })
