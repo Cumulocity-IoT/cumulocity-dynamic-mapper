@@ -122,27 +122,31 @@ public class TestController {
         log.info("{} - Test mapping: {}, {}, {}, {}", tenant, mapping.getName(), mapping.getId(), send,
                 payload);
         try {
-            // Create test device in C8Y inventory before dispatching (INBOUND + send only)
+            AConnectorClient connectorClient = connectorRegistry
+                    .getClientForTenant(tenant, TestClient.TEST_CONNECTOR_IDENTIFIER);
+
+            // Create test device in C8Y inventory before dispatching (INBOUND + send only).
+            // Run a dry-run first so we can extract the actual externalId produced by the
+            // mapping's substitution, rather than guessing from the static source template.
             if (Boolean.TRUE.equals(send) && Boolean.TRUE.equals(context.getCreateTestDevice())
                     && mapping.getDirection().equals(Direction.INBOUND)) {
-                String externalId = extractIdentityFromSourceTemplate(mapping.getSourceTemplate());
+                String externalId = resolveExternalIdViaDryRun(tenant, connectorClient, mapping, payload);
+                if (externalId == null) {
+                    externalId = extractIdentityFromSourceTemplate(mapping.getSourceTemplate());
+                }
                 if (externalId == null) {
                     externalId = deriveExternalIdFromTopic(mapping.getMappingTopicSample());
                 }
                 String externalIdType = (mapping.getExternalIdType() != null && !mapping.getExternalIdType().isEmpty())
                         ? mapping.getExternalIdType()
                         : "c8y_Serial";
-                String deviceName = externalId;
-                String testDeviceId = c8YAgent.createTestDevice(tenant, deviceName, externalId, externalIdType);
+                String testDeviceId = c8YAgent.createTestDevice(tenant, externalId, externalId, externalIdType);
                 if (testDeviceId != null) {
                     result.setTestDeviceId(testDeviceId);
                     log.info("{} - Created test device: id={}, externalId={}, type={}", tenant, testDeviceId,
                             externalId, externalIdType);
                 }
             }
-
-            AConnectorClient connectorClient = connectorRegistry
-                    .getClientForTenant(tenant, TestClient.TEST_CONNECTOR_IDENTIFIER);
 
             ProcessingResultWrapper<?> processingResultWrapper = null;
             if (mapping.getDirection().equals(Direction.INBOUND)) {
@@ -306,6 +310,32 @@ public class TestController {
 
         // Return 200 OK with empty body
         return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Runs the mapping in dry-run mode (testing=true, sendPayload=false) and returns
+     * the externalId that the substitution actually produces at runtime. Returns null
+     * if the dry-run fails or produces no externalId.
+     */
+    private String resolveExternalIdViaDryRun(String tenant, AConnectorClient connectorClient,
+            Mapping mapping, String payload) {
+        try {
+            ConnectorMessage dryRunMessage = createTestMessage(tenant, connectorClient,
+                    mapping.getMappingTopicSample(), false, payload);
+            ProcessingResultWrapper<?> dryRunWrapper = connectorClient.getDispatcher()
+                    .onTestMessage(dryRunMessage, mapping);
+            if (dryRunWrapper == null || dryRunWrapper.getProcessingResult() == null) {
+                return null;
+            }
+            var dryRunContexts = (List<? extends ProcessingContext<?>>) dryRunWrapper.getProcessingResult().get();
+            if (dryRunContexts != null && !dryRunContexts.isEmpty()) {
+                return dryRunContexts.get(0).getExternalId();
+            }
+        } catch (Exception e) {
+            log.warn("{} - Dry-run for externalId resolution failed, falling back to static extraction: {}",
+                    tenant, e.getMessage());
+        }
+        return null;
     }
 
     /**
