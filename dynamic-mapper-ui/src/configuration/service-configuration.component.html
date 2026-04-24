@@ -474,6 +474,27 @@
               </div>
             </div>
           </c8y-li>
+
+          <c8y-li>
+            <c8y-li-icon icon="exchange"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'Cache alias maps for SparkPlug B mappings' | translate }}</p>
+                <p>
+                  <small translate>When enabled, the SparkPlug B BIRTH fragments (sparkPlugB_NBIRTH,
+                    sparkPlugB_DBIRTH) are automatically included in the inventory cache for all cached
+                    managed objects. This removes the need to add these fragments manually to the list
+                    above.</small>
+                </p>
+              </div>
+              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
+                <label class="c8y-switch" title="{{ 'Cache alias maps for SparkPlug B mappings' | translate }}">
+                  <input type="checkbox" name="cacheAliasMaps" formControlName="cacheAliasMaps" />
+                  <span></span>
+                </label>
+              </div>
+            </div>
+          </c8y-li>
           }
         </form>
       </c8y-list-group>

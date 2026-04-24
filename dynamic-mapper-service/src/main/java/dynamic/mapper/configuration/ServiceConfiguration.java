@@ -65,6 +65,7 @@ public class ServiceConfiguration implements Cloneable {
         this.smartFunctionAgent = null;
         this.flowStateRetention = 1440;
         this.supportESM = false;
+        this.cacheAliasMaps = false;
     }
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Enable logging of message payloads for debugging purposes. Caution: May expose sensitive data in logs.", example = "false")
@@ -181,4 +182,9 @@ public class ServiceConfiguration implements Cloneable {
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     private Boolean supportESM;
+
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Automatically include the sparkPlugB_NBIRTH and sparkPlugB_DBIRTH fragments in the inventory cache for all cached managed objects. When enabled, these fragments are cached transparently alongside the fragments listed in inventoryFragmentsToCache, without requiring them to be added to that list manually.", example = "false")
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    private Boolean cacheAliasMaps;
 }

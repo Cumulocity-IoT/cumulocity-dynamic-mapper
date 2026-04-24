@@ -73,6 +73,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     javaScriptAgent: undefined,
     smartFunctionAgent: undefined,
     suppressDeprecationWarning: false,
+    cacheAliasMaps: false,
   };
   agents$: BehaviorSubject<string[]> = new BehaviorSubject([]);
   destroy$: Subject<void> = new Subject<void>();
@@ -128,6 +129,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
       javaScriptAgent: [{ value: '', disabled: true }],
       smartFunctionAgent: [{ value: '', disabled: true }],
       suppressDeprecationWarning: [''],
+      cacheAliasMaps: [''],
     });
   }
 
@@ -156,12 +158,16 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     });
   }
 
+  private readonly SPARKPLUGB_BIRTH_FRAGMENTS = ['sparkPlugB_NBIRTH', 'sparkPlugB_DBIRTH'];
+
   async loadData(): Promise<void> {
     this.serviceConfiguration = await this.sharedService.getServiceConfiguration();
+    const visibleFragments = (this.serviceConfiguration.inventoryFragmentsToCache ?? [])
+      .filter(f => !this.SPARKPLUGB_BIRTH_FRAGMENTS.includes(f.trim()));
 
     this.serviceForm.patchValue({
       ...this.serviceConfiguration,
-      inventoryFragmentsToCache: this.serviceConfiguration.inventoryFragmentsToCache.join(',')
+      inventoryFragmentsToCache: visibleFragments.join(',')
     });
   }
 
@@ -195,7 +201,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
 
     conf.inventoryFragmentsToCache = this.parseFragmentsList(
       this.serviceForm.value['inventoryFragmentsToCache']
-    );
+    ).filter(f => !this.SPARKPLUGB_BIRTH_FRAGMENTS.includes(f));
 
     conf.javaScriptAgent = this.trimOrUndefined(this.serviceForm.value['javaScriptAgent']);
     conf.jsonataAgent = this.trimOrUndefined(this.serviceForm.value['jsonataAgent']);
