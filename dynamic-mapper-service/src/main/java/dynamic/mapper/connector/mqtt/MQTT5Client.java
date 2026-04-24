@@ -41,6 +41,7 @@ import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.ConnectorStatus;
+import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
@@ -424,5 +425,44 @@ public class MQTT5Client extends AMQTTClient {
                 .properties(buildCommonMqttProperties(MQTT_VERSION_5_0))
                 .supportedDirections(supportedDirections())
                 .build();
+    }
+
+    @Override
+    protected SparkplugCertificateManager.SparkplugPublisher createSparkplugPublisher() {
+        return new SparkplugCertificateManager.SparkplugPublisher() {
+            @Override
+            public void publishCertificate(String topic, byte[] payload) throws Exception {
+                if (!isConnected() || mqttClient == null) {
+                    throw new ConnectorException("Cannot publish Sparkplug certificate: not connected");
+                }
+
+                try {
+                    Mqtt5Publish message = Mqtt5Publish.builder()
+                            .topic(topic)
+                            .retain(true)
+                            .qos(MqttQos.AT_LEAST_ONCE)
+                            .payload(payload)
+                            .build();
+
+                    mqttClient.publish(message);
+                    log.debug("{} - Published Sparkplug certificate to topic: [{}]", tenant, topic);
+                } catch (Exception e) {
+                    log.error("{} - Error publishing Sparkplug certificate to topic [{}]", tenant, topic, e);
+                    throw new ConnectorException("Failed to publish Sparkplug certificate", e);
+                }
+            }
+
+            @Override
+            public void subscribeTopic(String topicPattern) throws Exception {
+                try {
+                    subscribe(topicPattern, Qos.AT_LEAST_ONCE);
+                    log.debug("{} - Subscribed to Sparkplug topic pattern: [{}]", tenant, topicPattern);
+                } catch (ConnectorException e) {
+                    log.warn("{} - Failed to subscribe to Sparkplug topic pattern [{}]: {}",
+                            tenant, topicPattern, e.getMessage());
+                    throw e;
+                }
+            }
+        };
     }
 }

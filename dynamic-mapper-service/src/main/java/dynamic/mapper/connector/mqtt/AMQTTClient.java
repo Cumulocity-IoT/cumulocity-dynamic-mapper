@@ -60,12 +60,17 @@ public abstract class AMQTTClient extends AConnectorClient {
     protected static final int RECONNECT_DELAY_STEP_MS = 10000;
     protected static final int RECONNECT_DELAY_MAX_MS  = 300000; // 5 minutes
 
-    @Getter
-    @Setter
-    protected List<Qos> supportedQOS = Arrays.asList(
-            Qos.AT_MOST_ONCE,
-            Qos.AT_LEAST_ONCE,
-            Qos.EXACTLY_ONCE);
+     @Getter
+     @Setter
+     protected List<Qos> supportedQOS = Arrays.asList(
+             Qos.AT_MOST_ONCE,
+             Qos.AT_LEAST_ONCE,
+             Qos.EXACTLY_ONCE);
+
+     // Sparkplug Host support
+     protected SparkplugCertificateManager sparkplugCertificateManager;
+     protected boolean isSparkplugHost = false;
+     protected String sparkplugHostId;
 
     /**
      * Default constructor - initializes connector specification
@@ -206,6 +211,9 @@ public abstract class AMQTTClient extends AConnectorClient {
                 return;
             }
 
+            // Initialize Sparkplug support if enabled
+            initializeSparkplugSupport();
+
             // Build MQTT client (version-specific)
             buildMqttClient();
 
@@ -218,6 +226,12 @@ public abstract class AMQTTClient extends AConnectorClient {
             // Initialize subscriptions after successful connection
             if (isConnected()) {
                 initializeSubscriptionsAfterConnect();
+
+                // Publish Birth Certificate if Sparkplug Host mode is enabled
+                if (isSparkplugHost && sparkplugCertificateManager != null) {
+                    sparkplugCertificateManager.subscribeToSparkplugTopics();
+                    sparkplugCertificateManager.publishBirthCertificate();
+                }
             }
 
         } catch (Exception e) {
@@ -275,25 +289,35 @@ public abstract class AMQTTClient extends AConnectorClient {
             log.info("{} - Disconnecting MQTT client", tenant);
             connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTING, true, true);
 
-            // Unsubscribe from all topics (if client is connected)
-            if (mappingSubscriptionManager != null && isMqttClientConnected()) {
-                try {
-                    mappingSubscriptionManager.getSubscriptionCountsView().keySet().forEach(topic -> {
-                        try {
-                            unsubscribeMqttTopic(topic);
-                            log.debug("{} - Unsubscribed from topic: [{}]", tenant, topic);
-                        } catch (Exception e) {
-                            log.debug("{} - Error unsubscribing from topic: [{}] (may already be unsubscribed)",
-                                    tenant, topic);
-                        }
-                    });
-                } catch (Exception e) {
-                    log.debug("{} - Error during unsubscribe phase: {}", tenant, e.getMessage());
-                }
-            }
+             // Unsubscribe from all topics (if client is connected)
+             if (mappingSubscriptionManager != null && isMqttClientConnected()) {
+                 try {
+                     mappingSubscriptionManager.getSubscriptionCountsView().keySet().forEach(topic -> {
+                         try {
+                             unsubscribeMqttTopic(topic);
+                             log.debug("{} - Unsubscribed from topic: [{}]", tenant, topic);
+                         } catch (Exception e) {
+                             log.debug("{} - Error unsubscribing from topic: [{}] (may already be unsubscribed)",
+                                     tenant, topic);
+                         }
+                     });
+                 } catch (Exception e) {
+                     log.debug("{} - Error during unsubscribe phase: {}", tenant, e.getMessage());
+                 }
+             }
 
-            // Disconnect client (version-specific)
-            disconnectMqttClient();
+             // Publish Sparkplug Death Certificate before disconnecting (if configured)
+             if (isSparkplugHost && sparkplugCertificateManager != null && isMqttClientConnected()) {
+                 try {
+                     sparkplugCertificateManager.publishDeathCertificate();
+                     log.info("{} - Published Sparkplug Death Certificate before disconnect", tenant);
+                 } catch (Exception e) {
+                     log.error("{} - Error publishing Sparkplug Death Certificate: {}", tenant, e.getMessage());
+                 }
+             }
+
+             // Disconnect client (version-specific)
+             disconnectMqttClient();
 
             connectionStateManager.setConnected(false);
             connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTED, true, true);
@@ -497,17 +521,90 @@ public abstract class AMQTTClient extends AConnectorClient {
                 .condition("protocol", MQTT_PROTOCOL_WS, MQTT_PROTOCOL_WSS)
                 .build());
 
-        // MQTT session behavior
-        configProps.put("cleanSession", ConnectorPropertyBuilder.optionalBoolean()
-                .order(15)
-                .defaultValue(true)
-                .build());
+         // MQTT session behavior
+         configProps.put("cleanSession", ConnectorPropertyBuilder.optionalBoolean()
+                 .order(15)
+                 .defaultValue(true)
+                 .build());
 
-        return configProps;
+         // Sparkplug Host support
+         configProps.put("isSparkplugHost", ConnectorPropertyBuilder.optionalBoolean()
+                 .order(16)
+                 .defaultValue(false)
+                 .description("Enable Sparkplug Host mode to publish Birth/Death certificates on connection/disconnection")
+                 .build());
+
+         configProps.put("sparkplugHostId", ConnectorPropertyBuilder.optionalString()
+                 .order(17)
+                 .description("Sparkplug Host ID (used for Birth/Death certificates)")
+                 .condition("isSparkplugHost", "true")
+                 .build());
+
+         return configProps;
+     }
+
+     /**
+      * Create connector specification - subclasses should implement
+      */
+     protected abstract ConnectorSpecification createConnectorSpecification();
+
+    /**
+     * Initialize Sparkplug Host support if configured
+     */
+    protected void initializeSparkplugSupport() {
+        isSparkplugHost = (Boolean) connectorConfiguration.getProperties().getOrDefault("isSparkplugHost", false);
+        sparkplugHostId = (String) connectorConfiguration.getProperties().get("sparkplugHostId");
+
+        if (isSparkplugHost) {
+            if (sparkplugHostId == null || sparkplugHostId.trim().isEmpty()) {
+                // Use tenant as fallback if sparkplugHostId is not provided
+                sparkplugHostId = tenant;
+            }
+
+            if (sparkplugHostId != null && !sparkplugHostId.trim().isEmpty()) {
+                sparkplugCertificateManager = new SparkplugCertificateManager(
+                        tenant,
+                        sparkplugHostId,
+                        objectMapper,
+                        createSparkplugPublisher());
+                log.info("{} - Sparkplug Host support initialized with ID: {}", tenant, sparkplugHostId);
+            } else {
+                log.warn("{} - Sparkplug Host mode enabled but no Host ID provided", tenant);
+                isSparkplugHost = false;
+            }
+        }
     }
 
     /**
-     * Create connector specification - subclasses should implement
+     * Create a Sparkplug publisher for this MQTT client
+     * Subclasses should override to provide protocol-specific implementation
+     *
+     * @return The SparkplugPublisher implementation
      */
-    protected abstract ConnectorSpecification createConnectorSpecification();
+    protected SparkplugCertificateManager.SparkplugPublisher createSparkplugPublisher() {
+        return new SparkplugCertificateManager.SparkplugPublisher() {
+            @Override
+            public void publishCertificate(String topic, byte[] payload) throws Exception {
+                // Default implementation - subclasses should override for specific MQTT versions
+                if (!isConnected()) {
+                    throw new ConnectorException("Cannot publish certificate: not connected");
+                }
+                // Will be overridden by subclasses with actual publishing logic
+            }
+
+            @Override
+            public void subscribeTopic(String topicPattern) throws Exception {
+                if (!isConnected()) {
+                    throw new ConnectorException("Cannot subscribe to topic: not connected");
+                }
+                // Subscribe using the base connector's subscribe method
+                try {
+                    subscribe(topicPattern, Qos.AT_LEAST_ONCE);
+                } catch (ConnectorException e) {
+                    log.debug("{} - Failed to subscribe to {}: {}", tenant, topicPattern, e.getMessage());
+                    throw e;
+                }
+            }
+        };
+    }
 }
