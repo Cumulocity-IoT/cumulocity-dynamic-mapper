@@ -82,6 +82,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
     ConnectorPropertyType,
     (entry: PropertyEntry) => FormlyFieldConfig
   >([
+    [ConnectorPropertyType.ID_STRING_PROPERTY, this.createIdStringField.bind(this)],
     [ConnectorPropertyType.NUMERIC_PROPERTY, this.createNumericField.bind(this)],
     [ConnectorPropertyType.STRING_PROPERTY, this.createStringField.bind(this)],
     [ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, this.createSensitiveStringField.bind(this)],
@@ -140,7 +141,6 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
     const spec = this.specifications.find(sp => sp.connectorType === this.configuration.connectorType);
     if (spec) {
       this.description = spec.description;
-      this.configuration['description'] = spec.description;
     }
   }
 
@@ -186,6 +186,10 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
     });
   }
 
+  private createIdStringField(entry: PropertyEntry): FormlyFieldConfig {
+    return this.createBaseFormField(entry, 'input', { disabled: true });
+  }
+
   private createNumericField(entry: PropertyEntry): FormlyFieldConfig {
     return this.createBaseFormField(entry, 'input', { type: 'number' });
   }
@@ -203,7 +207,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
   }
 
   private createOptionField(entry: PropertyEntry): FormlyFieldConfig {
-    const options = (entry.property as any).options;
+    const options = entry.property.options;
     return this.createBaseFormField(entry, 'select', {
       options: options ? Object.values(options).map((key: string) => ({
         label: key,
@@ -276,7 +280,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
           type: 'd11r-textarea',
           key: 'description',
           wrappers: ['c8y-form-field'],
-          templateOptions: {
+          props: {
             label: 'Description',
             readonly: true,
             placeholder: 'choose connector ...',

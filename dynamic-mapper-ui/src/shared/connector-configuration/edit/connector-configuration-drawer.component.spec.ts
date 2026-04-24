@@ -71,8 +71,6 @@ describe('ConnectorConfigurationDrawerComponent', () => {
       description: 'MQTT Connector',
       supportedDirections: [Direction.INBOUND, Direction.OUTBOUND],
       singleton: false,
-      supportsWildcardInTopicInbound: true,
-      supportsWildcardInTopicOutbound: true,
       properties: {
         mqttHost: {
           type: ConnectorPropertyType.STRING_PROPERTY,
