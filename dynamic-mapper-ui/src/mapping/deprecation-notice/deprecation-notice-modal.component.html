@@ -28,7 +28,7 @@
   </ng-container>
 
   <div class="p-24 animated fadeIn">
-    <div class="alert alert-danger m-b-16">
+    <div class="alert alert-danger m-b-16" style="min-width:stretch">
       <i c8yIcon="warning" class="m-r-8"></i>
       <strong>{{ 'Action required: ' | translate }}</strong>
       {{ 'The transformation type ' | translate }}
@@ -37,12 +37,12 @@
     </div>
 
     <!-- Migration Target -->
-    <div class="alert alert-info m-t-16" style="min-width:stretch">
+    <!-- <div class="alert alert-info m-t-16" style="min-width:stretch">
       <i c8yIcon="info-circle" class="m-r-8"></i>
       <strong>{{ 'Migration target: ' | translate }}</strong>
       {{ 'Smart Function (JavaScript)' | translate }}
       <span class="text-muted m-l-4">(TransformationType.SMART_FUNCTION)</span>
-    </div>
+    </div> -->
 
     <!-- Migration Steps -->
     <h5 class="m-t-16 m-b-8">{{ 'How to migrate' | translate }}</h5>

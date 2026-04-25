@@ -94,7 +94,6 @@ import { AdviceActionComponent } from './advisor/advice-action.component';
 import { CommonModule } from '@angular/common';
 import { MappingStepperComponent } from '../stepper-mapping/mapping-stepper.component';
 import { SnoopingStepperComponent } from '../stepper-snooping/snooping-stepper.component';
-import { MappingFilterDrawerComponent } from '../filter/mapping-filter-drawer.component';
 import { CodeEditorDrawerComponent } from '../../shared/component/code-explorer/code-editor-drawer.component';
 import { DeprecationNoticeModalComponent } from '../deprecation-notice/deprecation-notice-modal.component';
 import { DEPRECATION_NOTICE_VERSION } from '../../shared';
@@ -377,41 +376,6 @@ export class MappingComponent implements OnInit, OnDestroy {
       }
     );
   }
-
-  async editMessageFilter(m: MappingEnriched) {
-    const { mapping } = m;
-    const sourceSystem =
-      mapping.direction == Direction.OUTBOUND ? 'Cumulocity' : 'Broker';
-    const initialState = { mapping, sourceSystem };
-    try {
-      const drawer = this.bottomDrawerService.openDrawer(MappingFilterDrawerComponent, { initialState: initialState });
-
-      await new Promise((resolve) => {
-        drawer.instance.closeSubject
-          .pipe(
-            take(1),
-            filter(filterMapping => !!filterMapping),
-            switchMap(filterMapping => this.applyMappingFilter(filterMapping, mapping.id)),
-            finalize(() => {
-              drawer.close();
-              resolve(undefined);
-            })
-          )
-          .subscribe({
-            next: () => {
-              // this.alertService.success(`Applied filter to mapping ${mapping.name}`);
-            },
-            error: (error) => {
-              this.alertService.danger('Failed to apply mapping filter', error);
-              resolve(undefined);
-            }
-          });
-      });
-    } catch (error) {
-      this.alertService.danger(`Failed to apply mapping filter: ${error.message}`);
-    }
-  }
-
 
   async updateCode(m: MappingEnriched) {
     const { mapping } = m;
