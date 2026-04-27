@@ -163,10 +163,13 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   private clearHighlights(): void {
-    document.querySelectorAll('mark.search-highlight').forEach(mark => {
+    const root = this.docContentRef?.nativeElement;
+    if (!root) return;
+
+    root.querySelectorAll('mark.search-highlight').forEach(mark => {
       const parent = mark.parentNode;
       if (parent) {
-        parent.replaceChild(document.createTextNode(mark.textContent || ''), mark);
+        parent.replaceChild(root.ownerDocument.createTextNode(mark.textContent || ''), mark);
         parent.normalize();
       }
     });
