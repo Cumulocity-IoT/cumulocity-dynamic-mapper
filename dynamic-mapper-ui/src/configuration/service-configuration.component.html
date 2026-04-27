@@ -457,26 +457,28 @@
 
           <c8y-li>
             <c8y-li-icon icon="list"></c8y-li-icon>
-            <div class="d-flex a-i-start fit-w">
-              <div>
+            <div class="d-flex a-i-start">
+              <div style="flex:1; min-width:0">
                 <p>{{ 'Fragments from inventory to cache' | translate }}</p>
                 <p>
                   <small translate>The listed fragments will be cached and can be referenced in
                     'filterInventory'</small>
                 </p>
               </div>
-              <ul class="list-unstyled m-l-auto m-b-0" style="width:350px" c8yInputGroupListContainer>
-                @for (item of inventoryFragmentsList; track trackByFragmentFn(i, item); let i = $index) {
-                  <li class="m-b-8 fit-w">
-                    <c8y-input-group-list [index]="i" (onAdd)="addFragment()" (onRemove)="removeFragment($event)" [minus]="inventoryFragmentsList.length > 0">
-                      <div class="col-xs-11" style="padding-left:0px">
-                        <input class="form-control" placeholder="e.g. type" type="text"
-                          [(ngModel)]="inventoryFragmentsList[i]" [ngModelOptions]="{standalone: true}" />
-                      </div>
-                    </c8y-input-group-list>
-                  </li>
-                }
-              </ul>
+              <div style="flex:0 0 350px">
+                <ul class="list-unstyled m-b-0" c8yInputGroupListContainer>
+                  @for (item of inventoryFragmentsList; track trackByFragmentFn(i, item); let i = $index) {
+                    <li class="m-b-8">
+                      <c8y-input-group-list [index]="i" (onAdd)="addFragment()" (onRemove)="removeFragment($event)" [minus]="inventoryFragmentsList.length > 0">
+                        <div style="width:100%">
+                          <input class="form-control" placeholder="e.g. type" type="text"
+                            [(ngModel)]="inventoryFragmentsList[i]" [ngModelOptions]="{standalone: true}" />
+                        </div>
+                      </c8y-input-group-list>
+                    </li>
+                  }
+                </ul>
+              </div>
             </div>
           </c8y-li>
 
@@ -493,7 +495,7 @@
                 </p>
               </div>
               <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
-                <label class="c8y-switch" title="{{ 'Cache alias maps for SparkPlug B mappings' | translate }}">
+                <label class="c8y-switch c8y-switch--inline" title="{{ 'Cache alias maps for SparkPlug B mappings' | translate }}">
                   <input type="checkbox" name="cacheAliasMaps" formControlName="cacheAliasMaps" />
                   <span></span>
                 </label>
