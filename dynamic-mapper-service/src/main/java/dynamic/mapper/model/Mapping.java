@@ -273,7 +273,6 @@ public class Mapping implements Serializable {
     @NotNull
     private long lastUpdate;
 
-    public static final String EXTRACT_FROM_SOURCE = "extractFromSource";
     public static final String SMART_FUNCTION_NAME = "onMessage";
 
     @Override

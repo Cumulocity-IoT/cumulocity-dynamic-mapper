@@ -62,16 +62,10 @@ public class ConnectorProperty implements Cloneable {
     @JsonSetter(nulls = Nulls.SKIP)
     public Boolean hidden;
 
-    @NotNull
-    @JsonSetter(nulls = Nulls.SKIP)
     public Object defaultValue;
 
-    @NotNull
-    @JsonSetter(nulls = Nulls.SKIP)
     public Map<String, String> options;
 
-    @NotNull
-    @JsonSetter(nulls = Nulls.SKIP)
     public ConnectorPropertyCondition condition;
 
     @Override

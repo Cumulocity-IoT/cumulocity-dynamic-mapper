@@ -38,6 +38,7 @@ import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.connector.mqtt.SparkplugCertificateManager;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -80,6 +81,11 @@ public class PulsarConnectorClient extends AConnectorClient {
 
     @Getter
     protected List<Qos> supportedQOS;
+
+    // Sparkplug Host support
+    protected SparkplugCertificateManager sparkplugCertificateManager;
+    protected boolean isSparkplugHost = false;
+    protected String sparkplugHostId;
 
     /**
      * Default constructor
@@ -917,6 +923,17 @@ public class PulsarConnectorClient extends AConnectorClient {
                         .order(15)
                         .defaultValue("default"))
 
+                // Sparkplug Host support
+                .property("isSparkplugHost", ConnectorPropertyBuilder.optionalBoolean()
+                        .order(16)
+                        .defaultValue(false)
+                        .description("Enable Sparkplug Host mode to publish Birth/Death certificates on connection/disconnection"))
+
+                .property("sparkplugHostId", ConnectorPropertyBuilder.optionalString()
+                        .order(17)
+                        .description("Sparkplug Host ID (used for Birth/Death certificates)")
+                        .condition("isSparkplugHost", "true"))
+
                 .build();
     }
 
@@ -944,5 +961,58 @@ public class PulsarConnectorClient extends AConnectorClient {
 
             delegate.received(consumer, message);
         }
+    }
+
+    /**
+     * Initialize Sparkplug Host support if configured
+     */
+    protected void initializeSparkplugSupport() {
+        isSparkplugHost = (Boolean) connectorConfiguration.getProperties().getOrDefault("isSparkplugHost", false);
+        sparkplugHostId = (String) connectorConfiguration.getProperties().get("sparkplugHostId");
+
+        if (isSparkplugHost) {
+            if (sparkplugHostId == null || sparkplugHostId.trim().isEmpty()) {
+                // Use connectorIdentifier as fallback if sparkplugHostId is not provided
+                sparkplugHostId = connectorIdentifier;
+            }
+
+            if (sparkplugHostId != null && !sparkplugHostId.trim().isEmpty()) {
+                sparkplugCertificateManager = new SparkplugCertificateManager(
+                        tenant,
+                        sparkplugHostId,
+                        objectMapper,
+                        createSparkplugPublisher());
+                log.info("{} - Sparkplug Host support initialized with ID: {}", tenant, sparkplugHostId);
+            } else {
+                log.warn("{} - Sparkplug Host mode enabled but no Host ID provided", tenant);
+                isSparkplugHost = false;
+            }
+        }
+    }
+
+    /**
+     * Create a Sparkplug publisher for this connector
+     * Subclasses should override to provide protocol-specific implementation
+     *
+     * @return The SparkplugPublisher implementation
+     */
+    protected SparkplugCertificateManager.SparkplugPublisher createSparkplugPublisher() {
+        return new SparkplugCertificateManager.SparkplugPublisher() {
+            @Override
+            public void publishCertificate(String topic, byte[] payload) throws Exception {
+                if (!isConnected()) {
+                    throw new ConnectorException("Cannot publish Sparkplug certificate: not connected");
+                }
+                log.warn("{} - Sparkplug certificate publishing not implemented for this connector type", tenant);
+            }
+
+            @Override
+            public void subscribeTopic(String topicPattern) throws Exception {
+                if (!isConnected()) {
+                    throw new ConnectorException("Cannot subscribe to topic: not connected");
+                }
+                log.debug("{} - Sparkplug topic subscription not needed for this connector type", tenant);
+            }
+        };
     }
 }

@@ -83,6 +83,19 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
       this.currentPage = 'main';
     }
 
+    // For section paths that live inside the 'main' overview page (e.g. /landing/sparkplugb),
+    // extract the last path segment and use it as a scroll target after the view renders.
+    const sectionPaths = [
+      'overview', 'getting-started', 'managing-connectors', 'define-mapping',
+      'sparkplugb', 'define-subscription-for-outbound', 'transformation-types',
+      'flow-state', 'code-templates', 'metadata', 'unknown-payload',
+      'reliability-settings', 'access-control', 'monitoring', 'troubleshooting'
+    ];
+    const lastSegment = path.split('/').pop() || '';
+    if (sectionPaths.includes(lastSegment)) {
+      setTimeout(() => { this.scrollToElement(lastSegment); }, 200);
+    }
+
     this.clearSearch();
     this.highlightApplied = false;
 
@@ -91,87 +104,6 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
         setTimeout(() => { this.scrollToElement(fragment); }, 150);
       }
     });
-
-    if (this.currentPage === 'main') {
-      // Load code templates
-      const codeTemplatesMap: CodeTemplateMap = await this.sharedService.getCodeTemplates();
-      this.codeTemplates = Object.entries(codeTemplatesMap)
-        .map(([, template]) => template)
-        .sort((a, b) => {
-          // Sort by template type first, then by name
-          const typeOrder = {
-            'INBOUND_SMART_FUNCTION': 1,
-            'OUTBOUND_SMART_FUNCTION': 2,
-            'SHARED': 3,
-            'SYSTEM': 4
-          };
-          const typeComparison = (typeOrder[a.templateType] || 999) - (typeOrder[b.templateType] || 999);
-          if (typeComparison !== 0) return typeComparison;
-          return a.name.localeCompare(b.name);
-        });
-
-      from(this.mappingService.getMappings(Direction.INBOUND)).subscribe(
-        (mappings) => {
-          this.countMappingInbound$.next(!mappings ? 'no' : mappings.length);
-        }
-      );
-
-      from(this.mappingService.getMappings(Direction.OUTBOUND)).subscribe(
-        (count) => this.countMappingOutbound$.next(!count ? 'no' : count.length)
-      );
-
-      this.connectorConfigurationService.getConfigurations()
-        .subscribe((count) =>
-          this.countConnector$.next(!count ? 'no' : count.length)
-        );
-
-      if (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole) {
-        this.alertService.warning(
-          "You don't have any Dynamic Mapper permissions and therefore can only view mappings/connectors. Please contact your administrator."
-        );
-      } else if (!this.feature?.userHasMappingAdminRole) {
-        this.alertService.warning(
-          "You don't have the role 'Dynamic Mapper Admin' and therefore cannot create or edit connectors. Please contact your administrator."
-        );
-      } else if (!this.feature?.userHasMappingCreateRole) {
-        this.alertService.warning(
-          "You don't have the role 'Dynamic Mapper User' and therefore cannot edit mappings. Please contact your administrator."
-        );
-      }
-
-      // After data is loaded, check if we need to scroll to a specific section
-      const pathSegment = path.split('/').pop() || '';
-      const fragmentId = pathToFragmentMap[pathSegment];
-      if (fragmentId) {
-        setTimeout(() => { this.scrollToElement(fragmentId); }, 300);
-      } else {
-        setTimeout(() => { window.scrollTo(0, 0); }, 0);
-      }
-    }
-  }
-
-  openCodeExplorer(template: CodeTemplate): void {
-    this.bottomDrawerService.openDrawer(CodeEditorDrawerComponent, {
-      initialState: {
-        encodedCode: template.code,
-        sourceSystem: 'Template',
-        action: 'view'
-      }
-    });
-  }
-
-  getTransformationTypeName(templateType: string): string {
-    switch (templateType) {
-      case 'INBOUND_SMART_FUNCTION':
-      case 'OUTBOUND_SMART_FUNCTION':
-        return 'Smart Functions';
-      case 'SHARED':
-        return 'Shared Code';
-      case 'SYSTEM':
-        return 'System Code';
-      default:
-        return templateType;
-    }
   }
 
   onSearch(): void {

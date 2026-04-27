@@ -36,7 +36,7 @@ function onMessage(msg, context) {
     console.log("Payload messageId: " + payload["messageId"]);
 
     // Get externalId from context first, fall back to payload
-    var externalId = context.getClientId() || payload["externalId"];
+    var externalId = context.getConfig()["clientId"] || payload["externalId"];
 
     // --- Load persistent state ---
     var telemetryCount = context.getState("telemetryCount") || 0;

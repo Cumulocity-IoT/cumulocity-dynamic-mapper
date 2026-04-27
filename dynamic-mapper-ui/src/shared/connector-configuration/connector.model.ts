@@ -60,7 +60,8 @@ export interface ConnectorProperty {
   hidden: boolean;
   defaultValue?: any;
   type: ConnectorPropertyType;
-  condition?: ConnectorPropertyCondition
+  options?: { [key: string]: string };
+  condition?: ConnectorPropertyCondition;
 }
 
 export interface ConnectorConfiguration {
@@ -78,8 +79,6 @@ export interface ConnectorSpecification {
   description: string;
   connectorType: ConnectorType;
   singleton: boolean;
-  supportsWildcardInTopicInbound: boolean;
-  supportsWildcardInTopicOutbound: boolean;
   supportsMessageContext?: boolean;
   supportedDirections?: Direction[];
   properties: { [name: string]: ConnectorProperty };

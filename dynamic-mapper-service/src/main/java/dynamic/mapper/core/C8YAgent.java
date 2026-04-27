@@ -791,6 +791,50 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     }
 
     /**
+     * Stores (or replaces) a single named fragment on an existing managed object.
+     * <p>
+     * This is used, for example, to persist the SparkPlug B NBIRTH payload
+     * ({@code sparkPlugB_NBIRTH}) so that subsequent NDATA messages can resolve
+     * metric aliases back to their original names.
+     *
+     * @param tenant        the tenant context
+     * @param deviceId      the C8Y internal ID of the managed object to update
+     * @param fragmentKey   the fragment / property key
+     * @param fragmentValue the value to store (must be JSON-serialisable)
+     * @param testing       when {@code true} the call is skipped (dry-run / test mode)
+     */
+    public void storeManagedObjectFragment(String tenant, String deviceId, String fragmentKey, Object fragmentValue,
+            Boolean testing) {
+        if (Boolean.TRUE.equals(testing)) {
+            log.debug("{} - Skipping storeManagedObjectFragment '{}' on device {} in test mode",
+                    tenant, fragmentKey, deviceId);
+            return;
+        }
+        subscriptionsService.runForTenant(tenant, () -> {
+            MicroserviceCredentials contextCredentials = removeAppKeyHeaderFromContext(contextService.getContext());
+            contextService.runWithinContext(contextCredentials, () -> {
+                ManagedObjectRepresentation mor = new ManagedObjectRepresentation();
+                mor.setId(new GId(deviceId));
+                mor.set(fragmentValue, fragmentKey);
+                try {
+                    c8ySemaphore.acquire();
+                    inventoryApi.update(mor, false);
+                    log.info("{} - Stored fragment '{}' on device {}", tenant, fragmentKey, deviceId);
+                } catch (InterruptedException e) {
+                    log.error("{} - Failed to acquire semaphore for storing fragment '{}' on device {}",
+                            tenant, fragmentKey, deviceId, e);
+                    Thread.currentThread().interrupt();
+                } catch (SDKException e) {
+                    log.warn("{} - Failed to store fragment '{}' on device {}: {}",
+                            tenant, fragmentKey, deviceId, e.getMessage());
+                } finally {
+                    c8ySemaphore.release();
+                }
+            });
+        });
+    }
+
+    /**
      * Assigns a newly created device to one or more named device groups.
      * Groups that do not exist yet are created automatically.
      * Errors for individual groups are logged as warnings and do not abort the others.

@@ -549,61 +549,6 @@ class AbstractEnrichmentProcessorTest {
     }
 
     @Test
-    void testAddToFlowContextWithValidValue() {
-        // Given
-        graalContext = Context.newBuilder("js").allowAllAccess(true).build();
-        processingContext.setGraalContext(graalContext);
-        flowContext = new SmartFunctionContext(graalContext, TEST_TENANT, c8yAgent, false);
-
-        String key = "testKey";
-        String value = "testValue";
-
-        // When
-        processor.addToFlowContext(flowContext, processingContext, key, value);
-
-        // Then
-        assertNotNull(flowContext.getState(key), "Should have added value to flow context");
-
-        log.info("✅ Successfully added value to flow context");
-    }
-
-    @Test
-    void testAddToFlowContextWithNullGraalContext() {
-        // Given
-        processingContext.setGraalContext(null);
-        flowContext = mock(DataPrepContext.class);
-
-        String key = "testKey";
-        String value = "testValue";
-
-        // When
-        processor.addToFlowContext(flowContext, processingContext, key, value);
-
-        // Then - Should handle gracefully without exception
-        verify(flowContext, never()).setState(any(), any());
-
-        log.info("✅ Successfully handled null GraalContext in addToFlowContext");
-    }
-
-    @Test
-    void testAddToFlowContextWithNullValue() {
-        // Given
-        graalContext = Context.newBuilder("js").allowAllAccess(true).build();
-        processingContext.setGraalContext(graalContext);
-        flowContext = new SmartFunctionContext(graalContext, TEST_TENANT, c8yAgent, false);
-
-        String key = "testKey";
-
-        // When
-        processor.addToFlowContext(flowContext, processingContext, key, null);
-
-        // Then - Should handle null value gracefully
-        assertNull(flowContext.getState(key), "Should not have added null value");
-
-        log.info("✅ Successfully handled null value in addToFlowContext");
-    }
-
-    @Test
     void testPerformPreEnrichmentSetupDefaultImplementation() {
         // Given - Create instance that uses default implementation
         AbstractEnrichmentProcessor defaultProcessor = new AbstractEnrichmentProcessor(

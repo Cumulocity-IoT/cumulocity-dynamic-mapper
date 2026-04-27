@@ -119,9 +119,6 @@ export class DocOverviewComponent implements OnInit {
 
   getTransformationTypeName(templateType: string): string {
     switch (templateType) {
-      case 'INBOUND_SUBSTITUTION_AS_CODE':
-      case 'OUTBOUND_SUBSTITUTION_AS_CODE':
-        return 'Substitution as JavaScript (deprecated)';
       case 'INBOUND_SMART_FUNCTION':
       case 'OUTBOUND_SMART_FUNCTION':
         return 'Smart Functions';
@@ -133,8 +130,6 @@ export class DocOverviewComponent implements OnInit {
         return 'Inbound (deprecated)';
       case 'OUTBOUND':
         return 'Outbound (deprecated)';
-      case 'SUBSTITUTION_AS_CODE':
-        return 'Substitution as JavaScript (deprecated)';
       default:
         return templateType;
     }
@@ -144,7 +139,7 @@ export class DocOverviewComponent implements OnInit {
     const element = document.getElementById(elementId);
     if (element) {
       const elementPosition = element.getBoundingClientRect().top + window.scrollY;
-      const offsetPosition = elementPosition - 80;
+      const offsetPosition = elementPosition - 120;
       window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
     }
   }

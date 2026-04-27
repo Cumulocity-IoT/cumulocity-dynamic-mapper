@@ -403,6 +403,64 @@ function celsiusToFahrenheit(celsius) &#123;
                   <br/><strong>Example:</strong> <code>var device = context.getManagedObjectByExternalId(&#123;externalId: "sensor-01", type: "c8y_Serial"&#125;);</code>
                 </td>
               </tr>
+              <tr class="table-info">
+                <td colspan="3" style="text-align: center; font-weight: bold; background-color: #e7f3ff;">
+                  Context Config Properties — available via <code>context.getConfig()</code>
+                </td>
+              </tr>
+              <tr>
+                <td><code>tenant</code></td>
+                <td>Access (all)</td>
+                <td>The Cumulocity tenant identifier.</td>
+              </tr>
+              <tr>
+                <td><code>topic</code></td>
+                <td>Access (all)</td>
+                <td>The MQTT topic or URL path of the inbound message.</td>
+              </tr>
+              <tr>
+                <td><code>clientId</code></td>
+                <td>Access (connector-dependent)</td>
+                <td>The publisher or producer client identifier. Its value depends on the connector type:
+                  <ul class="m-t-8 m-b-0">
+                    <li><strong>MQTT 5</strong>: The publisher's client ID read from the MQTT 5 user property
+                      named <code>clientId</code>. Returns <code>null</code> when the publisher does not include this
+                      user property. Same value as <code>context.getClientId()</code>.</li>
+                    <li><strong>MQTT 3</strong>: Always <code>null</code> — MQTT 3.1.1 does not carry a
+                      per-message publisher identity.</li>
+                    <li><strong>Kafka</strong>: Always <code>null</code> — Kafka identifies messages by topic,
+                      partition, and offset; use <code>payload["_KEY_"]</code> to access the record key
+                      instead.</li>
+                    <li><strong>HTTP / Webhook / AMQP</strong>: Always <code>null</code>.</li>
+                    <li><strong>Pulsar / MQTT-over-Pulsar</strong>: The value of the Pulsar message property
+                      <code>clientID</code>. May be <code>null</code> if the producer does not set it.</li>
+                  </ul>
+                  <strong>Example:</strong>
+                  <code>var id = context.getConfig().clientId || context.getConfig().topic;</code>
+                </td>
+              </tr>
+              <tr>
+                <td><code>mappingName</code></td>
+                <td>Access (all)</td>
+                <td>The name of the mapping.</td>
+              </tr>
+              <tr>
+                <td><code>mappingId</code></td>
+                <td>Access (all)</td>
+                <td>The internal ID of the mapping.</td>
+              </tr>
+              <tr>
+                <td><code>targetAPI</code></td>
+                <td>Access (all)</td>
+                <td>The Cumulocity target API (e.g. <code>"MEASUREMENT"</code>, <code>"EVENT"</code>).</td>
+              </tr>
+              <tr>
+                <td><code>aliasMap</code> / <code>isActive</code></td>
+                <td>Outbound only</td>
+                <td>SparkPlug B-specific context properties (<code>aliasMap</code> and <code>isActive</code>) are
+                  available for <strong>outbound</strong> SparkPlug B mappings only. See the
+                  <em>Metadata Properties for Outbound Smart Functions</em> table for details.</td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -708,6 +766,72 @@ function celsiusToFahrenheit(celsius) &#123;
                     </li>
                     <li><code>retain</code>: Boolean to set MQTT retained message flag (for MQTT connectors)</li>
                   </ul>
+                </td>
+              </tr>
+              <tr class="table-info">
+                <td colspan="3" style="text-align: center; font-weight: bold; background-color: #e7f3ff;">
+                  Context Properties — available via <code>context.getConfig()</code>
+                </td>
+              </tr>
+              <tr>
+                <td><code>tenant</code></td>
+                <td>Access (all)</td>
+                <td>The Cumulocity tenant identifier.</td>
+              </tr>
+              <tr>
+                <td><code>topic</code></td>
+                <td>Access (all)</td>
+                <td>The inbound topic that triggered the outbound mapping.</td>
+              </tr>
+              <tr>
+                <td><code>mappingName</code></td>
+                <td>Access (all)</td>
+                <td>The name of the mapping.</td>
+              </tr>
+              <tr>
+                <td><code>mappingId</code></td>
+                <td>Access (all)</td>
+                <td>The internal ID of the mapping.</td>
+              </tr>
+              <tr>
+                <td><code>targetAPI</code></td>
+                <td>Access (all)</td>
+                <td>The Cumulocity target API (e.g. <code>"MEASUREMENT"</code>, <code>"EVENT"</code>).</td>
+              </tr>
+              <tr>
+                <td><code>externalId</code></td>
+                <td>Access (all)</td>
+                <td>The resolved external ID of the source device (present when <code>useExternalId</code> is
+                  enabled on the mapping).</td>
+              </tr>
+              <tr>
+                <td><code>aliasMap</code></td>
+                <td>Access (SparkPlug B only)</td>
+                <td>
+                  A <code>&#123; metricName → alias &#125;</code> map loaded from the <code>sparkPlugB_NBIRTH</code>
+                  (or <code>sparkPlugB_DBIRTH</code>) fragment stored on the device managed object during inbound BIRTH
+                  processing. Use it to include numeric aliases in outbound NCMD / DCMD metrics so that the edge node
+                  can match them without a full name lookup:
+                  <pre class="m-t-8 p-8" style="background:#f5f5f5;border-radius:4px;font-size:0.85em;">const aliasMap = context.getConfig().aliasMap || &#123;&#125;;
+function metric(name, type, value) &#123;
+  const m = &#123; name, type, value &#125;;
+  if (aliasMap[name] !== undefined)
+    m.alias = parseInt(aliasMap[name], 10);
+  return m;
+&#125;</pre>
+                </td>
+              </tr>
+              <tr>
+                <td><code>isActive</code></td>
+                <td>Access (SparkPlug B only)</td>
+                <td>
+                  Boolean flag reflecting the current online/offline state of the target Edge Node or Device.
+                  Set to <code>true</code> when a NBIRTH / DBIRTH / NDATA / DDATA message was last received, and
+                  <code>false</code> after a NDEATH / DDEATH message. Defaults to <code>true</code> when no status
+                  fragment is present yet. Use it to suppress outbound commands to devices that have gone offline:
+                  <pre class="m-t-8 p-8" style="background:#f5f5f5;border-radius:4px;font-size:0.85em;">if (!context.getConfig().isActive) &#123;
+  return null; // device offline — suppress command
+&#125;</pre>
                 </td>
               </tr>
             </tbody>

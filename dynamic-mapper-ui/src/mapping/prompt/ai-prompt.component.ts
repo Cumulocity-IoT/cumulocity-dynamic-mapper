@@ -24,7 +24,7 @@ import {
   OnInit,
   ViewEncapsulation
 } from '@angular/core';
-import { Mapping, Substitution, MappingType, SharedService, isSubstitutionsAsCode } from '../../shared';
+import { Mapping, Substitution, MappingType, SharedService, isSubstitutionsAsCode, TransformationType } from '../../shared';
 import { AlertService, BottomDrawerRef, CoreModule } from '@c8y/ngx-components';
 import { AiChatComponent, AiChatMessageComponent } from '@c8y/ngx-components/ai/ai-chat';
 import { AIAgentService } from '../core/ai-agent.service';
@@ -213,8 +213,8 @@ export class AIPromptComponent implements OnInit {
         const jsContent = match[1].trim();
 
         // Validate that it contains a function (basic validation)
-        if (jsContent.includes('function') && (jsContent.includes('function extractFromSource') || jsContent.includes('function onMessage'))) {
-          this.generatedCode = jsContent;
+        if (jsContent.includes('function') && jsContent.includes('function onMessage')) {
+          this.generatedCode = this.applyESMExport(jsContent);
           this.valid = true;
           this.alertService.success('JavaScript code extracted successfully!');
         } else {
@@ -229,7 +229,7 @@ export class AIPromptComponent implements OnInit {
         if (genericMatch && genericMatch[1]) {
           const jsContent = genericMatch[1].trim();
           if (jsContent.includes('function')) {
-            this.generatedCode = jsContent;
+            this.generatedCode = this.applyESMExport(jsContent);
             this.valid = true;
             this.alertService.success('JavaScript code extracted successfully!');
           } else {
@@ -245,6 +245,18 @@ export class AIPromptComponent implements OnInit {
       console.error('Error parsing JavaScript from response:', error);
       this.alertService.danger('Failed to parse JavaScript code from AI response');
     }
+  }
+
+  private applyESMExport(code: string): string {
+    if (!this.serviceConfiguration?.supportESM) return code;
+    if (this.mapping.transformationType !== TransformationType.SMART_FUNCTION) return code;
+
+    const exportStatement = `export { onMessage };`;
+    if (code.includes(exportStatement)) return code;
+
+    return code.trimEnd() +
+      '\n\n// ── ESM export (added automatically because Support ESM is enabled) ──────────\n' +
+      exportStatement + '\n';
   }
 
   checkIfResponseContainsSubstitutions(content: any) {

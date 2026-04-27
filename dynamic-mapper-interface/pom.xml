@@ -201,6 +201,14 @@
 			<groupId>org.apache.camel</groupId>
 			<artifactId>camel-direct</artifactId>
 		</dependency>
+
+		<!-- SparkPlugB support via Eclipse Tahu -->
+		<dependency>
+			<groupId>org.eclipse.tahu</groupId>
+			<artifactId>tahu-core</artifactId>
+			<version>1.0.7</version>
+		</dependency>
+
 	</dependencies>
 	<build>
 		<sourceDirectory>../dynamic-mapper-service/src/main/java</sourceDirectory>

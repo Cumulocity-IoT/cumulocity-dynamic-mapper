@@ -32,8 +32,9 @@
         <br>
         </small>
       </div>
-      <div class="card-block">
-        <div class="p-24 modal-inner-scroll animated fadeIn">
+      <div class="card-inner-scroll fit-h">
+        <div class="card-block">
+          <div class="p-24 animated fadeIn">
           @if (action === 'view' && configuration.enabled) {
             <div class="alert alert-info">
               <i c8yIcon="info-circle" class="m-r-4"></i>
@@ -49,6 +50,7 @@
             <formly-form [form]="dynamicForm" [fields]="dynamicFormFields" [model]="configuration"></formly-form>
           </div>
         </div>
+      </div>
       </div>
       <div class="card-footer text-center sticky-buttons">
         <div class="form-group">

@@ -36,6 +36,7 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.core.cache.InventoryCache;
+import dynamic.mapper.processor.inbound.deserializer.SparkPlugBDeserializer;
 import dynamic.mapper.processor.model.ExternalId;
 import lombok.extern.slf4j.Slf4j;
 
@@ -68,8 +69,9 @@ public class InventoryCacheEnrichmentService {
         inventoryCache.putMO(sourceId, newMO);
 
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
+        List<String> effectiveFragments = buildEffectiveFragmentList(serviceConfiguration);
         // Check if assetParents is requested in fragments to cache
-        boolean withParents = serviceConfiguration.getInventoryFragmentsToCache().stream()
+        boolean withParents = effectiveFragments.stream()
                 .anyMatch(frag -> "assetParents".equals(frag.trim()));
 
         // Use the identityResolver to get managed object
@@ -77,9 +79,8 @@ public class InventoryCacheEnrichmentService {
         if (device != null) {
             Map<String, Object> attrs = device.getAttrs();
 
-            serviceConfiguration.getInventoryFragmentsToCache().forEach(frag -> {
-                frag = frag.trim();
-                processFragment(frag, sourceId, device, attrs, newMO);
+            effectiveFragments.forEach(frag -> {
+                processFragment(frag.trim(), sourceId, device, attrs, newMO);
             });
         }
 
@@ -106,21 +107,41 @@ public class InventoryCacheEnrichmentService {
         configurationRegistry.getNotificationSubscriber().subscribeMOForInventoryCacheUpdates(tenant, mor);
 
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
+        List<String> effectiveFragments = buildEffectiveFragmentList(serviceConfiguration);
         // Check if assetParents is requested in fragments to cache
-        boolean withParents = serviceConfiguration.getInventoryFragmentsToCache().stream()
+        boolean withParents = effectiveFragments.stream()
                 .anyMatch(frag -> "assetParents".equals(frag.trim()));
 
         ManagedObjectRepresentation device = getManagedObjectFromResolver(tenant, sourceId, testing, identityResolver, withParents);
         if (device != null) {
             Map<String, Object> attrs = device.getAttrs();
 
-            serviceConfiguration.getInventoryFragmentsToCache().forEach(frag -> {
-                frag = frag.trim();
-                processFragment(frag, sourceId, device, attrs, newMO);
+            effectiveFragments.forEach(frag -> {
+                processFragment(frag.trim(), sourceId, device, attrs, newMO);
             });
         }
 
         return newMO;
+    }
+
+    /**
+     * Builds the effective list of inventory fragments to cache, adding the
+     * SparkPlug B BIRTH fragments ({@code sparkPlugB_NBIRTH}, {@code sparkPlugB_DBIRTH})
+     * transparently when {@link ServiceConfiguration#getCacheAliasMaps()} is {@code true}.
+     * The BIRTH fragments are never exposed in the UI-visible
+     * {@code inventoryFragmentsToCache} list.
+     */
+    private List<String> buildEffectiveFragmentList(ServiceConfiguration serviceConfiguration) {
+        List<String> effective = new ArrayList<>(serviceConfiguration.getInventoryFragmentsToCache());
+        if (Boolean.TRUE.equals(serviceConfiguration.getCacheAliasMaps())) {
+            if (!effective.contains(SparkPlugBDeserializer.SPARKPLUGB_NBIRTH_FRAGMENT)) {
+                effective.add(SparkPlugBDeserializer.SPARKPLUGB_NBIRTH_FRAGMENT);
+            }
+            if (!effective.contains(SparkPlugBDeserializer.SPARKPLUGB_DBIRTH_FRAGMENT)) {
+                effective.add(SparkPlugBDeserializer.SPARKPLUGB_DBIRTH_FRAGMENT);
+            }
+        }
+        return effective;
     }
 
     private ManagedObjectRepresentation getManagedObjectFromResolver(String tenant, String deviceId,

@@ -66,7 +66,6 @@ public class MappingService {
     private final DeploymentMapService deploymentMapService;
     private final DeviceToClientMapService deviceToClientMapService;
     private final MappingSnoopService snoopService;
-    private final MappingJavaScriptService javaScriptService;
     private final ConfigurationRegistry configurationRegistry;
     private final MicroserviceSubscriptionsService subscriptionsService;
     private final MappingValidator mappingValidator;
@@ -274,7 +273,6 @@ public class MappingService {
             cacheManager.removeMapping(tenant, mapping);
             statusService.removeStatus(tenant, mapping.getIdentifier());
             deploymentMapService.removeMappingDeployment(tenant, mapping.getIdentifier());
-            javaScriptService.removeCodeFromEngine(tenant, mapping);
             flowStateStore.clearMappingState(tenant, mapping.getIdentifier());
 
             configurationRegistry.getC8yAgent().createOperationEvent(

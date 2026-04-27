@@ -63,6 +63,8 @@ public class DynamicMapperRequest {
     private String response;
     @Schema(description = "Error that occurred during request execution, if any")
     private Exception error;
+    @Schema(description = "Pre-encoded binary payload (e.g. SparkPlug B proto bytes). When set, connectors use this instead of encoding request as UTF-8.")
+    private byte[] binaryPayload;
     // this property documents if a C8Y request was already submitted and is created only for documentation/testing purpose.
     // this happens when a device is created implicitly with mapping.createNonExistingDevice == true
     // private Boolean alreadySubmitted;
