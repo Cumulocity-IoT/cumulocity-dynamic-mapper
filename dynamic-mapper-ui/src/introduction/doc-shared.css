@@ -496,3 +496,41 @@ svg {
   width: inherit;
   height: inherit;
 }
+
+/* ============================================================================ */
+/* SEARCH BAR                                                                   */
+/* ============================================================================ */
+
+.doc-search-bar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0 8px 0;
+  background-color: var(--c8y-body-background-color, #f5f5f5);
+  border-bottom: 1px solid #e0e0e0;
+  margin-bottom: 8px;
+}
+
+.doc-search-input-group {
+  max-width: 420px;
+  flex-shrink: 0;
+}
+
+.doc-search-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.doc-search-count {
+  font-size: 13px;
+  min-width: 52px;
+}
+
+/* ============================================================================ */
+/* SEARCH HIGHLIGHTS — rules live in global styles.less (Angular encapsulation  */
+/* prevents scoped styles from applying to runtime-created mark elements)        */
+/* ============================================================================ */

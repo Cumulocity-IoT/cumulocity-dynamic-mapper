@@ -1,4 +1,3 @@
-/* eslint-disable @angular-eslint/no-empty-lifecycle-method */
 /*
  * Copyright (c) 2025 Cumulocity GmbH
  *
@@ -19,24 +18,22 @@
  * @authors Christof Strack
  */
 
-import { Component, OnDestroy, OnInit, ViewChild, AfterViewChecked } from '@angular/core';
-import { MappingService } from '../mapping/core/mapping.service';
-import { Direction, Feature, JsonEditorComponent, NODE1, NODE3 } from '../shared';
-import { BehaviorSubject, from, Subject, Subscription } from 'rxjs';
-import { ConnectorConfigurationService } from '../connector';
-import { AlertService, BottomDrawerService, CoreModule } from '@c8y/ngx-components';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { Component, OnDestroy, OnInit, AfterViewChecked, ElementRef, ViewChild } from '@angular/core';
+import { CoreModule } from '@c8y/ngx-components';
+import { ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { SharedService } from '../shared/service/shared.service';
-import { CodeTemplate, CodeTemplateMap } from '../configuration/shared/configuration.model';
-import { CodeEditorDrawerComponent } from '../shared/component/code-explorer/code-editor-drawer.component';
+import { Subscription } from 'rxjs';
+import { DocOverviewComponent } from './doc-overview.component';
+import { DocJsonataComponent } from './doc-jsonata.component';
+import { DocJavaScriptComponent } from './doc-javascript.component';
+import { DocSmartFunctionComponent } from './doc-smartfunction.component';
+import { DocJavaExtensionComponent } from './doc-javaextension.component';
 
 import hljs from 'highlight.js/lib/core';
 import javascript from 'highlight.js/lib/languages/javascript';
 import java from 'highlight.js/lib/languages/java';
 import yaml from 'highlight.js/lib/languages/yaml';
 
-// Register the JavaScript language
 hljs.registerLanguage('javascript', javascript);
 hljs.registerLanguage('java', java);
 hljs.registerLanguage('yaml', yaml);
@@ -49,63 +46,30 @@ hljs.registerLanguage('yaml', yaml);
   imports: [
     CoreModule,
     CommonModule,
-    RouterLink
+    DocOverviewComponent,
+    DocJsonataComponent,
+    DocJavaScriptComponent,
+    DocSmartFunctionComponent,
+    DocJavaExtensionComponent
   ]
 })
 export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
   private highlightApplied = false;
-  constructor(
-    private mappingService: MappingService,
-    private alertService: AlertService,
-    private connectorConfigurationService: ConnectorConfigurationService,
-    private route: ActivatedRoute,
-    private bottomDrawerService: BottomDrawerService,
-    private sharedService: SharedService
-  ) {
 
-  }
-  @ViewChild('editorTest', { static: false }) editorTest: JsonEditorComponent;
+  @ViewChild('docContent', { static: false }) docContentRef: ElementRef<HTMLElement>;
 
-  codeTemplates: CodeTemplate[] = [];
-
-  ROUTE_INBOUND: string = `/c8y-pkg-dynamic-mapper/${NODE1}/mappings/inbound`;
-  ROUTE_ADD_CONNECTOR: string = `/c8y-pkg-dynamic-mapper/${NODE3}/connectorConfiguration`;
-  ROUTE_SERVICE_CONFIGURATION: string = `/c8y-pkg-dynamic-mapper/${NODE3}/serviceConfiguration/general`;
-  ROUTE_OUTBOUND: string =
-    `/c8y-pkg-dynamic-mapper/${NODE1}/mappings/outbound`;
-  ROUTE_CONNECTORS: string = `/c8y-pkg-dynamic-mapper/${NODE3}/connectorConfiguration`;
-  ROUTE_CODE_TEMPLATES_INBOUND_SMART_FUNCTION= `/c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/INBOUND_SMART_FUNCTION`;
-  countMappingInbound$: Subject<any> = new BehaviorSubject<any>(0);
-  countMappingOutbound$: Subject<any> = new BehaviorSubject<any>(0);
-  countConnector$: Subject<any> = new BehaviorSubject<any>(0);
-
-  feature: Feature;
+  searchQuery: string = '';
+  searchMatchCount: number = 0;
+  searchCurrentIndex: number = -1;
+  private searchMatches: HTMLElement[] = [];
 
   currentPage: string = 'main';
   private fragmentSubscription: Subscription;
 
-  async ngOnInit() {
+  constructor(private route: ActivatedRoute) {}
 
-    this.feature = this.route.snapshot.data['feature'];
-
-    // Determine which page to display based on the URL path
+  ngOnInit(): void {
     const path = this.route.snapshot.routeConfig?.path || '';
-
-    // Map of path segments to their corresponding element IDs for scrolling
-    const pathToFragmentMap: { [key: string]: string } = {
-      'overview': 'overview',
-      'getting-started': 'getting-started',
-      'managing-connectors': 'managing-connectors',
-      'define-mapping': 'define-mapping',
-      'define-subscription-for-outbound': 'define-subscription-for-outbound',
-      'transformation-types': 'transformation-types',
-      'flow-state': 'flow-state',
-      'code-templates': 'code-templates',
-      'metadata': 'metadata',
-      'unknown-payload': 'unknown-payload',
-      'reliability-settings': 'reliability-settings',
-      'access-control': 'access-control'
-    };
 
     if (path.includes('jsonata')) {
       this.currentPage = 'jsonata';
@@ -119,136 +83,148 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
       this.currentPage = 'main';
     }
 
-    // Subscribe to fragment changes for navigation anchor scrolling (fallback for hash-based navigation)
+    this.clearSearch();
+    this.highlightApplied = false;
+
     this.fragmentSubscription = this.route.fragment.subscribe(fragment => {
       if (fragment) {
-        // Wait for DOM to render before scrolling
-        setTimeout(() => {
-          this.scrollToElement(fragment);
-        }, 100);
+        setTimeout(() => { this.scrollToElement(fragment); }, 150);
       }
     });
 
-    // Only load data for the main page
     if (this.currentPage === 'main') {
-      // Load code templates
-      const codeTemplatesMap: CodeTemplateMap = await this.sharedService.getCodeTemplates();
-      this.codeTemplates = Object.entries(codeTemplatesMap)
-        .map(([, template]) => template)
-        .sort((a, b) => {
-          // Sort by template type first, then by name
-          const typeOrder = {
-            'INBOUND_SUBSTITUTION_AS_CODE': 1,
-            'OUTBOUND_SUBSTITUTION_AS_CODE': 2,
-            'INBOUND_SMART_FUNCTION': 3,
-            'OUTBOUND_SMART_FUNCTION': 4,
-            'SHARED': 5,
-            'SYSTEM': 6
-          };
-          const typeComparison = (typeOrder[a.templateType] || 999) - (typeOrder[b.templateType] || 999);
-          if (typeComparison !== 0) return typeComparison;
-          return a.name.localeCompare(b.name);
-        });
-
-      from(this.mappingService.getMappings(Direction.INBOUND)).subscribe(
-        (mappings) => {
-          this.countMappingInbound$.next(!mappings ? 'no' : mappings.length);
-        }
-      );
-
-      from(this.mappingService.getMappings(Direction.OUTBOUND)).subscribe(
-        (count) => this.countMappingOutbound$.next(!count ? 'no' : count.length)
-      );
-
-      this.connectorConfigurationService.getConfigurations()
-        .subscribe((count) =>
-          this.countConnector$.next(!count ? 'no' : count.length)
-        );
-
-      if (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole) {
-        this.alertService.warning(
-          "You don't have any Dynamic Mapper permissions and therefore can only view mappings/connectors. Please contact your administrator."
-        );
-      } else if (!this.feature?.userHasMappingAdminRole) {
-        this.alertService.warning(
-          "You don't have the role 'Dynamic Mapper Admin' and therefore cannot create or edit connectors. Please contact your administrator."
-        );
-      } else if (!this.feature?.userHasMappingCreateRole) {
-        this.alertService.warning(
-          "You don't have the role 'Dynamic Mapper User' and therefore cannot edit mappings. Please contact your administrator."
-        );
-      }
-
-      // After data is loaded, check if we need to scroll to a specific section
+      const pathToFragmentMap: { [key: string]: string } = {
+        'overview': 'overview',
+        'getting-started': 'getting-started',
+        'managing-connectors': 'managing-connectors',
+        'define-mapping': 'define-mapping',
+        'define-subscription-for-outbound': 'define-subscription-for-outbound',
+        'transformation-types': 'transformation-types',
+        'flow-state': 'flow-state',
+        'code-templates': 'code-templates',
+        'metadata': 'metadata',
+        'unknown-payload': 'unknown-payload',
+        'reliability-settings': 'reliability-settings',
+        'access-control': 'access-control',
+        'monitoring': 'monitoring',
+        'troubleshooting': 'troubleshooting'
+      };
       const pathSegment = path.split('/').pop() || '';
       const fragmentId = pathToFragmentMap[pathSegment];
-
       if (fragmentId) {
-        // Wait for DOM to fully render with loaded data before scrolling
-        setTimeout(() => {
-          this.scrollToElement(fragmentId);
-        }, 200);
+        setTimeout(() => { this.scrollToElement(fragmentId); }, 300);
       } else {
-        // No specific section, scroll to top
-        setTimeout(() => {
-          window.scrollTo(0, 0);
-        }, 0);
+        setTimeout(() => { window.scrollTo(0, 0); }, 0);
       }
     }
   }
 
-  openCodeExplorer(template: CodeTemplate): void {
-    this.bottomDrawerService.openDrawer(CodeEditorDrawerComponent, {
-      initialState: {
-        encodedCode: template.code,
-        sourceSystem: 'Template',
-        action: 'view'
+  onSearch(): void {
+    this.clearHighlights();
+    this.searchMatches = [];
+    this.searchCurrentIndex = -1;
+    const query = this.searchQuery.trim();
+    if (query.length < 2) { this.searchMatchCount = 0; return; }
+    const root = this.docContentRef?.nativeElement;
+    if (!root) return;
+    this.searchMatches = this.applyHighlights(root, query);
+    this.searchMatchCount = this.searchMatches.length;
+    if (this.searchMatches.length > 0) { this.searchCurrentIndex = 0; this.scrollToMatch(0); }
+  }
+
+  clearSearch(): void {
+    this.searchQuery = '';
+    this.clearHighlights();
+    this.searchMatches = [];
+    this.searchMatchCount = 0;
+    this.searchCurrentIndex = -1;
+  }
+
+  nextMatch(): void {
+    if (this.searchMatches.length === 0) return;
+    this.searchCurrentIndex = (this.searchCurrentIndex + 1) % this.searchMatches.length;
+    this.scrollToMatch(this.searchCurrentIndex);
+  }
+
+  prevMatch(): void {
+    if (this.searchMatches.length === 0) return;
+    this.searchCurrentIndex = (this.searchCurrentIndex - 1 + this.searchMatches.length) % this.searchMatches.length;
+    this.scrollToMatch(this.searchCurrentIndex);
+  }
+
+  private scrollToMatch(index: number): void {
+    this.searchMatches.forEach(m => m.classList.remove('search-highlight--current'));
+    const el = this.searchMatches[index];
+    if (!el) return;
+    el.classList.add('search-highlight--current');
+    const rect = el.getBoundingClientRect();
+    const absoluteTop = window.scrollY + rect.top;
+    window.scrollTo({ top: absoluteTop - 130, behavior: 'smooth' });
+  }
+
+  private clearHighlights(): void {
+    const root = this.docContentRef?.nativeElement;
+    if (!root) return;
+
+    root.querySelectorAll('mark.search-highlight').forEach(mark => {
+      const parent = mark.parentNode;
+      if (parent) {
+        parent.replaceChild(root.ownerDocument.createTextNode(mark.textContent || ''), mark);
+        parent.normalize();
       }
     });
   }
 
-  getTransformationTypeName(templateType: string): string {
-    switch (templateType) {
-      case 'INBOUND_SUBSTITUTION_AS_CODE':
-      case 'OUTBOUND_SUBSTITUTION_AS_CODE':
-        return 'Substitution as JavaScript (deprecated)';
-      case 'INBOUND_SMART_FUNCTION':
-      case 'OUTBOUND_SMART_FUNCTION':
-        return 'Smart Functions';
-      case 'SHARED':
-        return 'Shared Code';
-      case 'SYSTEM':
-        return 'System Code';
-      case 'INBOUND':
-        return 'Inbound (deprecated)';
-      case 'OUTBOUND':
-        return 'Outbound (deprecated)';
-      case 'SUBSTITUTION_AS_CODE':
-        return 'Substitution as JavaScript (deprecated)';
-      default:
-        return templateType;
-    }
+  private applyHighlights(root: HTMLElement, query: string): HTMLElement[] {
+    const matches: HTMLElement[] = [];
+    const regex = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode(node) {
+        const parent = (node as Text).parentElement;
+        if (!parent) return NodeFilter.FILTER_SKIP;
+        const tag = parent.tagName.toLowerCase();
+        if (tag === 'script' || tag === 'style') return NodeFilter.FILTER_SKIP;
+        if (parent.closest('mark')) return NodeFilter.FILTER_SKIP;
+        if (parent.closest('pre')) return NodeFilter.FILTER_SKIP; // skip hljs-highlighted code blocks
+        return (node.textContent?.trim()) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
+      }
+    });
+    const textNodes: Text[] = [];
+    while (walker.nextNode()) textNodes.push(walker.currentNode as Text);
+    textNodes.forEach(node => {
+      const text = node.textContent || '';
+      regex.lastIndex = 0;
+      if (!regex.test(text)) return;
+      regex.lastIndex = 0;
+      const fragment = document.createDocumentFragment();
+      let lastIndex = 0;
+      let match: RegExpExecArray | null;
+      while ((match = regex.exec(text)) !== null) {
+        if (match.index > lastIndex) fragment.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
+        const mark = document.createElement('mark');
+        mark.className = 'search-highlight';
+        mark.textContent = match[0];
+        fragment.appendChild(mark);
+        matches.push(mark);
+        lastIndex = regex.lastIndex;
+      }
+      if (lastIndex < text.length) fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+      node.parentNode?.replaceChild(fragment, node);
+    });
+    return matches;
   }
 
   scrollToElement(elementId: string): void {
     const element = document.getElementById(elementId);
     if (element) {
       const elementPosition = element.getBoundingClientRect().top + window.scrollY;
-      const offsetPosition = elementPosition - 80; // Offset to show heading with some space above
-
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: 'smooth'
-      });
+      window.scrollTo({ top: elementPosition - 120, behavior: 'smooth' });
     }
   }
 
   ngAfterViewChecked(): void {
-    // Apply syntax highlighting once after the view is initialized
     if (!this.highlightApplied) {
-      // Use setTimeout to ensure DOM is fully rendered
       setTimeout(() => {
-        // Highlight all code blocks
         document.querySelectorAll('pre code').forEach((block) => {
           hljs.highlightElement(block as HTMLElement);
         });
@@ -259,57 +235,23 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   private addCopyButtons(): void {
-    const preElements = document.querySelectorAll('pre code');
-
-    preElements.forEach((codeElement: Element) => {
+    document.querySelectorAll('pre code').forEach((codeElement: Element) => {
       const pre = codeElement.parentElement;
-      if (!pre) {
-        return;
-      }
-
-      // Skip if button already exists
-      if (pre.querySelector('.btn-copy-code')) {
-        return;
-      }
-
-      // Ensure pre element has relative positioning
+      if (!pre || pre.querySelector('.btn-copy-code')) return;
       (pre as HTMLElement).style.position = 'relative';
-
-      // Create toolbar container
       const toolbar = document.createElement('div');
       toolbar.className = 'code-toolbar';
-      // Force flexbox styles inline to override any framework styles
-      toolbar.style.display = 'flex';
-      toolbar.style.flexDirection = 'row';
-      toolbar.style.justifyContent = 'flex-end';
-      toolbar.style.alignItems = 'center';
-      toolbar.style.backgroundColor = '#000000';
-
-      // Create copy button with icon
+      toolbar.style.cssText = 'display:flex;flex-direction:row;justify-content:flex-end;align-items:center;background-color:#000000';
       const button = document.createElement('button');
       button.className = 'btn-copy-code';
       button.setAttribute('type', 'button');
       button.setAttribute('aria-label', 'Copy code to clipboard');
-      // Force button positioning and size inline
-      button.style.marginLeft = 'auto';
-      button.style.marginRight = '4px';
-      button.style.marginBottom = '4px';
-      button.style.marginTop = '2px';
-      button.style.height = '18px';
-      button.style.backgroundColor = '#000000';
-
-      button.style.fontSize = '12px';
-
-      // Create icon element
+      button.style.cssText = 'margin:2px 4px 4px auto;height:18px;background-color:#000000;font-size:12px';
       const icon = document.createElement('i');
       icon.className = 'dlt-c8y-icon-clipboard';
       icon.style.marginRight = '4px';
-
-      // Add icon and text to button
       button.appendChild(icon);
       button.appendChild(document.createTextNode('Copy to clipboard'));
-
-      // Add click handler
       button.addEventListener('click', async () => {
         const code = codeElement.textContent || '';
         try {
@@ -317,33 +259,19 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
           icon.className = 'dlt-c8y-icon-ok';
           button.childNodes[1].textContent = 'Copied!';
           button.classList.add('copied');
-
-          setTimeout(() => {
-            icon.className = 'dlt-c8y-icon-clipboard';
-            button.childNodes[1].textContent = 'Copy to clipboard';
-            button.classList.remove('copied');
-          }, 2000);
-        } catch (err) {
-          console.error('Failed to copy code:', err);
+          setTimeout(() => { icon.className = 'dlt-c8y-icon-clipboard'; button.childNodes[1].textContent = 'Copy to clipboard'; button.classList.remove('copied'); }, 2000);
+        } catch {
           icon.className = 'dlt-c8y-icon-remove';
           button.childNodes[1].textContent = 'Failed';
-          setTimeout(() => {
-            icon.className = 'dlt-c8y-icon-clipboard';
-            button.childNodes[1].textContent = 'Copy to clipboard';
-          }, 2000);
+          setTimeout(() => { icon.className = 'dlt-c8y-icon-clipboard'; button.childNodes[1].textContent = 'Copy to clipboard'; }, 2000);
         }
       });
-
-      // Append button to toolbar and toolbar to pre element
       toolbar.appendChild(button);
       pre.insertBefore(toolbar, pre.firstChild);
     });
   }
 
   ngOnDestroy(): void {
-    if (this.fragmentSubscription) {
-      this.fragmentSubscription.unsubscribe();
-    }
+    if (this.fragmentSubscription) { this.fragmentSubscription.unsubscribe(); }
   }
-
 }

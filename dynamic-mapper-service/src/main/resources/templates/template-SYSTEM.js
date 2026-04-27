@@ -6,6 +6,28 @@
  * @internal true
  * @readonly true
  */
+ 
+// Polyfill for atob and btoa using Java-Interop
+if (typeof btoa === 'undefined') {
+    const Base64 = Java.type('java.util.Base64');
+    const StandardCharsets = Java.type('java.nio.charset.StandardCharsets');
+    const Arrays = Java.type('java.util.Arrays');
+    const JavaString = Java.type('java.lang.String');
+
+    globalThis.btoa = function(str) {
+        // Charset.encode(CharSequence) accepts GraalVM JS strings directly
+        const bb = StandardCharsets.UTF_8.encode(str);
+        const bytes = Arrays.copyOf(bb.array(), bb.limit());
+        return Base64.getEncoder().encodeToString(bytes);
+    };
+
+    globalThis.atob = function(base64) {
+        // Base64.Decoder.decode(String) accepts a coerced JS string
+        const decodedBytes = Base64.getDecoder().decode(base64);
+        return new JavaString(decodedBytes, StandardCharsets.UTF_8);
+    };
+}
+
 
 const ArrayList = Java.type('java.util.ArrayList');
 const HashMap = Java.type('java.util.HashMap');

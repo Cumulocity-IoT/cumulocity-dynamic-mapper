@@ -136,6 +136,18 @@ import { DocNavigationFactory } from './doc-navigation.factory';
         feature: featureResolver
       }
     }),
+    hookRoute({
+      path: 'c8y-pkg-dynamic-mapper/landing/monitoring',
+      component: DocMainComponent, resolve: {
+        feature: featureResolver
+      }
+    }),
+    hookRoute({
+      path: 'c8y-pkg-dynamic-mapper/landing/troubleshooting',
+      component: DocMainComponent, resolve: {
+        feature: featureResolver
+      }
+    }),
     hookNavigator(DocNavigationFactory),
   ]
 })

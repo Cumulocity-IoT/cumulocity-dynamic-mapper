@@ -196,7 +196,7 @@ public class ConfigurationRegistry {
     }
 
     public boolean isPulsarAvailable(String tenant) {
-        if( mqttServicePulsarUrl == null || mqttServicePulsarUrl.trim().isEmpty()) {
+        if (mqttServicePulsarUrl == null || mqttServicePulsarUrl.trim().isEmpty()) {
             log.warn("{} - C8Y_BASEURL_PULSAR is not configured for Pulsar connector. Disabling MQTT Service.", tenant);
             return false;
         }
@@ -204,7 +204,7 @@ public class ConfigurationRegistry {
     }
 
     public AConnectorClient createConnectorClient(ConnectorConfiguration connectorConfiguration,
-                                                  String additionalSubscriptionIdTest, String tenant) throws ConnectorException {
+            String additionalSubscriptionIdTest, String tenant) throws ConnectorException {
         AConnectorClient connectorClient = null;
 
         switch (connectorConfiguration.getConnectorType()) {
@@ -257,7 +257,6 @@ public class ConfigurationRegistry {
                 log.info("{} - WebHook Connector created, identifier: {}", tenant,
                         connectorConfiguration.getIdentifier());
                 break;
-
 
             case WEB_HOOK_INTERNAL:
                 connectorClient = new WebHookInternal(this, connectorRegistry, connectorConfiguration,
@@ -339,9 +338,11 @@ public class ConfigurationRegistry {
         boolean supportESM = Boolean.TRUE.equals(serviceConfiguration.getSupportESM());
         tenantESMFlags.put(tenant, supportESM);
 
-        // Shared / system code is ALWAYS evaluated as a plain script (.js) so that every
-        // top-level declaration lands on globalThis and is visible to all mapping modules
-        // running in the same GraalVM context.  Only the per-mapping code is loaded as
+        // Shared / system code is ALWAYS evaluated as a plain script (.js) so that
+        // every
+        // top-level declaration lands on globalThis and is visible to all mapping
+        // modules
+        // running in the same GraalVM context. Only the per-mapping code is loaded as
         // an ES module (.mjs) when supportESM is true.
         // Create cached sources at Engine level - these will be parsed once and reused
         String sharedCode = serviceConfiguration.getCodeTemplates()
@@ -349,7 +350,7 @@ public class ConfigurationRegistry {
         Source sharedSource = Source.newBuilder("js",
                 JavaScriptModuleStripper.toPlainScript(new String(Base64.getDecoder().decode(sharedCode))),
                 "sharedCode.js")
-                .cached(true)  // KEY: Engine-level caching
+                .cached(true) // KEY: Engine-level caching
                 .buildLiteral();
 
         String systemCode = serviceConfiguration.getCodeTemplates()
@@ -357,31 +358,37 @@ public class ConfigurationRegistry {
         Source systemSource = Source.newBuilder("js",
                 JavaScriptModuleStripper.toPlainScript(new String(Base64.getDecoder().decode(systemCode))),
                 "systemCode.js")
-                .cached(true)  // KEY: Engine-level caching
+                .cached(true) // KEY: Engine-level caching
                 .buildLiteral();
 
         graalSourceShared.put(tenant, sharedSource);
         graalSourceSystem.put(tenant, systemSource);
 
-        // Warm up the GraalVM JIT by running a throw-away Context through the shared/system
-        // sources and a trivial onMessage stub. This triggers Graal's JIT compiler at startup
+        // Warm up the GraalVM JIT by running a throw-away Context through the
+        // shared/system
+        // sources and a trivial onMessage stub. This triggers Graal's JIT compiler at
+        // startup
         // so the first real mapping test executes in ~1s instead of ~7s.
         Context.Builder warmupBuilder = Context.newBuilder("js")
                 .engine(eng)
                 .allowHostAccess(getHostAccess())
-                .allowHostClassLookup(className ->
-                        className.equals("dynamic.mapper.processor.model.SubstitutionContext")
-                        || className.equals("dynamic.mapper.processor.model.SubstitutionResult")
-                        || className.equals("dynamic.mapper.processor.model.SubstituteValue")
-                        || className.equals("dynamic.mapper.processor.model.SubstituteValue$TYPE")
-                        || className.equals("dynamic.mapper.processor.model.RepairStrategy")
-                        || className.equals("java.util.ArrayList")
-                        || className.equals("java.util.HashMap")
-                        || className.equals("java.util.HashSet"));
+                .allowHostClassLookup(
+                        className -> className.equals("dynamic.mapper.processor.model.SubstitutionContext")
+                                || className.equals("dynamic.mapper.processor.model.SubstitutionResult")
+                                || className.equals("dynamic.mapper.processor.model.SubstituteValue")
+                                || className.equals("dynamic.mapper.processor.model.SubstituteValue$TYPE")
+                                || className.equals("dynamic.mapper.processor.model.RepairStrategy")
+                                || className.equals("java.nio.charset.StandardCharsets")
+                                || className.equals("java.util.Base64")
+                                || className.equals("java.lang.String")
+                                || className.equals("java.util.ArrayList")
+                                || className.equals("java.util.Arrays")
+                                || className.equals("java.util.HashMap")
+                                || className.equals("java.util.HashSet"));
         if (supportESM) {
             warmupBuilder.allowIO(IOAccess.ALL)
-                         .allowExperimentalOptions(true)
-                         .option("js.esm-eval-returns-exports", "true");
+                    .allowExperimentalOptions(true)
+                    .option("js.esm-eval-returns-exports", "true");
         }
         try (Context warmupCtx = warmupBuilder.build()) {
             warmupCtx.eval(sharedSource);
@@ -405,7 +412,7 @@ public class ConfigurationRegistry {
         Source sharedSource = Source.newBuilder("js",
                 JavaScriptModuleStripper.toPlainScript(new String(Base64.getDecoder().decode(code))),
                 "sharedCode.js")
-                .cached(true)  // Engine-level caching
+                .cached(true) // Engine-level caching
                 .buildLiteral();
         graalSourceShared.put(tenant, sharedSource);
         log.info("{} - Updated cached shared code source", tenant);
@@ -419,7 +426,7 @@ public class ConfigurationRegistry {
         Source systemSource = Source.newBuilder("js",
                 JavaScriptModuleStripper.toPlainScript(new String(Base64.getDecoder().decode(code))),
                 "systemCode.js")
-                .cached(true)  // Engine-level caching
+                .cached(true) // Engine-level caching
                 .buildLiteral();
         graalSourceSystem.put(tenant, systemSource);
         log.info("{} - Updated cached system code source", tenant);
@@ -434,25 +441,27 @@ public class ConfigurationRegistry {
      * Call this after mappings are loaded so the first test for each existing
      * mapping hits the cache instead of paying the full parse+compile cost.
      *
-     * @param tenant         the tenant identifier
-     * @param sourceCodes    map of source name (e.g. "onMessage_<id>.js") → decoded+adapted JS code
+     * @param tenant      the tenant identifier
+     * @param sourceCodes map of source name (e.g. "onMessage_<id>.js") →
+     *                    decoded+adapted JS code
      */
     public void warmupMappingCodes(String tenant, Map<String, String> sourceCodes) {
         Engine eng = graalEngines.get(tenant);
-        if (eng == null || sourceCodes.isEmpty()) return;
+        if (eng == null || sourceCodes.isEmpty())
+            return;
 
         try (Context warmupCtx = Context.newBuilder("js")
                 .engine(eng)
                 .allowHostAccess(getHostAccess())
-                .allowHostClassLookup(className ->
-                        className.equals("dynamic.mapper.processor.model.SubstitutionContext")
-                        || className.equals("dynamic.mapper.processor.model.SubstitutionResult")
-                        || className.equals("dynamic.mapper.processor.model.SubstituteValue")
-                        || className.equals("dynamic.mapper.processor.model.SubstituteValue$TYPE")
-                        || className.equals("dynamic.mapper.processor.model.RepairStrategy")
-                        || className.equals("java.util.ArrayList")
-                        || className.equals("java.util.HashMap")
-                        || className.equals("java.util.HashSet"))
+                .allowHostClassLookup(
+                        className -> className.equals("dynamic.mapper.processor.model.SubstitutionContext")
+                                || className.equals("dynamic.mapper.processor.model.SubstitutionResult")
+                                || className.equals("dynamic.mapper.processor.model.SubstituteValue")
+                                || className.equals("dynamic.mapper.processor.model.SubstituteValue$TYPE")
+                                || className.equals("dynamic.mapper.processor.model.RepairStrategy")
+                                || className.equals("java.util.ArrayList")
+                                || className.equals("java.util.HashMap")
+                                || className.equals("java.util.HashSet"))
                 .build()) {
 
             warmupCtx.eval(graalSourceShared.get(tenant));
@@ -549,7 +558,8 @@ public class ConfigurationRegistry {
             CamelDispatcherOutbound dispatcherOutbound = new CamelDispatcherOutbound(
                     this, connectorClient);
             // Only initialize Connectors which are enabled
-            if (connectorClient.getConnectorConfiguration() != null && connectorClient.getConnectorConfiguration().getEnabled())
+            if (connectorClient.getConnectorConfiguration() != null
+                    && connectorClient.getConnectorConfiguration().getEnabled())
                 getNotificationSubscriber().addConnector(tenant,
                         connectorClient.getConnectorIdentifier(),
                         dispatcherOutbound);
