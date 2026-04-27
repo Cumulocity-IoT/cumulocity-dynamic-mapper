@@ -20,7 +20,7 @@
 
 import { Injectable } from '@angular/core';
 import { ApplicationService } from '@c8y/client';
-import _ from 'lodash';
+import * as _ from 'lodash';
 import {
   AlertService,
   AppStateService,
