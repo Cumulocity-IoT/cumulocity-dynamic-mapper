@@ -53,6 +53,7 @@ import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.connector.amqp.AMQPClient;
+import dynamic.mapper.connector.amqp.AMQP10Client;
 import dynamic.mapper.connector.http.HttpClient;
 import dynamic.mapper.connector.kafka.KafkaClientV2;
 import dynamic.mapper.connector.mqtt.MQTT3Client;
@@ -265,11 +266,18 @@ public class ConfigurationRegistry {
                             connectorConfiguration.getIdentifier());
                 }
                 break;
-            case AMQP:
+            case AMQP_091:
                 connectorClient = new AMQPClient(this, connectorRegistry, connectorConfiguration,
                         null,
                         additionalSubscriptionIdTest, tenant);
                 log.info("{} - AMQP Connector created, identifier: {}", tenant,
+                        connectorConfiguration.getIdentifier());
+                break;
+            case AMQP_10:
+                connectorClient = new AMQP10Client(this, connectorRegistry, connectorConfiguration,
+                        null,
+                        additionalSubscriptionIdTest, tenant);
+                log.info("{} - AMQP 1.0 Connector created, identifier: {}", tenant,
                         connectorConfiguration.getIdentifier());
                 break;
             case TEST:

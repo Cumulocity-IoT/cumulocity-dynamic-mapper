@@ -240,6 +240,11 @@
             <artifactId>amqp-client</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>org.apache.qpid</groupId>
+            <artifactId>qpid-jms-client</artifactId>
+        </dependency>
+
         <!-- SparkPlugB support via Eclipse Tahu -->
         <dependency>
             <groupId>org.eclipse.tahu</groupId>

@@ -170,7 +170,10 @@
             <strong>Apache Pulsar</strong> - Connect to Pulsar topics for cloud-native messaging
           </li>
           <li>
-            <strong>AMQP</strong> - Connect to AMQP 0-9-1 brokers like RabbitMQ for reliable message queuing
+            <strong>AMQP 0-9-1</strong> - Connect to AMQP 0-9-1 brokers like RabbitMQ for reliable message queuing
+          </li>
+          <li>
+            <strong>AMQP 1.0</strong> - Connect to AMQP 1.0 brokers (Azure Service Bus, ActiveMQ Artemis, Solace, etc.) using the Apache Qpid JMS client
           </li>
         </ul>
         <div class="p-b-8 text-16">
@@ -358,7 +361,15 @@
                 <td>JSON, Hex, Protobuf, Extension</td>
               </tr>
               <tr class="table-light">
-                <td><strong>AMQP</strong><br><small class="text-muted">(RabbitMQ, etc.)</small></td>
+                <td><strong>AMQP 0-9-1</strong><br><small class="text-muted">(RabbitMQ, etc.)</small></td>
+                <td class="text-center"><strong>X</strong></td>
+                <td class="text-center"><strong>X</strong></td>
+                <td class="text-center"><strong>X</strong></td>
+                <td class="text-center"><strong>X</strong><br></td>
+                <td>JSON, Hex, Protobuf, Extension</td>
+              </tr>
+              <tr>
+                <td><strong>AMQP 1.0</strong><br><small class="text-muted">(Azure Service Bus, Artemis, Solace, etc.)</small></td>
                 <td class="text-center"><strong>X</strong></td>
                 <td class="text-center"><strong>X</strong></td>
                 <td class="text-center"><strong>X</strong></td>
@@ -1760,7 +1771,8 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
           <li><strong>Apache Pulsar</strong>: Supports QoS 0 equivalent (fire-and-forget).</li>
           <li><strong>Cumulocity MQTT Service (device isolation)</strong>: Supports QoS 0 and 1.</li>
           <li><strong>Kafka</strong>: Limited to QoS 0 for outbound operations.</li>
-          <li><strong>AMQP</strong>: Supports QoS 0 and 1 (non-persistent and persistent delivery).</li>
+          <li><strong>AMQP 0-9-1</strong>: Supports QoS 0 and 1 (non-persistent and persistent delivery).</li>
+          <li><strong>AMQP 1.0</strong>: Supports QoS 0 and 1 (non-persistent and persistent delivery via JMS delivery modes).</li>
         </ul>
         <div class="admonition info" style="max-width: 100%;">
           <div class="title">Info</div>
@@ -1905,9 +1917,9 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
                 <td class="text-muted">not relevant</td>
                 <td class="text-muted">not supported</td>
               </tr>
-              <!-- AMQP group - grey background -->
+              <!-- AMQP 0-9-1 group - grey background -->
               <tr class="table-light">
-                <td rowspan="3" class="align-middle"><strong>AMQP</strong></td>
+                <td rowspan="3" class="align-middle"><strong>AMQP 0-9-1</strong><br><small class="text-muted">(RabbitMQ, etc.)</small></td>
                 <td class="text-center">0</td>
                 <td class="text-muted">not relevant</td>
                 <td>Non-persistent delivery, no acknowledgment guarantee</td>
@@ -1918,6 +1930,23 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
                 <td>Persistent delivery with acknowledgment after processing</td>
               </tr>
               <tr class="table-light">
+                <td class="text-center">2</td>
+                <td class="text-muted">not relevant</td>
+                <td class="text-muted">not supported</td>
+              </tr>
+              <!-- AMQP 1.0 group - white background -->
+              <tr>
+                <td rowspan="3" class="align-middle"><strong>AMQP 1.0</strong><br><small class="text-muted">(Azure Service Bus, Artemis, Solace, etc.)</small></td>
+                <td class="text-center">0</td>
+                <td class="text-muted">not relevant</td>
+                <td>NON_PERSISTENT delivery mode, no acknowledgment guarantee</td>
+              </tr>
+              <tr>
+                <td class="text-center">1</td>
+                <td class="text-muted">not relevant</td>
+                <td>PERSISTENT delivery mode with CLIENT_ACKNOWLEDGE after processing</td>
+              </tr>
+              <tr>
                 <td class="text-center">2</td>
                 <td class="text-muted">not relevant</td>
                 <td class="text-muted">not supported</td>
@@ -1940,7 +1969,9 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
                 consumer after successful processing; the QoS field is not applicable.</li>
               <li><strong>Kafka (inbound)</strong> — consumer offsets are committed after processing;
                 the QoS field does not change this behavior.</li>
-              <li><strong>AMQP (inbound)</strong> — messages are acknowledged (basic.ack) after processing;
+              <li><strong>AMQP 0-9-1 (inbound)</strong> — messages are acknowledged (<code>basic.ack</code>) after processing;
+                the QoS field is not applicable.</li>
+              <li><strong>AMQP 1.0 (inbound)</strong> — messages are acknowledged via JMS <code>CLIENT_ACKNOWLEDGE</code> after processing;
                 the QoS field is not applicable.</li>
               <li><strong>Webhook (inbound)</strong> — Webhook is an outbound-only connector; inbound is
                 not applicable.</li>

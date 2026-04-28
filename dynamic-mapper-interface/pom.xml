@@ -119,6 +119,11 @@
 			<artifactId>amqp-client</artifactId>
 		</dependency>
 
+        <dependency>
+            <groupId>org.apache.qpid</groupId>
+            <artifactId>qpid-jms-client</artifactId>
+        </dependency>
+
 		<!-- <dependency>
 			<groupId>org.apache.pulsar</groupId>
 			<artifactId>pulsar-client</artifactId>

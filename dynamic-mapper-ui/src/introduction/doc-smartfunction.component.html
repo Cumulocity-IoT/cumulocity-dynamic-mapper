@@ -431,7 +431,7 @@ function celsiusToFahrenheit(celsius) &#123;
                     <li><strong>Kafka</strong>: Always <code>null</code> — Kafka identifies messages by topic,
                       partition, and offset; use <code>payload["_KEY_"]</code> to access the record key
                       instead.</li>
-                    <li><strong>HTTP / Webhook / AMQP</strong>: Always <code>null</code>.</li>
+                    <li><strong>HTTP / Webhook / AMQP 0-9-1 / AMQP 1.0</strong>: Always <code>null</code>.</li>
                     <li><strong>Pulsar / MQTT-over-Pulsar</strong>: The value of the Pulsar message property
                       <code>clientID</code>. May be <code>null</code> if the producer does not set it.</li>
                   </ul>

@@ -28,6 +28,7 @@ import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.amqp.AMQPClient;
+import dynamic.mapper.connector.amqp.AMQP10Client;
 import dynamic.mapper.connector.http.HttpClient;
 import dynamic.mapper.connector.kafka.KafkaClientV2;
 import dynamic.mapper.connector.mqtt.MQTT3Client;
@@ -213,7 +214,8 @@ public class ConnectorRegistry {
         connectorSpecificationMap.put(ConnectorType.PULSAR, new PulsarConnectorClient().getConnectorSpecification());
         connectorSpecificationMap.put(ConnectorType.CUMULOCITY_MQTT_SERVICE_PULSAR,
                 new MQTTServicePulsarClient().getConnectorSpecification());
-        connectorSpecificationMap.put(ConnectorType.AMQP, new AMQPClient().getConnectorSpecification());
+        connectorSpecificationMap.put(ConnectorType.AMQP_091, new AMQPClient().getConnectorSpecification());
+        connectorSpecificationMap.put(ConnectorType.AMQP_10, new AMQP10Client().getConnectorSpecification());
     }
 
     // === New Methods for NotificationSubscriber Support ===
