@@ -183,7 +183,7 @@ class AMQPClientTest {
 
         // Then
         assertNotNull(client);
-        assertEquals(ConnectorType.AMQP, client.getConnectorType());
+        assertEquals(ConnectorType.AMQP_091, client.getConnectorType());
         assertFalse(client.isSingleton());
         assertNotNull(client.getSupportedQOS());
         assertEquals(2, client.getSupportedQOS().size());
@@ -492,7 +492,7 @@ class AMQPClientTest {
 
         // Then
         assertNotNull(spec);
-        assertEquals(ConnectorType.AMQP, spec.getConnectorType());
+        assertEquals(ConnectorType.AMQP_091, spec.getConnectorType());
         assertFalse(spec.isSingleton());
         assertEquals("AMQP Connector", spec.getName());
 
