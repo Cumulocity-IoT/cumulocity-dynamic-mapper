@@ -146,8 +146,11 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
 
         try {
             // Get the API from the cumulocityType using unified API derivation
-            if (cumulocityMessage.getCumulocityType() == null) {
-                log.warn("{} - CumulocityObject missing cumulocityType, cannot derive API for mapping {}, skipping message", tenant, mapping.getIdentifier());
+            if(cumulocityMessage.getCumulocityType() == null){
+                String warnMsg = String.format(
+                        "CumulocityObject missing cumulocityType, cannot derive API for mapping '%s', skipping message", mapping.getIdentifier());
+                log.warn("{} - {}", tenant, warnMsg);
+                output.addWarning(warnMsg);
                 return;
             }
             API targetAPI = APITopicUtil.deriveAPIFromTopic(cumulocityMessage.getCumulocityType().toString());
