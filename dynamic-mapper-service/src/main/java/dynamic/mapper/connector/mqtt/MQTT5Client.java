@@ -22,8 +22,6 @@
 package dynamic.mapper.connector.mqtt;
 
 import com.hivemq.client.mqtt.datatypes.MqttQos;
-import com.hivemq.client.mqtt.mqtt3.message.connect.connack.Mqtt3ConnAck;
-import com.hivemq.client.mqtt.mqtt3.message.publish.Mqtt3Publish;
 import com.hivemq.client.mqtt.mqtt5.Mqtt5AsyncClient;
 import com.hivemq.client.mqtt.mqtt5.Mqtt5BlockingClient;
 import com.hivemq.client.mqtt.mqtt5.Mqtt5Client;
@@ -76,11 +74,11 @@ public class MQTT5Client extends AMQTTClient {
      * Full constructor with dependencies
      */
     public MQTT5Client(ConfigurationRegistry configurationRegistry,
-            ConnectorRegistry connectorRegistry,
-            ConnectorConfiguration connectorConfiguration,
-            CamelDispatcherInbound dispatcher,
-            String additionalSubscriptionIdTest,
-            String tenant) {
+                       ConnectorRegistry connectorRegistry,
+                       ConnectorConfiguration connectorConfiguration,
+                       CamelDispatcherInbound dispatcher,
+                       String additionalSubscriptionIdTest,
+                       String tenant) {
         super(configurationRegistry, connectorRegistry, connectorConfiguration,
                 dispatcher, additionalSubscriptionIdTest, tenant);
         this.connectorSpecification = createConnectorSpecification();
@@ -104,8 +102,8 @@ public class MQTT5Client extends AMQTTClient {
                 .serverPort(mqttPort)
                 .identifier(clientId + (additionalSubscriptionIdTest != null ? additionalSubscriptionIdTest : ""))
                 .transportConfig()
-                    .socketConnectTimeout(10, TimeUnit.SECONDS)
-                    .applyTransportConfig();
+                .socketConnectTimeout(10, TimeUnit.SECONDS)
+                .applyTransportConfig();
 
         // Add authentication if provided
         if (!StringUtils.isEmpty(user)) {
@@ -197,7 +195,7 @@ public class MQTT5Client extends AMQTTClient {
                     Thread.sleep(WAIT_PERIOD_MS);
                 }
                 Mqtt5ConnAck ack;
-                if(isSparkplugHost) {
+                if (isSparkplugHost) {
                     ack = mqttClient.connectWith()
                             .cleanStart(cleanSession)
                             .willPublish(Mqtt5Publish.builder()
@@ -209,12 +207,12 @@ public class MQTT5Client extends AMQTTClient {
                             )
                             .keepAlive(60)
                             .send();
-                    } else {
-                        ack = mqttClient.connectWith()
-                                .cleanStart(cleanSession)
-                                .keepAlive(60)
-                                .send();
-                    }
+                } else {
+                    ack = mqttClient.connectWith()
+                            .cleanStart(cleanSession)
+                            .keepAlive(60)
+                            .send();
+                }
                 if (!ack.getReasonCode().equals(Mqtt5ConnAckReasonCode.SUCCESS)) {
                     throw new ConnectorException(
                             String.format("Connection failed with code: %s", ack.getReasonCode().name()));
