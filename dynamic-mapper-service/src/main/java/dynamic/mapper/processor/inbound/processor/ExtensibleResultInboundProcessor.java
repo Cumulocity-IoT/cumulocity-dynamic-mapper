@@ -206,7 +206,15 @@ public class ExtensibleResultInboundProcessor extends AbstractExtensibleResultPr
 
         try {
             // Get the API from the cumulocityType
+            if (c8yObj.getCumulocityType() == null) {
+                log.warn("{} - CumulocityObject missing cumulocityType, cannot derive API for mapping {}, skipping message", tenant, mapping.getIdentifier());
+                return;
+            }
             API targetAPI = APITopicUtil.deriveAPIFromTopic(c8yObj.getCumulocityType().toString());
+            if (targetAPI == null) {
+                log.warn("{} - CumulocityObject has unrecognized cumulocityType '{}' for mapping {}, skipping message", tenant, c8yObj.getCumulocityType(), mapping.getIdentifier());
+                return;
+            }
 
             // Set API on context for consistency
             context.setApi(targetAPI);

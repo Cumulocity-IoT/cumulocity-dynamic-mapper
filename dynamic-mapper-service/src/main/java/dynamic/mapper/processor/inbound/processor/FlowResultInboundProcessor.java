@@ -146,11 +146,15 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
 
         try {
             // Get the API from the cumulocityType using unified API derivation
-            if(cumulocityMessage.getCumulocityType() == null){
-                log.warn("{} - CumulocityObject missing cumulocityType, cannot derive API for mapping {}, skipping message",tenant, mapping.getIdentifier());
+            if (cumulocityMessage.getCumulocityType() == null) {
+                log.warn("{} - CumulocityObject missing cumulocityType, cannot derive API for mapping {}, skipping message", tenant, mapping.getIdentifier());
                 return;
             }
             API targetAPI = APITopicUtil.deriveAPIFromTopic(cumulocityMessage.getCumulocityType().toString());
+            if (targetAPI == null) {
+                log.warn("{} - CumulocityObject has unrecognized cumulocityType '{}' for mapping {}, skipping message", tenant, cumulocityMessage.getCumulocityType(), mapping.getIdentifier());
+                return;
+            }
 
             // Set API on context so it's used when creating DynamicMapperRequest
             context.setApi(targetAPI);
