@@ -198,7 +198,7 @@ public class SparkplugCertificateManager {
      * @return The certificate payload as UTF-8 JSON bytes
      * @throws Exception if serialization fails
      */
-    private byte[] buildCertificatePayload(boolean online) throws Exception {
+    public byte[] buildCertificatePayload(boolean online) throws Exception {
         Map<String, Object> payload = new HashMap<>();
         payload.put("online", online);
         payload.put("timestamp", System.currentTimeMillis());

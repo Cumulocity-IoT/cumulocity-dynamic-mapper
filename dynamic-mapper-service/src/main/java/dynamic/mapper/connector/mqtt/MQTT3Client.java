@@ -196,11 +196,26 @@ public class MQTT3Client extends AMQTTClient {
                     log.info("{} - Connection attempt {} of {}", tenant, attempt + 1, maxAttempts);
                     Thread.sleep(WAIT_PERIOD_MS);
                 }
+                Mqtt3ConnAck ack;
+                if(isSparkplugHost) {
+                    ack = mqttClient.connectWith()
+                            .cleanSession(cleanSession)
+                            .willPublish(Mqtt3Publish.builder()
+                                    .topic(sparkplugCertificateManager.getStateTopicName())
+                                    .payload(sparkplugCertificateManager.buildCertificatePayload(false))
+                                    .qos(MqttQos.AT_LEAST_ONCE)
+                                    .retain(true)
+                                    .build()
+                            )
+                            .keepAlive(60)
+                            .send();
+                } else {
+                    ack = mqttClient.connectWith()
+                            .cleanSession(cleanSession)
+                            .keepAlive(60)
+                            .send();
+                }
 
-                Mqtt3ConnAck ack = mqttClient.connectWith()
-                        .cleanSession(cleanSession)
-                        .keepAlive(60)
-                        .send();
 
                 if (!ack.getReturnCode().equals(Mqtt3ConnAckReturnCode.SUCCESS)) {
                     throw new ConnectorException(

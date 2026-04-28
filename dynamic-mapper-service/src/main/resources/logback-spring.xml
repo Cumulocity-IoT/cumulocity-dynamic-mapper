@@ -25,7 +25,12 @@
     <include resource="org/springframework/boot/logging/logback/console-appender.xml" />
 
     <logger name="com.cumulocity.microservice.security.filter.provider.SpringSecurityContextProvider" level="ERROR" />
-    <logger name="org.glassfish.jersey.client" level="WARN" />
+    <!-- Suppress Jersey verbose logging -->
+    <logger name="org.glassfish.jersey" level="ERROR" />
+    <logger name="org.glassfish.jersey.client" level="ERROR" />
+    <logger name="org.glassfish.jersey.internal.Errors" level="ERROR" />
+    <logger name="org.glassfish.jersey.p.internal.ExecutorProviders" level="ERROR" />
+    <logger name="org.glassfish.jersey.media.multipart.MultiPartFeature" level="ERROR" />
 
     <springProfile name="dev">
         <logger name="org.springframework.web" level="INFO" />

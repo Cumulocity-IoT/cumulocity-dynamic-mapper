@@ -22,6 +22,8 @@
 package dynamic.mapper.connector.mqtt;
 
 import com.hivemq.client.mqtt.datatypes.MqttQos;
+import com.hivemq.client.mqtt.mqtt3.message.connect.connack.Mqtt3ConnAck;
+import com.hivemq.client.mqtt.mqtt3.message.publish.Mqtt3Publish;
 import com.hivemq.client.mqtt.mqtt5.Mqtt5AsyncClient;
 import com.hivemq.client.mqtt.mqtt5.Mqtt5BlockingClient;
 import com.hivemq.client.mqtt.mqtt5.Mqtt5Client;
@@ -194,12 +196,25 @@ public class MQTT5Client extends AMQTTClient {
                     log.info("{} - Connection attempt {} of {}", tenant, attempt + 1, maxAttempts);
                     Thread.sleep(WAIT_PERIOD_MS);
                 }
-
-                Mqtt5ConnAck ack = mqttClient.connectWith()
-                        .cleanStart(cleanSession)
-                        .keepAlive(60)
-                        .send();
-
+                Mqtt5ConnAck ack;
+                if(isSparkplugHost) {
+                    ack = mqttClient.connectWith()
+                            .cleanStart(cleanSession)
+                            .willPublish(Mqtt5Publish.builder()
+                                    .topic(sparkplugCertificateManager.getStateTopicName())
+                                    .payload(sparkplugCertificateManager.buildCertificatePayload(false))
+                                    .qos(MqttQos.AT_LEAST_ONCE)
+                                    .retain(true)
+                                    .build()
+                            )
+                            .keepAlive(60)
+                            .send();
+                    } else {
+                        ack = mqttClient.connectWith()
+                                .cleanStart(cleanSession)
+                                .keepAlive(60)
+                                .send();
+                    }
                 if (!ack.getReasonCode().equals(Mqtt5ConnAckReasonCode.SUCCESS)) {
                     throw new ConnectorException(
                             String.format("Connection failed with code: %s", ack.getReasonCode().name()));
