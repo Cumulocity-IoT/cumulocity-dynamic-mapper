@@ -25,19 +25,16 @@ import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.configuration.ConnectorId;
-import dynamic.mapper.connector.core.ConnectorProperty;
-import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
-import dynamic.mapper.connector.core.ConnectorPropertyType;
-import dynamic.mapper.connector.core.ConnectorSpecification;
-import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
+import dynamic.mapper.connector.core.*;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.ConnectorStatus;
-import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Qos;
+import dynamic.mapper.model.Direction;
 import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
+import dynamic.mapper.connector.mqtt.SparkplugCertificateManager;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 import lombok.Getter;
@@ -213,9 +210,15 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                     connectionStateManager.updateStatus(ConnectorStatus.CONFIGURED, true, true);
                 }
             } catch (Exception e) {
-                if (containsPip344Error(e)) {
-                    log.error("{} - Broker doesn't support PIP-344. Please upgrade Pulsar broker to 2.11.0+", tenant);
-                    return false;
+                Throwable current = e;
+                while (current != null) {
+                    if (current instanceof PulsarClientException.FeatureNotSupportedException &&
+                            current.getMessage() != null &&
+                            current.getMessage().contains("PIP-344")) {
+                        log.error("{} - Broker doesn't support PIP-344. Please upgrade Pulsar broker to 2.11.0+", tenant);
+                        return false;
+                    }
+                    current = current.getCause();
                 }
                 throw e;
             }
@@ -249,29 +252,8 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         }
     }
 
-    @Override
-    public void connect() {
-        log.info("{} - Connecting MQTT Service Pulsar connector: {}", tenant, connectorName);
 
-        if (isConnected()) {
-            log.debug("{} - Already connected", tenant);
-            return;
-        }
-
-        if (!shouldConnect()) {
-            log.info("{} - Connector disabled or invalid configuration", tenant);
-            return;
-        }
-
-        if (pulsarClient == null || pulsarClient.isClosed()) {
-            log.error("{} - Pulsar client not available - initialization may have failed", tenant);
-            connectionStateManager.updateStatusWithError(new Exception("Pulsar client not initialized"));
-            return;
-        }
-
-        connectWithRetry();
-    }
-
+    @SuppressWarnings("BusyWait")
     private void connectWithRetry() {
         int maxAttempts = 10;
         int attempt = 0;
@@ -279,12 +261,12 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         int delayStep = 10000;
 
         while (attempt < maxAttempts && !isConnected() && shouldConnect()) {
-            // Do not have a delay on first start, then for each attempt +5s
+            // Do not have a delay on first start, then for each attempt +10s
             if (attempt > 0) {
                 delay = delay + delayStep;
                 log.info("{} - Pulsar Connection Attempt {} with delay {}", tenant, attempt, delay);
                 try {
-                    Thread.sleep(delay);
+                    Thread.sleep(delay);  // Intentional sleep for retry backoff
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
@@ -369,7 +351,6 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
 
         String subscriptionName = getSubscriptionName(connectorIdentifier, additionalSubscriptionIdTest);
 
-        Exception lastException = null;
 
         // Try multiple subscription strategies
 
@@ -389,7 +370,6 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
             return;
 
         } catch (PulsarClientException e) {
-            lastException = e;
             log.warn("{} - Standard subscription failed (PIP-344), trying async", tenant);
         }
 
@@ -409,7 +389,6 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
             return;
 
         } catch (Exception e) {
-            lastException = e;
             log.warn("{} - Async subscription failed, trying basic", tenant);
         }
 
@@ -469,53 +448,6 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         log.info("{} - Unsubscription registered for topic: [{}]", tenant, topic);
     }
 
-    @Override
-    public void disconnect() {
-        if (!isConnected()) {
-            log.debug("{} - Already disconnected", tenant);
-            return;
-        }
-
-        log.info("{} - Disconnecting MQTT Service Pulsar connector", tenant);
-        connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTING, true, true);
-
-        try {
-            // Close platform consumer
-            if (platformConsumer != null) {
-                try {
-                    platformConsumer.close();
-                    log.info("{} - Closed platform consumer", tenant);
-                } catch (PulsarClientException e) {
-                    log.error("{} - Error closing platform consumer: {}", tenant, e.getMessage());
-                }
-                platformConsumer = null;
-            }
-
-            // Close device producer
-            if (deviceProducer != null) {
-                try {
-                    deviceProducer.close();
-                    log.info("{} - Closed device producer", tenant);
-                } catch (PulsarClientException e) {
-                    log.error("{} - Error closing device producer: {}", tenant, e.getMessage());
-                }
-                deviceProducer = null;
-            }
-
-            // Close client
-            if (pulsarClient != null && !pulsarClient.isClosed()) {
-                pulsarClient.close();
-            }
-
-            connectionStateManager.setConnected(false);
-            connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTED, true, true);
-
-            log.info("{} - MQTT Service Pulsar connector disconnected", tenant);
-
-        } catch (Exception e) {
-            log.error("{} - Error during disconnect: {}", tenant, e.getMessage(), e);
-        }
-    }
 
     /**
      * Adjust service URL for TLS
@@ -535,8 +467,11 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
 
     /**
      * Configures authentication based on method
-     * 
-     * @throws UnsupportedAuthenticationException
+     *
+     * @param clientBuilder the Pulsar client builder
+     * @param authMethod the authentication method (token, oauth2, tls, basic, none)
+     * @param authParams the authentication parameters
+     * @throws UnsupportedAuthenticationException if authentication method is not supported
      */
     protected void configureAuthentication(ClientBuilder clientBuilder, String authMethod, String authParams)
             throws UnsupportedAuthenticationException {
@@ -675,12 +610,13 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
 
         DynamicMapperRequest request = context.getCurrentRequest();
 
-        if (context.getCurrentRequest() == null ||
-                context.getCurrentRequest().getRequest() == null) {
+        if (request == null || (request.getRequest() == null && request.getBinaryPayload() == null)) {
             log.warn("{} - No payload to publish for mapping: {}", tenant, context.getMapping().getName());
             return;
         }
-        String payload = request.getRequest();
+        byte[] payloadBytes = request.getBinaryPayload() != null
+                ? request.getBinaryPayload()
+                : request.getRequest().getBytes(StandardCharsets.UTF_8);
         String originalMqttTopic = context.getResolvedPublishTopic();
         Qos qos = Qos.AT_LEAST_ONCE; // MQTT Service uses AT_LEAST_ONCE
 
@@ -698,7 +634,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                 createTowardsDeviceProducer();
             }
 
-            sendMessageToDevice(deviceProducer, payload, originalMqttTopic, qos, context);
+            sendMessageToDevice(deviceProducer, payloadBytes, originalMqttTopic, qos, context);
 
         } catch (Exception e) {
             log.error("{} - Error publishing to MQTT Service: {}", tenant, e.getMessage(), e);
@@ -710,10 +646,8 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
     /**
      * Send message to device with topic as property
      */
-    private void sendMessageToDevice(Producer<byte[]> producer, String payload, String mqttTopic,
+    private void sendMessageToDevice(Producer<byte[]> producer, byte[] payloadBytes, String mqttTopic,
             Qos qos, ProcessingContext<?> context) throws PulsarClientException {
-
-        byte[] payloadBytes = payload.getBytes(StandardCharsets.UTF_8);
 
         if (qos == Qos.AT_MOST_ONCE) {
             producer.newMessage()
@@ -752,26 +686,6 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         }
     }
 
-    @Override
-    public Boolean supportsWildcardInTopic(Direction direction) {
-        return true;
-    }
-
-    @Override
-    public List<Direction> supportedDirections() {
-        return Arrays.asList(Direction.INBOUND, Direction.OUTBOUND);
-    }
-
-    @Override
-    public String getConnectorIdentifier() {
-        return connectorIdentifier;
-    }
-
-    @Override
-    public String getConnectorName() {
-        return connectorName;
-    }
-
     /**
      * Generate subscription name
      */
@@ -780,20 +694,98 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                 (suffix != null ? suffix : "");
     }
 
-    /**
-     * Check if exception contains PIP-344 error
-     */
-    private Boolean containsPip344Error(Throwable throwable) {
-        Throwable current = throwable;
-        while (current != null) {
-            if (current instanceof PulsarClientException.FeatureNotSupportedException &&
-                    current.getMessage() != null &&
-                    current.getMessage().contains("PIP-344")) {
-                return true;
+    @Override
+    public Boolean supportsWildcardInTopic(Direction direction) {
+        return true;
+    }
+
+
+    @Override
+    protected SparkplugCertificateManager.SparkplugPublisher createSparkplugPublisher() {
+        return new SparkplugCertificateManager.SparkplugPublisher() {
+            @Override
+            public void publishCertificate(String topic, byte[] payload) throws Exception {
+                if (pulsarClient == null || pulsarClient.isClosed() || deviceProducer == null) {
+                    throw new ConnectorException("Cannot publish Sparkplug certificate: Pulsar producer not available");
+                }
+
+                try {
+                    // Convert MQTT topic to Pulsar topic property
+                    deviceProducer.newMessage()
+                            .value(payload)
+                            .property(PULSAR_PROPERTY_TOPIC, topic)
+                            .key(topic)
+                            .send();
+
+                    log.debug("{} - Published Sparkplug certificate to Pulsar for MQTT topic: [{}]", tenant, topic);
+                } catch (Exception e) {
+                    log.error("{} - Error publishing Sparkplug certificate for topic [{}]", tenant, topic, e);
+                    throw new ConnectorException("Failed to publish Sparkplug certificate via Pulsar", e);
+                }
             }
-            current = current.getCause();
+
+            @Override
+            public void subscribeTopic(String topicPattern) {
+                // Sparkplug topics are automatically subscribed via platform topic
+                // Just log for tracking
+                log.debug("{} - Sparkplug topic pattern [{}] will be received via platform topic", tenant, topicPattern);
+            }
+        };
+    }
+
+     @Override
+    public void connect() {
+        log.info("{} - Connecting MQTT Service Pulsar connector: {}", tenant, connectorName);
+
+        if (isConnected()) {
+            log.debug("{} - Already connected", tenant);
+            return;
         }
-        return false;
+
+        if (!shouldConnect()) {
+            log.info("{} - Connector disabled or invalid configuration", tenant);
+            return;
+        }
+
+        if (pulsarClient == null || pulsarClient.isClosed()) {
+            log.error("{} - Pulsar client not available - initialization may have failed", tenant);
+            connectionStateManager.updateStatusWithError(new Exception("Pulsar client not initialized"));
+            return;
+        }
+
+        // Initialize Sparkplug support if enabled
+        initializeSparkplugSupport();
+
+        // Connect with retry logic for consumer and producer
+        connectWithRetry();
+
+         // Publish Birth Certificate if Sparkplug Host mode is enabled
+         if (isSparkplugHost && sparkplugCertificateManager != null) {
+             sparkplugCertificateManager.subscribeToSparkplugTopics();
+             sparkplugCertificateManager.publishBirthCertificate();
+         }
+
+        // Schedule periodic Birth Certificate publishing if connected and Sparkplug Host enabled
+        if (isConnected() && isSparkplugHost && sparkplugCertificateManager != null) {
+            // Use a scheduled executor for periodic Birth certificates
+            java.util.concurrent.ScheduledExecutorService scheduler =
+                java.util.concurrent.Executors.newScheduledThreadPool(1, r -> {
+                    Thread t = new Thread(r, "sparkplug-periodic-birth-" + tenant);
+                    t.setDaemon(true);
+                    return t;
+                });
+            sparkplugCertificateManager.schedulePeriodicBirthCertificates(scheduler);
+        }
+    }
+
+    @Override
+    public void disconnect() {
+        // Stop periodic Birth Certificate publishing before disconnect
+        if (isSparkplugHost && sparkplugCertificateManager != null) {
+            sparkplugCertificateManager.stopPeriodicPublishing();
+        }
+        // Call parent disconnect
+        super.disconnect();
     }
 
     /**
@@ -912,6 +904,20 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                         .hidden(true)
                         .defaultValue(PULSAR_NAMESPACE))
 
+                // Sparkplug Host support
+                .property("isSparkplugHost", ConnectorPropertyBuilder.optionalBoolean()
+                        .order(16)
+                        .defaultValue(false)
+                        .description("Enable Sparkplug Host mode to publish Birth/Death certificates on connection/disconnection"))
+
+                .property("sparkplugHostId", ConnectorPropertyBuilder.optionalString()
+                        .order(17)
+                        .description("Sparkplug Host ID (used for Birth/Death certificates)")
+                        .condition("isSparkplugHost", "true"))
+
                 .build();
     }
 }
+
+
+

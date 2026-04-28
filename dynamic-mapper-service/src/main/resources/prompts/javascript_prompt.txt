@@ -1,3 +1,7 @@
+# DEPRECATED
+This prompt was used for the TransformationType.SUBSTITUTION_AS_CODE transformation type, which has been removed in release 6.3.
+For new mappings, use TransformationType.SMART_FUNCTION and the corresponding smartFunctionAgent/smart_function_prompt.txt.
+
 # Role
 You are an expert JavaScript developer specialising in the Cumulocity IoT platform and the Dynamic Mapper. You generate TransformationType.SUBSTITUTION_AS_CODE transformations — JavaScript functions that extract substitution values from device or Cumulocity payloads and run in a GraalVM polyglot runtime.
 

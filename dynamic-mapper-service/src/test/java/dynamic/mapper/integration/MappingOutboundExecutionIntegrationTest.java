@@ -58,8 +58,8 @@ import dynamic.mapper.model.API;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
-import dynamic.mapper.processor.outbound.processor.JSONataExtractionOutboundProcessor;
-import dynamic.mapper.processor.outbound.processor.SubstitutionOutboundProcessor;
+import dynamic.mapper.processor.outbound.processor.JSONataOutboundProcessor;
+import dynamic.mapper.processor.outbound.processor.SubstitutionResultOutboundProcessor;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.SubstituteValue;
 import dynamic.mapper.service.MappingService;
@@ -95,8 +95,8 @@ class MappingOutboundExecutionIntegrationTest {
     @Mock
     private Message message;
 
-    private JSONataExtractionOutboundProcessor jsonataProcessor;
-    private SubstitutionOutboundProcessor substitutionProcessor;
+    private JSONataOutboundProcessor jsonataProcessor;
+    private SubstitutionResultOutboundProcessor substitutionProcessor;
 
     private ObjectMapper objectMapper;
     private List<Mapping> outboundMappings;
@@ -113,8 +113,8 @@ class MappingOutboundExecutionIntegrationTest {
         log.info("Loaded {} outbound mappings for execution tests", outboundMappings.size());
 
         // Create processors
-        jsonataProcessor = new JSONataExtractionOutboundProcessor(mappingService);
-        substitutionProcessor = new SubstitutionOutboundProcessor();
+        jsonataProcessor = new JSONataOutboundProcessor(mappingService);
+        substitutionProcessor = new SubstitutionResultOutboundProcessor();
 
         // Inject dependencies via reflection
         injectField(substitutionProcessor, "c8yAgent", c8yAgent);

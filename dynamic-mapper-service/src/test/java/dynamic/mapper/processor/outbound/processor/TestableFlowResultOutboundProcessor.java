@@ -51,7 +51,7 @@ public class TestableFlowResultOutboundProcessor extends FlowResultOutboundProce
     public TestableFlowResultOutboundProcessor(
             MappingService mappingService,
             ObjectMapper objectMapper) {
-        super(mappingService, objectMapper);
+        super(mappingService, objectMapper, null);
         this.objectMapper = objectMapper;
     }
 

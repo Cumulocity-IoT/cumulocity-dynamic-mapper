@@ -62,7 +62,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-class JSONataExtractionOutboundProcessorTest {
+class JSONataOutboundProcessorTest {
 
     @Mock
     private MappingService mappingService;
@@ -76,7 +76,7 @@ class JSONataExtractionOutboundProcessorTest {
     @Mock
     private ServiceConfiguration serviceConfiguration;
 
-    private JSONataExtractionOutboundProcessor processor;
+    private JSONataOutboundProcessor processor;
 
     private static final String TEST_TENANT = "testTenant";
     private static final String TEST_DEVICE_ID = "6926746";
@@ -91,7 +91,7 @@ class JSONataExtractionOutboundProcessorTest {
     @BeforeEach
     void setUp() throws Exception {
         objectMapper = new ObjectMapper();
-        processor = new JSONataExtractionOutboundProcessor(mappingService);
+        processor = new JSONataOutboundProcessor(mappingService);
 
         mapping = createOutboundEventMapping();
         mappingStatus = new MappingStatus(
@@ -121,7 +121,7 @@ class JSONataExtractionOutboundProcessorTest {
     }
 
     private void injectField(String fieldName, Object value) throws Exception {
-        Field field = JSONataExtractionOutboundProcessor.class.getDeclaredField(fieldName);
+        Field field = JSONataOutboundProcessor.class.getDeclaredField(fieldName);
         field.setAccessible(true);
         field.set(processor, value);
     }

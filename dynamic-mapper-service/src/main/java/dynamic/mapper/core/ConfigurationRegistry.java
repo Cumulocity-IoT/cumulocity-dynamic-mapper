@@ -179,22 +179,6 @@ public class ConfigurationRegistry {
     @Autowired
     private CamelContext camelContext;
 
-    public static Source decodeCode(String code, String sourceCodeFileName, boolean replaceIdentifier,
-            String mappingIdentifier) {
-        byte[] decodedCodeBytes = Base64.getDecoder().decode(code);
-        String decodedCode = new String(decodedCodeBytes);
-        if (replaceIdentifier) {
-            // replace the identifier in the code with the source file name
-            String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mappingIdentifier;
-            decodedCode = decodedCode.replaceFirst(
-                    Mapping.EXTRACT_FROM_SOURCE,
-                    identifier);
-        }
-        Source source = Source.newBuilder("js", decodedCode, sourceCodeFileName)
-                .buildLiteral();
-        return source;
-    }
-
     public boolean isPulsarAvailable(String tenant) {
         if (mqttServicePulsarUrl == null || mqttServicePulsarUrl.trim().isEmpty()) {
             log.warn("{} - C8Y_BASEURL_PULSAR is not configured for Pulsar connector. Disabling MQTT Service.", tenant);

@@ -201,7 +201,8 @@
           <li><strong>Flat File (CSV)</strong> - For comma-separated or delimiter-based data <small class="text-muted">(requires Expert Mode)</small></li>
           <li><strong>Hexadecimal</strong> - For binary data encoded as hex strings <small class="text-muted">(requires Expert Mode)</small></li>
           <li><strong>Protobuf</strong> - For Protocol Buffer serialized data <small class="text-muted">(requires Expert Mode)</small></li>
-          <li><strong>Any Payload</strong> - Payload format is unknown or binary (e.g. SparkPlugB, Protobuf, XML). Passed as a Base64-encoded string; processed by a <strong>Smart Function</strong> (JavaScript, in-process) or a <strong>Java Extension</strong> (server-side). <small class="text-muted">(requires Expert Mode)</small></li>
+          <li><strong>Any Payload</strong> - Payload format is unknown or binary (e.g. CBOR, XML, custom binary). Passed as a Base64-encoded string; processed by a <strong>Smart Function</strong> or a <strong>Java Extension</strong>. <small class="text-muted">(requires Expert Mode)</small></li>
+          <li><strong>SparkPlug B</strong> - Native support for the Eclipse Sparkplug B protocol over MQTT. The binary protobuf payload is automatically decoded for inbound; outbound NCMD/DCMD messages are serialized to protobuf binary. Use a <strong>Smart Function</strong> in both directions. <small class="text-muted">(requires Expert Mode)</small></li>
         </ul>
         <h5 class="p-t-8 p-b-4 text-16"><strong>Step 2.2: Choose the Transformation Type</strong></h5>
         <div class="p-b-8 text-16">
@@ -215,19 +216,24 @@
             Ideal for simple to moderately complex transformations without programming knowledge.
           </li>
           <li>
-            <strong>JavaScript Substitutions</strong> <span class="label label-warning text-10">deprecated</span> - Write JavaScript code snippets for individual field
-            transformations.
-            Provides more flexibility than JSONata while keeping substitution-based structure.
-          </li>
-          <li>
             <strong>Smart Function (JavaScript)</strong> - Define the complete transformation logic using JavaScript.
             Offers maximum control and flexibility for complex transformations, calculations, and business logic.
             Allows access to device context and inventory data for enrichment.
           </li>
         </ul>
+        <div class="admonition important" style="max-width: 100%;">
+          <div class="title">Important — Release 6.3</div>
+          <div class="content">
+            <strong>Substitution as JavaScript (SUBSTITUTION_AS_CODE) has been removed in release 6.3.</strong>
+            Existing mappings of this type are no longer executed. They can only be <strong>exported</strong> and
+            <strong>deleted</strong>. No other operations (edit, activate, test) are available for these mappings.
+            Migrate to <strong>Smart Function (JavaScript)</strong> — see the migration guide in the
+            <a (click)="scrollToElement('javascript-substitution')" style="cursor: pointer;">Removed: Substitution as
+              JavaScript</a> section.
+          </div>
+        </div>
         <div class="p-b-8 text-16">
-          If you're using <strong>JavaScript Substitutions</strong> or <strong>Smart Function
-            (JavaScript)</strong> as Transformation Type, navigate to <a
+          If you're using <strong>Smart Function (JavaScript)</strong> as Transformation Type, navigate to <a
             [routerLink]="ROUTE_CODE_TEMPLATES_INBOUND_SMART_FUNCTION"> Code
             Templates
           </a> to see
@@ -307,7 +313,7 @@
                 <td class="text-center"><strong>X</strong></td>
                 <td class="text-center"><strong>X</strong></td>
                 <td class="text-center"><strong>X</strong><br></td>
-                <td>JSON, Hex, Protobuf, Extension</td>
+                <td>JSON, Hex, Protobuf, Extension, <strong>SparkPlug B</strong></td>
               </tr>
               <tr>
                 <td><strong>HTTP Connector</strong><br><small class="text-muted">(only one instance per tenant
@@ -472,11 +478,21 @@
         </div>
         <h5 class="p-t-8 p-b-4"><strong>Any Payload <small class="text-muted">(Expert Mode)</small></strong></h5>
         <div class="p-b-8 text-16">
-          Use this when the payload format is unknown, binary (SparkPlugB, CBOR, XML, custom binary), or
+          Use this when the payload format is unknown, binary (CBOR, XML, custom binary), or
           when you want full programmatic control. The raw payload bytes are passed to your
           transformation as a Base64-encoded string. You must use a <strong>Smart Function</strong> or
           <strong>Java Extension</strong> that decodes and interprets the bytes. In a Smart Function,
           access the raw data via <code>msg.getPayload()</code> and decode it with <code>atob()</code>.
+        </div>
+        <h5 class="p-t-8 p-b-4"><strong>SparkPlug B <small class="text-muted">(Expert Mode)</small></strong></h5>
+        <div class="p-b-8 text-16">
+          Native first-class support for the <a href="https://sparkplug.eclipse.org/" target="_blank">Eclipse Sparkplug B</a>
+          protocol over MQTT. For <strong>inbound</strong> mappings the binary protobuf payload is automatically decoded by
+          the mapper using the <a href="https://github.com/eclipse-tahu/tahu" target="_blank">Eclipse Tahu</a> library —
+          no manual Base64 decoding required. For <strong>outbound</strong> (NCMD / DCMD) mappings, the metric object
+          returned by your Smart Function is automatically serialized to protobuf binary before publishing.
+          See the <a (click)="scrollToElement('sparkplugb')" style="cursor: pointer;">SparkPlug B</a> section for
+          the full protocol details, message types, and Smart Function API.
         </div>
         <div class="admonition important" style="max-width: 100%;">
           <div class="title">Important</div>
@@ -535,7 +551,7 @@
         <div class="p-b-8 text-16">
           The following screenshot shows the <strong>Transformation</strong> step for transformation type
           <strong>Substitution as JSONata Expression</strong>. This step shows a JavaScript editor if you choose
-          <strong>Substitution as JavaScript (deprecated)</strong> or <strong>Smart Function (JavaScript)</strong>.
+          <strong>Smart Function (JavaScript)</strong>.
         </div>
         <br />
         <img width="80%" class="m-l-48 m-b-48 m-b-16"
@@ -544,6 +560,386 @@
         <p class="image-description m-l-48"><b>Description:</b> Screenshot of fourth wizard step to define substitutions
           using JSONata expressions.</p>
         <div class="p-b-8"></div>
+      </div>
+      <!-- ==================== SECTION: SPARKPLUG B ==================== -->
+      <div class="card-header" id="sparkplugb">
+        <h3>
+          {{ 'SparkPlug B' | translate }}
+        </h3>
+      </div>
+      <div class="card-block">
+        <div class="p-b-8 text-16">
+          The Dynamic Mapper provides native, first-class support for the
+          <a href="https://sparkplug.eclipse.org/" target="_blank">Eclipse Sparkplug B</a> protocol —
+          a standardized MQTT-based messaging specification designed for Industrial IoT (IIoT) environments.
+          Sparkplug B defines a strict topic namespace, payload encoding (protobuf), and a birth/data/death
+          message lifecycle that the mapper understands and handles automatically.
+        </div>
+        <div class="admonition info" style="max-width: 100%;">
+          <div class="title">Inbound &amp; Outbound</div>
+          <div class="content">
+            The <strong>SparkPlug B</strong> payload type is supported for both <strong>inbound</strong> and
+            <strong>outbound</strong> mappings and requires a <strong>Generic MQTT</strong> connector.
+            Inbound decodes NBIRTH / NDATA / DBIRTH / DDATA / NCMD / DCMD protobuf payloads automatically.
+            Outbound serializes the metric object returned by your Smart Function to SparkPlug B protobuf binary
+            before publishing NCMD or DCMD messages to the broker.
+          </div>
+        </div>
+
+        <h4 class="p-t-16 p-b-8">Topic Structure</h4>
+        <div class="p-b-8 text-16">
+          Sparkplug B topics follow the fixed format:
+          <code>spBv1.0/[Group ID]/[Message Type]/[Edge Node ID]/[Device ID]</code>
+        </div>
+        <div class="table-responsive table-width-100">
+          <table class="table table-striped">
+            <thead class="thead-light">
+              <tr>
+                <th style="width: 18%;">Message Type</th>
+                <th style="width: 12%;">Topic Levels</th>
+                <th style="width: 18%;">MO Type (C8Y)</th>
+                <th style="width: 22%;">Fragment Stored</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>NBIRTH</code></td>
+                <td>4</td>
+                <td><code>c8y_Serial</code></td>
+                <td><code>sparkPlugB_NBIRTH</code></td>
+                <td>Edge Node birth — metric definitions published when the node comes online. The mapper stores
+                  the alias→metric-definition map on the Edge Node managed object so that subsequent NDATA
+                  messages can resolve aliases.
+                  The Edge Node external ID is <code>[Group ID]_[Edge Node ID]</code>.</td>
+              </tr>
+              <tr class="table-light">
+                <td><code>NDATA</code></td>
+                <td>4</td>
+                <td>—</td>
+                <td>—</td>
+                <td>Edge Node data — metric values published periodically. Aliases are resolved using the
+                  <code>sparkPlugB_NBIRTH</code> fragment stored on the Edge Node MO.
+                  The decoded payload is passed to your Smart Function.</td>
+              </tr>
+              <tr>
+                <td><code>DBIRTH</code></td>
+                <td>5</td>
+                <td><code>c8y_Serial</code></td>
+                <td><code>sparkPlugB_DBIRTH</code></td>
+                <td>Device birth — metric definitions for a device attached to an Edge Node. The mapper stores
+                  the alias→metric-definition map on the Device managed object so that subsequent DDATA
+                  messages can resolve aliases.
+                  The Device external ID is <code>[Group ID]_[Edge Node ID]_[Device ID]</code>.
+                  This ensures uniqueness because the same device ID can exist under different groups or Edge Nodes.</td>
+              </tr>
+              <tr class="table-light">
+                <td><code>DDATA</code></td>
+                <td>5</td>
+                <td>—</td>
+                <td>—</td>
+                <td>Device data — metric values for a specific device. Aliases are resolved using the
+                  <code>sparkPlugB_DBIRTH</code> fragment stored on the Device MO.
+                  The decoded payload is passed to your Smart Function.</td>
+              </tr>
+              <tr>
+                <td><code>NDEATH</code> / <code>DDEATH</code></td>
+                <td>4 / 5</td>
+                <td>—</td>
+                <td>—</td>
+                <td>Node/Device death — signals that the node or device has gone offline.
+                  Passed to the Smart Function without alias resolution.</td>
+              </tr>
+              <tr class="table-light">
+                <td><code>NCMD</code> / <code>DCMD</code></td>
+                <td>4 / 5</td>
+                <td>—</td>
+                <td>—</td>
+                <td>Node/Device command — command messages sent to a node or device.
+                  <strong>Inbound:</strong> aliases are resolved like NDATA/DDATA respectively and passed to the Smart Function.
+                  <strong>Outbound:</strong> the metric object returned by the Smart Function is serialized to protobuf binary
+                  by <code>SparkPlugBSerializer</code> before publishing. Use the
+                  <code>context.getConfig().aliasMap</code> to include numeric aliases in the outbound metrics.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4 class="p-t-16 p-b-8">How the Mapper Processes SparkPlug B Messages</h4>
+        <h5 class="p-t-8 p-b-4">Inbound</h5>
+        <ol class="text-16 m-l-16">
+          <li class="m-b-8">
+            <strong>Deserialization</strong> — The binary protobuf payload is decoded automatically by the mapper
+            using the <a href="https://github.com/eclipse-tahu/tahu" target="_blank">Eclipse Tahu</a> library.
+            No manual decoding is needed in your Smart Function.
+          </li>
+          <li class="m-b-8">
+            <strong>Birth message storage (NBIRTH / DBIRTH)</strong> — After the managed object for the Edge Node
+            or Device is upserted in inventory, the decoded metric-definition map
+            (alias → &#123; name, dataType &#125;) is stored as a named fragment on the MO.
+            This happens automatically — your Smart Function does not need to handle it.
+          </li>
+          <li class="m-b-8">
+            <strong>Alias resolution (NDATA / DDATA)</strong> — Sparkplug B data messages typically use
+            numeric aliases instead of full metric names to reduce payload size. The mapper looks up the
+            stored birth fragment and replaces aliases with their original names before passing the payload
+            to your Smart Function.
+          </li>
+          <li class="m-b-8">
+            <strong>Smart Function execution</strong> — Your Smart Function receives the fully decoded and
+            alias-resolved payload as a JavaScript object and returns one or more
+            <code>CumulocityObject</code> instances.
+          </li>
+        </ol>
+        <h5 class="p-t-8 p-b-4">Outbound (NCMD / DCMD)</h5>
+        <ol class="text-16 m-l-16">
+          <li class="m-b-8">
+            <strong>Enrichment</strong> — The mapper resolves the device external ID and loads the
+            <code>sparkPlugB_NBIRTH</code> (or <code>sparkPlugB_DBIRTH</code>) alias map from the managed object.
+            The inverted map (metric name → alias) is available inside the Smart Function as
+            <code>context.getConfig().aliasMap</code>.
+          </li>
+          <li class="m-b-8">
+            <strong>Smart Function execution</strong> — Your <code>onMessage(msg, context)</code> function
+            receives the triggering Cumulocity payload (e.g. an operation) and returns an object with
+            <code>topic</code> and <code>payload</code> fields. The topic must be a valid SparkPlug B NCMD or
+            DCMD topic (<code>spBv1.0/&lt;GroupID&gt;/NCMD/&lt;EdgeNodeID&gt;</code>). The payload is a plain
+            JavaScript object with an optional <code>seq</code>, <code>timestamp</code>, and a
+            <code>metrics</code> array.
+          </li>
+          <li class="m-b-8">
+            <strong>Serialization</strong> — The mapper's <code>SparkPlugBSerializer</code> converts the
+            returned metric object to SparkPlug B protobuf binary bytes before publishing to the broker.
+            Include <code>alias</code> values in the metric entries (available from
+            <code>context.getConfig().aliasMap</code>) to produce compact messages that the edge node
+            can match by alias.
+          </li>
+        </ol>
+
+        <h4 class="p-t-16 p-b-8">Decoded Payload Structure</h4>
+        <div class="p-b-8 text-16">
+          The object passed to your Smart Function via <code>msg.getPayload()</code> has the following shape:
+        </div>
+        <pre class="text-14" style="background:#f8f9fa; padding: 16px; border-radius: 4px; overflow-x: auto;">&#123;
+  "messageType": "NDATA",        // NBIRTH | NDATA | DBIRTH | DDATA | NDEATH | DDEATH | NCMD | DCMD
+  "groupId":     "factory-01",   // Sparkplug Group ID
+  "edgeNodeId":  "plc-01",       // Edge Node ID (always present)
+  "deviceId":    "sensor-a",     // Device ID (present for D* messages only)
+  "timestamp":   1713700000000,  // UTC milliseconds
+  "seq":         42,             // Sequence number
+  "metrics": [
+    &#123;
+      "name":      "Temperature",   // resolved from alias (NDATA/DDATA) or original (NBIRTH/DBIRTH)
+      "alias":     12,
+      "dataType":  "Float",
+      "floatValue": 23.5,
+      "timestamp": 1713700000000
+    &#125;
+  ],
+  "sparkPlugB_NBIRTH": &#123; ... &#125;   // birth map attached for NBIRTH / NDATA (sparkPlugB_DBIRTH for DBIRTH / DDATA)
+&#125;</pre>
+
+        <h4 class="p-t-16 p-b-8">Creating a SparkPlug B Mapping</h4>
+        <ol class="text-16 m-l-16">
+          <li class="m-b-8">
+            <strong>Connector</strong> — Create a <strong>Generic MQTT</strong> connector pointing to your
+            MQTT broker that receives Sparkplug B messages.
+          </li>
+          <li class="m-b-8">
+            <strong>Add Mapping</strong> — For inbound, navigate to <a [routerLink]="ROUTE_INBOUND">Inbound → Add Mapping</a>.
+            For outbound NCMD/DCMD, navigate to <a [routerLink]="ROUTE_OUTBOUND">Outbound → Add Mapping</a>.
+            Enable <strong>Expert Mode</strong> in the dialog.
+          </li>
+          <li class="m-b-8">
+            <strong>Payload Type</strong> — Select <strong>SparkPlug B</strong>.
+          </li>
+          <li class="m-b-8">
+            <strong>Transformation Type</strong> — <strong>Smart Function (JavaScript)</strong> is the only
+            available option for this payload type.
+          </li>
+          <li class="m-b-8">
+            <strong>Topic</strong> — Enter the Sparkplug B topic pattern, e.g.
+            <code>spBv1.0/factory-01/#</code> to receive all message types from a group, or a more
+            specific pattern such as <code>spBv1.0/factory-01/NDATA/plc-01</code>.
+          </li>
+          <li class="m-b-8">
+            <strong>Smart Function</strong> — Write a <code>onMessage(msg, context)</code> function that
+            processes the decoded payload and returns
+            <code>CumulocityObject</code> instances. See the example below.
+          </li>
+        </ol>
+
+        <h4 class="p-t-16 p-b-8">Birth Message Handling</h4>
+        <div class="admonition info" style="max-width: 100%;">
+          <div class="title">How birth fragments are stored</div>
+          <div class="content">
+            For <strong>NBIRTH</strong> and <strong>DBIRTH</strong> messages the mapper stores the
+            decoded metric-definition map as a fragment on the corresponding managed object so that
+            subsequent NDATA/DDATA messages can resolve metric aliases. The storage logic works in two steps:
+            <ol class="m-t-8">
+              <li class="m-b-4">
+                <strong>Smart Function returns an INVENTORY object</strong> — the mapper upserts the MO
+                (creates or updates it) and immediately stores the birth fragment on it.
+                This is the recommended path for the <em>first boot</em> of a node or device.
+              </li>
+              <li class="m-b-4">
+                <strong>Smart Function returns nothing (or a non-INVENTORY object)</strong> — the mapper
+                derives the external ID directly from the topic
+                (name <code>c8y_Serial</code>, value <code>[Group ID]_[Edge Node ID]</code> for NBIRTH;
+                name <code>c8y_Serial</code>, value <code>[Group ID]_[Edge Node ID]_[Device ID]</code> for DBIRTH) and looks
+                up the pre-existing MO in inventory. If found, the birth fragment is stored on it.
+                This covers re-boots of already-registered nodes/devices without requiring any
+                INVENTORY object from the Smart Function.
+              </li>
+            </ol>
+            If the MO does not exist and the Smart Function does not create it, the mapper checks the
+            <code>createNonExistingDevice</code> flag. If enabled, a minimal MO is auto-created with the
+            external ID derived from the topic and the birth fragment is stored on it.
+            Otherwise an error is logged and the birth fragment cannot be stored — causing all subsequent
+            alias lookups to fail.
+          </div>
+        </div>
+        <div class="admonition important" style="max-width: 100%;">
+          <div class="title">Important — first boot</div>
+          <div class="content">
+            On the <strong>first ever boot</strong> of an Edge Node or Device (i.e. before a
+             MO exists in inventory), choose one
+            of two approaches:
+            <ul class="m-t-8">
+              <li class="m-b-4">
+                Enable <strong>createNonExistingDevice</strong> on the mapping — the mapper
+                automatically creates a minimal MO using the external ID derived from the topic.
+                This is the simplest option and requires no changes to the Smart Function.
+              </li>
+              <li class="m-b-4">
+                Return a <code>CumulocityObject</code> with <code>cumulocityType: "INVENTORY"</code>
+                from the Smart Function — use this when you need a custom device name, type, or
+                additional fragments on the managed object.
+              </li>
+            </ul>
+            For subsequent reboots the fallback lookup handles fragment storage automatically even if
+            the Smart Function returns nothing for the birth message.
+          </div>
+        </div>
+
+        <h4 class="p-t-16 p-b-8">Smart Function Example — Inbound</h4>
+        <div class="p-b-8 text-16">
+          The following example handles all Sparkplug B message types and maps NDATA temperature metrics
+          to Cumulocity measurements:
+        </div>
+        <pre class="text-14" style="background:#f8f9fa; padding: 16px; border-radius: 4px; overflow-x: auto;">function onMessage(msg, context) &#123;
+  var payload  = msg.getPayload();
+  var msgType  = payload.messageType;  // e.g. "NBIRTH", "NDATA", "DBIRTH", "DDATA"
+  var groupId  = payload.groupId;
+  var nodeId   = payload.edgeNodeId;
+  var deviceId = payload.deviceId;     // undefined for node-level messages
+
+  // External IDs follow the Sparkplug B namespace to ensure global uniqueness:
+  //   Edge Node: [Group ID]_[Edge Node ID]
+  //   Device:    [Group ID]_[Edge Node ID]_[Device ID]
+  var nodeExtId   = groupId + '_' + nodeId;
+  var deviceExtId = deviceId ? groupId + '_' + nodeId + '_' + deviceId : undefined;
+
+  // ── Birth messages: create / update the managed object ──────────────────────
+  if (msgType === 'NBIRTH' || msgType === 'DBIRTH') &#123;
+    var extId = msgType === 'NBIRTH' ? nodeExtId : deviceExtId;
+    return [&#123;
+      cumulocityType: 'INVENTORY',
+      externalSource: [&#123; externalId: extId, type: 'c8y_Serial' &#125;],
+      payload: &#123;
+        name: extId,
+        type: 'c8y_Serial'
+      &#125;
+    &#125;];
+  &#125;
+
+  // ── NDATA / DDATA: map metrics to measurements ───────────────────────────────
+  if (msgType === 'NDATA' || msgType === 'DDATA') &#123;
+    var extId   = msgType === 'DDATA' ? deviceExtId : nodeExtId;
+    var results = [];
+    (payload.metrics || []).forEach(function(metric) &#123;
+      if (metric.name === 'Temperature') &#123;
+        results.push(&#123;
+          cumulocityType: 'MEASUREMENT',
+          externalSource: [&#123; externalId: extId, type: 'c8y_Serial' &#125;],
+          payload: &#123;
+            type: 'c8y_Temperature',
+            time: new Date(payload.timestamp).toISOString(),
+            'c8y_Temperature': &#123; T: &#123; value: metric.floatValue, unit: '°C' &#125; &#125;
+          &#125;
+        &#125;);
+      &#125;
+    &#125;);
+    return results;
+  &#125;
+
+  // Death / CMD messages — nothing to do in this example
+  return [];
+&#125;</pre>
+
+        <h4 class="p-t-16 p-b-8">Smart Function Example — Outbound NCMD</h4>
+        <div class="p-b-8 text-16">
+          The following example sends an NCMD (Node Command) from a Cumulocity operation. The mapper serializes
+          the returned metric object to SparkPlug B protobuf binary automatically.
+        </div>
+        <div class="p-b-8 text-16">
+          <code>context.getConfig().aliasMap</code> is a <code>&#123; metricName → alias &#125;</code> map
+          automatically loaded from the <code>sparkPlugB_NBIRTH</code> (or <code>sparkPlugB_DBIRTH</code>) fragment
+          stored on the device managed object during inbound BIRTH processing. Including the numeric alias in each
+          outbound metric lets the edge node match it without a full name lookup, reducing payload size. The
+          <code>metric()</code> helper below adds the alias only when one is available.
+        </div>
+        <div class="p-b-8 text-16">
+          <code>context.getConfig().isActive</code> reflects whether the Edge Node or Device is currently online
+          (<code>true</code> after NBIRTH / NDATA, <code>false</code> after NDEATH). Use it to suppress commands
+          to offline devices. Defaults to <code>true</code> when no status has been recorded yet.
+        </div>
+        <pre class="text-14" style="background:#f8f9fa; padding: 16px; border-radius: 4px; overflow-x: auto;">function onMessage(msg, context) &#123;
+  // context.getConfig().externalId is "GroupID_EdgeNodeID" when useExternalId is enabled.
+  const externalId = context.getConfig().externalId;
+  const parts      = externalId ? externalId.split('_') : [];
+  const groupId    = parts[0] || 'DefaultGroup';
+  const edgeNodeId = parts[1] || 'DefaultNode';
+
+  // Suppress commands to offline edge nodes (NDEATH received)
+  if (!context.getConfig().isActive) &#123;
+    return null;
+  &#125;
+
+  // aliasMap: metric name → alias string (loaded from sparkPlugB_NBIRTH on the MO)
+  const aliasMap = context.getConfig().aliasMap || &#123;&#125;;
+
+  // Helper: build a metric entry and add alias when available
+  function metric(name, type, value) &#123;
+    const entry = &#123; name, type, value &#125;;
+    if (aliasMap[name] !== undefined) &#123;
+      entry.alias = parseInt(aliasMap[name], 10);
+    &#125;
+    return entry;
+  &#125;
+
+  return &#123;
+    // NCMD topic: spBv1.0/&lt;GroupID&gt;/NCMD/&lt;EdgeNodeID&gt;
+    topic: `spBv1.0/$&#123;groupId&#125;/NCMD/$&#123;edgeNodeId&#125;`,
+    payload: &#123;
+      timestamp: Date.now(),
+      metrics: [
+        metric('Node Control/Rebirth', 'Boolean', false)
+      ]
+    &#125;
+  &#125;;
+&#125;</pre>
+        <div class="admonition info" style="max-width: 100%;">
+          <div class="title">Supported metric types</div>
+          <div class="content">
+            The <code>type</code> field in each metric entry is case-insensitive and supports:
+            <code>Int8</code>, <code>Int16</code>, <code>Int32</code>, <code>Int64</code>,
+            <code>UInt8</code>, <code>UInt16</code>, <code>UInt32</code>, <code>UInt64</code>,
+            <code>Float</code>, <code>Double</code>, <code>Boolean</code>, <code>String</code>,
+            <code>DateTime</code>, <code>Text</code>, <code>UUID</code>, <code>Bytes</code>.
+          </div>
+        </div>
+
       </div>
       <!-- ==================== SECTION: DEFINING A SUBSCRIPTION FOR OUTBOUND MAPPING ==================== -->
       <div class="card-header" id="define-subscription-for-outbound">
@@ -683,12 +1079,10 @@ type = "c8y_Uplink"</code></pre>
         <div class="admonition info" style="max-width: 100%;">
           <div class="title">Info</div>
           <div class="content">
-            <strong>Choosing a Transformation Type:</strong> Select JSONata for simple mappings, JavaScript
-            substitutions
-            when you need more computational power for individual fields, Smart Functions when you need complete
-            control
-            over the transformation logic or when working with array payloads, and Java Extensions when you need
-            enterprise-grade type safety, performance, and access to the full Java ecosystem.
+            <strong>Choosing a Transformation Type:</strong> Select JSONata for simple mappings, Smart Functions when
+            you need complete control over the transformation logic, JavaScript computations, or when working with array
+            payloads, and Java Extensions when you need enterprise-grade type safety, performance, and access to the
+            full Java ecosystem.
           </div>
         </div>
         <div class="p-t-8 p-b-4 text-16"><strong>Quick-reference decision guide:</strong></div>
@@ -714,8 +1108,8 @@ type = "c8y_Uplink"</code></pre>
               </tr>
               <tr>
                 <td>Familiar imperative JavaScript syntax per-field</td>
-                <td><strong>Smart Function</strong> <span class="text-muted">(migrated from deprecated JS substitutions)</span></td>
-                <td>JavaScript Substitutions are deprecated; Smart Functions offer a superset of capabilities</td>
+                <td><strong>Smart Function</strong></td>
+                <td>JavaScript Substitutions have been removed in release 6.3; Smart Functions offer a superset of capabilities</td>
               </tr>
               <tr>
                 <td>Full control over the output payload</td>
@@ -767,18 +1161,33 @@ type = "c8y_Uplink"</code></pre>
               <i class="fa fa-book m-r-8"></i>Learn more about Smart Functions and metadata usage →
             </a></strong>
         </div>
-        <h4 class="p-t-16 p-b-8" id="javascript-substitution">{{ 'Defining a substitution using JavaScript (deprecated)' | translate
+        <h4 class="p-t-16 p-b-8" id="javascript-substitution">{{ 'Removed: Substitution as JavaScript (release 6.3)' | translate
           }}
         </h4>
-        <div class="p-b-8 text-16">
-          JavaScript substitutions allow you to define individual field transformations using familiar JavaScript syntax
-          within a substitution-based structure. Use JavaScript substitutions when you need complex string
-          manipulations,
-          mathematical calculations, or conditional logic that's easier to express in imperative code.
+        <div class="admonition important" style="max-width: 100%;">
+          <div class="title">Removed in release 6.3</div>
+          <div class="content">
+            <strong>TransformationType.SUBSTITUTION_AS_CODE has been removed.</strong>
+            Existing mappings of this type are no longer executed. The only permitted operations are
+            <strong>Export</strong> and <strong>Delete</strong>. Editing, testing, activating, or duplicating such
+            mappings is not supported.
+          </div>
         </div>
+        <div class="p-b-8 text-16">
+          Migrate to <strong>Smart Function (JavaScript)</strong>:
+        </div>
+        <ol class="text-16 m-l-16">
+          <li>Export the affected mapping via the <strong>Export</strong> action in the mapping grid.</li>
+          <li>Create a new mapping with transformation type <strong>Smart Function (JavaScript)</strong>. Instead of
+            returning a <code>SubstitutionResult</code>, the function returns a fully-built Cumulocity object directly.
+            See <a [routerLink]="['/c8y-pkg-dynamic-mapper/landing/smartfunction']">Smart Functions →</a> for the API
+            and code templates.</li>
+          <li>Use the built-in <strong>Test</strong> feature to verify the migrated mapping.</li>
+          <li>Activate the new mapping and delete the original deprecated mapping.</li>
+        </ol>
         <div class="p-b-16 text-16">
           <strong><a [routerLink]="['/c8y-pkg-dynamic-mapper/landing/javascript']">
-              <i class="fa fa-book m-r-8"></i>Learn more about defining substitutions using JavaScript →
+              <i class="fa fa-book m-r-8"></i>View migration guide for Substitution as JavaScript →
             </a></strong>
         </div>
         <h4 class="p-t-16 p-b-8" id="java-extension">{{ 'Defining the payload transformation using Java Extensions' |
@@ -968,16 +1377,16 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
                 <td>Yes (duplicate system template to customise)</td>
               </tr>
               <tr>
-                <td><code>INBOUND_SUBSTITUTION_AS_CODE</code> <span class="label label-warning">Deprecated</span></td>
+                <td><code>INBOUND_SUBSTITUTION_AS_CODE</code> <span class="label label-danger">Removed</span></td>
                 <td>Inbound</td>
-                <td>Legacy JavaScript substitution template (deprecated transformation type)</td>
-                <td>Yes</td>
+                <td>Removed transformation type (release 6.3). Existing mappings can only be exported and deleted.</td>
+                <td>No</td>
               </tr>
               <tr>
-                <td><code>OUTBOUND_SUBSTITUTION_AS_CODE</code> <span class="label label-warning">Deprecated</span></td>
+                <td><code>OUTBOUND_SUBSTITUTION_AS_CODE</code> <span class="label label-danger">Removed</span></td>
                 <td>Outbound</td>
-                <td>Legacy JavaScript substitution template (deprecated transformation type)</td>
-                <td>Yes</td>
+                <td>Removed transformation type (release 6.3). Existing mappings can only be exported and deleted.</td>
+                <td>No</td>
               </tr>
               <tr>
                 <td><code>SHARED</code></td>
@@ -1223,8 +1632,8 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
                   path
                   is then appended to the URL that is defined in the Webhook connector properties. This property has to
                   be
-                  used for all transformation types other than Smart Functions, i.e. Substitution as JSONata Expression,
-                  Substitution as JavaScript.</td>
+                  used for all transformation types other than Smart Functions, i.e. Substitution as JSONata
+                  Expression.</td>
               </tr>
               <tr>
                 <td>Target template <small class="text-muted">(external broker)</small></td>
@@ -1675,7 +2084,7 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
 
         <h4 class="p-t-16 p-b-8">Statistic processed (Inbound / Outbound)</h4>
         <div class="p-b-8 text-16">
-          This view shows one row per active mapping in a data grid. The columns are:
+          This view shows one row per mapping in a data grid. The columns are:
         </div>
         <div class="table-responsive table-width-100">
           <table class="table table-striped" style="table-layout: fixed;">

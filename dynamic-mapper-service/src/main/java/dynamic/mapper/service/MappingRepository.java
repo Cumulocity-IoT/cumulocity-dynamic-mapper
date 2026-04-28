@@ -211,7 +211,7 @@ public class MappingRepository {
                         tenant, moId);
 
                 mapping.setMappingType(MappingType.JSON);
-                mapping.setTransformationType(TransformationType.SUBSTITUTION_AS_CODE);
+                mapping.setTransformationType(TransformationType.SMART_FUNCTION);
 
                 try {
                     // Persist the migrated mapping - now through MappingService with proper scope

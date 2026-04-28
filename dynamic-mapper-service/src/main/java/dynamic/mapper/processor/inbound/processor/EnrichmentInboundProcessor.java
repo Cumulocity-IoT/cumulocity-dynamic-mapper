@@ -80,14 +80,7 @@ public class EnrichmentInboundProcessor extends AbstractEnrichmentProcessor {
                         (dynamic.mapper.processor.model.SmartFunctionContext) flowContext;
                 sfContext.setClientId(context.getClientId());
 
-                Map<String, Object> config = new HashMap<>();
-                config.put("tenant", tenant);
-                config.put("topic", context.getTopic());
-                config.put("clientId", context.getClientId());
-                config.put("mappingName", mapping.getName());
-                config.put("mappingId", mapping.getId());
-                config.put("targetAPI", mapping.getTargetAPI().toString());
-                config.put(ProcessingContext.DEBUG, mapping.getDebug());
+                Map<String, Object> config = buildBaseSmartFunctionConfig(context);
 
                 if (context.getMapping().getEventWithAttachment()) {
                     config.put(ProcessingContext.ATTACHMENT_TYPE, "");

@@ -58,7 +58,7 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 
 @Slf4j
 @Component
-public class SubstitutionOutboundProcessor extends BaseProcessor {
+public class SubstitutionResultOutboundProcessor extends BaseProcessor {
 
     @Autowired
     private C8YAgent c8yAgent;

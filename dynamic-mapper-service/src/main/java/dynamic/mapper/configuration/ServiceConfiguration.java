@@ -65,6 +65,7 @@ public class ServiceConfiguration implements Cloneable {
         this.smartFunctionAgent = null;
         this.flowStateRetention = 1440;
         this.supportESM = false;
+        this.cacheAliasMaps = false;
     }
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Enable logging of message payloads for debugging purposes. Caution: May expose sensitive data in logs.", example = "false")
@@ -154,7 +155,9 @@ public class ServiceConfiguration implements Cloneable {
     @JsonSetter(nulls = Nulls.SKIP)
     private String jsonataAgent;
 
-    @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "Name of javaScript agent to be used when generating substitutions as JavaScript code. The needs to be defined in the AI Agent Manager.", example = "javaScriptAgent")
+    /** @deprecated Substitution As Code is no longer supported. This field is kept for backward compatibility with existing tenant configurations. */
+    @Deprecated(since = "6.3", forRemoval = false)
+    @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "Deprecated: Name of javaScript agent for Substitution As Code (no longer supported). Kept for backward compatibility.", example = "javaScriptAgent")
     @JsonSetter(nulls = Nulls.SKIP)
     private String javaScriptAgent;
 
@@ -179,4 +182,9 @@ public class ServiceConfiguration implements Cloneable {
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     private Boolean supportESM;
+
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Automatically include the sparkPlugB_NBIRTH and sparkPlugB_DBIRTH fragments in the inventory cache for all cached managed objects. When enabled, these fragments are cached transparently alongside the fragments listed in inventoryFragmentsToCache, without requiring them to be added to that list manually.", example = "false")
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    private Boolean cacheAliasMaps;
 }

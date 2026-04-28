@@ -336,9 +336,6 @@ public class BootstrapService {
                     if (TransformationType.SMART_FUNCTION.equals(mapping.getTransformationType())) {
                         String id = Mapping.SMART_FUNCTION_NAME + "_" + mapping.getIdentifier();
                         result.put(id + ".js", code);
-                    } else if (TransformationType.SUBSTITUTION_AS_CODE.equals(mapping.getTransformationType())) {
-                        String id = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.getIdentifier();
-                        result.put(id + ".js", code);
                     }
                 } catch (Exception e) {
                     log.warn("{} - Could not prepare mapping code for warm-up [{}]: {}", tenant,

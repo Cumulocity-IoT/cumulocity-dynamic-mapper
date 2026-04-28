@@ -83,6 +83,19 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
       this.currentPage = 'main';
     }
 
+    // For section paths that live inside the 'main' overview page (e.g. /landing/sparkplugb),
+    // extract the last path segment and use it as a scroll target after the view renders.
+    const sectionPaths = [
+      'overview', 'getting-started', 'managing-connectors', 'define-mapping',
+      'sparkplugb', 'define-subscription-for-outbound', 'transformation-types',
+      'flow-state', 'code-templates', 'metadata', 'unknown-payload',
+      'reliability-settings', 'access-control', 'monitoring', 'troubleshooting'
+    ];
+    const lastSegment = path.split('/').pop() || '';
+    if (sectionPaths.includes(lastSegment)) {
+      setTimeout(() => { this.scrollToElement(lastSegment); }, 200);
+    }
+
     this.clearSearch();
     this.highlightApplied = false;
 
@@ -91,32 +104,6 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
         setTimeout(() => { this.scrollToElement(fragment); }, 150);
       }
     });
-
-    if (this.currentPage === 'main') {
-      const pathToFragmentMap: { [key: string]: string } = {
-        'overview': 'overview',
-        'getting-started': 'getting-started',
-        'managing-connectors': 'managing-connectors',
-        'define-mapping': 'define-mapping',
-        'define-subscription-for-outbound': 'define-subscription-for-outbound',
-        'transformation-types': 'transformation-types',
-        'flow-state': 'flow-state',
-        'code-templates': 'code-templates',
-        'metadata': 'metadata',
-        'unknown-payload': 'unknown-payload',
-        'reliability-settings': 'reliability-settings',
-        'access-control': 'access-control',
-        'monitoring': 'monitoring',
-        'troubleshooting': 'troubleshooting'
-      };
-      const pathSegment = path.split('/').pop() || '';
-      const fragmentId = pathToFragmentMap[pathSegment];
-      if (fragmentId) {
-        setTimeout(() => { this.scrollToElement(fragmentId); }, 300);
-      } else {
-        setTimeout(() => { window.scrollTo(0, 0); }, 0);
-      }
-    }
   }
 
   onSearch(): void {

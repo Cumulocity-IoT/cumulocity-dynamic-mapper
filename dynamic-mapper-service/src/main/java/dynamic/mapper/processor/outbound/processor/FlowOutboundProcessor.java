@@ -51,18 +51,18 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Component
-public class FlowProcessorOutboundProcessor extends AbstractFlowProcessor {
+public class FlowOutboundProcessor extends AbstractFlowProcessor {
 
     @Autowired
     private C8YAgent c8yAgent;
 
-    public FlowProcessorOutboundProcessor(MappingService mappingService) {
+    public FlowOutboundProcessor(MappingService mappingService) {
         super(mappingService);
     }
 
     @Override
     protected String getProcessorName() {
-        return "FlowProcessorOutboundProcessor";
+        return "FlowOutboundProcessor";
     }
 
     @Override

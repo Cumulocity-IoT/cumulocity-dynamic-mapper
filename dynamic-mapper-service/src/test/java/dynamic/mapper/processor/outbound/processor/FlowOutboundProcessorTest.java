@@ -60,7 +60,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-class FlowProcessorOutboundProcessorTest {
+class FlowOutboundProcessorTest {
 
     @Mock
     private MappingService mappingService;
@@ -87,7 +87,7 @@ class FlowProcessorOutboundProcessorTest {
     private Value resultValue;
 
     @InjectMocks
-    private FlowProcessorOutboundProcessor processor;
+    private FlowOutboundProcessor processor;
 
     private static final String TEST_TENANT = "testTenant";
     private static final String TEST_DEVICE_ID = "6926746";

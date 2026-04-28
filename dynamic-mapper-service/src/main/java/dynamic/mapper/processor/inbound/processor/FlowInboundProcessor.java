@@ -25,15 +25,15 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Component
-public class FlowProcessorInboundProcessor extends AbstractFlowProcessor {
+public class FlowInboundProcessor extends AbstractFlowProcessor {
 
-    public FlowProcessorInboundProcessor(MappingService mappingService) {
+    public FlowInboundProcessor(MappingService mappingService) {
         super(mappingService);
     }
 
     @Override
     protected String getProcessorName() {
-        return "FlowProcessorInboundProcessor";
+        return "FlowInboundProcessor";
     }
 
     @Override

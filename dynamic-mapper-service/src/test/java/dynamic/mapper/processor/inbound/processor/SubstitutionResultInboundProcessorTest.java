@@ -71,7 +71,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-class SubstitutionInboundProcessorTest {
+class SubstitutionResultInboundProcessorTest {
 
     @Mock
     private MappingService mappingService;
@@ -94,7 +94,7 @@ class SubstitutionInboundProcessorTest {
     @Mock
     private MappingResolverService mappingResolverService;
 
-    private SubstitutionInboundProcessor processor;
+    private SubstitutionResultInboundProcessor processor;
 
     private static final String TEST_TENANT = "testTenant";
     private static final String TEST_DEVICE_ID = "test-c8y-device-id";
@@ -107,7 +107,7 @@ class SubstitutionInboundProcessorTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        processor = new SubstitutionInboundProcessor();
+        processor = new SubstitutionResultInboundProcessor();
         injectDependencies();
 
         mapping = createCompleteMapping();
@@ -157,7 +157,7 @@ class SubstitutionInboundProcessorTest {
     }
 
     private void injectField(String fieldName, Object value) throws Exception {
-        Field field = SubstitutionInboundProcessor.class.getDeclaredField(fieldName);
+        Field field = SubstitutionResultInboundProcessor.class.getDeclaredField(fieldName);
         field.setAccessible(true);
         field.set(processor, value);
     }

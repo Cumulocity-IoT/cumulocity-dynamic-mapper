@@ -33,6 +33,8 @@ import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.AbstractFlowResultProcessor;
+import dynamic.mapper.processor.model.MappingType;
+import dynamic.mapper.processor.outbound.serializer.SparkPlugBSerializer;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.CumulocityObject;
 import dynamic.mapper.processor.model.DeviceMessage;
@@ -168,10 +170,14 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
 
     protected static final String EXTERNAL_ID_TOKEN = "_externalId_";
 
+    private final SparkPlugBSerializer sparkPlugBSerializer;
+
     public FlowResultOutboundProcessor(
             MappingService mappingService,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            SparkPlugBSerializer sparkPlugBSerializer) {
         super(mappingService, objectMapper);
+        this.sparkPlugBSerializer = sparkPlugBSerializer;
     }
 
     @Override
@@ -271,6 +277,19 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             DynamicMapperRequest request = ProcessingResultHelper.createDynamicMapperRequest(
                     context.getDeviceContext(), context.getRoutingContext(), payloadJson,
                     deviceMessage.getAction(), mapping);
+
+            // For SparkPlug B outbound, serialize payload to proto binary bytes
+            if (MappingType.SPARKPLUGB.equals(mapping.getMappingType())) {
+                try {
+                    byte[] protoBytes = sparkPlugBSerializer.serialize(payload);
+                    request.setBinaryPayload(protoBytes);
+                    log.debug("{} - SparkPlugB outbound: serialized {} bytes for topic {}",
+                            tenant, protoBytes.length, deviceMessage.getTopic());
+                } catch (Exception serEx) {
+                    throw new ProcessingException(
+                            "Failed to serialize SparkPlugB payload: " + serEx.getMessage(), serEx);
+                }
+            }
             // Add to thread-safe output collector (syncOutputToContext copies to context.requests once)
             output.addRequest(request);
 

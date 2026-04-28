@@ -21,14 +21,17 @@
 package dynamic.mapper.processor.outbound.processor;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.springframework.stereotype.Component;
 
+import static dynamic.mapper.model.Substitution.toPrettyJsonString;
+
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
@@ -37,6 +40,9 @@ import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.AbstractEnrichmentProcessor;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.flow.JavaExtensionContextImpl;
+import dynamic.mapper.processor.inbound.deserializer.SparkPlugBDeserializer;
+import dynamic.mapper.processor.model.MappingType;
+import dynamic.mapper.processor.model.SmartFunctionContext;
 import dynamic.mapper.processor.model.DataPrepContext;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.TransformationType;
@@ -51,6 +57,9 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 @Slf4j
 public class EnrichmentOutboundProcessor extends AbstractEnrichmentProcessor {
+
+    /** Container for SparkPlug B MO state loaded in a single fetch. */
+    private record SparkPlugBContext(Map<String, String> aliasMap, boolean isActive) {}
 
     private final C8YAgent c8yAgent;
 
@@ -107,23 +116,28 @@ public class EnrichmentOutboundProcessor extends AbstractEnrichmentProcessor {
 
         // Declared here so externalId can be added after resolution below
         Map<String, Object> config = null;
-        dynamic.mapper.processor.model.SmartFunctionContext sfContext = null;
+        SmartFunctionContext sfContext = null;
         JavaExtensionContextImpl javaExtContext = null;
 
         if (isSmartFunction) {
-            if (flowContext instanceof dynamic.mapper.processor.model.SmartFunctionContext) {
-                sfContext = (dynamic.mapper.processor.model.SmartFunctionContext) flowContext;
+            if (flowContext instanceof SmartFunctionContext) {
+                sfContext = (SmartFunctionContext) flowContext;
 
-                config = new HashMap<>();
-                config.put("tenant", tenant);
-                config.put("topic", context.getTopic());
-                config.put("clientId", context.getClientId());
-                config.put("mappingName", mapping.getName());
-                config.put("mappingId", mapping.getId());
-                config.put("targetAPI", mapping.getTargetAPI().toString());
-                config.put(ProcessingContext.DEBUG, mapping.getDebug());
+                config = buildBaseSmartFunctionConfig(context);
                 config.put(ProcessingContext.RETAIN, false);
                 // externalId is added below after resolution
+
+                // For SparkPlug B outbound: expose the alias map (metric name → alias) so the
+                // JS function can include the correct alias in the NCMD/DCMD metric payload.
+                // The alias map is stored on the device/edge-node MO as sparkPlugB_NBIRTH or
+                // sparkPlugB_DBIRTH during inbound BIRTH processing.
+                if (MappingType.SPARKPLUGB.equals(mapping.getMappingType())) {
+                    SparkPlugBContext spbCtx = loadSparkPlugBContext(tenant, sourceId.toString(), context.getTesting());
+                    config.put("aliasMap", spbCtx.aliasMap());
+                    config.put("isActive", spbCtx.isActive());
+                    log.debug("{} - SparkPlugB context: aliasMap={} entries, isActive={} for sourceId={}",
+                            tenant, spbCtx.aliasMap().size(), spbCtx.isActive(), sourceId);
+                }
             } else if (flowContext instanceof JavaExtensionContextImpl) {
                 javaExtContext = (JavaExtensionContextImpl) flowContext;
                 // externalId is set directly on javaExtContext below after resolution
@@ -208,25 +222,59 @@ public class EnrichmentOutboundProcessor extends AbstractEnrichmentProcessor {
     }
 
     /**
-     * Convert payload object to pretty JSON string for logging
+     * Loads SparkPlug B state from the managed object in a <em>single</em> REST call.
+     * Returns both the inverted alias map ({@code name → alias}) and the
+     * {@code sparkPlugB_isActive} flag so the caller avoids two separate fetches.
+     *
+     * <p>The NBIRTH fragment is checked first (edge-node NCMD); if absent, DBIRTH
+     * is used (device DCMD).
+     *
+     * @param tenant   the tenant identifier
+     * @param sourceId internal C8Y managed object ID
+     * @param testing  testing flag passed through to C8YAgent
+     * @return a {@link SparkPlugBContext} with the alias map and isActive flag
      */
-    private String toPrettyJsonString(Object payloadObject) {
-        ObjectMapper objectMapper = configurationRegistry.getObjectMapper();
+    private SparkPlugBContext loadSparkPlugBContext(String tenant, String sourceId, Boolean testing) {
+        Map<String, String> nameToAlias = new LinkedHashMap<>();
+        boolean isActive = true; // default: assume active until a DEATH message is received
         try {
-            if (payloadObject == null) {
-                return "null";
+            ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(tenant, sourceId, testing);
+            if (mor == null) {
+                return new SparkPlugBContext(nameToAlias, isActive);
             }
 
-            if (payloadObject instanceof String) {
-                return (String) payloadObject;
+            // ── isActive flag ──────────────────────────────────────────────────
+            Object activeVal = mor.get(SparkPlugBDeserializer.SPARKPLUGB_IS_ACTIVE_FRAGMENT);
+            if (activeVal instanceof Boolean) {
+                isActive = (Boolean) activeVal;
             }
 
-            // Use ObjectMapper to convert to pretty JSON
-            return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(payloadObject);
-
+            // ── alias map ─────────────────────────────────────────────────────
+            // Try NBIRTH first (edge-node NCMD), then DBIRTH (device DCMD)
+            Object fragment = mor.get(SparkPlugBDeserializer.SPARKPLUGB_NBIRTH_FRAGMENT);
+            if (!(fragment instanceof Map)) {
+                fragment = mor.get(SparkPlugBDeserializer.SPARKPLUGB_DBIRTH_FRAGMENT);
+            }
+            if (fragment instanceof Map) {
+                @SuppressWarnings("rawtypes")
+                Map rawMap = (Map) fragment;
+                for (Object key : rawMap.keySet()) {
+                    Object val = rawMap.get(key);
+                    if (!(val instanceof Map)) continue;
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> def = (Map<String, Object>) val;
+                    Object name = def.get("name");
+                    if (name != null && !name.toString().isEmpty()) {
+                        nameToAlias.put(name.toString(), key.toString());
+                    }
+                }
+            } else {
+                log.debug("{} - No SparkPlugB birth fragment found on MO {} for alias resolution", tenant, sourceId);
+            }
         } catch (Exception e) {
-            log.warn("Failed to convert payload to pretty JSON string: {}", e.getMessage());
-            return payloadObject != null ? payloadObject.toString() : "null";
+            log.warn("{} - Failed to load SparkPlugB context for sourceId={}: {}", tenant, sourceId, e.getMessage());
         }
+        return new SparkPlugBContext(nameToAlias, isActive);
     }
+
 }

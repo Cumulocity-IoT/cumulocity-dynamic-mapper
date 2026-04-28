@@ -41,9 +41,9 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Component
-public class JSONataExtractionOutboundProcessor extends AbstractJSONataExtractionProcessor {
+public class JSONataOutboundProcessor extends AbstractJSONataExtractionProcessor {
 
-    public JSONataExtractionOutboundProcessor(MappingService mappingService) {
+    public JSONataOutboundProcessor(MappingService mappingService) {
         super(mappingService);
     }
 
@@ -66,7 +66,7 @@ public class JSONataExtractionOutboundProcessor extends AbstractJSONataExtractio
     @Override
     protected void handleProcessingError(Exception e, ProcessingContext<?> context, String tenant, Mapping mapping) {
         String errorMessage = String.format(
-                "Tenant %s - Error in JSONataExtractionOutboundProcessor for mapping: %s,",
+                "Tenant %s - Error in JSONataOutboundProcessor for mapping: %s,",
                 tenant, mapping.getName());
         log.error(errorMessage, e);
         MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);

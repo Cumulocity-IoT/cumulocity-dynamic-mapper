@@ -54,13 +54,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.model.API;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
-import dynamic.mapper.processor.inbound.processor.JSONataExtractionInboundProcessor;
-import dynamic.mapper.processor.inbound.processor.SubstitutionInboundProcessor;
-import dynamic.mapper.processor.model.DynamicMapperRequest;
+import dynamic.mapper.processor.inbound.processor.JSONataInboundProcessor;
+import dynamic.mapper.processor.inbound.processor.SubstitutionResultInboundProcessor;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.SubstituteValue;
 import dynamic.mapper.service.MappingService;
@@ -96,8 +94,8 @@ class MappingInboundExecutionIntegrationTest {
     @Mock
     private Message message;
 
-    private JSONataExtractionInboundProcessor jsonataProcessor;
-    private SubstitutionInboundProcessor substitutionProcessor;
+    private JSONataInboundProcessor jsonataProcessor;
+    private SubstitutionResultInboundProcessor substitutionProcessor;
 
     private ObjectMapper objectMapper;
     private List<Mapping> inboundMappings;
@@ -114,8 +112,8 @@ class MappingInboundExecutionIntegrationTest {
         log.info("Loaded {} inbound mappings for execution tests", inboundMappings.size());
 
         // Create processors
-        jsonataProcessor = new JSONataExtractionInboundProcessor(mappingService);
-        substitutionProcessor = new SubstitutionInboundProcessor();
+        jsonataProcessor = new JSONataInboundProcessor(mappingService);
+        substitutionProcessor = new SubstitutionResultInboundProcessor();
 
         // Inject dependencies via reflection
         injectField(substitutionProcessor, "c8yAgent", c8yAgent);
