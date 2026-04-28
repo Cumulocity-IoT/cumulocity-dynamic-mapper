@@ -102,7 +102,9 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
             <strong>Important Configuration:</strong> Only device fragments configured in <a
               [routerLink]="ROUTE_SERVICE_CONFIGURATION"> <b>Configuration → Service
                 Configuration → Function → Fragments from inventory to cache</b></a> can be referenced in Smart
-            Functions.
+            Functions. Each entry can be an exact fragment name or a glob pattern using <code>*</code> (any sequence)
+            and <code>?</code> (single character), e.g. <code>sparkPlugB_DBIRTH_*</code> to cache all fragments
+            whose name starts with <code>sparkPlugB_DBIRTH_</code>.
             Make sure to add all required fragments to this list before using them in your code.
           </div>
         </div>

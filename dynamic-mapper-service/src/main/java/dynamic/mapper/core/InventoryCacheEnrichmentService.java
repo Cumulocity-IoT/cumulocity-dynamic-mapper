@@ -216,10 +216,51 @@ public class InventoryCacheEnrichmentService {
             return;
         }
 
+        // Glob pattern: match all attrs keys that fit the pattern
+        if (isGlobPattern(frag)) {
+            for (String key : attrs.keySet()) {
+                if (matchesGlob(frag, key)) {
+                    Object value = attrs.get(key);
+                    if (value != null) {
+                        newMO.put(key, value);
+                    }
+                }
+            }
+            return;
+        }
+
         Object value = resolveNestedAttribute(attrs, frag);
         if (value != null) {
             newMO.put(frag, value);
         }
+    }
+
+    private boolean isGlobPattern(String frag) {
+        return frag != null && (frag.contains("*") || frag.contains("?"));
+    }
+
+    /**
+     * Matches a glob pattern (supporting {@code *} for any sequence and {@code ?}
+     * for a single character) against a candidate string.
+     */
+    private boolean matchesGlob(String pattern, String candidate) {
+        // Convert glob to regex: escape regex metacharacters except * and ?,
+        // then replace * -> .* and ? -> .
+        String regex = pattern
+                .replace(".", "\\.")
+                .replace("(", "\\(")
+                .replace(")", "\\)")
+                .replace("[", "\\[")
+                .replace("]", "\\]")
+                .replace("{", "\\{")
+                .replace("}", "\\}")
+                .replace("^", "\\^")
+                .replace("$", "\\$")
+                .replace("+", "\\+")
+                .replace("|", "\\|")
+                .replace("?", ".")
+                .replace("*", ".*");
+        return candidate.matches(regex);
     }
 
     private Object resolveNestedAttribute(Map<String, Object> attrs, String path) {

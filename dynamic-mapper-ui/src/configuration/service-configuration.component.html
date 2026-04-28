@@ -462,7 +462,11 @@
                 <p>{{ 'Fragments from inventory to cache' | translate }}</p>
                 <p>
                   <small translate>The listed fragments will be cached and can be referenced in
-                    'filterInventory'</small>
+                    'filterInventory'. Each entry can be an exact fragment name (e.g. <code>type</code>,
+                    <code>c8y_Hardware</code>) or a glob pattern using <code>*</code> (any sequence of
+                    characters) and <code>?</code> (single character), e.g.
+                    <code>sparkPlugB_DBIRTH_*</code> to cache all fragments whose name starts with
+                    <code>sparkPlugB_DBIRTH_</code>.</small>
                 </p>
               </div>
               <div style="flex:0 0 350px">
@@ -471,7 +475,7 @@
                     <li class="m-b-8">
                       <c8y-input-group-list [index]="i" (onAdd)="addFragment()" (onRemove)="removeFragment($event)" [minus]="inventoryFragmentsList.length > 0">
                         <div style="width:100%">
-                          <input class="form-control" placeholder="e.g. type" type="text"
+                          <input class="form-control" placeholder="e.g. type, c8y_Hardware, sparkPlugB_DBIRTH_*" type="text"
                             [(ngModel)]="inventoryFragmentsList[i]" [ngModelOptions]="{standalone: true}" />
                         </div>
                       </c8y-input-group-list>

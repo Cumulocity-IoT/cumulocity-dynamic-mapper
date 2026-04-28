@@ -2218,7 +2218,7 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
             <strong>Clear external ID cache</strong> — removes all cached external-ID-to-internal-ID resolutions. Use this after deleting or re-registering a device to prevent stale identity lookups. The cache is rebuilt automatically as new messages arrive.
           </li>
           <li>
-            <strong>Clear inventory cache</strong> — removes all cached managed object fragments. Use this after updating a device's managed object directly in Cumulocity (outside the mapper) so the mapper picks up the latest values. The fragments you configured under <strong>Service Configuration → Function → Fragments from inventory to cache</strong> are re-fetched on demand.
+            <strong>Clear inventory cache</strong> — removes all cached managed object fragments. Use this after updating a device's managed object directly in Cumulocity (outside the mapper) so the mapper picks up the latest values. The fragments you configured under <strong>Service Configuration → Function → Fragments from inventory to cache</strong> are re-fetched on demand. Entries can be exact fragment names or glob patterns (e.g. <code>sparkPlugB_DBIRTH_*</code>).
           </li>
           <li>
             <strong>Reload</strong> — refreshes the KPI cards without clearing the caches, useful to get an up-to-date snapshot of the current fill levels.
@@ -2279,7 +2279,7 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
           <li><strong>"Device not found"</strong> — the <code>externalId</code> returned by your mapping does not match any registered device. Enable <strong>Create non-existing devices</strong> on the mapping or pre-register the device in Cumulocity.</li>
           <li><strong>"Cannot evaluate expression"</strong> (JSONata) — the JSONata expression references a field that is missing or null in the source payload. Add a null-guard, e.g. <code>payload.value ? payload.value : 0</code>.</li>
           <li><strong>Smart Function throws a JavaScript exception</strong> — the full stack trace is shown in the Event Log. Use <code>console.log()</code> in your function to emit diagnostic output visible in the Event Log.</li>
-          <li><strong>"Fragment not found in cache"</strong> — the managed object fragment accessed via <code>context.getManagedObject()</code> is not in the <a [routerLink]="ROUTE_SERVICE_CONFIGURATION"><strong>Fragments from inventory to cache</strong></a> list. Add the fragment name and restart the mapper or wait for the cache to refresh.</li>
+          <li><strong>"Fragment not found in cache"</strong> — the managed object fragment accessed via <code>context.getManagedObject()</code> is not in the <a [routerLink]="ROUTE_SERVICE_CONFIGURATION"><strong>Fragments from inventory to cache</strong></a> list. Add the exact fragment name or a matching glob pattern (e.g. <code>sparkPlugB_DBIRTH_*</code>) and clear the inventory cache or wait for it to refresh.</li>
         </ul>
         <h4 class="p-t-16 p-b-8">Outbound mapping does not trigger</h4>
         <ul class="text-16 p-b-8">
@@ -2295,7 +2295,7 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
             and click <strong>Clear inventory cache</strong> to force a refresh.</li>
           <li>Ensure the required fragment is listed in
             <a [routerLink]="ROUTE_SERVICE_CONFIGURATION"><strong>Service Configuration → Function → Fragments from inventory to cache</strong></a>.
-            Only listed fragments are loaded into the cache.</li>
+            Only listed fragments (or fragments matching a configured glob pattern, e.g. <code>sparkPlugB_DBIRTH_*</code>) are loaded into the cache.</li>
         </ul>
         <h4 class="p-t-16 p-b-8">Connector disconnects repeatedly</h4>
         <ul class="text-16 p-b-8">

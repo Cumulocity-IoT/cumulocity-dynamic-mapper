@@ -137,7 +137,7 @@ public class ServiceConfiguration implements Cloneable {
     @JsonSetter(nulls = Nulls.SKIP)
     private Integer inventoryCacheRetention;
 
-    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "List of inventory fragments to include in cache for better performance. Examples: c8y_IsDevice, c8y_Hardware, c8y_Mobile", example = "[\"c8y_IsDevice\", \"c8y_Hardware\", \"c8y_Mobile\"]")
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "List of inventory fragments to include in cache for better performance. Entries are exact fragment names or glob patterns using '*' (any sequence) and '?' (single character). Examples: c8y_IsDevice, c8y_Hardware, sparkPlugB_DBIRTH_*", example = "[\"c8y_IsDevice\", \"c8y_Hardware\", \"sparkPlugB_DBIRTH_*\"]")
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     private List<String> inventoryFragmentsToCache;
