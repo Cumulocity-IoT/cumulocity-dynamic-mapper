@@ -95,7 +95,7 @@ public class SparkplugCertificateManager {
             String topic = buildStateTopicName();
             byte[] payload = buildCertificatePayload(true);
             publisher.publishCertificate(topic, payload);
-            log.info("{} - Published Sparkplug Birth Certificate to topic: [{}]", tenant, topic);
+            log.debug("{} - Published Sparkplug Birth Certificate to topic: [{}]", tenant, topic);
             return true;
         } catch (Exception e) {
             log.error("{} - Error publishing Sparkplug Birth Certificate", tenant, e);
