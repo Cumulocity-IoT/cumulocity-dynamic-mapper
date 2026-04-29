@@ -53,7 +53,7 @@ import java.util.Map;
  * For NBIRTH/DBIRTH messages the decoded payload is returned as-is (all metrics
  * carry full name and data-type information). The caller (
  * {@code SendInboundProcessor}) is responsible for persisting the NBIRTH/DBIRTH
- * payload as the {@value C8YAgent#SPARKPLUGB_NBIRTH_FRAGMENT} fragment on the
+ * payload as the {@value #SPARKPLUGB_NBIRTH_FRAGMENT} fragment on the
  * managed object so that subsequent NDATA/DDATA messages can resolve metric
  * aliases back to their original names.
  * <p>
@@ -77,11 +77,30 @@ public class SparkPlugBDeserializer implements PayloadDeserializer<Object> {
     public static final String SPARKPLUGB_NBIRTH_FRAGMENT = "sparkPlugB_NBIRTH";
 
     /**
-     * Fragment key used to store the DBIRTH alias→definition map on a
-     * <b>Device</b> managed object (type {@code spark_Device}).
+     * Fragment key prefix used to store the DBIRTH alias→definition map on the
+     * <b>Edge Node</b> managed object. The full key is {@code sparkPlugB_DBIRTH_<sparkplugDeviceId>}.
      * Retrieved when decoding subsequent DDATA / DCMD messages.
+     * Stored on the NODE MO so that no separate device MO is required per DBIRTH.
      */
+    public static final String SPARKPLUGB_DBIRTH_FRAGMENT_PREFIX = "sparkPlugB_DBIRTH_";
+
+    /**
+     * @deprecated Use {@link #getDbBirthFragmentKey(String)} to get the device-specific fragment key.
+     */
+    @Deprecated
     public static final String SPARKPLUGB_DBIRTH_FRAGMENT = "sparkPlugB_DBIRTH";
+
+    /**
+     * Returns the fragment key used to store the DBIRTH alias map for the given SparkPlug device ID
+     * on the <b>Edge Node</b> managed object.
+     * Format: {@code sparkPlugB_DBIRTH_<sparkplugDeviceId>}
+     *
+     * @param sparkplugDeviceId the SparkPlug B Device ID (last segment of the topic)
+     * @return the full fragment key
+     */
+    public static String getDbBirthFragmentKey(String sparkplugDeviceId) {
+        return SPARKPLUGB_DBIRTH_FRAGMENT_PREFIX + sparkplugDeviceId;
+    }
 
     /**
      * Fragment key used to track the active/online status of an Edge Node or Device.
@@ -130,12 +149,15 @@ public class SparkPlugBDeserializer implements PayloadDeserializer<Object> {
             aliasToMetricDef = loadAliasMap(tenant, mapping, edgeNodeExternalId,
                     SPARKPLUGB_NBIRTH_FRAGMENT);
         } else if ("DDATA".equals(msgType) || "DCMD".equals(msgType)) {
-            // Device ID must be present for device-level messages
+            // Device ID must be present for device-level messages.
+            // Per new design: DBIRTH alias maps are stored on the NODE MO with a device-specific
+            // fragment key (sparkPlugB_DBIRTH_<deviceId>). Load from the Edge Node, not the Device MO.
             String devId = sparkplugTopic.getDeviceId();
             if (devId != null) {
-                // ExternalId for a Device is [Group ID]_[Edge Node ID]_[Device ID]
-                String deviceExternalId = sparkplugTopic.getGroupId() + "_" + sparkplugTopic.getEdgeNodeId() + "_" + devId;
-                aliasToMetricDef = loadAliasMap(tenant, mapping, deviceExternalId, SPARKPLUGB_DBIRTH_FRAGMENT);
+                // ExternalId for the Edge Node is [Group ID]_[Edge Node ID]
+                String edgeNodeExternalId = sparkplugTopic.getGroupId() + "_" + sparkplugTopic.getEdgeNodeId();
+                aliasToMetricDef = loadAliasMap(tenant, mapping, edgeNodeExternalId,
+                        getDbBirthFragmentKey(devId));
             } else {
                 log.warn("{} - DDATA/DCMD message on topic '{}' has no Device ID; alias resolution skipped",
                         tenant, topic);
