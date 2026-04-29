@@ -204,7 +204,9 @@ public class FlowOutboundProcessor extends AbstractFlowProcessor {
 
     /**
      * Process a single message element and add it to the output list.
-     * Handles DeviceMessage types for outbound processing.
+     * Objects with a {@code cumulocityType} property are converted to
+     * {@link dynamic.mapper.processor.model.CumulocityObject} (e.g. custom routing);
+     * all other objects are treated as {@link dynamic.mapper.processor.model.DeviceMessage}.
      */
     private void processMessageElement(Value element, List<Object> outputMessages, String tenant) {
         if (element == null || element.isNull()) {
@@ -213,10 +215,17 @@ public class FlowOutboundProcessor extends AbstractFlowProcessor {
         }
 
         try {
-            // always use DeviceMessage for outbound
-            DeviceMessage deviceMsg = JavaScriptInteropHelper.convertToDeviceMessage(element);
-            outputMessages.add(deviceMsg);
-            log.debug("{} - Processed DeviceMessage: topic={}", tenant, deviceMsg.getTopic());
+            if (JavaScriptInteropHelper.isCumulocityObject(element)) {
+                // e.g. cumulocityType: "custom" — route to processCumulocityObject
+                var cumulocityObj = JavaScriptInteropHelper.convertToCumulocityObject(element);
+                outputMessages.add(cumulocityObj);
+                log.debug("{} - Processed CumulocityObject: type={}", tenant, cumulocityObj.getCumulocityType());
+            } else {
+                // default outbound path
+                DeviceMessage deviceMsg = JavaScriptInteropHelper.convertToDeviceMessage(element);
+                outputMessages.add(deviceMsg);
+                log.debug("{} - Processed DeviceMessage: topic={}", tenant, deviceMsg.getTopic());
+            }
         } catch (Exception e) {
             log.error("{} - Error processing message element: {}", tenant, e.getMessage(), e);
         }

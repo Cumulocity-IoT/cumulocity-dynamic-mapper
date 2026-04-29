@@ -141,6 +141,14 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       priority: 604,
       preventDuplicates: true
     }),
+    customRoutingNode: new NavigatorNode({
+      parent: gettext('Transformation Types'),
+      icon: 'empty',
+      label: gettext('Custom Routing'),
+      path: '/c8y-pkg-dynamic-mapper/landing/custom-routing',
+      priority: 603.5,
+      preventDuplicates: true
+    }),
     flowStateNode: new NavigatorNode({
       parent: gettext('Introduction'),
       icon: 'empty',

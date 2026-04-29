@@ -189,7 +189,9 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
 
     const decoded = base64ToString(template.code);
     const exportStatement = `export { ${exportName} };`;
-    if (decoded.includes(exportStatement)) return template;
+    // Match any spacing variant: "export {onMessage}" or "export { onMessage }"
+    const exportPattern = new RegExp(`export\\s*\\{\\s*${exportName}\\s*\\}`);
+    if (exportPattern.test(decoded)) return template;
 
     const patched =
       decoded.trimEnd() +

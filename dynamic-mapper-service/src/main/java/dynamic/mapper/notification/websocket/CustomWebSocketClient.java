@@ -118,7 +118,7 @@ public class CustomWebSocketClient extends WebSocketClient {
                                 for (DynamicMapperRequest r : resultRequests) {
                                     if (r.hasError()) {
                                         Throwable e = r.getError();
-                                        while (!(e instanceof ProcessingException) && e != e.getCause()) {
+                                        while (!(e instanceof ProcessingException) && e.getCause() != null && e != e.getCause()) {
                                             e = e.getCause();
                                         }
                                         if (e instanceof ProcessingException) {

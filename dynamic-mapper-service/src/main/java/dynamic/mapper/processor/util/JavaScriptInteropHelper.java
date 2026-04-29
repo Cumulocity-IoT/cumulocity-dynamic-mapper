@@ -117,6 +117,9 @@ public class JavaScriptInteropHelper {
         if (value.hasMember("sourceId") && !value.getMember("sourceId").isNull()) {
             msg.setSourceId(value.getMember("sourceId").asString());
         }
+        if (value.hasMember("targetPath") && !value.getMember("targetPath").isNull()) {
+            msg.setTargetPath(value.getMember("targetPath").asString());
+        }
 
         return msg;
     }

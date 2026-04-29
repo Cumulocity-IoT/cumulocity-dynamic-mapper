@@ -536,6 +536,7 @@ export interface C8yManagedObject {
  * - `CumulocityObject<'alarm'>`       → `payload: C8yAlarm`
  * - `CumulocityObject<'operation'>`   → `payload: C8yOperation`
  * - `CumulocityObject<'managedObject'>` → `payload: C8yManagedObject`
+ * - `CumulocityObject<'custom'>`      → `payload: Record<string, any>` (arbitrary microservice body)
  *
  * When `T` is the full {@link C8yObjectType} union (the default), TypeScript
  * distributes the conditional type, resulting in the union of all domain interfaces.
@@ -546,28 +547,40 @@ export type C8yPayloadTypeMap = {
   alarm: C8yAlarm;
   operation: C8yOperation;
   managedObject: C8yManagedObject;
+  /** Arbitrary body sent to a tenant-local microservice via {@link CumulocityObject.targetPath}. */
+  custom: Record<string, any>;
 };
 
 /**
- * CRUD action to perform on a Cumulocity object, or a custom microservice route.
+ * HTTP verb to use when calling the Cumulocity API or a tenant-local microservice.
  * Used in {@link CumulocityObject.action} and {@link DeviceMessage.action}.
  *
- * - `"create"` – POST to the standard C8Y Core API
- * - `"update"` – PUT to the standard C8Y Core API
- * - `"delete"` – DELETE from the standard C8Y Core API
- * - `"patch"`  – PATCH/PUT to the standard C8Y Core API
- * - `"custom"` – POST to a tenant-local microservice; the target path is taken
- *   from {@link DeviceMessage.topic} or {@link CumulocityObject.targetPath} and
- *   must start with `/service/`
+ * - `"create"` – POST
+ * - `"update"` – PUT
+ * - `"delete"` – DELETE
+ * - `"patch"`  – PATCH
+ *
+ * The routing target (C8Y Core API vs. microservice) is determined by
+ * {@link CumulocityObject.cumulocityType} / {@link DeviceMessage.cumulocityType},
+ * not by this field.
  */
-export type C8yObjectAction = 'create' | 'update' | 'delete' | 'patch' | 'custom';
+export type C8yObjectAction = 'create' | 'update' | 'delete' | 'patch';
 
 /**
  * Cumulocity API object type.
  * Determines which API endpoint is used when processing the object.
  * Used in {@link CumulocityObject.cumulocityType} and {@link DeviceMessage.cumulocityType}.
+ *
+ * - `"measurement"` – POST/GET to `/measurement/measurements`
+ * - `"event"`       – POST/PUT/DELETE to `/event/events`
+ * - `"alarm"`       – POST/PUT/DELETE to `/alarm/alarms`
+ * - `"operation"`   – POST/PUT to `/devicecontrol/operations`
+ * - `"managedObject"` – POST/PUT/DELETE/PATCH to `/inventory/managedObjects`
+ * - `"custom"`      – call a tenant-local microservice; set {@link CumulocityObject.targetPath}
+ *                     or {@link DeviceMessage.topic} to the `/service/…` path.
+ *                     The HTTP method is controlled by {@link C8yObjectAction}.
  */
-export type C8yObjectType = 'measurement' | 'event' | 'alarm' | 'operation' | 'managedObject';
+export type C8yObjectType = 'measurement' | 'event' | 'alarm' | 'operation' | 'managedObject' | 'custom';
 
 /**
  * Details of external Id for advanced device creation scenarios.
@@ -694,23 +707,26 @@ export interface CumulocityObject<
    * - "alarm" - Alarm notifications
    * - "operation" - Device operations/commands
    * - "managedObject" - Inventory/device objects
+   * - "custom" - Tenant-local microservice call; set {@link targetPath} to `/service/…`
    */
   cumulocityType: T;
 
   /**
-   * What kind of operation to perform on this type.
-   * - "create" - Create a new object
-   * - "update" - Update an existing object
-   * - "delete" - Delete an object
-   * - "patch"  - Partially update an object
-   * - "custom" - POST to a tenant-local microservice; set {@link targetPath} to the
-   *              `/service/<name>/...` path to route to
+   * HTTP method to use for this operation.
+   * - "create" - POST (create a new object)
+   * - "update" - PUT (replace an existing object)
+   * - "delete" - DELETE
+   * - "patch"  - PATCH (partial update)
+   *
+   * When {@link cumulocityType} is `"custom"`, this controls the HTTP verb sent
+   * to the tenant-local microservice at {@link targetPath}.
    */
   action: C8yObjectAction;
 
   /**
-   * Target microservice path used when {@link action} is `"custom"`.
+   * Target microservice path used when {@link cumulocityType} is `"custom"`.
    * Must start with `/service/` to ensure requests stay within the tenant.
+   * The HTTP method is determined by {@link action}.
    *
    * @example "/service/my-microservice/api/process"
    * @since 6.3

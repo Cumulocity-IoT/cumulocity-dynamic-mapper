@@ -56,21 +56,5 @@
 <!-- PAGE SWITCHER — each page rendered by its own sub-component                       -->
 <!-- ================================================================================ -->
 <div #docContent>
-  @switch (currentPage) {
-    @case ('main') {
-      <d11r-doc-overview></d11r-doc-overview>
-    }
-    @case ('jsonata') {
-      <d11r-doc-jsonata></d11r-doc-jsonata>
-    }
-    @case ('javascript') {
-      <d11r-doc-javascript></d11r-doc-javascript>
-    }
-    @case ('smartfunction') {
-      <d11r-doc-smartfunction></d11r-doc-smartfunction>
-    }
-    @case ('javaextension') {
-      <d11r-doc-javaextension></d11r-doc-javaextension>
-    }
-  }
+  <router-outlet></router-outlet>
 </div>

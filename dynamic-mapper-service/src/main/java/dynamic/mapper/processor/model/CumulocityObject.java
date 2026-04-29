@@ -121,6 +121,13 @@ public class CumulocityObject {
      */
     private String sourceId;
 
+    /**
+     * For custom routing (cumulocityType == CUSTOM): the relative path of the
+     * tenant-local microservice to call, e.g. {@code /service/my-service/api/endpoint}.
+     * Must start with {@code /service/}. Ignored for all other cumulocityType values.
+     */
+    private String targetPath;
+
     // ==================== Builder Factory Methods ====================
 
     /**

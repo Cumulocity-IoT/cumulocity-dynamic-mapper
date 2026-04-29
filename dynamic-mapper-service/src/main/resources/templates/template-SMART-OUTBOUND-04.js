@@ -76,3 +76,5 @@ function onMessage(msg, context) {
         }
     };
 }
+
+export {onMessage};

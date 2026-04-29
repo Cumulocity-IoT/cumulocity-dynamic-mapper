@@ -67,3 +67,5 @@ function onMessage(msg, context) {
         externalSource: [{ type: "c8y_Serial", externalId: deviceId }]
     }];
 }
+
+export {onMessage};

@@ -41,7 +41,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.client.RestTemplate;
 import com.cumulocity.microservice.api.CumulocityClientProperties;
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
@@ -459,6 +466,28 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                                             payload, OperationRepresentation.class);
                             rt = deviceControlApi.create(operationRepresentation);
                             log.info("{} - SEND: operation posted: {}", tenant, rt);
+                        } else if (targetAPI.equals(API.CUSTOM)) {
+                            String customPath = currentRequest.getPathCumulocity();
+                            RequestMethod requestMethod = currentRequest.getMethod();
+                            HttpMethod httpMethod;
+                            switch (requestMethod != null ? requestMethod : RequestMethod.POST) {
+                                case PUT: httpMethod = HttpMethod.PUT; break;
+                                case PATCH: httpMethod = HttpMethod.PATCH; break;
+                                case DELETE: httpMethod = HttpMethod.DELETE; break;
+                                case GET: httpMethod = HttpMethod.GET; break;
+                                default: httpMethod = HttpMethod.POST; break;
+                            }
+                            HttpHeaders customHeaders = new HttpHeaders();
+                            customHeaders.set("Authorization",
+                                    contextService.getContext().toCumulocityCredentials().getAuthenticationString());
+                            customHeaders.setContentType(MediaType.APPLICATION_JSON);
+                            String customUrl = clientProperties.getBaseURL() + customPath;
+                            HttpEntity<String> customEntity = new HttpEntity<>(payload, customHeaders);
+                            ResponseEntity<String> customResponse = new RestTemplate().exchange(
+                                    customUrl, httpMethod, customEntity, String.class);
+                            currentRequest.setResponse(customResponse.getBody());
+                            log.info("{} - SEND: custom route called: path={}, method={}, status={}",
+                                    tenant, customPath, requestMethod, customResponse.getStatusCode());
                         } else {
                             log.error("{} - Not existing API!", tenant);
                         }
@@ -621,6 +650,28 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                             c8ySemaphore.release();
                         }
                         log.info("{} - SEND: operation posted: {}", tenant, rt);
+                    } else if (targetAPI.equals(API.CUSTOM)) {
+                        String customPath = currentRequest.getPathCumulocity();
+                        RequestMethod requestMethod = currentRequest.getMethod();
+                        HttpMethod httpMethod;
+                        switch (requestMethod != null ? requestMethod : RequestMethod.POST) {
+                            case PUT: httpMethod = HttpMethod.PUT; break;
+                            case PATCH: httpMethod = HttpMethod.PATCH; break;
+                            case DELETE: httpMethod = HttpMethod.DELETE; break;
+                            case GET: httpMethod = HttpMethod.GET; break;
+                            default: httpMethod = HttpMethod.POST; break;
+                        }
+                        HttpHeaders customHeaders = new HttpHeaders();
+                        customHeaders.set("Authorization",
+                                contextService.getContext().toCumulocityCredentials().getAuthenticationString());
+                        customHeaders.setContentType(MediaType.APPLICATION_JSON);
+                        String customUrl = clientProperties.getBaseURL() + customPath;
+                        HttpEntity<String> customEntity = new HttpEntity<>(payload, customHeaders);
+                        ResponseEntity<String> customResponse = new RestTemplate().exchange(
+                                customUrl, httpMethod, customEntity, String.class);
+                        currentRequest.setResponse(customResponse.getBody());
+                        log.info("{} - SEND: custom route called: path={}, method={}, status={}",
+                                tenant, customPath, requestMethod, customResponse.getStatusCode());
                     } else {
                         log.error("{} - Not existing API!", tenant);
                     }

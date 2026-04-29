@@ -16,6 +16,7 @@ import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.AbstractFlowResultProcessor;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.CumulocityObject;
+import dynamic.mapper.processor.model.CumulocityType;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ExternalId;
 import dynamic.mapper.processor.model.ExternalIdInfo;
@@ -145,6 +146,26 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
             Mapping mapping) throws ProcessingException {
 
         try {
+            // Custom routing: bypass device resolution, call tenant-local microservice directly
+            if (CumulocityType.CUSTOM.equals(cumulocityMessage.getCumulocityType())) {
+                String targetPath = cumulocityMessage.getTargetPath();
+                if (targetPath == null || !targetPath.startsWith("/service/")) {
+                    throw new ProcessingException(
+                            "Custom routing targetPath must start with /service/, got: " + targetPath);
+                }
+                DynamicMapperRequest customRequest = DynamicMapperRequest.builder()
+                        .predecessor(-1)
+                        .method(ProcessingResultHelper.mapActionToRequestMethod(cumulocityMessage.getAction()))
+                        .api(API.CUSTOM)
+                        .pathCumulocity(targetPath)
+                        .request(objectMapper.writeValueAsString(cumulocityMessage.getPayload()))
+                        .build();
+                output.addRequest(customRequest);
+                log.debug("{} - Created CUSTOM route request: path={}, method={}",
+                        tenant, targetPath, customRequest.getMethod());
+                return;
+            }
+
             // Get the API from the cumulocityType using unified API derivation
             if(cumulocityMessage.getCumulocityType() == null){
                 String warnMsg = String.format(

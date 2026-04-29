@@ -64,6 +64,18 @@ export class DocOverviewComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     this.feature = this.route.snapshot.data['feature'];
 
+    // When navigating to a section anchor within the overview page, scroll to it
+    const path = this.route.snapshot.routeConfig?.path || '';
+    if (path && path !== '') {
+      setTimeout(() => {
+        const element = document.getElementById(path);
+        if (element) {
+          const elementPosition = element.getBoundingClientRect().top + window.scrollY;
+          window.scrollTo({ top: elementPosition - 120, behavior: 'smooth' });
+        }
+      }, 200);
+    }
+
     const codeTemplatesMap: CodeTemplateMap = await this.sharedService.getCodeTemplates();
     this.codeTemplates = Object.entries(codeTemplatesMap)
       .map(([, template]) => template)

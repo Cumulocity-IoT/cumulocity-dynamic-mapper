@@ -31,17 +31,13 @@ import com.fasterxml.jackson.annotation.JsonValue;
  *   <li>{@link #UPDATE}  – replace an existing object (PUT)</li>
  *   <li>{@link #DELETE}  – delete an object (DELETE)</li>
  *   <li>{@link #PATCH}   – partially update an object (PATCH)</li>
- *   <li>{@link #CUSTOM}  – call a tenant-local microservice at a relative
- *       {@code /service/…} path; the path is taken from
- *       {@code DeviceMessage.topic} or {@code CumulocityObject.targetPath}</li>
  * </ul>
  */
 public enum MappingAction {
     CREATE("create"),
     UPDATE("update"),
     DELETE("delete"),
-    PATCH("patch"),
-    CUSTOM("custom");
+    PATCH("patch");
 
     private final String value;
 

@@ -105,3 +105,5 @@ function onMessage(msg, context) {
 
     return result;
 }
+
+export {onMessage};

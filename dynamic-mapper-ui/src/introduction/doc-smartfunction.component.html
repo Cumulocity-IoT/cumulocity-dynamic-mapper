@@ -330,8 +330,11 @@ function celsiusToFahrenheit(celsius) &#123;
                 <td><code>cumulocityType</code></td>
                 <td>Yes</td>
                 <td>The Cumulocity API to use: <code>"measurement"</code>, <code>"event"</code>, <code>"alarm"</code>,
-                  or
-                  <code>"inventory"</code>
+                  <code>"inventory"</code>, or <code>"custom"</code>.
+                  <br /><br />
+                  Use <code>"custom"</code> to forward the payload directly to a tenant-local microservice
+                  instead of a built-in Cumulocity API. When <code>"custom"</code> is set, the
+                  <code>targetPath</code> property is required and device identity resolution is skipped.
                 </td>
               </tr>
               <tr>
@@ -712,7 +715,8 @@ function celsiusToFahrenheit(celsius) &#123;
                 <td><code>cumulocityType</code></td>
                 <td>No</td>
                 <td>Explicitly specifies which Cumulocity API type to use: <code>"measurement"</code>,
-                  <code>"event"</code>, <code>"alarm"</code>, <code>"operation"</code>, or <code>"managedObject"</code>.
+                  <code>"event"</code>, <code>"alarm"</code>, <code>"operation"</code>, <code>"managedObject"</code>,
+                  or <code>"custom"</code>.
                   <br /><br />
                   <strong>When specified:</strong> The mapper uses this explicit value to determine the target
                   Cumulocity API endpoint, making the API selection more robust and less ambiguous.
@@ -720,6 +724,12 @@ function celsiusToFahrenheit(celsius) &#123;
                   <strong>When not specified:</strong> The mapper falls back to deriving the API type from the
                   <code>topic</code> string (e.g., a topic starting with <code>"measurements/"</code> automatically
                   routes to the Measurement API).
+                  <br /><br />
+                  <strong>Custom routing (<code>"custom"</code>):</strong> Forwards the payload to a
+                  tenant-local microservice at the path given by <code>targetPath</code>.
+                  Device identity resolution and broker publishing are both skipped.
+                  The <code>action</code> value is mapped to the corresponding HTTP method
+                  (<code>"create"</code> → POST, <code>"update"</code> → PUT, etc.).
                   <br /><br />
                   <strong>Recommended for Webhook connectors with Cumulocity Internal:</strong> Using
                   <code>cumulocityType</code> provides explicit control over API routing and is more reliable than
@@ -755,6 +765,15 @@ function celsiusToFahrenheit(celsius) &#123;
                   <br /><br />
                   <strong>Note:</strong> This must be a Cumulocity <em>internal</em> numeric managed object ID, not an
                   external identifier like a serial number or LoRa EUI.
+                </td>
+              </tr>
+              <tr>
+                <td><code>targetPath</code></td>
+                <td>No*</td>
+                <td>Required when <code>cumulocityType: "custom"</code> is set. Relative REST path of the
+                  tenant-local microservice to call, e.g. <code>/service/my-processor/ingest</code>.
+                  Must start with <code>/service/</code>. The mapper validates this at runtime and rejects
+                  requests that do not match. Ignored for all other <code>cumulocityType</code> values.
                 </td>
               </tr>
               <tr>
@@ -1071,6 +1090,72 @@ function metric(name, type, value) &#123;
             <code>_TOPIC_LEVEL_</code> exists and has the expected index before accessing it. Similarly, verify external
             IDs and source IDs are present in outbound mappings. For <code>context.getClientId()</code>, always check if the value is not <code>null</code> before using it, as it's only available for MQTT 5 connections when the publisher includes it as a user property.
           </div>
+        </div>
+        <h4 class="p-t-16 p-b-4"><strong>Routing to a Cumulocity Tenant Microservice</strong></h4>
+        <div class="p-b-8 text-16">
+          Smart Functions can forward payloads directly to a tenant-local microservice instead of (or in addition to)
+          the built-in Cumulocity APIs. Set <code>cumulocityType: "custom"</code> and supply a
+          <code>targetPath</code> starting with <code>/service/</code>. The mapper calls the microservice using
+          the tenant's own credentials, so no additional authentication setup is required. Device identity resolution
+          and broker publishing are both skipped for custom-routed objects.
+        </div>
+        <div class="admonition important" style="max-width: 100%;">
+          <div class="title">Important — Security restriction</div>
+          <div class="content">
+            The <code>targetPath</code> must start with <code>/service/</code>. The mapper enforces this at runtime
+            and throws a processing error for any other path. This ensures that only microservices subscribed
+            to the same Cumulocity tenant can be called.
+          </div>
+        </div>
+        <div class="p-b-8 text-14">
+          <strong>Example: Inbound — create a measurement and forward to a custom microservice</strong><br /><br />
+          <pre><code class="language-javascript">function onMessage(msg, context) &#123;
+  var payload = msg.getPayload();
+  var externalId = context.getClientId() || payload["externalId"];
+  return [
+    // Standard Cumulocity measurement
+    &#123;
+      cumulocityType: "measurement",
+      action: "create",
+      payload: &#123;
+        "time": new Date().toISOString(),
+        "type": "c8y_TemperatureMeasurement",
+        "c8y_Steam": &#123; "Temperature": &#123; "unit": "C", "value": payload["temperature"] &#125; &#125;
+      &#125;,
+      externalSource: [&#123; "type": "c8y_Serial", "externalId": externalId &#125;]
+    &#125;,
+    // Forward raw reading to custom microservice (HTTP POST)
+    &#123;
+      cumulocityType: "custom",
+      action: "create",
+      targetPath: "/service/my-processor/ingest",
+      payload: &#123;
+        "deviceId": externalId,
+        "timestamp": new Date().toISOString(),
+        "reading": payload["temperature"]
+      &#125;
+    &#125;
+  ];
+&#125;</code></pre>
+        </div>
+        <div class="p-b-8 text-14">
+          <strong>Example: Outbound — forward a Cumulocity operation to a custom microservice</strong><br /><br />
+          <pre><code class="language-javascript">function onMessage(msg, context) &#123;
+  var payload = msg.getPayload();
+  var deviceId = payload["deviceId"] || (payload["source"] &amp;&amp; payload["source"]["id"]);
+  var command  = payload["c8y_Command"] &amp;&amp; payload["c8y_Command"]["text"];
+  return &#123;
+    cumulocityType: "custom",
+    action: "create",   // maps to HTTP POST
+    targetPath: "/service/my-processor/execute",
+    payload: &#123;
+      "deviceId":    deviceId,
+      "command":     command,
+      "operationId": payload["id"],
+      "timestamp":   new Date().toISOString()
+    &#125;
+  &#125;;
+&#125;</code></pre>
         </div>
         <div class="p-b-8 text-16">
           For more examples and complete code templates, navigate to <a

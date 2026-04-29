@@ -164,6 +164,9 @@ public class APITopicUtil {
             case "operations":
                 return API.OPERATION;
 
+            case "custom":
+                return API.CUSTOM;
+
             default:
                 return null;
         }

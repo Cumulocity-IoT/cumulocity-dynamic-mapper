@@ -20,14 +20,9 @@
 
 import { Component, OnDestroy, OnInit, AfterViewChecked, ElementRef, ViewChild } from '@angular/core';
 import { CoreModule } from '@c8y/ngx-components';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { Subscription } from 'rxjs';
-import { DocOverviewComponent } from './doc-overview.component';
-import { DocJsonataComponent } from './doc-jsonata.component';
-import { DocJavaScriptComponent } from './doc-javascript.component';
-import { DocSmartFunctionComponent } from './doc-smartfunction.component';
-import { DocJavaExtensionComponent } from './doc-javaextension.component';
+import { Subscription, filter } from 'rxjs';
 
 import hljs from 'highlight.js/lib/core';
 import javascript from 'highlight.js/lib/languages/javascript';
@@ -46,11 +41,7 @@ hljs.registerLanguage('yaml', yaml);
   imports: [
     CoreModule,
     CommonModule,
-    DocOverviewComponent,
-    DocJsonataComponent,
-    DocJavaScriptComponent,
-    DocSmartFunctionComponent,
-    DocJavaExtensionComponent
+    RouterOutlet,
   ]
 })
 export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
@@ -63,39 +54,12 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
   searchCurrentIndex: number = -1;
   private searchMatches: HTMLElement[] = [];
 
-  currentPage: string = 'main';
   private fragmentSubscription: Subscription;
+  private routerSubscription: Subscription;
 
-  constructor(private route: ActivatedRoute) {}
+  constructor(private route: ActivatedRoute, private router: Router) {}
 
   ngOnInit(): void {
-    const path = this.route.snapshot.routeConfig?.path || '';
-
-    if (path.includes('jsonata')) {
-      this.currentPage = 'jsonata';
-    } else if (path.includes('javascript')) {
-      this.currentPage = 'javascript';
-    } else if (path.includes('smartfunction')) {
-      this.currentPage = 'smartfunction';
-    } else if (path.includes('javaextension')) {
-      this.currentPage = 'javaextension';
-    } else {
-      this.currentPage = 'main';
-    }
-
-    // For section paths that live inside the 'main' overview page (e.g. /landing/sparkplugb),
-    // extract the last path segment and use it as a scroll target after the view renders.
-    const sectionPaths = [
-      'overview', 'getting-started', 'managing-connectors', 'define-mapping',
-      'sparkplugb', 'define-subscription-for-outbound', 'transformation-types',
-      'flow-state', 'code-templates', 'metadata', 'unknown-payload',
-      'reliability-settings', 'access-control', 'monitoring', 'troubleshooting'
-    ];
-    const lastSegment = path.split('/').pop() || '';
-    if (sectionPaths.includes(lastSegment)) {
-      setTimeout(() => { this.scrollToElement(lastSegment); }, 200);
-    }
-
     this.clearSearch();
     this.highlightApplied = false;
 
@@ -104,6 +68,14 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
         setTimeout(() => { this.scrollToElement(fragment); }, 150);
       }
     });
+
+    // Reset search and syntax highlighting whenever a child route changes
+    this.routerSubscription = this.router.events
+      .pipe(filter(e => e instanceof NavigationEnd))
+      .subscribe(() => {
+        this.clearSearch();
+        this.highlightApplied = false;
+      });
   }
 
   onSearch(): void {
@@ -260,5 +232,6 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
 
   ngOnDestroy(): void {
     if (this.fragmentSubscription) { this.fragmentSubscription.unsubscribe(); }
+    if (this.routerSubscription) { this.routerSubscription.unsubscribe(); }
   }
 }

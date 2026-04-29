@@ -37,6 +37,7 @@ import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.outbound.serializer.SparkPlugBSerializer;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.CumulocityObject;
+import dynamic.mapper.processor.model.CumulocityType;
 import dynamic.mapper.processor.model.DeviceMessage;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ExternalIdInfo;
@@ -224,6 +225,26 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             Mapping mapping) throws ProcessingException {
 
         try {
+
+            // Custom routing: bypass device resolution, call tenant-local microservice directly
+            if (CumulocityType.CUSTOM.equals(deviceMessage.getCumulocityType())) {
+                String servicePath = deviceMessage.getTopic();
+                if (servicePath == null || !servicePath.startsWith("/service/")) {
+                    throw new ProcessingException(
+                            "Custom routing DeviceMessage.topic must start with /service/, got: " + servicePath);
+                }
+                DynamicMapperRequest customRequest = DynamicMapperRequest.builder()
+                        .predecessor(-1)
+                        .method(ProcessingResultHelper.mapActionToRequestMethod(deviceMessage.getAction()))
+                        .api(API.CUSTOM)
+                        .pathCumulocity(servicePath)
+                        .request(objectMapper.writeValueAsString(deviceMessage.getPayload()))
+                        .build();
+                output.addRequest(customRequest);
+                log.debug("{} - Created CUSTOM route request from DeviceMessage: path={}, method={}",
+                        tenant, servicePath, customRequest.getMethod());
+                return;
+            }
 
             // Clone the payload to modify it
             Map<String, Object> payload = clonePayload(deviceMessage.getPayload());
@@ -413,6 +434,26 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             Mapping mapping) throws ProcessingException {
 
         try {
+            // Custom routing: bypass device resolution, call tenant-local microservice directly
+            if (CumulocityType.CUSTOM.equals(cumulocityMessage.getCumulocityType())) {
+                String targetPath = cumulocityMessage.getTargetPath();
+                if (targetPath == null || !targetPath.startsWith("/service/")) {
+                    throw new ProcessingException(
+                            "Custom routing targetPath must start with /service/, got: " + targetPath);
+                }
+                DynamicMapperRequest customRequest = DynamicMapperRequest.builder()
+                        .predecessor(-1)
+                        .method(ProcessingResultHelper.mapActionToRequestMethod(cumulocityMessage.getAction()))
+                        .api(API.CUSTOM)
+                        .pathCumulocity(targetPath)
+                        .request(objectMapper.writeValueAsString(cumulocityMessage.getPayload()))
+                        .build();
+                output.addRequest(customRequest);
+                log.debug("{} - Created CUSTOM route request: path={}, method={}",
+                        tenant, targetPath, customRequest.getMethod());
+                return;
+            }
+
             // Get the API from the cumulocityType using unified API derivation
             if (cumulocityMessage.getCumulocityType() == null) {
                 String warnMsg = String.format(

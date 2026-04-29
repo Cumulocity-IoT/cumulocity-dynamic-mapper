@@ -681,6 +681,11 @@ export const API = {
     identifier: 'deviceId',
     notificationFilter: 'operations'
   },
+  CUSTOM: {
+    name: 'CUSTOM',
+    identifier: '',
+    notificationFilter: 'custom'
+  },
   ALL: { name: 'ALL', identifier: '*', notificationFilter: '*' }
 };
 export interface Feature {
