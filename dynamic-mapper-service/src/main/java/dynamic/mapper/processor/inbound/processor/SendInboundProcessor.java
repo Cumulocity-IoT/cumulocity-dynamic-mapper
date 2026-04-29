@@ -292,14 +292,14 @@ public class SendInboundProcessor extends BaseProcessor {
      * fragment on the managed object so that subsequent DATA messages can resolve aliases.
      * <ul>
      *   <li><b>NBIRTH</b> — stored as {@code sparkPlugB_NBIRTH} on the <b>Edge Node</b> MO
-     *       (identified by the external ID {@code [Group ID]_[Edge Node ID]}). The MO was just created/updated by
-     *       {@code upsertDevice}, so it is guaranteed to exist.</li>
-     *   <li><b>DBIRTH</b> — stored as {@code sparkPlugB_DBIRTH} on the <b>Device</b> MO
-     *       (identified by the external ID {@code [Group ID]_[Edge Node ID]_[Device ID]}).</li>
+     *       (identified by the external ID {@code [Group ID]_[Edge Node ID]}). The MO was just
+     *       created/updated by {@code upsertDevice}, so it is guaranteed to exist.</li>
+     *   <li><b>DBIRTH</b> — stored as {@code sparkPlugB_DBIRTH_<sparkplugDeviceId>} on the
+     *       <b>Edge Node</b> MO (same NODE MO). No separate Device MO is created for DBIRTH.
+     *       This allows all DBIRTH alias maps to live on the NODE device.</li>
      * </ul>
      *
-     * @param context  the current processing context
-     * @param deviceId the C8Y internal ID of the managed object that was just upserted
+     * @param context the current processing context
      */
     @SuppressWarnings("unchecked")
     private void storeSparkPlugBBirthMessage(ProcessingContext<Object> context) {
@@ -322,65 +322,81 @@ public class SendInboundProcessor extends BaseProcessor {
             return;
         }
 
-        // deviceId is normally populated by processInventoryRequest (via upsertDevice).
-        // If the Smart Function emits no INVENTORY object we fall back to resolving the
-        // external ID directly from the topic so the fragment is not silently lost.
-        String deviceId = context.getSourceId();
-        if (deviceId == null) {
-            // Derive external ID from topic:
-            //   NBIRTH → [Group ID]_[Edge Node ID]  = parts[1] + "_" + parts[3]
-            //   DBIRTH → [Group ID]_[Edge Node ID]_[Device ID] = parts[1] + "_" + parts[3] + "_" + parts[4]
-            String externalIdValue;
-            String externalIdType;
-            if ("NBIRTH".equals(messageType)) {
-                // ExternalId for an Edge Node is [Group ID]_[Edge Node ID]
-                externalIdValue = parts[1] + "_" + parts[3];
-                externalIdType = context.getMapping().getExternalIdType();
-            } else {
-                // DBIRTH requires a device-level topic (5 parts)
-                if (parts.length < 5) {
-                    log.error("{} - storeSparkPlugBBirthMessage: DBIRTH topic has fewer than 5 levels: {}",
-                            context.getTenant(), topic);
-                    return;
-                }
-                // ExternalId for a Device is [Group ID]_[Edge Node ID]_[Device ID]
-                externalIdValue = parts[1] + "_" + parts[3] + "_" + parts[4];
-                externalIdType = context.getMapping().getExternalIdType();
-            }
-            com.cumulocity.model.ID identity = new com.cumulocity.model.ID(externalIdType, externalIdValue);
-            com.cumulocity.rest.representation.identity.ExternalIDRepresentation resolved =
-                    c8yAgent.resolveExternalId2GlobalId(context.getTenant(), identity, context.getTesting());
-            if (resolved != null) {
-                deviceId = resolved.getManagedObject().getId().getValue();
-                log.debug("{} - storeSparkPlugBBirthMessage: resolved {} → C8Y ID {}",
-                        context.getTenant(), externalIdValue, deviceId);
-            } else if (Boolean.TRUE.equals(context.getMapping().getCreateNonExistingDevice())) {
-                log.info("{} - storeSparkPlugBBirthMessage: MO for {}/{} does not exist, auto-creating device "
-                        + "(createNonExistingDevice=true)",
-                        context.getTenant(), externalIdType, externalIdValue);
-                deviceId = dynamic.mapper.processor.util.ProcessingResultHelper.createImplicitDevice(
-                        identity, context, log, c8yAgent, objectMapper);
-                if (deviceId == null) {
-                    log.error("{} - storeSparkPlugBBirthMessage: Failed to auto-create device for {}/{}",
-                            context.getTenant(), externalIdType, externalIdValue);
-                    return;
-                }
-            } else {
-                log.error("{} - storeSparkPlugBBirthMessage: MO for {} '{}' does not exist and no INVENTORY "
-                        + "request was produced by the Smart Function. The '{}' fragment cannot be stored. "
-                        + "Configure the Smart Function to return a CumulocityObject with cumulocityType=INVENTORY "
-                        + "for NBIRTH/DBIRTH messages, or enable createNonExistingDevice on the mapping.",
-                        context.getTenant(), externalIdType, externalIdValue, messageType);
-                return;
-            }
+        String tenant = context.getTenant();
+        String externalIdType = context.getMapping().getExternalIdType();
+        if (externalIdType == null || externalIdType.isEmpty()) {
+            externalIdType = "c8y_Serial";
         }
 
-        // Determine which fragment key to use (messageType is already validated as NBIRTH or DBIRTH)
-        final String fragmentKey = "NBIRTH".equals(messageType)
-                ? dynamic.mapper.processor.inbound.deserializer.SparkPlugBDeserializer.SPARKPLUGB_NBIRTH_FRAGMENT
-                : dynamic.mapper.processor.inbound.deserializer.SparkPlugBDeserializer.SPARKPLUGB_DBIRTH_FRAGMENT;
+        // C8Y internal ID of the MO where the fragment will be stored
+        final String targetDeviceId;
+        final String fragmentKey;
 
-        // Build the alias→metricDefinition map from the decoded payload
+        if ("NBIRTH".equals(messageType)) {
+            // NBIRTH: store sparkPlugB_NBIRTH on the NODE MO.
+            // context.getSourceId() is set when the Smart Function returned an INVENTORY object.
+            String resolvedId = context.getSourceId();
+            if (resolvedId == null) {
+                String externalIdValue = parts[1] + "_" + parts[3]; // [Group ID]_[Edge Node ID]
+                com.cumulocity.model.ID identity = new com.cumulocity.model.ID(externalIdType, externalIdValue);
+                com.cumulocity.rest.representation.identity.ExternalIDRepresentation resolved =
+                        c8yAgent.resolveExternalId2GlobalId(tenant, identity, context.getTesting());
+                if (resolved != null) {
+                    resolvedId = resolved.getManagedObject().getId().getValue();
+                    log.debug("{} - storeSparkPlugBBirthMessage: resolved {} → C8Y ID {}",
+                            tenant, externalIdValue, resolvedId);
+                } else if (Boolean.TRUE.equals(context.getMapping().getCreateNonExistingDevice())) {
+                    log.info("{} - storeSparkPlugBBirthMessage: NODE MO for {}/{} does not exist, "
+                            + "auto-creating (createNonExistingDevice=true)", tenant, externalIdType, externalIdValue);
+                    resolvedId = dynamic.mapper.processor.util.ProcessingResultHelper.createImplicitDevice(
+                            identity, context, log, c8yAgent, objectMapper);
+                    if (resolvedId == null) {
+                        log.error("{} - storeSparkPlugBBirthMessage: Failed to auto-create NODE device for {}/{}",
+                                tenant, externalIdType, externalIdValue);
+                        return;
+                    }
+                } else {
+                    log.error("{} - storeSparkPlugBBirthMessage: NODE MO for {} '{}' does not exist and no "
+                            + "INVENTORY request was produced by the Smart Function. The '{}' fragment cannot "
+                            + "be stored. Configure the Smart Function to return a CumulocityObject with "
+                            + "cumulocityType=INVENTORY for NBIRTH messages, or enable createNonExistingDevice.",
+                            tenant, externalIdType, externalIdValue, messageType);
+                    return;
+                }
+            }
+            targetDeviceId = resolvedId;
+            fragmentKey = dynamic.mapper.processor.inbound.deserializer.SparkPlugBDeserializer.SPARKPLUGB_NBIRTH_FRAGMENT;
+
+        } else {
+            // DBIRTH: store sparkPlugB_DBIRTH_<sparkplugDeviceId> on the NODE MO.
+            // No implicit device creation for DBIRTH — all data lives on the NODE device.
+            if (parts.length < 5) {
+                log.error("{} - storeSparkPlugBBirthMessage: DBIRTH topic has fewer than 5 levels: {}",
+                        tenant, topic);
+                return;
+            }
+            String sparkplugDeviceId = parts[4];
+            // Always resolve the NODE's external ID: [Group ID]_[Edge Node ID]
+            String nodeExternalIdValue = parts[1] + "_" + parts[3];
+            com.cumulocity.model.ID nodeIdentity = new com.cumulocity.model.ID(externalIdType, nodeExternalIdValue);
+            com.cumulocity.rest.representation.identity.ExternalIDRepresentation resolved =
+                    c8yAgent.resolveExternalId2GlobalId(tenant, nodeIdentity, context.getTesting());
+            if (resolved == null) {
+                log.error("{} - storeSparkPlugBBirthMessage: NODE MO for {} '{}' not found. "
+                        + "Cannot store DBIRTH alias map. Ensure the NBIRTH message has been processed first.",
+                        tenant, externalIdType, nodeExternalIdValue);
+                return;
+            }
+            targetDeviceId = resolved.getManagedObject().getId().getValue();
+            fragmentKey = dynamic.mapper.processor.inbound.deserializer.SparkPlugBDeserializer
+                    .getDbBirthFragmentKey(sparkplugDeviceId);
+            log.debug("{} - storeSparkPlugBBirthMessage: DBIRTH for sparkplugDeviceId='{}' → "
+                    + "fragment '{}' on NODE MO {}", tenant, sparkplugDeviceId, fragmentKey, targetDeviceId);
+        }
+
+        // ── Build the alias→metricDefinition map from the decoded payload ──────────────
+
+        // ── Build the alias→metricDefinition map from the decoded payload ──────────────
         Object payload = context.getPayload();
         if (!(payload instanceof java.util.Map)) {
             return;
@@ -409,10 +425,9 @@ public class SendInboundProcessor extends BaseProcessor {
             }
         }
 
-        String tenant = context.getTenant();
         log.info("{} - Storing '{}' fragment ({} metric definitions) on MO {} ({})",
-                tenant, fragmentKey, aliasMap.size(), deviceId, messageType);
-        c8yAgent.storeManagedObjectFragment(tenant, deviceId, fragmentKey,
+                tenant, fragmentKey, aliasMap.size(), targetDeviceId, messageType);
+        c8yAgent.storeManagedObjectFragment(tenant, targetDeviceId, fragmentKey,
                 aliasMap, context.getTesting());
     }
 
