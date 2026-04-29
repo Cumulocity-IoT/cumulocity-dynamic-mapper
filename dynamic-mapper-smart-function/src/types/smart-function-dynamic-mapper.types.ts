@@ -549,10 +549,18 @@ export type C8yPayloadTypeMap = {
 };
 
 /**
- * CRUD action to perform on a Cumulocity object.
+ * CRUD action to perform on a Cumulocity object, or a custom microservice route.
  * Used in {@link CumulocityObject.action} and {@link DeviceMessage.action}.
+ *
+ * - `"create"` – POST to the standard C8Y Core API
+ * - `"update"` – PUT to the standard C8Y Core API
+ * - `"delete"` – DELETE from the standard C8Y Core API
+ * - `"patch"`  – PATCH/PUT to the standard C8Y Core API
+ * - `"custom"` – POST to a tenant-local microservice; the target path is taken
+ *   from {@link DeviceMessage.topic} or {@link CumulocityObject.targetPath} and
+ *   must start with `/service/`
  */
-export type C8yObjectAction = 'create' | 'update' | 'delete' | 'patch';
+export type C8yObjectAction = 'create' | 'update' | 'delete' | 'patch' | 'custom';
 
 /**
  * Cumulocity API object type.
@@ -694,9 +702,20 @@ export interface CumulocityObject<
    * - "create" - Create a new object
    * - "update" - Update an existing object
    * - "delete" - Delete an object
-   * - "patch" - Partially update an object
+   * - "patch"  - Partially update an object
+   * - "custom" - POST to a tenant-local microservice; set {@link targetPath} to the
+   *              `/service/<name>/...` path to route to
    */
   action: C8yObjectAction;
+
+  /**
+   * Target microservice path used when {@link action} is `"custom"`.
+   * Must start with `/service/` to ensure requests stay within the tenant.
+   *
+   * @example "/service/my-microservice/api/process"
+   * @since 6.3
+   */
+  targetPath?: string;
 
   /**
    * External ID configuration for device resolution.

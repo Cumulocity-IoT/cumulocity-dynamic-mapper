@@ -41,6 +41,7 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.model.DeviceContext;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
+import dynamic.mapper.processor.model.MappingAction;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingResultWrapper;
 
@@ -291,7 +292,7 @@ public class ProcessingResultHelper {
      */
     public static DynamicMapperRequest createAndAddDynamicMapperRequest(ProcessingContext<?> context,
             String payloadJson,
-            String action, Mapping mapping) {
+            MappingAction action, Mapping mapping) {
 
         // Determine the request method based on action
         RequestMethod method = mapActionToRequestMethod(action);
@@ -381,19 +382,19 @@ public class ProcessingResultHelper {
      * @param action the action type string
      * @return the corresponding RequestMethod
      */
-    public static RequestMethod mapActionToRequestMethod(String action) {
+    public static RequestMethod mapActionToRequestMethod(MappingAction action) {
         if (action == null) {
             return RequestMethod.POST;
         }
 
-        switch (action.toLowerCase()) {
-            case "create":
+        switch (action) {
+            case CREATE:
                 return RequestMethod.POST;
-            case "update":
+            case UPDATE:
                 return RequestMethod.PUT;
-            case "patch":
+            case PATCH:
                 return RequestMethod.PATCH;
-            case "delete":
+            case DELETE:
                 return RequestMethod.DELETE;
             default:
                 return RequestMethod.POST;
@@ -635,7 +636,7 @@ public class ProcessingResultHelper {
             dynamic.mapper.processor.model.DeviceContext device,
             dynamic.mapper.processor.model.RoutingContext routing,
             String payloadJson,
-            String action,
+            MappingAction action,
             Mapping mapping) {
 
         // Determine the request method based on action
@@ -678,7 +679,7 @@ public class ProcessingResultHelper {
             dynamic.mapper.processor.model.DeviceContext device,
             dynamic.mapper.processor.model.RoutingContext routing,
             String payloadJson,
-            String action,
+            MappingAction action,
             Mapping mapping) {
 
         RequestMethod method = mapActionToRequestMethod(action);

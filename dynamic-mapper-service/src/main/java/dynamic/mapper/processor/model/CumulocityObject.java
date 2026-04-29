@@ -70,7 +70,7 @@ public class CumulocityObject {
     private CumulocityType cumulocityType;
 
     /** What kind of operation is being performed on this type */
-    private String action; // "create" | "update" | "delete" | "patch"
+    private MappingAction action;
 
     /**
      * Since we usually don't know the C8Y ID to put in the payload, the flow can
@@ -175,7 +175,7 @@ public class CumulocityObject {
      */
     public static abstract class BaseBuilder<T extends BaseBuilder<T>> {
         protected Map<String, Object> payload = new HashMap<>();
-        protected String action = "create";
+        protected MappingAction action = MappingAction.CREATE;
         protected List<ExternalId> externalSource = new ArrayList<>();
         protected Destination destination = Destination.CUMULOCITY;
         protected Map<String, Object> contextData = new HashMap<>();
@@ -187,13 +187,13 @@ public class CumulocityObject {
         }
 
         /**
-         * Set the action to perform (create, update, delete, patch).
-         * Default is "create".
+         * Set the action to perform.
+         * Default is {@link MappingAction#CREATE}.
          *
          * @param action The action to perform
          * @return This builder
          */
-        public T action(String action) {
+        public T action(MappingAction action) {
             this.action = action;
             return self();
         }

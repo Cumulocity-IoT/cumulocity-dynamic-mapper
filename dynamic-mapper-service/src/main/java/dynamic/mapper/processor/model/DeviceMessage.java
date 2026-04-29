@@ -45,10 +45,11 @@ public class DeviceMessage {
     private Object payload;
 
     /**
-     * What kind of operation is being performed, e.g. "create", "update", "delete",
-     * "patch"
+     * What kind of operation is being performed.
+     *
+     * @see MappingAction
      */
-    private String action;
+    private MappingAction action;
 
     /**
      * Optional: Specifies which Cumulocity API type this device message should map to.
@@ -139,7 +140,7 @@ public class DeviceMessage {
      */
     public static class Builder {
         private Object payload;
-        private String action;
+        private MappingAction action;
         private CumulocityType cumulocityType;
         private Object externalSource;
         private String transportId;
@@ -179,10 +180,10 @@ public class DeviceMessage {
         /**
          * Set the action.
          *
-         * @param action The action (create, update, delete, patch)
+         * @param action The action
          * @return This builder
          */
-        public Builder action(String action) {
+        public Builder action(MappingAction action) {
             this.action = action;
             return this;
         }
