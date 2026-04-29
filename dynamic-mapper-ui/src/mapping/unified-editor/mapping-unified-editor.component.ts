@@ -607,6 +607,11 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
    * The last tab (Testing) is always visible.
    */
   isTabVisible(tabIndex: number): boolean {
+    // Deprecated SUBSTITUTION_AS_CODE mappings: hide Testing tab (can't be processed)
+    // eslint-disable-next-line deprecation/deprecation
+    if (this.mapping?.transformationType === TransformationType.SUBSTITUTION_AS_CODE && tabIndex === TAB_TEST_MAPPING) {
+      return false;
+    }
     const skip = this.stepperConfiguration?.advanceFromStepToEndStep;
     if (skip == null) return true;
     return tabIndex <= skip || tabIndex === TAB_TEST_MAPPING;

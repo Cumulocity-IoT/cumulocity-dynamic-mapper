@@ -48,14 +48,10 @@ export interface ServiceConfiguration {
 }
 
 export enum TemplateType {
-  INBOUND = "INBOUND", // deprecated, use INBOUND_SUBSTITUTION_AS_CODE instead
-  OUTBOUND = "OUTBOUND", // deprecated, use OUTBOUND_SUBSTITUTION_AS_CODE instead
-  INBOUND_SUBSTITUTION_AS_CODE = "INBOUND_SUBSTITUTION_AS_CODE",
-  OUTBOUND_SUBSTITUTION_AS_CODE = "OUTBOUND_SUBSTITUTION_AS_CODE",
-  SHARED = "SHARED",
-  SYSTEM = "SYSTEM",
   INBOUND_SMART_FUNCTION = "INBOUND_SMART_FUNCTION",
-  OUTBOUND_SMART_FUNCTION = "OUTBOUND_SMART_FUNCTION"
+  OUTBOUND_SMART_FUNCTION = "OUTBOUND_SMART_FUNCTION",
+  SHARED = "SHARED",
+  SYSTEM = "SYSTEM"
 }
 
 export interface CodeTemplate {
@@ -75,8 +71,6 @@ export interface CodeTemplateMap {
 }
 
 const TEMPLATE_TYPE_LOOKUP = new Map<string, TemplateType>([
-  [`${Direction.INBOUND}_${TransformationType.SUBSTITUTION_AS_CODE}`, TemplateType.INBOUND_SUBSTITUTION_AS_CODE],
-  [`${Direction.OUTBOUND}_${TransformationType.SUBSTITUTION_AS_CODE}`, TemplateType.OUTBOUND_SUBSTITUTION_AS_CODE],
   [`${Direction.INBOUND}_${TransformationType.SMART_FUNCTION}`, TemplateType.INBOUND_SMART_FUNCTION],
   [`${Direction.OUTBOUND}_${TransformationType.SMART_FUNCTION}`, TemplateType.OUTBOUND_SMART_FUNCTION],
 ]);

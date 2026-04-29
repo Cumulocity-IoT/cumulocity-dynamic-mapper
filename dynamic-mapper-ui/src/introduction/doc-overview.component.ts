@@ -81,12 +81,10 @@ export class DocOverviewComponent implements OnInit {
       .map(([, template]) => template)
       .sort((a, b) => {
         const typeOrder = {
-          'INBOUND_SUBSTITUTION_AS_CODE': 1,
-          'OUTBOUND_SUBSTITUTION_AS_CODE': 2,
-          'INBOUND_SMART_FUNCTION': 3,
-          'OUTBOUND_SMART_FUNCTION': 4,
-          'SHARED': 5,
-          'SYSTEM': 6
+          'INBOUND_SMART_FUNCTION': 1,
+          'OUTBOUND_SMART_FUNCTION': 2,
+          'SHARED': 3,
+          'SYSTEM': 4
         };
         const typeComparison = (typeOrder[a.templateType] || 999) - (typeOrder[b.templateType] || 999);
         if (typeComparison !== 0) return typeComparison;

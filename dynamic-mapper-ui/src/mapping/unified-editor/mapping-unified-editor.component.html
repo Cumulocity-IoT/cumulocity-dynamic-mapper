@@ -51,6 +51,15 @@
   <!-- Tab content – [hidden] keeps all components alive so editors/forms retain state -->
   <div class="card-block flex-grow overflow-auto">
 
+    <!-- Deprecation notice for legacy SUBSTITUTION_AS_CODE mappings -->
+    @if (mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE) {
+    <div class="alert alert-warning m-16">
+      <strong translate>Deprecated mapping type</strong>
+      &nbsp;
+      <span translate>This mapping uses the removed <code>SUBSTITUTION_AS_CODE</code> transformation type. It can only be <strong>exported</strong> or <strong>deleted</strong>. Editing and testing are disabled. Please recreate it using <strong>Smart Function</strong>.</span>
+    </div>
+    }
+
     <!-- Tab 0: Connector -->
     @if (activeTabIndex === 0 && isTabVisible(0)) {
     <d11r-mapping-connector [stepperConfiguration]="stepperConfiguration" [directions]="[mapping.direction]"
@@ -349,6 +358,7 @@
           </c8y-select>
           <div class="input-group-btn">
             <button type="button" name="update" class="btn btn-default btn-sm" (click)="onCreateCodeTemplate()"
+              [disabled]="mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE"
               translate>
               Create new code template
             </button>

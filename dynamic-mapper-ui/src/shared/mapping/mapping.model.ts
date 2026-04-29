@@ -277,6 +277,7 @@ export interface StepperConfiguration {
 
 export enum TransformationType {
   DEFAULT = 'DEFAULT',
+  /** @deprecated Removed in 6.3 — existing mappings are read-only and can only be exported or deleted. */
   SUBSTITUTION_AS_CODE = 'SUBSTITUTION_AS_CODE',
   SMART_FUNCTION = 'SMART_FUNCTION',
   JSONATA = 'JSONATA',
@@ -299,14 +300,16 @@ export enum MappingType {
 export const TransformationTypeLabels = {
   [Direction.INBOUND]: {
     [TransformationType.DEFAULT]: 'Default Transformation',
-    [TransformationType.SUBSTITUTION_AS_CODE]: 'Substitution as JavaScript (deprecated)',
+    // eslint-disable-next-line deprecation/deprecation
+    [TransformationType.SUBSTITUTION_AS_CODE]: 'Substitution as JavaScript (removed — export or delete only)',
     [TransformationType.SMART_FUNCTION]: 'Smart Function (JavaScript) to create Cumulocity API calls',
     [TransformationType.JSONATA]: 'Substitution as JSONata Expression',
     [TransformationType.EXTENSION_JAVA]: 'Java Extension (Smart Java Function)'
   },
   [Direction.OUTBOUND]: {
     [TransformationType.DEFAULT]: 'Default Transformation',
-    [TransformationType.SUBSTITUTION_AS_CODE]: 'Substitution as JavaScript (deprecated)',
+    // eslint-disable-next-line deprecation/deprecation
+    [TransformationType.SUBSTITUTION_AS_CODE]: 'Substitution as JavaScript (removed — export or delete only)',
     [TransformationType.SMART_FUNCTION]: 'Smart Function (JavaScript) to create Broker Payload',
     [TransformationType.JSONATA]: 'Substitution as JSONata Expression',
     [TransformationType.EXTENSION_JAVA]: 'Java Extension (Smart Java Function)'
@@ -315,7 +318,8 @@ export const TransformationTypeLabels = {
 
 export const TransformationTypeDescriptions = {
   [TransformationType.DEFAULT]: 'Uses the default transformation logic without custom processing',
-  [TransformationType.SUBSTITUTION_AS_CODE]: 'Allows writing custom JavaScript code for complex transformations',
+  // eslint-disable-next-line deprecation/deprecation
+  [TransformationType.SUBSTITUTION_AS_CODE]: 'Removed in release 6.3 — this mapping can only be exported or deleted.',
   [TransformationType.SMART_FUNCTION]: 'Executes a predefined Smart Function for data transformation and create payload for Cumulocity API calls. Supports setting sourceId to route data to different devices',
   [TransformationType.JSONATA]: 'Uses JSONata query and transformation language for data mapping',
   [TransformationType.EXTENSION_JAVA]: 'Java extension returns domain objects (CumulocityObject[] for inbound, DeviceMessage[] for outbound) using Smart Java Function pattern with builder syntax. Supports setting sourceId to route data to different devices'
@@ -794,6 +798,7 @@ export function getGenericDeviceIdentifier(mapping: Mapping): string {
 }
 
 export function isSubstitutionsAsCode(mapping: Mapping): boolean {
+  // eslint-disable-next-line deprecation/deprecation
   return mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE ||
     mapping.transformationType === TransformationType.SMART_FUNCTION;
 }

@@ -255,6 +255,13 @@ export class MappingComponent implements OnInit, OnDestroy {
         showIf: item => (item['mapping']['active'] || !this.canManageMappings) && !this.isDeprecatedMapping(item)
       },
       {
+        type: 'VIEW_DEPRECATED',
+        text: 'View (deprecated)',
+        icon: 'eye',
+        callback: this.updateMapping.bind(this),
+        showIf: item => this.isDeprecatedMapping(item)
+      },
+      {
         text: 'Duplicate',
         type: 'DUPLICATE',
         icon: 'duplicate',
