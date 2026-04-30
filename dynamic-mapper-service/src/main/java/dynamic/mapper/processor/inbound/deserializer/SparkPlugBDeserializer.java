@@ -62,8 +62,8 @@ import java.util.Map;
  * (identified by the external ID <b>[Group ID]_[Edge Node ID]</b>) and uses the alias→name mapping it contains.
  * <p>
  * For DDATA messages the deserializer retrieves the previously stored DBIRTH
- * ({@value #SPARKPLUGB_DBIRTH_FRAGMENT}) from the <b>Device</b> managed object
- * (identified by the external ID <b>[Group ID]_[Edge Node ID]_[Device ID]</b>) and uses the alias→name mapping it contains.
+ * (fragment key {@code sparkPlugB_DBIRTH_<deviceId>}) from the <b>Edge Node</b> managed object
+ * (identified by the external ID <b>[Group ID]_[Edge Node ID]</b>) and uses the alias→name mapping it contains.
  */
 @Slf4j
 @Component
