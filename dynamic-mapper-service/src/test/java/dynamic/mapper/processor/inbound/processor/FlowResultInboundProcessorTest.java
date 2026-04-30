@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import dynamic.mapper.core.ConfigurationRegistry;
 import org.apache.camel.Exchange;
 import org.apache.camel.Message;
 import org.junit.jupiter.api.BeforeEach;
@@ -91,6 +92,9 @@ class FlowResultInboundProcessorTest {
     private ServiceConfiguration serviceConfiguration;
 
     @Mock
+    private ConfigurationRegistry configurationRegistry;
+
+    @Mock
     private MappingResolverService mappingResolverService;
 
     private TestableFlowResultInboundProcessor processor;
@@ -107,7 +111,7 @@ class FlowResultInboundProcessorTest {
     @BeforeEach
     void setUp() throws Exception {
         // Create testable processor with default device ID
-        processor = new TestableFlowResultInboundProcessor(mappingService, c8yAgent, objectMapper)
+        processor = new TestableFlowResultInboundProcessor(mappingService, c8yAgent, configurationRegistry, objectMapper)
                 .withDefaultDeviceId(TEST_DEVICE_ID);
 
         mapping = createSampleMapping();
