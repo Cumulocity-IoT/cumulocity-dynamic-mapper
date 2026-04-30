@@ -40,10 +40,12 @@ function onMessage(msg, context) {
     // Requires the mapping to have 'useExternalId' enabled and 'externalIdType' configured.
     const externalId = context.getConfig().externalId;
 
-    // Split the external id into group and edge node parts.
-    const parts = externalId ? externalId.split('_') : [];
-    const groupId    = parts[0] || 'DefaultGroup';
-    const edgeNodeId = parts[1] || 'DefaultNode';
+    // Split the external id into group and edge node parts on the FIRST underscore.
+    // SparkPlugBDeserializer stores the key as groupId + "_" + edgeNodeId, so splitting
+    // on the first '_' is the correct inverse even when edgeNodeId itself contains '_'.
+    const firstUnderscore = externalId ? externalId.indexOf('_') : -1;
+    const groupId    = firstUnderscore >= 0 ? externalId.substring(0, firstUnderscore) : (externalId || 'DefaultGroup');
+    const edgeNodeId = firstUnderscore >= 0 ? externalId.substring(firstUnderscore + 1) : 'DefaultNode';
 
     // Suppress the command when the edge node has gone offline (NDEATH received).
     if (!context.getConfig().isActive) {
