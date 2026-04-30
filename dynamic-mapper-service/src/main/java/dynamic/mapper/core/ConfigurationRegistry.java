@@ -111,6 +111,14 @@ public class ConfigurationRegistry {
     // Structure: < Tenant, Id ManagedObject Map >
     private Map<String, String> deviceToClientMapRepresentations = new ConcurrentHashMap<>();
 
+    // Thread-safe device creation: prevents race conditions when creating implicit devices
+    // Structure: < externalIdType|externalId, lock object >
+    private Map<String, Object> externalIdLocks = new ConcurrentHashMap<>();
+
+    // Cache for resolved external IDs to internal C8Y IDs
+    // Structure: < externalIdType|externalId, internalC8YId >
+    private Map<String, String> externalIdCache = new ConcurrentHashMap<>();
+
     @Getter
     private C8YAgent c8yAgent;
 
@@ -685,6 +693,89 @@ public class ConfigurationRegistry {
     public boolean hasClientRelation(String tenant, String deviceId) {
         Map<String, String> tenantMappings = deviceToClientPerTenant.get(tenant);
         return tenantMappings != null && tenantMappings.containsKey(deviceId);
+    }
+
+    /**
+     * Thread-safe method to create or retrieve an implicit device.
+     * Prevents race conditions when multiple threads try to create the same device simultaneously.
+     * Uses double-check locking pattern with per-external-ID locks.
+     *
+     * @param tenant               the tenant identifier
+     * @param externalIdType       the external ID type
+     * @param externalIdValue      the external ID value
+     * @param identity             the ID object for C8Y API calls
+     * @param context              the processing context
+     * @return the C8Y internal device ID, or null if creation failed and device doesn't exist
+     * @throws Exception if an error occurs during device creation or lookup
+     */
+    public String getOrCreateDeviceThreadSafe(String tenant, String externalIdType, String externalIdValue,
+            com.cumulocity.model.ID identity, dynamic.mapper.processor.model.ProcessingContext<?> context) throws Exception {
+        String cacheKey = externalIdType + "|" + externalIdValue;
+
+        // First check: quick cache hit
+        String cached = externalIdCache.get(cacheKey);
+        if (cached != null) {
+            log.debug("{} - Device cache hit for {}: {}", tenant, cacheKey, cached);
+            return cached;
+        }
+
+        // Get or create lock for this specific externalId (per-ID locking, not global)
+        Object lock = externalIdLocks.computeIfAbsent(cacheKey, k -> new Object());
+
+        synchronized (lock) {
+            // Double-check after acquiring lock: another thread may have created it
+            cached = externalIdCache.get(cacheKey);
+            if (cached != null) {
+                log.debug("{} - Device found in cache after lock acquired for {}: {}", tenant, cacheKey, cached);
+                return cached;
+            }
+
+            // Check if device already exists in C8Y
+            com.cumulocity.rest.representation.identity.ExternalIDRepresentation resolved =
+                    c8yAgent.resolveExternalId2GlobalId(tenant, identity, context.getTesting());
+            if (resolved != null) {
+                String internalId = resolved.getManagedObject().getId().getValue();
+                externalIdCache.put(cacheKey, internalId);
+                log.debug("{} - Device exists in C8Y for {}: {}", tenant, cacheKey, internalId);
+                return internalId;
+            }
+
+            // Device doesn't exist, check if we should create it
+            if (!Boolean.TRUE.equals(context.getMapping().getCreateNonExistingDevice())) {
+                log.debug("{} - Device creation disabled for {}, returning null", tenant, cacheKey);
+                return null;
+            }
+
+            // Create new device
+            log.info("{} - Creating new implicit device for {}/{}", tenant, externalIdType, externalIdValue);
+            String newId = dynamic.mapper.processor.util.ProcessingResultHelper.createImplicitDevice(
+                    identity, context, log, c8yAgent, objectMapper);
+
+            if (newId != null) {
+                externalIdCache.put(cacheKey, newId);
+                log.info("{} - Successfully created implicit device for {}: {}", tenant, cacheKey, newId);
+            } else {
+                log.error("{} - Failed to create implicit device for {}", tenant, cacheKey);
+            }
+
+            return newId;
+        }
+    }
+
+    /**
+     * Clear the external ID cache. Useful for testing or tenant cleanup.
+     *
+     * @param tenant the tenant identifier (optional; if null, clears all cache)
+     */
+    public void clearExternalIdCache(String tenant) {
+        if (tenant == null) {
+            externalIdCache.clear();
+            log.info("Cleared entire external ID cache");
+        } else {
+            // Clear entries for this tenant (prefix-based)
+            externalIdCache.entrySet().removeIf(entry -> entry.getKey().startsWith(tenant + "|"));
+            log.debug("{} - Cleared external ID cache", tenant);
+        }
     }
 
 }

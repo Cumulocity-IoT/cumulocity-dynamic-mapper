@@ -27,21 +27,27 @@ import dynamic.mapper.processor.model.RoutingContext;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
 import dynamic.mapper.processor.util.APITopicUtil;
 import dynamic.mapper.core.C8YAgent;
+import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @Slf4j
 @Component
 public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
 
     private final C8YAgent c8yAgent;
+    private final ConfigurationRegistry configurationRegistry;
 
+    @Autowired
     public FlowResultInboundProcessor(
             MappingService mappingService,
             C8YAgent c8yAgent,
+            ConfigurationRegistry configurationRegistry,
             ObjectMapper objectMapper) {
         super(mappingService, objectMapper);
         this.c8yAgent = c8yAgent;
+        this.configurationRegistry = configurationRegistry;
     }
 
     /**
@@ -250,18 +256,27 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
                             && externalId.getExternalId() != null) {
                         ID identity = new ID(externalId.getType(),
                                 externalId.getExternalId());
-                        String sourceId = ProcessingResultHelper.createImplicitDevice(identity, context, log,
-                                c8yAgent,
-                                objectMapper);
-                        context.setSourceId(sourceId);
-                        resolvedDeviceId = sourceId; // Set this so it's used below
-                        // Update externalIdInfo with created device info
-                        externalIdInfo = ExternalIdInfo.builder()
-                                .externalType(externalId.getType())
-                                .externalId(externalId.getExternalId())
-                                .build();
-                        context.setExternalId(externalId.getExternalId());
-                        ProcessingResultHelper.setHierarchicalValue(payload, targetAPI.identifier, sourceId);
+                        // Use thread-safe method to prevent race condition
+                        String sourceId = configurationRegistry.getOrCreateDeviceThreadSafe(
+                                tenant, externalId.getType(), externalId.getExternalId(), identity, context);
+                        if (sourceId != null) {
+                            context.setSourceId(sourceId);
+                            resolvedDeviceId = sourceId; // Set this so it's used below
+                            // Update externalIdInfo with created device info
+                            externalIdInfo = ExternalIdInfo.builder()
+                                    .externalType(externalId.getType())
+                                    .externalId(externalId.getExternalId())
+                                    .build();
+                            context.setExternalId(externalId.getExternalId());
+                            ProcessingResultHelper.setHierarchicalValue(payload, targetAPI.identifier, sourceId);
+                        } else {
+                            String warnMsg = String.format(
+                                    "Failed to create implicit device for externalId '%s' (type '%s') for mapping '%s'.",
+                                    externalId.getExternalId(), externalId.getType(), mapping.getIdentifier());
+                            log.warn("{} - {}", tenant, warnMsg);
+                            output.addWarning(warnMsg);
+                            return; // Don't create a request
+                        }
                     }
                 } else {
                     // No device ID and not creating implicit devices - skip this message

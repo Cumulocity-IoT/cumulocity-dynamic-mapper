@@ -348,11 +348,17 @@ public class SendInboundProcessor extends BaseProcessor {
                 } else if (Boolean.TRUE.equals(context.getMapping().getCreateNonExistingDevice())) {
                     log.info("{} - storeSparkPlugBBirthMessage: NODE MO for {}/{} does not exist, "
                             + "auto-creating (createNonExistingDevice=true)", tenant, externalIdType, externalIdValue);
-                    resolvedId = dynamic.mapper.processor.util.ProcessingResultHelper.createImplicitDevice(
-                            identity, context, log, c8yAgent, objectMapper);
-                    if (resolvedId == null) {
-                        log.error("{} - storeSparkPlugBBirthMessage: Failed to auto-create NODE device for {}/{}",
-                                tenant, externalIdType, externalIdValue);
+                    try {
+                        resolvedId = configurationRegistry.getOrCreateDeviceThreadSafe(
+                                tenant, externalIdType, externalIdValue, identity, context);
+                        if (resolvedId == null) {
+                            log.error("{} - storeSparkPlugBBirthMessage: Failed to auto-create NODE device for {}/{}",
+                                    tenant, externalIdType, externalIdValue);
+                            return;
+                        }
+                    } catch (Exception e) {
+                        log.error("{} - storeSparkPlugBBirthMessage: Exception while auto-creating NODE device for {}/{}: {}",
+                                tenant, externalIdType, externalIdValue, e.getMessage());
                         return;
                     }
                 } else {
