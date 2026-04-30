@@ -131,7 +131,7 @@ function onMessage(msg, context) {
             payload: measurementPayload,
             externalSource: [{
                 "type": "c8y_Serial",
-                "externalId": groupId + "_" + edgeNodeId + "_" + deviceId
+                "externalId": groupId + "_" + edgeNodeId
             }]
         });
     }
