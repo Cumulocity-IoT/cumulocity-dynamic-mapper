@@ -291,7 +291,6 @@ public class ProcessingContext<O> implements AutoCloseable {
         } else {
             pathsTargetForDeviceIdentifiers = mapping.getPathTargetForDeviceIdentifiers();
         }
-        pathsTargetForDeviceIdentifiers = new ArrayList<>(Arrays.asList(mapping.getGenericDeviceIdentifier()));
         return pathsTargetForDeviceIdentifiers;
     }
 

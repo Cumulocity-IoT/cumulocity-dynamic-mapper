@@ -196,6 +196,14 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
                     resultExchange = producerTemplate.send("direct:processInboundMessage", exchange);
                     contexts = resultExchange.getIn().getHeader("processedContexts",
                             List.class);
+                    if (contexts != null) {
+                        for (ProcessingContext<?> retryContext : contexts) {
+                            if (retryContext != null && retryContext.hasError()) {
+                                log.warn("{} - Retry after 422 also failed for topic {}: {}",
+                                        tenant, topic, retryContext.getErrors());
+                            }
+                        }
+                    }
                 }
                 // Stop the timer
                 timer.stop(inboundProcessingTimer);

@@ -34,7 +34,6 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Substitution;
 import dynamic.mapper.processor.model.PayloadContext;
 import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.ProcessingState;
 import dynamic.mapper.processor.model.RoutingContext;
 import dynamic.mapper.processor.model.SubstituteValue;
 import dynamic.mapper.processor.model.SubstitutionEvaluation;
@@ -85,15 +84,10 @@ public abstract class AbstractJSONataExtractionProcessor extends CommonProcessor
      * @throws ProcessingException if extraction or processing fails
      */
     public void extractFromSource(ProcessingContext<?> context) throws ProcessingException {
-        // Extract focused contexts at entry for cleaner internal API
         RoutingContext routing = context.getRoutingContext();
         PayloadContext<?> payload = context.getPayloadContext();
-        ProcessingState state = context.getProcessingState();
 
-        extractFromSource(routing, payload, state, context);
-
-        // Sync state modifications back to context for downstream processors
-        context.syncFromState(state);
+        extractFromSource(routing, payload, context);
     }
 
     /**
@@ -102,7 +96,6 @@ public abstract class AbstractJSONataExtractionProcessor extends CommonProcessor
     private void extractFromSource(
             RoutingContext routing,
             PayloadContext<?> payload,
-            ProcessingState state,
             ProcessingContext<?> context) throws ProcessingException {
         try {
             Mapping mapping = context.getMapping();
@@ -120,13 +113,13 @@ public abstract class AbstractJSONataExtractionProcessor extends CommonProcessor
                         serviceConfiguration.getLogPayload() || mapping.getDebug());
             }
 
-            // Process all substitutions using focused contexts
+            // Process all substitutions
             for (Substitution substitution : mapping.getSubstitutions()) {
-                processSubstitution(routing, state, substitution, payloadObject, payloadAsString, mapping, serviceConfiguration, context);
+                processSubstitution(routing, substitution, payloadObject, payloadAsString, mapping, serviceConfiguration, context);
             }
 
             // Hook for subclass-specific post-processing
-            postProcessSubstitutions(state, context);
+            postProcessSubstitutions(context);
 
         } catch (Exception e) {
             throw new ProcessingException(e.getMessage() != null ? e.getMessage() : e.getClass().getName(), e);
@@ -139,7 +132,6 @@ public abstract class AbstractJSONataExtractionProcessor extends CommonProcessor
      */
     private void processSubstitution(
             RoutingContext routing,
-            ProcessingState state,
             Substitution substitution,
             Object payloadObject,
             String payloadAsString,
@@ -154,7 +146,7 @@ public abstract class AbstractJSONataExtractionProcessor extends CommonProcessor
 
         // Step 2: Analyze and process extracted content
         // Get existing substitutions and create a mutable copy
-        List<SubstituteValue> existingValues = state.getSubstitutions(substitution.getPathTarget());
+        List<SubstituteValue> existingValues = context.getFromProcessingCache(substitution.getPathTarget());
         List<SubstituteValue> processingCacheEntry = existingValues != null && !existingValues.isEmpty()
             ? new ArrayList<>(existingValues)
             : new ArrayList<>();
@@ -173,7 +165,7 @@ public abstract class AbstractJSONataExtractionProcessor extends CommonProcessor
                     substitution, mapping);
         }
 
-        state.putSubstitutions(substitution.getPathTarget(), processingCacheEntry);
+        context.getProcessingCache().put(substitution.getPathTarget(), processingCacheEntry);
 
         // Log substitution if configured
         if (serviceConfiguration.getLogSubstitution() || mapping.getDebug()) {
@@ -206,7 +198,7 @@ public abstract class AbstractJSONataExtractionProcessor extends CommonProcessor
      * @param context Legacy context for any remaining needs
      * @throws ProcessingException if post-processing fails
      */
-    protected void postProcessSubstitutions(ProcessingState state, ProcessingContext<?> context)
+    protected void postProcessSubstitutions(ProcessingContext<?> context)
             throws ProcessingException {
         // Default: no post-processing
     }

@@ -32,29 +32,20 @@ import org.graalvm.polyglot.Value;
 import java.util.Map;
 
 /**
- * Context for managing GraalVM execution resources with automatic cleanup.
+ * View into the GraalVM execution resources held by a {@link ProcessingContext}.
  *
- * Implements AutoCloseable to ensure proper resource cleanup using try-with-resources pattern.
- * This prevents memory leaks from unclosed GraalVM contexts.
+ * <p>This class is a <em>view/snapshot</em> — it does NOT own the GraalVM resources it
+ * references. The owning {@link ProcessingContext} is responsible for closing the
+ * {@code graalContext} via its own {@link ProcessingContext#close()} method.
+ * Do NOT call {@code close()} on this object or wrap it in try-with-resources.</p>
  *
- * Example usage:
- * <pre>
- * try (ExecutionContext exec = ExecutionContext.builder()
- *         .graalEngine(engine)
- *         .graalContext(context)
- *         .build()) {
- *     // Use execution context
- *     exec.evaluate(code);
- * } // Resources automatically cleaned up
- * </pre>
- *
- * This class separates execution engine concerns from other processing aspects,
- * making it clear which operations require script execution capabilities.
+ * <p>This class separates execution engine concerns from other processing aspects,
+ * making it clear which operations require script execution capabilities.</p>
  */
 @Slf4j
 @Getter
 @Builder
-public class ExecutionContext implements AutoCloseable {
+public class ExecutionContext {
     /**
      * The GraalVM engine instance (can be shared across multiple contexts).
      * Not closed by this context - engine lifecycle managed separately.
@@ -121,37 +112,6 @@ public class ExecutionContext implements AutoCloseable {
      * The tenant identifier for logging purposes.
      */
     private final String tenant;
-
-    /**
-     * Cleans up GraalVM resources in the correct order.
-     * Called automatically when used with try-with-resources.
-     */
-    @Override
-    public void close() {
-        try {
-            // Close flow context first (may hold GraalVM references)
-            if (flowContext != null) {
-                try {
-                    flowContext.clearState();
-                    log.debug("{} - Cleared flow context state", tenant);
-                } catch (Exception e) {
-                    log.warn("{} - Error clearing flow context state: {}", tenant, e.getMessage());
-                }
-            }
-
-            // Close GraalVM Context (critical for preventing memory leaks)
-            if (graalContext != null) {
-                try {
-                    graalContext.close();
-                    log.debug("{} - Closed GraalVM Context", tenant);
-                } catch (Exception e) {
-                    log.warn("{} - Error closing GraalVM Context: {}", tenant, e.getMessage());
-                }
-            }
-        } catch (Exception e) {
-            log.error("{} - Error during ExecutionContext cleanup: {}", tenant, e.getMessage(), e);
-        }
-    }
 
     /**
      * Sets the flow result.

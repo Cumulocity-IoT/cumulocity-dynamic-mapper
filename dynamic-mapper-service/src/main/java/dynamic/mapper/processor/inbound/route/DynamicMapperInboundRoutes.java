@@ -197,9 +197,17 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
                 .when(exchange -> isFlowFunction(exchange))
                 .to("direct:processFlowFunction")
 
-                // Default fallback (should not happen with proper mapping validation)
+                // Default fallback — unknown/unmatched TransformationType
                 .otherwise()
-                .to("direct:processJSONataExtraction") // Default to JSONata
+                .process(exchange -> {
+                    ProcessingContext<?> ctx = exchange.getIn().getHeader("processingContext",
+                            ProcessingContext.class);
+                    log.warn("{} - No matching transformation type for mapping '{}' (type={}), falling back to JSONata",
+                            ctx != null ? ctx.getTenant() : "unknown",
+                            ctx != null && ctx.getMapping() != null ? ctx.getMapping().getName() : "unknown",
+                            ctx != null && ctx.getMapping() != null ? ctx.getMapping().getTransformationType() : "null");
+                })
+                .to("direct:processJSONataExtraction")
                 .end();
 
         // 1a. Snooping processing route

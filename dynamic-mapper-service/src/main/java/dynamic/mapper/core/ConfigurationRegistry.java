@@ -21,21 +21,14 @@
 
 package dynamic.mapper.core;
 
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
-import java.util.stream.Collectors;
 
 import org.apache.camel.CamelContext;
-import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Engine;
 import org.graalvm.polyglot.HostAccess;
 import org.graalvm.polyglot.Source;
-import org.graalvm.polyglot.io.IOAccess;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
@@ -44,11 +37,8 @@ import org.springframework.stereotype.Component;
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import dynamic.mapper.processor.util.JavaScriptModuleStripper;
-
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.configuration.ServiceConfiguration;
-import dynamic.mapper.configuration.TemplateType;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
@@ -66,11 +56,9 @@ import dynamic.mapper.connector.webhook.WebHook;
 import dynamic.mapper.connector.webhook.WebHookInternal;
 import dynamic.mapper.model.DeviceToClientMapRepresentation;
 import dynamic.mapper.model.Direction;
-import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MapperServiceRepresentation;
 import dynamic.mapper.notification.NotificationSubscriber;
 import dynamic.mapper.processor.outbound.CamelDispatcherOutbound;
-import dynamic.mapper.processor.util.JavaScriptModuleStripper;
 import dynamic.mapper.service.ConnectorConfigurationService;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.service.ServiceConfigurationService;
@@ -81,43 +69,10 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Component
 public class ConfigurationRegistry {
-    // TODO GRAAL_PERFORMANCE create cache for code graalCode
 
-    private HostAccess hostAccess;
-
-    private Map<String, Engine> graalEngines = new ConcurrentHashMap<>();
-
-    // Structure: < Tenant, Source>>
-    private Map<String, Source> graalSourceShared = new ConcurrentHashMap<>();
-
-    // Structure: < Tenant, Source>>
-    private Map<String, Source> graalSourceSystem = new ConcurrentHashMap<>();
-
-    // Tracks whether each tenant has ESM support enabled, so updateGraalsSource*
-    // methods can build Sources with the correct file extension (.mjs vs .js).
-    private Map<String, Boolean> tenantESMFlags = new ConcurrentHashMap<>();
-
-    private Map<String, MicroserviceCredentials> microserviceCredentials = new ConcurrentHashMap<>();
-
-    // Structure: < Tenant, < MappingType, < MapperServiceRepresentation > >
-    private Map<String, MapperServiceRepresentation> mapperServiceRepresentations = new ConcurrentHashMap<>();
-
-    // Structure: < Tenant, < ServiceConfiguration > >
-    private Map<String, ServiceConfiguration> serviceConfigurations = new ConcurrentHashMap<>();
-
-    // Structure: < Tenant, < Device, Client > >
-    private Map<String, Map<String, String>> deviceToClientPerTenant = new ConcurrentHashMap<>();
-
-    // Structure: < Tenant, Id ManagedObject Map >
-    private Map<String, String> deviceToClientMapRepresentations = new ConcurrentHashMap<>();
-
-    // Thread-safe device creation: prevents race conditions when creating implicit devices
-    // Structure: < externalIdType|externalId, lock object >
-    private Map<String, Object> externalIdLocks = new ConcurrentHashMap<>();
-
-    // Cache for resolved external IDs to internal C8Y IDs
-    // Structure: < externalIdType|externalId, internalC8YId >
-    private Map<String, String> externalIdCache = new ConcurrentHashMap<>();
+    @Autowired
+    @Getter
+    private TenantRegistry tenantRegistry;
 
     @Getter
     private C8YAgent c8yAgent;
@@ -325,115 +280,31 @@ public class ConfigurationRegistry {
     }
 
     public MicroserviceCredentials getMicroserviceCredential(String tenant) {
-        return microserviceCredentials.get(tenant);
+        return tenantRegistry.getMicroserviceCredential(tenant);
     }
 
     public void createGraalsResources(String tenant, ServiceConfiguration serviceConfiguration) {
-        Engine eng = Engine.newBuilder()
-                .option("engine.WarnInterpreterOnly", "false")
-                .build();
-
-        graalEngines.put(tenant, eng);
-
-        boolean supportESM = Boolean.TRUE.equals(serviceConfiguration.getSupportESM());
-        tenantESMFlags.put(tenant, supportESM);
-
-        // Shared / system code is ALWAYS evaluated as a plain script (.js) so that
-        // every
-        // top-level declaration lands on globalThis and is visible to all mapping
-        // modules
-        // running in the same GraalVM context. Only the per-mapping code is loaded as
-        // an ES module (.mjs) when supportESM is true.
-        // Create cached sources at Engine level - these will be parsed once and reused
-        String sharedCode = serviceConfiguration.getCodeTemplates()
-                .get(TemplateType.SHARED.name()).getCode();
-        Source sharedSource = Source.newBuilder("js",
-                JavaScriptModuleStripper.toPlainScript(new String(Base64.getDecoder().decode(sharedCode))),
-                "sharedCode.js")
-                .cached(true) // KEY: Engine-level caching
-                .buildLiteral();
-
-        String systemCode = serviceConfiguration.getCodeTemplates()
-                .get(TemplateType.SYSTEM.name()).getCode();
-        Source systemSource = Source.newBuilder("js",
-                JavaScriptModuleStripper.toPlainScript(new String(Base64.getDecoder().decode(systemCode))),
-                "systemCode.js")
-                .cached(true) // KEY: Engine-level caching
-                .buildLiteral();
-
-        graalSourceShared.put(tenant, sharedSource);
-        graalSourceSystem.put(tenant, systemSource);
-
-        // Warm up the GraalVM JIT by running a throw-away Context through the
-        // shared/system
-        // sources and a trivial onMessage stub. This triggers Graal's JIT compiler at
-        // startup
-        // so the first real mapping test executes in ~1s instead of ~7s.
-        Context.Builder warmupBuilder = Context.newBuilder("js")
-                .engine(eng)
-                .allowHostAccess(getHostAccess())
-                .allowHostClassLookup(
-                        className -> className.equals("dynamic.mapper.processor.model.SubstitutionContext")
-                                || className.equals("dynamic.mapper.processor.model.SubstitutionResult")
-                                || className.equals("dynamic.mapper.processor.model.SubstituteValue")
-                                || className.equals("dynamic.mapper.processor.model.SubstituteValue$TYPE")
-                                || className.equals("dynamic.mapper.processor.model.RepairStrategy")
-                                || className.equals("java.nio.charset.StandardCharsets")
-                                || className.equals("java.util.Base64")
-                                || className.equals("java.lang.String")
-                                || className.equals("java.util.ArrayList")
-                                || className.equals("java.util.Arrays")
-                                || className.equals("java.util.HashMap")
-                                || className.equals("java.util.HashSet"));
-        if (supportESM) {
-            warmupBuilder.allowIO(IOAccess.ALL)
-                    .allowExperimentalOptions(true)
-                    .option("js.esm-eval-returns-exports", "true");
-        }
-        try (Context warmupCtx = warmupBuilder.build()) {
-            warmupCtx.eval(sharedSource);
-            warmupCtx.eval(systemSource);
-            warmupCtx.eval(Source.newBuilder("js",
-                    "function __warmup__(msg, ctx) { return []; } __warmup__({}, null);",
-                    "__warmup__.js").buildLiteral());
-            log.info("{} - GraalVM JIT warm-up complete", tenant);
-        } catch (Exception e) {
-            log.warn("{} - GraalVM warm-up failed (non-fatal): {}", tenant, e.getMessage());
-        }
-
-        log.info("{} - Created cached GraalVM sources for shared and system code", tenant);
+        tenantRegistry.createGraalsResources(tenant, serviceConfiguration);
     }
 
     public Engine getGraalEngine(String tenant) {
-        return graalEngines.get(tenant);
+        return tenantRegistry.getGraalEngine(tenant);
     }
 
     public void updateGraalsSourceShared(String tenant, String code) {
-        Source sharedSource = Source.newBuilder("js",
-                JavaScriptModuleStripper.toPlainScript(new String(Base64.getDecoder().decode(code))),
-                "sharedCode.js")
-                .cached(true) // Engine-level caching
-                .buildLiteral();
-        graalSourceShared.put(tenant, sharedSource);
-        log.info("{} - Updated cached shared code source", tenant);
+        tenantRegistry.updateGraalsSourceShared(tenant, code);
     }
 
     public Source getGraalsSourceShared(String tenant) {
-        return graalSourceShared.get(tenant);
+        return tenantRegistry.getGraalsSourceShared(tenant);
     }
 
     public void updateGraalsSourceSystem(String tenant, String code) {
-        Source systemSource = Source.newBuilder("js",
-                JavaScriptModuleStripper.toPlainScript(new String(Base64.getDecoder().decode(code))),
-                "systemCode.js")
-                .cached(true) // Engine-level caching
-                .buildLiteral();
-        graalSourceSystem.put(tenant, systemSource);
-        log.info("{} - Updated cached system code source", tenant);
+        tenantRegistry.updateGraalsSourceSystem(tenant, code);
     }
 
     public Source getGraalsSourceSystem(String tenant) {
-        return graalSourceSystem.get(tenant);
+        return tenantRegistry.getGraalsSourceSystem(tenant);
     }
 
     /**
@@ -446,102 +317,53 @@ public class ConfigurationRegistry {
      *                    decoded+adapted JS code
      */
     public void warmupMappingCodes(String tenant, Map<String, String> sourceCodes) {
-        Engine eng = graalEngines.get(tenant);
-        if (eng == null || sourceCodes.isEmpty())
-            return;
-
-        try (Context warmupCtx = Context.newBuilder("js")
-                .engine(eng)
-                .allowHostAccess(getHostAccess())
-                .allowHostClassLookup(
-                        className -> className.equals("dynamic.mapper.processor.model.SubstitutionContext")
-                                || className.equals("dynamic.mapper.processor.model.SubstitutionResult")
-                                || className.equals("dynamic.mapper.processor.model.SubstituteValue")
-                                || className.equals("dynamic.mapper.processor.model.SubstituteValue$TYPE")
-                                || className.equals("dynamic.mapper.processor.model.RepairStrategy")
-                                || className.equals("java.util.ArrayList")
-                                || className.equals("java.util.HashMap")
-                                || className.equals("java.util.HashSet"))
-                .build()) {
-
-            warmupCtx.eval(graalSourceShared.get(tenant));
-            warmupCtx.eval(graalSourceSystem.get(tenant));
-
-            int warmed = 0;
-            for (Map.Entry<String, String> entry : sourceCodes.entrySet()) {
-                try {
-                    Source source = Source.newBuilder("js", entry.getValue(), entry.getKey())
-                            .cached(true)
-                            .buildLiteral();
-                    warmupCtx.eval(source);
-                    warmed++;
-                } catch (Exception e) {
-                    log.warn("{} - Failed to pre-compile mapping {}: {}", tenant, entry.getKey(), e.getMessage());
-                }
-            }
-            log.info("{} - GraalVM pre-compiled {} mapping JavaScript source(s)", tenant, warmed);
-        } catch (Exception e) {
-            log.warn("{} - Mapping code warm-up failed (non-fatal): {}", tenant, e.getMessage());
-        }
+        tenantRegistry.warmupMappingCodes(tenant, sourceCodes);
     }
 
     public void removeGraalsResources(String tenant) {
-        graalEngines.remove(tenant);
-        graalSourceShared.remove(tenant);
-        graalSourceSystem.remove(tenant);
-        log.info("{} - Removed GraalVM engine and cached sources", tenant);
+        tenantRegistry.removeGraalsResources(tenant);
     }
 
     public ServiceConfiguration getServiceConfiguration(String tenant) {
-        return serviceConfigurations.get(tenant);
+        return tenantRegistry.getServiceConfiguration(tenant);
     }
 
     public void addServiceConfiguration(String tenant, ServiceConfiguration configuration) {
-        serviceConfigurations.put(tenant, configuration);
+        tenantRegistry.addServiceConfiguration(tenant, configuration);
     }
 
     public void removeServiceConfiguration(String tenant) {
-        serviceConfigurations.remove(tenant);
+        tenantRegistry.removeServiceConfiguration(tenant);
     }
 
     public void addMapperServiceRepresentation(String tenant,
             MapperServiceRepresentation mapperServiceRepresentation) {
-        mapperServiceRepresentations.put(tenant, mapperServiceRepresentation);
+        tenantRegistry.addMapperServiceRepresentation(tenant, mapperServiceRepresentation);
     }
 
     public MapperServiceRepresentation getMapperServiceRepresentation(String tenant) {
-        return mapperServiceRepresentations.get(tenant);
+        return tenantRegistry.getMapperServiceRepresentation(tenant);
     }
 
     public void removeMapperServiceRepresentation(String tenant) {
-        mapperServiceRepresentations.remove(tenant);
+        tenantRegistry.removeMapperServiceRepresentation(tenant);
     }
 
     private void addDeviceToClientMapRepresentation(String tenant,
             DeviceToClientMapRepresentation deviceToClientMapRepresentation) {
-        deviceToClientMapRepresentations.put(tenant, deviceToClientMapRepresentation.getId());
-        Map<String, String> clientToDeviceMap = new ConcurrentHashMap<>();
-        if (deviceToClientMapRepresentation.getDeviceToClientMap() != null) {
-            log.debug("{} - Initializing Device To Client Map: {}, {} ", tenant,
-                    deviceToClientMapRepresentation.getDeviceToClientMap(),
-                    (deviceToClientMapRepresentation.getDeviceToClientMap() == null
-                            || deviceToClientMapRepresentation.getDeviceToClientMap().size() == 0 ? 0
-                                    : deviceToClientMapRepresentation.getDeviceToClientMap().size()));
-            clientToDeviceMap = deviceToClientMapRepresentation.getDeviceToClientMap();
-        }
-        deviceToClientPerTenant.put(tenant, clientToDeviceMap);
+        tenantRegistry.initializeDeviceToClientMap(tenant, deviceToClientMapRepresentation);
     }
 
     public String getDeviceToClientMapId(String tenant) {
-        return deviceToClientMapRepresentations.get(tenant);
+        return tenantRegistry.getDeviceToClientMapId(tenant);
     }
 
     public void addMicroserviceCredentials(String tenant, MicroserviceCredentials credentials) {
-        microserviceCredentials.put(tenant, credentials);
+        tenantRegistry.addMicroserviceCredentials(tenant, credentials);
     }
 
     public void removeMicroserviceCredentials(String tenant) {
-        microserviceCredentials.remove(tenant);
+        tenantRegistry.removeMicroserviceCredentials(tenant);
     }
 
     // In ConfigurationRegistry
@@ -569,130 +391,51 @@ public class ConfigurationRegistry {
     }
 
     public HostAccess getHostAccess() {
-        if (hostAccess == null) {
-            // Create a custom HostAccess configuration
-            // SubstitutionContext public methods and basic collection operations
-            // Create a HostAccess instance with the desired configuration
-            // Allow access to public members of accessible classes
-            // Allow array access for basic functionality
-            // Allow List operations
-            // Allow Map operations
-            hostAccess = HostAccess.newBuilder()
-                    // Allow access to public members of accessible classes
-                    .allowPublicAccess(true)
-                    // Allow array access for basic functionality
-                    .allowArrayAccess(true)
-                    // Allow List operations
-                    .allowListAccess(true)
-                    // Allow Map operations
-                    .allowMapAccess(true)
-                    .build();
-            // log.info("HostAccess created with public access, array access, list access,
-            // and map access enabled.");
-
-        }
-        return hostAccess;
+        return tenantRegistry.getHostAccess();
     }
 
     public void addOrUpdateClientRelation(String tenant, String clientId, String deviceId) {
-        deviceToClientPerTenant.computeIfAbsent(tenant, k -> new ConcurrentHashMap<>())
-                .put(deviceId, clientId);
-        log.debug("Added client mapping for tenant {}: device {} -> client {}", tenant, deviceId, clientId);
+        tenantRegistry.addOrUpdateClientRelation(tenant, clientId, deviceId);
     }
 
     public void addOrUpdateClientRelations(String tenant, String clientId, List<String> deviceIds) {
-        if (deviceIds == null || deviceIds.isEmpty()) {
-            log.debug("No device IDs provided for tenant {}, client {}", tenant, clientId);
-            return;
-        }
-
-        Map<String, String> tenantMappings = deviceToClientPerTenant.computeIfAbsent(tenant,
-                k -> new ConcurrentHashMap<>());
-
-        deviceIds.forEach(deviceId -> tenantMappings.put(deviceId, clientId));
-
-        log.debug("Added {} client mappings for tenant {}: devices {} -> client {}",
-                deviceIds.size(), tenant, deviceIds, clientId);
+        tenantRegistry.addOrUpdateClientRelations(tenant, clientId, deviceIds);
     }
 
     public void removeClientRelation(String tenant, String deviceId) {
-        Map<String, String> tenantMappings = deviceToClientPerTenant.get(tenant);
-        if (tenantMappings != null) {
-            String removedClientId = tenantMappings.remove(deviceId);
-            if (removedClientId != null) {
-                log.debug("Removed client mapping for tenant {}: device {} (was mapped to client {})",
-                        tenant, deviceId, removedClientId);
-            }
-        }
+        tenantRegistry.removeClientRelation(tenant, deviceId);
     }
 
     public void removeClientById(String tenant, String clientId) {
-        Map<String, String> tenantMappings = deviceToClientPerTenant.get(tenant);
-        if (tenantMappings != null) {
-            List<String> devicesToRemove = tenantMappings.entrySet().stream()
-                    .filter(entry -> clientId.equals(entry.getValue()))
-                    .map(Map.Entry::getKey)
-                    .collect(Collectors.toList());
-
-            devicesToRemove.forEach(tenantMappings::remove);
-            log.debug("Removed {} device mappings for client {} in tenant {}",
-                    devicesToRemove.size(), clientId, tenant);
-        }
+        tenantRegistry.removeClientById(tenant, clientId);
     }
 
     public void clearCacheDeviceToClient(String tenant) {
-        deviceToClientPerTenant.put(tenant, new ConcurrentHashMap<>());
-        log.debug("Cleared all client mappings for tenant {}", tenant);
+        tenantRegistry.clearCacheDeviceToClient(tenant);
     }
 
     public String resolveDeviceToClient(String tenant, String deviceId) {
-        Map<String, String> tenantMappings = deviceToClientPerTenant.get(tenant);
-        if (tenantMappings != null && tenantMappings.containsKey(deviceId)) {
-            return tenantMappings.get(deviceId);
-        } else {
-            // Return null if no mapping exists (instead of returning deviceId)
-            // This allows proper 404 handling in the controller
-            return null;
-        }
+        return tenantRegistry.resolveDeviceToClient(tenant, deviceId);
     }
 
     public Map<String, String> getAllClientRelations(String tenant) {
-        Map<String, String> tenantMappings = deviceToClientPerTenant.get(tenant);
-        return tenantMappings != null ? new HashMap<>(tenantMappings) : new HashMap<>();
+        return tenantRegistry.getAllClientRelations(tenant);
     }
 
     public List<String> getDevicesForClient(String tenant, String clientId) {
-        Map<String, String> tenantMappings = deviceToClientPerTenant.get(tenant);
-        if (tenantMappings == null) {
-            return new ArrayList<>();
-        }
-
-        return tenantMappings.entrySet().stream()
-                .filter(entry -> clientId.equals(entry.getValue()))
-                .map(Map.Entry::getKey)
-                .collect(Collectors.toList());
+        return tenantRegistry.getDevicesForClient(tenant, clientId);
     }
 
     public List<String> getAllClients(String tenant) {
-        Map<String, String> tenantMappings = deviceToClientPerTenant.get(tenant);
-        if (tenantMappings == null) {
-            return new ArrayList<>();
-        }
-
-        return tenantMappings.values().stream()
-                .distinct()
-                .sorted()
-                .collect(Collectors.toList());
+        return tenantRegistry.getAllClients(tenant);
     }
 
     public int getClientRelationCount(String tenant) {
-        Map<String, String> tenantMappings = deviceToClientPerTenant.get(tenant);
-        return tenantMappings != null ? tenantMappings.size() : 0;
+        return tenantRegistry.getClientRelationCount(tenant);
     }
 
     public boolean hasClientRelation(String tenant, String deviceId) {
-        Map<String, String> tenantMappings = deviceToClientPerTenant.get(tenant);
-        return tenantMappings != null && tenantMappings.containsKey(deviceId);
+        return tenantRegistry.hasClientRelation(tenant, deviceId);
     }
 
     /**
@@ -713,18 +456,18 @@ public class ConfigurationRegistry {
         String cacheKey = externalIdType + "|" + externalIdValue;
 
         // First check: quick cache hit
-        String cached = externalIdCache.get(cacheKey);
+        String cached = tenantRegistry.getCachedExternalId(cacheKey);
         if (cached != null) {
             log.debug("{} - Device cache hit for {}: {}", tenant, cacheKey, cached);
             return cached;
         }
 
         // Get or create lock for this specific externalId (per-ID locking, not global)
-        Object lock = externalIdLocks.computeIfAbsent(cacheKey, k -> new Object());
+        Object lock = tenantRegistry.getOrCreateExternalIdLock(cacheKey);
 
         synchronized (lock) {
             // Double-check after acquiring lock: another thread may have created it
-            cached = externalIdCache.get(cacheKey);
+            cached = tenantRegistry.getCachedExternalId(cacheKey);
             if (cached != null) {
                 log.debug("{} - Device found in cache after lock acquired for {}: {}", tenant, cacheKey, cached);
                 return cached;
@@ -735,7 +478,7 @@ public class ConfigurationRegistry {
                     c8yAgent.resolveExternalId2GlobalId(tenant, identity, context.getTesting());
             if (resolved != null) {
                 String internalId = resolved.getManagedObject().getId().getValue();
-                externalIdCache.put(cacheKey, internalId);
+                tenantRegistry.cacheExternalId(cacheKey, internalId);
                 log.debug("{} - Device exists in C8Y for {}: {}", tenant, cacheKey, internalId);
                 return internalId;
             }
@@ -752,7 +495,7 @@ public class ConfigurationRegistry {
                     identity, context, log, c8yAgent, objectMapper);
 
             if (newId != null) {
-                externalIdCache.put(cacheKey, newId);
+                tenantRegistry.cacheExternalId(cacheKey, newId);
                 log.info("{} - Successfully created implicit device for {}: {}", tenant, cacheKey, newId);
             } else {
                 log.error("{} - Failed to create implicit device for {}", tenant, cacheKey);
@@ -768,14 +511,7 @@ public class ConfigurationRegistry {
      * @param tenant the tenant identifier (optional; if null, clears all cache)
      */
     public void clearExternalIdCache(String tenant) {
-        if (tenant == null) {
-            externalIdCache.clear();
-            log.info("Cleared entire external ID cache");
-        } else {
-            // Clear entries for this tenant (prefix-based)
-            externalIdCache.entrySet().removeIf(entry -> entry.getKey().startsWith(tenant + "|"));
-            log.debug("{} - Cleared external ID cache", tenant);
-        }
+        tenantRegistry.clearExternalIdCache(tenant);
     }
 
 }
