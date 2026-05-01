@@ -126,8 +126,9 @@ public class InventoryCacheEnrichmentService {
 
     /**
      * Builds the effective list of inventory fragments to cache, adding the
-     * SparkPlug B BIRTH fragments ({@code sparkPlugB_NBIRTH}, {@code sparkPlugB_DBIRTH})
-     * transparently when {@link ServiceConfiguration#getCacheAliasMaps()} is {@code true}.
+     * SparkPlug B BIRTH fragments ({@code sparkPlugB_NBIRTH} and the glob
+     * {@code sparkPlugB_DBIRTH_*}) transparently when
+     * {@link ServiceConfiguration#getCacheAliasMaps()} is {@code true}.
      * The BIRTH fragments are never exposed in the UI-visible
      * {@code inventoryFragmentsToCache} list.
      */
@@ -137,8 +138,11 @@ public class InventoryCacheEnrichmentService {
             if (!effective.contains(SparkPlugBDeserializer.SPARKPLUGB_NBIRTH_FRAGMENT)) {
                 effective.add(SparkPlugBDeserializer.SPARKPLUGB_NBIRTH_FRAGMENT);
             }
-            if (!effective.contains(SparkPlugBDeserializer.SPARKPLUGB_DBIRTH_FRAGMENT)) {
-                effective.add(SparkPlugBDeserializer.SPARKPLUGB_DBIRTH_FRAGMENT);
+            // Use a glob so all per-device DBIRTH fragments (sparkPlugB_DBIRTH_<deviceId>) are cached.
+            // processFragment() expands glob patterns against the actual MO attributes.
+            String dbBirthGlob = SparkPlugBDeserializer.SPARKPLUGB_DBIRTH_FRAGMENT_PREFIX + "*";
+            if (effective.stream().noneMatch(f -> f.startsWith(SparkPlugBDeserializer.SPARKPLUGB_DBIRTH_FRAGMENT_PREFIX))) {
+                effective.add(dbBirthGlob);
             }
         }
         return effective;

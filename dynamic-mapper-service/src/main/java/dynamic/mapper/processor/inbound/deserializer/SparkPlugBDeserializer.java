@@ -228,8 +228,8 @@ public class SparkPlugBDeserializer implements PayloadDeserializer<Object> {
      * <ul>
      *   <li>For NDATA / NCMD: {@code externalIdValue} = <b>[Group ID]_[Edge Node ID]</b>,
      *       {@code fragmentKey} = {@value #SPARKPLUGB_NBIRTH_FRAGMENT}</li>
-     *   <li>For DDATA / DCMD: {@code externalIdValue} = <b>[Group ID]_[Edge Node ID]_[Device ID]</b>,
-     *       {@code fragmentKey} = {@value #SPARKPLUGB_DBIRTH_FRAGMENT}</li>
+     *   <li>For DDATA / DCMD: {@code externalIdValue} = <b>[Group ID]_[Edge Node ID]</b>,
+     *       {@code fragmentKey} = {@code sparkPlugB_DBIRTH_<sparkplugDeviceId>}</li>
      * </ul>
      *
      * @return alias→definition map, or {@code null} if the fragment cannot be found

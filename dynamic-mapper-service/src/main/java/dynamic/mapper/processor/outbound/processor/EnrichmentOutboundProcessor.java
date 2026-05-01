@@ -250,10 +250,29 @@ public class EnrichmentOutboundProcessor extends AbstractEnrichmentProcessor {
             }
 
             // ── alias map ─────────────────────────────────────────────────────
-            // Try NBIRTH first (edge-node NCMD), then DBIRTH (device DCMD)
+            // Try NBIRTH first (edge-node NCMD).
+            // For DCMD, fall back to scanning all sparkPlugB_DBIRTH_<deviceId> fragments on the
+            // NODE MO (DBIRTH alias maps are stored per-device with the prefix, never under the
+            // old flat "sparkPlugB_DBIRTH" key).  Merge all device maps — aliases are unique
+            // across devices on the same node so a merged map is safe for alias→name lookups.
             Object fragment = mor.get(SparkPlugBDeserializer.SPARKPLUGB_NBIRTH_FRAGMENT);
             if (!(fragment instanceof Map)) {
-                fragment = mor.get(SparkPlugBDeserializer.SPARKPLUGB_DBIRTH_FRAGMENT);
+                // No NBIRTH — scan attrs for any sparkPlugB_DBIRTH_<deviceId> entry
+                Map<String, Object> attrs = mor.getAttrs();
+                if (attrs != null) {
+                    Map<Object, Object> merged = new LinkedHashMap<>();
+                    for (Map.Entry<String, Object> entry : attrs.entrySet()) {
+                        if (entry.getKey().startsWith(SparkPlugBDeserializer.SPARKPLUGB_DBIRTH_FRAGMENT_PREFIX)
+                                && entry.getValue() instanceof Map) {
+                            @SuppressWarnings("unchecked")
+                            Map<Object, Object> dbirth = (Map<Object, Object>) entry.getValue();
+                            merged.putAll(dbirth);
+                        }
+                    }
+                    if (!merged.isEmpty()) {
+                        fragment = merged;
+                    }
+                }
             }
             if (fragment instanceof Map) {
                 @SuppressWarnings("rawtypes")
