@@ -780,10 +780,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                         agentFragments.put("maintainer", "Open-Source");
                         mor.set(agentFragments, "c8y_Agent");
                         mor.set(new IsDevice());
-                        // Tag as test device when created during a test send
-                        if (Boolean.TRUE.equals(context.getSendPayload())) {
-                            mor.set(new HashMap<String, String>(), MAPPING_TEST_DEVICE_TYPE);
-                        }
                         // remove id only if not testing
                         if (!testing) {
                             mor.setId(null);
