@@ -453,7 +453,7 @@ public class ConfigurationRegistry {
      */
     public String getOrCreateDeviceThreadSafe(String tenant, String externalIdType, String externalIdValue,
             com.cumulocity.model.ID identity, dynamic.mapper.processor.model.ProcessingContext<?> context) throws Exception {
-        String cacheKey = externalIdType + "|" + externalIdValue;
+        String cacheKey = tenant + "|" + externalIdType + "|" + externalIdValue;
 
         // First check: quick cache hit
         String cached = tenantRegistry.getCachedExternalId(cacheKey);

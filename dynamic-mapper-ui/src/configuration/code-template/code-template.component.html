@@ -29,7 +29,7 @@
         <option [ngValue]="null" disabled>Select template...</option>
         @for (item of codeTemplateEntries$ | async; track item) {
         <option [ngValue]="item.key">
-          {{ item.name }} ({{ item.readonly ? 'read-only — duplicate to customise' : 'editable' }})
+          {{ item.name }} ({{ item.readonly ? 'read-only' : 'editable' }})
         </option>
         }
       </select>

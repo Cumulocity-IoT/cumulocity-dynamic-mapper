@@ -229,6 +229,23 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
                 }
             }
 
+            // Merge device identity into MANAGED_OBJECT patch payload so that name/type/fragments
+            // are always written to inventory — even when:
+            // (a) contextData is on a sibling CumulocityObject in the same batch (processed first
+            //     by reorderMessages, populating context.getDeviceName/Type/Fragments), or
+            // (b) the device was created by a concurrent thread without contextData (race condition).
+            if (CumulocityType.MANAGED_OBJECT.equals(cumulocityMessage.getCumulocityType())) {
+                if (context.getDeviceName() != null) {
+                    payload.put("name", context.getDeviceName());
+                }
+                if (context.getDeviceType() != null) {
+                    payload.put("type", context.getDeviceType());
+                }
+                if (context.getDeviceFragments() != null) {
+                    payload.putAll(context.getDeviceFragments());
+                }
+            }
+
             // Check if sourceId is explicitly set in CumulocityObject
             String resolvedDeviceId;
             List<ExternalId> externalSources = cumulocityMessage.getExternalSource();

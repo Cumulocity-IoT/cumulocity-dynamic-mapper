@@ -108,10 +108,10 @@ public class TenantRegistry {
 
     // ─── External-ID resolution cache & per-ID creation locks ────────────────
 
-    // Structure: < externalIdType|externalId, internalC8YId >
+    // Structure: < tenant|externalIdType|externalId, internalC8YId >
     private final Map<String, String> externalIdCache = new ConcurrentHashMap<>();
 
-    // Structure: < externalIdType|externalId, lock object > — per-ID monitor for double-check locking during implicit device creation
+    // Structure: < tenant|externalIdType|externalId, lock object > — per-ID monitor for double-check locking during implicit device creation
     private final Map<String, Object> externalIdLocks = new ConcurrentHashMap<>();
 
     // =========================================================================
@@ -466,7 +466,7 @@ public class TenantRegistry {
      * Used after a 422 response to force re-resolution on the next message.
      */
     public void removeFromExternalIdCache(String tenant, ID identity) {
-        String cacheKey = identity.getType() + "|" + identity.getValue();
+        String cacheKey = tenant + "|" + identity.getType() + "|" + identity.getValue();
         externalIdCache.remove(cacheKey);
         externalIdLocks.remove(cacheKey);
         log.debug("{} - Removed external ID from cache: {}", tenant, cacheKey);
