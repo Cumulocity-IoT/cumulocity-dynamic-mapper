@@ -238,75 +238,91 @@ public class MQTT5Callback implements Consumer<Mqtt5Publish> {
     /**
      * Circuit-breaker-aware reconnect handler.
      * <ul>
-     *   <li>Increments the consecutive-failure counter.</li>
-     *   <li>If the counter is below {@link #MAX_CONSECUTIVE_RECONNECTS}: triggers a
-     *       rate-limited disconnect so the broker retransmits the unACKed message after
-     *       the session is restored.</li>
-     *   <li>If the counter reaches the threshold: the message is treated as a
+     *   <li>If a reconnect is already in progress (including its back-off delay), the
+     *       message stays unACKed — the broker will retransmit it after the session is
+     *       restored, so no further action is required.</li>
+     *   <li>If the consecutive-reconnect counter has reached
+     *       {@link #MAX_CONSECUTIVE_RECONNECTS}: the message is treated as a
      *       <em>poison pill</em> — it is ACKed (discarded) and a hard error is logged.
      *       This breaks an infinite reconnect loop caused by a permanently unprocessable
      *       message.</li>
+     *   <li>Otherwise {@link #triggerReconnect()} is called, which increments the
+     *       counter and schedules a delayed disconnect.</li>
      * </ul>
      *
      * @param mqttMessage the unacknowledged MQTT message
      * @param topic       human-readable topic string for logging
      */
     private void triggerReconnectOrAck(Mqtt5Publish mqttMessage, String topic) {
-        int count = consecutiveReconnectCount.incrementAndGet();
-        if (count <= MAX_CONSECUTIVE_RECONNECTS) {
-            triggerReconnect();
-        } else {
-            // Poison-pill detected: ACK to remove from broker session and break the loop.
-            log.error("{} - POISON PILL: {} consecutive failures without success — ACKing message to prevent "
-                    + "infinite reconnect loop. Message is discarded. topic: [{}], connector: {}",
-                    tenant, count, topic, connectorIdentifier);
-            consecutiveReconnectCount.set(0); // reset so normal processing can resume
-            mqttMessage.acknowledge();
+        // If a reconnect is already scheduled/running, this message stays unACKed.
+        // The broker will retransmit it after the session is restored.
+        if (reconnectInProgress.get()) {
+            log.debug("{} - Reconnect already in progress — message will be retransmitted after reconnect. topic: [{}], connector: {}",
+                    tenant, topic, connectorIdentifier);
+            return;
         }
+        // Check poison-pill threshold BEFORE scheduling another reconnect attempt.
+        if (consecutiveReconnectCount.get() >= MAX_CONSECUTIVE_RECONNECTS) {
+            log.error("{} - POISON PILL: {} consecutive reconnect attempts without success — ACKing message to prevent "
+                    + "infinite reconnect loop. Message is discarded. topic: [{}], connector: {}",
+                    tenant, consecutiveReconnectCount.get(), topic, connectorIdentifier);
+            consecutiveReconnectCount.set(0);
+            mqttMessage.acknowledge();
+            return;
+        }
+        triggerReconnect();
     }
 
     /**
-     * Triggers a connector disconnect (rate-limited to once per {@value #MIN_RECONNECT_INTERVAL_MS} ms).
+     * Schedules a connector disconnect with exponential back-off delay.
      * <p>
-     * Two guards prevent parallel execution:
-     * <ol>
-     *   <li><b>Rate-limit</b>: reconnect is suppressed if the last one was less than
-     *       {@value #MIN_RECONNECT_INTERVAL_MS} ms ago.</li>
-     *   <li><b>In-progress flag</b>: {@link #reconnectInProgress} ensures that only one
-     *       reconnect runs at a time. Concurrent callers immediately return without
-     *       triggering a second disconnect.</li>
-     * </ol>
-     * Disconnecting causes the MQTT broker to retain all unACKed QoS&gt;0 messages in the session.
-     * When the connector reconnects (with {@code cleanStart=false} / {@code cleanSession=false}),
-     * the broker retransmits those messages — effectively a safe retry without data loss.
+     * The {@link #reconnectInProgress} flag is held for the entire duration — including
+     * the sleep before the disconnect — so that concurrent callers in
+     * {@link #triggerReconnectOrAck} see "reconnect in progress" and leave their
+     * messages unACKed for broker retransmission.
+     * <p>
+     * Back-off schedule (base = {@value #MIN_RECONNECT_INTERVAL_MS} ms):
+     * <ul>
+     *   <li>Attempt 1: immediate (0 ms)</li>
+     *   <li>Attempt 2: {@value #MIN_RECONNECT_INTERVAL_MS} ms</li>
+     *   <li>Attempt 3: 2 × {@value #MIN_RECONNECT_INTERVAL_MS} ms</li>
+     *   <li>… capped at 5 × {@value #MIN_RECONNECT_INTERVAL_MS} ms</li>
+     * </ul>
+     * The consecutive-reconnect counter is incremented here (not in the caller) so it
+     * accurately reflects actual reconnect attempts, not the number of failing messages.
      */
     private void triggerReconnect() {
-        // Rate-limit pre-check (fast path, no locking needed)
-        long now = System.currentTimeMillis();
-        long last = lastReconnectTriggerMs.get();
-        if (now - last < MIN_RECONNECT_INTERVAL_MS) {
-            log.warn("{} - Reconnect suppressed (rate-limited: last was {}ms ago, min {}ms), connector: {}",
-                    tenant, now - last, MIN_RECONNECT_INTERVAL_MS, connectorIdentifier);
-            return;
-        }
-        // Parallel-execution guard: only one reconnect at a time
+        // Parallel-execution guard — also prevents a second reconnect from being queued
+        // while the first one is still sleeping through its back-off delay.
         if (!reconnectInProgress.compareAndSet(false, true)) {
             log.warn("{} - Reconnect already in progress, skipping parallel trigger, connector: {}",
                     tenant, connectorIdentifier);
             return;
         }
-        // Update timestamp now that we own the reconnect slot
-        lastReconnectTriggerMs.set(now);
-        log.warn("{} - Triggering connector reconnect for message retransmission (rate-limit: {}s), connector: {}",
-                tenant, MIN_RECONNECT_INTERVAL_MS / 1000, connectorIdentifier);
-        // Run disconnect in a dedicated virtual thread so it doesn't block the callback thread.
-        // Housekeeping will detect the disconnection and reconnect automatically.
-        // The in-progress flag is reset in the finally block after the trigger completes.
+        int attempt = consecutiveReconnectCount.incrementAndGet();
+        lastReconnectTriggerMs.set(System.currentTimeMillis());
+
+        // Exponential back-off: 0 ms for the first attempt, then (attempt-1) × base, capped at 5 × base.
+        long delayMs = attempt <= 1 ? 0L
+                : Math.min((long) (attempt - 1) * MIN_RECONNECT_INTERVAL_MS, 5 * MIN_RECONNECT_INTERVAL_MS);
+
+        log.warn("{} - Scheduling reconnect attempt {} with {}ms back-off delay, connector: {}",
+                tenant, attempt, delayMs, connectorIdentifier);
+
+        // Run in a dedicated virtual thread so it doesn't block the callback thread.
+        // reconnectInProgress remains true during the sleep AND the disconnect call,
+        // ensuring no second reconnect can start until this one fully completes.
         Thread.ofVirtual()
                 .name("mqtt-timeout-reconnect-" + connectorIdentifier)
                 .start(() -> {
                     try {
+                        if (delayMs > 0) {
+                            Thread.sleep(delayMs); //NOSONAR intentional back-off delay
+                        }
                         reconnectTrigger.run();
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        log.warn("{} - Reconnect back-off sleep interrupted, connector: {}", tenant, connectorIdentifier);
                     } finally {
                         reconnectInProgress.set(false);
                     }
