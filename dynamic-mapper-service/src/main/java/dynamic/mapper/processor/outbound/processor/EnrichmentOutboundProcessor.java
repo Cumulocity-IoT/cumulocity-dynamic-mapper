@@ -58,8 +58,16 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class EnrichmentOutboundProcessor extends AbstractEnrichmentProcessor {
 
-    /** Container for SparkPlug B MO state loaded in a single fetch. */
-    private record SparkPlugBContext(Map<String, String> aliasMap, boolean isActive) {}
+    /**
+     * Container for SparkPlug B MO state loaded in a single fetch.
+     *
+     * @param aliasMap   metric-name → alias string map for NCMD/DCMD payload building
+     * @param isActive   node-level isActive flag ({@code sparkPlugB_isActive})
+     * @param deviceActiveMap  per-device isActive flags: deviceId → isActive
+     *                   (derived from {@code sparkPlugB_isActive_<deviceId>} fragments)
+     */
+    private record SparkPlugBContext(Map<String, String> aliasMap, boolean isActive,
+                                     Map<String, Boolean> deviceActiveMap) {}
 
     private final C8YAgent c8yAgent;
 
@@ -135,8 +143,10 @@ public class EnrichmentOutboundProcessor extends AbstractEnrichmentProcessor {
                     SparkPlugBContext spbCtx = loadSparkPlugBContext(tenant, sourceId.toString(), context.getTesting());
                     config.put("aliasMap", spbCtx.aliasMap());
                     config.put("isActive", spbCtx.isActive());
-                    log.debug("{} - SparkPlugB context: aliasMap={} entries, isActive={} for sourceId={}",
-                            tenant, spbCtx.aliasMap().size(), spbCtx.isActive(), sourceId);
+                    config.put("deviceActiveMap", spbCtx.deviceActiveMap());
+                    log.debug("{} - SparkPlugB context: aliasMap={} entries, isActive={}, deviceActiveMap={} entries for sourceId={}",
+                            tenant, spbCtx.aliasMap().size(), spbCtx.isActive(),
+                            spbCtx.deviceActiveMap().size(), sourceId);
                 }
             } else if (flowContext instanceof JavaExtensionContextImpl) {
                 javaExtContext = (JavaExtensionContextImpl) flowContext;
@@ -223,42 +233,55 @@ public class EnrichmentOutboundProcessor extends AbstractEnrichmentProcessor {
 
     /**
      * Loads SparkPlug B state from the managed object in a <em>single</em> REST call.
-     * Returns both the inverted alias map ({@code name → alias}) and the
-     * {@code sparkPlugB_isActive} flag so the caller avoids two separate fetches.
+     * Returns the inverted alias map ({@code name → alias}), the node-level
+     * {@code sparkPlugB_isActive} flag, and the per-device isActive map
+     * ({@code deviceId → isActive} derived from {@code sparkPlugB_isActive_<deviceId>} fragments).
      *
-     * <p>The NBIRTH fragment is checked first (edge-node NCMD); if absent, DBIRTH
-     * is used (device DCMD).
+     * <p>The NBIRTH fragment is checked first (edge-node NCMD); if absent, all
+     * {@code sparkPlugB_DBIRTH_<deviceId>} fragments are merged (device DCMD).
      *
      * @param tenant   the tenant identifier
      * @param sourceId internal C8Y managed object ID
      * @param testing  testing flag passed through to C8YAgent
-     * @return a {@link SparkPlugBContext} with the alias map and isActive flag
+     * @return a {@link SparkPlugBContext} with alias map, node isActive flag, and per-device isActive map
      */
     private SparkPlugBContext loadSparkPlugBContext(String tenant, String sourceId, Boolean testing) {
         Map<String, String> nameToAlias = new LinkedHashMap<>();
         boolean isActive = true; // default: assume active until a DEATH message is received
+        Map<String, Boolean> deviceActiveMap = new LinkedHashMap<>();
         try {
             ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(tenant, sourceId, testing);
             if (mor == null) {
-                return new SparkPlugBContext(nameToAlias, isActive);
+                return new SparkPlugBContext(nameToAlias, isActive, deviceActiveMap);
             }
 
-            // ── isActive flag ──────────────────────────────────────────────────
+            // ── node-level isActive flag ───────────────────────────────────────
             Object activeVal = mor.get(SparkPlugBDeserializer.SPARKPLUGB_IS_ACTIVE_FRAGMENT);
             if (activeVal instanceof Boolean) {
                 isActive = (Boolean) activeVal;
             }
 
+            // ── per-device isActive flags ──────────────────────────────────────
+            // Scan all sparkPlugB_isActive_<deviceId> fragments on the NODE MO.
+            Map<String, Object> attrs = mor.getAttrs();
+            if (attrs != null) {
+                for (Map.Entry<String, Object> entry : attrs.entrySet()) {
+                    if (entry.getKey().startsWith(SparkPlugBDeserializer.SPARKPLUGB_IS_ACTIVE_FRAGMENT_PREFIX)
+                            && entry.getValue() instanceof Boolean) {
+                        String devId = entry.getKey()
+                                .substring(SparkPlugBDeserializer.SPARKPLUGB_IS_ACTIVE_FRAGMENT_PREFIX.length());
+                        deviceActiveMap.put(devId, (Boolean) entry.getValue());
+                    }
+                }
+            }
+
             // ── alias map ─────────────────────────────────────────────────────
             // Try NBIRTH first (edge-node NCMD).
             // For DCMD, fall back to scanning all sparkPlugB_DBIRTH_<deviceId> fragments on the
-            // NODE MO (DBIRTH alias maps are stored per-device with the prefix, never under the
-            // old flat "sparkPlugB_DBIRTH" key).  Merge all device maps — aliases are unique
-            // across devices on the same node so a merged map is safe for alias→name lookups.
+            // NODE MO. Merge all device maps — aliases are unique across devices on the same node.
             Object fragment = mor.get(SparkPlugBDeserializer.SPARKPLUGB_NBIRTH_FRAGMENT);
             if (!(fragment instanceof Map)) {
                 // No NBIRTH — scan attrs for any sparkPlugB_DBIRTH_<deviceId> entry
-                Map<String, Object> attrs = mor.getAttrs();
                 if (attrs != null) {
                     Map<Object, Object> merged = new LinkedHashMap<>();
                     for (Map.Entry<String, Object> entry : attrs.entrySet()) {
@@ -293,7 +316,7 @@ public class EnrichmentOutboundProcessor extends AbstractEnrichmentProcessor {
         } catch (Exception e) {
             log.warn("{} - Failed to load SparkPlugB context for sourceId={}: {}", tenant, sourceId, e.getMessage());
         }
-        return new SparkPlugBContext(nameToAlias, isActive);
+        return new SparkPlugBContext(nameToAlias, isActive, deviceActiveMap);
     }
 
 }

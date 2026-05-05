@@ -438,16 +438,16 @@ public class SendInboundProcessor extends BaseProcessor {
     }
 
     /**
-     * Updates the {@code sparkPlugB_isActive} fragment on the managed object that corresponds
-     * to the SparkPlug B topic:
+     * Updates the isActive fragment on the NODE managed object for the SparkPlug B topic:
      * <ul>
-     *   <li><b>NBIRTH / DBIRTH / NDATA / DDATA</b> → {@code true} (node/device is online and producing data)</li>
-     *   <li><b>NDEATH / DDEATH</b> → {@code false} (node/device has gone offline)</li>
-     *   <li>NCMD / DCMD / STATE — no change</li>
+     *   <li><b>NBIRTH / NDATA</b> → {@code sparkPlugB_isActive = true} on NODE MO</li>
+     *   <li><b>NDEATH</b>         → {@code sparkPlugB_isActive = false} on NODE MO</li>
+     *   <li><b>DBIRTH / DDATA</b> → {@code sparkPlugB_isActive_<deviceId> = true} on NODE MO</li>
+     *   <li><b>DDEATH</b>         → {@code sparkPlugB_isActive_<deviceId> = false} on NODE MO</li>
+     *   <li>NCMD / DCMD / STATE   — no change</li>
      * </ul>
-     * The managed object is resolved via {@code context.getSourceId()} when set (BIRTH messages where
-     * the Smart Function returned an INVENTORY object), otherwise by looking up the external ID derived
-     * from the topic (same convention as {@link #storeSparkPlugBBirthMessage}).
+     * Device-level isActive fragments are always stored on the <b>Edge Node MO</b> (same MO that
+     * holds the DBIRTH alias maps), not on a separate device MO.
      */
     private void updateSparkPlugBActiveStatus(ProcessingContext<Object> context) {
         if (!dynamic.mapper.processor.model.MappingType.SPARKPLUGB
@@ -477,51 +477,65 @@ public class SendInboundProcessor extends BaseProcessor {
         }
 
         String tenant = context.getTenant();
-
-        // For BIRTH messages, context.getSourceId() is set by processInventoryRequest when the Smart Function
-        // returns an INVENTORY object. Reuse it to avoid an extra identity lookup.
-        String deviceId = context.getSourceId();
-
-        if (deviceId == null) {
-            // Derive external ID from the topic
-            boolean isNodeLevel = "NBIRTH".equals(messageType) || "NDATA".equals(messageType)
-                    || "NDEATH".equals(messageType);
-            String externalIdValue;
-            if (isNodeLevel) {
-                // Edge Node: [Group ID]_[Edge Node ID]
-                externalIdValue = parts[1] + "_" + parts[3];
-            } else {
-                // Device: [Group ID]_[Edge Node ID]_[Device ID]
-                if (parts.length < 5) {
-                    log.warn("{} - updateSparkPlugBActiveStatus: {} topic has fewer than 5 levels: {}",
-                            tenant, messageType, topic);
-                    return;
-                }
-                externalIdValue = parts[1] + "_" + parts[3] + "_" + parts[4];
-            }
-
-            String externalIdType = context.getMapping().getExternalIdType();
-            if (externalIdType == null || externalIdType.isEmpty()) {
-                externalIdType = "c8y_Serial";
-            }
-
-            ID identity = new ID(externalIdType, externalIdValue);
-            ExternalIDRepresentation resolved =
-                    c8yAgent.resolveExternalId2GlobalId(tenant, identity, context.getTesting());
-            if (resolved == null) {
-                log.debug("{} - updateSparkPlugBActiveStatus: no MO found for externalId={}, skipping",
-                        tenant, externalIdValue);
-                return;
-            }
-            deviceId = resolved.getManagedObject().getId().getValue();
+        String externalIdType = context.getMapping().getExternalIdType();
+        if (externalIdType == null || externalIdType.isEmpty()) {
+            externalIdType = "c8y_Serial";
         }
 
-        log.info("{} - Setting {}={} on MO {} (messageType={})",
-                tenant, SparkPlugBDeserializer.SPARKPLUGB_IS_ACTIVE_FRAGMENT,
-                isActive, deviceId, messageType);
-        c8yAgent.storeManagedObjectFragment(tenant, deviceId,
-                SparkPlugBDeserializer.SPARKPLUGB_IS_ACTIVE_FRAGMENT,
-                isActive, context.getTesting());
+        boolean isDeviceLevel = "DBIRTH".equals(messageType) || "DDATA".equals(messageType)
+                || "DDEATH".equals(messageType);
+
+        if (isDeviceLevel) {
+            // Device-level: store sparkPlugB_isActive_<deviceId> on the NODE MO
+            if (parts.length < 5) {
+                log.warn("{} - updateSparkPlugBActiveStatus: {} topic has fewer than 5 levels: {}",
+                        tenant, messageType, topic);
+                return;
+            }
+            String sparkplugDeviceId = parts[4];
+            // Resolve the NODE MO: [Group ID]_[Edge Node ID]
+            String nodeExternalIdValue = parts[1] + "_" + parts[3];
+            ID nodeIdentity = new ID(externalIdType, nodeExternalIdValue);
+            ExternalIDRepresentation resolved =
+                    c8yAgent.resolveExternalId2GlobalId(tenant, nodeIdentity, context.getTesting());
+            if (resolved == null) {
+                log.debug("{} - updateSparkPlugBActiveStatus: NODE MO not found for externalId={}, skipping",
+                        tenant, nodeExternalIdValue);
+                return;
+            }
+            String nodeMoId = resolved.getManagedObject().getId().getValue();
+            String fragmentKey = SparkPlugBDeserializer.getIsActiveFragmentKey(sparkplugDeviceId);
+            log.info("{} - Setting {}={} on NODE MO {} (messageType={}, sparkplugDeviceId={})",
+                    tenant, fragmentKey, isActive, nodeMoId, messageType, sparkplugDeviceId);
+            c8yAgent.storeManagedObjectFragment(tenant, nodeMoId, fragmentKey, isActive, context.getTesting());
+
+        } else {
+            // Node-level NBIRTH/NDATA/NDEATH: store sparkPlugB_isActive on the NODE MO.
+            // context.getSourceId() is set by processInventoryRequest when the Smart Function
+            // returns an INVENTORY object for the NODE — reuse it to avoid an extra lookup.
+            String nodeMoId = context.getSourceId();
+
+            if (nodeMoId == null) {
+                // Derive NODE external ID from topic: [Group ID]_[Edge Node ID]
+                String externalIdValue = parts[1] + "_" + parts[3];
+                ID identity = new ID(externalIdType, externalIdValue);
+                ExternalIDRepresentation resolved =
+                        c8yAgent.resolveExternalId2GlobalId(tenant, identity, context.getTesting());
+                if (resolved == null) {
+                    log.debug("{} - updateSparkPlugBActiveStatus: no NODE MO found for externalId={}, skipping",
+                            tenant, externalIdValue);
+                    return;
+                }
+                nodeMoId = resolved.getManagedObject().getId().getValue();
+            }
+
+            log.info("{} - Setting {}={} on NODE MO {} (messageType={})",
+                    tenant, SparkPlugBDeserializer.SPARKPLUGB_IS_ACTIVE_FRAGMENT,
+                    isActive, nodeMoId, messageType);
+            c8yAgent.storeManagedObjectFragment(tenant, nodeMoId,
+                    SparkPlugBDeserializer.SPARKPLUGB_IS_ACTIVE_FRAGMENT,
+                    isActive, context.getTesting());
+        }
     }
 
 }

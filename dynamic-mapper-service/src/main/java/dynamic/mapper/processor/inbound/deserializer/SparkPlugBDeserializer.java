@@ -103,11 +103,31 @@ public class SparkPlugBDeserializer implements PayloadDeserializer<Object> {
     }
 
     /**
-     * Fragment key used to track the active/online status of an Edge Node or Device.
-     * Set to {@code true} on NBIRTH / DBIRTH / NDATA / DDATA messages and
-     * {@code false} on NDEATH / DDEATH messages.
+     * Fragment key used to track the active/online status of an Edge Node.
+     * Set to {@code true} on NBIRTH / NDATA messages and {@code false} on NDEATH messages.
+     * Stored on the <b>Edge Node</b> managed object.
      */
     public static final String SPARKPLUGB_IS_ACTIVE_FRAGMENT = "sparkPlugB_isActive";
+
+    /**
+     * Fragment key prefix used to track the active/online status of a SparkPlug B Device.
+     * The full key format is {@code sparkPlugB_isActive_<sparkplugDeviceId>}.
+     * Stored on the <b>Edge Node</b> managed object (same as DBIRTH alias maps).
+     * Set to {@code true} on DBIRTH / DDATA messages and {@code false} on DDEATH messages.
+     */
+    public static final String SPARKPLUGB_IS_ACTIVE_FRAGMENT_PREFIX = "sparkPlugB_isActive_";
+
+    /**
+     * Returns the fragment key used to store the isActive status for the given SparkPlug device ID
+     * on the <b>Edge Node</b> managed object.
+     * Format: {@code sparkPlugB_isActive_<sparkplugDeviceId>}
+     *
+     * @param sparkplugDeviceId the SparkPlug B Device ID (last segment of the topic)
+     * @return the full fragment key, e.g. {@code sparkPlugB_isActive_sensor1}
+     */
+    public static String getIsActiveFragmentKey(String sparkplugDeviceId) {
+        return SPARKPLUGB_IS_ACTIVE_FRAGMENT_PREFIX + sparkplugDeviceId;
+    }
 
     @Autowired
     @Lazy
