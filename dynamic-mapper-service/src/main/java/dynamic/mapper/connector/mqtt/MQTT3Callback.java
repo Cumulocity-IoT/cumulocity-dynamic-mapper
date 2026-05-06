@@ -139,11 +139,24 @@ public class MQTT3Callback implements Consumer<Mqtt3Publish> {
             // Use the provided virtualThreadPool instead of creating a new thread
             virtualThreadPool.submit(() -> {
                 try {
-                    // Wait for the future to complete
+                    // Wait for the future to complete.
+                    // Multiply timeout by (attempt + 1) so each retransmission gets progressively
+                    // more processing time — useful when the first timeout was caused by a slow server.
+                    // attempt = consecutiveReconnectCount at the moment this message is being processed:
+                    //   0 → first try   → 1× timeout
+                    //   1 → 2nd try     → 2× timeout
+                    //   …  capped at MAX_CONSECUTIVE_RECONNECTS × timeout
                     List<? extends ProcessingContext<?>> results;
                     if (timeout > 0) {
-                        results = processedResults.getProcessingResult().get(timeout,
-                                TimeUnit.MILLISECONDS);
+                        int attempt = consecutiveReconnectCount.get(); // 0-based; 0 = first attempt
+                        long effectiveTimeout = Math.min(
+                                (long) timeout * (attempt + 1),
+                                (long) timeout * MAX_CONSECUTIVE_RECONNECTS);
+                        if (attempt > 0) {
+                            log.info("{} - Retransmission attempt {}: using increased timeout {}ms (base: {}ms), connector: {}",
+                                    tenant, attempt + 1, effectiveTimeout, timeout, connectorIdentifier);
+                        }
+                        results = processedResults.getProcessingResult().get(effectiveTimeout, TimeUnit.MILLISECONDS);
                     } else {
                         results = processedResults.getProcessingResult().get();
                     }
