@@ -152,6 +152,9 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
         Future<List<ProcessingContext<Object>>> futureProcessingResult = virtualThreadPool.submit(() -> {
             try {
                 Exchange exchange = createExchange(connectorMessage, resolvedMappings, testing); // Now can use final variable
+                // Pass the result wrapper so in-flight processors can register cancel actions
+                // (e.g. GraalVM context closure) reachable from the timeout handler.
+                exchange.getIn().setHeader("processingResultWrapper", result);
                 Exchange resultExchange = producerTemplate.send("direct:processInboundMessage", exchange);
 
                 @SuppressWarnings("unchecked")

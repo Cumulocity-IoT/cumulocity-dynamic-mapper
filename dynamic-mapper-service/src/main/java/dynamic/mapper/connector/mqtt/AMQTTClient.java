@@ -72,6 +72,9 @@ public abstract class AMQTTClient extends AConnectorClient {
      protected boolean isSparkplugHost = false;
      protected String sparkplugHostId;
 
+     // Error handling and reconnection control
+     protected boolean reconnectOnProcessingError = true;
+
     /**
      * Default constructor - initializes connector specification
      * Subclasses should call this and set their specific connectorSpecification
@@ -130,6 +133,10 @@ public abstract class AMQTTClient extends AConnectorClient {
             if (useSelfSignedCertificate) {
                 initializeMqttSslConfiguration();
             }
+
+            // Load error handling configuration
+            reconnectOnProcessingError = (Boolean) connectorConfiguration.getProperties()
+                    .getOrDefault("reconnectOnProcessingError", true);
 
             log.info("{} - MQTT Connector {} initialized successfully", tenant, connectorName);
             if (isConfigValid(connectorConfiguration)) {
@@ -521,26 +528,35 @@ public abstract class AMQTTClient extends AConnectorClient {
                 .condition("protocol", MQTT_PROTOCOL_WS, MQTT_PROTOCOL_WSS)
                 .build());
 
-         // MQTT session behavior
-         configProps.put("cleanSession", ConnectorPropertyBuilder.optionalBoolean()
+        // MQTT session behavior
+        configProps.put("cleanSession", ConnectorPropertyBuilder.optionalBoolean()
                  .order(15)
                  .defaultValue(true)
                  .build());
 
-         // Sparkplug Host support
-         configProps.put("isSparkplugHost", ConnectorPropertyBuilder.optionalBoolean()
-                 .order(16)
-                 .defaultValue(false)
-                 .description("Enable Sparkplug Host mode to publish Birth/Death certificates on connection/disconnection")
-                 .build());
+        // Error handling and reconnection control
+        configProps.put("reconnectOnProcessingError", ConnectorPropertyBuilder.optionalBoolean()
+                .order(16)
+                .defaultValue(true)
+                .description("Reconnect broker on timeout or internal processing errors (for QoS 1+ messages and broker which don't automatically retransmit unacked messages)")
+                .build());
 
-         configProps.put("sparkplugHostId", ConnectorPropertyBuilder.optionalString()
-                 .order(17)
-                 .description("Sparkplug Host ID (used for Birth/Death certificates)")
-                 .condition("isSparkplugHost", "true")
-                 .build());
+        // Sparkplug Host support
+        configProps.put("isSparkplugHost", ConnectorPropertyBuilder.optionalBoolean()
+                .order(17)
+                .defaultValue(false)
+                .description("Enable Sparkplug Host mode to publish Birth/Death certificates on connection/disconnection")
+                .build());
 
-         return configProps;
+        configProps.put("sparkplugHostId", ConnectorPropertyBuilder.optionalString()
+                .order(18)
+                .description("Sparkplug Host ID (used for Birth/Death certificates)")
+                .condition("isSparkplugHost", "true")
+                .build());
+
+
+
+        return configProps;
      }
 
      /**

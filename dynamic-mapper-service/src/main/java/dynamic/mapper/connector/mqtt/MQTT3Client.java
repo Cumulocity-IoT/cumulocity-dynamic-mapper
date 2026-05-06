@@ -179,9 +179,15 @@ public class MQTT3Client extends AMQTTClient {
                 connectorIdentifier,
                 connectorName,
                 clientId,
-                // Reconnect trigger: disconnect so the broker retransmits unACKed messages;
-                // housekeeping will reconnect automatically after detecting the disconnection.
-                this::disconnect);
+                // Reconnect trigger for timeout/server-error retransmission:
+                // 1. disconnect() → broker retains unACKed messages in the session
+                //    (sets intentionalDisconnect=true so housekeeping does NOT auto-reconnect)
+                // 2. connect()    → resets intentionalDisconnect=false via beginConnection()
+                //                   and re-establishes the session so the broker retransmits
+                () -> {
+                    disconnect();
+                    connect();
+                });
     }
 
     @Override

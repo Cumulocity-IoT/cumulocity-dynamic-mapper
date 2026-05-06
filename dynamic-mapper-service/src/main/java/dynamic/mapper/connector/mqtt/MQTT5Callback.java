@@ -33,6 +33,7 @@ import com.cumulocity.sdk.client.SDKException;
 import com.hivemq.client.mqtt.datatypes.MqttTopic;
 import com.hivemq.client.mqtt.mqtt5.message.publish.Mqtt5Publish;
 
+import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.callback.GenericMessageCallback;
@@ -66,6 +67,9 @@ public class MQTT5Callback implements Consumer<Mqtt5Publish> {
     private String connectorName;
     private ServiceConfiguration serviceConfiguration;
     private ExecutorService virtualThreadPool;
+    private ConfigurationRegistry configurationRegistry;
+    /** Flag to control whether reconnect should be triggered on processing errors */
+    private boolean reconnectOnProcessingError = true;
     /** Callback that disconnects the connector so the broker retransmits unACKed messages. */
     private final Runnable reconnectTrigger;
     /** Timestamp of the last triggered reconnect — used for rate-limiting. */
@@ -100,7 +104,22 @@ public class MQTT5Callback implements Consumer<Mqtt5Publish> {
         this.connectorName = connectorName;
         this.serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
+        this.configurationRegistry = configurationRegistry;
         this.reconnectTrigger = reconnectTrigger;
+
+        // Load the reconnectOnProcessingError flag from connector configuration
+        try {
+            ConnectorConfiguration configuration = configurationRegistry.getConnectorConfigurationService()
+                    .getConnectorConfiguration(connectorIdentifier, tenant);
+            if (configuration != null && configuration.getProperties() != null) {
+                this.reconnectOnProcessingError = (Boolean) configuration.getProperties()
+                        .getOrDefault("reconnectOnProcessingError", true);
+            }
+        } catch (Exception e) {
+            log.warn("{} - Failed to load reconnectOnProcessingError flag for connector {}, using default (true): {}",
+                    tenant, connectorIdentifier, e.getMessage());
+            this.reconnectOnProcessingError = true;
+        }
     }
 
     @Override
@@ -235,7 +254,11 @@ public class MQTT5Callback implements Consumer<Mqtt5Publish> {
                     log.warn("{} - END: Was interrupted for MQTT message: topic: [{}], QoS: {}, connector: {}",
                             tenant, mqttMessage.getTopic(), mqttMessage.getQos().ordinal(), connectorIdentifier);
                 } catch (TimeoutException e) {
-                    var cancelResult = processedResults.getProcessingResult().cancel(true);
+                    // cancel(true) interrupts threads blocked in IO (C8Y SDK HTTP calls).
+                    // cancelProcessing() additionally closes any active GraalVM context via
+                    // Context.close(cancelIfExecuting=true) — the only reliable way to stop
+                    // CPU-bound JS execution that ignores Java thread interruption.
+                    var cancelResult = processedResults.cancelProcessing();
                     log.warn(
                             "{} - END: Processing timed out after {} ms, not sending ACK. Triggering reconnect for retransmission. connector: {}, cancel result: {}",
                             tenant, timeout, connectorIdentifier, cancelResult);
@@ -261,6 +284,8 @@ public class MQTT5Callback implements Consumer<Mqtt5Publish> {
     /**
      * Circuit-breaker-aware reconnect handler.
      * <ul>
+     *   <li>If reconnectOnProcessingError is disabled, the message is acknowledged immediately
+     *       regardless of the error condition.</li>
      *   <li>If a reconnect is already in progress (including its back-off delay), the
      *       message stays unACKed — the broker will retransmit it after the session is
      *       restored, so no further action is required.</li>
@@ -277,6 +302,15 @@ public class MQTT5Callback implements Consumer<Mqtt5Publish> {
      * @param topic       human-readable topic string for logging
      */
     private void triggerReconnectOrAck(Mqtt5Publish mqttMessage, String topic) {
+        log.info("reconnectProcessingError={}", reconnectOnProcessingError);
+        // If reconnectOnProcessingError is disabled, wait for broker to re-transmit un-acked message again
+        if (!reconnectOnProcessingError) {
+            log.info(
+                    "{} - END: reconnectOnProcessingError is disabled, waiting for Broker to re-transmit unacked message automatically. connector: {}",
+                    tenant, connectorIdentifier);
+            return;
+        }
+
         // If a reconnect is already scheduled/running, this message stays unACKed.
         // The broker will retransmit it after the session is restored.
         if (reconnectInProgress.get()) {

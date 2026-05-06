@@ -62,6 +62,25 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
 
+        // Register a GraalVM cancel action on the wrapper (if present) so that a
+        // TimeoutException in the MQTT callback can forcibly stop JS execution via
+        // Context.close(cancelIfExecuting=true) — plain thread interruption is ignored by GraalVM.
+        dynamic.mapper.processor.model.ProcessingResultWrapper<?> wrapper =
+                exchange.getIn().getHeader("processingResultWrapper",
+                        dynamic.mapper.processor.model.ProcessingResultWrapper.class);
+        org.graalvm.polyglot.Context graalCtx = context.getGraalContext();
+        Runnable cancelAction = null;
+        if (wrapper != null && graalCtx != null) {
+            cancelAction = () -> {
+                try {
+                    graalCtx.close(true); // forcibly interrupt running JS
+                } catch (Exception e2) {
+                    log.debug("{} - GraalVM context close(true) threw (expected when already closed): {}", tenant, e2.getMessage());
+                }
+            };
+            wrapper.addCancelAction(cancelAction);
+        }
+
         try {
             processSmartMapping(context);
         } catch (Exception e) {
@@ -82,6 +101,10 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
 
             handleProcessingError(e, errorMessage, context, tenant, mapping);
         } finally {
+            // Unregister the GraalVM cancel action — context is about to be closed normally.
+            if (wrapper != null && cancelAction != null) {
+                wrapper.removeCancelAction(cancelAction);
+            }
             // Close the Context completely
             if (context != null) {
                 try {
