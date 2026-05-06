@@ -49,7 +49,7 @@ export interface SteamAndHumidityMeasurement extends C8yMeasurement {
  * Expected output (DeviceMessage):
  * {
  *   "topic": "device/12345/measurements",
- *   "payload": <binary: {
+ *   "payload": {
  *     "timestamp": "<ISO timestamp>",
  *     "deviceId": "12345",
  *     "sensors": {
@@ -57,7 +57,7 @@ export interface SteamAndHumidityMeasurement extends C8yMeasurement {
  *       "humidity": { "value": 65.0, "unit": "%" }
  *     },
  *     "metadata": { "type": "c8y_TemperatureMeasurement", "source": "cumulocity" }
- *   }>,
+ *   },
  *   "transportFields": { "key": "12345", "content-type": "application/json" }
  * }
  */
@@ -136,9 +136,10 @@ const onMessage: SmartFunctionOut<'measurement', SteamAndHumidityMeasurement> = 
   console.log('Transformed payload:', customPayload);
 
   // Create device message with transformed payload
+  // JSON object payload — no manual serialization needed
   return {
     topic: `device/${sourceId}/measurements`,
-    payload: new TextEncoder().encode(JSON.stringify(customPayload)),
+    payload: customPayload,
     transportFields: {
       key: sourceId, // Kafka record key
       'content-type': 'application/json',

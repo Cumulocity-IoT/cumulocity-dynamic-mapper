@@ -828,17 +828,13 @@ export interface DeviceMessage<T extends C8yObjectType = C8yObjectType> {
    *
    * **Uint8Array (binary / legacy):** Use when the broker requires raw bytes or a
    * non-JSON encoding (e.g. SparkPlug B protobuf, custom binary protocol).
-   * Note: `TextEncoder` is not available in GraalJS — use manual charCode encoding
-   * if you need to produce raw bytes from a string.
+   * `TextEncoder` / `TextDecoder` are available (GraalJS is started with `js.text-encoding=true`).
    *
    * @example JSON object (preferred)
    * payload: { temperature: 25.5, timestamp: new Date().toISOString() }
    *
-   * @example Uint8Array (binary)
-   * const s = JSON.stringify(myObject);
-   * const bytes = new Uint8Array(s.length);
-   * for (let i = 0; i < s.length; i++) bytes[i] = s.charCodeAt(i);
-   * payload: bytes
+   * @example Uint8Array via TextEncoder
+   * payload: new TextEncoder().encode(JSON.stringify(myObject))
    */
   payload: Record<string, any> | Uint8Array;
 
@@ -1274,6 +1270,14 @@ export interface SmartFunctionContextV2<
  * without worrying about parameter order.
  *
  * @typeParam T - Object describing the function contract:
+ *   - `input`   — narrows `msg.payload` to a specific type. Two forms are supported:
+ *                 1. A {@link C8yObjectType} string (`'operation'`, `'measurement'`, etc.) —
+ *                    auto-narrows `msg.payload` to the matching C8y domain type via
+ *                    {@link C8yPayloadTypeMap}. Useful when the **Cumulocity API Connector**
+ *                    forwards a known C8y event type into the mapper as an inbound message.
+ *                 2. A custom `Record<string, any>` interface — use when the broker payload
+ *                    has a well-known but non-standard shape (e.g. LoRa uplink objects).
+ *                 Defaults to `Record<string, any>` so untyped code is unaffected.
  *   - `returns` — allowed return type(s); can be a tuple for exact order/count enforcement
  *   - `config`  — shape of the mapping config (enables typed `context.getConfig()`)
  *   - `state`   — shape of the persistent state (enables typed `getState`/`setState`)
@@ -1281,9 +1285,31 @@ export interface SmartFunctionContextV2<
  * @example Untyped (backward-compatible default)
  * const onMessage: SmartFunctionInV2 = (msg, context) => { ... };
  *
+ * @example C8yObjectType string — auto-narrows payload to C8y domain type
+ * // Use this when the Cumulocity API Connector forwards a C8y operation as the inbound message.
+ * const onMessage: SmartFunctionInV2<{ input: 'operation' }> = (msg, context) => {
+ *   // msg.payload is narrowed to C8yOperation — no cast or Zod schema needed
+ *   const deviceId = msg.payload.deviceId;   // ✅ typed
+ *   const text     = msg.payload.c8y_Command?.text; // ✅ typed via index signature
+ *   return [{ cumulocityType: 'operation', action: 'update', payload: { id: msg.payload.id, status: 'SUCCESSFUL' } }];
+ * };
+ *
+ * @example Custom interface — typed broker payload (e.g. LoRa uplink)
+ * const onMessage: SmartFunctionInV2<{
+ *   input: {
+ *     source: { id: string };
+ *     c8y_LoriotUplinkRequest: { port: number; data: string; freq: number; EUI: string; dr: string };
+ *     time: string;
+ *   };
+ * }> = (msg, context) => {
+ *   const id  = msg.payload.source.id;                        // ✅ typed
+ *   const req = msg.payload.c8y_LoriotUplinkRequest;          // ✅ typed
+ *   // ...
+ * };
+ *
  * @example Config only
  * const onMessage: SmartFunctionInV2<{ config: { mappingName: string } }> = (msg, context) => {
- *   console.log(context.getConfig().mappingName); // typed
+ *   console.log(context.getConfig().mappingName); // ✅ typed
  * };
  *
  * @example Tuple return — enforces exactly [measurement, managedObject] in that order
@@ -1298,12 +1324,27 @@ export interface SmartFunctionContextV2<
  */
 export type SmartFunctionInV2<
   T extends {
+    input?: C8yObjectType | Record<string, any>;
     returns?: CumulocityObject | CumulocityObject[];
     config?: Record<string, any>;
     state?: Record<string, any>;
   } = {}
 > = (
-  msg: DynamicMapperDeviceMessage,
+  msg: Omit<DynamicMapperDeviceMessage, 'payload'> & {
+    /**
+     * Pre-deserialized message payload, typed via `T['input']`:
+     * - `C8yObjectType` string → auto-mapped to the C8y domain interface via {@link C8yPayloadTypeMap}
+     * - Custom interface     → used directly
+     * - Omitted             → `Record<string, any>` (backward-compatible default)
+     */
+    payload: T extends { input: infer TInput }
+      ? TInput extends C8yObjectType
+        ? C8yPayloadTypeMap[TInput]
+        : TInput extends Record<string, any>
+          ? TInput
+          : Record<string, any>
+      : Record<string, any>;
+  },
   context: SmartFunctionContextV2<
     T extends { config: infer TConfig extends Record<string, any> } ? TConfig : Record<string, any>,
     T extends { state: infer TState extends Record<string, any> } ? TState : Record<string, any>

@@ -54,7 +54,7 @@ import {
  * Expected output (DeviceMessage):
  * {
  *   "topic": "measurements/sensor-berlin-01",
- *   "payload": <binary: {"time": "<ISO timestamp>", "c8y_Steam": {"Temperature": {"unit": "C", "value": 23.5}}}>,
+ *   "payload": { "time": "<ISO timestamp>", "c8y_Steam": { "Temperature": { "unit": "C", "value": 23.5 } } },
  *   "transportFields": { "key": "sensor-berlin-01" }
  * }
  */
@@ -87,17 +87,16 @@ const onMessage: SmartFunctionOut = (
 
   return {
     topic: `measurements/${externalId}`,
-    payload: new TextEncoder().encode(
-      JSON.stringify({
-        time: new Date().toISOString(),
-        c8y_Steam: {
-          Temperature: {
-            unit: 'C',
-            value: payload['c8y_TemperatureMeasurement']['T']['value'],
-          },
+    // JSON object payload — no manual serialization needed
+    payload: {
+      time: new Date().toISOString(),
+      c8y_Steam: {
+        Temperature: {
+          unit: 'C',
+          value: payload['c8y_TemperatureMeasurement']['T']['value'],
         },
-      })
-    ),
+      },
+    },
     transportFields: { key: externalId }, // Kafka record key
   };
 };

@@ -169,14 +169,13 @@ const onMessageOutbound: SmartFunctionOut<'measurement'> = (
   const fragment = msg.payload['c8y_TemperatureMeasurement'];
   const tempValue: number | undefined = fragment?.['T']?.['value'];
 
+  // JSON object payload — no manual serialization needed
   return {
     topic: `measurements/${sourceId}`,
-    payload: new TextEncoder().encode(
-      JSON.stringify({
-        temperature: tempValue,
-        time: new Date().toISOString(),
-      })
-    ),
+    payload: {
+      temperature: tempValue,
+      time: new Date().toISOString(),
+    },
   };
 };
 
