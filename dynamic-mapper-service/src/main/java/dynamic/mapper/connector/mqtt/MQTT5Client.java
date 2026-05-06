@@ -176,7 +176,10 @@ public class MQTT5Client extends AMQTTClient {
                 configurationRegistry,
                 dispatcher,
                 connectorIdentifier,
-                connectorName);
+                connectorName,
+                // Reconnect trigger: disconnect so the broker retransmits unACKed messages;
+                // housekeeping will reconnect automatically after detecting the disconnection.
+                this::disconnect);
     }
 
     @Override
