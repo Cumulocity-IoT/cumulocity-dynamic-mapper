@@ -84,6 +84,13 @@ public class MQTT5Callback implements Consumer<Mqtt5Publish> {
      */
     private final java.util.concurrent.atomic.AtomicInteger consecutiveReconnectCount =
             new java.util.concurrent.atomic.AtomicInteger(0);
+    /**
+     * Counts the number of messages currently being processed in the virtualThreadPool.
+     * Used to avoid triggering a reconnect while other messages are still being processed,
+     * as the reconnect would delay their ACKs.
+     */
+    private final java.util.concurrent.atomic.AtomicInteger activeProcessingMessages =
+            new java.util.concurrent.atomic.AtomicInteger(0);
 
     MQTT5Callback(String tenant, ConfigurationRegistry configurationRegistry, GenericMessageCallback callback,
             String connectorIdentifier, String connectorName, Runnable reconnectTrigger) {
@@ -147,6 +154,7 @@ public class MQTT5Callback implements Consumer<Mqtt5Publish> {
                     connectorIdentifier);
         }
         if (effectiveQos > 0) {
+            activeProcessingMessages.incrementAndGet();
             // Use the provided virtualThreadPool instead of creating a new thread
             virtualThreadPool.submit(() -> {
                 try {
@@ -232,6 +240,8 @@ public class MQTT5Callback implements Consumer<Mqtt5Publish> {
                             "{} - END: Processing timed out after {} ms, not sending ACK. Triggering reconnect for retransmission. connector: {}, cancel result: {}",
                             tenant, timeout, connectorIdentifier, cancelResult);
                     triggerReconnectOrAck(mqttMessage, topic);
+                } finally {
+                    activeProcessingMessages.decrementAndGet();
                 }
                 return null; // Proper return for Callable<Void>
             });
@@ -294,6 +304,10 @@ public class MQTT5Callback implements Consumer<Mqtt5Publish> {
      * {@link #triggerReconnectOrAck} see "reconnect in progress" and leave their
      * messages unACKed for broker retransmission.
      * <p>
+     * If other messages are being processed, this thread waits for them to complete
+     * (and be ACKed) before proceeding with the reconnect. This avoids blocking their
+     * ACKs unnecessarily.
+     * <p>
      * Back-off schedule (base = {@value #MIN_RECONNECT_INTERVAL_MS} ms):
      * <ul>
      *   <li>Attempt 1: immediate (0 ms)</li>
@@ -312,6 +326,7 @@ public class MQTT5Callback implements Consumer<Mqtt5Publish> {
                     tenant, connectorIdentifier);
             return;
         }
+
         int attempt = consecutiveReconnectCount.incrementAndGet();
         lastReconnectTriggerMs.set(System.currentTimeMillis());
 
@@ -329,13 +344,18 @@ public class MQTT5Callback implements Consumer<Mqtt5Publish> {
                 .name("mqtt-timeout-reconnect-" + connectorIdentifier)
                 .start(() -> {
                     try {
+                        // Wait for other messages to finish processing and be ACKed.
+                        // This prevents the reconnect from blocking their ACK operations.
+                        while (activeProcessingMessages.get() > 1) {
+                            Thread.sleep(100); //NOSONAR intentional wait for other messages
+                        }
                         if (delayMs > 0) {
                             Thread.sleep(delayMs); //NOSONAR intentional back-off delay
                         }
                         reconnectTrigger.run();
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
-                        log.warn("{} - Reconnect back-off sleep interrupted, connector: {}", tenant, connectorIdentifier);
+                        log.warn("{} - Reconnect thread interrupted, connector: {}", tenant, connectorIdentifier);
                     } finally {
                         reconnectInProgress.set(false);
                     }
