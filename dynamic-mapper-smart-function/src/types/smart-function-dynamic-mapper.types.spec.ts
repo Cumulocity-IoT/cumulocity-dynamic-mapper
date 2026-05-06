@@ -373,7 +373,7 @@ describe('Smart Function Runtime Types', () => {
       expect(deviceMsg.topic).toBe('measurements/12345');
       expect(deviceMsg.payload).toBeInstanceOf(Uint8Array);
 
-      const decoded = JSON.parse(new TextDecoder().decode(deviceMsg.payload));
+      const decoded = JSON.parse(new TextDecoder().decode(deviceMsg.payload as Uint8Array));
       expect(decoded.temp).toBe(25.5);
     });
 

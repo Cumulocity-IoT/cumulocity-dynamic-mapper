@@ -789,13 +789,16 @@ export interface CumulocityObject<
  * Used primarily in outbound scenarios to send data back to devices/brokers.
  *
  * @example
- * // Send a message to a device topic
+ * // Send a JSON object — no manual serialization needed
  * return {
  *   topic: `measurements/${deviceId}`,
- *   payload: new TextEncoder().encode(JSON.stringify({
- *     temperature: 25.5,
- *     timestamp: new Date().toISOString()
- *   }))
+ *   payload: { temperature: 25.5, timestamp: new Date().toISOString() }
+ * };
+ *
+ * @example
+ * // Omit topic when the mapping already defines a fixed publish topic
+ * return {
+ *   payload: { temperature: 25.5 }
  * };
  */
 
@@ -818,28 +821,46 @@ export interface CumulocityObject<
  */
 export interface DeviceMessage<T extends C8yObjectType = C8yObjectType> {
   /**
-   * Message payload as a Uint8Array.
-   * For outbound messages, serialize your data to Uint8Array.
+   * Message payload — either a plain JSON object or a `Uint8Array` of raw bytes.
    *
-   * @example
-   * // Convert string to Uint8Array (TextEncoder is not available in GraalJS)
+   * **JSON object (recommended):** Return a plain JavaScript object and the runtime
+   * will serialize it to JSON before publishing. No manual serialization needed.
+   *
+   * **Uint8Array (binary / legacy):** Use when the broker requires raw bytes or a
+   * non-JSON encoding (e.g. SparkPlug B protobuf, custom binary protocol).
+   * Note: `TextEncoder` is not available in GraalJS — use manual charCode encoding
+   * if you need to produce raw bytes from a string.
+   *
+   * @example JSON object (preferred)
+   * payload: { temperature: 25.5, timestamp: new Date().toISOString() }
+   *
+   * @example Uint8Array (binary)
    * const s = JSON.stringify(myObject);
    * const bytes = new Uint8Array(s.length);
    * for (let i = 0; i < s.length; i++) bytes[i] = s.charCodeAt(i);
    * payload: bytes
    */
-  payload: Uint8Array;
+  payload: Record<string, any> | Uint8Array;
 
   /**
    * The topic on the transport (e.g., MQTT topic).
    *
-   * Use `context.getConfig().externalId` to include the device's external ID in the topic.
-   * Requires the mapping to have `useExternalId` enabled and an `externalIdType` configured.
+   * **Optional when the mapping has a fixed (non-wildcard) publish topic.**
+   * If omitted, the runtime falls back to the publish topic configured in the
+   * mapping itself — no need to repeat it here.
+   *
+   * Provide a value when you need to override or dynamically construct the topic
+   * (e.g. include the device external ID via `context.getConfig().externalId` or
+   * the `_externalId_` placeholder token).
+   *
+   * Requires the mapping to have `useExternalId` enabled and an `externalIdType`
+   * configured when using the external-ID placeholder.
    *
    * @example `measurements/${context.getConfig().externalId}`
    * @example "measurements/12345"
+   * @example undefined  // use the topic from the mapping configuration
    */
-  topic: string;
+  topic?: string;
 
   /**
    * Identifier for the source/destination transport.
@@ -1074,9 +1095,10 @@ export interface OutboundMessage<
  * }
  * const onMessage: SmartFunctionOut<'measurement', MySteamMeasurement> = (msg) => {
  *   const temp: number = msg.payload.c8y_Steam.Temperature.value; // ✅ typed
+ *   // JSON object payload — no manual serialization needed
  *   return {
- *     topic: `measurements/${msg.sourceId}`,
- *     payload: new TextEncoder().encode(JSON.stringify({ temperature: temp })),
+ *     topic: `measurements/${msg.sourceId}`,  // omit topic to use the mapping's fixed topic
+ *     payload: { temperature: temp },
  *   };
  * };
  */
@@ -1317,9 +1339,11 @@ export type SmartFunctionInV2<
  *   // msg.payload        is narrowed to C8yMeasurement
  *   const count = context.getState('forwardedCount', 0) + 1;
  *   context.setState('forwardedCount', count);
+ *   // JSON object payload — no manual serialization needed
+ *   // topic is optional: omit it when the mapping defines a fixed publish topic
  *   return {
  *     topic: `measurements/${context.getConfig().externalId}`,
- *     payload: new TextEncoder().encode(JSON.stringify({ count })),
+ *     payload: { count },
  *   };
  * };
  */
