@@ -45,7 +45,7 @@ export const onMessage: SmartFunctionOutV2<{
   input: 'measurement';
   config: { externalId: string; mappingName: string };
   state: { forwardedCount: number };
-  message: DeviceMessage;
+  returns: DeviceMessage;
 }> = (msg, context) => {
   // msg.cumulocityType is 'measurement' (narrowed — not the full C8yObjectType union)
   // msg.payload is C8yMeasurement — source, type, time are typed without casting

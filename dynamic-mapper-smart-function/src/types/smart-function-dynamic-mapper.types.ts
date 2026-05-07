@@ -109,7 +109,7 @@ export interface DynamicMapperDeviceMessage {
   transportId?: string;
 
   /** Transport-specific fields/properties/headers */
-  transportFields?: { [key: string]: any };
+  transportFields?: { [key: string]: string };
 
   /** Timestamp of the incoming message */
   time?: Date;
@@ -788,6 +788,10 @@ export interface CumulocityObject<
  * A device/broker message that can be returned from a Smart Function.
  * Used primarily in outbound scenarios to send data back to devices/brokers.
  *
+ * The optional type parameter `T` narrows the {@link DeviceMessage.cumulocityType}
+ * field, documenting which Cumulocity event type this outbound message is derived
+ * from. Defaults to the full {@link C8yObjectType} union so existing code is unaffected.
+ *
  * @example
  * // Send a JSON object — no manual serialization needed
  * return {
@@ -800,23 +804,17 @@ export interface CumulocityObject<
  * return {
  *   payload: { temperature: 25.5 }
  * };
- */
-
-/**
- * The optional type parameter `T` narrows the {@link DeviceMessage.cumulocityType}
- * field, documenting which Cumulocity event type this outbound message is derived
- * from. Defaults to the full {@link C8yObjectType} union so existing code is unaffected.
  *
  * @example
  * // Untyped — any cumulocityType (backward-compatible default)
- * const msg: DeviceMessage = { topic: "out/temp", payload: bytes };
+ * const msg: DeviceMessage = { topic: 'out/temp', payload: { data: 'value' } };
  *
  * @example
  * // Constrained to measurement
  * const msg: DeviceMessage<'measurement'> = {
- *   topic: "out/temp",
- *   payload: bytes,
- *   cumulocityType: "measurement"  // ✅ — "alarm" would be a TypeScript error
+ *   topic: 'out/temp',
+ *   payload: { temperature: 25.5 },
+ *   cumulocityType: 'measurement'  // ✅ — 'alarm' would be a TypeScript error
  * };
  */
 export interface DeviceMessage<T extends C8yObjectType = C8yObjectType> {
@@ -993,15 +991,14 @@ export type SmartFunctionIn<
 > = (
   msg: DynamicMapperDeviceMessage,
   context: SmartFunctionContext
-) => Array<CumulocityObject<T, TPayload>> | CumulocityObject<T, TPayload> | [];
+) => Array<CumulocityObject<T, TPayload>> | CumulocityObject<T, TPayload>;
 
 /**
  * Message received by an outbound Smart Function.
  *
  * At runtime the Java backend wraps the Cumulocity platform event (measurement,
- * operation, alarm, etc.) in the same `DeviceMessage` Java class used for inbound
- * messages. This means `payload` is always a {@link SmartFunctionPayload} that supports
- * direct property access using bracket notation.
+ * operation, alarm, etc.) and provides the payload as a pre-deserialized object
+ * supporting direct property access using bracket notation.
  *
  * The optional type parameter `T` narrows the `cumulocityType` of the triggering
  * event — useful when a function is dedicated to a specific event type.
@@ -1028,8 +1025,7 @@ export interface OutboundMessage<
    * safety on custom fragments without any casting.
    *
    * All C8y domain types carry a `[fragment: string]: any` index signature,
-   * so `.get("key")` and arbitrary bracket notation continue to work even
-   * when `TPayload` is the base type.
+   * so arbitrary bracket notation continues to work even when `TPayload` is the base type.
    *
    * @example Typed access to a custom measurement series
    * interface MySteamMeasurement extends C8yMeasurement {
@@ -1054,8 +1050,8 @@ export interface OutboundMessage<
  * Processes a Cumulocity platform event and returns device messages
  * to be sent to the broker.
  *
- * The `msg.payload` is a {@link SmartFunctionPayload} — the same accessor type used
- * in inbound functions — so both property access and `.get()` work without casting.
+ * The `msg.payload` is a pre-deserialized C8y domain object — typed via
+ * `C8yPayloadTypeMap[T]` so known fields are directly accessible without casting.
  *
  * The optional type parameter `T` narrows `msg.cumulocityType` to the specified
  * event type(s), documenting which Cumulocity events this function handles.
@@ -1068,7 +1064,7 @@ export interface OutboundMessage<
  *
  * @typeParam T       - Triggering Cumulocity event type(s)
  * @typeParam TPayload - Expected payload shape (defaults to `C8yPayloadTypeMap[T]`)
- * @param msg - The incoming Cumulocity event, wrapped with SmartFunctionPayload access
+ * @param msg - The incoming Cumulocity event with pre-deserialized payload
  * @param context - Runtime context providing state, config, and device lookups
  * @returns Device messages to send to the broker or empty array
  *
@@ -1104,7 +1100,7 @@ export type SmartFunctionOut<
 > = (
   msg: OutboundMessage<T, TPayload>,
   context: SmartFunctionContext
-) => Array<DeviceMessage> | DeviceMessage | [];
+) => Array<DeviceMessage> | DeviceMessage;
 
 /**
  * Smart Function signature (union of inbound and outbound).
@@ -1362,7 +1358,7 @@ export type SmartFunctionInV2<
  * @typeParam T - Object describing the function contract:
  *   - `input`   — the C8y event type triggering this function; narrows `msg.cumulocityType`
  *                 and auto-narrows `msg.payload` to the matching domain type
- *   - `message` — allowed return type(s)
+ *   - `returns` — allowed return type(s)
  *   - `config`  — shape of the mapping config
  *   - `state`   — shape of the persistent state
  *
@@ -1374,7 +1370,7 @@ export type SmartFunctionInV2<
  *   input:   'measurement';
  *   config:  { externalId: string };
  *   state:   { forwardedCount: number };
- *   message: DeviceMessage;
+ *   returns: DeviceMessage;
  * }> = (msg, context) => {
  *   // msg.cumulocityType is narrowed to 'measurement'
  *   // msg.payload        is narrowed to C8yMeasurement
@@ -1390,7 +1386,7 @@ export type SmartFunctionInV2<
  */
 export type SmartFunctionOutV2<
   T extends {
-    message?: DeviceMessage | DeviceMessage[];
+    returns?: DeviceMessage | DeviceMessage[];
     config?: Record<string, any>;
     state?: Record<string, any>;
     input?: C8yObjectType;
@@ -1403,8 +1399,8 @@ export type SmartFunctionOutV2<
     T extends { config: infer TConfig extends Record<string, any> } ? TConfig : Record<string, any>,
     T extends { state: infer TState extends Record<string, any> } ? TState : Record<string, any>
   >
-) => T extends { message: infer TMessage extends DeviceMessage | DeviceMessage[] }
-  ? TMessage
+) => T extends { returns: infer TReturns extends DeviceMessage | DeviceMessage[] }
+  ? TReturns
   : DeviceMessage | DeviceMessage[];
 
 /**
