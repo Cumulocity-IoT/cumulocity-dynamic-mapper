@@ -43,6 +43,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.pulsar.client.api.*;
 import org.apache.pulsar.client.api.PulsarClientException.UnsupportedAuthenticationException;
+import org.apache.pulsar.client.impl.MultiplierRedeliveryBackoff;
 
 import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
@@ -71,6 +72,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
     private static final int DEFAULT_CONNECTION_TIMEOUT = 30;
     private static final int DEFAULT_OPERATION_TIMEOUT = 30;
     private static final int DEFAULT_KEEP_ALIVE = 30;
+    private static final int DEFAULT_NEGATIVE_ACK_DELAY = 10000;
 
     // Cumulocity-specific consumer and producer
     private Consumer<byte[]> platformConsumer;
@@ -350,7 +352,8 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         }
 
         String subscriptionName = getSubscriptionName(connectorIdentifier, additionalSubscriptionIdTest);
-
+        Long negativeAckRedeliveryDelay = (Long) connectorConfiguration.getProperties()
+                .getOrDefault("negativeAckRedeliveryDelay", DEFAULT_NEGATIVE_ACK_DELAY);
 
         // Try multiple subscription strategies
 
@@ -362,6 +365,10 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                     .autoUpdatePartitions(false)
                     // Prevents a default exclusive consumer blocking other instances during restart
                     .subscriptionType(SubscriptionType.Failover)
+                    .negativeAckRedeliveryBackoff(MultiplierRedeliveryBackoff.builder()
+                            .minDelayMs(negativeAckRedeliveryDelay)
+                            .maxDelayMs(negativeAckRedeliveryDelay * 5)
+                            .build())
                     .messageListener(mqttServiceCallback)
                     .subscribe();
 
@@ -381,6 +388,10 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                     .autoUpdatePartitions(false)
                     .messageListener(mqttServiceCallback)
                     .subscriptionType(SubscriptionType.Failover)
+                    .negativeAckRedeliveryBackoff(MultiplierRedeliveryBackoff.builder()
+                            .minDelayMs(negativeAckRedeliveryDelay)
+                            .maxDelayMs(negativeAckRedeliveryDelay * 5)
+                            .build())
                     .subscribeAsync()
                     .get(30, TimeUnit.SECONDS);
 
@@ -399,6 +410,10 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                     .subscriptionName(subscriptionName)
                     .messageListener(mqttServiceCallback)
                     .subscriptionType(SubscriptionType.Failover)
+                    .negativeAckRedeliveryBackoff(MultiplierRedeliveryBackoff.builder()
+                            .minDelayMs(negativeAckRedeliveryDelay)
+                            .maxDelayMs(negativeAckRedeliveryDelay * 5)
+                            .build())
                     .subscribeAsync()
                     .get(30, TimeUnit.SECONDS);
 
@@ -904,16 +919,22 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                         .hidden(true)
                         .defaultValue(PULSAR_NAMESPACE))
 
+                .property("negativeAckRedeliveryDelay", ConnectorPropertyBuilder.optionalString()
+                        .order(16)
+                        .description("Delay for redelivery of negatively acknowledged messages in ms")
+                        .defaultValue(10000))
+
                 // Sparkplug Host support
                 .property("isSparkplugHost", ConnectorPropertyBuilder.optionalBoolean()
-                        .order(16)
+                        .order(17)
                         .defaultValue(false)
                         .description("Enable Sparkplug Host mode to publish Birth/Death certificates on connection/disconnection"))
 
                 .property("sparkplugHostId", ConnectorPropertyBuilder.optionalString()
-                        .order(17)
+                        .order(18)
                         .description("Sparkplug Host ID (used for Birth/Death certificates)")
                         .condition("isSparkplugHost", "true"))
+
 
                 .build();
     }

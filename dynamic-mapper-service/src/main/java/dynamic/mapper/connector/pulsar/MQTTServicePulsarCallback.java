@@ -45,6 +45,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class MQTTServicePulsarCallback implements MessageListener<byte[]> {
+
     private GenericMessageCallback genericMessageCallback;
     private String tenant;
     private String connectorIdentifier;
@@ -131,7 +132,7 @@ public class MQTTServicePulsarCallback implements MessageListener<byte[]> {
                 }
 
                 if (!hasErrors) {
-                    // No errors found, acknowledge based on original QoS requirements
+                    // No errors found, acknowledge the message
                     if (serviceConfiguration.getLogPayload()) {
                         log.debug("{} - END: Sending ack for Pulsar message: topic: [{}], connector: {}",
                                 tenant, towardsDeviceTopic, connectorIdentifier);
@@ -143,21 +144,40 @@ public class MQTTServicePulsarCallback implements MessageListener<byte[]> {
                             tenant, towardsDeviceTopic, connectorIdentifier);
                     consumer.acknowledge(message);
                 } else {
-                    // Server error, negative acknowledge to trigger redelivery
-                    // But only if QoS requires reliability
+                    // Server error (>=500): negative-ACK for Pulsar automatic redelivery
                     log.warn(
-                            "{} - END: Sending negative ack due to server error for Pulsar message: topic: [{}], connector: {}",
-                            tenant, towardsDeviceTopic, connectorIdentifier);
+                            "{} - END: Server error (HTTP {}), sending negative ack for Pulsar redelivery. topic: [{}], connector: {}",
+                            tenant, httpStatusCode, towardsDeviceTopic, connectorIdentifier);
                     consumer.negativeAcknowledge(message);
                 }
             } catch (InterruptedException | ExecutionException e) {
-                // Processing failed, negative acknowledge to allow redelivery
+                // Processing failed, negative acknowledge for Pulsar redelivery
                 log.warn("{} - END: Was interrupted for Pulsar message: topic: [{}], connector: {}",
                         tenant, towardsDeviceTopic, connectorIdentifier);
                 consumer.negativeAcknowledge(message);
             } catch (TimeoutException e) {
-                var cancelResult = processedResults.getProcessingResult().cancel(true);
-                log.warn("{} - END: Processing timed out with: {} milliseconds, connector {}, result of cancelling: {}",
+                // Cancel the processing task to stop execution
+                log.warn("{} - Timeout occurred, initiating cancellation of processing task, connector: {}",
+                        tenant, connectorIdentifier);
+                var cancelResult = processedResults.cancelProcessing();
+                log.info("{} - Cancellation result: future was cancelled={}, connector: {}", tenant, cancelResult,
+                        connectorIdentifier);
+
+                // Give the cancellation a brief moment to take effect (interrupt flag propagation,
+                // GraalVM context closure).
+                try {
+                    Thread.sleep(50); //NOSONAR intentional wait for cancellation to take effect
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                }
+
+                if (!cancelResult && processedResults.getCancellationRequested().get()) {
+                    log.warn("{} - Future was already running when cancellation was requested. Waiting for it to complete or be interrupted, connector: {}.",
+                            tenant, connectorIdentifier);
+                }
+
+                log.warn(
+                        "{} - END: Processing timed out after {} ms, sending negative ack for Pulsar redelivery. connector: {}, cancel result: {}",
                         tenant, timeout, connectorIdentifier, cancelResult);
                 consumer.negativeAcknowledge(message);
             } catch (PulsarClientException e) {
@@ -168,3 +188,4 @@ public class MQTTServicePulsarCallback implements MessageListener<byte[]> {
         });
     }
 }
+
