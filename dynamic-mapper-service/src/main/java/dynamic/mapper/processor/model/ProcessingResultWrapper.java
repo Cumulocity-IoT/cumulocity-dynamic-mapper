@@ -24,6 +24,7 @@ package dynamic.mapper.processor.model;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import dynamic.mapper.model.Qos;
 import lombok.Builder;
@@ -40,7 +41,16 @@ public class ProcessingResultWrapper<O> {
     private Qos consolidatedQos;
     private int maxCPUTimeMS;
     private Exception error;
+    @SuppressWarnings("rawtypes")
     private Future future;
+
+    /**
+     * Flag to indicate that processing cancellation has been requested.
+     * Set to true when cancelProcessing() is called, can be checked by processing code
+     * to detect that they should stop executing.
+     */
+    @Getter
+    private final AtomicBoolean cancellationRequested = new AtomicBoolean(false);
 
     /**
      * Cancel actions registered by in-flight processors (e.g. GraalVM context closures).
@@ -74,6 +84,8 @@ public class ProcessingResultWrapper<O> {
     /**
      * Cancel the ongoing processing:
      * <ol>
+     *   <li>Set the {@link #cancellationRequested} flag to true so processing code can detect
+     *       the cancellation request and exit early</li>
      *   <li>Interrupt the virtual thread via {@link Future#cancel(boolean) cancel(true)} on the
      *       underlying future — effective for threads blocked in IO (C8Y SDK HTTP calls).</li>
      *   <li>Invoke every registered cancel action — required for CPU-bound GraalVM JavaScript
@@ -85,17 +97,30 @@ public class ProcessingResultWrapper<O> {
      *         {@link Future#cancel(boolean)})
      */
     public boolean cancelProcessing() {
-        // 1. Interrupt the processing thread (effective for blocking IO)
-        boolean cancelled = processingResult != null && processingResult.cancel(true);
+        log.debug("Cancelling processing on thread: {}", Thread.currentThread().getName());
 
-        // 2. Run all registered cancel actions (effective for GraalVM JS execution)
+        // 1. Set the cancellation flag so processing code can check it
+        cancellationRequested.set(true);
+
+        // 2. Interrupt the processing thread (effective for blocking IO)
+        boolean cancelled = processingResult != null && processingResult.cancel(true);
+        log.debug("Future.cancel(true) returned: {}", cancelled);
+
+        // 3. Run all registered cancel actions (effective for GraalVM JS execution)
+        log.debug("Invoking {} cancel action(s)", cancelActions.size());
+        int actionCount = 0;
         for (Runnable action : cancelActions) {
+            actionCount++;
+            log.debug("Calling cancel action #{} of {}", actionCount, cancelActions.size());
             try {
                 action.run();
+                log.debug("Cancel action #{} completed", actionCount);
             } catch (Exception e) {
-                log.warn("Cancel action threw an exception (ignored): {}", e.getMessage());
+                log.debug("Cancel action #{} threw an exception (ignored): {} - {}",
+                        actionCount, e.getClass().getSimpleName(), e.getMessage(), e);
             }
         }
+        log.debug("All {} cancel action(s) processed. Cancelling finished!", cancelActions.size());
         return cancelled;
     }
 }

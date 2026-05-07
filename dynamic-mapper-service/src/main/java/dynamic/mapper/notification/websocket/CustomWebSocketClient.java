@@ -166,9 +166,27 @@ public class CustomWebSocketClient extends WebSocketClient {
                     log.warn("{} - END: Processing InterruptedException |  ExecutionException: {}",
                             tenant, e.getMessage());
                 } catch (TimeoutException e) {
-                    var cancelResult = processedResults.getProcessingResult().cancel(true);
+                    // cancelProcessing() calls Future.cancel(true) to interrupt IO-blocked threads
+                    // AND closes any active GraalVM context via Context.close(cancelIfExecuting=true)
+                    // — the only reliable way to stop CPU-bound JS execution.
+                    log.warn("{} - Timeout occurred, initiating cancellation of processing task, connector InternalWebSocket", tenant);
+                    var cancelResult = processedResults.cancelProcessing();
+                    log.info("{} - Cancellation result: future was cancelled={}, connector InternalWebSocket", tenant, cancelResult);
+
+                    // Give the cancellation a brief moment to take effect (interrupt flag propagation,
+                    // GraalVM context closure).
+                    try {
+                        Thread.sleep(50); //NOSONAR intentional wait for cancellation to take effect
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                    }
+
+                    if (!cancelResult && processedResults.getCancellationRequested().get()) {
+                        log.warn("{} - Future was already running when cancellation was requested. Waiting for it to complete or be interrupted, connector InternalWebSocket.", tenant);
+                    }
+
                     log.warn(
-                            "{} - END: Processing timed out with: {} milliseconds, connector InternalWebSocket, result of cancelling: {}",
+                            "{} - END: Processing timed out after {}ms, connector InternalWebSocket, cancel result: {}",
                             tenant, timeout, cancelResult);
                 } catch (Exception e) {
                     // Handle other exceptions

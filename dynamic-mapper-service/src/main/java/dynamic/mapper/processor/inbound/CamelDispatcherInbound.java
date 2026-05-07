@@ -155,6 +155,14 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
                 // Pass the result wrapper so in-flight processors can register cancel actions
                 // (e.g. GraalVM context closure) reachable from the timeout handler.
                 exchange.getIn().setHeader("processingResultWrapper", result);
+
+                // Abort early if the MQTT callback already cancelled (timeout fired before
+                // we even reached the Camel route — cancel actions were not yet registered).
+                if (result.getCancellationRequested().get()) {
+                    log.warn("{} - Cancellation already requested before Camel route started, aborting processing for topic: {}", tenant, topic);
+                    return new ArrayList<>();
+                }
+
                 Exchange resultExchange = producerTemplate.send("direct:processInboundMessage", exchange);
 
                 @SuppressWarnings("unchecked")

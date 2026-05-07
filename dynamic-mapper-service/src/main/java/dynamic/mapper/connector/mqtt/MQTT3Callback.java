@@ -24,6 +24,7 @@ package dynamic.mapper.connector.mqtt;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
@@ -76,12 +77,10 @@ public class MQTT3Callback implements Consumer<Mqtt3Publish> {
     /** Timestamp of the last triggered reconnect — used for rate-limiting. */
     private final AtomicLong lastReconnectTriggerMs = new AtomicLong(0);
     /**
-     * Guards against parallel reconnect execution. Set to {@code true} when a reconnect is
-     * in progress; reset to {@code false} after the reconnect trigger has completed.
-     * Combined with the rate-limit this ensures at most one reconnect runs at a time.
+     * Semaphore that ensures only one thread executes reconnectTrigger.run() at a time.
+     * This allows other messages to be processed during the back-off sleep phase.
      */
-    private final java.util.concurrent.atomic.AtomicBoolean reconnectInProgress =
-            new java.util.concurrent.atomic.AtomicBoolean(false);
+    private final Semaphore reconnectExecutionSemaphore = new Semaphore(1);
     /**
      * Counts consecutive failures (timeout / HTTP≥500) without a successful processing in between.
      * When it exceeds {@link #MAX_CONSECUTIVE_RECONNECTS} the message is treated as a poison pill
@@ -154,6 +153,7 @@ public class MQTT3Callback implements Consumer<Mqtt3Publish> {
         int publishQos = mqttMessage.getQos().getCode();
         int mappingQos = processedResults.getConsolidatedQos().ordinal();
         int timeout = processedResults.getMaxCPUTimeMS();
+        AtomicLong effectiveTimeout = new AtomicLong(timeout);
         int effectiveQos = Math.min(publishQos, mappingQos);
         if (serviceConfiguration.getLogPayload()) {
             log.info(
@@ -176,14 +176,14 @@ public class MQTT3Callback implements Consumer<Mqtt3Publish> {
                     List<? extends ProcessingContext<?>> results;
                     if (timeout > 0) {
                         int attempt = consecutiveReconnectCount.get(); // 0-based; 0 = first attempt
-                        long effectiveTimeout = Math.min(
+                        effectiveTimeout.set(Math.min(
                                 (long) timeout * (attempt + 1),
-                                (long) timeout * MAX_CONSECUTIVE_RECONNECTS);
+                                (long) timeout * MAX_CONSECUTIVE_RECONNECTS));
                         if (attempt > 0) {
                             log.info("{} - Retransmission attempt {}: using increased timeout {}ms (base: {}ms), connector: {}",
                                     tenant, attempt + 1, effectiveTimeout, timeout, connectorIdentifier);
                         }
-                        results = processedResults.getProcessingResult().get(effectiveTimeout, TimeUnit.MILLISECONDS);
+                        results = processedResults.getProcessingResult().get(effectiveTimeout.get(), TimeUnit.MILLISECONDS);
                     } else {
                         results = processedResults.getProcessingResult().get();
                     }
@@ -247,10 +247,28 @@ public class MQTT3Callback implements Consumer<Mqtt3Publish> {
                     // cancelProcessing() additionally closes any active GraalVM context via
                     // Context.close(cancelIfExecuting=true) — the only reliable way to stop
                     // CPU-bound JS execution that ignores Java thread interruption.
+                    log.warn("{} - Timeout occurred, initiating cancellation of processing task", tenant);
                     var cancelResult = processedResults.cancelProcessing();
+                    log.info("{} - Cancellation result: future was cancelled={}", tenant, cancelResult);
+
+                    // Give the cancellation a brief moment to take effect (e.g., interrupt flag propagation,
+                    // GraalVM context closure). This helps ensure that the processing task actually stops
+                    // rather than continuing to run after the timeout.
+                    try {
+                        Thread.sleep(50); //NOSONAR intentional wait for cancellation to take effect
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                    }
+
+                    // If the future couldn't be cancelled but cancellation was requested,
+                    // the task is likely already running. Log this for diagnostics.
+                    if (!cancelResult && processedResults.getCancellationRequested().get()) {
+                        log.warn("{} - Future was already running when cancellation was requested. Waiting for it to complete or be interrupted.", tenant);
+                    }
+
                     log.warn(
-                            "{} - END: Processing timed out after {} ms, not sending ACK. Triggering reconnect for retransmission. connector: {}, cancel result: {}",
-                            tenant, timeout, connectorIdentifier, cancelResult);
+                            "{} - END: Processing timed out after {}ms, not sending ACK. Triggering reconnect for retransmission. connector: {}, cancel result: {}",
+                            tenant, effectiveTimeout, connectorIdentifier, cancelResult);
                     triggerReconnectOrAck(mqttMessage, topic);
                 } finally {
                     activeProcessingMessages.decrementAndGet();
@@ -275,9 +293,6 @@ public class MQTT3Callback implements Consumer<Mqtt3Publish> {
      * <ul>
      *   <li>If reconnectOnProcessingError is disabled, the message is acknowledged immediately
      *       regardless of the error condition.</li>
-     *   <li>If a reconnect is already in progress (including its back-off delay), the
-     *       message stays unACKed — the broker will retransmit it after the session is
-     *       restored, so no further action is required.</li>
      *   <li>If the consecutive-reconnect counter has reached
      *       {@link #MAX_CONSECUTIVE_RECONNECTS}: the message is treated as a
      *       <em>poison pill</em> — it is ACKed (discarded) and a hard error is logged.</li>
@@ -290,7 +305,6 @@ public class MQTT3Callback implements Consumer<Mqtt3Publish> {
      */
     private void triggerReconnectOrAck(Mqtt3Publish mqttMessage, String topic) {
         // If reconnectOnProcessingError is disabled, wait for broker to re-transmit un-acked message again
-        log.info("reconnectProcessingError={}", reconnectOnProcessingError);
         if (!reconnectOnProcessingError) {
             log.info(
                     "{} - END: reconnectOnProcessingError is disabled, waiting for Broker to re-transmit unacked message automatically. connector: {}",
@@ -298,13 +312,6 @@ public class MQTT3Callback implements Consumer<Mqtt3Publish> {
             return;
         }
 
-        // If a reconnect is already scheduled/running, this message stays unACKed.
-        // The broker will retransmit it after the session is restored.
-        if (reconnectInProgress.get()) {
-            log.debug("{} - Reconnect already in progress — message will be retransmitted after reconnect. topic: [{}], connector: {}",
-                    tenant, topic, connectorIdentifier);
-            return;
-        }
         // Check poison-pill threshold BEFORE scheduling another reconnect attempt.
         if (consecutiveReconnectCount.get() >= MAX_CONSECUTIVE_RECONNECTS) {
             log.error("{} - POISON PILL: {} consecutive reconnect attempts without success — ACKing message to prevent "
@@ -320,10 +327,10 @@ public class MQTT3Callback implements Consumer<Mqtt3Publish> {
     /**
      * Schedules a connector disconnect with exponential back-off delay.
      * <p>
-     * The {@link #reconnectInProgress} flag is held for the entire duration — including
-     * the sleep before the disconnect — so that concurrent callers in
-     * {@link #triggerReconnectOrAck} see "reconnect in progress" and leave their
-     * messages unACKed for broker retransmission.
+     * The semaphore ensures that only one thread executes the reconnect trigger at a time.
+     * However, the back-off delay happens BEFORE acquiring the semaphore, allowing other
+     * messages to be processed during this sleep phase. This improves throughput when the
+     * broker is recovering.
      * <p>
      * If other messages are being processed, this thread waits for them to complete
      * (and be ACKed) before proceeding with the reconnect. This avoids blocking their
@@ -340,14 +347,6 @@ public class MQTT3Callback implements Consumer<Mqtt3Publish> {
      * accurately reflects actual reconnect attempts, not the number of failing messages.
      */
     private void triggerReconnect() {
-        // Parallel-execution guard — also prevents a second reconnect from being queued
-        // while the first one is still sleeping through its back-off delay.
-        if (!reconnectInProgress.compareAndSet(false, true)) {
-            log.warn("{} - Reconnect already in progress, skipping parallel trigger, connector: {}",
-                    tenant, connectorIdentifier);
-            return;
-        }
-
         int attempt = consecutiveReconnectCount.incrementAndGet();
         lastReconnectTriggerMs.set(System.currentTimeMillis());
 
@@ -359,8 +358,8 @@ public class MQTT3Callback implements Consumer<Mqtt3Publish> {
                 tenant, attempt, delayMs, connectorIdentifier);
 
         // Run in a dedicated virtual thread so it doesn't block the callback thread.
-        // reconnectInProgress remains true during the sleep AND the disconnect call,
-        // ensuring no second reconnect can start until this one fully completes.
+        // The back-off sleep happens BEFORE acquiring the semaphore, allowing other
+        // messages to proceed without waiting for this reconnect to complete.
         Thread.ofVirtual()
                 .name("mqtt-timeout-reconnect-" + connectorIdentifier)
                 .start(() -> {
@@ -373,12 +372,25 @@ public class MQTT3Callback implements Consumer<Mqtt3Publish> {
                         if (delayMs > 0) {
                             Thread.sleep(delayMs); //NOSONAR intentional back-off delay
                         }
-                        reconnectTrigger.run();
+
+                        // Only one thread can execute reconnectTrigger.run() at a time.
+                        // Acquire the semaphore before executing the reconnect.
+                        try {
+                            reconnectExecutionSemaphore.acquire();
+                            log.debug("{} - Reconnect attempt {} acquiring execution semaphore and executing reconnect trigger, connector: {}",
+                                    tenant, attempt, connectorIdentifier);
+                            reconnectTrigger.run();
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            log.warn("{} - Reconnect thread interrupted while waiting for semaphore, connector: {}", tenant, connectorIdentifier);
+                        } finally {
+                            reconnectExecutionSemaphore.release();
+                            log.debug("{} - Reconnect attempt {} completed and released execution semaphore, connector: {}",
+                                    tenant, attempt, connectorIdentifier);
+                        }
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
                         log.warn("{} - Reconnect thread interrupted, connector: {}", tenant, connectorIdentifier);
-                    } finally {
-                        reconnectInProgress.set(false);
                     }
                 });
     }

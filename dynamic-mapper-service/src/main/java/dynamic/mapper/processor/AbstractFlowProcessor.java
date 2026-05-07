@@ -68,21 +68,50 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
         dynamic.mapper.processor.model.ProcessingResultWrapper<?> wrapper =
                 exchange.getIn().getHeader("processingResultWrapper",
                         dynamic.mapper.processor.model.ProcessingResultWrapper.class);
+
+        // ── Early-exit: cancellation was requested before this processor was even reached.
+        // This happens when the MQTT timeout fires before the Camel route reaches the
+        // FlowProcessor (cancel actions list was empty at cancel time, so nothing fired).
+        if (wrapper != null && wrapper.getCancellationRequested().get()) {
+            log.info("{} - Cancellation already requested before process() started, skipping JS execution for mapping: {}",
+                    tenant, mapping.getName());
+            return;
+        }
+
         org.graalvm.polyglot.Context graalCtx = context.getGraalContext();
         Runnable cancelAction = null;
         if (wrapper != null && graalCtx != null) {
+            // Capture context identity for diagnostics
+            String contextId = Integer.toHexString(System.identityHashCode(graalCtx));
+            log.debug("{} - Registering GraalVM cancel action for context: {} ({})", tenant, contextId, graalCtx.getClass().getSimpleName());
+
             cancelAction = () -> {
+                log.debug("{} - GraalVM cancel action INVOKED on thread {}, closing context {}",
+                        tenant, Thread.currentThread().getName(), contextId);
                 try {
+                    log.debug("{} - Calling graalCtx.close(true) to forcibly interrupt running JS", tenant);
                     graalCtx.close(true); // forcibly interrupt running JS
+                    log.debug("{} - graalCtx.close(true) completed successfully", tenant);
                 } catch (Exception e2) {
-                    log.debug("{} - GraalVM context close(true) threw (expected when already closed): {}", tenant, e2.getMessage());
+                    log.warn("{} - GraalVM context close(true) threw an exception: {} ({})",
+                            tenant, e2.getClass().getSimpleName(), e2.getMessage(), e2);
                 }
             };
             wrapper.addCancelAction(cancelAction);
+        } else {
+            log.warn("{} - Cannot register cancel action: wrapper={}, graalCtx={}",
+                    tenant, wrapper != null, graalCtx != null);
         }
 
         try {
+            // Set the wrapper on the context so processSmartMapping() can access it
+            if (wrapper != null) {
+                context.setProcessingResultWrapper(wrapper);
+                log.debug("{} - ProcessingResultWrapper assigned to context", tenant);
+            }
+            log.debug("{} - Starting processSmartMapping on thread: {}", tenant, Thread.currentThread().getName());
             processSmartMapping(context);
+            log.debug("{} - processSmartMapping completed successfully", tenant);
         } catch (Exception e) {
             // Salvage any console.log() messages written before the exception so they
             // are included in the test/error response even when processing fails.
@@ -141,18 +170,42 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
             Value result = null;
 
             try {
-                // Task 1: Invoking JavaScript function
-                String identifier = Mapping.SMART_FUNCTION_NAME + "_" + mapping.getIdentifier();
-                bindings = graalContext.getBindings("js");
+                 // Task 1: Invoking JavaScript function
+                 String identifier = Mapping.SMART_FUNCTION_NAME + "_" + mapping.getIdentifier();
+                 bindings = graalContext.getBindings("js");
 
-                // Always provide console for JavaScript code
-                if (context.getFlowContext() != null) {
+                 // Always provide console for JavaScript code
+                 if (context.getFlowContext() != null) {
                     JavaScriptConsole console = new JavaScriptConsole(context.getFlowContext(), tenant, mapping);
-                    bindings.putMember("console", console);
-                }
+                     bindings.putMember("console", console);
+                 }
 
-                // Load shared/system code first — populates globalThis with helpers/libraries
-                loadSharedCode(graalContext, context);
+                  // Inject a cancellation checker object so JavaScript code can periodically check
+                  // if processing has been cancelled and exit early.
+                  // The ProcessingResultWrapper updates the cancellationRequested flag on timeout.
+                  dynamic.mapper.processor.model.ProcessingResultWrapper<?> wrapper =
+                          context.getProcessingResultWrapper();
+                  if (wrapper != null) {
+                      // Create a helper object that JS can call to check if it's been cancelled
+                      Object cancellationHelper = new Object() {
+                          @SuppressWarnings("unused")
+                          public boolean isCancelled() {
+                              boolean cancelled = wrapper.getCancellationRequested().get();
+                              if (cancelled) {
+                                  log.warn("{} - CANCELLATION CHECK: Code has been CANCELLED, returning true", tenant);
+                              }
+                              return cancelled;
+                          }
+                      };
+                      bindings.putMember("__cancellationHelper", cancellationHelper);
+                      log.debug("{} - Injected cancellation helper into JavaScript bindings for thread: {}",
+                               tenant, Thread.currentThread().getName());
+                  } else {
+                      log.debug("{} - No ProcessingResultWrapper available, cancellation helper not injected", tenant);
+                  }
+
+                 // Load shared/system code first — populates globalThis with helpers/libraries
+                 loadSharedCode(graalContext, context);
 
                 byte[] decodedBytes = Base64.getDecoder().decode(mapping.getCode());
                 String decodedCode = new String(decodedBytes);
@@ -190,16 +243,27 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
                     onMessageFunction = bindings.getMember(Mapping.SMART_FUNCTION_NAME);
                 }
 
-                if (onMessageFunction == null || onMessageFunction.isNull()) {
-                    throw new ProcessingException(String.format(
-                            "Function '%s' not found in mapping code. Ensure the script defines and exports a function named '%s'.",
-                            Mapping.SMART_FUNCTION_NAME, Mapping.SMART_FUNCTION_NAME));
-                }
+                 if (onMessageFunction == null || onMessageFunction.isNull()) {
+                     throw new ProcessingException(String.format(
+                             "Function '%s' not found in mapping code. Ensure the script defines and exports a function named '%s'.",
+                             Mapping.SMART_FUNCTION_NAME, Mapping.SMART_FUNCTION_NAME));
+                 }
 
-                inputMessage = createInputMessage(graalContext, context);
+                 inputMessage = createInputMessage(graalContext, context);
 
-                // Execute the JavaScript function
-                result = onMessageFunction.execute(inputMessage, context.getFlowContext());
+                 // Last chance to abort before handing control to JavaScript.
+                 // Between registering the cancel action above and reaching this line,
+                 // the timeout thread may have fired and set cancellationRequested.
+                 dynamic.mapper.processor.model.ProcessingResultWrapper<?> wrapperCheck =
+                         context.getProcessingResultWrapper();
+                 if (wrapperCheck != null && wrapperCheck.getCancellationRequested().get()) {
+                     log.warn("{} - Cancellation requested just before JS execute(), skipping for mapping: {}",
+                             tenant, mapping.getName());
+                     return;
+                 }
+
+                 // Execute the JavaScript function
+                 result = onMessageFunction.execute(inputMessage, context.getFlowContext());
 
                 // Task 2: Extracting the result
                 processResult(result, context, tenant);

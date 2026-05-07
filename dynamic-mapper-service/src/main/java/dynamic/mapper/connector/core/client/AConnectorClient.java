@@ -229,7 +229,9 @@ public abstract class AConnectorClient {
      * Subclasses should call this at the end of their connect() method
      */
     protected void endConnection() {
+        log.debug("{} - Calling end connection...", tenant);
         synchronized (connectionLock) {
+            log.debug("{} - Setting isConnecting to false...", tenant);
             isConnecting = false;
         }
     }
@@ -255,7 +257,9 @@ public abstract class AConnectorClient {
      * Subclasses should call this at the end of their disconnect() method
      */
     protected void endDisconnection() {
+        log.debug("{} - Calling end disconnection...", tenant);
         synchronized (disconnectionLock) {
+            log.debug("{} - Setting isDisconnecting to false...", tenant);
             isDisconnecting = false;
         }
     }
@@ -527,6 +531,38 @@ public abstract class AConnectorClient {
             performHousekeeping();
         } catch (Exception e) {
             log.error("{} - Error during housekeeping: {}", tenant, e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Pre-builds mapping caches and pre-populates the effective mapping registry WITHOUT
+     * performing any broker subscribe calls.
+     * <p>
+     * Called by {@link dynamic.mapper.connector.mqtt.AMQTTClient#connect()} when
+     * {@code cleanSession=false} so that mapping resolution is ready before the TCP
+     * connection is established.  When the broker immediately delivers queued messages
+     * upon reconnect, the {@link dynamic.mapper.service.MappingService} can resolve them
+     * to their mappings even before {@link #initializeSubscriptionsAfterConnect()} runs.
+     */
+    public void prepareForPersistentSessionReconnect() {
+        try {
+            log.debug("{} - Pre-building mapping caches for persistent session reconnect on connector: {}",
+                    tenant, connectorName);
+            mappingService.rebuildMappingCaches(tenant, connectorId);
+
+            List<Mapping> inboundMappings = new ArrayList<>(
+                    mappingService.getCacheInboundMappings(tenant).values());
+            List<Mapping> deployedMappings = inboundMappings.stream()
+                    .filter(this::isDeployedInConnector)
+                    .toList();
+            mappingSubscriptionManager.prePopulateEffectiveMappingsInbound(
+                    deployedMappings, this::isMappingValidForDeployment);
+
+            log.debug("{} - Pre-populated {} effective inbound mappings for persistent session on connector: {}",
+                    tenant, deployedMappings.size(), connectorName);
+        } catch (Exception e) {
+            log.warn("{} - Error pre-building caches for persistent session (will retry after connect): {}",
+                    tenant, e.getMessage(), e);
         }
     }
 

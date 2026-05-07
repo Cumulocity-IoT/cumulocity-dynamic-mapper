@@ -112,6 +112,26 @@ public class MappingSubscriptionManager {
     // ===== Inbound Subscription Management =====
 
     /**
+     * Pre-populates the effective inbound mapping registry without performing any broker
+     * subscribe operations.
+     * <p>
+     * Used before establishing a connection when {@code cleanSession=false}: the broker
+     * may push queued messages immediately upon reconnect, so the mapping registry must
+     * be ready before the TCP handshake completes.
+     *
+     * @param mappings  candidate mappings (already filtered for deployment)
+     * @param validator validates if a mapping should be applied
+     */
+    public void prePopulateEffectiveMappingsInbound(List<Mapping> mappings, MappingValidator validator) {
+        mappings.stream()
+                .filter(Mapping::getActive)
+                .filter(validator::isValid)
+                .forEach(mapping -> effectiveMappingsInbound.put(mapping.getIdentifier(), mapping));
+        log.debug("{} - Pre-populated {} effective inbound mappings for persistent session on connector: {}",
+                tenant, effectiveMappingsInbound.size(), connectorName);
+    }
+
+    /**
      * Adds (or increments) a subscription for an inbound mapping.
      * 
      * <p>If this is the first mapping for the topic, performs the actual subscription.

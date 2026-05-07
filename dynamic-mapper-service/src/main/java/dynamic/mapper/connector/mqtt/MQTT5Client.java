@@ -21,6 +21,7 @@
 
 package dynamic.mapper.connector.mqtt;
 
+import com.hivemq.client.mqtt.MqttGlobalPublishFilter;
 import com.hivemq.client.mqtt.datatypes.MqttQos;
 import com.hivemq.client.mqtt.mqtt5.Mqtt5AsyncClient;
 import com.hivemq.client.mqtt.mqtt5.Mqtt5BlockingClient;
@@ -422,6 +423,25 @@ public class MQTT5Client extends AMQTTClient {
                 context.addError(new dynamic.mapper.processor.ProcessingException(
                         "Failed to publish message " + (i + 1) + "/" + requests.size(), e));
             }
+        }
+    }
+
+    @Override
+    protected void registerPreConnectPublishHandler() {
+        // Register mqttCallback as the global fallback listener so that messages pushed
+        // by the broker immediately on reconnect (persistent session / cleanStart=false)
+        // are routed to our callback even before per-topic subscriptions are re-established.
+        //
+        // We use MqttGlobalPublishFilter.REMAINING (not ALL) so that once per-topic
+        // callbacks are registered via subscribe(), those callbacks become the sole handler
+        // for their topics. REMAINING only delivers messages that have no matching
+        // per-subscription callback, preventing duplicate processing.
+        if (mqttCallback != null) {
+            mqttClient.toAsync().publishes(MqttGlobalPublishFilter.REMAINING, mqttCallback, true);
+            log.info("{} - Registered MQTT5 global publish handler (REMAINING filter) for persistent session (cleanStart=false) on connector: {}",
+                    tenant, connectorName);
+        } else {
+            log.warn("{} - Cannot register pre-connect publish handler: mqttCallback not yet created", tenant);
         }
     }
 

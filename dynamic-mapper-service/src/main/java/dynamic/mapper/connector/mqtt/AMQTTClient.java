@@ -138,6 +138,13 @@ public abstract class AMQTTClient extends AConnectorClient {
             reconnectOnProcessingError = (Boolean) connectorConfiguration.getProperties()
                     .getOrDefault("reconnectOnProcessingError", true);
 
+            // Create MQTT callback ONCE during initialization.
+            // The callback maintains reconnection attempt counters that must survive
+            // across multiple connect()/disconnect() cycles. Creating a new callback
+            // on every connect() would reset these counters and cause an infinite
+            // reconnect loop where each reconnect is treated as "attempt 1".
+            createMqttCallback();
+
             log.info("{} - MQTT Connector {} initialized successfully", tenant, connectorName);
             if (isConfigValid(connectorConfiguration)) {
                 connectionStateManager.updateStatus(ConnectorStatus.CONFIGURED, true, true);
@@ -207,6 +214,7 @@ public abstract class AMQTTClient extends AConnectorClient {
     public void connect() {
         // Use base class synchronization helpers
         if (!beginConnection()) {
+            log.info("{} - Connection attempt already in progress for connector: {}", tenant, connectorName);
             return;
         }
 
@@ -224,14 +232,46 @@ public abstract class AMQTTClient extends AConnectorClient {
             // Build MQTT client (version-specific)
             buildMqttClient();
 
-            // Create callback (version-specific)
-            createMqttCallback();
+
+            if (!cleanSession) {
+                // With cleanSession=false the broker persists the session and immediately
+                // delivers queued messages as soon as the TCP connection is established —
+                // BEFORE the application has registered any per-topic callbacks.
+                // To avoid "No publish flow registered" errors we must:
+                //   1. Pre-build mapping caches so messages can be resolved and processed
+                //   2. Register a global publish handler that routes messages to mqttCallback
+                log.info("{} - cleanSession=false: pre-building caches and registering global publish handler before connect for connector: {}",
+                        tenant, connectorName);
+                prepareForPersistentSessionReconnect();
+                registerPreConnectPublishHandler();
+            }
 
             // Connect with retry logic
             connectMqttWithRetry();
 
-            // Initialize subscriptions after successful connection
-            if (isConnected()) {
+        } catch (Exception e) {
+            log.error("{} - Error connecting MQTT client: {}", tenant, e.getMessage(), e);
+            connectionStateManager.updateStatusWithError(e);
+        } finally {
+            // *** IMPORTANT: release isConnecting BEFORE initializeSubscriptionsAfterConnect() ***
+            //
+            // initializeSubscriptionsAfterConnect() calls rebuildMappingCaches() which can take
+            // several hundred milliseconds (DB round-trips). The MQTT connection is already live
+            // at this point, so the broker may deliver messages immediately. If one of those
+            // messages hits its processing timeout (e.g. 50 ms), its reconnect trigger calls
+            // connect() → beginConnection(). With the old code, beginConnection() saw
+            // isConnecting=true (set earlier in this method) and returned false, silently
+            // aborting the reconnect. By calling endConnection() here – inside finally, right
+            // after the physical connection phase is done – we allow a legitimate reconnect to
+            // proceed concurrently. subscribe() calls inside a maybe-concurrent
+            // initializeSubscriptionsAfterConnect() check isConnected() first and skip
+            // gracefully if the client has been disconnected in the meantime.
+            endConnection();
+        }
+
+        // Initialize subscriptions OUTSIDE the isConnecting guard (see comment above).
+        if (isConnected()) {
+            try {
                 initializeSubscriptionsAfterConnect();
 
                 // Publish Birth Certificate if Sparkplug Host mode is enabled
@@ -239,13 +279,9 @@ public abstract class AMQTTClient extends AConnectorClient {
                     sparkplugCertificateManager.subscribeToSparkplugTopics();
                     sparkplugCertificateManager.publishBirthCertificate();
                 }
+            } catch (Exception e) {
+                log.error("{} - Error initializing subscriptions after connect: {}", tenant, e.getMessage(), e);
             }
-
-        } catch (Exception e) {
-            log.error("{} - Error connecting MQTT client: {}", tenant, e.getMessage(), e);
-            connectionStateManager.updateStatusWithError(e);
-        } finally {
-            endConnection();
         }
     }
 
@@ -284,6 +320,21 @@ public abstract class AMQTTClient extends AConnectorClient {
      * Subclasses must implement resource cleanup
      */
     protected abstract void closeMqttResources();
+
+    /**
+     * Register a global publish handler BEFORE connecting to the broker.
+     * <p>
+     * Required for {@code cleanSession=false} (persistent sessions): the broker starts
+     * delivering queued messages immediately upon connection — before per-topic callbacks
+     * are registered via {@link #subscribe(String, Qos)}.  Subclasses must register
+     * {@code mqttCallback} as the global fallback listener (using
+     * {@code MqttGlobalPublishFilter.ALL}) so those messages are not dropped with
+     * "No publish flow registered".
+     * <p>
+     * After {@link #initializeSubscriptionsAfterConnect()} completes, per-topic callbacks
+     * take over and the global handler serves only as a fallback.
+     */
+    protected abstract void registerPreConnectPublishHandler();
 
     @Override
     public void disconnect() {
@@ -538,6 +589,7 @@ public abstract class AMQTTClient extends AConnectorClient {
         configProps.put("reconnectOnProcessingError", ConnectorPropertyBuilder.optionalBoolean()
                 .order(16)
                 .defaultValue(true)
+                .condition("cleanSession", "false")
                 .description("Reconnect broker on timeout or internal processing errors (for QoS 1+ messages and broker which don't automatically retransmit unacked messages)")
                 .build());
 
