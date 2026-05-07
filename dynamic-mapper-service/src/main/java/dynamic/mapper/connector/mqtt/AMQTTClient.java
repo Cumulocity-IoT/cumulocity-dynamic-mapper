@@ -588,7 +588,7 @@ public abstract class AMQTTClient extends AConnectorClient {
         // Error handling and reconnection control
         configProps.put("reconnectOnProcessingError", ConnectorPropertyBuilder.optionalBoolean()
                 .order(16)
-                .defaultValue(true)
+                .defaultValue(false)
                 .condition("cleanSession", "false")
                 .description("Reconnect broker on timeout or internal processing errors (for QoS 1+ messages and broker which don't automatically retransmit unacked messages)")
                 .build());
