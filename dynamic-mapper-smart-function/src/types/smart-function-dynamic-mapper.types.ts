@@ -1484,23 +1484,50 @@ export function createMockPayload(data: Record<string, any>): Record<string, any
 
 /**
  * Mock input message for testing Smart Functions.
- * Creates a DynamicMapperDeviceMessage with pre-deserialized payload.
+ * Creates a `DynamicMapperDeviceMessage` with a typed, pre-deserialized payload.
  *
- * @example
- * const mockMsg = createMockInputMessage({
- *   messageId: "msg-123",
- *   temperature: 25.5
- * }, "device/temp/data", "client-123");
+ * The optional type parameter `TInput` mirrors the `input` slot of
+ * {@link SmartFunctionInV2} so the returned message is assignable directly
+ * to the `msg` parameter of a typed Smart Function:
+ *
+ * - `C8yObjectType` string (e.g. `'event'`) → payload typed as `C8yPayloadTypeMap[TInput]`
+ * - Custom `Record<string, any>` interface   → payload typed as that interface
+ * - Omitted (default)                         → payload typed as `Record<string, any>`
+ *
+ * @typeParam TInput - Expected payload type (defaults to `Record<string, any>`)
+ *
+ * @example Untyped (backward-compatible default)
+ * const msg = createMockInputMessage({ temperature: 25.5 }, "device/temp", "client-123");
+ *
+ * @example Typed via C8yObjectType string — payload is C8yEvent
+ * const msg = createMockInputMessage<'event'>({
+ *   type: 'c8y_LocationUpdate',
+ *   text: 'Location updated',
+ *   time: new Date().toISOString(),
+ *   source: { id: '12345' },
+ * }, "device/events");
+ * // msg.payload is C8yEvent — all required fields are enforced at compile time
+ *
+ * @example Typed via custom interface
+ * interface LoRaPayload { source: { id: string }; data: string; freq: number }
+ * const msg = createMockInputMessage<LoRaPayload>(
+ *   { source: { id: '42' }, data: 'AABB', freq: 868 },
+ *   "lora/uplink"
+ * );
  */
-export function createMockInputMessage(
-  payloadData: Record<string, any>,
+export function createMockInputMessage<
+  TInput extends C8yObjectType | Record<string, any> = Record<string, any>
+>(
+  payloadData: TInput extends C8yObjectType ? C8yPayloadTypeMap[TInput] : TInput,
   topic: string = "test/topic",
   clientId?: string
-): DynamicMapperDeviceMessage {
-  const payload = createMockPayload(payloadData);
+): Omit<DynamicMapperDeviceMessage, 'payload'> & {
+  payload: TInput extends C8yObjectType ? C8yPayloadTypeMap[TInput] : TInput;
+} {
+  const payload = createMockPayload(payloadData as Record<string, any>);
 
   return {
-    payload,
+    payload: payload as TInput extends C8yObjectType ? C8yPayloadTypeMap[TInput] : TInput,
     topic,
     ...(clientId !== undefined && { clientId }),
     transportId: "mqtt",

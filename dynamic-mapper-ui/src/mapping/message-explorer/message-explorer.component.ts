@@ -61,6 +61,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
   sessionId: string | null = null;
   connectorName: string = '';
   sessionTopic: string = '';
+  sessionDirection: 'INBOUND' | 'OUTBOUND' = 'INBOUND';
   messages: ExplorerMessage[] = [];
   paused: boolean = false;
   expandedIndex: number | null = null;
@@ -197,10 +198,13 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       this.sessionId = await this.explorerService.startSession({
         connectorIdentifier: result.connectorIdentifier,
         topic: result.topic,
-        maxMessages: result.maxMessages
+        maxMessages: result.maxMessages,
+        direction: result.direction,
+        deviceId: result.deviceId
       });
       this.connectorName = result.connectorName;
       this.sessionTopic = result.topic;
+      this.sessionDirection = result.direction;
       this.paused = false;
       this.expandedIndex = null;
       this.expandedPayload = null;
@@ -210,7 +214,8 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       if (this.shouldRefreshAutomatic) {
         this.countdownIntervalComponent?.start();
       }
-      this.alertService.success(`Exploring "${result.topic}" on "${result.connectorName}"`);
+      const deviceLabel = result.deviceName ? ` / device: "${result.deviceName}"` : '';
+      this.alertService.success(`${result.direction === 'OUTBOUND' ? 'Outbound' : 'Inbound'}: exploring "${result.topic}" on "${result.connectorName}"${deviceLabel}`);
     } catch (e: any) {
       this.alertService.danger(`Failed to start explorer session: ${e.message}`);
     }
@@ -233,6 +238,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
     this.messages = [];
     this.connectorName = '';
     this.sessionTopic = '';
+    this.sessionDirection = 'INBOUND';
     this.paused = false;
     this.expandedIndex = null;
     this.expandedPayload = null;

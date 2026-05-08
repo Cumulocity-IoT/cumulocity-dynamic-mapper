@@ -25,10 +25,16 @@ import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.connector.core.registry.ConnectorRegistryException;
+import dynamic.mapper.core.C8YAgent;
+import dynamic.mapper.model.API;
 import dynamic.mapper.model.ExplorerMessage;
 import dynamic.mapper.model.ExplorerSession;
+import dynamic.mapper.notification.NotificationSubscriber;
+import dynamic.mapper.notification.Utils;
+import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -67,6 +73,14 @@ public class ExplorerService {
     @Autowired
     private ConnectorRegistry connectorRegistry;
 
+    @Autowired
+    @Lazy
+    private NotificationSubscriber notificationSubscriber;
+
+    @Autowired
+    @Lazy
+    private C8YAgent c8yAgent;
+
     /**
      * sessions: tenant → (sessionId → ExplorerSession)
      * explorerListeners: sessionId → Consumer registered on the AConnectorClient
@@ -77,6 +91,15 @@ public class ExplorerService {
     private final ConcurrentHashMap<String, Consumer<ConnectorMessage>> listenerRegistry
             = new ConcurrentHashMap<>();
 
+    /**
+     * Short-lived deduplication cache for OUTBOUND messages.
+     * Each Notification 2.0 event is delivered once per connector, so N connectors
+     * would produce N identical explorer entries. We suppress duplicates seen within
+     * OUTBOUND_DEDUP_WINDOW_MS milliseconds using a key of (tenant, topic, payloadHash).
+     */
+    private final ConcurrentHashMap<String, Long> outboundDedupCache = new ConcurrentHashMap<>();
+    static final long OUTBOUND_DEDUP_WINDOW_MS = 3_000L;
+
     // -------------------------------------------------------------------------
     // Public API
     // -------------------------------------------------------------------------
@@ -84,46 +107,108 @@ public class ExplorerService {
     /**
      * Start a new explorer session for the given connector + topic.
      *
+     * <p>For <b>INBOUND</b>: listens on the specific connector and subscribes the topic on the broker.
+     * <p>For <b>OUTBOUND</b>: {@code connectorIdentifier} is ignored — the listener is registered on
+     * <em>all</em> connectors for the tenant so every outbound publish is captured regardless of
+     * which connector sends it. The session stores connectorIdentifier as {@code "*"} and
+     * connectorName as {@code "(all)"}.
+     *
      * @param tenant              tenant identifier
-     * @param connectorIdentifier identifier of the inbound connector to listen on
-     * @param topic               topic (may include wildcards if the connector supports them)
+     * @param connectorIdentifier identifier of the inbound connector (INBOUND only; ignored for OUTBOUND)
+     * @param topic               topic filter (MQTT wildcards supported)
      * @param maxMessages         maximum messages to buffer (1–500); defaults to 50
+     * @param direction           "INBOUND" or "OUTBOUND"
+     * @param deviceId            C8Y device ID to filter (OUTBOUND only; null = all devices)
      * @return the new session id
-     * @throws ConnectorRegistryException if the connector is not registered for the tenant
+     * @throws ConnectorRegistryException if the connector is not registered for the tenant (INBOUND only)
      */
-    public String startSession(String tenant, String connectorIdentifier, String topic, int maxMessages)
+    public String startSession(String tenant, String connectorIdentifier, String topic, int maxMessages,
+            String direction, String deviceId)
             throws ConnectorRegistryException {
 
-        AConnectorClient client = connectorRegistry.getClientForTenant(tenant, connectorIdentifier);
-
         int cappedMax = Math.max(1, Math.min(500, maxMessages > 0 ? maxMessages : DEFAULT_MAX_MESSAGES));
+        String dir = (direction != null && direction.equalsIgnoreCase("OUTBOUND")) ? "OUTBOUND" : "INBOUND";
 
         String sessionId = UUID.randomUUID().toString();
 
-        ExplorerSession session = ExplorerSession.builder()
-                .sessionId(sessionId)
-                .connectorIdentifier(connectorIdentifier)
-                .connectorName(client.getConnectorName())
-                .topic(topic)
-                .tenant(tenant)
-                .maxMessages(cappedMax)
-                .lastPolledAt(System.currentTimeMillis())
-                .messages(new ConcurrentLinkedDeque<>())
-                .build();
+        ExplorerSession session;
+        Consumer<ConnectorMessage> listener;
 
-        // Build the listener that filters by topic and appends to the session
-        Consumer<ConnectorMessage> listener = buildListener(session, topic);
+        if ("OUTBOUND".equals(dir)) {
+            // Outbound: intercept published messages on ALL connectors for this tenant
+            String resolvedDeviceId = (deviceId != null && !deviceId.isBlank()) ? deviceId.trim() : null;
+            String connName = resolvedDeviceId != null ? "device:" + resolvedDeviceId : "(all)";
 
-        sessions.computeIfAbsent(tenant, t -> new ConcurrentHashMap<>()).put(sessionId, session);
-        listenerRegistry.put(sessionId, listener);
-        client.addExplorerListener(listener);
+            session = ExplorerSession.builder()
+                    .sessionId(sessionId)
+                    .connectorIdentifier("*")
+                    .connectorName(connName)
+                    .topic(topic)
+                    .tenant(tenant)
+                    .maxMessages(cappedMax)
+                    .direction(dir)
+                    .deviceId(resolvedDeviceId)
+                    .lastPolledAt(System.currentTimeMillis())
+                    .messages(new ConcurrentLinkedDeque<>())
+                    .build();
 
-        // Subscribe to the topic on the broker so messages actually arrive
-        // (no-op for connectors that don't require explicit subscriptions, e.g. HTTP)
-        client.subscribeExplorerTopic(topic);
+            listener = buildListener(session, topic);
 
-        log.info("{} - Explorer session started: sessionId={}, connector={}, topic={}",
-                tenant, sessionId, connectorIdentifier, topic);
+            sessions.computeIfAbsent(tenant, t -> new ConcurrentHashMap<>()).put(sessionId, session);
+            listenerRegistry.put(sessionId, listener);
+
+            Map<String, AConnectorClient> clients = connectorRegistry.getClientsForTenant(tenant);
+            for (AConnectorClient client : clients.values()) {
+                client.addOutboundExplorerListener(listener);
+            }
+
+            // If a specific device is requested, create a dedicated Notification 2.0 subscription
+            // independent of STATIC/DYNAMIC subscriptions, so notifications arrive even when
+            // no outbound mapping exists for that device.
+            if (resolvedDeviceId != null) {
+                ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(tenant, resolvedDeviceId, false);
+                if (mor != null) {
+                    notificationSubscriber.subscribeDeviceAndConnect(tenant, mor, API.ALL,
+                            Utils.EXPLORER_DEVICE_SUBSCRIPTION);
+                    // Also open a subscriber WebSocket for this session so events actually arrive
+                    notificationSubscriber.initializeExplorerDeviceClient(tenant, sessionId);
+                    log.info("{} - Explorer subscription created for device {}", tenant, resolvedDeviceId);
+                } else {
+                    log.warn("{} - Device {} not found; explorer will rely on existing subscriptions",
+                            tenant, resolvedDeviceId);
+                }
+            }
+
+            log.info("{} - Outbound explorer session started: sessionId={}, device={}, connectors={}",
+                    tenant, sessionId, resolvedDeviceId != null ? resolvedDeviceId : "(all)", clients.size());
+        } else {
+            AConnectorClient client = connectorRegistry.getClientForTenant(tenant, connectorIdentifier);
+
+            session = ExplorerSession.builder()
+                    .sessionId(sessionId)
+                    .connectorIdentifier(connectorIdentifier)
+                    .connectorName(client.getConnectorName())
+                    .topic(topic)
+                    .tenant(tenant)
+                    .maxMessages(cappedMax)
+                    .direction(dir)
+                    .lastPolledAt(System.currentTimeMillis())
+                    .messages(new ConcurrentLinkedDeque<>())
+                    .build();
+
+            listener = buildListener(session, topic);
+
+            sessions.computeIfAbsent(tenant, t -> new ConcurrentHashMap<>()).put(sessionId, session);
+            listenerRegistry.put(sessionId, listener);
+
+            client.addExplorerListener(listener);
+            // Subscribe to the topic on the broker so messages actually arrive
+            // (no-op for connectors that don't require explicit subscriptions, e.g. HTTP)
+            client.subscribeExplorerTopic(topic);
+            log.info("{} - Inbound explorer session started: sessionId={}, connector={}, topic={}",
+                    tenant, sessionId, connectorIdentifier, topic);
+        }
+
         return sessionId;
     }
 
@@ -204,6 +289,8 @@ public class ExplorerService {
                 }
             }
         }
+        // Purge stale outbound deduplication entries older than the window
+        outboundDedupCache.entrySet().removeIf(e -> now - e.getValue() > OUTBOUND_DEDUP_WINDOW_MS);
     }
 
     // -------------------------------------------------------------------------
@@ -219,10 +306,30 @@ public class ExplorerService {
         Consumer<ConnectorMessage> listener = listenerRegistry.remove(sessionId);
         if (listener == null) return;
         try {
-            AConnectorClient client = connectorRegistry.getClientForTenant(tenant, session.getConnectorIdentifier());
-            client.removeExplorerListener(listener);
-            // Unsubscribe the broker topic if no mapping still needs it
-            client.unsubscribeExplorerTopic(session.getTopic());
+            if ("OUTBOUND".equals(session.getDirection())) {
+                // Registered on all connectors — remove from all
+                Map<String, AConnectorClient> clients = connectorRegistry.getClientsForTenant(tenant);
+                for (AConnectorClient client : clients.values()) {
+                    client.removeOutboundExplorerListener(listener);
+                }
+                // Remove the dedicated explorer device subscription if one was created
+                if (session.getDeviceId() != null) {
+                    // Close the WebSocket first
+                    notificationSubscriber.closeExplorerDeviceClient(session.getSessionId());
+                    ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(
+                            tenant, session.getDeviceId(), false);
+                    if (mor != null) {
+                        notificationSubscriber.unsubscribeDeviceAndDisconnect(
+                                tenant, mor, Utils.EXPLORER_DEVICE_SUBSCRIPTION);
+                        log.info("{} - Explorer subscription removed for device {}", tenant, session.getDeviceId());
+                    }
+                }
+            } else {
+                AConnectorClient client = connectorRegistry.getClientForTenant(tenant, session.getConnectorIdentifier());
+                client.removeExplorerListener(listener);
+                // Unsubscribe the broker topic if no mapping still needs it
+                client.unsubscribeExplorerTopic(session.getTopic());
+            }
         } catch (ConnectorRegistryException e) {
             // Connector may already be gone — safe to ignore
             log.debug("{} - Could not unregister explorer listener (connector gone?): {}", tenant, e.getMessage());
@@ -234,6 +341,24 @@ public class ExplorerService {
             // Optional topic filter — skip messages that don't match
             if (!topicMatches(topicFilter, message.getTopic())) {
                 return;
+            }
+
+            // Optional device filter for OUTBOUND sessions
+            if (session.getDeviceId() != null && !session.getDeviceId().equals(message.getSourceId())) {
+                return;
+            }
+
+            // OUTBOUND deduplication: Notification 2.0 events are delivered once per connector,
+            // so with N connectors the same event would appear N times. Suppress duplicates
+            // seen within OUTBOUND_DEDUP_WINDOW_MS using a payload-hash key.
+            if ("OUTBOUND".equals(session.getDirection())) {
+                int hash = Arrays.hashCode(message.getPayload());
+                String dedupKey = message.getTenant() + "::" + message.getTopic() + "::" + hash;
+                long now = System.currentTimeMillis();
+                Long prev = outboundDedupCache.put(dedupKey, now);
+                if (prev != null && now - prev < OUTBOUND_DEDUP_WINDOW_MS) {
+                    return; // duplicate delivery from another connector — skip
+                }
             }
 
             String payload;
@@ -255,9 +380,11 @@ public class ExplorerService {
                     .topic(message.getTopic())
                     .connectorIdentifier(session.getConnectorIdentifier())
                     .connectorName(session.getConnectorName())
+                    .direction(session.getDirection())
                     .receivedAt(System.currentTimeMillis())
                     .payload(payload)
                     .binary(binary)
+                    .sourceId(message.getSourceId())
                     .build();
 
             ConcurrentLinkedDeque<ExplorerMessage> deque = session.getMessages();

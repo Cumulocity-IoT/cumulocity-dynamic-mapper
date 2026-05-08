@@ -42,6 +42,8 @@ public class Utils {
     public static final String MANAGEMENT_SUBSCRIPTION = "DynamicMapperManagementSubscription";
     public static final String CACHE_INVENTORY_SUBSCRIBER = "DynamicMapperCacheInventorySubscriber";
     public static final String CACHE_INVENTORY_SUBSCRIPTION = "DynamicMapperCacheInventorySubscription";
+    public static final String EXPLORER_DEVICE_SUBSCRIBER = "DynamicMapperExplorerDeviceSubscriber";
+    public static final String EXPLORER_DEVICE_SUBSCRIPTION = "DynamicMapperExplorerDeviceSubscription";
     public static final int CONNECTION_TIMEOUT_SECONDS = 30;
     public static final int RECONNECT_INTERVAL_SECONDS = 60;
     public static final int CONFLICT_RETRY_COUNT = 5;

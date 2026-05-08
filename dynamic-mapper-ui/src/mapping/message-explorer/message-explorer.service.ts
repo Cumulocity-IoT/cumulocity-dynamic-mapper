@@ -29,6 +29,8 @@ export interface ExplorerMessage {
   receivedAt: number;   // epoch millis
   payload: string;
   binary: boolean;
+  direction: 'INBOUND' | 'OUTBOUND';
+  sourceId?: string;    // C8Y device ID (outbound only)
 }
 
 export class SessionExpiredError extends Error {
@@ -42,6 +44,8 @@ export interface StartSessionRequest {
   connectorIdentifier: string;
   topic: string;
   maxMessages: number;
+  direction: 'INBOUND' | 'OUTBOUND';
+  deviceId?: string;    // C8Y device ID filter (OUTBOUND only)
 }
 
 @Injectable({ providedIn: 'root' })

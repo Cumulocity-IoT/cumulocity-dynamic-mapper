@@ -134,6 +134,14 @@ public class NotificationSubscriber {
         subscriptionManager.unsubscribeDeviceAndDisconnect(tenant, mor, subscription);
     }
 
+    public void initializeExplorerDeviceClient(String tenant, String sessionId) {
+        connectionManager.initializeExplorerDeviceClient(tenant, sessionId);
+    }
+
+    public void closeExplorerDeviceClient(String sessionId) {
+        connectionManager.closeExplorerDeviceClient(sessionId);
+    }
+
     public void unsubscribeByDeviceGroup(String tenant, ManagedObjectRepresentation mor) {
         subscriptionManager.unsubscribeByDeviceGroup(tenant, mor);
     }

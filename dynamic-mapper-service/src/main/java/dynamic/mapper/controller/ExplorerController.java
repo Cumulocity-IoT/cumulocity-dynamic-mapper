@@ -65,8 +65,7 @@ public class ExplorerController {
 
     @Data
     public static class StartSessionRequest {
-        @NotBlank
-        @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Identifier of the inbound connector to listen on", example = "mqtt-broker-01")
+        @Schema(description = "Identifier of the inbound connector to listen on (required for INBOUND, ignored for OUTBOUND)", example = "mqtt-broker-01")
         private String connectorIdentifier;
 
         @NotBlank
@@ -75,6 +74,13 @@ public class ExplorerController {
 
         @Schema(description = "Maximum number of messages to buffer (1–500). Defaults to 50.", example = "50")
         private int maxMessages = 50;
+
+        @Schema(description = "Direction to capture: INBOUND (broker → C8Y) or OUTBOUND (C8Y → broker). Defaults to INBOUND.",
+                allowableValues = {"INBOUND", "OUTBOUND"}, example = "INBOUND")
+        private String direction = "INBOUND";
+
+        @Schema(description = "C8Y device ID to filter outbound notifications (OUTBOUND only; omit or null for all devices).", example = "12345")
+        private String deviceId;
     }
 
     // ---- Endpoints ----------------------------------------------------------
@@ -91,12 +97,19 @@ public class ExplorerController {
     @PostMapping(value = "/session", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> startSession(@Valid @RequestBody StartSessionRequest request) {
         String tenant = contextService.getContext().getTenant();
+        // connectorIdentifier is required for INBOUND sessions
+        boolean isOutbound = "OUTBOUND".equalsIgnoreCase(request.getDirection());
+        if (!isOutbound && (request.getConnectorIdentifier() == null || request.getConnectorIdentifier().isBlank())) {
+            return ResponseEntity.badRequest().body(Map.of("error", "connectorIdentifier is required for INBOUND sessions"));
+        }
         try {
             String sessionId = explorerService.startSession(
                     tenant,
                     request.getConnectorIdentifier(),
                     request.getTopic(),
-                    request.getMaxMessages());
+                    request.getMaxMessages(),
+                    request.getDirection(),
+                    request.getDeviceId());
             log.info("{} - Explorer session created: {}", tenant, sessionId);
             return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("sessionId", sessionId));
         } catch (ConnectorRegistryException e) {

@@ -23,6 +23,7 @@ package dynamic.mapper.processor.outbound;
 import static com.dashjoin.jsonata.Jsonata.jsonata;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +38,7 @@ import org.apache.camel.support.DefaultExchange;
 
 import com.dashjoin.jsonata.json.Json;
 import dynamic.mapper.configuration.ServiceConfiguration;
+import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.core.ConfigurationRegistry;
@@ -136,6 +138,33 @@ public class CamelDispatcherOutbound implements NotificationCallback {
 
         // Extract tenant from notification
         String tenant = getTenantFromNotificationHeaders(notification.getNotificationHeaders());
+
+        // Notify outbound explorer listeners FIRST — before any connector/operation guards —
+        // so the explorer works regardless of whether connectors are enabled or connected.
+        // Only fire for real (non-test) notifications with a valid payload and qualifying operations.
+        if (!testing && notification.getMessage() != null
+                && ("CREATE".equals(notification.getOperation()) || "UPDATE".equals(notification.getOperation()))
+                && !(notification.getApi().equals(API.OPERATION) && "UPDATE".equals(notification.getOperation()))) {
+            String explorerTopic = notification.getApi().name() + "/" + notification.getOperation();
+            // Extract the C8Y source device ID so per-device explorer sessions can filter
+            String sourceId = null;
+            try {
+                Map parsedForExplorer = (Map) Json.parseJson(notification.getMessage());
+                var expr = jsonata(notification.getApi().identifier);
+                Object sourceIdResult = expr.evaluate(parsedForExplorer);
+                sourceId = (sourceIdResult instanceof String) ? (String) sourceIdResult : null;
+            } catch (Exception ignored) {
+                // not critical — explorer will show messages without device filtering
+            }
+            ConnectorMessage explorerMsg = ConnectorMessage.builder()
+                    .topic(explorerTopic)
+                    .payload(notification.getMessage().getBytes(StandardCharsets.UTF_8))
+                    .tenant(tenant)
+                    .connectorIdentifier(connectorClient.getConnectorIdentifier())
+                    .sourceId(sourceId)
+                    .build();
+            connectorClient.notifyOutboundExplorerListeners(explorerMsg);
+        }
 
         // Check connector connection status (skip for testing)
         if (!testing && !connectorClient.isConnected() && connectorClient.getConnectorType() != ConnectorType.TEST) {

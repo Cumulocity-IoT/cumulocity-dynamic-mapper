@@ -99,7 +99,12 @@
       <i [c8yIcon]="paused ? 'pause' : 'c8y-data-explorer'"></i>
       <span>
         <strong>{{ paused ? ('Paused' | translate) : ('Active session' | translate) }}</strong>
-        — connector: <strong>{{ connectorName }}</strong>,
+        &mdash;
+        <span class="label" [class.label-success]="sessionDirection === 'INBOUND'" [class.label-info]="sessionDirection === 'OUTBOUND'">
+          <i [c8yIcon]="sessionDirection === 'OUTBOUND' ? 'arrow-up' : 'arrow-down'"></i>
+          {{ sessionDirection | translate }}
+        </span>
+        connector: <strong>{{ sessionDirection === 'OUTBOUND' ? ('all connectors' | translate) : connectorName }}</strong>,
         topic: <code>{{ sessionTopic }}</code>
         @if (paused) {
           &mdash; <span class="text-muted" translate>polling suspended, session still alive on broker</span>
@@ -132,10 +137,11 @@
       <div class="c8y-list__item__block">
         <div class="c8y-list__item__body">
           <div class="d-flex">
+            <div class="col-md-1"><label translate>Direction</label></div>
             <div class="col-md-2"><label translate>Received at</label></div>
             <div class="col-md-1"><label translate>Connector</label></div>
-            <div class="col-md-4"><label translate>Topic</label></div>
-            <div class="col-md-5"><label translate>Payload</label></div>
+            <div class="col-md-3"><label translate>Topic</label></div>
+            <div class="col-md-5" style="padding-right: 16px"><label translate>Payload</label></div>
           </div>
         </div>
       </div>
@@ -146,6 +152,13 @@
         <c8y-li>
           <c8y-li-body>
             <div class="d-flex a-i-start">
+              <!-- Direction badge -->
+              <div class="col-md-1">
+                <span class="label" [class.label-success]="msg.direction === 'INBOUND'" [class.label-info]="msg.direction === 'OUTBOUND'">
+                  <i [c8yIcon]="msg.direction === 'OUTBOUND' ? 'arrow-up' : 'arrow-down'"></i>
+                  {{ msg.direction }}
+                </span>
+              </div>
               <!-- Timestamp -->
               <div class="col-md-2 text-muted text-12">
                 {{ msg.receivedAt | c8yDate: 'MMM d, y, h:mm:ss a' }}
@@ -155,11 +168,11 @@
                 <span class="label label-default">{{ msg.connectorName }}</span>
               </div>
               <!-- Topic -->
-              <div class="col-md-4" style="word-break: break-all">
+              <div class="col-md-3" style="word-break: break-all">
                 <code>{{ msg.topic }}</code>
               </div>
               <!-- Payload (truncated) -->
-              <div class="col-md-5">
+              <div class="col-md-5" style="padding-right: 16px; overflow: hidden;">
                 @if (expandedIndex !== i) {
                   <span class="text-monospace text-12 cursor-pointer" (click)="toggleExpand(i, msg.payload)"
                     title="{{ 'Click to expand' | translate }}">

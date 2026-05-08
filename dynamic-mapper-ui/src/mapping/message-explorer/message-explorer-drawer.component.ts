@@ -22,32 +22,41 @@ import { Component, inject, Input, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { AlertService, BottomDrawerRef, CoreModule } from '@c8y/ngx-components';
+import { IIdentified } from '@c8y/client';
 import { combineLatest } from 'rxjs';
 import { ConnectorConfiguration, Direction } from '../../shared';
 import { ConnectorConfigurationService } from '../../shared/service/connector-configuration.service';
 import { StartSessionRequest } from './message-explorer.service';
+import { AssetSelectionChangeEvent, AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
 
 export interface ExplorerStartResult {
   connectorIdentifier: string;
   connectorName: string;
   topic: string;
   maxMessages: number;
+  direction: 'INBOUND' | 'OUTBOUND';
+  deviceId?: string;
+  deviceName?: string;
 }
 
 @Component({
   selector: 'd11r-message-explorer-drawer',
   templateUrl: './message-explorer-drawer.component.html',
   standalone: true,
-  imports: [CoreModule, CommonModule, FormsModule]
+  imports: [CoreModule, CommonModule, FormsModule, AssetSelectorModule]
 })
 export class MessageExplorerDrawerComponent implements OnInit {
 
   @Input() activeSessionId: string | null = null;
 
   connectors: ConnectorConfiguration[] = [];
+  allConnectors: ConnectorConfiguration[] = [];
   selectedConnectorIdentifier: string = '';
   topic: string = '';
   maxMessages: number = 50;
+  direction: 'INBOUND' | 'OUTBOUND' = 'INBOUND';
+  /** Selected device for outbound device-scoped monitoring (single selection, optional). */
+  selectedDeviceList: IIdentified[] = [];
 
   private _resolve!: (value: ExplorerStartResult | null) => void;
   result: Promise<ExplorerStartResult | null> = new Promise(resolve => { this._resolve = resolve; });
@@ -61,34 +70,57 @@ export class MessageExplorerDrawerComponent implements OnInit {
       this.connectorConfigService.getConfigurations(),
       this.connectorConfigService.getSpecifications()
     ]).subscribe(([configs, specs]) => {
-      this.connectors = configs
-        .map(c => ({
-          ...c,
-          supportedDirections: specs.find(s => s.connectorType === c.connectorType)?.supportedDirections ?? []
-        }))
-        .filter(c => c.supportedDirections.includes(Direction.INBOUND));
+      this.allConnectors = configs.map(c => ({
+        ...c,
+        supportedDirections: specs.find(s => s.connectorType === c.connectorType)?.supportedDirections ?? []
+      }));
+      this.filterConnectorsByDirection();
     });
+  }
+
+  onDirectionChange(): void {
+    this.selectedConnectorIdentifier = '';
+    this.selectedDeviceList = [];
+    this.filterConnectorsByDirection();
+  }
+
+  private filterConnectorsByDirection(): void {
+    const dir = this.direction === 'OUTBOUND' ? Direction.OUTBOUND : Direction.INBOUND;
+    this.connectors = this.allConnectors.filter(c =>
+      (c as any).supportedDirections?.includes(dir)
+    );
   }
 
   isConnectorDisabled(c: ConnectorConfiguration): boolean {
     return c.enabled === false;
   }
 
+  onDeviceSelected(event: AssetSelectionChangeEvent): void {
+    const items = event.items;
+    this.selectedDeviceList = Array.isArray(items) ? items : (items ? [items] : []);
+  }
+
   onStart(): void {
-    if (!this.selectedConnectorIdentifier) {
+    if (this.direction === 'INBOUND' && !this.selectedConnectorIdentifier) {
       this.alertService.warning('Please select a connector.');
       return;
     }
-    if (!this.topic || !this.topic.trim()) {
+    if (this.direction === 'INBOUND' && (!this.topic || !this.topic.trim())) {
       this.alertService.warning('Please enter a topic to listen on.');
       return;
     }
     const selected = this.connectors.find(c => c.identifier === this.selectedConnectorIdentifier);
+    const selectedDevice = this.selectedDeviceList.length > 0 ? this.selectedDeviceList[0] : null;
+    const deviceId = selectedDevice ? String((selectedDevice as any).id ?? '') : undefined;
+    const deviceName = selectedDevice ? ((selectedDevice as any).name ?? deviceId) : undefined;
     this._resolve({
       connectorIdentifier: this.selectedConnectorIdentifier,
       connectorName: selected?.name ?? this.selectedConnectorIdentifier,
-      topic: this.topic.trim(),
-      maxMessages: this.maxMessages > 0 ? this.maxMessages : 50
+      topic: this.direction === 'OUTBOUND' ? '#' : this.topic.trim(),
+      maxMessages: this.maxMessages > 0 ? this.maxMessages : 50,
+      direction: this.direction,
+      deviceId,
+      deviceName
     });
     this.bottomDrawerRef.close();
   }
@@ -102,7 +134,8 @@ export class MessageExplorerDrawerComponent implements OnInit {
     return {
       connectorIdentifier: this.selectedConnectorIdentifier,
       topic: this.topic.trim(),
-      maxMessages: this.maxMessages
+      maxMessages: this.maxMessages,
+      direction: this.direction
     };
   }
 }

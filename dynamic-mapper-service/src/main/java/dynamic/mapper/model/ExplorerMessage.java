@@ -27,10 +27,13 @@ import lombok.Data;
 
 @Data
 @Builder
-@Schema(description = "A message captured by an explorer session from an inbound connector")
+@Schema(description = "A message captured by an explorer session from an inbound or outbound connector")
 public class ExplorerMessage {
 
-    @Schema(description = "The topic on which the message was received", example = "sensors/temperature/data")
+    @Schema(description = "Direction of the message: INBOUND (broker → C8Y) or OUTBOUND (C8Y → broker)", example = "INBOUND")
+    private String direction;
+
+    @Schema(description = "The topic on which the message was received or sent", example = "sensors/temperature/data")
     private String topic;
 
     @Schema(description = "Unique identifier of the connector that received the message", example = "mqtt-broker-01")
@@ -47,4 +50,7 @@ public class ExplorerMessage {
 
     @Schema(description = "true if the original payload was binary and has been Base64-encoded", example = "false")
     private boolean binary;
+
+    @Schema(description = "C8Y source device ID (outbound only)", example = "12345")
+    private String sourceId;
 }

@@ -375,18 +375,15 @@ public class ConfigurationRegistry {
             AConnectorClient connectorClient) {
         if (serviceConfiguration.getOutboundMappingEnabled()
                 && connectorClient.supportedDirections().contains(Direction.OUTBOUND)) {
-            // DispatcherOutbound dispatcherOutbound = new DispatcherOutbound(
-            // this, connectorClient);
             CamelDispatcherOutbound dispatcherOutbound = new CamelDispatcherOutbound(
                     this, connectorClient);
-            // Only initialize Connectors which are enabled
-            if (connectorClient.getConnectorConfiguration() != null
-                    && connectorClient.getConnectorConfiguration().getEnabled())
-                getNotificationSubscriber().addConnector(tenant,
-                        connectorClient.getConnectorIdentifier(),
-                        dispatcherOutbound);
-            // Subscriber must be new initialized for the new added connector
-            // configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
+            // Always register the dispatcher so a Notification 2.0 WebSocket is established
+            // regardless of connector enabled state. This allows the Message Explorer to
+            // capture outbound notifications even when connectors are disabled.
+            // processNotification() guards actual mapping execution via isConnected().
+            getNotificationSubscriber().addConnector(tenant,
+                    connectorClient.getConnectorIdentifier(),
+                    dispatcherOutbound);
         }
     }
 

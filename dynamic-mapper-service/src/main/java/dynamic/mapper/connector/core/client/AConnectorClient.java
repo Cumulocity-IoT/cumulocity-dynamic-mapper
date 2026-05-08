@@ -167,6 +167,31 @@ public abstract class AConnectorClient {
         }
     }
 
+    // Explorer listeners for outbound messages (C8Y → broker), notified from SendOutboundProcessor
+    private final CopyOnWriteArrayList<java.util.function.Consumer<dynamic.mapper.connector.core.callback.ConnectorMessage>> outboundExplorerListeners
+            = new CopyOnWriteArrayList<>();
+
+    /** Register a listener that receives every outbound {@link dynamic.mapper.connector.core.callback.ConnectorMessage}. */
+    public void addOutboundExplorerListener(java.util.function.Consumer<dynamic.mapper.connector.core.callback.ConnectorMessage> listener) {
+        outboundExplorerListeners.add(listener);
+    }
+
+    /** Remove a previously registered outbound explorer listener. */
+    public void removeOutboundExplorerListener(java.util.function.Consumer<dynamic.mapper.connector.core.callback.ConnectorMessage> listener) {
+        outboundExplorerListeners.remove(listener);
+    }
+
+    /** Notify all registered outbound explorer listeners (called by SendOutboundProcessor). */
+    public void notifyOutboundExplorerListeners(dynamic.mapper.connector.core.callback.ConnectorMessage message) {
+        for (java.util.function.Consumer<dynamic.mapper.connector.core.callback.ConnectorMessage> listener : outboundExplorerListeners) {
+            try {
+                listener.accept(message);
+            } catch (Exception e) {
+                log.warn("{} - Outbound explorer listener error on topic [{}]: {}", tenant, message.getTopic(), e.getMessage());
+            }
+        }
+    }
+
     /**
      * Subscribe to a topic on the broker on behalf of an explorer session.
      * Only subscribes if no existing mapping or other explorer is already subscribed (best-effort).

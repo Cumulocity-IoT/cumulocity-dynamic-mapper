@@ -47,4 +47,7 @@ public class ConnectorMessage {
     private String connectorIdentifier;
 
     private Boolean sendPayload;
+
+    /** C8Y source device ID carried for outbound explorer filtering. */
+    private String sourceId;
 }
