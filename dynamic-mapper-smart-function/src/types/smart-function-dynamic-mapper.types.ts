@@ -34,8 +34,8 @@
  * @since 6.2
  */
 
-import { DataPrepContext, ExternalId } from './dataprep.types';
-export { DataPrepContext, ExternalId };
+import type { DataPrepContext, ExternalId } from './dataprep.types';
+export type { DataPrepContext, ExternalId };
 
 // ============================================================================
 // DYNAMIC MAPPER EXTENDED TYPES
@@ -1502,7 +1502,7 @@ export function createMockInputMessage(
   return {
     payload,
     topic,
-    clientId,
+    ...(clientId !== undefined && { clientId }),
     transportId: "mqtt",
     time: new Date()
   };
@@ -1526,8 +1526,8 @@ export function createMockOutboundMessage(
 ): OutboundMessage {
   return {
     payload: createMockPayload(payloadData),
-    cumulocityType,
-    sourceId
+    ...(cumulocityType !== undefined && { cumulocityType }),
+    ...(sourceId !== undefined && { sourceId }),
   };
 }
 
