@@ -24,6 +24,7 @@ import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.model.ProcessingResultWrapper;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.processor.inbound.deserializer.SparkPlugBDeserializer;
 import dynamic.mapper.util.Utils;
@@ -53,6 +54,15 @@ public class SendInboundProcessor extends BaseProcessor {
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
         Boolean testing = context.getTesting();
+
+        // Check if processing was cancelled due to timeout
+        ProcessingResultWrapper<?> wrapper = exchange.getIn().getHeader("processingResultWrapper",
+                ProcessingResultWrapper.class);
+        if (wrapper != null && wrapper.getCancellationRequested().get()) {
+            log.warn("{} - Processing was cancelled (timeout), skipping SendInboundProcessor for mapping: {}",
+                    tenant, mapping.getName());
+            return;
+        }
 
         try {
             // Check if we have a single request from parallel processing (body contains split request)
