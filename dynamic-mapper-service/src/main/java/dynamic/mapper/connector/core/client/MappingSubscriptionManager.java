@@ -413,6 +413,13 @@ public class MappingSubscriptionManager {
     }
 
     /**
+     * Returns {@code true} if at least one active mapping is subscribed to the given topic.
+     */
+    public boolean isTopicSubscribed(String topic) {
+        return subscriptionCounts.containsKey(topic);
+    }
+
+    /**
      * Gets the count of applied inbound mappings.
      * 
      * @return number of inbound mappings currently effective

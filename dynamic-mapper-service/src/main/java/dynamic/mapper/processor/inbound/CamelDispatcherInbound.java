@@ -68,6 +68,8 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
 
     @Override
     public ProcessingResultWrapper<?> onMessage(ConnectorMessage message) {
+        // Notify any explorer sessions listening on this connector
+        connectorClient.notifyExplorerListeners(message);
         return processMessage(message, null);
     }
 

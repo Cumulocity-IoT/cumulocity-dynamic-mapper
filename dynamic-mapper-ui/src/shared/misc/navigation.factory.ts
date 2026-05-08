@@ -123,6 +123,15 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
       preventDuplicates: true
     }),
 
+    messageExplorerNode: new NavigatorNode({
+      parent: gettext('Mapping'),
+      label: gettext('Message Explorer'),
+      icon: 'c8y-data-explorer',
+      path: `/c8y-pkg-dynamic-mapper/${NODE1}/mappings/messageExplorer`,
+      priority: 360,
+      preventDuplicates: true
+    }),
+
     monitoringNode: new NavigatorNode({
       label: gettext('Monitoring'),
       icon: 'pie-chart',
