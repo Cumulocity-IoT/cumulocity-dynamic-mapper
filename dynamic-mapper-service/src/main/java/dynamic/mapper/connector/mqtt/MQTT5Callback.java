@@ -22,11 +22,14 @@
 package dynamic.mapper.connector.mqtt;
 
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
@@ -53,6 +56,7 @@ public class MQTT5Callback implements Consumer<Mqtt5Publish> {
      * Prevents a reconnect storm when the server is persistently unavailable.
      */
     private static final long MIN_RECONNECT_INTERVAL_MS = 60_000L;
+    private static final int MAX_PROCESSING_TIMEOUT = 30000;
 
     /**
      * Maximum number of consecutive failures (timeout or server error) before treating
@@ -81,12 +85,12 @@ public class MQTT5Callback implements Consumer<Mqtt5Publish> {
      */
     private final Semaphore reconnectExecutionSemaphore = new Semaphore(1);
     /**
-     * Counts consecutive failures (timeout / HTTP≥500) without a successful processing in between.
-     * When it exceeds {@link #MAX_CONSECUTIVE_RECONNECTS} the message is treated as a poison pill
-     * and ACKed to break an infinite reconnect loop.
+     * Counts consecutive failures (timeout / HTTP≥500) per message (identified by topic+payload hash).
+     * Each message is tracked independently. When a message's counter exceeds
+     * {@link #MAX_CONSECUTIVE_RECONNECTS} it is treated as a poison pill and ACKed
+     * to break an infinite reconnect loop.
      */
-    private final java.util.concurrent.atomic.AtomicInteger consecutiveReconnectCount =
-            new java.util.concurrent.atomic.AtomicInteger(0);
+    private final Map<String, AtomicInteger> failureCountPerMessage = new ConcurrentHashMap<>();
     /**
      * Counts the number of messages currently being processed in the virtualThreadPool.
      * Used to avoid triggering a reconnect while other messages are still being processed,
@@ -94,6 +98,16 @@ public class MQTT5Callback implements Consumer<Mqtt5Publish> {
      */
     private final java.util.concurrent.atomic.AtomicInteger activeProcessingMessages =
             new java.util.concurrent.atomic.AtomicInteger(0);
+
+    /**
+     * Generates a unique identifier for a message based on topic and payload.
+     * This allows per-message failure tracking during redelivery.
+     */
+    private String getMessageId(String topic, byte[] payload) {
+        // Use topic + payload hash as unique message identifier
+        int hash = 31 * topic.hashCode() + (payload != null ? java.util.Arrays.hashCode(payload) : 0);
+        return topic + "#" + Integer.toHexString(hash);
+    }
 
     MQTT5Callback(String tenant, ConfigurationRegistry configurationRegistry, GenericMessageCallback callback,
             String connectorIdentifier, String connectorName, Runnable reconnectTrigger) {
@@ -131,6 +145,7 @@ public class MQTT5Callback implements Consumer<Mqtt5Publish> {
                     return bytes;
                 })
                 .orElse(null);
+        String messageId = getMessageId(topic, payloadBytes);
 
         // Extract client ID from MQTT 5 user properties
         String publisherClientId = mqttMessage.getUserProperties().asList().stream()
@@ -175,20 +190,22 @@ public class MQTT5Callback implements Consumer<Mqtt5Publish> {
             activeProcessingMessages.incrementAndGet();
             // Use the provided virtualThreadPool instead of creating a new thread
             virtualThreadPool.submit(() -> {
+                long effectiveTimeout = timeout;
                 try {
                     // Wait for the future to complete.
                     // Multiply timeout by (attempt + 1) so each retransmission gets progressively
                     // more processing time — useful when the first timeout was caused by a slow server.
-                    // attempt = consecutiveReconnectCount at the moment this message is being processed:
+                    // attempt = current failure count for this message:
                     //   0 → first try   → 1× timeout
                     //   1 → 2nd try     → 2× timeout
                     //   …  capped at MAX_CONSECUTIVE_RECONNECTS × timeout
                     List<? extends ProcessingContext<?>> results;
                     if (timeout > 0) {
-                        int attempt = consecutiveReconnectCount.get(); // 0-based; 0 = first attempt
-                        long effectiveTimeout = Math.min(
+                        int attempt = failureCountPerMessage.getOrDefault(messageId, new AtomicInteger(0)).get();
+                        //Effective Timeout is capped at max 30s for processing
+                        effectiveTimeout = Math.min(
                                 (long) timeout * (attempt + 1),
-                                (long) timeout * MAX_CONSECUTIVE_RECONNECTS);
+                                MAX_PROCESSING_TIMEOUT);
                         if (attempt > 0) {
                             log.info("{} - Retransmission attempt {}: using increased timeout {}ms (base: {}ms), connector: {}",
                                     tenant, attempt + 1, effectiveTimeout, timeout, connectorIdentifier);
@@ -226,15 +243,15 @@ public class MQTT5Callback implements Consumer<Mqtt5Publish> {
                     }
 
                     if (!hasErrors) {
-                        // No errors found, acknowledge the message
-                        consecutiveReconnectCount.set(0); // reset circuit breaker on success
+                        // No errors found, acknowledge the message and reset failure counter for this message
+                        failureCountPerMessage.remove(messageId);
                         log.warn(
                                 "{} - END: Sending manual ack for MQTT message: topic: [{}], QoS: {}, connector: {}",
                                 tenant, mqttMessage.getTopic(), mqttMessage.getQos().ordinal(), connectorIdentifier);
                         mqttMessage.acknowledge();
                     } else if (httpStatusCode < 500) {
                         // Errors found but not a server error, acknowledge the message
-                        consecutiveReconnectCount.set(0); // client-side error is not a transient failure
+                        failureCountPerMessage.remove(messageId); // client-side error is not a transient failure
                         log.warn(
                                 "{} - END: Sending manual ack due to non-Server error for MQTT message: topic: [{}], QoS: {}, connector: {}",
                                 tenant, mqttMessage.getTopic(), mqttMessage.getQos().ordinal(), connectorIdentifier);
@@ -245,7 +262,7 @@ public class MQTT5Callback implements Consumer<Mqtt5Publish> {
                         log.warn(
                                 "{} - END: Server error (HTTP {}), not sending ACK. Triggering reconnect for retransmission. topic: [{}], connector: {}",
                                 tenant, httpStatusCode, mqttMessage.getTopic(), connectorIdentifier);
-                        triggerReconnectOrAck(mqttMessage, topic);
+                        triggerReconnectOrAck(mqttMessage, topic, messageId);
                     }
                 } catch (InterruptedException | ExecutionException e) {
                     // Processing failed, don't acknowledge to allow redelivery
@@ -278,8 +295,8 @@ public class MQTT5Callback implements Consumer<Mqtt5Publish> {
 
                     log.warn(
                             "{} - END: Processing timed out after {} ms, not sending ACK. Triggering reconnect for retransmission. connector: {}, cancel result: {}",
-                            tenant, timeout, connectorIdentifier, cancelResult);
-                    triggerReconnectOrAck(mqttMessage, topic);
+                            tenant, effectiveTimeout, connectorIdentifier, cancelResult);
+                    triggerReconnectOrAck(mqttMessage, topic, messageId);
                 } finally {
                     activeProcessingMessages.decrementAndGet();
                 }
@@ -300,20 +317,22 @@ public class MQTT5Callback implements Consumer<Mqtt5Publish> {
 
     /**
      * Circuit-breaker-aware reconnect handler.
+     * Tracks failures per message (by messageId) to prevent infinite reconnect loops.
      * <ul>
      *   <li>If reconnectOnProcessingError is disabled, the message is acknowledged immediately
      *       regardless of the error condition.</li>
-     *   <li>If the consecutive-reconnect counter has reached
+     *   <li>If the failure counter for this message has reached
      *       {@link #MAX_CONSECUTIVE_RECONNECTS}: the message is treated as a
      *       <em>poison pill</em> — it is ACKed (discarded) and a hard error is logged.</li>
-     *   <li>Otherwise {@link #triggerReconnect()} is called, which increments the
-     *       counter and schedules a delayed disconnect.</li>
+      *   <li>Otherwise {@link #triggerReconnect(String)} is called, which increments the
+      *       counter for this message and schedules a delayed disconnect.</li>
      * </ul>
      *
      * @param mqttMessage the unacknowledged MQTT message
      * @param topic       human-readable topic string for logging
+     * @param messageId   unique identifier for tracking failures per message
      */
-    private void triggerReconnectOrAck(Mqtt5Publish mqttMessage, String topic) {
+    private void triggerReconnectOrAck(Mqtt5Publish mqttMessage, String topic, String messageId) {
         // If reconnectOnProcessingError is disabled, wait for broker to re-transmit un-acked message again
         if (!reconnectOnProcessingError) {
             log.info(
@@ -323,15 +342,16 @@ public class MQTT5Callback implements Consumer<Mqtt5Publish> {
         }
 
         // Check poison-pill threshold BEFORE scheduling another reconnect attempt.
-        if (consecutiveReconnectCount.get() >= MAX_CONSECUTIVE_RECONNECTS) {
-            log.error("{} - POISON PILL: {} consecutive reconnect attempts without success — ACKing message to prevent "
+        int failureCount = failureCountPerMessage.getOrDefault(messageId, new AtomicInteger(0)).get();
+        if (failureCount >= MAX_CONSECUTIVE_RECONNECTS) {
+            log.error("{} - POISON PILL: {} consecutive failures without success — ACKing message to prevent "
                     + "infinite reconnect loop. Message is discarded. topic: [{}], connector: {}",
-                    tenant, consecutiveReconnectCount.get(), topic, connectorIdentifier);
-            consecutiveReconnectCount.set(0);
+                    tenant, failureCount, topic, connectorIdentifier);
+            failureCountPerMessage.remove(messageId);
             mqttMessage.acknowledge();
             return;
         }
-        triggerReconnect();
+        triggerReconnect(messageId);
     }
 
     /**
@@ -353,11 +373,15 @@ public class MQTT5Callback implements Consumer<Mqtt5Publish> {
      *   <li>Attempt 3: 2 × {@value #MIN_RECONNECT_INTERVAL_MS} ms</li>
      *   <li>… capped at 5 × {@value #MIN_RECONNECT_INTERVAL_MS} ms</li>
      * </ul>
-     * The consecutive-reconnect counter is incremented here (not in the caller) so it
-     * accurately reflects actual reconnect attempts, not the number of failing messages.
+     * The failure counter is incremented per message (by messageId) so each message
+     * is counted independently.
+     *
+     * @param messageId unique identifier for tracking failures per message
      */
-    private void triggerReconnect() {
-        int attempt = consecutiveReconnectCount.incrementAndGet();
+    private void triggerReconnect(String messageId) {
+        int attempt = failureCountPerMessage
+            .computeIfAbsent(messageId, k -> new AtomicInteger(0))
+            .incrementAndGet();
         lastReconnectTriggerMs.set(System.currentTimeMillis());
 
         // Exponential back-off: 0 ms for the first attempt, then (attempt-1) × base, capped at 5 × base.
@@ -387,7 +411,7 @@ public class MQTT5Callback implements Consumer<Mqtt5Publish> {
                         // Acquire the semaphore before executing the reconnect.
                         try {
                             reconnectExecutionSemaphore.acquire();
-                            log.info("{} - Reconnect attempt {} acquiring execution semaphore and executing reconnect trigger, connector: {}",
+                            log.debug("{} - Reconnect attempt {} acquiring execution semaphore and executing reconnect trigger, connector: {}",
                                     tenant, attempt, connectorIdentifier);
                             reconnectTrigger.run();
                         } catch (InterruptedException e) {
@@ -395,7 +419,7 @@ public class MQTT5Callback implements Consumer<Mqtt5Publish> {
                             log.warn("{} - Reconnect thread interrupted while waiting for semaphore, connector: {}", tenant, connectorIdentifier);
                         } finally {
                             reconnectExecutionSemaphore.release();
-                            log.info("{} - Reconnect attempt {} completed and released execution semaphore, connector: {}",
+                            log.debug("{} - Reconnect attempt {} completed and released execution semaphore, connector: {}",
                                     tenant, attempt, connectorIdentifier);
                         }
                     } catch (InterruptedException e) {

@@ -72,7 +72,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
     private static final int DEFAULT_CONNECTION_TIMEOUT = 30;
     private static final int DEFAULT_OPERATION_TIMEOUT = 30;
     private static final int DEFAULT_KEEP_ALIVE = 30;
-    private static final long DEFAULT_NEGATIVE_ACK_DELAY = 10000;
+    private static final long DEFAULT_NEGATIVE_ACK_DELAY = 60;
 
     // Cumulocity-specific consumer and producer
     private Consumer<byte[]> platformConsumer;
@@ -352,8 +352,8 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         }
 
         String subscriptionName = getSubscriptionName(connectorIdentifier, additionalSubscriptionIdTest);
-        Long negativeAckRedeliveryDelay = (Long) connectorConfiguration.getProperties()
-                .getOrDefault("negativeAckRedeliveryDelay", DEFAULT_NEGATIVE_ACK_DELAY);
+        long negativeAckRedeliveryDelay = (long) connectorConfiguration.getProperties()
+                .getOrDefault("negativeAckRedeliveryDelay", DEFAULT_NEGATIVE_ACK_DELAY)*1000;
 
         // Try multiple subscription strategies
 
@@ -367,7 +367,8 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                     .subscriptionType(SubscriptionType.Failover)
                     .negativeAckRedeliveryBackoff(MultiplierRedeliveryBackoff.builder()
                             .minDelayMs(negativeAckRedeliveryDelay)
-                            .maxDelayMs(negativeAckRedeliveryDelay * 5)
+                            .maxDelayMs(negativeAckRedeliveryDelay * 10)
+                            .multiplier(2)
                             .build())
                     .messageListener(mqttServiceCallback)
                     .subscribe();
@@ -390,7 +391,8 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                     .subscriptionType(SubscriptionType.Failover)
                     .negativeAckRedeliveryBackoff(MultiplierRedeliveryBackoff.builder()
                             .minDelayMs(negativeAckRedeliveryDelay)
-                            .maxDelayMs(negativeAckRedeliveryDelay * 5)
+                            .maxDelayMs(negativeAckRedeliveryDelay * 10)
+                            .multiplier(2)
                             .build())
                     .subscribeAsync()
                     .get(30, TimeUnit.SECONDS);
@@ -412,7 +414,8 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                     .subscriptionType(SubscriptionType.Failover)
                     .negativeAckRedeliveryBackoff(MultiplierRedeliveryBackoff.builder()
                             .minDelayMs(negativeAckRedeliveryDelay)
-                            .maxDelayMs(negativeAckRedeliveryDelay * 5)
+                            .maxDelayMs(negativeAckRedeliveryDelay * 10)
+                            .multiplier(2)
                             .build())
                     .subscribeAsync()
                     .get(30, TimeUnit.SECONDS);
@@ -921,8 +924,8 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
 
                 .property("negativeAckRedeliveryDelay", ConnectorPropertyBuilder.optionalString()
                         .order(16)
-                        .description("Delay for redelivery of negatively acknowledged messages in ms")
-                        .defaultValue(10000))
+                        .description("Delay for redelivery of negatively acknowledged messages in s (Default: 60")
+                        .defaultValue(60))
 
                 // Sparkplug Host support
                 .property("isSparkplugHost", ConnectorPropertyBuilder.optionalBoolean()
