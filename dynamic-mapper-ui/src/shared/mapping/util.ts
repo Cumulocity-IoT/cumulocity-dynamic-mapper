@@ -368,6 +368,7 @@ export const PATH_RELATION_ENDPOINT = 'relation';
 export const PATH_TESTING_ENDPOINT = 'test';
 export const PATH_MAPPING_ENDPOINT = 'mapping';
 export const PATH_AGENT_ENDPOINT = 'agent';
+export const PATH_EXPLORER_ENDPOINT = 'explorer';
 
 export const AGENT_ID = 'd11r_mappingService';
 export const COLOR_HIGHLIGHTED: string = 'lightgrey';

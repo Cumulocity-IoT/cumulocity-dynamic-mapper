@@ -1,0 +1,93 @@
+<!--
+~ Copyright (c) 2025 Cumulocity GmbH.
+~
+~ SPDX-License-Identifier: Apache-2.0
+~
+~  Licensed under the Apache License, Version 2.0 (the "License");
+~  you may not use this file except in compliance with the License.
+~  You may obtain a copy of the License at
+~
+~       http://www.apache.org/licenses/LICENSE-2.0
+~
+~  Unless required by applicable law or agreed to in writing, software
+~  distributed under the License is distributed on an "AS IS" BASIS,
+~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+~  See the License for the specific language governing permissions and
+~  limitations under the License.
+~
+~  @authors Christof Strack
+~
+-->
+
+<div class="p-24">
+  <h4 translate>Start exploring messages</h4>
+  <p class="text-muted m-b-16" translate>
+    Select an inbound connector and a topic to start capturing live messages.
+    Disconnected connectors cannot be selected.
+  </p>
+
+  <!-- Connector selector -->
+  <div class="form-group">
+    <label class="control-label" for="explorerConnector" translate>Connector</label>
+    <div class="c8y-select-wrapper">
+      <select
+        id="explorerConnector"
+        class="form-control"
+        [(ngModel)]="selectedConnectorIdentifier"
+        name="connectorIdentifier">
+        <option value="" disabled selected translate>-- Select connector --</option>
+        @for (c of connectors; track c.identifier) {
+          <option [value]="c.identifier" [disabled]="isConnectorDisabled(c)">
+            {{ c.name }}
+            @if (isConnectorDisabled(c)) {
+              (disabled)
+            }
+          </option>
+        }
+      </select>
+      <span></span>
+    </div>
+  </div>
+
+  <!-- Topic input -->
+  <div class="form-group">
+    <label class="control-label" for="explorerTopic" translate>Topic</label>
+    <input
+      id="explorerTopic"
+      type="text"
+      class="form-control"
+      [(ngModel)]="topic"
+      name="topic"
+      placeholder="{{ 'e.g. sensors/#  or  devices/+/data' | translate }}" />
+    <span class="help-block" translate>
+      Wildcards: <code>+</code> matches one level, <code>#</code> matches the rest of the path.
+    </span>
+  </div>
+
+  <!-- Max messages input -->
+  <div class="form-group">
+    <label class="control-label" for="explorerMaxMessages" translate>Max messages to buffer</label>
+    <input
+      id="explorerMaxMessages"
+      type="number"
+      class="form-control"
+      [(ngModel)]="maxMessages"
+      name="maxMessages"
+      min="1"
+      max="500"
+      style="max-width: 120px" />
+    <span class="help-block" translate>Between 1 and 500. Oldest messages are discarded when the limit is reached.</span>
+  </div>
+
+  <div class="d-flex j-c-end g-8 m-t-24">
+    <button class="btn btn-default" style="min-width: 120px" (click)="onCancel()" translate>Cancel</button>
+    <button
+      class="btn btn-primary"
+      style="min-width: 120px"
+      (click)="onStart()"
+      [disabled]="!selectedConnectorIdentifier || !topic"
+      translate>
+      Start
+    </button>
+  </div>
+</div>

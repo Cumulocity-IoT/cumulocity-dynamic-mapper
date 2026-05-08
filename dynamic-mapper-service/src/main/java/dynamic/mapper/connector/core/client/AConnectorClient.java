@@ -59,6 +59,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLContext;
@@ -140,6 +141,66 @@ public abstract class AConnectorClient {
     @Getter
     @Setter
     protected GenericMessageCallback dispatcher;
+
+    // Explorer listeners: notified for every raw inbound message (topic-independent)
+    private final CopyOnWriteArrayList<java.util.function.Consumer<dynamic.mapper.connector.core.callback.ConnectorMessage>> explorerListeners
+            = new CopyOnWriteArrayList<>();
+
+    /** Register a listener that receives every raw inbound {@link dynamic.mapper.connector.core.callback.ConnectorMessage}. */
+    public void addExplorerListener(java.util.function.Consumer<dynamic.mapper.connector.core.callback.ConnectorMessage> listener) {
+        explorerListeners.add(listener);
+    }
+
+    /** Remove a previously registered explorer listener. */
+    public void removeExplorerListener(java.util.function.Consumer<dynamic.mapper.connector.core.callback.ConnectorMessage> listener) {
+        explorerListeners.remove(listener);
+    }
+
+    /** Notify all registered explorer listeners (called by the inbound dispatcher). */
+    public void notifyExplorerListeners(dynamic.mapper.connector.core.callback.ConnectorMessage message) {
+        for (java.util.function.Consumer<dynamic.mapper.connector.core.callback.ConnectorMessage> listener : explorerListeners) {
+            try {
+                listener.accept(message);
+            } catch (Exception e) {
+                log.warn("{} - Explorer listener error on topic [{}]: {}", tenant, message.getTopic(), e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Subscribe to a topic on the broker on behalf of an explorer session.
+     * Only subscribes if no existing mapping or other explorer is already subscribed (best-effort).
+     * Swallows errors since not all connector types require explicit subscriptions.
+     */
+    public void subscribeExplorerTopic(String topic) {
+        try {
+            subscribe(topic, Qos.AT_LEAST_ONCE);
+            log.info("{} - Explorer subscribed to topic: [{}] on connector: {}", tenant, topic, connectorName);
+        } catch (Exception e) {
+            // Some connectors (HTTP, WebHook) don't support topic subscriptions — that's fine
+            log.debug("{} - Explorer topic subscription not applicable for connector {}: {}", tenant, connectorName, e.getMessage());
+        }
+    }
+
+    /**
+     * Unsubscribe a topic that was subscribed by an explorer session.
+     * Only unsubscribes if there are no active mappings still using this topic.
+     */
+    public void unsubscribeExplorerTopic(String topic) {
+        try {
+            // Only unsubscribe if no active mapping covers this topic
+            boolean mappingStillActive = mappingSubscriptionManager != null
+                    && mappingSubscriptionManager.isTopicSubscribed(topic);
+            if (!mappingStillActive) {
+                unsubscribe(topic);
+                log.info("{} - Explorer unsubscribed from topic: [{}] on connector: {}", tenant, topic, connectorName);
+            } else {
+                log.debug("{} - Kept broker subscription for topic [{}] — still used by a mapping", tenant, topic);
+            }
+        } catch (Exception e) {
+            log.debug("{} - Explorer topic unsubscription not applicable for connector {}: {}", tenant, connectorName, e.getMessage());
+        }
+    }
 
     // Managers
     protected MappingSubscriptionManager mappingSubscriptionManager;
