@@ -64,6 +64,10 @@ public class MQTT3Callback implements Consumer<Mqtt3Publish> {
      * The counter is reset to zero on every successful message processing.
      */
     private static final int MAX_CONSECUTIVE_RECONNECTS = 5;
+
+    /** Maximum time a mapping can use CPU-time to process end to end. Only used in error cases,
+     *  otherwise configured timeout is used
+     */
     private static final int MAX_PROCESSING_TIMEOUT = 30000;
 
     private GenericMessageCallback genericMessageCallback;

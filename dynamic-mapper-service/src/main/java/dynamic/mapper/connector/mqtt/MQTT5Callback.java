@@ -56,6 +56,10 @@ public class MQTT5Callback implements Consumer<Mqtt5Publish> {
      * Prevents a reconnect storm when the server is persistently unavailable.
      */
     private static final long MIN_RECONNECT_INTERVAL_MS = 60_000L;
+
+    /** Maximum time a mapping can use CPU-time to process end to end. Only used in error cases,
+     *  otherwise configured timeout is used
+     */
     private static final int MAX_PROCESSING_TIMEOUT = 30000;
 
     /**
