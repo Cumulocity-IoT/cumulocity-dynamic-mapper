@@ -72,7 +72,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
     private static final int DEFAULT_CONNECTION_TIMEOUT = 30;
     private static final int DEFAULT_OPERATION_TIMEOUT = 30;
     private static final int DEFAULT_KEEP_ALIVE = 30;
-    private static final int DEFAULT_NEGATIVE_ACK_DELAY = 10000;
+    private static final long DEFAULT_NEGATIVE_ACK_DELAY = 10000;
 
     // Cumulocity-specific consumer and producer
     private Consumer<byte[]> platformConsumer;
@@ -933,6 +933,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                 .property("sparkplugHostId", ConnectorPropertyBuilder.optionalString()
                         .order(18)
                         .description("Sparkplug Host ID (used for Birth/Death certificates)")
+                        .defaultValue(tenant)
                         .condition("isSparkplugHost", "true"))
 
 
