@@ -30,36 +30,36 @@
         Connectors of type Cumulocity MQTT Service - (device isolation) and Cumulocity MQTT Service - (tenant isolation)
         can only be created once.
         <br>
-        </small>
-      </div>
-      <div class="card-inner-scroll fit-h">
-        <div class="card-block">
-          <div class="p-24 animated fadeIn">
+      </small>
+    </div>
+    <div class="card-inner-scroll fit-h">
+      <div class="card-block">
+        <div class="p-24 animated fadeIn">
           @if (action === 'view' && configuration.enabled) {
-            <div class="alert alert-info">
-              <i c8yIcon="info-circle" class="m-r-4"></i>
-              {{ 'This connector is currently enabled. Disable it first to edit its configuration.' | translate }}
-            </div>
+          <div class="alert alert-info">
+            <i c8yIcon="info-circle" class="m-r-4"></i>
+            {{ 'This connector is currently enabled. Disable it first to edit its configuration.' | translate }}
+          </div>
           }
           @if (action === 'create') {
-            <div [formGroup]="brokerForm">
-              <formly-form [form]="brokerForm" [fields]="brokerFormFields"></formly-form>
-            </div>
+          <div [formGroup]="brokerForm">
+            <formly-form [form]="brokerForm" [fields]="brokerFormFields"></formly-form>
+          </div>
           }
           <div [formGroup]="dynamicForm">
             <formly-form [form]="dynamicForm" [fields]="dynamicFormFields" [model]="configuration"></formly-form>
           </div>
         </div>
       </div>
-      </div>
-      <div class="card-footer d-flex j-c-center g-8">
-          <button type="button" name="save" class="btn btn-primary" (click)="onSave()"
-            [disabled]="readOnly || !dynamicForm.valid || !feature?.userHasMappingAdminRole" translate>
-            Save
-          </button>
-          <button type="button" name="cancel" class="btn btn-default" (click)="onCancel()" translate>
-            Cancel
-          </button>
-      </div>
+    </div>
+    <div class="card-footer d-flex j-c-center g-8">
+      <button type="button" name="cancel" class="btn btn-default" (click)="onCancel()" translate>
+        Cancel
+      </button>
+      <button type="button" name="save" class="btn btn-primary  m-l-8" (click)="onSave()"
+        [disabled]="readOnly || !dynamicForm.valid || !feature?.userHasMappingAdminRole" translate>
+        Save
+      </button>
     </div>
   </div>
+</div>

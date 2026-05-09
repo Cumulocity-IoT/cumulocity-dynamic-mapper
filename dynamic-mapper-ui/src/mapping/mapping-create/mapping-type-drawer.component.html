@@ -58,8 +58,8 @@
           <!-- Payload Format Selection -->
           <c8y-form-group class="p-l-16 p-r-16">
             <label>{{ 'Payload Format' | translate }}</label>
-            <c8y-select [items]="mappingTypeOptions" formControlName="mappingType" [filterItems]="true" labelProperty="label"
-              aria-label="Payload Format">
+            <c8y-select [items]="mappingTypeOptions" formControlName="mappingType" [filterItems]="true"
+              labelProperty="label" aria-label="Payload Format">
             </c8y-select>
             @if (formGroup.get('mappingType')?.value) {
             <small class="text-muted">
@@ -72,8 +72,8 @@
           <c8y-form-group class="p-l-16 p-r-16"
             [class.has-error]="formGroup.get('transformationType')?.invalid && formGroup.get('transformationType')?.touched">
             <label>{{ 'Transformation Type' | translate }}</label>
-            <c8y-select [items]="transformationTypeOptions" formControlName="transformationType" [filterItems]="true" labelProperty="label"
-              aria-label="Transformation Type">
+            <c8y-select [items]="transformationTypeOptions" formControlName="transformationType" [filterItems]="true"
+              labelProperty="label" aria-label="Transformation Type">
             </c8y-select>
             @if (formGroup.get('transformationType')?.invalid && formGroup.get('transformationType')?.touched) {
             <span class="help-block">{{ 'Transformation type is required' | translate }}</span>
@@ -99,8 +99,8 @@
           <c8y-form-group class="p-l-16 p-r-16">
             <label>{{ 'JavaScript Code Template' | translate }}</label>
             <div class="input-group">
-              <c8y-select [items]="codeTemplateOptions" formControlName="codeTemplate" labelProperty="label"  [filterItems]="true" 
-                style="width: 100%" aria-label="JavaScript Code Template">
+              <c8y-select [items]="codeTemplateOptions" formControlName="codeTemplate" labelProperty="label"
+                [filterItems]="true" style="width: 100%" aria-label="JavaScript Code Template">
               </c8y-select>
               <span class="input-group-btn">
                 <button class="btn btn-primary" type="button" aria-label="View Code" (click)="viewCode()"
@@ -143,12 +143,12 @@
     </div>
     <!-- Footer Buttons -->
     <div class="card-footer d-flex j-c-center g-8">
-        <button type="button" class="btn btn-primary" (click)="onSave()" [disabled]="!formGroup.valid">
-          {{ 'Save' | translate }}
-        </button>
-        <button type="button" class="btn btn-default" (click)="onCancel()">
-          {{ 'Cancel' | translate }}
-        </button>
+      <button type="button" class="btn btn-default" (click)="onCancel()">
+        {{ 'Cancel' | translate }}
+      </button>
+      <button type="button" class="btn btn-primary m-l-8" (click)="onContinue()" [disabled]="!formGroup.valid">
+        {{ 'Continue' | translate }}
+      </button>
     </div>
   </div>
 </div>

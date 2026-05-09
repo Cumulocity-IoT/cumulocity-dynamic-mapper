@@ -132,7 +132,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     this.bottomDrawerRef.close();
   }
 
-  onSave(): void {
+  onContinue(): void {
     if (this.shouldShowTransformationType()) {
       this.formGroup.get('transformationType')?.markAsTouched();
     }

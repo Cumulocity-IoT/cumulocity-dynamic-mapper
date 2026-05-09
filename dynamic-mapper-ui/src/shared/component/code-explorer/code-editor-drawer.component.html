@@ -50,13 +50,13 @@
     <div class="card-footer text-center sticky-buttons">
       <div class="form-group">
         @if (action !== 'view') {
-        <button type="button" class="btn btn-primary" (click)="onSave()" [disabled]="!valid">
-          {{ 'Save' | translate }}
-        </button>
-        }
         <button type="button" class="btn btn-default" (click)="onCancel()">
           {{ (action === 'view' ? 'Close' : 'Cancel') | translate }}
         </button>
+        <button type="button" class="btn btn-primary  m-l-8" (click)="onSave()" [disabled]="!valid">
+          {{ 'Save' | translate }}
+        </button>
+        }
       </div>
     </div>
   </div>

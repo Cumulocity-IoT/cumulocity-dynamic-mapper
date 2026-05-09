@@ -123,10 +123,10 @@ export interface DeviceGroupInfo {
           </div>
         </div>
         <div class="card-footer d-flex j-c-center g-8">
-          <button class="btn btn-default" (click)="onCancel()" translate>Cancel</button>
-          <button class="btn btn-primary"
-                  [disabled]="submitting || (choice === 'group' && !selectedGroupId)"
-                  (click)="onConfirm()" translate>Continue</button>
+            <button class="btn btn-default" (click)="onCancel()" translate>Cancel</button>
+            <button class="btn btn-primary m-l-8"
+            [disabled]="submitting || (choice === 'group' && !selectedGroupId)"
+            (click)="onConfirm()" translate>Continue</button>
         </div>
       </div>
     </div>
