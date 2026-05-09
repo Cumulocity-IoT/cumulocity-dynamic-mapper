@@ -37,10 +37,10 @@
 
 <c8y-action-bar-item [placement]="'right'">
   <li>
-    <a class="btn btn-link" title="{{ 'Reload' | translate }}" (click)="reload()">
+    <button class="btn btn-link" title="{{ 'Reload' | translate }}" (click)="reload()">
       <i c8yIcon="refresh" [ngClass]="{ 'icon-spin': loading }"></i>
       {{ 'Reload' | translate }}
-    </a>
+    </button>
   </li>
 </c8y-action-bar-item>
 

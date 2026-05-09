@@ -229,7 +229,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         this.transformationType = navState.transformationType;
         this.snoopStatus = navState.snoop ? SnoopStatus.ENABLED : SnoopStatus.NONE;
         this.snoopEnabled = navState.snoop ?? false;
-        this.substitutionsAsCode = false;
+        this.substitutionsAsCode = this.transformationType === TransformationType.SMART_FUNCTION;
         this.codeTemplate = navState.codeTemplate;
         this.addMapping();
       }
@@ -630,7 +630,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       let code;
       if (this.substitutionsAsCode) code = this.codeTemplate.code;
       mapping = {
-        name: `Mapping - ${identifier.substring(0, 7)}`,
+        name: `Mapping - ${nextIdAndPad(this.mappingsCount, 2)}`,
         id: identifier,
         identifier: identifier,
         // publishTopic: '',

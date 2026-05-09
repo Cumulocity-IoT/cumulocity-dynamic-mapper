@@ -37,6 +37,7 @@ export class MonitoringNavigationFactory implements NavigatorNodeFactory {
     'dynamic-mapper-service';
 
   appName: string;
+  isStandaloneApp: boolean = false;
   staticNodesStandalone = {
     monitoringMappingNode: new NavigatorNode({
       parent: gettext('Monitoring'),
@@ -80,6 +81,8 @@ export class MonitoringNavigationFactory implements NavigatorNodeFactory {
     public router: Router
   ) {
     this.appStateService.currentApplication.subscribe((cur) => {
+      this.isStandaloneApp =
+        _.has(cur?.manifest, 'isPackage') || _.has(cur?.manifest, 'blueprint');
       this.appName = cur.name;
     });
   }
@@ -87,15 +90,8 @@ export class MonitoringNavigationFactory implements NavigatorNodeFactory {
   async get(): Promise<any> {
     try {
       const feature: any = await this.sharedService.getFeatures();
-      let navs;
-      let copyStaticNodesPlugin;
-
-      copyStaticNodesPlugin = _.clone(this.staticNodesStandalone);
-      if (!feature?.outputMappingEnabled) {
-        delete copyStaticNodesPlugin.mappingOutboundNode;
-        delete copyStaticNodesPlugin.subscriptionOutboundNode;
-      }
-      navs = Object.values(copyStaticNodesPlugin) as NavigatorNode[];
+      const copyStaticNodesPlugin = _.clone(this.staticNodesStandalone);
+      const navs = Object.values(copyStaticNodesPlugin) as NavigatorNode[];
 
       return this.applicationService
         .isAvailable(MonitoringNavigationFactory.APPLICATION_DYNAMIC_MAPPING_SERVICE)

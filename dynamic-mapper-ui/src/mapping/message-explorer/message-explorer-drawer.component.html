@@ -19,139 +19,148 @@
 ~
 -->
 
-<div class="p-48">
-  <h4 id="drawerTitle" translate>Start exploring messages</h4>
-  @if (direction === 'INBOUND') {
-    <p class="text-muted m-b-16" translate>
-      Select a connector and a topic to start capturing live messages.
-      Disconnected connectors cannot be selected.
-    </p>
-  } @else {
-    <p class="text-muted m-b-16" translate>
-      Capture raw JSON payloads from the Cumulocity Notification 2.0 API before mapping.
-      Optionally filter by a specific device.
-    </p>
-  }
-
-  <!-- Direction toggle -->
-  <div class="form-group separator-top m-t-24 p-t-24">
-    <label class="control-label" translate>Direction</label>
-    <div class="d-flex g-16">
-      <label class="c8y-radio radio-inline" title="Inbound" aria-label="Inbound">
-        <input
-          type="radio"
-          name="direction"
-          value="INBOUND"
-          [(ngModel)]="direction"
-          (ngModelChange)="onDirectionChange()"
-          [attr.aria-checked]="direction === 'INBOUND'" />
-        <span></span>
-        <span><i c8yIcon="arrow-down" class="text-success m-r-4"></i><span translate>Inbound</span></span>
-      </label>
-      <label class="c8y-radio radio-inline" title="Outbound" aria-label="Outbound">
-        <input
-          type="radio"
-          name="direction"
-          value="OUTBOUND"
-          [(ngModel)]="direction"
-          (ngModelChange)="onDirectionChange()"
-          [attr.aria-checked]="direction === 'OUTBOUND'" />
-        <span></span>
-        <span><i c8yIcon="arrow-up" class="text-info m-r-4"></i><span translate>Outbound</span></span>
-      </label>
+<div class="flex-col flex-nowrap no-align-items p-48 fit-h col-md-12 col-md-offset-0 c8y-stepper--no-btns">
+  <div class="card card--fullpage">
+    <div class="card-header separator j-c-center">
+      <h4 id="drawerTitle" class="card-title d-flex">
+        <i c8yIcon="scan-wi-fi" class="icon-32 m-r-16"></i>
+        <span class="m-t-8" translate>Start exploring messages</span>
+      </h4>
     </div>
-  </div>
+    <div class="card-inner-scroll fit-h">
+      <div class="card-block">
+        @if (direction === 'INBOUND') {
+          <p class="text-muted m-b-16" translate>
+            Select a connector and a topic to start capturing live messages.
+            Disconnected connectors cannot be selected.
+          </p>
+        } @else {
+          <p class="text-muted m-b-16" translate>
+            Capture raw JSON payloads from the Cumulocity Notification 2.0 API before mapping.
+            Optionally filter by a specific device.
+          </p>
+        }
 
-  <!-- Device selector (OUTBOUND only) -->
-  @if (direction === 'OUTBOUND') {
-    <div class="form-group separator-top m-t-24 p-t-24">
-      <label class="control-label" translate>Device <span class="text-muted">(optional — leave empty to capture all devices)</span></label>
-      <c8y-asset-selector-miller
-        [(ngModel)]="selectedDeviceList"
-        (onSelected)="onDeviceSelected($event)"
-        name="explorerDevice"
-        [config]="{
-          groupsSelectable: false,
-          columnHeaders: true,
-          showFilter: true,
-          showUnassignedDevices: true,
-          showChildDevices: true,
-          search: true,
-          multi: false,
-          showSelected: true
-        }"
-        style="height: 260px; display: block;"
-        class="bg-component">
-      </c8y-asset-selector-miller>
-      <span class="help-block" translate>
-        Select a specific device to monitor. Leave empty to capture notifications from all devices.
-      </span>
-    </div>
-  }
+        <!-- Direction toggle -->
+        <div class="form-group separator-top m-t-24 p-t-24">
+          <label class="control-label" translate>Direction</label>
+          <div class="d-flex g-16">
+            <label class="c8y-radio radio-inline" title="{{ 'Inbound' | translate }}" aria-label="{{ 'Inbound' | translate }}">
+              <input
+                type="radio"
+                name="direction"
+                value="INBOUND"
+                [(ngModel)]="direction"
+                (ngModelChange)="onDirectionChange()"
+                [attr.aria-checked]="direction === 'INBOUND'" />
+              <span></span>
+              <span><i c8yIcon="arrow-down" class="text-success m-r-4"></i><span translate>Inbound</span></span>
+            </label>
+            <label class="c8y-radio radio-inline" title="{{ 'Outbound' | translate }}" aria-label="{{ 'Outbound' | translate }}">
+              <input
+                type="radio"
+                name="direction"
+                value="OUTBOUND"
+                [(ngModel)]="direction"
+                (ngModelChange)="onDirectionChange()"
+                [attr.aria-checked]="direction === 'OUTBOUND'" />
+              <span></span>
+              <span><i c8yIcon="arrow-up" class="text-info m-r-4"></i><span translate>Outbound</span></span>
+            </label>
+          </div>
+        </div>
 
-  <!-- Connector + Topic selectors (INBOUND only) -->
-  @if (direction === 'INBOUND') {
-    <div class="form-group separator-top m-t-24 p-t-24">
-      <label class="control-label" for="explorerConnector" translate>Connector</label>
-      <div class="c8y-select-wrapper">
-        <select
-          id="explorerConnector"
-          class="form-control"
-          [(ngModel)]="selectedConnectorIdentifier"
-          name="connectorIdentifier">
-          <option value="" disabled selected translate>-- Select connector --</option>
-          @for (c of connectors; track c.identifier) {
-            <option [value]="c.identifier" [disabled]="isConnectorDisabled(c)">
-              {{ c.name }}
-              @if (isConnectorDisabled(c)) {
-                (disabled)
-              }
-            </option>
-          }
-        </select>
-        <span></span>
+        <!-- Device selector (OUTBOUND only) -->
+        @if (direction === 'OUTBOUND') {
+          <div class="form-group separator-top m-t-24 p-t-24">
+            <label class="control-label" translate>Device <span class="text-muted">(optional — leave empty to capture all devices)</span></label>
+            <c8y-asset-selector-miller
+              [(ngModel)]="selectedDeviceList"
+              (onSelected)="onDeviceSelected($event)"
+              name="explorerDevice"
+              [config]="{
+                groupsSelectable: false,
+                columnHeaders: true,
+                showFilter: true,
+                showUnassignedDevices: true,
+                showChildDevices: true,
+                search: true,
+                multi: false,
+                showSelected: true
+              }"
+              style="height: 260px; display: block;"
+              class="bg-component">
+            </c8y-asset-selector-miller>
+            <span class="help-block" translate>
+              Select a specific device to monitor. Leave empty to capture notifications from all devices.
+            </span>
+          </div>
+        }
+
+        <!-- Connector + Topic selectors (INBOUND only) -->
+        @if (direction === 'INBOUND') {
+          <div class="form-group separator-top m-t-24 p-t-24">
+            <label class="control-label" for="explorerConnector" translate>Connector</label>
+            <div class="c8y-select-wrapper">
+              <select
+                id="explorerConnector"
+                class="form-control"
+                [(ngModel)]="selectedConnectorIdentifier"
+                name="connectorIdentifier">
+                <option value="" disabled selected translate>-- Select connector --</option>
+                @for (c of connectors; track c.identifier) {
+                  <option [value]="c.identifier" [disabled]="isConnectorDisabled(c)">
+                    {{ c.name }}
+                    @if (isConnectorDisabled(c)) {
+                      (disabled)
+                    }
+                  </option>
+                }
+              </select>
+              <span></span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="control-label" for="explorerTopic" translate>Topic</label>
+            <input
+              id="explorerTopic"
+              type="text"
+              class="form-control"
+              [(ngModel)]="topic"
+              name="topic"
+              placeholder="{{ 'e.g. sensors/#  or  devices/+/data' | translate }}" />
+            <span class="help-block" translate>
+              Wildcards: <code>+</code> matches one level, <code>#</code> matches the rest of the path.
+            </span>
+          </div>
+        }
+
+        <!-- Max messages input -->
+        <div class="form-group separator-top m-t-24 p-t-24">
+          <label class="control-label" for="explorerMaxMessages" translate>Max messages to buffer</label>
+          <input
+            id="explorerMaxMessages"
+            type="number"
+            class="form-control"
+            [(ngModel)]="maxMessages"
+            name="maxMessages"
+            min="1"
+            max="500"
+            style="max-width: 120px" />
+          <span class="help-block" translate>Between 1 and 500. Oldest messages are discarded when the limit is reached.</span>
+        </div>
       </div>
     </div>
-
-    <div class="form-group">
-      <label class="control-label" for="explorerTopic" translate>Topic</label>
-      <input
-        id="explorerTopic"
-        type="text"
-        class="form-control"
-        [(ngModel)]="topic"
-        name="topic"
-        placeholder="{{ 'e.g. sensors/#  or  devices/+/data' | translate }}" />
-      <span class="help-block" translate>
-        Wildcards: <code>+</code> matches one level, <code>#</code> matches the rest of the path.
-      </span>
+    <div class="card-footer d-flex j-c-center g-8">
+      <button class="btn btn-default" (click)="onCancel()" translate>Cancel</button>
+      <button
+        class="btn btn-primary"
+        (click)="onStart()"
+        [disabled]="direction === 'INBOUND' && (!selectedConnectorIdentifier || !topic)"
+        translate>
+        Start
+      </button>
     </div>
-  }
-
-  <!-- Max messages input -->
-  <div class="form-group separator-top m-t-24 p-t-24">
-    <label class="control-label" for="explorerMaxMessages" translate>Max messages to buffer</label>
-    <input
-      id="explorerMaxMessages"
-      type="number"
-      class="form-control"
-      [(ngModel)]="maxMessages"
-      name="maxMessages"
-      min="1"
-      max="500"
-      style="max-width: 120px" />
-    <span class="help-block" translate>Between 1 and 500. Oldest messages are discarded when the limit is reached.</span>
-  </div>
-
-  <div class="d-flex j-c-end g-8 separator-top m-t-24 p-t-24">
-    <button class="btn btn-default" style="min-width: 120px" (click)="onCancel()" translate>Cancel</button>
-    <button
-      class="btn btn-primary"
-      style="min-width: 120px"
-      (click)="onStart()"
-      [disabled]="direction === 'INBOUND' && (!selectedConnectorIdentifier || !topic)"
-      translate>
-      Start
-    </button>
   </div>
 </div>

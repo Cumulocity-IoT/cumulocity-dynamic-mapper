@@ -88,6 +88,16 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
       priority: 400,
       preventDuplicates: true
     }),
+
+    messageExplorerNode: new NavigatorNode({
+      parent: gettext('Mapping'),
+      label: gettext('Message Explorer'),
+      icon: 'c8y-data-explorer',
+      path: `/c8y-pkg-dynamic-mapper/${NODE1}/mappings/messageExplorer`,
+      priority: 400,
+      preventDuplicates: true
+    }),
+
     mappingInboundNode: new NavigatorNode({
       parent: gettext('Mapping'),
       label: gettext('Inbound'),
@@ -120,15 +130,6 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
       icon: 'relay-home-automation',
       path: `/c8y-pkg-dynamic-mapper/${NODE1}/mappings/relation/deviceToClientMap`,
       priority: 370,
-      preventDuplicates: true
-    }),
-
-    messageExplorerNode: new NavigatorNode({
-      parent: gettext('Mapping'),
-      label: gettext('Message Explorer'),
-      icon: 'c8y-data-explorer',
-      path: `/c8y-pkg-dynamic-mapper/${NODE1}/mappings/messageExplorer`,
-      priority: 360,
       preventDuplicates: true
     }),
 

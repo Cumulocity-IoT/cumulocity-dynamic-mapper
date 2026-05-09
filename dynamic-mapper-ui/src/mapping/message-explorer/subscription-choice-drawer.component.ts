@@ -39,85 +39,95 @@ export interface DeviceGroupInfo {
   standalone: true,
   imports: [CoreModule, CommonModule, FormsModule],
   template: `
-    <div class="p-48">
-      <h4 translate>Outbound subscription</h4>
-      <p class="text-muted" translate>
-        Outbound mappings require a device subscription so Cumulocity pushes events to the broker.
-        Would you like to set one up now?
-      </p>
-
-      <c8y-list-group class="separator-top m-t-24">
-
-        <!-- Skip -->
-        <c8y-li>
-          <c8y-li-radio name="subscriptionChoice" [value]="'skip'" [(ngModel)]="choice"></c8y-li-radio>
-          <c8y-li-icon icon="forward"></c8y-li-icon>
-          <c8y-li-body>
-            <strong translate>Skip for now</strong>
-            <p class="text-muted m-b-0 m-t-4 text-12" translate>
-              Continue without a subscription. Add one later from the Subscription outbound page.
+    <div class="flex-col flex-nowrap no-align-items p-48 fit-h col-md-12 col-md-offset-0 c8y-stepper--no-btns">
+      <div class="card card--fullpage">
+        <div class="card-header separator j-c-center">
+          <h4 id="drawerTitle" class="card-title d-flex">
+            <i c8yIcon="subscription" class="icon-32 m-r-16"></i>
+            <span class="m-t-8" translate>Outbound subscription</span>
+          </h4>
+        </div>
+        <div class="card-inner-scroll fit-h">
+          <div class="card-block">
+            <p class="text-muted" translate>
+              Outbound mappings require a device subscription so Cumulocity pushes events to the broker.
+              Would you like to set one up now?
             </p>
-          </c8y-li-body>
-        </c8y-li>
 
-        <!-- By device type -->
-        <c8y-li>
-          <c8y-li-radio name="subscriptionChoice" [value]="'type'" [(ngModel)]="choice"></c8y-li-radio>
-          <c8y-li-icon icon="speaker-notes"></c8y-li-icon>
-          <c8y-li-body>
-            <strong translate>By device type</strong>
-            <p class="text-muted m-b-0 m-t-4 text-12" translate>
-              All devices of this type will be subscribed automatically.
-            </p>
-            @if (deviceType) {
-              <span class="badge badge--primary m-t-4">{{ deviceType }}</span>
-            } @else {
-              <span class="text-muted text-12" translate>
-                No type detected for this device — type must be available to use this option.
-              </span>
-            }
-          </c8y-li-body>
-        </c8y-li>
+            <c8y-list-group class="separator-top m-t-24" role="list">
 
-        <!-- By device group -->
-        <c8y-li>
-          <c8y-li-radio name="subscriptionChoice" [value]="'group'" [(ngModel)]="choice"></c8y-li-radio>
-          <c8y-li-icon icon="c8y-group"></c8y-li-icon>
-          <c8y-li-body>
-            <strong translate>By device group</strong>
-            <p class="text-muted m-b-0 m-t-4 text-12" translate>
-              All devices in the selected group will be subscribed automatically.
-            </p>
-            @if (deviceGroups.length === 1) {
-              <span class="badge badge--primary m-t-4">{{ deviceGroups[0].name }}</span>
-            } @else if (deviceGroups.length > 1) {
-              <!-- Nested group picker using c8y-li-radio -->
-              <c8y-list-group class="m-t-8" (click)="$event.stopPropagation(); choice = 'group'">
-                @for (g of deviceGroups; track g.id) {
-                  <c8y-li [dense]="true">
-                    <c8y-li-radio name="groupChoice" [value]="g.id"
-                      [(ngModel)]="selectedGroupId"
-                      (onSelect)="choice = 'group'">
-                    </c8y-li-radio>
-                    <c8y-li-body>{{ g.name }}</c8y-li-body>
-                  </c8y-li>
-                }
-              </c8y-list-group>
-            } @else {
-              <span class="text-muted text-12" translate>
-                No group detected for this device — group must be available to use this option.
-              </span>
-            }
-          </c8y-li-body>
-        </c8y-li>
+              <!-- Skip -->
+              <c8y-li role="listitem">
+                <c8y-li-radio name="subscriptionChoice" [value]="'skip'" [(ngModel)]="choice"></c8y-li-radio>
+                <c8y-li-icon icon="forward"></c8y-li-icon>
+                <c8y-li-body>
+                  <strong translate>Skip for now</strong>
+                  <p class="text-muted m-b-0 m-t-4 text-12" translate>
+                    Continue without a subscription. Add one later from the Subscription outbound page.
+                  </p>
+                </c8y-li-body>
+              </c8y-li>
 
-      </c8y-list-group>
+              <!-- By device type -->
+              <c8y-li role="listitem">
+                <c8y-li-radio name="subscriptionChoice" [value]="'type'" [(ngModel)]="choice"></c8y-li-radio>
+                <c8y-li-icon icon="speaker-notes"></c8y-li-icon>
+                <c8y-li-body>
+                  <strong translate>By device type</strong>
+                  <p class="text-muted m-b-0 m-t-4 text-12" translate>
+                    All devices of this type will be subscribed automatically.
+                  </p>
+                  @if (deviceType) {
+                    <span class="badge badge--primary m-t-4">{{ deviceType }}</span>
+                  } @else {
+                    <span class="text-muted text-12" translate>
+                      No type detected for this device — type must be available to use this option.
+                    </span>
+                  }
+                </c8y-li-body>
+              </c8y-li>
 
-      <div class="d-flex j-c-end g-8 separator-top m-t-24 p-t-24">
-        <button class="btn btn-default" style="min-width: 120px" (click)="onCancel()" translate>Cancel</button>
-        <button class="btn btn-primary" style="min-width: 120px"
-                [disabled]="submitting || (choice === 'group' && !selectedGroupId)"
-                (click)="onConfirm()" translate>Continue</button>
+              <!-- By device group -->
+              <c8y-li role="listitem">
+                <c8y-li-radio name="subscriptionChoice" [value]="'group'" [(ngModel)]="choice"></c8y-li-radio>
+                <c8y-li-icon icon="c8y-group"></c8y-li-icon>
+                <c8y-li-body>
+                  <strong translate>By device group</strong>
+                  <p class="text-muted m-b-0 m-t-4 text-12" translate>
+                    All devices in the selected group will be subscribed automatically.
+                  </p>
+                  @if (deviceGroups.length === 1) {
+                    <span class="badge badge--primary m-t-4">{{ deviceGroups[0].name }}</span>
+                  } @else if (deviceGroups.length > 1) {
+                    <!-- Nested group picker using c8y-li-radio -->
+                    <c8y-list-group class="m-t-8" role="list" (click)="$event.stopPropagation(); choice = 'group'">
+                      @for (g of deviceGroups; track g.id) {
+                        <c8y-li [dense]="true" role="listitem">
+                          <c8y-li-radio name="groupChoice" [value]="g.id"
+                            [(ngModel)]="selectedGroupId"
+                            (onSelect)="choice = 'group'">
+                          </c8y-li-radio>
+                          <c8y-li-body>{{ g.name }}</c8y-li-body>
+                        </c8y-li>
+                      }
+                    </c8y-list-group>
+                  } @else {
+                    <span class="text-muted text-12" translate>
+                      No group detected for this device — group must be available to use this option.
+                    </span>
+                  }
+                </c8y-li-body>
+              </c8y-li>
+
+            </c8y-list-group>
+          </div>
+        </div>
+        <div class="card-footer d-flex j-c-center g-8">
+          <button class="btn btn-default" (click)="onCancel()" translate>Cancel</button>
+          <button class="btn btn-primary"
+                  [disabled]="submitting || (choice === 'group' && !selectedGroupId)"
+                  (click)="onConfirm()" translate>Continue</button>
+        </div>
       </div>
     </div>
   `

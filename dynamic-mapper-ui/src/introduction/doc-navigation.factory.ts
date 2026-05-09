@@ -217,12 +217,6 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
     this.appStateService.currentApplication.subscribe((cur) => {
       this.isStandaloneApp =
         _.has(cur?.manifest, 'isPackage') || _.has(cur?.manifest, 'blueprint');
-      //   console.log(
-      //     'Constructor: AppName in MappingNavigationFactory',
-      //     cur,
-      //     this.isStandaloneApp,
-      //     _.has(cur?.manifest, 'isPackage')
-      //   );
       this.appName = cur.name;
     });
   }

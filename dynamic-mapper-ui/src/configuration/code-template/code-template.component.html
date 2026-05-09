@@ -72,7 +72,7 @@
   <c8y-loading></c8y-loading>
   } @else {
   <div class="card-block">
-    <div class="p-b-12 text-muted" style="font-size: 13px; line-height: 1.5;">
+    <div class="p-b-12 text-muted font-smaller">
       A <strong>Code Template</strong> is the JavaScript starting point that is copied into every new mapping that
       uses this transformation type. Editing a template does <em>not</em> affect mappings already created from it
       &mdash; each mapping holds its own independent copy. Select a template from the drop-down above to view or
@@ -97,13 +97,11 @@
       </c8y-editor>
     </c8y-form-group>
   </div>
-  <div class="card-footer">
-    <div class="form-group p-l-24">
+  <div class="card-footer d-flex j-c-center g-8">
       <button type="button" name="save" class="btn btn-primary" (click)="onSaveCodeTemplate()"
         [disabled]="codeTemplateDecoded?.readonly || !feature?.userHasMappingAdminRole" translate>
         Save
       </button>
-    </div>
   </div>
   }
 </div>

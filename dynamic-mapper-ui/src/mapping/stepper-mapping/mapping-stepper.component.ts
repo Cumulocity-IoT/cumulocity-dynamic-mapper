@@ -1041,13 +1041,26 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
   private expandTemplates(): void {
     if (this.stepperConfiguration.editorMode === EditorMode.CREATE && !this.templatesInitialized) {
       this.templatesInitialized = true;
-      const templates = this.stepperService.expandTemplates(
-        this.mapping,
-        this.stepperConfiguration.direction,
-        this.stepperConfiguration.allowTemplateExpansion
-      );
-      this.sourceTemplate = templates.sourceTemplate;
-      this.targetTemplate = templates.targetTemplate;
+      // If sourceTemplate was pre-filled (e.g. from Message Explorer), honour it directly
+      // instead of overwriting with the generic SAMPLE_TEMPLATES_C8Y default.
+      const hasPrefilledSource = this.mapping.sourceTemplate && this.mapping.sourceTemplate !== '{}';
+      if (hasPrefilledSource) {
+        const templates = this.stepperService.expandExistingTemplates(
+          this.mapping,
+          this.stepperConfiguration.direction,
+          this.stepperConfiguration.allowTemplateExpansion
+        );
+        this.sourceTemplate = templates.sourceTemplate;
+        this.targetTemplate = templates.targetTemplate;
+      } else {
+        const templates = this.stepperService.expandTemplates(
+          this.mapping,
+          this.stepperConfiguration.direction,
+          this.stepperConfiguration.allowTemplateExpansion
+        );
+        this.sourceTemplate = templates.sourceTemplate;
+        this.targetTemplate = templates.targetTemplate;
+      }
       return;
     }
 

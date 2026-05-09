@@ -35,10 +35,10 @@
 <div class="flex-col flex-nowrap no-align-items p-48 fit-h col-md-12 col-md-offset-0 c8y-stepper--no-btns">
   <div class="card card--fullpage">
     <!-- Header -->
-    <div class="card-header separator" style="justify-content: center">
-      <h4 class="card-title d-flex">
+    <div class="card-header separator j-c-center">
+      <h4 id="drawerTitle" class="card-title d-flex">
         <i [c8yIcon]="'plus-circle'" class="icon-32 m-r-16"></i>
-        <span class="m-t-8">
+        <span class="m-t-8" translate>
           {{ 'Select Payload Format and Transformation Type' | translate }}
         </span>
       </h4>
@@ -142,15 +142,13 @@
       </div>
     </div>
     <!-- Footer Buttons -->
-    <div class="card-footer text-center sticky-buttons">
-      <div class="form-group">
+    <div class="card-footer d-flex j-c-center g-8">
         <button type="button" class="btn btn-primary" (click)="onSave()" [disabled]="!formGroup.valid">
           {{ 'Save' | translate }}
         </button>
         <button type="button" class="btn btn-default" (click)="onCancel()">
           {{ 'Cancel' | translate }}
         </button>
-      </div>
     </div>
   </div>
 </div>
