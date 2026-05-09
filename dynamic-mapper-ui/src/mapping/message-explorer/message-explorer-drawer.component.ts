@@ -22,7 +22,7 @@ import { Component, inject, Input, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { AlertService, BottomDrawerRef, CoreModule } from '@c8y/ngx-components';
-import { IIdentified } from '@c8y/client';
+import { IIdentified, InventoryService } from '@c8y/client';
 import { combineLatest } from 'rxjs';
 import { ConnectorConfiguration, Direction } from '../../shared';
 import { ConnectorConfigurationService } from '../../shared/service/connector-configuration.service';
@@ -37,6 +37,7 @@ export interface ExplorerStartResult {
   direction: 'INBOUND' | 'OUTBOUND';
   deviceId?: string;
   deviceName?: string;
+  deviceType?: string | null;
 }
 
 @Component({
@@ -64,6 +65,10 @@ export class MessageExplorerDrawerComponent implements OnInit {
   private readonly bottomDrawerRef = inject(BottomDrawerRef);
   private readonly connectorConfigService = inject(ConnectorConfigurationService);
   private readonly alertService = inject(AlertService);
+  private readonly inventoryService = inject(InventoryService);
+
+  selectedDeviceType: string | null = null;
+  private deviceTypeFetch: Promise<string | null> = Promise.resolve(null);
 
   async ngOnInit(): Promise<void> {
     combineLatest([
@@ -98,9 +103,27 @@ export class MessageExplorerDrawerComponent implements OnInit {
   onDeviceSelected(event: AssetSelectionChangeEvent): void {
     const items = event.items;
     this.selectedDeviceList = Array.isArray(items) ? items : (items ? [items] : []);
+    const selected = this.selectedDeviceList[0] as any;
+    if (selected?.id) {
+      // Asset selector may already return a full managed object with type
+      if (selected.type) {
+        this.selectedDeviceType = selected.type;
+        this.deviceTypeFetch = Promise.resolve(selected.type);
+      } else {
+        this.deviceTypeFetch = this.inventoryService.detail(String(selected.id))
+          .then(({ data }) => {
+            this.selectedDeviceType = (data as any)['type'] ?? null;
+            return this.selectedDeviceType;
+          })
+          .catch((err) => { this.selectedDeviceType = null; return null; });
+      }
+    } else {
+      this.selectedDeviceType = null;
+      this.deviceTypeFetch = Promise.resolve(null);
+    }
   }
 
-  onStart(): void {
+  async onStart(): Promise<void> {
     if (this.direction === 'INBOUND' && !this.selectedConnectorIdentifier) {
       this.alertService.warning('Please select a connector.');
       return;
@@ -113,6 +136,8 @@ export class MessageExplorerDrawerComponent implements OnInit {
     const selectedDevice = this.selectedDeviceList.length > 0 ? this.selectedDeviceList[0] : null;
     const deviceId = selectedDevice ? String((selectedDevice as any).id ?? '') : undefined;
     const deviceName = selectedDevice ? ((selectedDevice as any).name ?? deviceId) : undefined;
+    // Await in case the user clicked Start before the detail() promise resolved
+    const deviceType = deviceId ? await this.deviceTypeFetch : null;
     this._resolve({
       connectorIdentifier: this.selectedConnectorIdentifier,
       connectorName: selected?.name ?? this.selectedConnectorIdentifier,
@@ -120,7 +145,8 @@ export class MessageExplorerDrawerComponent implements OnInit {
       maxMessages: this.maxMessages > 0 ? this.maxMessages : 50,
       direction: this.direction,
       deviceId,
-      deviceName
+      deviceName,
+      deviceType
     });
     this.bottomDrawerRef.close();
   }

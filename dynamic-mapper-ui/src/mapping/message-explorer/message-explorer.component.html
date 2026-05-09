@@ -141,7 +141,8 @@
             <div class="col-md-2"><label translate>Received at</label></div>
             <div class="col-md-1"><label translate>Connector</label></div>
             <div class="col-md-3"><label translate>Topic</label></div>
-            <div class="col-md-5" style="padding-right: 16px"><label translate>Payload</label></div>
+            <div class="col-md-4" style="padding-right: 16px"><label translate>Payload</label></div>
+            <div class="col-md-1"></div>
           </div>
         </div>
       </div>
@@ -172,7 +173,7 @@
                 <code>{{ msg.topic }}</code>
               </div>
               <!-- Payload (truncated) -->
-              <div class="col-md-5" style="padding-right: 16px; overflow: hidden;">
+              <div class="col-md-4" style="padding-right: 16px; overflow: hidden;">
                 @if (expandedIndex !== i) {
                   <span class="text-monospace text-12 cursor-pointer" (click)="toggleExpand(i, msg.payload)"
                     title="{{ 'Click to expand' | translate }}">
@@ -197,6 +198,15 @@
                 @if (msg.binary) {
                   <span class="label label-warning m-l-4" translate>binary (base64)</span>
                 }
+              </div>
+              <!-- Create mapping action -->
+              <div class="col-md-1 d-flex a-i-start j-c-end">
+                <button
+                  class="btn btn-xs btn-default"
+                  title="{{ 'Create mapping from this message' | translate }}"
+                  (click)="onCreateMappingFromMessage(msg)">
+                  <i c8yIcon="plus-circle"></i>
+                </button>
               </div>
             </div>
           </c8y-li-body>

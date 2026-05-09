@@ -38,6 +38,8 @@ import {
 import { Subject } from 'rxjs';
 import { filter, takeUntil } from 'rxjs/operators';
 import { BehaviorSubject } from 'rxjs';
+import { ActivatedRoute, Router } from '@angular/router';
+import { InventoryService } from '@c8y/client';
 import { ConnectorConfigurationService } from '../../shared/service/connector-configuration.service';
 import { PollingInterval } from '../../shared/connector-configuration/connector.model';
 import { ExplorerMessage, MessageExplorerService, SessionExpiredError } from './message-explorer.service';
@@ -45,6 +47,9 @@ import {
   ExplorerStartResult,
   MessageExplorerDrawerComponent
 } from './message-explorer-drawer.component';
+import { MappingTypeDrawerComponent } from '../mapping-create/mapping-type-drawer.component';
+import { SubscriptionChoiceDrawerComponent } from './subscription-choice-drawer.component';
+import { Direction } from '../../shared';
 import { JsonEditorComponent } from '../../shared/component/json-editor/jsoneditor.component';
 
 @Component({
@@ -62,6 +67,8 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
   connectorName: string = '';
   sessionTopic: string = '';
   sessionDirection: 'INBOUND' | 'OUTBOUND' = 'INBOUND';
+  sessionDeviceType: string | null = null;
+  sessionDeviceId: string | null = null;
   messages: ExplorerMessage[] = [];
   paused: boolean = false;
   expandedIndex: number | null = null;
@@ -95,6 +102,9 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
   private readonly explorerService = inject(MessageExplorerService);
   private readonly connectorConfigService = inject(ConnectorConfigurationService);
   private readonly bottomDrawerService = inject(BottomDrawerService);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private readonly inventoryService = inject(InventoryService);
 
   constructor() {
     this.toggleIntervalForm = this.fb.group({
@@ -205,6 +215,8 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       this.connectorName = result.connectorName;
       this.sessionTopic = result.topic;
       this.sessionDirection = result.direction;
+      this.sessionDeviceType = result.deviceType ?? null;
+      this.sessionDeviceId = result.deviceId ?? null;
       this.paused = false;
       this.expandedIndex = null;
       this.expandedPayload = null;
@@ -271,5 +283,78 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
 
   truncate(text: string, maxLen = 120): string {
     return text && text.length > maxLen ? text.substring(0, maxLen) + '…' : text;
+  }
+
+  // ---- create mapping from captured message ---------------------------------
+
+  async onCreateMappingFromMessage(msg: ExplorerMessage): Promise<void> {
+    const direction = msg.direction === 'OUTBOUND' ? Direction.OUTBOUND : Direction.INBOUND;
+
+    // Step 1: pick mapping format / transformation type
+    const typeDrawer = this.bottomDrawerService.openDrawer(MappingTypeDrawerComponent, {
+      initialState: { direction }
+    });
+    let mappingResult: any;
+    try {
+      mappingResult = await typeDrawer.instance.result;
+    } catch {
+      return; // user cancelled
+    }
+    if (!mappingResult || typeof mappingResult === 'string') return;
+
+    // Step 2 (OUTBOUND only): optionally create a subscription inline
+    if (direction === Direction.OUTBOUND) {
+      // Use device type already fetched when the session was started (from the selected device).
+      // Fall back to fetching from msg.sourceId only if it wasn't available.
+      let deviceType: string | null = this.sessionDeviceType;
+      let deviceGroups: { id: string; name: string }[] = [];
+      // Use msg.sourceId if available, otherwise fall back to the session's selected device
+      const effectiveDeviceId = msg.sourceId ?? this.sessionDeviceId;
+      if (effectiveDeviceId) {
+        try {
+          const { data } = await this.inventoryService.detail(effectiveDeviceId, { withParents: true });
+          if (deviceType === null) {
+            deviceType = data['type'] ?? null;
+          }
+          const parentRefs: { id: string; self: string }[] = (data.assetParents?.references ?? [])
+            .map((ref: any) => ({ id: String(ref.managedObject.id), self: ref.managedObject.self }));
+          deviceGroups = (
+            await Promise.all(
+              parentRefs.map(async (ref) => {
+                try {
+                  const { data: groupData } = await this.inventoryService.detail(ref.id);
+                  return { id: ref.id, name: groupData['name'] ?? ref.id };
+                } catch {
+                  return { id: ref.id, name: ref.id };
+                }
+              })
+            )
+          );
+        } catch {
+          // non-fatal — drawer will show no device context
+        }
+      }
+      const subDrawer = this.bottomDrawerService.openDrawer(SubscriptionChoiceDrawerComponent, {
+        initialState: { deviceType, deviceGroups }
+      });
+      const subResult = await subDrawer.instance.result;
+      if (subResult === null) return; // user cancelled
+      // subscription was either skipped or created inside the drawer — nothing more to do here
+    }
+
+    // Navigate to the appropriate mapping grid; mapping.component.ts reads the state and opens the stepper
+    const targetRoute = direction === Direction.INBOUND ? ['../inbound'] : ['../outbound'];
+    this.router.navigate(targetRoute, {
+      relativeTo: this.route,
+      state: {
+        fromExplorer: true,
+        topic: msg.topic,
+        payload: msg.payload,
+        mappingType: mappingResult.mappingType,
+        transformationType: mappingResult.transformationType,
+        snoop: mappingResult.snoop,
+        codeTemplate: mappingResult.codeTemplate
+      }
+    });
   }
 }

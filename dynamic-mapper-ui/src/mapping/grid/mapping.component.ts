@@ -139,6 +139,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   mappingType!: MappingType;
   transformationType!: TransformationType;
   private readonly destroy$ = new Subject<void>();
+  private explorerPreFill: { topic: string; payload: string } | null = null;
 
   pagination: Pagination = {
     pageSize: 30,
@@ -219,6 +220,19 @@ export class MappingComponent implements OnInit, OnDestroy {
         .subscribe((m: MappingEnriched) => {
           this.updateMapping(m);
         });
+
+      // If navigated from Message Explorer, auto-open the stepper with pre-filled data
+      const navState = history.state;
+      if (navState?.fromExplorer) {
+        this.explorerPreFill = { topic: navState.topic ?? '', payload: navState.payload ?? '{}' };
+        this.mappingType = navState.mappingType;
+        this.transformationType = navState.transformationType;
+        this.snoopStatus = navState.snoop ? SnoopStatus.ENABLED : SnoopStatus.NONE;
+        this.snoopEnabled = navState.snoop ?? false;
+        this.substitutionsAsCode = false;
+        this.codeTemplate = navState.codeTemplate;
+        this.addMapping();
+      }
     } finally {
       this.isLoading = false;
     }
@@ -653,6 +667,16 @@ export class MappingComponent implements OnInit, OnDestroy {
         ...mapping,
         sourceTemplate: sampleSource
       };
+    }
+
+    // Apply pre-fill from Message Explorer (topic + payload)
+    if (this.explorerPreFill) {
+      if (this.stepperConfiguration.direction === Direction.INBOUND) {
+        mapping.mappingTopic = this.explorerPreFill.topic;
+        mapping.mappingTopicSample = this.explorerPreFill.topic;
+      }
+      mapping.sourceTemplate = this.explorerPreFill.payload;
+      this.explorerPreFill = null;
     }
 
     this.mappingToUpdate = mapping;

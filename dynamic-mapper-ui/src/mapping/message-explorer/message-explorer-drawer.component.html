@@ -20,7 +20,7 @@
 -->
 
 <div class="p-48">
-  <h4 translate>Start exploring messages</h4>
+  <h4 id="drawerTitle" translate>Start exploring messages</h4>
   @if (direction === 'INBOUND') {
     <p class="text-muted m-b-16" translate>
       Select a connector and a topic to start capturing live messages.
@@ -37,23 +37,25 @@
   <div class="form-group separator-top m-t-24 p-t-24">
     <label class="control-label" translate>Direction</label>
     <div class="d-flex g-16">
-      <label class="radio-inline">
+      <label class="c8y-radio radio-inline" title="Inbound" aria-label="Inbound">
         <input
           type="radio"
           name="direction"
           value="INBOUND"
           [(ngModel)]="direction"
-          (ngModelChange)="onDirectionChange()" />
+          (ngModelChange)="onDirectionChange()"
+          [attr.aria-checked]="direction === 'INBOUND'" />
         <span></span>
         <span><i c8yIcon="arrow-down" class="text-success m-r-4"></i><span translate>Inbound</span></span>
       </label>
-      <label class="radio-inline m-l-16">
+      <label class="c8y-radio radio-inline" title="Outbound" aria-label="Outbound">
         <input
           type="radio"
           name="direction"
           value="OUTBOUND"
           [(ngModel)]="direction"
-          (ngModelChange)="onDirectionChange()" />
+          (ngModelChange)="onDirectionChange()"
+          [attr.aria-checked]="direction === 'OUTBOUND'" />
         <span></span>
         <span><i c8yIcon="arrow-up" class="text-info m-r-4"></i><span translate>Outbound</span></span>
       </label>
@@ -147,7 +149,7 @@
       class="btn btn-primary"
       style="min-width: 120px"
       (click)="onStart()"
-      [disabled]="(direction === 'INBOUND' && !selectedConnectorIdentifier) || (direction === 'INBOUND' && !topic)"
+      [disabled]="direction === 'INBOUND' && (!selectedConnectorIdentifier || !topic)"
       translate>
       Start
     </button>

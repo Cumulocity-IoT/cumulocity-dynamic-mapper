@@ -83,7 +83,7 @@
 </c8y-action-bar-item>
 
 <div class="alert alert-info a-i-center" role="alert" style="min-width: stretch;">
-  <!-- <i c8yIcon="info-circle" class="m-r-8"></i> -->
+  <i c8yIcon="info-circle" class="m-r-8"></i>
   <span translate>Subscriptions are processed asynchronously. Verify the result in the list below or</span>
   &nbsp;
   <button class="btn btn-link p-0" (click)="navigateToServiceEvents()">
@@ -115,7 +115,7 @@
 }
 
 <div [ngClass]="{ drawerOpen: showConfigSubscription1 }">
-  <div class="bottom-drawer">
+  <div class="bottom-drawer d-col has-backdrop" role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
     @if (showConfigSubscription1) {
       <d11r-device-selector-tree (cancel)="showConfigSubscription1 = false"
         (commit)="onCommitSubscriptionDevice($event)" [deviceList]="subscribedDevices">
@@ -126,7 +126,7 @@
 
 
 <div [ngClass]="{ drawerOpen: showConfigSubscription2 }">
-  <div class="bottom-drawer">
+  <div class="bottom-drawer d-col has-backdrop" role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
     @if (showConfigSubscription2) {
       <d11r-device-selector-table (cancel)="showConfigSubscription2 = false"
         (commit)="onCommitSubscriptionDevice($event)" [deviceList]="subscribedDevices">
@@ -136,7 +136,7 @@
 </div>
 
 <div [ngClass]="{ drawerOpen: showConfigSubscription3 }">
-  <div class="bottom-drawer">
+  <div class="bottom-drawer d-col has-backdrop" role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
     @if (showConfigSubscription3) {
       <d11r-group-selector (cancel)="showConfigSubscription3 = false"
         (commit)="onCommitSubscriptionByDeviceGroup($event)" [deviceList]="subscribedDeviceGroups">
@@ -146,7 +146,7 @@
 </div>
 
 <div [ngClass]="{ drawerOpen: showConfigSubscription4 }">
-  <div class="bottom-drawer">
+  <div class="bottom-drawer d-col has-backdrop" role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
     @if (showConfigSubscription4) {
       <d11r-type-selector (cancel)="showConfigSubscription4 = false"
         (commit)="onCommitSubscriptionByDeviceType($event)" [typeList]="subscribedDeviceTypes">
