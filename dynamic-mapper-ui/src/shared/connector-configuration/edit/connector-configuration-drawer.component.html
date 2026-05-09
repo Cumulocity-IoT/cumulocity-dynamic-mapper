@@ -36,7 +36,7 @@
       <div class="card-block">
         <div class="p-24 animated fadeIn">
           @if (action === 'view' && configuration.enabled) {
-          <div class="alert alert-info">
+          <div class="alert alert-info" style="min-width: stretch;">
             <i c8yIcon="info-circle" class="m-r-4"></i>
             {{ 'This connector is currently enabled. Disable it first to edit its configuration.' | translate }}
           </div>
