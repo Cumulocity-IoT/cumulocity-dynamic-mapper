@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 
-import { Component, inject, Input, ViewEncapsulation } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, inject, Input, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AlertService, BottomDrawerRef, CoreModule } from '@c8y/ngx-components';
@@ -132,7 +132,7 @@ export interface DeviceGroupInfo {
     </div>
   `
 })
-export class SubscriptionChoiceDrawerComponent {
+export class SubscriptionChoiceDrawerComponent implements AfterViewInit {
   @Input() deviceType: string | null = null;
 
   private _deviceGroups: DeviceGroupInfo[] = [];
@@ -151,6 +151,13 @@ export class SubscriptionChoiceDrawerComponent {
   private readonly bottomDrawerRef = inject(BottomDrawerRef);
   private readonly subscriptionService = inject(SubscriptionService);
   private readonly alertService = inject(AlertService);
+  private readonly cdr = inject(ChangeDetectorRef);
+
+  ngAfterViewInit(): void {
+    // c8y-li-radio doesn't reflect the initial ngModel value on first render;
+    // detectChanges() forces a write cycle so 'skip' appears pre-selected.
+    this.cdr.detectChanges();
+  }
 
   private _resolve: (value: SubscriptionChoice | null) => void;
   result = new Promise<SubscriptionChoice | null>(resolve => {

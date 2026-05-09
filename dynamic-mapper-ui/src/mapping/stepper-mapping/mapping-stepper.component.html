@@ -22,7 +22,6 @@
 <c8y-stepper class="d-col no-align-items fit-h c8y-stepper--no-btns a-i-center"
   [disableDefaultIcons]="{ edit: true, done: false }" [customClasses]="[
         'col-xs-10',
-        'col-sm-8',
         'm-t-24',
         'm-b-40',
         'p-0',
@@ -33,29 +32,8 @@
   </ng-template>
 
   <cdk-step label="Add and select connector">
-    <div class="p-16 p-t-0 flex-no-shrink separator-bottom col-xs-12">
-      <div class="d-flex">
-        <div class="col-lg-10 col-lg-offset-1">
-          <h4 class="text-medium text-center">
-            @if (
-            stepperConfiguration.editorMode !== EditorMode.READ_ONLY
-            ) {
-            <span translate>Select connector for mapping (at least one is required)</span>
-            }
-            @if (
-            stepperConfiguration.editorMode === EditorMode.READ_ONLY
-            ) {
-            <div>
-              <span translate>Selected connectors</span>
-              <span class="label label-primary text-12">{{ 'Read Only' }}</span>
-            </div>
-            }
-          </h4>
-        </div>
-      </div>
-    </div>
     <div class="col-xs-12 flex-grow no-gutter">
-      <d11r-mapping-connector [stepperConfiguration]="stepperConfiguration" [directions]="[mapping.direction]"
+      <d11r-mapping-connector [showHeader]="true" [stepperConfiguration]="stepperConfiguration" [directions]="[mapping.direction]"
         [deploymentMapEntry]="deploymentMapEntry"
         (deploymentMapEntryChange)="deploymentMapEntryChange($event)"></d11r-mapping-connector>
     </div>
@@ -79,10 +57,10 @@
   <cdk-step label="Select templates" [stepControl]="filterFormly">
     <div class="p-16 p-t-0 flex-no-shrink separator-bottom col-xs-12">
       <div class="d-flex">
-        <div class="col-lg-6 col-lg-offset-3">
-          <h4 class="text-medium text-center" translate>
+        <div class="col-lg-12">
+          <h5 class="text-medium text-center" translate>
             Define templates for source & target payload
-          </h4>
+          </h5>
         </div>
       </div>
     </div>
@@ -91,7 +69,7 @@
         <div class="card-block p-b-0">
           <div [formGroup]="templateForm">
             <div class="d-flex" #buttonsStep2>
-              <div class="col-lg-5 col-lg-offset-1 column-right-border">
+              <div class="col-lg-6 column-right-border">
                 <div class="form-group">
                   <c8y-select [items]="snoopedTemplateItems" formControlName="snoopedTemplateIndex" [filterItems]="true"
                     labelProperty="label" placeholder="{{ 'Select snooped template' | translate }}" aria-label="Snooped Template"
@@ -105,7 +83,7 @@
                   </div>
                 </div>
               </div>
-              <div class="col-lg-5 column-left-border">
+              <div class="col-lg-6 column-left-border">
                 <div class="form-group">
                   <div class="d-flex j-c-between">
                     <button type="button" name="sample" class="btn btn-default"
@@ -121,7 +99,7 @@
               </div>
             </div>
             <div class="d-flex" #editorsStep2>
-              <div class="col-lg-5 col-lg-offset-1 column-right-border" #leftTemplateStep2>
+              <div class="col-lg-6 column-right-border" #leftTemplateStep2>
                 <div class="form-group">
                   <div>
                     <label translate>Source Template - {{ sourceSystem }}</label>
@@ -142,7 +120,7 @@
                   }
                 </div>
               </div>
-              <div class="col-lg-5 column-left-border" #rightTemplateStep2>
+              <div class="col-lg-6 column-left-border" #rightTemplateStep2>
                 <div class="form-group">
                   <div class="d-flex j-c-between">
                     <div class="d-flex">
@@ -175,7 +153,7 @@
           <div>
             @if (!(isContentChangeValid$ | async)) {
             <div class="d-flex">
-              <div class="col-lg-10 col-lg-offset-1 p-b-16">
+              <div class="col-lg-12 p-b-16">
                 <span class="text-warning text-12 p-l-8 p-b-12">
                   <!-- Protected fields warning -->
                   @if (sourceTemplateUpdated && !validateProtectedFields(sourceTemplate, sourceTemplateUpdated)) {
@@ -200,7 +178,7 @@
             }
             @if (stepperViewModel.showFilterControls) {
             <div class="d-flex">
-              <div class="col-lg-5 col-lg-offset-1">
+              <div class="col-lg-12">
                 <button type="button" name="updateFilterExecutionMapping" class="btn btn-default btn-sm m-b-4"
                   (click)="onOverwriteFilterMapping()" translate title="{{ 'Update Filter Execution Mapping' | translate }}"
                   [disabled]="!selectedPathFilterFilterMapping">
@@ -209,12 +187,12 @@
               </div>
             </div>
             <div class="d-flex">
-              <div class="col-lg-5 col-lg-offset-1">
+              <div class="col-lg-12">
                 <formly-form [form]="filterFormly" [fields]="filterFormlyFields" [model]="filterModel"></formly-form>
               </div>
             </div>
             <div class="d-flex">
-              <div class="col-lg-5 col-lg-offset-1">
+              <div class="col-lg-12">
                 <div class="form-group m-l-0 m-b-4">
                   <label translate class="p-l-8">Filter Result [{{
                     filterModel.filterExpression?.resultType
