@@ -137,6 +137,7 @@
       <div class="c8y-list__item__block">
         <div class="c8y-list__item__body">
           <div class="d-flex">
+            <div class="col-md-1" style="max-width: 40px"><label>#</label></div>
             <div class="col-md-1"><label translate>Direction</label></div>
             <div class="col-md-2"><label translate>Received at</label></div>
             <div class="col-md-1"><label translate>Connector</label></div>
@@ -149,10 +150,12 @@
     </div>
 
     <c8y-list-group>
-      @for (msg of messages; track msg.receivedAt + msg.topic; let i = $index) {
+      @for (msg of messages; track msg.seqNo; let i = $index) {
         <c8y-li>
           <c8y-li-body>
             <div class="d-flex a-i-start">
+              <!-- Index -->
+              <div class="col-md-1 text-muted text-12" style="max-width: 40px">{{ msg.seqNo }}</div>
               <!-- Direction badge -->
               <div class="col-md-1">
                 <span class="label" [class.label-success]="msg.direction === 'INBOUND'" [class.label-info]="msg.direction === 'OUTBOUND'">

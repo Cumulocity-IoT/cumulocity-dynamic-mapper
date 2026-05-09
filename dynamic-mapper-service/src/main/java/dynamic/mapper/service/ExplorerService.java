@@ -154,7 +154,26 @@ public class ExplorerService {
 
             listener = buildListener(session, topic);
 
-            sessions.computeIfAbsent(tenant, t -> new ConcurrentHashMap<>()).put(sessionId, session);
+            // Stop any existing sessions for the same device to prevent ghost subscribers.
+            // This is the primary guard for the case where the browser reloads without calling
+            // DELETE /session/{id} (e.g. page refresh, tab close, or ngOnDestroy fire-and-forget).
+            ConcurrentHashMap<String, ExplorerSession> tenantSessions =
+                    sessions.computeIfAbsent(tenant, t -> new ConcurrentHashMap<>());
+            List<String> stale = tenantSessions.entrySet().stream()
+                    .filter(e -> "OUTBOUND".equals(e.getValue().getDirection())
+                            && Objects.equals(resolvedDeviceId, e.getValue().getDeviceId()))
+                    .map(Map.Entry::getKey)
+                    .collect(java.util.stream.Collectors.toList());
+            for (String staleId : stale) {
+                ExplorerSession staleSession = tenantSessions.remove(staleId);
+                if (staleSession != null) {
+                    unregisterListener(tenant, staleId, staleSession);
+                    log.info("{} - Stopped stale outbound explorer session before creating new one: sessionId={}",
+                            tenant, staleId);
+                }
+            }
+
+            tenantSessions.put(sessionId, session);
             listenerRegistry.put(sessionId, listener);
 
             Map<String, AConnectorClient> clients = connectorRegistry.getClientsForTenant(tenant);
@@ -198,7 +217,25 @@ public class ExplorerService {
 
             listener = buildListener(session, topic);
 
-            sessions.computeIfAbsent(tenant, t -> new ConcurrentHashMap<>()).put(sessionId, session);
+            // Stop any existing sessions for the same connector + topic to prevent ghost listeners.
+            ConcurrentHashMap<String, ExplorerSession> tenantSessionsInbound =
+                    sessions.computeIfAbsent(tenant, t -> new ConcurrentHashMap<>());
+            List<String> staleInbound = tenantSessionsInbound.entrySet().stream()
+                    .filter(e -> "INBOUND".equals(e.getValue().getDirection())
+                            && connectorIdentifier.equals(e.getValue().getConnectorIdentifier())
+                            && topic.equals(e.getValue().getTopic()))
+                    .map(Map.Entry::getKey)
+                    .collect(java.util.stream.Collectors.toList());
+            for (String staleId : staleInbound) {
+                ExplorerSession staleSession = tenantSessionsInbound.remove(staleId);
+                if (staleSession != null) {
+                    unregisterListener(tenant, staleId, staleSession);
+                    log.info("{} - Stopped stale inbound explorer session before creating new one: sessionId={}",
+                            tenant, staleId);
+                }
+            }
+
+            tenantSessionsInbound.put(sessionId, session);
             listenerRegistry.put(sessionId, listener);
 
             client.addExplorerListener(listener);
@@ -350,10 +387,12 @@ public class ExplorerService {
 
             // OUTBOUND deduplication: Notification 2.0 events are delivered once per connector,
             // so with N connectors the same event would appear N times. Suppress duplicates
-            // seen within OUTBOUND_DEDUP_WINDOW_MS using a payload-hash key.
+            // seen within OUTBOUND_DEDUP_WINDOW_MS.
+            // The key is scoped per session so that independent sessions each receive the message
+            // exactly once (instead of the first session's dedup blocking all others).
             if ("OUTBOUND".equals(session.getDirection())) {
                 int hash = Arrays.hashCode(message.getPayload());
-                String dedupKey = message.getTenant() + "::" + message.getTopic() + "::" + hash;
+                String dedupKey = session.getSessionId() + "::" + message.getTopic() + "::" + hash;
                 long now = System.currentTimeMillis();
                 Long prev = outboundDedupCache.put(dedupKey, now);
                 if (prev != null && now - prev < OUTBOUND_DEDUP_WINDOW_MS) {

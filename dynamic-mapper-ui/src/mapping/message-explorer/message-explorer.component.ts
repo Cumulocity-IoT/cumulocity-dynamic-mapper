@@ -43,6 +43,8 @@ import { InventoryService } from '@c8y/client';
 import { ConnectorConfigurationService } from '../../shared/service/connector-configuration.service';
 import { PollingInterval } from '../../shared/connector-configuration/connector.model';
 import { ExplorerMessage, MessageExplorerService, SessionExpiredError } from './message-explorer.service';
+
+export type IndexedMessage = ExplorerMessage & { seqNo: number };
 import {
   ExplorerStartResult,
   MessageExplorerDrawerComponent
@@ -69,9 +71,10 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
   sessionDirection: 'INBOUND' | 'OUTBOUND' = 'INBOUND';
   sessionDeviceType: string | null = null;
   sessionDeviceId: string | null = null;
-  messages: ExplorerMessage[] = [];
+  messages: IndexedMessage[] = [];
   paused: boolean = false;
   expandedIndex: number | null = null;
+  private nextSeqNo = 1;
   // Pre-parsed payload for the expanded row — avoids calling JSON.parse on every CD cycle
   expandedPayload: { isJson: boolean; parsed: any; raw: string } | null = null;
 
@@ -160,7 +163,15 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
     if (!this.sessionId) return;
     try {
       const msgs = await this.explorerService.getMessages(this.sessionId);
-      this.messages = msgs;
+      // Identify which messages are new (not yet indexed) and assign consecutive seqNos.
+      // Existing messages keep their seqNo even when the backend drops old ones from the buffer.
+      const existingKeys = new Set(this.messages.map(m => `${m.receivedAt}|${m.topic}|${m.connectorIdentifier}`));
+      const indexed: IndexedMessage[] = msgs.map(m => {
+        const key = `${m.receivedAt}|${m.topic}|${m.connectorIdentifier}`;
+        const existing = this.messages.find(em => `${em.receivedAt}|${em.topic}|${em.connectorIdentifier}` === key);
+        return existing ?? { ...m, seqNo: this.nextSeqNo++ };
+      });
+      this.messages = indexed.slice().reverse();
     } catch (e) {
       if (e instanceof SessionExpiredError) {
         // Session expired or was evicted on the backend — reset UI cleanly
@@ -217,6 +228,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       this.sessionDirection = result.direction;
       this.sessionDeviceType = result.deviceType ?? null;
       this.sessionDeviceId = result.deviceId ?? null;
+      this.nextSeqNo = 1;
       this.paused = false;
       this.expandedIndex = null;
       this.expandedPayload = null;
@@ -342,6 +354,9 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       // subscription was either skipped or created inside the drawer — nothing more to do here
     }
 
+    // Infer the C8Y API type from the outbound message topic (e.g. "EVENT/CREATE" → "EVENT")
+    const targetAPI = direction === Direction.OUTBOUND ? this.inferTargetAPIFromTopic(msg.topic) : undefined;
+
     // Navigate to the appropriate mapping grid; mapping.component.ts reads the state and opens the stepper
     const targetRoute = direction === Direction.INBOUND ? ['../inbound'] : ['../outbound'];
     this.router.navigate(targetRoute, {
@@ -353,8 +368,26 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
         mappingType: mappingResult.mappingType,
         transformationType: mappingResult.transformationType,
         snoop: mappingResult.snoop,
-        codeTemplate: mappingResult.codeTemplate
+        codeTemplate: mappingResult.codeTemplate,
+        targetAPI
       }
     });
+  }
+
+  /**
+   * Infer the Cumulocity targetAPI from an outbound topic.
+   * Outbound topics have the form "<TYPE>/CREATE" or "<TYPE_WITH_CHILDREN>/CREATE",
+   * where <TYPE> is one of EVENT, ALARM, MEASUREMENT, INVENTORY, OPERATION.
+   */
+  private inferTargetAPIFromTopic(topic: string): string | undefined {
+    if (!topic) return undefined;
+    const segment = topic.split('/')[0].toUpperCase();
+    // EVENT_WITH_CHILDREN → EVENT
+    for (const api of ['ALARM', 'EVENT', 'MEASUREMENT', 'INVENTORY', 'OPERATION']) {
+      if (segment === api || segment.startsWith(api + '_')) {
+        return api;
+      }
+    }
+    return undefined;
   }
 }
