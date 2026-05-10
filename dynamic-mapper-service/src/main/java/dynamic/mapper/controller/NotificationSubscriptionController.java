@@ -172,7 +172,8 @@ public class NotificationSubscriptionController {
         }
     }
 
-    @Operation(summary = "Update group notification subscription")
+    @Operation(summary = "Update group notification subscription (desired state)",
+             description = "Accepts the full desired set of subscribed groups. The backend computes the diff against the current state and applies the necessary additions and removals. Sending [A, B] always results in exactly groups A and B being subscribed — nothing more, nothing less.")
     @PreAuthorize(ADMIN_CREATE_ROLES)
     @PutMapping(value = "/group", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<NotificationSubscriptionResponse> updateGroupSubscription(

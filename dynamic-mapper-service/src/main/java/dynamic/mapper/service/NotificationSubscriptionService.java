@@ -114,6 +114,14 @@ public class NotificationSubscriptionService {
                 .build();
     }
 
+    /**
+     * Updates group-based notification subscriptions.
+     * <p>
+     * The caller sends the <strong>full desired set</strong> of groups. This method
+     * computes the diff against the current subscriptions internally and applies the
+     * necessary additions and removals. The API contract is: "replace the subscribed
+     * groups with exactly this list" — not "apply this delta".
+     */
     public NotificationSubscriptionResponse updateGroupSubscription(String tenant,
             NotificationSubscriptionRequest request) {
         try {

@@ -184,17 +184,28 @@ export class SubscriptionChoiceDrawerComponent implements AfterViewInit {
           this.submitting = false;
           return;
         }
+        // Load existing types and merge so we don't overwrite them
+        const existing = await this.subscriptionService.getSubscriptionByDeviceType();
+        const existingTypes: string[] = existing?.types ?? [];
+        const mergedTypes = Array.from(new Set([...existingTypes, this.deviceType]));
         await this.subscriptionService.updateSubscriptionByDeviceType({
           api: API.ALL.name,
-          types: [this.deviceType]
+          types: mergedTypes
         });
         this.alertService.info('Subscription request submitted. Subscriptions are processed asynchronously.');
         this._resolve('type');
       } else if (this.choice === 'group' && this.selectedGroupId) {
         const group = this.deviceGroups.find(g => g.id === this.selectedGroupId);
+        // Load existing group subscriptions and merge so we don't remove others
+        const existingGroups = await this.subscriptionService.getSubscriptionByDeviceGroup();
+        const existingDevices: Device[] = existingGroups?.devices ?? [];
+        const alreadySubscribed = existingDevices.some(d => d.id === this.selectedGroupId);
+        const mergedDevices: Device[] = alreadySubscribed
+          ? existingDevices
+          : [...existingDevices, { id: this.selectedGroupId, name: group?.name } as Device];
         await this.subscriptionService.updateSubscriptionByDeviceGroup({
           api: API.ALL.name,
-          devices: [{ id: this.selectedGroupId, name: group?.name } as Device]
+          devices: mergedDevices
         });
         this.alertService.info('Subscription request submitted. Subscriptions are processed asynchronously.');
         this._resolve('group');
