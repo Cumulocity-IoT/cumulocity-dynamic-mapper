@@ -39,8 +39,8 @@ public class ExplorerSession {
     /** Direction of messages to capture: "INBOUND" or "OUTBOUND". */
     private String direction;
 
-    /** C8Y device ID to filter outbound notifications (OUTBOUND only; null = all devices). */
-    private String deviceId;
+    /** C8Y managed object ID (device or group) to filter outbound notifications (OUTBOUND only; null = required). */
+    private String sourceId;
 
     /** Maximum number of messages to retain (oldest are dropped once limit is reached). */
     private int maxMessages;

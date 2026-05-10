@@ -27,6 +27,7 @@ import { base64ToString, stringToBase64 } from '../../../mapping/shared/util';
 
 @Component({
   selector: 'd11r-code-editor-drawer',
+  host: { class: 'flex-grow d-col fit-h' },
   templateUrl: './code-editor-drawer.component.html',
   encapsulation: ViewEncapsulation.None,
   standalone: true,

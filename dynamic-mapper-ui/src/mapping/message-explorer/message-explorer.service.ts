@@ -30,7 +30,7 @@ export interface ExplorerMessage {
   payload: string;
   binary: boolean;
   direction: 'INBOUND' | 'OUTBOUND';
-  sourceId?: string;    // C8Y device ID (outbound only)
+  sourceId?: string;    // C8Y managed object ID (device or group, outbound only)
 }
 
 export class SessionExpiredError extends Error {
@@ -45,7 +45,7 @@ export interface StartSessionRequest {
   topic: string;
   maxMessages: number;
   direction: 'INBOUND' | 'OUTBOUND';
-  deviceId?: string;    // C8Y device ID filter (OUTBOUND only)
+  sourceId?: string;    // C8Y managed object ID (device or group) filter (OUTBOUND only)
 }
 
 @Injectable({ providedIn: 'root' })

@@ -21,7 +21,7 @@
 
 <!-- Loading State -->
 @if (isLoading) {
-<div class="flex-col flex-nowrap no-align-items p-48 fit-h col-md-12 col-md-offset-0 c8y-stepper--no-btns">
+<div class="d-col flex-nowrap no-align-items p-48 flex-grow col-md-12 col-md-offset-0 c8y-stepper--no-btns">
   <div class="card card--fullpage">
     <div class="card-block text-center">
       <c8y-loading></c8y-loading>
@@ -32,8 +32,8 @@
 
 <!-- Main Content -->
 @if (!isLoading && formGroup) {
-<div class="flex-col flex-nowrap no-align-items p-48 fit-h col-md-12 col-md-offset-0 c8y-stepper--no-btns">
-  <div class="card card--fullpage">
+<div class="d-col flex-nowrap no-align-items p-48 flex-grow col-md-12 col-md-offset-0 c8y-stepper--no-btns">
+  <div class="card card--fullpage d-col flex-grow">
     <!-- Header -->
     <div class="card-header separator j-c-center">
       <h4 id="drawerTitle" class="card-title d-flex">
@@ -44,7 +44,7 @@
       </h4>
     </div>
     <!-- Form Content -->
-    <div class="card-inner-scroll fit-h">
+    <div class="card-inner-scroll flex-grow">
       <div class="card-block">
         <form [formGroup]="formGroup">
           <!-- Expert Mode Toggle -->
@@ -142,7 +142,7 @@
       </div>
     </div>
     <!-- Footer Buttons -->
-    <div class="card-footer d-flex j-c-center g-8">
+    <div class="card-footer separator p-24 text-center flex-no-shrink">
       <button type="button" class="btn btn-default" (click)="onCancel()">
         {{ 'Cancel' | translate }}
       </button>

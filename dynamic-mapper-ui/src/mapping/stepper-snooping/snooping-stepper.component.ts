@@ -59,6 +59,7 @@ const CONSTANTS = {
 
 @Component({
   selector: 'd11r-snooping-stepper',
+  host: { class: 'flex-grow d-col fit-h' },
   templateUrl: 'snooping-stepper.component.html',
   styleUrls: ['../shared/mapping.style.css', 'snooping-stepper.component.css'],
   encapsulation: ViewEncapsulation.None,

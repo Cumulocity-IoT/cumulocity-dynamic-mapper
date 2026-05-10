@@ -19,56 +19,63 @@
 ~
 -->
 
-<div class="flex-col flex-nowrap no-align-items p-48 fit-h col-md-12 col-md-offset-0 c8y-stepper--no-btns">
-  <div class="card card--fullpage">
+<div class="d-col flex-nowrap no-align-items p-48 flex-grow col-md-12 col-md-offset-0 c8y-stepper--no-btns">
+  <div class="card card--fullpage d-col flex-grow">
     <div class="card-header separator j-c-center">
       <h4 id="drawerTitle" class="card-title d-flex">
         <i c8yIcon="scan-wi-fi" class="icon-32 m-r-16"></i>
         <span class="m-t-8" translate>Start exploring messages</span>
       </h4>
     </div>
-    <div class="card-inner-scroll fit-h">
+    <div class="card-inner-scroll flex-grow">
       <div class="card-block">
         @if (direction === 'INBOUND') {
-        <p class="m-b-16" translate>
+        <p class="m-b-16 text-medium" translate>
           Capture raw payloads from the connected broker. Select a connector and a topic to start capturing live messages.
         </p>
         } @else {
-        <p class="m-b-16" translate>
+        <p class="m-b-16 text-medium" translate>
           Capture raw JSON payloads from the Cumulocity Notification 2.0 API before mapping.
           Optionally filter by a specific device.
         </p>
         }
 
-        <!-- Direction toggle -->
-        <div class="form-group separator-top m-t-24 p-t-24">
-          <label class="control-label" translate>Direction</label>
-          <div class="d-flex g-16">
-            <label class="c8y-radio radio-inline" title="{{ 'Inbound' | translate }}"
-              aria-label="{{ 'Inbound' | translate }}">
-              <input type="radio" name="direction" value="INBOUND" [(ngModel)]="direction"
-                (ngModelChange)="onDirectionChange()" [attr.aria-checked]="direction === 'INBOUND'" />
-              <span></span>
-              <span><i c8yIcon="arrow-down" class="text-success m-r-4"></i><span translate>Inbound</span></span>
-            </label>
-            <label class="c8y-radio radio-inline" title="{{ 'Outbound' | translate }}"
-              aria-label="{{ 'Outbound' | translate }}">
-              <input type="radio" name="direction" value="OUTBOUND" [(ngModel)]="direction"
-                (ngModelChange)="onDirectionChange()" [attr.aria-checked]="direction === 'OUTBOUND'" />
-              <span></span>
-              <span><i c8yIcon="arrow-up" class="text-info m-r-4"></i><span translate>Outbound</span></span>
-            </label>
+        <!-- Direction + Max messages row -->
+        <div class="d-flex g-24 separator-top m-t-24 p-t-24 flex-wrap">
+          <div class="form-group m-b-0" style="flex: 0 0 calc(50% - 12px)">
+            <label class="control-label" translate>Direction</label>
+            <div class="d-flex g-16">
+              <label class="c8y-radio radio-inline" title="{{ 'Inbound' | translate }}"
+                aria-label="{{ 'Inbound' | translate }}">
+                <input type="radio" name="direction" value="INBOUND" [(ngModel)]="direction"
+                  (ngModelChange)="onDirectionChange()" [attr.aria-checked]="direction === 'INBOUND'" />
+                <span></span>
+                <span><i c8yIcon="arrow-down" class="text-success m-r-4"></i><span translate>Inbound</span></span>
+              </label>
+              <label class="c8y-radio radio-inline" title="{{ 'Outbound' | translate }}"
+                aria-label="{{ 'Outbound' | translate }}">
+                <input type="radio" name="direction" value="OUTBOUND" [(ngModel)]="direction"
+                  (ngModelChange)="onDirectionChange()" [attr.aria-checked]="direction === 'OUTBOUND'" />
+                <span></span>
+                <span><i c8yIcon="arrow-up" class="text-info m-r-4"></i><span translate>Outbound</span></span>
+              </label>
+            </div>
+          </div>
+          <div class="form-group m-b-0" style="flex: 0 0 calc(50% - 12px)">
+            <label class="control-label" for="explorerMaxMessages" translate>Max messages to buffer</label>
+            <input id="explorerMaxMessages" type="number" class="form-control" [(ngModel)]="maxMessages"
+              name="maxMessages" min="1" max="500" />
+            <span class="help-block" translate>Between 1 and 500. Oldest messages are discarded when the limit is reached.</span>
           </div>
         </div>
 
         <!-- Device selector (OUTBOUND only) -->
         @if (direction === 'OUTBOUND') {
         <div class="form-group separator-top m-t-24 p-t-24">
-          <label class="control-label" translate>Device <span class="text-muted">(optional — leave empty to capture all
-              devices)</span></label>
+          <label class="control-label" translate>Source <span class="text-muted text-default">(*required — select a device or group; a Notification 2.0 subscription will be created for the selected source)</span></label>
           <c8y-asset-selector-miller [(ngModel)]="selectedDeviceList" (onSelected)="onDeviceSelected($event)"
             name="explorerDevice" [config]="{
-                groupsSelectable: false,
+                groupsSelectable: true,
                 columnHeaders: true,
                 showFilter: true,
                 showUnassignedDevices: true,
@@ -113,20 +120,13 @@
         </div>
         }
 
-        <!-- Max messages input -->
-        <div class="form-group separator-top m-t-24 p-t-24">
-          <label class="control-label" for="explorerMaxMessages" translate>Max messages to buffer</label>
-          <input id="explorerMaxMessages" type="number" class="form-control" [(ngModel)]="maxMessages"
-            name="maxMessages" min="1" max="500" style="max-width: 120px" />
-          <span class="help-block" translate>Between 1 and 500. Oldest messages are discarded when the limit is
-            reached.</span>
-        </div>
+
       </div>
     </div>
-    <div class="card-footer d-flex j-c-center g-8">
+    <div class="card-footer separator p-24 text-center flex-no-shrink">
       <button class="btn btn-default" (click)="onCancel()" translate>Cancel</button>
       <button class="btn btn-primary m-l-8" (click)="onStart()"
-        [disabled]="direction === 'INBOUND' && (!selectedConnectorIdentifier || !topic)" translate>
+        [disabled]="(direction === 'INBOUND' && (!selectedConnectorIdentifier || !topic)) || (direction === 'OUTBOUND' && selectedDeviceList.length === 0)" translate>
         Start
       </button>
     </div>

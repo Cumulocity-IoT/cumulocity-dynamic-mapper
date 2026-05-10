@@ -35,13 +35,14 @@ export interface ExplorerStartResult {
   topic: string;
   maxMessages: number;
   direction: 'INBOUND' | 'OUTBOUND';
-  deviceId?: string;
+  sourceId?: string;
   deviceName?: string;
   deviceType?: string | null;
 }
 
 @Component({
   selector: 'd11r-message-explorer-drawer',
+  host: { class: 'flex-grow d-col fit-h' },
   templateUrl: './message-explorer-drawer.component.html',
   standalone: true,
   imports: [CoreModule, CommonModule, FormsModule, AssetSelectorModule]
@@ -56,7 +57,7 @@ export class MessageExplorerDrawerComponent implements OnInit {
   topic: string = '';
   maxMessages: number = 50;
   direction: 'INBOUND' | 'OUTBOUND' = 'INBOUND';
-  /** Selected device for outbound device-scoped monitoring (single selection, optional). */
+  /** Selected source (device or group) for outbound monitoring (single selection). */
   selectedDeviceList: IIdentified[] = [];
 
   private _resolve!: (value: ExplorerStartResult | null) => void;
@@ -134,17 +135,17 @@ export class MessageExplorerDrawerComponent implements OnInit {
     }
     const selected = this.connectors.find(c => c.identifier === this.selectedConnectorIdentifier);
     const selectedDevice = this.selectedDeviceList.length > 0 ? this.selectedDeviceList[0] : null;
-    const deviceId = selectedDevice ? String((selectedDevice as any).id ?? '') : undefined;
-    const deviceName = selectedDevice ? ((selectedDevice as any).name ?? deviceId) : undefined;
+    const sourceId = selectedDevice ? String((selectedDevice as any).id ?? '') : undefined;
+    const deviceName = selectedDevice ? ((selectedDevice as any).name ?? sourceId) : undefined;
     // Await in case the user clicked Start before the detail() promise resolved
-    const deviceType = deviceId ? await this.deviceTypeFetch : null;
+    const deviceType = sourceId ? await this.deviceTypeFetch : null;
     this._resolve({
       connectorIdentifier: this.selectedConnectorIdentifier,
       connectorName: selected?.name ?? this.selectedConnectorIdentifier,
       topic: this.direction === 'OUTBOUND' ? '#' : this.topic.trim(),
       maxMessages: this.maxMessages > 0 ? this.maxMessages : 50,
       direction: this.direction,
-      deviceId,
+      sourceId,
       deviceName,
       deviceType
     });

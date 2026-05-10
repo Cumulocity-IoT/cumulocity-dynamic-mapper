@@ -123,6 +123,7 @@ interface StepperStepChange {
 
 @Component({
   selector: 'd11r-mapping-stepper',
+  host: { class: 'flex-grow d-col fit-h' },
   templateUrl: 'mapping-stepper.component.html',
   styleUrls: ['../shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,

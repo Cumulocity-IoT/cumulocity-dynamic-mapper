@@ -70,7 +70,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
   sessionTopic: string = '';
   sessionDirection: 'INBOUND' | 'OUTBOUND' = 'INBOUND';
   sessionDeviceType: string | null = null;
-  sessionDeviceId: string | null = null;
+  sessionSourceId: string | null = null;
   messages: IndexedMessage[] = [];
   paused: boolean = false;
   expandedIndex: number | null = null;
@@ -221,13 +221,13 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
         topic: result.topic,
         maxMessages: result.maxMessages,
         direction: result.direction,
-        deviceId: result.deviceId
+        sourceId: result.sourceId
       });
       this.connectorName = result.connectorName;
       this.sessionTopic = result.topic;
       this.sessionDirection = result.direction;
       this.sessionDeviceType = result.deviceType ?? null;
-      this.sessionDeviceId = result.deviceId ?? null;
+      this.sessionSourceId = result.sourceId ?? null;
       this.nextSeqNo = 1;
       this.paused = false;
       this.expandedIndex = null;
@@ -321,7 +321,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       let deviceType: string | null = this.sessionDeviceType;
       let deviceGroups: { id: string; name: string }[] = [];
       // Use msg.sourceId if available, otherwise fall back to the session's selected device
-      const effectiveDeviceId = msg.sourceId ?? this.sessionDeviceId;
+      const effectiveDeviceId = msg.sourceId ?? this.sessionSourceId;
       if (effectiveDeviceId) {
         try {
           const { data } = await this.inventoryService.detail(effectiveDeviceId, { withParents: true });

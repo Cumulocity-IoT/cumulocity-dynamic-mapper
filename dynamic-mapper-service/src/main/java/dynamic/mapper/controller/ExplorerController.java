@@ -79,8 +79,8 @@ public class ExplorerController {
                 allowableValues = {"INBOUND", "OUTBOUND"}, example = "INBOUND")
         private String direction = "INBOUND";
 
-        @Schema(description = "C8Y device ID to filter outbound notifications (OUTBOUND only; omit or null for all devices).", example = "12345")
-        private String deviceId;
+        @Schema(description = "C8Y managed object ID (device or group) for outbound notifications (OUTBOUND only; required — without a source ID no Notification 2.0 subscription is created and no events will be captured).", example = "12345")
+        private String sourceId;
     }
 
     // ---- Endpoints ----------------------------------------------------------
@@ -109,7 +109,7 @@ public class ExplorerController {
                     request.getTopic(),
                     request.getMaxMessages(),
                     request.getDirection(),
-                    request.getDeviceId());
+                    request.getSourceId());
             log.info("{} - Explorer session created: {}", tenant, sessionId);
             return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("sessionId", sessionId));
         } catch (ConnectorRegistryException e) {

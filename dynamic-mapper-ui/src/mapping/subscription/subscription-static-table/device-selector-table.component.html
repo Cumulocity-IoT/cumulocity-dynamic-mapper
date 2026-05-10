@@ -19,22 +19,22 @@
   ~
   -->
 
-<div class="flex-col flex-nowrap no-align-items p-48 fit-h col-md-12 col-md-offset-0 c8y-stepper--no-btns">
-  <div class="card card--fullpage">
+<div class="d-col flex-nowrap no-align-items p-48 flex-grow col-md-12 col-md-offset-0 c8y-stepper--no-btns">
+  <div class="card card--fullpage d-col flex-grow">
     <div class="card-header separator j-c-center">
       <h4 id="drawerTitle" class="card-title d-flex">
         <i [c8yIcon]="'subscription'" class="icon-32 m-r-16"></i>
         <span class="m-t-8" translate>Select devices to subscribe to for outbound mappings</span>
       </h4>
     </div>
-    <div class="card-inner-scroll fit-h">
+    <div class="card-inner-scroll flex-grow">
       <div class="card-block">
         <c8y-device-grid [title]="'Devices'" [columns]="columns" [actionControls]="[]"
           (itemsSelect)="onItemsSelect($event)" [selectable]="true"
           (onDeviceQueryStringChange)="onDeviceQueryStringChange($event)"></c8y-device-grid>
       </div>
     </div>
-    <div class="card-footer d-flex j-c-center g-8">
+    <div class="card-footer separator p-24 text-center flex-no-shrink">
       <button type="button" name="cancel" class="btn btn-default" (click)="clickedCancel()" translate>
         Cancel
       </button>

@@ -30,6 +30,7 @@ import { AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
 
 @Component({
   selector: 'd11r-group-selector',
+  host: { class: 'flex-grow d-col fit-h' },
   templateUrl: 'group-selector.component.html',
   styleUrls: ['../../shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,

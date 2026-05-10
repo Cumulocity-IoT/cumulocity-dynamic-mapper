@@ -19,15 +19,15 @@
   ~
   -->
 
-<div class="flex-col flex-nowrap no-align-items p-48 fit-h col-md-12 col-md-offset-0 c8y-stepper--no-btns">
-  <div class="card card--fullpage">
+<div class="d-col flex-nowrap no-align-items p-48 flex-grow col-md-12 col-md-offset-0 c8y-stepper--no-btns">
+  <div class="card card--fullpage d-col flex-grow">
     <div class="card-header separator j-c-center">
       <h4 id="drawerTitle" class="card-title d-flex">
         <i [c8yIcon]="'subscription'" class="icon-32 m-r-16"></i>
         <span class="m-t-8" translate>Select devices to subscribe to for outbound mappings</span>
       </h4>
     </div>
-    <div class="card-block">
+    <div class="card-block flex-grow">
       <c8y-asset-selector-miller [(ngModel)]="deviceList" [config]="{
             groupsSelectable: true,
             columnHeaders: true,
@@ -39,7 +39,7 @@
             showSelected: true
           }" class="bg-component"></c8y-asset-selector-miller>
     </div>
-    <div class="card-footer d-flex j-c-center g-8">
+    <div class="card-footer separator p-24 text-center flex-no-shrink">
       <button type="button" name="cancel" class="btn btn-default" (click)="clickedCancel()" translate>
         Cancel
       </button>

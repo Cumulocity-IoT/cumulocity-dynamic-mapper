@@ -58,6 +58,7 @@ interface SaveResult {
 
 @Component({
   selector: 'd11r-mapping-type-drawer',
+  host: { class: 'flex-grow d-col fit-h' },
   templateUrl: './mapping-type-drawer.component.html',
   encapsulation: ViewEncapsulation.None,
   standalone: true,

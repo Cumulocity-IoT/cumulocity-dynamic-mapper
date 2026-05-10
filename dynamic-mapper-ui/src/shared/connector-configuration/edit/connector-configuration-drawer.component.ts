@@ -43,6 +43,7 @@ interface PropertyEntry {
 
 @Component({
   selector: 'd11r-edit-connector-drawer',
+  host: { class: 'flex-grow d-col fit-h' },
   templateUrl: 'connector-configuration-drawer.component.html',
   styleUrls: ['./connector-configuration-drawer.component.css'],
   standalone: true,

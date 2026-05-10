@@ -35,19 +35,20 @@ export interface DeviceGroupInfo {
 
 @Component({
   selector: 'd11r-subscription-choice-drawer',
+  host: { class: 'flex-grow d-col fit-h' },
   encapsulation: ViewEncapsulation.None,
   standalone: true,
   imports: [CoreModule, CommonModule, FormsModule],
   template: `
-    <div class="flex-col flex-nowrap no-align-items p-48 fit-h col-md-12 col-md-offset-0 c8y-stepper--no-btns">
-      <div class="card card--fullpage">
+    <div class="d-col flex-nowrap no-align-items p-48 flex-grow col-md-12 col-md-offset-0 c8y-stepper--no-btns">
+      <div class="card card--fullpage d-col flex-grow">
         <div class="card-header separator j-c-center">
           <h4 id="drawerTitle" class="card-title d-flex">
             <i c8yIcon="subscription" class="icon-32 m-r-16"></i>
             <span class="m-t-8" translate>Outbound subscription</span>
           </h4>
         </div>
-        <div class="card-inner-scroll fit-h">
+        <div class="card-inner-scroll flex-grow">
           <div class="card-block">
             <p class="text-muted" translate>
               Outbound mappings require a device subscription so Cumulocity pushes events to the broker.
@@ -122,7 +123,7 @@ export interface DeviceGroupInfo {
             </c8y-list-group>
           </div>
         </div>
-        <div class="card-footer d-flex j-c-center g-8">
+        <div class="card-footer separator p-24 text-center flex-no-shrink">
             <button class="btn btn-default" (click)="onCancel()" translate>Cancel</button>
             <button class="btn btn-primary m-l-8"
             [disabled]="submitting || (choice === 'group' && !selectedGroupId)"
