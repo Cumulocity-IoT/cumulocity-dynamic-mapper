@@ -21,13 +21,13 @@
 
 <c8y-stepper class="d-col no-align-items fit-h c8y-stepper--no-btns a-i-center"
   [disableDefaultIcons]="{ edit: true, done: false }" [customClasses]="[
-    'col-xs-10',
+    'col-xs-8',
     'col-sm-8',
     'm-t-24',
     'm-b-40',
     'p-0',
     'flex-no-shrink'
-  ]" (onStepChange)="onStepChange($event)" #stepper>
+  ]" (selectionChange)="onStepChange($event)" #stepper>
 
   <!-- override icons -->
   <ng-template c8yStepperIcon="final">

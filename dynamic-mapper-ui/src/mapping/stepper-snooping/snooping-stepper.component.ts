@@ -160,8 +160,8 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy, AfterViewIni
     this.cancel.emit();
   }
 
-  async onStepChange(index: number): Promise<void> {
-    this.currentStepIndex = index;
+  async onStepChange(event: any): Promise<void> {
+    this.currentStepIndex = event['selectedIndex'];
     try {
       this.showSnoopingInfo();
     } catch (error) {

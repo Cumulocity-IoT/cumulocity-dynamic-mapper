@@ -139,7 +139,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   mappingType!: MappingType;
   transformationType!: TransformationType;
   private readonly destroy$ = new Subject<void>();
-  private explorerPreFill: { topic: string; payload: string; targetAPI?: string } | null = null;
+  private explorerPreFill: { topic: string; payload: string; targetAPI?: string; publishTopic?: string; publishTopicSample?: string } | null = null;
 
   pagination: Pagination = {
     pageSize: 30,
@@ -224,7 +224,13 @@ export class MappingComponent implements OnInit, OnDestroy {
       // If navigated from Message Explorer, auto-open the stepper with pre-filled data
       const navState = history.state;
       if (navState?.fromExplorer) {
-        this.explorerPreFill = { topic: navState.topic ?? '', payload: navState.payload ?? '{}', targetAPI: navState.targetAPI };
+        this.explorerPreFill = {
+          topic: navState.topic ?? '',
+          payload: navState.payload ?? '{}',
+          targetAPI: navState.targetAPI,
+          publishTopic: navState.publishTopic,
+          publishTopicSample: navState.publishTopicSample
+        };
         this.mappingType = navState.mappingType;
         this.transformationType = navState.transformationType;
         this.snoopStatus = navState.snoop ? SnoopStatus.ENABLED : SnoopStatus.NONE;
@@ -679,6 +685,13 @@ export class MappingComponent implements OnInit, OnDestroy {
       if (this.explorerPreFill.targetAPI) {
         mapping.targetAPI = this.explorerPreFill.targetAPI;
         mapping.targetTemplate = SAMPLE_TEMPLATES_C8Y[this.explorerPreFill.targetAPI] ?? mapping.targetTemplate;
+      }
+      if (this.explorerPreFill.publishTopic) {
+        mapping.publishTopic = this.explorerPreFill.publishTopic;
+        mapping.useExternalId = true;
+      }
+      if (this.explorerPreFill.publishTopicSample) {
+        mapping.publishTopicSample = this.explorerPreFill.publishTopicSample;
       }
       this.explorerPreFill = null;
     }

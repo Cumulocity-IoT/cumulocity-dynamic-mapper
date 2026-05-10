@@ -39,7 +39,7 @@ import { Subject } from 'rxjs';
 import { filter, takeUntil } from 'rxjs/operators';
 import { BehaviorSubject } from 'rxjs';
 import { ActivatedRoute, Router } from '@angular/router';
-import { InventoryService } from '@c8y/client';
+import { InventoryService, IdentityService } from '@c8y/client';
 import { ConnectorConfigurationService } from '../../shared/service/connector-configuration.service';
 import { PollingInterval } from '../../shared/connector-configuration/connector.model';
 import { ExplorerMessage, MessageExplorerService, SessionExpiredError } from './message-explorer.service';
@@ -108,6 +108,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly inventoryService = inject(InventoryService);
+  private readonly identityService = inject(IdentityService);
 
   constructor() {
     this.toggleIntervalForm = this.fb.group({
@@ -357,6 +358,31 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
     // Infer the C8Y API type from the outbound message topic (e.g. "EVENT/CREATE" → "EVENT")
     const targetAPI = direction === Direction.OUTBOUND ? this.inferTargetAPIFromTopic(msg.topic) : undefined;
 
+    // Derive publishTopic / publishTopicSample from the API path (OUTBOUND only)
+    let publishTopic: string | undefined;
+    let publishTopicSample: string | undefined;
+    if (targetAPI) {
+      const apiPath = MessageExplorerComponent.API_C8Y_PATH[targetAPI];
+      if (apiPath) {
+        publishTopic = apiPath + '/#';
+        // Try to resolve the c8y_Serial external ID of the source device
+        // so the sample topic contains a real identifier instead of the literal "externalId".
+        const effectiveSourceId = msg.sourceId ?? this.sessionSourceId;
+        let externalIdLabel = 'externalId';
+        if (effectiveSourceId) {
+          try {
+            const { data: extIds } = await this.identityService.list(effectiveSourceId);
+            const serial = extIds.find((e: any) => e.type === 'c8y_Serial');
+            if (serial?.externalId) {
+              externalIdLabel = serial.externalId;
+            }
+          } catch {
+            // non-fatal — keep the default label
+          }
+        }
+        publishTopicSample = apiPath + '/' + externalIdLabel;
+      }
+    }
     // Navigate to the appropriate mapping grid; mapping.component.ts reads the state and opens the stepper
     const targetRoute = direction === Direction.INBOUND ? ['../inbound'] : ['../outbound'];
     this.router.navigate(targetRoute, {
@@ -369,10 +395,24 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
         transformationType: mappingResult.transformationType,
         snoop: mappingResult.snoop,
         codeTemplate: mappingResult.codeTemplate,
-        targetAPI
+        targetAPI,
+        publishTopic,
+        publishTopicSample
       }
     });
   }
+
+  /**
+   * Maps a Cumulocity API name to its REST path, mirroring the Java API enum.
+   * Used to derive publishTopic / publishTopicSample for outbound mappings.
+   */
+  private static readonly API_C8Y_PATH: Record<string, string> = {
+    ALARM: '/alarm/alarms',
+    EVENT: '/event/events',
+    MEASUREMENT: '/measurement/measurements',
+    INVENTORY: '/inventory/managedObjects',
+    OPERATION: '/devicecontrol/operations'
+  };
 
   /**
    * Infer the Cumulocity targetAPI from an outbound topic.
