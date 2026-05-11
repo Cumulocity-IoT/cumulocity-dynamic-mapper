@@ -693,6 +693,10 @@ export class MappingComponent implements OnInit, OnDestroy {
       if (this.explorerPreFill.publishTopicSample) {
         mapping.publishTopicSample = this.explorerPreFill.publishTopicSample;
       }
+      // For OUTBOUND, pre-fill filterMapping with 'true' so at least one execution filter is set
+      if (this.stepperConfiguration.direction === Direction.OUTBOUND && !mapping.filterMapping) {
+        mapping.filterMapping = 'true';
+      }
       this.explorerPreFill = null;
     }
 
