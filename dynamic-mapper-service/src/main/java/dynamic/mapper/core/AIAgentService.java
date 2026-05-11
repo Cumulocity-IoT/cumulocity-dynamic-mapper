@@ -67,7 +67,7 @@ public class AIAgentService {
     private ServiceConfigurationService serviceConfigurationService;
 
     private static final String DEFAULT_JSONATA_AGENT_NAME = "dynamic-mapper-jsonata-agent";
-    private static final String DEFAULT_JAVASCRIPT_AGENT_NAME = "dynamic-mapper-javascript-agent";
+    //private static final String DEFAULT_JAVASCRIPT_AGENT_NAME = "dynamic-mapper-javascript-agent";
     private static final String DEFAULT_SMART_FUNCTION_AGENT_NAME = "dynamic-mapper-smart-function-agent";
     private static final String MCP_SSE_ENDPOINT = "/service/dynamic-mapper-service/sse";
     private static final String JSONATA_TOOL_NAME = "evaluateJsonataExpression";
@@ -151,7 +151,7 @@ public class AIAgentService {
                     addingAIAgentsToServiceConfiguration();
                 } else {
                     if (agents.stream().anyMatch(agent -> agent.getName().equals(DEFAULT_JSONATA_AGENT_NAME)
-                            || agent.getName().equals(DEFAULT_JAVASCRIPT_AGENT_NAME) || agent.getName().equals(DEFAULT_SMART_FUNCTION_AGENT_NAME))) {
+                            || agent.getName().equals(DEFAULT_SMART_FUNCTION_AGENT_NAME))) {
                         log.info("{} - AIAgents already exists, not re-creating them",
                                 contextService.getContext().getTenant());
                         addingAIAgentsToServiceConfiguration();
@@ -175,8 +175,6 @@ public class AIAgentService {
         if(serviceConfiguration != null){
             if (serviceConfiguration .getJsonataAgent() == null)
                 serviceConfiguration.setJsonataAgent(DEFAULT_JSONATA_AGENT_NAME);
-            if (serviceConfiguration .getJavaScriptAgent() == null)
-                serviceConfiguration .setJavaScriptAgent(DEFAULT_JAVASCRIPT_AGENT_NAME);
             if (serviceConfiguration .getSmartFunctionAgent() == null)
                 serviceConfiguration .setSmartFunctionAgent(DEFAULT_SMART_FUNCTION_AGENT_NAME);
             try {
@@ -249,8 +247,6 @@ public class AIAgentService {
             AIAgent aiAgent = new AIAgent();
             if (file.equals("jsonata"))
                 aiAgent.setName(DEFAULT_JSONATA_AGENT_NAME);
-            if (file.equals("javascript"))
-                aiAgent.setName(DEFAULT_JAVASCRIPT_AGENT_NAME);
             if (file.equals("smartfunction"))
                 aiAgent.setName(DEFAULT_SMART_FUNCTION_AGENT_NAME);
 
@@ -282,9 +278,6 @@ public class AIAgentService {
                 String fileName = resource.getFilename();
                 if (fileName.startsWith("jsonata"))
                     prompts.put("jsonata",
-                            new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8));
-                if (fileName.startsWith("javascript"))
-                    prompts.put("javascript",
                             new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8));
                 if (fileName.startsWith("smartfunction"))
                     prompts.put("smartfunction",
