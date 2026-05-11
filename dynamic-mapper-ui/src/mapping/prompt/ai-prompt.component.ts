@@ -151,19 +151,15 @@ export class AIPromptComponent implements OnInit {
       this.newMessage = "I have an existing Smart Function for the following mapping. " +
         "Please review it and let me know if you see any issues or improvements. " +
         "Feel free to ask me questions about specific changes you'd like to make.\n\n" +
-        "**Complete Mapping (including existing code):**\n\n" +
-        "```json\n" +
-        JSON.stringify(this.mappingForAI, null, 2) +
-        "\n```\n";
+        "Complete Mapping (including existing code):\n\n" +
+        JSON.stringify(this.mappingForAI, null, 2) + "\n";
     } else {
       this.drawerTitle = 'Review / Refine Substitutions';
       this.chatConfig = { ...this.chatConfig, title: 'Review / Refine Substitutions' };
       this.newMessage = "I have existing substitutions for the following mapping. " +
         "Please review them and let me know if you see any issues or improvements. " +
         "Feel free to ask me questions about specific changes you'd like to make.\n\n" +
-        "```json\n" +
-        JSON.stringify({ ...this.mappingForAI, substitutions: this.mapping.substitutions }, null, 2) +
-        "\n```\n";
+        JSON.stringify({ ...this.mappingForAI, substitutions: this.mapping.substitutions }, null, 2) + "\n";
     }
   }
 
@@ -172,17 +168,12 @@ export class AIPromptComponent implements OnInit {
       this.drawerTitle = 'Generate Smart Function';
       this.chatConfig = { ...this.chatConfig, title: 'Generate Smart Function' };
       this.newMessage = "Map for the following mapping the source template to the target template:\n\n" +
-        "**Complete Mapping:**\n\n" +
-        "```json\n" +
-        JSON.stringify(this.mappingForAI, null, 2) +
-        "\n```\n";
+        JSON.stringify(this.mappingForAI, null, 2) + "\n";
     } else {
       this.drawerTitle = 'Generate Substitutions';
       this.chatConfig = { ...this.chatConfig, title: 'Generate Substitutions' };
       this.newMessage = "Map for the following mapping the source template to the target template:\n\n" +
-        "```json\n" +
-        JSON.stringify(this.mappingForAI, null, 2) +
-        "\n```\n";
+        JSON.stringify(this.mappingForAI, null, 2) + "\n";
     }
   }
 
@@ -201,10 +192,12 @@ export class AIPromptComponent implements OnInit {
   }
 
   private buildMappingForAI(): any {
-    const m = { ...this.mapping };
+    const m: any = { ...this.mapping };
     delete m.substitutions;
     m.sourceTemplate = JSON.parse(m.sourceTemplate as any);
     m.targetTemplate = JSON.parse(m.targetTemplate as any);
+    // Tell the AI whether ESM exports are required in the generated code
+    m.supportESM = this.serviceConfiguration?.supportESM ?? false;
     return m;
   }
 

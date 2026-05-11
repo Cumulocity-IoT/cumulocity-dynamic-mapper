@@ -919,7 +919,7 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
     }
 
     if (this.mapping.code) {
-      this.mappingCode = base64ToString(this.mapping.code);
+      this.mappingCode = stripTemplateMetadataTags(base64ToString(this.mapping.code));
     }
 
     // Update snooped template items in case new templates were added

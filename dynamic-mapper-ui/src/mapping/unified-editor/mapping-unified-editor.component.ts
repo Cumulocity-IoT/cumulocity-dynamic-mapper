@@ -420,7 +420,7 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
 
     // Load code if present
     if (this.mapping.code) {
-      this.mappingCode = base64ToString(this.mapping.code);
+      this.mappingCode = stripTemplateMetadataTags(base64ToString(this.mapping.code));
     }
 
     // Expand existing templates (mapping is fully defined)
@@ -692,7 +692,7 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     }
 
     if (this.mapping.code) {
-      this.mappingCode = base64ToString(this.mapping.code);
+      this.mappingCode = stripTemplateMetadataTags(base64ToString(this.mapping.code));
     }
 
     this.updateSnoopedTemplateItems();

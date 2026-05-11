@@ -33,11 +33,11 @@
   <div class="d-flex d-col j-c-center a-i-center fit-h p-24">
     <p class="text-medium m-b-24" translate>What would you like to do with the existing {{ isCodeMapping ? 'Smart Function' : 'substitutions' }}?</p>
     <div class="btn-group d-col" style="gap: 12px; min-width: 280px">
-      <button type="button" class="btn btn-ai btn-lg" (click)="chooseReview()">
+      <button type="button" class="btn btn-ai" (click)="chooseReview()">
         <i c8yIcon="search"></i>&nbsp;
         <span translate>Review / Refine existing {{ isCodeMapping ? 'Smart Function' : 'substitutions' }}</span>
       </button>
-      <button type="button" class="btn btn-default btn-lg" (click)="chooseGenerate()">
+      <button type="button" class="btn btn-default" (click)="chooseGenerate()">
         <i c8yIcon="plus-circle-o"></i>&nbsp;
         <span translate>Generate new {{ isCodeMapping ? 'Smart Function' : 'substitutions' }} from scratch</span>
       </button>
