@@ -10,8 +10,8 @@ If you want to use the dynamic mapper, the following prerequisites must be met:
 ### AI pre-requisites
 
 To leverage **AI capabilities** of the dynamic mapper, you need to have the following prerequisites:
-- **AI Agent Manager** microservice deployed in your tenant. This is currently in private preview, please contact your Cumulocity representative to get access.
-- **AI Model Provider + API key** is required which must be configured in the **AI Agent Manager** and is leveraged by the AI agents. We tested `claude-sonnet-4-20250514` model from Anthropic, but you can use any other model that supports the required functionality.
+- **AI Agent Manager** microservice deployed in your tenant. This is currently in public preview.
+- **AI Model Provider + API key** is required which must be configured in the **AI Agent Manager** and is leveraged by the AI agents. We tested `claude-sonnet-4-7` model from Anthropic, but you can use any other model that supports the required functionality.
 
 ## Installation
 
@@ -29,9 +29,6 @@ The microservice is provided in 4 variants:
 * **Max** - Uses 16 CPU and 16 GB RAM, suitable for up to 20.000 messages per second to be processed.
 
 Download the binaries from the latest release and upload them to your Cumulocity Tenant.
-
-> **_NOTE:_**
-> The screenshots show the dynamic mapper installed as a plugin in the Cumulocity Administration app. The dynamic mapper can also be installed in other Cumulocity apps, including Cockpit or Device Management, or as a standalone application.
 
 ## Permissions
 
@@ -52,11 +49,7 @@ Make sure that you subscribe the microservice to your tenant when prompted
 
 ### Web app
 
-The frontend can be deployed in your tenant:
-
-1. As a **Blueprint** standalone Application selectable from the App switcher
-
-> **_NOTE:_** The option to deploy the dynamic mapper as plugin is deprecated.
+The frontend can be deployed in your tenant as a **Blueprint** standalone Application selectable from the App switcher.
 
 #### Community store (Preferred)
 
