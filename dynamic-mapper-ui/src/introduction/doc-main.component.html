@@ -23,8 +23,8 @@
 <!-- SEARCH BAR — rendered into the Cumulocity action bar (stays fixed at top)        -->
 <!-- ================================================================================ -->
 <c8y-action-bar-item [placement]="'left'" itemClass="navbar-form">
-  <div class="d-flex a-i-center" style="gap: 8px;">
-    <div class="input-group" style="max-width: 320px;">
+  <div class="d-flex a-i-center g-8">
+    <div class="input-group doc-search-input-group">
       <span class="input-group-addon"><i c8yIcon="search"></i></span>
       <input type="text" class="form-control" placeholder="Search documentation…"
         [(ngModel)]="searchQuery" (input)="onSearch()" (keydown.escape)="clearSearch()" name="docSearch" />
@@ -38,9 +38,9 @@
     </div>
     @if (searchQuery.length >= 2) {
       @if (searchMatchCount === 0) {
-        <span class="text-muted" style="font-size: 13px; white-space: nowrap;">No matches</span>
+        <span class="text-muted doc-search-count">No matches</span>
       } @else {
-        <span style="font-size: 13px; white-space: nowrap;">{{ searchCurrentIndex + 1 }}&nbsp;/&nbsp;{{ searchMatchCount }}</span>
+        <span class="doc-search-count">{{ searchCurrentIndex + 1 }}&nbsp;/&nbsp;{{ searchMatchCount }}</span>
         <button class="btn btn-xs btn-default" type="button" (click)="prevMatch()" title="Previous match">
           <i c8yIcon="chevron-up"></i>
         </button>

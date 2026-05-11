@@ -31,6 +31,7 @@ import { AIAgentService } from '../core/ai-agent.service';
 import { AgentObjectDefinition, AgentTextDefinition } from '../shared/ai-prompt.model';
 import { ServiceConfiguration } from '../../configuration';
 import { base64ToBytes } from '../shared/util';
+import { EditorMode } from '../shared/stepper.model';
 
 
 @Component({
@@ -51,6 +52,7 @@ export class AIPromptComponent implements OnInit {
 
   @Input() mapping: Mapping;
   @Input() aiAgent: AgentObjectDefinition | AgentTextDefinition | null;
+  @Input() editorMode: EditorMode = EditorMode.CREATE;
 
   private _save: (value: Substitution[] | string) => void;
   private _cancel: (reason?: any) => void;
@@ -77,12 +79,21 @@ export class AIPromptComponent implements OnInit {
   chatConfig = {
     headline: 'AI Assistant',
     welcomeText: '',
-    title: 'Generate substitutions using AI',
+    title: 'AI Mapping Assistant',
     placeholder: 'Type your message...',
     sendButtonText: 'Send',
     cancelButtonText: 'Cancel',
     disclaimerText: 'AI-generated responses can contain errors. Verify the details before use.'
   };
+
+  /** Set during ngOnInit — true when the mapping already has code or substitutions */
+  isReviewMode = false;
+  /** Exposed for the template header */
+  drawerTitle = 'AI Mapping Assistant';
+  /** In UPDATE mode: true while the user is choosing review-vs-generate */
+  awaitingModeChoice = false;
+  /** Cached mapping object (without substitutions) ready to send to AI */
+  private mappingForAI: any = null;
 
   // Add getter to check if this is a code-based mapping
   get isCodeMapping(): boolean {
@@ -99,24 +110,80 @@ export class AIPromptComponent implements OnInit {
       this.aiAgent?.agent?.variables || {},
     );
 
-    const mappingForAI = this.buildMappingForAI();
+    this.mappingForAI = this.buildMappingForAI();
 
     if (this.isCodeMapping) {
-      mappingForAI.code = this.extractExistingJavaScriptCode(this.mapping);
+      this.mappingForAI.code = this.extractExistingJavaScriptCode(this.mapping);
+    }
+
+    if (this.editorMode === EditorMode.UPDATE) {
+      // Let the user decide: review existing or generate from scratch
+      this.awaitingModeChoice = true;
+      this.drawerTitle = 'AI Mapping Assistant';
+      return;
+    }
+
+    // CREATE mode — always generate
+    this.prepareGenerateMessage();
+    await this.sendMessage();
+  }
+
+  /** Called when the user picks "Review / Refine" in the choice screen */
+  async chooseReview(): Promise<void> {
+    this.awaitingModeChoice = false;
+    this.isReviewMode = true;
+    this.prepareReviewMessage();
+    await this.sendMessage();
+  }
+
+  /** Called when the user picks "Generate new" in the choice screen */
+  async chooseGenerate(): Promise<void> {
+    this.awaitingModeChoice = false;
+    this.isReviewMode = false;
+    this.prepareGenerateMessage();
+    await this.sendMessage();
+  }
+
+  private prepareReviewMessage(): void {
+    if (this.isCodeMapping) {
+      this.drawerTitle = 'Review / Refine Smart Function';
+      this.chatConfig = { ...this.chatConfig, title: 'Review / Refine Smart Function' };
+      this.newMessage = "I have an existing Smart Function for the following mapping. " +
+        "Please review it and let me know if you see any issues or improvements. " +
+        "Feel free to ask me questions about specific changes you'd like to make.\n\n" +
+        "**Complete Mapping (including existing code):**\n\n" +
+        "```json\n" +
+        JSON.stringify(this.mappingForAI, null, 2) +
+        "\n```\n";
+    } else {
+      this.drawerTitle = 'Review / Refine Substitutions';
+      this.chatConfig = { ...this.chatConfig, title: 'Review / Refine Substitutions' };
+      this.newMessage = "I have existing substitutions for the following mapping. " +
+        "Please review them and let me know if you see any issues or improvements. " +
+        "Feel free to ask me questions about specific changes you'd like to make.\n\n" +
+        "```json\n" +
+        JSON.stringify({ ...this.mappingForAI, substitutions: this.mapping.substitutions }, null, 2) +
+        "\n```\n";
+    }
+  }
+
+  private prepareGenerateMessage(): void {
+    if (this.isCodeMapping) {
+      this.drawerTitle = 'Generate Smart Function';
+      this.chatConfig = { ...this.chatConfig, title: 'Generate Smart Function' };
       this.newMessage = "Map for the following mapping the source template to the target template:\n\n" +
         "**Complete Mapping:**\n\n" +
         "```json\n" +
-        JSON.stringify(mappingForAI, null, 2) +
+        JSON.stringify(this.mappingForAI, null, 2) +
         "\n```\n";
     } else {
+      this.drawerTitle = 'Generate Substitutions';
+      this.chatConfig = { ...this.chatConfig, title: 'Generate Substitutions' };
       this.newMessage = "Map for the following mapping the source template to the target template:\n\n" +
         "```json\n" +
-        JSON.stringify(mappingForAI, null, 2) +
+        JSON.stringify(this.mappingForAI, null, 2) +
         "\n```\n";
     }
-
-    // Call sendMessage() automatically
-    await this.sendMessage();
   }
 
   save() {

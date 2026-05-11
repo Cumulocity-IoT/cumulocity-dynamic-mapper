@@ -77,12 +77,12 @@
     <!-- Tab 2: Templates -->
     @if (activeTabIndex === 2 && isTabVisible(2)) {
     <div [formGroup]="templateForm">
-      <div class="d-flex">
+      <div class="row">
         <div class="col-lg-6 column-right-border">
           <div class="form-group">
             <c8y-select [items]="snoopedTemplateItems" formControlName="snoopedTemplateIndex" [filterItems]="true"
               labelProperty="label" placeholder="{{ 'Select snooped template' | translate }}" aria-label="Snooped Template"
-              style="width: 50%">
+              class="w-50">
             </c8y-select>
             <div>
               <small class="text-muted">{{stepperViewModel.showSourceEditor ?
@@ -107,7 +107,7 @@
           </div>
         </div>
       </div>
-      <div class="d-flex">
+      <div class="row">
         <div class="col-lg-6 column-right-border">
           <div class="form-group">
             <div>
@@ -152,49 +152,39 @@
       </div>
     </div>
     @if (!(isContentChangeValid$ | async)) {
-    <div class="d-flex">
-      <div class="col-lg-12 p-b-16">
-        <span class="text-warning text-12 p-l-8 p-b-12">
-          @if (sourceTemplateUpdated && !validateProtectedFields(sourceTemplate, sourceTemplateUpdated)) {
-          Changing <code>_IDENTITY_</code>, <code>_TOPIC_LEVEL_</code> or <code>_CONTEXT_DATA_</code>
-          directly in templates is not supported. Use substitutions instead. Changes are reverted!
-          }
-          @if (sourceTemplateUpdated && !checkTransformationType(mapping.transformationType,
-          sourceTemplateUpdated)) {
-          @if (sourceTemplateUpdated && !validateProtectedFields(sourceTemplate, sourceTemplateUpdated)) {
-          <span><br /></span>
-          }
-          Array templates require transformation type <code>SMART_FUNCTION</code>.
-          }
-        </span>
-      </div>
+    <div class="p-b-16">
+      <span class="text-warning text-12 p-l-8 p-b-12">
+        @if (sourceTemplateUpdated && !validateProtectedFields(sourceTemplate, sourceTemplateUpdated)) {
+        Changing <code>_IDENTITY_</code>, <code>_TOPIC_LEVEL_</code> or <code>_CONTEXT_DATA_</code>
+        directly in templates is not supported. Use substitutions instead. Changes are reverted!
+        }
+        @if (sourceTemplateUpdated && !checkTransformationType(mapping.transformationType,
+        sourceTemplateUpdated)) {
+        @if (sourceTemplateUpdated && !validateProtectedFields(sourceTemplate, sourceTemplateUpdated)) {
+        <span><br /></span>
+        }
+        Array templates require transformation type <code>SMART_FUNCTION</code>.
+        }
+      </span>
     </div>
     }
     @if (stepperViewModel.showFilterControls) {
-    <div class="d-flex">
-      <div class="col-lg-12">
+    <div class="d-col g-8">
+      <div>
         <button type="button" name="updateFilterExecutionMapping" class="btn btn-default btn-sm m-b-4"
           (click)="onOverwriteFilterMapping()" translate title="{{ 'Update Filter Execution Mapping' | translate }}"
           [disabled]="!selectedPathFilterFilterMapping">
           <i c8yIcon="filter"></i>Update Filter Execution Mapping
         </button>
       </div>
-    </div>
-    <div class="d-flex">
-      <div class="col-lg-12">
-        <formly-form [form]="filterFormly" [fields]="filterFormlyFields" [model]="filterModel"></formly-form>
-      </div>
-    </div>
-    <div class="d-flex">
-      <div class="col-lg-12">
-        <div class="form-group m-b-4">
-          <label translate class="p-l-8">Filter Result [{{ filterModel.filterExpression?.resultType
-            }}]</label>
-          <textarea class="form-control font-smaller" #filterModelFilterExpression c8y-textarea-autoresize [readonly]="true"
-            >{{
-                        filterModel.filterExpression?.result
-                      }}</textarea>
-        </div>
+      <formly-form [form]="filterFormly" [fields]="filterFormlyFields" [model]="filterModel"></formly-form>
+      <div class="form-group m-b-4">
+        <label translate class="p-l-8">Filter Result [{{ filterModel.filterExpression?.resultType
+          }}]</label>
+        <textarea class="form-control font-smaller" #filterModelFilterExpression c8y-textarea-autoresize [readonly]="true"
+          >{{
+                      filterModel.filterExpression?.result
+                    }}</textarea>
       </div>
     </div>
     }
@@ -268,9 +258,8 @@
     @if (hasExtensionParameter) {
     <div class="form-group">
       <label translate>Extension Parameter (YAML)</label>
-      <textarea class="form-control font-smaller" formControlName="extensionParameter" rows="6"
-        placeholder="parameter:&#10;  key: value"
-        style="font-family: monospace;">
+      <textarea class="form-control font-smaller font-monospace" formControlName="extensionParameter" rows="6"
+        placeholder="parameter:&#10;  key: value">
         </textarea>
       <small class="text-muted" translate>Optional YAML parameter passed to the extension.</small>
     </div>
@@ -307,9 +296,8 @@
     @if (hasExtensionParameter) {
     <div class="form-group">
       <label translate>Extension Parameter (YAML)</label>
-      <textarea class="form-control font-smaller" formControlName="extensionParameter" rows="6"
-        placeholder="parameter:&#10;  key: value"
-        style="font-family: monospace;">
+      <textarea class="form-control font-smaller font-monospace" formControlName="extensionParameter" rows="6"
+        placeholder="parameter:&#10;  key: value">
         </textarea>
       <small class="text-muted" translate>Optional YAML parameter passed to the extension.</small>
     </div>
@@ -324,8 +312,8 @@
 </ng-template>
 
 <ng-template #extensionTemplateSourceGraals let-form="form">
-  <div class="form-group p-b-8 fit-h">
-    <div class="row d-flex p-b-8">
+  <div class="form-group p-b-8 fit-h d-col">
+    <div class="row p-b-8">
       <div class="col-lg-5">
         <div class="d-flex">
           <label translate class="m-t-4">{{codeEditorLabel}}</label>
@@ -340,25 +328,25 @@
       </div>
       <div class="flex-grow col-lg-2 p-t-4">
         <button type="button" name="generateSubstitution" class="btn btn-ai btn-sm"
-          (click)="openGenerateSubstitutionDrawer()" translate title="{{ 'Generate substitutions' | translate }}"
+          (click)="openGenerateSubstitutionDrawer()"
+          title="{{ (stepperConfiguration.editorMode === EditorMode.UPDATE ? 'Review / Refine with AI' : 'Generate with AI') | translate }}"
           [disabled]="!stepperViewModel.config.showEditorSource || stepperViewModel.config.editorMode === EditorMode.READ_ONLY || !aiAgentDeployed">
-          <span>Generate substitutions</span>
+          <span>{{ stepperConfiguration.editorMode === EditorMode.UPDATE ? 'Review / Refine with AI' : 'Generate with AI' }}</span>
         </button>
         @if (!aiAgentDeployed) {
         <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
-          popover="{{'Generate substitutions is disabled if AI Agent is not deployed in this tenant or no agent is defined.' | translate}}"
+          popover="{{'AI Assistant is disabled if AI Agent is not deployed in this tenant or no agent is defined.' | translate}}"
           placement="right" container="body" triggers="focus" type="button"></button>
         }
       </div>
-      <div class="text-right col-lg-5 p-r-16">
+      <div class="col-lg-5 p-r-16">
         <div class="input-group">
           <c8y-select [items]="codeTemplateItems" [(ngModel)]="templateId" (ngModelChange)="onSelectCodeTemplate()"
             name="templateSelect" [filterItems]="true" labelProperty="label" placeholder="{{ 'Select template...' | translate }}"
-            aria-label="Code Template" style="min-width: 300px">
+            aria-label="Code Template" class="select-template">
           </c8y-select>
           <div class="input-group-btn">
             <button type="button" name="update" class="btn btn-default btn-sm" (click)="onCreateCodeTemplate()"
-              [disabled]="mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE"
               translate>
               Create new code template
             </button>

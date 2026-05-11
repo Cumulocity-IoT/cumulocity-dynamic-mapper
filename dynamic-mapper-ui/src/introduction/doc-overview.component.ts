@@ -65,14 +65,16 @@ export class DocOverviewComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     this.feature = this.route.snapshot.data['feature'];
 
-    // When navigating to a section anchor within the overview page, scroll to it
+    // When navigating to a section anchor within the overview page, scroll to it.
+    // Use offsetTop (layout-based, scroll-independent) rather than
+    // getBoundingClientRect() so the correct offset is computed regardless of the
+    // window scroll position at the time this runs.
     const path = this.route.snapshot.routeConfig?.path || '';
     if (path && path !== '') {
       setTimeout(() => {
         const element = document.getElementById(path);
         if (element) {
-          const elementPosition = element.getBoundingClientRect().top + window.scrollY;
-          window.scrollTo({ top: elementPosition - 120, behavior: 'smooth' });
+          window.scrollTo({ top: element.offsetTop - 120, behavior: 'smooth' });
         }
       }, 200);
     }
@@ -149,9 +151,7 @@ export class DocOverviewComponent implements OnInit {
   scrollToElement(elementId: string): void {
     const element = document.getElementById(elementId);
     if (element) {
-      const elementPosition = element.getBoundingClientRect().top + window.scrollY;
-      const offsetPosition = elementPosition - 120;
-      window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
+      window.scrollTo({ top: element.offsetTop - 120, behavior: 'smooth' });
     }
   }
 }

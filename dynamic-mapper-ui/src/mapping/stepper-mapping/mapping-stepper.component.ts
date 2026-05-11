@@ -74,6 +74,7 @@ import {
   reduceSourceTemplate,
   splitTopicExcludingSeparator,
   stringToBase64,
+  stripTemplateMetadataTags,
   validateProtectedFields
 } from '../shared/util';
 import { SubstitutionRendererComponent } from '../substitution/substitution-grid.component';
@@ -739,7 +740,7 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
     }
 
     if (this.mapping.code || this.mappingCode) {
-      this.mapping.code = stringToBase64(this.mappingCode);
+      this.mapping.code = stringToBase64(stripTemplateMetadataTags(this.mappingCode));
     }
 
     if (isSubstitutionsAsCode(this.mapping) && (!this.mapping.code || this.mapping.code === null || this.mapping.code === '')) {
@@ -1159,7 +1160,7 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
     const template = this.codeTemplatesDecoded.get(this.templateId);
     if (!template) return;
 
-    let code = template.code;
+    let code = stripTemplateMetadataTags(template.code);
 
     if (this.serviceConfiguration?.supportESM) {
       const exportName =
@@ -1238,7 +1239,7 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
     testMapping.targetTemplate = JSON.stringify(this.targetTemplate);
 
     const drawer = this.bottomDrawerService.openDrawer(AIPromptComponent, {
-      initialState: { mapping: testMapping, aiAgent: this.aiAgent }
+      initialState: { mapping: testMapping, aiAgent: this.aiAgent, editorMode: this.stepperConfiguration.editorMode }
     });
 
     try {

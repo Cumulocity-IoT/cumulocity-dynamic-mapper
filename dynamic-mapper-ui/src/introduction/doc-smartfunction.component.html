@@ -23,7 +23,7 @@
     <a id="top"></a>
     <div class="text-right m-b-16">
       <a (click)="scrollToElement('top')" class="to-the-top" role="button" aria-label="Scroll to top"
-        style="cursor: pointer;">
+>
         <i class="dlt-c8y-icon-chevron-up m-r-4"></i> Top
       </a>
     </div>
@@ -42,7 +42,7 @@
           to
           see the payload exactly as it is sent to the Cumulocity backend.
         </div>
-        <div class="admonition info" style="max-width: 100%;">
+        <div class="admonition info">
           <div class="title">Info</div>
           <div class="content">
             <strong>Power of Smart Functions:</strong> Smart Functions offer maximum flexibility:
@@ -55,7 +55,7 @@
             </ul>
           </div>
         </div>
-        <div class="admonition caution" style="max-width: 100%;">
+        <div class="admonition caution">
           <div class="title">Caution</div>
           <div class="content">
             The JavaScript editor for Smart Function is only available if you select <b>Smart
@@ -96,7 +96,7 @@ var deviceBySourceId = context.getManagedObject(payload["c8ySourceId"]);
 console.log("Device (by C8Y source id): " + deviceBySourceId);
 var deviceByExternalId = context.getManagedObjectByExternalId(&#123; externalId: externalId, type: "c8y_Serial" &#125;);
 console.log("Device (by external id): " + deviceByExternalId);</code></pre>
-        <div class="admonition important" style="max-width: 100%;">
+        <div class="admonition important">
           <div class="title">Important</div>
           <div class="content">
             <strong>Important Configuration:</strong> Only device fragments configured in <a
@@ -125,7 +125,7 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
           <a [routerLink]="ROUTE_SERVICE_CONFIGURATION"><b>Configuration → Service Configuration →
           General</b></a>, the execution model changes to true ES module semantics.
         </div>
-        <div class="admonition info" style="max-width: 100%;">
+        <div class="admonition info">
           <div class="title">ESM mode — what changes</div>
           <div class="content">
             <ul class="m-t-4 m-b-0">
@@ -165,7 +165,7 @@ console.log("Device (by external id): " + deviceByExternalId);</code></pre>
 &#125;
 
 export &#123; onMessage &#125;;   // required in ESM mode</code></pre>
-        <div class="admonition caution" style="max-width: 100%;">
+        <div class="admonition caution">
           <div class="title">Constraints</div>
           <div class="content">
             Static <code>import</code> statements (e.g.
@@ -177,7 +177,7 @@ export &#123; onMessage &#125;;   // required in ESM mode</code></pre>
             Static imports would require a custom module resolver (future work).
           </div>
         </div>
-        <div class="admonition info" style="max-width: 100%;">
+        <div class="admonition info">
           <div class="title">Flat-script mode (default, <code>supportESM = false</code>)</div>
           <div class="content">
             When ESM support is disabled the runtime automatically:
@@ -199,7 +199,7 @@ export &#123; onMessage &#125;;   // required in ESM mode</code></pre>
           is executed. Functions and variables defined in a Shared Code template are available as globals
           in all Smart Functions without any import statement.
         </div>
-        <div class="admonition info" style="max-width: 100%;">
+        <div class="admonition info">
           <div class="title">Info — How Shared Code is loaded</div>
           <div class="content">
             <ol class="m-t-4 m-b-0">
@@ -247,7 +247,7 @@ function celsiusToFahrenheit(celsius) &#123;
           <strong>Any Payload</strong> types.
         </div>
         <div class="table-responsive table-width-100">
-          <table class="table table-striped" style="table-layout: fixed;">
+          <table class="table table-striped table-layout-fixed">
             <thead class="thead-light">
               <tr>
                 <th style="width: 30%;">Function</th>
@@ -303,7 +303,7 @@ function celsiusToFahrenheit(celsius) &#123;
           substitution-based mappings. Instead of using metadata nodes like <code>_IDENTITY_</code> or
           <code>_CONTEXT_DATA_</code> in templates, you define metadata directly in the JavaScript return object.
         </div>
-        <div class="admonition info" style="max-width: 100%;">
+        <div class="admonition info">
           <div class="title">Info</div>
           <div class="content">
             <strong>Key Difference:</strong> In Smart Functions, you don't manipulate <code>_IDENTITY_</code> or
@@ -317,7 +317,7 @@ function celsiusToFahrenheit(celsius) &#123;
           properties:
         </div>
         <div class="table-responsive table-width-100">
-          <table class="table table-striped" style="table-layout: fixed;">
+          <table class="table table-striped table-layout-fixed">
             <thead class="thead-light">
               <tr>
                 <th style="width: 25%;">Property</th>
@@ -383,7 +383,7 @@ function celsiusToFahrenheit(celsius) &#123;
                 </td>
               </tr>
               <tr class="table-info">
-                <td colspan="3" style="text-align: center; font-weight: bold; background-color: #e7f3ff;">
+                <td colspan="3" class="td-section-header">
                   Context Methods for Accessing Incoming Metadata
                 </td>
               </tr>
@@ -409,7 +409,7 @@ function celsiusToFahrenheit(celsius) &#123;
                 </td>
               </tr>
               <tr class="table-info">
-                <td colspan="3" style="text-align: center; font-weight: bold; background-color: #e7f3ff;">
+                <td colspan="3" class="td-section-header">
                   Context Config Properties — available via <code>context.getConfig()</code>
                 </td>
               </tr>
@@ -469,7 +469,7 @@ function celsiusToFahrenheit(celsius) &#123;
             </tbody>
           </table>
         </div>
-        <div class="admonition info" style="max-width: 100%;">
+        <div class="admonition info">
           <div class="title">Info - Context Methods for Accessing Metadata</div>
           <div class="content">
             <strong>Available Context Methods:</strong>
@@ -491,7 +491,7 @@ function celsiusToFahrenheit(celsius) &#123;
             </p>
           </div>
         </div>
-        <div class="admonition caution" style="max-width: 100%;">
+        <div class="admonition caution">
           <div class="title">Caution</div>
           <div class="content">
             When using <code>contextData.deviceName</code>, <code>contextData.deviceType</code>,
@@ -660,7 +660,7 @@ function celsiusToFahrenheit(celsius) &#123;
           properties:
         </div>
         <div class="table-responsive table-width-100">
-          <table class="table table-striped" style="table-layout: fixed;">
+          <table class="table table-striped table-layout-fixed">
             <thead class="thead-light">
               <tr>
                 <th style="width: 25%;">Property</th>
@@ -790,7 +790,7 @@ function celsiusToFahrenheit(celsius) &#123;
                 </td>
               </tr>
               <tr class="table-info">
-                <td colspan="3" style="text-align: center; font-weight: bold; background-color: #e7f3ff;">
+                <td colspan="3" class="td-section-header">
                   Context Properties — available via <code>context.getConfig()</code>
                 </td>
               </tr>
@@ -833,7 +833,7 @@ function celsiusToFahrenheit(celsius) &#123;
                   (or <code>sparkPlugB_DBIRTH</code>) fragment stored on the device managed object during inbound BIRTH
                   processing. Use it to include numeric aliases in outbound NCMD / DCMD metrics so that the edge node
                   can match them without a full name lookup:
-                  <pre class="m-t-8 p-8" style="background:#f5f5f5;border-radius:4px;font-size:0.85em;">const aliasMap = context.getConfig().aliasMap || &#123;&#125;;
+                  <pre class="m-t-8 p-8 pre-light">const aliasMap = context.getConfig().aliasMap || &#123;&#125;;
 function metric(name, type, value) &#123;
   const m = &#123; name, type, value &#125;;
   if (aliasMap[name] !== undefined)
@@ -850,7 +850,7 @@ function metric(name, type, value) &#123;
                   Set to <code>true</code> when a NBIRTH / DBIRTH / NDATA / DDATA message was last received, and
                   <code>false</code> after a NDEATH / DDEATH message. Defaults to <code>true</code> when no status
                   fragment is present yet. Use it to suppress outbound commands to devices that have gone offline:
-                  <pre class="m-t-8 p-8" style="background:#f5f5f5;border-radius:4px;font-size:0.85em;">if (!context.getConfig().isActive) &#123;
+                  <pre class="m-t-8 p-8 pre-light">if (!context.getConfig().isActive) &#123;
   return null; // device offline — suppress command
 &#125;</pre>
                 </td>
@@ -858,7 +858,7 @@ function metric(name, type, value) &#123;
             </tbody>
           </table>
         </div>
-        <div class="admonition important" style="max-width: 100%;">
+        <div class="admonition important">
           <div class="title">Important: Webhook with Cumulocity Internal</div>
           <div class="content">
             <strong>Using Webhook connectors with Cumulocity Internal enabled:</strong><br />
@@ -890,7 +890,7 @@ function metric(name, type, value) &#123;
             The mapper will automatically fetch the device, merge your changes, and send a PUT request.
           </div>
         </div>
-        <div class="admonition info" style="max-width: 100%;">
+        <div class="admonition info">
           <div class="title">Info</div>
           <div class="content">
             <strong>Dynamic Topic Resolution:</strong> Use <code>context.getConfig().externalId</code> to include the
@@ -1007,7 +1007,7 @@ function metric(name, type, value) &#123;
             the object while preserving existing fields.
           </p>
         </div>
-        <div class="admonition info" style="max-width: 100%;">
+        <div class="admonition info">
           <div class="title">Info</div>
           <div class="content">
             <strong>Return Type Flexibility:</strong> For outbound Smart Functions, you can return either a single
@@ -1083,7 +1083,7 @@ function metric(name, type, value) &#123;
   &#125;];
 &#125;</code></pre>
         </div>
-        <div class="admonition caution" style="max-width: 100%;">
+        <div class="admonition caution">
           <div class="title">Caution</div>
           <div class="content">
             <strong>Best Practice:</strong> Always validate metadata values before using them. Check if
@@ -1099,7 +1099,7 @@ function metric(name, type, value) &#123;
           the tenant's own credentials, so no additional authentication setup is required. Device identity resolution
           and broker publishing are both skipped for custom-routed objects.
         </div>
-        <div class="admonition important" style="max-width: 100%;">
+        <div class="admonition important">
           <div class="title">Important — Security restriction</div>
           <div class="content">
             The <code>targetPath</code> must start with <code>/service/</code>. The mapper enforces this at runtime

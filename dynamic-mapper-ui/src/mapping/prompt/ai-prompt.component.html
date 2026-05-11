@@ -22,17 +22,37 @@
 <div class="card-header separator" style="justify-content: center">
   <h4 class="card-title d-flex">
     <i class="btn btn-ai btn-sm btn-ai-hint ai-icon m-r-8" style="margin-top:4px;"><span></span></i>
-    <span class="m-t-8">Generate substitutions with agent:</span>
+    <span class="m-t-8">{{ drawerTitle }} with agent:</span>
     <span class="label label-success m-l-8 m-t-8 m-b-8 text-16">{{aiAgent.name}}</span>
   </h4>
 </div>
 
 <div class="card-inner-scroll fit-h">
-  @if (aiAgent) {
+  @if (awaitingModeChoice) {
+  <!-- UPDATE mode: let the user choose the intent before sending anything to the AI -->
+  <div class="d-flex d-col j-c-center a-i-center fit-h p-24">
+    <p class="text-medium m-b-24" translate>What would you like to do with the existing {{ isCodeMapping ? 'Smart Function' : 'substitutions' }}?</p>
+    <div class="btn-group d-col" style="gap: 12px; min-width: 280px">
+      <button type="button" class="btn btn-ai btn-lg" (click)="chooseReview()">
+        <i c8yIcon="search"></i>&nbsp;
+        <span translate>Review / Refine existing {{ isCodeMapping ? 'Smart Function' : 'substitutions' }}</span>
+      </button>
+      <button type="button" class="btn btn-default btn-lg" (click)="chooseGenerate()">
+        <i c8yIcon="plus-circle-o"></i>&nbsp;
+        <span translate>Generate new {{ isCodeMapping ? 'Smart Function' : 'substitutions' }} from scratch</span>
+      </button>
+    </div>
+  </div>
+  } @else if (aiAgent) {
   <c8y-ai-chat [isLoading]="isLoadingChat" [disabled]="false" [prompt]="chatInput"
     (onMessage)="handleMessage($event)" [config]="chatConfig">
     @for (message of getCompatibleMessages(); track $index) {
-    <c8y-ai-chat-message [message]="formatMessage(message)">
+    <c8y-ai-chat-message [role]="$any(message.role)" [message]="formatMessage(message)">
+      @if (message.role === 'assistant') {
+      <div [innerHTML]="getMessageContent(message) | markdownToHtml | async"></div>
+      } @else {
+      <div class="text-pre-wrap">{{ getMessageContent(message) }}</div>
+      }
     </c8y-ai-chat-message>
     }
   </c8y-ai-chat>

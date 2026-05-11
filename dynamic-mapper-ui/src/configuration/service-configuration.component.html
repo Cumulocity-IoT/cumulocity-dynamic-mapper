@@ -45,8 +45,8 @@
 }
 
 
-<div class="card card--fullpage">
-  <div class="inner-scroll">
+<div class="card content-fullpage d-col flex-grow">
+  <div class="inner-scroll flex-grow">
     <div class="card-block">
       <c8y-list-group class="p-l-48 p-r-48">
         <form [formGroup]="serviceForm">
@@ -60,7 +60,7 @@
                   <small translate>Log payload in microservice log file.</small>
                 </p>
               </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
                 <label class="c8y-switch c8y-switch--inline" title="{{ 'Log payload' | translate }}">
                   <input name="logPayload" type="checkbox" formControlName="logPayload" />
                   <span></span>
@@ -78,7 +78,7 @@
                     mapping.</small>
                 </p>
               </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
                 <label class="c8y-switch c8y-switch--inline" title="{{ 'Log substitution' | translate }}">
                   <input name="logSubstitution" type="checkbox" formControlName="logSubstitution" />
                   <span></span>
@@ -95,7 +95,7 @@
                   <small translate>Log errors when connecting in microservice log file.</small>
                 </p>
               </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
                 <label class="c8y-switch c8y-switch--inline" title="{{ 'Log connector errors' | translate }}">
                   <input name="logConnectorErrorInBackend" type="checkbox" formControlName="logConnectorErrorInBackend" />
                   <span></span>
@@ -113,7 +113,7 @@
                     this can cause additional costs </small><i c8yIcon="euro"></i>
                 </p>
               </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
                 <label class="c8y-switch c8y-switch--inline" title="{{ 'Send connector lifecycle' | translate }}">
                   <input name="sendMappingStatus" type="checkbox" formControlName="sendConnectorLifecycle" />
                   <span></span>
@@ -132,7 +132,7 @@
                     aware this can cause additional costs </small><i c8yIcon="euro"></i>
                 </p>
               </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
                 <label class="c8y-switch c8y-switch--inline" title="{{ 'Send mapping status' | translate }}">
                   <input name="sendMappingStatus" type="checkbox" formControlName="sendMappingStatus" />
                   <span></span>
@@ -151,7 +151,7 @@
                     aware this can cause additional costs </small><i c8yIcon="euro"></i>
                 </p>
               </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
                 <label class="c8y-switch c8y-switch--inline" title="{{ 'Send events on topic subscriptions' | translate }}">
                   <input name="sendSubscriptionEvents" type="checkbox" formControlName="sendSubscriptionEvents" />
                   <span></span>
@@ -170,7 +170,7 @@
                     Be aware this can cause additional costs </small><i c8yIcon="euro"></i>
                 </p>
               </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
                 <label class="c8y-switch c8y-switch--inline" title="{{ 'Send notification lifecycle' | translate }}">
                   <input name="sendNotificationLifecycle" type="checkbox" formControlName="sendNotificationLifecycle" />
                   <span></span>
@@ -190,7 +190,7 @@
                     defined in the AI Agent Manager.</small>
                 </p>
               </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
                 <label title="{{ ' Name of jsonata agent' | translate }}">
                   <div class="c8y-select-wrapper p-r-4">
                     <select class="form-control" formControlName="jsonataAgent" name="jsonataAgent">
@@ -229,7 +229,7 @@
                     defined in the AI Agent Manager.</small>
                 </p>
               </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
                 <label title="{{ ' Name of smartFunction agent' | translate }}">
                   <div class="c8y-select-wrapper">
                     <select class="form-control" formControlName="smartFunctionAgent" name="smartFunctionAgent">
@@ -265,7 +265,7 @@
                     the Dynamic Mapper microservice to this tenant.</small>
                 </p>
               </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
                 <label class="c8y-switch c8y-switch--inline" title="{{ 'Outbound mappings' | translate }}">
                   <input name="outboundMappingEnabled" type="checkbox" formControlName="outboundMappingEnabled" />
                   <span></span>
@@ -285,7 +285,7 @@
                     Dynamic Mapper microservice to this tenant.</small>
                 </p>
               </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
                 <label class="c8y-switch c8y-switch--inline" title="{{ 'Device Isolation Cumulocity MQTT Service' | translate }}">
                   <input name="deviceIsolationMQTTServiceEnabled" type="checkbox"
                     formControlName="deviceIsolationMQTTServiceEnabled" />
@@ -304,7 +304,7 @@
                   <small translate>Suppress deprecation warnings for outdated mapping types and configurations.</small>
                 </p>
               </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
                 <label class="c8y-switch c8y-switch--inline" title="{{ 'Suppress deprecation warnings' | translate }}">
                   <input name="suppressDeprecationWarning" type="checkbox" formControlName="suppressDeprecationWarning" />
                   <span></span>
@@ -323,9 +323,9 @@
                     starving the CPU</small>
                 </p>
               </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
                 <label class="editable" title="{{ ' maxCPU time in milliseconds ' | translate }}">
-                  <input class="form-control" name="maxCPUTimeMS" type="number" style="min-width:350px" formControlName="maxCPUTimeMS" />
+                  <input class="form-control" name="maxCPUTimeMS" type="number" formControlName="maxCPUTimeMS" />
                   <span></span>
                 </label>
               </div>
@@ -343,7 +343,7 @@
                     (default), code runs in flat-script mode.</small>
                 </p>
               </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
                 <label class="c8y-switch c8y-switch--inline" title="{{ 'Support ESM modules' | translate }}">
                   <input name="supportESM" type="checkbox" formControlName="supportESM" />
                   <span></span>
@@ -363,9 +363,9 @@
                     to clear the cache to take effect</small>
                 </p>
               </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
                 <label class="editable" title="{{ 'Size inbound Id cache' | translate }}">
-                  <input class="form-control" name="inboundExternalIdCacheSize" type="number" style="min-width:350px"
+                  <input class="form-control" name="inboundExternalIdCacheSize" type="number"
                     formControlName="inboundExternalIdCacheSize" />
                   <span></span>
                 </label>
@@ -384,9 +384,9 @@
                     external id to different device</small>
                 </p>
               </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
                 <label class="editable" title="{{ 'Days lifetime ' | translate }}">
-                  <input class="form-control" name="inboundExternalIdCacheRetention" type="number" style="min-width:350px"
+                  <input class="form-control" name="inboundExternalIdCacheRetention" type="number"
                     formControlName="inboundExternalIdCacheRetention" />
                   <span></span>
                 </label>
@@ -404,9 +404,9 @@
                     to clear the cache to take effect</small>
                 </p>
               </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
                 <label class="editable" title="{{ 'Size inventory cache' | translate }}">
-                  <input class="form-control" name="inventoryCacheSize" type="number" style="min-width:350px"
+                  <input class="form-control" name="inventoryCacheSize" type="number"
                     formControlName="inventoryCacheSize" />
                   <span></span>
                 </label>
@@ -425,9 +425,9 @@
                     external id to different device</small>
                 </p>
               </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
                 <label class="editable" title="{{ 'Days lifetime' | translate }}">
-                  <input class="form-control" name="inventoryCacheRetention" type="number" style="min-width:350px"
+                  <input class="form-control" name="inventoryCacheRetention" type="number"
                     formControlName="inventoryCacheRetention" />
                   <span></span>
                 </label>
@@ -445,9 +445,9 @@
                     Extensions is cleared. Set to 0 to disable TTL.</small>
                 </p>
               </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
                 <label class="editable" title="{{ 'Minutes lifetime flow state' | translate }}" >
-                  <input class="form-control" name="flowStateRetention" type="number" style="min-width:350px"
+                  <input class="form-control" name="flowStateRetention" type="number"
                     formControlName="flowStateRetention" />
                   <span></span>
                 </label>
@@ -458,7 +458,7 @@
           <c8y-li>
             <c8y-li-icon icon="list"></c8y-li-icon>
             <div class="d-flex a-i-start">
-              <div style="flex:1; min-width:0">
+              <div class="config-label-grow">
                 <p>{{ 'Fragments from inventory to cache' | translate }}</p>
                 <p>
                   <small translate>The listed fragments will be cached and can be referenced in
@@ -469,12 +469,12 @@
                     <code>sparkPlugB_DBIRTH_</code>.</small>
                 </p>
               </div>
-              <div style="flex:0 0 350px">
+              <div class="config-control-fragments">
                 <ul class="list-unstyled m-b-0" c8yInputGroupListContainer>
                   @for (item of inventoryFragmentsList; track trackByFragmentFn(i, item); let i = $index) {
                     <li class="m-b-8">
                       <c8y-input-group-list [index]="i" (onAdd)="addFragment()" (onRemove)="removeFragment($event)" [minus]="inventoryFragmentsList.length > 0">
-                        <div style="width:100%">
+                        <div>
                           <input class="form-control" placeholder="e.g. type, c8y_Hardware, sparkPlugB_DBIRTH_*" type="text"
                             [(ngModel)]="inventoryFragmentsList[i]" [ngModelOptions]="{standalone: true}" />
                         </div>
@@ -498,7 +498,7 @@
                     above.</small>
                 </p>
               </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto" style="width:350px">
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
                 <label class="c8y-switch c8y-switch--inline" title="{{ 'Cache alias maps for SparkPlug B mappings' | translate }}">
                   <input type="checkbox" name="cacheAliasMaps" formControlName="cacheAliasMaps" />
                   <span></span>
@@ -511,8 +511,8 @@
       </c8y-list-group>
     </div>
   </div>
-  <div class="card-footer">
-    <div class="form-group">
+  <div class="card-footer separator">
+    <div class="d-flex j-c-center">
       <button type="button" name="update" class="btn btn-primary" (click)="clickedSaveServiceConfiguration()" translate
         [disabled]="!feature?.userHasMappingAdminRole">
         Save

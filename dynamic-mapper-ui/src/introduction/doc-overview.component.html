@@ -23,7 +23,7 @@
     <a id="top"></a>
     <div class="text-right m-b-16">
       <a (click)="scrollToElement('top')" class="to-the-top" role="button" aria-label="Scroll to top"
-        style="cursor: pointer;">
+>
         <i class="dlt-c8y-icon-chevron-up m-r-4"></i> Top
       </a>
     </div>
@@ -58,7 +58,7 @@
             language for JSON data.
           </li>
         </ul>
-        <div class="admonition info" style="max-width: 100%;">
+        <div class="admonition info">
           <div class="title">Info</div>
           <div class="content">
             <strong>What is Dynamic Mapper?</strong> It acts as a bridge between your devices/systems and Cumulocity
@@ -94,7 +94,7 @@
         </ul>
         <div class="p-b-8 text-16">
           The Dynamic Mapper is <b>AI empowered</b>.</div>
-        <div class="admonition info" style="max-width: 100%;">
+        <div class="admonition info">
           <div class="title">Info</div>
           <div class="content">
             <strong>AI-Powered Development:</strong> The Dynamic Mapper can leverage AI to automatically generate
@@ -178,7 +178,7 @@
         </ul>
         <div class="p-b-8 text-16">
           Use the <a [routerLink]="ROUTE_ADD_CONNECTOR"> wizard</a> and <b> Add Connector</b> to create your connector.
-          Refer to the <a (click)="scrollToElement('managing-connectors')" style="cursor: pointer;">Managing
+          Refer to the <a (click)="scrollToElement('managing-connectors')">Managing
             Connectors</a>
           section for detailed guidance.
         </div>
@@ -187,7 +187,7 @@
           After establishing connectivity, define a mapping to transform your data. When creating a mapping, you need to
           make two key decisions:
         </div>
-        <div class="admonition info" style="max-width: 100%;">
+        <div class="admonition info">
           <div class="title">Info — Expert Mode</div>
           <div class="content">
             By default the mapping creation dialog shows only the <strong>JSON</strong> payload type with the standard
@@ -224,14 +224,14 @@
             Allows access to device context and inventory data for enrichment.
           </li>
         </ul>
-        <div class="admonition important" style="max-width: 100%;">
+        <div class="admonition important">
           <div class="title">Important — Release 6.3</div>
           <div class="content">
             <strong>Substitution as JavaScript (SUBSTITUTION_AS_CODE) has been removed in release 6.3.</strong>
             Existing mappings of this type are no longer executed. They can only be <strong>exported</strong> and
             <strong>deleted</strong>. No other operations (edit, activate, test) are available for these mappings.
             Migrate to <strong>Smart Function (JavaScript)</strong> — see the migration guide in the
-            <a (click)="scrollToElement('javascript-substitution')" style="cursor: pointer;">Removed: Substitution as
+            <a (click)="scrollToElement('javascript-substitution')">Removed: Substitution as
               JavaScript</a> section.
           </div>
         </div>
@@ -250,14 +250,14 @@
           </a> ).
           The intuitive stepper wizard will guide you through the mapping configuration process.
         </div>
-        <div class="admonition info" style="max-width: 100%;">
+        <div class="admonition info">
           <div class="title">Info</div>
           <div class="content">
             If you're unsure about your device's payload structure, enable <b>Snooping Mode</b>
             when
             creating a mapping.
             This captures incoming messages that you can analyze and use as templates.
-            See <a (click)="scrollToElement('unknown-payload')" style="cursor: pointer;">Getting started without knowing
+            See <a (click)="scrollToElement('unknown-payload')">Getting started without knowing
               your source payload</a> for details.
           </div>
         </div>
@@ -267,14 +267,14 @@
         <ul class="text-16">
           <li>
             Not sure what payload your devices send? Use the
-            <a (click)="scrollToElement('message-explorer')" style="cursor: pointer;">Message Explorer</a>
+            <a (click)="scrollToElement('message-explorer')">Message Explorer</a>
             to capture live messages from a connector topic and instantly build a mapping from real traffic.
           </li>
-          <li>Review <a (click)="scrollToElement('define-mapping')" style="cursor: pointer;">Defining a Mapping</a> for
+          <li>Review <a (click)="scrollToElement('define-mapping')">Defining a Mapping</a> for
             step-by-step instructions</li>
-          <li>Explore <a (click)="scrollToElement('jsonata-substitution')" style="cursor: pointer;">JSONata
+          <li>Explore <a (click)="scrollToElement('jsonata-substitution')">JSONata
               Substitutions</a> for expression-based transformations</li>
-          <li>Learn about <a (click)="scrollToElement('javascript-smart-function')" style="cursor: pointer;">Smart
+          <li>Learn about <a (click)="scrollToElement('javascript-smart-function')">Smart
               Functions</a> for advanced scenarios</li>
         </ul>
       </div>
@@ -384,7 +384,7 @@
             </tbody>
           </table>
         </div>
-        <div class="admonition caution" style="max-width: 100%;">
+        <div class="admonition caution">
           <div class="title">Caution</div>
           <div class="content">
             Some connectors like HTTP Connector and Cumulocity MQTT Service have only one
@@ -433,7 +433,7 @@
             </li>
           </ol>
         </div>
-        <div class="admonition important" style="max-width: 100%;">
+        <div class="admonition important">
           <div class="title">Important</div>
           <div class="content">
             If any of the templates: source or target is a JSON array - instead of a JSON object -
@@ -483,7 +483,7 @@
           The message body is a hex-encoded string (e.g. <code>68656C6C6F</code>). The mapper passes
           the raw hex string to your transformation. In a Smart Function receive it via
           <code>msg.getPayload()</code> and decode it using the built-in <code>atob()</code> /
-          <code>btoa()</code> helpers (see <a (click)="scrollToElement('binary-helpers')" style="cursor: pointer;">Binary helpers in Smart Functions</a>).
+          <code>btoa()</code> helpers (see <a (click)="scrollToElement('binary-helpers')">Binary helpers in Smart Functions</a>).
         </div>
         <h5 class="p-t-8 p-b-4"><strong>Protobuf <small class="text-muted">(Expert Mode)</small></strong></h5>
         <div class="p-b-8 text-16">
@@ -507,10 +507,10 @@
           the mapper using the <a href="https://github.com/eclipse-tahu/tahu" target="_blank">Eclipse Tahu</a> library —
           no manual Base64 decoding required. For <strong>outbound</strong> (NCMD / DCMD) mappings, the metric object
           returned by your Smart Function is automatically serialized to protobuf binary before publishing.
-          See the <a (click)="scrollToElement('sparkplugb')" style="cursor: pointer;">SparkPlug B</a> section for
+          See the <a (click)="scrollToElement('sparkplugb')">SparkPlug B</a> section for
           the full protocol details, message types, and Smart Function API.
         </div>
-        <div class="admonition important" style="max-width: 100%;">
+        <div class="admonition important">
           <div class="title">Important</div>
           <div class="content">
             <strong>Payload type and transformation type cannot be changed after mapping creation.</strong>
@@ -555,7 +555,7 @@
         <p class="image-description m-l-48"><b>Description:</b> Screenshot of second wizard step to define general
           properties.</p>
         <br />
-        <div class="admonition info" style="max-width: 100%;">
+        <div class="admonition info">
           <div class="title">Info</div>
           <div class="content">
             <strong>Best Practice:</strong> Always test your mapping with sample payloads before activating it. Use the
@@ -591,7 +591,7 @@
           Sparkplug B defines a strict topic namespace, payload encoding (protobuf), and a birth/data/death
           message lifecycle that the mapper understands and handles automatically.
         </div>
-        <div class="admonition info" style="max-width: 100%;">
+        <div class="admonition info">
           <div class="title">Inbound &amp; Outbound</div>
           <div class="content">
             The <strong>SparkPlug B</strong> payload type is supported for both <strong>inbound</strong> and
@@ -736,7 +736,7 @@
         <div class="p-b-8 text-16">
           The object passed to your Smart Function via <code>msg.getPayload()</code> has the following shape:
         </div>
-        <pre class="text-14" style="background:#f8f9fa; padding: 16px; border-radius: 4px; overflow-x: auto;">&#123;
+        <pre class="text-14 pre-light">&#123;
   "messageType": "NDATA",        // NBIRTH | NDATA | DBIRTH | DDATA | NDEATH | DDEATH | NCMD | DCMD
   "groupId":     "factory-01",   // Sparkplug Group ID
   "edgeNodeId":  "plc-01",       // Edge Node ID (always present)
@@ -786,7 +786,7 @@
         </ol>
 
         <h4 class="p-t-16 p-b-8">Birth Message Handling</h4>
-        <div class="admonition info" style="max-width: 100%;">
+        <div class="admonition info">
           <div class="title">How birth fragments are stored</div>
           <div class="content">
             For <strong>NBIRTH</strong> and <strong>DBIRTH</strong> messages the mapper stores the
@@ -815,7 +815,7 @@
             alias lookups to fail.
           </div>
         </div>
-        <div class="admonition important" style="max-width: 100%;">
+        <div class="admonition important">
           <div class="title">Important — first boot</div>
           <div class="content">
             On the <strong>first ever boot</strong> of an Edge Node or Device (i.e. before a
@@ -843,7 +843,7 @@
           The following example handles all Sparkplug B message types and maps NDATA temperature metrics
           to Cumulocity measurements:
         </div>
-        <pre class="text-14" style="background:#f8f9fa; padding: 16px; border-radius: 4px; overflow-x: auto;">function onMessage(msg, context) &#123;
+        <pre class="text-14 pre-light">function onMessage(msg, context) &#123;
   var payload  = msg.getPayload();
   var msgType  = payload.messageType;  // e.g. "NBIRTH", "NDATA", "DBIRTH", "DDATA"
   var groupId  = payload.groupId;
@@ -910,7 +910,7 @@
           (<code>true</code> after NBIRTH / NDATA, <code>false</code> after NDEATH). Use it to suppress commands
           to offline devices. Defaults to <code>true</code> when no status has been recorded yet.
         </div>
-        <pre class="text-14" style="background:#f8f9fa; padding: 16px; border-radius: 4px; overflow-x: auto;">function onMessage(msg, context) &#123;
+        <pre class="text-14 pre-light">function onMessage(msg, context) &#123;
   // context.getConfig().externalId is "GroupID_EdgeNodeID" when useExternalId is enabled.
   const externalId = context.getConfig().externalId;
   const parts      = externalId ? externalId.split('_') : [];
@@ -945,7 +945,7 @@
     &#125;
   &#125;;
 &#125;</pre>
-        <div class="admonition info" style="max-width: 100%;">
+        <div class="admonition info">
           <div class="title">Supported metric types</div>
           <div class="content">
             The <code>type</code> field in each metric entry is case-insensitive and supports:
@@ -970,7 +970,7 @@
           This only happens when you created a subscription for the device. The details on how to create subscriptions
           is explained later in this section.<br />
         </div>
-        <div class="admonition important" style="max-width: 100%;">
+        <div class="admonition important">
           <div class="title">Important</div>
           <div class="content">
             Outbound mappings require active subscriptions. Without a subscription, the
@@ -1016,7 +1016,7 @@
             of the configured types is registered, a subscription is automatically created for it.
           </li>
         </ul>
-        <div class="admonition info" style="max-width: 100%;">
+        <div class="admonition info">
           <div class="title">Info</div>
           <div class="content">
             Use <b>dynamic subscriptions</b> with device types when you have many devices of the
@@ -1067,7 +1067,7 @@ severity = "CRITICAL"
 
 // Only forward events of a specific type
 type = "c8y_Uplink"</code></pre>
-        <div class="admonition info" style="max-width: 100%;">
+        <div class="admonition info">
           <div class="title">Info</div>
           <div class="content">
             Both filters use JSONata expression syntax. The
@@ -1092,7 +1092,7 @@ type = "c8y_Uplink"</code></pre>
           approach
           that best fits your use case:
         </div>
-        <div class="admonition info" style="max-width: 100%;">
+        <div class="admonition info">
           <div class="title">Info</div>
           <div class="content">
             <strong>Choosing a Transformation Type:</strong> Select JSONata for simple mappings, Smart Functions when
@@ -1103,7 +1103,7 @@ type = "c8y_Uplink"</code></pre>
         </div>
         <div class="p-t-8 p-b-4 text-16"><strong>Quick-reference decision guide:</strong></div>
         <div class="table-responsive table-width-100 m-b-16">
-          <table class="table table-striped" style="table-layout: fixed;">
+          <table class="table table-striped table-layout-fixed">
             <thead class="thead-light">
               <tr>
                 <th style="width: 30%;">If you need…</th>
@@ -1180,7 +1180,7 @@ type = "c8y_Uplink"</code></pre>
         <h4 class="p-t-16 p-b-8" id="javascript-substitution">{{ 'Removed: Substitution as JavaScript (release 6.3)' | translate
           }}
         </h4>
-        <div class="admonition important" style="max-width: 100%;">
+        <div class="admonition important">
           <div class="title">Removed in release 6.3</div>
           <div class="content">
             <strong>TransformationType.SUBSTITUTION_AS_CODE has been removed.</strong>
@@ -1242,7 +1242,7 @@ type = "c8y_Uplink"</code></pre>
           State is scoped per <b>tenant</b> and <b>mapping</b>. All devices processed by the same mapping share the
           same state bucket. To separate state per device, prefix your keys with the client ID (see examples below).
         </div>
-        <div class="admonition info" style="max-width: 100%;">
+        <div class="admonition info">
           <div class="title">Info — Lifetime &amp; TTL</div>
           <div class="content">
             <p>State is held <b>in-memory</b> and does not survive a microservice restart.</p>
@@ -1320,7 +1320,7 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
 
         <div class="p-b-4 p-t-16 text-16"><strong>Available state methods in Java Extensions:</strong></div>
         <div class="table-responsive table-width-100">
-          <table class="table table-striped" style="table-layout: fixed;">
+          <table class="table table-striped table-layout-fixed">
             <thead class="thead-light">
               <tr>
                 <th style="width: 35%;">Method</th>
@@ -1357,7 +1357,7 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
           templates serve as starting points for building your mappings and can be customized according to your
           requirements.
         </div>
-        <div class="admonition info" style="max-width: 100%;">
+        <div class="admonition info">
           <div class="title">Info</div>
           <div class="content">
             <strong>Using Code Templates:</strong> Code templates are available in the mapping editor when creating or
@@ -1370,7 +1370,7 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
           modifying a template after a mapping has been created does <em>not</em> affect existing mappings.
         </div>
         <div class="table-responsive table-width-100 m-b-8">
-          <table class="table table-striped" style="table-layout: fixed;">
+          <table class="table table-striped table-layout-fixed">
             <thead class="thead-light">
               <tr>
                 <th style="width: 30%;">Template Type</th>
@@ -1408,7 +1408,7 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
           </table>
         </div>
         <div class="table-responsive table-width-100">
-          <table class="table table-striped" style="table-layout: fixed;">
+          <table class="table table-striped table-layout-fixed">
             <thead class="thead-light">
               <tr>
                 <th style="width: 20%;">Transformation Type</th>
@@ -1423,7 +1423,7 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
                 <td>{{ getTransformationTypeName(template.templateType) }}</td>
                 <td>{{ template.direction }}</td>
                 <td>{{ template.description }}</td>
-                <td><a (click)="openCodeExplorer(template)" style="cursor: pointer;">View</a></td>
+                <td><a (click)="openCodeExplorer(template)">View</a></td>
               </tr>
               }
             </tbody>
@@ -1460,7 +1460,7 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
             <li>Mapping external device IDs (<code>_IDENTITY_.externalId</code>)</li>
           </ul>
         </div>
-        <div class="admonition caution" style="max-width: 100%;">
+        <div class="admonition caution">
           <div class="title">Caution</div>
           <div class="content">
             All metadata nodes including sub-nodes are not meant to be changed directly. All
@@ -1490,7 +1490,7 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
         </div>
         <br />
         <div class="table-responsive table-width-100">
-          <table class="table table-striped" style="table-layout: fixed;">
+          <table class="table table-striped table-layout-fixed">
             <thead class="thead-light">
               <tr>
                 <th style="width: 15%;">Defined in template</th>
@@ -1570,7 +1570,7 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
           mappings.
         </p>
         <br />
-        <div class="admonition info" style="max-width: 100%;">
+        <div class="admonition info">
           <div class="title">Info - MQTT 5 User Properties</div>
           <div class="content">
             <strong>Publisher Client ID with MQTT 5:</strong>
@@ -1606,7 +1606,7 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
           <br />
         </div>
         <div class="table-responsive table-width-100">
-          <table class="table table-striped" style="table-layout: fixed;">
+          <table class="table table-striped table-layout-fixed">
             <thead class="thead-light">
               <tr>
                 <th style="width: 15%;">Defined in template</th>
@@ -1668,7 +1668,7 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
               </tr>
             </tbody>
           </table>
-          <div class="admonition info" style="max-width: 100%;">
+          <div class="admonition info">
             <div class="title">Info</div>
             <div class="content">
               <strong>Outbound Metadata Tips:</strong>
@@ -1702,7 +1702,7 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
           To enable snooping for a mapping, select <b>Enable snooping</b> when choosing a mapping type.
           Start by clicking <b>Add mapping</b> (Mapping → Inbound Mapping → Action Add mapping).
         </div>
-        <div class="admonition info" style="max-width: 100%;">
+        <div class="admonition info">
           <div class="title">Info</div>
           <div class="content">
             <strong>Snooping Best Practices:</strong>
@@ -1767,7 +1767,7 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
           <li><strong>AMQP 0-9-1</strong>: Supports QoS 0 and 1 (non-persistent and persistent delivery).</li>
           <li><strong>AMQP 1.0</strong>: Supports QoS 0 and 1 (non-persistent and persistent delivery via JMS delivery modes).</li>
         </ul>
-        <div class="admonition info" style="max-width: 100%;">
+        <div class="admonition info">
           <div class="title">Info</div>
           <div class="content">
             <strong>Understanding QoS Levels:</strong>
@@ -1781,7 +1781,7 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
             </ul>
           </div>
         </div>
-        <div class="admonition caution" style="max-width: 100%;">
+        <div class="admonition caution">
           <div class="title">Caution</div>
           <div class="content">
             <strong>Performance Considerations:</strong> Higher QoS levels (1-2) provide better delivery guarantees but
@@ -1947,7 +1947,7 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
             </tbody>
           </table>
         </div>
-        <div class="admonition info" style="max-width: 100%;">
+        <div class="admonition info">
           <div class="title">Info — "not relevant" in the table above</div>
           <div class="content">
             <p>
@@ -1989,7 +1989,7 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
           <li><strong>Admin role</strong>: All <strong>Create role</strong> permissions plus connector management and
             service configuration editing.</li>
         </ul>
-        <div class="admonition caution" style="max-width: 100%;">
+        <div class="admonition caution">
           <div class="title">Caution</div>
           <div class="content">
             <strong>Security Best Practice:</strong> Assign the minimum required role to users. Regular users typically
@@ -2083,7 +2083,7 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
             </tbody>
           </table>
         </div>
-        <div class="admonition info" style="max-width: 100%;">
+        <div class="admonition info">
           <div class="title">Info</div>
           <div class="content">
             To configure roles, navigate to <b>Administration → Role Management</b> in Cumulocity.
@@ -2111,7 +2111,7 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
           This view shows one row per mapping in a data grid. The columns are:
         </div>
         <div class="table-responsive table-width-100">
-          <table class="table table-striped" style="table-layout: fixed;">
+          <table class="table table-striped table-layout-fixed">
             <thead class="thead-light">
               <tr>
                 <th style="width: 25%;">Column</th>
@@ -2150,7 +2150,7 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
             </tbody>
           </table>
         </div>
-        <div class="admonition info" style="max-width: 100%;">
+        <div class="admonition info">
           <div class="title">Info</div>
           <div class="content">
             Counters accumulate since the last reset (or since microservice startup). Use the
@@ -2173,7 +2173,7 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
           The Cache statistic view shows two cache panels side by side, each displaying two KPI cards:
         </div>
         <div class="table-responsive table-width-100">
-          <table class="table table-striped" style="table-layout: fixed;">
+          <table class="table table-striped table-layout-fixed">
             <thead class="thead-light">
               <tr>
                 <th style="width: 20%;">Cache panel</th>
@@ -2217,7 +2217,7 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
             <strong>Reload</strong> — refreshes the KPI cards without clearing the caches, useful to get an up-to-date snapshot of the current fill levels.
           </li>
         </ul>
-        <div class="admonition caution" style="max-width: 100%;">
+        <div class="admonition caution">
           <div class="title">Caution</div>
           <div class="content">
             Both caches are held in memory and are lost on microservice restart. After a restart they
@@ -2241,7 +2241,7 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
           narrow the event list to a specific time window or event category. This is particularly useful
           when correlating errors with known message arrival times.
         </div>
-        <div class="admonition caution" style="max-width: 100%;">
+        <div class="admonition caution">
           <div class="title">Caution</div>
           <div class="content">
             Service events are stored in an in-memory ring buffer and are lost on microservice restart.
@@ -2263,7 +2263,7 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
           understanding your device payloads, validating connector subscriptions, and rapidly building new
           mappings from real traffic.
         </div>
-        <div class="admonition info" style="max-width: 100%;">
+        <div class="admonition info">
           <div class="title">Info</div>
           <div class="content">
             The Message Explorer is available under
@@ -2286,7 +2286,7 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
           configuration drawer. Configure the following settings:
         </div>
         <div class="table-responsive table-width-100">
-          <table class="table table-striped" style="table-layout: fixed;">
+          <table class="table table-striped table-layout-fixed">
             <thead class="thead-light">
               <tr>
                 <th style="width: 25%;">Setting</th>
@@ -2345,7 +2345,7 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
           Each captured message appears as a row in the message list with the following columns:
         </div>
         <div class="table-responsive table-width-100">
-          <table class="table table-striped" style="table-layout: fixed;">
+          <table class="table table-striped table-layout-fixed">
             <thead class="thead-light">
               <tr>
                 <th style="width: 5%;">#</th>
@@ -2446,7 +2446,7 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
             skip straight to defining substitutions.
           </li>
         </ol>
-        <div class="admonition info" style="max-width: 100%;">
+        <div class="admonition info">
           <div class="title">Tip</div>
           <div class="content">
             Combine the Message Explorer with <strong>AI-powered substitution generation</strong>:
@@ -2509,7 +2509,7 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
           <strong>Debug</strong> for a mapping. Debug output appears in the <strong>Event Log</strong>
           and in the microservice logs. Disable debug mode after troubleshooting to avoid excessive log volume.
         </div>
-        <div class="admonition caution" style="max-width: 100%;">
+        <div class="admonition caution">
           <div class="title">Caution</div>
           <div class="content">
             Debug mode logs full payload content. Do not leave it enabled in production if payloads

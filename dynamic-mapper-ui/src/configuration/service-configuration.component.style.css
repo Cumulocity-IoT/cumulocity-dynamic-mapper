@@ -18,6 +18,32 @@
  * @authors Christof Strack
  */
 
-.button-bottom-margin{
-  margin-bottom: 8px;
+/* Host element must be a flex column that fills the C8Y page content area */
+:host {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* right-side control column used throughout all list items */
+.config-control-col {
+  width: 350px;
+  flex-shrink: 0;
+}
+
+/* number inputs inside the control column fill available width */
+.config-control-col input.form-control {
+  width: 100%;
+}
+
+/* fragments list: label grows, control column is fixed */
+.config-label-grow {
+  flex: 1;
+  min-width: 0;
+}
+
+.config-control-fragments {
+  flex: 0 0 350px;
 }

@@ -140,6 +140,17 @@ img {
   background-color: #f8f9fa;
 }
 
+.table-layout-fixed {
+  table-layout: fixed;
+}
+
+/* Column-width helpers for fixed-layout tables */
+.col-w-15 { width: 15%; }
+.col-w-25 { width: 25%; }
+.col-w-35 { width: 35%; }
+.col-w-60 { width: 60%; }
+.col-w-65 { width: 65%; }
+
 .thead-light th {
   background-color: #e9ecef;
   color: #495057;
@@ -346,6 +357,7 @@ pre .code-toolbar {
   background-color: #f9f9f9;
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  max-width: 100%;
 }
 
 .admonition .title {
@@ -395,6 +407,33 @@ pre .code-toolbar {
 .admonition.caution .title {
   background-color: #f9ecc5;
   color: var(--c8y-palette-status-warning, #8a6d3b);
+}
+
+/* ============================================================================ */
+/* TABLE HELPERS                                                                */
+/* ============================================================================ */
+
+/* Light-background pre block — use instead of inline style="background:#f8f9fa…" */
+pre.pre-light {
+  background: #f8f9fa !important;
+  background-color: #f8f9fa !important;
+  color: #333 !important;
+  border-radius: 4px !important;
+  overflow-x: auto;
+  font-size: 0.875em;
+}
+
+pre.pre-light code {
+  background-color: transparent !important;
+  color: #333 !important;
+  font-size: inherit !important;
+}
+
+/* Table section-header row cell (replaces style="text-align:center;font-weight:bold;background:#e7f3ff") */
+.td-section-header {
+  text-align: center;
+  font-weight: bold;
+  background-color: #e7f3ff;
 }
 
 /* Important - Red */
@@ -515,7 +554,7 @@ svg {
 }
 
 .doc-search-input-group {
-  max-width: 420px;
+  max-width: 320px;
   flex-shrink: 0;
 }
 
@@ -528,6 +567,7 @@ svg {
 .doc-search-count {
   font-size: 13px;
   min-width: 52px;
+  white-space: nowrap;
 }
 
 /* ============================================================================ */

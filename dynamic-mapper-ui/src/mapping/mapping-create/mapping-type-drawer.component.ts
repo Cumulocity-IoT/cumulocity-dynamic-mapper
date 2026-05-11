@@ -35,7 +35,7 @@ import {
 } from '../../shared';
 import { CodeEditorDrawerComponent } from '../../shared/component/code-explorer/code-editor-drawer.component';
 import { CodeTemplate, ServiceConfiguration } from '../../configuration';
-import { base64ToString, stringToBase64 } from '../shared/util';
+import { base64ToString, stringToBase64, stripTemplateMetadataTags } from '../shared/util';
 
 // Types
 interface SelectOption<T> {
@@ -188,7 +188,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
 
     if (!exportName) return template;
 
-    const decoded = base64ToString(template.code);
+    const decoded = stripTemplateMetadataTags(base64ToString(template.code));
     const exportStatement = `export { ${exportName} };`;
     // Match any spacing variant: "export {onMessage}" or "export { onMessage }"
     const exportPattern = new RegExp(`export\\s*\\{\\s*${exportName}\\s*\\}`);

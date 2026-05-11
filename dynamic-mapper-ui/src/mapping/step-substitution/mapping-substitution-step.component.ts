@@ -363,7 +363,7 @@ export class MappingSubstitutionStepComponent implements OnInit {
     testMapping.targetTemplate = JSON.stringify(this.targetTemplate);
 
     const drawer = this.bottomDrawerService.openDrawer(AIPromptComponent, {
-      initialState: { mapping: testMapping, aiAgent: this.aiAgent }
+      initialState: { mapping: testMapping, aiAgent: this.aiAgent, editorMode: this.stepperConfiguration.editorMode }
     });
 
     try {

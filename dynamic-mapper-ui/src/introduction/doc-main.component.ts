@@ -75,6 +75,10 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
       .subscribe(() => {
         this.clearSearch();
         this.highlightApplied = false;
+        // Scroll to top on every navigation so the incoming page always starts at the
+        // top of the viewport. This must be 'instant' (not 'smooth') so it completes
+        // before DocOverviewComponent.ngOnInit fires its own 200ms scroll-to-section.
+        window.scrollTo({ top: 0, behavior: 'instant' });
       });
   }
 
@@ -176,8 +180,7 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
   scrollToElement(elementId: string): void {
     const element = document.getElementById(elementId);
     if (element) {
-      const elementPosition = element.getBoundingClientRect().top + window.scrollY;
-      window.scrollTo({ top: elementPosition - 120, behavior: 'smooth' });
+      window.scrollTo({ top: element.offsetTop - 120, behavior: 'smooth' });
     }
   }
 

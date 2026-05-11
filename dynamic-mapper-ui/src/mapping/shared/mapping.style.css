@@ -39,6 +39,10 @@ c8y-data-grid button[title='Reload'] {
   font-size: smaller !important;
 }
 
+.font-monospace {
+  font-family: monospace;
+}
+
 .column-left-border {
   border-left: 1px solid;
   border-color: var(--c8y-form-legend-color);
@@ -73,6 +77,19 @@ d11r-mapping-testing {
   flex-direction: column;
   height: 100%;
   overflow: hidden;
+}
+
+/* Transformation tab: same treatment so the code editor fills available height */
+d11r-mapping-substitution-step {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.select-template {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .console-output {
