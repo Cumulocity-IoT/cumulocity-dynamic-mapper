@@ -35,6 +35,7 @@ Per default, the following connectors are supported
 - **Cumulocity MQTT Service** - Cumulocity built-in MQTT Broker
 - **Kafka** - Kafka Broker
 - **HTTP/REST** - HTTP/REST Endpoint
+- **AMQP 0.9.1 + 1.0** - any AMQP Broker
 
 Using the Cumulocity Dynamic Mapper you are able to connect to almost any message broker and map any payload on any topic dynamically to
 the Cumulocity IoT Domain Model in a graphical or, if you prefer code, in a web code editor.
@@ -46,8 +47,9 @@ Here are the **core features** summarized:
 - **Connect** to multiple message broker of your choice at the same time.
 - **Map** any data to/from the Cumulocity Domain Model in a graphical or code-based (javaScript) way.
 - **Auto-generate** mappings using AI agents that suggest and create mappings based on provided or snooped payloads.
+- **Explore** messages from different connectors by using a **Message Explorer**.
 - **Bidirectional mappings** are supported - so you can forward data to Cumulocity or subscribe on Cumulocity data and forward it to the broker
-- **Transform** data with a comprehensive expression language supported by [JSONata](https://jsonata.org/) or plain JavaScript.
+- **Transform** data with a comprehensive expression language supported by [JSONata](https://jsonata.org/), plain JavaScript or Java using Extensions.
 - **Filter** messages either via topic subscriptions or using simple expressions or JavaScript code applied on the payload.
 - **Multiple payload formats** are supported, starting with **JSON**, **Protobuf**, **Hex**.
 - **Extend** the mapper easily by using payload extensions or the provided connector interface

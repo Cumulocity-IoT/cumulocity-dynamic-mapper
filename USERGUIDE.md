@@ -75,7 +75,7 @@ The mapper supports the following connectors:
           <td class="text-center text-muted">-</td>
           <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong><br></td>
-          <td>JSON, Hex, Protobuf, Extension</td>
+          <td>JSON, Flat File, Hex, Any Payload</td>
         </tr>
         <tr class="table-light">
           <td><strong>Webhook</strong><br><small class="text-muted">(including Cumulocity Rest API)</small></td>
@@ -83,7 +83,7 @@ The mapper supports the following connectors:
           <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong><br></td>
-          <td>JSON, Hex</td>
+          <td>JSON, Flat File, Hex, Any Payload</td>
         </tr>
         <!-- <tr>
           <td><strong>Cumulocity MQTT Service ( deprecated ) </strong><small class="text-muted">(tenant
@@ -92,7 +92,7 @@ The mapper supports the following connectors:
           <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong><br></td>
-          <td>JSON, Hex, Protobuf, Extension</td>
+          <td>JSON, Flat File, Hex, SparkPlugB (partially), Any Payload</td>
         </tr> -->
         <tr>
           <td><strong>Cumulocity MQTT Service </strong><small class="text-muted">(device
@@ -101,7 +101,7 @@ The mapper supports the following connectors:
           <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong><br></td>
-          <td>JSON, Hex, Protobuf, Extension</td>
+          <td>JSON, Flat File, Hex, SparkPlugB (partially), Any Payload</td>
         </tr>
         <tr>
           <td><strong>Apache Pulsar </strong><small class="text-muted"></small></td>
@@ -109,7 +109,7 @@ The mapper supports the following connectors:
           <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong><br></td>
-          <td>JSON, Hex, Protobuf, Extension</td>
+          <td>JSON, Flat File, Hex, Any Payload</td>
         </tr>
         <tr class="table-light">
           <td><strong>Generic MQTT</strong></td>
@@ -117,7 +117,7 @@ The mapper supports the following connectors:
           <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong><br></td>
-          <td>JSON, Hex, Protobuf, Extension</td>
+          <td>JSON, Flat File, Hex, SparkPlugB, Any Payload</td>
         </tr>
         <tr>
           <td><strong>Kafka</strong></td>
@@ -125,20 +125,46 @@ The mapper supports the following connectors:
           <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong><br></td>
-          <td>JSON, Hex, Protobuf, Extension</td>
+          <td>JSON, Flat File, Hex, Any Payload</td>
         </tr>
-      </tbody>
+        <tr>
+          <td><strong>AMQP 0.9.1</strong></td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong><br></td>
+          <td>JSON, Flat File, Hex, Any Payload</td>
+        </tr>
+        <tr>
+          <td><strong>AMQP 1.0.0</strong></td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong><br></td>
+          <td>JSON, Flat File, Hex, Any Payload</td>
+        </tr>
+        <tr>
+          <td><strong>Cumulocity API</strong></td>
+          <td class="text-center text-muted">-</td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong><br></td>
+          <td>JSON</td>
+        </tr>
     </table>
   </div>
 </div>
 
 Furthermore, new connectors can be added. The UI is shown on the following screenshot. In the modal dialog, you have to first select the type of connector. Currently, we support the following connectors:
 
-- MQTT: supports connections to MQTT version 3.1.1 over websocket and tcp
+- MQTT: supports connections to MQTT version 3.1.1 or 5 over websocket and tcp
 - MQTT Service: this connector is a special case of the MQTT connector, to connect to the Cumulocity MQTT Service
 - Kafka: is an initial implementation for connecting to Kafka brokers. It is expected that the implementation of the connector has to be adapted to the specific needs of your project. This applies to configuration for security, transactions, key and payload serialization (currently StringSerializer)...
 - HTTP Connector: the `HTTP Connector` is a HTTP endpoint where custom payload can be sent to the mapper over HTTP
 - Webhook: the `Webhook` sends outbound messages to the configured REST endpoints as POST in JSON format.
+- Apache Pulsar: supports connections to Apache Pulsar brokers
+- AMQP 0.9.1: supports connections to AMQP 0.9.1 brokers
+- AMQP 1.0: supports connections to AMQP 1.0 brokers
 
 The configuration properties are dynamically adapted to the configuration parameter for the chosen connector type:
 
