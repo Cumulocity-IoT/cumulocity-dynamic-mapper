@@ -1346,8 +1346,8 @@ export type SmartFunctionInV2<
     T extends { state: infer TState extends Record<string, any> } ? TState : Record<string, any>
   >
 ) => T extends { returns: infer TReturns extends CumulocityObject | CumulocityObject[] }
-  ? TReturns
-  : CumulocityObject | CumulocityObject[];
+  ? TReturns | void
+  : CumulocityObject | CumulocityObject[] | void;
 
 /**
  * V2 outbound Smart Function signature.
