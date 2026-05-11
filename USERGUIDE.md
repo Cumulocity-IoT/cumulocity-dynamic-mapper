@@ -1,5 +1,6 @@
 # User Guide
 
+
 - [User Guide](#user-guide)
   - [Connector configuration to broker and http endpoint](#connector-configuration-to-broker-and-http-endpoint)
   - [Definition and Activation of mappings](#definition-and-activation-of-mappings)
@@ -69,47 +70,13 @@ The mapper supports the following connectors:
       </thead>
       <tbody>
         <tr>
-          <td><strong>HTTP Connector</strong><br><small class="text-muted">(only one instance per tenant
-              exists)</small></td>
-          <td class="text-center"><strong>X</strong></td>
-          <td class="text-center text-muted">-</td>
-          <td class="text-center"><strong>X</strong></td>
-          <td class="text-center"><strong>X</strong><br></td>
-          <td>JSON, Flat File, Hex, Any Payload</td>
-        </tr>
-        <tr class="table-light">
-          <td><strong>Webhook</strong><br><small class="text-muted">(including Cumulocity Rest API)</small></td>
-          <td class="text-center text-muted">-</td>
-          <td class="text-center"><strong>X</strong></td>
-          <td class="text-center"><strong>X</strong></td>
-          <td class="text-center"><strong>X</strong><br></td>
-          <td>JSON, Flat File, Hex, Any Payload</td>
-        </tr>
-        <!-- <tr>
-          <td><strong>Cumulocity MQTT Service ( deprecated ) </strong><small class="text-muted">(tenant
+          <td><strong>Cumulocity MQTT Service</strong><small class="text-muted">(device
               isolation, only one instance per tenant exists)</small></td>
           <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong><br></td>
           <td>JSON, Flat File, Hex, SparkPlugB (partially), Any Payload</td>
-        </tr> -->
-        <tr>
-          <td><strong>Cumulocity MQTT Service </strong><small class="text-muted">(device
-              isolation, only one instance per tenant exists)</small></td>
-          <td class="text-center"><strong>X</strong></td>
-          <td class="text-center"><strong>X</strong></td>
-          <td class="text-center"><strong>X</strong></td>
-          <td class="text-center"><strong>X</strong><br></td>
-          <td>JSON, Flat File, Hex, SparkPlugB (partially), Any Payload</td>
-        </tr>
-        <tr>
-          <td><strong>Apache Pulsar </strong><small class="text-muted"></small></td>
-          <td class="text-center"><strong>X</strong></td>
-          <td class="text-center"><strong>X</strong></td>
-          <td class="text-center"><strong>X</strong></td>
-          <td class="text-center"><strong>X</strong><br></td>
-          <td>JSON, Flat File, Hex, Any Payload</td>
         </tr>
         <tr class="table-light">
           <td><strong>Generic MQTT</strong></td>
@@ -120,28 +87,21 @@ The mapper supports the following connectors:
           <td>JSON, Flat File, Hex, SparkPlugB, Any Payload</td>
         </tr>
         <tr>
-          <td><strong>Kafka</strong></td>
+          <td><strong>HTTP Connector</strong><br><small class="text-muted">(only one instance per tenant
+              exists)</small></td>
           <td class="text-center"><strong>X</strong></td>
-          <td class="text-center"><strong>X</strong></td>
-          <td class="text-center"><strong>X</strong></td>
-          <td class="text-center"><strong>X</strong><br></td>
-          <td>JSON, Flat File, Hex, Any Payload</td>
-        </tr>
-        <tr>
-          <td><strong>AMQP 0.9.1</strong></td>
-          <td class="text-center"><strong>X</strong></td>
-          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center text-muted">-</td>
           <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong><br></td>
           <td>JSON, Flat File, Hex, Any Payload</td>
         </tr>
-        <tr>
-          <td><strong>AMQP 1.0.0</strong></td>
-          <td class="text-center"><strong>X</strong></td>
+        <tr class="table-light">
+          <td><strong>Webhook</strong><br></td>
+          <td class="text-center text-muted">-</td>
           <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong><br></td>
-          <td>JSON, Flat File, Hex, Any Payload</td>
+          <td>JSON</td>
         </tr>
         <tr>
           <td><strong>Cumulocity API</strong></td>
@@ -150,6 +110,38 @@ The mapper supports the following connectors:
           <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong><br></td>
           <td>JSON</td>
+        </tr>
+        <tr>
+          <td><strong>Apache Pulsar </strong><small class="text-muted"></small></td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong><br></td>
+          <td>JSON, Flat File, Hex, Any Payload</td>
+        </tr>
+        <tr>
+          <td><strong>Kafka</strong></td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong><br></td>
+          <td>JSON, Flat File, Hex, Any Payload</td>
+        </tr>
+        <tr>
+          <td><strong>AMQP 0.9.1</strong><br><small class="text-muted">(RabbitMQ, etc.)</small></td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong><br></td>
+          <td>JSON, Flat File, Hex, Any Payload</td>
+        </tr>
+        <tr>
+          <td><strong>AMQP 1.0.0</strong><br><small class="text-muted">(Azure Service Bus, Artemis, Solace, etc.)</small></td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong><br></td>
+          <td>JSON, Flat File, Hex, Any Payload</td>
         </tr>
     </table>
   </div>
@@ -270,10 +262,12 @@ When you start with a new mapping the first considerations are about the payload
 Creation of the new mapping starts by pressing `Add Mapping`. On the next modal UI you can choose the mapping type depending on the structure of your payload. Currently there is support for:
 
 1. `JSON`: if your payload is in JSON format
-1. `Hex`: if your payload is in HEX format
-1. `Protobuf Internal`: if your payload is a serialized protobuf message
-1. `Extension Source`: if you want to process the message yourself, by registering a processor extension
+2. `Flat File (CSV)`: if your payload is in a flat file format, e.g. CSV, where the fields are separated by a specific character, e.g. comma, semicolon etc.
+3. `Hexadecimal`: if your payload is in HEX format
+4. `Any Payload`: use this when the payload format is unknown, binary (CBOR, XML, custom binary)
+5. `SparkPlugB`: if your payload is in SparkPlug B format. This option is only available for MQTT connectors.
 
+  
 <p align="center">
 <img src="resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal.png"  style="width: 70%;" />
 </p>

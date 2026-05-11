@@ -1,41 +1,21 @@
 # Dynamic Mapper Service for Cumulocity
 
->NOTE: Breaking changes 
-Due to the approach to sync the JS7TS API offer Smart Functions with the new Cumulocity Product IDP (Intelligent Data Preparation) the following JS APi where changed in this release:
-
-
-**Obsolete**
-```
-    // lookup device for enrichment
-    var deviceByDeviceId = context.lookupDeviceByDeviceId(payload.get("deviceId"));
-    var deviceByExternalId = context.lookupDeviceByExternalId(payload.get("clientId"), "c8y_Serial"); 
-
-    // removed context.logMessage
-    context.logMessage("Payload Raw:" + payload);
-```
-
-**New**
-```
-    // lookup device for enrichment
-    var deviceByDeviceId = context.getManagedObjectByDeviceId(payload.get("deviceId"));
-    var deviceByExternalId = context.getManagedObject({ externalId: payload.get("clientId"), type: "c8y_Serial" } );
-
-    // use instead
-    console.log("Payload Raw:" + payload);
-```
-
 ## Overview
 
 The Cumulocity Dynamic Mapper addresses the need to get **any** data provided by a message broker mapped to the Cumulocity IoT Domain model in a zero-code approach powered by AI agents.
 It can connect to multiple message brokers like **MQTT**, **MQTT Service**, **Kafka** and others, subscribes to specific topics and maps the data in a graphical or code-based editor to the domain model of Cumulocity.
 
-Per default, the following connectors are supported
+Per default, the following connectors are supported:
 
-- **MQTT** - any MQTT Broker
-- **Cumulocity MQTT Service** - Cumulocity built-in MQTT Broker
-- **Kafka** - Kafka Broker
-- **HTTP/REST** - HTTP/REST Endpoint
-- **AMQP 0.9.1 + 1.0** - any AMQP Broker
+- **MQTT Broker** - Connect to third-party MQTT brokers such as HiveMQ, Mosquitto, Eclipse Mosquitto, or any MQTT-compliant broker
+- **Cumulocity MQTT Service** - Use the built-in Cumulocity IoT MQTT broker for device communication with device isolation
+- **HTTP Connector** - Receive data via REST endpoints
+- **Webhook** - Send data to external REST APIs
+- **Cumulocity API** - Use the internal Cumulocity REST API for creating, updating, and deleting managed objects, events, alarms, and measurements
+- **Apache Kafka** - Integrate with Kafka topics for high-throughput messaging
+- **Apache Pulsar** - Connect to Pulsar topics for cloud-native messaging
+- **AMQP 0-9-1** - Connect to AMQP 0-9-1 brokers like RabbitMQ for reliable message queuing
+- **AMQP 1.0** - Connect to AMQP 1.0 brokers (Azure Service Bus, ActiveMQ Artemis, Solace, etc.) using the Apache Qpid JMS client
 
 Using the Cumulocity Dynamic Mapper you are able to connect to almost any message broker and map any payload on any topic dynamically to
 the Cumulocity IoT Domain Model in a graphical or, if you prefer code, in a web code editor.
@@ -71,112 +51,7 @@ Please check the [Installation Guide](/INSTALLATION.md) to find out how you can 
 
 ## User Guide
 
-Please check the [User Guide](/USERGUIDE.md) to find comprehensive guidance on how to use the Dynamic Mapper.
-
-### Defining a mapping
-
-When you start with a new mapping the first considerations are about the payload format and the transformation type to use:
-
-1. In which format is the inbound payload sent? This defines the payload type to choose: JSON, Flat File, Hexadecimal, Protobuf
-2. How to define the transformation of inbound to Cumulocity format? This defines the transformation type: JSONata, Smart Functions, ...
-
-<br/>
-<p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_Payload.png"  style="width: 70%;" />
-<br/>
-<b>Description:</b> Screenshot showing available payload types.
-</p>
-<br/>
-
-<br/>
-<p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_TransformationType.png"  style="width: 70%;" />
-<br/>
-<b>Description:</b> Screenshot showing available transformation types.
-</p>
-<br/>
-
-Now you start adding a mapping by clicking **Add mapping** (Mapping -> Inbound Mapping -> Action Add mapping).
-
-In the **Add mapping** dialog, you can choose the payload type, e.g. **JSON** and the transformation type, e.g. **Define substitutions as JavaScript** to use JavaScript.
-
-<br/>
-<p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_Topic_Definition.png"  style="width: 70%;" />
-</p>
-<br/>
-
-The stepper guides you through these steps to define a mapping using JSONata for substitutions:
-
-1. Add or select an existing connector for your mapping (where payloads come from).
-2. Define general settings, such as the topic name for this mapping.
-3. Select or enter the template for the expected source payload. This is used as the source path for substitutions.
-4. Define substitutions for copying content from the source to the target payload. These will be applied at runtime.
-5. Test the mapping by applying the substitutions and save the mapping.
-
-<br/>
-<p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Basic.png"  style="width: 70%;" />
-</p>
-<br/>
-
-### Defining the payload transformation using a Smart Function (JavaScript)
-
-When you select **Smart Function** as the **Transformation Type** in the modal dialog, you can define the entire payload directly in the editor using JavaScript syntax, rather than just substitutions. At runtime, this JavaScript code is evaluated and copies the value to the target payload path. This gives you the freedom to see the payload exactly as it is sent to the Cumulocity backend.
-
-**Note:** The JavaScript editor for Smart Function is only available if you select the **Smart Function** as a **Transformation Type** when creating the mapping.
-
-The signature and structure of a **Smart Function** has the form:
-
-```javascript
-function onMessage (inputMsg, context) {
-    const msg = inputMsg;
-    var payload = msg.getPayload(); // contains payload
-
-    console.log("Context" + context.getStateAll());
-    console.log("Payload Raw:" + msg.getPayload());
-    console.log("Payload messageId" +  msg.getPayload().get('messageId'));
-    // insert transformation logic here
-
-    // then return result
-    return [{
-        cumulocityType: "measurement",
-        action: "create",
-        payload: {
-            "time":  new Date().toISOString(),
-            "type": "c8y_TemperatureMeasurement",
-            "c8y_Steam": {
-                "Temperature": {
-                    "unit": "C",
-                    "value": payload["sensorData"]["temp_val"]
-                }
-            }
-        },
-        externalSource: [{"type":"c8y_Serial", "externalId": payload.get("clientId")}]
-    }];
-}
-```
-
-The **Smart Function** allows to enrich the payload with inventory data from the device e.g.:
-
-```javascript
-// lookup device for enrichment
-var deviceByDeviceId = context.getManagedObjectByDeviceId(payload.get("deviceId"));
-console.log("Device (by device id): " + deviceByDeviceId);
-
-var deviceByExternalId = context.getManagedObject({ externalId: payload.get("clientId"), type:"c8y_Serial" } );
-console.log("Device (by external id): " + deviceByExternalId);
-```
-
-**Note:** Only device fragments configured in **Configuration > Service Configuration > Function > Fragments from inventory to cache** can be referenced and have to be defined in this list of fragments.
-
-<br/>
-<p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_SmartFunction.png"  style="width: 70%;" />
-<br/>
-<b>Description:</b> Screenshot showing step 4 for defining complete transformation using JavaScript.
-</p>
-<br/>
+There is a comprehensive User guide built-in in the Web App of Dynamic Mapper. Please follow the guide there.
 
 ## Architecture
 
