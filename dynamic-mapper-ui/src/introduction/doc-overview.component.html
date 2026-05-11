@@ -265,6 +265,11 @@
           <strong>Next Steps:</strong>
         </div>
         <ul class="text-16">
+          <li>
+            Not sure what payload your devices send? Use the
+            <a (click)="scrollToElement('message-explorer')" style="cursor: pointer;">Message Explorer</a>
+            to capture live messages from a connector topic and instantly build a mapping from real traffic.
+          </li>
           <li>Review <a (click)="scrollToElement('define-mapping')" style="cursor: pointer;">Defining a Mapping</a> for
             step-by-step instructions</li>
           <li>Explore <a (click)="scrollToElement('jsonata-substitution')" style="cursor: pointer;">JSONata
@@ -2242,6 +2247,211 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
             Service events are stored in an in-memory ring buffer and are lost on microservice restart.
             For long-term audit trails, configure the Cumulocity platform's built-in audit log or forward
             events to an external monitoring system.
+          </div>
+        </div>
+      </div>
+      <!-- ==================== SECTION: MESSAGE EXPLORER ==================== -->
+      <div class="card-header" id="message-explorer">
+        <h3>
+          {{ 'Message Explorer' | translate }}
+        </h3>
+      </div>
+      <div class="card-block">
+        <div class="p-b-8 text-16">
+          The <strong>Message Explorer</strong> lets you capture and inspect live messages flowing through
+          the Dynamic Mapper — before any mapping transformation is applied. It is a powerful tool for
+          understanding your device payloads, validating connector subscriptions, and rapidly building new
+          mappings from real traffic.
+        </div>
+        <div class="admonition info" style="max-width: 100%;">
+          <div class="title">Info</div>
+          <div class="content">
+            The Message Explorer is available under
+            <a [routerLink]="ROUTE_MESSAGE_EXPLORER"><strong>Mappings → Message Explorer</strong></a>.
+            No mapping or transformation is applied — you see the raw payloads exactly as they arrive
+            from the broker or the Cumulocity Notification 2.0 API.
+          </div>
+        </div>
+
+        <br />
+        <img width="80%" class="m-l-48 m-b-48 m-b-16"
+          src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Message_Explorer.png"
+          alt="Message Explorer" />
+        <p class="image-description m-l-48"><b>Description:</b> Screenshot of the Message Explorer showing captured live messages from a broker topic.</p>
+        <br />
+
+        <h4 class="p-t-16 p-b-8">Starting a session</h4>
+        <div class="p-b-8 text-16">
+          Click <strong>Start exploring messages…</strong> in the action bar to open the session
+          configuration drawer. Configure the following settings:
+        </div>
+        <div class="table-responsive table-width-100">
+          <table class="table table-striped" style="table-layout: fixed;">
+            <thead class="thead-light">
+              <tr>
+                <th style="width: 25%;">Setting</th>
+                <th style="width: 75%;">Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Direction</strong></td>
+                <td>
+                  <span class="label label-success"><i c8yIcon="arrow-down"></i> Inbound</span> — subscribe to a
+                  broker topic via a selected connector. Raw payloads arriving on the topic are captured.<br />
+                  <span class="label label-info"><i c8yIcon="arrow-up"></i> Outbound</span> — subscribe to the
+                  Cumulocity Notification 2.0 API for a selected device or group and capture the raw JSON objects
+                  before they are transformed by an outbound mapping.
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Connector</strong> &nbsp;<small class="text-muted">(Inbound only)</small></td>
+                <td>
+                  The connector to subscribe to. Only connectors that support the selected direction and are
+                  currently connected are selectable.
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Topic</strong> &nbsp;<small class="text-muted">(Inbound only)</small></td>
+                <td>
+                  The broker topic to subscribe to. MQTT wildcards (<code>#</code>, <code>+</code>) are
+                  supported. Be specific to avoid capturing unrelated traffic.
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Source device / group</strong> &nbsp;<small class="text-muted">(Outbound only)</small></td>
+                <td>
+                  The managed object (device or group) for which a Notification 2.0 subscription is created.
+                  Selecting a group captures events for all devices in that group.
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Max messages to buffer</strong></td>
+                <td>
+                  Maximum number of messages kept in the in-browser buffer (1–500). When the limit is reached,
+                  the oldest messages are discarded automatically. Reduce this value for high-frequency topics.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="p-b-8 text-16">
+          Click <strong>Start</strong> to open the session. The action bar switches to show
+          <strong>Stop session</strong>, <strong>Pause / Resume</strong>, and <strong>Clear</strong> controls.
+        </div>
+
+        <h4 class="p-t-16 p-b-8">Viewing captured messages</h4>
+        <div class="p-b-8 text-16">
+          Each captured message appears as a row in the message list with the following columns:
+        </div>
+        <div class="table-responsive table-width-100">
+          <table class="table table-striped" style="table-layout: fixed;">
+            <thead class="thead-light">
+              <tr>
+                <th style="width: 5%;">#</th>
+                <th style="width: 12%;">Column</th>
+                <th style="width: 83%;">Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1</td>
+                <td><strong>Direction</strong></td>
+                <td>
+                  <span class="label label-success">INBOUND</span> or
+                  <span class="label label-info">OUTBOUND</span> badge.
+                </td>
+              </tr>
+              <tr>
+                <td>2</td>
+                <td><strong>Received at</strong></td>
+                <td>Timestamp when the backend captured the message.</td>
+              </tr>
+              <tr>
+                <td>3</td>
+                <td><strong>Connector</strong></td>
+                <td>Name of the connector that delivered the message.</td>
+              </tr>
+              <tr>
+                <td>4</td>
+                <td><strong>Topic</strong></td>
+                <td>The exact broker topic the message arrived on (wildcards resolved).</td>
+              </tr>
+              <tr>
+                <td>5</td>
+                <td><strong>Payload</strong></td>
+                <td>
+                  Truncated payload preview. Click <strong>show more</strong> to expand the row and view
+                  the full payload in a formatted JSON editor. Binary payloads are flagged with a
+                  <span class="label label-warning">binary (base64)</span> badge.
+                </td>
+              </tr>
+              <tr>
+                <td>6</td>
+                <td><strong>Create mapping</strong></td>
+                <td>
+                  The <i c8yIcon="plus-circle"></i> button opens the <strong>Add Mapping</strong> wizard
+                  pre-filled with the captured payload as the source template. This is the fastest way
+                  to build a mapping from real device data.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4 class="p-t-16 p-b-8">Session controls</h4>
+        <div class="p-b-8 text-16">
+          The action bar provides the following controls while a session is active:
+        </div>
+        <ul class="text-16 p-b-8">
+          <li>
+            <strong>Stop session</strong> — terminates the backend subscription and ends the session.
+            All captured messages remain visible in the list until you navigate away or click
+            <strong>Clear</strong>.
+          </li>
+          <li>
+            <strong>Pause</strong> — suspends polling of new messages. The backend session stays alive
+            so no messages are missed; messages received while paused are returned when you resume.
+          </li>
+          <li>
+            <strong>Resume</strong> — resumes polling and appends any messages that arrived while paused.
+          </li>
+          <li>
+            <strong>Clear</strong> — removes all messages from the in-browser list without stopping the
+            session. Use this to start a fresh capture window during an active session.
+          </li>
+          <li>
+            <strong>Auto refresh</strong> — when enabled, the Message Explorer polls the backend at the
+            configured interval (e.g. every 5 s) and appends newly arrived messages automatically.
+          </li>
+        </ul>
+
+        <h4 class="p-t-16 p-b-8">Creating a mapping from a captured message</h4>
+        <div class="p-b-8 text-16">
+          The most powerful feature of the Message Explorer is the ability to instantly build a mapping
+          from live traffic:
+        </div>
+        <ol class="text-16 p-b-8">
+          <li>Start a session on a connector and topic that your devices publish to.</li>
+          <li>Wait for at least one message to appear in the list.</li>
+          <li>
+            Click the <i c8yIcon="plus-circle"></i> button on the message row you want to use as a template.
+          </li>
+          <li>
+            The <strong>Add Mapping</strong> dialog opens with the captured payload pre-loaded as the
+            source template, and the topic pre-filled from the captured message.
+          </li>
+          <li>
+            Complete the mapping wizard as usual — the source template is already populated, so you can
+            skip straight to defining substitutions.
+          </li>
+        </ol>
+        <div class="admonition info" style="max-width: 100%;">
+          <div class="title">Tip</div>
+          <div class="content">
+            Combine the Message Explorer with <strong>AI-powered substitution generation</strong>:
+            capture a real payload, create a mapping from it, and then use the AI prompt in the
+            substitution step to auto-generate the mapping rules from a natural-language description.
           </div>
         </div>
       </div>

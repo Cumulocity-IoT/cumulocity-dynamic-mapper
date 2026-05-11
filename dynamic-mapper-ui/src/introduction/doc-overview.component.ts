@@ -51,6 +51,7 @@ export class DocOverviewComponent implements OnInit {
   ROUTE_CONNECTORS: string = `/c8y-pkg-dynamic-mapper/${NODE3}/connectorConfiguration`;
   ROUTE_CODE_TEMPLATES_INBOUND_SMART_FUNCTION: string = `/c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/INBOUND_SMART_FUNCTION`;
   ROUTE_MONITORING: string = `/c8y-pkg-dynamic-mapper/${NODE2}/monitoring/statistic/inbound`;
+  ROUTE_MESSAGE_EXPLORER: string = `/c8y-pkg-dynamic-mapper/${NODE1}/mappings/messageExplorer`;
 
   constructor(
     private mappingService: MappingService,

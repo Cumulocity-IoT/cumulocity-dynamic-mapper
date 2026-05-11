@@ -61,6 +61,14 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       priority: 612,
       preventDuplicates: true
     }),
+    messageExplorerNode: new NavigatorNode({
+      parent: gettext('Introduction'),
+      icon: 'empty',
+      label: gettext('Message Explorer'),
+      path: '/c8y-pkg-dynamic-mapper/landing/message-explorer',
+      priority: 611.5,
+      preventDuplicates: true
+    }),
     managingConnectorsNode: new NavigatorNode({
       parent: gettext('Introduction'),
       icon: 'empty',
