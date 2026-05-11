@@ -828,7 +828,7 @@
                 This is the simplest option and requires no changes to the Smart Function.
               </li>
               <li class="m-b-4">
-                Return a <code>CumulocityObject</code> with <code>cumulocityType: "INVENTORY"</code>
+                Return a <code>CumulocityObject</code> with <code>cumulocityType: "managedObject"</code>
                 from the Smart Function — use this when you need a custom device name, type, or
                 additional fragments on the managed object.
               </li>
@@ -860,7 +860,7 @@
   if (msgType === 'NBIRTH' || msgType === 'DBIRTH') &#123;
     var extId = msgType === 'NBIRTH' ? nodeExtId : deviceExtId;
     return [&#123;
-      cumulocityType: 'INVENTORY',
+      cumulocityType: 'managedObject',
       externalSource: [&#123; externalId: extId, type: 'c8y_Serial' &#125;],
       payload: &#123;
         name: extId,
@@ -876,7 +876,7 @@
     (payload.metrics || []).forEach(function(metric) &#123;
       if (metric.name === 'Temperature') &#123;
         results.push(&#123;
-          cumulocityType: 'MEASUREMENT',
+          cumulocityType: 'measurement',
           externalSource: [&#123; externalId: extId, type: 'c8y_Serial' &#125;],
           payload: &#123;
             type: 'c8y_Temperature',

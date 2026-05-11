@@ -758,19 +758,33 @@ export interface CumulocityObject<
    * Context data for device creation.
    * Used when automatically creating new devices.
    *
-   * Common fields:
-   * - deviceName: Name for the new device
-   * - deviceType: Type for the new device
-   * - processingMode: "PERSISTENT" or "TRANSIENT"
-   * - attachmentName/Type/Data: for EVENT attachments
-   *
    * @example
    * contextData: {
    *   deviceName: "Temperature Sensor 01",
-   *   deviceType: "c8y_Sensor"
+   *   deviceType: "c8y_Sensor",
+   *   processingMode: "TRANSIENT",
+   *   deviceFragments: { c8y_IsDevice: {}, c8y_Hardware: { model: "Sensor v1" } },
+   *   deviceGroups: ["line 1", "building A"]
    * }
    */
-  contextData?: Record<string, string>;
+  contextData?: {
+    /** Name for implicitly created devices. */
+    deviceName?: string;
+    /** Type for implicitly created devices. */
+    deviceType?: string;
+    /** Processing mode: "PERSISTENT" (default) or "TRANSIENT". */
+    processingMode?: 'PERSISTENT' | 'TRANSIENT';
+    /** Attachment file name for binary EVENT attachments. */
+    attachmentName?: string;
+    /** Attachment MIME type for binary EVENT attachments. */
+    attachmentType?: string;
+    /** Attachment data (Base64-encoded) for binary EVENT attachments. */
+    attachmentData?: string;
+    /** Additional managed-object fragments merged into the implicit device (objects/arrays allowed). */
+    deviceFragments?: Record<string, any>;
+    /** Group names the implicit device is assigned to as child assets. */
+    deviceGroups?: string[];
+  };
 
   /**
    * Explicitly set the Cumulocity device ID (sourceId) for this object.

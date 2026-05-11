@@ -30,7 +30,7 @@ function onMessage(msg, context) {
 
     return [{
         topic: `measurements/${externalId}`,
-        payload:[{
+        payload: {
             "time":  new Date().toISOString(),
             "c8y_Steam": {
                 "Temperature": {
@@ -38,7 +38,7 @@ function onMessage(msg, context) {
                 "value": payload["c8y_TemperatureMeasurement"]["T"]["value"]
                 }
             }
-        }]
+        }
     }];
 }
 export {onMessage};

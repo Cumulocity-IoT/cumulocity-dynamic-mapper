@@ -330,7 +330,7 @@ function celsiusToFahrenheit(celsius) &#123;
                 <td><code>cumulocityType</code></td>
                 <td>Yes</td>
                 <td>The Cumulocity API to use: <code>"measurement"</code>, <code>"event"</code>, <code>"alarm"</code>,
-                  <code>"inventory"</code>, or <code>"custom"</code>.
+                  <code>"operation"</code>, <code>"managedObject"</code>, or <code>"custom"</code>.
                   <br /><br />
                   Use <code>"custom"</code> to forward the payload directly to a tenant-local microservice
                   instead of a built-in Cumulocity API. When <code>"custom"</code> is set, the
@@ -370,7 +370,7 @@ function celsiusToFahrenheit(celsius) &#123;
                   <ul class="m-t-8 m-b-0">
                     <li><code>deviceName</code>: Name for implicitly created devices</li>
                     <li><code>deviceType</code>: Type for implicitly created devices</li>
-                    <li><code>processingMode</code>: Set to <code>"persistent"</code> or <code>"transient"</code></li>
+                    <li><code>processingMode</code>: Set to <code>"PERSISTENT"</code> (default) or <code>"TRANSIENT"</code></li>
                     <li><code>deviceFragments</code>: Map of additional managed object fragments to merge into the
                       implicitly created device (e.g. <code>c8y_Hardware</code>, <code>c8y_SupportedOperations</code>).
                       The value of each key must be an object or array — nested structures are preserved.</li>
