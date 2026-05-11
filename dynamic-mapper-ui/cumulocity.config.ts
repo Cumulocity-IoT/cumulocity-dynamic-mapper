@@ -68,7 +68,6 @@ export default {
         from: '../resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_TransformationType.png',
         to: 'image/Dynamic_Mapper_Mapping_Table_Add_Modal_TransformationType.png'
       },
-
       {
         from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Generate_JSONata.png',
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_Generate_JSONata.png'
@@ -77,7 +76,6 @@ export default {
         from: '../resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_Payload.png',
         to: 'image/Dynamic_Mapper_Mapping_Table_Add_Modal_Payload.png'
       },
-
       {
         from: '../resources/image/Dynamic_Mapper_Mapping_Substitution_Outbound.png',
         to: 'image/Dynamic_Mapper_Mapping_Substitution_Outbound.png'
@@ -105,6 +103,10 @@ export default {
       {
         from: '../resources/image/Dynamic_Mapper_Configuration_ProcessorExtensionSource_Plugin_Installed.png',
         to: 'image/Dynamic_Mapper_Configuration_ProcessorExtensionSource_Plugin_Installed.png'
+      },
+      {
+        from: '../resources/image/Dynamic_Mapper_Mapping_Message_Explorer.png',
+        to: 'image/Dynamic_Mapper_Mapping_Message_Explorer.png'
       },
       {
         from: '../LICENSE',
