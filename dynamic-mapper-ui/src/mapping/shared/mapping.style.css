@@ -92,6 +92,24 @@ d11r-mapping-substitution-step {
   min-width: 0;
 }
 
+/* Monospace YAML/code preview textarea */
+.yaml-preview {
+  font-family: monospace;
+  font-size: var(--c8y-font-size-small);
+  line-height: var(--c8y-line-height-small);
+}
+
+/* Unstyled anchor card — removes link underline and inherits text color */
+.card-link-reset {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Fixed-width filter select in action bars */
+.filter-select {
+  width: 280px;
+}
+
 .console-output {
   background-color: #1e1e1e;
   color: #d4d4d4;

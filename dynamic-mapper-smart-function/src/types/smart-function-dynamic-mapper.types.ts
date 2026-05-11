@@ -1338,7 +1338,7 @@ export type SmartFunctionInV2<
     returns?: CumulocityObject | CumulocityObject[];
     config?: Record<string, any>;
     state?: Record<string, any>;
-  } = {}
+  } = Record<string, never>
 > = (
   msg: Omit<DynamicMapperDeviceMessage, 'payload'> & {
     /**
@@ -1404,7 +1404,7 @@ export type SmartFunctionOutV2<
     config?: Record<string, any>;
     state?: Record<string, any>;
     input?: C8yObjectType;
-  } = {}
+  } = Record<string, never>
 > = (
   msg: OutboundMessageV2<
     T extends { input: infer TInput extends C8yObjectType } ? TInput : C8yObjectType

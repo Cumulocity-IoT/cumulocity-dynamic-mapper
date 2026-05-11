@@ -20,3 +20,13 @@
 [class="modal-header"] {
   display: none;
 }
+
+/* Constrains the drop-area form group to match the drop-area visual size */
+.modal-drop-area {
+  max-width: 285px;
+}
+
+/* Ensures the success state fills the same vertical space as the drop-area */
+.modal-success-area {
+  min-height: 285px;
+}

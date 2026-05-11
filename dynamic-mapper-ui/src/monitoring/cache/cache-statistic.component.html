@@ -36,12 +36,10 @@
 </c8y-action-bar-item>
 
 <c8y-action-bar-item [placement]="'right'">
-  <li>
-    <button class="btn btn-link" title="{{ 'Reload' | translate }}" (click)="reload()">
-      <i c8yIcon="refresh" [ngClass]="{ 'icon-spin': loading }"></i>
-      {{ 'Reload' | translate }}
-    </button>
-  </li>
+  <button class="btn btn-link" title="{{ 'Reload' | translate }}" (click)="reload()">
+    <i c8yIcon="refresh" [ngClass]="{ 'icon-spin': loading }"></i>
+    {{ 'Reload' | translate }}
+  </button>
 </c8y-action-bar-item>
 
 <div class="card">

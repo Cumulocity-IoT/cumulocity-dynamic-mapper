@@ -24,7 +24,7 @@
   <form [formGroup]="filterForm" class="d-flex a-i-center">
     <div class="">
       <div class="c8y-select-wrapper">
-        <select class="form-control" style="width: 280px" formControlName="type" id="listLabel" [attr.aria-label]="'Event type' | translate">
+        <select class="form-control filter-select" formControlName="type" id="listLabel" [attr.aria-label]="'Event type' | translate">
           @for (lt of LoggingEventTypeMap | keyvalue; track lt) {
           <option [ngValue]="lt.key">
             {{ lt.key | formatStringAsWords:1 }}
