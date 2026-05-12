@@ -78,8 +78,8 @@ export default {
         to: 'image/Dynamic_Mapper_Mapping_Table_Add_Modal_Payload.png'
       },
       {
-        from: '../resources/image/Dynamic_Mapper_Mapping_Substitution_Outbound.png',
-        to: 'image/Dynamic_Mapper_Mapping_Substitution_Outbound.png'
+        from: '../resources/image/Dynamic_Mapper_Mapping_Subscription_Outbound.png',
+        to: 'image/Dynamic_Mapper_Mapping_Subscription_Outbound.png'
       },
       {
         from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Mapping_Metadata_Inbound.png',

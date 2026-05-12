@@ -727,16 +727,7 @@ The result can then be `Saved` to the mapping. Note: AI generation of `Substitut
 ### Apply a filter for a mapping
 
 You can apply a filter for a mapping, in case the mapping should only be processed if the payload meets a certain condition. This might be the case, if you want to turn a rather generic payload into a measurement, an event and an alarm depending on content of the payload.
-In this case you can apply a filter:
-<p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Table_Filter.png"  style="width: 70%;" />
-</p>
-
-by defining a `JSONata` expression that evaluates to `true` or `false`:
-
-<p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Table_Filter_Detail.png"  style="width: 70%;" />
-</p>
+In this case you can apply a filter by defining a `JSONata` expression that evaluates to `true` or `false`:
 
 ---
 
