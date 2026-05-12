@@ -76,113 +76,46 @@
 
     <!-- Tab 2: Templates -->
     @if (activeTabIndex === 2 && isTabVisible(2)) {
-    <div class="card-block p-b-0">
-    <div [formGroup]="templateForm">
-      <div class="row">
-        <div class="col-lg-6 column-right-border">
-          <div class="form-group">
-            <div>
-              <label translate>Source Template - {{ sourceSystem }}</label>
-            </div>
-            <c8y-select [items]="snoopedTemplateItems" formControlName="snoopedTemplateIndex" [filterItems]="true"
-              labelProperty="label" placeholder="{{ 'Select snooped template' | translate }}" aria-label="Snooped Template"
-              class="w-50">
-            </c8y-select>
-            <div>
-              <small class="text-muted">{{stepperViewModel.showSourceEditor ?
-                'Template is described internally by the chosen mapping type.' :
-                'Use sample templates for the source.'
-                }}</small>
-            </div>
-            @if (stepperViewModel.showSourceEditor) {
-            <d11r-mapping-json-editor [updateEditor]="updateSourceEditor" [options]="editorOptionsSourceTemplate"
-              [class]="'jse-main-small'" (initialized)="onEditorSourceInitialized()"
-              (contentChanged)="onSourceTemplateChanged($event)" [data]="sourceTemplate"
-              (pathChanged)="onSelectedPathFilterMappingChanged($event)" #editorSourceStepTemplate>
-            </d11r-mapping-json-editor>
-            }
-            @if (stepperViewModel.showExtensionSelectors) {
-            <ng-container *ngTemplateOutlet="extensionTemplateSource; context: { form: templateForm }">
-            </ng-container>
-            }
-            @if (!stepperViewModel.showSourceEditor && !stepperViewModel.showExtensionSelectorsSource) {
-            <small class="text-muted">Template is not shown as the format is unknown.</small>
-            }
-          </div>
-        </div>
-        <div class="col-lg-6 column-left-border">
-          <div class="form-group">
-            <div class="d-flex j-c-between">
-              <label translate>Target Template - {{ targetSystem }}</label>
-            </div>
-            <div class="d-flex j-c-between">
-              <button type="button" name="sample" class="btn btn-default" (click)="onSampleTargetTemplatesButton()"
-                translate title="{{ 'Use Sample Target Templates' | translate }}"
-                [disabled]="templateForm.get('sampleTargetTemplatesButton')?.value || (!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole)">
-                <i c8yIcon="enter-right"></i>Reset to default
-              </button>
-            </div>
-            <div>
-              <small class="text-muted" translate>Use sample templates for the target.</small>
-            </div>
-            @if (stepperViewModel.showTargetEditor) {
-            <d11r-mapping-json-editor [updateEditor]="updateTargetEditor" [options]="editorOptionsTargetTemplate"
-              [class]="'jse-main-small'" (initialized)="onEditorTargetInitialized()"
-              (contentChanged)="onTargetTemplateChanged($event)" [data]="targetTemplate" #editorTargetStepTemplate>
-            </d11r-mapping-json-editor>
-            }
-            @if (stepperViewModel.showExtensionSelectors) {
-            <ng-container *ngTemplateOutlet="extensionTemplateTarget; context: { form: templateForm }">
-            </ng-container>
-            }
-            @if (!stepperViewModel.showTargetContent) {
-            <small class="text-muted">Template is described internally by the chosen mapping type.</small>
-            }
-          </div>
-        </div>
-      </div>
-    </div>
-    @if (!(isContentChangeValid$ | async)) {
-    <div class="p-b-16">
-      <span class="text-warning text-12 p-l-8 p-b-12">
-        @if (sourceTemplateUpdated && !validateProtectedFields(sourceTemplate, sourceTemplateUpdated)) {
-        Changing <code>_IDENTITY_</code>, <code>_TOPIC_LEVEL_</code> or <code>_CONTEXT_DATA_</code>
-        directly in templates is not supported. Use substitutions instead. Changes are reverted!
-        }
-        @if (sourceTemplateUpdated && !checkTransformationType(mapping.transformationType,
-        sourceTemplateUpdated)) {
-        @if (sourceTemplateUpdated && !validateProtectedFields(sourceTemplate, sourceTemplateUpdated)) {
-        <span><br /></span>
-        }
-        Array templates require transformation type <code>SMART_FUNCTION</code>.
-        }
-      </span>
-    </div>
-    }
-    @if (stepperViewModel.showFilterControls) {
-    <div class="row">
-      <div class="col-lg-6 d-col g-8">
-        <div>
-          <button type="button" name="updateFilterExecutionMapping" class="btn btn-default btn-sm m-b-4"
-            (click)="onOverwriteFilterMapping()" translate title="{{ 'Update Filter Execution Mapping' | translate }}"
-            [disabled]="!selectedPathFilterFilterMapping">
-            <i c8yIcon="filter"></i>Update Filter Execution Mapping
-          </button>
-        </div>
-        <formly-form [form]="filterFormly" [fields]="filterFormlyFields" [model]="filterModel"></formly-form>
-        <div class="form-group m-l-0 m-b-4">
-          <label translate class="p-l-8">Filter Result [{{ filterModel.filterExpression?.resultType
-            }}]</label>
-          <textarea class="form-control font-smaller" #filterModelFilterExpression c8y-textarea-autoresize [readonly]="true"
-            >{{
-                        filterModel.filterExpression?.result
-                      }}</textarea>
-        </div>
-      </div>
-    </div>
-    }
-
-    </div>
+    <d11r-mapping-template-step #templateStep
+      [mapping]="mapping"
+      [stepperConfiguration]="stepperConfiguration"
+      [feature]="feature"
+      [sourceSystem]="sourceSystem"
+      [targetSystem]="targetSystem"
+      [sourceTemplate]="sourceTemplate"
+      [targetTemplate]="targetTemplate"
+      [snoopedTemplateItems]="snoopedTemplateItems"
+      [editorOptionsSourceTemplate]="editorOptionsSourceTemplate"
+      [editorOptionsTargetTemplate]="editorOptionsTargetTemplate"
+      [updateSourceEditor]="updateSourceEditor"
+      [updateTargetEditor]="updateTargetEditor"
+      [stepperViewModel]="stepperViewModel"
+      [templateForm]="templateForm"
+      [filterFormly]="filterFormly"
+      [filterFormlyFields]="filterFormlyFields"
+      [filterModel]="filterModel"
+      [sourceTemplateUpdated]="sourceTemplateUpdated"
+      [selectedPathFilterFilterMapping]="selectedPathFilterFilterMapping"
+      (sourceTemplateChanged)="onSourceTemplateChanged($event)"
+      (targetTemplateChanged)="onTargetTemplateChanged($event)"
+      (editorSourceInitialized)="onEditorSourceInitialized()"
+      (editorTargetInitialized)="onEditorTargetInitialized()"
+      (pathFilterMappingChanged)="onSelectedPathFilterMappingChanged($event)"
+      (filterMappingOverwrite)="onOverwriteFilterMapping()"
+      (sampleTargetTemplates)="onSampleTargetTemplatesButton()">
+      @if (stepperViewModel.showExtensionSelectors) {
+      <ng-container extensionSource>
+        <ng-container *ngTemplateOutlet="extensionTemplateSource; context: { form: templateForm }">
+        </ng-container>
+      </ng-container>
+      }
+      @if (stepperViewModel.showExtensionSelectors) {
+      <ng-container extensionTarget>
+        <ng-container *ngTemplateOutlet="extensionTemplateTarget; context: { form: templateForm }">
+        </ng-container>
+      </ng-container>
+      }
+    </d11r-mapping-template-step>
     }
 
     <!-- Tab 3: Substitutions -->
@@ -244,8 +177,8 @@
     </div>
     <div class="form-group" [class.has-error]="form.get('eventName')?.invalid && form.get('eventName')?.touched">
       <label translate>Events for {{ mapping?.extension?.extensionName }}</label>
-      <c8y-select [items]="extensionEventItems$ | async" formControlName="eventName" [filterItems]="true"
-        aria-label="Event Name"></c8y-select>
+      <c8y-select [items]="extensionEventItems$ | async" formControlName="eventName" [filterItems]="true" aria-label="Event Name">
+      </c8y-select>
       @if (form.get('eventName')?.invalid && form.get('eventName')?.touched) {
       <span class="help-block"><small translate>Event name is required.</small></span>
       }
@@ -282,8 +215,8 @@
     </div>
     <div class="form-group" [class.has-error]="form.get('eventName')?.invalid && form.get('eventName')?.touched">
       <label translate>Events for {{ mapping?.extension?.extensionName }}</label>
-      <c8y-select [items]="extensionEventItems$ | async" formControlName="eventName" [filterItems]="true"
-        aria-label="Event Name"></c8y-select>
+      <c8y-select [items]="extensionEventItems$ | async" formControlName="eventName" [filterItems]="true" aria-label="Event Name">
+      </c8y-select>
       @if (form.get('eventName')?.invalid && form.get('eventName')?.touched) {
       <span class="help-block"><small translate>Event name is required.</small></span>
       }

@@ -93,6 +93,7 @@ import { CommonModule } from '@angular/common';
 import { MappingStepPropertiesComponent } from '../step-property/mapping-properties.component';
 import { MappingConnectorComponent } from '../step-connector/mapping-connector.component';
 import { MappingSubstitutionStepComponent } from '../step-substitution/mapping-substitution-step.component';
+import { MappingTemplateStepComponent } from '../step-template/mapping-template-step.component';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { StepperViewModel, StepperViewModelFactory } from '../stepper-mapping/stepper-view.model';
 import * as jsYaml from 'js-yaml';
@@ -144,8 +145,8 @@ const TAB_TEST_MAPPING = 4;
     MappingStepPropertiesComponent,
     MappingConnectorComponent,
     MappingSubstitutionStepComponent,
-    MappingStepTestingComponent,
-    JsonEditorComponent
+    MappingTemplateStepComponent,
+    MappingStepTestingComponent
   ]
 })
 export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnDestroy {
@@ -156,14 +157,12 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
   // View model with computed properties for template simplification
   stepperViewModel!: StepperViewModel;
 
-  @ViewChild('editorSourceStepTemplate', { static: false }) editorSourceStepTemplate!: JsonEditorComponent;
-  @ViewChild('editorTargetStepTemplate', { static: false }) editorTargetStepTemplate!: JsonEditorComponent;
+  @ViewChild('templateStep', { static: false }) templateStepRef!: MappingTemplateStepComponent;
   @ViewChild('mappingTestingStep', { static: false }) mappingTestingStep!: MappingStepTestingComponent;
   @ViewChild('editorSourceStepSubstitution', { static: false }) editorSourceStepSubstitution!: JsonEditorComponent;
   @ViewChild('editorTargetStepSubstitution', { static: false }) editorTargetStepSubstitution!: JsonEditorComponent;
   @ViewChild(SubstitutionRendererComponent, { static: false }) substitutionChild!: SubstitutionRendererComponent;
   @ViewChild('codeEditor', { static: false }) codeEditor!: EditorComponent;
-  @ViewChild('filterModelFilterExpression') filterModelFilterExpression!: ElementRef<HTMLTextAreaElement>;
   @ViewChild('substitutionModelSourceExpression') substitutionModelSourceExpression!: ElementRef<HTMLTextAreaElement>;
   @ViewChild('substitutionModelTargetExpression') substitutionModelTargetExpression!: ElementRef<HTMLTextAreaElement>;
 
@@ -235,7 +234,7 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
 
   // Cached properties for c8y-select components
   extensionItems: string[] = [];
-  extensionEventItems$: Observable<string[]>;
+  extensionEventItems$: Observable<{ label: string; value: string }[]>;
   /** True when the selected extension event has a configuration block defined */
   hasExtensionParameter = false;
   snoopedTemplateItems: Array<{ label: string, value: string }> = [];
@@ -340,7 +339,12 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     this.stepperViewModel = StepperViewModelFactory.create(this.stepperConfiguration);
 
     this.extensionEventItems$ = this.stepperService.extensionEvents$.pipe(
-      map((events: ExtensionEntry[]) => events?.map((event: ExtensionEntry) => event.eventName) || []),
+      map((events: ExtensionEntry[]) =>
+        (events || []).map(e => ({
+          label: e.description ? `${e.eventName} — ${e.description}` : e.eventName,
+          value: e.eventName
+        }))
+      ),
       shareReplay(1)
     );
     this.updateSnoopedTemplateItems();
@@ -765,7 +769,7 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
 
     try {
       const result = await this.stepperService.evaluateFilterExpression(
-        this.editorSourceStepTemplate?.get(),
+        this.templateStepRef?.editorSourceStepTemplate?.get(),
         path
       );
 
@@ -986,7 +990,7 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
         ? expandExternalTemplate(template, this.mapping, levels)
         : template;
     }
-    this.editorTargetStepTemplate.set(this.targetTemplate);
+    this.templateStepRef?.editorTargetStepTemplate?.set(this.targetTemplate);
   }
 
   onSelectExtensionName(extensionName: string): void {
@@ -1264,8 +1268,8 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
   private manualResize(source: string): void {
     let element;
 
-    if (source === 'filterModelFilterExpression' && this.filterModelFilterExpression?.nativeElement) {
-      element = this.filterModelFilterExpression.nativeElement;
+    if (source === 'filterModelFilterExpression' && this.templateStepRef?.filterModelFilterExpression?.nativeElement) {
+      element = this.templateStepRef.filterModelFilterExpression.nativeElement;
     } else if (source === 'substitutionModelSourceExpression' && this.substitutionModelSourceExpression?.nativeElement) {
       element = this.substitutionModelSourceExpression.nativeElement;
     } else if (source === 'substitutionModelTargetExpression' && this.substitutionModelTargetExpression?.nativeElement) {

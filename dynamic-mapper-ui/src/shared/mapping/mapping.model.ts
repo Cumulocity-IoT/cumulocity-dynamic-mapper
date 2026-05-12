@@ -238,6 +238,7 @@ export interface ExtensionEntry {
   extensionName: string;
   eventName: string;
   fqnClassName?: string;
+  description?: string;
   loaded?: boolean;
   message?: string;
   extensionType: ExtensionType;

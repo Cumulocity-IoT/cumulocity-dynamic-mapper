@@ -87,6 +87,13 @@ d11r-mapping-substitution-step {
   overflow: hidden;
 }
 
+/* Templates tab: host element fills the step panel / tab scroll container */
+d11r-mapping-template-step {
+  display: block;
+  height: 100%;
+  overflow: hidden;
+}
+
 .select-template {
   flex: 1 1 auto;
   min-width: 0;
