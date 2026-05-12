@@ -437,7 +437,7 @@ public class MQTT3Client extends AMQTTClient {
     @Override
     protected ConnectorSpecification createConnectorSpecification() {
         return ConnectorSpecificationBuilder
-                .create("Generic MQTT", ConnectorType.MQTT)
+                .create("MQTT", ConnectorType.MQTT)
                 .description("Connector for connecting to external MQTT broker over tcp or websocket.")
                 .properties(buildCommonMqttProperties(MQTT_VERSION_3_1_1))
                 .supportedDirections(supportedDirections())

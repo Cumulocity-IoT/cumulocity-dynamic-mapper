@@ -462,7 +462,7 @@ public class MQTT5Client extends AMQTTClient {
     @Override
     protected ConnectorSpecification createConnectorSpecification() {
         return ConnectorSpecificationBuilder
-                .create("Generic MQTT 5.0", ConnectorType.MQTT)
+                .create("MQTT 5.0", ConnectorType.MQTT)
                 .description("Connector for connecting to external MQTT 5.0 broker over tcp or websocket.")
                 .properties(buildCommonMqttProperties(MQTT_VERSION_5_0))
                 .supportedDirections(supportedDirections())

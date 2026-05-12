@@ -316,7 +316,7 @@
                 <td>JSON, Hex, Protobuf, Extension</td>
               </tr>
               <tr class="table-light">
-                <td><strong>Generic MQTT</strong></td>
+                <td><strong>MQTT</strong></td>
                 <td class="text-center"><strong>X</strong></td>
                 <td class="text-center"><strong>X</strong></td>
                 <td class="text-center"><strong>X</strong></td>
@@ -595,7 +595,7 @@
           <div class="title">Inbound &amp; Outbound</div>
           <div class="content">
             The <strong>SparkPlug B</strong> payload type is supported for both <strong>inbound</strong> and
-            <strong>outbound</strong> mappings and requires a <strong>Generic MQTT</strong> connector (MQTT Service support only partially due to missing retain messages).
+            <strong>outbound</strong> mappings and requires a <strong>MQTT</strong> connector (MQTT Service support only partially due to missing retain messages).
             Inbound decodes NBIRTH / NDATA / DBIRTH / DDATA / NCMD / DCMD protobuf payloads automatically.
             Outbound serializes the metric object returned by your Smart Function to SparkPlug B protobuf binary
             before publishing NCMD or DCMD messages to the broker.
@@ -756,7 +756,7 @@
         <h4 class="p-t-16 p-b-8">Creating a SparkPlug B Mapping</h4>
         <ol class="text-16 m-l-16">
           <li class="m-b-8">
-            <strong>Connector</strong> — Create a <strong>Generic MQTT</strong> connector pointing to your
+            <strong>Connector</strong> — Create a <strong>MQTT</strong> connector pointing to your
             MQTT broker that receives Sparkplug B messages.
           </li>
           <li class="m-b-8">
