@@ -30,7 +30,10 @@ import com.dashjoin.jsonata.json.Json;
 import dynamic.mapper.configuration.ServiceConfiguration;import dynamic.mapper.model.*;
 
 import dynamic.mapper.service.ServiceConfigurationService;import lombok.extern.slf4j.Slf4j;
+import org.springaicommunity.mcp.annotation.McpTool;
+import org.springaicommunity.mcp.annotation.McpToolParam;
 import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
@@ -373,8 +376,10 @@ public class AIAgentService {
      * @throws IllegalArgumentException if the expression or source JSON is null or
      *                                  empty
      */
-    @Tool(description = "Evaluate a JSONata expression against a JSON object")
-    public String evaluateJsonataExpression(String expression, String sourceJSON) {
+    @Tool(name = "evaluateJsonataExpression", description = "Evaluate a JSONata expression against a JSON object")
+    //@McpTool(name = "evaluateJsonataExpression", description = "Evaluate a JSONata expression against a JSON object")
+    public String evaluateJsonataExpression(@ToolParam(description = "JSONata expression to evaluate", required = true) String expression,
+                                            @ToolParam(description = "JSON document to apply the expression on", required = true) String sourceJSON) {
         if (expression == null || expression.isEmpty())
             throw new IllegalArgumentException("JSONata expression cannot be null");
         if (sourceJSON == null || sourceJSON.isEmpty())
