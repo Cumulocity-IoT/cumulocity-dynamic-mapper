@@ -1158,6 +1158,11 @@ public abstract class AConnectorClient {
                 submitInitialize().get();
                 submitConnect().get();
                 log.info("{} - Reconnection completed successfully for {}", tenant, connectorName);
+            } catch (java.util.concurrent.CancellationException e) {
+                // A newer reconnect attempt cancelled this one — this is expected behaviour
+                // when a CONNECT operation arrives while a previous reconnect is still in flight.
+                log.debug("{} - Reconnection for {} was superseded by a newer reconnect request",
+                        tenant, connectorName);
             } catch (Exception e) {
                 log.error("{} - Reconnection failed for {}: {}", tenant, connectorName, e.getMessage(), e);
                 connectionStateManager.updateStatusWithError(e);

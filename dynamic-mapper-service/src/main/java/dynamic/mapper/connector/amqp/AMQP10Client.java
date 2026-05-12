@@ -197,6 +197,10 @@ public class AMQP10Client extends AConnectorClient {
             if (StringUtils.isNotEmpty(password)) {
                 factory.setPassword(password);
             }
+            String clientId = (String) connectorConfiguration.getProperties().get("clientId");
+            if (StringUtils.isNotEmpty(clientId)) {
+                factory.setClientID(clientId);
+            }
 
             connection = factory.createConnection();
             connection.setExceptionListener(ex -> {
@@ -408,6 +412,10 @@ public class AMQP10Client extends AConnectorClient {
                     MessageProducer producer = getOrCreateProducer(address, destination);
 
                     TextMessage message = session.createTextMessage(payload);
+                    String contentType = (String) connectorConfiguration.getProperties().get("contentType");
+                    if (StringUtils.isNotEmpty(contentType)) {
+                        message.setStringProperty("JMS_AMQP_ContentType", contentType);
+                    }
                     int deliveryMode = (context.getQos() == Qos.AT_LEAST_ONCE)
                             ? DeliveryMode.PERSISTENT
                             : DeliveryMode.NON_PERSISTENT;
@@ -636,45 +644,53 @@ public class AMQP10Client extends AConnectorClient {
                 .property("password", ConnectorPropertyBuilder.optionalSensitive()
                         .order(4))
 
+                // AMQP container ID / JMS client ID (e.g. device ID for Azure IoT Hub)
+                .property("clientId", ConnectorPropertyBuilder.optionalString()
+                        .order(5))
+
                 // AMQP 1.0 destination type — no exchange/routing-key concept
                 .property("destinationType", ConnectorPropertyBuilder.requiredOption()
-                        .order(5)
+                        .order(6)
                         .defaultValue("queue")
                         .optionsWithLabels("queue", "Queue", "topic", "Topic"))
 
+                // Content type set on outbound AMQP messages (e.g. application/json;charset=utf-8)
+                .property("contentType", ConnectorPropertyBuilder.optionalString()
+                        .order(7))
+
                 // TLS/SSL certificate configuration (only for amqps://)
                 .property("useSelfSignedCertificate", ConnectorPropertyBuilder.optionalBoolean()
-                        .order(6)
+                        .order(8)
                         .defaultValue(false)
                         .condition("protocol", "amqps://"))
 
                 .property("fingerprintSelfSignedCertificate", ConnectorPropertyBuilder.largeText()
-                        .order(7)
+                        .order(9)
                         .description("SHA-1 fingerprint of CA or Self-Signed Certificate")
                         .condition("useSelfSignedCertificate", "true"))
 
                 .property("nameCertificate", ConnectorPropertyBuilder.optionalString()
-                        .order(8)
+                        .order(10)
                         .condition("useSelfSignedCertificate", "true"))
 
                 .property("certificateChainInPemFormat", ConnectorPropertyBuilder.largeText()
-                        .order(9)
+                        .order(11)
                         .description("Certificate in PEM format, or identify by name/fingerprint " +
                                 "(must be uploaded as Trusted Certificate in Device Management)")
                         .condition("useSelfSignedCertificate", "true"))
 
                 // Connection behaviour
                 .property("automaticRecovery", ConnectorPropertyBuilder.optionalBoolean()
-                        .order(10)
+                        .order(12)
                         .defaultValue(true))
 
                 // Wildcard support (broker-dependent for AMQP 1.0)
                 .property("supportsWildcardInTopicInbound", ConnectorPropertyBuilder.optionalBoolean()
-                        .order(11)
+                        .order(13)
                         .defaultValue(false))
 
                 .property("supportsWildcardInTopicOutbound", ConnectorPropertyBuilder.optionalBoolean()
-                        .order(12)
+                        .order(14)
                         .defaultValue(false))
 
                 .build();

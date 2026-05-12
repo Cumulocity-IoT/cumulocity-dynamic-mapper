@@ -23,6 +23,7 @@ package dynamic.mapper.notification.service;
 
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
+import dynamic.mapper.connector.core.client.ConnectorType;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionRepresentation;
 import dynamic.mapper.configuration.ConnectorId;
@@ -107,7 +108,9 @@ public class NotificationConnectionManager {
     /**
      * Create a subscriber token for EXPLORER_DEVICE_SUBSCRIPTION and open a WebSocket
      * so the explorer session receives Notification 2.0 events for the subscribed device.
-     * Uses the first available dispatcher for the tenant as the callback target.
+     * Prefers a non-TEST dispatcher so that the WebSocket callback processes notifications
+     * normally — TEST connector dispatchers skip live notifications (early-return guard in
+     * CamelDispatcherOutbound.onNotification) and would silently drop all events.
      */
     public void initializeExplorerDeviceClient(String tenant, String sessionId) {
         Map<String, CamelDispatcherOutbound> dispatchers = connectorRegistry.getDispatchers(tenant);
@@ -115,8 +118,18 @@ public class NotificationConnectionManager {
             log.warn("{} - No outbound dispatchers available for explorer session {}", tenant, sessionId);
             return;
         }
-        CamelDispatcherOutbound dispatcher = dispatchers.values().iterator().next();
-        if (!isValidDispatcher(dispatcher)) {
+        // Prefer a non-TEST dispatcher: CamelDispatcherOutbound.onNotification returns early
+        // for TEST connectors without calling processNotification, so notifyOutboundExplorerListeners
+        // would never fire and no messages would appear in the explorer.
+        CamelDispatcherOutbound dispatcher = dispatchers.values().stream()
+                .filter(d -> isValidDispatcher(d)
+                        && d.getConnectorClient().getConnectorType() != ConnectorType.TEST)
+                .findFirst()
+                .orElseGet(() -> dispatchers.values().stream()
+                        .filter(this::isValidDispatcher)
+                        .findFirst()
+                        .orElse(null));
+        if (dispatcher == null) {
             log.warn("{} - No valid dispatcher for explorer session {}", tenant, sessionId);
             return;
         }
