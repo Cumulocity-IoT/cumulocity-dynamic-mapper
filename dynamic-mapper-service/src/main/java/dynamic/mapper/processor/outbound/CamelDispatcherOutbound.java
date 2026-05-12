@@ -95,6 +95,36 @@ public class CamelDispatcherOutbound implements NotificationCallback {
 
     @Override
     public ProcessingResultWrapper<?> onNotification(Notification notification) {
+        // Notify outbound explorer listeners BEFORE the TEST connector guard so that
+        // the Message Explorer works regardless of which connector type owns the WebSocket.
+        // This is necessary in multi-tenant setups where the TEST connector may be the
+        // only (or first) dispatcher available for opening the explorer WebSocket.
+        if (notification != null && notification.getMessage() != null
+                && ("CREATE".equals(notification.getOperation()) || "UPDATE".equals(notification.getOperation()))
+                && !(notification.getApi() != null && notification.getApi().equals(API.OPERATION)
+                        && "UPDATE".equals(notification.getOperation()))) {
+            String tenant = getTenantFromNotificationHeaders(notification.getNotificationHeaders());
+            String explorerTopic = (notification.getApi() != null ? notification.getApi().name() : "UNKNOWN")
+                    + "/" + notification.getOperation();
+            String sourceId = null;
+            try {
+                Map parsedForExplorer = (Map) Json.parseJson(notification.getMessage());
+                var expr = jsonata(notification.getApi().identifier);
+                Object sourceIdResult = expr.evaluate(parsedForExplorer);
+                sourceId = (sourceIdResult instanceof String) ? (String) sourceIdResult : null;
+            } catch (Exception ignored) {
+                // not critical — explorer will show messages without device filtering
+            }
+            ConnectorMessage explorerMsg = ConnectorMessage.builder()
+                    .topic(explorerTopic)
+                    .payload(notification.getMessage().getBytes(StandardCharsets.UTF_8))
+                    .tenant(tenant)
+                    .connectorIdentifier(connectorClient.getConnectorIdentifier())
+                    .sourceId(sourceId)
+                    .build();
+            connectorClient.notifyOutboundExplorerListeners(explorerMsg);
+        }
+
         if (connectorClient.getConnectorType() == ConnectorType.TEST) {
             log.debug("{} - Skipping live notification for TEST connector — only processes via TestController",
                     connectorClient.getTenant());
@@ -149,33 +179,6 @@ public class CamelDispatcherOutbound implements NotificationCallback {
 
         // Extract tenant from notification
         String tenant = getTenantFromNotificationHeaders(notification.getNotificationHeaders());
-
-        // Notify outbound explorer listeners FIRST — before any connector/operation guards —
-        // so the explorer works regardless of whether connectors are enabled or connected.
-        // Only fire for real (non-test) notifications with a valid payload and qualifying operations.
-        if (!testing && notification.getMessage() != null
-                && ("CREATE".equals(notification.getOperation()) || "UPDATE".equals(notification.getOperation()))
-                && !(notification.getApi().equals(API.OPERATION) && "UPDATE".equals(notification.getOperation()))) {
-            String explorerTopic = notification.getApi().name() + "/" + notification.getOperation();
-            // Extract the C8Y source device ID so per-device explorer sessions can filter
-            String sourceId = null;
-            try {
-                Map parsedForExplorer = (Map) Json.parseJson(notification.getMessage());
-                var expr = jsonata(notification.getApi().identifier);
-                Object sourceIdResult = expr.evaluate(parsedForExplorer);
-                sourceId = (sourceIdResult instanceof String) ? (String) sourceIdResult : null;
-            } catch (Exception ignored) {
-                // not critical — explorer will show messages without device filtering
-            }
-            ConnectorMessage explorerMsg = ConnectorMessage.builder()
-                    .topic(explorerTopic)
-                    .payload(notification.getMessage().getBytes(StandardCharsets.UTF_8))
-                    .tenant(tenant)
-                    .connectorIdentifier(connectorClient.getConnectorIdentifier())
-                    .sourceId(sourceId)
-                    .build();
-            connectorClient.notifyOutboundExplorerListeners(explorerMsg);
-        }
 
         // Check connector connection status (skip for testing)
         if (!testing && !connectorClient.isConnected() && connectorClient.getConnectorType() != ConnectorType.TEST) {
