@@ -595,7 +595,7 @@
           <div class="title">Inbound &amp; Outbound</div>
           <div class="content">
             The <strong>SparkPlug B</strong> payload type is supported for both <strong>inbound</strong> and
-            <strong>outbound</strong> mappings and requires a <strong>Generic MQTT</strong> connector.
+            <strong>outbound</strong> mappings and requires a <strong>Generic MQTT</strong> connector (MQTT Service support only partially due to missing retain messages).
             Inbound decodes NBIRTH / NDATA / DBIRTH / DDATA / NCMD / DCMD protobuf payloads automatically.
             Outbound serializes the metric object returned by your Smart Function to SparkPlug B protobuf binary
             before publishing NCMD or DCMD messages to the broker.
@@ -642,12 +642,10 @@
                 <td><code>DBIRTH</code></td>
                 <td>5</td>
                 <td><code>c8y_Serial</code></td>
-                <td><code>sparkPlugB_DBIRTH</code></td>
-                <td>Device birth — metric definitions for a device attached to an Edge Node. The mapper stores
-                  the alias→metric-definition map on the Device managed object so that subsequent DDATA
-                  messages can resolve aliases.
-                  The Device external ID is <code>[Group ID]_[Edge Node ID]_[Device ID]</code>.
-                  This ensures uniqueness because the same device ID can exist under different groups or Edge Nodes.</td>
+                <td><code>sparkPlugB_DBIRTH_[deviceId]</code></td>
+                <td>Device birth — metric definitions for a device attached to an Edge Node. Per default no managed objects are created for SparkPlug devices. The mapper stores
+                  the alias→metric-definition map and metrics on the Edge node managed object so that subsequent DDATA
+                  messages can resolve aliases.</td>
               </tr>
               <tr class="table-light">
                 <td><code>DDATA</code></td>
@@ -655,15 +653,15 @@
                 <td>—</td>
                 <td>—</td>
                 <td>Device data — metric values for a specific device. Aliases are resolved using the
-                  <code>sparkPlugB_DBIRTH</code> fragment stored on the Device MO.
+                  <code>sparkPlugB_DBIRTH_[deviceId]</code> fragment stored on the Edge Node MO.
                   The decoded payload is passed to your Smart Function.</td>
               </tr>
               <tr>
                 <td><code>NDEATH</code> / <code>DDEATH</code></td>
                 <td>4 / 5</td>
                 <td>—</td>
-                <td>—</td>
-                <td>Node/Device death — signals that the node or device has gone offline.
+                <td><code>sparkPlugB_IsActive_[deviceId]</code></td>
+                <td>Node/Device death — signals that the node or device has gone offline. The fragment <code>sparkPlugB_IsActive_[deviceId]</code> for DDEATH or <code>sparkPlugB_IsActive</code> for NDEATH will be set to false.
                   Passed to the Smart Function without alias resolution.</td>
               </tr>
               <tr class="table-light">
@@ -691,7 +689,7 @@
           </li>
           <li class="m-b-8">
             <strong>Birth message storage (NBIRTH / DBIRTH)</strong> — After the managed object for the Edge Node
-            or Device is upserted in inventory, the decoded metric-definition map
+            is upserted in inventory, the decoded metric-definition map
             (alias → &#123; name, dataType &#125;) is stored as a named fragment on the MO.
             This happens automatically — your Smart Function does not need to handle it.
           </li>
@@ -711,7 +709,7 @@
         <ol class="text-16 m-l-16">
           <li class="m-b-8">
             <strong>Enrichment</strong> — The mapper resolves the device external ID and loads the
-            <code>sparkPlugB_NBIRTH</code> (or <code>sparkPlugB_DBIRTH</code>) alias map from the managed object.
+            <code>sparkPlugB_NBIRTH</code> (or <code>sparkPlugB_DBIRTH_[deviceId]</code>) alias map from the managed object.
             The inverted map (metric name → alias) is available inside the Smart Function as
             <code>context.getConfig().aliasMap</code>.
           </li>
@@ -752,7 +750,7 @@
       "timestamp": 1713700000000
     &#125;
   ],
-  "sparkPlugB_NBIRTH": &#123; ... &#125;   // birth map attached for NBIRTH / NDATA (sparkPlugB_DBIRTH for DBIRTH / DDATA)
+  "sparkPlugB_NBIRTH": &#123; ... &#125;   // birth map attached for NBIRTH / NDATA (sparkPlugB_DBIRTH_[deviceId] for DBIRTH / DDATA)
 &#125;</pre>
 
         <h4 class="p-t-16 p-b-8">Creating a SparkPlug B Mapping</h4>
