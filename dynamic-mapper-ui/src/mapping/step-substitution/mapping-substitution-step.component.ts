@@ -99,7 +99,8 @@ export class MappingSubstitutionStepComponent implements OnInit {
 
   templateForm: FormGroup = new FormGroup({});
   substitutionFormly: FormGroup = new FormGroup({});
-  substitutionFormlyFields: FormlyFieldConfig[];
+  substitutionFormlyFieldsSource: FormlyFieldConfig[];
+  substitutionFormlyFieldsTarget: FormlyFieldConfig[];
   substitutionModel: any = {};
   selectedSubstitution: number = -1;
   expertMode: boolean = false;
@@ -153,82 +154,78 @@ export class MappingSubstitutionStepComponent implements OnInit {
   }
 
   private initializeFormlyFields(): void {
-    this.substitutionFormlyFields = [
+    this.substitutionFormlyFieldsSource = [
       {
-        fieldGroup: [
-          {
-            className: 'col-lg-5 col-lg-offset-1',
-            key: 'pathSource',
-            type: 'd11r-input',
-            wrappers: ['c8y-form-field'],
-            templateOptions: {
-              label: 'Source Expression',
-              class: 'input-sm',
-              disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
-                !this.stepperConfiguration.allowDefiningSubstitutions,
-              placeholder: '$join([$substring(txt,5), id]) or $number(id)/10',
-              description: `Use <a href="https://jsonata.org" target="_blank">JSONata</a>
-              in your expressions:
-              <ol>
-                <li>to convert a UNIX timestamp to ISO date format use:
-                  <code>$fromMillis($number(deviceTimestamp))</code>
-                </li>
-                <li>to concat strings use "&"
-                </li>
-                <li>to join substring starting at position 5 of property <code>txt</code> with
-                  device
-                  identifier use: <code>$join([$substring(txt,5), "-", id])</code></li>
-                <li>function chaining using <code>~</code> is supported. The expression <code>Account.Product.(Price * Quantity) ~> $sum()</code>
-                  becomes <code>$sum(Account.Product.(Price * Quantity))</code></li>
-              </ol>`,
-              required: true,
-              customMessage: this.sourceCustomMessage$
-            },
-            hooks: {
-              onInit: (field: FormlyFieldConfig) => {
-                field.formControl.valueChanges.pipe(
-                  debounceTime(500),
-                  distinctUntilChanged()
-                ).subscribe(path => this.updateSourceExpressionResult(path));
-              }
-            }
-          },
-          {
-            className: 'col-lg-5',
-            key: 'pathTarget',
-            type: 'd11r-input',
-            wrappers: ['c8y-form-field'],
-            templateOptions: {
-              label: 'Target Expression',
-              disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
-                !this.stepperConfiguration.allowDefiningSubstitutions,
-              description: `Use <a href="https://jsonata.org" target="_blank">JSONata</a>
-              in your expressions:
-              <ol>
-                <li>to convert a UNIX timestamp to ISO date format use:
-                  <code>$fromMillis($number(deviceTimestamp))</code>
-                </li>
-                <li>to concat strings use "&"
-                </li>
-                <li>to join substring starting at position 5 of property <code>txt</code> with
-                  device
-                  identifier use: <code>$join([$substring(txt,5), "-", id])</code></li>
-                <li>function chaining using <code>~</code> is supported. The expression <code>Account.Product.(Price * Quantity) ~> $sum()</code>
-                  becomes <code>$sum(Account.Product.(Price * Quantity))</code></li>
-              </ol>`,
-              required: true,
-              customMessage: this.targetCustomMessage$
-            },
-            hooks: {
-              onInit: (field: FormlyFieldConfig) => {
-                field.formControl.valueChanges.pipe(
-                  debounceTime(500),
-                  distinctUntilChanged()
-                ).subscribe(path => this.updateTargetExpressionResult(path));
-              }
-            }
+        key: 'pathSource',
+        type: 'd11r-input',
+        wrappers: ['c8y-form-field'],
+        templateOptions: {
+          label: 'Source Expression',
+          class: 'input-sm',
+          disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
+            !this.stepperConfiguration.allowDefiningSubstitutions,
+          placeholder: '$join([$substring(txt,5), id]) or $number(id)/10',
+          description: `Use <a href="https://jsonata.org" target="_blank">JSONata</a>
+          in your expressions:
+          <ol>
+            <li>to convert a UNIX timestamp to ISO date format use:
+              <code>$fromMillis($number(deviceTimestamp))</code>
+            </li>
+            <li>to concat strings use "&"
+            </li>
+            <li>to join substring starting at position 5 of property <code>txt</code> with
+              device
+              identifier use: <code>$join([$substring(txt,5), "-", id])</code></li>
+            <li>function chaining using <code>~</code> is supported. The expression <code>Account.Product.(Price * Quantity) ~> $sum()</code>
+              becomes <code>$sum(Account.Product.(Price * Quantity))</code></li>
+          </ol>`,
+          required: true,
+          customMessage: this.sourceCustomMessage$
+        },
+        hooks: {
+          onInit: (field: FormlyFieldConfig) => {
+            field.formControl.valueChanges.pipe(
+              debounceTime(500),
+              distinctUntilChanged()
+            ).subscribe(path => this.updateSourceExpressionResult(path));
           }
-        ]
+        }
+      }
+    ];
+    this.substitutionFormlyFieldsTarget = [
+      {
+        key: 'pathTarget',
+        type: 'd11r-input',
+        wrappers: ['c8y-form-field'],
+        templateOptions: {
+          label: 'Target Expression',
+          disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
+            !this.stepperConfiguration.allowDefiningSubstitutions,
+          description: `Use <a href="https://jsonata.org" target="_blank">JSONata</a>
+          in your expressions:
+          <ol>
+            <li>to convert a UNIX timestamp to ISO date format use:
+              <code>$fromMillis($number(deviceTimestamp))</code>
+            </li>
+            <li>to concat strings use "&"
+            </li>
+            <li>to join substring starting at position 5 of property <code>txt</code> with
+              device
+              identifier use: <code>$join([$substring(txt,5), "-", id])</code></li>
+            <li>function chaining using <code>~</code> is supported. The expression <code>Account.Product.(Price * Quantity) ~> $sum()</code>
+              becomes <code>$sum(Account.Product.(Price * Quantity))</code></li>
+          </ol>`,
+          required: true,
+          customMessage: this.targetCustomMessage$
+        },
+        hooks: {
+          onInit: (field: FormlyFieldConfig) => {
+            field.formControl.valueChanges.pipe(
+              debounceTime(500),
+              distinctUntilChanged()
+            ).subscribe(path => this.updateTargetExpressionResult(path));
+          }
+        }
       }
     ];
   }

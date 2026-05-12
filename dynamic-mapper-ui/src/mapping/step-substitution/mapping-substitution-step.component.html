@@ -6,7 +6,7 @@
     <div [formGroup]="templateForm">
       <div class="row">
         <!-- Source Template Editor -->
-        <div class="col-lg-5 col-lg-offset-1 column-right-border">
+        <div class="col-lg-6 column-right-border">
           <div class="form-group m-b-0">
             <div class="d-flex j-c-between">
               <label translate>Source Template - {{ sourceSystem }}</label>
@@ -22,7 +22,7 @@
           </div>
         </div>
         <!-- Target Template Editor -->
-        <div class="col-lg-5 column-left-border">
+        <div class="col-lg-6 column-left-border">
           <div class="form-group m-b-0">
             <div class="d-flex a-i-center">
               <label>Target Template - {{ targetSystem }}</label>
@@ -44,7 +44,7 @@
       </div>
       <!-- Status Messages -->
       <div class="row">
-        <div class="col-lg-5 col-lg-offset-1">
+        <div class="col-lg-6">
           <div class="form-group m-b-8">
             @if (stepperConfiguration.showEditorSource) {
             <div>
@@ -60,7 +60,7 @@
             }
           </div>
         </div>
-        <div class="col-lg-5">
+        <div class="col-lg-6">
           <div class="form-group m-b-8">
             <span class="text-info text-12 p-l-8">
               {{substitutionModel.pathTarget === '' && stepperConfiguration.showEditorSource ?
@@ -76,7 +76,7 @@
     <div [formGroup]="substitutionFormly">
       <!-- Action Buttons -->
       <div class="row p-t-8">
-        <div class="col-lg-10 col-lg-offset-1">
+        <div class="col-lg-12">
           <div class="btn-group btn-group-justified j-c-center">
             <div class="btn-group">
               <button type="button" class="btn btn-default btn-sm" (click)="onAddSubstitution()"
@@ -97,37 +97,35 @@
                 <span>{{ stepperConfiguration.editorMode === EditorMode.UPDATE ? 'Review / Refine with AI' : 'Generate substitutions' }}</span>
               </button>
             </div>
-            <div class="btn-group m-l-4">
-              <!-- <button type="button" class="btn btn-default btn-sm" (click)="toggleExpertMode()">
-                <i c8yIcon="c8y-analytic-model"></i>&nbsp;Toggle expert mode
-              </button> -->
-              <label class="c8y-switch">
-                <input type="checkbox" (click)="toggleExpertMode()" />
-                <span class="m-r-8"></span>
-                {{ 'Expert Mode' | translate }}
-              </label>
-              <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
-                popover="{{'Allow to define expressions using JSONata'}}" triggers="focus" type="button"
-                container="body"></button>
-            </div>
           </div>
+        </div>
+      </div>
+      <!-- Expert Mode collapsible header -->
+      <div class="row p-t-4 p-b-4 cursor-pointer" (click)="toggleExpertMode()" style="cursor:pointer">
+        <div class="col-lg-12 d-flex a-i-center">
+          <i [c8yIcon]="expertMode ? 'chevron-down' : 'chevron-right'" class="m-r-8"></i>
+          <span translate>Expert Mode</span>
+          <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
+            popover="{{'Allow to define expressions using JSONata'}}" triggers="focus" type="button"
+            container="body" (click)="$event.stopPropagation()"></button>
         </div>
       </div>
       <!-- Expert Mode Fields -->
       <div class="collapse" [isAnimated]="true" [collapse]="!expertMode">
-        <div class="d-flex d-col p-t-8">
-          <formly-form [form]="substitutionFormly" [fields]="substitutionFormlyFields" [model]="substitutionModel">
-          </formly-form>
-          <!-- Expression Results -->
+        <div class="p-t-8">
           <div class="row">
-            <div class="col-lg-5 col-lg-offset-1">
+            <div class="col-lg-6">
+              <formly-form [form]="substitutionFormly" [fields]="substitutionFormlyFieldsSource" [model]="substitutionModel">
+              </formly-form>
               <div class="form-group m-b-4">
                 <label>&nbsp;Source Result [{{substitutionModel.sourceExpression?.resultType}}]</label>
                 <textarea class="form-control font-smaller" #substitutionModelSourceExpression c8y-textarea-autoresize
                   readonly="true">{{substitutionModel.sourceExpression?.result}}</textarea>
               </div>
             </div>
-            <div class="col-lg-5">
+            <div class="col-lg-6">
+              <formly-form [form]="substitutionFormly" [fields]="substitutionFormlyFieldsTarget" [model]="substitutionModel">
+              </formly-form>
               <div class="form-group m-b-4">
                 <label>&nbsp;Target Result [{{substitutionModel.targetExpression?.resultType}}]</label>
                 <textarea class="form-control font-smaller" #substitutionModelTargetExpression c8y-textarea-autoresize
@@ -141,7 +139,7 @@
     <!-- Substitution Grid -->
     <div [formGroup]="templateForm">
       <div class="row">
-        <div class="col-lg-10 col-lg-offset-1">
+        <div class="col-lg-12">
           <div style="min-height: 32px">
             <d11r-mapping-substitution-grid [mapping]="mapping" [settings]="{
                   color: COLOR_HIGHLIGHTED,

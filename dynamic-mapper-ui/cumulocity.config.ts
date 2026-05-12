@@ -42,10 +42,6 @@ export default {
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_Basic.png'
       },
       {
-        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Basic_Annotated.png',
-        to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_Basic_Annotated.png'
-      },
-      {
         from: '../resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_Snooping.png',
         to: 'image/Dynamic_Mapper_Mapping_Table_Add_Modal_Snooping.png'
       },

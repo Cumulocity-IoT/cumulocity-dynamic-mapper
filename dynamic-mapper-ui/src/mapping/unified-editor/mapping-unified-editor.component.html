@@ -76,10 +76,14 @@
 
     <!-- Tab 2: Templates -->
     @if (activeTabIndex === 2 && isTabVisible(2)) {
+    <div class="card-block p-b-0">
     <div [formGroup]="templateForm">
       <div class="row">
         <div class="col-lg-6 column-right-border">
           <div class="form-group">
+            <div>
+              <label translate>Source Template - {{ sourceSystem }}</label>
+            </div>
             <c8y-select [items]="snoopedTemplateItems" formControlName="snoopedTemplateIndex" [filterItems]="true"
               labelProperty="label" placeholder="{{ 'Select snooped template' | translate }}" aria-label="Snooped Template"
               class="w-50">
@@ -89,29 +93,6 @@
                 'Template is described internally by the chosen mapping type.' :
                 'Use sample templates for the source.'
                 }}</small>
-            </div>
-          </div>
-        </div>
-        <div class="col-lg-6 column-left-border">
-          <div class="form-group">
-            <div class="d-flex j-c-between">
-              <button type="button" name="sample" class="btn btn-default" (click)="onSampleTargetTemplatesButton()"
-                translate title="{{ 'Use Sample Target Templates' | translate }}"
-                [disabled]="templateForm.get('sampleTargetTemplatesButton')?.value || (!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole)">
-                <i c8yIcon="enter-right"></i>Reset to default
-              </button>
-            </div>
-            <div>
-              <small class="text-muted" translate>Use sample templates for the target.</small>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="row">
-        <div class="col-lg-6 column-right-border">
-          <div class="form-group">
-            <div>
-              <label translate>Source Template - {{ sourceSystem }}</label>
             </div>
             @if (stepperViewModel.showSourceEditor) {
             <d11r-mapping-json-editor [updateEditor]="updateSourceEditor" [options]="editorOptionsSourceTemplate"
@@ -133,6 +114,16 @@
           <div class="form-group">
             <div class="d-flex j-c-between">
               <label translate>Target Template - {{ targetSystem }}</label>
+            </div>
+            <div class="d-flex j-c-between">
+              <button type="button" name="sample" class="btn btn-default" (click)="onSampleTargetTemplatesButton()"
+                translate title="{{ 'Use Sample Target Templates' | translate }}"
+                [disabled]="templateForm.get('sampleTargetTemplatesButton')?.value || (!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole)">
+                <i c8yIcon="enter-right"></i>Reset to default
+              </button>
+            </div>
+            <div>
+              <small class="text-muted" translate>Use sample templates for the target.</small>
             </div>
             @if (stepperViewModel.showTargetEditor) {
             <d11r-mapping-json-editor [updateEditor]="updateTargetEditor" [options]="editorOptionsTargetTemplate"
@@ -169,25 +160,29 @@
     </div>
     }
     @if (stepperViewModel.showFilterControls) {
-    <div class="d-col g-8">
-      <div>
-        <button type="button" name="updateFilterExecutionMapping" class="btn btn-default btn-sm m-b-4"
-          (click)="onOverwriteFilterMapping()" translate title="{{ 'Update Filter Execution Mapping' | translate }}"
-          [disabled]="!selectedPathFilterFilterMapping">
-          <i c8yIcon="filter"></i>Update Filter Execution Mapping
-        </button>
-      </div>
-      <formly-form [form]="filterFormly" [fields]="filterFormlyFields" [model]="filterModel"></formly-form>
-      <div class="form-group m-b-4">
-        <label translate class="p-l-8">Filter Result [{{ filterModel.filterExpression?.resultType
-          }}]</label>
-        <textarea class="form-control font-smaller" #filterModelFilterExpression c8y-textarea-autoresize [readonly]="true"
-          >{{
-                      filterModel.filterExpression?.result
-                    }}</textarea>
+    <div class="row">
+      <div class="col-lg-6 d-col g-8">
+        <div>
+          <button type="button" name="updateFilterExecutionMapping" class="btn btn-default btn-sm m-b-4"
+            (click)="onOverwriteFilterMapping()" translate title="{{ 'Update Filter Execution Mapping' | translate }}"
+            [disabled]="!selectedPathFilterFilterMapping">
+            <i c8yIcon="filter"></i>Update Filter Execution Mapping
+          </button>
+        </div>
+        <formly-form [form]="filterFormly" [fields]="filterFormlyFields" [model]="filterModel"></formly-form>
+        <div class="form-group m-l-0 m-b-4">
+          <label translate class="p-l-8">Filter Result [{{ filterModel.filterExpression?.resultType
+            }}]</label>
+          <textarea class="form-control font-smaller" #filterModelFilterExpression c8y-textarea-autoresize [readonly]="true"
+            >{{
+                        filterModel.filterExpression?.result
+                      }}</textarea>
+        </div>
       </div>
     </div>
     }
+
+    </div>
     }
 
     <!-- Tab 3: Substitutions -->

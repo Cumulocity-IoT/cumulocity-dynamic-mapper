@@ -16,7 +16,6 @@
       - [Enable snooping payloads on source topic](#enable-snooping-payloads-on-source-topic)
       - [Map Device Identifier](#map-device-identifier)
       - [Define templates and substitutions for source and target payload](#define-templates-and-substitutions-for-source-and-target-payload)
-      - [Substitutions defined as code (javascript) — DEPRECATED](#substitutions-defined-as-code-javascript)
       - [Defining the payload transformation using a Smart Function (JavaScript)](#defining-the-payload-transformation-using-a-smart-function-javascript)
     - [Using metadata in source templates and target templates](#using-metadata-in-source-templates-and-target-templates)
     - [Apply a filter for a mapping](#apply-a-filter-for-a-mapping)
@@ -443,11 +442,6 @@ In order to define a substitution (a substitution substitutes values in the targ
 2. Update an existing substitution, by selecting the substitution in the table of substitutions in the lower section of the wizard. Then press button "Update substitution"
 3. Delete an existing substitution, by pressing the button with the red minus
 
-<p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_ExpertMode_Annotated.png"  style="width: 70%;" />
-</p>
-<br/>
-
 To define a new substitution the following steps have to be performed:
 
 1. Select a property in the source JSON payload by click on the respective property. Then the JSONpath is appears in the field with the label `Evaluate Expression on Source`
@@ -484,82 +478,6 @@ Otherwise an extracted array is treated as a single value, see [Different type o
 To avoid inconsistent JSON being sent to the Cumulocity API the defined target template are validated with schemas. These are defined for all target payloads (Measurement, Event, Alarm, Inventory). The schemas validate if required properties are defined and if the time is in the correct format.
 
 In the sample below, e.g. a warning is shown since the required property `source.id` is missing in the payload.
-
-<p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_SchemaValidation_Annotated.png"  style="width: 70%;" />
-</p>
-<br/>
-
-#### Substitutions defined as code (javascript)
-
-> **⚠ DEPRECATED as of version 6.1.5**
->
-> Creation of new mappings using this transformation type has been **disabled in version 6.2**. Existing mappings continue to work but **must be migrated to Smart Functions before version 6.3** (planned ~May 2026), when this type will be removed entirely.
->
-> For migration steps and a timeline, see [DEPRECATION_SUBSTITUTION_AS_JAVASCRIPT.md](DEPRECATION_SUBSTITUTION_AS_JAVASCRIPT.md).
-> For new mappings, use [Smart Functions](#defining-the-payload-transformation-using-a-smart-function-javascript) instead.
-
-*The following screenshots and code example are provided for reference only, to help with migrating existing mappings.*
-
-When you choose to define the substitutions in javascript code, see following screenshot, then the flow in the stepper is different.
-
-<p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_CodeBasedSubstitution.png"  style="width: 70%;" />
-</p>
-<p class="image-description"><b>Description:</b> Screenshot showing the deprecated <em>Substitution as JavaScript</em> option. This option is no longer available for new mappings as of version 6.2.</p>
-<br/>
-
-In step 4 of the mapping stepper
-
-<p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_SubstitutionAsJavaScript.png"  style="width: 70%;" />
-</p>
-<p class="image-description"><b>Description:</b> Screenshot showing the JavaScript editor for the deprecated substitution type. Shown for reference only.</p>
-<br/>
-
-a javascript editor allows you to define your substitutions:
-
-```javascript
-function extractFromSource(ctx) {
-
-    //This is the source message as json
-    const sourceObject = JSON.parse(ctx.getPayload());
-    // for (var key in sourceObject) {
-    //     console.log(`key: ${key}, value: ${sourceObject[key]}`);
-    // }
-
-    //Define a new Measurement Value for Temperatures by assigning from source
-    const fragmentTemperatureSeries = {
-        value: sourceObject['temperature'],
-        unit: sourceObject['unit']
-    };
-
-    //Assign Values to Series
-    const fragmentTemperature = {
-        T: fragmentTemperatureSeries
-    };
-
-    // Substitution: String key, Object value, MappingSubstitution.SubstituteValue.TYPE type, RepairStrategy repairStrategy
-    //Define time mapping time -> time
-
-    //Define temperature fragment mapping temperature -> c8y_Temperature.T.value/unit
-    const temperature = new Substitution('c8y_TemperatureMeasurement', fragmentTemperature, 'OBJECT', 'DEFAULT');
-
-    //Define Device Identifier
-    const deviceIdentifier = new Substitution(ctx.getGenericDeviceIdentifier(), sourceObject['_TOPIC_LEVEL_'][1], 'TEXTUAL', 'DEFAULT');
-    //Return undefined, if you want to skip the message and not process it further
-    return new SubstitutionResult([deviceIdentifier, temperature]);
-}
-```
-
-> **Note:** The `Substitution` / `SubstitutionResult` API used above belongs to the deprecated transformation type. For new mappings, use a [Smart Function](#defining-the-payload-transformation-using-a-smart-function-javascript) with the `onMessage(inputMsg, context)` signature instead.
-
-The code that you write in the web editor is evaluated together with the shared code:
-
-<p align="center">
-<img src="resources/image/Dynamic_Mapper_Configuration_SharedCode.png"  style="width: 70%;" />
-</p>
-<br/>
 
 #### Defining the payload transformation using a Smart Function (JavaScript)
 
@@ -863,12 +781,6 @@ In order to use a previously snooped payload click the button
 ### Update existing Mapping
 
 To avoid inconsistencies when updating the properties of a mapping, active mapping are locked - `READ_ONLY` - and can't be updated. All properties of the mapping are protected from changes.
-This can be seen on the following screenshot:
-
-<p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_Topic_ReadOnly.png"  style="width: 70%;" />
-</p>
-<br/>
 
 To allow updating an activated mapping it has to be deactivated in the list of all mapping, please refer to the following screenshot:
 
@@ -901,12 +813,7 @@ The configuration of the microservice can be changed using the following UI:
 
 ### Processing Extensions
 
-When you choose the mapping type `Extension Source` the wizard for defining your mapping changes. On the second step you are not be able to change the source format of the inbound message and define substitutions. This is done by the processor extension. Instead you are able to choose a processor extension by selecting the respective message in the dropdown:
-
-<p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_ProtobufMessage_Annotated.png"  style="width: 70%;" />
-</p>
-<br/>
+When you choose the mapping type `Extension Source` the wizard for defining your mapping changes. On the second step you are not be able to change the source format of the inbound message and define substitutions. This is done by the processor extension. Instead you are able to choose a processor extension by selecting the respective message in the dropdown.
 
 Using the tab `Processor Extension` you can upload your own processor extension. After the upload the mircroservice load the extensions dynamically.
 
