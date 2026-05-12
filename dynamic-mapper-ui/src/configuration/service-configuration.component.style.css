@@ -44,6 +44,9 @@
   min-width: 0;
 }
 
-.config-control-fragments {
-  flex: 0 0 350px;
+/* input wrapper inside c8y-input-group-list: fill the .input-group flex container */
+.fragment-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
 }

@@ -469,12 +469,12 @@
                     <code>sparkPlugB_DBIRTH_</code>.</small>
                 </p>
               </div>
-              <div class="config-control-fragments">
-                <ul class="list-unstyled m-b-0" c8yInputGroupListContainer>
+              <div class="m-l-auto config-control-col">
+                <ul class="list-unstyled m-b-0 p-l-4" c8yInputGroupListContainer>
                   @for (item of inventoryFragmentsList; track trackByFragmentFn(i, item); let i = $index) {
                     <li class="m-b-8">
                       <c8y-input-group-list [index]="i" (onAdd)="addFragment()" (onRemove)="removeFragment($event)" [minus]="inventoryFragmentsList.length > 0">
-                        <div>
+                        <div class="fragment-input">
                           <input class="form-control" placeholder="e.g. type, c8y_Hardware, sparkPlugB_DBIRTH_*" type="text"
                             [(ngModel)]="inventoryFragmentsList[i]" [ngModelOptions]="{standalone: true}" />
                         </div>

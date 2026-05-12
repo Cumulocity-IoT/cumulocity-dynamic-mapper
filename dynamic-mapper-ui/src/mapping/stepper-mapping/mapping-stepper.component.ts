@@ -65,7 +65,7 @@ import {
   Substitution
 } from '../../shared';
 import { ValidationError } from '../shared/mapping.model';
-import { createCompletionProviderFlowFunction, createCompletionProviderSubstitutionAsCode, EditorMode, STEP_DEFINE_SUBSTITUTIONS, STEP_GENERAL_SETTINGS, STEP_SELECT_TEMPLATES, STEP_TEST_MAPPING } from '../shared/stepper.model';
+import { createCompletionProviderFlowFunction, EditorMode, STEP_DEFINE_SUBSTITUTIONS, STEP_GENERAL_SETTINGS, STEP_SELECT_TEMPLATES, STEP_TEST_MAPPING } from '../shared/stepper.model';
 import {
   base64ToString,
   checkTransformationType,
@@ -434,9 +434,8 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
     }
     const monacoModule = await import('monaco-editor');
     const monaco = (monacoModule as any).default || monacoModule;
-    const d1 = createCompletionProviderFlowFunction(monaco);
-    const d2 = createCompletionProviderSubstitutionAsCode(monaco);
-    this.completionProviderDisposable = { dispose: () => { d1.dispose(); d2.dispose(); } };
+    const d1 = createCompletionProviderFlowFunction(monaco, this.mapping.direction);
+    this.completionProviderDisposable = { dispose: () => { d1.dispose(); } };
   }
 
   private setTemplateForm(): void {

@@ -65,7 +65,7 @@ import {
   MappingType
 } from '../../shared';
 import { ValidationError } from '../shared/mapping.model';
-import { createCompletionProviderFlowFunction, createCompletionProviderSubstitutionAsCode, EditorMode } from '../shared/stepper.model';
+import { createCompletionProviderFlowFunction, EditorMode } from '../shared/stepper.model';
 import { MappingService } from '../core/mapping.service';
 import { MappingEditData } from '../core/mapping-edit.resolver';
 import { gettext } from '@c8y/ngx-components/gettext';
@@ -517,9 +517,8 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     }
     const monacoModule = await import('monaco-editor');
     const monaco = (monacoModule as any).default || monacoModule;
-    const d1 = createCompletionProviderFlowFunction(monaco);
-    const d2 = createCompletionProviderSubstitutionAsCode(monaco);
-    this.completionProviderDisposable = { dispose: () => { d1.dispose(); d2.dispose(); } };
+    const d1 = createCompletionProviderFlowFunction(monaco, this.mapping.direction);
+    this.completionProviderDisposable = { dispose: () => { d1.dispose(); } };
   }
 
   private setTemplateForm(): void {
