@@ -558,7 +558,7 @@ class MQTT3ClientTest {
         assertNotNull(spec);
         assertEquals(ConnectorType.MQTT, spec.getConnectorType());
         assertFalse(spec.isSingleton());
-        assertEquals("Generic MQTT", spec.getName());
+        assertEquals("MQTT", spec.getName());
 
         // Verify required properties
         assertTrue(spec.getProperties().containsKey("mqttHost"));
