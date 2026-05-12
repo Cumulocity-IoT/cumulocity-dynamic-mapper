@@ -41,7 +41,8 @@ import {
   Mapping,
   MappingType,
   StepperConfiguration,
-  isSubstitutionsAsCode
+  isSubstitutionsAsCode,
+  ALERT_INFO_TIMEOUT
 } from '../../shared/';
 import { DynamicMapperRequest, TestResult, TestContext, MappingTokens } from '../core/processor/processor.model';
 import { TestingService } from '../core/testing.service';
@@ -382,7 +383,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       const responseId = parsedResponse?.id;
       const responseLabel = responseId ?? result.requests?.[0]?.sourceId ?? 'unknown';
       const deviceInfo = result.testDeviceId ? `, test device: ${result.testDeviceId}` : '';
-      this.alertService.info(`Sending mapping result was successful: ${responseLabel}${deviceInfo}`);
+      this.alertService.add({ text: `Sending mapping result was successful: ${responseLabel}${deviceInfo}`, type: 'info', timeout: ALERT_INFO_TIMEOUT });
       this.testResult.emit(true);
     } else {
       // this.alertService.success(`Test of mapping ${this.testMapping.name} was successful.`);

@@ -21,7 +21,8 @@ import {
   StepperConfiguration,
   Feature,
   isSubstitutionsAsCode,
-  RepairStrategy
+  RepairStrategy,
+  ALERT_INFO_TIMEOUT
 } from '../../shared';
 import { EditorMode } from '../shared/stepper.model';
 import { SubstitutionRendererComponent } from '../substitution/substitution-grid.component';
@@ -250,7 +251,7 @@ export class MappingSubstitutionStepComponent implements OnInit {
       this.substitutionFormly.get('pathSource').setErrors(null);
 
       if (result.resultType == 'Array' && !this.substitutionModel.expandArray) {
-        this.alertService.info('Current expression extracts an array. Consider using "Expand as array"...');
+        this.alertService.add({ text: 'Current expression extracts an array. Consider using "Expand as array"...', type: 'info', timeout: ALERT_INFO_TIMEOUT });
       }
     } catch (error) {
       this.substitutionModel.sourceExpression.valid = false;

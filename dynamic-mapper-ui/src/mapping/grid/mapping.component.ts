@@ -61,7 +61,8 @@ import {
   SnoopStatus,
   StepperConfiguration,
   Substitution,
-  TransformationType
+  TransformationType,
+  ALERT_INFO_TIMEOUT
 } from '../../shared';
 import { ConfirmationModalService } from '../../shared/service/confirmation-modal.service';
 import {
@@ -250,7 +251,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     if (this.stepperConfiguration.direction === Direction.OUTBOUND) {
       const result = await Promise.all([this.subscriptionService.getSubscriptionDevice(this.subscriptionService.DYNAMIC_DEVICE_SUBSCRIPTION), this.subscriptionService.getSubscriptionDevice(this.subscriptionService.STATIC_DEVICE_SUBSCRIPTION)]);
       if (result[0].devices?.length === 0 && result[1].devices?.length === 0) {
-        this.alertService.info("To enable the outbound mapping, a subscription is required. Please proceed with creating the necessary 'Subscription outbound'.");
+        this.alertService.add({ text: "To enable the outbound mapping, a subscription is required. Please proceed with creating the necessary 'Subscription outbound'.", type: 'info', timeout: ALERT_INFO_TIMEOUT });
         valid = false;
       }
     }

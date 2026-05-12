@@ -22,7 +22,7 @@ import { AfterViewInit, ChangeDetectorRef, Component, inject, Input, ViewEncapsu
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AlertService, BottomDrawerRef, CoreModule } from '@c8y/ngx-components';
-import { API } from '../../shared';
+import { ALERT_INFO_TIMEOUT, API } from '../../shared';
 import { SubscriptionService } from '../core/subscription.service';
 import { Device } from '../shared/mapping.model';
 
@@ -193,7 +193,7 @@ export class SubscriptionChoiceDrawerComponent implements AfterViewInit {
           api: API.ALL.name,
           types: mergedTypes
         });
-        this.alertService.info('Subscription request submitted. Subscriptions are processed asynchronously.');
+        this.alertService.add({ text: 'Subscription request submitted. Subscriptions are processed asynchronously.', type: 'info', timeout: ALERT_INFO_TIMEOUT });
         this._resolve('type');
       } else if (this.choice === 'group' && this.selectedGroupId) {
         const group = this.deviceGroups.find(g => g.id === this.selectedGroupId);
@@ -208,7 +208,7 @@ export class SubscriptionChoiceDrawerComponent implements AfterViewInit {
           api: API.ALL.name,
           devices: mergedDevices
         });
-        this.alertService.info('Subscription request submitted. Subscriptions are processed asynchronously.');
+        this.alertService.add({ text: 'Subscription request submitted. Subscriptions are processed asynchronously.', type: 'info', timeout: ALERT_INFO_TIMEOUT });
         this._resolve('group');
       }
       this.bottomDrawerRef.close();

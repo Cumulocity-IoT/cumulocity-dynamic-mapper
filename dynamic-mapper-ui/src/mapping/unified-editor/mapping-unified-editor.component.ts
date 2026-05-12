@@ -908,13 +908,15 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
 
   raiseAlert(alert: Alert): void {
     this.alertService.state.forEach(a => {
-      if (a.type === 'info') this.alertService.remove(a);
+      if (a.type === 'info' || a.type === 'warning') this.alertService.remove(a);
     });
     this.alertService.add(alert);
   }
 
   clearAlerts(): void {
-    this.alertService.clearAll();
+    this.alertService.state.forEach(a => {
+      if (a.type === 'info' || a.type === 'warning') this.alertService.remove(a);
+    });
   }
 
   async onCommitButton(): Promise<void> {

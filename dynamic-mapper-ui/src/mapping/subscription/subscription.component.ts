@@ -48,7 +48,8 @@ import {
   LoggingEventType,
   NODE2,
   Operation,
-  SharedModule
+  SharedModule,
+  ALERT_INFO_TIMEOUT
 } from '../../shared';
 
 import { ActivatedRoute, Router } from '@angular/router';
@@ -335,7 +336,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
         subscriptionDevices
       );
       this.loadSubscriptionDevice();
-      this.alertService.info(gettext('Subscription request submitted. Subscriptions are processed asynchronously – verify the result in the list below and check Service Events for details.'));
+      this.alertService.add({ text: gettext('Subscription request submitted. Subscriptions are processed asynchronously – verify the result in the list below and check Service Events for details.'), type: 'info', timeout: ALERT_INFO_TIMEOUT });
     } catch (error) {
       this.alertService.danger(
         gettext('Failed to update subscriptions:') + error
@@ -356,7 +357,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
       );
       this.loadSubscriptionByDeviceGroup();
       this.loadSubscriptionDevice();
-      this.alertService.info(gettext('Subscription request submitted. Subscriptions are processed asynchronously – verify the result in the list below and check Service Events for details.'));
+      this.alertService.add({ text: gettext('Subscription request submitted. Subscriptions are processed asynchronously – verify the result in the list below and check Service Events for details.'), type: 'info', timeout: ALERT_INFO_TIMEOUT });
     } catch (error) {
       this.alertService.danger(
         gettext('Failed to update subscriptions:') + error
@@ -376,7 +377,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
       );
       this.loadSubscriptionByDeviceType();
       this.loadSubscriptionDevice();
-      this.alertService.info(gettext('Subscription request submitted. Subscriptions are processed asynchronously – verify the result in the list below and check Service Events for details.'));
+      this.alertService.add({ text: gettext('Subscription request submitted. Subscriptions are processed asynchronously – verify the result in the list below and check Service Events for details.'), type: 'info', timeout: ALERT_INFO_TIMEOUT });
     } catch (error) {
       this.alertService.danger(
         gettext('Failed to update subscriptions:') + error

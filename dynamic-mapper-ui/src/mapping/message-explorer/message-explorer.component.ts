@@ -51,7 +51,7 @@ import {
 } from './message-explorer-drawer.component';
 import { MappingTypeDrawerComponent } from '../mapping-create/mapping-type-drawer.component';
 import { SubscriptionChoiceDrawerComponent } from './subscription-choice-drawer.component';
-import { Direction } from '../../shared';
+import { ALERT_INFO_TIMEOUT, Direction } from '../../shared';
 import { JsonEditorComponent } from '../../shared/component/json-editor/jsoneditor.component';
 
 @Component({
@@ -268,7 +268,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
     this.expandedIndex = null;
     this.expandedPayload = null;
     this.countdownIntervalComponent?.stop();
-    this.alertService.info('Explorer session stopped.');
+    this.alertService.add({ text: 'Explorer session stopped.', type: 'info', timeout: ALERT_INFO_TIMEOUT });
   }
 
   async onClear(): Promise<void> {

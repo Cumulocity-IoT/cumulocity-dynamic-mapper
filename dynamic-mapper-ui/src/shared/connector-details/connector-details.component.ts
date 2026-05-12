@@ -32,7 +32,8 @@ import {
   LoggingEventTypeMap,
   Operation,
   SharedService,
-  ConnectorType
+  ConnectorType,
+  ALERT_INFO_TIMEOUT
 } from '..';
 import { ConnectorLogService } from '../service/connector-log.service';
 import { ConnectorConfigurationService } from '../service/connector-configuration.service';
@@ -153,8 +154,15 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
       }
     );
     if (response1.status === HttpStatusCode.Created) {
+      const wasConnecting = !this.configuration.enabled;
       this.configuration.enabled = !this.configuration.enabled;
-      this.alertService.success(gettext('Connection updated successfully.'));
+      this.alertService.add({
+        text: wasConnecting
+          ? gettext('Connector is connecting, please wait...')
+          : gettext('Connector disconnected.'),
+        type: 'info',
+        timeout: ALERT_INFO_TIMEOUT
+      });
     } else {
       this.alertService.danger(gettext('Failed to establish connection!'));
     }
