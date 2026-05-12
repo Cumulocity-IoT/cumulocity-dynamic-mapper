@@ -52,8 +52,8 @@ export class MappingSubstitutionStepComponent implements OnInit {
   @Input() feature: Feature;
   @Input() aiAgentDeployed: boolean;
   @Input() aiAgent: AgentObjectDefinition | AgentTextDefinition | null;
-  @Input() updateSourceEditor: Observable<any>;
-  @Input() updateTargetEditor: Observable<any>;
+  @Input() schemaSource: any;
+  @Input() schemaTarget: any;
   @Input() mappingCode: string;
   @Input() codeEditorLabel: string;
   @Input() codeEditorHelp: string;

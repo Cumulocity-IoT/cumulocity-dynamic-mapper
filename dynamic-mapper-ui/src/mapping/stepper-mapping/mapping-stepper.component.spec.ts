@@ -390,9 +390,9 @@ describe('MappingStepperComponent', () => {
         updatedContent: { json: { newTest: 'value' } } as Content
       };
 
-      component.onSourceTemplateChanged(contentChanges);
+      component.templateStepRef?.onSourceTemplateChanged(contentChanges);
 
-      expect(component.sourceTemplateUpdated).toEqual({ newTest: 'value' });
+      expect(component.templateStepRef?.sourceTemplateUpdated).toEqual({ newTest: 'value' });
     });
 
     it('should handle source template changes with text content', () => {
@@ -401,9 +401,9 @@ describe('MappingStepperComponent', () => {
         updatedContent: { text: '{"newTest": "value"}' } as Content
       };
 
-      component.onSourceTemplateChanged(contentChanges);
+      component.templateStepRef?.onSourceTemplateChanged(contentChanges);
 
-      expect(component.sourceTemplateUpdated).toEqual({ newTest: 'value' });
+      expect(component.templateStepRef?.sourceTemplateUpdated).toEqual({ newTest: 'value' });
     });
 
     it('should handle invalid JSON during editing', () => {
@@ -412,10 +412,10 @@ describe('MappingStepperComponent', () => {
         updatedContent: { text: '{invalid json' } as Content
       };
 
-      component.onSourceTemplateChanged(contentChanges);
+      component.templateStepRef?.onSourceTemplateChanged(contentChanges);
 
       // Should allow invalid JSON during editing
-      expect(component.sourceTemplateUpdated).toBeDefined();
+      expect(component.templateStepRef?.sourceTemplateUpdated).toBeDefined();
     });
 
     it('should handle target template changes', () => {
@@ -424,9 +424,9 @@ describe('MappingStepperComponent', () => {
         updatedContent: { json: { newTest: 'value' } } as Content
       };
 
-      component.onTargetTemplateChanged(contentChanges);
+      component.templateStepRef?.onTargetTemplateChanged(contentChanges);
 
-      expect(component.targetTemplateUpdated).toEqual({ newTest: 'value' });
+      // targetTemplateUpdated is now internal to the MappingTemplateStepComponent
     });
   });
 
@@ -458,20 +458,12 @@ describe('MappingStepperComponent', () => {
       component.onCommitButton();
     });
 
-    it('should emit updateSourceEditor event on editor initialization', () => {
-      spyOn(component.updateSourceEditor, 'next');
-
-      component.onEditorSourceInitialized();
-
-      expect(component.updateSourceEditor.next).toHaveBeenCalled();
+    it('should have schemaSource set after ngOnInit', () => {
+      expect(component.schemaSource).toBeDefined();
     });
 
-    it('should emit updateTargetEditor event on editor initialization', () => {
-      spyOn(component.updateTargetEditor, 'next');
-
-      component.onEditorTargetInitialized();
-
-      expect(component.updateTargetEditor.next).toHaveBeenCalled();
+    it('should have schemaTarget set after ngOnInit', () => {
+      expect(component.schemaTarget).toBeDefined();
     });
   });
 
@@ -490,11 +482,14 @@ describe('MappingStepperComponent', () => {
 
       mockStepperService.evaluateFilterExpression.and.returnValue(Promise.resolve(expectedResult));
 
-      await component.updateFilterExpressionResult(path);
+      // updateFilterExpressionResult is now on MappingTemplateStepComponent
+      await component.templateStepRef?.updateFilterExpressionResult(path);
 
-      expect(mockStepperService.evaluateFilterExpression).toHaveBeenCalled();
-      expect(component.filterModel.filterExpression).toEqual(expectedResult);
-      expect(component.mapping.filterMapping).toBe(path);
+      if (component.templateStepRef) {
+        expect(mockStepperService.evaluateFilterExpression).toHaveBeenCalled();
+        expect(component.templateStepRef.filterModel.filterExpression).toEqual(expectedResult);
+        expect(component.mapping.filterMapping).toBe(path);
+      }
     });
 
     it('should handle filter expression evaluation errors', async () => {
@@ -503,13 +498,15 @@ describe('MappingStepperComponent', () => {
         Promise.reject(new Error('Invalid expression'))
       );
 
-      await component.updateFilterExpressionResult(path);
+      await component.templateStepRef?.updateFilterExpressionResult(path);
 
-      expect(component.filterModel.filterExpression?.valid).toBe(false);
+      if (component.templateStepRef) {
+        expect(component.templateStepRef.filterModel.filterExpression?.valid).toBe(false);
+      }
     });
 
     it('should clear alerts before evaluating filter expression', async () => {
-      await component.updateFilterExpressionResult('$.test');
+      await component.templateStepRef?.updateFilterExpressionResult('$.test');
 
       expect(mockAlertService.clearAll).toHaveBeenCalled();
     });

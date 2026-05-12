@@ -87,22 +87,13 @@
       [snoopedTemplateItems]="snoopedTemplateItems"
       [editorOptionsSourceTemplate]="editorOptionsSourceTemplate"
       [editorOptionsTargetTemplate]="editorOptionsTargetTemplate"
-      [updateSourceEditor]="updateSourceEditor"
-      [updateTargetEditor]="updateTargetEditor"
+      [schemaSource]="schemaSource"
+      [schemaTarget]="schemaTarget"
       [stepperViewModel]="stepperViewModel"
       [templateForm]="templateForm"
       [filterFormly]="filterFormly"
       [filterFormlyFields]="filterFormlyFields"
-      [filterModel]="filterModel"
-      [sourceTemplateUpdated]="sourceTemplateUpdated"
-      [selectedPathFilterFilterMapping]="selectedPathFilterFilterMapping"
-      (sourceTemplateChanged)="onSourceTemplateChanged($event)"
-      (targetTemplateChanged)="onTargetTemplateChanged($event)"
-      (editorSourceInitialized)="onEditorSourceInitialized()"
-      (editorTargetInitialized)="onEditorTargetInitialized()"
-      (pathFilterMappingChanged)="onSelectedPathFilterMappingChanged($event)"
-      (filterMappingOverwrite)="onOverwriteFilterMapping()"
-      (sampleTargetTemplates)="onSampleTargetTemplatesButton()">
+      (targetTemplateChange)="targetTemplate = $event">
       @if (stepperViewModel.showExtensionSelectors) {
       <ng-container extensionSource>
         <ng-container *ngTemplateOutlet="extensionTemplateSource; context: { form: templateForm }">
@@ -123,7 +114,7 @@
     <d11r-mapping-substitution-step [mapping]="mapping" [stepperConfiguration]="stepperConfiguration"
       [sourceTemplate]="sourceTemplate" [targetTemplate]="targetTemplate" [sourceSystem]="sourceSystem"
       [targetSystem]="targetSystem" [feature]="feature" [aiAgentDeployed]="aiAgentDeployed" [aiAgent]="aiAgent"
-      [updateSourceEditor]="updateSourceEditor" [updateTargetEditor]="updateTargetEditor" [mappingCode]="mappingCode"
+      [schemaSource]="schemaSource" [schemaTarget]="schemaTarget" [mappingCode]="mappingCode"
       [codeEditorLabel]="codeEditorLabel" [codeEditorHelp]="codeEditorHelp" [currentStepIndex]="currentStepIndex"
       (mappingCodeChange)="mappingCode = $event">
 

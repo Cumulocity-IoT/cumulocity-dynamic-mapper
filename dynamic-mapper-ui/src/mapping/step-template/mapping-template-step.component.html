@@ -19,10 +19,10 @@
                 }}</small>
             </div>
             @if (stepperViewModel.showSourceEditor) {
-            <d11r-mapping-json-editor [updateEditor]="updateSourceEditor" [options]="editorOptionsSourceTemplate"
-              [class]="'jse-main-small'" (initialized)="editorSourceInitialized.emit()"
-              (contentChanged)="sourceTemplateChanged.emit($event)" [data]="sourceTemplate"
-              (pathChanged)="pathFilterMappingChanged.emit($event)"
+            <d11r-mapping-json-editor [schema]="schemaSource" [options]="editorOptionsSourceTemplate"
+              [class]="'jse-main-small'"
+              (contentChanged)="onSourceTemplateChanged($event)" [data]="sourceTemplate"
+              (pathChanged)="onSelectedPathFilterMappingChanged($event)"
               #editorSourceStepTemplate></d11r-mapping-json-editor>
             }
             @if (stepperViewModel.showExtensionSelectors) {
@@ -39,7 +39,7 @@
             <label>Target Template - {{ targetSystem }}</label>
             <div class="d-flex j-c-between">
               <button type="button" name="sample" class="btn btn-default"
-                (click)="sampleTargetTemplates.emit()" translate
+                (click)="onSampleTargetTemplatesButton()" translate
                 title="{{ 'Use Sample Target Templates' | translate }}"
                 [disabled]="templateForm.get('sampleTargetTemplatesButton')?.value || (!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole)">
                 <i c8yIcon="enter-right"></i>Reset to default
@@ -49,9 +49,9 @@
               <small class="text-muted" translate>Use sample templates for the target.</small>
             </div>
             @if (stepperViewModel.showTargetEditor) {
-            <d11r-mapping-json-editor [updateEditor]="updateTargetEditor" [options]="editorOptionsTargetTemplate"
-              [class]="'jse-main-small'" (initialized)="editorTargetInitialized.emit()"
-              (contentChanged)="targetTemplateChanged.emit($event)" [data]="targetTemplate"
+            <d11r-mapping-json-editor [schema]="schemaTarget" [options]="editorOptionsTargetTemplate"
+              [class]="'jse-main-small'"
+              (contentChanged)="onTargetTemplateChanged($event)" [data]="targetTemplate"
               #editorTargetStepTemplate>
             </d11r-mapping-json-editor>
             }
@@ -89,7 +89,7 @@
         <div class="col-lg-6 d-col g-8">
           <div>
             <button type="button" name="updateFilterExecutionMapping" class="btn btn-default btn-sm m-b-4"
-              (click)="filterMappingOverwrite.emit()" translate
+              (click)="onOverwriteFilterMapping()" translate
               title="{{ 'Update Filter Execution Mapping' | translate }}"
               [disabled]="!selectedPathFilterFilterMapping">
               <i c8yIcon="filter"></i>Update Filter Execution Mapping

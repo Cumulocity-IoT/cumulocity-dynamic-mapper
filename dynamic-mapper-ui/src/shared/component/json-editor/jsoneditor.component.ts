@@ -34,7 +34,7 @@ import {
   ChangeDetectorRef,
   SimpleChanges
 } from '@angular/core';
-import { Observable, Subject, takeUntil } from 'rxjs';
+import { Subject } from 'rxjs';
 import {
   JsonEditor,
   createJSONEditor,
@@ -82,7 +82,14 @@ export class JsonEditorComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
   @Input()
-  updateEditor: Observable<any>;
+  set schema(value: any) {
+    if (!value) return;
+    if (this.editor) {
+      this.setSchema(value);
+    } else {
+      this._pendingSchema = value;
+    }
+  }
   @Input()
   class: string;
 
@@ -90,14 +97,12 @@ export class JsonEditorComponent implements OnInit, OnDestroy, AfterViewInit {
   contentChanged: EventEmitter<ContentChanges> = new EventEmitter<ContentChanges>();
   @Output()
   pathChanged: EventEmitter<string> = new EventEmitter<string>();
-  @Output()
-  initialized: EventEmitter<string> = new EventEmitter<string>();
 
   @ViewChild('jsonEditorContainer', { static: true })
   jsonEditorContainer: ElementRef;
 
   initRan: boolean = true;
-  identifier: string;
+  private _pendingSchema: any;
   private isReverting: boolean = false; // Flag to prevent emission during revert
   private readonly destroy$ = new Subject<void>();
 
@@ -167,16 +172,16 @@ export class JsonEditorComponent implements OnInit, OnDestroy, AfterViewInit {
     });
 
     this.class = `jsoneditor2 ${this.class}`;
-    this.updateEditor?.pipe(takeUntil(this.destroy$)).subscribe((update) => {
-      this.setSchema(update.schema);
-      this.identifier = update.identifier;
-    });
-    this.initialized.emit('Ready');
+    if (this._pendingSchema) {
+      this.setSchema(this._pendingSchema);
+      this._pendingSchema = null;
+    }
   }
 
   ngOnDestroy() {
     this.destroy$.next();
     this.destroy$.complete();
+    this._pendingSchema = null;
     this.editor?.destroy();
   }
 

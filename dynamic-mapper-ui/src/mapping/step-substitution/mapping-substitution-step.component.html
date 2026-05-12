@@ -13,7 +13,7 @@
             </div>
             @if (stepperConfiguration.showEditorSource) {
             <div>
-              <d11r-mapping-json-editor [updateEditor]="updateSourceEditor" [options]="editorOptionsSourceSubstitution"
+              <d11r-mapping-json-editor [schema]="schemaSource" [options]="editorOptionsSourceSubstitution"
                 [class]="'jse-main-small'" (pathChanged)="onSelectedPathSourceChanged($event)" [data]="sourceTemplate"
                 #editorSourceStepSubstitution>
               </d11r-mapping-json-editor>
@@ -35,7 +35,7 @@
                 </button>
               </span>
             </div>
-            <d11r-mapping-json-editor [updateEditor]="updateTargetEditor" [options]="editorOptionsTargetSubstitution"
+            <d11r-mapping-json-editor [schema]="schemaTarget" [options]="editorOptionsTargetSubstitution"
               [class]="'jse-main-small'" (pathChanged)="onSelectedPathTargetChanged($event)" [data]="targetTemplate"
               #editorTargetStepSubstitution>
             </d11r-mapping-json-editor>
