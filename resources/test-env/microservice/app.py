@@ -190,7 +190,7 @@ def ingest_delete():
     body, err = _parse_body(["deviceId"])
     if err:
         logger.warning("DELETE /ingest – bad request: %s", err[0].get_json())
-        return err
+        return jsonify({"error": "Invalid request"}), 400
 
     device_id = body["deviceId"]
     removed = len(_store.pop(device_id, []))
