@@ -54,7 +54,7 @@ import os
 from collections import defaultdict
 from datetime import datetime, timezone
 
-from flask import Flask, jsonify, request
+from flask import Flask, escape, jsonify, request
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -89,7 +89,8 @@ def _parse_body(required_fields: list[str]):
         return None, (jsonify({"error": "Request body must be valid JSON"}), 400)
     for field in required_fields:
         if field not in body:
-            return None, (jsonify({"error": f"Missing required field: {field}"}), 400)
+            safe_field = escape(str(field))
+            return None, (jsonify({"error": f"Missing required field: {safe_field}"}), 400)
     return body, None
 
 
