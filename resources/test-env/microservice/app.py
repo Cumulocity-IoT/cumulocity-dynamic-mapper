@@ -89,8 +89,7 @@ def _parse_body(required_fields: list[str]):
         return None, (jsonify({"error": "Request body must be valid JSON"}), 400)
     for field in required_fields:
         if field not in body:
-            safe_field = escape(str(field))
-            return None, (jsonify({"error": f"Missing required field: {safe_field}"}), 400)
+            return None, (jsonify({"error": "Missing one or more required fields"}), 400)
     return body, None
 
 
