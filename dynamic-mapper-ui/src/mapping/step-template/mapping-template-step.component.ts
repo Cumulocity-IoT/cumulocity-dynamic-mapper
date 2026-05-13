@@ -150,11 +150,16 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
     this.updateFilterExpressionResult(this.selectedPathFilterFilterMapping);
   }
 
-  async updateFilterExpressionResult(path: string): Promise<void> {
+  async updateFilterExpressionResult(path: string, templateOverride?: any): Promise<void> {
     this.clearAlerts();
     try {
+      // Use an explicitly supplied template first (passed by the parent when it
+      // has already expanded the templates but Angular hasn't yet propagated the
+      // @Input change to this child). Fall back to the live editor content, then
+      // to the @Input sourceTemplate as a last resort.
+      const template = templateOverride ?? this.editorSourceStepTemplate?.get() ?? this.sourceTemplate;
       const result = await this.stepperService.evaluateFilterExpression(
-        this.editorSourceStepTemplate?.get(),
+        template,
         path
       );
       this.filterModel.filterExpression = result;

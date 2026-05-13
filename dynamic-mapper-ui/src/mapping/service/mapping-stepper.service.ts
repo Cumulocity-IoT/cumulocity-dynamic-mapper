@@ -110,6 +110,11 @@ export class MappingStepperService {
         valid: boolean;
     }> {
         try {
+            // Safety net: if no template is available at all, skip evaluation.
+            if (!sourceTemplate) {
+                return { resultType: '', result: '', valid: true };
+            }
+
             const resultExpression: JSON = await this.mappingService.evaluateExpression(sourceTemplate, path);
             const resultType = getTypeOf(resultExpression);
 
