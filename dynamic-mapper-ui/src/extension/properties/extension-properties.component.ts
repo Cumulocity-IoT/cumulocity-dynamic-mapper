@@ -48,6 +48,7 @@ interface ExtensionWithEntries extends IManagedObject {
 @Component({
   selector: 'd11r-mapping-extension-properties',
   templateUrl: './extension-properties.component.html',
+  styleUrls: ['../../mapping/shared/mapping.style.css'],
   standalone: true,
   imports: [CoreModule, SharedModule]
 })

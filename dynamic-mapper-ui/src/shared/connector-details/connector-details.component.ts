@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 import * as _ from 'lodash';
-import { ChangeDetectorRef, Component, inject, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
 import { AlertService, BottomDrawerService, CoreModule } from '@c8y/ngx-components';
 import { firstValueFrom, Observable, Subject, Subscription, takeUntil, tap } from 'rxjs';
 import packageJson from '../../../package.json';
@@ -32,7 +32,8 @@ import {
   LoggingEventTypeMap,
   Operation,
   SharedService,
-  ConnectorType
+  ConnectorType,
+  ALERT_INFO_TIMEOUT
 } from '..';
 import { ConnectorLogService } from '../service/connector-log.service';
 import { ConnectorConfigurationService } from '../service/connector-configuration.service';
@@ -45,6 +46,7 @@ import { gettext } from '@c8y/ngx-components/gettext';
   selector: 'd11r-mapping-connector-details',
   styleUrls: ['./connector-details.component.style.css'],
   templateUrl: 'connector-details.component.html',
+  encapsulation: ViewEncapsulation.None,
   standalone: true,
   imports: [
     CoreModule,
@@ -153,8 +155,15 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
       }
     );
     if (response1.status === HttpStatusCode.Created) {
+      const wasConnecting = !this.configuration.enabled;
       this.configuration.enabled = !this.configuration.enabled;
-      this.alertService.success(gettext('Connection updated successfully.'));
+      this.alertService.add({
+        text: wasConnecting
+          ? gettext('Connector is connecting, please wait...')
+          : gettext('Connector disconnected.'),
+        type: 'info',
+        timeout: ALERT_INFO_TIMEOUT
+      });
     } else {
       this.alertService.danger(gettext('Failed to establish connection!'));
     }

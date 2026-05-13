@@ -22,7 +22,7 @@ import { Injectable } from '@angular/core';
 import { TabFactory, Tab } from '@c8y/ngx-components';
 import { Router } from '@angular/router';
 import { Observable, merge, mergeAll, of, toArray } from 'rxjs';
-import { Direction, NODE3, TransformationType, TransformationTypeLabels } from '../shared';
+import { NODE3 } from '../shared';
 @Injectable()
 export class CodeTemplateTabFactory implements TabFactory {
   constructor(
@@ -51,20 +51,6 @@ export class CodeTemplateTabFactory implements TabFactory {
         priority: 960,
         label: 'System, shared',
         icon: 'processor',
-        orientation: 'horizontal'
-      } as Tab);
-      tabs.push({
-        path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/INBOUND_SUBSTITUTION_AS_CODE`,
-        priority: 950,
-        label: `Inbound (${TransformationTypeLabels[Direction.INBOUND][TransformationType.SUBSTITUTION_AS_CODE]})`,
-        icon: 'swipe-right',
-        orientation: 'horizontal'
-      } as Tab);
-      tabs.push({
-        path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/OUTBOUND_SUBSTITUTION_AS_CODE`,
-        priority: 940,
-        label: `Outbound (${TransformationTypeLabels[Direction.OUTBOUND][TransformationType.SUBSTITUTION_AS_CODE]})`,
-        icon: 'swipe-left',
         orientation: 'horizontal'
       } as Tab);
       return merge(of(tabs)).pipe(mergeAll(), toArray());

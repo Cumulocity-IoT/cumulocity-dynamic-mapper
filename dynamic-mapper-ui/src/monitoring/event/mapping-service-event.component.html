@@ -24,7 +24,7 @@
   <form [formGroup]="filterForm" class="d-flex a-i-center">
     <div class="">
       <div class="c8y-select-wrapper">
-        <select class="form-control" style="width: 280px" formControlName="type" id="listLabel">
+        <select class="form-control filter-select" formControlName="type" id="listLabel" [attr.aria-label]="'Event type' | translate">
           @for (lt of LoggingEventTypeMap | keyvalue; track lt) {
           <option [ngValue]="lt.key">
             {{ lt.key | formatStringAsWords:1 }}
@@ -61,7 +61,7 @@
   @if (isLoading$ | async) {
   <div class="p-12 text-center">
     <c8y-loading></c8y-loading>
-    <p class="text-muted m-t-16">Loading service events...</p>
+    <p class="text-muted m-t-16" translate>Loading service events...</p>
   </div>
   }
 
@@ -70,7 +70,7 @@
   <div class="alert alert-danger m-24">
     <i c8yIcon="exclamation-circle"></i>
     {{ error }}
-    <button class="btn btn-link pull-right" (click)="onFilterMappingServiceEventSelect(filterForm.get('type')?.value)">
+      <button class="btn btn-link pull-right" (click)="onFilterMappingServiceEventSelect(filterForm.get('type')?.value)" translate>
       Retry
     </button>
   </div>
@@ -86,9 +86,9 @@
         <div class="c8y-list__item__block flex-grow">
           <div class="c8y-list__item__body">
             <div class="d-flex m-r-48">
-              <div class="col-md-8">Message</div>
-              <div class="col-md-2">Component</div>
-              <div class="col-md-2">Connector or System</div>
+              <div class="col-md-8" translate>Message</div>
+              <div class="col-md-2" translate>Component</div>
+              <div class="col-md-2" translate>Connector or System</div>
             </div>
           </div>
         </div>
@@ -105,12 +105,12 @@
                 {{ event.text }}
               </span>
               @if (event.type === 'd11r_mappingLoadingErrorEvent' && extractManagedObjectId(event)) {
-              <button class="btn btn-xs btn-default m-l-8" title="Download raw mapping JSON for manual editing"
-                (click)="downloadMapping(event)">
+              <button class="btn btn-xs btn-default m-l-8" title="{{ 'Download raw mapping JSON for manual editing' | translate }}"
+                (click)="downloadMapping(event)" translate>
                 <i c8yIcon="download-archive"></i> Download mapping
               </button>
-              <button class="btn btn-xs btn-default m-l-8" title="Download managed object JSON"
-                (click)="downloadMappingMo(event)">
+              <button class="btn btn-xs btn-default m-l-8" title="{{ 'Download managed object JSON' | translate }}"
+                (click)="downloadMappingMo(event)" translate>
                 <i c8yIcon="download-archive"></i> Download MO
               </button>
               }

@@ -73,10 +73,24 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     javaScriptAgent: undefined,
     smartFunctionAgent: undefined,
     suppressDeprecationWarning: false,
+    cacheAliasMaps: false,
   };
   agents$: BehaviorSubject<string[]> = new BehaviorSubject([]);
   destroy$: Subject<void> = new Subject<void>();
   aiAgentDeployed: boolean = false;
+  inventoryFragmentsList: string[] = [''];
+
+  trackByFragmentFn(index: any, _item: any) {
+    return index;
+  }
+
+  addFragment() {
+    this.inventoryFragmentsList.push('');
+  }
+
+  removeFragment(index: number) {
+    this.inventoryFragmentsList.splice(index, 1);
+  }
 
 
   async ngOnInit() {
@@ -121,13 +135,13 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
       inventoryCacheRetention: [''],
       inventoryCacheSize: [''],
       flowStateRetention: [''],
-      inventoryFragmentsToCache: [''],
       maxCPUTimeMS: [''],
       supportESM: [''],
       jsonataAgent: [{ value: '', disabled: true }],
       javaScriptAgent: [{ value: '', disabled: true }],
       smartFunctionAgent: [{ value: '', disabled: true }],
       suppressDeprecationWarning: [''],
+      cacheAliasMaps: [''],
     });
   }
 
@@ -156,12 +170,17 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     });
   }
 
+  private readonly SPARKPLUGB_BIRTH_FRAGMENTS = ['sparkPlugB_NBIRTH', 'sparkPlugB_DBIRTH'];
+
   async loadData(): Promise<void> {
     this.serviceConfiguration = await this.sharedService.getServiceConfiguration();
+    const visibleFragments = (this.serviceConfiguration.inventoryFragmentsToCache ?? [])
+      .filter(f => !this.SPARKPLUGB_BIRTH_FRAGMENTS.includes(f.trim()));
+
+    this.inventoryFragmentsList = visibleFragments.length > 0 ? [...visibleFragments] : [''];
 
     this.serviceForm.patchValue({
       ...this.serviceConfiguration,
-      inventoryFragmentsToCache: this.serviceConfiguration.inventoryFragmentsToCache.join(',')
     });
   }
 
@@ -193,9 +212,9 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
   async clickedSaveServiceConfiguration() {
     const conf = this.serviceForm.value;
 
-    conf.inventoryFragmentsToCache = this.parseFragmentsList(
-      this.serviceForm.value['inventoryFragmentsToCache']
-    );
+    conf.inventoryFragmentsToCache = this.inventoryFragmentsList
+      .map(f => f.trim())
+      .filter(f => f.length > 0 && !this.SPARKPLUGB_BIRTH_FRAGMENTS.includes(f));
 
     conf.javaScriptAgent = this.trimOrUndefined(this.serviceForm.value['javaScriptAgent']);
     conf.jsonataAgent = this.trimOrUndefined(this.serviceForm.value['jsonataAgent']);
@@ -208,13 +227,6 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     } else {
       this.alertService.danger(gettext('Failed to update service configuration'));
     }
-  }
-
-  private parseFragmentsList(fragmentsString: string): string[] {
-    return fragmentsString
-      .split(',')
-      .map(fragment => fragment.trim())
-      .filter(fragment => fragment.length > 0);
   }
 
   private trimOrUndefined(value: string | null | undefined): string | undefined {

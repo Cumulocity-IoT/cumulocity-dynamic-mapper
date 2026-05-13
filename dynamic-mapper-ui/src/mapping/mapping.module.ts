@@ -33,6 +33,7 @@ import { SubstitutionManagementService } from './service/substitution-management
 import { MappingStepperService } from './service/mapping-stepper.service';
 import { MappingUnifiedEditorComponent } from './unified-editor';
 import { mappingEditResolver } from './core/mapping-edit.resolver';
+import { MessageExplorerComponent } from './message-explorer/message-explorer.component';
 
 @NgModule({
   providers: [
@@ -91,6 +92,13 @@ import { mappingEditResolver } from './core/mapping-edit.resolver';
     hookRoute({
       path: `c8y-pkg-dynamic-mapper/${NODE1}/mappings/relation/deviceToClientMap`,
       component: DeviceClientMapComponent,
+      resolve: {
+        feature: featureResolver
+      }
+    }),
+    hookRoute({
+      path: `c8y-pkg-dynamic-mapper/${NODE1}/mappings/messageExplorer`,
+      component: MessageExplorerComponent,
       resolve: {
         feature: featureResolver
       }

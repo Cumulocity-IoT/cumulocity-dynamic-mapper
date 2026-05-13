@@ -37,7 +37,7 @@ function onMessage(msg, context) {
     console.log("Payload messageId: " + payload["messageId"]);
 
     // Get clientId from context first, fall back to payload
-    var clientId = context.getClientId() || payload["clientId"];
+    var clientId = context.getConfig()["clientId"] || payload["clientId"];
 
     // Lookup the originating device using external ID
     var originatingDevice = context.getManagedObjectByExternalId({
@@ -80,3 +80,5 @@ function onMessage(msg, context) {
         externalSource: [{"type":"c8y_Serial", "externalId": clientId}]
     }];
 }
+
+export {onMessage};

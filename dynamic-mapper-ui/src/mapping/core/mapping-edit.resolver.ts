@@ -26,7 +26,8 @@ import {
   isSubstitutionsAsCode,
   Mapping,
   MappingTypeDescriptionMap,
-  StepperConfiguration
+  StepperConfiguration,
+  TransformationType
 } from '../../shared';
 import {
   StepperConfigurationContext,
@@ -56,11 +57,15 @@ export const mappingEditResolver: ResolveFn<MappingEditData> = async (route) => 
     throw new Error(`Mapping with identifier ${identifier} not found`);
   }
 
+  // Deprecated SUBSTITUTION_AS_CODE mappings are always read-only (export/delete only)
+  // eslint-disable-next-line deprecation/deprecation
+  const isDeprecated = mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE;
+
   const context: StepperConfigurationContext = {
     mappingType: mapping.mappingType,
     transformationType: mapping.transformationType,
     direction,
-    editorMode: mapping.active ? EditorMode.READ_ONLY : EditorMode.UPDATE,
+    editorMode: (mapping.active || isDeprecated) ? EditorMode.READ_ONLY : EditorMode.UPDATE,
     substitutionsAsCode: isSubstitutionsAsCode(mapping),
     snoopStatus: mapping.snoopStatus,
     hasDeployedConnector: deploymentMapEntry.connectors.length > 0

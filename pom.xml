@@ -34,10 +34,10 @@
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<revision>6.2.3</revision>
+		<revision>6.3.0-SNAPSHOT</revision>
 		<spring-boot-dependencies.version>3.3.5</spring-boot-dependencies.version>
 		<!-- <c8y.version>2025.81.0</c8y.version> -->
-		<c8y.version>2026.13.0</c8y.version>
+		<c8y.version>2026.32.0</c8y.version>
 		<lombok.version>1.18.38</lombok.version>
 		<slf4j.version>2.0.17</slf4j.version>
 		<maven.compiler.source>21</maven.compiler.source>
@@ -192,6 +192,11 @@
 				<groupId>com.rabbitmq</groupId>
 				<artifactId>amqp-client</artifactId>
 				<version>5.29.0</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.qpid</groupId>
+				<artifactId>qpid-jms-client</artifactId>
+				<version>2.6.0</version>
 			</dependency>
 			<dependency>
 				<groupId>io.netty</groupId>

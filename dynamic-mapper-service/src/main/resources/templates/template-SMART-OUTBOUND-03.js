@@ -42,3 +42,4 @@ function onMessage(msg, context) {
         transportFields: { "key": externalId }  // define key to add to Kafka payload (record)
     }];
 }
+export {onMessage};

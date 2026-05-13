@@ -184,6 +184,9 @@ public abstract class AbstractFlowResultProcessor extends CommonProcessor {
      */
     @SuppressWarnings("unchecked")
     protected Map<String, Object> clonePayload(Object payload) throws ProcessingException {
+        if (payload == null) {
+            return new HashMap<>();
+        }
         try {
             if (payload instanceof Map) {
                 return new HashMap<>((Map<String, Object>) payload);

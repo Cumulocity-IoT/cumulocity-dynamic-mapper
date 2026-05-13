@@ -20,14 +20,9 @@
 
 import { Component, OnDestroy, OnInit, AfterViewChecked, ElementRef, ViewChild } from '@angular/core';
 import { CoreModule } from '@c8y/ngx-components';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { Subscription } from 'rxjs';
-import { DocOverviewComponent } from './doc-overview.component';
-import { DocJsonataComponent } from './doc-jsonata.component';
-import { DocJavaScriptComponent } from './doc-javascript.component';
-import { DocSmartFunctionComponent } from './doc-smartfunction.component';
-import { DocJavaExtensionComponent } from './doc-javaextension.component';
+import { Subscription, filter } from 'rxjs';
 
 import hljs from 'highlight.js/lib/core';
 import javascript from 'highlight.js/lib/languages/javascript';
@@ -46,11 +41,7 @@ hljs.registerLanguage('yaml', yaml);
   imports: [
     CoreModule,
     CommonModule,
-    DocOverviewComponent,
-    DocJsonataComponent,
-    DocJavaScriptComponent,
-    DocSmartFunctionComponent,
-    DocJavaExtensionComponent
+    RouterOutlet,
   ]
 })
 export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
@@ -63,26 +54,12 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
   searchCurrentIndex: number = -1;
   private searchMatches: HTMLElement[] = [];
 
-  currentPage: string = 'main';
   private fragmentSubscription: Subscription;
+  private routerSubscription: Subscription;
 
-  constructor(private route: ActivatedRoute) {}
+  constructor(private route: ActivatedRoute, private router: Router) {}
 
   ngOnInit(): void {
-    const path = this.route.snapshot.routeConfig?.path || '';
-
-    if (path.includes('jsonata')) {
-      this.currentPage = 'jsonata';
-    } else if (path.includes('javascript')) {
-      this.currentPage = 'javascript';
-    } else if (path.includes('smartfunction')) {
-      this.currentPage = 'smartfunction';
-    } else if (path.includes('javaextension')) {
-      this.currentPage = 'javaextension';
-    } else {
-      this.currentPage = 'main';
-    }
-
     this.clearSearch();
     this.highlightApplied = false;
 
@@ -92,31 +69,17 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
       }
     });
 
-    if (this.currentPage === 'main') {
-      const pathToFragmentMap: { [key: string]: string } = {
-        'overview': 'overview',
-        'getting-started': 'getting-started',
-        'managing-connectors': 'managing-connectors',
-        'define-mapping': 'define-mapping',
-        'define-subscription-for-outbound': 'define-subscription-for-outbound',
-        'transformation-types': 'transformation-types',
-        'flow-state': 'flow-state',
-        'code-templates': 'code-templates',
-        'metadata': 'metadata',
-        'unknown-payload': 'unknown-payload',
-        'reliability-settings': 'reliability-settings',
-        'access-control': 'access-control',
-        'monitoring': 'monitoring',
-        'troubleshooting': 'troubleshooting'
-      };
-      const pathSegment = path.split('/').pop() || '';
-      const fragmentId = pathToFragmentMap[pathSegment];
-      if (fragmentId) {
-        setTimeout(() => { this.scrollToElement(fragmentId); }, 300);
-      } else {
-        setTimeout(() => { window.scrollTo(0, 0); }, 0);
-      }
-    }
+    // Reset search and syntax highlighting whenever a child route changes
+    this.routerSubscription = this.router.events
+      .pipe(filter(e => e instanceof NavigationEnd))
+      .subscribe(() => {
+        this.clearSearch();
+        this.highlightApplied = false;
+        // Scroll to top on every navigation so the incoming page always starts at the
+        // top of the viewport. This must be 'instant' (not 'smooth') so it completes
+        // before DocOverviewComponent.ngOnInit fires its own 200ms scroll-to-section.
+        window.scrollTo({ top: 0, behavior: 'instant' });
+      });
   }
 
   onSearch(): void {
@@ -217,8 +180,7 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
   scrollToElement(elementId: string): void {
     const element = document.getElementById(elementId);
     if (element) {
-      const elementPosition = element.getBoundingClientRect().top + window.scrollY;
-      window.scrollTo({ top: elementPosition - 120, behavior: 'smooth' });
+      window.scrollTo({ top: element.offsetTop - 120, behavior: 'smooth' });
     }
   }
 
@@ -273,5 +235,6 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
 
   ngOnDestroy(): void {
     if (this.fragmentSubscription) { this.fragmentSubscription.unsubscribe(); }
+    if (this.routerSubscription) { this.routerSubscription.unsubscribe(); }
   }
 }

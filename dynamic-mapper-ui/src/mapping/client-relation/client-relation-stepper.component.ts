@@ -43,6 +43,7 @@ const CONSTANTS = {
 
 @Component({
   selector: 'd11r-relation-stepper',
+  host: { class: 'flex-grow d-col fit-h' },
   templateUrl: 'client-relation-stepper.component.html',
   // styleUrls: ['../shared/mapping.style.css', 'client-relation-stepper.component.css'],
   styleUrls: ['client-relation-stepper.component.css'],

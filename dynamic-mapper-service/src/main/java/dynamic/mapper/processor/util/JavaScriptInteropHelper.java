@@ -16,6 +16,7 @@ import dynamic.mapper.processor.model.CumulocityType;
 import dynamic.mapper.processor.model.Destination;
 import dynamic.mapper.processor.model.DeviceMessage;
 import dynamic.mapper.processor.model.ExternalId;
+import dynamic.mapper.processor.model.MappingAction;
 
 import dynamic.mapper.processor.model.ProcessingContext;
 
@@ -97,7 +98,7 @@ public class JavaScriptInteropHelper {
             msg.setCumulocityType(CumulocityType.fromValue(value.getMember("cumulocityType").asString()));
         }
         if (value.hasMember("action")) {
-            msg.setAction(value.getMember("action").asString());
+            msg.setAction(MappingAction.fromValue(value.getMember("action").asString()));
         }
         if (value.hasMember("externalSource")) {
             msg.setExternalSource(convertToExternalIdList(convertValueToJavaObject(value.getMember("externalSource"))));
@@ -115,6 +116,9 @@ public class JavaScriptInteropHelper {
         }
         if (value.hasMember("sourceId") && !value.getMember("sourceId").isNull()) {
             msg.setSourceId(value.getMember("sourceId").asString());
+        }
+        if (value.hasMember("targetPath") && !value.getMember("targetPath").isNull()) {
+            msg.setTargetPath(value.getMember("targetPath").asString());
         }
 
         return msg;
@@ -180,7 +184,7 @@ public class JavaScriptInteropHelper {
 
         // Handle action
         if (value.hasMember("action")) {
-            msg.setAction(value.getMember("action").asString());
+            msg.setAction(MappingAction.fromValue(value.getMember("action").asString()));
         }
         if (value.hasMember("sourceId") && !value.getMember("sourceId").isNull()) {
             msg.setSourceId(value.getMember("sourceId").asString());

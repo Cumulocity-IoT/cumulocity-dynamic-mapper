@@ -20,8 +20,8 @@
   -->
 
 <!-- Main Content -->
-<div class="flex-col flex-nowrap no-align-items p-48 fit-h col-md-12 col-md-offset-0 c8y-stepper--no-btns">
-  <div class="card card--fullpage">
+<div class="d-col flex-nowrap no-align-items p-48 flex-grow col-md-12 col-md-offset-0 c8y-stepper--no-btns">
+  <div class="card card--fullpage d-col flex-grow">
     <!-- Header -->
     <div class="card-header separator" style="justify-content: center">
       <h4 class="card-title d-flex">
@@ -37,7 +37,7 @@
       } -->
     </div>
     <!-- Editor Content -->
-    <div class="card-inner-scroll fit-h">
+    <div class="card-inner-scroll flex-grow">
       <div class="card-block">
         <div class="p-b-24">
           <c8y-editor [editorOptions]="editorOptions" class="form-control flex-grow" style="min-height: 600px"
@@ -47,16 +47,16 @@
       </div>
     </div>
     <!-- Footer Buttons -->
-    <div class="card-footer text-center sticky-buttons">
+    <div class="card-footer separator p-24 text-center flex-no-shrink">
       <div class="form-group">
-        @if (action !== 'view') {
-        <button type="button" class="btn btn-primary" (click)="onSave()" [disabled]="!valid">
-          {{ 'Save' | translate }}
-        </button>
-        }
         <button type="button" class="btn btn-default" (click)="onCancel()">
           {{ (action === 'view' ? 'Close' : 'Cancel') | translate }}
         </button>
+        @if (action !== 'view') {
+        <button type="button" class="btn btn-primary m-l-8" (click)="onSave()" [disabled]="!valid">
+          {{ 'Save' | translate }}
+        </button>
+        }
       </div>
     </div>
   </div>

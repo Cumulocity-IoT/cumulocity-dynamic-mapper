@@ -41,7 +41,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.client.RestTemplate;
 import com.cumulocity.microservice.api.CumulocityClientProperties;
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
@@ -459,6 +466,28 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                                             payload, OperationRepresentation.class);
                             rt = deviceControlApi.create(operationRepresentation);
                             log.info("{} - SEND: operation posted: {}", tenant, rt);
+                        } else if (targetAPI.equals(API.CUSTOM)) {
+                            String customPath = currentRequest.getPathCumulocity();
+                            RequestMethod requestMethod = currentRequest.getMethod();
+                            HttpMethod httpMethod;
+                            switch (requestMethod != null ? requestMethod : RequestMethod.POST) {
+                                case PUT: httpMethod = HttpMethod.PUT; break;
+                                case PATCH: httpMethod = HttpMethod.PATCH; break;
+                                case DELETE: httpMethod = HttpMethod.DELETE; break;
+                                case GET: httpMethod = HttpMethod.GET; break;
+                                default: httpMethod = HttpMethod.POST; break;
+                            }
+                            HttpHeaders customHeaders = new HttpHeaders();
+                            customHeaders.set("Authorization",
+                                    contextService.getContext().toCumulocityCredentials().getAuthenticationString());
+                            customHeaders.setContentType(MediaType.APPLICATION_JSON);
+                            String customUrl = clientProperties.getBaseURL() + customPath;
+                            HttpEntity<String> customEntity = new HttpEntity<>(payload, customHeaders);
+                            ResponseEntity<String> customResponse = new RestTemplate().exchange(
+                                    customUrl, httpMethod, customEntity, String.class);
+                            currentRequest.setResponse(customResponse.getBody());
+                            log.info("{} - SEND: custom route called: path={}, method={}, status={}",
+                                    tenant, customPath, requestMethod, customResponse.getStatusCode());
                         } else {
                             log.error("{} - Not existing API!", tenant);
                         }
@@ -621,6 +650,28 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                             c8ySemaphore.release();
                         }
                         log.info("{} - SEND: operation posted: {}", tenant, rt);
+                    } else if (targetAPI.equals(API.CUSTOM)) {
+                        String customPath = currentRequest.getPathCumulocity();
+                        RequestMethod requestMethod = currentRequest.getMethod();
+                        HttpMethod httpMethod;
+                        switch (requestMethod != null ? requestMethod : RequestMethod.POST) {
+                            case PUT: httpMethod = HttpMethod.PUT; break;
+                            case PATCH: httpMethod = HttpMethod.PATCH; break;
+                            case DELETE: httpMethod = HttpMethod.DELETE; break;
+                            case GET: httpMethod = HttpMethod.GET; break;
+                            default: httpMethod = HttpMethod.POST; break;
+                        }
+                        HttpHeaders customHeaders = new HttpHeaders();
+                        customHeaders.set("Authorization",
+                                contextService.getContext().toCumulocityCredentials().getAuthenticationString());
+                        customHeaders.setContentType(MediaType.APPLICATION_JSON);
+                        String customUrl = clientProperties.getBaseURL() + customPath;
+                        HttpEntity<String> customEntity = new HttpEntity<>(payload, customHeaders);
+                        ResponseEntity<String> customResponse = new RestTemplate().exchange(
+                                customUrl, httpMethod, customEntity, String.class);
+                        currentRequest.setResponse(customResponse.getBody());
+                        log.info("{} - SEND: custom route called: path={}, method={}, status={}",
+                                tenant, customPath, requestMethod, customResponse.getStatusCode());
                     } else {
                         log.error("{} - Not existing API!", tenant);
                     }
@@ -729,10 +780,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                         agentFragments.put("maintainer", "Open-Source");
                         mor.set(agentFragments, "c8y_Agent");
                         mor.set(new IsDevice());
-                        // Tag as test device when created during a test send
-                        if (Boolean.TRUE.equals(context.getSendPayload())) {
-                            mor.set(new HashMap<String, String>(), MAPPING_TEST_DEVICE_TYPE);
-                        }
                         // remove id only if not testing
                         if (!testing) {
                             mor.setId(null);
@@ -788,6 +835,50 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         // throw new ProcessingException(error.toString());
         // }
         return device;
+    }
+
+    /**
+     * Stores (or replaces) a single named fragment on an existing managed object.
+     * <p>
+     * This is used, for example, to persist the SparkPlug B NBIRTH payload
+     * ({@code sparkPlugB_NBIRTH}) so that subsequent NDATA messages can resolve
+     * metric aliases back to their original names.
+     *
+     * @param tenant        the tenant context
+     * @param deviceId      the C8Y internal ID of the managed object to update
+     * @param fragmentKey   the fragment / property key
+     * @param fragmentValue the value to store (must be JSON-serialisable)
+     * @param testing       when {@code true} the call is skipped (dry-run / test mode)
+     */
+    public void storeManagedObjectFragment(String tenant, String deviceId, String fragmentKey, Object fragmentValue,
+            Boolean testing) {
+        if (Boolean.TRUE.equals(testing)) {
+            log.debug("{} - Skipping storeManagedObjectFragment '{}' on device {} in test mode",
+                    tenant, fragmentKey, deviceId);
+            return;
+        }
+        subscriptionsService.runForTenant(tenant, () -> {
+            MicroserviceCredentials contextCredentials = removeAppKeyHeaderFromContext(contextService.getContext());
+            contextService.runWithinContext(contextCredentials, () -> {
+                ManagedObjectRepresentation mor = new ManagedObjectRepresentation();
+                mor.setId(new GId(deviceId));
+                mor.set(fragmentValue, fragmentKey);
+                try {
+                    c8ySemaphore.acquire();
+                    inventoryApi.update(mor, false);
+                    log.info("{} - Stored fragment '{}' on device {}", tenant, fragmentKey, deviceId);
+                } catch (InterruptedException e) {
+                    log.error("{} - Failed to acquire semaphore for storing fragment '{}' on device {}",
+                            tenant, fragmentKey, deviceId, e);
+                    Thread.currentThread().interrupt();
+                } catch (SDKException e) {
+                    log.warn("{} - Failed to store fragment '{}' on device {}: {}",
+                            tenant, fragmentKey, deviceId, e.getMessage());
+                } finally {
+                    c8ySemaphore.release();
+                }
+            });
+        });
     }
 
     /**

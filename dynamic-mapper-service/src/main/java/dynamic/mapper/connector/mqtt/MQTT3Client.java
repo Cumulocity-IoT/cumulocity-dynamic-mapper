@@ -21,6 +21,7 @@
 
 package dynamic.mapper.connector.mqtt;
 
+import com.hivemq.client.mqtt.MqttGlobalPublishFilter;
 import com.hivemq.client.mqtt.datatypes.MqttQos;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3BlockingClient;
@@ -40,6 +41,7 @@ import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.ConnectorStatus;
+import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
@@ -170,12 +172,23 @@ public class MQTT3Client extends AMQTTClient {
 
     @Override
     protected void createMqttCallback() {
+        String clientId = (String) connectorConfiguration.getProperties().get("clientId");
         mqttCallback = new MQTT3Callback(
                 tenant,
                 configurationRegistry,
                 dispatcher,
                 connectorIdentifier,
-                connectorName);
+                connectorName,
+                clientId,
+                // Reconnect trigger for timeout/server-error retransmission:
+                // 1. disconnect() → broker retains unACKed messages in the session
+                //    (sets intentionalDisconnect=true so housekeeping does NOT auto-reconnect)
+                // 2. connect()    → resets intentionalDisconnect=false via beginConnection()
+                //                   and re-establishes the session so the broker retransmits
+                () -> {
+                    disconnect();
+                    connect();
+                });
     }
 
     @Override
@@ -193,11 +206,25 @@ public class MQTT3Client extends AMQTTClient {
                     log.info("{} - Connection attempt {} of {}", tenant, attempt + 1, maxAttempts);
                     Thread.sleep(WAIT_PERIOD_MS);
                 }
-
-                Mqtt3ConnAck ack = mqttClient.connectWith()
-                        .cleanSession(cleanSession)
-                        .keepAlive(60)
-                        .send();
+                Mqtt3ConnAck ack;
+                if(isSparkplugHost) {
+                    ack = mqttClient.connectWith()
+                            .cleanSession(cleanSession)
+                            .willPublish(Mqtt3Publish.builder()
+                                    .topic(sparkplugCertificateManager.getStateTopicName())
+                                    .payload(sparkplugCertificateManager.buildCertificatePayload(false))
+                                    .qos(MqttQos.AT_LEAST_ONCE)
+                                    .retain(true)
+                                    .build()
+                            )
+                            .keepAlive(60)
+                            .send();
+                } else {
+                    ack = mqttClient.connectWith()
+                            .cleanSession(cleanSession)
+                            .keepAlive(60)
+                            .send();
+                }
 
                 if (!ack.getReturnCode().equals(Mqtt3ConnAckReturnCode.SUCCESS)) {
                     throw new ConnectorException(
@@ -332,12 +359,14 @@ public class MQTT3Client extends AMQTTClient {
         for (int i = 0; i < requests.size(); i++) {
             DynamicMapperRequest request = requests.get(i);
 
-            if (request == null || request.getRequest() == null) {
+            if (request == null || (request.getRequest() == null && request.getBinaryPayload() == null)) {
                 log.warn("{} - Skipping null request or payload ({}/{})", tenant, i + 1, requests.size());
                 continue;
             }
 
-            String payload = request.getRequest();
+            byte[] payloadBytes = request.getBinaryPayload() != null
+                    ? request.getBinaryPayload()
+                    : request.getRequest().getBytes(StandardCharsets.UTF_8);
             String topic = request.getPublishTopic() != null ? request.getPublishTopic() : context.getResolvedPublishTopic();
 
             if (topic == null || topic.isEmpty()) {
@@ -351,14 +380,14 @@ public class MQTT3Client extends AMQTTClient {
                         .topic(topic)
                         .retain(context.getRetain() == null ? false : context.getRetain())
                         .qos(mqttQos)
-                        .payload(payload.getBytes(StandardCharsets.UTF_8))
+                        .payload(payloadBytes)
                         .build();
 
                 mqttClient.publish(message);
 
                 if (context.getMapping().getDebug() || context.getServiceConfiguration().getLogPayload()) {
-                    log.info("{} - Published message ({}/{}): topic=[{}], QoS: {}, payload: {}",
-                            tenant, i + 1, requests.size(), topic, mqttQos, payload);
+                    log.info("{} - Published message ({}/{}): topic=[{}], QoS: {}, payload: {} bytes",
+                            tenant, i + 1, requests.size(), topic, mqttQos, payloadBytes.length);
                 } else {
                     log.debug("{} - Published message ({}/{}): topic=[{}], QoS: {}", tenant, i + 1, requests.size(), topic, mqttQos);
                 }
@@ -369,6 +398,25 @@ public class MQTT3Client extends AMQTTClient {
                 context.addError(new dynamic.mapper.processor.ProcessingException(
                         "Failed to publish message " + (i + 1) + "/" + requests.size(), e));
             }
+        }
+    }
+
+    @Override
+    protected void registerPreConnectPublishHandler() {
+        // Register mqttCallback as the global fallback listener so that messages pushed
+        // by the broker immediately on reconnect (persistent session / cleanSession=false)
+        // are routed to our callback even before per-topic subscriptions are re-established.
+        //
+        // We use MqttGlobalPublishFilter.REMAINING (not ALL) so that once per-topic
+        // callbacks are registered via subscribe(), those callbacks become the sole handler
+        // for their topics. REMAINING only delivers messages that have no matching
+        // per-subscription callback, preventing duplicate processing.
+        if (mqttCallback != null) {
+            mqttClient.toAsync().publishes(MqttGlobalPublishFilter.REMAINING, mqttCallback, true);
+            log.info("{} - Registered MQTT3 global publish handler (REMAINING filter) for persistent session (cleanSession=false) on connector: {}",
+                    tenant, connectorName);
+        } else {
+            log.warn("{} - Cannot register pre-connect publish handler: mqttCallback not yet created", tenant);
         }
     }
 
@@ -389,10 +437,49 @@ public class MQTT3Client extends AMQTTClient {
     @Override
     protected ConnectorSpecification createConnectorSpecification() {
         return ConnectorSpecificationBuilder
-                .create("Generic MQTT", ConnectorType.MQTT)
+                .create("MQTT", ConnectorType.MQTT)
                 .description("Connector for connecting to external MQTT broker over tcp or websocket.")
                 .properties(buildCommonMqttProperties(MQTT_VERSION_3_1_1))
                 .supportedDirections(supportedDirections())
                 .build();
+    }
+
+    @Override
+    protected SparkplugCertificateManager.SparkplugPublisher createSparkplugPublisher() {
+        return new SparkplugCertificateManager.SparkplugPublisher() {
+            @Override
+            public void publishCertificate(String topic, byte[] payload) throws Exception {
+                if (!isConnected() || mqttClient == null) {
+                    throw new ConnectorException("Cannot publish Sparkplug certificate: not connected");
+                }
+
+                try {
+                    Mqtt3Publish message = Mqtt3Publish.builder()
+                            .topic(topic)
+                            .retain(true)
+                            .qos(MqttQos.AT_LEAST_ONCE)
+                            .payload(payload)
+                            .build();
+
+                    mqttClient.publish(message);
+                    log.debug("{} - Published Sparkplug certificate to topic: [{}]", tenant, topic);
+                } catch (Exception e) {
+                    log.error("{} - Error publishing Sparkplug certificate to topic [{}]", tenant, topic, e);
+                    throw new ConnectorException("Failed to publish Sparkplug certificate", e);
+                }
+            }
+
+            @Override
+            public void subscribeTopic(String topicPattern) throws Exception {
+                try {
+                    subscribe(topicPattern, Qos.AT_LEAST_ONCE);
+                    log.debug("{} - Subscribed to Sparkplug topic pattern: [{}]", tenant, topicPattern);
+                } catch (ConnectorException e) {
+                    log.warn("{} - Failed to subscribe to Sparkplug topic pattern [{}]: {}",
+                            tenant, topicPattern, e.getMessage());
+                    throw e;
+                }
+            }
+        };
     }
 }

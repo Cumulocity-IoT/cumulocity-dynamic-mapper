@@ -35,7 +35,7 @@ import {
 } from '../../shared';
 import { CodeEditorDrawerComponent } from '../../shared/component/code-explorer/code-editor-drawer.component';
 import { CodeTemplate, ServiceConfiguration } from '../../configuration';
-import { base64ToString, stringToBase64 } from '../shared/util';
+import { base64ToString, stringToBase64, stripTemplateMetadataTags } from '../shared/util';
 
 // Types
 interface SelectOption<T> {
@@ -58,6 +58,7 @@ interface SaveResult {
 
 @Component({
   selector: 'd11r-mapping-type-drawer',
+  host: { class: 'flex-grow d-col fit-h' },
   templateUrl: './mapping-type-drawer.component.html',
   encapsulation: ViewEncapsulation.None,
   standalone: true,
@@ -132,7 +133,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     this.bottomDrawerRef.close();
   }
 
-  onSave(): void {
+  onContinue(): void {
     if (this.shouldShowTransformationType()) {
       this.formGroup.get('transformationType')?.markAsTouched();
     }
@@ -187,9 +188,11 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
 
     if (!exportName) return template;
 
-    const decoded = base64ToString(template.code);
+    const decoded = stripTemplateMetadataTags(base64ToString(template.code));
     const exportStatement = `export { ${exportName} };`;
-    if (decoded.includes(exportStatement)) return template;
+    // Match any spacing variant: "export {onMessage}" or "export { onMessage }"
+    const exportPattern = new RegExp(`export\\s*\\{\\s*${exportName}\\s*\\}`);
+    if (exportPattern.test(decoded)) return template;
 
     const patched =
       decoded.trimEnd() +

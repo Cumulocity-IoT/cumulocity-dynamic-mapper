@@ -390,3 +390,5 @@ function onMessage(msg, context) {
     console.log("Emitting " + output.length + " C8Y object(s)");
     return output;
 }
+
+export {onMessage};

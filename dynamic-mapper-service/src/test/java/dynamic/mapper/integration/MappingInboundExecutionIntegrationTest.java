@@ -34,13 +34,18 @@ import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.Message;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -58,9 +63,10 @@ import dynamic.mapper.model.API;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
-import dynamic.mapper.processor.inbound.processor.JSONataExtractionInboundProcessor;
-import dynamic.mapper.processor.inbound.processor.SubstitutionInboundProcessor;
-import dynamic.mapper.processor.model.DynamicMapperRequest;
+import dynamic.mapper.processor.model.MappingType;
+import dynamic.mapper.processor.model.TransformationType;
+import dynamic.mapper.processor.inbound.processor.JSONataInboundProcessor;
+import dynamic.mapper.processor.inbound.processor.SubstitutionResultInboundProcessor;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.SubstituteValue;
 import dynamic.mapper.service.MappingService;
@@ -96,8 +102,8 @@ class MappingInboundExecutionIntegrationTest {
     @Mock
     private Message message;
 
-    private JSONataExtractionInboundProcessor jsonataProcessor;
-    private SubstitutionInboundProcessor substitutionProcessor;
+    private JSONataInboundProcessor jsonataProcessor;
+    private SubstitutionResultInboundProcessor substitutionProcessor;
 
     private ObjectMapper objectMapper;
     private List<Mapping> inboundMappings;
@@ -114,8 +120,8 @@ class MappingInboundExecutionIntegrationTest {
         log.info("Loaded {} inbound mappings for execution tests", inboundMappings.size());
 
         // Create processors
-        jsonataProcessor = new JSONataExtractionInboundProcessor(mappingService);
-        substitutionProcessor = new SubstitutionInboundProcessor();
+        jsonataProcessor = new JSONataInboundProcessor(mappingService);
+        substitutionProcessor = new SubstitutionResultInboundProcessor();
 
         // Inject dependencies via reflection
         injectField(substitutionProcessor, "c8yAgent", c8yAgent);
@@ -402,6 +408,130 @@ class MappingInboundExecutionIntegrationTest {
         }
 
         log.info("✅ JSONata expression evaluation executed successfully");
+    }
+
+    // ========== PARAMETERIZED SAMPLE-MAPPING TESTS (from TestCases_6.2.0.pdf) ==========
+
+    /**
+     * Data-driven test covering all JSON-type inbound sample mappings from the test plan.
+     * Each case loads the mapping by name from mappings-INBOUND.json, feeds its
+     * sourceTemplate as the payload, and verifies that JSONata extraction produces
+     * at least one substitution and that the target API matches the expected type.
+     *
+     * Excluded mappings (require special deserialization not covered by JSONata extraction):
+     *   Mapping - 07  – root payload is a JSON array
+     *   Mapping - 10  – HEX
+     *   Mapping - 12  – HEX
+     *   Mapping - 14  – PROTOBUF_INTERNAL
+     *   Mapping - 15  – EXTENSION_JAVA
+     *   Mapping - 20  – EXTENSION_JAVA
+     *   Mapping - 24  – EXTENSION_JAVA
+     *   Mapping - 26  – FLAT_FILE
+     *   Any mapping using SUBSTITUTION_AS_CODE transformation type
+     */
+    @ParameterizedTest(name = "[{index}] {0} → {1}")
+    @MethodSource("jsonSampleMappingTestCases")
+    void testSampleMapping_JSONataExtraction(String mappingName, API expectedApi) throws Exception {
+        Mapping mapping = findMappingByName(inboundMappings, mappingName);
+        Assumptions.assumeTrue(mapping != null, "Mapping not present in sample file: " + mappingName);
+        Assumptions.assumeTrue(mapping.getMappingType() == MappingType.JSON,
+                "Skipping non-JSON mapping: " + mappingName);
+        Assumptions.assumeTrue(mapping.getTransformationType() != TransformationType.SUBSTITUTION_AS_CODE,
+                "Skipping SUBSTITUTION_AS_CODE mapping: " + mappingName);
+
+        String sourceTemplate = mapping.getSourceTemplate();
+        Assumptions.assumeTrue(sourceTemplate != null && !sourceTemplate.isBlank(),
+                "No sourceTemplate for: " + mappingName);
+        Assumptions.assumeTrue(sourceTemplate.trim().startsWith("{"),
+                "Array-root source not supported in this test: " + mappingName);
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> payload = objectMapper.readValue(sourceTemplate,
+                new TypeReference<Map<String, Object>>() {});
+
+        ProcessingContext<Object> context = createProcessingContext(
+                mapping, new HashMap<>(payload), mapping.getMappingTopicSample());
+
+        // Execute JSONata extraction through the processor under test
+        jsonataProcessor.extractFromSource(context);
+
+        Map<String, List<SubstituteValue>> cache = context.getProcessingCache();
+        assertFalse(cache.isEmpty(),
+                "Processing cache should not be empty for: " + mappingName
+                        + " (substitutions: " + mapping.getSubstitutions().length + ")");
+        assertEquals(expectedApi, mapping.getTargetAPI(),
+                "Target API mismatch for: " + mappingName);
+
+        log.info("✅ {} → {} substitutions extracted, API={}",
+                mappingName, cache.size(), mapping.getTargetAPI());
+    }
+
+    /**
+     * Mapping-07 has a JSON-array root payload. Test it separately using the
+     * array wrapped as the special __array__ token that JSONata evaluates as $.
+     */
+    @Test
+    void testMapping07_ArrayRootPayload_JSONataExtraction() throws Exception {
+        Mapping mapping = findMappingByName(inboundMappings, "Mapping - 07");
+        Assumptions.assumeTrue(mapping != null, "Mapping - 07 not found, skipping");
+
+        // The sourceTemplate is a JSON array – wrap it so the context payload is a Map
+        String sourceTemplate = mapping.getSourceTemplate();
+        Assumptions.assumeTrue(sourceTemplate != null && sourceTemplate.trim().startsWith("["),
+                "Expected array source for Mapping - 07");
+
+        List<Object> arrayPayload = objectMapper.readValue(sourceTemplate,
+                new TypeReference<List<Object>>() {});
+
+        Map<String, Object> payload = new HashMap<>();
+        // JSONata in this codebase evaluates `$` against the payload map; putting the
+        // array under the identity key lets the $[] expressions in the substitutions resolve.
+        payload.put("__root__", arrayPayload);
+        // Also flatten first element fields so $[0].devicePath resolves
+        if (!arrayPayload.isEmpty() && arrayPayload.get(0) instanceof Map) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> first = (Map<String, Object>) arrayPayload.get(0);
+            payload.putAll(first);
+        }
+
+        ProcessingContext<Object> context = createProcessingContext(
+                mapping, payload, mapping.getMappingTopicSample());
+
+        jsonataProcessor.extractFromSource(context);
+
+        Map<String, List<SubstituteValue>> cache = context.getProcessingCache();
+        log.info("Mapping - 07 extraction cache keys: {}", cache.keySet());
+        // At minimum the _IDENTITY_.externalId substitution should fire
+        assertFalse(cache.isEmpty(),
+                "Processing cache should not be empty for Mapping - 07");
+        assertEquals(API.MEASUREMENT, mapping.getTargetAPI());
+
+        log.info("✅ Mapping - 07 (array root) → {} substitutions extracted", cache.size());
+    }
+
+    static Stream<Arguments> jsonSampleMappingTestCases() {
+        return Stream.of(
+                // PDF Sample Mapping # → (name, expected C8Y API)
+                Arguments.of("Mapping - 01", API.MEASUREMENT),  // topic level concat + measurement
+                Arguments.of("Mapping - 02", API.MEASUREMENT),  // array expansion, multiple measurements
+                Arguments.of("Mapping - 03", API.INVENTORY),   // create device with fields
+                Arguments.of("Mapping - 04", API.EVENT),        // event with topic level externalId
+                Arguments.of("Mapping - 05", API.MEASUREMENT),  // fuel measurement
+                Arguments.of("Mapping - 06", API.INVENTORY),   // multi-array device creation
+                // Mapping - 07 tested separately (array root)
+                Arguments.of("Mapping - 08", API.EVENT),        // event with REMOVE_IF_MISSING_OR_NULL
+                Arguments.of("Mapping - 09", API.MEASUREMENT),  // conditional fragment, REMOVE_IF_MISSING_OR_NULL
+                Arguments.of("Mapping - 11", API.OPERATION),   // operation creation
+                Arguments.of("Mapping - 13", API.INVENTORY),   // device type update
+                Arguments.of("Mapping - 16", API.MEASUREMENT),  // panel timestamp conversion
+                Arguments.of("Mapping - 17", API.EVENT),        // panel event
+                Arguments.of("Mapping - 18", API.MEASUREMENT),  // flexible measurement name
+                Arguments.of("Mapping - 19", API.ALARM),        // alarm creation
+                Arguments.of("Mapping - 21", API.MEASUREMENT),  // key-value array to measurement
+                Arguments.of("Mapping - 22", API.MEASUREMENT),  // key-value array to measurement (v3)
+                Arguments.of("Mapping - 23", API.MEASUREMENT),  // datalogger nested measurement
+                Arguments.of("Mapping - 25", API.ALARM)         // alarm with c8y source id
+        );
     }
 
     // ========== HELPER METHODS ==========

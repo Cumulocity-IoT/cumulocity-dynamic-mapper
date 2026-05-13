@@ -51,6 +51,7 @@ export class DocOverviewComponent implements OnInit {
   ROUTE_CONNECTORS: string = `/c8y-pkg-dynamic-mapper/${NODE3}/connectorConfiguration`;
   ROUTE_CODE_TEMPLATES_INBOUND_SMART_FUNCTION: string = `/c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/INBOUND_SMART_FUNCTION`;
   ROUTE_MONITORING: string = `/c8y-pkg-dynamic-mapper/${NODE2}/monitoring/statistic/inbound`;
+  ROUTE_MESSAGE_EXPLORER: string = `/c8y-pkg-dynamic-mapper/${NODE1}/mappings/messageExplorer`;
 
   constructor(
     private mappingService: MappingService,
@@ -64,17 +65,29 @@ export class DocOverviewComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     this.feature = this.route.snapshot.data['feature'];
 
+    // When navigating to a section anchor within the overview page, scroll to it.
+    // Use offsetTop (layout-based, scroll-independent) rather than
+    // getBoundingClientRect() so the correct offset is computed regardless of the
+    // window scroll position at the time this runs.
+    const path = this.route.snapshot.routeConfig?.path || '';
+    if (path && path !== '') {
+      setTimeout(() => {
+        const element = document.getElementById(path);
+        if (element) {
+          window.scrollTo({ top: element.offsetTop - 120, behavior: 'smooth' });
+        }
+      }, 200);
+    }
+
     const codeTemplatesMap: CodeTemplateMap = await this.sharedService.getCodeTemplates();
     this.codeTemplates = Object.entries(codeTemplatesMap)
       .map(([, template]) => template)
       .sort((a, b) => {
         const typeOrder = {
-          'INBOUND_SUBSTITUTION_AS_CODE': 1,
-          'OUTBOUND_SUBSTITUTION_AS_CODE': 2,
-          'INBOUND_SMART_FUNCTION': 3,
-          'OUTBOUND_SMART_FUNCTION': 4,
-          'SHARED': 5,
-          'SYSTEM': 6
+          'INBOUND_SMART_FUNCTION': 1,
+          'OUTBOUND_SMART_FUNCTION': 2,
+          'SHARED': 3,
+          'SYSTEM': 4
         };
         const typeComparison = (typeOrder[a.templateType] || 999) - (typeOrder[b.templateType] || 999);
         if (typeComparison !== 0) return typeComparison;
@@ -119,9 +132,6 @@ export class DocOverviewComponent implements OnInit {
 
   getTransformationTypeName(templateType: string): string {
     switch (templateType) {
-      case 'INBOUND_SUBSTITUTION_AS_CODE':
-      case 'OUTBOUND_SUBSTITUTION_AS_CODE':
-        return 'Substitution as JavaScript (deprecated)';
       case 'INBOUND_SMART_FUNCTION':
       case 'OUTBOUND_SMART_FUNCTION':
         return 'Smart Functions';
@@ -133,8 +143,6 @@ export class DocOverviewComponent implements OnInit {
         return 'Inbound (deprecated)';
       case 'OUTBOUND':
         return 'Outbound (deprecated)';
-      case 'SUBSTITUTION_AS_CODE':
-        return 'Substitution as JavaScript (deprecated)';
       default:
         return templateType;
     }
@@ -143,9 +151,7 @@ export class DocOverviewComponent implements OnInit {
   scrollToElement(elementId: string): void {
     const element = document.getElementById(elementId);
     if (element) {
-      const elementPosition = element.getBoundingClientRect().top + window.scrollY;
-      const offsetPosition = elementPosition - 80;
-      window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
+      window.scrollTo({ top: element.offsetTop - 120, behavior: 'smooth' });
     }
   }
 }

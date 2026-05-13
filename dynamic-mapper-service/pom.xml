@@ -239,6 +239,18 @@
             <groupId>com.rabbitmq</groupId>
             <artifactId>amqp-client</artifactId>
         </dependency>
+
+        <dependency>
+            <groupId>org.apache.qpid</groupId>
+            <artifactId>qpid-jms-client</artifactId>
+        </dependency>
+
+        <!-- SparkPlugB support via Eclipse Tahu -->
+        <dependency>
+            <groupId>org.eclipse.tahu</groupId>
+            <artifactId>tahu-core</artifactId>
+            <version>1.0.7</version>
+        </dependency>
     </dependencies>
 
     <build>

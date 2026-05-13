@@ -34,6 +34,7 @@ public enum API {
     MEASUREMENT("MEASUREMENT", "source.id", "measurements", "/measurement/measurements"),
     INVENTORY("INVENTORY", "id", "managedobjects", "/inventory/managedObjects"),
     OPERATION("OPERATION", "deviceId", "operations", "/devicecontrol/operations"),
+    CUSTOM("CUSTOM", "", "custom", ""),
     EMPTY("NN", "nn", "nn", ""),
     ALL("ALL", "*", "*", "");
 
@@ -94,6 +95,8 @@ public enum API {
                 return "operation";
             case INVENTORY:
                 return "managedObject";
+            case CUSTOM:
+                return "custom";
             default:
                 return null;
         }

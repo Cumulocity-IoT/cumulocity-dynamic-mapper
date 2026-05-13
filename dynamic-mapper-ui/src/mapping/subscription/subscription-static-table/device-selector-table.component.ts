@@ -32,6 +32,7 @@ import { DeviceGridModule, DeviceGridService, GroupDeviceGridColumn, NameDeviceG
 
 @Component({
   selector: 'd11r-device-selector-table',
+  host: { class: 'flex-grow d-col fit-h' },
   templateUrl: 'device-selector-table.component.html',
   styleUrls: ['../../shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,

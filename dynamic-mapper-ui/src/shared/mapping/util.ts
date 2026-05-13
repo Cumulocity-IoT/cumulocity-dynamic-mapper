@@ -350,6 +350,8 @@ export const MAPPING_FRAGMENT = 'd11r_mapping';
 export const CONNECTOR_FRAGMENT = 'd11r_connector';
 export const MAPPING_GENERATED_TEST_DEVICE = 'd11r_device_generatedType';
 
+export const ALERT_INFO_TIMEOUT = 10000;
+
 export const BASE_URL = 'service/dynamic-mapper-service';
 export const BASE_AI_URL = 'service/ai';
 export const PATH_OPERATION_ENDPOINT = 'operation';
@@ -368,6 +370,7 @@ export const PATH_RELATION_ENDPOINT = 'relation';
 export const PATH_TESTING_ENDPOINT = 'test';
 export const PATH_MAPPING_ENDPOINT = 'mapping';
 export const PATH_AGENT_ENDPOINT = 'agent';
+export const PATH_EXPLORER_ENDPOINT = 'explorer';
 
 export const AGENT_ID = 'd11r_mappingService';
 export const COLOR_HIGHLIGHTED: string = 'lightgrey';

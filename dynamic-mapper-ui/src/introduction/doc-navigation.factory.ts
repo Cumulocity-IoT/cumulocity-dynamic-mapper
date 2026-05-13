@@ -61,6 +61,14 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       priority: 612,
       preventDuplicates: true
     }),
+    messageExplorerNode: new NavigatorNode({
+      parent: gettext('Introduction'),
+      icon: 'empty',
+      label: gettext('Message Explorer'),
+      path: '/c8y-pkg-dynamic-mapper/landing/message-explorer',
+      priority: 611.5,
+      preventDuplicates: true
+    }),
     managingConnectorsNode: new NavigatorNode({
       parent: gettext('Introduction'),
       icon: 'empty',
@@ -83,6 +91,14 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       label: gettext('Defining a mapping'),
       path: '/c8y-pkg-dynamic-mapper/landing/define-mapping',
       priority: 610,
+      preventDuplicates: true
+    }),
+    sparkPlugBNode: new NavigatorNode({
+      parent: gettext('Introduction'),
+      icon: 'empty',
+      label: gettext('SparkPlug B'),
+      path: '/c8y-pkg-dynamic-mapper/landing/sparkplugb',
+      priority: 609.5,
       preventDuplicates: true
     }),
     subscriptionOutboundNode: new NavigatorNode({
@@ -120,7 +136,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
     javaScriptNode: new NavigatorNode({
       parent: gettext('Transformation Types'),
       icon: 'empty',
-      label: gettext('Substitution as JavaScript (deprecated)'),
+      label: gettext('Substitution as JavaScript (removed)'),
       path: '/c8y-pkg-dynamic-mapper/landing/javascript',
       priority: 605,
       preventDuplicates: true
@@ -131,6 +147,14 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       label: gettext('Java Extension'),
       path: '/c8y-pkg-dynamic-mapper/landing/javaextension',
       priority: 604,
+      preventDuplicates: true
+    }),
+    customRoutingNode: new NavigatorNode({
+      parent: gettext('Transformation Types'),
+      icon: 'empty',
+      label: gettext('Custom Routing'),
+      path: '/c8y-pkg-dynamic-mapper/landing/custom-routing',
+      priority: 603.5,
       preventDuplicates: true
     }),
     flowStateNode: new NavigatorNode({
@@ -201,12 +225,6 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
     this.appStateService.currentApplication.subscribe((cur) => {
       this.isStandaloneApp =
         _.has(cur?.manifest, 'isPackage') || _.has(cur?.manifest, 'blueprint');
-      //   console.log(
-      //     'Constructor: AppName in MappingNavigationFactory',
-      //     cur,
-      //     this.isStandaloneApp,
-      //     _.has(cur?.manifest, 'isPackage')
-      //   );
       this.appName = cur.name;
     });
   }

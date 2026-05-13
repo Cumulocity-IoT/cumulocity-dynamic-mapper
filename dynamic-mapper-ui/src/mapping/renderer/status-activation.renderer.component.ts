@@ -22,7 +22,7 @@ import { HttpStatusCode } from '@angular/common/http';
 import { ChangeDetectorRef, Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { AlertService, CellRendererContext, CoreModule } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
-import { DEPRECATION_NOTICE_VERSION, Direction, Feature, SharedService, TransformationType } from '../../shared';
+import { ALERT_INFO_TIMEOUT, DEPRECATION_NOTICE_VERSION, Direction, Feature, SharedService, TransformationType } from '../../shared';
 import { DeprecationNoticeModalComponent } from '../deprecation-notice/deprecation-notice-modal.component';
 import { MappingService } from '../core/mapping.service';
 import { SubscriptionService } from '../core/subscription.service';
@@ -67,6 +67,10 @@ export class MappingStatusActivationRendererComponent implements OnInit {
   ) {}
 
   get canEdit(): boolean {
+    const mapping = this.context.item?.['mapping'];
+    if (mapping?.transformationType === TransformationType.SUBSTITUTION_AS_CODE) {
+      return false;
+    }
     return this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole;
   }
 
@@ -144,9 +148,7 @@ export class MappingStatusActivationRendererComponent implements OnInit {
     const hasSubscriptions = (dynamicResult.devices?.length > 0) || (staticResult.devices?.length > 0);
 
     if (!hasSubscriptions) {
-      this.alertService.info(
-        "To enable the outbound mapping, a subscription is required. Please proceed with creating the necessary 'Subscription outbound'."
-      );
+      this.alertService.add({ text: "To enable the outbound mapping, a subscription is required. Please proceed with creating the necessary 'Subscription outbound'.", type: 'info', timeout: ALERT_INFO_TIMEOUT });
     }
 
     return hasSubscriptions;

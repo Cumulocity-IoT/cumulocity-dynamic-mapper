@@ -61,7 +61,8 @@ import {
   SnoopStatus,
   StepperConfiguration,
   Substitution,
-  TransformationType
+  TransformationType,
+  ALERT_INFO_TIMEOUT
 } from '../../shared';
 import { ConfirmationModalService } from '../../shared/service/confirmation-modal.service';
 import {
@@ -94,7 +95,6 @@ import { AdviceActionComponent } from './advisor/advice-action.component';
 import { CommonModule } from '@angular/common';
 import { MappingStepperComponent } from '../stepper-mapping/mapping-stepper.component';
 import { SnoopingStepperComponent } from '../stepper-snooping/snooping-stepper.component';
-import { MappingFilterDrawerComponent } from '../filter/mapping-filter-drawer.component';
 import { CodeEditorDrawerComponent } from '../../shared/component/code-explorer/code-editor-drawer.component';
 import { DeprecationNoticeModalComponent } from '../deprecation-notice/deprecation-notice-modal.component';
 import { DEPRECATION_NOTICE_VERSION } from '../../shared';
@@ -140,6 +140,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   mappingType!: MappingType;
   transformationType!: TransformationType;
   private readonly destroy$ = new Subject<void>();
+  private explorerPreFill: { topic: string; payload: string; targetAPI?: string; publishTopic?: string; publishTopicSample?: string } | null = null;
 
   pagination: Pagination = {
     pageSize: 30,
@@ -220,6 +221,25 @@ export class MappingComponent implements OnInit, OnDestroy {
         .subscribe((m: MappingEnriched) => {
           this.updateMapping(m);
         });
+
+      // If navigated from Message Explorer, auto-open the stepper with pre-filled data
+      const navState = history.state;
+      if (navState?.fromExplorer) {
+        this.explorerPreFill = {
+          topic: navState.topic ?? '',
+          payload: navState.payload ?? '{}',
+          targetAPI: navState.targetAPI,
+          publishTopic: navState.publishTopic,
+          publishTopicSample: navState.publishTopicSample
+        };
+        this.mappingType = navState.mappingType;
+        this.transformationType = navState.transformationType;
+        this.snoopStatus = navState.snoop ? SnoopStatus.ENABLED : SnoopStatus.NONE;
+        this.snoopEnabled = navState.snoop ?? false;
+        this.substitutionsAsCode = this.transformationType === TransformationType.SMART_FUNCTION;
+        this.codeTemplate = navState.codeTemplate;
+        this.addMapping();
+      }
     } finally {
       this.isLoading = false;
     }
@@ -231,11 +251,15 @@ export class MappingComponent implements OnInit, OnDestroy {
     if (this.stepperConfiguration.direction === Direction.OUTBOUND) {
       const result = await Promise.all([this.subscriptionService.getSubscriptionDevice(this.subscriptionService.DYNAMIC_DEVICE_SUBSCRIPTION), this.subscriptionService.getSubscriptionDevice(this.subscriptionService.STATIC_DEVICE_SUBSCRIPTION)]);
       if (result[0].devices?.length === 0 && result[1].devices?.length === 0) {
-        this.alertService.info("To enable the outbound mapping, a subscription is required. Please proceed with creating the necessary 'Subscription outbound'.");
+        this.alertService.add({ text: "To enable the outbound mapping, a subscription is required. Please proceed with creating the necessary 'Subscription outbound'.", type: 'info', timeout: ALERT_INFO_TIMEOUT });
         valid = false;
       }
     }
     return valid;
+  }
+
+  private isDeprecatedMapping(item: any): boolean {
+    return item['mapping']['transformationType'] === TransformationType.SUBSTITUTION_AS_CODE;
   }
 
   private setupActionControls() {
@@ -243,20 +267,27 @@ export class MappingComponent implements OnInit, OnDestroy {
       {
         type: BuiltInActionType.Edit,
         callback: this.updateMapping.bind(this),
-        showIf: item => !item['mapping']['active'] && this.canManageMappings,
+        showIf: item => !item['mapping']['active'] && this.canManageMappings && !this.isDeprecatedMapping(item),
       },
       {
         type: 'VIEW',
         icon: 'eye',
         callback: this.updateMapping.bind(this),
-        showIf: item => item['mapping']['active'] || !this.canManageMappings
+        showIf: item => (item['mapping']['active'] || !this.canManageMappings) && !this.isDeprecatedMapping(item)
+      },
+      {
+        type: 'VIEW_DEPRECATED',
+        text: 'View (deprecated)',
+        icon: 'eye',
+        callback: this.updateMapping.bind(this),
+        showIf: item => this.isDeprecatedMapping(item)
       },
       {
         text: 'Duplicate',
         type: 'DUPLICATE',
         icon: 'duplicate',
         callback: this.copyMapping.bind(this),
-        showIf: () => this.canManageMappings
+        showIf: item => this.canManageMappings && !this.isDeprecatedMapping(item)
       },
       {
         type: BuiltInActionType.Delete,
@@ -268,14 +299,14 @@ export class MappingComponent implements OnInit, OnDestroy {
         text: 'Enable debugging',
         icon: 'bug1',
         callback: this.toggleDebugMapping.bind(this),
-        showIf: item => !item['mapping']['debug'] && this.canManageMappings
+        showIf: item => !item['mapping']['debug'] && this.canManageMappings && !this.isDeprecatedMapping(item)
       },
       {
         type: 'DISABLE_DEBUG',
         text: 'Disable debugging',
         icon: 'bug1',
         callback: this.toggleDebugMapping.bind(this),
-        showIf: item => item['mapping']['debug'] && this.canManageMappings
+        showIf: item => item['mapping']['debug'] && this.canManageMappings && !this.isDeprecatedMapping(item)
       },
       {
         type: 'ENABLE_SNOOPING',
@@ -285,7 +316,8 @@ export class MappingComponent implements OnInit, OnDestroy {
         showIf: item =>
           item['snoopSupported'] &&
           (item['mapping']['snoopStatus'] === SnoopStatus.NONE ||
-            item['mapping']['snoopStatus'] === SnoopStatus.STOPPED) && this.canManageMappings
+            item['mapping']['snoopStatus'] === SnoopStatus.STOPPED) &&
+          this.canManageMappings && !this.isDeprecatedMapping(item)
       },
       {
         type: 'DISABLE_SNOOPING',
@@ -297,7 +329,8 @@ export class MappingComponent implements OnInit, OnDestroy {
           !(
             item['mapping']['snoopStatus'] === SnoopStatus.NONE ||
             item['mapping']['snoopStatus'] === SnoopStatus.STOPPED
-          ) && this.canManageMappings
+          ) &&
+          this.canManageMappings && !this.isDeprecatedMapping(item)
       },
       {
         type: 'RESET_SNOOP',
@@ -308,7 +341,8 @@ export class MappingComponent implements OnInit, OnDestroy {
           item['snoopSupported'] &&
           (item['mapping']['snoopStatus'] === SnoopStatus.STARTED ||
             item['mapping']['snoopStatus'] === SnoopStatus.ENABLED ||
-            item['mapping']['snoopStatus'] === SnoopStatus.STOPPED) && this.canManageMappings
+            item['mapping']['snoopStatus'] === SnoopStatus.STOPPED) &&
+          this.canManageMappings && !this.isDeprecatedMapping(item)
       },
       {
         type: 'EXPORT',
@@ -370,41 +404,6 @@ export class MappingComponent implements OnInit, OnDestroy {
       }
     );
   }
-
-  async editMessageFilter(m: MappingEnriched) {
-    const { mapping } = m;
-    const sourceSystem =
-      mapping.direction == Direction.OUTBOUND ? 'Cumulocity' : 'Broker';
-    const initialState = { mapping, sourceSystem };
-    try {
-      const drawer = this.bottomDrawerService.openDrawer(MappingFilterDrawerComponent, { initialState: initialState });
-
-      await new Promise((resolve) => {
-        drawer.instance.closeSubject
-          .pipe(
-            take(1),
-            filter(filterMapping => !!filterMapping),
-            switchMap(filterMapping => this.applyMappingFilter(filterMapping, mapping.id)),
-            finalize(() => {
-              drawer.close();
-              resolve(undefined);
-            })
-          )
-          .subscribe({
-            next: () => {
-              // this.alertService.success(`Applied filter to mapping ${mapping.name}`);
-            },
-            error: (error) => {
-              this.alertService.danger('Failed to apply mapping filter', error);
-              resolve(undefined);
-            }
-          });
-      });
-    } catch (error) {
-      this.alertService.danger(`Failed to apply mapping filter: ${error.message}`);
-    }
-  }
-
 
   async updateCode(m: MappingEnriched) {
     const { mapping } = m;
@@ -585,7 +584,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         this.snoopEnabled = true;
       }
       this.transformationType = resultOf.transformationType;
-      this.substitutionsAsCode = this.transformationType == TransformationType.SMART_FUNCTION || this.transformationType == TransformationType.SUBSTITUTION_AS_CODE;
+      this.substitutionsAsCode = this.transformationType == TransformationType.SMART_FUNCTION;
       this.mappingType = resultOf.mappingType;
       this.codeTemplate = resultOf.codeTemplate;
       this.addMapping();
@@ -638,7 +637,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       let code;
       if (this.substitutionsAsCode) code = this.codeTemplate.code;
       mapping = {
-        name: `Mapping - ${identifier.substring(0, 7)}`,
+        name: `Mapping - ${nextIdAndPad(this.mappingsCount, 2)}`,
         id: identifier,
         identifier: identifier,
         // publishTopic: '',
@@ -675,6 +674,31 @@ export class MappingComponent implements OnInit, OnDestroy {
         ...mapping,
         sourceTemplate: sampleSource
       };
+    }
+
+    // Apply pre-fill from Message Explorer (topic + payload + targetAPI)
+    if (this.explorerPreFill) {
+      if (this.stepperConfiguration.direction === Direction.INBOUND) {
+        mapping.mappingTopic = this.explorerPreFill.topic;
+        mapping.mappingTopicSample = this.explorerPreFill.topic;
+      }
+      mapping.sourceTemplate = this.explorerPreFill.payload;
+      if (this.explorerPreFill.targetAPI) {
+        mapping.targetAPI = this.explorerPreFill.targetAPI;
+        mapping.targetTemplate = SAMPLE_TEMPLATES_C8Y[this.explorerPreFill.targetAPI] ?? mapping.targetTemplate;
+      }
+      if (this.explorerPreFill.publishTopic) {
+        mapping.publishTopic = this.explorerPreFill.publishTopic;
+        mapping.useExternalId = true;
+      }
+      if (this.explorerPreFill.publishTopicSample) {
+        mapping.publishTopicSample = this.explorerPreFill.publishTopicSample;
+      }
+      // For OUTBOUND, pre-fill filterMapping with 'true' so at least one execution filter is set
+      if (this.stepperConfiguration.direction === Direction.OUTBOUND && !mapping.filterMapping) {
+        mapping.filterMapping = 'true';
+      }
+      this.explorerPreFill = null;
     }
 
     this.mappingToUpdate = mapping;

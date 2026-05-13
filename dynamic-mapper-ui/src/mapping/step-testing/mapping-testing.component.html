@@ -19,12 +19,12 @@
 ~
 -->
 
-<div class="col-xs-12 flex-grow d-col">
+<div class="fit-h d-col">
   <!-- Scrollable content area -->
   <div class="flex-grow overflow-auto">
     <div class="card-block p-b-0">
-      <div class="d-flex">
-        <div class="col-lg-5 col-lg-offset-1 col-md-5 col-md-offset-1 column-right-border">
+      <div class="row">
+        <div class="col-lg-6 col-md-6 column-right-border">
           <div class="form-group">
             <div style="display: flex">
               <label for="testResult" translate>{{ sourceSystem }} Payload&nbsp;</label>
@@ -41,7 +41,7 @@
             </c8y-messages>
           </div>
         </div>
-        <div class="col-lg-5 col-md-5 column-left-border">
+        <div class="col-lg-6 col-md-6 column-left-border">
           <div class="form-group">
             <div style="display: flex">
               <label for="testResult" translate>{{ targetSystem }} Request&nbsp;</label>
@@ -81,72 +81,59 @@
         </div>
       </div>
       @if (mapping.direction !== Direction.OUTBOUND && !isSubstitutionsAsCode(mapping)) {
-      <div class="d-flex">
-        <div class="form-block legend col-lg-10 col-lg-offset-1 col-md-10 col-md-offset-1">
-        </div>
-      </div>
+      <hr />
       }
       @if (mapping.direction !== Direction.OUTBOUND && !isSubstitutionsAsCode(mapping)) {
-      <div class="d-flex">
-        <div class="col-lg-5 col-lg-offset-1 col-md-5 col-md-offset-1 column-right-border"></div>
-        <div class="col-lg-5 column-left-border">
-          <div class="form-group">
-            <div style="display: flex">
-              <label>{{ targetSystem }} Response&nbsp;</label>
-              @if ((selectedResult$ | async) > 0) {
-              <div class="m-l-auto">
-                <span class="badge badge-success m-r-8"> {{
-                  selectedResult$ | async
-                  }}</span>
+      <!-- Collapsible response header -->
+      <div class="row p-t-4 p-b-4 cursor-pointer" (click)="showResponse = !showResponse" style="cursor:pointer">
+        <div class="col-lg-12 d-flex a-i-center">
+          <i [c8yIcon]="showResponse ? 'chevron-down' : 'chevron-right'" class="m-r-8"></i>
+          <span translate>{{ targetSystem }} Response</span>
+          @if ((selectedResult$ | async) > 0) {
+          <span class="badge badge-success m-l-8">{{ selectedResult$ | async }}</span>
+          }
+        </div>
+      </div>
+      <div class="collapse" [isAnimated]="true" [collapse]="!showResponse">
+        <div class="row">
+          <div class="col-lg-6 col-md-6"></div>
+          <div class="col-lg-6 col-md-6 column-left-border">
+            <div class="form-group">
+              <d11r-mapping-json-editor [options]="editorOptionsDefault" [class]="'jse-main-tiny'"
+                [data]="testingModel.response" #editorTestingResponse id="editorTestingResponse">
+              </d11r-mapping-json-editor>
+            </div>
+          </div>
+        </div>
+      </div>
+      }
+      <hr />
+      <!-- Collapsible console header -->
+      <div class="row p-t-4 p-b-4 cursor-pointer" (click)="showConsole = !showConsole" style="cursor:pointer">
+        <div class="col-lg-12 d-flex a-i-center">
+          <i [c8yIcon]="showConsole ? 'chevron-down' : 'chevron-right'" class="m-r-8"></i>
+          <span translate>Console output</span>
+        </div>
+      </div>
+      <div class="collapse" [isAnimated]="true" [collapse]="!showConsole">
+        <div class="row">
+          <div class="col-lg-12 col-md-12">
+            <div class="form-group">
+              <div class="console-output">
+                @if (isLoading) {
+                <span class="log-loading">Processing</span>
+                } @else if (testingModel.logs?.length) {
+                @for (line of testingModel.logs; track $index) {
+                <div [class]="'log-line log-' + getLogLevel(line)">{{ line }}</div>
+                }
+                } @else {
+                <span class="log-empty">No output yet</span>
+                }
               </div>
-              }
-            </div>
-            <d11r-mapping-json-editor [options]="editorOptionsDefault" [class]="'jse-main-tiny'"
-              [data]="testingModel.response" #editorTestingResponse id="editorTestingResponse">
-            </d11r-mapping-json-editor>
-            @if (!hasResponse && testingModel.results.length > 0) {
-            <c8y-messages>
-              <c8y-message translate type="info">
-                <span class="text-info">
-                  <i class="fa fa-info-circle"></i> No response in test mode.
-                  Data operations (MEASUREMENT, EVENT, ALARM) are prepared but not executed.
-                  Use "Send Test Message" to get actual responses.
-                </span>
-              </c8y-message>
-            </c8y-messages>
-            }
-          </div>
-        </div>
-      </div>
-      }
-      @if (isSubstitutionsAsCode(mapping)) {
-      <div class="d-flex">
-        <div class="legend form-block col-lg-10 col-lg-offset-1 col-md-10 col-md-offset-1">
-        </div>
-      </div>
-      }
-      @if (isSubstitutionsAsCode(mapping) || requiresRawPayload() || testingModel.logs?.length > 0) {
-      <div class="d-flex">
-        <div class="col-lg-10 col-lg-offset-1 col-md-10 col-md-offset-1">
-          <div class="form-group">
-            <div style="display: flex">
-              <label>Console output</label>
-            </div>
-            <div class="console-output">
-              @if (isLoading) {
-              <span class="log-loading">Processing</span>
-              } @else if (testingModel.logs?.length) {
-              @for (line of testingModel.logs; track $index) {
-              <div [class]="'log-line log-' + getLogLevel(line)">{{ line }}</div>
-              }
-              } @else {
-              <span class="log-empty">No output yet</span>
-              }
             </div>
           </div>
         </div>
       </div>
-      }
     </div>
   </div>
 

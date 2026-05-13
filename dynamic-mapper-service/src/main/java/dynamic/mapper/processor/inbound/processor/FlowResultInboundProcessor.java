@@ -16,6 +16,7 @@ import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.AbstractFlowResultProcessor;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.CumulocityObject;
+import dynamic.mapper.processor.model.CumulocityType;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ExternalId;
 import dynamic.mapper.processor.model.ExternalIdInfo;
@@ -26,21 +27,27 @@ import dynamic.mapper.processor.model.RoutingContext;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
 import dynamic.mapper.processor.util.APITopicUtil;
 import dynamic.mapper.core.C8YAgent;
+import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @Slf4j
 @Component
 public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
 
     private final C8YAgent c8yAgent;
+    private final ConfigurationRegistry configurationRegistry;
 
+    @Autowired
     public FlowResultInboundProcessor(
             MappingService mappingService,
             C8YAgent c8yAgent,
+            ConfigurationRegistry configurationRegistry,
             ObjectMapper objectMapper) {
         super(mappingService, objectMapper);
         this.c8yAgent = c8yAgent;
+        this.configurationRegistry = configurationRegistry;
     }
 
     /**
@@ -145,8 +152,43 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
             Mapping mapping) throws ProcessingException {
 
         try {
+            // Custom routing: bypass device resolution, call tenant-local microservice directly
+            if (CumulocityType.CUSTOM.equals(cumulocityMessage.getCumulocityType())) {
+                String targetPath = cumulocityMessage.getTargetPath();
+                if (targetPath == null || !targetPath.startsWith("/service/")) {
+                    throw new ProcessingException(
+                            "Custom routing targetPath must start with /service/, got: " + targetPath);
+                }
+                DynamicMapperRequest customRequest = DynamicMapperRequest.builder()
+                        .predecessor(-1)
+                        .method(ProcessingResultHelper.mapActionToRequestMethod(cumulocityMessage.getAction()))
+                        .api(API.CUSTOM)
+                        .pathCumulocity(targetPath)
+                        .request(objectMapper.writeValueAsString(cumulocityMessage.getPayload()))
+                        .build();
+                output.addRequest(customRequest);
+                log.debug("{} - Created CUSTOM route request: path={}, method={}",
+                        tenant, targetPath, customRequest.getMethod());
+                return;
+            }
+
             // Get the API from the cumulocityType using unified API derivation
+            if(cumulocityMessage.getCumulocityType() == null){
+                String warnMsg = String.format(
+                        "CumulocityObject missing cumulocityType, cannot derive API for mapping '%s', skipping message", mapping.getIdentifier());
+                log.warn("{} - {}", tenant, warnMsg);
+                output.addWarning(warnMsg);
+                return;
+            }
             API targetAPI = APITopicUtil.deriveAPIFromTopic(cumulocityMessage.getCumulocityType().toString());
+            if (targetAPI == null) {
+                String warnMsgType = String.format(
+                        "CumulocityObject has unrecognized cumulocityType '%s' for mapping '%s', skipping message",
+                        cumulocityMessage.getCumulocityType(), mapping.getIdentifier());
+                log.warn("{} - {}", tenant, warnMsgType);
+                output.addWarning(warnMsgType);
+                return;
+            }
 
             // Set API on context so it's used when creating DynamicMapperRequest
             context.setApi(targetAPI);
@@ -187,6 +229,23 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
                 }
             }
 
+            // Merge device identity into MANAGED_OBJECT patch payload so that name/type/fragments
+            // are always written to inventory — even when:
+            // (a) contextData is on a sibling CumulocityObject in the same batch (processed first
+            //     by reorderMessages, populating context.getDeviceName/Type/Fragments), or
+            // (b) the device was created by a concurrent thread without contextData (race condition).
+            if (CumulocityType.MANAGED_OBJECT.equals(cumulocityMessage.getCumulocityType())) {
+                if (context.getDeviceName() != null) {
+                    payload.put("name", context.getDeviceName());
+                }
+                if (context.getDeviceType() != null) {
+                    payload.put("type", context.getDeviceType());
+                }
+                if (context.getDeviceFragments() != null) {
+                    payload.putAll(context.getDeviceFragments());
+                }
+            }
+
             // Check if sourceId is explicitly set in CumulocityObject
             String resolvedDeviceId;
             List<ExternalId> externalSources = cumulocityMessage.getExternalSource();
@@ -214,18 +273,27 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
                             && externalId.getExternalId() != null) {
                         ID identity = new ID(externalId.getType(),
                                 externalId.getExternalId());
-                        String sourceId = ProcessingResultHelper.createImplicitDevice(identity, context, log,
-                                c8yAgent,
-                                objectMapper);
-                        context.setSourceId(sourceId);
-                        resolvedDeviceId = sourceId; // Set this so it's used below
-                        // Update externalIdInfo with created device info
-                        externalIdInfo = ExternalIdInfo.builder()
-                                .externalType(externalId.getType())
-                                .externalId(externalId.getExternalId())
-                                .build();
-                        context.setExternalId(externalId.getExternalId());
-                        ProcessingResultHelper.setHierarchicalValue(payload, targetAPI.identifier, sourceId);
+                        // Use thread-safe method to prevent race condition
+                        String sourceId = configurationRegistry.getOrCreateDeviceThreadSafe(
+                                tenant, externalId.getType(), externalId.getExternalId(), identity, context);
+                        if (sourceId != null) {
+                            context.setSourceId(sourceId);
+                            resolvedDeviceId = sourceId; // Set this so it's used below
+                            // Update externalIdInfo with created device info
+                            externalIdInfo = ExternalIdInfo.builder()
+                                    .externalType(externalId.getType())
+                                    .externalId(externalId.getExternalId())
+                                    .build();
+                            context.setExternalId(externalId.getExternalId());
+                            ProcessingResultHelper.setHierarchicalValue(payload, targetAPI.identifier, sourceId);
+                        } else {
+                            String warnMsg = String.format(
+                                    "Failed to create implicit device for externalId '%s' (type '%s') for mapping '%s'.",
+                                    externalId.getExternalId(), externalId.getType(), mapping.getIdentifier());
+                            log.warn("{} - {}", tenant, warnMsg);
+                            output.addWarning(warnMsg);
+                            return; // Don't create a request
+                        }
                     }
                 } else {
                     // No device ID and not creating implicit devices - skip this message

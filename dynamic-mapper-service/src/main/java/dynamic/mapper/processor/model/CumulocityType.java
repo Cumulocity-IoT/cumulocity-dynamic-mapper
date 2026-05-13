@@ -28,7 +28,8 @@ public enum CumulocityType {
     EVENT("event"),
     ALARM("alarm"),
     OPERATION("operation"),
-    MANAGED_OBJECT("managedObject");
+    MANAGED_OBJECT("managedObject"),
+    CUSTOM("custom");
 
     private final String value;
 

@@ -262,7 +262,7 @@ function onMessage(inputMsg, context) {
 
     // Simply specify the cumulocityType - no need to override context data!
     return [{
-        cumulocityType: "alarm",  // Can be "alarm", "event", "measurement", "inventory"
+        cumulocityType: "alarm",  // Can be "alarm", "event", "measurement", "managedObject"
         action: "create",
         payload: {
             "time": new Date().toISOString(),

@@ -40,7 +40,6 @@ import { ActivatedRoute } from '@angular/router';
 import { debounceTime, distinctUntilChanged, map, Observable, ReplaySubject, shareReplay, Subject, takeUntil } from 'rxjs';
 import { Mode } from 'vanilla-jsoneditor';
 import {
-  API,
   COLOR_HIGHLIGHTED,
   DeploymentMapEntry,
   Direction,
@@ -65,7 +64,7 @@ import {
   MappingType
 } from '../../shared';
 import { ValidationError } from '../shared/mapping.model';
-import { createCompletionProviderFlowFunction, createCompletionProviderSubstitutionAsCode, EditorMode } from '../shared/stepper.model';
+import { createCompletionProviderFlowFunction, EditorMode } from '../shared/stepper.model';
 import { MappingService } from '../core/mapping.service';
 import { MappingEditData } from '../core/mapping-edit.resolver';
 import { gettext } from '@c8y/ngx-components/gettext';
@@ -78,6 +77,7 @@ import {
   reduceSourceTemplate,
   splitTopicExcludingSeparator,
   stringToBase64,
+  stripTemplateMetadataTags,
   validateProtectedFields
 } from '../shared/util';
 import { SubstitutionRendererComponent } from '../substitution/substitution-grid.component';
@@ -91,18 +91,11 @@ import { SubstitutionManagementService } from '../service/substitution-managemen
 import { CommonModule } from '@angular/common';
 import { MappingStepPropertiesComponent } from '../step-property/mapping-properties.component';
 import { MappingConnectorComponent } from '../step-connector/mapping-connector.component';
-import { MappingSubstitutionStepComponent } from '../step-substitution/mapping-substitution-step.component';
+import { MappingSubstitutionStepComponent } from '../step-transformation/mapping-transformation-step.component';
+import { MappingTemplateStepComponent } from '../step-template/mapping-template-step.component';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { StepperViewModel, StepperViewModelFactory } from '../stepper-mapping/stepper-view.model';
 import * as jsYaml from 'js-yaml';
-
-/**
- * Update event for JSON editors with schema information
- */
-interface EditorUpdateEvent {
-  schema: any;
-  identifier?: string;
-}
 
 /**
  * Extended substitution model with UI-specific properties
@@ -143,8 +136,8 @@ const TAB_TEST_MAPPING = 4;
     MappingStepPropertiesComponent,
     MappingConnectorComponent,
     MappingSubstitutionStepComponent,
-    MappingStepTestingComponent,
-    JsonEditorComponent
+    MappingTemplateStepComponent,
+    MappingStepTestingComponent
   ]
 })
 export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnDestroy {
@@ -155,14 +148,12 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
   // View model with computed properties for template simplification
   stepperViewModel!: StepperViewModel;
 
-  @ViewChild('editorSourceStepTemplate', { static: false }) editorSourceStepTemplate!: JsonEditorComponent;
-  @ViewChild('editorTargetStepTemplate', { static: false }) editorTargetStepTemplate!: JsonEditorComponent;
+  @ViewChild('templateStep', { static: false }) templateStepRef!: MappingTemplateStepComponent;
   @ViewChild('mappingTestingStep', { static: false }) mappingTestingStep!: MappingStepTestingComponent;
   @ViewChild('editorSourceStepSubstitution', { static: false }) editorSourceStepSubstitution!: JsonEditorComponent;
   @ViewChild('editorTargetStepSubstitution', { static: false }) editorTargetStepSubstitution!: JsonEditorComponent;
   @ViewChild(SubstitutionRendererComponent, { static: false }) substitutionChild!: SubstitutionRendererComponent;
   @ViewChild('codeEditor', { static: false }) codeEditor!: EditorComponent;
-  @ViewChild('filterModelFilterExpression') filterModelFilterExpression!: ElementRef<HTMLTextAreaElement>;
   @ViewChild('substitutionModelSourceExpression') substitutionModelSourceExpression!: ElementRef<HTMLTextAreaElement>;
   @ViewChild('substitutionModelTargetExpression') substitutionModelTargetExpression!: ElementRef<HTMLTextAreaElement>;
 
@@ -190,19 +181,14 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
   readonly MappingTypeDescriptions = MappingTypeDescriptions;
 
   updateTestingTemplate = new ReplaySubject<Mapping>(1);
-  updateSourceEditor = new Subject<EditorUpdateEvent>();
-  updateTargetEditor = new Subject<EditorUpdateEvent>();
+  schemaSource: any;
+  schemaTarget: any;
 
   templateForm!: FormGroup;
   templateModel: { stepperConfiguration?: StepperConfiguration; mapping?: Mapping } = {};
   substitutionFormly = new FormGroup({});
   filterFormly = new FormGroup({});
   filterFormlyFields!: FormlyFieldConfig[];
-  filterModel: {
-    filterMapping?: string;
-    filterExpression?: { result: string; resultType: string; valid: boolean };
-  } = {};
-  selectedPathFilterFilterMapping?: string;
   substitutionModel: SubstitutionModel = {};
   propertyFormly = new FormGroup({});
   isGenerateSubstitutionOpen = false;
@@ -215,10 +201,8 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
   templateId?: TemplateType;
 
   sourceTemplate?: any;
-  sourceTemplateUpdated?: any;
   sourceSystem!: string;
   targetTemplate?: any;
-  targetTemplateUpdated?: any;
   targetSystem!: string;
   aiAgentDeployed = false;
   aiAgent: AgentObjectDefinition | AgentTextDefinition | null = null;
@@ -234,7 +218,7 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
 
   // Cached properties for c8y-select components
   extensionItems: string[] = [];
-  extensionEventItems$: Observable<string[]>;
+  extensionEventItems$: Observable<{ label: string; value: string }[]>;
   /** True when the selected extension event has a configuration block defined */
   hasExtensionParameter = false;
   snoopedTemplateItems: Array<{ label: string, value: string }> = [];
@@ -339,7 +323,12 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     this.stepperViewModel = StepperViewModelFactory.create(this.stepperConfiguration);
 
     this.extensionEventItems$ = this.stepperService.extensionEvents$.pipe(
-      map((events: ExtensionEntry[]) => events?.map((event: ExtensionEntry) => event.eventName) || []),
+      map((events: ExtensionEntry[]) =>
+        (events || []).map(e => ({
+          label: e.description ? `${e.eventName} — ${e.description}` : e.eventName,
+          value: e.eventName
+        }))
+      ),
       shareReplay(1)
     );
     this.updateSnoopedTemplateItems();
@@ -371,10 +360,6 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
       sourceExpression: { result: '', resultType: 'empty', valid: false }
     };
 
-    this.filterModel = {
-      filterExpression: { result: '', resultType: 'empty', valid: false }
-    };
-
     this.setTemplateForm();
 
     this.feature = await this.sharedService.getFeatures();
@@ -404,6 +389,9 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
 
     // For the unified editor, expand existing templates upfront since mapping is fully defined
     await this.initializeTemplates();
+
+    this.schemaSource = getSchema(this.mapping.targetAPI, this.mapping.direction, false, false);
+    this.schemaTarget = getSchema(this.mapping.targetAPI, this.mapping.direction, true, false);
   }
 
   private async initializeTemplates(): Promise<void> {
@@ -411,15 +399,12 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     this.extensions = await this.stepperService.loadExtensions(this.mapping);
     this.updateExtensionItems();
 
-    // Load filter model
-    this.filterModel['filterMapping'] = this.mapping.filterMapping;
-    if (this.mapping.filterMapping) {
-      await this.updateFilterExpressionResult(this.mapping.filterMapping);
-    }
+    // Load filter model – handled by MappingTemplateStepComponent on init
+    // when filterFormly changes; no action needed here.
 
     // Load code if present
     if (this.mapping.code) {
-      this.mappingCode = base64ToString(this.mapping.code);
+      this.mappingCode = stripTemplateMetadataTags(base64ToString(this.mapping.code));
     }
 
     // Expand existing templates (mapping is fully defined)
@@ -478,11 +463,8 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
               customMessage: this.sourceCustomMessage$
             },
             hooks: {
-              onInit: (field: FormlyFieldConfig) => {
-                field.formControl.valueChanges.pipe(
-                  debounceTime(500),
-                  distinctUntilChanged()
-                ).pipe(takeUntil(this.destroy$)).subscribe(path => this.updateFilterExpressionResult(path));
+              onInit: (_field: FormlyFieldConfig) => {
+                // valueChanges is subscribed inside MappingTemplateStepComponent via ngOnChanges
               }
             }
           }
@@ -516,9 +498,8 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     }
     const monacoModule = await import('monaco-editor');
     const monaco = (monacoModule as any).default || monacoModule;
-    const d1 = createCompletionProviderFlowFunction(monaco);
-    const d2 = createCompletionProviderSubstitutionAsCode(monaco);
-    this.completionProviderDisposable = { dispose: () => { d1.dispose(); d2.dispose(); } };
+    const d1 = createCompletionProviderFlowFunction(monaco, this.mapping.direction);
+    this.completionProviderDisposable = { dispose: () => { d1.dispose(); } };
   }
 
   private setTemplateForm(): void {
@@ -607,6 +588,11 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
    * The last tab (Testing) is always visible.
    */
   isTabVisible(tabIndex: number): boolean {
+    // Deprecated SUBSTITUTION_AS_CODE mappings: hide Testing tab (can't be processed)
+    // eslint-disable-next-line deprecation/deprecation
+    if (this.mapping?.transformationType === TransformationType.SUBSTITUTION_AS_CODE && tabIndex === TAB_TEST_MAPPING) {
+      return false;
+    }
     const skip = this.stepperConfiguration?.advanceFromStepToEndStep;
     if (skip == null) return true;
     return tabIndex <= skip || tabIndex === TAB_TEST_MAPPING;
@@ -680,13 +666,12 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
   }
 
   private async handleSelectTemplatesTab(): Promise<void> {
-    this.filterModel['filterMapping'] = this.mapping.filterMapping;
     if (this.mapping.filterMapping) {
-      await this.updateFilterExpressionResult(this.mapping.filterMapping);
+      await this.templateStepRef?.updateFilterExpressionResult(this.mapping.filterMapping);
     }
 
     if (this.mapping.code) {
-      this.mappingCode = base64ToString(this.mapping.code);
+      this.mappingCode = stripTemplateMetadataTags(base64ToString(this.mapping.code));
     }
 
     this.updateSnoopedTemplateItems();
@@ -735,181 +720,40 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
   }
 
   private updateTemplatesInEditors(): void {
-    this.sourceTemplate = this.sourceTemplateUpdated ? this.sourceTemplateUpdated : this.sourceTemplate;
-    this.targetTemplate = this.targetTemplateUpdated ? this.targetTemplateUpdated : this.targetTemplate;
+    if (this.templateStepRef?.sourceTemplateUpdated) {
+      this.sourceTemplate = this.templateStepRef.sourceTemplateUpdated;
+    }
     this.editorSourceStepSubstitution?.set(this.sourceTemplate);
     this.editorTargetStepSubstitution?.set(this.targetTemplate);
   }
 
   onEditorSourceInitialized(): void {
-    this.updateSourceEditor.next({
-      schema: getSchema(this.mapping.targetAPI, this.mapping.direction, false, false),
-      identifier: API[this.mapping.targetAPI].identifier
-    });
+    // No-op: schema now flows via [schemaSource] @Input directly to the editor
   }
 
   onEditorTargetInitialized(): void {
-    this.updateTargetEditor.next({
-      schema: getSchema(this.mapping.targetAPI, this.mapping.direction, true, false),
-      identifier: API[this.mapping.targetAPI].identifier
-    });
-  }
-
-  async updateFilterExpressionResult(path: string): Promise<void> {
-    this.clearAlerts();
-
-    try {
-      const result = await this.stepperService.evaluateFilterExpression(
-        this.editorSourceStepTemplate?.get(),
-        path
-      );
-
-      this.filterModel.filterExpression = result;
-      this.mapping.filterMapping = path;
-    } catch (error) {
-      if (this.filterModel.filterExpression) {
-        this.filterModel.filterExpression.valid = false;
-      }
-      // filterFormly control only exists while tab 2 is rendered (@if); guard with ?.
-      this.filterFormly.get('filterMapping')?.setErrors({
-        validationError: { message: error.message }
-      });
-      this.filterFormly.get('filterMapping')?.markAsTouched();
-    }
-
-    this.filterModel = { ...this.filterModel };
-    queueMicrotask(() => {
-      this.manualResize('filterModelFilterExpression');
-      this.cdr.markForCheck();
-    });
+    // No-op: schema now flows via [schemaTarget] @Input directly to the editor
   }
 
   isSubstitutionValid(): boolean {
     return this.substitutionService.isSubstitutionValid(this.substitutionModel);
   }
 
-  async onSelectedPathFilterMappingChanged(path: string): Promise<void> {
-    this.selectedPathFilterFilterMapping = path;
-  }
-
-  async onOverwriteFilterMapping(): Promise<void> {
-    this.filterModel.filterMapping = this.selectedPathFilterFilterMapping;
-    this.updateFilterExpressionResult(this.selectedPathFilterFilterMapping);
-  }
-
   onTestingSourceTemplateChanged(template: any): void {
     this.sourceTemplate = template;
   }
 
-  onSourceTemplateChanged(contentChanges: ContentChanges): void {
-    const { previousContent, updatedContent } = contentChanges;
-
-    let updatedContentAsJson;
-
-    if ('text' in updatedContent && updatedContent['text']) {
-      try {
-        updatedContentAsJson = JSON.parse(updatedContent['text']);
-      } catch (error) {
-        this.sourceTemplateUpdated = updatedContent;
-        this.isContentChangeValid$.next(true);
-        return;
-      }
-    } else {
-      updatedContentAsJson = updatedContent['json'];
-    }
-
-    this.sourceTemplateUpdated = updatedContentAsJson;
-
-    // Parse previousContent to use as baseline — avoids false positives on reformat.
-    let baselineAsJson = this.sourceTemplate;
-    if (previousContent) {
-      if ('text' in previousContent && previousContent['text']) {
-        try { baselineAsJson = JSON.parse(previousContent['text']); } catch { /* keep fallback */ }
-      } else if ('json' in previousContent) {
-        baselineAsJson = previousContent['json'];
-      }
-    }
-
-    const hasProtectedChanges = this.stepperConfiguration.allowTemplateExpansion && !validateProtectedFields(
-      baselineAsJson,
-      updatedContentAsJson
-    );
-
-    const isTransformationTypeValid = checkTransformationType(
-      this.mapping.transformationType,
-      updatedContentAsJson
-    );
-
-    const isValid = !hasProtectedChanges && isTransformationTypeValid;
-    this.isContentChangeValid$.next(isValid);
-
-    if (hasProtectedChanges && this.stepperConfiguration.allowTemplateExpansion) {
-      this.raiseAlert({
-        type: 'warning',
-        text: "Warning: Changes to _IDENTITY_, _TOPIC_LEVEL_, or _CONTEXT_DATA_ will be reverted when saving."
-      });
-    }
-  }
-
-  onTargetTemplateChanged(contentChanges: ContentChanges): void {
-    const { previousContent, updatedContent } = contentChanges;
-
-    let updatedContentAsJson;
-
-    if ('text' in updatedContent && updatedContent['text']) {
-      try {
-        updatedContentAsJson = JSON.parse(updatedContent['text']);
-      } catch (error) {
-        this.targetTemplateUpdated = updatedContent;
-        this.isContentChangeValid$.next(true);
-        return;
-      }
-    } else {
-      updatedContentAsJson = updatedContent['json'];
-    }
-
-    this.targetTemplateUpdated = updatedContentAsJson;
-
-    // Parse previousContent to use as baseline — avoids false positives on reformat.
-    let baselineAsJson = this.targetTemplate;
-    if (previousContent) {
-      if ('text' in previousContent && previousContent['text']) {
-        try { baselineAsJson = JSON.parse(previousContent['text']); } catch { /* keep fallback */ }
-      } else if ('json' in previousContent) {
-        baselineAsJson = previousContent['json'];
-      }
-    }
-
-    const hasProtectedChanges = this.stepperConfiguration.allowTemplateExpansion && !validateProtectedFields(
-      baselineAsJson,
-      updatedContentAsJson
-    );
-
-    const isTransformationTypeValid = checkTransformationType(
-      this.mapping.transformationType,
-      updatedContentAsJson
-    );
-
-    const isValid = !hasProtectedChanges && isTransformationTypeValid;
-    this.isContentChangeValid$.next(isValid);
-
-    if (hasProtectedChanges && this.stepperConfiguration.allowTemplateExpansion) {
-      this.raiseAlert({
-        type: 'warning',
-        text: "Warning: Changes to _IDENTITY_, _TOPIC_LEVEL_, or _CONTEXT_DATA_ will be reverted when saving."
-      });
-    }
-  }
-
   raiseAlert(alert: Alert): void {
     this.alertService.state.forEach(a => {
-      if (a.type === 'info') this.alertService.remove(a);
+      if (a.type === 'info' || a.type === 'warning') this.alertService.remove(a);
     });
     this.alertService.add(alert);
   }
 
   clearAlerts(): void {
-    this.alertService.clearAll();
+    this.alertService.state.forEach(a => {
+      if (a.type === 'info' || a.type === 'warning') this.alertService.remove(a);
+    });
   }
 
   async onCommitButton(): Promise<void> {
@@ -936,7 +780,7 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     }
 
     if (this.mapping.code || this.mappingCode) {
-      this.mapping.code = stringToBase64(this.mappingCode);
+      this.mapping.code = stringToBase64(stripTemplateMetadataTags(this.mappingCode));
     }
 
     if (isSubstitutionsAsCode(this.mapping) && (!this.mapping.code || this.mapping.code === null || this.mapping.code === '')) {
@@ -979,7 +823,7 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
         ? expandExternalTemplate(template, this.mapping, levels)
         : template;
     }
-    this.editorTargetStepTemplate.set(this.targetTemplate);
+    this.templateStepRef?.editorTargetStepTemplate?.set(this.targetTemplate);
   }
 
   onSelectExtensionName(extensionName: string): void {
@@ -1048,13 +892,11 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     if (this.stepperConfiguration.direction === Direction.INBOUND) {
       this.mapping.targetTemplate = SAMPLE_TEMPLATES_C8Y[changedTargetAPI];
       this.mapping.sourceTemplate = getExternalTemplate(this.mapping);
-      const schemaTarget = getSchema(this.mapping.targetAPI, this.mapping.direction, true, false);
-      this.updateTargetEditor.next({ schema: schemaTarget });
+      this.schemaTarget = getSchema(this.mapping.targetAPI, this.mapping.direction, true, false);
     } else {
       this.mapping.sourceTemplate = SAMPLE_TEMPLATES_C8Y[changedTargetAPI];
       this.mapping.targetTemplate = getExternalTemplate(this.mapping);
-      const schemaSource = getSchema(this.mapping.targetAPI, this.mapping.direction, false, false);
-      this.updateSourceEditor.next({ schema: schemaSource });
+      this.schemaSource = getSchema(this.mapping.targetAPI, this.mapping.direction, false, false);
     }
   }
 
@@ -1075,7 +917,7 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     const template = this.codeTemplatesDecoded.get(this.templateId);
     if (!template) return;
 
-    let code = template.code;
+    let code = stripTemplateMetadataTags(template.code);
 
     if (this.serviceConfiguration?.supportESM) {
       const exportName =
@@ -1163,7 +1005,7 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     testMapping.targetTemplate = JSON.stringify(this.targetTemplate);
 
     const drawer = this.bottomDrawerService.openDrawer(AIPromptComponent, {
-      initialState: { mapping: testMapping, aiAgent: this.aiAgent }
+      initialState: { mapping: testMapping, aiAgent: this.aiAgent, editorMode: this.stepperConfiguration.editorMode }
     });
 
     try {
@@ -1257,9 +1099,7 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
   private manualResize(source: string): void {
     let element;
 
-    if (source === 'filterModelFilterExpression' && this.filterModelFilterExpression?.nativeElement) {
-      element = this.filterModelFilterExpression.nativeElement;
-    } else if (source === 'substitutionModelSourceExpression' && this.substitutionModelSourceExpression?.nativeElement) {
+    if (source === 'substitutionModelSourceExpression' && this.substitutionModelSourceExpression?.nativeElement) {
       element = this.substitutionModelSourceExpression.nativeElement;
     } else if (source === 'substitutionModelTargetExpression' && this.substitutionModelTargetExpression?.nativeElement) {
       element = this.substitutionModelTargetExpression.nativeElement;

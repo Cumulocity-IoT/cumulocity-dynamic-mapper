@@ -59,6 +59,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLContext;
@@ -140,6 +141,91 @@ public abstract class AConnectorClient {
     @Getter
     @Setter
     protected GenericMessageCallback dispatcher;
+
+    // Explorer listeners: notified for every raw inbound message (topic-independent)
+    private final CopyOnWriteArrayList<java.util.function.Consumer<dynamic.mapper.connector.core.callback.ConnectorMessage>> explorerListeners
+            = new CopyOnWriteArrayList<>();
+
+    /** Register a listener that receives every raw inbound {@link dynamic.mapper.connector.core.callback.ConnectorMessage}. */
+    public void addExplorerListener(java.util.function.Consumer<dynamic.mapper.connector.core.callback.ConnectorMessage> listener) {
+        explorerListeners.add(listener);
+    }
+
+    /** Remove a previously registered explorer listener. */
+    public void removeExplorerListener(java.util.function.Consumer<dynamic.mapper.connector.core.callback.ConnectorMessage> listener) {
+        explorerListeners.remove(listener);
+    }
+
+    /** Notify all registered explorer listeners (called by the inbound dispatcher). */
+    public void notifyExplorerListeners(dynamic.mapper.connector.core.callback.ConnectorMessage message) {
+        for (java.util.function.Consumer<dynamic.mapper.connector.core.callback.ConnectorMessage> listener : explorerListeners) {
+            try {
+                listener.accept(message);
+            } catch (Exception e) {
+                log.warn("{} - Explorer listener error on topic [{}]: {}", tenant, message.getTopic(), e.getMessage());
+            }
+        }
+    }
+
+    // Explorer listeners for outbound messages (C8Y → broker), notified from SendOutboundProcessor
+    private final CopyOnWriteArrayList<java.util.function.Consumer<dynamic.mapper.connector.core.callback.ConnectorMessage>> outboundExplorerListeners
+            = new CopyOnWriteArrayList<>();
+
+    /** Register a listener that receives every outbound {@link dynamic.mapper.connector.core.callback.ConnectorMessage}. */
+    public void addOutboundExplorerListener(java.util.function.Consumer<dynamic.mapper.connector.core.callback.ConnectorMessage> listener) {
+        outboundExplorerListeners.add(listener);
+    }
+
+    /** Remove a previously registered outbound explorer listener. */
+    public void removeOutboundExplorerListener(java.util.function.Consumer<dynamic.mapper.connector.core.callback.ConnectorMessage> listener) {
+        outboundExplorerListeners.remove(listener);
+    }
+
+    /** Notify all registered outbound explorer listeners (called by SendOutboundProcessor). */
+    public void notifyOutboundExplorerListeners(dynamic.mapper.connector.core.callback.ConnectorMessage message) {
+        for (java.util.function.Consumer<dynamic.mapper.connector.core.callback.ConnectorMessage> listener : outboundExplorerListeners) {
+            try {
+                listener.accept(message);
+            } catch (Exception e) {
+                log.warn("{} - Outbound explorer listener error on topic [{}]: {}", tenant, message.getTopic(), e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Subscribe to a topic on the broker on behalf of an explorer session.
+     * Only subscribes if no existing mapping or other explorer is already subscribed (best-effort).
+     * Swallows errors since not all connector types require explicit subscriptions.
+     */
+    public void subscribeExplorerTopic(String topic) {
+        try {
+            subscribe(topic, Qos.AT_LEAST_ONCE);
+            log.info("{} - Explorer subscribed to topic: [{}] on connector: {}", tenant, topic, connectorName);
+        } catch (Exception e) {
+            // Some connectors (HTTP, WebHook) don't support topic subscriptions — that's fine
+            log.debug("{} - Explorer topic subscription not applicable for connector {}: {}", tenant, connectorName, e.getMessage());
+        }
+    }
+
+    /**
+     * Unsubscribe a topic that was subscribed by an explorer session.
+     * Only unsubscribes if there are no active mappings still using this topic.
+     */
+    public void unsubscribeExplorerTopic(String topic) {
+        try {
+            // Only unsubscribe if no active mapping covers this topic
+            boolean mappingStillActive = mappingSubscriptionManager != null
+                    && mappingSubscriptionManager.isTopicSubscribed(topic);
+            if (!mappingStillActive) {
+                unsubscribe(topic);
+                log.info("{} - Explorer unsubscribed from topic: [{}] on connector: {}", tenant, topic, connectorName);
+            } else {
+                log.debug("{} - Kept broker subscription for topic [{}] — still used by a mapping", tenant, topic);
+            }
+        } catch (Exception e) {
+            log.debug("{} - Explorer topic unsubscription not applicable for connector {}: {}", tenant, connectorName, e.getMessage());
+        }
+    }
 
     // Managers
     protected MappingSubscriptionManager mappingSubscriptionManager;
@@ -229,7 +315,9 @@ public abstract class AConnectorClient {
      * Subclasses should call this at the end of their connect() method
      */
     protected void endConnection() {
+        log.debug("{} - Calling end connection...", tenant);
         synchronized (connectionLock) {
+            log.debug("{} - Setting isConnecting to false...", tenant);
             isConnecting = false;
         }
     }
@@ -255,7 +343,9 @@ public abstract class AConnectorClient {
      * Subclasses should call this at the end of their disconnect() method
      */
     protected void endDisconnection() {
+        log.debug("{} - Calling end disconnection...", tenant);
         synchronized (disconnectionLock) {
+            log.debug("{} - Setting isDisconnecting to false...", tenant);
             isDisconnecting = false;
         }
     }
@@ -527,6 +617,38 @@ public abstract class AConnectorClient {
             performHousekeeping();
         } catch (Exception e) {
             log.error("{} - Error during housekeeping: {}", tenant, e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Pre-builds mapping caches and pre-populates the effective mapping registry WITHOUT
+     * performing any broker subscribe calls.
+     * <p>
+     * Called by {@link dynamic.mapper.connector.mqtt.AMQTTClient#connect()} when
+     * {@code cleanSession=false} so that mapping resolution is ready before the TCP
+     * connection is established.  When the broker immediately delivers queued messages
+     * upon reconnect, the {@link dynamic.mapper.service.MappingService} can resolve them
+     * to their mappings even before {@link #initializeSubscriptionsAfterConnect()} runs.
+     */
+    public void prepareForPersistentSessionReconnect() {
+        try {
+            log.debug("{} - Pre-building mapping caches for persistent session reconnect on connector: {}",
+                    tenant, connectorName);
+            mappingService.rebuildMappingCaches(tenant, connectorId);
+
+            List<Mapping> inboundMappings = new ArrayList<>(
+                    mappingService.getCacheInboundMappings(tenant).values());
+            List<Mapping> deployedMappings = inboundMappings.stream()
+                    .filter(this::isDeployedInConnector)
+                    .toList();
+            mappingSubscriptionManager.prePopulateEffectiveMappingsInbound(
+                    deployedMappings, this::isMappingValidForDeployment);
+
+            log.debug("{} - Pre-populated {} effective inbound mappings for persistent session on connector: {}",
+                    tenant, deployedMappings.size(), connectorName);
+        } catch (Exception e) {
+            log.warn("{} - Error pre-building caches for persistent session (will retry after connect): {}",
+                    tenant, e.getMessage(), e);
         }
     }
 
@@ -1036,6 +1158,11 @@ public abstract class AConnectorClient {
                 submitInitialize().get();
                 submitConnect().get();
                 log.info("{} - Reconnection completed successfully for {}", tenant, connectorName);
+            } catch (java.util.concurrent.CancellationException e) {
+                // A newer reconnect attempt cancelled this one — this is expected behaviour
+                // when a CONNECT operation arrives while a previous reconnect is still in flight.
+                log.debug("{} - Reconnection for {} was superseded by a newer reconnect request",
+                        tenant, connectorName);
             } catch (Exception e) {
                 log.error("{} - Reconnection failed for {}: {}", tenant, connectorName, e.getMessage(), e);
                 connectionStateManager.updateStatusWithError(e);

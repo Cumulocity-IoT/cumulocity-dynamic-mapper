@@ -45,7 +45,7 @@ export const onMessage: SmartFunctionOutV2<{
   input: 'measurement';
   config: { externalId: string; mappingName: string };
   state: { forwardedCount: number };
-  message: DeviceMessage;
+  returns: DeviceMessage;
 }> = (msg, context) => {
   // msg.cumulocityType is 'measurement' (narrowed — not the full C8yObjectType union)
   // msg.payload is C8yMeasurement — source, type, time are typed without casting
@@ -63,21 +63,15 @@ export const onMessage: SmartFunctionOutV2<{
   const tempValue: number | undefined =
     msg.payload['c8y_TemperatureMeasurement']?.['T']?.['value'];
 
-  // TextEncoder is not available in GraalJS — encode the JSON string manually.
-  const json = JSON.stringify({
-    type: measurementType,
-    temperature: tempValue,
-    forwardedCount: count,
-    time: new Date().toISOString(),
-  });
-  const bytes = new Uint8Array(json.length);
-  for (let i = 0; i < json.length; i++) {
-    bytes[i] = json.charCodeAt(i);
-  }
-
+  // JSON object payload — no manual serialization needed
   return {
     topic: `measurements/${externalId}`,
-    payload: bytes,
+    payload: {
+      type: measurementType,
+      temperature: tempValue,
+      forwardedCount: count,
+      time: new Date().toISOString(),
+    },
     transportFields: { key: externalId },
     cumulocityType: 'measurement',
   };

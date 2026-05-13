@@ -19,9 +19,9 @@
 ~
 -->
 
-<div style="padding-top: 16px;">
+<div class="p-t-16">
   <table class="table table-condensed m-b-0">
-    <thead style="position: sticky; z-index: 10; background-color: white;">
+    <thead class="substitution-grid-thead">
       <tr>
         <th class="bg-level-1" style="width: 2%"></th>
         <th class="bg-level-1" style="width: 2%">#</th>
@@ -42,7 +42,7 @@
     </thead>
   </table>
 
-  <div style="max-height: 160px; overflow-y: scroll; border-top: 0px solid #ddd; border-bottom: 1px solid #ddd;">
+  <div class="substitution-grid-body">
     <table class="table table-condensed" style="margin-bottom: 0;">
       <tbody>
         @for (sub of mapping.substitutions; track sub; let i = $index) {
@@ -79,10 +79,8 @@
               {{ sub.repairStrategy | formatStringAsWords }}
             </td>
             <td width="6%">
-              <button title="{{ 'Remove' | translate }}" class="btn btn-icon btn-clean showOnHover"
-              style="height: 24px;padding-top: 0px !important;" (click)="onSubstitutionDelete(i)" [disabled]="
-              settings.editorMode === EditorMode.READ_ONLY
-            ">
+              <button title="{{ 'Remove' | translate }}" class="btn btn-icon btn-clean showOnHover substitution-grid-delete-btn"
+                (click)="onSubstitutionDelete(i)" [disabled]="settings.editorMode === EditorMode.READ_ONLY">
                 <i c8yIcon="delete" class="c8y-icon dlt-c8y-icon-delete"></i>
                 <span class="sr-only" translate>Remove</span>
               </button>

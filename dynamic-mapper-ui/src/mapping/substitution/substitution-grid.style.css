@@ -18,15 +18,26 @@
  * @authors Christof Strack
  */
 
-/* not working
-div:has(>c8y-li-body ) {
-  padding-top: 4px !important;
-  padding-bottom: 4px !important;
-} */
-
 .c8y-list__item__body:has(> c8y-li-body) {
   padding-top: 6px;
   padding-bottom: 4px;
+}
+
+.substitution-grid-thead {
+  position: sticky;
+  z-index: 10;
+  background-color: var(--c8y-root-component-bg, #fff);
+}
+
+.substitution-grid-body {
+  max-height: 160px;
+  overflow-y: scroll;
+  border-bottom: 1px solid var(--c8y-root-component-separator-color, #ddd);
+}
+
+.substitution-grid-delete-btn {
+  height: 24px;
+  padding-top: 0 !important;
 }
 
 .table-head-fixed {

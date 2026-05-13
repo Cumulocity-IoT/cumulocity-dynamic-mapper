@@ -302,6 +302,13 @@ public class BootstrapService {
         configurationRegistry.getNotificationSubscriber()
                 .cleanupOrphanedSubscribers(tenant, allConnectorConfigs, additionalSubscriptionIdTest);
 
+        // Remove stale connector identifiers from the deployment map (connectors deleted
+        // without going through the normal deletion flow leave behind orphaned references)
+        Set<String> validConnectorIds = allConnectorConfigs.stream()
+                .map(dynamic.mapper.configuration.ConnectorConfiguration::getIdentifier)
+                .collect(java.util.stream.Collectors.toSet());
+        mappingService.cleanupStaleDeploymentConnectors(tenant, validConnectorIds);
+
         // Wait for ALL connectors are successfully connected before handling Outbound
         // Mappings
         List<Future<?>> connectorTasks = initializeConnectors(tenant, serviceConfiguration);
@@ -335,9 +342,6 @@ public class BootstrapService {
                     String code = JavaScriptModuleStripper.toPlainScript(new String(decoded));
                     if (TransformationType.SMART_FUNCTION.equals(mapping.getTransformationType())) {
                         String id = Mapping.SMART_FUNCTION_NAME + "_" + mapping.getIdentifier();
-                        result.put(id + ".js", code);
-                    } else if (TransformationType.SUBSTITUTION_AS_CODE.equals(mapping.getTransformationType())) {
-                        String id = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.getIdentifier();
                         result.put(id + ".js", code);
                     }
                 } catch (Exception e) {

@@ -33,8 +33,11 @@ import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.AbstractFlowResultProcessor;
+import dynamic.mapper.processor.model.MappingType;
+import dynamic.mapper.processor.outbound.serializer.SparkPlugBSerializer;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.CumulocityObject;
+import dynamic.mapper.processor.model.CumulocityType;
 import dynamic.mapper.processor.model.DeviceMessage;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ExternalIdInfo;
@@ -168,10 +171,14 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
 
     protected static final String EXTERNAL_ID_TOKEN = "_externalId_";
 
+    private final SparkPlugBSerializer sparkPlugBSerializer;
+
     public FlowResultOutboundProcessor(
             MappingService mappingService,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            SparkPlugBSerializer sparkPlugBSerializer) {
         super(mappingService, objectMapper);
+        this.sparkPlugBSerializer = sparkPlugBSerializer;
     }
 
     @Override
@@ -218,6 +225,26 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             Mapping mapping) throws ProcessingException {
 
         try {
+
+            // Custom routing: bypass device resolution, call tenant-local microservice directly
+            if (CumulocityType.CUSTOM.equals(deviceMessage.getCumulocityType())) {
+                String servicePath = deviceMessage.getTopic();
+                if (servicePath == null || !servicePath.startsWith("/service/")) {
+                    throw new ProcessingException(
+                            "Custom routing DeviceMessage.topic must start with /service/, got: " + servicePath);
+                }
+                DynamicMapperRequest customRequest = DynamicMapperRequest.builder()
+                        .predecessor(-1)
+                        .method(ProcessingResultHelper.mapActionToRequestMethod(deviceMessage.getAction()))
+                        .api(API.CUSTOM)
+                        .pathCumulocity(servicePath)
+                        .request(objectMapper.writeValueAsString(deviceMessage.getPayload()))
+                        .build();
+                output.addRequest(customRequest);
+                log.debug("{} - Created CUSTOM route request from DeviceMessage: path={}, method={}",
+                        tenant, servicePath, customRequest.getMethod());
+                return;
+            }
 
             // Clone the payload to modify it
             Map<String, Object> payload = clonePayload(deviceMessage.getPayload());
@@ -271,6 +298,19 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             DynamicMapperRequest request = ProcessingResultHelper.createDynamicMapperRequest(
                     context.getDeviceContext(), context.getRoutingContext(), payloadJson,
                     deviceMessage.getAction(), mapping);
+
+            // For SparkPlug B outbound, serialize payload to proto binary bytes
+            if (MappingType.SPARKPLUGB.equals(mapping.getMappingType())) {
+                try {
+                    byte[] protoBytes = sparkPlugBSerializer.serialize(payload);
+                    request.setBinaryPayload(protoBytes);
+                    log.debug("{} - SparkPlugB outbound: serialized {} bytes for topic {}",
+                            tenant, protoBytes.length, deviceMessage.getTopic());
+                } catch (Exception serEx) {
+                    throw new ProcessingException(
+                            "Failed to serialize SparkPlugB payload: " + serEx.getMessage(), serEx);
+                }
+            }
             // Add to thread-safe output collector (syncOutputToContext copies to context.requests once)
             output.addRequest(request);
 
@@ -394,8 +434,44 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             Mapping mapping) throws ProcessingException {
 
         try {
+            // Custom routing: bypass device resolution, call tenant-local microservice directly
+            if (CumulocityType.CUSTOM.equals(cumulocityMessage.getCumulocityType())) {
+                String targetPath = cumulocityMessage.getTargetPath();
+                if (targetPath == null || !targetPath.startsWith("/service/")) {
+                    throw new ProcessingException(
+                            "Custom routing targetPath must start with /service/, got: " + targetPath);
+                }
+                DynamicMapperRequest customRequest = DynamicMapperRequest.builder()
+                        .predecessor(-1)
+                        .method(ProcessingResultHelper.mapActionToRequestMethod(cumulocityMessage.getAction()))
+                        .api(API.CUSTOM)
+                        .pathCumulocity(targetPath)
+                        .request(objectMapper.writeValueAsString(cumulocityMessage.getPayload()))
+                        .build();
+                output.addRequest(customRequest);
+                log.debug("{} - Created CUSTOM route request: path={}, method={}",
+                        tenant, targetPath, customRequest.getMethod());
+                return;
+            }
+
             // Get the API from the cumulocityType using unified API derivation
+            if (cumulocityMessage.getCumulocityType() == null) {
+                String warnMsg = String.format(
+                        "CumulocityObject missing cumulocityType, cannot derive API for mapping '%s', skipping message",
+                        mapping.getIdentifier());
+                log.warn("{} - {}", tenant, warnMsg);
+                output.addWarning(warnMsg);
+                return;
+            }
             API targetAPI = APITopicUtil.deriveAPIFromTopic(cumulocityMessage.getCumulocityType().toString());
+            if (targetAPI == null) {
+                String warnMsg = String.format(
+                        "CumulocityObject has unrecognized cumulocityType '%s' for mapping '%s', skipping message",
+                        cumulocityMessage.getCumulocityType(), mapping.getIdentifier());
+                log.warn("{} - {}", tenant, warnMsg);
+                output.addWarning(warnMsg);
+                return;
+            }
 
             // Clone the payload to modify it
             Map<String, Object> payload = clonePayload(cumulocityMessage.getPayload());

@@ -27,6 +27,7 @@ import dynamic.mapper.processor.model.CumulocityObject;
 import dynamic.mapper.processor.model.CumulocityType;
 import dynamic.mapper.processor.model.Destination;
 import dynamic.mapper.processor.model.DeviceMessage;
+import dynamic.mapper.processor.model.MappingAction;
 import dynamic.mapper.processor.model.Message;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -48,7 +49,7 @@ public class BuildersTest {
                 .build();
 
         assertEquals(CumulocityType.MEASUREMENT, measurement.getCumulocityType());
-        assertEquals("create", measurement.getAction());
+        assertEquals(MappingAction.CREATE, measurement.getAction());
         assertEquals(1, measurement.getExternalSource().size());
         assertEquals("device-001", measurement.getExternalSource().get(0).getExternalId());
         assertEquals("c8y_Serial", measurement.getExternalSource().get(0).getType());
@@ -72,7 +73,7 @@ public class BuildersTest {
                 .build();
 
         assertEquals(CumulocityType.ALARM, alarm.getCumulocityType());
-        assertEquals("create", alarm.getAction());
+        assertEquals(MappingAction.CREATE, alarm.getAction());
 
         @SuppressWarnings("unchecked")
         Map<String, Object> payload = (Map<String, Object>) alarm.getPayload();
@@ -180,14 +181,14 @@ public class BuildersTest {
     @Test
     public void testBuilderWithAction() {
         CumulocityObject alarm = CumulocityObject.alarm()
-                .action("update")
+                .action(MappingAction.UPDATE)
                 .type("c8y_TemperatureAlarm")
                 .severity("CRITICAL")
                 .text("Updated alarm")
                 .externalId("device-001", "c8y_Serial")
                 .build();
 
-        assertEquals("update", alarm.getAction());
+        assertEquals("update", alarm.getAction().getValue());
     }
 
     @Test

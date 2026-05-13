@@ -36,6 +36,7 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.core.cache.InventoryCache;
+import dynamic.mapper.processor.inbound.deserializer.SparkPlugBDeserializer;
 import dynamic.mapper.processor.model.ExternalId;
 import lombok.extern.slf4j.Slf4j;
 
@@ -68,8 +69,9 @@ public class InventoryCacheEnrichmentService {
         inventoryCache.putMO(sourceId, newMO);
 
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
+        List<String> effectiveFragments = buildEffectiveFragmentList(serviceConfiguration);
         // Check if assetParents is requested in fragments to cache
-        boolean withParents = serviceConfiguration.getInventoryFragmentsToCache().stream()
+        boolean withParents = effectiveFragments.stream()
                 .anyMatch(frag -> "assetParents".equals(frag.trim()));
 
         // Use the identityResolver to get managed object
@@ -77,9 +79,8 @@ public class InventoryCacheEnrichmentService {
         if (device != null) {
             Map<String, Object> attrs = device.getAttrs();
 
-            serviceConfiguration.getInventoryFragmentsToCache().forEach(frag -> {
-                frag = frag.trim();
-                processFragment(frag, sourceId, device, attrs, newMO);
+            effectiveFragments.forEach(frag -> {
+                processFragment(frag.trim(), sourceId, device, attrs, newMO);
             });
         }
 
@@ -106,21 +107,45 @@ public class InventoryCacheEnrichmentService {
         configurationRegistry.getNotificationSubscriber().subscribeMOForInventoryCacheUpdates(tenant, mor);
 
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
+        List<String> effectiveFragments = buildEffectiveFragmentList(serviceConfiguration);
         // Check if assetParents is requested in fragments to cache
-        boolean withParents = serviceConfiguration.getInventoryFragmentsToCache().stream()
+        boolean withParents = effectiveFragments.stream()
                 .anyMatch(frag -> "assetParents".equals(frag.trim()));
 
         ManagedObjectRepresentation device = getManagedObjectFromResolver(tenant, sourceId, testing, identityResolver, withParents);
         if (device != null) {
             Map<String, Object> attrs = device.getAttrs();
 
-            serviceConfiguration.getInventoryFragmentsToCache().forEach(frag -> {
-                frag = frag.trim();
-                processFragment(frag, sourceId, device, attrs, newMO);
+            effectiveFragments.forEach(frag -> {
+                processFragment(frag.trim(), sourceId, device, attrs, newMO);
             });
         }
 
         return newMO;
+    }
+
+    /**
+     * Builds the effective list of inventory fragments to cache, adding the
+     * SparkPlug B BIRTH fragments ({@code sparkPlugB_NBIRTH} and the glob
+     * {@code sparkPlugB_DBIRTH_*}) transparently when
+     * {@link ServiceConfiguration#getCacheAliasMaps()} is {@code true}.
+     * The BIRTH fragments are never exposed in the UI-visible
+     * {@code inventoryFragmentsToCache} list.
+     */
+    private List<String> buildEffectiveFragmentList(ServiceConfiguration serviceConfiguration) {
+        List<String> effective = new ArrayList<>(serviceConfiguration.getInventoryFragmentsToCache());
+        if (Boolean.TRUE.equals(serviceConfiguration.getCacheAliasMaps())) {
+            if (!effective.contains(SparkPlugBDeserializer.SPARKPLUGB_NBIRTH_FRAGMENT)) {
+                effective.add(SparkPlugBDeserializer.SPARKPLUGB_NBIRTH_FRAGMENT);
+            }
+            // Use a glob so all per-device DBIRTH fragments (sparkPlugB_DBIRTH_<deviceId>) are cached.
+            // processFragment() expands glob patterns against the actual MO attributes.
+            String dbBirthGlob = SparkPlugBDeserializer.SPARKPLUGB_DBIRTH_FRAGMENT_PREFIX + "*";
+            if (effective.stream().noneMatch(f -> f.startsWith(SparkPlugBDeserializer.SPARKPLUGB_DBIRTH_FRAGMENT_PREFIX))) {
+                effective.add(dbBirthGlob);
+            }
+        }
+        return effective;
     }
 
     private ManagedObjectRepresentation getManagedObjectFromResolver(String tenant, String deviceId,
@@ -195,10 +220,51 @@ public class InventoryCacheEnrichmentService {
             return;
         }
 
+        // Glob pattern: match all attrs keys that fit the pattern
+        if (isGlobPattern(frag)) {
+            for (String key : attrs.keySet()) {
+                if (matchesGlob(frag, key)) {
+                    Object value = attrs.get(key);
+                    if (value != null) {
+                        newMO.put(key, value);
+                    }
+                }
+            }
+            return;
+        }
+
         Object value = resolveNestedAttribute(attrs, frag);
         if (value != null) {
             newMO.put(frag, value);
         }
+    }
+
+    private boolean isGlobPattern(String frag) {
+        return frag != null && (frag.contains("*") || frag.contains("?"));
+    }
+
+    /**
+     * Matches a glob pattern (supporting {@code *} for any sequence and {@code ?}
+     * for a single character) against a candidate string.
+     */
+    private boolean matchesGlob(String pattern, String candidate) {
+        // Convert glob to regex: escape regex metacharacters except * and ?,
+        // then replace * -> .* and ? -> .
+        String regex = pattern
+                .replace(".", "\\.")
+                .replace("(", "\\(")
+                .replace(")", "\\)")
+                .replace("[", "\\[")
+                .replace("]", "\\]")
+                .replace("{", "\\{")
+                .replace("}", "\\}")
+                .replace("^", "\\^")
+                .replace("$", "\\$")
+                .replace("+", "\\+")
+                .replace("|", "\\|")
+                .replace("?", ".")
+                .replace("*", ".*");
+        return candidate.matches(regex);
     }
 
     private Object resolveNestedAttribute(Map<String, Object> attrs, String path) {

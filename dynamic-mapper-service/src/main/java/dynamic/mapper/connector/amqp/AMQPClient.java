@@ -72,7 +72,7 @@ public class AMQPClient extends AConnectorClient {
      * Default constructor - initializes connector specification
      */
     public AMQPClient() {
-        this.connectorType = ConnectorType.AMQP;
+        this.connectorType = ConnectorType.AMQP_091;
         this.connectorSpecification = createConnectorSpecification();
         this.singleton = false;
     }
@@ -558,7 +558,7 @@ public class AMQPClient extends AConnectorClient {
      */
     private ConnectorSpecification createConnectorSpecification() {
         return ConnectorSpecificationBuilder
-                .create("AMQP Connector", ConnectorType.AMQP)
+                .create("AMQP Connector", ConnectorType.AMQP_091)
                 .description("Connector for connecting to AMQP 0-9-1 brokers (RabbitMQ, etc.). " +
                         "Supports publishing and consuming messages via queues and exchanges.")
                 .supportedDirections(supportedDirections())

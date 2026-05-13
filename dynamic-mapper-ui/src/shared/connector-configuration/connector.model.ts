@@ -43,7 +43,8 @@ export enum ConnectorType {
   WEB_HOOK_INTERNAL = 'WEB_HOOK_INTERNAL',
   PULSAR = 'PULSAR',
   CUMULOCITY_MQTT_SERVICE_PULSAR = 'CUMULOCITY_MQTT_SERVICE_PULSAR',
-  AMQP = 'AMQP',
+  AMQP_091 = 'AMQP_091',
+  AMQP_10 = 'AMQP_10',
   TEST = 'TEST',
 }
 
@@ -60,7 +61,8 @@ export interface ConnectorProperty {
   hidden: boolean;
   defaultValue?: any;
   type: ConnectorPropertyType;
-  condition?: ConnectorPropertyCondition
+  options?: { [key: string]: string };
+  condition?: ConnectorPropertyCondition;
 }
 
 export interface ConnectorConfiguration {
@@ -78,8 +80,6 @@ export interface ConnectorSpecification {
   description: string;
   connectorType: ConnectorType;
   singleton: boolean;
-  supportsWildcardInTopicInbound: boolean;
-  supportsWildcardInTopicOutbound: boolean;
   supportsMessageContext?: boolean;
   supportedDirections?: Direction[];
   properties: { [name: string]: ConnectorProperty };

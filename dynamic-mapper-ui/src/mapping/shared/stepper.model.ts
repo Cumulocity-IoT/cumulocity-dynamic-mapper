@@ -18,6 +18,8 @@
  * @authors Christof Strack
  */
 
+import { Direction } from '../../shared/mapping/mapping.model';
+
 export enum EditorMode {
   CREATE = 'CREATE',
   UPDATE = 'UPDATE',
@@ -65,7 +67,7 @@ type ClassOrEnum = ClassDefinition | EnumDefinition;
  * @param {Monaco} monaco - The Monaco instance
  * @returns {{ dispose: () => void }} Combined disposable for both providers
  */
-export function createCompletionProviderFlowFunction(monaco: any): { dispose: () => void } {
+export function createCompletionProviderFlowFunction(monaco: any, direction: Direction = Direction.INBOUND): { dispose: () => void } {
   // Register flow-specific classes and interfaces
   const customClasses: ClassOrEnum[] = [
     {
@@ -73,11 +75,12 @@ export function createCompletionProviderFlowFunction(monaco: any): { dispose: ()
       isEnum: false,
       properties: [
         { name: 'payload', type: 'object', documentation: 'The same payload that would be used in the C8Y REST/SmartREST API.' },
-        { name: 'cumulocityType', type: '"measurement" | "event" | "alarm" | "operation" | "managedObject"', documentation: 'Which type in the C8Y API is being modified (measurement, event, alarm, operation, managedObject). Singular not plural. Serves as discriminator for CumulocityObject.' },
+        { name: 'cumulocityType', type: '"measurement" | "event" | "alarm" | "operation" | "managedObject" | "custom"', documentation: 'Which type in the C8Y API is being modified. Singular not plural. Serves as discriminator for CumulocityObject. Use "custom" to call a tenant-local microservice — set targetPath to the "/service/…" path.' },
         { name: 'action', type: '"create" | "update"| "delete" | "patch"', documentation: 'What kind of operation is being performed on this type.' },
-        { name: 'externalSource', type: 'ExternalId[] | ExternalId', documentation: 'External Id to lookup and optionally create. Use ExternalId for simple lookups.' },
-        { name: 'destination', type: '"cumulocity" | "iceflow" | "streaming-analytics"', documentation: 'Destination for the message.' },
-        { name: 'contextData', type: 'Record<string, any>', documentation: 'Additional context data passed along with the message for downstream processing.' },
+        { name: 'externalSource', type: 'ExternalId[] | ExternalId | ExternalSource[]', documentation: 'External ID configuration for device resolution. Use ExternalId[] for simple lookups, ExternalSource[] for advanced device creation scenarios.' },
+        { name: 'targetPath', type: 'string', documentation: 'Target microservice path used when cumulocityType is "custom". Must start with "/service/" to stay within the tenant. Example: "/service/my-microservice/api/process".' },
+        { name: 'destination', type: '"cumulocity" | "iceflow" | "streaming-analytics"', documentation: 'Destination for the message. Default: "cumulocity".' },
+        { name: 'contextData', type: 'Record<string, any>', documentation: 'Additional context data for device creation (deviceName, deviceType, processingMode, deviceFragments, deviceGroups, attachment fields).' },
         { name: 'sourceId', type: 'string', documentation: 'Internal Cumulocity source/device ID. Set this to override automatic device resolution.' }
       ],
       methods: [],
@@ -87,7 +90,7 @@ export function createCompletionProviderFlowFunction(monaco: any): { dispose: ()
       name: 'DeviceMessage',
       isEnum: false,
       properties: [
-        { name: 'payload', type: 'Uint8Array', documentation: 'Message payload as Uint8Array. Use TextEncoder/TextDecoder for string conversion. (Changed from ArrayBuffer in v2.0)' },
+        { name: 'payload', type: 'Record<string, any> | Uint8Array', documentation: 'Message payload. Prefer a plain JSON object — the runtime serializes it automatically. Use Uint8Array only for binary/non-JSON protocols (e.g. SparkPlug B). TextEncoder/TextDecoder are available.' },
         { name: 'action', type: '"create" | "update"| "delete" | "patch"', documentation: 'What kind of operation is being performed on this type.' },
         { name: 'cumulocityType', type: '"measurement" | "event" | "alarm" | "operation" | "managedObject"', documentation: 'Optional: Target Cumulocity API type (measurement, event, alarm, operation, managedObject). If not specified, derived from topic or mapping.' },
         { name: 'transportId', type: 'string', documentation: 'Identifier for the source/dest transport e.g. "mqtt", "opc-ua".' },
@@ -95,7 +98,7 @@ export function createCompletionProviderFlowFunction(monaco: any): { dispose: ()
         { name: 'clientId', type: 'string', documentation: 'Transport/MQTT client Id.' },
         { name: 'transportFields', type: 'Record<string, any>', documentation: 'Dictionary of transport-specific fields/properties/headers. For Kafka, use "key" to define record key.' },
         { name: 'time', type: 'Date', documentation: 'Timestamp of incoming message; does nothing when sending.' },
-        { name: 'externalSource', type: 'Array<{type: string}>', documentation: 'External source config for resolving _externalId_ placeholder. Defines which external ID type to use.' },
+        { name: 'externalSource', type: 'Array<{type: string; externalId?: string}>', documentation: 'External source config for resolving _externalId_ placeholder. Defines which external ID type to use. Provide externalId explicitly when the value is known upfront.' },
         { name: 'retain', type: 'boolean', documentation: 'Whether the message should be retained on the broker (MQTT retain flag).' },
         { name: 'sourceId', type: 'string', documentation: 'Internal Cumulocity source/device ID associated with this device message.' }
       ],
@@ -139,37 +142,53 @@ export function createCompletionProviderFlowFunction(monaco: any): { dispose: ()
     {
       name: 'DataPrepContext',
       isEnum: false,
-      properties: [],
+      properties: [
+        { name: 'runtime', type: 'string', documentation: 'Runtime identifier. Always "dynamic-mapper" in the Dynamic Mapper context.' }
+      ],
       methods: [
-        { name: 'setState', parameters: ['key', 'value'], returnType: 'void', documentation: 'Persists a value by key. State survives across message invocations for the same mapping and is cleared when the mapping is deleted.' },
         { name: 'getState', parameters: ['key', 'defaultValue?'], returnType: 'any', documentation: 'Retrieves a persisted state value. Returns the value stored by a previous invocation, or the defaultValue (if provided) on first call.' },
+        { name: 'setState', parameters: ['key', 'value'], returnType: 'void', documentation: 'Persists a value by key. State survives across message invocations for the same mapping and is cleared when the mapping is deleted.' }
+      ],
+      documentation: 'Base context interface providing persistent state (getState/setState). Extended by SmartFunctionContext with the full Smart Function API.'
+    },
+    {
+      name: 'SmartFunctionContext',
+      isEnum: false,
+      properties: [
+        { name: 'runtime', type: '"dynamic-mapper"', documentation: 'Runtime identifier — always "dynamic-mapper".' }
+      ],
+      methods: [
+        { name: 'getState', parameters: ['key', 'defaultValue?'], returnType: 'any', documentation: 'Retrieves a persisted state value. Returns the value stored by a previous invocation, or the defaultValue (if provided) on first call.' },
+        { name: 'setState', parameters: ['key', 'value'], returnType: 'void', documentation: 'Persists a value by key. State survives across message invocations for the same mapping and is cleared when the mapping is deleted.' },
         { name: 'getStateAll', parameters: [], returnType: 'Record<string, any>', documentation: 'Returns all persisted state entries for the current mapping as a plain object.' },
         { name: 'getStateKeySet', parameters: [], returnType: 'string[]', documentation: 'Returns the set of all keys currently stored in the mapping state.' },
         { name: 'clearState', parameters: [], returnType: 'void', documentation: 'Clears all persisted state for the current mapping. On clearState the state is flushed to the persistent store.' },
-        { name: 'getConfig', parameters: [], returnType: 'Record<string, any>', documentation: 'Returns the mapping configuration object.' },
+        { name: 'getConfig', parameters: [], returnType: 'Record<string, any>', documentation: 'Returns the mapping configuration object (mappingId, mappingName, tenant, topic, targetAPI, debug, clientId, etc.).' },
         { name: 'getClientId', parameters: [], returnType: 'string | undefined', documentation: 'Returns the transport/MQTT client ID associated with this mapping, or undefined if not set.' },
-        { name: 'getExternalId', parameters: [], returnType: 'string | undefined', documentation: 'Returns the external ID of the device derived from the mapping config (requires useExternalId enabled and externalIdType configured), or undefined if not available.' },
+        { name: 'getExternalId', parameters: [], returnType: 'string | undefined', documentation: 'Returns the resolved external ID of the source device (requires useExternalId enabled and externalIdType configured), or undefined.' },
         { name: 'getTesting', parameters: [], returnType: 'boolean', documentation: 'Returns true if the mapping is currently being tested (not in production).' },
+        { name: 'getManagedObject', parameters: ['c8ySourceId'], returnType: 'C8yManagedObject | null', documentation: 'Lookup a device from inventory cache by internal Cumulocity device ID. Returns null if not found.' },
+        { name: 'getManagedObjectByExternalId', parameters: ['externalId: ExternalId'], returnType: 'C8yManagedObject | null', documentation: 'Lookup a device from inventory cache by ExternalId object ({ externalId, type }). Returns null if not found.' },
+        { name: 'getDTMAsset', parameters: ['assetId'], returnType: 'C8yManagedObject | null', documentation: 'Lookup DTM Asset properties by asset ID. Returns null if not found.' },
         { name: 'addLogMessage', parameters: ['message'], returnType: 'void', documentation: 'Adds a log message stored under _LOGS_ in state. Visible in the processing result for debugging.' },
         { name: 'logMessage', parameters: ['message'], returnType: 'void', documentation: 'Alias for addLogMessage(). Adds a log message stored under _LOGS_ in state.' },
-        { name: 'getDTMAsset', parameters: ['assetId'], returnType: 'Record<string, any>', documentation: 'Lookup DTM Asset properties by asset ID.' },
-        { name: 'getManagedObject', parameters: ['c8ySourceId'], returnType: 'C8yManagedObject | null', documentation: 'Lookup a device from inventory cache by internal Cumulocity device ID. Returns null if not found.' },
-        { name: 'getManagedObjectByExternalId', parameters: ['externalId: ExternalId'], returnType: 'C8yManagedObject | null', documentation: 'Lookup a device from inventory cache by ExternalId object ({ externalId, type }). Returns null if not found.' }
+        { name: 'addWarning', parameters: ['warning'], returnType: 'void', documentation: 'Adds a warning message to the processing context. Surfaced for debugging non-fatal issues (e.g. fallback logic applied, optional field missing).' }
       ],
-      documentation: 'Context object providing state management, configuration access, and device lookup capabilities'
+      documentation: 'Smart Function runtime context. Extends DataPrepContext with state management, config access, device lookups, and mapping utilities.'
     },
     {
-      name: 'InputMessage',
+      name: 'DynamicMapperDeviceMessage',
       isEnum: false,
       properties: [
-        { name: 'topic', type: 'string', documentation: 'The MQTT/broker topic on which the message arrived.' },
-        { name: 'clientId', type: 'string', documentation: 'The MQTT client ID of the sender (inbound only; null for outbound).' },
-        { name: 'sourceId', type: 'string', documentation: 'Internal Cumulocity device ID (outbound only; null for inbound).' },
-        { name: 'cumulocityType', type: '"measurement" | "event" | "alarm" | "operation" | "managedObject" | null', documentation: 'C8Y object type for outbound messages (null for inbound).' },
-        { name: 'payload', type: 'object | string', documentation: 'The deserialized message payload.\n\n**JSON / FLAT_FILE / HEX:** parsed object or string map.\n\n**ANY_PAYLOAD (SparkPlugB, Protobuf, XML):** Base64-encoded binary string. In Smart Functions, avoid browser-only APIs like `atob()`. Decode with a pure-JS Base64 decoder, for example:\n```js\nfunction decodeBase64(base64) {\n  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";\n  const clean = base64.replace(/=+$/, "");\n  const bytes = [];\n  let buffer = 0;\n  let bits = 0;\n\n  for (let i = 0; i < clean.length; i++) {\n    const value = chars.indexOf(clean.charAt(i));\n    if (value < 0) {\n      continue;\n    }\n    buffer = (buffer << 6) | value;\n    bits += 6;\n    if (bits >= 8) {\n      bits -= 8;\n      bytes.push((buffer >> bits) & 0xff);\n    }\n  }\n\n  return new Uint8Array(bytes);\n}\n\nconst bytes = decodeBase64(msg.payload);\n```' }
+        { name: 'payload', type: 'Record<string, any>', documentation: 'Pre-deserialized JSON payload. Dynamic Mapper automatically deserializes JSON payloads to objects. Use bracket notation to access properties: payload["key"].\n\n**ANY_PAYLOAD (SparkPlugB, Protobuf, XML):** Base64-encoded binary string. Decode with a pure-JS Base64 decoder, for example:\n```js\nfunction decodeBase64(base64) {\n  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";\n  const clean = base64.replace(/=+$/, "");\n  const bytes = [];\n  let buffer = 0;\n  let bits = 0;\n\n  for (let i = 0; i < clean.length; i++) {\n    const value = chars.indexOf(clean.charAt(i));\n    if (value < 0) { continue; }\n    buffer = (buffer << 6) | value;\n    bits += 6;\n    if (bits >= 8) { bits -= 8; bytes.push((buffer >> bits) & 0xff); }\n  }\n  return new Uint8Array(bytes);\n}\nconst bytes = decodeBase64(msg.payload);\n```' },
+        { name: 'topic', type: 'string', documentation: 'The broker topic on which the message arrived (e.g. MQTT topic).' },
+        { name: 'clientId', type: 'string', documentation: 'Transport/MQTT client ID of the sender.' },
+        { name: 'transportId', type: 'string', documentation: 'Identifier for the source/destination transport (e.g. "mqtt", "kafka").' },
+        { name: 'transportFields', type: 'Record<string, string>', documentation: 'Transport-specific fields/properties/headers.' },
+        { name: 'time', type: 'Date', documentation: 'Timestamp of the incoming message.' }
       ],
       methods: [],
-      documentation: 'Input message passed to the Smart Function as the first argument (`msg`).\n\nThe `payload` format depends on the mapping type:\n- **JSON**: parsed JSON object\n- **FLAT_FILE**: `{ payload: "..." }` string map\n- **HEX**: `{ payload: "0x..." }` hex string map\n- **ANY_PAYLOAD**: Base64-encoded binary string (e.g. SparkPlugB, Protobuf, XML). Processed by a Smart Function (JavaScript) or a Java Extension.'
+      documentation: 'Inbound device message passed to the Smart Function as the first argument (`msg`). Payloads are pre-deserialized from JSON for convenience — use bracket notation: msg.payload["key"].'
     },
     {
       name: 'OutputMessage',
@@ -192,6 +211,17 @@ export function createCompletionProviderFlowFunction(monaco: any): { dispose: ()
       ],
       methods: [],
       documentation: 'Error information for mapping operations.'
+    },
+    {
+      name: 'OutboundMessage',
+      isEnum: false,
+      properties: [
+        { name: 'payload', type: 'object', documentation: 'Pre-deserialized Cumulocity domain object payload (e.g. C8yMeasurement). Known fields are typed; custom fragments use bracket notation.' },
+        { name: 'cumulocityType', type: 'string | undefined', documentation: 'Cumulocity API type of the triggering event, e.g. "measurement", "event", "alarm".' },
+        { name: 'sourceId', type: 'string | undefined', documentation: 'Internal Cumulocity device ID of the originating device, if available.' }
+      ],
+      methods: [],
+      documentation: 'Outbound message passed to the Smart Function as the first argument (`msg`). Contains the pre-deserialized Cumulocity domain object that triggered the outbound mapping.'
     }
   ];
 
@@ -200,14 +230,14 @@ export function createCompletionProviderFlowFunction(monaco: any): { dispose: ()
     {
       name: 'CumulocityAction',
       isEnum: true,
-      values: ['create', 'update'],
-      documentation: 'Actions that can be performed on Cumulocity types.'
+      values: ['create', 'update', 'delete', 'patch'],
+      documentation: 'HTTP actions: create=POST, update=PUT, delete=DELETE, patch=PATCH.'
     },
     {
       name: 'CumulocityType',
       isEnum: true,
-      values: ['measurement', 'alarm', 'event', 'managedObject', 'operation'],
-      documentation: 'Common Cumulocity types (singular form).'
+      values: ['measurement', 'alarm', 'event', 'managedObject', 'operation', 'custom'],
+      documentation: 'Cumulocity API types (singular form). Use "custom" to target a tenant-local microservice via targetPath.'
     },
     {
       name: 'Destination',
@@ -326,6 +356,23 @@ export function createCompletionProviderFlowFunction(monaco: any): { dispose: ()
       documentation: 'Builder shortcut: creates a DeviceMessage with an encoded payload.',
       description: 'Build DeviceMessage'
     }
+  ];
+
+  // Common variable names and their associated types — shared by completion and hover providers
+  const isOutbound = direction === Direction.OUTBOUND;
+  const commonVars = [
+    {
+      name: 'msg',
+      type: isOutbound ? 'OutboundMessage' : 'DynamicMapperDeviceMessage',
+      desc: isOutbound
+        ? 'Outbound message: pre-deserialized Cumulocity domain object (payload, cumulocityType?, sourceId?)'
+        : 'Inbound device message (pre-deserialized JSON payload)'
+    },
+    { name: 'context', type: 'SmartFunctionContext', desc: 'Smart Function runtime context providing state, config, device lookups, and mapping utilities' },
+    { name: 'outputMsg', type: 'OutputMessage', desc: 'Output message variable' },
+    { name: 'c8yMsg', type: 'CumulocityObject', desc: 'Cumulocity message variable' },
+    { name: 'deviceMsg', type: 'DeviceMessage', desc: 'Device message variable' },
+    { name: 'externalId', type: 'ExternalId', desc: 'External ID reference variable (v2.0+)' }
   ];
 
   // Register completion and hover providers
@@ -587,15 +634,6 @@ export function createCompletionProviderFlowFunction(monaco: any): { dispose: ()
 
       // Common variable name suggestions for flow functions
       if (textUntilPosition.match(/\b(let|const|var)\s+\w*$/)) {
-        const commonVars = [
-          { name: 'msg', type: 'InputMessage', desc: 'Input message variable' },
-          { name: 'outputMsg', type: 'OutputMessage', desc: 'Output message variable' },
-          { name: 'c8yMsg', type: 'CumulocityObject', desc: 'Cumulocity message variable' },
-          { name: 'deviceMsg', type: 'DeviceMessage', desc: 'Device message variable' },
-          { name: 'dataPrepContext', type: 'DataPrepContext', desc: 'Data preparation context variable' },
-          { name: 'externalId', type: 'ExternalId', desc: 'External ID reference variable (v2.0+)' }
-        ];
-
         commonVars.forEach((variable, index) => {
           suggestions.push({
             label: {
@@ -636,6 +674,52 @@ export function createCompletionProviderFlowFunction(monaco: any): { dispose: ()
         endColumn: word.endColumn
       };
 
+      // onMessage entry-point — direction-aware full signature
+      if (w === 'onMessage') {
+        const content = isOutbound
+          ? `\`\`\`typescript\nfunction onMessage(\n  msg: OutboundMessage,\n  context: SmartFunctionContext\n): Array<DeviceMessage> | DeviceMessage | null\n\`\`\`\n\n` +
+            `**Outbound Smart Function** — called for each Cumulocity platform event that matches the mapping.\n\n` +
+            `**Parameters:**\n` +
+            `- \`msg: OutboundMessage\` — Pre-deserialized Cumulocity domain object:\n` +
+            `  - \`msg.payload\` — C8Y domain object payload. Access with bracket notation: \`msg.payload["c8y_Temperature"]["T"]["value"]\`\n` +
+            `  - \`msg.cumulocityType\` — Triggering event type: \`"measurement"\`, \`"event"\`, \`"alarm"\`, \`"operation"\`, \`"managedObject"\`\n` +
+            `  - \`msg.sourceId\` — Internal Cumulocity device ID of the originating device\n` +
+            `- \`context: SmartFunctionContext\` — Runtime context with state, config, and device lookups\n\n` +
+            `**Returns** \`DeviceMessage | DeviceMessage[]\` with these fields:\n` +
+            `- \`topic\` — Broker topic to publish to (omit to use the mapping's fixed publish topic)\n` +
+            `- \`payload\` — Message body: plain JSON object (auto-serialized) or \`Uint8Array\` for binary protocols\n` +
+            `- \`transportFields\` — Transport-specific metadata, e.g. \`{ "key": externalId }\` for Kafka partition key\n` +
+            `- \`transportId\` — Target transport identifier (e.g. \`"mqtt"\`, \`"kafka"\`)\n` +
+            `- \`clientId\` — MQTT/transport client ID for the outgoing message\n\n` +
+            `Return \`null\` to suppress publishing (e.g. when the device is offline).\n\n` +
+            `**Example:**\n` +
+            `\`\`\`js\nfunction onMessage(msg, context) {\n  const externalId = context.getExternalId();\n  return {\n    topic: \`measurements/\${externalId}\`,\n    payload: { temperature: msg.payload["c8y_Temperature"]["T"]["value"] }\n  };\n}\n\`\`\``
+          : `\`\`\`typescript\nfunction onMessage(\n  msg: DynamicMapperDeviceMessage,\n  context: SmartFunctionContext\n): CumulocityObject | CumulocityObject[] | void\n\`\`\`\n\n` +
+            `**Inbound Smart Function** — called for each broker message that matches the mapping.\n\n` +
+            `**Parameters:**\n` +
+            `- \`msg: DynamicMapperDeviceMessage\` — Pre-deserialized broker message:\n` +
+            `  - \`msg.payload\` — JSON payload as a plain object. Access fields: \`msg.payload["temperature"]\`\n` +
+            `  - \`msg.topic\` — The broker topic on which the message arrived\n` +
+            `  - \`msg.clientId\` — Transport/MQTT client ID of the sender\n` +
+            `  - \`msg.transportId\` — Source transport identifier (e.g. \`"mqtt"\`, \`"kafka"\`)\n` +
+            `  - \`msg.transportFields\` — Transport-specific headers/properties\n` +
+            `  - \`msg.time\` — Timestamp of the incoming message\n` +
+            `- \`context: SmartFunctionContext\` — Runtime context with state, config, and device lookups\n\n` +
+            `**Returns** \`CumulocityObject | CumulocityObject[]\` with these fields:\n` +
+            `- \`cumulocityType\` — Target C8Y API: \`"measurement"\`, \`"event"\`, \`"alarm"\`, \`"operation"\`, \`"managedObject"\`, \`"custom"\`\n` +
+            `- \`action\` — HTTP verb: \`"create"\` (POST), \`"update"\` (PUT), \`"delete"\`, \`"patch"\`\n` +
+            `- \`payload\` — C8Y REST API payload matching the \`cumulocityType\` shape\n` +
+            `- \`externalSource\` — Device identity for resolution: \`[{ type: "c8y_Serial", externalId: "..." }]\`\n` +
+            `- \`sourceId\` — Override target device (e.g. route child-device data to parent)\n` +
+            `- \`targetPath\` — Microservice path when \`cumulocityType\` is \`"custom"\`, must start with \`/service/\`\n` +
+            `- \`destination\` — \`"cumulocity"\` (default), \`"iceflow"\`, \`"streaming-analytics"\`\n` +
+            `- \`contextData\` — Implicit device creation: \`{ deviceName, deviceType, deviceGroups, deviceFragments }\`\n\n` +
+            `Return \`void\` or \`[]\` to suppress output.\n\n` +
+            `**Example:**\n` +
+            `\`\`\`js\nfunction onMessage(msg, context) {\n  return [{\n    cumulocityType: "measurement",\n    action: "create",\n    payload: { type: "c8y_Temp", time: new Date().toISOString(),\n               c8y_Temp: { T: { value: msg.payload["temp"], unit: "C" } } },\n    externalSource: [{ type: "c8y_Serial", externalId: context.getClientId() }]\n  }];\n}\n\`\`\``;
+        return { range, contents: [{ value: content, isTrusted: true }] };
+      }
+
       const func = utilityFunctions.find(f => f.name === w);
       if (func) {
         return { range, contents: [{ value: `\`\`\`typescript\n(function) ${func.name}(${func.parameters.join(', ')}): ${func.returnType}\n\`\`\`\n\n${func.documentation}`, isTrusted: true }] };
@@ -665,468 +749,26 @@ export function createCompletionProviderFlowFunction(monaco: any): { dispose: ()
         }
       }
 
-      return null;
-    }
-  });
-
-  return {
-    dispose: () => {
-      completionDisposable.dispose();
-      hoverDisposable.dispose();
-    }
-  };
-}
-
-/**
- * Registers completion and hover providers for Substitution-as-Code JavaScript in Monaco Editor
- * @param {Monaco} monaco - The Monaco instance
- * @returns {{ dispose: () => void }} Combined disposable for both providers
- */
-export function createCompletionProviderSubstitutionAsCode(monaco: any): { dispose: () => void } {
-  // Register our custom classes and enums
-  const customClasses: ClassOrEnum[] = [
-    {
-      name: 'RepairStrategy',
-      isEnum: true,
-      values: [
-        'DEFAULT',
-        'USE_FIRST_VALUE_OF_ARRAY',
-        'USE_LAST_VALUE_OF_ARRAY',
-        'IGNORE',
-        'REMOVE_IF_MISSING_OR_NULL',
-        'CREATE_IF_MISSING'
-      ],
-      documentation: 'Specifies how to repair a value during substitution.'
-    },
-    {
-      name: 'TYPE',
-      isEnum: true,
-      values: [
-        'ARRAY',
-        'BOOLEAN',
-        'IGNORE',
-        'NUMBER',
-        'OBJECT',
-        'TEXTUAL'
-      ],
-      documentation: 'Defines the data type for a substitute value.'
-    },
-    {
-      name: 'SubstitutionValue',
-      isEnum: false,
-      properties: [
-        { name: 'value', type: 'any', documentation: 'The value to substitute.' },
-        { name: 'type', type: 'TYPE', documentation: 'The type of the substitute value.' },
-        { name: 'repairStrategy', type: 'RepairStrategy', documentation: 'Strategy for repairing missing or invalid values.' },
-        { name: 'expandArray', type: 'boolean', documentation: 'Whether to expand arrays.' }
-      ],
-      methods: [
-        { name: 'clone', parameters: [], returnType: 'SubstitutionValue', documentation: 'Creates a clone of this SubstitutionValue.' }
-      ],
-      documentation: 'Represents a value to substitute in the payload. Construct with: new SubstitutionValue(value, TYPE.xxx, RepairStrategy.xxx, expandArray)'
-    },
-    {
-      name: 'ArrayList',
-      isEnum: false,
-      properties: [
-        { name: 'items', type: 'Array', documentation: 'The array of items.' }
-      ],
-      methods: [
-        { name: 'add', parameters: ['item'], returnType: 'boolean', documentation: 'Adds an item to the list.' },
-        { name: 'get', parameters: ['index'], returnType: 'any', documentation: 'Gets the item at the specified index.' },
-        { name: 'size', parameters: [], returnType: 'number', documentation: 'Returns the number of items in the list.' },
-        { name: 'isEmpty', parameters: [], returnType: 'boolean', documentation: 'Returns whether the list is empty.' }
-      ],
-      documentation: 'A JavaScript implementation of Java ArrayList.'
-    },
-    {
-      name: 'HashMap',
-      isEnum: false,
-      properties: [
-        { name: 'map', type: 'Object', documentation: 'The underlying map object.' }
-      ],
-      methods: [
-        { name: 'put', parameters: ['key', 'value'], returnType: 'any', documentation: 'Adds a key-value pair to the map.' },
-        { name: 'get', parameters: ['key'], returnType: 'any', documentation: 'Gets the value for the specified key.' },
-        { name: 'containsKey', parameters: ['key'], returnType: 'boolean', documentation: 'Returns whether the map contains the specified key.' },
-        { name: 'keySet', parameters: [], returnType: 'Array<string>', documentation: 'Returns an array of keys in the map.' }
-      ],
-      documentation: 'A JavaScript implementation of Java HashMap.'
-    },
-    {
-      name: 'SubstitutionResult',
-      isEnum: false,
-      properties: [
-        { name: 'substitutions', type: 'HashMap', documentation: 'The substitutions map.' },
-        { name: 'alarms', type: 'Set<string>', documentation: 'Set of alarm messages collected during substitution.' }
-      ],
-      methods: [
-        { name: 'getSubstitutions', parameters: [], returnType: 'HashMap', documentation: 'Gets the substitutions map.' },
-        { name: 'toString', parameters: [], returnType: 'string', documentation: 'Returns a string representation of the substitution result.' }
-      ],
-      documentation: 'Represents the result of a substitution operation.'
-    },
-    {
-      name: 'JsonObject',
-      isEnum: false,
-      properties: [
-        { name: 'data', type: 'Object', documentation: 'The underlying data object.' }
-      ],
-      methods: [
-        { name: 'get', parameters: ['key'], returnType: 'any', documentation: 'Gets the value for the specified key.' }
-      ],
-      documentation: 'A simple wrapper for JSON objects.'
-    },
-    {
-      name: 'SubstitutionContext',
-      isEnum: false,
-      properties: [
-        { name: 'IDENTITY_EXTERNAL', type: 'string', documentation: 'The external identity key.' },
-        { name: 'IDENTITY_C8Y', type: 'string', documentation: 'The C8Y identity key.' }
-      ],
-      methods: [
-        { name: 'getGenericDeviceIdentifier', parameters: [], returnType: 'string', documentation: 'Gets the generic device identifier.' },
-        { name: 'getExternalIdentifier', parameters: [], returnType: 'string', documentation: 'Gets the external identifier from the payload.' },
-        { name: 'getC8YIdentifier', parameters: [], returnType: 'string', documentation: 'Gets the C8Y identifier from the payload.' },
-        { name: 'getPayload', parameters: [], returnType: 'Object', documentation: 'Gets the JSON payload.' },
-        { name: 'getTopic', parameters: [], returnType: 'string', documentation: 'Gets subscribe or publish topic of this mapping.' }
-      ],
-      documentation: 'Context for substitution operations.'
-    }
-  ];
-
-  // Add the utility functions
-  const utilityFunctions = [
-    {
-      name: 'tracePayload',
-      parameters: ['ctx'],
-      returnType: 'void',
-      documentation: 'Logs payload details to the console for debugging purposes. Shows all keys in the payload and the identifiers from the context.',
-      description: 'Trace payload contents'
-    },
-    {
-      name: 'addSubstitution',
-      parameters: ['result', 'key', 'value'],
-      returnType: 'void',
-      documentation: 'Adds a substitution value to the result for a specific key. Creates a new ArrayList for the key if it doesn\'t exist yet.',
-      description: 'Add value to substitution result'
-    },
-    {
-      name: 'addError',
-      parameters: ['result', 'message'],
-      returnType: 'void',
-      documentation: 'Adds an error to the set of error messages. Creates a new HashSet for the key if it doesn\'t exist yet.',
-      description: 'Add error message to substitution result'
-    }
-  ];
-
-  // Register completion and hover providers
-  const completionDisposable = monaco.languages.registerCompletionItemProvider('javascript', {
-    triggerCharacters: ['.', ' ', '('],
-    provideCompletionItems: function (model: any, position: any, _context: any, _token: any) {
-      const textUntilPosition = model.getValueInRange({
-        startLineNumber: position.lineNumber,
-        startColumn: 1,
-        endLineNumber: position.lineNumber,
-        endColumn: position.column
-      });
-
-      const wordAtPosition = model.getWordUntilPosition(position);
-      const range = {
-        startLineNumber: position.lineNumber,
-        endLineNumber: position.lineNumber,
-        startColumn: wordAtPosition.startColumn,
-        endColumn: wordAtPosition.endColumn
-      };
-
-      const suggestions = [];
-
-      // Check for specific contexts
-      const dotMatch = textUntilPosition.match(/(\w+)\.\s*$/);
-      if (dotMatch) {
-        const objectName = dotMatch[1];
-        const matchedClass = customClasses.find(cls => cls.name === objectName);
-
-        // Object property/method completion
-        if (matchedClass) {
-          if (matchedClass.isEnum) {
-            // Enum value completion
-            const enumClass = matchedClass as EnumDefinition;
-            enumClass.values.forEach((value, index) => {
-              suggestions.push({
-                label: value,
-                kind: monaco.languages.CompletionItemKind.EnumMember,
-                documentation: {
-                  value: `${enumClass.name}.${value}`
-                },
-                insertText: value,
-                range: range,
-                sortText: `00-${index.toString().padStart(2, '0')}` // High priority sorting
-              });
-            });
-          } else {
-            // Class property and method completion
-            const classObject = matchedClass as ClassDefinition;
-            
-            classObject.properties.forEach((prop, index) => {
-              suggestions.push({
-                label: prop.name,
-                kind: monaco.languages.CompletionItemKind.Field,
-                documentation: {
-                  value: `**${prop.type}**\n\n${prop.documentation}`
-                },
-                insertText: prop.name,
-                range: range,
-                sortText: `01-${index.toString().padStart(2, '0')}` // High priority sorting
-              });
-            });
-
-            classObject.methods.forEach((method, index) => {
-              const params = method.parameters.join(', ');
-              suggestions.push({
-                label: {
-                  label: `${method.name}(${params})`,
-                  description: method.returnType
-                },
-                kind: monaco.languages.CompletionItemKind.Method,
-                documentation: {
-                  value: `**${method.returnType}** ${method.name}(${params})\n\n${method.documentation}`
-                },
-                insertText: method.parameters.length > 0
-                  ? `${method.name}(${method.parameters.map((_, i) => `\${${i + 1}}`).join(', ')})`
-                  : `${method.name}()`,
-                insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-                range: range,
-                sortText: `02-${index.toString().padStart(2, '0')}` // High priority sorting
-              });
-            });
+      // Common variable names — look up the type and show its class documentation
+      const varEntry = commonVars.find(v => v.name === w);
+      if (varEntry) {
+        const typeCls = allClasses.find(c => c.name === varEntry.type);
+        if (typeCls && !typeCls.isEnum) {
+          const classDef = typeCls as ClassDefinition;
+          let content = `\`\`\`typescript\n(variable) ${w}: ${varEntry.type}\n\`\`\`\n\n${typeCls.documentation}`;
+          if (classDef.properties.length > 0) {
+            content += '\n\n**Properties:**\n' + classDef.properties
+              .map(p => `- \`${p.name}: ${p.type}\` — ${p.documentation.split('\n')[0]}`)
+              .join('\n');
           }
-          return {
-            suggestions,
-            incomplete: false // Mark as complete to avoid other providers
-          };
+          if (classDef.methods.length > 0) {
+            content += '\n\n**Methods:**\n' + classDef.methods
+              .map(m => `- \`${m.name}(${m.parameters.join(', ')}): ${m.returnType}\` — ${m.documentation.split('\n')[0]}`)
+              .join('\n');
+          }
+          return { range, contents: [{ value: content, isTrusted: true }] };
         }
-
-        // For enum value access (e.g. RepairStrategy.DEFAULT)
-        const enumClass = customClasses.find(cls => cls.isEnum && cls.name === objectName);
-        if (enumClass) {
-          const enumDef = enumClass as EnumDefinition;
-          enumDef.values.forEach((value, index) => {
-            suggestions.push({
-              label: value,
-              kind: monaco.languages.CompletionItemKind.EnumMember,
-              documentation: {
-                value: `${enumDef.name}.${value}`
-              },
-              insertText: value,
-              range: range,
-              sortText: `00-${index.toString().padStart(2, '0')}` // High priority sorting
-            });
-          });
-          return {
-            suggestions,
-            incomplete: false // Mark as complete to avoid other providers 
-          };
-        }
-      }
-
-      // Global class/enum completion
-      customClasses.forEach((cls, index) => {
-        suggestions.push({
-          label: cls.name,
-          kind: cls.isEnum
-            ? monaco.languages.CompletionItemKind.Enum
-            : monaco.languages.CompletionItemKind.Class,
-          documentation: {
-            value: cls.documentation
-          },
-          insertText: cls.name,
-          range: range,
-          sortText: `03-${index.toString().padStart(2, '0')}` // High priority sorting
-        });
-      });
-
-      // Utility function completion
-      utilityFunctions.forEach((func, index) => {
-        suggestions.push({
-          label: {
-            label: `${func.name}(${func.parameters.join(', ')})`,
-            description: func.description
-          },
-          kind: monaco.languages.CompletionItemKind.Function,
-          documentation: {
-            value: `**${func.returnType}** ${func.name}(${func.parameters.join(', ')})\n\n${func.documentation}`
-          },
-          insertText: `${func.name}(${func.parameters.map((_, i) => `\${${i + 1}}`).join(', ')})`,
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          range: range,
-          sortText: `04-${index.toString().padStart(2, '0')}` // High priority sorting
-        });
-      });
-
-      // Provide new object creation completions
-      const newMatch = textUntilPosition.match(/new\s+(\w*)$/);
-      if (newMatch) {
-        customClasses.forEach((cls, index) => {
-          if (!cls.isEnum) {
-            const classObject = cls as ClassDefinition;
-            const constructorParams = classObject.properties
-              .map(p => p.name)
-              .join(', ');
-
-            suggestions.push({
-              label: {
-                label: cls.name,
-                description: `new ${cls.name}(${constructorParams})`
-              },
-              kind: monaco.languages.CompletionItemKind.Constructor,
-              documentation: {
-                value: `Create a new ${cls.name} instance:\n\n\`\`\`javascript\nnew ${cls.name}(${constructorParams})\n\`\`\``
-              },
-              insertText: cls.name + (
-                classObject.properties.length > 0
-                  ? `(${classObject.properties.map((_, i) => `\${${i + 1}}`).join(', ')})`
-                  : '()'
-              ),
-              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-              range: range,
-              sortText: `05-${index.toString().padStart(2, '0')}` // High priority sorting
-            });
-          }
-        });
-
-        return {
-          suggestions,
-          incomplete: false // Mark as complete to avoid other providers when dealing with constructors
-        };
-      }
-
-      // Check if we're inside a function call for better parameter suggestions
-      const funcCallMatch = textUntilPosition.match(/(\w+)\s*\(\s*$/);
-      if (funcCallMatch) {
-        const funcName = funcCallMatch[1];
-        const matchedFunc = utilityFunctions.find(f => f.name === funcName);
-
-        if (matchedFunc) {
-          // We're inside a function call, offer parameter suggestions
-          if (matchedFunc.name === 'tracePayload') {
-            suggestions.push({
-              label: 'ctx',
-              kind: monaco.languages.CompletionItemKind.Variable,
-              documentation: 'The SubstitutionContext object',
-              insertText: 'ctx',
-              range: range,
-              sortText: '00-01' // High priority sorting
-            });
-          } else if (matchedFunc.name === 'addError') {
-            suggestions.push({
-              label: 'result',
-              kind: monaco.languages.CompletionItemKind.Variable,
-              documentation: 'The SubstitutionResult object',
-              insertText: 'result',
-              range: range,
-              sortText: '00-01' // High priority sorting
-            });
-            suggestions.push({
-              label: 'message',
-              kind: monaco.languages.CompletionItemKind.Variable,
-              documentation: 'The error message',
-              insertText: '"${1:errorMessage}"',
-              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-              range: range,
-              sortText: '00-02' // High priority sorting
-            });
-          } else if (matchedFunc.name === 'addSubstitution') {
-            suggestions.push({
-              label: 'result',
-              kind: monaco.languages.CompletionItemKind.Variable,
-              documentation: 'The SubstitutionResult object',
-              insertText: 'result',
-              range: range,
-              sortText: '00-01' // High priority sorting
-            });
-
-            suggestions.push({
-              label: 'key',
-              kind: monaco.languages.CompletionItemKind.Variable,
-              documentation: 'The key for the substitution',
-              insertText: '"${1:keyName}"',
-              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-              range: range,
-              sortText: '00-02' // High priority sorting
-            });
-
-            suggestions.push({
-              label: 'new SubstitutionValue()',
-              kind: monaco.languages.CompletionItemKind.Value,
-              documentation: 'Create a new SubstitutionValue',
-              insertText: 'new SubstitutionValue(${1:value}, ${2:TYPE.TEXTUAL}, ${3:RepairStrategy.DEFAULT}, ${4:false})',
-              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-              range: range,
-              sortText: '00-03' // High priority sorting
-            });
-          }
-
-          if (suggestions.length > 0) {
-            return {
-              suggestions,
-              incomplete: false // Mark as complete to avoid other providers 
-            };
-          }
-        }
-      }
-
-      // If we have any suggestions, return them with a signal that they're complete
-      if (suggestions.length > 0) {
-        return {
-          suggestions,
-          incomplete: false // Mark as complete to avoid other providers
-        };
-      }
-
-      // For other contexts, don't provide any suggestions
-      return { suggestions: [] };
-    }
-  });
-
-  const hoverDisposable = monaco.languages.registerHoverProvider('javascript', {
-    provideHover: function(model: any, position: any) {
-      const word = model.getWordAtPosition(position);
-      if (!word) return null;
-      const w = word.word;
-      const range = {
-        startLineNumber: position.lineNumber,
-        endLineNumber: position.lineNumber,
-        startColumn: word.startColumn,
-        endColumn: word.endColumn
-      };
-
-      const func = utilityFunctions.find(f => f.name === w);
-      if (func) {
-        return { range, contents: [{ value: `\`\`\`typescript\n(function) ${func.name}(${func.parameters.join(', ')}): ${func.returnType}\n\`\`\`\n\n${func.documentation}`, isTrusted: true }] };
-      }
-
-      for (const cls of customClasses) {
-        if (cls.name === w) {
-          const kind = cls.isEnum ? 'enum' : 'class';
-          return { range, contents: [{ value: `\`\`\`typescript\n${kind} ${cls.name}\n\`\`\`\n\n${cls.documentation}`, isTrusted: true }] };
-        }
-        if (cls.isEnum) {
-          const enumDef = cls as EnumDefinition;
-          if (enumDef.values.includes(w)) {
-            return { range, contents: [{ value: `\`\`\`typescript\n(enum member) ${cls.name}.${w}\n\`\`\`\n\n${cls.documentation}`, isTrusted: true }] };
-          }
-        } else {
-          const classDef = cls as ClassDefinition;
-          const prop = classDef.properties.find(p => p.name === w);
-          if (prop) {
-            return { range, contents: [{ value: `\`\`\`typescript\n(property) ${cls.name}.${prop.name}: ${prop.type}\n\`\`\`\n\n${prop.documentation}`, isTrusted: true }] };
-          }
-          const method = classDef.methods.find(m => m.name === w);
-          if (method) {
-            return { range, contents: [{ value: `\`\`\`typescript\n(method) ${cls.name}.${method.name}(${method.parameters.join(', ')}): ${method.returnType}\n\`\`\`\n\n${method.documentation}`, isTrusted: true }] };
-          }
-        }
+        return { range, contents: [{ value: `\`\`\`typescript\n(variable) ${w}: ${varEntry.type}\n\`\`\`\n\n${varEntry.desc}`, isTrusted: true }] };
       }
 
       return null;

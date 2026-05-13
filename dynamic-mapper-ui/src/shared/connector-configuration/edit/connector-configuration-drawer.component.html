@@ -19,47 +19,47 @@
 ~
 -->
 
-<div class="flex-col flex-nowrap no-align-items p-48 fit-h col-md-12 col-md-offset-0 c8y-stepper--no-btns">
-  <div class="card card--fullpage">
-    <div class="card-header separator" style="justify-content: center">
-      <h4 class="card-title d-flex">
+<div class="d-col flex-nowrap no-align-items p-48 flex-grow col-md-12 col-md-offset-0 c8y-stepper--no-btns">
+  <div class="card card--fullpage d-col flex-grow">
+    <div class="card-header separator j-c-center">
+      <h4 id="drawerTitle" class="card-title d-flex">
         <i [c8yIcon]="'connected'" class="icon-32 m-r-16"></i>
-        <span class="m-t-8">{{mode}} connector</span>
+        <span class="m-t-8" translate>{{mode}} connector</span>
       </h4>
-      <small class="text-muted p-t-8">
+      <small class="text-muted p-t-8" translate>
         Connectors of type Cumulocity MQTT Service - (device isolation) and Cumulocity MQTT Service - (tenant isolation)
         can only be created once.
         <br>
-        </small>
-      </div>
+      </small>
+    </div>
+    <div class="card-inner-scroll flex-grow">
       <div class="card-block">
-        <div class="p-24 modal-inner-scroll animated fadeIn">
+        <div class="p-24 animated fadeIn">
           @if (action === 'view' && configuration.enabled) {
-            <div class="alert alert-info">
-              <i c8yIcon="info-circle" class="m-r-4"></i>
-              {{ 'This connector is currently enabled. Disable it first to edit its configuration.' | translate }}
-            </div>
+          <div class="alert alert-info" style="min-width: stretch;">
+            <i c8yIcon="info-circle" class="m-r-4"></i>
+            {{ 'This connector is currently enabled. Disable it first to edit its configuration.' | translate }}
+          </div>
           }
           @if (action === 'create') {
-            <div [formGroup]="brokerForm">
-              <formly-form [form]="brokerForm" [fields]="brokerFormFields"></formly-form>
-            </div>
+          <div [formGroup]="brokerForm">
+            <formly-form [form]="brokerForm" [fields]="brokerFormFields"></formly-form>
+          </div>
           }
           <div [formGroup]="dynamicForm">
             <formly-form [form]="dynamicForm" [fields]="dynamicFormFields" [model]="configuration"></formly-form>
           </div>
         </div>
       </div>
-      <div class="card-footer text-center sticky-buttons">
-        <div class="form-group">
-          <button type="button" name="save" class="btn btn-primary" (click)="onSave()"
-            [disabled]="readOnly || !dynamicForm.valid || !feature?.userHasMappingAdminRole" translate>
-            Save
-          </button>
-          <button type="button" name="cancel" class="btn btn-primary" (click)="onCancel()" translate>
-            Cancel
-          </button>
-        </div>
-      </div>
+    </div>
+    <div class="card-footer separator p-24 text-center flex-no-shrink">
+      <button type="button" name="cancel" class="btn btn-default" (click)="onCancel()" translate>
+        Cancel
+      </button>
+      <button type="button" name="save" class="btn btn-primary  m-l-8" (click)="onSave()"
+        [disabled]="readOnly || !dynamicForm.valid || !feature?.userHasMappingAdminRole" translate>
+        Save
+      </button>
     </div>
   </div>
+</div>

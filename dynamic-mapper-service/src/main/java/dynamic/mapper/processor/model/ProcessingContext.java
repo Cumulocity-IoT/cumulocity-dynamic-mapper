@@ -167,6 +167,15 @@ public class ProcessingContext<O> implements AutoCloseable {
 
     private Source systemSource;
 
+    /**
+     * Reference to the ProcessingResultWrapper for this processing task.
+     * Allows in-flight processors to check if processing has been cancelled.
+     * Set by CamelDispatcherInbound to enable cancellation checks in JavaScript code.
+     * Can be null if the wrapper is not available.
+     */
+    @SuppressWarnings("rawtypes")
+    private ProcessingResultWrapper processingResultWrapper;
+
     private Source mappingSource;
 
     private Value sourceValue;
@@ -291,7 +300,6 @@ public class ProcessingContext<O> implements AutoCloseable {
         } else {
             pathsTargetForDeviceIdentifiers = mapping.getPathTargetForDeviceIdentifiers();
         }
-        pathsTargetForDeviceIdentifiers = new ArrayList<>(Arrays.asList(mapping.getGenericDeviceIdentifier()));
         return pathsTargetForDeviceIdentifiers;
     }
 

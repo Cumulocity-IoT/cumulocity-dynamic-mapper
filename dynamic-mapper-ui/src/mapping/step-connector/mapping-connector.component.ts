@@ -50,6 +50,7 @@ import { EditorMode } from '../shared/stepper.model';
 })
 export class MappingConnectorComponent implements OnInit, OnDestroy {
   @ViewChild(ConnectorGridComponent) connectorGrid!: ConnectorGridComponent;
+  @Input() showHeader: boolean = false;
   @Input() stepperConfiguration: StepperConfiguration;
   @Input() directions: Direction[] = [Direction.INBOUND, Direction.OUTBOUND];
   @Input() deploymentMapEntry: DeploymentMapEntry;

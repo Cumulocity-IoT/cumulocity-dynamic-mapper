@@ -19,16 +19,15 @@
 ~
 -->
 
-<div class="">
+<div>
   <c8y-form-group class="p-l-24">
     <form class="form-inline">
       <label class="control-label m-r-8" title="{{ 'Filter connector logs' | translate }}">Filter connector logs</label>
       <div class="c8y-select-wrapper">
-        <select class="form-control" style="width: 280px" [(ngModel)]="filterStatusLog.type" name="type">
+        <select class="form-control connector-log-select-type" [(ngModel)]="filterStatusLog.type" name="type">
           @for (lt of LoggingEventTypeMap | keyvalue; track lt) {
             @if (lt.value['component'] === 'd11r_connector' || lt.value['component'] === LoggingEventTypeMap[LoggingEventType.ALL].component) {
-              <option [ngValue]="lt.key"
-                >
+              <option [ngValue]="lt.key">
                 {{ lt.key | formatStringAsWords }}
               </option>
             }
@@ -36,10 +35,9 @@
         </select>
       </div>
       <div class="c8y-select-wrapper m-l-16">
-        <select class="form-control" style="width: 180px" [(ngModel)]="filterStatusLog.connectorIdentifier"
+        <select class="form-control connector-log-select-connector" [(ngModel)]="filterStatusLog.connectorIdentifier"
           name="connectorIdentifier">
           <option [value]="'ALL'">ALL connectors</option>
-
           @for (t of configurations$ | async; track t) {
             <option [value]="t.identifier">
               {{ t.name }}
@@ -71,7 +69,7 @@
   <c8y-list-group>
     @for (event of statusLogs$ | async; track event) {
       <c8y-li-timeline>
-        {{ event.date | date: 'dd.MM.yy hh:mm:ss' }}
+        {{ event.date | date: 'dd.MM.yy HH:mm' }}
         <c8y-li>
           <c8y-li-body>
             <div class="d-flex">
@@ -88,6 +86,10 @@
           </c8y-li-body>
         </c8y-li>
       </c8y-li-timeline>
+    } @empty {
+      <c8y-ui-empty-state [icon]="'logs'" [title]="'No log entries.' | translate"
+        [horizontal]="true">
+      </c8y-ui-empty-state>
     }
   </c8y-list-group>
 </div>

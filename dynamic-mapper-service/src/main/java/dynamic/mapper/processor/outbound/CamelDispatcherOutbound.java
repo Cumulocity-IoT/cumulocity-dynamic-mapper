@@ -23,6 +23,7 @@ package dynamic.mapper.processor.outbound;
 import static com.dashjoin.jsonata.Jsonata.jsonata;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +38,7 @@ import org.apache.camel.support.DefaultExchange;
 
 import com.dashjoin.jsonata.json.Json;
 import dynamic.mapper.configuration.ServiceConfiguration;
+import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.core.ConfigurationRegistry;
@@ -93,12 +95,53 @@ public class CamelDispatcherOutbound implements NotificationCallback {
 
     @Override
     public ProcessingResultWrapper<?> onNotification(Notification notification) {
+        // Notify outbound explorer listeners BEFORE the TEST connector guard so that
+        // the Message Explorer works regardless of which connector type owns the WebSocket.
+        // This is necessary in multi-tenant setups where the TEST connector may be the
+        // only (or first) dispatcher available for opening the explorer WebSocket.
+        if (notification != null && notification.getMessage() != null
+                && ("CREATE".equals(notification.getOperation()) || "UPDATE".equals(notification.getOperation()))
+                && !(notification.getApi() != null && notification.getApi().equals(API.OPERATION)
+                        && "UPDATE".equals(notification.getOperation()))) {
+            String tenant = getTenantFromNotificationHeaders(notification.getNotificationHeaders());
+            String explorerTopic = (notification.getApi() != null ? notification.getApi().name() : "UNKNOWN")
+                    + "/" + notification.getOperation();
+            String sourceId = null;
+            try {
+                Map parsedForExplorer = (Map) Json.parseJson(notification.getMessage());
+                var expr = jsonata(notification.getApi().identifier);
+                Object sourceIdResult = expr.evaluate(parsedForExplorer);
+                sourceId = (sourceIdResult instanceof String) ? (String) sourceIdResult : null;
+            } catch (Exception ignored) {
+                // not critical — explorer will show messages without device filtering
+            }
+            ConnectorMessage explorerMsg = ConnectorMessage.builder()
+                    .topic(explorerTopic)
+                    .payload(notification.getMessage().getBytes(StandardCharsets.UTF_8))
+                    .tenant(tenant)
+                    .connectorIdentifier(connectorClient.getConnectorIdentifier())
+                    .sourceId(sourceId)
+                    .build();
+            connectorClient.notifyOutboundExplorerListeners(explorerMsg);
+        }
+
         if (connectorClient.getConnectorType() == ConnectorType.TEST) {
             log.debug("{} - Skipping live notification for TEST connector — only processes via TestController",
                     connectorClient.getTenant());
             return ProcessingResultWrapper.builder().consolidatedQos(Qos.AT_MOST_ONCE).build();
         }
-        return processNotification(notification, null, true);
+        try {
+            return processNotification(notification, null, true);
+        } catch (Exception e) {
+            log.error("{} - Unexpected error processing outbound notification, API: {}, Operation: {}: {}",
+                    connectorClient.getTenant(),
+                    notification != null ? notification.getApi() : "null",
+                    notification != null ? notification.getOperation() : "null",
+                    e.getMessage(), e);
+            // Return a safe default — QoS 0 so the message is ACKed (not re-delivered)
+            // to avoid an infinite retry loop for a permanently broken notification.
+            return ProcessingResultWrapper.builder().consolidatedQos(Qos.AT_MOST_ONCE).build();
+        }
     }
 
     @Override
@@ -271,9 +314,29 @@ public class CamelDispatcherOutbound implements NotificationCallback {
         }
 
         // Process using Camel routes asynchronously
+        // NOTE: This inner virtual thread must respond to cancellation signals emitted by
+        // CustomWebSocketClient when a processing timeout is detected. Cancellation happens
+        // via ProcessingResultWrapper.cancelProcessing() which:
+        //   1. sets cancellationRequested=true
+        //   2. calls Future.cancel(true) on this future → sends interrupt to this thread
+        //   3. runs GraalVM cancel-actions (Context.close) to stop CPU-bound JS execution
+        // All three paths are handled below.
+        final String connectorIdentifier = connectorClient.getConnectorIdentifier();
         Future<List<ProcessingContext<Object>>> futureProcessingResult = virtualThreadPool.submit(() -> {
+            // ── Early-exit path ──────────────────────────────────────────────────────────
+            // If cancelProcessing() was already called (e.g. the timeout fired before this
+            // thread was scheduled), skip Camel processing entirely.
+            if (result.getCancellationRequested().get() || Thread.currentThread().isInterrupted()) {
+                log.info("{} - Outbound processing thread cancelled before Camel route started, skipping. connector: {}",
+                        tenant, connectorIdentifier);
+                return new ArrayList<>();
+            }
             try {
                 Exchange exchange = createExchange(c8yMessage, resolvedMappings, testing);
+                // *** Set processingResultWrapper so AbstractFlowProcessor can register
+                // GraalVM cancel actions and check early-exit cancellation flags — same
+                // as CamelDispatcherInbound does at its exchange creation. ***
+                exchange.getIn().setHeader("processingResultWrapper", result);
                 Exchange resultExchange = producerTemplate.send("direct:processOutboundMessage", exchange);
 
                 @SuppressWarnings("unchecked")
@@ -283,11 +346,23 @@ public class CamelDispatcherOutbound implements NotificationCallback {
                 return contexts != null ? contexts : new ArrayList<>();
 
             } catch (Exception e) {
+                // ── Cancellation-induced exception path ──────────────────────────────────
+                // Future.cancel(true) sends an interrupt to this thread. If producerTemplate.send()
+                // was blocking on I/O the interrupt causes an InterruptedException which Camel
+                // wraps and re-throws. GraalVM context-close likewise aborts JS and throws a
+                // PolyglotException. In both cases we detect the cancellation via the flag (the
+                // interrupt flag itself may already be cleared by the time we reach here) and
+                // return an empty list instead of propagating a noisy RuntimeException.
+                if (result.getCancellationRequested().get()) {
+                    log.info("{} - Outbound processing thread interrupted due to cancellation, aborting Camel route: {}. connector: {}",
+                            tenant, e.getMessage(), connectorIdentifier);
+                    Thread.interrupted(); // clear residual interrupt flag to avoid cascading effects
+                    return new ArrayList<>();
+                }
                 log.error("{} - Error processing outbound message through Camel routes: {}", tenant, e.getMessage(), e);
                 throw new RuntimeException("Camel processing failed", e);
             }
         });
-
         result.setProcessingResult((Future) futureProcessingResult);
         return result;
     }

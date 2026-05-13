@@ -30,7 +30,10 @@ import com.dashjoin.jsonata.json.Json;
 import dynamic.mapper.configuration.ServiceConfiguration;import dynamic.mapper.model.*;
 
 import dynamic.mapper.service.ServiceConfigurationService;import lombok.extern.slf4j.Slf4j;
+import org.springaicommunity.mcp.annotation.McpTool;
+import org.springaicommunity.mcp.annotation.McpToolParam;
 import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
@@ -67,7 +70,7 @@ public class AIAgentService {
     private ServiceConfigurationService serviceConfigurationService;
 
     private static final String DEFAULT_JSONATA_AGENT_NAME = "dynamic-mapper-jsonata-agent";
-    private static final String DEFAULT_JAVASCRIPT_AGENT_NAME = "dynamic-mapper-javascript-agent";
+    //private static final String DEFAULT_JAVASCRIPT_AGENT_NAME = "dynamic-mapper-javascript-agent";
     private static final String DEFAULT_SMART_FUNCTION_AGENT_NAME = "dynamic-mapper-smart-function-agent";
     private static final String MCP_SSE_ENDPOINT = "/service/dynamic-mapper-service/sse";
     private static final String JSONATA_TOOL_NAME = "evaluateJsonataExpression";
@@ -151,7 +154,7 @@ public class AIAgentService {
                     addingAIAgentsToServiceConfiguration();
                 } else {
                     if (agents.stream().anyMatch(agent -> agent.getName().equals(DEFAULT_JSONATA_AGENT_NAME)
-                            || agent.getName().equals(DEFAULT_JAVASCRIPT_AGENT_NAME) || agent.getName().equals(DEFAULT_SMART_FUNCTION_AGENT_NAME))) {
+                            || agent.getName().equals(DEFAULT_SMART_FUNCTION_AGENT_NAME))) {
                         log.info("{} - AIAgents already exists, not re-creating them",
                                 contextService.getContext().getTenant());
                         addingAIAgentsToServiceConfiguration();
@@ -175,8 +178,6 @@ public class AIAgentService {
         if(serviceConfiguration != null){
             if (serviceConfiguration .getJsonataAgent() == null)
                 serviceConfiguration.setJsonataAgent(DEFAULT_JSONATA_AGENT_NAME);
-            if (serviceConfiguration .getJavaScriptAgent() == null)
-                serviceConfiguration .setJavaScriptAgent(DEFAULT_JAVASCRIPT_AGENT_NAME);
             if (serviceConfiguration .getSmartFunctionAgent() == null)
                 serviceConfiguration .setSmartFunctionAgent(DEFAULT_SMART_FUNCTION_AGENT_NAME);
             try {
@@ -249,8 +250,6 @@ public class AIAgentService {
             AIAgent aiAgent = new AIAgent();
             if (file.equals("jsonata"))
                 aiAgent.setName(DEFAULT_JSONATA_AGENT_NAME);
-            if (file.equals("javascript"))
-                aiAgent.setName(DEFAULT_JAVASCRIPT_AGENT_NAME);
             if (file.equals("smartfunction"))
                 aiAgent.setName(DEFAULT_SMART_FUNCTION_AGENT_NAME);
 
@@ -282,9 +281,6 @@ public class AIAgentService {
                 String fileName = resource.getFilename();
                 if (fileName.startsWith("jsonata"))
                     prompts.put("jsonata",
-                            new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8));
-                if (fileName.startsWith("javascript"))
-                    prompts.put("javascript",
                             new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8));
                 if (fileName.startsWith("smartfunction"))
                     prompts.put("smartfunction",
@@ -380,8 +376,10 @@ public class AIAgentService {
      * @throws IllegalArgumentException if the expression or source JSON is null or
      *                                  empty
      */
-    @Tool(description = "Evaluate a JSONata expression against a JSON object")
-    public String evaluateJsonataExpression(String expression, String sourceJSON) {
+    @Tool(name = "evaluateJsonataExpression", description = "Evaluate a JSONata expression against a JSON object")
+    //@McpTool(name = "evaluateJsonataExpression", description = "Evaluate a JSONata expression against a JSON object")
+    public String evaluateJsonataExpression(@ToolParam(description = "JSONata expression to evaluate", required = true) String expression,
+                                            @ToolParam(description = "JSON document to apply the expression on", required = true) String sourceJSON) {
         if (expression == null || expression.isEmpty())
             throw new IllegalArgumentException("JSONata expression cannot be null");
         if (sourceJSON == null || sourceJSON.isEmpty())

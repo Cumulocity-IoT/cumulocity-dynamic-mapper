@@ -22,6 +22,7 @@ import {
   ElementRef,
   EventEmitter,
   Input,
+  OnDestroy,
   Output,
   ViewEncapsulation
 } from '@angular/core';
@@ -36,6 +37,13 @@ import {
 import { EditorMode } from '../shared/stepper.model';
 import { CoreModule } from '@c8y/ngx-components';
 import { PopoverModule } from 'ngx-bootstrap/popover';
+import { Subject, takeUntil } from 'rxjs';
+
+export interface SubstitutionGridSettings {
+  color: string;
+  selectedSubstitutionIndex: number;
+  editorMode: EditorMode;
+}
 
 @Component({
   selector: 'd11r-mapping-substitution-grid',
@@ -43,13 +51,13 @@ import { PopoverModule } from 'ngx-bootstrap/popover';
   styleUrls: ['./substitution-grid.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
-  imports:[CoreModule, PopoverModule, SharedModule]
+  imports: [CoreModule, PopoverModule, SharedModule]
 })
-export class SubstitutionRendererComponent {
+export class SubstitutionRendererComponent implements OnDestroy {
   @Input()
-  mapping: Mapping;
+  mapping!: Mapping;
   @Input()
-  settings: any;
+  settings!: SubstitutionGridSettings;
 
   @Output() selectSub = new EventEmitter<number>();
   @Output() deleteSub = new EventEmitter<number>();
@@ -66,32 +74,35 @@ export class SubstitutionRendererComponent {
   readonly substitutionTemplateHelp = 'Substitutions defining the device identifier are marked with an "*". Before adding a substitution target and source property in templates have to be selected.';
   substitutions: Substitution[] = [];
 
+  private destroy$ = new Subject<void>();
 
-  onSubstitutionSelect(index: number) : void {
-    // console.log('Selected substitution:', index);
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  onSubstitutionSelect(index: number): void {
     this.settings.selectedSubstitutionIndex = index;
     this.selectSub.emit(index);
   }
 
-  scrollToSubstitution(i: number) : void {
+  scrollToSubstitution(i: number): void {
     let ix = i;
     ix++;
     if (!ix || ix < 0 || ix >= this.substitutions.length) {
       ix = 0;
     }
-    // console.log('Scroll to:', ix);
     this.elementRef.nativeElement
       .querySelector(`#sub-${this.id}-${ix}`)
       .scrollIntoView();
   }
 
-  onSubstitutionEdit(index: number) : void {
-    // console.log('Delete substitution:', index);
+  onSubstitutionEdit(index: number): void {
     this.settings.selectedSubstitutionIndex = index;
     this.editSub.emit(index);
   }
 
-  onSubstitutionDelete(index: number) : void {
+  onSubstitutionDelete(index: number): void {
     const initialState = {
       title: 'Delete substitution',
       message:
@@ -105,8 +116,8 @@ export class SubstitutionRendererComponent {
       ConfirmationModalComponent,
       { initialState }
     );
-    confirmDeletionModalRef.content.closeSubject.subscribe(
-      async (result: boolean) => {
+    confirmDeletionModalRef.content.closeSubject.pipe(takeUntil(this.destroy$)).subscribe(
+      (result: boolean) => {
         if (result) {
           this.settings.selectedSubstitutionIndex = index;
           this.deleteSub.emit(index);

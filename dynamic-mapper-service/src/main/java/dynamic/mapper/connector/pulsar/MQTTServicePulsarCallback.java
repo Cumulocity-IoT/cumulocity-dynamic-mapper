@@ -1,31 +1,13 @@
-/*
- * Copyright (c) 2025 Cumulocity GmbH.
- *
- * SPDX-License-Identifier: Apache-2.0
- *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *       http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- *
- *  @authors Christof Strack, Stefan Witschel
- *
- */
-
 package dynamic.mapper.connector.pulsar;
 
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.pulsar.client.api.Consumer;
 import org.apache.pulsar.client.api.Message;
@@ -45,12 +27,34 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class MQTTServicePulsarCallback implements MessageListener<byte[]> {
+
+    /**
+     * Maximum number of consecutive failures (timeout or error) before treating
+     * a specific message as a poison pill and ACKing it to break the infinite redelivery loop.
+     * After this threshold, the message is acknowledged (discarded) and a hard error is logged.
+     * The counter is reset to zero on every successful message processing.
+     */
+    private static final int MAX_CONSECUTIVE_FAILURES = 5;
+
+    /** Maximum time a mapping can use CPU-time to process end to end. Only used in error cases,
+     *  otherwise configured timeout is used
+     */
+    private static final int MAX_PROCESSING_TIMEOUT = 30000;
+
+
     private GenericMessageCallback genericMessageCallback;
     private String tenant;
     private String connectorIdentifier;
     private String connectorName;
     private ServiceConfiguration serviceConfiguration;
     private ExecutorService virtualThreadPool;
+    /**
+     * Counts consecutive failures per message ID (timeout / error) without a successful processing.
+     * Each message is tracked independently to prevent one failing message from affecting others.
+     * When a message's counter exceeds {@link #MAX_CONSECUTIVE_FAILURES}, it is treated as a poison pill
+     * and ACKed to break an infinite redelivery loop.
+     */
+    private final Map<String, AtomicInteger> failureCountPerMessage = new ConcurrentHashMap<>();
 
     public MQTTServicePulsarCallback(String tenant, ConfigurationRegistry configurationRegistry,
             GenericMessageCallback callback, String connectorIdentifier, String connectorName) {
@@ -68,6 +72,7 @@ public class MQTTServicePulsarCallback implements MessageListener<byte[]> {
         String topic = message.getProperty(MQTTServicePulsarClient.PULSAR_PROPERTY_TOPIC);
         String client = message.getProperty(MQTTServicePulsarClient.PULSAR_PROPERTY_CLIENT_ID);
         byte[] payloadBytes = message.getData();
+        String messageId = message.getMessageId().toString();
 
         ConnectorMessage connectorMessage = ConnectorMessage.builder()
                 .tenant(tenant)
@@ -80,8 +85,8 @@ public class MQTTServicePulsarCallback implements MessageListener<byte[]> {
 
         if (serviceConfiguration.getLogPayload()) {
             log.info(
-                    "{} - INITIAL: message on topic: [{}], connector: {}, {}",
-                    tenant, towardsDeviceTopic, connectorName, connectorIdentifier);
+                    "{} - INITIAL: message {} on topic: [{}], connector: {}, {}",
+                    tenant, messageId, towardsDeviceTopic, connectorName, connectorIdentifier);
         }
 
         // Process the message
@@ -91,17 +96,32 @@ public class MQTTServicePulsarCallback implements MessageListener<byte[]> {
 
         if (serviceConfiguration.getLogPayload()) {
             log.info(
-                    "{} - PREPARING_RESULTS: message on topic: [{}], connector {}",
-                    tenant, towardsDeviceTopic, connectorIdentifier);
+                    "{} - PREPARING_RESULTS: message {} on topic: [{}], connector {}",
+                    tenant, messageId, towardsDeviceTopic, connectorIdentifier);
         }
 
         // Use the provided virtualThreadPool instead of creating a new thread
         virtualThreadPool.submit(() -> {
+            long effectiveTimeout = timeout;
             try {
-                // Wait for the future to complete
+                // Wait for the future to complete.
+                // Multiply timeout by (attempt + 1) so each retransmission gets progressively
+                // more processing time — useful when the first timeout was caused by a slow server.
+                // attempt = current failure count for this message:
+                //   0 → first try   → 1× timeout
+                //   1 → 2nd try     → 2× timeout
+                //   …  capped at MAX_CONSECUTIVE_FAILURES × timeout
                 List<? extends ProcessingContext<?>> results;
                 if (timeout > 0) {
-                    results = processedResults.getProcessingResult().get(timeout, TimeUnit.MILLISECONDS);
+                    int attempt = failureCountPerMessage.getOrDefault(messageId, new AtomicInteger(0)).get();
+                    effectiveTimeout = Math.min(
+                            (long) timeout * (attempt + 1),
+                            MAX_PROCESSING_TIMEOUT);
+                    if (attempt > 0) {
+                        log.info("{} - Retransmission attempt {}: using increased timeout {}ms (base: {}ms), connector: {}",
+                                tenant, attempt + 1, effectiveTimeout, effectiveTimeout, connectorIdentifier);
+                    }
+                    results = processedResults.getProcessingResult().get(effectiveTimeout, TimeUnit.MILLISECONDS);
                 } else {
                     results = processedResults.getProcessingResult().get();
                 }
@@ -131,35 +151,56 @@ public class MQTTServicePulsarCallback implements MessageListener<byte[]> {
                 }
 
                 if (!hasErrors) {
-                    // No errors found, acknowledge based on original QoS requirements
+                    // No errors found, acknowledge the message and reset failure counter for this message
+                    failureCountPerMessage.remove(messageId);
                     if (serviceConfiguration.getLogPayload()) {
                         log.debug("{} - END: Sending ack for Pulsar message: topic: [{}], connector: {}",
                                 tenant, towardsDeviceTopic, connectorIdentifier);
                     }
                     consumer.acknowledge(message);
                 } else if (httpStatusCode < 500) {
-                    // Client errors - acknowledge to prevent redelivery
+                    // Client errors - acknowledge to prevent redelivery and reset failure counter
+                    failureCountPerMessage.remove(messageId); // client-side error is not a transient failure
                     log.warn("{} - END: Sending ack due to client error for Pulsar message: topic: [{}], connector: {}",
                             tenant, towardsDeviceTopic, connectorIdentifier);
                     consumer.acknowledge(message);
                 } else {
-                    // Server error, negative acknowledge to trigger redelivery
-                    // But only if QoS requires reliability
+                    // Server error (>=500): check poison-pill threshold
                     log.warn(
-                            "{} - END: Sending negative ack due to server error for Pulsar message: topic: [{}], connector: {}",
-                            tenant, towardsDeviceTopic, connectorIdentifier);
-                    consumer.negativeAcknowledge(message);
+                            "{} - END: Server error (HTTP {}), sending negative ack for Pulsar redelivery. topic: [{}], connector: {}",
+                            tenant, httpStatusCode, towardsDeviceTopic, connectorIdentifier);
+                    handleFailureOrPoisonPill(consumer, message, messageId, towardsDeviceTopic);
                 }
             } catch (InterruptedException | ExecutionException e) {
-                // Processing failed, negative acknowledge to allow redelivery
+                // Processing failed, check poison-pill threshold
                 log.warn("{} - END: Was interrupted for Pulsar message: topic: [{}], connector: {}",
                         tenant, towardsDeviceTopic, connectorIdentifier);
-                consumer.negativeAcknowledge(message);
+                handleFailureOrPoisonPill(consumer, message, messageId, towardsDeviceTopic);
             } catch (TimeoutException e) {
-                var cancelResult = processedResults.getProcessingResult().cancel(true);
-                log.warn("{} - END: Processing timed out with: {} milliseconds, connector {}, result of cancelling: {}",
-                        tenant, timeout, connectorIdentifier, cancelResult);
-                consumer.negativeAcknowledge(message);
+                // Cancel the processing task to stop execution
+                log.warn("{} - Timeout occurred, initiating cancellation of processing task, connector: {}",
+                        tenant, connectorIdentifier);
+                var cancelResult = processedResults.cancelProcessing();
+                log.info("{} - Cancellation result: future was cancelled={}, connector: {}", tenant, cancelResult,
+                        connectorIdentifier);
+
+                // Give the cancellation a brief moment to take effect (interrupt flag propagation,
+                // GraalVM context closure).
+                try {
+                    Thread.sleep(50); //NOSONAR intentional wait for cancellation to take effect
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                }
+
+                if (!cancelResult && processedResults.getCancellationRequested().get()) {
+                    log.warn("{} - Future was already running when cancellation was requested. Waiting for it to complete or be interrupted, connector: {}.",
+                            tenant, connectorIdentifier);
+                }
+
+                log.warn(
+                        "{} - END: Processing timed out after {} ms, sending negative ack for Pulsar redelivery. connector: {}, cancel result: {}",
+                        tenant, effectiveTimeout, connectorIdentifier, cancelResult);
+                handleFailureOrPoisonPill(consumer, message, messageId, towardsDeviceTopic);
             } catch (PulsarClientException e) {
                 log.error("{} - Error acknowledging Pulsar message: topic: [{}], connector: {}",
                         tenant, towardsDeviceTopic, connectorIdentifier, e);
@@ -167,4 +208,51 @@ public class MQTTServicePulsarCallback implements MessageListener<byte[]> {
             return null;
         });
     }
+
+    /**
+     * Handles failure-to-acknowledge or poison-pill detection for unreliable messages.
+     * Each message is tracked independently by its ID, so one failing message does not affect others.
+     * <ul>
+     *   <li>If the consecutive-failure counter for this specific message has reached
+     *       {@link #MAX_CONSECUTIVE_FAILURES}: the message is treated as a <em>poison pill</em>
+     *       — it is ACKed (discarded) and a hard error is logged. This breaks an infinite redelivery
+     *       loop caused by a permanently unprocessable message.</li>
+     *   <li>Otherwise the message is negative-ACKed to trigger Pulsar's native redelivery mechanism.</li>
+     * </ul>
+     *
+     * @param consumer  the Pulsar consumer (needed for ack/nack)
+     * @param message   the unacknowledged Pulsar message
+     * @param messageId the unique message ID for tracking failures
+     * @param topic     human-readable topic string for logging
+     */
+    private void handleFailureOrPoisonPill(Consumer<byte[]> consumer, Message<byte[]> message,
+                                           String messageId, String topic) {
+        // Track failures per message ID independently
+        int failureCount = failureCountPerMessage
+            .computeIfAbsent(messageId, k -> new AtomicInteger(0))
+            .incrementAndGet();
+
+        if (failureCount >= MAX_CONSECUTIVE_FAILURES) {
+            log.error("{} - POISON PILL: {} consecutive failures without success — ACKing message to prevent "
+                    + "infinite redelivery loop. Message is discarded. messageId: {}, topic: [{}], connector: {}",
+                    tenant, failureCount, messageId, topic, connectorIdentifier);
+            failureCountPerMessage.remove(messageId);
+            try {
+                consumer.acknowledge(message);
+            } catch (PulsarClientException e) {
+                log.error("{} - Error acknowledging poison-pill Pulsar message: messageId: {}, topic: [{}], connector: {}",
+                        tenant, messageId, topic, connectorIdentifier, e);
+            }
+            return;
+        }
+
+        if (failureCount > 1) {
+            log.warn("{} - Redelivery attempt {} for message: {}, topic: [{}], connector: {}",
+                    tenant, failureCount, messageId, topic, connectorIdentifier);
+        }
+
+        // Negative-ACK triggers Pulsar's native redelivery mechanism
+        consumer.negativeAcknowledge(message);
+    }
 }
+

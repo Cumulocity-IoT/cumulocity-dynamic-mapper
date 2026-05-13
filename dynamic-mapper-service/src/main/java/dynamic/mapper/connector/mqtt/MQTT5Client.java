@@ -21,6 +21,7 @@
 
 package dynamic.mapper.connector.mqtt;
 
+import com.hivemq.client.mqtt.MqttGlobalPublishFilter;
 import com.hivemq.client.mqtt.datatypes.MqttQos;
 import com.hivemq.client.mqtt.mqtt5.Mqtt5AsyncClient;
 import com.hivemq.client.mqtt.mqtt5.Mqtt5BlockingClient;
@@ -41,6 +42,7 @@ import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.ConnectorStatus;
+import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
@@ -73,11 +75,11 @@ public class MQTT5Client extends AMQTTClient {
      * Full constructor with dependencies
      */
     public MQTT5Client(ConfigurationRegistry configurationRegistry,
-            ConnectorRegistry connectorRegistry,
-            ConnectorConfiguration connectorConfiguration,
-            CamelDispatcherInbound dispatcher,
-            String additionalSubscriptionIdTest,
-            String tenant) {
+                       ConnectorRegistry connectorRegistry,
+                       ConnectorConfiguration connectorConfiguration,
+                       CamelDispatcherInbound dispatcher,
+                       String additionalSubscriptionIdTest,
+                       String tenant) {
         super(configurationRegistry, connectorRegistry, connectorConfiguration,
                 dispatcher, additionalSubscriptionIdTest, tenant);
         this.connectorSpecification = createConnectorSpecification();
@@ -101,8 +103,8 @@ public class MQTT5Client extends AMQTTClient {
                 .serverPort(mqttPort)
                 .identifier(clientId + (additionalSubscriptionIdTest != null ? additionalSubscriptionIdTest : ""))
                 .transportConfig()
-                    .socketConnectTimeout(10, TimeUnit.SECONDS)
-                    .applyTransportConfig();
+                .socketConnectTimeout(10, TimeUnit.SECONDS)
+                .applyTransportConfig();
 
         // Add authentication if provided
         if (!StringUtils.isEmpty(user)) {
@@ -175,7 +177,16 @@ public class MQTT5Client extends AMQTTClient {
                 configurationRegistry,
                 dispatcher,
                 connectorIdentifier,
-                connectorName);
+                connectorName,
+                // Reconnect trigger for timeout/server-error retransmission:
+                // 1. disconnect() → broker retains unACKed messages in the session
+                //    (sets intentionalDisconnect=true so housekeeping does NOT auto-reconnect)
+                // 2. connect()    → resets intentionalDisconnect=false via beginConnection()
+                //                   and re-establishes the session so the broker retransmits
+                () -> {
+                    disconnect();
+                    connect();
+                });
     }
 
     @Override
@@ -193,12 +204,25 @@ public class MQTT5Client extends AMQTTClient {
                     log.info("{} - Connection attempt {} of {}", tenant, attempt + 1, maxAttempts);
                     Thread.sleep(WAIT_PERIOD_MS);
                 }
-
-                Mqtt5ConnAck ack = mqttClient.connectWith()
-                        .cleanStart(cleanSession)
-                        .keepAlive(60)
-                        .send();
-
+                Mqtt5ConnAck ack;
+                if (isSparkplugHost) {
+                    ack = mqttClient.connectWith()
+                            .cleanStart(cleanSession)
+                            .willPublish(Mqtt5Publish.builder()
+                                    .topic(sparkplugCertificateManager.getStateTopicName())
+                                    .payload(sparkplugCertificateManager.buildCertificatePayload(false))
+                                    .qos(MqttQos.AT_LEAST_ONCE)
+                                    .retain(true)
+                                    .build()
+                            )
+                            .keepAlive(60)
+                            .send();
+                } else {
+                    ack = mqttClient.connectWith()
+                            .cleanStart(cleanSession)
+                            .keepAlive(60)
+                            .send();
+                }
                 if (!ack.getReasonCode().equals(Mqtt5ConnAckReasonCode.SUCCESS)) {
                     throw new ConnectorException(
                             String.format("Connection failed with code: %s", ack.getReasonCode().name()));
@@ -356,12 +380,14 @@ public class MQTT5Client extends AMQTTClient {
         for (int i = 0; i < requests.size(); i++) {
             DynamicMapperRequest request = requests.get(i);
 
-            if (request == null || request.getRequest() == null) {
+            if (request == null || (request.getRequest() == null && request.getBinaryPayload() == null)) {
                 log.warn("{} - Skipping null request or payload ({}/{})", tenant, i + 1, requests.size());
                 continue;
             }
 
-            String payload = request.getRequest();
+            byte[] payloadBytes = request.getBinaryPayload() != null
+                    ? request.getBinaryPayload()
+                    : request.getRequest().getBytes(StandardCharsets.UTF_8);
             String topic = request.getPublishTopic() != null ? request.getPublishTopic() : context.getResolvedPublishTopic();
 
             if (topic == null || topic.isEmpty()) {
@@ -375,7 +401,7 @@ public class MQTT5Client extends AMQTTClient {
                         .topic(topic)
                         .retain(context.getRetain() == null ? false : context.getRetain())
                         .qos(mqttQos)
-                        .payload(payload.getBytes(StandardCharsets.UTF_8));
+                        .payload(payloadBytes);
 
                 // MQTT5 specific: can add user properties, content type, etc.
                 // Example: messageBuilder.contentType("application/json");
@@ -385,8 +411,8 @@ public class MQTT5Client extends AMQTTClient {
                 mqttClient.publish(message);
 
                 if (context.getMapping().getDebug() || context.getServiceConfiguration().getLogPayload()) {
-                    log.info("{} - Published message ({}/{}): topic=[{}], QoS: {}, payload: {}",
-                            tenant, i + 1, requests.size(), topic, mqttQos, payload);
+                    log.info("{} - Published message ({}/{}): topic=[{}], QoS: {}, payload: {} bytes",
+                            tenant, i + 1, requests.size(), topic, mqttQos, payloadBytes.length);
                 } else {
                     log.debug("{} - Published message ({}/{}): topic=[{}], QoS: {}", tenant, i + 1, requests.size(), topic, mqttQos);
                 }
@@ -397,6 +423,25 @@ public class MQTT5Client extends AMQTTClient {
                 context.addError(new dynamic.mapper.processor.ProcessingException(
                         "Failed to publish message " + (i + 1) + "/" + requests.size(), e));
             }
+        }
+    }
+
+    @Override
+    protected void registerPreConnectPublishHandler() {
+        // Register mqttCallback as the global fallback listener so that messages pushed
+        // by the broker immediately on reconnect (persistent session / cleanStart=false)
+        // are routed to our callback even before per-topic subscriptions are re-established.
+        //
+        // We use MqttGlobalPublishFilter.REMAINING (not ALL) so that once per-topic
+        // callbacks are registered via subscribe(), those callbacks become the sole handler
+        // for their topics. REMAINING only delivers messages that have no matching
+        // per-subscription callback, preventing duplicate processing.
+        if (mqttCallback != null) {
+            mqttClient.toAsync().publishes(MqttGlobalPublishFilter.REMAINING, mqttCallback, true);
+            log.info("{} - Registered MQTT5 global publish handler (REMAINING filter) for persistent session (cleanStart=false) on connector: {}",
+                    tenant, connectorName);
+        } else {
+            log.warn("{} - Cannot register pre-connect publish handler: mqttCallback not yet created", tenant);
         }
     }
 
@@ -417,10 +462,49 @@ public class MQTT5Client extends AMQTTClient {
     @Override
     protected ConnectorSpecification createConnectorSpecification() {
         return ConnectorSpecificationBuilder
-                .create("Generic MQTT 5.0", ConnectorType.MQTT)
+                .create("MQTT 5.0", ConnectorType.MQTT)
                 .description("Connector for connecting to external MQTT 5.0 broker over tcp or websocket.")
                 .properties(buildCommonMqttProperties(MQTT_VERSION_5_0))
                 .supportedDirections(supportedDirections())
                 .build();
+    }
+
+    @Override
+    protected SparkplugCertificateManager.SparkplugPublisher createSparkplugPublisher() {
+        return new SparkplugCertificateManager.SparkplugPublisher() {
+            @Override
+            public void publishCertificate(String topic, byte[] payload) throws Exception {
+                if (!isConnected() || mqttClient == null) {
+                    throw new ConnectorException("Cannot publish Sparkplug certificate: not connected");
+                }
+
+                try {
+                    Mqtt5Publish message = Mqtt5Publish.builder()
+                            .topic(topic)
+                            .retain(true)
+                            .qos(MqttQos.AT_LEAST_ONCE)
+                            .payload(payload)
+                            .build();
+
+                    mqttClient.publish(message);
+                    log.debug("{} - Published Sparkplug certificate to topic: [{}]", tenant, topic);
+                } catch (Exception e) {
+                    log.error("{} - Error publishing Sparkplug certificate to topic [{}]", tenant, topic, e);
+                    throw new ConnectorException("Failed to publish Sparkplug certificate", e);
+                }
+            }
+
+            @Override
+            public void subscribeTopic(String topicPattern) throws Exception {
+                try {
+                    subscribe(topicPattern, Qos.AT_LEAST_ONCE);
+                    log.debug("{} - Subscribed to Sparkplug topic pattern: [{}]", tenant, topicPattern);
+                } catch (ConnectorException e) {
+                    log.warn("{} - Failed to subscribe to Sparkplug topic pattern [{}]: {}",
+                            tenant, topicPattern, e.getMessage());
+                    throw e;
+                }
+            }
+        };
     }
 }

@@ -238,6 +238,7 @@ export interface ExtensionEntry {
   extensionName: string;
   eventName: string;
   fqnClassName?: string;
+  description?: string;
   loaded?: boolean;
   message?: string;
   extensionType: ExtensionType;
@@ -277,6 +278,7 @@ export interface StepperConfiguration {
 
 export enum TransformationType {
   DEFAULT = 'DEFAULT',
+  /** @deprecated Removed in 6.3 — existing mappings are read-only and can only be exported or deleted. */
   SUBSTITUTION_AS_CODE = 'SUBSTITUTION_AS_CODE',
   SMART_FUNCTION = 'SMART_FUNCTION',
   JSONATA = 'JSONATA',
@@ -293,19 +295,22 @@ export enum MappingType {
    *  Retained for display of not-yet-migrated mappings only. */
   EXTENSION_JAVA = 'EXTENSION_JAVA',
   ANY_PAYLOAD = 'ANY_PAYLOAD',
+  SPARKPLUGB = 'SPARKPLUGB',
 }
 
 export const TransformationTypeLabels = {
   [Direction.INBOUND]: {
     [TransformationType.DEFAULT]: 'Default Transformation',
-    [TransformationType.SUBSTITUTION_AS_CODE]: 'Substitution as JavaScript (deprecated)',
+    // eslint-disable-next-line deprecation/deprecation
+    [TransformationType.SUBSTITUTION_AS_CODE]: 'Substitution as JavaScript (removed — export or delete only)',
     [TransformationType.SMART_FUNCTION]: 'Smart Function (JavaScript) to create Cumulocity API calls',
     [TransformationType.JSONATA]: 'Substitution as JSONata Expression',
     [TransformationType.EXTENSION_JAVA]: 'Java Extension (Smart Java Function)'
   },
   [Direction.OUTBOUND]: {
     [TransformationType.DEFAULT]: 'Default Transformation',
-    [TransformationType.SUBSTITUTION_AS_CODE]: 'Substitution as JavaScript (deprecated)',
+    // eslint-disable-next-line deprecation/deprecation
+    [TransformationType.SUBSTITUTION_AS_CODE]: 'Substitution as JavaScript (removed — export or delete only)',
     [TransformationType.SMART_FUNCTION]: 'Smart Function (JavaScript) to create Broker Payload',
     [TransformationType.JSONATA]: 'Substitution as JSONata Expression',
     [TransformationType.EXTENSION_JAVA]: 'Java Extension (Smart Java Function)'
@@ -314,7 +319,8 @@ export const TransformationTypeLabels = {
 
 export const TransformationTypeDescriptions = {
   [TransformationType.DEFAULT]: 'Uses the default transformation logic without custom processing',
-  [TransformationType.SUBSTITUTION_AS_CODE]: 'Allows writing custom JavaScript code for complex transformations',
+  // eslint-disable-next-line deprecation/deprecation
+  [TransformationType.SUBSTITUTION_AS_CODE]: 'Removed in release 6.3 — this mapping can only be exported or deleted.',
   [TransformationType.SMART_FUNCTION]: 'Executes a predefined Smart Function for data transformation and create payload for Cumulocity API calls. Supports setting sourceId to route data to different devices',
   [TransformationType.JSONATA]: 'Uses JSONata query and transformation language for data mapping',
   [TransformationType.EXTENSION_JAVA]: 'Java extension returns domain objects (CumulocityObject[] for inbound, DeviceMessage[] for outbound) using Smart Java Function pattern with builder syntax. Supports setting sourceId to route data to different devices'
@@ -328,6 +334,7 @@ export const MappingTypeLabels = {
   // eslint-disable-next-line deprecation/deprecation
   [MappingType.EXTENSION_JAVA]: 'Payload parsed in Java Extension (deprecated — use Any Payload)',
   [MappingType.ANY_PAYLOAD]: 'Any Payload (e.g. SparkPlugB, Protobuf, XML)',
+  [MappingType.SPARKPLUGB]: 'SparkPlug B Payload',
 } as const;
 
 export const MappingTypeDescriptions = {
@@ -338,6 +345,7 @@ export const MappingTypeDescriptions = {
   // eslint-disable-next-line deprecation/deprecation
   [MappingType.EXTENSION_JAVA]: 'Deprecated — use Any Payload with Java Extension transformation type instead',
   [MappingType.ANY_PAYLOAD]: 'Payload format is unknown or binary (e.g. SparkPlugB, Protobuf, XML). Processed by a Smart Function (JavaScript) or a Java Extension.',
+  [MappingType.SPARKPLUGB]: 'SparkPlug B binary payload. Inbound: decoded automatically via Eclipse Tahu; outbound NCMD/DCMD: metric object serialized to protobuf binary. Only Smart Function transformations are supported.',
 } as const;
 
 export interface MappingTypeProperties {
@@ -582,6 +590,46 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
       allowTestSending: false,
       advanceFromStepToEndStep: 2
     })
+  },
+  [MappingType.SPARKPLUGB]: {
+    key: MappingType.SPARKPLUGB,
+    enabled: true,
+    description:
+      'Payload is in SparkPlug B binary format (NBIRTH, NDATA, DBIRTH, DDATA, …). ' +
+      'For inbound mappings the mapper decodes the protobuf payload automatically using the Eclipse Tahu library and ' +
+      'passes a rich JSON object to your Smart Function. ' +
+      'For outbound NCMD/DCMD mappings the metric object returned by your Smart Function is serialized ' +
+      'to SparkPlug B protobuf binary before publishing. ' +
+      'NBIRTH / DBIRTH metric definitions are stored on the managed object so that subsequent ' +
+      'NDATA / DDATA messages can resolve metric aliases. ' +
+      'The aliasMap (metric name → alias) is available in the outbound Smart Function via ' +
+      'context.getConfig().aliasMap.',
+    properties: {
+      [Direction.INBOUND]: {
+        snoopSupported: false,
+        directionSupported: true,
+        substitutionsAsCodeSupported: false,
+        // Only Smart Function is supported for SparkPlug B — the decoder handles binary parsing.
+        supportedTransformationTypes: [TransformationType.SMART_FUNCTION]
+      },
+      [Direction.OUTBOUND]: {
+        snoopSupported: false,
+        directionSupported: true,
+        substitutionsAsCodeSupported: false,
+        // Only Smart Function is supported — the serializer handles binary SparkPlug B encoding.
+        supportedTransformationTypes: [TransformationType.SMART_FUNCTION]
+      },
+    },
+    stepperConfiguration: createStepperConfig({
+      showEditorSource: false,
+      showEditorTarget: false,
+      showFilterExpression: false,
+      allowDefiningSubstitutions: false,
+      allowNoDefinedIdentifier: true,
+      allowTestTransformation: false,
+      allowTestSending: false,
+      advanceFromStepToEndStep: 2
+    })
   }
 };
 
@@ -637,6 +685,11 @@ export const API = {
     name: 'OPERATION',
     identifier: 'deviceId',
     notificationFilter: 'operations'
+  },
+  CUSTOM: {
+    name: 'CUSTOM',
+    identifier: '',
+    notificationFilter: 'custom'
   },
   ALL: { name: 'ALL', identifier: '*', notificationFilter: '*' }
 };
@@ -746,6 +799,7 @@ export function getGenericDeviceIdentifier(mapping: Mapping): string {
 }
 
 export function isSubstitutionsAsCode(mapping: Mapping): boolean {
+  // eslint-disable-next-line deprecation/deprecation
   return mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE ||
     mapping.transformationType === TransformationType.SMART_FUNCTION;
 }

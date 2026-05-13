@@ -22,9 +22,17 @@
 package dynamic.mapper.configuration;
 
 public enum TemplateType {
-    INBOUND, // deprecated, use INBOUND_SUBSTITUTION_AS_CODE instead
-    OUTBOUND, // deprecated, use OUTBOUND_SUBSTITUTION_AS_CODE instead
+    /** @deprecated No longer in use. */
+    @Deprecated(since = "6.3", forRemoval = false)
+    INBOUND,
+    /** @deprecated No longer in use. */
+    @Deprecated(since = "6.3", forRemoval = false)
+    OUTBOUND,
+    /** @deprecated Substitution As Code is no longer supported. Kept for deserialization of existing tenant data. */
+    @Deprecated(since = "6.3", forRemoval = false)
     INBOUND_SUBSTITUTION_AS_CODE,
+    /** @deprecated Substitution As Code is no longer supported. Kept for deserialization of existing tenant data. */
+    @Deprecated(since = "6.3", forRemoval = false)
     OUTBOUND_SUBSTITUTION_AS_CODE,
     INBOUND_SMART_FUNCTION,
     OUTBOUND_SMART_FUNCTION,

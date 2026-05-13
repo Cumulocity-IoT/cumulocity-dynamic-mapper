@@ -23,6 +23,7 @@ package dynamic.mapper.notification.service;
 
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
+import dynamic.mapper.connector.core.client.ConnectorType;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionRepresentation;
 import dynamic.mapper.configuration.ConnectorId;
@@ -91,6 +92,10 @@ public class NotificationConnectionManager {
     private final Map<String, Map<String, CustomWebSocketClient>> dynamicDeviceClients = new ConcurrentHashMap<>();
     private final Map<String, CustomWebSocketClient> managementClients = new ConcurrentHashMap<>();
     private final Map<String, CustomWebSocketClient> cacheInventoryClients = new ConcurrentHashMap<>();
+    // Explorer: one WebSocket per session (keyed by sessionId)
+    private final Map<String, CustomWebSocketClient> explorerDeviceClients = new ConcurrentHashMap<>();
+    // Explorer session metadata: sessionId → [tenant, subscriberName] for cleanup
+    private final Map<String, String[]> explorerDeviceSessionMeta = new ConcurrentHashMap<>();
     private final Map<String, NotificationCallback> managementCallbacks = new ConcurrentHashMap<>();
     private final Map<String, NotificationCallback> cacheInventoryCallbacks = new ConcurrentHashMap<>();
     //FIXME As we have multiple WS connections the statusCode will only reflect the last connection attempt. We should consider a more granular status tracking if needed.
@@ -100,7 +105,78 @@ public class NotificationConnectionManager {
     // Scheduled executor for reconnection
     private volatile ScheduledExecutorService reconnectExecutor;
 
-    // === Public API ===
+    /**
+     * Create a subscriber token for EXPLORER_DEVICE_SUBSCRIPTION and open a WebSocket
+     * so the explorer session receives Notification 2.0 events for the subscribed device.
+     * Prefers a non-TEST dispatcher so that the WebSocket callback processes notifications
+     * normally — TEST connector dispatchers skip live notifications (early-return guard in
+     * CamelDispatcherOutbound.onNotification) and would silently drop all events.
+     */
+    public void initializeExplorerDeviceClient(String tenant, String sessionId) {
+        Map<String, CamelDispatcherOutbound> dispatchers = connectorRegistry.getDispatchers(tenant);
+        if (dispatchers == null || dispatchers.isEmpty()) {
+            log.warn("{} - No outbound dispatchers available for explorer session {}", tenant, sessionId);
+            return;
+        }
+        // Prefer a non-TEST dispatcher: CamelDispatcherOutbound.onNotification returns early
+        // for TEST connectors without calling processNotification, so notifyOutboundExplorerListeners
+        // would never fire and no messages would appear in the explorer.
+        CamelDispatcherOutbound dispatcher = dispatchers.values().stream()
+                .filter(d -> isValidDispatcher(d)
+                        && d.getConnectorClient().getConnectorType() != ConnectorType.TEST)
+                .findFirst()
+                .orElseGet(() -> dispatchers.values().stream()
+                        .filter(this::isValidDispatcher)
+                        .findFirst()
+                        .orElse(null));
+        if (dispatcher == null) {
+            log.warn("{} - No valid dispatcher for explorer session {}", tenant, sessionId);
+            return;
+        }
+        String tokenSeed = Utils.EXPLORER_DEVICE_SUBSCRIBER + sessionId.replace("-", "") + additionalSubscriptionIdTest;
+        try {
+            String token = subscriptionsService.callForTenant(tenant,
+                    () -> tokenManager.createToken(Utils.EXPLORER_DEVICE_SUBSCRIPTION, tokenSeed));
+            ConnectorId connectorInfo = new ConnectorId(
+                    dispatcher.getConnectorClient().getConnectorName(),
+                    dispatcher.getConnectorClient().getConnectorIdentifier());
+            CustomWebSocketClient client = connect(tenant, token, dispatcher, connectorInfo);
+            if (client != null) {
+                CustomWebSocketClient old = explorerDeviceClients.put(sessionId, client);
+                if (old != null) { try { old.close(); } catch (Exception ignored) {} }
+                explorerDeviceSessionMeta.put(sessionId, new String[]{tenant, tokenSeed});
+                log.info("{} - Explorer device WebSocket opened for session {}", tenant, sessionId);
+            }
+        } catch (Exception e) {
+            log.error("{} - Failed to open explorer device WebSocket for session {}: {}",
+                    tenant, sessionId, e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Close and remove the explorer device WebSocket for the given session,
+     * and delete the subscriber from C8Y so it no longer appears in the
+     * Notification 2.0 subscriber list.
+     */
+    public void closeExplorerDeviceClient(String sessionId) {
+        CustomWebSocketClient client = explorerDeviceClients.remove(sessionId);
+        if (client != null) {
+            try { client.close(); } catch (Exception ignored) {}
+            log.info("Explorer device WebSocket closed for session {}", sessionId);
+        }
+        String[] meta = explorerDeviceSessionMeta.remove(sessionId);
+        if (meta != null) {
+            String tenant = meta[0];
+            String subscriberName = meta[1];
+            try {
+                subscriptionsService.callForTenant(tenant,
+                        () -> { tokenManager.unsubscribeBySubscriberName(Utils.EXPLORER_DEVICE_SUBSCRIPTION, subscriberName); return null; });
+                log.info("{} - Explorer device subscriber '{}' deleted from C8Y", tenant, subscriberName);
+            } catch (Exception e) {
+                log.warn("{} - Could not delete explorer device subscriber '{}': {}", tenant, subscriberName, e.getMessage());
+            }
+        }
+    }
 
     public void initializeStaticDeviceClient(String tenant) {
         staticDeviceClients.computeIfAbsent(tenant, k -> new ConcurrentHashMap<>());

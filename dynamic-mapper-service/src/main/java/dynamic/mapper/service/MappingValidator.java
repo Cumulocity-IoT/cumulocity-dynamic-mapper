@@ -139,6 +139,7 @@ public class MappingValidator {
                 mapping.getSnoopStatus() == SnoopStatus.STARTED ||
                 mapping.getMappingType() == MappingType.PROTOBUF_INTERNAL ||
                 mapping.getMappingType() == MappingType.ANY_PAYLOAD ||
+                mapping.getMappingType() == MappingType.SPARKPLUGB ||
                 mapping.getTransformationType() == TransformationType.EXTENSION_JAVA ||
                 mapping.getTransformationType() == TransformationType.SMART_FUNCTION ||
                 mapping.getTransformationType() == TransformationType.SUBSTITUTION_AS_CODE ||
@@ -303,7 +304,8 @@ public class MappingValidator {
         // Validate target template (skip for certain mapping types)
         boolean skipTargetValidation = mapping.getTransformationType() == TransformationType.EXTENSION_JAVA ||
                 mapping.getMappingType() == MappingType.PROTOBUF_INTERNAL ||
-                mapping.getMappingType() == MappingType.ANY_PAYLOAD;
+                mapping.getMappingType() == MappingType.ANY_PAYLOAD ||
+                mapping.getMappingType() == MappingType.SPARKPLUGB;
 
         if (!skipTargetValidation && !isValidJSON(mapping.getTargetTemplate())) {
             errors.add(ValidationError.Target_Template_Must_Be_Valid_JSON);
@@ -330,6 +332,12 @@ public class MappingValidator {
     public List<ValidationError> validateMappingTypeConstraints(Mapping mapping) {
         List<ValidationError> errors = new ArrayList<>();
         if (MappingType.ANY_PAYLOAD.equals(mapping.getMappingType())
+                && !TransformationType.SMART_FUNCTION.equals(mapping.getTransformationType())
+                && !TransformationType.EXTENSION_JAVA.equals(mapping.getTransformationType())) {
+            errors.add(ValidationError.Unparsed_MappingType_Requires_Smart_Function_Transformation_Type);
+        }
+        // SPARKPLUGB supports only SMART_FUNCTION transformations
+        if (MappingType.SPARKPLUGB.equals(mapping.getMappingType())
                 && !TransformationType.SMART_FUNCTION.equals(mapping.getTransformationType())) {
             errors.add(ValidationError.Unparsed_MappingType_Requires_Smart_Function_Transformation_Type);
         }

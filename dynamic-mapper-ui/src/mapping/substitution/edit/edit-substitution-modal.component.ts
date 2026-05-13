@@ -69,7 +69,6 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
 
     this.editedSubstitution = this.substitution;
     this.repairStrategyOptions = Object.keys(RepairStrategy)
-      // .filter((key) => key != 'IGNORE' && key != 'CREATE_IF_MISSING')
       .filter((key) => key != 'IGNORE')
       .map((key) => {
         return {
@@ -101,8 +100,6 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
       expandArray: this.editedSubstitution.expandArray,
       repairStrategy: this.editedSubstitution.repairStrategy
     });
-    // console.log("Repair Options:", this.repairStrategyOptions);
-    // console.log('Existing substitution:', this.existingSubstitution);
   }
 
   createForm() {
@@ -116,12 +113,10 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
   }
 
   onDismiss() {
-    // console.log('Dismiss');
     this.closeSubject.next(undefined);
   }
 
   onSave() {
-    // console.log('Save');
     if (this.substitutionForm.valid) {
       const formValue = this.substitutionForm.value;
       // Update editedSubstitution with form values
@@ -135,21 +130,13 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
 
   onOverrideChanged() {
     const result = this.isDuplicate && !this.override;
-    // console.log('Override:', result);
     this.disabled$.next(result);
   }
 
   isExpandToArrayDisabled() {
     const d0 = this.stepperConfiguration.editorMode == EditorMode.READ_ONLY;
     const d1 = this.mapping.direction == Direction.OUTBOUND;
-    // const d2 = definesDeviceIdentifier(
-    //   this.mapping.targetAPI,
-    //   this.substitution,
-    //   this.mapping.direction
-    // );
-    // const r = d0 || d1 || (!d1 && d2);
     const r = d0 || d1;
-    // console.log("Evaluation", d0,d1,d2,d3, this.templateModel.currentSubstitution)
     return r;
   }
 
@@ -157,7 +144,6 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
     const r =
       this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
       this.stepperConfiguration.direction == Direction.OUTBOUND;
-    // console.log("Evaluation", d0,d1,d2,d3, this.templateModel.currentSubstitution)
     return r;
   }
 

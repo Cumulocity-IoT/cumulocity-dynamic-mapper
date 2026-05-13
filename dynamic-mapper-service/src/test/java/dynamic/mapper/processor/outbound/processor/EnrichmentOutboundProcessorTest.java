@@ -426,31 +426,6 @@ class EnrichmentOutboundProcessorTest {
     }
 
     @Test
-    void testProcessWithSubstitutionAsCode() throws Exception {
-        // Given - Substitution as code transformation
-        mapping.setTransformationType(TransformationType.SUBSTITUTION_AS_CODE);
-        mapping.setCode("function transform(input) { return input; }");
-
-        // GraalVM Engine mock will cause context creation to fail
-        when(configurationRegistry.getGraalEngine(TEST_TENANT)).thenReturn(graalEngine);
-
-        // When
-        processor.process(exchange); // line 430
-
-        // Then - Verify error handling for GraalVM setup failure
-        verify(configurationRegistry).getGraalEngine(TEST_TENANT);
-
-        assertTrue(mappingStatus.errors >= 1L,
-                "Should have recorded GraalVM setup error");
-
-        verify(processingContext).addError(any());
-        verify(mappingService).increaseAndHandleFailureCount(
-                eq(TEST_TENANT), eq(mapping), eq(mappingStatus));
-
-        log.info("✅ Substitution as code test passed (handled GraalVM setup error)");
-    }
-
-    @Test
     void testProcessWithSmartFunction() throws Exception {
         // Given - Smart function transformation
         mapping.setTransformationType(TransformationType.SMART_FUNCTION);
@@ -589,7 +564,7 @@ class EnrichmentOutboundProcessorTest {
     @Test
     void testGraalVMContextCreationError() throws Exception {
         // Given - GraalVM engine throws exception
-        mapping.setTransformationType(TransformationType.SUBSTITUTION_AS_CODE);
+        mapping.setTransformationType(TransformationType.SMART_FUNCTION);
         mapping.setCode("function transform(input) { return input; }");
 
         // Force an exception from the configuration registry
@@ -613,7 +588,7 @@ class EnrichmentOutboundProcessorTest {
     @Test
     void testGraalContextBuilderReuse() throws Exception {
         // Given - Multiple calls with code-based transformations
-        mapping.setTransformationType(TransformationType.SUBSTITUTION_AS_CODE);
+        mapping.setTransformationType(TransformationType.SMART_FUNCTION);
         mapping.setCode("function transform(input) { return input; }");
 
         // GraalVM Engine mock will cause context creation to fail

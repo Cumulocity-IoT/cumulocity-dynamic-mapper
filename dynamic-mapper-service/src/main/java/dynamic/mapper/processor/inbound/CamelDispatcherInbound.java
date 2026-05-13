@@ -68,6 +68,8 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
 
     @Override
     public ProcessingResultWrapper<?> onMessage(ConnectorMessage message) {
+        // Notify any explorer sessions listening on this connector
+        connectorClient.notifyExplorerListeners(message);
         return processMessage(message, null);
     }
 
@@ -152,6 +154,17 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
         Future<List<ProcessingContext<Object>>> futureProcessingResult = virtualThreadPool.submit(() -> {
             try {
                 Exchange exchange = createExchange(connectorMessage, resolvedMappings, testing); // Now can use final variable
+                // Pass the result wrapper so in-flight processors can register cancel actions
+                // (e.g. GraalVM context closure) reachable from the timeout handler.
+                exchange.getIn().setHeader("processingResultWrapper", result);
+
+                // Abort early if the MQTT callback already cancelled (timeout fired before
+                // we even reached the Camel route — cancel actions were not yet registered).
+                if (result.getCancellationRequested().get()) {
+                    log.warn("{} - Cancellation already requested before Camel route started, aborting processing for topic: {}", tenant, topic);
+                    return new ArrayList<>();
+                }
+
                 Exchange resultExchange = producerTemplate.send("direct:processInboundMessage", exchange);
 
                 @SuppressWarnings("unchecked")
@@ -196,6 +209,14 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
                     resultExchange = producerTemplate.send("direct:processInboundMessage", exchange);
                     contexts = resultExchange.getIn().getHeader("processedContexts",
                             List.class);
+                    if (contexts != null) {
+                        for (ProcessingContext<?> retryContext : contexts) {
+                            if (retryContext != null && retryContext.hasError()) {
+                                log.warn("{} - Retry after 422 also failed for topic {}: {}",
+                                        tenant, topic, retryContext.getErrors());
+                            }
+                        }
+                    }
                 }
                 // Stop the timer
                 timer.stop(inboundProcessingTimer);

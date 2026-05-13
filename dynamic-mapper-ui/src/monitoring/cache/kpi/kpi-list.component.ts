@@ -15,6 +15,7 @@ import { KpiDetails } from '../../shared/monitoring.service';
 @Component({
     selector: 'd11r-kpi-list',
     templateUrl: './kpi-list.component.html',
+    styleUrls: ['../../../mapping/shared/mapping.style.css'],
     imports: [
         CommonModule,
         HeaderModule,

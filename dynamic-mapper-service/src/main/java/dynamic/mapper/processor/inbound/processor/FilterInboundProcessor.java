@@ -42,6 +42,7 @@ public class FilterInboundProcessor extends BaseProcessor {
                 if (!Utils.isNodeTrue(extractedSourceContent)) {
                     log.info("{} - Payload will be ignored due to filter: {}, {}", tenant, mappingFilter,
                             payload);
+                    context.getWarnings().add("Payload will be ignored due to filter: " + mappingFilter);
                     context.setIgnoreFurtherProcessing(true);
                 }
             } catch (Exception e) {

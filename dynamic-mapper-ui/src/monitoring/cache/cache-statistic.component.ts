@@ -71,10 +71,12 @@ export class CacheStatisticComponent implements OnInit, OnDestroy {
 
   async clickedClearInboundExternalIdCache() {
     await this.clearCache('INBOUND_ID_CACHE');
+    await this.reload();
   }
 
   async clickedClearInventoryCache() {
     await this.clearCache('INVENTORY_CACHE');
+    await this.reload();
   }
 
   private async clearCache(cacheId: string): Promise<void> {

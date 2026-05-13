@@ -41,7 +41,8 @@ import {
   SAMPLE_TEMPLATES_C8Y,
   SharedService,
   SnoopStatus,
-  StepperConfiguration
+  StepperConfiguration,
+  ALERT_INFO_TIMEOUT
 } from '../../shared';
 import { EditorMode } from '../shared/stepper.model';
 import { MappingConnectorComponent } from '../step-connector/mapping-connector.component';
@@ -59,6 +60,7 @@ const CONSTANTS = {
 
 @Component({
   selector: 'd11r-snooping-stepper',
+  host: { class: 'flex-grow d-col fit-h' },
   templateUrl: 'snooping-stepper.component.html',
   styleUrls: ['../shared/mapping.style.css', 'snooping-stepper.component.css'],
   encapsulation: ViewEncapsulation.None,
@@ -115,7 +117,7 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy, AfterViewIni
       // Wrap changes in setTimeout to avoid ExpressionChangedAfterItHasBeenCheckedError
       setTimeout(() => {
         this.goToLastStep();
-        this.alertService.info('The other steps have been skipped for this mapping type!');
+        this.alertService.add({ text: 'The other steps have been skipped for this mapping type!', type: 'info', timeout: ALERT_INFO_TIMEOUT });
       });
     }
   }
@@ -159,8 +161,8 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy, AfterViewIni
     this.cancel.emit();
   }
 
-  async onStepChange(index: number): Promise<void> {
-    this.currentStepIndex = index;
+  async onStepChange(event: any): Promise<void> {
+    this.currentStepIndex = event['selectedIndex'];
     try {
       this.showSnoopingInfo();
     } catch (error) {
@@ -191,7 +193,7 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy, AfterViewIni
     const message =
       `Wait ${CONSTANTS.HOUSEKEEPING_INTERVAL_SECONDS} seconds before snooped messages are visible. ` +
       `Only the last ${CONSTANTS.SNOOP_TEMPLATES_MAX} messages are visible!`;
-    this.alertService.info(message);
+    this.alertService.add({ text: message, type: 'info', timeout: ALERT_INFO_TIMEOUT });
   }
 
   private handleError(message: string, error: Error): void {

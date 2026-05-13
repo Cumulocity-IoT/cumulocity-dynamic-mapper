@@ -30,8 +30,6 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.ProcessingState;
-import dynamic.mapper.processor.model.RoutingContext;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -55,20 +53,12 @@ public abstract class AbstractSnoopingProcessor extends CommonProcessor {
     public void process(Exchange exchange) throws Exception {
         ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
 
-        // Extract focused contexts
-        RoutingContext routing = context.getRoutingContext();
-        ProcessingState state = context.getProcessingState();
-
         Mapping mapping = context.getMapping();
-        String tenant = routing.getTenant();
+        String tenant = context.getTenant();
 
         handleSnooping(tenant, mapping, context);
 
-        // Mark state to skip further processing
-        state.setIgnoreFurtherProcessing(true);
-
-        // Sync state modifications back to context
-        context.syncFromState(state);
+        context.setIgnoreFurtherProcessing(true);
     }
 
     /**

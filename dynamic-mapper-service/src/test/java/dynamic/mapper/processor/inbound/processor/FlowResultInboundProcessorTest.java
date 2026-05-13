@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import dynamic.mapper.core.ConfigurationRegistry;
 import org.apache.camel.Exchange;
 import org.apache.camel.Message;
 import org.junit.jupiter.api.BeforeEach;
@@ -59,6 +60,7 @@ import dynamic.mapper.processor.model.CumulocityObject;
 import dynamic.mapper.processor.model.CumulocityType;
 import dynamic.mapper.processor.model.ExternalId;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
+import dynamic.mapper.processor.model.MappingAction;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.TransformationType;
@@ -90,6 +92,9 @@ class FlowResultInboundProcessorTest {
     private ServiceConfiguration serviceConfiguration;
 
     @Mock
+    private ConfigurationRegistry configurationRegistry;
+
+    @Mock
     private MappingResolverService mappingResolverService;
 
     private TestableFlowResultInboundProcessor processor;
@@ -106,7 +111,7 @@ class FlowResultInboundProcessorTest {
     @BeforeEach
     void setUp() throws Exception {
         // Create testable processor with default device ID
-        processor = new TestableFlowResultInboundProcessor(mappingService, c8yAgent, objectMapper)
+        processor = new TestableFlowResultInboundProcessor(mappingService, c8yAgent, configurationRegistry, objectMapper)
                 .withDefaultDeviceId(TEST_DEVICE_ID);
 
         mapping = createSampleMapping();
@@ -328,7 +333,7 @@ class FlowResultInboundProcessorTest {
     private CumulocityObject createCumulocityObject() {
         CumulocityObject msg = new CumulocityObject();
         msg.setCumulocityType(CumulocityType.MEASUREMENT);
-        msg.setAction("create");
+        msg.setAction(MappingAction.CREATE);
         msg.setPayload(createMeasurementPayload());
         msg.setExternalSource(createExternalSourceList());
         return msg;
@@ -337,7 +342,7 @@ class FlowResultInboundProcessorTest {
     private CumulocityObject createEventCumulocityObject() {
         CumulocityObject msg = new CumulocityObject();
         msg.setCumulocityType(CumulocityType.EVENT);
-        msg.setAction("create");
+        msg.setAction(MappingAction.CREATE);
         msg.setPayload(createEventPayload());
         msg.setExternalSource(createExternalSourceList());
         return msg;
@@ -346,7 +351,7 @@ class FlowResultInboundProcessorTest {
     private CumulocityObject createAlarmCumulocityObject() {
         CumulocityObject msg = new CumulocityObject();
         msg.setCumulocityType(CumulocityType.ALARM);
-        msg.setAction("create");
+        msg.setAction(MappingAction.CREATE);
         msg.setPayload(createAlarmPayload());
         msg.setExternalSource(createExternalSourceList());
         return msg;

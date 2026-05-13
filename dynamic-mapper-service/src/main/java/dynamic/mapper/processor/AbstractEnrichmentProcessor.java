@@ -27,10 +27,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
+import dynamic.mapper.processor.model.TransformationType;
+
 import org.apache.camel.Exchange;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Engine;
-import org.graalvm.polyglot.Value;
 import org.graalvm.polyglot.io.IOAccess;
 
 import dynamic.mapper.configuration.CodeTemplate;
@@ -40,21 +41,17 @@ import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.core.InventoryEnrichmentClient;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
-import dynamic.mapper.processor.model.DataPrepContext;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.RoutingContext;
 import dynamic.mapper.processor.model.SmartFunctionContext;
-import dynamic.mapper.processor.model.TransformationType;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.service.cache.FlowStateStore;
 import lombok.extern.slf4j.Slf4j;
 
 /**
  * Abstract base class for Enrichment processors that provides common
- * functionality
- * for setting up GraalVM contexts and enriching payloads with metadata.
- *
- * Handles both SUBSTITUTION_AS_CODE and SMART_FUNCTION transformation types.
+ * functionality for setting up GraalVM contexts and enriching payloads with
+ * metadata. Handles SMART_FUNCTION and EXTENSION_JAVA transformation types.
  */
 @Slf4j
 public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
@@ -97,38 +94,10 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
         // Hook for subclass-specific setup (e.g., QoS determination)
         performPreEnrichmentSetup(context, connectorIdentifier);
 
-        // Prepare GraalVM context if code exists
+        // Prepare GraalVM context if code exists (SMART_FUNCTION only)
         boolean supportESM = Boolean.TRUE.equals(serviceConfiguration.getSupportESM());
         if (mapping.getCode() != null
-                && mapping.isSubstitutionAsCode()) {
-            try {
-                var graalEngine = configurationRegistry.getGraalEngine(tenant);
-                var graalContext = createGraalContext(graalEngine, supportESM);
-                context.setGraalContext(graalContext);
-
-                // Set cached Source objects for performance
-                context.setSharedSource(configurationRegistry.getGraalsSourceShared(tenant));
-                context.setSystemSource(configurationRegistry.getGraalsSourceSystem(tenant));
-
-                // Keep Base64 strings for backward compatibility if needed
-                CodeTemplate sharedTemplate = serviceConfiguration.getCodeTemplates().get(TemplateType.SHARED.name());
-                CodeTemplate systemTemplate = serviceConfiguration.getCodeTemplates().get(TemplateType.SYSTEM.name());
-                if (sharedTemplate == null || systemTemplate == null) {
-                    log.error(
-                            "{} - SHARED or SYSTEM code template missing for mapping [{}] — re-initialize code templates",
-                            tenant, mapping.getIdentifier());
-                    handleGraalVMError(tenant, mapping,
-                            new IllegalStateException("SHARED or SYSTEM code template not found"), context);
-                    return;
-                }
-                context.setSharedCode(sharedTemplate.getCode());
-                context.setSystemCode(systemTemplate.getCode());
-            } catch (Exception e) {
-                handleGraalVMError(tenant, mapping, e, context);
-                return;
-            }
-        } else if (mapping.getCode() != null &&
-                TransformationType.SMART_FUNCTION.equals(mapping.getTransformationType())) {
+                && TransformationType.SMART_FUNCTION.equals(mapping.getTransformationType())) {
             try {
                 var graalEngine = configurationRegistry.getGraalEngine(tenant);
                 var graalContext = createGraalContext(graalEngine, supportESM);
@@ -301,18 +270,22 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
     }
 
     /**
-     * Helper method to safely add values to DataPrepContext.
+     * Builds the base config map shared by inbound and outbound Smart Function
+     * contexts: {@code tenant}, {@code topic}, {@code clientId},
+     * {@code mappingName}, {@code mappingId}, {@code targetAPI}, {@code debug}.
+     * Subclasses add their own keys on top.
      */
-    protected void addToFlowContext(DataPrepContext flowContext, ProcessingContext<?> context, String key,
-            Object value) {
-        try {
-            if (context.getGraalContext() != null && value != null) {
-                Value graalValue = context.getGraalContext().asValue(value);
-                flowContext.setState(key, graalValue);
-            }
-        } catch (Exception e) {
-            log.warn("{} - Failed to add '{}' to DataPrepContext: {}", context.getTenant(), key, e.getMessage());
-        }
+    protected Map<String, Object> buildBaseSmartFunctionConfig(ProcessingContext<?> context) {
+        Mapping mapping = context.getMapping();
+        Map<String, Object> config = new HashMap<>();
+        config.put("tenant", context.getTenant());
+        config.put("topic", context.getTopic());
+        config.put("clientId", context.getClientId());
+        config.put("mappingName", mapping.getName());
+        config.put("mappingId", mapping.getId());
+        config.put("targetAPI", mapping.getTargetAPI().toString());
+        config.put(ProcessingContext.DEBUG, mapping.getDebug());
+        return config;
     }
 
     /**

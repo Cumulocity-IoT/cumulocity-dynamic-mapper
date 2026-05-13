@@ -65,15 +65,8 @@ export class MappingTreeNavigationFactory implements NavigatorNodeFactory {
   async get(): Promise<any> {
     try {
       const feature: any = await this.sharedService.getFeatures();
-let navs;
-      let copyStaticNodesPlugin;
-
-      copyStaticNodesPlugin = _.clone(this.staticNodesStandalone);
-      if (!feature?.outputMappingEnabled) {
-        delete copyStaticNodesPlugin.mappingOutboundNode;
-        delete copyStaticNodesPlugin.subscriptionOutboundNode;
-      }
-      navs = Object.values(copyStaticNodesPlugin) as NavigatorNode[];
+      const copyStaticNodesPlugin = _.clone(this.staticNodesStandalone);
+      const navs = Object.values(copyStaticNodesPlugin) as NavigatorNode[];
 
       return this.applicationService
         .isAvailable(MappingTreeNavigationFactory.APPLICATION_DYNAMIC_MAPPING_SERVICE)

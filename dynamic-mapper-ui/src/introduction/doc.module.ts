@@ -23,130 +23,41 @@ import { hookNavigator, hookRoute } from '@c8y/ngx-components';
 import { featureResolver } from '../shared';
 import { DocMainComponent } from './doc-main.component';
 import { DocNavigationFactory } from './doc-navigation.factory';
+import { DocOverviewComponent } from './doc-overview.component';
+import { DocJsonataComponent } from './doc-jsonata.component';
+import { DocJavaScriptComponent } from './doc-javascript.component';
+import { DocSmartFunctionComponent } from './doc-smartfunction.component';
+import { DocJavaExtensionComponent } from './doc-javaextension.component';
+import { DocCustomRoutingComponent } from './doc-customrouting.component';
+
+const OVERVIEW_SECTIONS = [
+  'overview', 'getting-started', 'managing-connectors', 'define-mapping',
+  'sparkplugb', 'define-subscription-for-outbound', 'transformation-types',
+  'flow-state', 'code-templates', 'metadata', 'unknown-payload',
+  'reliability-settings', 'access-control', 'monitoring', 'message-explorer', 'troubleshooting'
+];
 
 @NgModule({
   providers: [
     hookRoute({
-      path: 'c8y-pkg-dynamic-mapper/landing',
-      component: DocMainComponent, resolve: {
-        feature: featureResolver
-      }
-    }),
-    hookRoute({
       path: '',
       pathMatch: 'full',
-      component: DocMainComponent, resolve: {
-        feature: featureResolver
-      }
+      component: DocMainComponent,
+      resolve: { feature: featureResolver }
     }),
     hookRoute({
-      path: 'c8y-pkg-dynamic-mapper/landing/jsonata',
-      component: DocMainComponent, resolve: {
-        feature: featureResolver
-      }
-    }),
-    hookRoute({
-      path: 'c8y-pkg-dynamic-mapper/landing/javascript',
-      component: DocMainComponent, resolve: {
-        feature: featureResolver
-      }
-    }),
-    hookRoute({
-      path: 'c8y-pkg-dynamic-mapper/landing/smartfunction',
-      component: DocMainComponent, resolve: {
-        feature: featureResolver
-      }
-    }),
-    hookRoute({
-      path: 'c8y-pkg-dynamic-mapper/landing/javaextension',
-      component: DocMainComponent, resolve: {
-        feature: featureResolver
-      }
-    }),
-    // Section routes - all use the same component but different paths for proper navigation highlighting
-    hookRoute({
-      path: 'c8y-pkg-dynamic-mapper/landing/overview',
-      component: DocMainComponent, resolve: {
-        feature: featureResolver
-      }
-    }),
-    hookRoute({
-      path: 'c8y-pkg-dynamic-mapper/landing/getting-started',
-      component: DocMainComponent, resolve: {
-        feature: featureResolver
-      }
-    }),
-    hookRoute({
-      path: 'c8y-pkg-dynamic-mapper/landing/managing-connectors',
-      component: DocMainComponent, resolve: {
-        feature: featureResolver
-      }
-    }),
-    hookRoute({
-      path: 'c8y-pkg-dynamic-mapper/landing/define-mapping',
-      component: DocMainComponent, resolve: {
-        feature: featureResolver
-      }
-    }),
-    hookRoute({
-      path: 'c8y-pkg-dynamic-mapper/landing/define-subscription-for-outbound',
-      component: DocMainComponent, resolve: {
-        feature: featureResolver
-      }
-    }),
-    hookRoute({
-      path: 'c8y-pkg-dynamic-mapper/landing/transformation-types',
-      component: DocMainComponent, resolve: {
-        feature: featureResolver
-      }
-    }),
-    hookRoute({
-      path: 'c8y-pkg-dynamic-mapper/landing/flow-state',
-      component: DocMainComponent, resolve: {
-        feature: featureResolver
-      }
-    }),
-    hookRoute({
-      path: 'c8y-pkg-dynamic-mapper/landing/code-templates',
-      component: DocMainComponent, resolve: {
-        feature: featureResolver
-      }
-    }),
-    hookRoute({
-      path: 'c8y-pkg-dynamic-mapper/landing/metadata',
-      component: DocMainComponent, resolve: {
-        feature: featureResolver
-      }
-    }),
-    hookRoute({
-      path: 'c8y-pkg-dynamic-mapper/landing/unknown-payload',
-      component: DocMainComponent, resolve: {
-        feature: featureResolver
-      }
-    }),
-    hookRoute({
-      path: 'c8y-pkg-dynamic-mapper/landing/reliability-settings',
-      component: DocMainComponent, resolve: {
-        feature: featureResolver
-      }
-    }),
-    hookRoute({
-      path: 'c8y-pkg-dynamic-mapper/landing/access-control',
-      component: DocMainComponent, resolve: {
-        feature: featureResolver
-      }
-    }),
-    hookRoute({
-      path: 'c8y-pkg-dynamic-mapper/landing/monitoring',
-      component: DocMainComponent, resolve: {
-        feature: featureResolver
-      }
-    }),
-    hookRoute({
-      path: 'c8y-pkg-dynamic-mapper/landing/troubleshooting',
-      component: DocMainComponent, resolve: {
-        feature: featureResolver
-      }
+      path: 'c8y-pkg-dynamic-mapper/landing',
+      component: DocMainComponent,
+      resolve: { feature: featureResolver },
+      children: [
+        { path: '', pathMatch: 'full', component: DocOverviewComponent, resolve: { feature: featureResolver } },
+        ...OVERVIEW_SECTIONS.map(s => ({ path: s, component: DocOverviewComponent, resolve: { feature: featureResolver } })),
+        { path: 'jsonata',        component: DocJsonataComponent },
+        { path: 'javascript',     component: DocJavaScriptComponent },
+        { path: 'smartfunction',  component: DocSmartFunctionComponent },
+        { path: 'javaextension',  component: DocJavaExtensionComponent },
+        { path: 'custom-routing', component: DocCustomRoutingComponent },
+      ]
     }),
     hookNavigator(DocNavigationFactory),
   ]

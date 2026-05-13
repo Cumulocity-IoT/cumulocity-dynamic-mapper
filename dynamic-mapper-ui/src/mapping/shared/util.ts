@@ -668,6 +668,17 @@ export function base64ToBytes(base64) {
   return Uint8Array.from(binString, (m) => m.codePointAt(0));
 }
 
+/**
+ * Removes template-metadata-only JSDoc tag lines from a code string.
+ * The tags @defaultTemplate, @internal and @readonly are meaningful on stored
+ * CodeTemplate objects but must not be carried over when the template is used
+ * as the basis for a mapping's code.
+ */
+export function stripTemplateMetadataTags(code: string): string {
+  if (!code) return code;
+  return code.replace(/^\s*\*\s*@(?:defaultTemplate|internal|readonly)\b[^\n]*\n?/gm, '');
+}
+
 export function bytesToBase64(bytes) {
   const binString = Array.from(bytes, (byte: any) =>
     String.fromCodePoint(byte),

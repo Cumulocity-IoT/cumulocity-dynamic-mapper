@@ -21,7 +21,7 @@
 
 <!-- Loading State -->
 @if (isLoading) {
-<div class="flex-col flex-nowrap no-align-items p-48 fit-h col-md-12 col-md-offset-0 c8y-stepper--no-btns">
+<div class="d-col flex-nowrap no-align-items p-48 flex-grow col-md-12 col-md-offset-0 c8y-stepper--no-btns">
   <div class="card card--fullpage">
     <div class="card-block text-center">
       <c8y-loading></c8y-loading>
@@ -32,19 +32,19 @@
 
 <!-- Main Content -->
 @if (!isLoading && formGroup) {
-<div class="flex-col flex-nowrap no-align-items p-48 fit-h col-md-12 col-md-offset-0 c8y-stepper--no-btns">
-  <div class="card card--fullpage">
+<div class="d-col flex-nowrap no-align-items p-48 flex-grow col-md-12 col-md-offset-0 c8y-stepper--no-btns">
+  <div class="card card--fullpage d-col flex-grow">
     <!-- Header -->
-    <div class="card-header separator" style="justify-content: center">
-      <h4 class="card-title d-flex">
+    <div class="card-header separator j-c-center">
+      <h4 id="drawerTitle" class="card-title d-flex">
         <i [c8yIcon]="'plus-circle'" class="icon-32 m-r-16"></i>
-        <span class="m-t-8">
+        <span class="m-t-8" translate>
           {{ 'Select Payload Format and Transformation Type' | translate }}
         </span>
       </h4>
     </div>
     <!-- Form Content -->
-    <div class="card-inner-scroll fit-h">
+    <div class="card-inner-scroll flex-grow">
       <div class="card-block">
         <form [formGroup]="formGroup">
           <!-- Expert Mode Toggle -->
@@ -58,8 +58,8 @@
           <!-- Payload Format Selection -->
           <c8y-form-group class="p-l-16 p-r-16">
             <label>{{ 'Payload Format' | translate }}</label>
-            <c8y-select [items]="mappingTypeOptions" formControlName="mappingType" [filterItems]="true" labelProperty="label"
-              aria-label="Payload Format">
+            <c8y-select [items]="mappingTypeOptions" formControlName="mappingType" [filterItems]="true"
+              labelProperty="label" aria-label="Payload Format">
             </c8y-select>
             @if (formGroup.get('mappingType')?.value) {
             <small class="text-muted">
@@ -72,8 +72,8 @@
           <c8y-form-group class="p-l-16 p-r-16"
             [class.has-error]="formGroup.get('transformationType')?.invalid && formGroup.get('transformationType')?.touched">
             <label>{{ 'Transformation Type' | translate }}</label>
-            <c8y-select [items]="transformationTypeOptions" formControlName="transformationType" [filterItems]="true" labelProperty="label"
-              aria-label="Transformation Type">
+            <c8y-select [items]="transformationTypeOptions" formControlName="transformationType" [filterItems]="true"
+              labelProperty="label" aria-label="Transformation Type">
             </c8y-select>
             @if (formGroup.get('transformationType')?.invalid && formGroup.get('transformationType')?.touched) {
             <span class="help-block">{{ 'Transformation type is required' | translate }}</span>
@@ -99,8 +99,8 @@
           <c8y-form-group class="p-l-16 p-r-16">
             <label>{{ 'JavaScript Code Template' | translate }}</label>
             <div class="input-group">
-              <c8y-select [items]="codeTemplateOptions" formControlName="codeTemplate" labelProperty="label"  [filterItems]="true" 
-                style="width: 100%" aria-label="JavaScript Code Template">
+              <c8y-select [items]="codeTemplateOptions" formControlName="codeTemplate" labelProperty="label"
+                [filterItems]="true" style="width: 100%" aria-label="JavaScript Code Template">
               </c8y-select>
               <span class="input-group-btn">
                 <button class="btn btn-primary" type="button" aria-label="View Code" (click)="viewCode()"
@@ -142,15 +142,13 @@
       </div>
     </div>
     <!-- Footer Buttons -->
-    <div class="card-footer text-center sticky-buttons">
-      <div class="form-group">
-        <button type="button" class="btn btn-primary" (click)="onSave()" [disabled]="!formGroup.valid">
-          {{ 'Save' | translate }}
-        </button>
-        <button type="button" class="btn btn-default" (click)="onCancel()">
-          {{ 'Cancel' | translate }}
-        </button>
-      </div>
+    <div class="card-footer separator p-24 text-center flex-no-shrink">
+      <button type="button" class="btn btn-default" (click)="onCancel()">
+        {{ 'Cancel' | translate }}
+      </button>
+      <button type="button" class="btn btn-primary m-l-8" (click)="onContinue()" [disabled]="!formGroup.valid">
+        {{ 'Continue' | translate }}
+      </button>
     </div>
   </div>
 </div>

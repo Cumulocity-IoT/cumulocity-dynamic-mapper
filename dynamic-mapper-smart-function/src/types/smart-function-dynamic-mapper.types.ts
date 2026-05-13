@@ -34,8 +34,8 @@
  * @since 6.2
  */
 
-import { DataPrepContext, ExternalId } from './dataprep.types';
-export { DataPrepContext, ExternalId };
+import type { DataPrepContext, ExternalId } from './dataprep.types';
+export type { DataPrepContext, ExternalId };
 
 // ============================================================================
 // DYNAMIC MAPPER EXTENDED TYPES
@@ -109,7 +109,7 @@ export interface DynamicMapperDeviceMessage {
   transportId?: string;
 
   /** Transport-specific fields/properties/headers */
-  transportFields?: { [key: string]: any };
+  transportFields?: { [key: string]: string };
 
   /** Timestamp of the incoming message */
   time?: Date;
@@ -536,6 +536,7 @@ export interface C8yManagedObject {
  * - `CumulocityObject<'alarm'>`       → `payload: C8yAlarm`
  * - `CumulocityObject<'operation'>`   → `payload: C8yOperation`
  * - `CumulocityObject<'managedObject'>` → `payload: C8yManagedObject`
+ * - `CumulocityObject<'custom'>`      → `payload: Record<string, any>` (arbitrary microservice body)
  *
  * When `T` is the full {@link C8yObjectType} union (the default), TypeScript
  * distributes the conditional type, resulting in the union of all domain interfaces.
@@ -546,11 +547,22 @@ export type C8yPayloadTypeMap = {
   alarm: C8yAlarm;
   operation: C8yOperation;
   managedObject: C8yManagedObject;
+  /** Arbitrary body sent to a tenant-local microservice via {@link CumulocityObject.targetPath}. */
+  custom: Record<string, any>;
 };
 
 /**
- * CRUD action to perform on a Cumulocity object.
+ * HTTP verb to use when calling the Cumulocity API or a tenant-local microservice.
  * Used in {@link CumulocityObject.action} and {@link DeviceMessage.action}.
+ *
+ * - `"create"` – POST
+ * - `"update"` – PUT
+ * - `"delete"` – DELETE
+ * - `"patch"`  – PATCH
+ *
+ * The routing target (C8Y Core API vs. microservice) is determined by
+ * {@link CumulocityObject.cumulocityType} / {@link DeviceMessage.cumulocityType},
+ * not by this field.
  */
 export type C8yObjectAction = 'create' | 'update' | 'delete' | 'patch';
 
@@ -558,8 +570,17 @@ export type C8yObjectAction = 'create' | 'update' | 'delete' | 'patch';
  * Cumulocity API object type.
  * Determines which API endpoint is used when processing the object.
  * Used in {@link CumulocityObject.cumulocityType} and {@link DeviceMessage.cumulocityType}.
+ *
+ * - `"measurement"` – POST/GET to `/measurement/measurements`
+ * - `"event"`       – POST/PUT/DELETE to `/event/events`
+ * - `"alarm"`       – POST/PUT/DELETE to `/alarm/alarms`
+ * - `"operation"`   – POST/PUT to `/devicecontrol/operations`
+ * - `"managedObject"` – POST/PUT/DELETE/PATCH to `/inventory/managedObjects`
+ * - `"custom"`      – call a tenant-local microservice; set {@link CumulocityObject.targetPath}
+ *                     or {@link DeviceMessage.topic} to the `/service/…` path.
+ *                     The HTTP method is controlled by {@link C8yObjectAction}.
  */
-export type C8yObjectType = 'measurement' | 'event' | 'alarm' | 'operation' | 'managedObject';
+export type C8yObjectType = 'measurement' | 'event' | 'alarm' | 'operation' | 'managedObject' | 'custom';
 
 /**
  * Details of external Id for advanced device creation scenarios.
@@ -686,17 +707,31 @@ export interface CumulocityObject<
    * - "alarm" - Alarm notifications
    * - "operation" - Device operations/commands
    * - "managedObject" - Inventory/device objects
+   * - "custom" - Tenant-local microservice call; set {@link targetPath} to `/service/…`
    */
   cumulocityType: T;
 
   /**
-   * What kind of operation to perform on this type.
-   * - "create" - Create a new object
-   * - "update" - Update an existing object
-   * - "delete" - Delete an object
-   * - "patch" - Partially update an object
+   * HTTP method to use for this operation.
+   * - "create" - POST (create a new object)
+   * - "update" - PUT (replace an existing object)
+   * - "delete" - DELETE
+   * - "patch"  - PATCH (partial update)
+   *
+   * When {@link cumulocityType} is `"custom"`, this controls the HTTP verb sent
+   * to the tenant-local microservice at {@link targetPath}.
    */
   action: C8yObjectAction;
+
+  /**
+   * Target microservice path used when {@link cumulocityType} is `"custom"`.
+   * Must start with `/service/` to ensure requests stay within the tenant.
+   * The HTTP method is determined by {@link action}.
+   *
+   * @example "/service/my-microservice/api/process"
+   * @since 6.3
+   */
+  targetPath?: string;
 
   /**
    * External ID configuration for device resolution.
@@ -723,19 +758,33 @@ export interface CumulocityObject<
    * Context data for device creation.
    * Used when automatically creating new devices.
    *
-   * Common fields:
-   * - deviceName: Name for the new device
-   * - deviceType: Type for the new device
-   * - processingMode: "PERSISTENT" or "TRANSIENT"
-   * - attachmentName/Type/Data: for EVENT attachments
-   *
    * @example
    * contextData: {
    *   deviceName: "Temperature Sensor 01",
-   *   deviceType: "c8y_Sensor"
+   *   deviceType: "c8y_Sensor",
+   *   processingMode: "TRANSIENT",
+   *   deviceFragments: { c8y_IsDevice: {}, c8y_Hardware: { model: "Sensor v1" } },
+   *   deviceGroups: ["line 1", "building A"]
    * }
    */
-  contextData?: Record<string, string>;
+  contextData?: {
+    /** Name for implicitly created devices. */
+    deviceName?: string;
+    /** Type for implicitly created devices. */
+    deviceType?: string;
+    /** Processing mode: "PERSISTENT" (default) or "TRANSIENT". */
+    processingMode?: 'PERSISTENT' | 'TRANSIENT';
+    /** Attachment file name for binary EVENT attachments. */
+    attachmentName?: string;
+    /** Attachment MIME type for binary EVENT attachments. */
+    attachmentType?: string;
+    /** Attachment data (Base64-encoded) for binary EVENT attachments. */
+    attachmentData?: string;
+    /** Additional managed-object fragments merged into the implicit device (objects/arrays allowed). */
+    deviceFragments?: Record<string, any>;
+    /** Group names the implicit device is assigned to as child assets. */
+    deviceGroups?: string[];
+  };
 
   /**
    * Explicitly set the Cumulocity device ID (sourceId) for this object.
@@ -753,58 +802,73 @@ export interface CumulocityObject<
  * A device/broker message that can be returned from a Smart Function.
  * Used primarily in outbound scenarios to send data back to devices/brokers.
  *
- * @example
- * // Send a message to a device topic
- * return {
- *   topic: `measurements/${deviceId}`,
- *   payload: new TextEncoder().encode(JSON.stringify({
- *     temperature: 25.5,
- *     timestamp: new Date().toISOString()
- *   }))
- * };
- */
-
-/**
  * The optional type parameter `T` narrows the {@link DeviceMessage.cumulocityType}
  * field, documenting which Cumulocity event type this outbound message is derived
  * from. Defaults to the full {@link C8yObjectType} union so existing code is unaffected.
  *
  * @example
+ * // Send a JSON object — no manual serialization needed
+ * return {
+ *   topic: `measurements/${deviceId}`,
+ *   payload: { temperature: 25.5, timestamp: new Date().toISOString() }
+ * };
+ *
+ * @example
+ * // Omit topic when the mapping already defines a fixed publish topic
+ * return {
+ *   payload: { temperature: 25.5 }
+ * };
+ *
+ * @example
  * // Untyped — any cumulocityType (backward-compatible default)
- * const msg: DeviceMessage = { topic: "out/temp", payload: bytes };
+ * const msg: DeviceMessage = { topic: 'out/temp', payload: { data: 'value' } };
  *
  * @example
  * // Constrained to measurement
  * const msg: DeviceMessage<'measurement'> = {
- *   topic: "out/temp",
- *   payload: bytes,
- *   cumulocityType: "measurement"  // ✅ — "alarm" would be a TypeScript error
+ *   topic: 'out/temp',
+ *   payload: { temperature: 25.5 },
+ *   cumulocityType: 'measurement'  // ✅ — 'alarm' would be a TypeScript error
  * };
  */
 export interface DeviceMessage<T extends C8yObjectType = C8yObjectType> {
   /**
-   * Message payload as a Uint8Array.
-   * For outbound messages, serialize your data to Uint8Array.
+   * Message payload — either a plain JSON object or a `Uint8Array` of raw bytes.
    *
-   * @example
-   * // Convert string to Uint8Array (TextEncoder is not available in GraalJS)
-   * const s = JSON.stringify(myObject);
-   * const bytes = new Uint8Array(s.length);
-   * for (let i = 0; i < s.length; i++) bytes[i] = s.charCodeAt(i);
-   * payload: bytes
+   * **JSON object (recommended):** Return a plain JavaScript object and the runtime
+   * will serialize it to JSON before publishing. No manual serialization needed.
+   *
+   * **Uint8Array (binary / legacy):** Use when the broker requires raw bytes or a
+   * non-JSON encoding (e.g. SparkPlug B protobuf, custom binary protocol).
+   * `TextEncoder` / `TextDecoder` are available (GraalJS is started with `js.text-encoding=true`).
+   *
+   * @example JSON object (preferred)
+   * payload: { temperature: 25.5, timestamp: new Date().toISOString() }
+   *
+   * @example Uint8Array via TextEncoder
+   * payload: new TextEncoder().encode(JSON.stringify(myObject))
    */
-  payload: Uint8Array;
+  payload: Record<string, any> | Uint8Array;
 
   /**
    * The topic on the transport (e.g., MQTT topic).
    *
-   * Use `context.getConfig().externalId` to include the device's external ID in the topic.
-   * Requires the mapping to have `useExternalId` enabled and an `externalIdType` configured.
+   * **Optional when the mapping has a fixed (non-wildcard) publish topic.**
+   * If omitted, the runtime falls back to the publish topic configured in the
+   * mapping itself — no need to repeat it here.
+   *
+   * Provide a value when you need to override or dynamically construct the topic
+   * (e.g. include the device external ID via `context.getConfig().externalId` or
+   * the `_externalId_` placeholder token).
+   *
+   * Requires the mapping to have `useExternalId` enabled and an `externalIdType`
+   * configured when using the external-ID placeholder.
    *
    * @example `measurements/${context.getConfig().externalId}`
    * @example "measurements/12345"
+   * @example undefined  // use the topic from the mapping configuration
    */
-  topic: string;
+  topic?: string;
 
   /**
    * Identifier for the source/destination transport.
@@ -941,15 +1005,14 @@ export type SmartFunctionIn<
 > = (
   msg: DynamicMapperDeviceMessage,
   context: SmartFunctionContext
-) => Array<CumulocityObject<T, TPayload>> | CumulocityObject<T, TPayload> | [];
+) => Array<CumulocityObject<T, TPayload>> | CumulocityObject<T, TPayload>;
 
 /**
  * Message received by an outbound Smart Function.
  *
  * At runtime the Java backend wraps the Cumulocity platform event (measurement,
- * operation, alarm, etc.) in the same `DeviceMessage` Java class used for inbound
- * messages. This means `payload` is always a {@link SmartFunctionPayload} that supports
- * direct property access using bracket notation.
+ * operation, alarm, etc.) and provides the payload as a pre-deserialized object
+ * supporting direct property access using bracket notation.
  *
  * The optional type parameter `T` narrows the `cumulocityType` of the triggering
  * event — useful when a function is dedicated to a specific event type.
@@ -976,8 +1039,7 @@ export interface OutboundMessage<
    * safety on custom fragments without any casting.
    *
    * All C8y domain types carry a `[fragment: string]: any` index signature,
-   * so `.get("key")` and arbitrary bracket notation continue to work even
-   * when `TPayload` is the base type.
+   * so arbitrary bracket notation continues to work even when `TPayload` is the base type.
    *
    * @example Typed access to a custom measurement series
    * interface MySteamMeasurement extends C8yMeasurement {
@@ -1002,8 +1064,8 @@ export interface OutboundMessage<
  * Processes a Cumulocity platform event and returns device messages
  * to be sent to the broker.
  *
- * The `msg.payload` is a {@link SmartFunctionPayload} — the same accessor type used
- * in inbound functions — so both property access and `.get()` work without casting.
+ * The `msg.payload` is a pre-deserialized C8y domain object — typed via
+ * `C8yPayloadTypeMap[T]` so known fields are directly accessible without casting.
  *
  * The optional type parameter `T` narrows `msg.cumulocityType` to the specified
  * event type(s), documenting which Cumulocity events this function handles.
@@ -1016,7 +1078,7 @@ export interface OutboundMessage<
  *
  * @typeParam T       - Triggering Cumulocity event type(s)
  * @typeParam TPayload - Expected payload shape (defaults to `C8yPayloadTypeMap[T]`)
- * @param msg - The incoming Cumulocity event, wrapped with SmartFunctionPayload access
+ * @param msg - The incoming Cumulocity event with pre-deserialized payload
  * @param context - Runtime context providing state, config, and device lookups
  * @returns Device messages to send to the broker or empty array
  *
@@ -1039,9 +1101,10 @@ export interface OutboundMessage<
  * }
  * const onMessage: SmartFunctionOut<'measurement', MySteamMeasurement> = (msg) => {
  *   const temp: number = msg.payload.c8y_Steam.Temperature.value; // ✅ typed
+ *   // JSON object payload — no manual serialization needed
  *   return {
- *     topic: `measurements/${msg.sourceId}`,
- *     payload: new TextEncoder().encode(JSON.stringify({ temperature: temp })),
+ *     topic: `measurements/${msg.sourceId}`,  // omit topic to use the mapping's fixed topic
+ *     payload: { temperature: temp },
  *   };
  * };
  */
@@ -1051,7 +1114,7 @@ export type SmartFunctionOut<
 > = (
   msg: OutboundMessage<T, TPayload>,
   context: SmartFunctionContext
-) => Array<DeviceMessage> | DeviceMessage | [];
+) => Array<DeviceMessage> | DeviceMessage;
 
 /**
  * Smart Function signature (union of inbound and outbound).
@@ -1217,6 +1280,14 @@ export interface SmartFunctionContextV2<
  * without worrying about parameter order.
  *
  * @typeParam T - Object describing the function contract:
+ *   - `input`   — narrows `msg.payload` to a specific type. Two forms are supported:
+ *                 1. A {@link C8yObjectType} string (`'operation'`, `'measurement'`, etc.) —
+ *                    auto-narrows `msg.payload` to the matching C8y domain type via
+ *                    {@link C8yPayloadTypeMap}. Useful when the **Cumulocity API Connector**
+ *                    forwards a known C8y event type into the mapper as an inbound message.
+ *                 2. A custom `Record<string, any>` interface — use when the broker payload
+ *                    has a well-known but non-standard shape (e.g. LoRa uplink objects).
+ *                 Defaults to `Record<string, any>` so untyped code is unaffected.
  *   - `returns` — allowed return type(s); can be a tuple for exact order/count enforcement
  *   - `config`  — shape of the mapping config (enables typed `context.getConfig()`)
  *   - `state`   — shape of the persistent state (enables typed `getState`/`setState`)
@@ -1224,9 +1295,31 @@ export interface SmartFunctionContextV2<
  * @example Untyped (backward-compatible default)
  * const onMessage: SmartFunctionInV2 = (msg, context) => { ... };
  *
+ * @example C8yObjectType string — auto-narrows payload to C8y domain type
+ * // Use this when the Cumulocity API Connector forwards a C8y operation as the inbound message.
+ * const onMessage: SmartFunctionInV2<{ input: 'operation' }> = (msg, context) => {
+ *   // msg.payload is narrowed to C8yOperation — no cast or Zod schema needed
+ *   const deviceId = msg.payload.deviceId;   // ✅ typed
+ *   const text     = msg.payload.c8y_Command?.text; // ✅ typed via index signature
+ *   return [{ cumulocityType: 'operation', action: 'update', payload: { id: msg.payload.id, status: 'SUCCESSFUL' } }];
+ * };
+ *
+ * @example Custom interface — typed broker payload (e.g. LoRa uplink)
+ * const onMessage: SmartFunctionInV2<{
+ *   input: {
+ *     source: { id: string };
+ *     c8y_LoriotUplinkRequest: { port: number; data: string; freq: number; EUI: string; dr: string };
+ *     time: string;
+ *   };
+ * }> = (msg, context) => {
+ *   const id  = msg.payload.source.id;                        // ✅ typed
+ *   const req = msg.payload.c8y_LoriotUplinkRequest;          // ✅ typed
+ *   // ...
+ * };
+ *
  * @example Config only
  * const onMessage: SmartFunctionInV2<{ config: { mappingName: string } }> = (msg, context) => {
- *   console.log(context.getConfig().mappingName); // typed
+ *   console.log(context.getConfig().mappingName); // ✅ typed
  * };
  *
  * @example Tuple return — enforces exactly [measurement, managedObject] in that order
@@ -1241,19 +1334,34 @@ export interface SmartFunctionContextV2<
  */
 export type SmartFunctionInV2<
   T extends {
+    input?: C8yObjectType | Record<string, any>;
     returns?: CumulocityObject | CumulocityObject[];
     config?: Record<string, any>;
     state?: Record<string, any>;
-  } = {}
+  } = Record<string, never>
 > = (
-  msg: DynamicMapperDeviceMessage,
+  msg: Omit<DynamicMapperDeviceMessage, 'payload'> & {
+    /**
+     * Pre-deserialized message payload, typed via `T['input']`:
+     * - `C8yObjectType` string → auto-mapped to the C8y domain interface via {@link C8yPayloadTypeMap}
+     * - Custom interface     → used directly
+     * - Omitted             → `Record<string, any>` (backward-compatible default)
+     */
+    payload: T extends { input: infer TInput }
+      ? TInput extends C8yObjectType
+        ? C8yPayloadTypeMap[TInput]
+        : TInput extends Record<string, any>
+          ? TInput
+          : Record<string, any>
+      : Record<string, any>;
+  },
   context: SmartFunctionContextV2<
     T extends { config: infer TConfig extends Record<string, any> } ? TConfig : Record<string, any>,
     T extends { state: infer TState extends Record<string, any> } ? TState : Record<string, any>
   >
 ) => T extends { returns: infer TReturns extends CumulocityObject | CumulocityObject[] }
-  ? TReturns
-  : CumulocityObject | CumulocityObject[];
+  ? TReturns | void
+  : CumulocityObject | CumulocityObject[] | void;
 
 /**
  * V2 outbound Smart Function signature.
@@ -1264,7 +1372,7 @@ export type SmartFunctionInV2<
  * @typeParam T - Object describing the function contract:
  *   - `input`   — the C8y event type triggering this function; narrows `msg.cumulocityType`
  *                 and auto-narrows `msg.payload` to the matching domain type
- *   - `message` — allowed return type(s)
+ *   - `returns` — allowed return type(s)
  *   - `config`  — shape of the mapping config
  *   - `state`   — shape of the persistent state
  *
@@ -1276,25 +1384,27 @@ export type SmartFunctionInV2<
  *   input:   'measurement';
  *   config:  { externalId: string };
  *   state:   { forwardedCount: number };
- *   message: DeviceMessage;
+ *   returns: DeviceMessage;
  * }> = (msg, context) => {
  *   // msg.cumulocityType is narrowed to 'measurement'
  *   // msg.payload        is narrowed to C8yMeasurement
  *   const count = context.getState('forwardedCount', 0) + 1;
  *   context.setState('forwardedCount', count);
+ *   // JSON object payload — no manual serialization needed
+ *   // topic is optional: omit it when the mapping defines a fixed publish topic
  *   return {
  *     topic: `measurements/${context.getConfig().externalId}`,
- *     payload: new TextEncoder().encode(JSON.stringify({ count })),
+ *     payload: { count },
  *   };
  * };
  */
 export type SmartFunctionOutV2<
   T extends {
-    message?: DeviceMessage | DeviceMessage[];
+    returns?: DeviceMessage | DeviceMessage[];
     config?: Record<string, any>;
     state?: Record<string, any>;
     input?: C8yObjectType;
-  } = {}
+  } = Record<string, never>
 > = (
   msg: OutboundMessageV2<
     T extends { input: infer TInput extends C8yObjectType } ? TInput : C8yObjectType
@@ -1303,8 +1413,8 @@ export type SmartFunctionOutV2<
     T extends { config: infer TConfig extends Record<string, any> } ? TConfig : Record<string, any>,
     T extends { state: infer TState extends Record<string, any> } ? TState : Record<string, any>
   >
-) => T extends { message: infer TMessage extends DeviceMessage | DeviceMessage[] }
-  ? TMessage
+) => T extends { returns: infer TReturns extends DeviceMessage | DeviceMessage[] }
+  ? TReturns
   : DeviceMessage | DeviceMessage[];
 
 /**
@@ -1388,25 +1498,52 @@ export function createMockPayload(data: Record<string, any>): Record<string, any
 
 /**
  * Mock input message for testing Smart Functions.
- * Creates a DynamicMapperDeviceMessage with pre-deserialized payload.
+ * Creates a `DynamicMapperDeviceMessage` with a typed, pre-deserialized payload.
  *
- * @example
- * const mockMsg = createMockInputMessage({
- *   messageId: "msg-123",
- *   temperature: 25.5
- * }, "device/temp/data", "client-123");
+ * The optional type parameter `TInput` mirrors the `input` slot of
+ * {@link SmartFunctionInV2} so the returned message is assignable directly
+ * to the `msg` parameter of a typed Smart Function:
+ *
+ * - `C8yObjectType` string (e.g. `'event'`) → payload typed as `C8yPayloadTypeMap[TInput]`
+ * - Custom `Record<string, any>` interface   → payload typed as that interface
+ * - Omitted (default)                         → payload typed as `Record<string, any>`
+ *
+ * @typeParam TInput - Expected payload type (defaults to `Record<string, any>`)
+ *
+ * @example Untyped (backward-compatible default)
+ * const msg = createMockInputMessage({ temperature: 25.5 }, "device/temp", "client-123");
+ *
+ * @example Typed via C8yObjectType string — payload is C8yEvent
+ * const msg = createMockInputMessage<'event'>({
+ *   type: 'c8y_LocationUpdate',
+ *   text: 'Location updated',
+ *   time: new Date().toISOString(),
+ *   source: { id: '12345' },
+ * }, "device/events");
+ * // msg.payload is C8yEvent — all required fields are enforced at compile time
+ *
+ * @example Typed via custom interface
+ * interface LoRaPayload { source: { id: string }; data: string; freq: number }
+ * const msg = createMockInputMessage<LoRaPayload>(
+ *   { source: { id: '42' }, data: 'AABB', freq: 868 },
+ *   "lora/uplink"
+ * );
  */
-export function createMockInputMessage(
-  payloadData: Record<string, any>,
+export function createMockInputMessage<
+  TInput extends C8yObjectType | Record<string, any> = Record<string, any>
+>(
+  payloadData: TInput extends C8yObjectType ? C8yPayloadTypeMap[TInput] : TInput,
   topic: string = "test/topic",
   clientId?: string
-): DynamicMapperDeviceMessage {
-  const payload = createMockPayload(payloadData);
+): Omit<DynamicMapperDeviceMessage, 'payload'> & {
+  payload: TInput extends C8yObjectType ? C8yPayloadTypeMap[TInput] : TInput;
+} {
+  const payload = createMockPayload(payloadData as Record<string, any>);
 
   return {
-    payload,
+    payload: payload as TInput extends C8yObjectType ? C8yPayloadTypeMap[TInput] : TInput,
     topic,
-    clientId,
+    ...(clientId !== undefined && { clientId }),
     transportId: "mqtt",
     time: new Date()
   };
@@ -1430,8 +1567,8 @@ export function createMockOutboundMessage(
 ): OutboundMessage {
   return {
     payload: createMockPayload(payloadData),
-    cumulocityType,
-    sourceId
+    ...(cumulocityType !== undefined && { cumulocityType }),
+    ...(sourceId !== undefined && { sourceId }),
   };
 }
 

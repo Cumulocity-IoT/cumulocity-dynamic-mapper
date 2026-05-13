@@ -7,7 +7,7 @@ export default {
     description,
     license,
     version,
-    name: 'Dynamic Mapper',
+    name: 'Dynamic Mapper Extension',
     contextPath: 'c8y-pkg-dynamic-mapper',
     icon: {
       class: 'c8y-icon-dynamic-mapper'
@@ -17,6 +17,11 @@ export default {
       "base-uri 'none'; default-src 'self' 'unsafe-inline' http: https: ws: wss:; connect-src 'self' http: https: ws: wss:;  script-src 'self' *.bugherd.com *.twitter.com *.twimg.com *.aptrinsic.com 'unsafe-inline' 'unsafe-eval' data:; style-src * 'unsafe-inline' blob:; img-src * data: blob:; font-src * data:; frame-src *; worker-src 'self' blob:;",
     dynamicOptionsUrl: '/apps/public/public-options/options.json',
     tabsHorizontal: true,
+    blueprintDeploymentOptions: {
+      "name": "Dynamic Mapper ",
+      "contextPath": "dynamic-mapper",
+      "key": "dynamic-mapper-application-key"
+    },
     noAppSwitcher: false,
     package: 'blueprint',
     contextHelp: true,
@@ -35,10 +40,6 @@ export default {
       {
         from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Basic.png',
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_Basic.png'
-      },
-      {
-        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Basic_Annotated.png',
-        to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_Basic_Annotated.png'
       },
       {
         from: '../resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_Snooping.png',
@@ -68,7 +69,6 @@ export default {
         from: '../resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_TransformationType.png',
         to: 'image/Dynamic_Mapper_Mapping_Table_Add_Modal_TransformationType.png'
       },
-
       {
         from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Generate_JSONata.png',
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_Generate_JSONata.png'
@@ -77,10 +77,9 @@ export default {
         from: '../resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_Payload.png',
         to: 'image/Dynamic_Mapper_Mapping_Table_Add_Modal_Payload.png'
       },
-
       {
-        from: '../resources/image/Dynamic_Mapper_Mapping_Substitution_Outbound.png',
-        to: 'image/Dynamic_Mapper_Mapping_Substitution_Outbound.png'
+        from: '../resources/image/Dynamic_Mapper_Mapping_Subscription_Outbound.png',
+        to: 'image/Dynamic_Mapper_Mapping_Subscription_Outbound.png'
       },
       {
         from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Mapping_Metadata_Inbound.png',
@@ -99,12 +98,16 @@ export default {
         to: 'image/Dynamic_Mapper_Connector_New.png'
       },
       {
-        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Java_Extension.png',
-        to: 'image/Dynamic_Mapper_Mapping_Stepper_Java_Extension.png'
+        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_ProcessorExtension.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_ProcessorExtension.png'
       },
       {
         from: '../resources/image/Dynamic_Mapper_Configuration_ProcessorExtensionSource_Plugin_Installed.png',
         to: 'image/Dynamic_Mapper_Configuration_ProcessorExtensionSource_Plugin_Installed.png'
+      },
+      {
+        from: '../resources/image/Dynamic_Mapper_Mapping_Message_Explorer.png',
+        to: 'image/Dynamic_Mapper_Mapping_Message_Explorer.png'
       },
       {
         from: '../LICENSE',

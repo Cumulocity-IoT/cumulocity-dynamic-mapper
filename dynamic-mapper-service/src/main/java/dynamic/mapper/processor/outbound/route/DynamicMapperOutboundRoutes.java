@@ -32,18 +32,17 @@ import org.springframework.stereotype.Component;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.outbound.processor.ExtensibleResultOutboundProcessor;
-import dynamic.mapper.processor.outbound.processor.FlowProcessorOutboundProcessor;
+import dynamic.mapper.processor.outbound.processor.FlowOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.FlowResultOutboundProcessor;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingResultWrapper;
-import dynamic.mapper.processor.outbound.processor.CodeExtractionOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.DeserializationOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.ExtensibleOutboundProcessor;
-import dynamic.mapper.processor.outbound.processor.JSONataExtractionOutboundProcessor;
+import dynamic.mapper.processor.outbound.processor.JSONataOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.EnrichmentOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.SendOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.SnoopingOutboundProcessor;
-import dynamic.mapper.processor.outbound.processor.SubstitutionOutboundProcessor;
+import dynamic.mapper.processor.outbound.processor.SubstitutionResultOutboundProcessor;
 import dynamic.mapper.processor.util.ProcessingContextAggregationStrategy;
 import dynamic.mapper.processor.util.ConsolidationProcessor;
 import dynamic.mapper.processor.util.DynamicMapperBaseRoutes;
@@ -65,13 +64,10 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
     private ExtensibleResultOutboundProcessor extensibleResultOutboundProcessor;
 
     @Autowired
-    private CodeExtractionOutboundProcessor codeExtractionOutboundProcessor;
+    private FlowOutboundProcessor flowOutboundProcessor;
 
     @Autowired
-    private FlowProcessorOutboundProcessor flowProcessorOutboundProcessor;
-
-    @Autowired
-    private SubstitutionOutboundProcessor substitutionOutboundProcessor;
+    private SubstitutionResultOutboundProcessor substitutionOutboundProcessor;
 
     @Autowired
     private SnoopingOutboundProcessor snoopingOutboundProcessor;
@@ -80,7 +76,7 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
     private DeserializationOutboundProcessor deserializationOutboundProcessor;
 
     @Autowired
-    private JSONataExtractionOutboundProcessor jsonataExtractionOutboundProcessor;
+    private JSONataOutboundProcessor jsonataExtractionOutboundProcessor;
 
     @Autowired
     private FlowResultOutboundProcessor flowResultOutboundProcessor;
@@ -200,10 +196,6 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
                 .when(exchange -> isFlowFunction(exchange))
                 .to("direct:processOutboundFlowFunction")
 
-                // 1d. SubstitutionAsCode extraction path
-                .when(exchange -> isSubstitutionAsCode(exchange))
-                .to("direct:processOutboundSubstitutionAsCodeExtraction")
-
                 // 1e. JSONata extraction path
                 .when(exchange -> isJSONataExtraction(exchange))
                 .to("direct:processOutboundJSONataExtraction")
@@ -245,7 +237,7 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
         // 1c. Flow function processing route
         from("direct:processOutboundFlowFunction")
                 .routeId("outbound-flow-function-processor")
-                .process(flowProcessorOutboundProcessor)
+                .process(flowOutboundProcessor)
                 .choice()
                 .when(exchange -> shouldIgnoreFurtherProcessing(exchange))
                 .to("log:outbound-flow-function-filtered-message?level=DEBUG")
@@ -256,21 +248,6 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
                 .stop()
                 .otherwise()
                 .process(flowResultOutboundProcessor)
-                .process(outboundSendProcessor)
-                .process(consolidationProcessor)
-                .end();
-
-        // 1d. SubstitutionAsCode extraction processing route
-        from("direct:processOutboundSubstitutionAsCodeExtraction")
-                .routeId("outbound-substitution-as-code-extraction-processor")
-                .process(codeExtractionOutboundProcessor)
-                .process(substitutionOutboundProcessor)
-                .choice()
-                .when(exchange -> shouldIgnoreFurtherProcessing(exchange))
-                .to("log:outbound-substitution-as-code-filtered-message?level=DEBUG")
-                .process(consolidationProcessor)
-                .stop()
-                .otherwise()
                 .process(outboundSendProcessor)
                 .process(consolidationProcessor)
                 .end();

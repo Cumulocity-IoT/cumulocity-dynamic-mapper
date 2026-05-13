@@ -56,11 +56,11 @@ import dynamic.mapper.model.Qos;
 import dynamic.mapper.model.SnoopStatus;
 import dynamic.mapper.processor.model.DeviceMessage;
 import dynamic.mapper.processor.model.ExternalSource;
+import dynamic.mapper.processor.model.MappingAction;
 import dynamic.mapper.processor.inbound.processor.ProcessorTestHelper;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.ExternalId;
 import dynamic.mapper.processor.model.TransformationType;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
@@ -588,7 +588,7 @@ void setUp() throws Exception {
         // Given - DeviceMessage with 'update' action
         DeviceMessage deviceMsg = createTemperatureMeasurementDeviceMessage();
         deviceMsg.setTopic("event/events");
-        deviceMsg.setAction("update");
+        deviceMsg.setAction(MappingAction.UPDATE);
 
         processingContext.setFlowResult(deviceMsg);
 
@@ -616,7 +616,7 @@ void setUp() throws Exception {
         // Given - DeviceMessage with 'patch' action for inventory
         DeviceMessage deviceMsg = createTemperatureMeasurementDeviceMessage();
         deviceMsg.setTopic("inventory/managedObjects");
-        deviceMsg.setAction("patch");
+        deviceMsg.setAction(MappingAction.PATCH);
 
         processingContext.setFlowResult(deviceMsg);
 
@@ -646,7 +646,7 @@ void setUp() throws Exception {
         // Given - DeviceMessage with 'delete' action
         DeviceMessage deviceMsg = createTemperatureMeasurementDeviceMessage();
         deviceMsg.setTopic("event/events");
-        deviceMsg.setAction("delete");
+        deviceMsg.setAction(MappingAction.DELETE);
 
         processingContext.setFlowResult(deviceMsg);
 
@@ -673,7 +673,7 @@ void setUp() throws Exception {
         // Given - DeviceMessage with 'update' action for measurement (which doesn't support PUT)
         DeviceMessage deviceMsg = createTemperatureMeasurementDeviceMessage();
         deviceMsg.setTopic("measurement/measurements");
-        deviceMsg.setAction("update");
+        deviceMsg.setAction(MappingAction.UPDATE);
 
         processingContext.setFlowResult(deviceMsg);
 
@@ -703,7 +703,7 @@ void setUp() throws Exception {
         // Given - DeviceMessage with 'patch' action for measurement (which doesn't support PUT/PATCH)
         DeviceMessage deviceMsg = createTemperatureMeasurementDeviceMessage();
         deviceMsg.setTopic("measurement/measurements");
-        deviceMsg.setAction("patch");
+        deviceMsg.setAction(MappingAction.PATCH);
 
         processingContext.setFlowResult(deviceMsg);
 
@@ -766,7 +766,7 @@ void setUp() throws Exception {
         // Given - DeviceMessage with 'update' action for event
         DeviceMessage deviceMsg = createTemperatureMeasurementDeviceMessage();
         deviceMsg.setTopic("event/events");
-        deviceMsg.setAction("update");
+        deviceMsg.setAction(MappingAction.UPDATE);
 
         processingContext.setFlowResult(deviceMsg);
 
@@ -794,7 +794,7 @@ void setUp() throws Exception {
         // Given - DeviceMessage with 'patch' action for inventory (managed objects)
         DeviceMessage deviceMsg = createTemperatureMeasurementDeviceMessage();
         deviceMsg.setTopic("inventory/managedObjects");
-        deviceMsg.setAction("patch");
+        deviceMsg.setAction(MappingAction.PATCH);
 
         processingContext.setFlowResult(deviceMsg);
 

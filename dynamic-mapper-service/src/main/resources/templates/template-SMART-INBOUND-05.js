@@ -165,3 +165,4 @@ function createMeasurement(timestamp, values, deviceId) {
         externalSource: [{ type: "c8y_Serial", externalId: deviceId }]
     };
 }
+export {onMessage};

@@ -60,12 +60,20 @@ public abstract class AMQTTClient extends AConnectorClient {
     protected static final int RECONNECT_DELAY_STEP_MS = 10000;
     protected static final int RECONNECT_DELAY_MAX_MS  = 300000; // 5 minutes
 
-    @Getter
-    @Setter
-    protected List<Qos> supportedQOS = Arrays.asList(
-            Qos.AT_MOST_ONCE,
-            Qos.AT_LEAST_ONCE,
-            Qos.EXACTLY_ONCE);
+     @Getter
+     @Setter
+     protected List<Qos> supportedQOS = Arrays.asList(
+             Qos.AT_MOST_ONCE,
+             Qos.AT_LEAST_ONCE,
+             Qos.EXACTLY_ONCE);
+
+     // Sparkplug Host support
+     protected SparkplugCertificateManager sparkplugCertificateManager;
+     protected boolean isSparkplugHost = false;
+     protected String sparkplugHostId;
+
+     // Error handling and reconnection control
+     protected boolean reconnectOnProcessingError = true;
 
     /**
      * Default constructor - initializes connector specification
@@ -125,6 +133,17 @@ public abstract class AMQTTClient extends AConnectorClient {
             if (useSelfSignedCertificate) {
                 initializeMqttSslConfiguration();
             }
+
+            // Load error handling configuration
+            reconnectOnProcessingError = (Boolean) connectorConfiguration.getProperties()
+                    .getOrDefault("reconnectOnProcessingError", true);
+
+            // Create MQTT callback ONCE during initialization.
+            // The callback maintains reconnection attempt counters that must survive
+            // across multiple connect()/disconnect() cycles. Creating a new callback
+            // on every connect() would reset these counters and cause an infinite
+            // reconnect loop where each reconnect is treated as "attempt 1".
+            createMqttCallback();
 
             log.info("{} - MQTT Connector {} initialized successfully", tenant, connectorName);
             if (isConfigValid(connectorConfiguration)) {
@@ -195,6 +214,7 @@ public abstract class AMQTTClient extends AConnectorClient {
     public void connect() {
         // Use base class synchronization helpers
         if (!beginConnection()) {
+            log.info("{} - Connection attempt already in progress for connector: {}", tenant, connectorName);
             return;
         }
 
@@ -206,25 +226,62 @@ public abstract class AMQTTClient extends AConnectorClient {
                 return;
             }
 
+            // Initialize Sparkplug support if enabled
+            initializeSparkplugSupport();
+
             // Build MQTT client (version-specific)
             buildMqttClient();
 
-            // Create callback (version-specific)
-            createMqttCallback();
+
+            if (!cleanSession) {
+                // With cleanSession=false the broker persists the session and immediately
+                // delivers queued messages as soon as the TCP connection is established —
+                // BEFORE the application has registered any per-topic callbacks.
+                // To avoid "No publish flow registered" errors we must:
+                //   1. Pre-build mapping caches so messages can be resolved and processed
+                //   2. Register a global publish handler that routes messages to mqttCallback
+                log.info("{} - cleanSession=false: pre-building caches and registering global publish handler before connect for connector: {}",
+                        tenant, connectorName);
+                prepareForPersistentSessionReconnect();
+                registerPreConnectPublishHandler();
+            }
 
             // Connect with retry logic
             connectMqttWithRetry();
-
-            // Initialize subscriptions after successful connection
-            if (isConnected()) {
-                initializeSubscriptionsAfterConnect();
-            }
 
         } catch (Exception e) {
             log.error("{} - Error connecting MQTT client: {}", tenant, e.getMessage(), e);
             connectionStateManager.updateStatusWithError(e);
         } finally {
+            // *** IMPORTANT: release isConnecting BEFORE initializeSubscriptionsAfterConnect() ***
+            //
+            // initializeSubscriptionsAfterConnect() calls rebuildMappingCaches() which can take
+            // several hundred milliseconds (DB round-trips). The MQTT connection is already live
+            // at this point, so the broker may deliver messages immediately. If one of those
+            // messages hits its processing timeout (e.g. 50 ms), its reconnect trigger calls
+            // connect() → beginConnection(). With the old code, beginConnection() saw
+            // isConnecting=true (set earlier in this method) and returned false, silently
+            // aborting the reconnect. By calling endConnection() here – inside finally, right
+            // after the physical connection phase is done – we allow a legitimate reconnect to
+            // proceed concurrently. subscribe() calls inside a maybe-concurrent
+            // initializeSubscriptionsAfterConnect() check isConnected() first and skip
+            // gracefully if the client has been disconnected in the meantime.
             endConnection();
+        }
+
+        // Initialize subscriptions OUTSIDE the isConnecting guard (see comment above).
+        if (isConnected()) {
+            try {
+                initializeSubscriptionsAfterConnect();
+
+                // Publish Birth Certificate if Sparkplug Host mode is enabled
+                if (isSparkplugHost && sparkplugCertificateManager != null) {
+                    sparkplugCertificateManager.subscribeToSparkplugTopics();
+                    sparkplugCertificateManager.publishBirthCertificate();
+                }
+            } catch (Exception e) {
+                log.error("{} - Error initializing subscriptions after connect: {}", tenant, e.getMessage(), e);
+            }
         }
     }
 
@@ -264,6 +321,21 @@ public abstract class AMQTTClient extends AConnectorClient {
      */
     protected abstract void closeMqttResources();
 
+    /**
+     * Register a global publish handler BEFORE connecting to the broker.
+     * <p>
+     * Required for {@code cleanSession=false} (persistent sessions): the broker starts
+     * delivering queued messages immediately upon connection — before per-topic callbacks
+     * are registered via {@link #subscribe(String, Qos)}.  Subclasses must register
+     * {@code mqttCallback} as the global fallback listener (using
+     * {@code MqttGlobalPublishFilter.ALL}) so those messages are not dropped with
+     * "No publish flow registered".
+     * <p>
+     * After {@link #initializeSubscriptionsAfterConnect()} completes, per-topic callbacks
+     * take over and the global handler serves only as a fallback.
+     */
+    protected abstract void registerPreConnectPublishHandler();
+
     @Override
     public void disconnect() {
         // Use base class synchronization helpers
@@ -275,25 +347,35 @@ public abstract class AMQTTClient extends AConnectorClient {
             log.info("{} - Disconnecting MQTT client", tenant);
             connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTING, true, true);
 
-            // Unsubscribe from all topics (if client is connected)
-            if (mappingSubscriptionManager != null && isMqttClientConnected()) {
-                try {
-                    mappingSubscriptionManager.getSubscriptionCountsView().keySet().forEach(topic -> {
-                        try {
-                            unsubscribeMqttTopic(topic);
-                            log.debug("{} - Unsubscribed from topic: [{}]", tenant, topic);
-                        } catch (Exception e) {
-                            log.debug("{} - Error unsubscribing from topic: [{}] (may already be unsubscribed)",
-                                    tenant, topic);
-                        }
-                    });
-                } catch (Exception e) {
-                    log.debug("{} - Error during unsubscribe phase: {}", tenant, e.getMessage());
-                }
-            }
+             // Unsubscribe from all topics (if client is connected)
+             if (mappingSubscriptionManager != null && isMqttClientConnected()) {
+                 try {
+                     mappingSubscriptionManager.getSubscriptionCountsView().keySet().forEach(topic -> {
+                         try {
+                             unsubscribeMqttTopic(topic);
+                             log.debug("{} - Unsubscribed from topic: [{}]", tenant, topic);
+                         } catch (Exception e) {
+                             log.debug("{} - Error unsubscribing from topic: [{}] (may already be unsubscribed)",
+                                     tenant, topic);
+                         }
+                     });
+                 } catch (Exception e) {
+                     log.debug("{} - Error during unsubscribe phase: {}", tenant, e.getMessage());
+                 }
+             }
 
-            // Disconnect client (version-specific)
-            disconnectMqttClient();
+             // Publish Sparkplug Death Certificate before disconnecting (if configured)
+             if (isSparkplugHost && sparkplugCertificateManager != null && isMqttClientConnected()) {
+                 try {
+                     sparkplugCertificateManager.publishDeathCertificate();
+                     log.info("{} - Published Sparkplug Death Certificate before disconnect", tenant);
+                 } catch (Exception e) {
+                     log.error("{} - Error publishing Sparkplug Death Certificate: {}", tenant, e.getMessage());
+                 }
+             }
+
+             // Disconnect client (version-specific)
+             disconnectMqttClient();
 
             connectionStateManager.setConnected(false);
             connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTED, true, true);
@@ -499,15 +581,98 @@ public abstract class AMQTTClient extends AConnectorClient {
 
         // MQTT session behavior
         configProps.put("cleanSession", ConnectorPropertyBuilder.optionalBoolean()
-                .order(15)
-                .defaultValue(true)
+                 .order(15)
+                 .defaultValue(true)
+                 .build());
+
+        // Error handling and reconnection control
+        configProps.put("reconnectOnProcessingError", ConnectorPropertyBuilder.optionalBoolean()
+                .order(16)
+                .defaultValue(false)
+                .condition("cleanSession", "false")
+                .description("Reconnect broker on timeout or internal processing errors (for QoS 1+ messages and broker which don't automatically retransmit unacked messages)")
                 .build());
 
+        // Sparkplug Host support
+        configProps.put("isSparkplugHost", ConnectorPropertyBuilder.optionalBoolean()
+                .order(17)
+                .defaultValue(false)
+                .description("Enable Sparkplug Host mode to publish Birth/Death certificates on connection/disconnection")
+                .build());
+
+        configProps.put("sparkplugHostId", ConnectorPropertyBuilder.optionalString()
+                .order(18)
+                .description("Sparkplug Host ID (used for Birth/Death certificates)")
+                .condition("isSparkplugHost", "true")
+                .build());
+
+
+
         return configProps;
+     }
+
+     /**
+      * Create connector specification - subclasses should implement
+      */
+     protected abstract ConnectorSpecification createConnectorSpecification();
+
+    /**
+     * Initialize Sparkplug Host support if configured
+     */
+    protected void initializeSparkplugSupport() {
+        isSparkplugHost = (Boolean) connectorConfiguration.getProperties().getOrDefault("isSparkplugHost", false);
+        sparkplugHostId = (String) connectorConfiguration.getProperties().get("sparkplugHostId");
+
+        if (isSparkplugHost) {
+            if (sparkplugHostId == null || sparkplugHostId.trim().isEmpty()) {
+                // Use tenant as fallback if sparkplugHostId is not provided
+                sparkplugHostId = tenant;
+            }
+
+            if (sparkplugHostId != null && !sparkplugHostId.trim().isEmpty()) {
+                sparkplugCertificateManager = new SparkplugCertificateManager(
+                        tenant,
+                        sparkplugHostId,
+                        objectMapper,
+                        createSparkplugPublisher());
+                log.info("{} - Sparkplug Host support initialized with ID: {}", tenant, sparkplugHostId);
+            } else {
+                log.warn("{} - Sparkplug Host mode enabled but no Host ID provided", tenant);
+                isSparkplugHost = false;
+            }
+        }
     }
 
     /**
-     * Create connector specification - subclasses should implement
+     * Create a Sparkplug publisher for this MQTT client
+     * Subclasses should override to provide protocol-specific implementation
+     *
+     * @return The SparkplugPublisher implementation
      */
-    protected abstract ConnectorSpecification createConnectorSpecification();
+    protected SparkplugCertificateManager.SparkplugPublisher createSparkplugPublisher() {
+        return new SparkplugCertificateManager.SparkplugPublisher() {
+            @Override
+            public void publishCertificate(String topic, byte[] payload) throws Exception {
+                // Default implementation - subclasses should override for specific MQTT versions
+                if (!isConnected()) {
+                    throw new ConnectorException("Cannot publish certificate: not connected");
+                }
+                // Will be overridden by subclasses with actual publishing logic
+            }
+
+            @Override
+            public void subscribeTopic(String topicPattern) throws Exception {
+                if (!isConnected()) {
+                    throw new ConnectorException("Cannot subscribe to topic: not connected");
+                }
+                // Subscribe using the base connector's subscribe method
+                try {
+                    subscribe(topicPattern, Qos.AT_LEAST_ONCE);
+                } catch (ConnectorException e) {
+                    log.debug("{} - Failed to subscribe to {}: {}", tenant, topicPattern, e.getMessage());
+                    throw e;
+                }
+            }
+        };
+    }
 }
