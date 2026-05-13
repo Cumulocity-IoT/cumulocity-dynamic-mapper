@@ -40,8 +40,7 @@
 <c8y-action-bar-item [placement]="'right'">
   <button class="btn btn-link"
     title="{{ 'Delete this custom template permanently. System templates cannot be deleted — use Init system code templates to restore them.' | translate }}"
-    (click)="onDeleteCodeTemplate()"
-    [disabled]="codeTemplateDecoded?.internal || !feature?.userHasMappingAdminRole">
+    (click)="onDeleteCodeTemplate()" [disabled]="codeTemplateDecoded?.internal || !feature?.userHasMappingAdminRole">
     <i c8yIcon="minus-circle"></i>
     {{ 'Delete' | translate }}
   </button>
@@ -57,51 +56,40 @@
   </button>
   <button class="btn btn-link"
     title="{{ 'Restore all system (read-only) templates to their factory defaults. Your custom templates are not affected.' | translate }}"
-    (click)="onInitSystemCodeTemplate()"
-    [disabled]="!feature?.userHasMappingAdminRole">
+    (click)="onInitSystemCodeTemplate()" [disabled]="!feature?.userHasMappingAdminRole">
     <i c8yIcon="reset"></i>
     {{ 'Init system code templates' | translate }}
   </button>
+  <button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate" popover="{{
+      'Restores all read-only system templates (SHARED, SYSTEM, and built-in transformation types) to their factory defaults. Custom templates you created are not affected.'
+        | translate
+    }}" placement="bottom left" triggers="focus" type="button"></button>
   <button class="btn btn-link" title="{{ 'Refresh' | translate }}" (click)="refresh()">
     <i c8yIcon="refresh"></i>
     {{ 'Refresh' | translate }}
   </button>
 </c8y-action-bar-item>
+<c8y-action-bar-item [placement]="'right'">
+  <ng-template #popTemplateCodeHelp>
+    <div [innerHtml]="codeEditorHelp"></div>
+  </ng-template>
+  <button type="button" placement="left" [popover]="popTemplateCodeHelp" triggers="click" class="btn-help"
+    containerClass="wide-popover" container="body" aria-label="Help content"></button>
+</c8y-action-bar-item>
 <div class="card content-fullpage d-grid">
   @if (isLoading) {
   <c8y-loading></c8y-loading>
   } @else {
-  <div class="card-block">
-    <div class="p-b-12 text-muted font-smaller">
-      A <strong>Code Template</strong> is the JavaScript starting point that is copied into every new mapping that
-      uses this transformation type. Editing a template does <em>not</em> affect mappings already created from it
-      &mdash; each mapping holds its own independent copy. Select a template from the drop-down above to view or
-      edit its code.
-      <br />
-      <strong>Shared</strong> templates are evaluated before every Smart Function execution: helpers and constants
-      defined here are available as globals in all Smart Functions without any import statement.
-    </div>
-    <c8y-form-group class="fit-h">
-      <div class="d-flex">
-        <label translate>JavaScript code</label>
-        <span class="hidden-xs hidden-sm">
-          <ng-template #popTemplateCodeHelp>
-            <div [innerHtml]="codeEditorHelp"></div>
-          </ng-template>
-          <button type="button" placement="right" [popover]="popTemplateCodeHelp" triggers="click" class="btn-help"
-            containerClass="wide-popover" aria-label="Help content"></button>
-        </span>
-      </div>
-      <c8y-editor [editorOptions]="editorOptions" monacoEditorMarkerValidator [ngModel]="codeTemplateDecoded?.code"
-        (ngModelChange)="onValueCodeChange($event)" (editorInit)="registerCompletionProvider()" class="form-control fit-h">
-      </c8y-editor>
-    </c8y-form-group>
-  </div>
+
+  <c8y-editor [editorOptions]="editorOptions" monacoEditorMarkerValidator [ngModel]="codeTemplateDecoded?.code"
+    (ngModelChange)="onValueCodeChange($event)" (editorInit)="registerCompletionProvider()" class="form-control fit-h">
+  </c8y-editor>
+
   <div class="card-footer separator p-24 text-center flex-no-shrink">
-      <button type="button" name="save" class="btn btn-primary" (click)="onSaveCodeTemplate()"
-        [disabled]="codeTemplateDecoded?.readonly || !feature?.userHasMappingAdminRole" translate>
-        Save
-      </button>
+    <button type="button" name="save" class="btn btn-primary" (click)="onSaveCodeTemplate()"
+      [disabled]="codeTemplateDecoded?.readonly || !feature?.userHasMappingAdminRole" translate>
+      Save
+    </button>
   </div>
   }
 </div>

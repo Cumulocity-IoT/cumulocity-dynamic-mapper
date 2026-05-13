@@ -36,7 +36,7 @@
         } @else {
         <p class="m-b-16 text-medium" translate>
           Capture raw JSON payloads from the Cumulocity Notification 2.0 API before mapping.
-          Optionally filter by a specific device. And then select a message to build a mapping.
+          Specify a device / device group to subscribe for messages. And then select a message to build a mapping.
         </p>
         }
 
@@ -50,14 +50,14 @@
                 <input type="radio" name="direction" value="INBOUND" [(ngModel)]="direction"
                   (ngModelChange)="onDirectionChange()" [attr.aria-checked]="direction === 'INBOUND'" />
                 <span></span>
-                <span><i c8yIcon="arrow-down" class="text-success m-r-4"></i><span translate>Inbound</span></span>
+                <span><i c8yIcon="swipe-right" class="text-success m-r-4"></i><span translate>Inbound</span></span>
               </label>
               <label class="c8y-radio radio-inline" title="{{ 'Outbound' | translate }}"
                 aria-label="{{ 'Outbound' | translate }}">
                 <input type="radio" name="direction" value="OUTBOUND" [(ngModel)]="direction"
                   (ngModelChange)="onDirectionChange()" [attr.aria-checked]="direction === 'OUTBOUND'" />
                 <span></span>
-                <span><i c8yIcon="arrow-up" class="text-info m-r-4"></i><span translate>Outbound</span></span>
+                <span><i c8yIcon="swipe-left" style="color: orange" class="m-r-4"></i><span translate>Outbound</span></span>
               </label>
             </div>
           </div>

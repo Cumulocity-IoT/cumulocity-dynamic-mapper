@@ -75,7 +75,7 @@ export class CodeComponent implements OnInit, AfterViewInit, OnDestroy {
   private completionProviderDisposable: any;
 
 
-  codeEditorHelp = `Shared code is evaluated across all mappings that utilize  <b>Smart Function JavaScript</b> or <b>Substitutions as JavaScript</b> for creating substitutions. The templates <b>Inbound</b> and <b>Outbound</b> are available in the code editor and can be customized according to your requirements per mapping.`;
+  codeEditorHelp = `A <b>Code Template</b> is copied into each new mapping — edits here do <em>not</em> affect existing mappings. <b>Shared</b> templates provide globals available in all Smart Functions without any import.<br><br>Shared code is evaluated across all mappings that utilize  <b>Smart Function JavaScript</b> or <b>Substitutions as JavaScript</b> for creating substitutions. The templates <b>Inbound</b> and <b>Outbound</b> are available in the code editor and can be customized according to your requirements per mapping.`;
 
   constructor(
     private bsModalService: BsModalService,
@@ -118,7 +118,7 @@ export class CodeComponent implements OnInit, AfterViewInit, OnDestroy {
     } else {
       this.templateType = TemplateType.SHARED;
       this.defaultTemplate = TemplateType.SHARED.toString();
-      this.codeEditorHelp = `Shared code is evaluated across all mappings that utilize <b>Smart Function JavaScript</b>. The system code shows internal definitions and wrapper classes used at runtime.`;
+      this.codeEditorHelp = `A <b>Code Template</b> is copied into each new mapping — edits here do <em>not</em> affect existing mappings. <b>Shared</b> templates provide globals available in all Smart Functions without any import.<br><br>Shared code is evaluated across all mappings that utilize <b>Smart Function JavaScript</b>. The system code shows internal definitions and wrapper classes used at runtime.`;
     }
   }
 
