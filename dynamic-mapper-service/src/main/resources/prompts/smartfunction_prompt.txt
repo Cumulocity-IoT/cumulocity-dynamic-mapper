@@ -16,15 +16,16 @@ You define a JavaScript function to transform the source template into the targe
 The JavaScript function must have the following signature:
 ```javascript
 function onMessage(msg, context) {
-    var payload = msg.payload;   // already a plain JS object — use bracket notation, NOT .get()
+    var payload = msg.getPayload();  // pre-deserialized plain JS object — use bracket/dot notation
     ...
 }
 ```
-Your input is a JSON of a mapping where `sourceTemplate` is the JSON Input document.
+Your input is a JSON of a mapping where `sourceTemplate` is the JSON input document.
 
 # Payload access rules
-- `msg.payload` is a **plain JavaScript object** (not a Java Map). Always use `payload["key"]` or `payload.key`, never `payload.get("key")`.
-- `msg.getPayload()` does NOT exist. Use `msg.payload` directly.
+- `msg.getPayload()` returns the **pre-deserialized JSON payload** as a plain JavaScript object. This is the preferred form.
+- `msg.payload` is equivalent and also valid (direct property access).
+- Always use `payload["key"]` or `payload.key` to access fields. Do NOT use `payload.get("key")` — it is deprecated.
 - `msg.sourceId` gives the C8Y internal device ID for OUTBOUND mappings (populated by the runtime).
 - `msg.time` gives the message arrival timestamp as a fallback when the payload has no time field.
 
@@ -34,6 +35,7 @@ The mapping JSON includes a `supportESM` flag.
 - If `supportESM` is **false** or absent: do **NOT** include any `export` statement. The function is discovered by name in the GraalVM runtime and an export statement would cause a runtime error.
 
 # Mapping
+```typescript
 export interface Mapping {
   [x: string]: any;
 
@@ -79,17 +81,11 @@ export interface Mapping {
   /** Type of mapping transformation */
   mappingType: MappingType;
 
-  /** Array of field substitutions for data transformation */
-  substitutions?: Substitution[];
-
-  /** Filter expression (condition) if mapping should be applied  (e.g., "telemetry.telemetryReadings[0].value >15") */
+  /** Filter expression (condition) if mapping should be applied (e.g., "telemetry.telemetryReadings[0].value > 15") */
   filterMapping?: string;
 
   /** Filter expression for inventory queries (e.g., "has(c8y_IsDevice)") */
   filterInventory?: string;
-
-  /** Maximum number of failures before disabling mapping */
-  maxFailureCount?: number;
 
   /** Whether the mapping is currently active */
   active: boolean;
@@ -97,23 +93,11 @@ export interface Mapping {
   /** Whether debug mode is enabled for this mapping */
   debug: boolean;
 
-  /** Whether the mapping has been tested */
-  tested: boolean;
-
-  /** Whether the mapping supports message context */
-  supportsMessageContext?: boolean;
-
-  /** Whether events can have attachments */
-  eventWithAttachment?: boolean;
-
   /** Whether to create devices that don't exist */
   createNonExistingDevice: boolean;
 
   /** Whether to update existing devices */
   updateExistingDevice: boolean;
-
-  /** Whether to automatically acknowledge operations */
-  autoAckOperation?: boolean;
 
   /** Whether to use external ID for device identification */
   useExternalId: boolean;
@@ -121,620 +105,524 @@ export interface Mapping {
   /** Type of external ID to use (e.g., "c8y_Serial") */
   externalIdType: string;
 
-  /** Status of template snooping */
-  snoopStatus: SnoopStatus;
-
-  /** List of templates captured during snooping */
-  snoopedTemplates?: string[];
-
-  /** Extension configuration for custom processing */
-  extension?: ExtensionEntry;
-
-  /** Quality of Service level for MQTT */
-  qos: Qos;
-
-  /** Base64 encoded code for custom substitutions */
+  /** Base64 encoded code for the Smart Function */
   code?: string;
+
+  /** Whether ESM (ES Module) mode is enabled */
+  supportESM?: boolean;
 
   /** Timestamp of last update */
   lastUpdate: number;
 }
-
-
 ```
- /** Details of external Id (simple lookup/reference only). */
-export interface ExternalId {
-    /** External Id to be looked up and/or created to get C8Y "id" */
-    externalId: string;
 
-    /** e.g. "c8y_Serial"  */
-    type: string;
-}
+# SmartFunctionContext — Runtime API
+The `context` parameter in `onMessage` provides access to device inventory, configuration, persistent state, and warnings.
 
-/**
- * Details of external Id for advanced device creation scenarios.
- * For simple lookups, use {@link ExternalId} instead.
- */
-export interface ExternalSource {
-    /** External Id to be looked up and/or created to get C8Y "id" */
-    externalId: string;
-
-    /** e.g. "c8y_Serial"  */
-    type: string;
-
-    // Advanced:
-
-    /** default true (false for advanced users, e.g. if they want to create somewhere deeper in the hierarchy) */
-    autoCreateDeviceMO?: boolean;
-
-    // TODO: more design needed for complex onboarding requirements - e.g. for advanced hierarchy changes, send separate messages (similar to the C8Y Rest API) or include those instructions as part of ExternalSource? Also need more fields for setting fragments on new MOs etc
-    /** To support adding child assets/devices */
-    parentId?: string;
-    /** If creating a child, what kind to create */
-    childReference?: "device" | "asset" | "addition";
-
-    /** Transport/MQTT client Id, stored on the MO first time/creation, so it can be used in outbound messages to send to the device. Would be stashed on the MO for inbound messages so that we can read it on the outbound side for use by the device */
-    clientId?: string;
-}
-
-/** A request going to or coming from Cumulocity core (or IceFlow/offloading) */
-export interface CumulocityObject {
-    /** The same payload that would be used in the C8Y REST/SmartREST API
-    Exceptions:
-     - If providing an externalSource you don't need to provide an "id" as you would in those APIs.
-     - When using update APIs (e.g. PUT /inventory/managedObjects/{id}), you should add an "id" field into the payload (which would otherwise be in the "path")
-    */
-    payload: object;
-
-    /** Which type in the C8Y api is being modified. Singular not plural. e.g. "measurement". The presence of this field also serves as a discriminator to identify this JS object as CumulocityObject */
-    cumulocityType: string;
-    /** What kind of operation is being performed on this type */
-    action: "create" | "update";
+```typescript
+interface SmartFunctionContext {
+    // ---- Configuration ----
 
     /**
-     * Since we usually don't know the C8Y Id to put in the payload,
-     * the flow can specify a single external Id to lookup (and optionally create).
-     * Mandatory to include one item when sending this from cloud. Optional for thin-edge.
-     *
-     * When a Cumulocity message (e.g. operation) is received, this will contain a list of all external ids for this Cumulocity id.
-     *
-     * @since 6.1.2 Changed from ExternalSource to ExternalId for simple lookups
-     */
-    externalSource?: ExternalId[] | ExternalId;
-
-    // For advanced cases only:
-
-    /** For messages sent by the flow, this is "cumulocity" by default, but can be set to other options for other destinations.
-For messages received by the flow this is not set.
-(nb: no need for a "processingMode" option due to having this) */
-    destination?: "cumulocity" | "iceflow" | "streaming-analytics";
-}
-
-export interface DeviceMessage {
-    /**
-     * Cloud IdP and first step of tedge always gets a Uint8Array, but might be a JS object
-     * if passing intermediate messages between steps in thin-edge.
-     *
-     * @since 6.1.2 Changed from ArrayBuffer|object to Uint8Array for consistency
-     *
-     * @example
-     * // Convert string to Uint8Array
-     * payload: JSON.stringify(myObject)
-     *
-     * @example
-     * // Convert Uint8Array to string
-     * const text = message.payload
-     */
-    payload: Uint8Array;
-
-    /**
-     * Identifier for the source/dest transport e.g. "mqtt", "opc-ua" etc.
-     * Mandatory unless in thin-edge (when it can be inferred from context).
-     */
-    transportId?: string;
-
-    /**
-     * The topic on the transport (e.g. MQTT topic).
-     *
-     * Special placeholder: Use `_externalId_` in the topic to automatically reference
-     * the external ID of the device. The placeholder will be resolved using the
-     * externalId type specified in the `externalSource` field.
-     *
-     * @example "measurements/_externalId_"
-     * @example "measurements/12345"
-     */
-    topic: string;
-
-    /**
-     * Transport/MQTT client Id.
-     * DiM team just renamed this from clientId->client, but we feel clientId is clearer;
-     * will discuss with them when Scott is back.
-     * Mandatory unless in thin-edge (when it can be inferred from context).
-     */
-    clientId?: string;
-
-    /**
-     * Dictionary of transport/MQTT-specific fields/properties/headers.
-     * For Kafka, use "key" to define the record key.
-     *
-     * @since 6.1.2 Changed from { [key: string]: string } to { [key: string]: any }
-     *
-     * @example { "key": "device-123" }
-     */
-    transportFields?: { [key: string]: any };
-
-    /**
-     * Timestamp of incoming Pulsar message; does nothing when sending.
-     */
-    time?: Date;
-
-    /**
-     * External source configuration for resolving the `_externalId_` placeholder in the topic.
-     * Defines which external ID type (and optionally the externalId value) to use for device lookup.
-     * `type` is required; `externalId` is optional and resolved from context when omitted.
-     *
-     * @example [{"type": "c8y_Serial"}]
-     * @example [{"type": "c8y_Serial", "externalId": "device-001"}]
-     */
-    externalSource?: Array<{ type: string; externalId?: string }>;
-
-    /**
-     * Optional: Explicitly set the Cumulocity device ID (sourceId) for this message.
-     * For OUTBOUND messages, the runtime populates this from the processing context so you
-     * can use it without extracting it from payload['source']['id'].
-     *
-     * @example msg.sourceId  // preferred over payload['source']?.['id']
-     */
-    sourceId?: string;
-}
-
-/**
- * Context object providing access to state, configuration, and device lookup capabilities
- * during data preparation/mapping operations.
- *
- */
-export interface DataPrepContext {
-    /**
-    * Persists a value in the context's state.
-    * State SURVIVES across message invocations for the same mapping.
-    * State is cleared when the mapping is deleted.
-    * @param {string} key - The key for the state item.
-    * @param {any} value - The value to store (primitives, objects, and arrays are supported).
-    */
-    setState(key: string, value: any): void;
-
-    /**
-     * Retrieves a persisted state value.
-     * Returns the value stored by a previous message invocation, or null on first call.
-     * @param {string} key - The key of the state item to retrieve.
-     * @returns {any} The value associated with the key, or undefined if not found.
-     */
-    getState(key: string): any;
-
-    /**
-     * Retrieves read-only mapping configuration for the current invocation.
-     * Contains mapping metadata: mappingId, mappingName, tenant, topic, targetAPI, debug, clientId.
-     * Does NOT persist across invocations (unlike getState/setState).
-     * @returns {Record<string, any>} The mapping configuration object.
-     *
-     * Use config.topic to access the full MQTT topic of the current message.
-     * To extract a device identifier from the topic, split it by '/':
+     * Returns read-only mapping configuration for the current invocation.
+     * Keys include: mappingId, mappingName, tenant, topic, targetAPI, debug, clientId, externalId.
+     * Does NOT persist across invocations.
      *
      * @example
      * const config = context.getConfig();
-     * console.log("Mapping:", config.mappingName, "Target:", config.targetAPI);
-     * // Extract externalId from topic segment, e.g. 'testSmartInbound/sensor-berlin-01'
-     * var topicSegments = config["topic"].split("/");
-     * var externalId = topicSegments[1]; // 'sensor-berlin-01'
+     * // Extract externalId from topic: 'testSmartInbound/sensor-berlin-01' → 'sensor-berlin-01'
+     * var segments = config["topic"].split("/");
+     * var externalId = segments[1];
      */
     getConfig(): Record<string, any>;
 
     /**
-     * Lookup DTM Asset properties by asset ID.
-     * @param {string} assetId - The ID of the asset to look up.
-     * @returns {Record<string, any>} A record containing the asset properties.
-     *
-     * @since 6.1.2 Renamed from lookupDTMAssetProperties
-     */
-    getDTMAsset(assetId: string): Record<string, any>;
-
-    /**
-     * Lookup a device from the inventory cache by internal device ID.
-     * @param {string} deviceId - The internal device ID to look up.
-     * @returns {any} The managed object from inventory, or null if not found.
-     *
-     * @since 6.1.2 New method
-     *
-     * @example
-     * const device = context.getManagedObjectByDeviceId("12345");
-     * if (device) {
-     *     console.log("Device name:", device.name);
-     * }
-     */
-    getManagedObjectByDeviceId(deviceId: string): any;
-
-    /**
-     * Lookup a device from the inventory cache by external ID.
-     * @param {ExternalId} externalId - The external ID to look up.
-     * @returns {any} The managed object from inventory, or null if not found.
-     *
-     * @since 6.1.2 New method
-     *
-     * @example
-     * const device = context.getManagedObject({
-     *     externalId: "DEVICE-001",
-     *     type: "c8y_Serial"
-     * });
-     * if (device) {
-     *     console.log("Device name:", device.name);
-     * }
-     */
-    getManagedObject(externalId: ExternalId): any;
-}
-
-```
-
-# SmartFunctionContext — Dynamic Mapper extended API
-The `context` parameter in `onMessage` is a **SmartFunctionContext**, which extends `DataPrepContext` with the following additional methods. Always prefer these over lower-level alternatives.
-
-```typescript
-interface SmartFunctionContext extends DataPrepContext {
-    /**
-     * Returns the transport/MQTT client ID for the current message.
-     * Equivalent to context.getConfig().clientId but more explicit.
-     * @returns {string|undefined}
-     * @example
-     * var clientId = context.getClientId();
+     * Returns the MQTT/transport client ID for the current message.
+     * Preferred over context.getConfig()["clientId"].
      */
     getClientId(): string | undefined;
 
     /**
-     * Returns the resolved external ID of the source device (outbound mappings).
-     * Only set when useExternalId is enabled on the mapping.
-     * @returns {string|undefined}
-     * @example
-     * var externalId = context.getExternalId();
+     * Returns the resolved external ID of the source device (OUTBOUND mappings).
+     * Only set when useExternalId is enabled and externalIdType is configured.
+     * Preferred over context.getConfig()["externalId"].
      */
     getExternalId(): string | undefined;
 
+    // ---- Persistent state ----
+
     /**
-     * Returns all persisted state as a single object (useful for debugging).
-     * @returns {Record<string, any>}
+     * Stores a value in the mapping's persistent state.
+     * State survives across message invocations for the same mapping.
+     * State is cleared when the mapping is deleted; does NOT survive a service restart.
+     */
+    setState(key: string, value: any): void;
+
+    /**
+     * Retrieves a persisted value. Returns null/undefined on first call.
+     */
+    getState(key: string): any;
+
+    /**
+     * Returns all persisted state as a single object. Useful for debugging.
      */
     getStateAll(): Record<string, any>;
 
-    /**
-     * Adds a non-fatal warning that is surfaced in the UI for debugging.
-     * @param {string} warning
-     * @example
-     * context.addWarning("Device not found, using fallback");
-     */
-    addWarning(warning: string): void;
+    // ---- Device inventory lookups ----
 
     /**
-     * Lookup a device from the inventory cache by internal Cumulocity device ID.
-     * @param {string} c8ySourceId
-     * @returns {any|null}
+     * Looks up a device from the inventory cache by internal Cumulocity device ID.
+     * Returns null if not found.
+     *
+     * @example
+     * var device = context.getManagedObject(payload["deviceId"]);
+     * if (device) { console.log("Device name:", device.name); }
      */
     getManagedObject(c8ySourceId: string): any | null;
 
     /**
-     * Lookup a device from the inventory cache by external ID.
-     * @param {ExternalId} externalId
-     * @returns {any|null}
+     * Looks up a device from the inventory cache by external ID.
+     * Returns null if not found.
+     *
+     * @example
+     * var device = context.getManagedObjectByExternalId({ externalId: clientId, type: "c8y_Serial" });
      */
-    getManagedObjectByExternalId(externalId: ExternalId): any | null;
+    getManagedObjectByExternalId(externalId: { externalId: string; type: string }): any | null;
+
+    /**
+     * Looks up DTM (Digital Twin Manager) Asset properties by asset ID.
+     * Returns null if not found.
+     */
+    getDTMAsset(assetId: string): any | null;
+
+    // ---- Diagnostics ----
+
+    /**
+     * Adds a non-fatal warning surfaced in the UI for debugging.
+     * Use for fallback logic, missing optional fields, etc.
+     *
+     * @example
+     * context.addWarning("Device not found in cache, using implicit creation");
+     */
+    addWarning(warning: string): void;
 }
 ```
 
-> **Important:** `context.getClientId()` IS available — it is defined on SmartFunctionContext, not on the base DataPrepContext. Do NOT suggest `context.getConfig().clientId` as a replacement; `getClientId()` is the preferred method.
+# Output: CumulocityObject (INBOUND)
+INBOUND Smart Functions must return an **array** of `CumulocityObject` items (or an empty array `[]` to suppress output).
+
+```typescript
+interface CumulocityObject {
+    /**
+     * Which Cumulocity API type to write.
+     * - "measurement"   → POST /measurement/measurements
+     * - "event"         → POST /event/events
+     * - "alarm"         → POST /alarm/alarms
+     * - "operation"     → POST /devicecontrol/operations
+     * - "managedObject" → POST/PUT /inventory/managedObjects
+     * - "custom"        → HTTP call to a tenant-local microservice (set targetPath)
+     */
+    cumulocityType: "measurement" | "event" | "alarm" | "operation" | "managedObject" | "custom";
+
+    /**
+     * HTTP verb: "create" (POST), "update" (PUT), "delete", "patch"
+     */
+    action: "create" | "update" | "delete" | "patch";
+
+    /**
+     * The C8Y REST payload. Shape depends on cumulocityType (see Cumulocity Context below).
+     * Do NOT include "source.id" — it is resolved from externalSource or sourceId.
+     */
+    payload: object;
+
+    /**
+     * Device identity. At least one entry required for non-custom types.
+     * The runtime resolves (and optionally creates) the device from this.
+     */
+    externalSource?: Array<{ type: string; externalId: string }>;
+
+    /**
+     * Explicitly route the result to a specific internal C8Y device ID.
+     * Overrides automatic device resolution from externalSource.
+     * Use to route a child device's measurement to its parent.
+     * @since 6.2
+     */
+    sourceId?: string | null;
+
+    /**
+     * Microservice endpoint for cumulocityType: "custom" only.
+     * Must start with "/service/".
+     * @since 6.3
+     */
+    targetPath?: string;
+
+    /**
+     * Device auto-creation configuration. Used when the device does not exist yet.
+     * Only relevant when createNonExistingDevice is true on the mapping.
+     */
+    contextData?: {
+        /** Display name of the implicitly created device */
+        deviceName?: string;
+        /** Managed object type of the implicitly created device */
+        deviceType?: string;
+        /** Processing mode: "PERSISTENT" (default) or "TRANSIENT" */
+        processingMode?: "PERSISTENT" | "TRANSIENT";
+        /** Additional fragments merged into the device MO on first creation */
+        deviceFragments?: Record<string, any>;
+        /** Group names the device is added to as a child asset (created if missing) */
+        deviceGroups?: string[];
+        /** Binary attachment fields for EVENT types */
+        attachmentName?: string;
+        attachmentType?: string;
+        attachmentData?: string;  // Base64-encoded
+    };
+}
+```
+
+# Output: DeviceMessage (OUTBOUND)
+OUTBOUND Smart Functions must return a **single** `DeviceMessage` object **or** an **array** of them (or `null` to suppress output).
+
+```typescript
+interface DeviceMessage {
+    /** MQTT topic or transport destination. Use `_externalId_` placeholder to auto-resolve. */
+    topic: string;
+
+    /** Outbound payload (plain object — the connector serializes it) */
+    payload: object | object[];
+
+    /**
+     * Transport-specific key/value metadata.
+     * For Kafka: { "key": deviceId }  sets the record key.
+     */
+    transportFields?: Record<string, any>;
+
+    /**
+     * External ID configuration for resolving `_externalId_` in the topic.
+     * @example [{ "type": "c8y_Serial" }]
+     */
+    externalSource?: Array<{ type: string; externalId?: string }>;
+}
+```
 
 # Source template `"type"` field
-In the mapping JSON, the `sourceTemplate` may contain `"type": "c8y_object"`. This is a **structural placeholder** used by the Dynamic Mapper to mark the root of the source object — it is NOT the intended Cumulocity event/alarm/measurement type. When generating the target Cumulocity payload, derive the `type` field from meaningful business data in the source payload (e.g., `payload["eventType"]`, `payload["category"]`, or a domain-specific constant). Never copy `"c8y_object"` verbatim as the Cumulocity event type.
+In the mapping JSON, `sourceTemplate` may contain `"type": "c8y_object"`. This is a **structural placeholder** — it is NOT the intended Cumulocity event/alarm/measurement type. Derive the `type` field from meaningful business data (e.g., `payload["eventType"]`, a domain-specific constant). Never copy `"c8y_object"` verbatim.
 
-### Example Functions
+# Time handling rules
+- **Always prefer timestamps from the source payload.** If the payload contains a time field it MUST be used for the output `time`.
+- If there is no timestamp in the source payload, use `msg.time` (message arrival time) as a fallback.
+- Use ISO 8601 format; convert epoch milliseconds with `new Date(ts).toISOString()`.
+- Only use `new Date().toISOString()` (wall-clock now) when neither payload time nor `msg.time` is available.
 
-#### INBOUND — simple measurement
+---
+
+# Example Functions
+
+## INBOUND — basic measurement
 
 ```javascript
-function onMessage(msg, context) { // JSDoc header stripped — not part of generated code
-
 function onMessage(msg, context) {
-    var payload = msg.payload;   // plain JS object — use bracket/dot notation, NOT .get()
+    var payload = msg.getPayload();
 
     console.log("Config:", context.getConfig());
-    console.log("Payload Raw:", payload);
-    console.log("Payload messageId", payload["messageId"]);
+    console.log("Payload:", payload);
 
-    // lookup device for enrichment
-    var deviceByDeviceId = context.getManagedObjectByDeviceId(payload["deviceId"]);
-    console.log("Device (by device id): " + deviceByDeviceId);
+    // Prefer context clientId (MQTT client), fall back to payload field
+    var clientId = context.getClientId() || payload["clientId"];
 
-    var deviceByExternalId = context.getManagedObjectByExternalId({ externalId: payload["clientId"], type: "c8y_Serial" });
-    console.log("Device (by external id): " + deviceByExternalId);
-
-    // Prefer timestamp from the payload; fall back to the message arrival time.
+    // Prefer timestamp from payload; fall back to message arrival time
     var time = payload["time"] ? payload["time"] : msg.time;
 
     return [{
         cumulocityType: "measurement",
         action: "create",
-
         payload: {
             "time": time,
             "type": "c8y_TemperatureMeasurement",
             "c8y_Steam": {
-                "Temperature": {
-                "unit": "C",
-                "value": payload["sensorData"]["temp_val"]
-                }
+                "Temperature": { "unit": "C", "value": payload["sensorData"]["temp_val"] }
             }
         },
-
-        externalSource: [{"type":"c8y_Serial", "externalId": payload["clientId"]}]
+        externalSource: [{ "type": "c8y_Serial", "externalId": clientId }]
     }];
 }
 ```
 
-#### INBOUND — device-type-conditional measurement (enrichment)
+## INBOUND — device-type-conditional measurement (inventory enrichment)
 
 ```javascript
 function onMessage(msg, context) {
-    var payload = msg.payload;   // plain JS object — use bracket/dot notation, NOT .get()
+    var payload = msg.getPayload();
 
-    console.log("Config:", context.getConfig());
-    console.log("Payload Raw:", payload);
-    console.log("Payload messageId", payload["messageId"]);
+    // Extract externalId from topic segment, e.g. 'sensors/sensor-berlin-01' → 'sensor-berlin-01'
+    var config = context.getConfig();
+    var topicSegments = config["topic"] ? config["topic"].split("/") : [];
+    var externalId = topicSegments[1] || null;
 
-    // lookup device for enrichment
-    var deviceByDeviceId = context.getManagedObjectByDeviceId(payload["deviceId"]);
-    console.log("Device (by device id): " + deviceByDeviceId);
+    if (!externalId) {
+        context.addWarning("Cannot determine externalId: topic segment [1] is missing.");
+        return [];
+    }
 
-    var deviceByExternalId = context.getManagedObjectByExternalId({ externalId: payload["clientId"], type: "c8y_Serial" });
-    console.log("Device (by external id): " + deviceByExternalId);
+    // Look up device inventory to determine the correct measurement type
+    var device = context.getManagedObjectByExternalId({ externalId: externalId, type: "c8y_Serial" });
+    var isVoltage = device?.c8y_Sensor?.type?.voltage === true;
+    var isCurrent = device?.c8y_Sensor?.type?.current === true;
 
-    // Determine measurement type based on device configuration
-    var isVoltage = deviceByExternalId?.c8y_Sensor?.type?.voltage === true;
-    var isCurrent = deviceByExternalId?.c8y_Sensor?.type?.current === true;
-
-    // Prefer timestamp from the payload; fall back to the message arrival time.
     var time = payload["time"] ? payload["time"] : msg.time;
-
     var measurementPayload;
 
     if (isVoltage) {
         measurementPayload = {
-            "time": time,
-            "type": "c8y_VoltageMeasurement",
-            "c8y_Voltage": {
-                "voltage": {
-                    "unit": "V",
-                    "value": payload["sensorData"]["val"]
-                }
-            }
+            "time": time, "type": "c8y_VoltageMeasurement",
+            "c8y_Voltage": { "voltage": { "unit": "V", "value": payload["sensorData"]["val"] } }
         };
-        console.log("Creating c8y_VoltageMeasurement");
     } else if (isCurrent) {
         measurementPayload = {
-            "time": time,
-            "type": "c8y_CurrentMeasurement",
-            "c8y_Current": {
-                "current": {
-                    "unit": "A",
-                    "value": payload["sensorData"]["val"]
-                }
-            }
+            "time": time, "type": "c8y_CurrentMeasurement",
+            "c8y_Current": { "current": { "unit": "A", "value": payload["sensorData"]["val"] } }
         };
-        console.log("Creating c8y_CurrentMeasurement");
     } else {
-        console.log("Warning: No valid sensor type configuration found");
-        return []; // Return empty array if no valid configuration
+        context.addWarning("No valid sensor type for '" + externalId + "'. Need c8y_Sensor.type.voltage or .current.");
+        return [];
     }
+
+    return [{ cumulocityType: "measurement", action: "create", payload: measurementPayload,
+               externalSource: [{ "type": "c8y_Serial", "externalId": externalId }] }];
+}
+```
+
+## INBOUND — persistent state (message counting, deduplication)
+
+```javascript
+function onMessage(msg, context) {
+    var payload = msg.getPayload();
+    var externalId = context.getClientId() || payload["externalId"];
+
+    // State persists across invocations; null on first call
+    var count        = context.getState("messageCount") || 0;
+    var lastErrorMsg = context.getState("lastErrorMsg") || null;
+
+    var time = payload["time"] ? payload["time"] : msg.time;
+
+    if (payload["payloadType"] === "telemetry") {
+        context.setState("messageCount", count + 1);
+        return [{
+            cumulocityType: "measurement",
+            action: "create",
+            payload: { "time": time, "type": "c8y_TemperatureMeasurement",
+                       "c8y_Steam": { "Temperature": { "unit": "C", "value": payload["sensorData"]["temp_val"] } } },
+            externalSource: [{ "type": "c8y_Serial", "externalId": externalId }]
+        }];
+    } else {
+        var currentError = payload["logMessage"];
+        if (currentError === lastErrorMsg) {
+            console.log("Suppressing duplicate error: " + currentError);
+            return [];
+        }
+        context.setState("lastErrorMsg", currentError);
+        return [{
+            cumulocityType: "event",
+            action: "create",
+            payload: { "time": time, "type": "c8y_ErrorEvent", "text": currentError },
+            externalSource: [{ "type": "c8y_Serial", "externalId": externalId }]
+        }];
+    }
+}
+```
+
+## INBOUND — device auto-creation with fragments and groups
+
+```javascript
+function onMessage(msg, context) {
+    var payload = msg.getPayload();
+    var clientId = context.getClientId() || payload["clientId"];
+    var time = payload["time"] ? payload["time"] : msg.time;
 
     return [{
         cumulocityType: "measurement",
         action: "create",
-        payload: measurementPayload,
-        externalSource: [{"type":"c8y_Serial", "externalId": payload["clientId"]}]
+        payload: {
+            "time": time,
+            "type": "c8y_TemperatureMeasurement",
+            "c8y_Steam": { "Temperature": { "unit": "C", "value": payload["sensorData"]["temp_val"] } }
+        },
+        externalSource: [{ "type": "c8y_Serial", "externalId": clientId }],
+        contextData: {
+            "deviceName": "Test-Sensor",
+            "deviceType": "sensor-type",
+            "deviceGroups": ["line 1", "line 2"],
+            "deviceFragments": {
+                "c8y_Hardware": { "model": "SmartSensor v2", "serialNumber": clientId, "revision": "2.0" },
+                "c8y_SupportedOperations": ["c8y_Restart", "c8y_Configuration"]
+            }
+        }
     }];
 }
 ```
 
-#### OUTBOUND — forward to broker
+## INBOUND — sourceId override (route measurement to parent device)
 
 ```javascript
 function onMessage(msg, context) {
-    var payload = msg.payload;   // plain JS object — use bracket/dot notation, NOT .get()
+    var payload = msg.getPayload();
+    var clientId = context.getClientId() || payload["clientId"];
 
-    console.log("Config:", context.getConfig());
-    console.log("Payload Raw:", payload);
-    console.log("Payload messageId", payload['messageId']);
+    // Look up the originating device and find its parent
+    var originatingDevice = context.getManagedObjectByExternalId({ externalId: clientId, type: "c8y_Serial" });
+    var targetDeviceId = null;
+    if (originatingDevice?.assetParents?.length > 0) {
+        targetDeviceId = originatingDevice.assetParents[0].id;
+    }
 
-    // Extract the device ID — prefer msg.sourceId (populated by the runtime from the
-    // processing context) over payload['source']['id'] to avoid failures when the source
-    // template does not include the 'source' field.
-    var sourceId = msg.sourceId ?? payload["source"]?.["id"] ?? "unknown";
-
-    // Prefer timestamp from the payload; fall back to the message arrival time.
     var time = payload["time"] ? payload["time"] : msg.time;
 
-    // Use _externalId_ in the topic to automatically resolve the device's external ID.
-    // The placeholder is resolved using the externalId type from externalSource.
-    // return [{
-    //    topic: `measurements/_externalId_`,
-    //    payload: {
-    //        "time": time,
-    //        "c8y_Steam": {
-    //            "Temperature": {
-    //            "unit": "C",
-    //            "value": payload["c8y_TemperatureMeasurement"]["T"]["value"]
-    //            }
-    //        }
-    //    },
-    //    transportFields: { "key": sourceId },  // Kafka record key
-    //    externalSource: [{"type":"c8y_Serial"}]
-    // }];
-
     return [{
-        topic: `measurements/${sourceId}`,
+        sourceId: targetDeviceId,  // route to parent; null falls back to externalSource resolution
+        cumulocityType: "measurement",
+        action: "create",
+        payload: { "time": time, "type": "c8y_TemperatureMeasurement",
+                   "c8y_Steam": { "Temperature": { "unit": "C", "value": payload["sensorData"]["temp_val"] } } },
+        externalSource: [{ "type": "c8y_Serial", "externalId": clientId }]
+    }];
+}
+```
+
+## INBOUND — custom microservice routing
+
+```javascript
+function onMessage(msg, context) {
+    var payload = msg.getPayload();
+    var externalId = context.getClientId() || payload["externalId"];
+    var time = payload["time"] ? payload["time"] : msg.time;
+
+    return [
+        // Standard Cumulocity measurement
+        {
+            cumulocityType: "measurement",
+            action: "create",
+            payload: { "time": time, "type": "c8y_TemperatureMeasurement",
+                       "c8y_Steam": { "Temperature": { "unit": "C", "value": payload["temperature"] } } },
+            externalSource: [{ "type": "c8y_Serial", "externalId": externalId }]
+        },
+        // Forward raw reading to a custom tenant microservice via HTTP POST.
+        // targetPath must start with /service/ and the microservice must be subscribed to this tenant.
+        {
+            cumulocityType: "custom",
+            action: "create",
+            targetPath: "/service/my-processor/ingest",
+            payload: { "deviceId": externalId, "timestamp": time, "reading": payload["temperature"] }
+        }
+    ];
+}
+```
+
+## OUTBOUND — forward measurement to broker
+
+```javascript
+function onMessage(msg, context) {
+    var payload = msg.getPayload();
+
+    // getExternalId() returns the resolved external ID of the source device.
+    // Requires the mapping to have 'useExternalId' enabled and 'externalIdType' configured.
+    var externalId = context.getExternalId();
+
+    // Use _externalId_ in the topic to automatically resolve the external ID at runtime,
+    // or build the topic explicitly as shown here:
+    return [{
+        topic: `measurements/${externalId}`,
         payload: {
-            "time": time,
+            "time": payload["time"] || msg.time,
             "c8y_Steam": {
-                "Temperature": {
-                "unit": "C",
-                "value": payload["c8y_TemperatureMeasurement"]["T"]["value"]
-                }
+                "Temperature": { "unit": "C", "value": payload["c8y_TemperatureMeasurement"]["T"]["value"] }
             }
         },
-        transportFields: { "key": sourceId }  // Kafka record key
+        transportFields: { "key": externalId }  // Kafka record key
     }];
+}
+```
+
+## OUTBOUND — custom microservice routing
+
+```javascript
+function onMessage(msg, context) {
+    var payload = msg.getPayload();
+    var deviceId = payload["deviceId"] || (payload["source"] && payload["source"]["id"]);
+    var command  = payload["c8y_Command"] && payload["c8y_Command"]["text"];
+
+    // Forward operation to a custom tenant microservice.
+    // targetPath must start with /service/ and the microservice must be subscribed to this tenant.
+    return {
+        cumulocityType: "custom",
+        action: "create",
+        targetPath: "/service/my-processor/execute",
+        payload: {
+            "deviceId":    deviceId,
+            "command":     command,
+            "operationId": payload["id"],
+            "timestamp":   payload["time"] || msg.time
+        }
+    };
 }
 ```
 
 # Cumulocity Context
-Use the following context for creating logic in JavaScript for Cumulocity target API resources:
-/**
- * Alarm interface representing Cumulocity alarms
- */
-export interface Alarm {
-  /** Unique identifier of the alarm */
-  id?: string;
+Use the following interfaces to produce correctly-shaped Cumulocity payloads:
 
-  /** Identifies the type of this alarm */
-  type: string;
-
-  /** Time when alarm was created in the database */
-  time: string;
-
-  /** Time when alarm was created */
-  creationTime?: string;
-
-  /** Time when alarm was last updated */
-  lastUpdated?: string;
-
-  /** The ManagedObject that the alarm originated from */
-  source: ManagedObject;
-
-  /** Description of the alarm */
-  text: string;
-
-  /** The status of the alarm */
-  status: AlarmStatus;
-
-  /** The severity of the alarm */
-  severity: AlarmSeverity;
-
-  /** The number of times this alarm has been triggered */
-  count?: number;
-
-  /** Time when alarm was first created */
-  firstOccurrenceTime?: string;
-
-  /** Additional custom properties */
-  [key: string]: any;
+```typescript
+interface C8yMeasurement {
+    type: string;               // e.g. "c8y_TemperatureMeasurement"
+    time: string;               // ISO 8601
+    // Dynamic measurement fragments: { FragmentName: { SeriesName: { value: number, unit?: string } } }
+    [fragment: string]: any;
 }
 
-/**
- * Measurement interface representing Cumulocity measurements
- */
-export interface Measurement {
-  /** Unique identifier of the measurement */
-  id?: string;
-
-  /** Identifies the type of this measurement */
-  type: string;
-
-  /** Time when measurement was created */
-  time: string;
-
-  /** The ManagedObject that the measurement originated from */
-  source: ManagedObject;
-
-  /** Measurement fragments - dynamic properties containing measurement series */
-  [fragmentName: string]: any | MeasurementFragment;
+interface C8yEvent {
+    type: string;               // e.g. "c8y_LocationUpdate"
+    text: string;               // human-readable description
+    time: string;               // ISO 8601
+    [fragment: string]: any;
 }
 
-/**
- * Event interface representing Cumulocity events
- */
-export interface Event {
-  /** Unique identifier of the event */
-  id?: string;
-
-  /** Identifies the type of this event */
-  type: string;
-
-  /** Time when event was created */
-  time: string;
-
-  /** Time when event was created in the database */
-  creationTime?: string;
-
-  /** Time when event was last updated */
-  lastUpdated?: string;
-
-  /** The ManagedObject that the event originated from */
-  source: ManagedObject;
-
-  /** Description of the event */
-  text: string;
-
-  /** Additional custom properties */
-  [key: string]: any;
+interface C8yAlarm {
+    type: string;               // e.g. "c8y_HighTemperatureAlarm"
+    text: string;               // description
+    severity: "CRITICAL" | "MAJOR" | "MINOR" | "WARNING";
+    status:   "ACTIVE"   | "ACKNOWLEDGED" | "CLEARED";
+    time: string;               // ISO 8601
+    [fragment: string]: any;
 }
 
-/**
- * ManagedObject interface, part of the inventory representing the source of alarms, measurements, and events
- */
-export interface ManagedObject {
-  /** Unique identifier of the object */
-  id: string;
-
-  /** NHuman-readable name that is used for representing the object in user interfaces. */
-  name?: string;
-
-  /** The fragment type can be interpreted as device class, this means, devices with the same type can receive the same types of configuration, software, firmware and operations. The type value is indexed and is therefore used for queries. */
-  type?: string;
-
-  /** A fragment which identifies this managed object as a device. */
-  c8y_IsDevice: object;
-
-  /** Additional custom properties */
-  [key: string]: any;
+interface C8yOperation {
+    deviceId: string;
+    status: "PENDING" | "EXECUTING" | "SUCCESSFUL" | "FAILED";
+    description?: string;
+    [fragment: string]: any;    // operation fragment, e.g. c8y_Restart: {}
 }
 
-/**
- * MeasurementValue interface representing individual measurement values
- */
-export interface MeasurementValue {
-  /** The value of the measurement */
-  value: number;
-
-  /** The unit of the measurement */
-  unit?: string;
+interface C8yManagedObject {
+    id?: string;
+    type?: string;
+    name?: string;
+    [fragment: string]: any;
 }
-
-/**
- * MeasurementFragment interface for measurement data series
- */
-export interface MeasurementFragment {
-  [seriesName: string]: MeasurementValue;
-}
-
-/**
- * Alarm status enumeration
- */
-export type AlarmStatus = 'ACTIVE' | 'ACKNOWLEDGED' | 'CLEARED';
-
-/**
- * Alarm severity enumeration
- */
-export type AlarmSeverity = 'CRITICAL' | 'MAJOR' | 'MINOR' | 'WARNING';
+```
 
 Rules:
-- Prefer timestamps from the source payload. If the payload contains a time field it MUST be used for the output time.
-- If there is no timestamp in the source payload, use `msg.time` (message arrival time). Do NOT use `new Date()` unless explicitly asked to.
-- Use ISO time format; convert if necessary.
-- For OUTBOUND mappings, always use `msg.sourceId` to obtain the Cumulocity device ID. Never access `payload["source"]["id"]` directly — it may be absent and will throw an error.
+- Do NOT include `"source": { "id": "..." }` in inbound payloads — the runtime resolves the device from `externalSource` or `sourceId`.
+- The `type` field must be a meaningful business value. Never use `"c8y_object"` (it is a mapping placeholder).
+- For OUTBOUND mappings, use `context.getExternalId()` or `msg.sourceId` to identify the device. Never access `payload["source"]["id"]` directly — it may be absent and will throw.
 - The code must be valid JavaScript (not TypeScript). Use the TypeScript interfaces only to understand available data structures.
-- Do not call non-existent context methods. The supported methods are: `getConfig()`, `getState(key)`, `setState(key, value)`, `getManagedObjectByDeviceId(id)`, `getManagedObject({externalId, type})`.
+
+# Supported context methods (summary)
+```
+context.getConfig()                                      → mapping config (topic, clientId, externalId, …)
+context.getClientId()                                    → MQTT/transport client ID (preferred over getConfig().clientId)
+context.getExternalId()                                  → resolved external device ID for OUTBOUND
+context.getState(key)                                    → persisted value (null on first call)
+context.setState(key, value)                             → persist a value across invocations
+context.getStateAll()                                    → all persisted state (debugging)
+context.getManagedObject(c8ySourceId)                    → device by internal C8Y ID
+context.getManagedObjectByExternalId({externalId, type}) → device by external ID
+context.getDTMAsset(assetId)                             → DTM asset properties
+context.addWarning(message)                              → surface a non-fatal warning in the UI
+```

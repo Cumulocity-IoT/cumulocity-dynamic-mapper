@@ -30,8 +30,6 @@ import com.dashjoin.jsonata.json.Json;
 import dynamic.mapper.configuration.ServiceConfiguration;import dynamic.mapper.model.*;
 
 import dynamic.mapper.service.ServiceConfigurationService;import lombok.extern.slf4j.Slf4j;
-import org.springaicommunity.mcp.annotation.McpTool;
-import org.springaicommunity.mcp.annotation.McpToolParam;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -70,7 +68,6 @@ public class AIAgentService {
     private ServiceConfigurationService serviceConfigurationService;
 
     private static final String DEFAULT_JSONATA_AGENT_NAME = "dynamic-mapper-jsonata-agent";
-    //private static final String DEFAULT_JAVASCRIPT_AGENT_NAME = "dynamic-mapper-javascript-agent";
     private static final String DEFAULT_SMART_FUNCTION_AGENT_NAME = "dynamic-mapper-smart-function-agent";
     private static final String MCP_SSE_ENDPOINT = "/service/dynamic-mapper-service/sse";
     private static final String JSONATA_TOOL_NAME = "evaluateJsonataExpression";

@@ -256,7 +256,14 @@ We use domain-specific terms such as `expandArray`. To improve the generated sub
 ]
 ```
 # _IDENTITY_ property
-The "_IDENTITY_" property contains "externalId", which contains a placeholder or example for the unique identifier of the device and "c8ySource" which contains a reference to an internal ID in Cumulocity.
+The `_IDENTITY_` property is used to identify the target or source device in Cumulocity.
+
+- `_IDENTITY_.externalId` — the external identifier of the device (e.g. a serial number or MQTT client ID). Use as the value when creating a substitution for the external device identity.
+- `_IDENTITY_.externalIdType` — the type of the external ID (e.g. `"c8y_Serial"`). Usually a fixed string.
+- `_IDENTITY_.c8ySourceId` — the internal Cumulocity managed-object ID. Use this when the source template already contains the internal C8Y ID.
+
+For INBOUND mappings, `_IDENTITY_` identifies the **target** device that the data should be written to.
+For OUTBOUND mappings, `_IDENTITY_` identifies the **source** device from which the Cumulocity data originates.
 
 # JSONata Context
 Use the following context to evaluate and use JSONata expressions starting each with "$":
@@ -1205,14 +1212,18 @@ Rules:
 - Each substitution is independent of each other.
 - If you find multiple values in an array of source template (JSON document), make a suggestion but also prompt the user how the values should be mapped to target template (JSON document).
 - Use the context provided in the JSONata functions block to find & use existing & proper functions and use them properly.
-- Prefer timestamps related to the values & data instead of generic message timestamp
-- If there is no timestamp in the source template (JSON document) use the current time.
+- Prefer timestamps related to the values & data instead of a generic message timestamp.
+- If the source payload contains an epoch-millisecond timestamp (integer), convert it with `$fromMillis(ts)`. Example: `mea.values[0].timestamp.$fromMillis()`.
+- If there is no timestamp in the source template, use `$now()` to produce the current UTC time in ISO 8601 format.
 - If an array with multiple items/objects is used as input set expandArray to true and use JSONata functions to create substitution and iterate over the array dynamically.
 - Skip a leading "$." when no function is used.
 - Use complete path when select JSON element not relative path
-- Consider using "any_SerialNumber" value of property "_IDENTITY_.externalId" of source message as unique identifier of the device
-- If "_IDENTITY_" is part of the sourceTemplate and contains "externalId", it is required to have one substitution for it.
-- If there is no corresponding field for "externalId" in the target template, map it to an ID or wildcard in _TOPIC_LEVEL_ array e.g. wildcard "+" or alphanumeric "berlin_01".
+- If `_IDENTITY_` is present in the sourceTemplate and contains `externalId`, you MUST create a substitution that maps the device identifier to `_IDENTITY_.externalId` in the pathTarget.
+- Use the value of `_IDENTITY_.externalId` in the sourceTemplate (e.g. `"any_SerialNumber"` or `"berlin_01"`) as the representative unique identifier of the device.
+- For INBOUND mappings the pathTarget for device identity is `_IDENTITY_.externalId`.
+- For OUTBOUND mappings with a topic containing a wildcard (`+`) or a `_TOPIC_LEVEL_` placeholder, map the external device ID to the appropriate `_TOPIC_LEVEL_[N]` entry so that the topic is resolved at runtime.
+- If there is no corresponding field for `externalId` in the target template, map it to an ID or wildcard in the `_TOPIC_LEVEL_` array, e.g. wildcard `"+"` or alphanumeric `"berlin_01"`.
+- Never create a substitution that maps a literal/static value — only map dynamic values from the source payload.
 
 - When generating substitutions, recognize that:
 -- `expandArray: true` indicates the substitution will be used in post-processing to create multiple output documents
