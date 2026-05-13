@@ -652,6 +652,13 @@ public class MappingService {
     }
 
     /**
+     * Removes stale connector identifiers (those no longer configured) from all deployment entries.
+     */
+    public boolean cleanupStaleDeploymentConnectors(String tenant, Set<String> validConnectorIdentifiers) {
+        return deploymentMapService.cleanupStaleConnectors(tenant, validConnectorIdentifiers);
+    }
+
+    /**
      * Removes a mapping from deployment map
      */
     public boolean removeMappingFromDeploymentMap(String tenant, String mappingIdentifier) {

@@ -78,7 +78,7 @@ d11r-mapping-testing {
 }
 
 /* Transformation tab: same treatment so the code editor fills available height */
-d11r-mapping-substitution-step {
+d11r-mapping-transformation-step {
   display: flex;
   flex-direction: column;
   height: 100%;

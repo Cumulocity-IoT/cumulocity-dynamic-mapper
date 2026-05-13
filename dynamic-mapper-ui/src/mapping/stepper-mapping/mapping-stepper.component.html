@@ -100,7 +100,7 @@
 
   <cdk-step label="Transformation" [stepControl]="templateForm">
     <div class="col-lg-12 flex-grow no-gutter">
-      <d11r-mapping-substitution-step [mapping]="mapping" [stepperConfiguration]="stepperConfiguration"
+      <d11r-mapping-transformation-step [mapping]="mapping" [stepperConfiguration]="stepperConfiguration"
         [sourceTemplate]="sourceTemplate" [targetTemplate]="targetTemplate" [sourceSystem]="sourceSystem"
         [targetSystem]="targetSystem" [feature]="feature" [aiAgentDeployed]="aiAgentDeployed" [aiAgent]="aiAgent"
         [schemaSource]="schemaSource" [schemaTarget]="schemaTarget" [mappingCode]="mappingCode"
@@ -114,7 +114,7 @@
           </ng-container>
         </ng-container>
         }
-      </d11r-mapping-substitution-step>
+      </d11r-mapping-transformation-step>
     </div>
 
     <c8y-stepper-buttons class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0"

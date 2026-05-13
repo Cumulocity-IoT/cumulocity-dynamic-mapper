@@ -20,7 +20,7 @@
 import { Pipe, PipeTransform } from '@angular/core';
 import { Mapping, definesDeviceIdentifier } from '../../shared';
 
-@Pipe({ name: 'countDeviceIdentifiers', pure: true })
+@Pipe({ name: 'countDeviceIdentifiers', standalone: true, pure: true })
 export class CountDeviceIdentifiersPipe implements PipeTransform {
   transform(mapping: Mapping) {
     return mapping.substitutions.filter((sub) =>

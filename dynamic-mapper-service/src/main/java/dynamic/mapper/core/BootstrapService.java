@@ -302,6 +302,13 @@ public class BootstrapService {
         configurationRegistry.getNotificationSubscriber()
                 .cleanupOrphanedSubscribers(tenant, allConnectorConfigs, additionalSubscriptionIdTest);
 
+        // Remove stale connector identifiers from the deployment map (connectors deleted
+        // without going through the normal deletion flow leave behind orphaned references)
+        Set<String> validConnectorIds = allConnectorConfigs.stream()
+                .map(dynamic.mapper.configuration.ConnectorConfiguration::getIdentifier)
+                .collect(java.util.stream.Collectors.toSet());
+        mappingService.cleanupStaleDeploymentConnectors(tenant, validConnectorIds);
+
         // Wait for ALL connectors are successfully connected before handling Outbound
         // Mappings
         List<Future<?>> connectorTasks = initializeConnectors(tenant, serviceConfiguration);

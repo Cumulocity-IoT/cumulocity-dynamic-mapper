@@ -18,6 +18,22 @@
  * @authors Christof Strack
  */
 
+
+/* Single-line date: widen column and reposition marker to match */
+d11r-mapping-connector-details .c8y-list--timeline .c8y-list--timeline__item__date {
+  width: 95px;
+  white-space: nowrap;
+}
+
+d11r-mapping-connector-details .c8y-list--timeline .c8y-list--timeline__item::before,
+d11r-mapping-connector-details .c8y-list--timeline .c8y-list--timeline__item::after {
+  left: 111px;
+}
+
+d11r-mapping-connector-details .c8y-list--timeline .c8y-list--timeline__item .c8y-list__item {
+  max-width: calc(100% - 137px);
+}
+
 .button-bottom-margin{
   margin-bottom: 8px;
 }

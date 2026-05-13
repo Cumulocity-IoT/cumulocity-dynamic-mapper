@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, ViewChild } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { FieldType, FormlyModule } from '@ngx-formly/core';
 
@@ -35,6 +35,7 @@ import { FieldType, FormlyModule } from '@ngx-formly/core';
       [rows]="props.rows"
       [formlyAttributes]="field"
       [placeholder]="props.placeholder"
+      #textareaRef
     >
  {{ formControl.value }}
 </textarea>
@@ -44,7 +45,9 @@ import { FieldType, FormlyModule } from '@ngx-formly/core';
   standalone: true,
   imports: [FormsModule, ReactiveFormsModule, FormlyModule]
 })
-export class CustomFieldTextarea extends FieldType {
+export class CustomFieldTextarea extends FieldType implements AfterViewInit {
+  @ViewChild('textareaRef') textareaRef: ElementRef<HTMLTextAreaElement>;
+
   get class() {
     return `form-control ${this.props['class']}`;
   }
@@ -56,5 +59,19 @@ export class CustomFieldTextarea extends FieldType {
   }
   get rows() {
     return this.props['v'] ? 4 : this.props.rows;
+  }
+
+  ngAfterViewInit(): void {
+    this.formControl.valueChanges.subscribe(() => {
+      setTimeout(() => this.resize(), 0);
+    });
+  }
+
+  private resize(): void {
+    const el = this.textareaRef?.nativeElement;
+    if (el) {
+      el.style.height = 'auto';
+      el.style.height = `${el.scrollHeight}px`;
+    }
   }
 }

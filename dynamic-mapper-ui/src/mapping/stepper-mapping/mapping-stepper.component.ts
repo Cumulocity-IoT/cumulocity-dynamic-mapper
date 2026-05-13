@@ -89,7 +89,7 @@ import { SubstitutionManagementService } from '../service/substitution-managemen
 import { CommonModule } from '@angular/common';
 import { MappingStepPropertiesComponent } from '../step-property/mapping-properties.component';
 import { MappingConnectorComponent } from '../step-connector/mapping-connector.component';
-import { MappingSubstitutionStepComponent } from '../step-substitution/mapping-substitution-step.component';
+import { MappingSubstitutionStepComponent } from '../step-transformation/mapping-transformation-step.component';
 import { MappingTemplateStepComponent } from '../step-template/mapping-template-step.component';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { StepperViewModel, StepperViewModelFactory } from './stepper-view.model';

@@ -8,16 +8,18 @@
         <!-- Source Template Editor -->
         <div class="col-lg-6 column-right-border">
           <div class="form-group m-b-0">
-            <div class="d-flex j-c-between">
+            <div class="d-flex a-i-center">
               <label translate>Source Template - {{ sourceSystem }}</label>
+              <button type="button" placement="right"
+                popover="Click a node in the source template to select it as the source of a substitution."
+                triggers="focus" class="btn-help" aria-label="Help content">
+              </button>
             </div>
             @if (stepperConfiguration.showEditorSource) {
-            <div>
-              <d11r-mapping-json-editor [schema]="schemaSource" [options]="editorOptionsSourceSubstitution"
-                [class]="'jse-main-small'" (pathChanged)="onSelectedPathSourceChanged($event)" [data]="sourceTemplate"
-                #editorSourceStepSubstitution>
-              </d11r-mapping-json-editor>
-            </div>
+            <d11r-mapping-json-editor [schema]="schemaSource" [options]="editorOptionsSourceSubstitution"
+              [class]="'jse-main-small'" (pathChanged)="onSelectedPathSourceChanged($event)" [data]="sourceTemplate"
+              #editorSourceStepSubstitution>
+            </d11r-mapping-json-editor>
             }
           </div>
         </div>
@@ -26,14 +28,12 @@
           <div class="form-group m-b-0">
             <div class="d-flex a-i-center">
               <label>Target Template - {{ targetSystem }}</label>
-              <span class="hidden-xs hidden-sm">
-                <ng-template #popupTargetTemplateHelp>
-                  <div [innerHtml]="targetTemplateHelp"></div>
-                </ng-template>
-                <button type="button" placement="right" [popover]="popupTargetTemplateHelp" triggers="click"
-                  class="btn-help" aria-label="Help content">
-                </button>
-              </span>
+              <ng-template #popupTargetTemplateHelp>
+                <div [innerHtml]="targetTemplateHelp"></div>
+              </ng-template>
+              <button type="button" placement="right" [popover]="popupTargetTemplateHelp" triggers="click"
+                class="btn-help" aria-label="Help content">
+              </button>
             </div>
             <d11r-mapping-json-editor [schema]="schemaTarget" [options]="editorOptionsTargetSubstitution"
               [class]="'jse-main-small'" (pathChanged)="onSelectedPathTargetChanged($event)" [data]="targetTemplate"
@@ -117,20 +117,10 @@
             <div class="col-lg-6">
               <formly-form [form]="substitutionFormly" [fields]="substitutionFormlyFieldsSource" [model]="substitutionModel">
               </formly-form>
-              <div class="form-group m-b-4">
-                <label>&nbsp;Source Result [{{substitutionModel.sourceExpression?.resultType}}]</label>
-                <textarea class="form-control font-smaller" #substitutionModelSourceExpression c8y-textarea-autoresize
-                  readonly="true">{{substitutionModel.sourceExpression?.result}}</textarea>
-              </div>
             </div>
             <div class="col-lg-6">
               <formly-form [form]="substitutionFormly" [fields]="substitutionFormlyFieldsTarget" [model]="substitutionModel">
               </formly-form>
-              <div class="form-group m-b-4">
-                <label>&nbsp;Target Result [{{substitutionModel.targetExpression?.resultType}}]</label>
-                <textarea class="form-control font-smaller" #substitutionModelTargetExpression c8y-textarea-autoresize
-                  readonly="true">{{substitutionModel.targetExpression?.result}}</textarea>
-              </div>
             </div>
           </div>
         </div>

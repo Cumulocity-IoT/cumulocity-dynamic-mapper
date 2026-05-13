@@ -6,7 +6,6 @@ import {
   EventEmitter,
   ViewChild,
   OnInit,
-  ElementRef,
   inject
 } from '@angular/core';
 import { FormGroup } from '@angular/forms';
@@ -36,11 +35,11 @@ import { PopoverModule } from 'ngx-bootstrap/popover';
 import { CollapseModule } from 'ngx-bootstrap/collapse';
 
 @Component({
-  selector: 'd11r-mapping-substitution-step',
-  templateUrl: './mapping-substitution-step.component.html',
+  selector: 'd11r-mapping-transformation-step',
+  templateUrl: './mapping-transformation-step.component.html',
   styleUrls: ['../shared/mapping.style.css'],
   standalone: true,
-  imports: [CoreModule, CommonModule, PopoverModule, CollapseModule, SubstitutionRendererComponent, JsonEditorComponent]
+  imports: [CoreModule, CommonModule, PopoverModule, CollapseModule, JsonEditorComponent, SubstitutionRendererComponent]
 })
 export class MappingSubstitutionStepComponent implements OnInit {
   @Input() mapping: Mapping;
@@ -70,12 +69,6 @@ export class MappingSubstitutionStepComponent implements OnInit {
   @ViewChild(SubstitutionRendererComponent, { static: false })
   substitutionChild!: SubstitutionRendererComponent;
 
-  @ViewChild('substitutionModelSourceExpression')
-  substitutionModelSourceExpression: ElementRef<HTMLTextAreaElement>;
-
-  @ViewChild('substitutionModelTargetExpression')
-  substitutionModelTargetExpression: ElementRef<HTMLTextAreaElement>;
-
   private alertService = inject(AlertService);
   private bottomDrawerService = inject(BottomDrawerService);
   private stepperService = inject(MappingStepperService);
@@ -89,7 +82,7 @@ export class MappingSubstitutionStepComponent implements OnInit {
     const side = this.mapping?.direction === Direction.OUTBOUND ? 'source' : 'target';
     if (this.mapping?.direction === Direction.OUTBOUND && this.mapping?.useExternalId) {
       return `One substitution with ${side} <code class="text-warning text-10">_IDENTITY_.externalId</code>`
-           + ` or <code class="text-warning text-10">_IDENTITY_.c8ySourceId</code> must exist.`;
+        + ` or <code class="text-warning text-10">_IDENTITY_.c8ySourceId</code> must exist.`;
     }
     const path = this.mapping?.useExternalId
       ? '_IDENTITY_.externalId'
@@ -159,6 +152,7 @@ export class MappingSubstitutionStepComponent implements OnInit {
         key: 'pathSource',
         type: 'd11r-input',
         wrappers: ['c8y-form-field'],
+
         templateOptions: {
           label: 'Source Expression',
           class: 'input-sm',
@@ -190,6 +184,21 @@ export class MappingSubstitutionStepComponent implements OnInit {
             ).subscribe(path => this.updateSourceExpressionResult(path));
           }
         }
+      },
+      {
+        key: 'sourceExpression.result',
+        type: 'd11r-textarea',
+        wrappers: ['c8y-form-field'],
+        props: {
+          readonly: true,
+          required: false,
+          class: 'font-smaller',
+          label: ' Source Result [empty]'
+        },
+        expressions: {
+          'props.label': (field: FormlyFieldConfig) =>
+            ` Source Result [${field.model?.sourceExpression?.resultType ?? 'empty'}]`
+        }
       }
     ];
     this.substitutionFormlyFieldsTarget = [
@@ -199,6 +208,7 @@ export class MappingSubstitutionStepComponent implements OnInit {
         wrappers: ['c8y-form-field'],
         templateOptions: {
           label: 'Target Expression',
+          class: 'input-sm',
           disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
             !this.stepperConfiguration.allowDefiningSubstitutions,
           description: `Use <a href="https://jsonata.org" target="_blank">JSONata</a>
@@ -225,6 +235,21 @@ export class MappingSubstitutionStepComponent implements OnInit {
               distinctUntilChanged()
             ).subscribe(path => this.updateTargetExpressionResult(path));
           }
+        }
+      },
+      {
+        key: 'targetExpression.result',
+        type: 'd11r-textarea',
+        wrappers: ['c8y-form-field'],
+        props: {
+          readonly: true,
+          required: false,
+          class: 'font-smaller',
+          label: ' Target Result [empty]'
+        },
+        expressions: {
+          'props.label': (field: FormlyFieldConfig) =>
+            ` Target Result [${field.model?.targetExpression?.resultType ?? 'empty'}]`
         }
       }
     ];
@@ -258,7 +283,6 @@ export class MappingSubstitutionStepComponent implements OnInit {
     }
 
     this.substitutionModel = { ...this.substitutionModel };
-    setTimeout(() => this.manualResize('source'), 0);
   }
 
   async updateTargetExpressionResult(path: string): Promise<void> {
@@ -283,7 +307,6 @@ export class MappingSubstitutionStepComponent implements OnInit {
     }
 
     this.substitutionModel = { ...this.substitutionModel };
-    setTimeout(() => this.manualResize('target'), 0);
   }
 
   async onSelectedPathSourceChanged(path: string): Promise<void> {
@@ -417,14 +440,4 @@ export class MappingSubstitutionStepComponent implements OnInit {
     return this.substitutionService.isSubstitutionValid(this.substitutionModel);
   }
 
-  private manualResize(source: 'source' | 'target'): void {
-    const element = source === 'source'
-      ? this.substitutionModelSourceExpression?.nativeElement
-      : this.substitutionModelTargetExpression?.nativeElement;
-
-    if (element) {
-      element.style.height = '32px';
-      element.style.height = element.scrollHeight + 'px';
-    }
-  }
 }

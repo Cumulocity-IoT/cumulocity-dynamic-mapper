@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 import * as _ from 'lodash';
-import { ChangeDetectorRef, Component, inject, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
 import { AlertService, BottomDrawerService, CoreModule } from '@c8y/ngx-components';
 import { firstValueFrom, Observable, Subject, Subscription, takeUntil, tap } from 'rxjs';
 import packageJson from '../../../package.json';
@@ -46,6 +46,7 @@ import { gettext } from '@c8y/ngx-components/gettext';
   selector: 'd11r-mapping-connector-details',
   styleUrls: ['./connector-details.component.style.css'],
   templateUrl: 'connector-details.component.html',
+  encapsulation: ViewEncapsulation.None,
   standalone: true,
   imports: [
     CoreModule,

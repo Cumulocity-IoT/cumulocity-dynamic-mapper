@@ -17,18 +17,16 @@
  *
  * @authors Christof Strack
  */
-import { Component, OnDestroy, OnInit } from '@angular/core';
-import { AlertService, CoreModule } from '@c8y/ngx-components';
-import { BsModalService } from 'ngx-bootstrap/modal';
-import { Observable, Subject, takeUntil } from 'rxjs';
-import packageJson from '../../../package.json';
+import { Component, inject, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
+import { CoreModule } from '@c8y/ngx-components';
+import { Observable, Subject } from 'rxjs';
 import {
   ConnectorConfiguration,
-  ConnectorStatus,
+  ConnectorStatusEvent,
   LoggingEventType,
   LoggingEventTypeMap,
 } from '..';
-import { FormatStringPipe } from '../misc/format-string.pipe'; 
+import { FormatStringPipe } from '../misc/format-string.pipe';
 import { ConnectorLogService } from '../service/connector-log.service';
 import { ConnectorConfigurationService } from '../service/connector-configuration.service';
 import { CommonModule } from '@angular/common';
@@ -37,14 +35,13 @@ import { CommonModule } from '@angular/common';
   selector: 'd11r-mapping-connector-log',
   styleUrls: ['./connector-log.component.style.css'],
   templateUrl: 'connector-log.component.html',
+  encapsulation: ViewEncapsulation.None,
   standalone: true,
-  imports:[CoreModule, CommonModule, FormatStringPipe]
+  imports: [CoreModule, CommonModule, FormatStringPipe]
 })
 export class ConnectorStatusComponent implements OnInit, OnDestroy {
-  version: string = packageJson.version;
-  monitorings$: Observable<ConnectorStatus>;
-  configurations$: Observable<ConnectorConfiguration[]> = new Observable();
-  statusLogs$: Observable<any[]> ;
+  configurations$: Observable<ConnectorConfiguration[]>;
+  statusLogs$: Observable<ConnectorStatusEvent[]>;
   filterStatusLog = {
     connectorIdentifier: 'ALL',
     type: LoggingEventType.ALL,
@@ -53,33 +50,20 @@ export class ConnectorStatusComponent implements OnInit, OnDestroy {
   readonly LoggingEventType = LoggingEventType;
   private readonly destroy$ = new Subject<void>();
 
-  constructor(
-    private readonly bsModalService: BsModalService,
-    readonly connectorStatusService: ConnectorLogService,
-    readonly connectorConfigurationService: ConnectorConfigurationService,
-    private readonly alertService: AlertService
-  ) {}
+  private readonly connectorStatusService = inject(ConnectorLogService);
+  private readonly connectorConfigurationService = inject(ConnectorConfigurationService);
 
-  async ngOnInit() {
-    // console.log('Running version', this.version);
+  ngOnInit(): void {
     this.connectorStatusService.startConnectorStatusLogs();
-    this.configurations$ =
-      this.connectorConfigurationService.getConfigurationsWithStatus();
+    this.configurations$ = this.connectorConfigurationService.getConfigurationsWithStatus();
     this.statusLogs$ = this.connectorStatusService.getStatusLogs();
-    // Subscribe to logs to verify they're coming through
-    this.statusLogs$.pipe(
-      takeUntil(this.destroy$)
-    ).subscribe({
-      // next: (logs) => console.log('Received logs in component:', logs),
-      error: (error) => console.error('Error receiving logs:', error),
-      // complete: () => console.log('Completed') // optional
-    });
   }
 
-  updateStatusLogs() {
+  updateStatusLogs(): void {
     this.connectorStatusService.updateStatusLogs(this.filterStatusLog);
   }
-  ngOnDestroy() {
+
+  ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
     this.connectorStatusService.stopConnectorStatusLogs();

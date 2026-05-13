@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { Component, EventEmitter, Input, OnInit, Output, ViewChild, AfterViewInit, ViewEncapsulation, OnDestroy, inject } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output, ViewChild, AfterViewInit, ViewEncapsulation, OnDestroy, inject, ElementRef } from '@angular/core';
 import { ActionControl, AlertService, BottomDrawerService, Column, CoreModule, CountdownIntervalComponent, DataGridComponent, Pagination } from '@c8y/ngx-components';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, combineLatest, Observable, Subject } from 'rxjs';
@@ -70,6 +70,10 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
   nextTriggerCountdown$: BehaviorSubject<number> = new BehaviorSubject(0);
 
   private shouldRefreshAutomatic: boolean = true;
+  private intersectionObserver: IntersectionObserver | null = null;
+  private visibilityListener: (() => void) | null = null;
+  private isIntersecting = true;
+  private isPageVisible = true;
 
   readonly LoggingEventType = LoggingEventType;
   readonly pagination: Pagination = {
@@ -92,6 +96,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
   private readonly bottomDrawerService = inject(BottomDrawerService);
   readonly connectorConfigurationService = inject(ConnectorConfigurationService);
   private readonly fb = inject(FormBuilder);
+  private readonly elementRef = inject(ElementRef);
 
   constructor() {
     this.toggleIntervalForm = this.initForm();
@@ -127,9 +132,17 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
       setTimeout(() => this.connectorGrid.setItemsSelected(this.selected, true), 0);
     }
     setTimeout(() => this.startCountdown());
+    this.initVisibilityTracking();
   }
 
   ngOnDestroy(): void {
+    this.stopPolling();
+    this.intersectionObserver?.disconnect();
+    this.intersectionObserver = null;
+    if (this.visibilityListener) {
+      document.removeEventListener('visibilitychange', this.visibilityListener);
+      this.visibilityListener = null;
+    }
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -146,6 +159,41 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
       this.countdownIntervalComponent.start();
       this.connectorConfigurationService.setPollingEnabled(true);
     }
+  }
+
+  private stopPolling(): void {
+    this.countdownIntervalComponent?.stop();
+    this.connectorConfigurationService.setPollingEnabled(false);
+  }
+
+  private updatePollingState(): void {
+    const shouldPoll = this.isIntersecting && this.isPageVisible;
+    if (shouldPoll) {
+      this.startCountdown();
+    } else {
+      this.stopPolling();
+    }
+  }
+
+  private initVisibilityTracking(): void {
+    // IntersectionObserver: pause when the grid scrolls out of the viewport
+    if (typeof IntersectionObserver !== 'undefined') {
+      this.intersectionObserver = new IntersectionObserver(
+        entries => {
+          this.isIntersecting = entries.some(e => e.isIntersecting);
+          this.updatePollingState();
+        },
+        { threshold: 0 }
+      );
+      this.intersectionObserver.observe(this.elementRef.nativeElement);
+    }
+
+    // Page Visibility API: pause when the browser tab is hidden
+    this.visibilityListener = () => {
+      this.isPageVisible = document.visibilityState === 'visible';
+      this.updatePollingState();
+    };
+    document.addEventListener('visibilitychange', this.visibilityListener);
   }
 
   private onRefreshIntervalChange(interval: number): void {

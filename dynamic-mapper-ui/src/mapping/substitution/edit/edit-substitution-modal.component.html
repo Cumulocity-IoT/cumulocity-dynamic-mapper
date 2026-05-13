@@ -27,35 +27,15 @@
     @if (isDuplicate) {
       <div>
         <p class="text-medium">
-          {{
-          'You are about to overwrite the existing substitution: # ' + &nbsp; +
-          duplicateSubstitutionIndex | translate
-          }}
+          {{ 'You are about to overwrite the existing substitution: # ' + duplicateSubstitutionIndex | translate }}
         </p>
         <br />
-        <div style="text-align: center">
+        <div class="text-center">
           <pre>{{ substitutionText }}</pre>
         </div>
       </div>
     }
     <form [formGroup]="substitutionForm">
-      <!-- <c8y-form-group>
-      <label>
-        <span>
-          {{ 'Path source' | translate }}
-        </span>
-      </label>
-      <input type="text" class="form-control" readOnly formControlName="pathSource" />
-    </c8y-form-group>
-    <c8y-form-group>
-      <label>
-        <span>
-          {{ 'Path target' | translate }}
-        </span>
-      </label>
-      <input type="text" readOnly formControlName="pathTarget" class="form-control" />
-    </c8y-form-group> -->
-
     <c8y-form-group>
       <label>
         <span>

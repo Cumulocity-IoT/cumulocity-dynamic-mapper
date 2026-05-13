@@ -34,6 +34,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -260,6 +261,38 @@ public class DeploymentMapService {
     public boolean isConnectorDeployed(String tenant, String mappingIdentifier, String connectorIdentifier) {
         List<String> connectors = getOrCreateDeploymentMap(tenant).get(mappingIdentifier);
         return connectors != null && connectors.contains(connectorIdentifier);
+    }
+
+    /**
+     * Removes connector identifiers that no longer exist from all mapping deployment entries.
+     *
+     * <p>This is called at startup to clean up stale references left behind if a connector
+     * was deleted without going through the normal deletion flow (e.g., direct data manipulation
+     * or a service crash).
+     *
+     * @param tenant                  the tenant identifier
+     * @param validConnectorIdentifiers the set of connector identifiers that currently exist
+     * @return true if any stale entries were removed and the map was persisted; false otherwise
+     */
+    public boolean cleanupStaleConnectors(String tenant, Set<String> validConnectorIdentifiers) {
+        Map<String, List<String>> tenantMap = getOrCreateDeploymentMap(tenant);
+        boolean modified = false;
+
+        for (Map.Entry<String, List<String>> entry : tenantMap.entrySet()) {
+            List<String> connectors = entry.getValue();
+            boolean removed = connectors.removeIf(id -> !validConnectorIdentifiers.contains(id));
+            if (removed) {
+                modified = true;
+                log.info("{} - Removed stale connector identifiers from mapping {}, remaining: {}",
+                        tenant, entry.getKey(), connectors);
+            }
+        }
+
+        if (modified) {
+            persistDeploymentMap(tenant);
+        }
+
+        return modified;
     }
 
     // ========== Private Helper Methods ==========

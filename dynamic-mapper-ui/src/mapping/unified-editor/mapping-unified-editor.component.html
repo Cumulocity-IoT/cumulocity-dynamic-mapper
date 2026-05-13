@@ -111,7 +111,7 @@
 
     <!-- Tab 3: Substitutions -->
     @if (activeTabIndex === 3 && isTabVisible(3)) {
-    <d11r-mapping-substitution-step [mapping]="mapping" [stepperConfiguration]="stepperConfiguration"
+    <d11r-mapping-transformation-step [mapping]="mapping" [stepperConfiguration]="stepperConfiguration"
       [sourceTemplate]="sourceTemplate" [targetTemplate]="targetTemplate" [sourceSystem]="sourceSystem"
       [targetSystem]="targetSystem" [feature]="feature" [aiAgentDeployed]="aiAgentDeployed" [aiAgent]="aiAgent"
       [schemaSource]="schemaSource" [schemaTarget]="schemaTarget" [mappingCode]="mappingCode"
@@ -124,7 +124,7 @@
         </ng-container>
       </ng-container>
       }
-    </d11r-mapping-substitution-step>
+    </d11r-mapping-transformation-step>
     }
 
     <!-- Tab 4: Testing -->
