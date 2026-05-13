@@ -268,7 +268,7 @@ def execute_update():
     body, err = _parse_body(["deviceId", "command"])
     if err:
         logger.warning("PUT /execute – bad request: %s", err[0].get_json())
-        return err
+        return jsonify({"error": "Invalid request"}), 400
 
     device_id = body["deviceId"]
     entry = {"receivedAt": _now(), **body}
