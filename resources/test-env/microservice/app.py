@@ -83,13 +83,13 @@ _commands: dict[str, list[dict]] = defaultdict(list)
 # ---------------------------------------------------------------------------
 
 def _parse_body(required_fields: list[str]):
-    """Parse JSON body and validate required fields. Returns (body, error_response)."""
+    """Parse JSON body and validate required fields. Returns (body, error_info)."""
     body = request.get_json(silent=True)
     if body is None:
-        return None, (jsonify({"error": str(escape("Request body must be valid JSON"))}), 400)
+        return None, ({"error": "Request body must be valid JSON"}, 400)
     for field in required_fields:
         if field not in body:
-            return None, (jsonify({"error": str(escape("Missing one or more required fields"))}), 400)
+            return None, ({"error": "Missing one or more required fields"}, 400)
     return body, None
 
 
@@ -309,8 +309,9 @@ def execute_delete():
     """
     body, err = _parse_body(["deviceId"])
     if err:
-        logger.warning("DELETE /execute – bad request: %s", err[0].get_json())
-        return err
+        err_payload, err_status = err
+        logger.warning("DELETE /execute – bad request: %s", err_payload)
+        return jsonify({"error": str(escape(err_payload.get("error", "Bad request")))}), err_status
 
     device_id = body["deviceId"]
     removed = len(_commands.pop(device_id, []))
