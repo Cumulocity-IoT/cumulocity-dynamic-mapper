@@ -124,6 +124,8 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   selectedResult$ = new BehaviorSubject<number>(0);
   hasResponse = true; // Tracks if current result has a response
   isLoading = false; // Tracks whether a test request is in progress
+  showResponse = false; // Controls collapsible response section
+  showConsole = true; // Controls collapsible console section (expanded by default)
 
   async ngOnInit(): Promise<void> {
     this.initializeMapping();
@@ -273,6 +275,13 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
         // Show empty object and info message for test mode
         this.testingModel.response = {};
         this.hasResponse = false;
+        const testModeMsg = 'INFO No response in test mode. Data operations (MEASUREMENT, EVENT, ALARM) are prepared but not executed. Use "Send Test Message" to get actual responses.';
+        if (!this.testingModel.logs) {
+          this.testingModel.logs = [];
+        }
+        if (!this.testingModel.logs.includes(testModeMsg)) {
+          this.testingModel.logs = [testModeMsg, ...this.testingModel.logs.filter(l => l !== testModeMsg)];
+        }
       }
 
       this.testingModel.errorMsg = result.error;

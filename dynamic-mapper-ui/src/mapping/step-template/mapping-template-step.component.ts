@@ -90,7 +90,7 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
   // ─── Internal state ────────────────────────────────────────────────────────
   filterModel: { filterMapping?: string; filterExpression?: { result: string; resultType: string; valid: boolean } } = {};
   sourceTemplateUpdated: any;
-  private selectedPathFilterFilterMapping: string;
+  selectedPathFilterFilterMapping: string;
   private readonly destroy$ = new Subject<void>();
 
   // ─── ViewChild refs (public so tests can reach them if needed) ─────────────
@@ -120,6 +120,12 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
   ngOnChanges(changes: SimpleChanges): void {
     // Subscribe to filterFormly once it is provided by the parent
     if (changes['filterFormly'] && this.filterFormly && !changes['filterFormly'].previousValue) {
+      // Pre-populate filterModel with the mapping's existing filterMapping value BEFORE
+      // Formly renders its formly-form. Formly reads [model] to initialize FormControl values,
+      // so setting filterModel.filterMapping here ensures the input field is populated on first render.
+      if (this.mapping?.filterMapping) {
+        this.filterModel = { ...this.filterModel, filterMapping: this.mapping.filterMapping };
+      }
       this.filterFormly.get('filterMapping')?.valueChanges.pipe(
         debounceTime(500),
         distinctUntilChanged(),
@@ -152,7 +158,11 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
         path
       );
       this.filterModel.filterExpression = result;
+      this.filterModel.filterMapping = path;
       this.mapping.filterMapping = path;
+      // Patch the FormControl so the input field shows the value.
+      // emitEvent: false prevents triggering the valueChanges subscription again.
+      this.filterFormly.get('filterMapping')?.setValue(path, { emitEvent: false });
     } catch (error) {
       this.filterModel.filterExpression ??= { result: '', resultType: '', valid: false };
       this.filterModel.filterExpression.valid = false;

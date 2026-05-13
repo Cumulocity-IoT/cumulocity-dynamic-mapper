@@ -184,6 +184,15 @@ public class TestController {
                             result.getErrors().add(e.getMessage() != null ? e.getMessage() : "No message");
                         });
                     }
+                    // If filter is configured and no requests were produced, add filter warning.
+                    // Warnings from ProcessingContext may not survive the Camel split+stop pipeline,
+                    // so we reconstruct the warning here as a reliable fallback.
+                    if (result.getWarnings().isEmpty() && result.getRequests().isEmpty()) {
+                        String filterExpression = mapping.getFilterMapping();
+                        if (filterExpression != null && !filterExpression.isEmpty()) {
+                            result.getWarnings().add("Payload will be ignored due to filter: " + filterExpression);
+                        }
+                    }
                 }
             }
             return new ResponseEntity<>(result, HttpStatus.OK);
