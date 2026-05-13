@@ -86,10 +86,10 @@ def _parse_body(required_fields: list[str]):
     """Parse JSON body and validate required fields. Returns (body, error_response)."""
     body = request.get_json(silent=True)
     if body is None:
-        return None, (jsonify({"error": "Request body must be valid JSON"}), 400)
+        return None, (jsonify({"error": str(escape("Request body must be valid JSON"))}), 400)
     for field in required_fields:
         if field not in body:
-            return None, (jsonify({"error": "Missing one or more required fields"}), 400)
+            return None, (jsonify({"error": str(escape("Missing one or more required fields"))}), 400)
     return body, None
 
 
