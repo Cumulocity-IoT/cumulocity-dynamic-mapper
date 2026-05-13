@@ -81,9 +81,6 @@ public class TenantRegistry {
     // Structure: < Tenant, Source > — pre-compiled system/built-in code (globalThis scope)
     private final Map<String, Source>  graalSourceSystem = new ConcurrentHashMap<>();
 
-    // Structure: < Tenant, Boolean > — true when ESM (.mjs) is enabled for per-mapping code
-    private final Map<String, Boolean> tenantESMFlags    = new ConcurrentHashMap<>();
-
     /** Lazily initialised; the same HostAccess config is shared across all tenants and contexts. */
     private HostAccess hostAccess;
 
@@ -148,7 +145,6 @@ public class TenantRegistry {
         graalEngines.put(tenant, eng);
 
         boolean supportESM = Boolean.TRUE.equals(serviceConfiguration.getSupportESM());
-        tenantESMFlags.put(tenant, supportESM);
 
         // Shared / system code is always evaluated as a plain script (.js) so that
         // every top-level declaration lands on globalThis and is visible to all mapping
@@ -281,7 +277,6 @@ public class TenantRegistry {
         graalEngines.remove(tenant);
         graalSourceShared.remove(tenant);
         graalSourceSystem.remove(tenant);
-        tenantESMFlags.remove(tenant);
         log.info("{} - Removed GraalVM engine and cached sources", tenant);
     }
 
