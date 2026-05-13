@@ -7,7 +7,7 @@ export default {
     description,
     license,
     version,
-    name: 'Dynamic Mapper Extension',
+    name: 'Dynamic Mapper',
     contextPath: 'c8y-pkg-dynamic-mapper',
     icon: {
       class: 'c8y-icon-dynamic-mapper'
