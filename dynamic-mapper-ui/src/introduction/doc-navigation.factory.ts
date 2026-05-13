@@ -41,7 +41,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
     rootNode: new NavigatorNode({
       label: gettext('Introduction'),
       icon: 'home',
-      path: '/c8y-pkg-dynamic-mapper/landing',
+      path: '/c8y-pkg-dynamic-mapper/introduction',
       priority: 614,
       preventDuplicates: true
     }),
@@ -49,7 +49,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       parent: gettext('Introduction'),
       icon: 'empty',
       label: gettext('Overview'),
-      path: '/c8y-pkg-dynamic-mapper/landing/overview',
+      path: '/c8y-pkg-dynamic-mapper/introduction/overview',
       priority: 613,
       preventDuplicates: true
     }),
@@ -57,7 +57,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       parent: gettext('Introduction'),
       icon: 'empty',
       label: gettext('Getting started'),
-      path: '/c8y-pkg-dynamic-mapper/landing/getting-started',
+      path: '/c8y-pkg-dynamic-mapper/introduction/getting-started',
       priority: 612,
       preventDuplicates: true
     }),
@@ -65,7 +65,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       parent: gettext('Introduction'),
       icon: 'empty',
       label: gettext('Message Explorer'),
-      path: '/c8y-pkg-dynamic-mapper/landing/message-explorer',
+      path: '/c8y-pkg-dynamic-mapper/introduction/message-explorer',
       priority: 611.5,
       preventDuplicates: true
     }),
@@ -73,7 +73,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       parent: gettext('Introduction'),
       icon: 'empty',
       label: gettext('Managing connectors'),
-      path: '/c8y-pkg-dynamic-mapper/landing/managing-connectors',
+      path: '/c8y-pkg-dynamic-mapper/introduction/managing-connectors',
       priority: 611,
       preventDuplicates: true
     }),
@@ -81,7 +81,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       parent: gettext('Introduction'),
       icon: 'empty',
       label: gettext('Monitoring overview'),
-      path: '/c8y-pkg-dynamic-mapper/landing/monitoring',
+      path: '/c8y-pkg-dynamic-mapper/introduction/monitoring',
       priority: 598.5,
       preventDuplicates: true
     }),
@@ -89,7 +89,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       parent: gettext('Introduction'),
       icon: 'empty',
       label: gettext('Defining a mapping'),
-      path: '/c8y-pkg-dynamic-mapper/landing/define-mapping',
+      path: '/c8y-pkg-dynamic-mapper/introduction/define-mapping',
       priority: 610,
       preventDuplicates: true
     }),
@@ -97,7 +97,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       parent: gettext('Introduction'),
       icon: 'empty',
       label: gettext('SparkPlug B'),
-      path: '/c8y-pkg-dynamic-mapper/landing/sparkplugb',
+      path: '/c8y-pkg-dynamic-mapper/introduction/sparkplugb',
       priority: 609.5,
       preventDuplicates: true
     }),
@@ -105,7 +105,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       parent: gettext('Introduction'),
       icon: 'empty',
       label: gettext('Outbound mapping'),
-      path: '/c8y-pkg-dynamic-mapper/landing/define-subscription-for-outbound',
+      path: '/c8y-pkg-dynamic-mapper/introduction/define-subscription-for-outbound',
       priority: 609,
       preventDuplicates: true
     }),
@@ -113,7 +113,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       parent: gettext('Introduction'),
       icon: 'empty',
       label: gettext('Transformation Types'),
-      path: '/c8y-pkg-dynamic-mapper/landing/transformation-types',
+      path: '/c8y-pkg-dynamic-mapper/introduction/transformation-types',
       priority: 608,
       preventDuplicates: true
     }),
@@ -121,7 +121,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       parent: gettext('Transformation Types'),
       icon: 'empty',
       label: gettext('JSONata'),
-      path: '/c8y-pkg-dynamic-mapper/landing/jsonata',
+      path: '/c8y-pkg-dynamic-mapper/introduction/jsonata',
       priority: 607,
       preventDuplicates: true
     }),
@@ -129,7 +129,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       parent: gettext('Transformation Types'),
       icon: 'empty',
       label: gettext('Smart Function'),
-      path: '/c8y-pkg-dynamic-mapper/landing/smartfunction',
+      path: '/c8y-pkg-dynamic-mapper/introduction/smartfunction',
       priority: 606,
       preventDuplicates: true
     }),
@@ -137,7 +137,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       parent: gettext('Transformation Types'),
       icon: 'empty',
       label: gettext('Substitution as JavaScript (removed)'),
-      path: '/c8y-pkg-dynamic-mapper/landing/javascript',
+      path: '/c8y-pkg-dynamic-mapper/introduction/javascript',
       priority: 605,
       preventDuplicates: true
     }),
@@ -145,7 +145,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       parent: gettext('Transformation Types'),
       icon: 'empty',
       label: gettext('Java Extension'),
-      path: '/c8y-pkg-dynamic-mapper/landing/javaextension',
+      path: '/c8y-pkg-dynamic-mapper/introduction/javaextension',
       priority: 604,
       preventDuplicates: true
     }),
@@ -153,7 +153,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       parent: gettext('Transformation Types'),
       icon: 'empty',
       label: gettext('Custom Routing'),
-      path: '/c8y-pkg-dynamic-mapper/landing/custom-routing',
+      path: '/c8y-pkg-dynamic-mapper/introduction/custom-routing',
       priority: 603.5,
       preventDuplicates: true
     }),
@@ -161,7 +161,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       parent: gettext('Introduction'),
       icon: 'empty',
       label: gettext('Flow State'),
-      path: '/c8y-pkg-dynamic-mapper/landing/flow-state',
+      path: '/c8y-pkg-dynamic-mapper/introduction/flow-state',
       priority: 603.5,
       preventDuplicates: true
     }),
@@ -169,7 +169,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       parent: gettext('Introduction'),
       icon: 'empty',
       label: gettext('Code Templates'),
-      path: '/c8y-pkg-dynamic-mapper/landing/code-templates',
+      path: '/c8y-pkg-dynamic-mapper/introduction/code-templates',
       priority: 603,
       preventDuplicates: true
     }),
@@ -177,7 +177,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       parent: gettext('Introduction'),
       icon: 'empty',
       label: gettext('Metadata'),
-      path: '/c8y-pkg-dynamic-mapper/landing/metadata',
+      path: '/c8y-pkg-dynamic-mapper/introduction/metadata',
       priority: 602,
       preventDuplicates: true
     }),
@@ -185,7 +185,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       parent: gettext('Introduction'),
       icon: 'empty',
       label: gettext('Snooping'),
-      path: '/c8y-pkg-dynamic-mapper/landing/unknown-payload',
+      path: '/c8y-pkg-dynamic-mapper/introduction/unknown-payload',
       priority: 601,
       preventDuplicates: true
     }),
@@ -193,7 +193,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       parent: gettext('Introduction'),
       icon: 'empty',
       label: gettext('Reliability settings'),
-      path: '/c8y-pkg-dynamic-mapper/landing/reliability-settings',
+      path: '/c8y-pkg-dynamic-mapper/introduction/reliability-settings',
       priority: 600,
       preventDuplicates: true
     }),
@@ -201,7 +201,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       parent: gettext('Introduction'),
       icon: 'empty',
       label: gettext('Managing permissions'),
-      path: '/c8y-pkg-dynamic-mapper/landing/access-control',
+      path: '/c8y-pkg-dynamic-mapper/introduction/access-control',
       priority: 599,
       preventDuplicates: true
     }),
@@ -209,7 +209,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       parent: gettext('Introduction'),
       icon: 'empty',
       label: gettext('Troubleshooting'),
-      path: '/c8y-pkg-dynamic-mapper/landing/troubleshooting',
+      path: '/c8y-pkg-dynamic-mapper/introduction/troubleshooting',
       priority: 598,
       preventDuplicates: true
     }),

@@ -42,11 +42,10 @@ const OVERVIEW_SECTIONS = [
     hookRoute({
       path: '',
       pathMatch: 'full',
-      component: DocMainComponent,
-      resolve: { feature: featureResolver }
+      redirectTo: 'c8y-pkg-dynamic-mapper/introduction'
     }),
     hookRoute({
-      path: 'c8y-pkg-dynamic-mapper/landing',
+      path: 'c8y-pkg-dynamic-mapper/introduction',
       component: DocMainComponent,
       resolve: { feature: featureResolver },
       children: [
