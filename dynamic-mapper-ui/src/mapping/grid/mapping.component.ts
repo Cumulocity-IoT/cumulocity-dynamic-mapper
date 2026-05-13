@@ -200,17 +200,16 @@ export class MappingComponent implements OnInit, OnDestroy {
           this.mappingsCount = maps.length;
         });
 
-      // Show deprecation notice modal once per session if not yet permanently accepted.
-      // Both suppressDeprecationWarning (legacy) and acceptedDeprecationNotice (versioned) suppress it.
-      const noticeAccepted =
-        this.feature?.suppressDeprecationWarning ||
-        this.feature?.acceptedDeprecationNotice === DEPRECATION_NOTICE_VERSION;
-      // const noticeAccepted = false;
-
-      if (!noticeAccepted && !this.mappingService.deprecationModalShown) {
-        this.mappingService.deprecationModalShown = true;
-        this.bsModalService.show(DeprecationNoticeModalComponent, { class: 'modal-lg' });
-      }
+      // Deprecation notice disabled for 6.3.2 — SUBSTITUTION_AS_CODE has been fully removed
+      // and all affected tenants have had sufficient time to migrate. Re-enable if new
+      // deprecations are introduced in a future release.
+      // const noticeAccepted =
+      //   this.feature?.suppressDeprecationWarning ||
+      //   this.feature?.acceptedDeprecationNotice === DEPRECATION_NOTICE_VERSION;
+      // if (!noticeAccepted && !this.mappingService.deprecationModalShown) {
+      //   this.mappingService.deprecationModalShown = true;
+      //   this.bsModalService.show(DeprecationNoticeModalComponent, { class: 'modal-lg' });
+      // }
 
       // Start listening to mapping changes
       await this.mappingService.startChangedMappingEvents();

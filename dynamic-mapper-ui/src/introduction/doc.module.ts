@@ -25,7 +25,6 @@ import { DocMainComponent } from './doc-main.component';
 import { DocNavigationFactory } from './doc-navigation.factory';
 import { DocOverviewComponent } from './doc-overview.component';
 import { DocJsonataComponent } from './doc-jsonata.component';
-import { DocJavaScriptComponent } from './doc-javascript.component';
 import { DocSmartFunctionComponent } from './doc-smartfunction.component';
 import { DocJavaExtensionComponent } from './doc-javaextension.component';
 import { DocCustomRoutingComponent } from './doc-customrouting.component';
@@ -52,7 +51,6 @@ const OVERVIEW_SECTIONS = [
         { path: '', pathMatch: 'full', component: DocOverviewComponent, resolve: { feature: featureResolver } },
         ...OVERVIEW_SECTIONS.map(s => ({ path: s, component: DocOverviewComponent, resolve: { feature: featureResolver } })),
         { path: 'jsonata',        component: DocJsonataComponent },
-        { path: 'javascript',     component: DocJavaScriptComponent },
         { path: 'smartfunction',  component: DocSmartFunctionComponent },
         { path: 'javaextension',  component: DocJavaExtensionComponent },
         { path: 'custom-routing', component: DocCustomRoutingComponent },
