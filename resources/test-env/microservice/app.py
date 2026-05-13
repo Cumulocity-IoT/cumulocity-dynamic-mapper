@@ -164,7 +164,8 @@ def ingest_patch():
     body, err = _parse_body(["deviceId"])
     if err:
         logger.warning("PATCH /ingest – bad request: %s", err[0].get_json())
-        return err
+        status_code = err[1] if len(err) > 1 else 400
+        return jsonify({"error": "Invalid request body"}), status_code
 
     device_id = body["deviceId"]
     existing = _store[device_id][-1].copy() if _store[device_id] else {}
