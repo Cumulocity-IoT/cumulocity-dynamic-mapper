@@ -234,7 +234,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
       },
       {
         type: 'template',
-        template: '<div class="legend form-block col-xs-12">Properties</div>'
+        template: '<div class="legend form-block">Properties</div>'
       },
       {
         fieldGroupClassName: 'row',

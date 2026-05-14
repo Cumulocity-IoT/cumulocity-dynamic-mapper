@@ -34,7 +34,7 @@ import { FormGroup } from '@angular/forms';
 import { Alert, AlertService, CoreModule } from '@c8y/ngx-components';
 import { FormlyFieldConfig } from '@ngx-formly/core';
 import { Observable, Subject, takeUntil } from 'rxjs';
-import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
+import { debounceTime, distinctUntilChanged, map } from 'rxjs/operators';
 import {
   ContentChanges,
   Direction,
@@ -118,19 +118,32 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
   // ─── Lifecycle ─────────────────────────────────────────────────────────────
 
   ngOnChanges(changes: SimpleChanges): void {
-    // Subscribe to filterFormly once it is provided by the parent
+    // Subscribe to filterFormly once when it is first provided by the parent.
     if (changes['filterFormly'] && this.filterFormly && !changes['filterFormly'].previousValue) {
-      // Pre-populate filterModel with the mapping's existing filterMapping value BEFORE
-      // Formly renders its formly-form. Formly reads [model] to initialize FormControl values,
-      // so setting filterModel.filterMapping here ensures the input field is populated on first render.
+      // Pre-populate filterModel so Formly shows the existing expression on first render.
       if (this.mapping?.filterMapping) {
         this.filterModel = { ...this.filterModel, filterMapping: this.mapping.filterMapping };
       }
-      this.filterFormly.get('filterMapping')?.valueChanges.pipe(
+      // Subscribe at GROUP level: the filterMapping FormControl does not exist yet here
+      // (Formly creates it during template rendering, which runs after ngOnChanges).
+      // Using filterFormly.valueChanges (always available) and extracting filterMapping
+      // avoids the silent no-op that occurred with the optional-chained control access.
+      this.filterFormly.valueChanges.pipe(
+        map((v: any) => v?.filterMapping as string),
         debounceTime(500),
         distinctUntilChanged(),
         takeUntil(this.destroy$)
-      ).subscribe(path => this.updateFilterExpressionResult(path));
+      ).subscribe(path => {
+        if (path) this.updateFilterExpressionResult(path);
+      });
+    }
+
+    // When the parent expands templates and propagates a non-null sourceTemplate, evaluate
+    // the filter expression immediately.  This covers the CDK-stepper lazy-render case where
+    // templateStepRef is null when handleSelectTemplatesStep fires, so the parent's direct
+    // call was a no-op and the debounced subscription hadn't fired yet.
+    if (changes['sourceTemplate'] && this.sourceTemplate && this.mapping?.filterMapping) {
+      this.updateFilterExpressionResult(this.mapping.filterMapping);
     }
   }
 

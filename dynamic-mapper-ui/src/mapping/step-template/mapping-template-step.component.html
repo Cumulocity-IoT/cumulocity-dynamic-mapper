@@ -1,9 +1,9 @@
 <div class="inner-scroll fit-h">
   <div class="card-block p-b-0">
     <div [formGroup]="templateForm">
-      <div class="row">
+      <div class="d-grid grid__col--6-6" style="column-gap: 4px">
         <!-- Source Template Column -->
-        <div class="col-lg-6 column-right-border">
+        <div class="column-right-border p-r-2">
           <div class="form-group">
             <div>
               <label translate>Source Template - {{ sourceSystem }}</label>
@@ -34,7 +34,7 @@
           </div>
         </div>
         <!-- Target Template Column -->
-        <div class="col-lg-6 column-left-border">
+        <div class="column-left-border p-l-2">
           <div class="form-group">
             <label>Target Template - {{ targetSystem }}</label>
             <div class="d-flex j-c-between">
