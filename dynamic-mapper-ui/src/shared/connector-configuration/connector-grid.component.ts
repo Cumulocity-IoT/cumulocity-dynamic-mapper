@@ -26,7 +26,7 @@ import { cloneDeep } from 'lodash';
 
 import { ConfirmationModalComponent } from '../confirmation/confirmation-modal.component';
 import { ConnectorConfigurationService } from '../service/connector-configuration.service';
-import { ConnectorStatus, LoggingEventType } from '../connector-log/connector-log.model';
+import { ConnectorStatus, LoggingEventType } from '../connector-details/connector-log.model';
 import { DeploymentMapEntry, Direction, Feature } from '../mapping/mapping.model';
 import { createCustomUuid } from '../mapping/util';
 import { ConnectorConfiguration, ConnectorSpecification, ConnectorType, PollingInterval } from './connector.model';

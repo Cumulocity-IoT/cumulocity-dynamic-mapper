@@ -54,6 +54,7 @@ interface ExtensionWithEntries extends IManagedObject {
 })
 export class ExtensionPropertiesComponent implements OnInit {
   extension: ExtensionWithEntries;
+  directionFilter: 'ANY' | 'INBOUND' | 'OUTBOUND' = 'ANY';
   readonly LINK = `c8y-pkg-dynamic-mapper/${NODE3}/processorExtension`;
 
   constructor(private route: ActivatedRoute) {}
@@ -71,6 +72,12 @@ export class ExtensionPropertiesComponent implements OnInit {
 
   get hasExtensionEntries(): boolean {
     return this.extension?.extensionEntries?.length > 0;
+  }
+
+  get filteredEntries(): ExtensionEntry[] {
+    const entries = this.extension?.extensionEntries ?? [];
+    if (this.directionFilter === 'ANY') return entries;
+    return entries.filter(e => e.direction === this.directionFilter);
   }
 
   get extensionType(): string {
