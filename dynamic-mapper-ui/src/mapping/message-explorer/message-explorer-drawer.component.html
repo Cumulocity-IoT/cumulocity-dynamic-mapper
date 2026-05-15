@@ -115,9 +115,7 @@
           } @else {
           <!-- Device type filter -->
           <div class="form-group m-b-0">
-            <label class="control-label" for="explorerDeviceType" translate>Device type filter
-              <span class="text-muted">(optional)</span>
-            </label>
+            <label class="control-label" for="explorerDeviceType" translate>Device type filter</label>
             <input id="explorerDeviceType" type="text" class="form-control" [(ngModel)]="deviceTypeFilter"
               name="deviceTypeFilter"
               placeholder="{{ 'e.g. c8y_MQTTDevice' | translate }}" />
@@ -167,7 +165,9 @@
     <div class="card-footer separator p-24 text-center flex-no-shrink">
       <button class="btn btn-default" (click)="onCancel()" translate>Cancel</button>
       <button class="btn btn-primary m-l-8" (click)="onStart()"
-        [disabled]="(direction === 'INBOUND' && (!selectedConnectorIdentifier || !topic))" translate>
+        [disabled]="(direction === 'INBOUND' && (!selectedConnectorIdentifier || !topic)) ||
+                    (direction === 'OUTBOUND' && outboundFilterMode === 'source' && selectedDeviceList.length === 0) ||
+                    (direction === 'OUTBOUND' && outboundFilterMode === 'deviceType' && !deviceTypeFilter.trim())" translate>
         Start
       </button>
     </div>
