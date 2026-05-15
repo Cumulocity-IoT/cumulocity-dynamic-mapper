@@ -24,7 +24,10 @@ package dynamic.mapper.model;
 import lombok.Builder;
 import lombok.Data;
 
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 @Data
 @Builder
@@ -41,6 +44,18 @@ public class ExplorerSession {
 
     /** C8Y managed object ID (device or group) to filter outbound notifications (OUTBOUND only; null = required). */
     private String sourceId;
+
+    /** Device type filter (OUTBOUND only; null = no type filter). Messages from devices whose C8Y type
+     *  does not match this value are dropped. Ignored when sourceId is set. */
+    private String deviceType;
+
+    /** Device IDs subscribed via EXPLORER_DEVICE_SUBSCRIPTION when deviceType filter is used. */
+    @Builder.Default
+    private List<String> subscribedDeviceIds = new CopyOnWriteArrayList<>();
+
+    /** Cache of sourceId → resolved C8Y device type to avoid repeated inventory lookups per session. */
+    @Builder.Default
+    private ConcurrentHashMap<String, String> deviceTypeCache = new ConcurrentHashMap<>();
 
     /** Maximum number of messages to retain (oldest are dropped once limit is reached). */
     private int maxMessages;

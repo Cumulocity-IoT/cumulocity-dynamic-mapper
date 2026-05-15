@@ -919,6 +919,23 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         });
     }
 
+    public List<ManagedObjectRepresentation> getManagedObjectsByType(String tenant, String type, Boolean testing) {
+        return subscriptionsService.callForTenant(tenant, () -> {
+            try {
+                com.cumulocity.sdk.client.inventory.InventoryFilter filter =
+                        new com.cumulocity.sdk.client.inventory.InventoryFilter().byType(type);
+                List<ManagedObjectRepresentation> result = new java.util.ArrayList<>();
+                for (ManagedObjectRepresentation mor : inventoryApi.getManagedObjectsByFilter(filter, testing).get().allPages()) {
+                    result.add(mor);
+                }
+                return result;
+            } catch (SDKException e) {
+                log.warn("{} - Error querying devices of type {}: {}", tenant, type, e.getMessage());
+                return java.util.Collections.emptyList();
+            }
+        });
+    }
+
     public ManagedObjectRepresentation getManagedObjectForId(String tenant, String deviceId, Boolean testing) {
         return getManagedObjectForId(tenant, deviceId, testing, false);
     }

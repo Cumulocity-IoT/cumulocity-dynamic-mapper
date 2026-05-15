@@ -46,6 +46,7 @@ export interface StartSessionRequest {
   maxMessages: number;
   direction: 'INBOUND' | 'OUTBOUND';
   sourceId?: string;    // C8Y managed object ID (device or group) filter (OUTBOUND only)
+  deviceType?: string;  // C8Y device type filter (OUTBOUND only)
 }
 
 @Injectable({ providedIn: 'root' })

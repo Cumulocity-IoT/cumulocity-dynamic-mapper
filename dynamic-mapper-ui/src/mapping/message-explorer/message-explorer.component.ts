@@ -222,7 +222,8 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
         topic: result.topic,
         maxMessages: result.maxMessages,
         direction: result.direction,
-        sourceId: result.sourceId
+        sourceId: result.sourceId,
+        deviceType: result.deviceTypeFilter
       });
       this.connectorName = result.connectorName;
       this.sessionTopic = result.topic;

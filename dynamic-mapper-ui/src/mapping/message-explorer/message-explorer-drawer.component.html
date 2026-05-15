@@ -69,22 +69,63 @@
           </div>
         </div>
 
-        <!-- Device selector (OUTBOUND only) -->
+        <!-- Device / group selector and type filter (OUTBOUND only) -->
         @if (direction === 'OUTBOUND') {
-        <div class="form-group separator-top m-t-24 p-t-24">
-          <label class="control-label" translate>Source <span class="text-muted text-default">(*required — select a device or group; a Notification 2.0 subscription will be created for the selected source)</span></label>
-          <c8y-asset-selector-miller [(ngModel)]="selectedDeviceList" (onSelected)="onDeviceSelected($event)"
-            name="explorerDevice" [config]="{
-                groupsSelectable: true,
-                columnHeaders: true,
-                showFilter: true,
-                showUnassignedDevices: true,
-                showChildDevices: true,
-                search: true,
-                multi: false,
-                showSelected: true
-              }" style="height: 260px; display: block;" class="bg-component">
-          </c8y-asset-selector-miller>
+        <div class="separator-top m-t-24 p-t-24">
+          <!-- Filter mode toggle -->
+          <div class="form-group m-b-16">
+            <label class="control-label" translate>Filter by</label>
+            <div class="d-flex g-24">
+              <label class="c8y-radio radio-inline" title="{{ 'By device or device group' | translate }}"
+                aria-label="{{ 'By device or device group' | translate }}">
+                <input type="radio" name="outboundFilterMode" value="source"
+                  [(ngModel)]="outboundFilterMode" (ngModelChange)="onOutboundFilterModeChange()" />
+                <span></span>
+                <span translate>Device or device group</span>
+              </label>
+              <label class="c8y-radio radio-inline" title="{{ 'By device type' | translate }}"
+                aria-label="{{ 'By device type' | translate }}">
+                <input type="radio" name="outboundFilterMode" value="deviceType"
+                  [(ngModel)]="outboundFilterMode" (ngModelChange)="onOutboundFilterModeChange()" />
+                <span></span>
+                <span translate>Device type</span>
+              </label>
+            </div>
+          </div>
+
+          @if (outboundFilterMode === 'source') {
+          <!-- Source: specific device or group -->
+          <div class="form-group m-b-0">
+            <label class="control-label" translate>Source
+              <span class="text-muted">(optional — select a device or group to create a dedicated Notification 2.0 subscription)</span>
+            </label>
+            <c8y-asset-selector-miller [(ngModel)]="selectedDeviceList" (onSelected)="onDeviceSelected($event)"
+              name="explorerDevice" [config]="{
+                  groupsSelectable: true,
+                  columnHeaders: true,
+                  showFilter: true,
+                  showUnassignedDevices: true,
+                  showChildDevices: true,
+                  search: true,
+                  multi: false,
+                  showSelected: true
+                }" style="height: 220px; display: block;" class="bg-component">
+            </c8y-asset-selector-miller>
+          </div>
+          } @else {
+          <!-- Device type filter -->
+          <div class="form-group m-b-0">
+            <label class="control-label" for="explorerDeviceType" translate>Device type filter
+              <span class="text-muted">(optional)</span>
+            </label>
+            <input id="explorerDeviceType" type="text" class="form-control" [(ngModel)]="deviceTypeFilter"
+              name="deviceTypeFilter"
+              placeholder="{{ 'e.g. c8y_MQTTDevice' | translate }}" />
+            <span class="help-block" translate>
+              Show only messages from devices whose C8Y type matches this value.
+            </span>
+          </div>
+          }
         </div>
         }
 
@@ -126,7 +167,7 @@
     <div class="card-footer separator p-24 text-center flex-no-shrink">
       <button class="btn btn-default" (click)="onCancel()" translate>Cancel</button>
       <button class="btn btn-primary m-l-8" (click)="onStart()"
-        [disabled]="(direction === 'INBOUND' && (!selectedConnectorIdentifier || !topic)) || (direction === 'OUTBOUND' && selectedDeviceList.length === 0)" translate>
+        [disabled]="(direction === 'INBOUND' && (!selectedConnectorIdentifier || !topic))" translate>
         Start
       </button>
     </div>

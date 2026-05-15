@@ -119,11 +119,12 @@ public class ExplorerService {
      * @param maxMessages         maximum messages to buffer (1–500); defaults to 50
      * @param direction           "INBOUND" or "OUTBOUND"
      * @param sourceId            C8Y managed object ID (device or group) to filter (OUTBOUND only; required — without a source ID no Notification 2.0 subscription is created and no events will be captured)
+     * @param deviceType          C8Y device type filter (OUTBOUND only; optional). Only messages from devices whose type matches are forwarded.
      * @return the new session id
      * @throws ConnectorRegistryException if the connector is not registered for the tenant (INBOUND only)
      */
     public String startSession(String tenant, String connectorIdentifier, String topic, int maxMessages,
-            String direction, String sourceId)
+            String direction, String sourceId, String deviceType)
             throws ConnectorRegistryException {
 
         int cappedMax = Math.max(1, Math.min(500, maxMessages > 0 ? maxMessages : DEFAULT_MAX_MESSAGES));
@@ -137,7 +138,9 @@ public class ExplorerService {
         if ("OUTBOUND".equals(dir)) {
             // Outbound: intercept published messages on ALL connectors for this tenant
             String resolvedSourceId = (sourceId != null && !sourceId.isBlank()) ? sourceId.trim() : null;
-            String connName = resolvedSourceId != null ? "source:" + resolvedSourceId : "(all)";
+            String resolvedDeviceType = (deviceType != null && !deviceType.isBlank()) ? deviceType.trim() : null;
+            String connName = resolvedSourceId != null ? "source:" + resolvedSourceId
+                    : (resolvedDeviceType != null ? "type:" + resolvedDeviceType : "(all)");
 
             session = ExplorerSession.builder()
                     .sessionId(sessionId)
@@ -148,6 +151,7 @@ public class ExplorerService {
                     .maxMessages(cappedMax)
                     .direction(dir)
                     .sourceId(resolvedSourceId)
+                    .deviceType(resolvedDeviceType)
                     .lastPolledAt(System.currentTimeMillis())
                     .messages(new ConcurrentLinkedDeque<>())
                     .build();
@@ -196,10 +200,33 @@ public class ExplorerService {
                     log.warn("{} - Source {} not found; explorer will rely on existing subscriptions",
                             tenant, resolvedSourceId);
                 }
+            } else if (resolvedDeviceType != null) {
+                // Subscribe all existing devices of the given type using the same pattern as
+                // UpdateSubscriptionDeviceTypeTask — one N2.0 subscription per device, all
+                // delivered on a single EXPLORER_DEVICE_SUBSCRIPTION WebSocket.
+                List<ManagedObjectRepresentation> deviceMors =
+                        c8yAgent.getManagedObjectsByType(tenant, resolvedDeviceType, false);
+                for (ManagedObjectRepresentation deviceMor : deviceMors) {
+                    String devId = deviceMor.getId().getValue();
+                    notificationSubscriber.subscribeDeviceAndConnect(tenant, deviceMor, API.ALL,
+                            Utils.EXPLORER_DEVICE_SUBSCRIPTION);
+                    session.getSubscribedDeviceIds().add(devId);
+                }
+                if (!session.getSubscribedDeviceIds().isEmpty()) {
+                    notificationSubscriber.initializeExplorerDeviceClient(tenant, sessionId);
+                    log.info("{} - Explorer subscribed {} devices of type {} for session {}",
+                            tenant, session.getSubscribedDeviceIds().size(), resolvedDeviceType, sessionId);
+                } else {
+                    log.info("{} - No devices found for type {} at session start; relying on per-message filter",
+                            tenant, resolvedDeviceType);
+                }
             }
 
-            log.info("{} - Outbound explorer session started: sessionId={}, source={}, connectors={}",
-                    tenant, sessionId, resolvedSourceId != null ? resolvedSourceId : "(all)", clients.size());
+            log.info("{} - Outbound explorer session started: sessionId={}, source={}, deviceType={}, connectors={}",
+                    tenant, sessionId,
+                    resolvedSourceId != null ? resolvedSourceId : "(all)",
+                    resolvedDeviceType != null ? resolvedDeviceType : "(any)",
+                    clients.size());
         } else {
             AConnectorClient client = connectorRegistry.getClientForTenant(tenant, connectorIdentifier);
 
@@ -360,6 +387,18 @@ public class ExplorerService {
                                 tenant, mor, Utils.EXPLORER_DEVICE_SUBSCRIPTION);
                         log.info("{} - Explorer subscription removed for source {}", tenant, session.getSourceId());
                     }
+                } else if (!session.getSubscribedDeviceIds().isEmpty()) {
+                    // Close the shared WebSocket for device-type sessions
+                    notificationSubscriber.closeExplorerDeviceClient(session.getSessionId());
+                    for (String devId : session.getSubscribedDeviceIds()) {
+                        ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(tenant, devId, false);
+                        if (mor != null) {
+                            notificationSubscriber.unsubscribeDeviceAndDisconnect(
+                                    tenant, mor, Utils.EXPLORER_DEVICE_SUBSCRIPTION);
+                        }
+                    }
+                    log.info("{} - Explorer subscriptions removed for {} devices of type {}",
+                            tenant, session.getSubscribedDeviceIds().size(), session.getDeviceType());
                 }
             } else {
                 AConnectorClient client = connectorRegistry.getClientForTenant(tenant, session.getConnectorIdentifier());
@@ -383,6 +422,21 @@ public class ExplorerService {
             // Optional source filter for OUTBOUND sessions (device or group)
             if (session.getSourceId() != null && !session.getSourceId().equals(message.getSourceId())) {
                 return;
+            }
+
+            // Optional device-type filter for OUTBOUND sessions.
+            // The resolved type is cached per session so each unique sourceId is looked up at most once.
+            if (session.getDeviceType() != null && message.getSourceId() != null) {
+                String resolvedType = session.getDeviceTypeCache().computeIfAbsent(
+                        message.getSourceId(),
+                        sid -> {
+                            ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(
+                                    session.getTenant(), sid, false);
+                            return (mor != null && mor.getType() != null) ? mor.getType() : "";
+                        });
+                if (!session.getDeviceType().equals(resolvedType)) {
+                    return;
+                }
             }
 
             // OUTBOUND deduplication: Notification 2.0 events are delivered once per connector,
