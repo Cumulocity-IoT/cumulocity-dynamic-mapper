@@ -4,7 +4,7 @@
   <div class="card-block p-b-0">
     <!-- Template Editors Section -->
     <div [formGroup]="templateForm">
-      <div class="d-grid grid__col--6-6" style="column-gap: 4px">
+      <div class="d-grid grid__col--6-6 gap-4">
         <!-- Source Template Editor -->
         <div class="column-right-border d-col p-r-2">
           <div class="form-group m-b-0">
@@ -87,7 +87,7 @@
       </div>
       <!-- Expert Mode Fields -->
       <div class="collapse" [isAnimated]="true" [collapse]="!expertMode">
-        <div class="d-grid grid__col--6-6 p-t-8" style="column-gap: 4px">
+        <div class="d-grid grid__col--6-6 p-t-4 gap-4">
           <div>
             <formly-form [form]="substitutionFormly" [fields]="substitutionFormlyFieldsSource" [model]="substitutionModel">
             </formly-form>

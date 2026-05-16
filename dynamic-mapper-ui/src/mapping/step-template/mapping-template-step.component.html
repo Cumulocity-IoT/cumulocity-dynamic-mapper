@@ -1,10 +1,15 @@
 <div class="inner-scroll fit-h">
   <div class="card-block p-b-0">
     <div [formGroup]="templateForm">
-      <div class="d-grid grid__col--6-6" style="column-gap: 4px">
+      <div class="d-grid grid__col--6-6 gap-4">
         <!-- Source Template Column -->
         <div class="column-right-border p-r-2">
           <div class="form-group">
+            <div class="d-flex j-c-between a-i-center">
+              <label translate class="m-b-0">Source Template - {{ sourceSystem }}</label>
+              <button type="button" class="btn btn-default btn-xs" style="visibility: hidden" aria-hidden="true" disabled tabindex="-1">
+                <i c8yIcon="enter-right"></i>&nbsp;
+              </button>
             <div>
               <label translate>Source Template - {{ sourceSystem }}</label>
             </div>
@@ -18,6 +23,7 @@
                 'Use sample templates for the source.'
                 }}</small>
             </div>
+
             @if (stepperViewModel.showSourceEditor) {
             <d11r-mapping-json-editor [schema]="schemaSource" [options]="editorOptionsSourceTemplate"
               [class]="'jse-main-small'"
@@ -25,29 +31,34 @@
               (pathChanged)="onSelectedPathFilterMappingChanged($event)"
               #editorSourceStepTemplate></d11r-mapping-json-editor>
             }
-            @if (stepperViewModel.showExtensionSelectors) {
+            @if (stepperViewModel.showExtensionSelectorsSource) {
             <ng-content select="[extensionSource]"></ng-content>
             }
-            @if (!stepperViewModel.showSourceEditor && !stepperViewModel.showExtensionSelectors) {
-            <small class="text-muted">Template is not shown as the format is unknown.</small>
+            @if (!stepperViewModel.showSourceEditor && !stepperViewModel.showExtensionSelectorsSource) {
+            <div class="jse-main-small d-flex a-i-center j-c-center">
+              <small class="text-muted text-center">
+                <i c8yIcon="info-circle" class="m-r-4"></i>
+                {{ 'Template is described internally by the chosen mapping type.' | translate }}
+              </small>
+            </div>
             }
           </div>
         </div>
         <!-- Target Template Column -->
         <div class="column-left-border p-l-2">
           <div class="form-group">
-            <label>Target Template - {{ targetSystem }}</label>
-            <div class="d-flex j-c-between">
-              <button type="button" name="sample" class="btn btn-default"
+            <div class="d-flex j-c-between a-i-center">
+              <label translate class="m-b-0">Target Template - {{ targetSystem }}</label>
+              @if (stepperViewModel.showTargetContent) {
+              <button type="button" name="sample" class="btn btn-default btn-xs"
                 (click)="onSampleTargetTemplatesButton()" translate
                 title="{{ 'Use Sample Target Templates' | translate }}"
                 [disabled]="templateForm.get('sampleTargetTemplatesButton')?.value || (!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole)">
                 <i c8yIcon="enter-right"></i>Reset to default
               </button>
+              }
             </div>
-            <div>
-              <small class="text-muted" translate>Use sample templates for the target.</small>
-            </div>
+
             @if (stepperViewModel.showTargetEditor) {
             <d11r-mapping-json-editor [schema]="schemaTarget" [options]="editorOptionsTargetTemplate"
               [class]="'jse-main-small'"
@@ -58,11 +69,14 @@
             @if (stepperViewModel.showExtensionSelectors) {
             <ng-content select="[extensionTarget]"></ng-content>
             }
-            <div>
-              @if (!stepperViewModel.showTargetContent) {
-              <small class="text-muted">Template is described internally by the chosen mapping type.</small>
-              }
+            @if (!stepperViewModel.showTargetContent) {
+            <div class="jse-main-small d-flex a-i-center j-c-center">
+              <small class="text-muted text-center">
+                <i c8yIcon="info-circle" class="m-r-4"></i>
+                {{ 'Template is described internally by the chosen mapping type.' | translate }}
+              </small>
             </div>
+            }
           </div>
         </div>
       </div>
