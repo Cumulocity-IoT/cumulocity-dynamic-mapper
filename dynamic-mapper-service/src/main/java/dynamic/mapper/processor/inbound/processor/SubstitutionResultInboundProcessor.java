@@ -96,10 +96,12 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
                 }
             }
         } catch (Exception e) {
-            String errorMessage = String.format("Tenant %s - Error in substitution processor for mapping: %s",
-                    tenant, mapping.getName());
+            String errorMessage = String.format("Tenant %s - Error in substitution processor for mapping: %s: %s",
+                    tenant, mapping.getName(), e.getMessage());
             log.error(errorMessage, e);
-            context.addError(new ProcessingException(errorMessage, e));
+            if (context.getErrors().isEmpty()) {
+                context.addError(new ProcessingException(errorMessage, e));
+            }
 
             if (!testing) {
                 MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
@@ -144,7 +146,10 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
                 log.debug("Created request {} of {} for mapping: {}", i + 1, cardinality, mapping.getName());
             } catch (Exception e) {
                 log.error("Failed to create request {} for mapping: {}", i, mapping.getName(), e);
-                context.addError(new ProcessingException("Failed to create request " + i, e));
+                String rootCause = e.getMessage() != null ? e.getMessage()
+                        : (e.getCause() != null ? e.getCause().getMessage() : e.getClass().getSimpleName());
+                context.addError(new ProcessingException(
+                        "Failed to create request " + i + ": " + rootCause + " in target template: " + targetTemplate, e));
 
                 if (!context.getNeedsRepair()) {
                     throw e;

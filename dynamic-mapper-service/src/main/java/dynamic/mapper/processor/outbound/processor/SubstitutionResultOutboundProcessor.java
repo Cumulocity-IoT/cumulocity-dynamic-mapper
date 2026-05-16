@@ -76,8 +76,8 @@ public class SubstitutionResultOutboundProcessor extends BaseProcessor {
         try {
             substituteInTargetAndCreateRequests(context);
         } catch (Exception e) {
-            String errorMessage = String.format("Tenant %s - Error in substitution processor for mapping: %s",
-                    tenant, mapping.getName());
+            String errorMessage = String.format("Tenant %s - Error in substitution processor for mapping: %s: %s",
+                    tenant, mapping.getName(), e.getMessage());
             log.error(errorMessage, e);
             MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
             context.addError(new ProcessingException(errorMessage, e));

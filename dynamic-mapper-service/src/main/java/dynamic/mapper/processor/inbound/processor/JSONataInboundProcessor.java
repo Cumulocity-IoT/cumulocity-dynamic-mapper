@@ -47,8 +47,8 @@ public class JSONataInboundProcessor extends AbstractJSONataExtractionProcessor 
     @Override
     protected void handleProcessingError(Exception e, ProcessingContext<?> context, String tenant, Mapping mapping) {
         String errorMessage = String.format(
-                "%s - Error in JSONataInboundProcessor for mapping: %s,",
-                tenant, mapping.getName());
+                "%s - Error in JSONataInboundProcessor for mapping: %s: %s",
+                tenant, mapping.getName(), e.getMessage());
         log.error(errorMessage, e);
 
         if (e instanceof ProcessingException) {

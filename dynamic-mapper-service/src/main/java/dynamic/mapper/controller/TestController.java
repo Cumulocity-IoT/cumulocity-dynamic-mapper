@@ -181,7 +181,16 @@ public class TestController {
                     result.setSuccess(firstResult.getErrors().isEmpty());
                     if (firstResult.getErrors() != null && !firstResult.getErrors().isEmpty()) {
                         firstResult.getErrors().forEach(e -> {
-                            result.getErrors().add(e.getMessage() != null ? e.getMessage() : "No message");
+                            String msg = e.getMessage() != null ? e.getMessage() : "No message";
+                            Throwable cause = e.getCause();
+                            while (cause != null) {
+                                if (cause.getMessage() != null && !msg.contains(cause.getMessage())) {
+                                    msg += " (caused by: " + cause.getMessage() + ")";
+                                    break;
+                                }
+                                cause = cause.getCause();
+                            }
+                            result.getErrors().add(msg);
                         });
                     }
                     // If filter is configured and no requests were produced, add filter warning.
