@@ -21,6 +21,7 @@
 
 package dynamic.mapper.processor.inbound.processor;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -37,6 +38,7 @@ import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.model.Substitution;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.RepairStrategy;
@@ -146,10 +148,8 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
                 log.debug("Created request {} of {} for mapping: {}", i + 1, cardinality, mapping.getName());
             } catch (Exception e) {
                 log.error("Failed to create request {} for mapping: {}", i, mapping.getName(), e);
-                String rootCause = e.getMessage() != null ? e.getMessage()
-                        : (e.getCause() != null ? e.getCause().getMessage() : e.getClass().getSimpleName());
-                context.addError(new ProcessingException(
-                        "Failed to create request " + i + ": " + rootCause + " in target template: " + targetTemplate, e));
+                String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+                context.addError(new ProcessingException(msg, e));
 
                 if (!context.getNeedsRepair()) {
                     throw e;
@@ -296,7 +296,7 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
 
     private ProcessingContext<Object> getBuildProcessingContext(ProcessingContext<Object> context,
             SubstituteValue device, int finalI,
-            int size) {
+            int size) throws ProcessingException {
         Set<String> pathTargets = context.getPathTargets();
         Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
@@ -324,7 +324,19 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
                         pathTarget, substitute.repairStrategy);
             }
 
-            prepareAndSubstituteInPayload(context, payloadTarget, pathTarget, substitute);
+            try {
+                prepareAndSubstituteInPayload(context, payloadTarget, pathTarget, substitute);
+            } catch (Exception e) {
+                String pathSource = Arrays.stream(mapping.getSubstitutions())
+                        .filter(s -> pathTarget.equals(s.getPathTarget()))
+                        .map(Substitution::getPathSource)
+                        .findFirst()
+                        .orElse("unknown");
+                throw new ProcessingException(
+                        String.format("Substitution [pathSource='%s' -> pathTarget='%s']: %s in target template: %s",
+                                pathSource, pathTarget, e.getMessage(), mapping.getTargetTemplate()),
+                        e);
+            }
         }
         ProcessingResultHelper.createAndAddDynamicMapperRequest(context, payloadTarget.jsonString(), null, mapping);
         if (context.getMapping().getDebug() || context.getServiceConfiguration().getLogPayload()) {
