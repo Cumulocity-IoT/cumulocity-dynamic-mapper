@@ -327,11 +327,19 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
             try {
                 prepareAndSubstituteInPayload(context, payloadTarget, pathTarget, substitute);
             } catch (Exception e) {
-                String pathSource = Arrays.stream(mapping.getSubstitutions())
+                Substitution matchedSub = Arrays.stream(mapping.getSubstitutions())
                         .filter(s -> pathTarget.equals(s.getPathTarget()))
-                        .map(Substitution::getPathSource)
                         .findFirst()
-                        .orElse("unknown");
+                        .orElse(null);
+                String pathSource = matchedSub != null ? matchedSub.getPathSource() : "unknown";
+                boolean alreadyCreateIfMissing = matchedSub != null
+                        && RepairStrategy.CREATE_IF_MISSING.equals(matchedSub.getRepairStrategy());
+                if (!alreadyCreateIfMissing && e instanceof com.jayway.jsonpath.PathNotFoundException) {
+                    context.getLogs().add(
+                            "WARNING: Hint: set repairStrategy to 'CREATE_IF_MISSING' on substitution"
+                            + " [pathSource='" + pathSource + "' -> pathTarget='" + pathTarget + "']"
+                            + " to create the missing path automatically.");
+                }
                 throw new ProcessingException(
                         String.format("Substitution [pathSource='%s' -> pathTarget='%s']: %s in target template: %s",
                                 pathSource, pathTarget, e.getMessage(), mapping.getTargetTemplate()),

@@ -47,7 +47,19 @@ export interface Substitution {
    */
   pathTarget: string;
 
-  /** Strategy to handle data extraction and transformation edge cases */
+  /**
+   * Strategy to handle data extraction and transformation edge cases.
+   *
+   * Selection guide:
+   * - Use DEFAULT when the pathTarget is guaranteed to exist as a literal key in the target template.
+   * - Use CREATE_IF_MISSING when the pathTarget does NOT exist as a literal path in the target template
+   *   (e.g. a dynamic or computed segment, or any new node that must be created at runtime).
+   *   Using DEFAULT for a non-existent path will cause a 'Path not found' error at runtime.
+   * - Use REMOVE_IF_MISSING_OR_NULL when the field should be omitted if the source value is absent.
+   * - Use USE_FIRST_VALUE_OF_ARRAY / USE_LAST_VALUE_OF_ARRAY when the source returns an array but
+   *   only one scalar value is needed.
+   * - Use IGNORE to silently skip this substitution if the source path evaluation fails.
+   */
   repairStrategy: RepairStrategy;
 
   /**
@@ -1224,6 +1236,12 @@ Rules:
 - For OUTBOUND mappings with a topic containing a wildcard (`+`) or a `_TOPIC_LEVEL_` placeholder, map the external device ID to the appropriate `_TOPIC_LEVEL_[N]` entry so that the topic is resolved at runtime.
 - If there is no corresponding field for `externalId` in the target template, map it to an ID or wildcard in the `_TOPIC_LEVEL_` array, e.g. wildcard `"+"` or alphanumeric `"berlin_01"`.
 - Never create a substitution that maps a literal/static value — only map dynamic values from the source payload.
+
+- Choosing repairStrategy:
+-- Set `repairStrategy` to `DEFAULT` ONLY when the exact `pathTarget` already exists as a literal key path in the target template.
+-- Set `repairStrategy` to `CREATE_IF_MISSING` whenever the `pathTarget` does NOT exist as a literal path in the target template (e.g. a dynamic segment derived from source data, a placeholder key, or any node that needs to be created at runtime). Using `DEFAULT` for a non-existent path will cause a runtime error: "Path: <pathTarget> not found!".
+-- When `expandArray: true` is combined with a `pathTarget` that contains a dynamic or placeholder segment not present in the target template, you MUST use `CREATE_IF_MISSING`.
+-- If a substitution writes to a top-level field that already appears in the target template (e.g. `time`, `type`, `source`), `DEFAULT` is correct.
 
 - When generating substitutions, recognize that:
 -- `expandArray: true` indicates the substitution will be used in post-processing to create multiple output documents
