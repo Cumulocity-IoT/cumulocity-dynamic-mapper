@@ -18,10 +18,28 @@
  * @authors Christof Strack
  */
 
-import { Component, OnDestroy, ViewChild, ViewEncapsulation } from '@angular/core';
+import { Component, Input, OnDestroy, ViewChild, ViewEncapsulation } from '@angular/core';
 import { AlertService, CoreModule } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
 import { DEPRECATION_NOTICE_VERSION, SharedService } from '../../shared';
+
+/** Semver string where SUBSTITUTION_AS_CODE was removed. Users on < this version
+ *  still need the action-required banner, not just the historical info note. */
+const SUBSTITUTION_AS_CODE_REMOVAL_VERSION = '6.3.0';
+
+function parseSemver(v: string | null | undefined): [number, number, number] {
+  if (!v) return [0, 0, 0];
+  const [major = 0, minor = 0, patch = 0] = v.replace(/-.*$/, '').split('.').map(Number);
+  return [major, minor, patch];
+}
+
+function versionLessThan(a: string | null | undefined, b: string): boolean {
+  const [aMaj, aMin, aPat] = parseSemver(a);
+  const [bMaj, bMin, bPat] = parseSemver(b);
+  if (aMaj !== bMaj) return aMaj < bMaj;
+  if (aMin !== bMin) return aMin < bMin;
+  return aPat < bPat;
+}
 
 @Component({
   selector: 'd11r-deprecation-notice-modal',
@@ -31,10 +49,19 @@ import { DEPRECATION_NOTICE_VERSION, SharedService } from '../../shared';
   imports: [CoreModule]
 })
 export class DeprecationNoticeModalComponent implements OnDestroy {
+  /** Set via BsModalService initialState — the version stored in tenant config. */
+  @Input() acceptedVersion: string | null = null;
+
   readonly closeSubject = new Subject<boolean>();
   readonly currentVersion = DEPRECATION_NOTICE_VERSION;
   isPending = false;
   isClosing = false;
+
+  /** True when the user has never accepted the 6.3 SUBSTITUTION_AS_CODE removal notice,
+   *  i.e. they need the action-required banner, not just the historical info note. */
+  get needsSubstitutionMigration(): boolean {
+    return versionLessThan(this.acceptedVersion, SUBSTITUTION_AS_CODE_REMOVAL_VERSION);
+  }
 
   @ViewChild('modal', { static: false }) private modal: any;
 

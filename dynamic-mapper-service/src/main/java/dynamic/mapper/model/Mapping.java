@@ -215,13 +215,15 @@ public class Mapping implements Serializable {
     @Schema(description = "Type of external ID to use", example = "c8y_Serial")
     private String externalIdType;
 
-    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Status of template snooping", implementation = SnoopStatus.class, example = "ENABLED")
-    @NotNull
-    private SnoopStatus snoopStatus;
+    @Builder.Default
+    @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "Status of template snooping", implementation = SnoopStatus.class, example = "NONE")
+    @JsonSetter(nulls = Nulls.SKIP)
+    private SnoopStatus snoopStatus = SnoopStatus.NONE;
 
-    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "List of templates captured during snooping")
-    @NotNull
-    private List<String> snoopedTemplates;
+    @Builder.Default
+    @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "List of templates captured during snooping")
+    @JsonSetter(nulls = Nulls.SKIP)
+    private List<String> snoopedTemplates = new java.util.ArrayList<>();
 
     @Schema(description = "Extension configuration for custom processing")
     @JsonSetter(nulls = Nulls.SKIP)

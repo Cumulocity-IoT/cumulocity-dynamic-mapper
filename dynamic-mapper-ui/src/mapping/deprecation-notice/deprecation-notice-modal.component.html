@@ -44,6 +44,29 @@
       <li>{{ 'Select the connector and topic to inspect incoming messages in real time.' | translate }}</li>
       <li>{{ 'Use the captured payload directly as the source template when creating or editing a mapping.' | translate }}</li>
     </ol>
+
+    <!-- Previous deprecation: SUBSTITUTION_AS_CODE removed in 6.3.0 -->
+    @if (needsSubstitutionMigration) {
+    <div class="alert alert-danger m-t-24" style="min-width:stretch">
+      <i c8yIcon="warning" class="m-r-8"></i>
+      <strong>{{ 'Action required — removed in 6.3.0: ' | translate }}</strong>
+      {{ 'The transformation type ' | translate }}
+      <strong>{{ 'Substitution as JavaScript (SUBSTITUTION_AS_CODE)' | translate }}</strong>
+      {{ ' was removed in release 6.3. Affected mappings are no longer executed. Export them, recreate them using the ' | translate }}
+      <strong>{{ 'Smart Function' | translate }}</strong>
+      {{ ' transformation type, and delete the originals.' | translate }}
+    </div>
+    } @else {
+    <div class="alert alert-info m-t-24" style="min-width:stretch">
+      <i c8yIcon="info-circle" class="m-r-8"></i>
+      <strong>{{ 'Already removed in 6.3.0: ' | translate }}</strong>
+      {{ 'The transformation type ' | translate }}
+      <strong>{{ 'Substitution as JavaScript (SUBSTITUTION_AS_CODE)' | translate }}</strong>
+      {{ ' was removed in release 6.3. If you still have affected mappings, export them, recreate them using the ' | translate }}
+      <strong>{{ 'Smart Function' | translate }}</strong>
+      {{ ' transformation type, and delete the originals.' | translate }}
+    </div>
+    }
   </div>
 
   <!-- Footer Buttons -->

@@ -519,7 +519,7 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
       snoopedTemplateIndex: new FormControl({
         value: '-1',
         disabled: !this.stepperConfiguration.showEditorSource ||
-          this.mapping.snoopedTemplates.length === 0 ||
+          (this.mapping.snoopedTemplates?.length ?? 0) === 0 ||
           this.stepperConfiguration.editorMode === EditorMode.READ_ONLY
       }),
       sampleTargetTemplatesButton: new FormControl({

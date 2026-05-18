@@ -200,16 +200,17 @@ export class MappingComponent implements OnInit, OnDestroy {
           this.mappingsCount = maps.length;
         });
 
-      // Deprecation notice disabled for 6.3.2 — SUBSTITUTION_AS_CODE has been fully removed
-      // and all affected tenants have had sufficient time to migrate. Re-enable if new
-      // deprecations are introduced in a future release.
-      // const noticeAccepted =
-      //   this.feature?.suppressDeprecationWarning ||
-      //   this.feature?.acceptedDeprecationNotice === DEPRECATION_NOTICE_VERSION;
-      // if (!noticeAccepted && !this.mappingService.deprecationModalShown) {
-      //   this.mappingService.deprecationModalShown = true;
-      //   this.bsModalService.show(DeprecationNoticeModalComponent, { class: 'modal-lg' });
-      // }
+      // Show deprecation notice for snooping removal (6.4.0) if not yet accepted for this version
+      const noticeAccepted =
+        this.feature?.suppressDeprecationWarning ||
+        this.feature?.acceptedDeprecationNotice === DEPRECATION_NOTICE_VERSION;
+      if (!noticeAccepted && !this.mappingService.deprecationModalShown) {
+        this.mappingService.deprecationModalShown = true;
+        this.bsModalService.show(DeprecationNoticeModalComponent, {
+          class: 'modal-lg',
+          initialState: { acceptedVersion: this.feature?.acceptedDeprecationNotice ?? null }
+        });
+      }
 
       // Start listening to mapping changes
       await this.mappingService.startChangedMappingEvents();
@@ -703,6 +704,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.mappingToUpdate = mapping;
     this.deploymentMapEntry = { identifier: mapping.identifier, connectors: [] };
     if (
+      !mapping.snoopStatus ||
       mapping.snoopStatus === SnoopStatus.NONE ||
       mapping.snoopStatus === SnoopStatus.STOPPED
     ) {
@@ -783,8 +785,10 @@ export class MappingComponent implements OnInit, OnDestroy {
         connectors: deploymentMapEntry.connectors
       };
       if (
+        !mapping.snoopStatus ||
         mapping.snoopStatus === SnoopStatus.NONE ||
-        mapping.snoopStatus === SnoopStatus.STOPPED
+        mapping.snoopStatus === SnoopStatus.STOPPED ||
+        !snoopSupported
       ) {
         this.router.navigate(['edit', mapping.identifier], { relativeTo: this.route });
       } else {

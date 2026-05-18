@@ -10,18 +10,6 @@
               <button type="button" class="btn btn-default btn-xs" style="visibility: hidden" aria-hidden="true" disabled tabindex="-1">
                 <i c8yIcon="enter-right"></i>&nbsp;
               </button>
-            <div>
-              <label translate>Source Template - {{ sourceSystem }}</label>
-            </div>
-            <c8y-select [items]="snoopedTemplateItems" formControlName="snoopedTemplateIndex" [filterItems]="true"
-              labelProperty="label" placeholder="{{ 'Select snooped template' | translate }}"
-              aria-label="Snooped Template" class="w-50">
-            </c8y-select>
-            <div>
-              <small class="text-muted">{{stepperViewModel.showSourceEditor ?
-                'Template is described internally by the chosen mapping type.' :
-                'Use sample templates for the source.'
-                }}</small>
             </div>
 
             @if (stepperViewModel.showSourceEditor) {
