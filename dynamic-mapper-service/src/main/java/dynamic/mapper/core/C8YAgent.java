@@ -703,6 +703,51 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     public static final String MAPPING_TEST_DEVICE_TYPE = "d11r_testDevice";
 
     /**
+     * Creates a managed object and binds its external ID using the optimistic
+     * single-request approach where the platform supports it.
+     *
+     * <p>Cumulocity platforms &ge; May 2026 allow external IDs to be bound
+     * atomically during MO creation by embedding a {@code c8y_ExternalIds}
+     * fragment in the request body. On older platforms (e.g. Edge) the fragment
+     * is simply stored as a regular schemaless property and the external ID is
+     * bound via a separate Identity API call (fallback).</p>
+     *
+     * <p>The caller must hold {@link #c8ySemaphore} before invoking this method.</p>
+     *
+     * @param mor      the managed object to create
+     * @param identity the external ID to bind
+     * @param testing  routing flag forwarded to the inventory/identity facades
+     * @return the created managed object representation
+     */
+    private ManagedObjectRepresentation createWithExternalIdBinding(
+            ManagedObjectRepresentation mor, ID identity, Boolean testing) {
+        if (Boolean.TRUE.equals(testing)) {
+            // Mock / test path – use the simple two-step approach
+            ManagedObjectRepresentation created = inventoryApi.create(mor, true);
+            identityApi.create(created, identity, true);
+            return created;
+        }
+
+        // Embed the external ID in the MO body (new API, platforms >= May 2026).
+        String idType = identity.getType() != null ? identity.getType() : "c8y_Serial";
+        mor.setProperty("c8y_ExternalIds",
+                List.of(Map.of("type", idType, "externalId", identity.getValue())));
+        ManagedObjectRepresentation created = inventoryApi.create(mor, false);
+
+        // Detection: on platforms that support atomic binding the c8y_ExternalIds
+        // directive is consumed and NOT persisted on the MO. On older platforms the
+        // fragment is stored as-is, meaning the external ID was NOT bound atomically.
+        if (created.getProperty("c8y_ExternalIds") != null) {
+            log.debug("c8y_ExternalIds persisted as fragment (platform does not support atomic "
+                    + "binding) – falling back to Identity API");
+            identityApi.create(created, identity, false);
+        } else {
+            log.debug("External ID bound atomically during MO creation");
+        }
+        return created;
+    }
+
+    /**
      * Creates a real managed object in C8Y inventory tagged with {@code d11r_testDevice} so it
      * is visible in the Test Devices grid and can be cleaned up after testing.
      *
@@ -731,9 +776,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                 mor.set(new HashMap<String, String>(), MAPPING_TEST_DEVICE_TYPE);
                 try {
                     c8ySemaphore.acquire();
-                    mor = inventoryApi.create(mor, false);
+                    mor = createWithExternalIdBinding(mor, id, false);
                     log.info("{} - Test device created: id={}, name={}", tenant, mor.getId().getValue(), deviceName);
-                    identityApi.create(mor, id, false);
                     return mor.getId().getValue();
                 } catch (InterruptedException e) {
                     log.error("{} - Failed to acquire semaphore for creating test device", tenant, e);
@@ -789,13 +833,12 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                         }
                         try {
                             c8ySemaphore.acquire();
-                            mor = inventoryApi.create(mor, testing);
+                            mor = createWithExternalIdBinding(mor, identity, testing);
                             // TODO Add/Update new managed object to IdentityCache
                             if (serviceConfiguration.getLogPayload())
                                 log.info("{} - New device created: {}", tenant, mor);
                             else
                                 log.info("{} - New device created with Id {}", tenant, mor.getId().getValue());
-                            identityApi.create(mor, identity, testing);
                         } catch (InterruptedException e) {
                             log.error("{} - Failed to acquire semaphore for creating Device", tenant, e);
                         } finally {
