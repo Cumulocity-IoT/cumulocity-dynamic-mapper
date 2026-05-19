@@ -94,11 +94,14 @@ public class MQTTServicePulsarCallback implements MessageListener<byte[]> {
 
         int timeout = processedResults.getMaxCPUTimeMS();
 
+        //TODO For what do we have this log output?
+        /*
         if (serviceConfiguration.getLogPayload()) {
             log.info(
                     "{} - PREPARING_RESULTS: message {} on topic: [{}], connector {}",
                     tenant, messageId, towardsDeviceTopic, connectorIdentifier);
         }
+         */
 
         // Use the provided virtualThreadPool instead of creating a new thread
         virtualThreadPool.submit(() -> {
@@ -154,7 +157,7 @@ public class MQTTServicePulsarCallback implements MessageListener<byte[]> {
                     // No errors found, acknowledge the message and reset failure counter for this message
                     failureCountPerMessage.remove(messageId);
                     if (serviceConfiguration.getLogPayload()) {
-                        log.debug("{} - END: Sending ack for Pulsar message: topic: [{}], connector: {}",
+                        log.info("{} - END: Sending ack for Pulsar message: topic: [{}], connector: {}",
                                 tenant, towardsDeviceTopic, connectorIdentifier);
                     }
                     consumer.acknowledge(message);
