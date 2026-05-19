@@ -69,6 +69,7 @@ public class AIAgentService {
 
     private static final String DEFAULT_JSONATA_AGENT_NAME = "dynamic-mapper-jsonata-agent";
     private static final String DEFAULT_SMART_FUNCTION_AGENT_NAME = "dynamic-mapper-smart-function-agent";
+    private static final String MCP_STREAMABLE_ENDPOINT = "/service/dynamic-mapper-service/mcp";
     private static final String MCP_SSE_ENDPOINT = "/service/dynamic-mapper-service/sse";
     private static final String JSONATA_TOOL_NAME = "evaluateJsonataExpression";
     private static final String MCP_SERVER_NAME = "Dynamic Mapper MCP Server";
@@ -91,6 +92,7 @@ public class AIAgentService {
                     mcpServer.setName(MCP_SERVER_NAME);
                     mcpServer.setDescription("MCP Server for dynamic mapper service");
                     mcpServer.setSendAuthentication(true);
+                    mcpServer.setType(MCPServer.typeEnum.HTTP);
                     try {
                         ResponseEntity<String> response = createMCPServer(mcpServer);
                         if (response != null && !response.getStatusCode().is2xxSuccessful()) {

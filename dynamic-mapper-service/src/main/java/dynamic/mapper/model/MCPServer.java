@@ -21,6 +21,7 @@
 
 package dynamic.mapper.model;
 
+import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Data;
 
 @Data
@@ -29,4 +30,19 @@ public class MCPServer {
     private String name;
     private String description;
     private Boolean sendAuthentication;
+    private typeEnum type;
+
+    public enum typeEnum {
+        HTTP("http"), SSE("sse");
+        private final String type;
+
+        typeEnum(String type) {
+            this.type = type;
+        }
+
+        @JsonValue
+        public String getValue() {
+            return this.type;
+        }
+    }
 }
