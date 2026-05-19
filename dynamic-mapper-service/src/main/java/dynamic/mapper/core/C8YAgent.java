@@ -720,7 +720,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
      * @return the created managed object representation
      */
     private ManagedObjectRepresentation createWithExternalIdBinding(
-            ManagedObjectRepresentation mor, ID identity, Boolean testing) {
+            ManagedObjectRepresentation mor, ID identity, Boolean testing, boolean supportsExternalIdBinding) {
         if (Boolean.TRUE.equals(testing)) {
             // Mock / test path – use the simple two-step approach
             ManagedObjectRepresentation created = inventoryApi.create(mor, true);
@@ -728,22 +728,22 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
             return created;
         }
 
-        // Embed the external ID in the MO body (new API, platforms >= May 2026).
-        String idType = identity.getType() != null ? identity.getType() : "c8y_Serial";
-        mor.setProperty("c8y_ExternalIds",
-                List.of(Map.of("type", idType, "externalId", identity.getValue())));
-        ManagedObjectRepresentation created = inventoryApi.create(mor, false);
-
-        // Detection: on platforms that support atomic binding the c8y_ExternalIds
-        // directive is consumed and NOT persisted on the MO. On older platforms the
-        // fragment is stored as-is, meaning the external ID was NOT bound atomically.
-        if (created.getProperty("c8y_ExternalIds") != null) {
-            log.debug("c8y_ExternalIds persisted as fragment (platform does not support atomic "
-                    + "binding) – falling back to Identity API");
-            identityApi.create(created, identity, false);
-        } else {
-            log.debug("External ID bound atomically during MO creation");
+        if (supportsExternalIdBinding) {
+            // New API (platforms >= May 2026): bind the external ID atomically in the MO
+            // creation body. The platform consumes the 'externalIds' directive and does
+            // not persist it as a fragment on the created object.
+            String idType = identity.getType() != null ? identity.getType() : "c8y_Serial";
+            mor.setProperty("externalIds",
+                    List.of(Map.of("type", idType, "externalId", identity.getValue())));
+            log.debug("Creating MO with atomic externalIds binding");
+            return inventoryApi.create(mor, false);
         }
+
+        // Legacy path (platforms < May 2026, e.g. Cumulocity Edge): create MO first,
+        // then bind the external ID via a separate Identity API call.
+        log.debug("Creating MO + external ID binding via two separate calls (legacy platform path)");
+        ManagedObjectRepresentation created = inventoryApi.create(mor, false);
+        identityApi.create(created, identity, false);
         return created;
     }
 
@@ -767,6 +767,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
             return existingId;
         }
 
+        boolean supportsExternalIdBinding = Boolean.TRUE.equals(
+                configurationRegistry.getServiceConfiguration(tenant).getExternalIdBinding());
         return subscriptionsService.callForTenant(tenant, () -> {
             MicroserviceCredentials contextCredentials = removeAppKeyHeaderFromContext(contextService.getContext());
             return contextService.callWithinContext(contextCredentials, () -> {
@@ -776,7 +778,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                 mor.set(new HashMap<String, String>(), MAPPING_TEST_DEVICE_TYPE);
                 try {
                     c8ySemaphore.acquire();
-                    mor = createWithExternalIdBinding(mor, id, false);
+                    mor = createWithExternalIdBinding(mor, id, false, supportsExternalIdBinding);
                     log.info("{} - Test device created: id={}, name={}", tenant, mor.getId().getValue(), deviceName);
                     return mor.getId().getValue();
                 } catch (InterruptedException e) {
@@ -833,7 +835,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                         }
                         try {
                             c8ySemaphore.acquire();
-                            mor = createWithExternalIdBinding(mor, identity, testing);
+                            mor = createWithExternalIdBinding(mor, identity, testing,
+                                    Boolean.TRUE.equals(serviceConfiguration.getExternalIdBinding()));
                             // TODO Add/Update new managed object to IdentityCache
                             if (serviceConfiguration.getLogPayload())
                                 log.info("{} - New device created: {}", tenant, mor);

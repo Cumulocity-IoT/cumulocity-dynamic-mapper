@@ -73,8 +73,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     javaScriptAgent: undefined,
     smartFunctionAgent: undefined,
     suppressDeprecationWarning: false,
-    cacheAliasMaps: false,
-  };
+    cacheAliasMaps: false,      externalIdBinding: true,  };
   agents$: BehaviorSubject<string[]> = new BehaviorSubject([]);
   destroy$: Subject<void> = new Subject<void>();
   aiAgentDeployed: boolean = false;
@@ -142,6 +141,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
       smartFunctionAgent: [{ value: '', disabled: true }],
       suppressDeprecationWarning: [''],
       cacheAliasMaps: [''],
+      externalIdBinding: [''],
     });
   }
 

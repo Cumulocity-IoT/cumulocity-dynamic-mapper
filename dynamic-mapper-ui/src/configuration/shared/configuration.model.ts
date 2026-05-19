@@ -45,6 +45,7 @@ export interface ServiceConfiguration {
   acceptedDeprecationNotice?: string;
   supportESM?: boolean;
   cacheAliasMaps?: boolean;
+  externalIdBinding?: boolean;
 }
 
 export enum TemplateType {
