@@ -732,7 +732,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
             // New API (platforms >= May 2026): bind the external ID atomically in the MO
             // creation body. The platform consumes the 'externalIds' directive and does
             // not persist it as a fragment on the created object.
-            String idType = identity.getType() != null ? identity.getType() : "c8y_Serial";
+            String identityType = identity.getType();
+            String idType = identityType == null || identityType.isBlank() ? "c8y_Serial" : identityType;
             mor.setProperty("externalIds",
                     List.of(Map.of("type", idType, "externalId", identity.getValue())));
             log.debug("Creating MO with atomic externalIds binding");
