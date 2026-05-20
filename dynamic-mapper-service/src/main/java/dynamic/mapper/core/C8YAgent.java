@@ -707,10 +707,10 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
      * single-request approach where the platform supports it.
      *
      * <p>Cumulocity platforms &ge; May 2026 allow external IDs to be bound
-     * atomically during MO creation by embedding a {@code c8y_ExternalIds}
-     * fragment in the request body. On older platforms (e.g. Edge) the fragment
-     * is simply stored as a regular schemaless property and the external ID is
-     * bound via a separate Identity API call (fallback).</p>
+     * atomically during MO creation by including an {@code externalIds}
+     * property in the request body. On older platforms (e.g. Edge), this
+     * implementation falls back to creating the managed object first and then
+     * binding the external ID via a separate Identity API call.</p>
      *
      * <p>The caller must hold {@link #c8ySemaphore} before invoking this method.</p>
      *
