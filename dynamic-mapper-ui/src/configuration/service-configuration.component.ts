@@ -73,7 +73,9 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     javaScriptAgent: undefined,
     smartFunctionAgent: undefined,
     suppressDeprecationWarning: false,
-    cacheAliasMaps: false,      externalIdBinding: true,  };
+    cacheAliasMaps: false,
+    externalIdBinding: true,
+  };
   agents$: BehaviorSubject<string[]> = new BehaviorSubject([]);
   destroy$: Subject<void> = new Subject<void>();
   aiAgentDeployed: boolean = false;
