@@ -175,6 +175,27 @@ public class CumulocityObject {
         return new ManagedObjectBuilder();
     }
 
+    /**
+     * Create a builder for a bulk measurement collection.
+     *
+     * <p>Use this when a single incoming message produces multiple measurements for
+     * the same device. The mapper POSTs them all in one REST call using
+     * {@code Content-Type: application/vnd.com.nsn.cumulocity.measurementcollection+json}.</p>
+     *
+     * <p><b>Important for Java Extensions:</b> Unlike the Smart Function path, the mapper
+     * does <em>not</em> auto-inject {@code source.id} for Java Extensions. Each measurement
+     * entry added via {@link MeasurementCollectionBuilder#measurement} must already contain
+     * a {@code "source": {"id": "<deviceId>"}} entry. Use
+     * {@link MeasurementCollectionBuilder#measurement(String, String, String, Map)} to build
+     * individual entries conveniently.</p>
+     *
+     * @return A new MeasurementCollectionBuilder instance
+     * @since 6.3
+     */
+    public static MeasurementCollectionBuilder measurementCollection() {
+        return new MeasurementCollectionBuilder();
+    }
+
     // ==================== Base Builder ====================
 
     /**
@@ -735,6 +756,69 @@ public class CumulocityObject {
          */
         public CumulocityObject build() {
             return build(CumulocityType.MANAGED_OBJECT);
+        }
+    }
+
+    // ==================== MeasurementCollection Builder ====================
+
+    /**
+     * Builder for creating a bulk measurement collection object.
+     *
+     * <p>Each entry added via {@link #measurement(Map)} is appended to an internal list.
+     * On {@link #build()}, the list is placed under {@code payload.measurements} and the
+     * {@link CumulocityType#MEASUREMENT_COLLECTION} type is set.</p>
+     *
+     * <p><b>Source ID:</b> Java Extensions must include {@code "source": {"id": deviceId}}
+     * in every measurement map passed to {@link #measurement(Map)}. The convenience overload
+     * {@link #measurement(String, String, String, Map)} adds the source automatically.</p>
+     */
+    public static class MeasurementCollectionBuilder extends BaseBuilder<MeasurementCollectionBuilder> {
+
+        private final List<Map<String, Object>> measurements = new ArrayList<>();
+
+        /**
+         * Add a fully constructed measurement entry (must include {@code source.id}).
+         *
+         * @param measurement Complete measurement map including {@code type}, {@code time}, {@code source}, and fragments
+         * @return This builder
+         */
+        public MeasurementCollectionBuilder measurement(Map<String, Object> measurement) {
+            this.measurements.add(measurement);
+            return this;
+        }
+
+        /**
+         * Convenience method to add a measurement entry with {@code source.id} injected automatically.
+         *
+         * @param type        Measurement type (e.g., {@code "c8y_TemperatureMeasurement"})
+         * @param time        ISO 8601 timestamp
+         * @param deviceId    Cumulocity internal device ID — set as {@code source.id}
+         * @param fragments   Map of fragment name → {@code {series → {value, unit}}} structures
+         * @return This builder
+         */
+        public MeasurementCollectionBuilder measurement(String type, String time, String deviceId,
+                Map<String, Map<String, Object>> fragments) {
+            Map<String, Object> m = new HashMap<>();
+            m.put("type", type);
+            m.put("time", time);
+            Map<String, Object> source = new HashMap<>();
+            source.put("id", deviceId);
+            m.put("source", source);
+            if (fragments != null) {
+                m.putAll(fragments);
+            }
+            this.measurements.add(m);
+            return this;
+        }
+
+        /**
+         * Build the measurement collection CumulocityObject.
+         *
+         * @return A new CumulocityObject with {@link CumulocityType#MEASUREMENT_COLLECTION}
+         */
+        public CumulocityObject build() {
+            payload.put("measurements", measurements);
+            return build(CumulocityType.MEASUREMENT_COLLECTION);
         }
     }
 }

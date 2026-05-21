@@ -63,6 +63,7 @@ import com.cumulocity.rest.representation.alarm.AlarmRepresentation;
 import com.cumulocity.rest.representation.event.EventRepresentation;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
+import com.cumulocity.rest.representation.measurement.MeasurementCollectionRepresentation;
 import com.cumulocity.rest.representation.measurement.MeasurementRepresentation;
 import com.cumulocity.rest.representation.operation.OperationRepresentation;
 import com.cumulocity.sdk.client.ProcessingMode;
@@ -460,6 +461,15 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                                 log.debug("{} - Using PERSISTENT processing mode for measurement", tenant);
                             }
                             log.info("{} - SEND: measurement posted: {}", tenant, rt);
+                        } else if (targetAPI.equals(API.MEASUREMENT_COLLECTION)) {
+                            MeasurementCollectionRepresentation collectionRepresentation = configurationRegistry
+                                    .getObjectMapper().readValue(
+                                            payload,
+                                            MeasurementCollectionRepresentation.class);
+                            rt = measurementApi.createBulk(collectionRepresentation);
+                            log.info("{} - SEND: measurement collection posted: {} measurements", tenant,
+                                    collectionRepresentation.getMeasurements() != null
+                                            ? collectionRepresentation.getMeasurements().size() : 0);
                         } else if (targetAPI.equals(API.OPERATION)) {
                             OperationRepresentation operationRepresentation = configurationRegistry.getObjectMapper()
                                     .readValue(
@@ -637,6 +647,24 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                         else
                             log.info("{} - SEND: measurement posted with Id {}", tenant,
                                     ((MeasurementRepresentation) rt).getId().getValue());
+                    } else if (targetAPI.equals(API.MEASUREMENT_COLLECTION)) {
+                        MeasurementCollectionRepresentation collectionRepresentation = configurationRegistry
+                                .getObjectMapper().readValue(
+                                        payload, MeasurementCollectionRepresentation.class);
+                        try {
+                            c8ySemaphore.acquire();
+                            rt = measurementApi.createBulk(collectionRepresentation);
+                        } catch (InterruptedException e) {
+                            log.error("{} - Failed to acquire semaphore for creating measurement collection", tenant, e);
+                        } finally {
+                            c8ySemaphore.release();
+                        }
+                        if (serviceConfiguration.getLogPayload())
+                            log.info("{} - SEND: measurement collection posted: {}", tenant, rt);
+                        else
+                            log.info("{} - SEND: measurement collection posted: {} measurements", tenant,
+                                    collectionRepresentation.getMeasurements() != null
+                                            ? collectionRepresentation.getMeasurements().size() : 0);
                     } else if (targetAPI.equals(API.OPERATION)) {
                         OperationRepresentation operationRepresentation = configurationRegistry.getObjectMapper()
                                 .readValue(

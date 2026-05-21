@@ -370,6 +370,31 @@ export interface C8yMeasurement extends C8ySourceReference {
 }
 
 /**
+ * Payload for a bulk measurement collection.
+ * Used when {@link CumulocityObject.cumulocityType} is `"measurementCollection"`.
+ *
+ * The mapper resolves the device once from {@link CumulocityObject.externalSource}
+ * and injects `source.id` into every entry before calling the Cumulocity bulk
+ * measurement endpoint (`POST /measurement/measurements` with
+ * `Content-Type: application/vnd.com.nsn.cumulocity.measurementcollection+json`).
+ *
+ * Individual measurements must **not** include a `source` field — it is added
+ * automatically.
+ *
+ * @example
+ * {
+ *   measurements: [
+ *     { type: "c8y_TemperatureMeasurement", time: "2026-01-01T00:00:00Z", c8y_Temperature: { T: { value: 22.5, unit: "C" } } },
+ *     { type: "c8y_TemperatureMeasurement", time: "2026-01-01T00:01:00Z", c8y_Temperature: { T: { value: 23.1, unit: "C" } } }
+ *   ]
+ * }
+ */
+export interface C8yMeasurementCollection {
+  /** Array of individual measurements to send in a single API call. */
+  measurements: Omit<C8yMeasurement, 'source'>[];
+}
+
+/**
  * Cumulocity Event object.
  * Represents discrete events from devices.
  *
@@ -543,6 +568,8 @@ export interface C8yManagedObject {
  */
 export type C8yPayloadTypeMap = {
   measurement: C8yMeasurement;
+  /** Bulk measurement collection — one REST call for N measurements via {@link C8yMeasurementCollection}. */
+  measurementCollection: C8yMeasurementCollection;
   event: C8yEvent;
   alarm: C8yAlarm;
   operation: C8yOperation;
@@ -571,16 +598,20 @@ export type C8yObjectAction = 'create' | 'update' | 'delete' | 'patch';
  * Determines which API endpoint is used when processing the object.
  * Used in {@link CumulocityObject.cumulocityType} and {@link DeviceMessage.cumulocityType}.
  *
- * - `"measurement"` – POST/GET to `/measurement/measurements`
- * - `"event"`       – POST/PUT/DELETE to `/event/events`
- * - `"alarm"`       – POST/PUT/DELETE to `/alarm/alarms`
- * - `"operation"`   – POST/PUT to `/devicecontrol/operations`
- * - `"managedObject"` – POST/PUT/DELETE/PATCH to `/inventory/managedObjects`
- * - `"custom"`      – call a tenant-local microservice; set {@link CumulocityObject.targetPath}
- *                     or {@link DeviceMessage.topic} to the `/service/…` path.
- *                     The HTTP method is controlled by {@link C8yObjectAction}.
+ * - `"measurement"`           – POST/GET to `/measurement/measurements`
+ * - `"measurementCollection"` – bulk POST to `/measurement/measurements` using
+ *                               `Content-Type: application/vnd.com.nsn.cumulocity.measurementcollection+json`;
+ *                               payload must be a {@link C8yMeasurementCollection}.
+ *                               The mapper injects `source.id` into each entry automatically.
+ * - `"event"`                 – POST/PUT/DELETE to `/event/events`
+ * - `"alarm"`                 – POST/PUT/DELETE to `/alarm/alarms`
+ * - `"operation"`             – POST/PUT to `/devicecontrol/operations`
+ * - `"managedObject"`         – POST/PUT/DELETE/PATCH to `/inventory/managedObjects`
+ * - `"custom"`                – call a tenant-local microservice; set {@link CumulocityObject.targetPath}
+ *                               or {@link DeviceMessage.topic} to the `/service/…` path.
+ *                               The HTTP method is controlled by {@link C8yObjectAction}.
  */
-export type C8yObjectType = 'measurement' | 'event' | 'alarm' | 'operation' | 'managedObject' | 'custom';
+export type C8yObjectType = 'measurement' | 'measurementCollection' | 'event' | 'alarm' | 'operation' | 'managedObject' | 'custom';
 
 /**
  * Details of external Id for advanced device creation scenarios.
@@ -702,7 +733,8 @@ export interface CumulocityObject<
    * Must match the shape of {@link payload}.
    *
    * Available values:
-   * - "measurement" - Time-series measurement data
+   * - "measurement"           - Single time-series measurement
+   * - "measurementCollection" - Bulk measurements (N in one REST call); payload must be {@link C8yMeasurementCollection}
    * - "event" - Events from devices
    * - "alarm" - Alarm notifications
    * - "operation" - Device operations/commands
