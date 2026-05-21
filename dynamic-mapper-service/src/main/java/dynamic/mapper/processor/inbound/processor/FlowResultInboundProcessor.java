@@ -344,8 +344,21 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
                 for (Map<String, Object> m : measurements) {
                     m.put("source", sourceMap);
                 }
-                // Remove top-level source set by generic device resolution — it belongs in each entry, not the wrapper
-                payload.remove("source");
+                // Build a clean collection payload containing ONLY the measurements array —
+                // avoids leaking the top-level source.id that setHierarchicalValue added.
+                Map<String, Object> collectionPayload = new HashMap<>();
+                collectionPayload.put("measurements", measurements);
+                String payloadJson = objectMapper.writeValueAsString(collectionPayload);
+                DynamicMapperRequest dynamicMapperRequest = ProcessingResultHelper.createDynamicMapperRequest(
+                        context.getDeviceContext(), routing, payloadJson, cumulocityMessage.getAction(), mapping);
+                dynamicMapperRequest.setApi(targetAPI);
+                dynamicMapperRequest.setSourceId(resolvedDeviceId);
+                dynamicMapperRequest.setExternalId(externalIdInfo.getExternalId());
+                dynamicMapperRequest.setExternalIdType(externalIdInfo.getExternalType());
+                output.addRequest(dynamicMapperRequest);
+                log.debug("{} - Created MEASUREMENT_COLLECTION request: {} measurements for device {}",
+                        tenant, measurements.size(), resolvedDeviceId);
+                return;
             }
 
             // Convert payload to JSON string for the request
