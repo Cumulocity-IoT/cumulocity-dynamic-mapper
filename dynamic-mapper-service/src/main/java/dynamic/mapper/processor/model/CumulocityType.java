@@ -25,7 +25,6 @@ package dynamic.mapper.processor.model;
  */
 public enum CumulocityType {
     MEASUREMENT("measurement"),
-    MEASUREMENT_COLLECTION("measurementCollection"),
     EVENT("event"),
     ALARM("alarm"),
     OPERATION("operation"),

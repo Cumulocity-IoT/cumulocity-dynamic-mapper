@@ -303,10 +303,6 @@ public class ExtensionResultProcessor {
         switch (cumulocityType) {
             case MEASUREMENT:
                 return API.MEASUREMENT;
-            case MEASUREMENT_COLLECTION:
-                // Extension authors must include source.id in each measurement entry themselves —
-                // the mapper does NOT auto-inject it for Java extensions (unlike Smart Functions).
-                return API.MEASUREMENT_COLLECTION;
             case EVENT:
                 return API.EVENT;
             case ALARM:
