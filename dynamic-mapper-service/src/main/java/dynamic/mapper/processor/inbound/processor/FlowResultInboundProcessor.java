@@ -1,6 +1,7 @@
 package dynamic.mapper.processor.inbound.processor;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -321,6 +322,30 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
                 log.warn("{} - Skipping request creation: no device ID available for API {} in mapping {}",
                         tenant, targetAPI.name, mapping.getIdentifier());
                 return;
+            }
+
+            // For MEASUREMENT_COLLECTION: inject source.id into every measurement entry.
+            // The Smart Function omits source from individual measurements; the mapper
+            // resolves the device once and injects it before POSTing the collection.
+            if (API.MEASUREMENT_COLLECTION.equals(targetAPI)) {
+                Object measurementsObj = payload.get("measurements");
+                if (!(measurementsObj instanceof List)) {
+                    String warnMsg = String.format(
+                            "MEASUREMENT_COLLECTION payload missing 'measurements' array for mapping '%s'",
+                            mapping.getIdentifier());
+                    log.warn("{} - {}", tenant, warnMsg);
+                    output.addWarning(warnMsg);
+                    return;
+                }
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> measurements = (List<Map<String, Object>>) measurementsObj;
+                Map<String, Object> sourceMap = new HashMap<>();
+                sourceMap.put("id", resolvedDeviceId);
+                for (Map<String, Object> m : measurements) {
+                    m.put("source", sourceMap);
+                }
+                // Remove top-level source set by generic device resolution — it belongs in each entry, not the wrapper
+                payload.remove("source");
             }
 
             // Convert payload to JSON string for the request
