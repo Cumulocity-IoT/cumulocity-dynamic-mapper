@@ -814,11 +814,11 @@ public class CumulocityObject {
         /**
          * Build the measurement collection CumulocityObject.
          *
-         * @return A new CumulocityObject with {@link CumulocityType#MEASUREMENT_COLLECTION}
+         * @return A new CumulocityObject with {@link CumulocityType#MEASUREMENT}
          */
         public CumulocityObject build() {
             payload.put("measurements", measurements);
-            return build(CumulocityType.MEASUREMENT_COLLECTION);
+            return build(CumulocityType.MEASUREMENT);
         }
     }
 }

@@ -142,10 +142,6 @@ public class APITopicUtil {
             case "measurements":
                 return API.MEASUREMENT;
 
-            case "measurementcollection":
-            case "measurementcollections":
-                return API.MEASUREMENT_COLLECTION;
-
             case "event":
             case "events":
                 return API.EVENT;

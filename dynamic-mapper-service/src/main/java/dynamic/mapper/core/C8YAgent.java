@@ -100,6 +100,7 @@ import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import static com.cumulocity.rest.representation.measurement.MeasurementMediaType.MEASUREMENT;
+import static com.cumulocity.rest.representation.measurement.MeasurementMediaType.MEASUREMENT_COLLECTION;
 import static com.cumulocity.rest.representation.event.EventMediaType.EVENT;
 import static com.cumulocity.rest.representation.alarm.AlarmMediaType.ALARM;;
 
@@ -438,38 +439,32 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                             }
                             log.info("{} - SEND: alarm posted: {}", tenant, rt);
                         } else if (targetAPI.equals(API.MEASUREMENT)) {
-                            MeasurementRepresentation measurementRepresentation = configurationRegistry
-                                    .getObjectMapper().readValue(
-                                            payload,
-                                            MeasurementRepresentation.class);
-                            // Set processing mode for measurements
+                            // Auto-detect payload format: { "measurements": [...] } = collection; anything else = single.
+                            // Always POST via createBulk — single measurements are wrapped in a one-element collection.
+                            MeasurementCollectionRepresentation collectionRepresentation;
+                            if (configurationRegistry.getObjectMapper().readTree(payload).has("measurements")) {
+                                collectionRepresentation = configurationRegistry.getObjectMapper()
+                                        .readValue(payload, MeasurementCollectionRepresentation.class);
+                            } else {
+                                MeasurementRepresentation mr = configurationRegistry.getObjectMapper()
+                                        .readValue(payload, MeasurementRepresentation.class);
+                                collectionRepresentation = new MeasurementCollectionRepresentation();
+                                collectionRepresentation.setMeasurements(List.of(mr));
+                            }
                             if (context.getProcessingMode() != null &&
                                     ProcessingMode.TRANSIENT.equals(context.getProcessingMode())) {
-                                // rt = measurementApiTransient.create(measurementRepresentation);
-                                rt = processingModeService.callWithProcessingMode("TRANSIENT", (connector) -> {
-                                    if (targetAPI.equals(API.MEASUREMENT)) {
-                                        // Now use the connector with the processing mode header
-                                        return (MeasurementRepresentation) connector.post("/measurement/measurements",
-                                                MEASUREMENT,
-                                                measurementRepresentation);
-                                    }
-                                    return null;
-                                });
-                                log.info("{} - Using TRANSIENT processing mode for measurement", tenant);
+                                final MeasurementCollectionRepresentation col = collectionRepresentation;
+                                rt = processingModeService.callWithProcessingMode("TRANSIENT", (connector) ->
+                                        (MeasurementCollectionRepresentation) connector.post(
+                                                MEASUREMENT_COLLECTION_PATH, MEASUREMENT_COLLECTION, col));
+                                log.info("{} - Using TRANSIENT processing mode for measurement(s)", tenant);
                             } else {
-                                rt = measurementApi.create(measurementRepresentation);
-                                log.debug("{} - Using PERSISTENT processing mode for measurement", tenant);
+                                rt = measurementApi.createBulk(collectionRepresentation);
+                                log.debug("{} - Using PERSISTENT processing mode for measurement(s)", tenant);
                             }
-                            log.info("{} - SEND: measurement posted: {}", tenant, rt);
-                        } else if (targetAPI.equals(API.MEASUREMENT_COLLECTION)) {
-                            MeasurementCollectionRepresentation collectionRepresentation = configurationRegistry
-                                    .getObjectMapper().readValue(
-                                            payload,
-                                            MeasurementCollectionRepresentation.class);
-                            rt = measurementApi.createBulk(collectionRepresentation);
-                            log.info("{} - SEND: measurement collection posted: {} measurements", tenant,
-                                    collectionRepresentation.getMeasurements() != null
-                                            ? collectionRepresentation.getMeasurements().size() : 0);
+                            int count = collectionRepresentation.getMeasurements() != null
+                                    ? collectionRepresentation.getMeasurements().size() : 0;
+                            log.info("{} - SEND: measurement(s) posted: {} measurement(s)", tenant, count);
                         } else if (targetAPI.equals(API.OPERATION)) {
                             OperationRepresentation operationRepresentation = configurationRegistry.getObjectMapper()
                                     .readValue(
@@ -611,60 +606,42 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                             log.info("{} - SEND: alarm posted with Id {}", tenant,
                                     ((AlarmRepresentation) rt).getId().getValue());
                     } else if (targetAPI.equals(API.MEASUREMENT)) {
-                        MeasurementRepresentation measurementRepresentation = configurationRegistry.getObjectMapper()
-                                .readValue(
-                                        payload, MeasurementRepresentation.class);
+                        // Auto-detect payload format: { "measurements": [...] } = collection; anything else = single.
+                        // Always POST via createBulk — single measurements are wrapped in a one-element collection.
+                        MeasurementCollectionRepresentation collectionRepresentation;
+                        if (configurationRegistry.getObjectMapper().readTree(payload).has("measurements")) {
+                            collectionRepresentation = configurationRegistry.getObjectMapper()
+                                    .readValue(payload, MeasurementCollectionRepresentation.class);
+                        } else {
+                            MeasurementRepresentation mr = configurationRegistry.getObjectMapper()
+                                    .readValue(payload, MeasurementRepresentation.class);
+                            collectionRepresentation = new MeasurementCollectionRepresentation();
+                            collectionRepresentation.setMeasurements(List.of(mr));
+                        }
                         try {
                             c8ySemaphore.acquire();
                             if (context.getProcessingMode() != null &&
                                     ProcessingMode.TRANSIENT.equals(context.getProcessingMode())) {
-                                // rt = measurementApiTransient.create(measurementRepresentation);
-                                rt = processingModeService.callWithProcessingMode("TRANSIENT", (connector) -> {
-                                    if (targetAPI.equals(API.MEASUREMENT)) {
-                                        MeasurementRepresentation mr = configurationRegistry.getObjectMapper()
-                                                .readValue(
-                                                        payload, MeasurementRepresentation.class);
-
-                                        // Now use the connector with the processing mode header
-                                        return (MeasurementRepresentation) connector.post("/measurement/measurements",
-                                                MEASUREMENT,
-                                                mr);
-                                    }
-                                    return null;
-                                });
-                                log.info("{} - Using TRANSIENT processing mode for measurement", tenant);
+                                final MeasurementCollectionRepresentation col = collectionRepresentation;
+                                rt = processingModeService.callWithProcessingMode("TRANSIENT", (connector) ->
+                                        (MeasurementCollectionRepresentation) connector.post(
+                                                MEASUREMENT_COLLECTION_PATH, MEASUREMENT_COLLECTION, col));
+                                log.info("{} - Using TRANSIENT processing mode for measurement(s)", tenant);
                             } else {
-                                rt = measurementApi.create(measurementRepresentation);
-                                log.debug("{} - Using PERSISTENT processing mode for measurement", tenant);
+                                rt = measurementApi.createBulk(collectionRepresentation);
+                                log.debug("{} - Using PERSISTENT processing mode for measurement(s)", tenant);
                             }
                         } catch (InterruptedException e) {
-                            log.error("{} - Failed to acquire semaphore for creating measurement", tenant, e);
+                            log.error("{} - Failed to acquire semaphore for creating measurement(s)", tenant, e);
                         } finally {
                             c8ySemaphore.release();
                         }
+                        int count = collectionRepresentation.getMeasurements() != null
+                                ? collectionRepresentation.getMeasurements().size() : 0;
                         if (serviceConfiguration.getLogPayload())
-                            log.info("{} - SEND: measurement posted: {}", tenant, rt);
+                            log.info("{} - SEND: measurement(s) posted: {}", tenant, rt);
                         else
-                            log.info("{} - SEND: measurement posted with Id {}", tenant,
-                                    ((MeasurementRepresentation) rt).getId().getValue());
-                    } else if (targetAPI.equals(API.MEASUREMENT_COLLECTION)) {
-                        MeasurementCollectionRepresentation collectionRepresentation = configurationRegistry
-                                .getObjectMapper().readValue(
-                                        payload, MeasurementCollectionRepresentation.class);
-                        try {
-                            c8ySemaphore.acquire();
-                            rt = measurementApi.createBulk(collectionRepresentation);
-                        } catch (InterruptedException e) {
-                            log.error("{} - Failed to acquire semaphore for creating measurement collection", tenant, e);
-                        } finally {
-                            c8ySemaphore.release();
-                        }
-                        if (serviceConfiguration.getLogPayload())
-                            log.info("{} - SEND: measurement collection posted: {}", tenant, rt);
-                        else
-                            log.info("{} - SEND: measurement collection posted: {} measurements", tenant,
-                                    collectionRepresentation.getMeasurements() != null
-                                            ? collectionRepresentation.getMeasurements().size() : 0);
+                            log.info("{} - SEND: measurement(s) posted: {} measurement(s)", tenant, count);
                     } else if (targetAPI.equals(API.OPERATION)) {
                         OperationRepresentation operationRepresentation = configurationRegistry.getObjectMapper()
                                 .readValue(

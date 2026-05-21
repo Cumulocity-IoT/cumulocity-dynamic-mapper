@@ -32,7 +32,6 @@ public enum API {
     EVENT("EVENT", "source.id", "events", "/event/events"),
     EVENT_WITH_CHILDREN("EVENT_WITH_CHILDREN", "source.id", "eventsWithChildren", "/event/events"),
     MEASUREMENT("MEASUREMENT", "source.id", "measurements", "/measurement/measurements"),
-    MEASUREMENT_COLLECTION("MEASUREMENT_COLLECTION", "source.id", "measurementCollections", "/measurement/measurements"),
     INVENTORY("INVENTORY", "id", "managedobjects", "/inventory/managedObjects"),
     OPERATION("OPERATION", "deviceId", "operations", "/devicecontrol/operations"),
     CUSTOM("CUSTOM", "", "custom", ""),
