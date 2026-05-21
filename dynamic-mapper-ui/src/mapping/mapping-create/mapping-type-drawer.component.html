@@ -93,7 +93,7 @@
             </c8y-select>
           </c8y-form-group>
           <c8y-form-group class="p-l-16 p-r-16">
-            <label>{{ 'Events for ' + (formGroup.get('extensionName')?.value || '') | translate }}</label>
+            <label>{{ ('Events for ' + getExtensionNameString()) | translate }}</label>
             <c8y-select [items]="extensionEventItems$ | async" formControlName="eventName" [filterItems]="true"
               aria-label="Event Name">
             </c8y-select>

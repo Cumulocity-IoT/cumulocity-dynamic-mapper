@@ -166,23 +166,27 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
 
     let extension: Partial<ExtensionEntry> | undefined;
     if (this.shouldShowExtensionSelectors() && extensionName) {
-      extension = { extensionName };
-      if (eventName) {
-        extension.eventName = eventName;
-        // Enrich with full entry details
-        const ext = this.extensions.get(extensionName);
-        if (ext?.extensionEntries) {
-          const entry = Object.values(ext.extensionEntries as Map<string, ExtensionEntry>)
-            .find(e => e.eventName === eventName);
-          if (entry) {
-            Object.assign(extension, {
-              extensionType: entry.extensionType,
-              direction: entry.direction,
-              fqnClassName: entry.fqnClassName,
-              loaded: entry.loaded,
-              message: entry.message,
-              parameter: entry.parameter
-            });
+      const extName = this.resolveSelectString(extensionName);
+      if (extName) {
+        extension = { extensionName: extName };
+        const evtName = this.resolveSelectString(eventName);
+        if (evtName) {
+          extension.eventName = evtName;
+          // Enrich with full entry details
+          const ext = this.extensions.get(extName);
+          if (ext?.extensionEntries) {
+            const entry = Object.values(ext.extensionEntries as Map<string, ExtensionEntry>)
+              .find(e => e.eventName === evtName);
+            if (entry) {
+              Object.assign(extension, {
+                extensionType: entry.extensionType,
+                direction: entry.direction,
+                fqnClassName: entry.fqnClassName,
+                loaded: entry.loaded,
+                message: entry.message,
+                parameter: entry.parameter
+              });
+            }
           }
         }
       }
@@ -403,7 +407,8 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     }
   }
 
-  private onExtensionNameChange(extensionName: string): void {
+  private onExtensionNameChange(selected: any): void {
+    const extensionName = typeof selected === 'string' ? selected : selected?.value ?? selected;
     if (!extensionName) {
       this.extensionEvents$.next([]);
       this.formGroup.patchValue({ eventName: null }, { emitEvent: false });
@@ -425,8 +430,10 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     this.hasExtensionParameter = false;
   }
 
-  private onExtensionEventChange(eventName: string): void {
-    const extensionName = this.formGroup.get('extensionName')?.value;
+  private onExtensionEventChange(selected: any): void {
+    const eventName = typeof selected === 'string' ? selected : selected?.value ?? selected;
+    const rawExtName = this.formGroup.get('extensionName')?.value;
+    const extensionName = typeof rawExtName === 'string' ? rawExtName : rawExtName?.value ?? rawExtName;
     if (!extensionName || !eventName) {
       this.hasExtensionParameter = false;
       return;
@@ -436,6 +443,16 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     const entry = Object.values(extension.extensionEntries as Map<string, ExtensionEntry>)
       .find(e => e.eventName === eventName);
     this.hasExtensionParameter = !!entry?.parameter;
+  }
+
+  /** Normalize a c8y-select value (may be a plain string or a {value, label} object) to a string. */
+  private resolveSelectString(raw: any): string | null {
+    if (!raw) return null;
+    return typeof raw === 'string' ? raw : raw?.value ?? null;
+  }
+
+  getExtensionNameString(): string {
+    return this.resolveSelectString(this.formGroup?.get('extensionName')?.value) || '';
   }
 
   // Helper methods
