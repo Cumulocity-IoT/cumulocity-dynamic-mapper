@@ -36,7 +36,7 @@ import { Alert, AlertService, BottomDrawerService, CoreModule, TabComponent, Tab
 import { GlobalContextService } from '@c8y/ngx-components/global-context';
 import { FormlyFieldConfig } from '@ngx-formly/core';
 import { BsModalService } from 'ngx-bootstrap/modal';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { debounceTime, distinctUntilChanged, map, Observable, ReplaySubject, shareReplay, Subject, takeUntil } from 'rxjs';
 import { Mode } from 'vanilla-jsoneditor';
 import {
@@ -166,6 +166,7 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
   private readonly substitutionService = inject(SubstitutionManagementService);
   private readonly mappingService = inject(MappingService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly location = inject(Location);
   private readonly globalContextService = inject(GlobalContextService);
 
@@ -803,11 +804,16 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
       this.alertService.danger(gettext('Failed to update connector assignments: ') + error.message);
     }
 
-    this.location.back();
+    this.navigateToGrid();
   }
 
   onCancel(): void {
-    this.location.back();
+    this.navigateToGrid();
+  }
+
+  private navigateToGrid(): void {
+    const gridUrl = this.router.url.replace(/\/edit\/[^\/]+$/, '');
+    this.router.navigateByUrl(gridUrl);
   }
 
   async onSampleTargetTemplatesButton(): Promise<void> {

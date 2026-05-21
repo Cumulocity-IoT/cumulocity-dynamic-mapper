@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { Component, EventEmitter, Input, OnInit, Output, ViewChild, AfterViewInit, ViewEncapsulation, OnDestroy, inject, ElementRef, TemplateRef } from '@angular/core';
+import { ChangeDetectorRef, Component, EventEmitter, Input, OnInit, Output, ViewChild, AfterViewInit, ViewEncapsulation, OnDestroy, inject, ElementRef, TemplateRef } from '@angular/core';
 import { ActionControl, AlertService, BottomDrawerService, Column, CoreModule, CountdownIntervalComponent, DataGridComponent, HeaderActionControl, Pagination } from '@c8y/ngx-components';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, combineLatest, Observable, Subject } from 'rxjs';
@@ -99,6 +99,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
   readonly connectorConfigurationService = inject(ConnectorConfigurationService);
   private readonly fb = inject(FormBuilder);
   private readonly elementRef = inject(ElementRef);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   constructor() {
     this.toggleIntervalForm = this.initForm();
@@ -135,6 +136,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
       template: this.autoRefreshTemplate,
       callback: () => {}
     }];
+    this.cdr.detectChanges();
     if (this.selectable) {
       setTimeout(() => this.connectorGrid.setItemsSelected(this.selected, true), 0);
     }

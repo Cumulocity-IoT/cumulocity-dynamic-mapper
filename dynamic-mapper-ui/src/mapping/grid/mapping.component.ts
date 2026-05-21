@@ -44,6 +44,7 @@ import {
   createCustomUuid,
   DeploymentMapEntry,
   Direction,
+  ExtensionEntry,
   Feature,
   getExternalTemplate,
   isSubstitutionsAsCode,
@@ -151,6 +152,7 @@ export class MappingComponent implements OnInit, OnDestroy {
 
   feature!: Feature;
   codeTemplate!: CodeTemplate;
+  private extension?: Partial<ExtensionEntry>;
 
   get canManageMappings(): boolean {
     return this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole;
@@ -587,6 +589,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       this.substitutionsAsCode = this.transformationType == TransformationType.SMART_FUNCTION;
       this.mappingType = resultOf.mappingType;
       this.codeTemplate = resultOf.codeTemplate;
+      this.extension = resultOf.extension;
       this.addMapping();
     }
   }
@@ -699,6 +702,11 @@ export class MappingComponent implements OnInit, OnDestroy {
         mapping.filterMapping = 'true';
       }
       this.explorerPreFill = null;
+    }
+
+    if (this.extension) {
+      mapping.extension = this.extension as ExtensionEntry;
+      this.extension = undefined;
     }
 
     this.mappingToUpdate = mapping;

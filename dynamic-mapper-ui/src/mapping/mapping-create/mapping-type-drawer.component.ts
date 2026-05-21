@@ -21,9 +21,12 @@
 import { Component, inject, Input, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
 import { AbstractControl, FormBuilder, FormGroup, ValidationErrors } from '@angular/forms';
 import { BottomDrawerRef, BottomDrawerService, CoreModule, ModalLabels } from '@c8y/ngx-components';
-import { Subject, takeUntil } from 'rxjs';
+import { BehaviorSubject, Observable, Subject, map, shareReplay, takeUntil } from 'rxjs';
 import {
   Direction,
+  Extension,
+  ExtensionEntry,
+  ExtensionType,
   MappingType,
   MappingTypeDescriptionMap,
   MappingTypeDescriptions,
@@ -36,6 +39,7 @@ import {
 import { CodeEditorDrawerComponent } from '../../shared/component/code-explorer/code-editor-drawer.component';
 import { CodeTemplate, ServiceConfiguration } from '../../configuration';
 import { base64ToString, stringToBase64, stripTemplateMetadataTags } from '../shared/util';
+import { ExtensionService } from '../../extension';
 
 // Types
 interface SelectOption<T> {
@@ -54,6 +58,7 @@ interface SaveResult {
   transformationType: TransformationType;
   snoop: boolean;
   codeTemplate?: CodeTemplate;
+  extension?: Partial<ExtensionEntry>;
 }
 
 @Component({
@@ -70,6 +75,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   // Services
   private readonly bottomDrawerRef = inject(BottomDrawerRef);
   private readonly sharedService = inject(SharedService);
+  private readonly extensionService = inject(ExtensionService);
   private readonly fb = inject(FormBuilder);
   private readonly bottomDrawerService = inject(BottomDrawerService);
   private readonly destroy$ = new Subject<void>();
@@ -97,6 +103,12 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   mappingTypeOptions: MappingTypeOption[] = [];
   transformationTypeOptions: TransformationTypeOption[] = [];
   codeTemplateOptions: CodeTemplateOption[] = [];
+  extensionItems: string[] = [];
+  extensionEventItems$: Observable<{ label: string; value: string }[]>;
+  hasExtensionParameter = false;
+
+  private readonly extensionEvents$ = new BehaviorSubject<ExtensionEntry[]>([]);
+  private extensions = new Map<string, Extension>();
   
   isLoading = true;
   isLoadingCodeTemplates = false;
@@ -113,6 +125,15 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   });
 
   async ngOnInit(): Promise<void> {
+    this.extensionEventItems$ = this.extensionEvents$.pipe(
+      map((events: ExtensionEntry[]) =>
+        (events || []).map(e => ({
+          label: e.description ? `${e.eventName} — ${e.description}` : e.eventName,
+          value: e.eventName
+        }))
+      ),
+      shareReplay(1)
+    );
     try {
       this.serviceConfiguration = await this.sharedService.getServiceConfiguration();
       await this.initializeForm();
@@ -139,9 +160,33 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     }
     if (!this.formGroup.valid) return;
 
-    const { mappingType, transformationType, snoop, codeTemplate } = this.formGroup.getRawValue();
+    const { mappingType, transformationType, snoop, codeTemplate, extensionName, eventName } = this.formGroup.getRawValue();
     const snoopSupported = this.getConfigForMappingType(mappingType.value).snoopSupported;
     const resolvedType: TransformationType = transformationType?.value || TransformationType.DEFAULT;
+
+    let extension: Partial<ExtensionEntry> | undefined;
+    if (this.shouldShowExtensionSelectors() && extensionName) {
+      extension = { extensionName };
+      if (eventName) {
+        extension.eventName = eventName;
+        // Enrich with full entry details
+        const ext = this.extensions.get(extensionName);
+        if (ext?.extensionEntries) {
+          const entry = Object.values(ext.extensionEntries as Map<string, ExtensionEntry>)
+            .find(e => e.eventName === eventName);
+          if (entry) {
+            Object.assign(extension, {
+              extensionType: entry.extensionType,
+              direction: entry.direction,
+              fqnClassName: entry.fqnClassName,
+              loaded: entry.loaded,
+              message: entry.message,
+              parameter: entry.parameter
+            });
+          }
+        }
+      }
+    }
 
     this._resolve({
       mappingType: mappingType.value,
@@ -149,7 +194,8 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
       snoop: snoop && snoopSupported,
       codeTemplate: codeTemplate?.value
         ? this.applyESMToTemplate(codeTemplate.value, resolvedType)
-        : undefined
+        : undefined,
+      extension
     });
     this.bottomDrawerRef.close();
   }
@@ -235,6 +281,15 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     return option?.value ? this.CODE_TEMPLATE_TYPES.includes(option.value) : false;
   }
 
+  shouldShowExtensionSelectors(): boolean {
+    const option = this.formGroup?.get('transformationType')?.value as TransformationTypeOption;
+    return option?.value === TransformationType.EXTENSION_JAVA;
+  }
+
+  getExtensionEventLabel(): string {
+    return this.formGroup?.get('extensionName')?.value || '';
+  }
+
   // Private initialization methods
   private async initializeForm(): Promise<void> {
     const defaultMappingType = this.getDefaultMappingType();
@@ -251,7 +306,10 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
       mappingType: [initialMappingType],
       transformationType: [initialTransformationType],
       snoop: [{ value: false, disabled: !config.snoopSupported }],
-      codeTemplate: [this.codeTemplateOptions[0] || null]
+      codeTemplate: [this.codeTemplateOptions[0] || null],
+      extensionName: [null],
+      eventName: [null],
+      extensionParameter: [null]
     });
 
     this.updateMappingTypeOptions();
@@ -270,6 +328,14 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     this.formGroup.get('transformationType')?.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(option => this.onTransformationTypeChange(option));
+
+    this.formGroup.get('extensionName')?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(name => this.onExtensionNameChange(name));
+
+    this.formGroup.get('eventName')?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(event => this.onExtensionEventChange(event));
   }
 
   // Event handlers
@@ -307,8 +373,11 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     if (!option?.value) return;
 
     this.isLoadingCodeTemplates = true;
-    this.formGroup.patchValue({ codeTemplate: null }, { emitEvent: false });
+    this.formGroup.patchValue({ codeTemplate: null, extensionName: null, eventName: null }, { emitEvent: false });
     this.codeTemplateOptions = [];
+    this.extensionItems = [];
+    this.extensionEvents$.next([]);
+    this.hasExtensionParameter = false;
 
     await this.loadCodeTemplates(option.value);
 
@@ -316,7 +385,57 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
       this.formGroup.patchValue({ codeTemplate: this.codeTemplateOptions[0] }, { emitEvent: false });
     }
 
+    if (option.value === TransformationType.EXTENSION_JAVA) {
+      await this.loadExtensions();
+    }
+
     this.isLoadingCodeTemplates = false;
+  }
+
+  private async loadExtensions(): Promise<void> {
+    try {
+      this.extensions = await this.extensionService.getProcessorExtensions() as Map<string, Extension>;
+      this.extensionItems = Array.from(this.extensions.keys());
+    } catch (error) {
+      console.error('Failed to load extensions:', error);
+      this.extensions = new Map();
+      this.extensionItems = [];
+    }
+  }
+
+  private onExtensionNameChange(extensionName: string): void {
+    if (!extensionName) {
+      this.extensionEvents$.next([]);
+      this.formGroup.patchValue({ eventName: null }, { emitEvent: false });
+      this.hasExtensionParameter = false;
+      return;
+    }
+    const extension = this.extensions.get(extensionName);
+    if (!extension?.extensionEntries) {
+      this.extensionEvents$.next([]);
+      return;
+    }
+    const allEntries = Object.values(extension.extensionEntries as Map<string, ExtensionEntry>);
+    const targetType = this.direction === Direction.INBOUND
+      ? ExtensionType.EXTENSION_INBOUND
+      : ExtensionType.EXTENSION_OUTBOUND;
+    const filtered = allEntries.filter(e => e.extensionType === targetType);
+    this.extensionEvents$.next(filtered);
+    this.formGroup.patchValue({ eventName: null }, { emitEvent: false });
+    this.hasExtensionParameter = false;
+  }
+
+  private onExtensionEventChange(eventName: string): void {
+    const extensionName = this.formGroup.get('extensionName')?.value;
+    if (!extensionName || !eventName) {
+      this.hasExtensionParameter = false;
+      return;
+    }
+    const extension = this.extensions.get(extensionName);
+    if (!extension?.extensionEntries) return;
+    const entry = Object.values(extension.extensionEntries as Map<string, ExtensionEntry>)
+      .find(e => e.eventName === eventName);
+    this.hasExtensionParameter = !!entry?.parameter;
   }
 
   // Helper methods
