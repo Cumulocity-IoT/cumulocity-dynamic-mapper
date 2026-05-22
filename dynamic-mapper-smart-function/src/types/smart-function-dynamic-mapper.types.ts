@@ -547,7 +547,7 @@ export type C8yPayloadTypeMap = {
    * The mapper injects `source.id` into every entry automatically — do not include `source`.
    * Single measurements are automatically wrapped in a one-element collection.
    */
-  measurement: C8yMeasurement & { measurements?: Omit<C8yMeasurement, 'source'>[] };
+  measurement: C8yMeasurement | { measurements: Omit<C8yMeasurement, 'source'>[] };
   event: C8yEvent;
   alarm: C8yAlarm;
   operation: C8yOperation;
