@@ -25,7 +25,6 @@ import static java.util.Map.entry;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -60,9 +59,7 @@ import com.cumulocity.model.idtype.GId;
 import com.cumulocity.model.measurement.MeasurementValue;
 import com.cumulocity.model.operation.OperationStatus;
 import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
-import com.cumulocity.rest.representation.alarm.AlarmCollectionRepresentation;
 import com.cumulocity.rest.representation.alarm.AlarmRepresentation;
-import com.cumulocity.rest.representation.event.EventCollectionRepresentation;
 import com.cumulocity.rest.representation.event.EventRepresentation;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
@@ -103,8 +100,8 @@ import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import static com.cumulocity.rest.representation.measurement.MeasurementMediaType.MEASUREMENT_COLLECTION;
-import static com.cumulocity.rest.representation.event.EventMediaType.EVENT_COLLECTION;
-import static com.cumulocity.rest.representation.alarm.AlarmMediaType.ALARM_COLLECTION;
+import static com.cumulocity.rest.representation.event.EventMediaType.EVENT;
+import static com.cumulocity.rest.representation.alarm.AlarmMediaType.ALARM;;
 
 @Slf4j
 @Component
@@ -180,8 +177,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     private static final String C8Y_NOTIFICATION_CONNECTOR = "C8YNotificationConnector";
 
     public static final String MEASUREMENT_COLLECTION_PATH = "/measurement/measurements";
-    public static final String EVENT_COLLECTION_PATH = "/event/events";
-    public static final String ALARM_COLLECTION_PATH = "/alarm/alarms";
 
     @Value("${application.version}")
     private String version;
@@ -399,69 +394,49 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                     AbstractExtensibleRepresentation rt = null;
                     try {
                         if (targetAPI.equals(API.EVENT)) {
-                            // Auto-detect payload format: { "events": [...] } = collection; anything else = single.
-                            EventCollectionRepresentation eventCollection;
-                            if (configurationRegistry.getObjectMapper().readTree(payload).has("events")) {
-                                eventCollection = configurationRegistry.getObjectMapper()
-                                        .readValue(payload, EventCollectionRepresentation.class);
-                            } else {
-                                EventRepresentation er = configurationRegistry.getObjectMapper()
-                                        .readValue(payload, EventRepresentation.class);
-                                eventCollection = new EventCollectionRepresentation();
-                                eventCollection.setEvents(List.of(er));
-                            }
+                            EventRepresentation eventRepresentation = configurationRegistry.getObjectMapper().readValue(
+                                    payload,
+                                    EventRepresentation.class);
+                            // Set processing mode for events
                             if (context.getProcessingMode() != null &&
                                     ProcessingMode.TRANSIENT.equals(context.getProcessingMode())) {
-                                final EventCollectionRepresentation col = eventCollection;
-                                rt = processingModeService.callWithProcessingMode("TRANSIENT", (connector) ->
-                                        (EventCollectionRepresentation) connector.post(
-                                                EVENT_COLLECTION_PATH, EVENT_COLLECTION, col));
-                                log.info("{} - Using TRANSIENT processing mode for event(s)", tenant);
+                                rt = processingModeService.callWithProcessingMode("TRANSIENT", (connector) -> {
+                                    if (targetAPI.equals(API.EVENT)) {
+                                        // Now use the connector with the processing mode header
+                                        return (EventRepresentation) connector.post("/event/events",
+                                                EVENT,
+                                                eventRepresentation);
+                                    }
+                                    return null;
+                                });
+                                log.info("{} - Using TRANSIENT processing mode for event", tenant);
                             } else {
-                                EventCollectionRepresentation resultCol = new EventCollectionRepresentation();
-                                List<EventRepresentation> created = new ArrayList<>();
-                                for (EventRepresentation er : eventCollection.getEvents()) {
-                                    created.add(eventApi.create(er));
-                                }
-                                resultCol.setEvents(created);
-                                rt = resultCol;
-                                log.debug("{} - Using PERSISTENT processing mode for event(s)", tenant);
+                                rt = eventApi.create(eventRepresentation);
+                                log.debug("{} - Using PERSISTENT processing mode for event", tenant);
                             }
-                            int eventCount = eventCollection.getEvents() != null
-                                    ? eventCollection.getEvents().size() : 0;
-                            log.info("{} - SEND: event(s) posted: {} event(s)", tenant, eventCount);
+                            log.info("{} - SEND: event posted: {}", tenant, rt);
                         } else if (targetAPI.equals(API.ALARM)) {
-                            // Auto-detect payload format: { "alarms": [...] } = collection; anything else = single.
-                            AlarmCollectionRepresentation alarmCollection;
-                            if (configurationRegistry.getObjectMapper().readTree(payload).has("alarms")) {
-                                alarmCollection = configurationRegistry.getObjectMapper()
-                                        .readValue(payload, AlarmCollectionRepresentation.class);
-                            } else {
-                                AlarmRepresentation ar = configurationRegistry.getObjectMapper()
-                                        .readValue(payload, AlarmRepresentation.class);
-                                alarmCollection = new AlarmCollectionRepresentation();
-                                alarmCollection.setAlarms(List.of(ar));
-                            }
+                            AlarmRepresentation alarmRepresentation = configurationRegistry.getObjectMapper().readValue(
+                                    payload,
+                                    AlarmRepresentation.class);
+                            // Set processing mode for alarms
                             if (context.getProcessingMode() != null &&
                                     ProcessingMode.TRANSIENT.equals(context.getProcessingMode())) {
-                                final AlarmCollectionRepresentation col = alarmCollection;
-                                rt = processingModeService.callWithProcessingMode("TRANSIENT", (connector) ->
-                                        (AlarmCollectionRepresentation) connector.post(
-                                                ALARM_COLLECTION_PATH, ALARM_COLLECTION, col));
-                                log.info("{} - Using TRANSIENT processing mode for alarm(s)", tenant);
+                                rt = processingModeService.callWithProcessingMode("TRANSIENT", (connector) -> {
+                                    if (targetAPI.equals(API.ALARM)) {
+                                        // Now use the connector with the processing mode header
+                                        return (AlarmRepresentation) connector.post("/alarm/alarms",
+                                                ALARM,
+                                                alarmRepresentation);
+                                    }
+                                    return null;
+                                });
+                                log.info("{} - Using TRANSIENT processing mode for alarm", tenant);
                             } else {
-                                AlarmCollectionRepresentation resultCol = new AlarmCollectionRepresentation();
-                                List<AlarmRepresentation> created = new ArrayList<>();
-                                for (AlarmRepresentation ar : alarmCollection.getAlarms()) {
-                                    created.add(alarmApi.create(ar));
-                                }
-                                resultCol.setAlarms(created);
-                                rt = resultCol;
-                                log.debug("{} - Using PERSISTENT processing mode for alarm(s)", tenant);
+                                rt = alarmApi.create(alarmRepresentation);
+                                log.debug("{} - Using PERSISTENT processing mode for alarm", tenant);
                             }
-                            int alarmCount = alarmCollection.getAlarms() != null
-                                    ? alarmCollection.getAlarms().size() : 0;
-                            log.info("{} - SEND: alarm(s) posted: {} alarm(s)", tenant, alarmCount);
+                            log.info("{} - SEND: alarm posted: {}", tenant, rt);
                         } else if (targetAPI.equals(API.MEASUREMENT)) {
                             // Auto-detect payload format: { "measurements": [...] } = collection; anything else = single.
                             // Always POST via createBulk — single measurements are wrapped in a one-element collection.
@@ -558,96 +533,77 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                 AbstractExtensibleRepresentation rt = null;
                 try {
                     if (targetAPI.equals(API.EVENT)) {
-                        // Auto-detect payload format: { "events": [...] } = collection; anything else = single.
-                        EventCollectionRepresentation eventCollection;
-                        if (configurationRegistry.getObjectMapper().readTree(payload).has("events")) {
-                            eventCollection = configurationRegistry.getObjectMapper()
-                                    .readValue(payload, EventCollectionRepresentation.class);
-                        } else {
-                            EventRepresentation er = configurationRegistry.getObjectMapper()
-                                    .readValue(payload, EventRepresentation.class);
-                            eventCollection = new EventCollectionRepresentation();
-                            eventCollection.setEvents(List.of(er));
-                        }
+                        EventRepresentation eventRepresentation = configurationRegistry.getObjectMapper().readValue(
+                                payload,
+                                EventRepresentation.class);
                         try {
                             c8ySemaphore.acquire();
+                            // Set processing mode for events
                             if (context.getProcessingMode() != null &&
                                     ProcessingMode.TRANSIENT.equals(context.getProcessingMode())) {
-                                final EventCollectionRepresentation col = eventCollection;
-                                rt = processingModeService.callWithProcessingMode("TRANSIENT", (connector) ->
-                                        (EventCollectionRepresentation) connector.post(
-                                                EVENT_COLLECTION_PATH, EVENT_COLLECTION, col));
-                                log.info("{} - Using TRANSIENT processing mode for event(s)", tenant);
+                                rt = processingModeService.callWithProcessingMode("TRANSIENT", (connector) -> {
+                                    if (targetAPI.equals(API.EVENT)) {
+                                        // Now use the connector with the processing mode header
+                                        return (EventRepresentation) connector.post("/event/events",
+                                                EVENT,
+                                                eventRepresentation);
+                                    }
+                                    return null;
+                                });
+                                log.info("{} - Using TRANSIENT processing mode for event", tenant);
                             } else {
-                                EventCollectionRepresentation resultCol = new EventCollectionRepresentation();
-                                List<EventRepresentation> created = new ArrayList<>();
-                                for (EventRepresentation er : eventCollection.getEvents()) {
-                                    created.add(eventApi.create(er));
-                                }
-                                resultCol.setEvents(created);
-                                rt = resultCol;
-                                log.debug("{} - Using PERSISTENT processing mode for event(s)", tenant);
+                                rt = eventApi.create(eventRepresentation);
+                                log.debug("{} - Using PERSISTENT processing mode for event", tenant);
                             }
                         } catch (InterruptedException e) {
-                            log.error("{} - Failed to acquire semaphore for creating event(s)", tenant, e);
+                            log.error("{} - Failed to acquire semaphore for creating event", tenant, e);
                         } finally {
                             c8ySemaphore.release();
                         }
-                        EventCollectionRepresentation createdEvents = (EventCollectionRepresentation) rt;
-                        List<EventRepresentation> eventList = createdEvents != null && createdEvents.getEvents() != null
-                                ? createdEvents.getEvents() : List.of();
-                        if (eventList.size() == 1 && context.getMapping().getEventWithAttachment()) {
+                        GId eventId = ((EventRepresentation) rt).getId();
+                        if (context.getMapping().getEventWithAttachment()) {
                             BinaryInfo binaryInfo = context.getBinaryInfo();
-                            uploadEventAttachment(binaryInfo, eventList.get(0).getId().getValue(), false);
+                            uploadEventAttachment(binaryInfo, eventId.getValue(), false);
                         }
-                        int eventCount = eventList.size();
                         if (serviceConfiguration.getLogPayload())
-                            log.info("{} - SEND: event(s) posted: {}", tenant, rt);
+                            log.info("{} - SEND: event posted: {}", tenant, rt);
                         else
-                            log.info("{} - SEND: event(s) posted: {} event(s)", tenant, eventCount);
+                            log.info("{} - SEND: event posted with Id {}", tenant,
+                                    ((EventRepresentation) rt).getId().getValue());
 
                     } else if (targetAPI.equals(API.ALARM)) {
-                        // Auto-detect payload format: { "alarms": [...] } = collection; anything else = single.
-                        AlarmCollectionRepresentation alarmCollection;
-                        if (configurationRegistry.getObjectMapper().readTree(payload).has("alarms")) {
-                            alarmCollection = configurationRegistry.getObjectMapper()
-                                    .readValue(payload, AlarmCollectionRepresentation.class);
-                        } else {
-                            AlarmRepresentation ar = configurationRegistry.getObjectMapper()
-                                    .readValue(payload, AlarmRepresentation.class);
-                            alarmCollection = new AlarmCollectionRepresentation();
-                            alarmCollection.setAlarms(List.of(ar));
-                        }
+                        AlarmRepresentation alarmRepresentation = configurationRegistry.getObjectMapper().readValue(
+                                payload,
+                                AlarmRepresentation.class);
                         try {
                             c8ySemaphore.acquire();
+                            // Set processing mode for alarms
                             if (context.getProcessingMode() != null &&
                                     ProcessingMode.TRANSIENT.equals(context.getProcessingMode())) {
-                                final AlarmCollectionRepresentation col = alarmCollection;
-                                rt = processingModeService.callWithProcessingMode("TRANSIENT", (connector) ->
-                                        (AlarmCollectionRepresentation) connector.post(
-                                                ALARM_COLLECTION_PATH, ALARM_COLLECTION, col));
-                                log.info("{} - Using TRANSIENT processing mode for alarm(s)", tenant);
+                                rt = processingModeService.callWithProcessingMode("TRANSIENT", (connector) -> {
+                                    if (targetAPI.equals(API.ALARM)) {
+                                        // Now use the connector with the processing mode header
+                                        return (AlarmRepresentation) connector.post("/alarm/alarms",
+                                                ALARM,
+                                                alarmRepresentation);
+                                    }
+                                    return null;
+                                });
+                                log.info("{} - Using TRANSIENT processing mode for alarm", tenant);
                             } else {
-                                AlarmCollectionRepresentation resultCol = new AlarmCollectionRepresentation();
-                                List<AlarmRepresentation> created = new ArrayList<>();
-                                for (AlarmRepresentation ar : alarmCollection.getAlarms()) {
-                                    created.add(alarmApi.create(ar));
-                                }
-                                resultCol.setAlarms(created);
-                                rt = resultCol;
-                                log.debug("{} - Using PERSISTENT processing mode for alarm(s)", tenant);
+                                rt = alarmApi.create(alarmRepresentation);
+                                log.debug("{} - Using PERSISTENT processing mode for alarm", tenant);
                             }
                         } catch (InterruptedException e) {
-                            log.error("{} - Failed to acquire semaphore for creating alarm(s)", tenant, e);
+                            log.error("{} - Failed to acquire semaphore for creating alarm", tenant, e);
                         } finally {
                             c8ySemaphore.release();
                         }
-                        int alarmCount = alarmCollection.getAlarms() != null
-                                ? alarmCollection.getAlarms().size() : 0;
                         if (serviceConfiguration.getLogPayload())
-                            log.info("{} - SEND: alarm(s) posted: {}", tenant, rt);
+                            log.info("{} - SEND: alarm posted: {}", tenant, rt);
                         else
-                            log.info("{} - SEND: alarm(s) posted: {} alarm(s)", tenant, alarmCount);
+                            log.info("{} - SEND: alarm posted with Id {}", tenant,
+                                    ((AlarmRepresentation) rt).getId().getValue());
                     } else if (targetAPI.equals(API.MEASUREMENT)) {
                         // Auto-detect payload format: { "measurements": [...] } = collection; anything else = single.
                         // Always POST via createBulk — single measurements are wrapped in a one-element collection.
