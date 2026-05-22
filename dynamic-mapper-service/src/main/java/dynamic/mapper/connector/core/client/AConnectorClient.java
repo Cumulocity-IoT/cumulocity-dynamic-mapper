@@ -820,7 +820,8 @@ public abstract class AConnectorClient {
             if (count.intValue() <= 0) {
                 try {
                     unsubscribe(topic);
-                    mappingSubscriptionManager.getSubscriptionCountsView().remove(topic);
+                    mappingSubscriptionManager.removeSubscriptionInbound(mapping);
+                    //mappingSubscriptionManager.getSubscriptionCountsView().remove(topic);
                     log.info("{} - Unsubscribed from topic: [{}] after mapping deletion", tenant, topic);
                 } catch (Exception e) {
                     log.error("{} - Error unsubscribing from topic: [{}]", tenant, topic, e);
@@ -828,7 +829,7 @@ public abstract class AConnectorClient {
             }
         }
 
-        mappingSubscriptionManager.removeSubscriptionOutbound(mapping.getIdentifier());
+        //mappingSubscriptionManager.removeSubscriptionOutbound(mapping.getIdentifier());
         log.info("{} - Deleted inbound subscription for mapping: {}", tenant, mapping.getIdentifier());
     }
 
