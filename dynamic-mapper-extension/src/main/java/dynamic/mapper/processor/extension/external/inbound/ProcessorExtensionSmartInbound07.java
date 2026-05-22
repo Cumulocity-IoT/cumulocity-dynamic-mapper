@@ -84,8 +84,8 @@ public class ProcessorExtensionSmartInbound07 implements ProcessorExtensionInbou
             log.info("{} - Processing bulk measurement collection for clientId: {}", tenant, clientId);
 
             // Resolve the internal Cumulocity device ID from the inventory cache.
-            // Java Extensions must set source.id explicitly — unlike Smart Functions
-            // the mapper does NOT auto-inject it for the MEASUREMENT_COLLECTION path.
+            // Java Extensions must set source.id explicitly on each measurement entry.
+            // (Unlike Smart Functions, the mapper does NOT auto-inject it into payload.measurements entries for extensions.)
             ExternalId externalId = new ExternalId(clientId, "c8y_Serial");
             Map<String, Object> device = context.getManagedObjectAsMap(externalId);
             if (device == null) {
