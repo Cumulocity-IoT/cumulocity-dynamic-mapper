@@ -71,7 +71,7 @@ public class ProcessorExtensionSmartInbound07 implements ProcessorExtensionInbou
     @Override
     public CumulocityObject[] onMessage(Message<byte[]> message, JavaExtensionContext context) {
         try {
-            String jsonString = new String(message.getPayload(), "UTF-8");
+            String jsonString = new String(message.getPayload(), java.nio.charset.StandardCharsets.UTF_8);
             @SuppressWarnings("unchecked")
             Map<String, Object> payload = (Map<String, Object>) Json.parseJson(jsonString);
 
