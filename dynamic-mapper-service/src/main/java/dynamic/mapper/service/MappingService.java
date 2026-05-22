@@ -261,7 +261,7 @@ public class MappingService {
                 mappingRepository.prepareForDelete(tenant, id, m);
                 inventoryApi.delete(GId.asGId(id), false);
 
-                log.info("{} - Mapping deleted: {}", tenant, id);
+                log.info("{} - Mapping deleted from Inventory: {}", tenant, id);
                 return m;
             } catch (SDKException e) {
                 log.warn("{} - Failed to find managed object for mapping: {}", tenant, id, e);
@@ -282,7 +282,7 @@ public class MappingService {
                     tenant,
                     null);
 
-            log.info("{} - Mapping deleted: {}", tenant, id);
+            log.info("{} - Mapping deleted from Service: {}", tenant, id);
         }
 
         return mapping;
