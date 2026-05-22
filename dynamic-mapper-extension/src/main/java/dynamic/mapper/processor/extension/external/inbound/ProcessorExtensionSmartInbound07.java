@@ -37,7 +37,7 @@ import java.util.Map;
  * Java Extension demonstrating bulk measurement collection (since 6.3).
  *
  * <p>Sends all measurements from a single incoming message in one Cumulocity REST
- * call using {@code CumulocityType.MEASUREMENT_COLLECTION}. This avoids N separate
+ * call using {@code CumulocityType.MEASUREMENT} with a {@code payload.measurements} collection. This avoids N separate
  * API calls when a message carries readings for multiple time slots.</p>
  *
  * <p><b>Key difference from Smart Functions:</b> the mapper does <em>not</em>
