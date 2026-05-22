@@ -766,7 +766,7 @@ public class CumulocityObject {
      *
      * <p>Each entry added via {@link #measurement(Map)} is appended to an internal list.
      * On {@link #build()}, the list is placed under {@code payload.measurements} and the
-     * {@link CumulocityType#MEASUREMENT_COLLECTION} type is set.</p>
+     * {@link CumulocityType#MEASUREMENT} type is set.</p>
      *
      * <p><b>Source ID:</b> Java Extensions must include {@code "source": {"id": deviceId}}
      * in every measurement map passed to {@link #measurement(Map)}. The convenience overload
