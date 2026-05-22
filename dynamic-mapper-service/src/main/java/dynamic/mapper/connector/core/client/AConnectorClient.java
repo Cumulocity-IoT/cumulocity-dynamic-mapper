@@ -829,7 +829,6 @@ public abstract class AConnectorClient {
             }
         }
 
-        //mappingSubscriptionManager.removeSubscriptionOutbound(mapping.getIdentifier());
         log.info("{} - Deleted inbound subscription for mapping: {}", tenant, mapping.getIdentifier());
     }
 
