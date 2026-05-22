@@ -1,6 +1,7 @@
 package dynamic.mapper.processor.inbound.processor;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -321,6 +322,89 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
                 log.warn("{} - Skipping request creation: no device ID available for API {} in mapping {}",
                         tenant, targetAPI.name, mapping.getIdentifier());
                 return;
+            }
+
+            // For MEASUREMENT: always produce a { measurements: [...] } collection payload.
+            // If the Smart Function returns { measurements: [...] }, source.id is injected into each entry.
+            // If it returns a single measurement, it is wrapped in a one-element list.
+            // C8YAgent always calls createBulk regardless — no user-facing type distinction needed.
+            if (API.MEASUREMENT.equals(targetAPI)) {
+                final Map<String, Object> collectionPayload = new HashMap<>();
+                Object measurementsObj = payload.get("measurements");
+                if (measurementsObj instanceof List) {
+                    // Multi-measurement: inject source.id into each entry, strip outer source.
+                    @SuppressWarnings("unchecked")
+                    List<Map<String, Object>> measurements = (List<Map<String, Object>>) measurementsObj;
+                    Map<String, Object> sourceMap = new HashMap<>();
+                    sourceMap.put("id", resolvedDeviceId);
+                    for (Map<String, Object> m : measurements) {
+                        m.put("source", sourceMap);
+                    }
+                    collectionPayload.put("measurements", measurements);
+                    log.debug("{} - Created measurement collection request: {} measurements for device {}",
+                            tenant, measurements.size(), resolvedDeviceId);
+                } else {
+                    // Single measurement: source.id already injected by setHierarchicalValue above.
+                    collectionPayload.put("measurements", List.of(payload));
+                    log.debug("{} - Created single measurement request for device {}", tenant, resolvedDeviceId);
+                }
+                String payloadJson = objectMapper.writeValueAsString(collectionPayload);
+                DynamicMapperRequest dynamicMapperRequest = ProcessingResultHelper.createDynamicMapperRequest(
+                        context.getDeviceContext(), routing, payloadJson, cumulocityMessage.getAction(), mapping);
+                dynamicMapperRequest.setApi(targetAPI);
+                dynamicMapperRequest.setSourceId(resolvedDeviceId);
+                dynamicMapperRequest.setExternalId(externalIdInfo.getExternalId());
+                dynamicMapperRequest.setExternalIdType(externalIdInfo.getExternalType());
+                output.addRequest(dynamicMapperRequest);
+                return;
+            }
+
+            // For EVENT / ALARM: if payload contains an "events" / "alarms" array, fan out to
+            // N individual creation calls. Otherwise fall through to single-object processing.
+            if (API.EVENT.equals(targetAPI) || API.EVENT_WITH_CHILDREN.equals(targetAPI)) {
+                Object eventsObj = payload.get("events");
+                if (eventsObj instanceof List) {
+                    @SuppressWarnings("unchecked")
+                    List<Map<String, Object>> events = (List<Map<String, Object>>) eventsObj;
+                    Map<String, Object> sourceMap = new HashMap<>();
+                    sourceMap.put("id", resolvedDeviceId);
+                    for (Map<String, Object> event : events) {
+                        event.put("source", sourceMap);
+                        String eventJson = objectMapper.writeValueAsString(event);
+                        DynamicMapperRequest req = ProcessingResultHelper.createDynamicMapperRequest(
+                                context.getDeviceContext(), routing, eventJson, cumulocityMessage.getAction(), mapping);
+                        req.setApi(API.EVENT);
+                        req.setSourceId(resolvedDeviceId);
+                        req.setExternalId(externalIdInfo.getExternalId());
+                        req.setExternalIdType(externalIdInfo.getExternalType());
+                        output.addRequest(req);
+                    }
+                    log.debug("{} - Fanned out {} event request(s) for device {}", tenant, events.size(), resolvedDeviceId);
+                    return;
+                }
+            }
+
+            if (API.ALARM.equals(targetAPI) || API.ALARM_WITH_CHILDREN.equals(targetAPI)) {
+                Object alarmsObj = payload.get("alarms");
+                if (alarmsObj instanceof List) {
+                    @SuppressWarnings("unchecked")
+                    List<Map<String, Object>> alarms = (List<Map<String, Object>>) alarmsObj;
+                    Map<String, Object> sourceMap = new HashMap<>();
+                    sourceMap.put("id", resolvedDeviceId);
+                    for (Map<String, Object> alarm : alarms) {
+                        alarm.put("source", sourceMap);
+                        String alarmJson = objectMapper.writeValueAsString(alarm);
+                        DynamicMapperRequest req = ProcessingResultHelper.createDynamicMapperRequest(
+                                context.getDeviceContext(), routing, alarmJson, cumulocityMessage.getAction(), mapping);
+                        req.setApi(API.ALARM);
+                        req.setSourceId(resolvedDeviceId);
+                        req.setExternalId(externalIdInfo.getExternalId());
+                        req.setExternalIdType(externalIdInfo.getExternalType());
+                        output.addRequest(req);
+                    }
+                    log.debug("{} - Fanned out {} alarm request(s) for device {}", tenant, alarms.size(), resolvedDeviceId);
+                    return;
+                }
             }
 
             // Convert payload to JSON string for the request
