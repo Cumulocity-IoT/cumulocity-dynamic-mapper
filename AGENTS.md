@@ -14,6 +14,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for a full component overview.
 | `dynamic-mapper-service` | Spring Boot microservice — main backend |
 | `dynamic-mapper-extension` | Reference implementations for processor extensions |
 | `dynamic-mapper-ui` | Angular frontend plugin for Cumulocity |
+| `dynamic-mapper-smart-function` | TypeScript type definitions, examples and tests for Smart Functions |
 
 ---
 
@@ -46,6 +47,16 @@ npm run build      # production build
 npm run deploy     # deploy to Cumulocity tenant (requires env vars)
 npm test           # unit tests
 npm run lint       # lint
+```
+
+### Smart Function Module (TypeScript)
+
+```bash
+cd dynamic-mapper-smart-function
+
+npm run build   # compile TypeScript → JavaScript (output in dist/)
+npm test        # run Jest unit tests
+npm run lint    # lint
 ```
 
 ---
@@ -147,6 +158,45 @@ Key CSS classes: `d-col` = flex column (not `flex-col` which lacks `display:flex
 
 Inbound = Broker → C8Y. Outbound = C8Y → Broker.
 `filterMapping` is a JSONata expression required on all OUTBOUND mappings (default: `'true'`).
+
+---
+
+## Smart Function Development
+
+Smart Functions are JavaScript callbacks executed in GraalVM at runtime. Write them in TypeScript using `dynamic-mapper-smart-function/` for type safety, then paste the compiled JS into the mapping editor.
+
+**Entry point signature** (both directions):
+```ts
+function onMessage(msg: DynamicMapperDeviceMessage, context: SmartFunctionContext): CumulocityObject[] | DeviceMessage[]
+```
+
+**Key types** (`src/types/`):
+
+| Type | Direction | Description |
+|------|-----------|-------------|
+| `DynamicMapperDeviceMessage` | Inbound | Pre-deserialized incoming message (`payload`, `topic`, `clientId`, `transportFields`) |
+| `OutboundMessage` | Outbound | Cumulocity notification triggering the function |
+| `SmartFunctionContext` | Both | Runtime context — device lookup, logging, config access |
+| `CumulocityObject` | Inbound return | C8Y object to create (measurement, event, alarm, inventory) |
+| `DeviceMessage` | Outbound return | Message to publish to the broker (`topic`, `payload`, `transportFields`) |
+
+**`SmartFunctionContext` key methods:**
+```ts
+context.getConfig()           // mapping config (targetAPI, externalIdType, externalId, ...)
+context.getDevice(externalId) // resolve device by external ID → C8yManagedObject
+context.log(message)          // write to mapper log
+context.getCache(key)         // per-mapping persistent state
+context.setCache(key, value)  // store per-mapping state
+```
+
+**Payload access** — payloads are pre-deserialized JSON objects:
+```ts
+const temp = msg.payload["sensorData"]["temp_val"]; // bracket notation (preferred)
+```
+
+See `src/examples/` for inbound and outbound reference implementations, and `src/__tests__/` for testing patterns with mock helpers.
+
+> **Deprecation:** `payload.get(key)` is a legacy alias for bracket notation. Use `payload["key"]` directly.
 
 ---
 
