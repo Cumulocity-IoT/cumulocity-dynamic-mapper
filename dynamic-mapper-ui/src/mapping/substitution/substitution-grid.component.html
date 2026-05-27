@@ -43,18 +43,18 @@
   </table>
 
   <div class="substitution-grid-body">
-    <table class="table table-condensed" style="margin-bottom: 0;">
+    <table class="table table-condensed m-b-0">
       <tbody>
         @for (sub of mapping.substitutions; track sub; let i = $index) {
           <tr id="{{ 'sub-' + id + '-' + i }}">
-            <td width="2%">
+            <td>
               <label class="c8y-radio" title="Checkbox">
                 <input type="radio" (click)="onSubstitutionSelect(i)"
                   [checked]="settings.selectedSubstitutionIndex == i" />
                 <span></span>
               </label>
             </td>
-            <td width="2%">
+            <td>
               {{ i + 1 }}
             </td>
             <td>
@@ -72,13 +72,13 @@
                 </span>
               }
             </td>
-            <td width="8%">
+            <td>
               {{ sub.expandArray ? 'on' : 'off' }}
             </td>
             <td>
               {{ sub.repairStrategy | formatStringAsWords }}
             </td>
-            <td width="6%">
+            <td>
               <button title="{{ 'Remove' | translate }}" class="btn btn-icon btn-clean showOnHover substitution-grid-delete-btn"
                 (click)="onSubstitutionDelete(i)" [disabled]="settings.editorMode === EditorMode.READ_ONLY">
                 <i c8yIcon="delete" class="c8y-icon dlt-c8y-icon-delete"></i>

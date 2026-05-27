@@ -145,8 +145,8 @@ public class EnrichmentInboundProcessor extends AbstractEnrichmentProcessor {
     @Override
     protected void handleEnrichmentError(String tenant, Mapping mapping, Exception e,
             ProcessingContext<?> context, MappingStatus mappingStatus) {
-        String errorMessage = String.format("%s - Error in enrichment phase for mapping: %s", tenant,
-                mapping.getName());
+        String errorMessage = String.format("%s - Error in enrichment phase for mapping: %s: %s", tenant,
+                mapping.getName(), e.getMessage());
         log.error(errorMessage, e);
         if (e instanceof ProcessingException) {
             context.addError((ProcessingException) e);

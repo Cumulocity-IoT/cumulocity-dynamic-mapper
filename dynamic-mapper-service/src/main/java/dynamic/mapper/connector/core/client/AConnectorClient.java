@@ -35,6 +35,7 @@ import dynamic.mapper.connector.core.callback.GenericMessageCallback;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.model.API;
 import dynamic.mapper.model.ConnectorStatus;
 import dynamic.mapper.model.ConnectorStatusEvent;
 import dynamic.mapper.model.DeploymentMapEntry;
@@ -265,6 +266,17 @@ public abstract class AConnectorClient {
     public abstract boolean isConfigValid(ConnectorConfiguration configuration);
 
     public abstract void publishMEAO(ProcessingContext<?> context);
+
+    /**
+     * Returns whether this connector can publish requests of the given API type.
+     * Broker connectors (MQTT, Kafka, AMQP, …) return {@code false} for {@link API#CUSTOM}
+     * because CUSTOM requests target Cumulocity REST microservice endpoints, not broker topics.
+     * Those requests are handled by {@code C8YAgent.createMEAO} instead.
+     * Default: {@code true} (all APIs supported).
+     */
+    public boolean supportsRequestAPI(API api) {
+        return true;
+    }
 
     public abstract Boolean supportsWildcardInTopic(Direction direction);
 
@@ -820,7 +832,8 @@ public abstract class AConnectorClient {
             if (count.intValue() <= 0) {
                 try {
                     unsubscribe(topic);
-                    mappingSubscriptionManager.getSubscriptionCountsView().remove(topic);
+                    mappingSubscriptionManager.removeSubscriptionInbound(mapping);
+                    //mappingSubscriptionManager.getSubscriptionCountsView().remove(topic);
                     log.info("{} - Unsubscribed from topic: [{}] after mapping deletion", tenant, topic);
                 } catch (Exception e) {
                     log.error("{} - Error unsubscribing from topic: [{}]", tenant, topic, e);
@@ -828,7 +841,6 @@ public abstract class AConnectorClient {
             }
         }
 
-        mappingSubscriptionManager.removeSubscriptionOutbound(mapping.getIdentifier());
         log.info("{} - Deleted inbound subscription for mapping: {}", tenant, mapping.getIdentifier());
     }
 

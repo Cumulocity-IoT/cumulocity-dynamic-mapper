@@ -365,7 +365,8 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
   private async handleTestResult(result: TestResult, sendPayload: boolean): Promise<void> {
     if (!result.success) {
-      result.errors.forEach(error => this.alertService.danger(error));
+      const errorLogs = (result.errors ?? []).map(e => `ERROR: ${e}`);
+      this.testingModel.logs = [...(this.testingModel.logs ?? []), ...errorLogs];
       if (sendPayload) {
         this.testResult.emit(false);
       }
@@ -466,7 +467,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   }
 
   getLogLevel(line: string): string {
-    if (line.startsWith('JS ERROR:')) return 'error';
+    if (line.startsWith('ERROR:') || line.startsWith('JS ERROR:')) return 'error';
     if (line.startsWith('JS WARN:') || line.startsWith('WARNING:')) return 'warn';
     if (line.startsWith('JS DEBUG:')) return 'debug';
     if (line.startsWith('INFO')) return 'info';

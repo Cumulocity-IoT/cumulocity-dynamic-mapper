@@ -47,7 +47,19 @@ export interface Substitution {
    */
   pathTarget: string;
 
-  /** Strategy to handle data extraction and transformation edge cases */
+  /**
+   * Strategy to handle data extraction and transformation edge cases.
+   *
+   * Selection guide:
+   * - Use DEFAULT when the pathTarget is guaranteed to exist as a literal key in the target template.
+   * - Use CREATE_IF_MISSING when the pathTarget does NOT exist as a literal path in the target template
+   *   (e.g. a dynamic or computed segment, or any new node that must be created at runtime).
+   *   Using DEFAULT for a non-existent path will cause a 'Path not found' error at runtime.
+   * - Use REMOVE_IF_MISSING_OR_NULL when the field should be omitted if the source value is absent.
+   * - Use USE_FIRST_VALUE_OF_ARRAY / USE_LAST_VALUE_OF_ARRAY when the source returns an array but
+   *   only one scalar value is needed.
+   * - Use IGNORE to silently skip this substitution if the source path evaluation fails.
+   */
   repairStrategy: RepairStrategy;
 
   /**
@@ -256,7 +268,14 @@ We use domain-specific terms such as `expandArray`. To improve the generated sub
 ]
 ```
 # _IDENTITY_ property
-The "_IDENTITY_" property contains "externalId", which contains a placeholder or example for the unique identifier of the device and "c8ySource" which contains a reference to an internal ID in Cumulocity.
+The `_IDENTITY_` property is used to identify the target or source device in Cumulocity.
+
+- `_IDENTITY_.externalId` — the external identifier of the device (e.g. a serial number or MQTT client ID). Use as the value when creating a substitution for the external device identity.
+- `_IDENTITY_.externalIdType` — the type of the external ID (e.g. `"c8y_Serial"`). Usually a fixed string.
+- `_IDENTITY_.c8ySourceId` — the internal Cumulocity managed-object ID. Use this when the source template already contains the internal C8Y ID.
+
+For INBOUND mappings, `_IDENTITY_` identifies the **target** device that the data should be written to.
+For OUTBOUND mappings, `_IDENTITY_` identifies the **source** device from which the Cumulocity data originates.
 
 # JSONata Context
 Use the following context to evaluate and use JSONata expressions starting each with "$":
@@ -1205,14 +1224,24 @@ Rules:
 - Each substitution is independent of each other.
 - If you find multiple values in an array of source template (JSON document), make a suggestion but also prompt the user how the values should be mapped to target template (JSON document).
 - Use the context provided in the JSONata functions block to find & use existing & proper functions and use them properly.
-- Prefer timestamps related to the values & data instead of generic message timestamp
-- If there is no timestamp in the source template (JSON document) use the current time.
+- Prefer timestamps related to the values & data instead of a generic message timestamp.
+- If the source payload contains an epoch-millisecond timestamp (integer), convert it with `$fromMillis(ts)`. Example: `mea.values[0].timestamp.$fromMillis()`.
+- If there is no timestamp in the source template, use `$now()` to produce the current UTC time in ISO 8601 format.
 - If an array with multiple items/objects is used as input set expandArray to true and use JSONata functions to create substitution and iterate over the array dynamically.
 - Skip a leading "$." when no function is used.
 - Use complete path when select JSON element not relative path
-- Consider using "any_SerialNumber" value of property "_IDENTITY_.externalId" of source message as unique identifier of the device
-- If "_IDENTITY_" is part of the sourceTemplate and contains "externalId", it is required to have one substitution for it.
-- If there is no corresponding field for "externalId" in the target template, map it to an ID or wildcard in _TOPIC_LEVEL_ array e.g. wildcard "+" or alphanumeric "berlin_01".
+- If `_IDENTITY_` is present in the sourceTemplate and contains `externalId`, you MUST create a substitution that maps the device identifier to `_IDENTITY_.externalId` in the pathTarget.
+- Use the value of `_IDENTITY_.externalId` in the sourceTemplate (e.g. `"any_SerialNumber"` or `"berlin_01"`) as the representative unique identifier of the device.
+- For INBOUND mappings the pathTarget for device identity is `_IDENTITY_.externalId`.
+- For OUTBOUND mappings with a topic containing a wildcard (`+`) or a `_TOPIC_LEVEL_` placeholder, map the external device ID to the appropriate `_TOPIC_LEVEL_[N]` entry so that the topic is resolved at runtime.
+- If there is no corresponding field for `externalId` in the target template, map it to an ID or wildcard in the `_TOPIC_LEVEL_` array, e.g. wildcard `"+"` or alphanumeric `"berlin_01"`.
+- Never create a substitution that maps a literal/static value — only map dynamic values from the source payload.
+
+- Choosing repairStrategy:
+-- Set `repairStrategy` to `DEFAULT` ONLY when the exact `pathTarget` already exists as a literal key path in the target template.
+-- Set `repairStrategy` to `CREATE_IF_MISSING` whenever the `pathTarget` does NOT exist as a literal path in the target template (e.g. a dynamic segment derived from source data, a placeholder key, or any node that needs to be created at runtime). Using `DEFAULT` for a non-existent path will cause a runtime error: "Path: <pathTarget> not found!".
+-- When `expandArray: true` is combined with a `pathTarget` that contains a dynamic or placeholder segment not present in the target template, you MUST use `CREATE_IF_MISSING`.
+-- If a substitution writes to a top-level field that already appears in the target template (e.g. `time`, `type`, `source`), `DEFAULT` is correct.
 
 - When generating substitutions, recognize that:
 -- `expandArray: true` indicates the substitution will be used in post-processing to create multiple output documents

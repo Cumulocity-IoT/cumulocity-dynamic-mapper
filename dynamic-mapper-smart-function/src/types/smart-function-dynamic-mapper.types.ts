@@ -542,7 +542,12 @@ export interface C8yManagedObject {
  * distributes the conditional type, resulting in the union of all domain interfaces.
  */
 export type C8yPayloadTypeMap = {
-  measurement: C8yMeasurement;
+  /**
+   * Single measurement, or bulk measurements as `{ measurements: [...] }` array.
+   * The mapper injects `source.id` into every entry automatically — do not include `source`.
+   * Single measurements are automatically wrapped in a one-element collection.
+   */
+  measurement: C8yMeasurement | { measurements: Omit<C8yMeasurement, 'source'>[] };
   event: C8yEvent;
   alarm: C8yAlarm;
   operation: C8yOperation;
@@ -571,14 +576,18 @@ export type C8yObjectAction = 'create' | 'update' | 'delete' | 'patch';
  * Determines which API endpoint is used when processing the object.
  * Used in {@link CumulocityObject.cumulocityType} and {@link DeviceMessage.cumulocityType}.
  *
- * - `"measurement"` – POST/GET to `/measurement/measurements`
- * - `"event"`       – POST/PUT/DELETE to `/event/events`
- * - `"alarm"`       – POST/PUT/DELETE to `/alarm/alarms`
- * - `"operation"`   – POST/PUT to `/devicecontrol/operations`
- * - `"managedObject"` – POST/PUT/DELETE/PATCH to `/inventory/managedObjects`
- * - `"custom"`      – call a tenant-local microservice; set {@link CumulocityObject.targetPath}
- *                     or {@link DeviceMessage.topic} to the `/service/…` path.
- *                     The HTTP method is controlled by {@link C8yObjectAction}.
+ * - `"measurement"`           – single measurement, or bulk when payload contains a `measurements` array.
+ *                               The mapper injects `source.id` automatically and always uses
+ *                               the bulk endpoint (`POST /measurement/measurements` with
+ *                               `Content-Type: application/vnd.com.nsn.cumulocity.measurementcollection+json`).
+ *                               For bulk: set `payload: { measurements: [...] }` without `source` on each entry.
+ * - `"event"`                 – POST/PUT/DELETE to `/event/events`
+ * - `"alarm"`                 – POST/PUT/DELETE to `/alarm/alarms`
+ * - `"operation"`             – POST/PUT to `/devicecontrol/operations`
+ * - `"managedObject"`         – POST/PUT/DELETE/PATCH to `/inventory/managedObjects`
+ * - `"custom"`                – call a tenant-local microservice; set {@link CumulocityObject.targetPath}
+ *                               or {@link DeviceMessage.topic} to the `/service/…` path.
+ *                               The HTTP method is controlled by {@link C8yObjectAction}.
  */
 export type C8yObjectType = 'measurement' | 'event' | 'alarm' | 'operation' | 'managedObject' | 'custom';
 
@@ -702,7 +711,7 @@ export interface CumulocityObject<
    * Must match the shape of {@link payload}.
    *
    * Available values:
-   * - "measurement" - Time-series measurement data
+   * - "measurement"           - Single measurement or bulk (payload: `{ measurements: [...] }`); source.id is injected automatically
    * - "event" - Events from devices
    * - "alarm" - Alarm notifications
    * - "operation" - Device operations/commands

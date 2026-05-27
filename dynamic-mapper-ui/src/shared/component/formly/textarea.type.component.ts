@@ -58,7 +58,7 @@ export class CustomFieldTextarea extends FieldType implements AfterViewInit {
     return this.props.cols ? 80 : this.props.cols;
   }
   get rows() {
-    return this.props['v'] ? 4 : this.props.rows;
+    return this.props['rows'] ? this.props['rows'] : 2;
   }
 
   ngAfterViewInit(): void {

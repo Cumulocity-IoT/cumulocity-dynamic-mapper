@@ -1,6 +1,8 @@
 package dynamic.mapper.processor.inbound.processor;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.camel.Exchange;
@@ -72,6 +74,8 @@ public class SendInboundProcessor extends BaseProcessor {
                 // Parallel mode: process single request from body
                 processSingleRequest(context, singleRequest, true);
             } else {
+                // Sequential mode: collapse multiple measurement requests into one bulk request.
+                bulkMeasurementRequestsIfNeeded(context);
                 // Sequential mode: process all requests in context
                 processAllRequests(context);
             }
@@ -119,6 +123,86 @@ public class SendInboundProcessor extends BaseProcessor {
                      context.getTenant(), context.getMapping().getName(), e);
             throw e;
         }
+    }
+
+    /**
+     * If more than one measurement request exists in the context, merge them into one
+     * bulk request with payload shape {"measurements": [...]}.
+     */
+    private void bulkMeasurementRequestsIfNeeded(ProcessingContext<Object> context) throws ProcessingException {
+        List<DynamicMapperRequest> requests = context.getRequests();
+        if (requests == null || requests.size() < 2) {
+            return;
+        }
+
+        List<DynamicMapperRequest> measurementRequests = requests.stream()
+                .filter(req -> API.MEASUREMENT.equals(req.getApi()))
+                .toList();
+        if (measurementRequests.size() <= 1) {
+            return;
+        }
+
+        final String tenant = context.getTenant();
+        final List<Map<String, Object>> combinedMeasurements = new ArrayList<>();
+        for (DynamicMapperRequest request : measurementRequests) {
+            try {
+                Map<String, Object> payloadMap = objectMapper.readValue(
+                        request.getRequest(), new TypeReference<Map<String, Object>>() {});
+                Object measurements = payloadMap.get("measurements");
+                if (measurements instanceof List<?>) {
+                    for (Object entry : (List<?>) measurements) {
+                        if (entry instanceof Map<?, ?>) {
+                            @SuppressWarnings("unchecked")
+                            Map<String, Object> measurement = (Map<String, Object>) entry;
+                            combinedMeasurements.add(measurement);
+                        }
+                    }
+                } else {
+                    combinedMeasurements.add(payloadMap);
+                }
+            } catch (Exception e) {
+                throw new ProcessingException("Failed to parse measurement request for bulk processing", e);
+            }
+        }
+
+        DynamicMapperRequest template = measurementRequests.get(0);
+        Map<String, Object> bulkPayload = new HashMap<>();
+        bulkPayload.put("measurements", combinedMeasurements);
+
+        DynamicMapperRequest bulkRequest = DynamicMapperRequest.builder()
+                .predecessor(template.getPredecessor())
+                .method(template.getMethod())
+                .api(API.MEASUREMENT)
+                .publishTopic(template.getPublishTopic())
+                .retain(template.getRetain())
+                .sourceId(template.getSourceId())
+                .externalId(template.getExternalId())
+                .externalIdType(template.getExternalIdType())
+                .pathCumulocity(template.getPathCumulocity())
+                .build();
+
+        try {
+            bulkRequest.setRequest(objectMapper.writeValueAsString(bulkPayload));
+        } catch (Exception e) {
+            throw new ProcessingException("Failed to serialize bulk measurement payload", e);
+        }
+
+        List<DynamicMapperRequest> mergedRequests = new ArrayList<>();
+        boolean bulkInserted = false;
+        for (DynamicMapperRequest request : requests) {
+            if (API.MEASUREMENT.equals(request.getApi())) {
+                if (!bulkInserted) {
+                    mergedRequests.add(bulkRequest);
+                    bulkInserted = true;
+                }
+                continue;
+            }
+            mergedRequests.add(request);
+        }
+        context.setRequests(mergedRequests);
+
+        log.info("{} - Merged {} measurement requests into one bulk request with {} measurements",
+                tenant, measurementRequests.size(), combinedMeasurements.size());
     }
 
     /**

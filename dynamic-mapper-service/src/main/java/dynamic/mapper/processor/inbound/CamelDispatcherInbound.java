@@ -129,7 +129,11 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
             } else {
                 resolvedMappings = mappingService.resolveMappingInbound(tenant, topic);
             }
-
+            if (resolvedMappings == null || resolvedMappings.isEmpty()) {
+                log.info("{} - No mapping found for topic {}. Processing stopped.", tenant, topic);
+            } else {
+                log.info("{} - Resolved {} mapping(s) for topic {}", tenant, resolvedMappings.size(), topic);
+            }
             result.setConsolidatedQos(connectorClient.determineMaxQosInbound(resolvedMappings));
 
             // Set max CPU time if code-based mappings exist

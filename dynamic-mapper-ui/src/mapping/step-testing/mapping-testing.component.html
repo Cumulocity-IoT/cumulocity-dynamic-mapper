@@ -23,8 +23,8 @@
   <!-- Scrollable content area -->
   <div class="flex-grow overflow-auto">
     <div class="card-block p-b-0">
-      <div class="row">
-        <div class="col-lg-6 col-md-6 column-right-border">
+      <div class="d-grid grid__col--6-6 gap-4">
+        <div class="column-right-border p-r-2">
           <div class="form-group">
             <div style="display: flex">
               <label for="testResult" translate>{{ sourceSystem }} Payload&nbsp;</label>
@@ -41,7 +41,7 @@
             </c8y-messages>
           </div>
         </div>
-        <div class="col-lg-6 col-md-6 column-left-border">
+        <div class="column-left-border p-l-2">
           <div class="form-group">
             <div style="display: flex">
               <label for="testResult" translate>{{ targetSystem }} Request&nbsp;</label>
@@ -85,19 +85,17 @@
       }
       @if (mapping.direction !== Direction.OUTBOUND && !isSubstitutionsAsCode(mapping)) {
       <!-- Collapsible response header -->
-      <div class="row p-t-4 p-b-4 cursor-pointer" (click)="showResponse = !showResponse" style="cursor:pointer">
-        <div class="col-lg-12 d-flex a-i-center">
-          <i [c8yIcon]="showResponse ? 'chevron-down' : 'chevron-right'" class="m-r-8"></i>
-          <span translate>{{ targetSystem }} Response</span>
-          @if ((selectedResult$ | async) > 0) {
-          <span class="badge badge-success m-l-8">{{ selectedResult$ | async }}</span>
-          }
-        </div>
+      <div class="d-flex a-i-center p-t-4 p-b-4" (click)="showResponse = !showResponse" style="cursor:pointer">
+        <i [c8yIcon]="showResponse ? 'chevron-down' : 'chevron-right'" class="m-r-8"></i>
+        <span translate>{{ targetSystem }} Response</span>
+        @if ((selectedResult$ | async) > 0) {
+        <span class="badge badge-success m-l-8">{{ selectedResult$ | async }}</span>
+        }
       </div>
       <div class="collapse" [isAnimated]="true" [collapse]="!showResponse">
-        <div class="row">
-          <div class="col-lg-6 col-md-6"></div>
-          <div class="col-lg-6 col-md-6 column-left-border">
+        <div class="d-grid grid__col--6-6 gap-4">
+          <div></div>
+          <div class="column-left-border p-l-2">
             <div class="form-group">
               <d11r-mapping-json-editor [options]="editorOptionsDefault" [class]="'jse-main-tiny'"
                 [data]="testingModel.response" #editorTestingResponse id="editorTestingResponse">
@@ -109,18 +107,15 @@
       }
       <hr />
       <!-- Collapsible console header -->
-      <div class="row p-t-4 p-b-4 cursor-pointer" (click)="showConsole = !showConsole" style="cursor:pointer">
-        <div class="col-lg-12 d-flex a-i-center">
-          <i [c8yIcon]="showConsole ? 'chevron-down' : 'chevron-right'" class="m-r-8"></i>
-          <span translate>Console output</span>
-        </div>
+      <div class="d-flex a-i-center p-t-4 p-b-4" (click)="showConsole = !showConsole" style="cursor:pointer">
+        <i [c8yIcon]="showConsole ? 'chevron-down' : 'chevron-right'" class="m-r-8"></i>
+        <span translate>Console output</span>
       </div>
       <div class="collapse" [isAnimated]="true" [collapse]="!showConsole">
-        <div class="row">
-          <div class="col-lg-12 col-md-12">
-            <div class="form-group">
-              <div class="console-output">
-                @if (isLoading) {
+        <div>
+          <div class="form-group">
+            <div class="console-output">
+              @if (isLoading) {
                 <span class="log-loading">Processing</span>
                 } @else if (testingModel.logs?.length) {
                 @for (line of testingModel.logs; track $index) {
@@ -133,7 +128,7 @@
             </div>
           </div>
         </div>
-      </div>
+
     </div>
   </div>
 

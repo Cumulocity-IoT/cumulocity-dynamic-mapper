@@ -20,11 +20,9 @@
 -->
 
 
-<form class="p-b-8 pull-right" [formGroup]="toggleIntervalForm">
-  <div class="d-flex">
-    <label class="text-normal text-muted flex-no-shrink m-r-8" style="margin-top:6px" id="listLabel">
-      Auto refresh
-    </label>
+<ng-template #autoRefreshTemplate>
+  <form class="d-flex a-i-center" [formGroup]="toggleIntervalForm">
+    <label class="text-normal text-muted flex-no-shrink m-r-8 m-b-0" id="listLabel">Auto refresh</label>
     <div class="input-group">
       <label class="toggle-countdown" placement="bottom" data-cy="c8y-alarms-interval-refresh--toggle-countdown">
         <input type="checkbox" data-cy="c8y-alarms-interval-toggle" formControlName="intervalToggle"
@@ -45,12 +43,13 @@
         <span></span>
       </div>
     </div>
-  </div>
-</form>
+  </form>
+</ng-template>
 
 <c8y-data-grid [ngClass]="customClasses" #connectorGrid [title]="'Connectors'" [selectable]="selectable && !readOnly"
   [columns]="columns" [selectionPrimaryKey]="'identifier'" [configureColumnsEnabled]="false"
-  [rows]="configurations$ | async" [pagination]="pagination" [actionControls]="actionControls" [showSearch]="false"
+  [rows]="configurations$ | async" [pagination]="pagination" [actionControls]="actionControls"
+  [headerActionControls]="headerActionControls"
   (itemsSelect)="onSelectionChanged($event)">
   <c8y-ui-empty-state [icon]="'c8y-icon dlt-c8y-icon-connected'" [title]="'No connectors exist.' | translate"
     [subtitle]="

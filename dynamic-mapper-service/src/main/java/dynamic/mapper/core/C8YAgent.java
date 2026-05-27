@@ -63,6 +63,7 @@ import com.cumulocity.rest.representation.alarm.AlarmRepresentation;
 import com.cumulocity.rest.representation.event.EventRepresentation;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
+import com.cumulocity.rest.representation.measurement.MeasurementCollectionRepresentation;
 import com.cumulocity.rest.representation.measurement.MeasurementRepresentation;
 import com.cumulocity.rest.representation.operation.OperationRepresentation;
 import com.cumulocity.sdk.client.ProcessingMode;
@@ -98,7 +99,7 @@ import io.micrometer.core.instrument.Timer;
 import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import static com.cumulocity.rest.representation.measurement.MeasurementMediaType.MEASUREMENT;
+import static com.cumulocity.rest.representation.measurement.MeasurementMediaType.MEASUREMENT_COLLECTION;
 import static com.cumulocity.rest.representation.event.EventMediaType.EVENT;
 import static com.cumulocity.rest.representation.alarm.AlarmMediaType.ALARM;;
 
@@ -437,29 +438,32 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                             }
                             log.info("{} - SEND: alarm posted: {}", tenant, rt);
                         } else if (targetAPI.equals(API.MEASUREMENT)) {
-                            MeasurementRepresentation measurementRepresentation = configurationRegistry
-                                    .getObjectMapper().readValue(
-                                            payload,
-                                            MeasurementRepresentation.class);
-                            // Set processing mode for measurements
+                            // Auto-detect payload format: { "measurements": [...] } = collection; anything else = single.
+                            // Always POST via createBulk — single measurements are wrapped in a one-element collection.
+                            MeasurementCollectionRepresentation collectionRepresentation;
+                            if (configurationRegistry.getObjectMapper().readTree(payload).has("measurements")) {
+                                collectionRepresentation = configurationRegistry.getObjectMapper()
+                                        .readValue(payload, MeasurementCollectionRepresentation.class);
+                            } else {
+                                MeasurementRepresentation mr = configurationRegistry.getObjectMapper()
+                                        .readValue(payload, MeasurementRepresentation.class);
+                                collectionRepresentation = new MeasurementCollectionRepresentation();
+                                collectionRepresentation.setMeasurements(List.of(mr));
+                            }
                             if (context.getProcessingMode() != null &&
                                     ProcessingMode.TRANSIENT.equals(context.getProcessingMode())) {
-                                // rt = measurementApiTransient.create(measurementRepresentation);
-                                rt = processingModeService.callWithProcessingMode("TRANSIENT", (connector) -> {
-                                    if (targetAPI.equals(API.MEASUREMENT)) {
-                                        // Now use the connector with the processing mode header
-                                        return (MeasurementRepresentation) connector.post("/measurement/measurements",
-                                                MEASUREMENT,
-                                                measurementRepresentation);
-                                    }
-                                    return null;
-                                });
-                                log.info("{} - Using TRANSIENT processing mode for measurement", tenant);
+                                final MeasurementCollectionRepresentation col = collectionRepresentation;
+                                rt = processingModeService.callWithProcessingMode("TRANSIENT", (connector) ->
+                                        (MeasurementCollectionRepresentation) connector.post(
+                                                MEASUREMENT_COLLECTION_PATH, MEASUREMENT_COLLECTION, col));
+                                log.info("{} - Using TRANSIENT processing mode for measurement(s)", tenant);
                             } else {
-                                rt = measurementApi.create(measurementRepresentation);
-                                log.debug("{} - Using PERSISTENT processing mode for measurement", tenant);
+                                rt = measurementApi.createBulk(collectionRepresentation);
+                                log.debug("{} - Using PERSISTENT processing mode for measurement(s)", tenant);
                             }
-                            log.info("{} - SEND: measurement posted: {}", tenant, rt);
+                            int count = collectionRepresentation.getMeasurements() != null
+                                    ? collectionRepresentation.getMeasurements().size() : 0;
+                            log.info("{} - SEND: measurement(s) posted: {} measurement(s)", tenant, count);
                         } else if (targetAPI.equals(API.OPERATION)) {
                             OperationRepresentation operationRepresentation = configurationRegistry.getObjectMapper()
                                     .readValue(
@@ -601,42 +605,42 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                             log.info("{} - SEND: alarm posted with Id {}", tenant,
                                     ((AlarmRepresentation) rt).getId().getValue());
                     } else if (targetAPI.equals(API.MEASUREMENT)) {
-                        MeasurementRepresentation measurementRepresentation = configurationRegistry.getObjectMapper()
-                                .readValue(
-                                        payload, MeasurementRepresentation.class);
+                        // Auto-detect payload format: { "measurements": [...] } = collection; anything else = single.
+                        // Always POST via createBulk — single measurements are wrapped in a one-element collection.
+                        MeasurementCollectionRepresentation collectionRepresentation;
+                        if (configurationRegistry.getObjectMapper().readTree(payload).has("measurements")) {
+                            collectionRepresentation = configurationRegistry.getObjectMapper()
+                                    .readValue(payload, MeasurementCollectionRepresentation.class);
+                        } else {
+                            MeasurementRepresentation mr = configurationRegistry.getObjectMapper()
+                                    .readValue(payload, MeasurementRepresentation.class);
+                            collectionRepresentation = new MeasurementCollectionRepresentation();
+                            collectionRepresentation.setMeasurements(List.of(mr));
+                        }
                         try {
                             c8ySemaphore.acquire();
                             if (context.getProcessingMode() != null &&
                                     ProcessingMode.TRANSIENT.equals(context.getProcessingMode())) {
-                                // rt = measurementApiTransient.create(measurementRepresentation);
-                                rt = processingModeService.callWithProcessingMode("TRANSIENT", (connector) -> {
-                                    if (targetAPI.equals(API.MEASUREMENT)) {
-                                        MeasurementRepresentation mr = configurationRegistry.getObjectMapper()
-                                                .readValue(
-                                                        payload, MeasurementRepresentation.class);
-
-                                        // Now use the connector with the processing mode header
-                                        return (MeasurementRepresentation) connector.post("/measurement/measurements",
-                                                MEASUREMENT,
-                                                mr);
-                                    }
-                                    return null;
-                                });
-                                log.info("{} - Using TRANSIENT processing mode for measurement", tenant);
+                                final MeasurementCollectionRepresentation col = collectionRepresentation;
+                                rt = processingModeService.callWithProcessingMode("TRANSIENT", (connector) ->
+                                        (MeasurementCollectionRepresentation) connector.post(
+                                                MEASUREMENT_COLLECTION_PATH, MEASUREMENT_COLLECTION, col));
+                                log.info("{} - Using TRANSIENT processing mode for measurement(s)", tenant);
                             } else {
-                                rt = measurementApi.create(measurementRepresentation);
-                                log.debug("{} - Using PERSISTENT processing mode for measurement", tenant);
+                                rt = measurementApi.createBulk(collectionRepresentation);
+                                log.debug("{} - Using PERSISTENT processing mode for measurement(s)", tenant);
                             }
                         } catch (InterruptedException e) {
-                            log.error("{} - Failed to acquire semaphore for creating measurement", tenant, e);
+                            log.error("{} - Failed to acquire semaphore for creating measurement(s)", tenant, e);
                         } finally {
                             c8ySemaphore.release();
                         }
+                        int count = collectionRepresentation.getMeasurements() != null
+                                ? collectionRepresentation.getMeasurements().size() : 0;
                         if (serviceConfiguration.getLogPayload())
-                            log.info("{} - SEND: measurement posted: {}", tenant, rt);
+                            log.info("{} - SEND: measurement(s) posted: {}", tenant, rt);
                         else
-                            log.info("{} - SEND: measurement posted with Id {}", tenant,
-                                    ((MeasurementRepresentation) rt).getId().getValue());
+                            log.info("{} - SEND: measurement(s) posted: {} measurement(s)", tenant, count);
                     } else if (targetAPI.equals(API.OPERATION)) {
                         OperationRepresentation operationRepresentation = configurationRegistry.getObjectMapper()
                                 .readValue(
@@ -703,6 +707,52 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     public static final String MAPPING_TEST_DEVICE_TYPE = "d11r_testDevice";
 
     /**
+     * Creates a managed object and binds its external ID using the optimistic
+     * single-request approach where the platform supports it.
+     *
+     * <p>Cumulocity platforms &ge; May 2026 allow external IDs to be bound
+     * atomically during MO creation by including an {@code externalIds}
+     * property in the request body. On older platforms (e.g. Edge), this
+     * implementation falls back to creating the managed object first and then
+     * binding the external ID via a separate Identity API call.</p>
+     *
+     * <p>The caller must hold {@link #c8ySemaphore} before invoking this method.</p>
+     *
+     * @param mor      the managed object to create
+     * @param identity the external ID to bind
+     * @param testing  routing flag forwarded to the inventory/identity facades
+     * @return the created managed object representation
+     */
+    private ManagedObjectRepresentation createWithExternalIdBinding(
+            ManagedObjectRepresentation mor, ID identity, Boolean testing, boolean supportsExternalIdBinding) {
+        if (Boolean.TRUE.equals(testing)) {
+            // Mock / test path – use the simple two-step approach
+            ManagedObjectRepresentation created = inventoryApi.create(mor, true);
+            identityApi.create(created, identity, true);
+            return created;
+        }
+
+        if (supportsExternalIdBinding) {
+            // New API (platforms >= May 2026): bind the external ID atomically in the MO
+            // creation body. The platform consumes the 'externalIds' directive and does
+            // not persist it as a fragment on the created object.
+            String identityType = identity.getType();
+            String idType = identityType == null || identityType.isBlank() ? "c8y_Serial" : identityType;
+            mor.setProperty("externalIds",
+                    List.of(Map.of("type", idType, "externalId", identity.getValue())));
+            log.debug("Creating MO with atomic externalIds binding");
+            return inventoryApi.create(mor, false);
+        }
+
+        // Legacy path (platforms < May 2026, e.g. Cumulocity Edge): create MO first,
+        // then bind the external ID via a separate Identity API call.
+        log.debug("Creating MO + external ID binding via two separate calls (legacy platform path)");
+        ManagedObjectRepresentation created = inventoryApi.create(mor, false);
+        identityApi.create(created, identity, false);
+        return created;
+    }
+
+    /**
      * Creates a real managed object in C8Y inventory tagged with {@code d11r_testDevice} so it
      * is visible in the Test Devices grid and can be cleaned up after testing.
      *
@@ -722,6 +772,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
             return existingId;
         }
 
+        boolean supportsExternalIdBinding = Boolean.TRUE.equals(
+                configurationRegistry.getServiceConfiguration(tenant).getExternalIdBinding());
         return subscriptionsService.callForTenant(tenant, () -> {
             MicroserviceCredentials contextCredentials = removeAppKeyHeaderFromContext(contextService.getContext());
             return contextService.callWithinContext(contextCredentials, () -> {
@@ -731,9 +783,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                 mor.set(new HashMap<String, String>(), MAPPING_TEST_DEVICE_TYPE);
                 try {
                     c8ySemaphore.acquire();
-                    mor = inventoryApi.create(mor, false);
+                    mor = createWithExternalIdBinding(mor, id, false, supportsExternalIdBinding);
                     log.info("{} - Test device created: id={}, name={}", tenant, mor.getId().getValue(), deviceName);
-                    identityApi.create(mor, id, false);
                     return mor.getId().getValue();
                 } catch (InterruptedException e) {
                     log.error("{} - Failed to acquire semaphore for creating test device", tenant, e);
@@ -789,13 +840,13 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                         }
                         try {
                             c8ySemaphore.acquire();
-                            mor = inventoryApi.create(mor, testing);
+                            mor = createWithExternalIdBinding(mor, identity, testing,
+                                    Boolean.TRUE.equals(serviceConfiguration.getExternalIdBinding()));
                             // TODO Add/Update new managed object to IdentityCache
                             if (serviceConfiguration.getLogPayload())
                                 log.info("{} - New device created: {}", tenant, mor);
                             else
                                 log.info("{} - New device created with Id {}", tenant, mor.getId().getValue());
-                            identityApi.create(mor, identity, testing);
                         } catch (InterruptedException e) {
                             log.error("{} - Failed to acquire semaphore for creating Device", tenant, e);
                         } finally {
@@ -916,6 +967,23 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                 }
                 return null;
             });
+        });
+    }
+
+    public List<ManagedObjectRepresentation> getManagedObjectsByType(String tenant, String type, Boolean testing) {
+        return subscriptionsService.callForTenant(tenant, () -> {
+            try {
+                com.cumulocity.sdk.client.inventory.InventoryFilter filter =
+                        new com.cumulocity.sdk.client.inventory.InventoryFilter().byType(type);
+                List<ManagedObjectRepresentation> result = new java.util.ArrayList<>();
+                for (ManagedObjectRepresentation mor : inventoryApi.getManagedObjectsByFilter(filter, testing).get().allPages()) {
+                    result.add(mor);
+                }
+                return result;
+            } catch (SDKException e) {
+                log.warn("{} - Error querying devices of type {}: {}", tenant, type, e.getMessage());
+                return java.util.Collections.emptyList();
+            }
         });
     }
 

@@ -475,7 +475,12 @@ public class ConfigurationRegistry {
                     c8yAgent.resolveExternalId2GlobalId(tenant, identity, context.getTesting());
             if (resolved != null) {
                 String internalId = resolved.getManagedObject().getId().getValue();
-                tenantRegistry.cacheExternalId(cacheKey, internalId);
+                // Only cache the resolved ID in production — during dry-run tests
+                // resolveExternalId2GlobalId routes to MockIdentity and returns a
+                // synthetic ID (e.g. "10000") that must never enter the production cache.
+                if (!Boolean.TRUE.equals(context.getTesting())) {
+                    tenantRegistry.cacheExternalId(cacheKey, internalId);
+                }
                 log.debug("{} - Device exists in C8Y for {}: {}", tenant, cacheKey, internalId);
                 return internalId;
             }
@@ -492,7 +497,9 @@ public class ConfigurationRegistry {
                     identity, context, log, c8yAgent, objectMapper);
 
             if (newId != null) {
-                tenantRegistry.cacheExternalId(cacheKey, newId);
+                if (!Boolean.TRUE.equals(context.getTesting())) {
+                    tenantRegistry.cacheExternalId(cacheKey, newId);
+                }
                 log.info("{} - Successfully created implicit device for {}: {}", tenant, cacheKey, newId);
             } else {
                 log.error("{} - Failed to create implicit device for {}", tenant, cacheKey);

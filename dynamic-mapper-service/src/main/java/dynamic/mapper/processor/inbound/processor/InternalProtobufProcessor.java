@@ -62,7 +62,7 @@ public class InternalProtobufProcessor extends BaseProcessor {
             if(e instanceof ProcessingException)
                 context.addError((ProcessingException) e);
             else
-                context.addError(new ProcessingException("InternalProtobufProcessor processing failed", e));
+                context.addError(new ProcessingException("InternalProtobufProcessor processing failed: " + e.getMessage(), e));
 
             mappingStatus.errors++;
             mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);

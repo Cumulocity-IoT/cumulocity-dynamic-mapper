@@ -17,8 +17,8 @@
  *
  * @authors Christof Strack
  */
-import { Component, EventEmitter, Input, OnInit, Output, ViewChild, AfterViewInit, ViewEncapsulation, OnDestroy, inject, ElementRef } from '@angular/core';
-import { ActionControl, AlertService, BottomDrawerService, Column, CoreModule, CountdownIntervalComponent, DataGridComponent, Pagination } from '@c8y/ngx-components';
+import { ChangeDetectorRef, Component, EventEmitter, Input, OnInit, Output, ViewChild, AfterViewInit, ViewEncapsulation, OnDestroy, inject, ElementRef, TemplateRef } from '@angular/core';
+import { ActionControl, AlertService, BottomDrawerService, Column, CoreModule, CountdownIntervalComponent, DataGridComponent, HeaderActionControl, Pagination } from '@c8y/ngx-components';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, combineLatest, Observable, Subject } from 'rxjs';
 import { filter, map, take, takeUntil } from 'rxjs/operators';
@@ -26,7 +26,7 @@ import { cloneDeep } from 'lodash';
 
 import { ConfirmationModalComponent } from '../confirmation/confirmation-modal.component';
 import { ConnectorConfigurationService } from '../service/connector-configuration.service';
-import { ConnectorStatus, LoggingEventType } from '../connector-log/connector-log.model';
+import { ConnectorStatus, LoggingEventType } from '../connector-details/connector-log.model';
 import { DeploymentMapEntry, Direction, Feature } from '../mapping/mapping.model';
 import { createCustomUuid } from '../mapping/util';
 import { ConnectorConfiguration, ConnectorSpecification, ConnectorType, PollingInterval } from './connector.model';
@@ -56,9 +56,11 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
   @Output() deploymentMapEntryChange = new EventEmitter<DeploymentMapEntry>();
 
   @ViewChild('connectorGrid') connectorGrid: DataGridComponent;
+  @ViewChild('autoRefreshTemplate') autoRefreshTemplate: TemplateRef<any>;
   @ViewChild(CountdownIntervalComponent)
   countdownIntervalComponent: CountdownIntervalComponent;
   toggleIntervalForm: FormGroup;
+  headerActionControls: HeaderActionControl[] = [];
 
   selected: string[] = [];
   selected$ = new BehaviorSubject<string[]>([]);
@@ -97,6 +99,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
   readonly connectorConfigurationService = inject(ConnectorConfigurationService);
   private readonly fb = inject(FormBuilder);
   private readonly elementRef = inject(ElementRef);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   constructor() {
     this.toggleIntervalForm = this.initForm();
@@ -112,7 +115,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
     this.intervals = this.connectorConfigurationService.getAvailablePollingIntervals();
     this.currentPollingInterval = this.connectorConfigurationService.getCurrentPollingIntervalValue();
     // console.log('Current Polling Interval:', this.currentPollingInterval);
-    this.customClasses = this.shouldHideBulkActionsAndReadOnly ? 'hide-bulk-actions' : '';
+    this.customClasses = `hide-search${this.shouldHideBulkActionsAndReadOnly ? ' hide-bulk-actions' : ''}`;
     this.feature = await this.featurePromise;
     // Fix 4: single consolidated subscription for interval changes
     this.toggleIntervalForm.get('refreshInterval')?.valueChanges
@@ -128,6 +131,12 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
   }
 
   ngAfterViewInit(): void {
+    this.headerActionControls = [{
+      type: 'AUTO_REFRESH',
+      template: this.autoRefreshTemplate,
+      callback: () => {}
+    }];
+    this.cdr.detectChanges();
     if (this.selectable) {
       setTimeout(() => this.connectorGrid.setItemsSelected(this.selected, true), 0);
     }

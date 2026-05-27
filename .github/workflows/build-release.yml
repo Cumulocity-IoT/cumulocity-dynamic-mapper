@@ -31,17 +31,25 @@ jobs:
         with:
           java-version: 21
           distribution: zulu
-      - name: Getting version of pom.xml
-        run: echo "version=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec)" >> $GITHUB_OUTPUT
-        id: project
+      - name: Extract version from tag
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VERSION="${{ github.ref_name }}"
+            VERSION="${VERSION#v}"
+          else
+            VERSION=$(mvn -q -Dexec.executable=echo -Dexec.args='${revision}' --non-recursive exec:exec)
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       # Fast Unit Tests (runs during compile)
       - name: Run Unit Tests
-        run: mvn -B test --file pom.xml
+        run: mvn -B test -Drevision=${{ env.VERSION }} --file pom.xml
 
       # Fast Dispatcher Integration Tests
       - name: Run Dispatcher Integration Tests
-        run: mvn -B verify -DskipTests --file pom.xml
+        run: mvn -B verify -DskipTests -Drevision=${{ env.VERSION }} --file pom.xml
 
       # Full Transformation Validation (only on tags/releases)
       # NOTE: Currently DISABLED - requires full Spring Boot context setup
@@ -52,52 +60,55 @@ jobs:
 
       #Building Starter backend
       - name: Build Starter Backend
-        run: mvn -B package -DskipTests --file pom.xml
+        run: mvn -B package -DskipTests -Drevision=${{ env.VERSION }} --file pom.xml
       - name: Packaging Starter Backend
         run: |
           mv ./dynamic-mapper-service/target/dynamic-mapper-service.zip ./dynamic-mapper-service/target/dynamic-mapper-service-starter.zip
           cp ./dynamic-mapper-service/target/dynamic-mapper-service-starter.zip ./dynamic-mapper-service/target/dynamic-mapper-service-starter-withoutMQTTService.zip
           mv ./dynamic-mapper-service/src/main/configuration/cumulocity-withoutMQTTService.json ./dynamic-mapper-service/src/main/configuration/cumulocity.json
-          sed -i 's/@project.version@/${{ steps.project.outputs.version }}/g' ./dynamic-mapper-service/src/main/configuration/cumulocity.json
+          sed -i 's/@project.version@/${{ env.VERSION }}/g' ./dynamic-mapper-service/src/main/configuration/cumulocity.json
           zip ./dynamic-mapper-service/target/dynamic-mapper-service-starter-withoutMQTTService.zip ./dynamic-mapper-service/src/main/configuration/cumulocity.json -j
       #Packaging Standard backend
       - name: Packaging Standard Backend
         run: |
           cp ./dynamic-mapper-service/target/dynamic-mapper-service-starter.zip ./dynamic-mapper-service/target/dynamic-mapper-service-standard.zip
           mv ./dynamic-mapper-service/src/main/configuration/cumulocity-2c.json ./dynamic-mapper-service/src/main/configuration/cumulocity.json
-          sed -i 's/@project.version@/${{ steps.project.outputs.version }}/g' ./dynamic-mapper-service/src/main/configuration/cumulocity.json
+          sed -i 's/@project.version@/${{ env.VERSION }}/g' ./dynamic-mapper-service/src/main/configuration/cumulocity.json
           zip ./dynamic-mapper-service/target/dynamic-mapper-service-standard.zip ./dynamic-mapper-service/src/main/configuration/cumulocity.json -j
           cp ./dynamic-mapper-service/target/dynamic-mapper-service-standard.zip ./dynamic-mapper-service/target/dynamic-mapper-service-standard-withoutMQTTService.zip
           mv ./dynamic-mapper-service/src/main/configuration/cumulocity-2c-withoutMQTTService.json ./dynamic-mapper-service/src/main/configuration/cumulocity.json
-          sed -i 's/@project.version@/${{ steps.project.outputs.version }}/g' ./dynamic-mapper-service/src/main/configuration/cumulocity.json
+          sed -i 's/@project.version@/${{ env.VERSION }}/g' ./dynamic-mapper-service/src/main/configuration/cumulocity.json
           zip ./dynamic-mapper-service/target/dynamic-mapper-service-standard-withoutMQTTService.zip ./dynamic-mapper-service/src/main/configuration/cumulocity.json -j
       #Packaging performance backend
       - name: Packaging Performance Backend
         run: |
           cp ./dynamic-mapper-service/target/dynamic-mapper-service-standard.zip ./dynamic-mapper-service/target/dynamic-mapper-service-performance.zip
           mv ./dynamic-mapper-service/src/main/configuration/cumulocity-8c.json ./dynamic-mapper-service/src/main/configuration/cumulocity.json
-          sed -i 's/@project.version@/${{ steps.project.outputs.version }}/g' ./dynamic-mapper-service/src/main/configuration/cumulocity.json
+          sed -i 's/@project.version@/${{ env.VERSION }}/g' ./dynamic-mapper-service/src/main/configuration/cumulocity.json
           zip ./dynamic-mapper-service/target/dynamic-mapper-service-performance.zip ./dynamic-mapper-service/src/main/configuration/cumulocity.json -j
           cp ./dynamic-mapper-service/target/dynamic-mapper-service-performance.zip ./dynamic-mapper-service/target/dynamic-mapper-service-performance-withoutMQTTService.zip
           mv ./dynamic-mapper-service/src/main/configuration/cumulocity-8c-withoutMQTTService.json ./dynamic-mapper-service/src/main/configuration/cumulocity.json
-          sed -i 's/@project.version@/${{ steps.project.outputs.version }}/g' ./dynamic-mapper-service/src/main/configuration/cumulocity.json
+          sed -i 's/@project.version@/${{ env.VERSION }}/g' ./dynamic-mapper-service/src/main/configuration/cumulocity.json
           zip ./dynamic-mapper-service/target/dynamic-mapper-service-performance-withoutMQTTService.zip ./dynamic-mapper-service/src/main/configuration/cumulocity.json -j
       #Packaging max backend
       - name: Packaging Max Backend
         run: |
           cp ./dynamic-mapper-service/target/dynamic-mapper-service-performance.zip ./dynamic-mapper-service/target/dynamic-mapper-service-max.zip
           mv ./dynamic-mapper-service/src/main/configuration/cumulocity-16c.json ./dynamic-mapper-service/src/main/configuration/cumulocity.json
-          sed -i 's/@project.version@/${{ steps.project.outputs.version }}/g' ./dynamic-mapper-service/src/main/configuration/cumulocity.json
+          sed -i 's/@project.version@/${{ env.VERSION }}/g' ./dynamic-mapper-service/src/main/configuration/cumulocity.json
           zip ./dynamic-mapper-service/target/dynamic-mapper-service-max.zip ./dynamic-mapper-service/src/main/configuration/cumulocity.json -j
           cp ./dynamic-mapper-service/target/dynamic-mapper-service-max.zip ./dynamic-mapper-service/target/dynamic-mapper-service-max-withoutMQTTService.zip
           mv ./dynamic-mapper-service/src/main/configuration/cumulocity-16c-withoutMQTTService.json ./dynamic-mapper-service/src/main/configuration/cumulocity.json
-          sed -i 's/@project.version@/${{ steps.project.outputs.version }}/g' ./dynamic-mapper-service/src/main/configuration/cumulocity.json
+          sed -i 's/@project.version@/${{ env.VERSION }}/g' ./dynamic-mapper-service/src/main/configuration/cumulocity.json
           zip ./dynamic-mapper-service/target/dynamic-mapper-service-max-withoutMQTTService.zip ./dynamic-mapper-service/src/main/configuration/cumulocity.json -j
       #Deployment
       - name: deploy
         uses: actions/setup-node@v2
         with:
           node-version: 20.x
+      - name: Set npm version
+        run: npm version ${{ env.VERSION }} --no-git-tag-version --allow-same-version
+        working-directory: ./dynamic-mapper-ui
       - run: npm ci
         working-directory: ./dynamic-mapper-ui
       - run: cp ./LICENSE ./dynamic-mapper-ui/LICENSE
@@ -123,7 +134,7 @@ jobs:
           tag_name: ${{ github.ref }}
           name: Release ${{ github.ref }}
           draft: true
-          prerelease: false
+          prerelease: ${{ contains(env.VERSION, '-pre') }}
           files: |
             ./dynamic-mapper-ui/dynamic-mapper-ui.zip
             ./dynamic-mapper-service/target/dynamic-mapper-service-starter.zip

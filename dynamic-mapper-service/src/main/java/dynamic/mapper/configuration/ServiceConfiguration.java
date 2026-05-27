@@ -66,6 +66,7 @@ public class ServiceConfiguration implements Cloneable {
         this.flowStateRetention = 1440;
         this.supportESM = false;
         this.cacheAliasMaps = false;
+        this.externalIdBinding = true;
     }
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Enable logging of message payloads for debugging purposes. Caution: May expose sensitive data in logs.", example = "false")
@@ -187,4 +188,9 @@ public class ServiceConfiguration implements Cloneable {
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     private Boolean cacheAliasMaps;
+
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Enable binding of external IDs during managed object creation in a single request (Cumulocity platform >= May 2026). Disable on older instances such as Cumulocity Edge that do not yet support this feature.", example = "true")
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    private Boolean externalIdBinding;
 }

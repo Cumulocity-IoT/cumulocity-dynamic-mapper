@@ -128,15 +128,8 @@ export class MappingStatusActivationRendererComponent implements OnInit {
     await this.refreshAllMappings();
   }
 
-  handleDeprecation(mapping: any): void {
-    if (mapping.transformationType !== TransformationType.SUBSTITUTION_AS_CODE) return;
-
-    const noticeAccepted =
-      this.feature?.suppressDeprecationWarning ||
-      this.feature?.acceptedDeprecationNotice === DEPRECATION_NOTICE_VERSION;
-    if (noticeAccepted) return;
-
-    this.bsModalService.show(DeprecationNoticeModalComponent, { class: 'modal-lg' });
+  handleDeprecation(_mapping: any): void {
+    // Deprecation notice disabled for 6.3.2 — no active deprecations to surface.
   }
 
   private async validateSubscriptionOutbound(): Promise<boolean> {

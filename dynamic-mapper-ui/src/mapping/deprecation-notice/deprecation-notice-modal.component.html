@@ -23,60 +23,48 @@
   <ng-container c8y-modal-title>
     <span [c8yIcon]="'warning'"></span>
     <h4 class="modal-title">
-      {{ 'Removed: Substitution as JavaScript' | translate }}
+      {{ 'Upcoming change: Snooping removed in 6.4.0' | translate }}
     </h4>
   </ng-container>
 
   <div class="p-24 animated fadeIn">
-    <div class="alert alert-danger m-b-16" style="min-width:stretch">
+    <div class="alert alert-warning" style="min-width:stretch">
       <i c8yIcon="warning" class="m-r-8"></i>
-      <strong>{{ 'Action required: ' | translate }}</strong>
-      {{ 'The transformation type ' | translate }}
-      <strong>{{ 'Substitution as JavaScript (SUBSTITUTION_AS_CODE)' | translate }}</strong>
-      {{ ' has been removed in release 6.3. Affected mappings are no longer executed. They can only be exported and deleted.' | translate }}
+      <strong>{{ 'Upcoming removal in 6.4.0 (July 2026): ' | translate }}</strong>
+      {{ 'The ' | translate }}
+      <strong>{{ 'Snooping' | translate }}</strong>
+      {{ ' feature will be removed in release 6.4.0. It is replaced by the ' | translate }}
+      <strong>{{ 'Message Explorer' | translate }}</strong>
+      {{ ', which provides a dedicated, more powerful interface to inspect incoming messages and build mappings from real payloads.' | translate }}
     </div>
 
-    <!-- Migration Target -->
-    <!-- <div class="alert alert-info m-t-16" style="min-width:stretch">
-      <i c8yIcon="info-circle" class="m-r-8"></i>
-      <strong>{{ 'Migration target: ' | translate }}</strong>
-      {{ 'Smart Function (JavaScript)' | translate }}
-      <span class="text-muted m-l-4">(TransformationType.SMART_FUNCTION)</span>
-    </div> -->
-
-    <!-- Migration Steps -->
     <h5 class="m-t-16 m-b-8">{{ 'How to migrate' | translate }}</h5>
     <ol class="m-l-16">
-      <li>{{ 'Export the affected mapping using the Export action in the mapping grid.' | translate }}</li>
-      <li>{{ 'Recreate a new mapping with the Smart Function transformation type and adapt the JavaScript code to the Smart Function API (direct payload creation instead of substitution objects).' | translate }}</li>
-      <li>{{ 'Use the built-in Test feature to verify the migrated mapping.' | translate }}</li>
-      <li>{{ 'Activate the new mapping.' | translate }}</li>
-      <li>{{ 'Delete the original deprecated mapping.' | translate }}</li>
+      <li>{{ 'Open the Message Explorer from the mapper navigation menu.' | translate }}</li>
+      <li>{{ 'Select the connector and topic to inspect incoming messages in real time.' | translate }}</li>
+      <li>{{ 'Use the captured payload directly as the source template when creating or editing a mapping.' | translate }}</li>
     </ol>
 
-    <!-- Affected Mappings List -->
-    <h5 class="m-t-16 m-b-8">{{ 'Affected mappings (export & delete only)' | translate }}</h5>
-    @if (isLoading) {
-    <div class="text-center p-16">
-      <c8y-loading></c8y-loading>
+    <!-- Previous deprecation: SUBSTITUTION_AS_CODE removed in 6.3.0 -->
+    @if (needsSubstitutionMigration) {
+    <div class="alert alert-danger m-t-24" style="min-width:stretch">
+      <i c8yIcon="warning" class="m-r-8"></i>
+      <strong>{{ 'Action required — removed in 6.3.0: ' | translate }}</strong>
+      {{ 'The transformation type ' | translate }}
+      <strong>{{ 'Substitution as JavaScript (SUBSTITUTION_AS_CODE)' | translate }}</strong>
+      {{ ' was removed in release 6.3. Affected mappings are no longer executed. Export them, recreate them using the ' | translate }}
+      <strong>{{ 'Smart Function' | translate }}</strong>
+      {{ ' transformation type, and delete the originals.' | translate }}
     </div>
-    } @else if (affectedMappings.length > 0) {
-    <ul class="list-group">
-      @for (mapping of affectedMappings; track mapping.id) {
-      <li class="list-group-item d-flex a-i-center">
-        <i c8yIcon="c8y-connector-out" class="m-r-8 text-muted"></i>
-        <span class="flex-grow">
-          <strong>{{ mapping.name }}</strong>
-          <span class="text-muted m-l-8">({{ mapping.direction | lowercase }})</span>
-        </span>
-        <span class="label label-warning m-l-8">{{ 'needs migration' | translate }}</span>
-      </li>
-      }
-    </ul>
     } @else {
-    <div class="alert alert-success m-t-16">
-      <i c8yIcon="ok-circle" class="m-r-8"></i>
-      {{ 'No affected mappings found. You are ready for release 6.3.' | translate }}
+    <div class="alert alert-info m-t-24" style="min-width:stretch">
+      <i c8yIcon="info-circle" class="m-r-8"></i>
+      <strong>{{ 'Already removed in 6.3.0: ' | translate }}</strong>
+      {{ 'The transformation type ' | translate }}
+      <strong>{{ 'Substitution as JavaScript (SUBSTITUTION_AS_CODE)' | translate }}</strong>
+      {{ ' was removed in release 6.3. If you still have affected mappings, export them, recreate them using the ' | translate }}
+      <strong>{{ 'Smart Function' | translate }}</strong>
+      {{ ' transformation type, and delete the originals.' | translate }}
     </div>
     }
   </div>

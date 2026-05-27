@@ -44,6 +44,7 @@ import {
   createCustomUuid,
   DeploymentMapEntry,
   Direction,
+  ExtensionEntry,
   Feature,
   getExternalTemplate,
   isSubstitutionsAsCode,
@@ -151,6 +152,7 @@ export class MappingComponent implements OnInit, OnDestroy {
 
   feature!: Feature;
   codeTemplate!: CodeTemplate;
+  private extension?: Partial<ExtensionEntry>;
 
   get canManageMappings(): boolean {
     return this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole;
@@ -200,16 +202,16 @@ export class MappingComponent implements OnInit, OnDestroy {
           this.mappingsCount = maps.length;
         });
 
-      // Show deprecation notice modal once per session if not yet permanently accepted.
-      // Both suppressDeprecationWarning (legacy) and acceptedDeprecationNotice (versioned) suppress it.
+      // Show deprecation notice for snooping removal (6.4.0) if not yet accepted for this version
       const noticeAccepted =
         this.feature?.suppressDeprecationWarning ||
         this.feature?.acceptedDeprecationNotice === DEPRECATION_NOTICE_VERSION;
-      // const noticeAccepted = false;
-
       if (!noticeAccepted && !this.mappingService.deprecationModalShown) {
         this.mappingService.deprecationModalShown = true;
-        this.bsModalService.show(DeprecationNoticeModalComponent, { class: 'modal-lg' });
+        this.bsModalService.show(DeprecationNoticeModalComponent, {
+          class: 'modal-lg',
+          initialState: { acceptedVersion: this.feature?.acceptedDeprecationNotice ?? null }
+        });
       }
 
       // Start listening to mapping changes
@@ -587,6 +589,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       this.substitutionsAsCode = this.transformationType == TransformationType.SMART_FUNCTION;
       this.mappingType = resultOf.mappingType;
       this.codeTemplate = resultOf.codeTemplate;
+      this.extension = resultOf.extension;
       this.addMapping();
     }
   }
@@ -701,9 +704,15 @@ export class MappingComponent implements OnInit, OnDestroy {
       this.explorerPreFill = null;
     }
 
+    if (this.extension) {
+      mapping.extension = this.extension as ExtensionEntry;
+      this.extension = undefined;
+    }
+
     this.mappingToUpdate = mapping;
     this.deploymentMapEntry = { identifier: mapping.identifier, connectors: [] };
     if (
+      !mapping.snoopStatus ||
       mapping.snoopStatus === SnoopStatus.NONE ||
       mapping.snoopStatus === SnoopStatus.STOPPED
     ) {
@@ -784,8 +793,10 @@ export class MappingComponent implements OnInit, OnDestroy {
         connectors: deploymentMapEntry.connectors
       };
       if (
+        !mapping.snoopStatus ||
         mapping.snoopStatus === SnoopStatus.NONE ||
-        mapping.snoopStatus === SnoopStatus.STOPPED
+        mapping.snoopStatus === SnoopStatus.STOPPED ||
+        !snoopSupported
       ) {
         this.router.navigate(['edit', mapping.identifier], { relativeTo: this.route });
       } else {

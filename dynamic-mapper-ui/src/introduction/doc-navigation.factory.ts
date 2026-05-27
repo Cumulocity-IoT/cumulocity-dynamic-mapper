@@ -133,14 +133,6 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       priority: 606,
       preventDuplicates: true
     }),
-    javaScriptNode: new NavigatorNode({
-      parent: gettext('Transformation Types'),
-      icon: 'empty',
-      label: gettext('Substitution as JavaScript (removed)'),
-      path: '/c8y-pkg-dynamic-mapper/introduction/javascript',
-      priority: 605,
-      preventDuplicates: true
-    }),
     javaExtensionNode: new NavigatorNode({
       parent: gettext('Transformation Types'),
       icon: 'empty',

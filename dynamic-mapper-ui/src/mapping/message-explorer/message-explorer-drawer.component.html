@@ -21,27 +21,27 @@
 
 <div class="d-col flex-nowrap no-align-items p-48 flex-grow col-md-12 col-md-offset-0 c8y-stepper--no-btns">
   <div class="card card--fullpage d-col flex-grow">
-    <div class="card-header separator j-c-center">
+    <div class="card-header separator j-c-center d-col">
       <h4 id="drawerTitle" class="card-title d-flex">
         <i c8yIcon="scan-wi-fi" class="icon-32 m-r-16"></i>
         <span class="m-t-8" translate>Start exploring messages</span>
       </h4>
+      @if (direction === 'INBOUND') {
+      <p class="text-muted m-0" translate>
+        Capture raw payloads from a connected broker. Select a connector and a topic to start capturing live messages. And then select a message to build a mapping.
+      </p>
+      } @else {
+      <p class="text-muted m-0" translate>
+        Capture raw JSON payloads from the Cumulocity Notification 2.0 API.
+        Specify a device / device group to subscribe for messages. And then select a message to build a mapping.
+      </p>
+      }
     </div>
     <div class="card-inner-scroll flex-grow">
       <div class="card-block">
-        @if (direction === 'INBOUND') {
-        <p class="m-b-16 text-medium" translate>
-          Capture raw payloads from a connected broker. Select a connector and a topic to start capturing live messages. And then select a message to build a mapping.
-        </p>
-        } @else {
-        <p class="m-b-16 text-medium" translate>
-          Capture raw JSON payloads from the Cumulocity Notification 2.0 API before mapping.
-          Optionally filter by a specific device. And then select a message to build a mapping.
-        </p>
-        }
 
-        <!-- Direction + Max messages row -->
-        <div class="d-flex g-24 separator-top m-t-24 p-t-24 flex-wrap">
+        <!-- ── Section 1: General settings ─────────────────────────── -->
+        <div class="d-flex g-24 flex-wrap">
           <div class="form-group m-b-0" style="flex: 0 0 calc(50% - 12px)">
             <label class="control-label" translate>Direction</label>
             <div class="d-flex g-16">
@@ -50,14 +50,14 @@
                 <input type="radio" name="direction" value="INBOUND" [(ngModel)]="direction"
                   (ngModelChange)="onDirectionChange()" [attr.aria-checked]="direction === 'INBOUND'" />
                 <span></span>
-                <span><i c8yIcon="arrow-down" class="text-success m-r-4"></i><span translate>Inbound</span></span>
+                <span><i c8yIcon="swipe-right" class="text-success m-r-4"></i><span translate>Inbound</span></span>
               </label>
               <label class="c8y-radio radio-inline" title="{{ 'Outbound' | translate }}"
                 aria-label="{{ 'Outbound' | translate }}">
                 <input type="radio" name="direction" value="OUTBOUND" [(ngModel)]="direction"
                   (ngModelChange)="onDirectionChange()" [attr.aria-checked]="direction === 'OUTBOUND'" />
                 <span></span>
-                <span><i c8yIcon="arrow-up" class="text-info m-r-4"></i><span translate>Outbound</span></span>
+                <span><i c8yIcon="swipe-left" style="color: orange" class="m-r-4"></i><span translate>Outbound</span></span>
               </label>
             </div>
           </div>
@@ -69,64 +69,100 @@
           </div>
         </div>
 
-        <!-- Device selector (OUTBOUND only) -->
+        <!-- ── Section 2a: OUTBOUND – subscription source ──────────── -->
         @if (direction === 'OUTBOUND') {
-        <div class="form-group separator-top m-t-24 p-t-24">
-          <label class="control-label" translate>Source <span class="text-muted text-default">(*required — select a device or group; a Notification 2.0 subscription will be created for the selected source)</span></label>
-          <c8y-asset-selector-miller [(ngModel)]="selectedDeviceList" (onSelected)="onDeviceSelected($event)"
-            name="explorerDevice" [config]="{
-                groupsSelectable: true,
-                columnHeaders: true,
-                showFilter: true,
-                showUnassignedDevices: true,
-                showChildDevices: true,
-                search: true,
-                multi: false,
-                showSelected: true
-              }" style="height: 260px; display: block;" class="bg-component">
-          </c8y-asset-selector-miller>
-        </div>
-        }
-
-        <!-- Connector + Topic selectors (INBOUND only) -->
-        @if (direction === 'INBOUND') {
-        <div class="form-group separator-top m-t-24 p-t-24">
-          <label class="control-label" for="explorerConnector" translate>Connector</label>
-          <div class="c8y-select-wrapper">
-            <select id="explorerConnector" class="form-control" [(ngModel)]="selectedConnectorIdentifier"
-              name="connectorIdentifier">
-              <option value="" disabled selected translate>-- Select connector --</option>
-              @for (c of connectors; track c.identifier) {
-              <option [value]="c.identifier" [disabled]="isConnectorDisabled(c)">
-                {{ c.name }}
-                @if (isConnectorDisabled(c)) {
-                (disabled)
-                }
-              </option>
-              }
-            </select>
-            <span></span>
+        <div class="separator-top m-t-24 p-t-16">
+  
+          <div class="form-group m-b-16">
+            <label class="control-label" translate>Filter by</label>
+            <div class="d-flex g-24">
+              <label class="c8y-radio radio-inline" title="{{ 'By device or device group' | translate }}"
+                aria-label="{{ 'By device or device group' | translate }}">
+                <input type="radio" name="outboundFilterMode" value="source"
+                  [(ngModel)]="outboundFilterMode" (ngModelChange)="onOutboundFilterModeChange()" />
+                <span></span>
+                <span translate>Device or device group</span>
+              </label>
+              <label class="c8y-radio radio-inline" title="{{ 'By device type' | translate }}"
+                aria-label="{{ 'By device type' | translate }}">
+                <input type="radio" name="outboundFilterMode" value="deviceType"
+                  [(ngModel)]="outboundFilterMode" (ngModelChange)="onOutboundFilterModeChange()" />
+                <span></span>
+                <span translate>Device type</span>
+              </label>
+            </div>
           </div>
-          <span class="help-block" translate>Disconnected connectors cannot be selected.</span>
-        </div>
 
-        <div class="form-group">
-          <label class="control-label" for="explorerTopic" translate>Topic</label>
-          <input id="explorerTopic" type="text" class="form-control" [(ngModel)]="topic" name="topic"
-            placeholder="{{ 'e.g. sensors/#  or  devices/+/data' | translate }}" />
-          <span class="help-block" translate>
-            Wildcards: <code>+</code> matches one level, <code>#</code> matches the rest of the path.
-          </span>
+          @if (outboundFilterMode === 'source') {
+          <div class="form-group m-b-0">
+            <label class="control-label" translate>Source</label>
+            <span class="help-block m-t-0 m-b-8" translate>Select a device or group to create a dedicated Notification 2.0 subscription.</span>
+            <c8y-asset-selector-miller [(ngModel)]="selectedDeviceList" (onSelected)="onDeviceSelected($event)"
+              name="explorerDevice" [config]="{
+                  groupsSelectable: true,
+                  columnHeaders: true,
+                  showFilter: true,
+                  showUnassignedDevices: true,
+                  showChildDevices: true,
+                  search: true,
+                  multi: false,
+                  showSelected: true
+                }" style="height: 220px; display: block;" class="bg-component">
+            </c8y-asset-selector-miller>
+          </div>
+          } @else {
+          <div class="form-group m-b-0">
+            <label class="control-label" for="explorerDeviceType" translate>Device type filter</label>
+            <input id="explorerDeviceType" type="text" class="form-control" [(ngModel)]="deviceTypeFilter"
+              name="deviceTypeFilter" placeholder="{{ 'e.g. c8y_MQTTDevice' | translate }}" />
+            <span class="help-block" translate>Show only messages from devices whose C8Y type matches this value.</span>
+          </div>
+          }
         </div>
         }
 
+        <!-- ── Section 2b: INBOUND – connector & topic ─────────────── -->
+        @if (direction === 'INBOUND') {
+        <div class="separator-top m-t-24 p-t-16">
+          <div class="form-group">
+            <label class="control-label" for="explorerConnector" translate>Connector</label>
+            <div class="c8y-select-wrapper">
+              <select id="explorerConnector" class="form-control" [(ngModel)]="selectedConnectorIdentifier"
+                name="connectorIdentifier">
+                <option value="" disabled selected translate>-- Select connector --</option>
+                @for (c of connectors; track c.identifier) {
+                <option [value]="c.identifier" [disabled]="isConnectorDisabled(c)">
+                  {{ c.name }}
+                  @if (isConnectorDisabled(c)) {
+                  (disabled)
+                  }
+                </option>
+                }
+              </select>
+              <span></span>
+            </div>
+            <span class="help-block" translate>Disconnected connectors cannot be selected.</span>
+          </div>
+
+          <div class="form-group m-b-0">
+            <label class="control-label" for="explorerTopic" translate>Topic</label>
+            <input id="explorerTopic" type="text" class="form-control" [(ngModel)]="topic" name="topic"
+              placeholder="{{ 'e.g. sensors/#  or  devices/+/data' | translate }}" />
+            <span class="help-block" translate>
+              Wildcards: <code>+</code> matches one level, <code>#</code> matches the rest of the path.
+            </span>
+          </div>
+        </div>
+        }
 
       </div>
     </div>
     <div class="card-footer separator p-24 text-center flex-no-shrink">
       <button class="btn btn-default" (click)="onCancel()" translate>Cancel</button>
       <button class="btn btn-primary m-l-8" (click)="onStart()"
-        [disabled]="(direction === 'INBOUND' && (!selectedConnectorIdentifier || !topic)) || (direction === 'OUTBOUND' && selectedDeviceList.length === 0)" translate>
+        [disabled]="(direction === 'INBOUND' && (!selectedConnectorIdentifier || !topic)) ||
+                    (direction === 'OUTBOUND' && outboundFilterMode === 'source' && selectedDeviceList.length === 0) ||
+                    (direction === 'OUTBOUND' && outboundFilterMode === 'deviceType' && !deviceTypeFilter.trim())" translate>
         Start
       </button>
     </div>

@@ -18,53 +18,57 @@
  * @authors Christof Strack
  */
 
-import { ChangeDetectorRef, Component, OnDestroy, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
+import { Component, Input, OnDestroy, ViewChild, ViewEncapsulation } from '@angular/core';
 import { AlertService, CoreModule } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
-import { DEPRECATION_NOTICE_VERSION, Direction, Mapping, SharedService, TransformationType } from '../../shared';
-import { CommonModule } from '@angular/common';
-import { MappingService } from '../core/mapping.service';
+import { DEPRECATION_NOTICE_VERSION, SharedService } from '../../shared';
+
+/** Semver string where SUBSTITUTION_AS_CODE was removed. Users on < this version
+ *  still need the action-required banner, not just the historical info note. */
+const SUBSTITUTION_AS_CODE_REMOVAL_VERSION = '6.3.0';
+
+function parseSemver(v: string | null | undefined): [number, number, number] {
+  if (!v) return [0, 0, 0];
+  const [major = 0, minor = 0, patch = 0] = v.replace(/-.*$/, '').split('.').map(Number);
+  return [major, minor, patch];
+}
+
+function versionLessThan(a: string | null | undefined, b: string): boolean {
+  const [aMaj, aMin, aPat] = parseSemver(a);
+  const [bMaj, bMin, bPat] = parseSemver(b);
+  if (aMaj !== bMaj) return aMaj < bMaj;
+  if (aMin !== bMin) return aMin < bMin;
+  return aPat < bPat;
+}
 
 @Component({
   selector: 'd11r-deprecation-notice-modal',
   templateUrl: './deprecation-notice-modal.component.html',
   encapsulation: ViewEncapsulation.None,
   standalone: true,
-  imports: [CoreModule, CommonModule]
+  imports: [CoreModule]
 })
-export class DeprecationNoticeModalComponent implements OnInit, OnDestroy {
+export class DeprecationNoticeModalComponent implements OnDestroy {
+  /** Set via BsModalService initialState — the version stored in tenant config. */
+  @Input() acceptedVersion: string | null = null;
+
   readonly closeSubject = new Subject<boolean>();
   readonly currentVersion = DEPRECATION_NOTICE_VERSION;
   isPending = false;
-  isLoading = true;
   isClosing = false;
-  affectedMappings: Mapping[] = [];
+
+  /** True when the user has never accepted the 6.3 SUBSTITUTION_AS_CODE removal notice,
+   *  i.e. they need the action-required banner, not just the historical info note. */
+  get needsSubstitutionMigration(): boolean {
+    return versionLessThan(this.acceptedVersion, SUBSTITUTION_AS_CODE_REMOVAL_VERSION);
+  }
 
   @ViewChild('modal', { static: false }) private modal: any;
 
   constructor(
     private sharedService: SharedService,
-    private mappingService: MappingService,
-    private alertService: AlertService,
-    private cdr: ChangeDetectorRef
+    private alertService: AlertService
   ) {}
-
-  async ngOnInit(): Promise<void> {
-    try {
-      const [inbound, outbound] = await Promise.all([
-        this.mappingService.getMappings(Direction.INBOUND),
-        this.mappingService.getMappings(Direction.OUTBOUND)
-      ]);
-      this.affectedMappings = [...inbound, ...outbound].filter(
-        m => m.transformationType === TransformationType.SUBSTITUTION_AS_CODE
-      );
-    } catch (error) {
-      console.error('Failed to load affected mappings:', error);
-    } finally {
-      this.isLoading = false;
-      this.cdr.detectChanges();
-    }
-  }
 
   ngOnDestroy(): void {
     this.closeSubject.complete();

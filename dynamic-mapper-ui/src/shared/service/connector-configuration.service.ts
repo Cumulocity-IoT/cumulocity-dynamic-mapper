@@ -52,12 +52,12 @@ export class ConnectorConfigurationService {
   private readonly refreshTrigger$ = new Subject<void>();
 
   // Polling configuration
-  private readonly pollingInterval$ = new BehaviorSubject<number>(5000); // Default 5 seconds
+  private readonly pollingInterval$ = new BehaviorSubject<number>(15000); // Default 15 seconds
   private readonly AVAILABLE_INTERVALS: PollingInterval[] = [
-    { label: '1 second', value: 1000, seconds: 1 },
-    { label: '2 seconds', value: 2000, seconds: 2 },
     { label: '5 seconds', value: 5000, seconds: 5 },
-    { label: '10 seconds', value: 10000, seconds: 10 }
+    { label: '15 seconds', value: 15000, seconds: 15 },
+    { label: '30 seconds', value: 30000, seconds: 30 },
+    { label: '60 seconds', value: 60000, seconds: 60 },
   ];
 
   // Controls whether the auto-refresh polling timer is active.

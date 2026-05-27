@@ -66,8 +66,8 @@ public class JSONataOutboundProcessor extends AbstractJSONataExtractionProcessor
     @Override
     protected void handleProcessingError(Exception e, ProcessingContext<?> context, String tenant, Mapping mapping) {
         String errorMessage = String.format(
-                "Tenant %s - Error in JSONataOutboundProcessor for mapping: %s,",
-                tenant, mapping.getName());
+                "Tenant %s - Error in JSONataOutboundProcessor for mapping: %s: %s",
+                tenant, mapping.getName(), e.getMessage());
         log.error(errorMessage, e);
         MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
         context.addError(new ProcessingException(errorMessage, e));

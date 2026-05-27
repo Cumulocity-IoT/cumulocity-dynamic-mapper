@@ -64,6 +64,7 @@ import dynamic.mapper.model.Feature;
 import dynamic.mapper.service.ConnectorConfigurationService;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.service.ServiceConfigurationService;
+import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -784,5 +785,24 @@ public class ConfigurationController {
             }
         }
         return codeTemplates;
+    }
+
+    // TEST ONLY — not exposed in OpenAPI docs
+    @Hidden
+    @PutMapping(value = "/test/deprecation-notice", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<String> setAcceptedDeprecationNotice(
+            @RequestParam String version) {
+        String tenant = contextService.getContext().getTenant();
+        log.info("{} - [TEST] Setting acceptedDeprecationNotice to '{}'", tenant, version);
+        try {
+            ServiceConfiguration existing = serviceConfigurationService.getServiceConfiguration(tenant);
+            existing.setAcceptedDeprecationNotice(version);
+            serviceConfigurationService.saveServiceConfiguration(tenant, existing);
+            configurationRegistry.addServiceConfiguration(tenant, existing);
+            return ResponseEntity.ok("acceptedDeprecationNotice set to: " + version);
+        } catch (Exception ex) {
+            log.error("{} - [TEST] Error setting acceptedDeprecationNotice", tenant, ex);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+        }
     }
 }

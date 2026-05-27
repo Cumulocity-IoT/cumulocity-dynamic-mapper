@@ -38,6 +38,7 @@ export interface ExplorerStartResult {
   sourceId?: string;
   deviceName?: string;
   deviceType?: string | null;
+  deviceTypeFilter?: string; // device type filter (OUTBOUND only)
 }
 
 @Component({
@@ -59,6 +60,10 @@ export class MessageExplorerDrawerComponent implements OnInit {
   direction: 'INBOUND' | 'OUTBOUND' = 'INBOUND';
   /** Selected source (device or group) for outbound monitoring (single selection). */
   selectedDeviceList: IIdentified[] = [];
+  /** Optional device type filter for outbound monitoring — shows all devices of this type. */
+  deviceTypeFilter: string = '';
+  /** Controls which OUTBOUND filter mode is active: asset selector or device type input. */
+  outboundFilterMode: 'source' | 'deviceType' = 'source';
 
   private _resolve!: (value: ExplorerStartResult | null) => void;
   result: Promise<ExplorerStartResult | null> = new Promise(resolve => { this._resolve = resolve; });
@@ -87,7 +92,18 @@ export class MessageExplorerDrawerComponent implements OnInit {
   onDirectionChange(): void {
     this.selectedConnectorIdentifier = '';
     this.selectedDeviceList = [];
+    this.deviceTypeFilter = '';
+    this.outboundFilterMode = 'source';
     this.filterConnectorsByDirection();
+  }
+
+  onOutboundFilterModeChange(): void {
+    if (this.outboundFilterMode === 'source') {
+      this.deviceTypeFilter = '';
+    } else {
+      this.selectedDeviceList = [];
+      this.selectedDeviceType = null;
+    }
   }
 
   private filterConnectorsByDirection(): void {
@@ -134,7 +150,9 @@ export class MessageExplorerDrawerComponent implements OnInit {
       return;
     }
     const selected = this.connectors.find(c => c.identifier === this.selectedConnectorIdentifier);
-    const selectedDevice = this.selectedDeviceList.length > 0 ? this.selectedDeviceList[0] : null;
+    const useSourceMode = this.direction === 'OUTBOUND' && this.outboundFilterMode === 'source';
+    const useTypeMode = this.direction === 'OUTBOUND' && this.outboundFilterMode === 'deviceType';
+    const selectedDevice = useSourceMode && this.selectedDeviceList.length > 0 ? this.selectedDeviceList[0] : null;
     const sourceId = selectedDevice ? String((selectedDevice as any).id ?? '') : undefined;
     const deviceName = selectedDevice ? ((selectedDevice as any).name ?? sourceId) : undefined;
     // Await in case the user clicked Start before the detail() promise resolved
@@ -147,7 +165,8 @@ export class MessageExplorerDrawerComponent implements OnInit {
       direction: this.direction,
       sourceId,
       deviceName,
-      deviceType
+      deviceType,
+      deviceTypeFilter: useTypeMode ? (this.deviceTypeFilter.trim() || undefined) : undefined
     });
     this.bottomDrawerRef.close();
   }

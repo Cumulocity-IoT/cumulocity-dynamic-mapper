@@ -278,7 +278,7 @@ export interface StepperConfiguration {
 
 export enum TransformationType {
   DEFAULT = 'DEFAULT',
-  /** @deprecated Removed in 6.3 — existing mappings are read-only and can only be exported or deleted. */
+  /** @deprecated removed in 6.3.0 — existing mappings are read-only and can only be exported or deleted. */
   SUBSTITUTION_AS_CODE = 'SUBSTITUTION_AS_CODE',
   SMART_FUNCTION = 'SMART_FUNCTION',
   JSONATA = 'JSONATA',

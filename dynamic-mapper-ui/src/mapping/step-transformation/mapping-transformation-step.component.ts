@@ -192,6 +192,7 @@ export class MappingSubstitutionStepComponent implements OnInit {
         props: {
           readonly: true,
           required: false,
+          rows: 2,
           class: 'font-smaller',
           label: ' Source Result [empty]'
         },
@@ -244,6 +245,7 @@ export class MappingSubstitutionStepComponent implements OnInit {
         props: {
           readonly: true,
           required: false,
+          rows: 2,
           class: 'font-smaller',
           label: ' Target Result [empty]'
         },

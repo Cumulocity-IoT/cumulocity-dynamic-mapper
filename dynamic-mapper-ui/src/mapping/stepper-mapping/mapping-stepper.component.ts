@@ -735,8 +735,19 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   private async handleSelectTemplatesStep(): Promise<void> {
+    // Expand templates FIRST so this.sourceTemplate is populated before we
+    // evaluate the filter expression (which needs real template data).
+    if (this.stepperForward) {
+      this.expandTemplates();
+    }
+
     if (this.mapping.filterMapping) {
-      await this.templateStepRef?.updateFilterExpressionResult(this.mapping.filterMapping);
+      // Pass the (now-expanded) sourceTemplate explicitly so the child does not
+      // have to rely on its own @Input or the not-yet-rendered editor ViewChild.
+      await this.templateStepRef?.updateFilterExpressionResult(
+        this.mapping.filterMapping,
+        this.sourceTemplate
+      );
     }
 
     if (this.mapping.code) {
@@ -767,10 +778,6 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
         });
         this.cdr.markForCheck();
       });
-    }
-
-    if (this.stepperForward) {
-      this.expandTemplates();
     }
   }
 

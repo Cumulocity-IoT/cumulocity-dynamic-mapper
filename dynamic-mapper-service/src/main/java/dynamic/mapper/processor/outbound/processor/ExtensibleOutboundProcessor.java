@@ -230,7 +230,7 @@ public class ExtensibleOutboundProcessor extends AbstractExtensibleProcessor {
         if (e instanceof ProcessingException) {
             context.addError((ProcessingException) e);
         } else {
-            context.addError(new ProcessingException("Extensible outbound processing failed", e));
+            context.addError(new ProcessingException("Extensible outbound processing failed: " + e.getMessage(), e));
         }
 
         if (!testing) {
