@@ -172,14 +172,24 @@ public class MappingSubscriptionManager {
      */
     public void removeSubscriptionInbound(Mapping mapping) throws ConnectorException {
         String topic = mapping.getMappingTopic();
+
+        // Idempotency guard: only decrement topic reference count if this mapping was
+        // actually effective before this call.
+        Mapping removed = effectiveMappingsInbound.remove(mapping.getIdentifier());
+        if (removed == null) {
+            log.debug("{} - Skip removing inbound subscription for non-effective mapping: {}, topic: [{}]",
+                    tenant, mapping.getIdentifier(), topic);
+            return;
+        }
+
         MutableInt count = subscriptionCounts.get(topic);
         if (count == null) {
-            log.warn("{} - Attempted to remove non-existent subscription for topic: [{}]", tenant, topic);
+            log.debug("{} - Skip removing non-existent subscription for topic: [{}] (mapping: {})",
+                    tenant, topic, mapping.getIdentifier());
             return;
         }
 
         count.decrement();
-        effectiveMappingsInbound.remove(mapping.getIdentifier());
 
         if (count.intValue() <= 0) {
             subscriptionCounts.remove(topic);
