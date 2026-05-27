@@ -364,7 +364,7 @@ class SnoopingInboundProcessorTest {
     @Test
     void testSnoopIncrementsMappingStatusCorrectly() throws Exception {
         // Given - Existing snooped templates
-        mapping.getSnoopedTemplates().add("{\"old\":\"template\"}");
+        mapping.addSnoopedTemplate("{\"old\":\"template\"}");
         mappingStatus.snoopedTemplatesTotal = 1;
         mappingStatus.snoopedTemplatesActive = 0;
 

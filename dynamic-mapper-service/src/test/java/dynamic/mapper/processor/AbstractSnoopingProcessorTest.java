@@ -190,8 +190,8 @@ class AbstractSnoopingProcessorTest {
     @Test
     void testProcessWithMultipleSnoopedTemplates() throws Exception {
         // Given - Add existing snooped templates
-        mapping.getSnoopedTemplates().add("{\"old\":\"template1\"}");
-        mapping.getSnoopedTemplates().add("{\"old\":\"template2\"}");
+        mapping.addSnoopedTemplate("{\"old\":\"template1\"}");
+        mapping.addSnoopedTemplate("{\"old\":\"template2\"}");
         mappingStatus.snoopedTemplatesTotal = 2;
 
         String newSerializedPayload = "{\"temperature\":25.5,\"humidity\":60,\"deviceId\":\"sensor-001\"}";
@@ -401,8 +401,8 @@ class AbstractSnoopingProcessorTest {
         // Given - Existing snooped templates
         String existing1 = "{\"old\":\"template1\"}";
         String existing2 = "{\"old\":\"template2\"}";
-        mapping.getSnoopedTemplates().add(existing1);
-        mapping.getSnoopedTemplates().add(existing2);
+        mapping.addSnoopedTemplate(existing1);
+        mapping.addSnoopedTemplate(existing2);
 
         String newTemplate = "{\"new\":\"template\"}";
         when(objectMapper.writeValueAsString(processingContext.getPayload())).thenReturn(newTemplate);
