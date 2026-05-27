@@ -92,7 +92,7 @@ public class AIAgentService {
                     mcpServer.setName(MCP_SERVER_NAME);
                     mcpServer.setDescription("MCP Server for dynamic mapper service");
                     mcpServer.setSendAuthentication(true);
-                    mcpServer.setType(MCPServer.typeEnum.HTTP);
+                    mcpServer.setType(MCPServer.typeEnum.SSE);
                     try {
                         ResponseEntity<String> response = createMCPServer(mcpServer);
                         if (response != null && !response.getStatusCode().is2xxSuccessful()) {
