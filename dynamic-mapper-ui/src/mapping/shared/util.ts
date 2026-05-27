@@ -80,7 +80,7 @@ export function deriveSampleTopicFromTopic(topic: string) {
   if (topix == undefined) topix = '';
   topix = normalizeTopic(topix);
   // replace trailing TOPIC_WILDCARD_MULTI "#" with TOPIC_WILDCARD_SINGLE "*"
-  const nt = topic.trim().replace(/#+$/, '+');
+  const nt = topix.trim().replace(/#+$/, '+');
   return nt;
 }
 

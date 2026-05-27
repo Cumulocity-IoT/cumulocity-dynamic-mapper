@@ -101,7 +101,13 @@
             ],
             "styles": [
               "src/styles.less"
-            ]
+            ],
+            "loader": {
+              ".ttf": "empty",
+              ".woff": "empty",
+              ".woff2": "empty",
+              ".eot": "empty"
+            }
           }
         },
         "deploy": {

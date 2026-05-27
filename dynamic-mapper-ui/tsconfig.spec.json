@@ -4,7 +4,12 @@
     "outDir": "./out-tsc/spec",
     "types": [
       "jasmine"
-    ]
+    ],
+    "strictPropertyInitialization": false,
+    "strictNullChecks": false,
+    "noImplicitAny": false,
+    "useUnknownInCatchVariables": false,
+    "strictFunctionTypes": false
   },
   "include": [
     "**/*.spec.ts",
