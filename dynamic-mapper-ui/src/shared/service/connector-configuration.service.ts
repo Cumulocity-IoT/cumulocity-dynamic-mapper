@@ -52,7 +52,7 @@ export class ConnectorConfigurationService {
   private readonly refreshTrigger$ = new Subject<void>();
 
   // Polling configuration
-  private readonly pollingInterval$ = new BehaviorSubject<number>(15000); // Default 5 seconds
+  private readonly pollingInterval$ = new BehaviorSubject<number>(15000); // Default 15 seconds
   private readonly AVAILABLE_INTERVALS: PollingInterval[] = [
     { label: '5 seconds', value: 5000, seconds: 5 },
     { label: '15 seconds', value: 15000, seconds: 15 },
