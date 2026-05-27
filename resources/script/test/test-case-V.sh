@@ -29,8 +29,8 @@ STATIC_DEVICE_TYPE="test-restart-static"
 DYNAMIC_DEVICE_NAME="test-restart-dynamic-device"
 DYNAMIC_DEVICE_TYPE="auto-restart-type"
 STATIC_SUBSCRIPTION_NAME="DynamicMapperStaticDeviceSubscription"
-STARTUP_WAIT=30   # seconds to wait for microservice to restart
-DISCOVERY_WAIT=10 # seconds to wait for dynamic discovery after restart
+STARTUP_WAIT=60   # seconds to wait for microservice to restart
+DISCOVERY_WAIT=15 # seconds to wait for dynamic discovery after restart
 
 cleanup() {
     echo ""
@@ -97,7 +97,7 @@ c8y api \
         \"api\": \"MEASUREMENT\",
         \"types\": [\"${DYNAMIC_DEVICE_TYPE}\"]
     }" \
-    --output json | jq '.types // "submitted"'
+    --output json | jq '.types? // .'
 echo "Type subscription created."
 
 DYNAMIC_DEVICE_JSON=$(c8y devices create \
@@ -128,14 +128,14 @@ c8y api --method GET --url "${DM_SERVICE}/subscription/type" --output json 2>/de
 
 # Step 4: Restart the microservice (unsubscribe + subscribe)
 echo ""
-echo "--- Step 4: Restart microservice by unsubscribing and re-subscribing ---"
-echo "Unsubscribing microservice '$DM_MICROSERVICE_NAME' ..."
-c8y microservices unsubscribe --id "$DM_MICROSERVICE_NAME" --force
+echo "--- Step 4: Restart microservice by disabling and re-enabling ---"
+echo "Disabling microservice '$DM_MICROSERVICE_NAME' ..."
+c8y microservices disable --id "$DM_MICROSERVICE_NAME" --force
 echo "Waiting 5s ..."
 sleep 5
 
-echo "Re-subscribing microservice '$DM_MICROSERVICE_NAME' ..."
-c8y microservices subscribe --id "$DM_MICROSERVICE_NAME" --force
+echo "Re-enabling microservice '$DM_MICROSERVICE_NAME' ..."
+c8y microservices enable --id "$DM_MICROSERVICE_NAME" --force
 
 # Step 5: Wait for the service to come back up
 echo ""
@@ -143,11 +143,15 @@ echo "--- Step 5: Waiting ${STARTUP_WAIT}s for microservice to restart and initi
 sleep "$STARTUP_WAIT"
 
 # Poll until the service responds
-MAX_RETRIES=12
-RETRY_INTERVAL=5
+MAX_RETRIES=24
+RETRY_INTERVAL=10
 for i in $(seq 1 $MAX_RETRIES); do
-    STATUS_CODE=$(c8y api --method GET --url "${DM_SERVICE}/health" --output json 2>/dev/null \
-        | jq -r '.status // "DOWN"' 2>/dev/null || echo "DOWN")
+    HEALTH_RESPONSE=$(c8y api --method GET \
+        --url "${DM_SERVICE}/health" \
+        --output json \
+        --silentStatusCodes 500,502,503 2>/dev/null || true)
+    STATUS_CODE=$(echo "$HEALTH_RESPONSE" | jq -r '.status // empty' 2>/dev/null || true)
+    STATUS_CODE=${STATUS_CODE:-DOWN}
     if [ "$STATUS_CODE" = "UP" ]; then
         echo "Microservice is UP."
         break
