@@ -10,10 +10,14 @@ Currently, the mappings to the following C8Y APIs are supported:
 - alarms
 - operations (outbound to devices)
 
-A mapping is defined of mapping properties and substitutions. The substitutions are mapping rules copying data from the incoming payload to the payload in the target system. These substitutions are defined using the standard JSONata as JSONata expressions. These JSONata expressions are evaluated in two different libraries:
+A mapping is defined by mapping properties and substitutions. The substitutions are mapping rules that copy data from the incoming payload to the target payload. Three transformation types are supported:
 
-1. `dynamic-mapper`: (nodejs) [npmjs JSONata](https://www.npmjs.com/package/jsonata) and
-2. `dynamic-mapper-service` (java): [JSONata4Java](https://github.com/IBM/JSONata4Java)
-   Please be aware that slight in differences in the evaluation of these expressions exist.
+1. **JSONata expressions** — evaluated in two different libraries depending on context:
+   - `dynamic-mapper-ui` (Angular/browser): [npmjs JSONata](https://www.npmjs.com/package/jsonata)
+   - `dynamic-mapper-service` (Java): [JSONata4Java](https://github.com/IBM/JSONata4Java)
 
-Differences in more advanced expressions can occur. Please test your expressions before you use advanced elements.
+   Slight differences in the evaluation of advanced expressions can occur between these two libraries. Please test your expressions thoroughly before using advanced features.
+
+2. **Smart Functions** — JavaScript callbacks executed in a GraalVM polyglot sandbox at runtime. Written in TypeScript using `dynamic-mapper-smart-function` for type safety, then compiled to JavaScript and pasted into the mapping editor. See [USERGUIDE.md](USERGUIDE.md) for details.
+
+3. **Java Extensions** — custom processor implementations (`ProcessorExtensionInbound` / `ProcessorExtensionOutbound`) packaged as JARs and uploaded to Cumulocity. See [EXTENSIONS.md](EXTENSIONS.md) for details.
