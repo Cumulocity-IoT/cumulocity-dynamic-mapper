@@ -82,4 +82,8 @@ public class ExplorerSession {
                 ? new CopyOnWriteArrayList<>()
                 : new CopyOnWriteArrayList<>(subscribedDeviceIds);
     }
+
+    public void addSubscribedDeviceId(String deviceId) {
+        this.subscribedDeviceIds.add(deviceId);
+    }
 }

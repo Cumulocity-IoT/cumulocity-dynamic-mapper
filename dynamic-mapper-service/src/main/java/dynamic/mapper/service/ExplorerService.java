@@ -210,7 +210,7 @@ public class ExplorerService {
                     String devId = deviceMor.getId().getValue();
                     notificationSubscriber.subscribeDeviceAndConnect(tenant, deviceMor, API.ALL,
                             Utils.EXPLORER_DEVICE_SUBSCRIPTION);
-                    session.getSubscribedDeviceIds().add(devId);
+                    session.addSubscribedDeviceId(devId);
                 }
                 if (!session.getSubscribedDeviceIds().isEmpty()) {
                     notificationSubscriber.initializeExplorerDeviceClient(tenant, sessionId);

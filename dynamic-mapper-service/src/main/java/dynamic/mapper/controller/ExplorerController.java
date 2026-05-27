@@ -123,7 +123,7 @@ public class ExplorerController {
         } catch (Exception e) {
             log.error("{} - Failed to start explorer session", tenant, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", e.getMessage()));
+                    .body(Map.of("error", e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName()));
         }
     }
 
