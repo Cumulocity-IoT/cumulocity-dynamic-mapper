@@ -176,8 +176,26 @@ public class SendOutboundProcessor extends BaseProcessor {
                 return;
             }
 
-            // Publish all requests in a single call
-            // The connector implementation will handle looping over requests
+            // Route API.CUSTOM requests via C8YAgent (HTTP POST to Cumulocity microservice endpoint).
+            // Broker connectors cannot publish to REST endpoints — CUSTOM requests carry a
+            // pathCumulocity (/service/…) but no broker topic.
+            for (int i = 0; i < requests.size(); i++) {
+                var req = requests.get(i);
+                if (req != null && API.CUSTOM.equals(req.getApi())) {
+                    try {
+                        c8yAgent.createMEAO(context, i);
+                        log.info("{} - Routed CUSTOM request ({}/{}) to microservice: {}",
+                                tenant, i + 1, requests.size(), req.getPathCumulocity());
+                    } catch (Exception e) {
+                        log.error("{} - Failed to execute CUSTOM request ({}/{}): {}",
+                                tenant, i + 1, requests.size(), e.getMessage(), e);
+                        req.setError(e);
+                    }
+                }
+            }
+
+            // Publish all remaining (broker-type) requests via the connector.
+            // Connector implementations skip API.CUSTOM via supportsRequestAPI().
             connectorClient.publishMEAO(context);
 
             // Log if debug is enabled

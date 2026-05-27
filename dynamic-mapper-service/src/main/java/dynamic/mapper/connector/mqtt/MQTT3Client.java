@@ -364,6 +364,14 @@ public class MQTT3Client extends AMQTTClient {
                 continue;
             }
 
+            if (!supportsRequestAPI(request.getApi())) {
+                // API.CUSTOM requests are routed via C8YAgent.createMEAO in SendOutboundProcessor;
+                // the broker connector has no broker topic to publish to for these.
+                log.debug("{} - Skipping request ({}/{}): API type '{}' is not supported by {} connector",
+                        tenant, i + 1, requests.size(), request.getApi(), getConnectorType());
+                continue;
+            }
+
             byte[] payloadBytes = request.getBinaryPayload() != null
                     ? request.getBinaryPayload()
                     : request.getRequest().getBytes(StandardCharsets.UTF_8);

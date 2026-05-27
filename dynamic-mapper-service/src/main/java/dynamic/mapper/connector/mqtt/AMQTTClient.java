@@ -469,6 +469,13 @@ public abstract class AMQTTClient extends AConnectorClient {
     }
 
     @Override
+    public boolean supportsRequestAPI(dynamic.mapper.model.API api) {
+        // MQTT brokers publish to topics — they cannot route to Cumulocity REST microservice
+        // endpoints. CUSTOM requests must be sent via C8YAgent.createMEAO instead.
+        return !dynamic.mapper.model.API.CUSTOM.equals(api);
+    }
+
+    @Override
     public Boolean supportsWildcardInTopic(Direction direction) {
         if (direction == Direction.INBOUND) {
             return Boolean.parseBoolean(
