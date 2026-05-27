@@ -21,9 +21,14 @@
 
 package dynamic.mapper.model;
 
+import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -51,6 +56,8 @@ public class ExplorerSession {
 
     /** Device IDs subscribed via EXPLORER_DEVICE_SUBSCRIPTION when deviceType filter is used. */
     @Builder.Default
+    @Getter(AccessLevel.NONE)
+    @Setter(AccessLevel.NONE)
     private List<String> subscribedDeviceIds = new CopyOnWriteArrayList<>();
 
     /** Cache of sourceId → resolved C8Y device type to avoid repeated inventory lookups per session. */
@@ -65,4 +72,14 @@ public class ExplorerSession {
 
     /** Bounded message store; thread-safe. */
     private ConcurrentLinkedDeque<ExplorerMessage> messages;
+
+    public List<String> getSubscribedDeviceIds() {
+        return Collections.unmodifiableList(new ArrayList<>(subscribedDeviceIds));
+    }
+
+    public void setSubscribedDeviceIds(List<String> subscribedDeviceIds) {
+        this.subscribedDeviceIds = subscribedDeviceIds == null
+                ? new CopyOnWriteArrayList<>()
+                : new CopyOnWriteArrayList<>(subscribedDeviceIds);
+    }
 }
