@@ -27,6 +27,7 @@ import {
   ConnectorPropertyType,
   ConnectorSpecification,
   ConnectorType,
+  Direction,
   Feature,
   nextIdAndPad,
   SharedService
@@ -70,6 +71,8 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
   readOnly = false;
   feature!: Feature;
   mode: 'Add' | 'Update' | 'View' = 'Add';
+  directionFilter: Direction | 'ALL' = 'ALL';
+  readonly Direction = Direction;
 
   private _save!: (value: ConnectorConfiguration) => void;
   private _cancel!: (reason?: string) => void;
@@ -111,6 +114,9 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
   }
 
   private initializeBrokerFormFields(): void {
+    const filteredSpecs = this.specifications
+      .filter(sp => sp.connectorType !== ConnectorType.CUMULOCITY_MQTT_SERVICE)
+      .filter(sp => this.directionFilter === 'ALL' || sp.supportedDirections?.includes(this.directionFilter as Direction));
     this.brokerFormFields = [{
       className: 'col-lg-12',
       key: 'connectorType',
@@ -119,16 +125,13 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
       wrappers: ['c8y-form-field'],
       props: {
         label: 'Connector type',
-        options: this.specifications
-          .filter(sp => sp.connectorType !== ConnectorType.CUMULOCITY_MQTT_SERVICE)
+        options: filteredSpecs
           .map(sp => {
-            const directions = sp.supportedDirections?.map(d => d.charAt(0).toUpperCase() + d.slice(1).toLowerCase()).join(', ') || '';
-            const directionLabel = directions ? ` ${directions}` : '';
             const singletonSuffix = !this.allowedConnectors.includes(sp.connectorType) ? ' - Only one instance per tenant allowed' : '';
             return {
-              label: `${sp.name} - ${directionLabel}${singletonSuffix}`,
+              label: `${sp.name}${singletonSuffix}`,
               value: sp.connectorType,
-              disabled: !this.allowedConnectors.includes(sp.connectorType) // Disable if not allowed
+              disabled: !this.allowedConnectors.includes(sp.connectorType)
             };
           }),
         change: () => this.createDynamicForm(this.brokerForm.get('connectorType').value),
@@ -336,6 +339,15 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
       const orderB = b.property.order ?? Number.MAX_SAFE_INTEGER;
       return orderA - orderB;
     });
+  }
+
+  onDirectionFilterChange(): void {
+    this.brokerForm.reset();
+    this.dynamicFormFields = [];
+    this.dynamicForm = new FormGroup({});
+    this.brokerFormFields = [];
+    this.cdr.detectChanges();
+    this.initializeBrokerFormFields();
   }
 
   onCancel() {

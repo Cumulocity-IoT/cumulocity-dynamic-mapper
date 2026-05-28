@@ -17,11 +17,11 @@
  *
  * @authors Christof Strack
  */
-import { ChangeDetectorRef, Component, EventEmitter, Input, OnInit, Output, ViewChild, AfterViewInit, ViewEncapsulation, OnDestroy, inject, ElementRef, TemplateRef } from '@angular/core';
+import { ChangeDetectorRef, Component, EventEmitter, Input, OnInit, OnChanges, Output, SimpleChanges, ViewChild, AfterViewInit, ViewEncapsulation, OnDestroy, inject, ElementRef, TemplateRef } from '@angular/core';
 import { ActionControl, AlertService, BottomDrawerService, Column, CoreModule, CountdownIntervalComponent, DataGridComponent, HeaderActionControl, Pagination } from '@c8y/ngx-components';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, combineLatest, Observable, Subject } from 'rxjs';
-import { filter, map, take, takeUntil } from 'rxjs/operators';
+import { filter, map, switchMap, take, takeUntil } from 'rxjs/operators';
 import { cloneDeep } from 'lodash';
 
 import { ConfirmationModalComponent } from '../confirmation/confirmation-modal.component';
@@ -47,9 +47,13 @@ import { gettext } from '@c8y/ngx-components/gettext';
     CoreModule,
   ]
 })
-export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy {
+export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy {
   @Input() selectable = true;
   @Input() directions: Direction[] = [Direction.INBOUND, Direction.OUTBOUND];
+  private directions$ = new BehaviorSubject<Direction[]>([Direction.INBOUND, Direction.OUTBOUND]);
+  private userDirectionFilter$ = new BehaviorSubject<Direction | 'ALL'>('ALL');
+  selectedDirectionFilter: Direction | 'ALL' = 'ALL';
+  readonly Direction = Direction;
   @Input() readOnly = false;
   @Input() deploy: string[];
   @Input() deploymentMapEntry: DeploymentMapEntry;
@@ -104,6 +108,12 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
   constructor() {
     this.toggleIntervalForm = this.initForm();
     this.featurePromise = this.sharedService.getFeatures();
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['directions']) {
+      this.directions$.next(changes['directions'].currentValue);
+    }
   }
 
   async ngOnInit(): Promise<void> {
@@ -234,13 +244,18 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
   }
 
   private initializeConfigurations(): void {
-    this.configurations$ = this.connectorConfigurationService.getConfigurationsWithStatus().pipe(
-      map(configs => configs.filter(config =>
-        config.supportedDirections?.some(dir => this.directions.includes(dir))
-      )),
-      map(configs => configs.map(config => ({ ...config, id: config.identifier }))),
-      // tap((configurations) => { console.log('Enriched configurations:', configurations) }),
-    )
+    this.configurations$ = combineLatest([this.directions$, this.userDirectionFilter$]).pipe(
+      switchMap(([dirs, dirFilter]) =>
+        this.connectorConfigurationService.getConfigurationsWithStatus().pipe(
+          map(configs => configs.filter(config => {
+            const matchesDirections = config.supportedDirections?.some(dir => dirs.includes(dir));
+            const matchesFilter = dirFilter === 'ALL' || config.supportedDirections?.includes(dirFilter as Direction);
+            return matchesDirections && matchesFilter;
+          })),
+          map(configs => configs.map(config => ({ ...config, id: config.identifier }))),
+        )
+      )
+    );
     this.setupConfigurationsSubscription();
   }
 
@@ -402,6 +417,10 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
 
   findNameByIdent(identifier: string): string {
     return this.configurations?.find(conf => conf.identifier === identifier)?.name;
+  }
+
+  onDirectionFilterChange(value: Direction | 'ALL'): void {
+    this.userDirectionFilter$.next(value);
   }
 
   get shouldHideBulkActionsAndReadOnly(): boolean {
