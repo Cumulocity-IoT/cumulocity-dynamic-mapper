@@ -453,7 +453,7 @@ dm_assert_mapping_received_gt() {   # <label> <mapping_id> <baseline>
 dm_connect_connector() {    # <connectorIdentifier>
     dm_api POST /operation \
         "{\"operation\":\"CONNECT\",\"parameter\":{\"connectorIdentifier\":\"$1\"}}" >/dev/null
-    dm_info "Connected connector: $1"
+    dm_info "CONNECT requested for connector: $1"
 }
 
 dm_disconnect_connector() { # <connectorIdentifier>
@@ -486,7 +486,7 @@ dm_assert_connector_status() {  # <label> <connectorIdentifier> <expected_status
 # not installed.  Call this once, right after dm_wait_for_service.
 dm_require_mqtt_broker() {
     local _host="${MQTT_HOST:-localhost}" _port="${MQTT_PORT:-1883}"
-    local _cfg _match_count
+    local _cfg _match_count _matching_ids _statuses _connected_count _first_id _first_match _proto _user
     if ! command -v mosquitto_pub >/dev/null 2>&1; then
         dm_skip "mosquitto_pub not installed — install mosquitto-clients to run MQTT tests."
         exit 0
@@ -512,6 +512,112 @@ dm_require_mqtt_broker() {
     if [ "${_match_count:-0}" -lt 1 ]; then
         dm_skip "No enabled MQTT connector is configured for ${_host}:${_port}."
         dm_skip "Update MQTT_HOST/MQTT_PORT to match the mapper connector configuration (or update connector config)."
+        exit 0
+    fi
+
+    _matching_ids=$(printf '%s' "$_cfg" | jq -r --arg host "$_host" --arg port "$_port" '
+        [ .[]
+          | select((.connectorType // "") == "MQTT")
+          | select((.enabled // false) == true)
+          | select((.properties.mqttHost // "") == $host)
+          | select((.properties.mqttPort | tostring) == $port)
+          | (.identifier // empty)
+        ] | .[]' 2>/dev/null || true)
+
+    _first_match=$(printf '%s' "$_cfg" | jq -c --arg host "$_host" --arg port "$_port" '
+        [ .[]
+          | select((.connectorType // "") == "MQTT")
+          | select((.enabled // false) == true)
+          | select((.properties.mqttHost // "") == $host)
+          | select((.properties.mqttPort | tostring) == $port)
+        ] | first // {}' 2>/dev/null || printf '{}')
+
+    # If the connector config specifies MQTT auth/protocol and the test env does not,
+    # inherit sensible defaults to avoid publish/subscribe mismatches.
+    _user=$(printf '%s' "$_first_match" | jq -r '.properties.user // empty' 2>/dev/null || printf '')
+    if [ -n "$_user" ] && [ -z "${MQTT_USER:-}" ]; then
+        export MQTT_USER="$_user"
+        dm_info "Using MQTT_USER from connector configuration for test publish/sub: ${MQTT_USER}"
+    fi
+
+    _proto=$(printf '%s' "$_first_match" | jq -r '.properties.protocol // empty' 2>/dev/null || printf '')
+    if [ "$_proto" = "mqtts://" ] && [ -z "${MQTT_TLS:-}" ]; then
+        export MQTT_TLS=true
+        dm_info "Using MQTT_TLS=true from connector protocol mqtts://"
+    fi
+
+    _statuses=$(dm_api GET /monitoring/status/connectors | jq -c '
+        if type == "array" then
+            .
+        elif type == "object" then
+            if ((.connectorIdentifier // empty) != "" and (.status // empty) != "") then
+                [.]  # single status object
+            else
+                [to_entries[] | .value]  # map keyed by connector id
+            end
+        else
+            []
+        end' 2>/dev/null || printf '[]')
+    [ -z "${_statuses:-}" ] && _statuses='[]'
+    _connected_count=$(printf '%s\n' "$_matching_ids" | jq -R -s 'split("\n") | map(select(length > 0))' \
+        | jq -r --argjson statuses "$_statuses" '
+            [ .[] as $id
+              | $statuses[]
+              | select((.connectorIdentifier // "") == $id)
+              | select((.status // "") == "CONNECTED")
+            ] | length' 2>/dev/null || printf '0')
+    [ -z "${_connected_count:-}" ] && _connected_count=0
+
+    if [ "${_connected_count:-0}" -lt 1 ]; then
+        _first_id=$(printf '%s\n' "$_matching_ids" | head -n 1)
+        if [ -n "${_first_id:-}" ]; then
+            dm_info "Matching MQTT connector is not CONNECTED; attempting connect: ${_first_id}"
+            dm_connect_connector "$_first_id" || true
+            dm_wait 8 "waiting for connector to connect"
+
+            _statuses=$(dm_api GET /monitoring/status/connectors | jq -c '
+                if type == "array" then
+                    .
+                elif type == "object" then
+                    if ((.connectorIdentifier // empty) != "" and (.status // empty) != "") then
+                        [.]  # single status object
+                    else
+                        [to_entries[] | .value]  # map keyed by connector id
+                    end
+                else
+                    []
+                end' 2>/dev/null || printf '[]')
+            [ -z "${_statuses:-}" ] && _statuses='[]'
+            _connected_count=$(printf '%s\n' "$_matching_ids" | jq -R -s 'split("\n") | map(select(length > 0))' \
+                | jq -r --argjson statuses "$_statuses" '
+                    [ .[] as $id
+                      | $statuses[]
+                      | select((.connectorIdentifier // "") == $id)
+                      | select((.status // "") == "CONNECTED")
+                    ] | length' 2>/dev/null || printf '0')
+            [ -z "${_connected_count:-}" ] && _connected_count=0
+
+            # Fallback to direct endpoint when aggregate status payload is empty
+            # or parsing failed transiently.
+            if [ "${_connected_count:-0}" -lt 1 ] && [ -n "${_first_id:-}" ]; then
+                if [ "$(dm_get_connector_status "$_first_id" | jq -r '.status // empty' 2>/dev/null || printf '')" = "CONNECTED" ]; then
+                    _connected_count=1
+                    dm_info "Confirmed CONNECTED via direct connector status: ${_first_id}"
+                fi
+            fi
+        fi
+    fi
+
+    if [ "${_connected_count:-0}" -lt 1 ]; then
+        local _matching_statuses
+        _matching_statuses=$(printf '%s\n' "$_matching_ids" | jq -R -s 'split("\n") | map(select(length > 0))' \
+            | jq -c --argjson statuses "$_statuses" '
+                [ .[] as $id
+                  | { id: $id, status: (($statuses[] | select((.connectorIdentifier // "") == $id) | .status) // "UNKNOWN") }
+                ]' 2>/dev/null || printf '[]')
+        dm_warn "Matching connector statuses for ${_host}:${_port}: ${_matching_statuses}"
+        dm_skip "No matching MQTT connector for ${_host}:${_port} is CONNECTED."
+        dm_skip "Connect the matching connector in Dynamic Mapper and retry."
         exit 0
     fi
 
@@ -575,7 +681,7 @@ dm_now() {  # [offset_seconds]
 # Look up the C8Y internal device id by external id / type.
 dm_lookup_device_by_ext_id() {  # <externalId> <externalIdType>
     c8y identity get \
-        --externalId "$1" --externalType "$2" \
+    --name "$1" --type "$2" \
         --output json 2>/dev/null \
         | jq -r '.managedObject.id // empty' 2>/dev/null || printf ''
 }

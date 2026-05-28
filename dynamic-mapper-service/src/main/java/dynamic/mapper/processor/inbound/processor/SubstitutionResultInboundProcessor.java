@@ -50,7 +50,6 @@ import lombok.extern.slf4j.Slf4j;
 
 import com.cumulocity.model.ID;
 import com.cumulocity.sdk.client.ProcessingMode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Slf4j
 @Component
@@ -64,9 +63,6 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
 
     @Autowired
     private ConfigurationRegistry configurationRegistry;
-
-    @Autowired
-    private ObjectMapper objectMapper;
 
     @Override
     public void process(Exchange exchange) throws Exception {
@@ -176,6 +172,9 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
         String tenant = context.getTenant();
 
         if ((Mapping.TOKEN_IDENTITY + ".externalId").equals(pathTarget)) {
+            if (substitute.getValue() == null) {
+                throw new IllegalArgumentException("External ID substitution produced null value");
+            }
             String externalId = substitute.getValue().toString();
             context.setExternalId(externalId);
             ID identity = new ID(mapping.getExternalIdType(), externalId);
@@ -185,12 +184,31 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
                 var resolvedSourceId = c8yAgent.resolveExternalId2GlobalId(tenant, identity, context.getTesting());
                 if (resolvedSourceId == null) {
                     if (mapping.getCreateNonExistingDevice()) {
-                        sourceId.setValue(ProcessingResultHelper.createImplicitDevice(identity, context, log, c8yAgent,
-                                objectMapper));
+                        try {
+                            String createdOrResolvedId = configurationRegistry.getOrCreateDeviceThreadSafe(
+                                    tenant,
+                                    identity.getType(),
+                                    externalId,
+                                    identity,
+                                    context);
+                            sourceId.setValue(createdOrResolvedId);
+                        } catch (Exception e) {
+                            throw new ProcessingException(
+                                    String.format("Failed to resolve/create implicit device for externalId '%s' (type '%s')",
+                                            externalId, identity.getType()),
+                                    e);
+                        }
                     }
                 } else {
                     sourceId.setValue(resolvedSourceId.getManagedObject().getId().getValue());
                 }
+
+                if (sourceId.getValue() == null) {
+                    throw new ProcessingException(
+                            String.format("Device resolution failed for externalId '%s' (type '%s')",
+                                    externalId, identity.getType()));
+                }
+
                 SubstituteValue.substituteValueInPayload(sourceId, payloadTarget,
                         mapping.transformGenericPath2C8YPath(pathTarget));
                 context.setSourceId(sourceId.getValue().toString());

@@ -50,8 +50,8 @@ dm_info "Device id: $DEVICE_ID"
 
 # Register external id for the device so topic resolution works
 c8y identity create \
-    --externalId "$EXT_ID" \
-    --externalType "c8y_Serial" \
+    --name "$EXT_ID" \
+    --type "c8y_Serial" \
     --device "$DEVICE_ID" \
     --output json 2>/dev/null || dm_warn "External id may already exist"
 

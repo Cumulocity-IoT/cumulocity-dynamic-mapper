@@ -31,7 +31,7 @@ cleanup() {
     for EID in "$EXT_ID_1" "$EXT_ID_2"; do
         DID=$(dm_lookup_device_by_ext_id "$EID" "c8y_Serial") || true
         if [ -n "${DID:-}" ]; then
-            c8y identity delete --externalId "$EID" --externalType "c8y_Serial" 2>/dev/null || true
+            c8y identity delete --name "$EID" --type "c8y_Serial" 2>/dev/null || true
             c8y inventory delete --id "$DID" 2>/dev/null || true
         fi
     done

@@ -28,7 +28,7 @@ MAPPING_ID=""
 cleanup() {
     dm_info "Cleaning up ..."
     [ -n "$MAPPING_ID" ] && dm_delete_mapping "$MAPPING_ID" || true
-    c8y identity delete --externalId "$EXT_ID" --externalType "c8y_Serial" 2>/dev/null || true
+    c8y identity delete --name "$EXT_ID" --type "c8y_Serial" 2>/dev/null || true
     DEVICE_ID=$(dm_lookup_device_by_ext_id "$EXT_ID" "c8y_Serial") || true
     [ -n "${DEVICE_ID:-}" ] && c8y inventory delete --id "$DEVICE_ID" 2>/dev/null || true
 }
