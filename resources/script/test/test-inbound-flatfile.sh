@@ -57,7 +57,7 @@ MAPPING_JSON=$(cat <<EOF
   "sourceTemplate": "{\"payload\":\"165, 14.5, 2022-08-06T00:14:50.000+02:00, c8y_FuelMeasurement\"}",
   "targetTemplate": "{\"c8y_TemperatureMeasurement\":{\"T\":{\"value\":110,\"unit\":\"C\"}},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"type\":\"c8y_TemperatureMeasurement\"}",
   "substitutions": [
-    {"pathSource":"_TOPIC_LEVEL_[1]","pathTarget":"_IDENTITY_.externalId","repairStrategy":"DEFAULT","expandArray":false},
+    {"pathSource":"_TOPIC_LEVEL_[2]","pathTarget":"_IDENTITY_.externalId","repairStrategy":"DEFAULT","expandArray":false},
     {"pathSource":"\$number(\$trim(\$split(payload,\",\")[1]))","pathTarget":"c8y_TemperatureMeasurement.T.value","repairStrategy":"DEFAULT","expandArray":false},
     {"pathSource":"\$now()","pathTarget":"time","repairStrategy":"DEFAULT","expandArray":false}
   ],

@@ -57,7 +57,7 @@ MAPPING_JSON=$(cat <<EOF
   "sourceTemplate": "{\"message\":\"3635 2c20 342e 35\"}",
   "targetTemplate": "{\"text\":\"hex event\",\"time\":\"2022-08-05T00:14:49.389+02:00\",\"type\":\"c8y_HexEvent\"}",
   "substitutions": [
-    {"pathSource":"_TOPIC_LEVEL_[1]","pathTarget":"_IDENTITY_.externalId","repairStrategy":"DEFAULT","expandArray":false},
+    {"pathSource":"_TOPIC_LEVEL_[2]","pathTarget":"_IDENTITY_.externalId","repairStrategy":"DEFAULT","expandArray":false},
     {"pathSource":"\"Hex: \" & \$substring(message,0,4)","pathTarget":"text","repairStrategy":"DEFAULT","expandArray":false},
     {"pathSource":"\$now()","pathTarget":"time","repairStrategy":"DEFAULT","expandArray":false}
   ],

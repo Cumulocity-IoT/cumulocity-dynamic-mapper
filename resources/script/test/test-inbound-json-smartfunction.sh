@@ -39,23 +39,37 @@ cleanup() {
 # The function extracts temperature from the payload and creates one measurement.
 # It uses the last topic level as external device id.
 SF_CODE=$(cat <<'JSCODE'
-function extractFromSource(ctx) {
-    const sourceObject = JSON.parse(ctx.getPayload());
-    const result = new SubstitutionResult();
+function onMessage(msg, ctx) {
+    const sourceObject = msg.getPayload();
 
-    // Device identifier from topic level 2
-    const deviceIdentifier = new SubstitutionValue(
-        sourceObject['_TOPIC_LEVEL_'][2], TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
-    addSubstitution(result, ctx.getGenericDeviceIdentifier(), deviceIdentifier);
+    // Determine external id from runtime topic (preferred), fallback to patched topic levels.
+    const config = ctx.getConfig ? ctx.getConfig() : {};
+    const topicLevels = typeof config.topic === 'string'
+        ? config.topic.split('/')
+        : (Array.isArray(sourceObject['_TOPIC_LEVEL_']) ? sourceObject['_TOPIC_LEVEL_'] : []);
+    const externalId = topicLevels.length > 0 ? topicLevels[topicLevels.length - 1] : null;
+    if (!externalId) {
+        return [];
+    }
 
-    // Temperature fragment
-    const fragmentSeries = { value: sourceObject['temperature'], unit: 'C' };
-    const fragment = { T: fragmentSeries };
-    const tempSV = new SubstitutionValue(fragment, TYPE.OBJECT, RepairStrategy.DEFAULT, false);
-    addSubstitution(result, 'c8y_TemperatureMeasurement', tempSV);
-
-    return result;
+    return [{
+        cumulocityType: 'measurement',
+        action: 'create',
+        payload: {
+            time: new Date().toISOString(),
+            type: 'c8y_TemperatureMeasurement',
+            c8y_TemperatureMeasurement: {
+                T: {
+                    value: sourceObject['temperature'],
+                    unit: 'C'
+                }
+            }
+        },
+        externalSource: [{ type: 'c8y_Serial', externalId: externalId }]
+    }];
 }
+
+export { onMessage };
 JSCODE
 )
 
