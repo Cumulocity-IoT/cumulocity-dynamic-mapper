@@ -285,12 +285,151 @@ These wire the full Apache Camel pipeline with a mocked `C8YAgent`.
 | Processor Extension upload | JAR upload dialog, extension appears in list |
 | Extension selection in mapping | Extension name shown in Transformation dropdown |
 
-### 2.3 Recommended Approach
+### 2.3 Recommended Approach — `cumulocity-cypress`
 
-- Use `cy.intercept()` to stub all API calls — tests run without a live Cumulocity tenant
-- Use fixtures in `cypress/fixtures/` for sample mappings and connector responses
-- Group tests by feature area: `connector/`, `mapping/inbound/`, `mapping/outbound/`, `monitoring/`
-- Add visual regression snapshots (e.g. Cypress Percy or `cy.screenshot()`) for critical views
+`cumulocity-cypress` is already installed and partially integrated (`cy.getAuth()`, `cy.hideCookieBanner()`, `cy.disableGainsight()`, `cy.visitAndWaitForSelector()` are used in the existing `configuration.cy.ts`). The following steps complete the integration and establish the pattern for all new tests.
+
+#### Step 1 — Complete the Plugin Setup
+
+`cypress.config.ts` does not yet load `configureC8yPlugin`. Add it to unlock the record/replay infrastructure:
+
+```ts
+import { defineConfig } from 'cypress';
+import { configureC8yPlugin, configureEnvVariables } from 'cumulocity-cypress/plugin';
+
+export default defineConfig({
+  e2e: {
+    baseUrl: 'http://localhost:4200',
+    setupNodeEvents(on, config) {
+      configureC8yPlugin(on, config);
+      configureEnvVariables(config); // reads go-c8y-cli session env vars automatically
+      return config;
+    },
+    env: { commandDelay: 150 },
+  },
+  viewportWidth: 1920,
+  viewportHeight: 1080,
+  video: true,
+});
+```
+
+Also extend `cypress/support/e2e.ts`:
+
+```ts
+import 'cumulocity-cypress/lib/commands/';
+import 'cumulocity-cypress/lib/commands/c8ypact';    // record & replay
+import 'cumulocity-cypress/lib/commands/intercept';  // intercept-aware mocking
+import './commands';
+```
+
+#### Step 2 — Use `c8ypact` Record/Replay Mode
+
+This is the key feature that makes tests **run without a live tenant in CI**. Record once against a real environment; replay against fixtures from then on.
+
+```json
+// cypress.env.json — set C8Y_PACT_MODE=record to record, =apply to replay
+{
+  "C8Y_PACT_MODE": "apply",
+  "C8Y_PACT_FOLDER": "cypress/fixtures/c8ypact"
+}
+```
+
+| Mode | Behaviour |
+|------|-----------|
+| `record` | Proxies real API calls and saves request/response pairs to `C8Y_PACT_FOLDER` |
+| `apply` | Replays saved fixtures — no network or live tenant required |
+| _(unset)_ | Passes through to live tenant without recording |
+
+#### Step 3 — File / Folder Organisation
+
+```
+cypress/e2e/
+  connector/
+    add-connector.cy.ts        ← all connector types (MQTT 3.1.1, MQTT 5.0, Kafka, HTTP, Webhook, AMQP, Pulsar)
+    edit-connector.cy.ts
+    toggle-connector.cy.ts
+    connection-status.cy.ts
+  mapping/
+    inbound/
+      json-default.cy.ts
+      json-jsonata.cy.ts
+      json-smart-function.cy.ts
+      flat-file.cy.ts
+      hex.cy.ts
+      any-payload.cy.ts
+    outbound/
+      create-outbound.cy.ts    ← filterMapping required, publishTopic field
+    table/
+      activate-deactivate.cy.ts
+      import-export.cy.ts
+      snoop.cy.ts
+    stepper/
+      connector-selection.cy.ts
+      topic-definition.cy.ts
+      substitution-modal.cy.ts
+      test-transformation.cy.ts
+  monitoring/
+    monitoring-tab.cy.ts
+    mapping-tree.cy.ts
+    message-explorer.cy.ts
+    snoop-explorer.cy.ts
+  configuration/
+    service-config.cy.ts
+    extension-upload.cy.ts
+```
+
+#### Step 4 — How to Use `cumulocity-cypress` Features per Area
+
+**Authentication** — `configureEnvVariables` picks up credentials from a `go-c8y-cli` session in dev and from `cypress.env.json` / CI env vars in pipelines automatically. Use token-based auth in `cypress.config.ts` for speed:
+
+```ts
+import { oauthLogin } from 'cumulocity-cypress';
+// in setupNodeEvents: obtain token once, store as C8Y_TOKEN env var
+```
+
+**Connector tests** — use `cy.c8yclient` to seed/clean connector state via the Dynamic Mapper REST API directly, avoiding brittle UI-only setup:
+
+```ts
+beforeEach(() => {
+  cy.useAuth('admin');
+  cy.c8yclient((c) =>
+    c.core.fetch('/service/dynamic-mapper-service/configuration/connector/instances')
+  ).then((resp) => { /* save connector IDs for afterEach cleanup */ });
+});
+```
+
+**Mapping stepper tests** — stub the specification and mapping list calls so the stepper wizard renders predictably without a live service:
+
+```ts
+cy.intercept('GET', '/service/dynamic-mapper-service/configuration/connector/specifications').as('getSpecs');
+cy.intercept('GET', '/service/dynamic-mapper-service/mapping*').as('getMappings');
+cy.wait('@getSpecs');
+```
+
+**Monitoring tab** — use `cy.c8ymatch` to assert the shape of the monitoring API response without brittle field-level checks:
+
+```ts
+cy.c8yclient((c) =>
+  c.core.fetch('/service/dynamic-mapper-service/monitoring/status/service')
+).c8ymatch({ status: Cypress.c8ymatch.ignore });
+```
+
+**Screenshot automation** — use `cy.c8yscrn` for documentation screenshots of the mapping stepper and monitoring views:
+
+```ts
+cy.c8yscrn('mapping-stepper-step2');
+```
+
+#### Step 5 — Implementation Priority
+
+| Priority | Area | Rationale |
+|----------|------|-----------|
+| 1 | Plugin setup + `c8ypact` wiring | Unlocks stub-mode for all subsequent tests |
+| 2 | `connector/add-connector.cy.ts` | Highest-value gap; covers all connector types |
+| 3 | `mapping/inbound/json-*.cy.ts` | Core feature; DEFAULT, JSONATA, SMART_FUNCTION |
+| 4 | `mapping/stepper/` | Validates the wizard flow users interact with most |
+| 5 | `mapping/outbound/` | `filterMapping` and topic resolution edge cases |
+| 6 | `monitoring/` + `configuration/` | Lower risk; simpler assertions |
 
 ---
 

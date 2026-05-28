@@ -173,7 +173,7 @@ _SUITE_SKIP=0
 declare -a _FAILED_TESTS=()
 
 _run_one() {   # <entry-from-TESTS>
-    local name script exit_code
+    local name script exit_code _cleanup_flag
     name=$(_name_of "$1")
     script=$(_resolve_script "$name")
 
@@ -186,8 +186,19 @@ _run_one() {   # <entry-from-TESTS>
     _suite_health_check
 
     printf "\n${C_BOLD}══ Running: %s ══${C_RESET}\n" "$name"
+    _cleanup_flag="--cleanup"
+    if [ "$name" = "test-outbound-group-subscription" ]; then
+        # Stateful handoff: test-outbound-group-subscription-removal consumes
+        # the state emitted by this test. Running with --cleanup here deletes
+        # the group/device before the removal test can validate unassign logic.
+        _cleanup_flag=""
+    fi
     set +e
-    bash "$script" --cleanup
+    if [ -n "$_cleanup_flag" ]; then
+        bash "$script" "$_cleanup_flag"
+    else
+        bash "$script"
+    fi
     exit_code=$?
     set -e
 
@@ -250,7 +261,11 @@ _dispatch_args() {
             script=$(_resolve_script "$arg")
             if [ -n "$script" ]; then
                 _suite_health_check
-                bash "$script" --cleanup
+                if [ "$arg" = "test-outbound-group-subscription" ] || [ "$arg" = "test-outbound-group-subscription.sh" ]; then
+                    bash "$script"
+                else
+                    bash "$script" --cleanup
+                fi
                 return $?
             fi
             printf "${C_RED}Unknown argument: %s${C_RESET}\n" "$arg"

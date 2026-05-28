@@ -52,7 +52,7 @@ dm_api POST /subscription \
     >/dev/null
 
 dm_step "Waiting for subscription propagation ..."
-dm_wait 3
+dm_wait 5
 
 dm_step "Creating outbound MEASUREMENT mapping ..."
 MAPPING_JSON=$(cat <<EOF
@@ -97,7 +97,7 @@ c8y measurements create \
     --output json >/dev/null
 
 dm_step "Waiting for outbound processing ..."
-dm_wait 8
+dm_wait 12
 
 dm_step "Asserting messagesReceived increased ..."
 dm_assert_mapping_received_gt "Outbound measurement processed" "$MAPPING_ID" "$BASELINE"

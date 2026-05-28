@@ -797,11 +797,14 @@ public abstract class AConnectorClient {
     /**
      * Update subscription for outbound mapping
      * Called when a mapping is created, updated, or its activation state changes
+     * 
+     * NOTE: Unlike inbound mappings, outbound mappings do NOT require explicit deployment
+     * to the deployment map. They are automatically active on all connectors when activated.
+     * This is because outbound mappings process C8Y notifications (which are tenant-level),
+     * not broker messages which require explicit routing.
      */
     public void updateSubscriptionForOutbound(Mapping mapping, Boolean create, Boolean activationChanged) {
-        boolean isDeployed = isDeployedInConnector(mapping);
-
-        if (mapping.getActive() && isDeployed) {
+        if (mapping.getActive()) {
             mappingSubscriptionManager.addSubscriptionOutbound(mapping.getIdentifier(), mapping);
             log.debug("{} - Added outbound mapping: {}", tenant, mapping.getIdentifier());
         } else {

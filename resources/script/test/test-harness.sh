@@ -390,7 +390,7 @@ _DM_LAST_MAPPING_ID=""
 dm_create_mapping() {   # <json_body>
     local _json
     _json=$(dm_api POST /mapping "$1")
-    _DM_LAST_MAPPING_ID=$(printf '%s' "$_json" | jq -r '.id // empty')
+    _DM_LAST_MAPPING_ID=$(printf '%s' "$_json" | jq -er '.id // empty' 2>/dev/null || printf '')
     if [ -z "${_DM_LAST_MAPPING_ID:-}" ]; then
         dm_fail "Mapping creation failed — API returned: $(printf '%s' "$_json" | head -c 200)"
         return 1
@@ -473,13 +473,20 @@ dm_assert_connector_status() {  # <label> <connectorIdentifier> <expected_status
 }
 
 # ── MQTT helpers ───────────────────────────────────────────────────────────────
-# Environment variables: MQTT_HOST (default localhost), MQTT_PORT (default 1883),
-#   MQTT_USER (optional), MQTT_PASS (optional)
+# Environment variables:
+#   MQTT_HOST      (default localhost)
+#   MQTT_PORT      (default 1883)
+#   MQTT_USER      (optional)
+#   MQTT_PASS      (optional)
+#   MQTT_TLS       (optional, true/false, default false)
+#   MQTT_CAFILE    (optional path to CA certificate)
+#   MQTT_INSECURE  (optional, true/false, default false)
 
 # Skip the calling test if the MQTT broker is unreachable or mosquitto_pub is
 # not installed.  Call this once, right after dm_wait_for_service.
 dm_require_mqtt_broker() {
     local _host="${MQTT_HOST:-localhost}" _port="${MQTT_PORT:-1883}"
+    local _cfg _match_count
     if ! command -v mosquitto_pub >/dev/null 2>&1; then
         dm_skip "mosquitto_pub not installed — install mosquitto-clients to run MQTT tests."
         exit 0
@@ -490,7 +497,42 @@ dm_require_mqtt_broker() {
         dm_skip "Set MQTT_HOST / MQTT_PORT / MQTT_USER / MQTT_PASS and retry."
         exit 0
     fi
+
+    # Ensure the selected publish target matches at least one enabled MQTT
+    # connector in Dynamic Mapper. Otherwise tests publish to the wrong broker
+    # and inbound mappings never receive any message.
+    _cfg=$(dm_api_json_array GET /configuration/connector/instance | jq -rs 'map(select(type=="object"))' 2>/dev/null || printf '[]')
+    _match_count=$(printf '%s' "$_cfg" | jq -r --arg host "$_host" --arg port "$_port" '
+        [ .[]
+          | select((.connectorType // "") == "MQTT")
+          | select((.enabled // false) == true)
+          | select((.properties.mqttHost // "") == $host)
+          | select((.properties.mqttPort | tostring) == $port)
+        ] | length' 2>/dev/null || printf '0')
+    if [ "${_match_count:-0}" -lt 1 ]; then
+        dm_skip "No enabled MQTT connector is configured for ${_host}:${_port}."
+        dm_skip "Update MQTT_HOST/MQTT_PORT to match the mapper connector configuration (or update connector config)."
+        exit 0
+    fi
+
     dm_info "MQTT broker reachable at ${_host}:${_port} — proceeding."
+}
+
+_dm_mqtt_append_tls_args() {  # <array_name>
+    local _arr_name=$1
+    local _tls="${MQTT_TLS:-false}"
+    local _insecure="${MQTT_INSECURE:-false}"
+    local _cafile="${MQTT_CAFILE:-}"
+
+    [ "$_tls" = "true" ] || return 0
+
+    eval "${_arr_name}+=(--tls-version tlsv1.2)"
+    if [ -n "$_cafile" ]; then
+        eval "${_arr_name}+=(--cafile \"$_cafile\")"
+    fi
+    if [ "$_insecure" = "true" ]; then
+        eval "${_arr_name}+=(--insecure)"
+    fi
 }
 
 dm_mqtt_publish() {     # <topic> <payload>
@@ -499,6 +541,7 @@ dm_mqtt_publish() {     # <topic> <payload>
     local _args=(-h "$_host" -p "$_port" -t "$_topic" -m "$_payload")
     [ -n "${MQTT_USER:-}" ] && _args+=(-u "$MQTT_USER")
     [ -n "${MQTT_PASS:-}" ] && _args+=(-P "$MQTT_PASS")
+    _dm_mqtt_append_tls_args _args
     mosquitto_pub "${_args[@]}"
     dm_info "Published to $_topic (broker=$_host:$_port)"
 }
@@ -511,6 +554,7 @@ dm_mqtt_subscribe_one() {   # <topic> [timeout_secs=10]
     local _args=(-h "$_host" -p "$_port" -t "$_topic" -C 1 -W "$_timeout")
     [ -n "${MQTT_USER:-}" ] && _args+=(-u "$MQTT_USER")
     [ -n "${MQTT_PASS:-}" ] && _args+=(-P "$MQTT_PASS")
+    _dm_mqtt_append_tls_args _args
     mosquitto_sub "${_args[@]}" 2>/dev/null
 }
 
@@ -537,6 +581,7 @@ dm_lookup_device_by_ext_id() {  # <externalId> <externalIdType>
 }
 
 dm_count_measurements_since() {     # <device_id> <since_iso8601>
+    [ -z "${1:-}" ] && { printf '0'; return 0; }
     c8y measurements list \
         --device "$1" --dateFrom "$2" \
         --pageSize 200 --output json 2>/dev/null \
@@ -544,6 +589,7 @@ dm_count_measurements_since() {     # <device_id> <since_iso8601>
 }
 
 dm_count_events_since() {   # <device_id> <since_iso8601>
+    [ -z "${1:-}" ] && { printf '0'; return 0; }
     c8y events list \
         --device "$1" --dateFrom "$2" \
         --pageSize 200 --output json 2>/dev/null \
@@ -551,6 +597,7 @@ dm_count_events_since() {   # <device_id> <since_iso8601>
 }
 
 dm_count_alarms_since() {   # <device_id> <since_iso8601>
+    [ -z "${1:-}" ] && { printf '0'; return 0; }
     c8y alarms list \
         --device "$1" --dateFrom "$2" \
         --pageSize 200 --output json 2>/dev/null \

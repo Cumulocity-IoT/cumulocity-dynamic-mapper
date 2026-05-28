@@ -54,7 +54,7 @@ MAPPING_JSON=$(cat <<EOF
   "direction": "INBOUND",
   "mappingType": "FLAT_FILE",
   "transformationType": "DEFAULT",
-  "sourceTemplate": "{\"payload\":\"165, 14.5, 2022-08-06T00:14:50.000+02:00, c8y_FuelMeasurement\"}"
+  "sourceTemplate": "{\"payload\":\"165, 14.5, 2022-08-06T00:14:50.000+02:00, c8y_FuelMeasurement\"}",
   "targetTemplate": "{\"c8y_TemperatureMeasurement\":{\"T\":{\"value\":110,\"unit\":\"C\"}},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"type\":\"c8y_TemperatureMeasurement\"}",
   "substitutions": [
     {"pathSource":"_TOPIC_LEVEL_[1]","pathTarget":"_IDENTITY_.externalId","repairStrategy":"DEFAULT","expandArray":false},
@@ -67,6 +67,7 @@ MAPPING_JSON=$(cat <<EOF
   "updateExistingDevice": false,
   "useExternalId": true,
   "externalIdType": "c8y_Serial",
+  "genericDeviceIdentifier": "_IDENTITY_.externalId",
   "qos": "AT_LEAST_ONCE",
   "snoopStatus": "NONE",
   "snoopedTemplates": []
@@ -94,10 +95,12 @@ dm_step "Looking up device by external id ..."
 DEVICE_ID=$(dm_lookup_device_by_ext_id "$EXT_ID" "c8y_Serial")
 if [ -z "$DEVICE_ID" ]; then
     dm_fail "Device '$EXT_ID' not found — FLAT_FILE mapper did not create it"
+  exit 1
 fi
 dm_info "Device id: $DEVICE_ID"
 
 dm_step "Asserting at least 1 measurement was created ..."
 dm_assert_measurement_count_gt "Measurement from CSV" "$DEVICE_ID" "$TEST_START" 1
 
-dm_done "Inbound FLAT_FILE (CSV) Transformation (MEASUREMENT)"dm_print_summary
+dm_done "Inbound FLAT_FILE (CSV) Transformation (MEASUREMENT)"
+dm_print_summary

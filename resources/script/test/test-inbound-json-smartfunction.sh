@@ -92,6 +92,7 @@ MAPPING_JSON=$(jq -cn \
       updateExistingDevice: false,
       useExternalId: true,
       externalIdType: "c8y_Serial",
+    genericDeviceIdentifier: "_IDENTITY_.externalId",
       supportsMessageContext: true,
       qos: "AT_LEAST_ONCE",
       snoopStatus: "NONE",
@@ -116,10 +117,12 @@ dm_step "Looking up device by external id ..."
 DEVICE_ID=$(dm_lookup_device_by_ext_id "$EXT_ID" "c8y_Serial")
 if [ -z "$DEVICE_ID" ]; then
     dm_fail "Device '$EXT_ID' not found — Smart Function did not create it"
+    exit 1
 fi
 dm_info "Device id: $DEVICE_ID"
 
 dm_step "Asserting at least 1 measurement was created ..."
 dm_assert_measurement_count_gt "Measurement created by Smart Function" "$DEVICE_ID" "$TEST_START" 1
 
-dm_done "Inbound JSON Smart Function Transformation (MEASUREMENT)"dm_print_summary
+dm_done "Inbound JSON Smart Function Transformation (MEASUREMENT)"
+dm_print_summary

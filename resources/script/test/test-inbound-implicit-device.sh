@@ -66,6 +66,7 @@ MAPPING_JSON=$(cat <<EOF
   "updateExistingDevice": false,
   "useExternalId": true,
   "externalIdType": "c8y_Serial",
+  "genericDeviceIdentifier": "_IDENTITY_.externalId",
   "qos": "AT_LEAST_ONCE",
   "snoopStatus": "NONE",
   "snoopedTemplates": []
@@ -94,6 +95,7 @@ dm_step "Asserting device was auto-created ..."
 DEVICE_ID=$(dm_lookup_device_by_ext_id "$EXT_ID" "c8y_Serial")
 if [ -z "$DEVICE_ID" ]; then
     dm_fail "Device '$EXT_ID' was NOT auto-created by the mapper"
+  exit 1
 fi
 dm_success "Device auto-created: id=$DEVICE_ID"
 

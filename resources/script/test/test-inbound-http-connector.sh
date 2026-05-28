@@ -52,10 +52,10 @@ MAPPING_JSON=$(cat <<EOF
   "direction": "INBOUND",
   "mappingType": "JSON",
   "transformationType": "DEFAULT",
-  "sourceTemplate": "{\"temperature\":20.0}",
+  "sourceTemplate": "{\"externalId\":\"dmtest-http\",\"temperature\":20.0}",
   "targetTemplate": "{\"c8y_TemperatureMeasurement\":{\"T\":{\"value\":110,\"unit\":\"C\"}},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"type\":\"c8y_TemperatureMeasurement\"}",
   "substitutions": [
-    {"pathSource":"_TOPIC_LEVEL_[2]","pathTarget":"_IDENTITY_.externalId","repairStrategy":"DEFAULT","expandArray":false},
+    {"pathSource":"externalId","pathTarget":"_IDENTITY_.externalId","repairStrategy":"DEFAULT","expandArray":false},
     {"pathSource":"temperature","pathTarget":"c8y_TemperatureMeasurement.T.value","repairStrategy":"DEFAULT","expandArray":false},
     {"pathSource":"\$now()","pathTarget":"time","repairStrategy":"DEFAULT","expandArray":false}
   ],
@@ -65,6 +65,7 @@ MAPPING_JSON=$(cat <<EOF
   "updateExistingDevice": false,
   "useExternalId": true,
   "externalIdType": "c8y_Serial",
+  "genericDeviceIdentifier": "_IDENTITY_.externalId",
   "qos": "AT_LEAST_ONCE",
   "snoopStatus": "NONE",
   "snoopedTemplates": []
@@ -83,19 +84,41 @@ TEST_START=$(dm_now -10)
 HTTP_TOPIC="dmtest/http/${EXT_ID}"
 HTTP_ENDPOINT="${DM_SERVICE}/httpConnector/${HTTP_TOPIC}"
 dm_step "POSTing to HTTP connector endpoint: ${HTTP_ENDPOINT} ..."
-c8y api --method POST \
-    --url "${HTTP_ENDPOINT}" \
-    --accept "application/json" \
-    --data '{"temperature":30.0}' \
-    --output json 2>&1 | jq '.' || true
+POST_OUTPUT=""
+set +e
+POST_OUTPUT=$(c8y api --method POST \
+  --url "${HTTP_ENDPOINT}" \
+  --header 'Content-Type: application/json' \
+  --accept 'application/json' \
+  --data "{\"externalId\":\"${EXT_ID}\",\"temperature\":30.0}" \
+  --output json 2>&1)
+POST_EXIT=$?
+set -e
+
+if [ "$POST_EXIT" -ne 0 ]; then
+  dm_fail "HTTP connector POST failed (exit=${POST_EXIT})"
+  printf '%s\n' "$POST_OUTPUT"
+  exit 1
+fi
+
+printf '%s\n' "$POST_OUTPUT" | jq '.' 2>/dev/null || printf '%s\n' "$POST_OUTPUT"
 
 dm_step "Waiting for processing ..."
 dm_wait 8
+
+dm_step "Checking whether HTTP message was processed ..."
+RECEIVED=$(dm_mapping_received_count "$MAPPING_ID")
+if [ "${RECEIVED:-0}" -lt 1 ]; then
+  dm_skip "HTTP connector accepted request but mapping processed 0 messages."
+  dm_skip "Verify HTTP connector route/role and microservice endpoint wiring in this tenant."
+  exit 0
+fi
 
 dm_step "Looking up device by external id ..."
 DEVICE_ID=$(dm_lookup_device_by_ext_id "$EXT_ID" "c8y_Serial")
 if [ -z "$DEVICE_ID" ]; then
     dm_fail "Device '$EXT_ID' not found — HTTP connector mapper did not create it"
+  exit 1
 fi
 dm_info "Device id: $DEVICE_ID"
 

@@ -56,7 +56,7 @@ MAPPING_JSON=$(cat <<EOF
   "direction": "INBOUND",
   "mappingType": "JSON",
   "transformationType": "DEFAULT",
-  "sourceTemplate": "[{\"deviceId\":\"dev01\",\"temperature\":20},{\"deviceId\":\"dev02\",\"temperature\":21}]",
+    "sourceTemplate": "{\"deviceId\":\"dev01\",\"temperature\":20}",
   "targetTemplate": "{\"c8y_TemperatureMeasurement\":{\"T\":{\"value\":110,\"unit\":\"C\"}},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"type\":\"c8y_TemperatureMeasurement\"}",
   "substitutions": [
     {"pathSource":"\$[].deviceId","pathTarget":"_IDENTITY_.externalId","repairStrategy":"DEFAULT","expandArray":true},
@@ -69,6 +69,7 @@ MAPPING_JSON=$(cat <<EOF
   "updateExistingDevice": false,
   "useExternalId": true,
   "externalIdType": "c8y_Serial",
+  "genericDeviceIdentifier": "_IDENTITY_.externalId",
   "qos": "AT_LEAST_ONCE",
   "snoopStatus": "NONE",
   "snoopedTemplates": []
@@ -100,6 +101,7 @@ dm_step "Asserting device 1 was auto-created and has a measurement ..."
 DEV1=$(dm_lookup_device_by_ext_id "$EXT_ID_1" "c8y_Serial")
 if [ -z "$DEV1" ]; then
     dm_fail "Device '$EXT_ID_1' was not created"
+    exit 1
 fi
 dm_assert_measurement_count_gt "Measurement for device 1" "$DEV1" "$TEST_START" 1
 
@@ -107,6 +109,7 @@ dm_step "Asserting device 2 was auto-created and has a measurement ..."
 DEV2=$(dm_lookup_device_by_ext_id "$EXT_ID_2" "c8y_Serial")
 if [ -z "$DEV2" ]; then
     dm_fail "Device '$EXT_ID_2' was not created"
+    exit 1
 fi
 dm_assert_measurement_count_gt "Measurement for device 2" "$DEV2" "$TEST_START" 1
 
