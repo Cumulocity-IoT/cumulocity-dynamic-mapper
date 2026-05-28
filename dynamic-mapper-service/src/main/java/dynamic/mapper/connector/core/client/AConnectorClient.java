@@ -890,7 +890,12 @@ public abstract class AConnectorClient {
      */
     private Boolean isDeployedInConnector(Mapping mapping) {
         List<String> deploymentMapEntry = mappingService.getDeploymentMapEntry(tenant, mapping.getIdentifier());
-        return deploymentMapEntry != null && deploymentMapEntry.contains(getConnectorIdentifier());
+        // No explicit deployment entry means "deployed everywhere" (default behavior).
+        // Only enforce filtering when a deployment list is explicitly configured.
+        if (deploymentMapEntry == null || deploymentMapEntry.isEmpty()) {
+            return true;
+        }
+        return deploymentMapEntry.contains(getConnectorIdentifier());
     }
 
     /**

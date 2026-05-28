@@ -17,6 +17,13 @@
 #   MQTT_PORT           MQTT broker port  (default 1883)
 #   MQTT_USER           MQTT username     (optional)
 #   MQTT_PASS           MQTT password     (optional)
+#   MQTT_TLS            Enable TLS for MQTT publish/subscribe (true/false, default false)
+#   MQTT_CAFILE         CA certificate path for MQTT TLS validation (optional)
+#   MQTT_INSECURE       Skip MQTT TLS cert verification (true/false, default false)
+#   DM_DEFAULT_DISCOVERY_WAIT  Wait for dynamic discovery checks in some tests (default 10)
+#   DM_DEFAULT_STARTUP_WAIT    Wait used by restart/persistence tests (default 60)
+#   DM_DEFAULT_HEALTH_RETRIES  Service health retries in harness (default 24)
+#   DM_DEFAULT_HEALTH_INTERVAL  Service health retry interval seconds (default 10)
 #   DM_STOP_ON_FAIL     Stop suite on first test failure (default: continue)
 
 set -euo pipefail
@@ -104,6 +111,77 @@ _print_menu() {
     printf "  ${C_BOLD}%2s${C_RESET}  %-14s %s\n" "r"  "[reliability]" "Run reliability tests"
     printf "  ${C_BOLD}%2s${C_RESET}  %-14s %s\n" "q"  ""              "Quit"
     echo ""
+}
+
+_print_help() {
+        cat <<'EOF'
+Dynamic Mapper integration test runner
+
+Usage:
+    ./run-tests.sh                   Interactive menu
+    ./run-tests.sh all               Run every test
+    ./run-tests.sh inbound           Run all inbound tests
+    ./run-tests.sh outbound          Run all outbound tests
+    ./run-tests.sh reliability       Run reliability tests
+    ./run-tests.sh <script-name>     Run one script (with or without .sh)
+    ./run-tests.sh <n> [n2 ...]      Run one or more menu indices
+    ./run-tests.sh --help            Show this help
+
+Environment variables:
+    DM_SERVICE
+        Base Dynamic Mapper API path.
+        Default: /service/dynamic-mapper-service
+
+    MQTT_HOST
+        MQTT broker host used by test publish/subscribe helpers.
+        Default: localhost
+
+    MQTT_PORT
+        MQTT broker port used by test publish/subscribe helpers.
+        Default: 1883
+
+    MQTT_USER, MQTT_PASS
+        Optional MQTT credentials.
+
+    MQTT_TLS
+        Enable TLS for MQTT test publish/subscribe (mosquitto_pub/sub).
+        Values: true|false
+        Default: false
+
+    MQTT_CAFILE
+        Optional path to CA certificate used when MQTT_TLS=true.
+
+    MQTT_INSECURE
+        Skip TLS certificate verification for MQTT helpers.
+        Values: true|false
+        Default: false
+
+    DM_DEFAULT_DISCOVERY_WAIT
+        Default wait (seconds) for discovery checks in selected tests.
+        Default: 10
+
+    DM_DEFAULT_STARTUP_WAIT
+        Default wait (seconds) for startup/restart checks.
+        Default: 60
+
+    DM_DEFAULT_HEALTH_RETRIES
+        Service health retry count in test harness.
+        Default: 24
+
+    DM_DEFAULT_HEALTH_INTERVAL
+        Service health retry interval (seconds) in test harness.
+        Default: 10
+
+    DM_STOP_ON_FAIL
+        Stop suite after first failing test.
+        Values: 1 to enable
+        Default: continue on failures
+
+Notes:
+    - Inbound MQTT tests require an enabled Dynamic Mapper MQTT connector that
+        matches MQTT_HOST and MQTT_PORT.
+    - c8y CLI authentication is required (active session or C8Y_* env vars).
+EOF
 }
 
 _resolve_script() {   # <basename>  →  full path
@@ -250,6 +328,7 @@ _print_suite_summary() {
 _dispatch_args() {
     local arg="$1"
     case "$arg" in
+        -h|--help|help) _print_help ; exit 0 ;;
         all)         _run_all ;;
         inbound)     _run_category "inbound" ;;
         outbound)    _run_category "outbound" ;;
