@@ -19,17 +19,17 @@ Coverage matrix: payload formats × transformation types × direction.
 | JSON | Inbound | ✅ | ✅ | ✅ | ✅ |
 | JSON | Outbound | ✅ | ✅ | ✅ | ✅ |
 | FLAT_FILE | Inbound | ✅ | ✅ | ⬜ | ⬜ |
-| FLAT_FILE | Outbound | ⬜ | ⬜ | ⬜ | ⬜ |
+| FLAT_FILE | Outbound | 🚫 | 🚫 | 🚫 | 🚫 |
 | HEX | Inbound | ✅ | ✅ | ⬜ | ⬜ |
-| HEX | Outbound | ⬜ | ⬜ | ⬜ | ⬜ |
+| HEX | Outbound | 🚫 | 🚫 | 🚫 | 🚫 |
 | PROTOBUF_INTERNAL | Inbound | ✅ | n/a | n/a | ✅ |
-| PROTOBUF_INTERNAL | Outbound | ⬜ | ⬜ | ⬜ | ⬜ |
-| SPARKPLUGB | Inbound | ⬜ | ⬜ | ⬜ | ✅ |
-| SPARKPLUGB | Outbound | ⬜ | ⬜ | ✅ | ⬜ |
+| PROTOBUF_INTERNAL | Outbound | 🚫 | 🚫 | 🚫 | 🚫 |
+| SPARKPLUGB | Inbound | n/a | n/a | ⬜ | n/a |
+| SPARKPLUGB | Outbound | n/a | n/a | ✅ | n/a |
 | ANY_PAYLOAD | Inbound | n/a | n/a | ⬜ | ⬜ |
-| ANY_PAYLOAD | Outbound | n/a | n/a | ⬜ | ⬜ |
+| ANY_PAYLOAD | Outbound | 🚫 | 🚫 | 🚫 | 🚫 |
 
-**Legend:** ✅ covered · ⬜ gap · n/a not applicable
+**Legend:** ✅ covered · ⬜ gap · n/a not applicable · 🚫 not supported (direction rejected by model)
 
 ---
 
@@ -60,7 +60,7 @@ These tests exercise individual processor steps in isolation using Mockito mocks
 | `FlowResultOutboundProcessorTest` | Outbound result collection |
 | `JSONataOutboundProcessorTest` | JSONata on C8Y payload, `filterMapping` evaluation |
 
-**Missing:** Processor tests for `HEX`, `FLAT_FILE` outbound; `ANY_PAYLOAD` outbound.
+**Note:** HEX outbound, FLAT_FILE outbound, and ANY_PAYLOAD outbound are not supported directions and require no tests.
 
 ### 1.2 Unit Tests — Smart Functions (GraalVM)
 
@@ -198,14 +198,21 @@ These wire the full Apache Camel pipeline with a mocked `C8YAgent`.
 
 ### 1.6 Gaps in Backend Tests
 
-- **HEX outbound** — no tests
-- **FLAT_FILE outbound** — no tests
-- **ANY_PAYLOAD** inbound and outbound — no tests
-- **SPARKPLUGB inbound** — no unit/integration tests (only a test client exists)
-- **GraalVM sandbox security** — no adversarial tests (script injection, CPU/memory exhaustion)
-- **Multi-tenancy isolation** — no tests verifying tenant A cannot access tenant B data
-- **Connector retry / reconnect** — no tests for exponential backoff behavior
-- **Kafka full integration** — `KafkaTestClient.java` exists but no `@Test` methods
+> **Not supported** (rejected by `MappingTypeDescriptionMap` — `directionSupported: false`):
+> HEX outbound, FLAT_FILE outbound, PROTOBUF_INTERNAL outbound, ANY_PAYLOAD outbound.
+> These combinations do not exist and must **not** be tested.
+
+| Gap | Status | New test class |
+|-----|--------|----------------|
+| ~~HEX outbound~~ | 🚫 Not supported | — |
+| ~~FLAT_FILE outbound~~ | 🚫 Not supported | — |
+| ~~ANY_PAYLOAD outbound~~ | 🚫 Not supported | — |
+| ANY_PAYLOAD inbound (SMART_FUNCTION + EXTENSION_JAVA) | ✅ Implemented | `AnyPayloadInboundTest` |
+| SPARKPLUGB inbound deserialization | ✅ Implemented | `SparkplugBDeserializerTest` |
+| GraalVM sandbox security | ✅ Implemented | `GraalVMSandboxSecurityTest` |
+| Multi-tenancy isolation | ✅ Implemented | `MultiTenancyIsolationTest` |
+| Connector retry / reconnect | ✅ Implemented | `ConnectorRetryReconnectTest` |
+| Kafka producer configuration | ✅ Implemented | `KafkaConnectorUnitTest` |
 
 ---
 
@@ -292,58 +299,103 @@ These wire the full Apache Camel pipeline with a mocked `C8YAgent`.
 **Location:** `resources/script/test/`
 **Prerequisites:** `c8y` CLI configured and authenticated; dynamic mapper microservice deployed
 
-### 3.1 Existing Tests
+Run all tests with `run-tests.sh` (see [3.4 Test Runner](#34-test-runner)).
 
-| Script | Description |
-|--------|-------------|
-| `test-case-I.sh` | Static subscription: create device → subscribe → send measurement → verify Notification 2.0 subscription exists |
-| `test-case-II.sh` | Dynamic subscription by device type: register type → create device of that type → wait for discovery → verify subscription |
-| `test-case-III.sh` | Dynamic subscription by device group: create group → register group subscription → add device → wait → verify subscription |
-| `test-case-IV.sh` | Remove device from group → verify subscription deleted (depends on test-case-III state) |
-| `test-case-V.sh` | Subscriptions survive microservice restart: static + dynamic subscriptions persist after `disable`/`enable` cycle |
+### 3.1 Inbound Tests
 
-All five test cases focus exclusively on **outbound subscription management**. They do not test payload transformation.
+Publish a message to the broker and verify the resulting object appears in Cumulocity.
 
-### 3.2 Required Tests (gaps)
+| Script | Scenario |
+|--------|----------|
+| `test-inbound-json-default.sh` | JSON / DEFAULT → MEASUREMENT |
+| `test-inbound-json-jsonata.sh` | JSON / JSONATA expression → EVENT |
+| `test-inbound-json-smartfunction.sh` | JSON / Smart Function (GraalVM) → MEASUREMENT |
+| `test-inbound-flatfile.sh` | FLAT_FILE CSV / DEFAULT → MEASUREMENT |
+| `test-inbound-hex.sh` | HEX / DEFAULT → EVENT |
+| `test-inbound-http-connector.sh` | POST to HTTP connector endpoint → MEASUREMENT |
+| `test-inbound-implicit-device.sh` | First-time device with `createNonExistingDevice` → managed object auto-created |
+| `test-inbound-multi-device.sh` | Array payload with `expandArray` → one C8Y object per array element |
 
-#### Inbound End-to-End
+### 3.2 Outbound Tests
 
-| Script (proposed) | Scenario |
-|-------------------|----------|
-| `test-inbound-json-default.sh` | Publish JSON to MQTT → verify measurement created in C8Y |
-| `test-inbound-json-jsonata.sh` | Publish JSON → verify JSONata expression evaluated correctly |
-| `test-inbound-json-smartfunction.sh` | Publish JSON → Smart Function executed → measurement in C8Y |
-| `test-inbound-flatfile.sh` | Publish CSV line → verify C8Y event created |
-| `test-inbound-hex.sh` | Publish hex string → verify parsed measurement |
-| `test-inbound-http-connector.sh` | POST to HTTP connector endpoint → verify C8Y object |
-| `test-inbound-implicit-device.sh` | First-time device → verify managed object auto-created |
-| `test-inbound-multi-device.sh` | Array payload → multiple C8Y requests generated |
+Create a C8Y object or manage a subscription and verify the broker or mapper state is updated.
 
-#### Outbound End-to-End
+#### Payload forwarding
 
-| Script (proposed) | Scenario |
-|-------------------|----------|
-| `test-outbound-measurement.sh` | Create measurement in C8Y → verify MQTT message published to broker |
-| `test-outbound-event.sh` | Create event in C8Y → verify broker receives event payload |
-| `test-outbound-alarm.sh` | Create alarm → verify broker message |
-| `test-outbound-operation.sh` | Create operation (CREATE only) → verify forwarded to device |
-| `test-outbound-filter.sh` | `filterMapping` expression blocks non-matching messages |
-| `test-outbound-topic-resolution.sh` | Dynamic publish topic resolved from device external ID |
+| Script | Scenario |
+|--------|----------|
+| `test-outbound-measurement.sh` | C8Y MEASUREMENT CREATE → published to MQTT broker |
+| `test-outbound-event.sh` | C8Y EVENT CREATE → published to MQTT broker |
+| `test-outbound-alarm.sh` | C8Y ALARM CREATE → published to MQTT broker |
+| `test-outbound-operation.sh` | C8Y OPERATION CREATE → published to MQTT broker (UPDATE/DELETE are ignored) |
+| `test-outbound-filter.sh` | `filterMapping` JSONata expression blocks non-matching objects |
+| `test-outbound-topic-resolution.sh` | Dynamic `publishTopic` wildcard resolved from device external ID |
 
-#### Reliability
+#### Subscription management
 
-| Script (proposed) | Scenario |
-|-------------------|----------|
-| `test-multi-tenant.sh` | Two tenants subscribed; verify mappings are isolated |
-| `test-multi-connector.sh` | Two connectors active simultaneously; messages routed correctly |
-| `test-reconnect.sh` | Broker disconnected → reconnected → messages resume |
+| Script | Scenario |
+|--------|----------|
+| `test-outbound-static-subscription.sh` | Static subscription created → Notification 2.0 subscription exists in C8Y |
+| `test-outbound-type-subscription.sh` | Device-type subscription → device of that type discovered and subscribed |
+| `test-outbound-group-subscription.sh` | Group subscription → devices added to group are subscribed |
+| `test-outbound-group-subscription-removal.sh` | Device removed from group → subscription deleted |
+| `test-outbound-subscription-persistence.sh` | Static + dynamic subscriptions persist after microservice `disable`/`enable` cycle |
 
-### 3.3 Approach
+### 3.3 Reliability Tests
 
-- Each script should follow the existing pattern: `set -e`, cleanup trap with `--cleanup` flag, `c8y` CLI for all API calls
-- Inbound tests: use a local test MQTT broker (e.g. Mosquitto via Docker) or the C8Y MQTT Service
-- Outbound tests: verify broker receipt using `mosquitto_sub` or a c8y notification2 subscriber
-- Use `jq` for all JSON assertions; always use `jq '.field? // fallback'` to handle non-object responses gracefully
+| Script | Scenario |
+|--------|----------|
+| `test-multi-tenant.sh` | Mapping CRUD round-trip: create → list → delete → verify gone |
+| `test-multi-connector.sh` | All configured connectors report CONNECTED status |
+| `test-reconnect.sh` | Connector disconnect → assert not connected → reconnect → assert CONNECTED |
+
+### 3.4 Test Runner
+
+`run-tests.sh` is a menu-driven suite runner for all integration tests.
+
+```bash
+# Interactive numbered menu
+./run-tests.sh
+
+# Run by category
+./run-tests.sh all
+./run-tests.sh inbound
+./run-tests.sh outbound
+./run-tests.sh reliability
+
+# Run by menu number (single or multiple)
+./run-tests.sh 3 7 11
+
+# Run a single test by name
+./run-tests.sh test-inbound-flatfile
+```
+
+| Feature | Detail |
+|---------|--------|
+| Per-test cleanup | Passes `--cleanup` to every script automatically |
+| Suite summary | Pass / fail / skip counts + list of failed test names |
+| Fail-fast mode | `DM_STOP_ON_FAIL=1` aborts the suite on first failure |
+| ANSI colours | Auto-disabled when stdout is piped or redirected |
+
+**Environment variables** (set before running):
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `DM_SERVICE` | `/service/dynamic-mapper-service` | Dynamic mapper base path |
+| `MQTT_HOST` | `localhost` | MQTT broker host |
+| `MQTT_PORT` | `1883` | MQTT broker port |
+| `MQTT_USER` | — | MQTT username (optional) |
+| `MQTT_PASS` | — | MQTT password (optional) |
+| `DM_CONNECTOR_ID` | auto-detected | Connector id for `test-reconnect.sh` |
+| `DM_STOP_ON_FAIL` | `0` | Set to `1` to abort on first failure |
+
+### 3.5 Conventions
+
+- All scripts: `set -euo pipefail`, cleanup trap behind `--cleanup` flag, `c8y` CLI for all API calls
+- Shared helpers (device creation, mapping CRUD, connector operations, C8Y data queries) are in `test-harness.sh`
+- Inbound verification: count C8Y objects since test start using `dm_count_measurements_since` / `dm_count_events_since`
+- Outbound verification: compare `messagesReceived` from the monitoring API before and after triggering a C8Y notification
+- JSON assertions: always `jq '.field? // fallback'` — never assume the response is a non-empty object
 
 ---
 

@@ -1,0 +1,125 @@
+#!/bin/bash
+#
+# test-inbound-json-smartfunction: Inbound JSON → C8Y Measurement (SMART_FUNCTION/EXTENSION_JAVA)
+#
+# Publishes a JSON MQTT message and verifies a C8Y measurement is created using
+# a Smart Function (JavaScript executed in GraalVM) for transformation.
+#
+# Prerequisites:
+#   - Dynamic mapper service is running
+#   - Active MQTT connector
+#   - c8y CLI authenticated, mosquitto_pub and jq installed
+#
+# Usage:
+#   ./test-inbound-json-smartfunction.sh [--cleanup]
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=test-harness.sh
+source "${SCRIPT_DIR}/test-harness.sh"
+
+# ── Config ─────────────────────────────────────────────────────────────────────
+EXT_ID="dmtest-sf-$(date +%s)"
+MAPPING_ID=""
+
+cleanup() {
+    dm_info "Cleaning up ..."
+    [ -n "$MAPPING_ID" ] && dm_delete_mapping "$MAPPING_ID" || true
+    DEVICE_ID=$(dm_lookup_device_by_ext_id "$EXT_ID" "c8y_Serial") || true
+    if [ -n "${DEVICE_ID:-}" ]; then
+        c8y identity delete --externalId "$EXT_ID" --externalType "c8y_Serial" 2>/dev/null || true
+        c8y inventory delete --id "$DEVICE_ID" 2>/dev/null || true
+    fi
+}
+
+[[ "${1:-}" == "--cleanup" ]] && trap cleanup EXIT
+
+# ── Smart Function code (base64-encoded for safe embedding) ────────────────────
+# The function extracts temperature from the payload and creates one measurement.
+# It uses the last topic level as external device id.
+SF_CODE=$(cat <<'JSCODE'
+function extractFromSource(ctx) {
+    const sourceObject = JSON.parse(ctx.getPayload());
+    const result = new SubstitutionResult();
+
+    // Device identifier from topic level 2
+    const deviceIdentifier = new SubstitutionValue(
+        sourceObject['_TOPIC_LEVEL_'][2], TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
+    addSubstitution(result, ctx.getGenericDeviceIdentifier(), deviceIdentifier);
+
+    // Temperature fragment
+    const fragmentSeries = { value: sourceObject['temperature'], unit: 'C' };
+    const fragment = { T: fragmentSeries };
+    const tempSV = new SubstitutionValue(fragment, TYPE.OBJECT, RepairStrategy.DEFAULT, false);
+    addSubstitution(result, 'c8y_TemperatureMeasurement', tempSV);
+
+    return result;
+}
+JSCODE
+)
+
+SF_CODE_B64=$(printf '%s' "$SF_CODE" | base64)
+
+# ── Test ───────────────────────────────────────────────────────────────────────
+dm_banner "Inbound JSON Smart Function Transformation (MEASUREMENT)"
+
+dm_step "Waiting for Dynamic Mapper service ..."
+dm_wait_for_service
+dm_require_mqtt_broker
+
+MAPPING_JSON=$(jq -cn \
+    --arg name       "test-inbound-sf-$$" \
+    --arg identifier "ibs$$" \
+    --arg extId      "$EXT_ID" \
+    --arg code       "$SF_CODE_B64" \
+    '{
+      name: $name,
+      identifier: $identifier,
+      mappingTopic: "dmtest/sf/+",
+      mappingTopicSample: ("dmtest/sf/" + $extId),
+      targetAPI: "MEASUREMENT",
+      direction: "INBOUND",
+      mappingType: "JSON",
+      transformationType: "SMART_FUNCTION",
+      sourceTemplate: "{\"temperature\":25.0}",
+      targetTemplate: "{\"c8y_TemperatureMeasurement\":{\"T\":{\"value\":110,\"unit\":\"C\"}},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"type\":\"c8y_TemperatureMeasurement\"}",
+      substitutions: [],
+      code: $code,
+      active: false,
+      debug: false,
+      createNonExistingDevice: true,
+      updateExistingDevice: false,
+      useExternalId: true,
+      externalIdType: "c8y_Serial",
+      supportsMessageContext: true,
+      qos: "AT_LEAST_ONCE",
+      snoopStatus: "NONE",
+      snoopedTemplates: []
+    }')
+
+dm_step "Creating and activating Smart Function mapping ..."
+dm_create_mapping "$MAPPING_JSON"
+MAPPING_ID="$_DM_LAST_MAPPING_ID"
+dm_activate_mapping "$MAPPING_ID"
+
+dm_step "Recording test start time ..."
+TEST_START=$(dm_now -10)
+
+dm_step "Publishing MQTT message ..."
+dm_mqtt_publish "dmtest/sf/${EXT_ID}" "{\"temperature\":55.5}"
+
+dm_step "Waiting for processing ..."
+dm_wait 8
+
+dm_step "Looking up device by external id ..."
+DEVICE_ID=$(dm_lookup_device_by_ext_id "$EXT_ID" "c8y_Serial")
+if [ -z "$DEVICE_ID" ]; then
+    dm_fail "Device '$EXT_ID' not found — Smart Function did not create it"
+fi
+dm_info "Device id: $DEVICE_ID"
+
+dm_step "Asserting at least 1 measurement was created ..."
+dm_assert_measurement_count_gt "Measurement created by Smart Function" "$DEVICE_ID" "$TEST_START" 1
+
+dm_done "Inbound JSON Smart Function Transformation (MEASUREMENT)"dm_print_summary
