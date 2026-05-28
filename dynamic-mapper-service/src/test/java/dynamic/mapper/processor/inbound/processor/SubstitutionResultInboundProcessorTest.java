@@ -46,10 +46,9 @@ import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.sdk.client.ProcessingMode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.core.C8YAgent;
+import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.BinaryInfo;
 import dynamic.mapper.model.Direction;
@@ -88,8 +87,8 @@ class SubstitutionResultInboundProcessorTest {
     @Mock
     private C8YAgent c8yAgent;
 
-    @Mock
-    private ObjectMapper objectMapper;
+        @Mock
+        private ConfigurationRegistry configurationRegistry;
 
     @Mock
     private MappingResolverService mappingResolverService;
@@ -153,7 +152,7 @@ class SubstitutionResultInboundProcessorTest {
     private void injectDependencies() throws Exception {
         injectField("mappingService", mappingService);
         injectField("c8yAgent", c8yAgent);
-        injectField("objectMapper", objectMapper);
+                injectField("configurationRegistry", configurationRegistry);
     }
 
     private void injectField(String fieldName, Object value) throws Exception {

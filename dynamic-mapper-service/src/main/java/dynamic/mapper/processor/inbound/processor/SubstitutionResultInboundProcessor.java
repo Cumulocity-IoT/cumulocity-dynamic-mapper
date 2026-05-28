@@ -193,7 +193,7 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
                                     context);
                             sourceId.setValue(createdOrResolvedId);
                         } catch (Exception e) {
-                            throw new ProcessingException(
+                            throw new IllegalStateException(
                                     String.format("Failed to resolve/create implicit device for externalId '%s' (type '%s')",
                                             externalId, identity.getType()),
                                     e);
@@ -204,7 +204,7 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
                 }
 
                 if (sourceId.getValue() == null) {
-                    throw new ProcessingException(
+                    throw new IllegalStateException(
                             String.format("Device resolution failed for externalId '%s' (type '%s')",
                                     externalId, identity.getType()));
                 }
