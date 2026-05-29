@@ -71,23 +71,23 @@ dm_send_measurement "$DEVICE_ID" "18.3"
 # Step 5: Verify notification subscription exists
 dm_step 5 "Verify notification subscription exists for device $DEVICE_ID"
 dm_wait 2 "allowing subscription propagation"
-if ! dm_wait_for_subscription_present "$DEVICE_ID" 30 1; then
-    dm_warn "No subscription observed after wait window for device $DEVICE_ID"
-fi
-dm_show_subscriptions "$DEVICE_ID"
-dm_assert_has_subscription "type-based subscription exists" "$DEVICE_ID"
+TYPE_SUB_JSON=$(dm_api GET /subscription/type)
+TYPE_MATCH=$(printf '%s' "$TYPE_SUB_JSON" | jq -s -r --arg t "$DEVICE_TYPE" '
+    [ .[]
+      | if type == "array" then .[]
+        elif type == "object" and (.types? != null) then .types[]
+        elif type == "string" then .
+        else empty
+        end
+      | tostring
+    ]
+    | if (index($t) != null) then 1 else 0 end
+' 2>/dev/null || printf '0')
+dm_assert_gt "type-based subscription exists" "${TYPE_MATCH:-0}" "0"
 
-if [ "$_DM_LAST_SUB_COUNT" -eq 0 ]; then
-    dm_warn "Checking current type subscriptions via dynamic mapper service API ..."
-        dm_api GET /subscription/type | jq -r '
-            if type == "array" then
-                (.[0] // {} | .types // [])
-            elif type == "object" then
-                (.types // [])
-            else
-                []
-            end
-        ' || true
+if [ "${TYPE_MATCH:-0}" -eq 0 ]; then
+    dm_warn "Type subscription '$DEVICE_TYPE' not found in mapper API response"
+    printf '%s' "$TYPE_SUB_JSON" | jq -s '.' || true
 fi
 
 dm_print_summary

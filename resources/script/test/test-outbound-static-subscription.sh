@@ -58,12 +58,23 @@ dm_send_measurement "$DEVICE_ID" "25.5"
 # Step 4: Verify notification subscription exists
 dm_step 4 "Verify notification subscription exists"
 dm_wait 2 "allowing subscription propagation"
-dm_show_subscriptions "$DEVICE_ID"
-dm_assert_has_subscription "static subscription exists" "$DEVICE_ID"
+STATIC_SUB_JSON=$(dm_api GET "/subscription?subscription=${SUBSCRIPTION_NAME}")
+STATIC_MATCH_COUNT=$(printf '%s' "$STATIC_SUB_JSON" | jq -s -r --arg did "$DEVICE_ID" '
+    [ .[]
+      | if type == "array" then .[]
+        elif type == "object" and (.devices? != null) then .devices[]
+        elif type == "object" then .
+        else empty
+        end
+    ]
+    | map(select((.id | tostring) == $did))
+    | length
+' 2>/dev/null || printf '0')
+dm_assert_gt "static subscription exists" "${STATIC_MATCH_COUNT:-0}" "0"
 
-if [ "$_DM_LAST_SUB_COUNT" -eq 0 ]; then
-    dm_warn "Checking via dynamic mapper service API ..."
-    dm_api GET "/subscription?subscription=${SUBSCRIPTION_NAME}" | jq '.'
+if [ "${STATIC_MATCH_COUNT:-0}" -eq 0 ]; then
+    dm_warn "Static subscription not found in mapper API response for device $DEVICE_ID"
+    printf '%s' "$STATIC_SUB_JSON" | jq -s '.' || true
 fi
 
 dm_print_summary

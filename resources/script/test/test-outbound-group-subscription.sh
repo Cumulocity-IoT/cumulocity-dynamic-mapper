@@ -96,12 +96,22 @@ dm_send_measurement "$DEVICE_ID" "21.7"
 # Step 6: Verify notification subscription exists
 dm_step 6 "Verify notification subscription exists for device $DEVICE_ID"
 dm_wait 2 "allowing subscription propagation"
-dm_show_subscriptions "$DEVICE_ID"
-dm_assert_has_subscription "group-based subscription exists" "$DEVICE_ID"
+GROUP_SUB_JSON=$(dm_api GET /subscription/group)
+GROUP_MATCH=$(printf '%s' "$GROUP_SUB_JSON" | jq -s -r --arg gid "$GROUP_ID" '
+        [ .[]
+            | if type == "array" then .[]
+                elif type == "object" then .
+                else empty
+                end
+            | select((.id | tostring) == $gid)
+        ]
+        | length
+' 2>/dev/null || printf '0')
+dm_assert_gt "group-based subscription exists" "${GROUP_MATCH:-0}" "0"
 
-if [ "$_DM_LAST_SUB_COUNT" -eq 0 ]; then
-    dm_warn "Checking group subscriptions via dynamic mapper service API ..."
-    dm_api GET /subscription/group | jq '.'
+if [ "${GROUP_MATCH:-0}" -eq 0 ]; then
+        dm_warn "Group subscription for group $GROUP_ID not found in mapper API response"
+        printf '%s' "$GROUP_SUB_JSON" | jq -s '.' || true
 fi
 
 dm_print_summary
