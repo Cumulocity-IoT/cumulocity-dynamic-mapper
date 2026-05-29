@@ -48,6 +48,20 @@
 #   dm_wait             <seconds> <reason>
 #   dm_wait_for_service [max_retries=24] [interval_secs=10]
 #
+# Connectors
+#   dm_require_mqtt_broker          — validate broker reachability; set _DM_MQTT_CONNECTOR_ID
+#   dm_setup_mqtt_test_connector    — create a new MQTT connector config (disabled)
+#   dm_enable_connector             — enable a connector (required before connect)
+#   dm_setup_and_connect_mqtt_connector — complete setup: create, enable, and connect
+#   dm_connect_connector            <connectorIdentifier>
+#   dm_disconnect_connector         <connectorIdentifier>
+#   dm_get_connector_status         <connectorIdentifier>
+#   dm_assert_connector_status      <label> <connectorIdentifier> <expected_status>
+#
+# MQTT Publish/Subscribe
+#   dm_mqtt_publish                 <topic> <payload>
+#   dm_mqtt_subscribe_one           <topic> [timeout_secs=10]
+#
 # Environment overrides (set before sourcing or exporting)
 #   DM_SERVICE                  (default /service/dynamic-mapper-service)
 #   DM_DEFAULT_DISCOVERY_WAIT   (default 10)
@@ -65,6 +79,12 @@ DM_DEFAULT_DISCOVERY_WAIT="${DM_DEFAULT_DISCOVERY_WAIT:-10}"
 DM_DEFAULT_STARTUP_WAIT="${DM_DEFAULT_STARTUP_WAIT:-60}"
 DM_DEFAULT_HEALTH_RETRIES="${DM_DEFAULT_HEALTH_RETRIES:-24}"
 DM_DEFAULT_HEALTH_INTERVAL="${DM_DEFAULT_HEALTH_INTERVAL:-10}"
+
+# ── MQTT Broker Defaults ────────────────────────────────────────────────────────
+export MQTT_HOST="${MQTT_HOST:-broker.hivemq.com}"
+export MQTT_PORT="${MQTT_PORT:-1883}"
+export MQTT_TLS="${MQTT_TLS:-false}"
+export MQTT_INSECURE="${MQTT_INSECURE:-true}"
 
 # Run c8y CLI non-interactively: suppress all confirmation prompts and spinners.
 export C8Y_SETTINGS_CI=true
@@ -384,6 +404,7 @@ dm_wait_for_service() {     # [max_retries] [interval_secs]
 
 # ── Mapping helpers ────────────────────────────────────────────────────────────
 _DM_LAST_MAPPING_ID=""
+_DM_MQTT_CONNECTOR_ID=""  # Will be set by dm_require_mqtt_broker
 
 # Create a mapping via POST /mapping. The raw JSON body is the only argument.
 # Stores the new mapping id in _DM_LAST_MAPPING_ID.
@@ -449,6 +470,18 @@ dm_assert_mapping_received_gt() {   # <label> <mapping_id> <baseline>
     fi
 }
 
+# Deploy a mapping to the MQTT connector (uses _DM_MQTT_CONNECTOR_ID set by dm_require_mqtt_broker).
+# Requires: dm_require_mqtt_broker must be called first to initialize the connector ID.
+dm_deploy_mapping_to_mqtt_connector() {  # <mapping_id>
+    if [ -z "${_DM_MQTT_CONNECTOR_ID:-}" ]; then
+        dm_fail "MQTT connector ID not set — call dm_require_mqtt_broker first"
+        return 1
+    fi
+    dm_api PUT "/deployment/defined/$1" \
+        "[\"${_DM_MQTT_CONNECTOR_ID}\"]" >/dev/null || true
+    dm_info "Deployed mapping to MQTT connector: $1 -> ${_DM_MQTT_CONNECTOR_ID}"
+}
+
 # ── Connector helpers ──────────────────────────────────────────────────────────
 dm_connect_connector() {    # <connectorIdentifier>
     dm_api POST /operation \
@@ -470,6 +503,52 @@ dm_assert_connector_status() {  # <label> <connectorIdentifier> <expected_status
     local _status
     _status=$(dm_get_connector_status "$2" | jq -r '.status // empty' 2>/dev/null || printf '')
     dm_assert_eq "$1" "$3" "${_status:-UNKNOWN}"
+}
+
+# Create a test MQTT connector configuration
+# Optional parameters: <identifier> [name] [mqtt_host] [mqtt_port]
+# Defaults: identifier=test-mqtt-connector, mqtt_host=$MQTT_HOST, mqtt_port=$MQTT_PORT
+dm_setup_mqtt_test_connector() {    # [identifier] [name] [mqtt_host] [mqtt_port]
+    local _identifier="${1:-test-mqtt-connector}"
+    local _name="${2:-Test MQTT Connector}"
+    local _host="${3:-${MQTT_HOST:-broker.hivemq.com}}"
+    local _port="${4:-${MQTT_PORT:-1883}}"
+    
+    dm_api POST /configuration/connector/instance "{
+      \"identifier\": \"$_identifier\",
+      \"connectorType\": \"MQTT\",
+      \"name\": \"$_name\",
+      \"description\": \"Auto-configured MQTT connector for integration tests\",
+      \"enabled\": false,
+      \"properties\": {
+        \"mqttHost\": \"$_host\",
+        \"mqttPort\": $_port,
+        \"clientId\": \"dynamic_mapper_test\",
+        \"cleanSession\": true,
+        \"protocol\": \"mqtt://\",
+        \"tls\": false,
+        \"insecure\": true
+      }
+    }" >/dev/null || true
+    
+    _DM_MQTT_CONNECTOR_ID="$_identifier"
+    dm_info "Created MQTT test connector: $_identifier (host=$_host:$_port)"
+}
+
+# Enable a connector configuration
+dm_enable_connector() {     # <connectorIdentifier>
+    dm_api PUT "/configuration/connector/instance/$1" "{\"enabled\": true}" >/dev/null || true
+    dm_info "Enabled connector: $1"
+}
+
+# Complete setup: create, enable, and connect MQTT test connector
+# Optional parameters: <identifier> [name] [mqtt_host] [mqtt_port]
+dm_setup_and_connect_mqtt_connector() {     # [identifier] [name] [mqtt_host] [mqtt_port]
+    local _identifier="${1:-test-mqtt-connector}"
+    dm_setup_mqtt_test_connector "$_identifier" "${2:-Test MQTT Connector}" "${3:-${MQTT_HOST:-broker.hivemq.com}}" "${4:-${MQTT_PORT:-1883}}"
+    dm_enable_connector "$_DM_MQTT_CONNECTOR_ID"
+    dm_connect_connector "$_DM_MQTT_CONNECTOR_ID"
+    dm_wait 5 "waiting for MQTT connector to establish connection"
 }
 
 # ── MQTT helpers ───────────────────────────────────────────────────────────────
@@ -523,6 +602,9 @@ dm_require_mqtt_broker() {
           | select((.properties.mqttPort | tostring) == $port)
           | (.identifier // empty)
         ] | .[]' 2>/dev/null || true)
+    
+    # Store the first matching connector ID for deployment operations
+    _DM_MQTT_CONNECTOR_ID=$(printf '%s\n' "$_matching_ids" | head -n 1)
 
     _first_match=$(printf '%s' "$_cfg" | jq -c --arg host "$_host" --arg port "$_port" '
         [ .[]

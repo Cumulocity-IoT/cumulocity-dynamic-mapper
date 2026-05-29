@@ -80,6 +80,7 @@ EOF
 dm_step "Creating and activating multi-device mapping ..."
 dm_create_mapping "$MAPPING_JSON"
 MAPPING_ID="$_DM_LAST_MAPPING_ID"
+dm_deploy_mapping_to_mqtt_connector "$MAPPING_ID"
 dm_activate_mapping "$MAPPING_ID"
 
 dm_step "Recording test start time ..."

@@ -797,17 +797,12 @@ public abstract class AConnectorClient {
     /**
      * Update subscription for outbound mapping
      * Called when a mapping is created, updated, or its activation state changes
-     * 
-     * NOTE: Unlike inbound mappings, outbound mappings do NOT require explicit deployment
-     * to the deployment map. They are automatically active on all connectors when activated.
-     * This is because outbound mappings process C8Y notifications (which are tenant-level),
-     * not broker messages which require explicit routing.
      */
     public void updateSubscriptionForOutbound(Mapping mapping, Boolean create, Boolean activationChanged) {
-        if (mapping.getActive()) {
+        if (mapping.getActive() && isDeployedInConnector(mapping)) {
             mappingSubscriptionManager.addSubscriptionOutbound(mapping.getIdentifier(), mapping);
             log.debug("{} - Added outbound mapping: {}", tenant, mapping.getIdentifier());
-        } else {
+        } else if (!mapping.getActive()) {
             mappingSubscriptionManager.removeSubscriptionOutbound(mapping.getIdentifier());
             log.debug("{} - Removed outbound mapping: {}", tenant, mapping.getIdentifier());
         }
@@ -890,12 +885,10 @@ public abstract class AConnectorClient {
      */
     private Boolean isDeployedInConnector(Mapping mapping) {
         List<String> deploymentMapEntry = mappingService.getDeploymentMapEntry(tenant, mapping.getIdentifier());
-        // No explicit deployment entry means "deployed everywhere" (default behavior).
-        // Only enforce filtering when a deployment list is explicitly configured.
-        if (deploymentMapEntry == null || deploymentMapEntry.isEmpty()) {
-            return true;
-        }
-        return deploymentMapEntry.contains(getConnectorIdentifier());
+        // Explicit deployment required: if no deployment entry is configured,
+        // the mapping is NOT deployed (default is no-deployment, not deploy-everywhere).
+        // Only return true if deployment entry exists AND contains this connector's identifier.
+        return deploymentMapEntry != null && deploymentMapEntry.contains(getConnectorIdentifier());
     }
 
     /**
