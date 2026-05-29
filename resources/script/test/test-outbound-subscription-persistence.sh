@@ -43,7 +43,8 @@ cleanup() {
     dm_delete_static_subscription "$STATIC_DEVICE_ID" "$STATIC_SUBSCRIPTION_NAME"
     dm_delete_device "$STATIC_DEVICE_ID"
     dm_delete_device "$DYNAMIC_DEVICE_ID"
-    dm_set_type_subscriptions MEASUREMENT '[]'
+    # Best-effort cleanup: service might still be restarting/unavailable.
+    dm_api PUT /subscription/type '{"api":"MEASUREMENT","types":[]}' >/dev/null 2>&1 || true
     echo "Cleanup done."
 }
 
@@ -79,6 +80,8 @@ dm_api GET /subscription/type | jq -r '
         (.[0] // {} | .types // [])
     elif type == "object" then
         (.types // [])
+    elif type == "string" then
+        [.] 
     else
         []
     end
@@ -95,7 +98,10 @@ c8y microservices enable --id "$DM_MICROSERVICE_NAME" --force
 # Step 5: Wait for the service to come back up
 dm_step 5 "Wait for microservice to restart and initialize"
 dm_wait "$STARTUP_WAIT" "initial startup period"
+# run-tests.sh may set DM_SKIP_HEALTH_CHECK globally; force a real readiness probe after restart
+unset DM_SKIP_HEALTH_CHECK
 dm_wait_for_service
+dm_wait 10 "post-restart subscription initialization"
 
 # Step 6: Send test messages for both devices
 dm_step 6 "Send test measurements after restart"
@@ -126,18 +132,26 @@ if [ "${STATIC_MATCH_COUNT:-0}" -eq 0 ]; then
 fi
 
 dm_info "Checking dynamic subscription (device $DYNAMIC_DEVICE_ID):"
-TYPE_SUB_JSON=$(dm_api GET /subscription/type)
-TYPE_MATCH=$(printf '%s' "$TYPE_SUB_JSON" | jq -s -r --arg t "$DYNAMIC_DEVICE_TYPE" '
-    [ .[]
-      | if type == "array" then .[]
-        elif type == "object" and (.types? != null) then .types[]
-        elif type == "string" then .
-        else empty
-        end
-      | tostring
-    ]
-    | if (index($t) != null) then 1 else 0 end
-' 2>/dev/null || printf '0')
+TYPE_SUB_JSON='{}'
+TYPE_MATCH=0
+for _i in $(seq 1 30); do
+        TYPE_SUB_JSON=$(dm_api GET /subscription/type)
+        TYPE_MATCH=$(printf '%s' "$TYPE_SUB_JSON" | jq -s -r --arg t "$DYNAMIC_DEVICE_TYPE" '
+                [ .[]
+                    | if type == "array" then .[]
+                        elif type == "object" and (.types? != null) then .types[]
+                        elif type == "string" then .
+                        else empty
+                        end
+                    | tostring
+                ]
+                | if (index($t) != null) then 1 else 0 end
+        ' 2>/dev/null || printf '0')
+        if [ "${TYPE_MATCH:-0}" -gt 0 ]; then
+                break
+        fi
+        sleep 2
+done
 dm_assert_gt "dynamic subscription survives restart" "${TYPE_MATCH:-0}" "0"
 if [ "${TYPE_MATCH:-0}" -eq 0 ]; then
     dm_warn "Type subscription '$DYNAMIC_DEVICE_TYPE' not found in mapper API response"

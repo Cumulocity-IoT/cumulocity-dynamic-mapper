@@ -67,7 +67,7 @@ MAPPING_JSON=$(jq -cn \
         extensionName: "custom-alarm-extension",
         eventName: "CustomAlarm",
         fqnClassName: "dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionCustomAlarm",
-        extensionType: "INBOUND_PROCESSOR",
+                extensionType: "EXTENSION_INBOUND",
         direction: "INBOUND"
       },
       sourceTemplate: "{}",

@@ -67,7 +67,7 @@ MAPPING_JSON=$(jq -cn \
         extensionName: "protobuf-event-extension",
         eventName: "ProtobufEvent",
         fqnClassName: "dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionCustomEvent",
-        extensionType: "INBOUND_PROCESSOR",
+                extensionType: "EXTENSION_INBOUND",
         direction: "INBOUND"
       },
       sourceTemplate: "{}",

@@ -35,6 +35,7 @@ dm_wait_for_service
 MAPPING_JSON=$(cat <<EOF
 {
   "name": "test-multi-tenant-$$",
+  "identifier": "tenant$$",
   "mappingTopic": "dmtest/tenant/+",
   "mappingTopicSample": "dmtest/tenant/dev01",
   "targetAPI": "MEASUREMENT",
@@ -65,7 +66,17 @@ dm_assert_gt "Mapping id is non-empty" "${#MAPPING_ID}" 0
 
 dm_step "Verifying mapping appears exactly once in listing ..."
 COUNT=$(dm_api_json_array GET /mapping \
-    | jq -r --arg id "$MAPPING_ID" '[.[] | select(.id == $id)] | length' 2>/dev/null || echo 0)
+    | jq -s -r --arg id "$MAPPING_ID" '
+        [ .[]
+          | if type == "array" then .[]
+            elif type == "object" and ((.data // .mappings) | type == "array") then (.data // .mappings)[]
+            elif type == "object" then .
+            else empty
+            end
+          | select((.id | tostring) == $id)
+        ]
+        | length
+      ' 2>/dev/null || echo 0)
 dm_assert_eq "Mapping appears exactly once" "1" "$COUNT"
 
 dm_step "Deleting mapping ..."
@@ -76,7 +87,17 @@ MAPPING_ID=""   # prevent double-delete in trap
 dm_step "Verifying mapping is gone from listing ..."
 dm_wait 2
 COUNT2=$(dm_api_json_array GET /mapping \
-    | jq -r --arg id "$MAPPING_ID_SAVED" '[.[] | select(.id == $id)] | length' 2>/dev/null || echo 0)
+    | jq -s -r --arg id "$MAPPING_ID_SAVED" '
+        [ .[]
+          | if type == "array" then .[]
+            elif type == "object" and ((.data // .mappings) | type == "array") then (.data // .mappings)[]
+            elif type == "object" then .
+            else empty
+            end
+          | select((.id | tostring) == $id)
+        ]
+        | length
+      ' 2>/dev/null || echo 0)
 dm_assert_eq "Mapping is no longer listed" "0" "$COUNT2"
 
 dm_done "Mapping CRUD / Tenant Isolation"

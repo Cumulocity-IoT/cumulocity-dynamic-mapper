@@ -67,7 +67,7 @@ MAPPING_JSON=$(jq -cn \
         extensionName: "sparkplugb-measurement-extension",
         eventName: "SparkplugBMeasurement",
         fqnClassName: "dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionSparkplugBMeasurement",
-        extensionType: "INBOUND_PROCESSOR",
+        extensionType: "EXTENSION_INBOUND",
         direction: "INBOUND"
       },
       sourceTemplate: "{}",

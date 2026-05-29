@@ -67,7 +67,7 @@ MAPPING_JSON=$(jq -cn \
         extensionName: "custom-measurement-extension",
         eventName: "CustomMeasurement",
         fqnClassName: "dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionCustomMeasurement",
-        extensionType: "INBOUND_PROCESSOR",
+                extensionType: "EXTENSION_INBOUND",
         direction: "INBOUND"
       },
       sourceTemplate: "{}",

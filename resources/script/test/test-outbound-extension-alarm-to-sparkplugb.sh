@@ -66,9 +66,11 @@ fi
 dm_success "Test device created: $DEVICE_ID"
 
 dm_step 3 "Binding external ID"
-dm_api POST "/identity/globalIdentities" \
-    --data "{\"externalId\":\"$EXT_ID\",\"type\":\"c8y_Serial\",\"managedObject\":{\"id\":\"$DEVICE_ID\"}}" \
-    > /dev/null 2>&1 || true
+c8y identity create \
+    --name "$EXT_ID" \
+    --type "c8y_Serial" \
+    --device "$DEVICE_ID" \
+    --output json >/dev/null 2>&1 || dm_warn "External ID may already exist: $EXT_ID"
 dm_success "External ID bound: $EXT_ID"
 
 dm_step 4 "Creating Sparkplug B outbound mapping (alarm → DCMD)"
@@ -79,6 +81,7 @@ MAPPING_JSON=$(jq -cn \
     '{
       name: $name,
       identifier: $identifier,
+            targetAPI: "ALARM",
       direction: "OUTBOUND",
       mappingType: "PROTOBUF_INTERNAL",
       transformationType: "EXTENSION_JAVA",
@@ -87,9 +90,11 @@ MAPPING_JSON=$(jq -cn \
         extensionName: "alarm-to-sparkplugb-extension",
         eventName: "AlarmToSparkplugB",
         fqnClassName: "dynamic.mapper.processor.extension.external.outbound.ProcessorExtensionAlarmToSparkplugB",
-        extensionType: "OUTBOUND_PROCESSOR",
+                extensionType: "EXTENSION_OUTBOUND",
         direction: "OUTBOUND"
       },
+            sourceTemplate: "{}",
+            targetTemplate: "{}",
       active: false,
       debug: false,
       useExternalId: true,
@@ -98,6 +103,7 @@ MAPPING_JSON=$(jq -cn \
       subscriptionType: "STATIC",
       subscriptionTenantId: "*",
       publishTopic: "spBv1.0/group1/DCMD/edgenode1/device1",
+            publishTopicSample: "spBv1.0/group1/DCMD/edgenode1/device1",
       parameter: {
         metricPrefix: "Alarms",
         qos: "1",
