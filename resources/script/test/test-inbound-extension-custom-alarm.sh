@@ -49,7 +49,7 @@ dm_wait_for_service
 dm_require_mqtt_broker
 dm_verify_mqtt_connector_ready
 
-dm_step 2 "Creating mapping with ProcessorExtensionCustomAlarm"
+dm_step 2 "Creating mapping with CustomAlarm extension"
 MAPPING_JSON=$(jq -cn \
     --arg name       "test-ext-alarm-$$" \
     --arg identifier "ext-alarm-$$" \
@@ -63,7 +63,13 @@ MAPPING_JSON=$(jq -cn \
       direction: "INBOUND",
       mappingType: "JSON",
       transformationType: "EXTENSION_JAVA",
-      processorExtensionName: "ProcessorExtensionCustomAlarm",
+      extension: {
+        extensionName: "custom-alarm-extension",
+        eventName: "CustomAlarm",
+        fqnClassName: "dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionCustomAlarm",
+        extensionType: "INBOUND_PROCESSOR",
+        direction: "INBOUND"
+      },
       sourceTemplate: "{}",
       targetTemplate: "{}",
       active: false,
@@ -75,12 +81,14 @@ MAPPING_JSON=$(jq -cn \
       qos: "AT_LEAST_ONCE"
     }')
 
-MAPPING_ID=$(dm_create_mapping "$MAPPING_JSON")
+dm_create_mapping "$MAPPING_JSON"
+MAPPING_ID="$_DM_LAST_MAPPING_ID"
 dm_success "Mapping created: $MAPPING_ID"
 
 dm_step 3 "Deploying and activating mapping"
 dm_deploy_mapping_to_mqtt_connector "$MAPPING_ID"
 dm_activate_mapping "$MAPPING_ID"
+dm_assert_mqtt_topics_active
 dm_success "Mapping deployed and activated"
 
 dm_step 4 "Recording baseline for verification"
@@ -130,4 +138,4 @@ if [ "$ALARM_COUNT" -ge 1 ]; then
     fi
 fi
 
-dm_banner "✅ Test PASSED: ProcessorExtensionCustomAlarm works correctly"
+dm_done "Inbound Extension Custom Alarm"

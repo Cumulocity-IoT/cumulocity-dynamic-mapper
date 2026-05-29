@@ -80,9 +80,16 @@ MAPPING_JSON=$(jq -cn \
       name: $name,
       identifier: $identifier,
       direction: "OUTBOUND",
-      mappingType: "BINARY",
+      mappingType: "PROTOBUF_INTERNAL",
       transformationType: "EXTENSION_JAVA",
-      processorExtensionName: "ProcessorExtensionAlarmToSparkplugB",
+      filterMapping: "true",
+      extension: {
+        extensionName: "alarm-to-sparkplugb-extension",
+        eventName: "AlarmToSparkplugB",
+        fqnClassName: "dynamic.mapper.processor.extension.external.outbound.ProcessorExtensionAlarmToSparkplugB",
+        extensionType: "OUTBOUND_PROCESSOR",
+        direction: "OUTBOUND"
+      },
       active: false,
       debug: false,
       useExternalId: true,
@@ -99,7 +106,8 @@ MAPPING_JSON=$(jq -cn \
       qos: "AT_LEAST_ONCE"
     }')
 
-MAPPING_ID=$(dm_create_mapping "$MAPPING_JSON")
+dm_create_mapping "$MAPPING_JSON"
+MAPPING_ID="$_DM_LAST_MAPPING_ID"
 dm_success "Sparkplug B alarm mapping created: $MAPPING_ID"
 
 dm_step 5 "Deploying and activating mapping"
@@ -109,13 +117,14 @@ dm_success "Mapping deployed and activated"
 
 dm_step 6 "Verifying mapping configuration"
 MAPPING_CONFIG=$(dm_api GET "/mapping/$MAPPING_ID" 2>/dev/null || echo '{}')
-EXT_NAME=$(echo "$MAPPING_CONFIG" | jq -r '.processorExtensionName // empty')
+EXT_EVENT=$(echo "$MAPPING_CONFIG" | jq -r '.extension.eventName // empty')
+EXT_FQN=$(echo "$MAPPING_CONFIG" | jq -r '.extension.fqnClassName // empty')
 PUB_TOPIC=$(echo "$MAPPING_CONFIG" | jq -r '.publishTopic // empty')
 
-if [ "$EXT_NAME" = "ProcessorExtensionAlarmToSparkplugB" ]; then
-    dm_success "Alarm-to-Sparkplug extension configured: $EXT_NAME"
+if [ "$EXT_EVENT" = "AlarmToSparkplugB" ] || [[ "$EXT_FQN" == *".ProcessorExtensionAlarmToSparkplugB" ]]; then
+    dm_success "Alarm-to-Sparkplug extension configured: ${EXT_EVENT:-$EXT_FQN}"
 else
-    dm_warn "Extension name mismatch: $EXT_NAME"
+    dm_warn "Extension mismatch: event=${EXT_EVENT:-n/a} fqn=${EXT_FQN:-n/a}"
 fi
 
 if [[ "$PUB_TOPIC" == spBv1.0/*/DCMD/* ]]; then
@@ -147,5 +156,5 @@ dm_info "  - Payload: Protobuf with metrics for alarm state"
 dm_info "  - Metric prefix: Alarms (configurable)"
 dm_info "  - ISA-95 alarm model: State/Message/Severity/Status"
 
-dm_banner "✅ Test PASSED: Sparkplug B alarm-to-DCMD mapping is configured correctly"
+dm_done "Outbound Extension Alarm to Sparkplug B"
 dm_info "Note: Full protobuf payload testing requires Sparkplug B broker validation"

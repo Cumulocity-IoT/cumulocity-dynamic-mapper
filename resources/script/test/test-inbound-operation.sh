@@ -66,8 +66,7 @@ MAPPING_JSON=$(jq -cn \
       sourceTemplate: "{\"operationType\":\"\",\"commandName\":\"\",\"status\":\"\"}",
       targetTemplate: "{\"deviceId\":\"${DEVICE_ID}\",\"status\":\"PENDING\",\"c8y_Restart\":{}}",
       substitutions: [
-        {"pathSource":"_TOPIC_LEVEL_[2]","pathTarget":"_IDENTITY_.externalId","repairStrategy":"DEFAULT","expandArray":false},
-        {"pathSource":"operationType","pathTarget":"c8y_Restart","repairStrategy":"DEFAULT","expandArray":false}
+                {"pathSource":"_TOPIC_LEVEL_[2]","pathTarget":"_IDENTITY_.externalId","repairStrategy":"DEFAULT","expandArray":false}
       ],
       active: false,
       debug: false,
@@ -78,12 +77,14 @@ MAPPING_JSON=$(jq -cn \
       qos: "AT_LEAST_ONCE"
     }')
 
-MAPPING_ID=$(dm_create_mapping "$MAPPING_JSON")
+dm_create_mapping "$MAPPING_JSON"
+MAPPING_ID="$_DM_LAST_MAPPING_ID"
 dm_success "Mapping created: $MAPPING_ID"
 
 dm_step 3 "Deploying and activating mapping"
 dm_deploy_mapping_to_mqtt_connector "$MAPPING_ID"
 dm_activate_mapping "$MAPPING_ID"
+dm_assert_mqtt_topics_active
 dm_success "Mapping deployed and activated"
 
 dm_step 4 "Publishing operation command via MQTT"
@@ -97,8 +98,8 @@ echo "$TEST_PAYLOAD" | mosquitto_pub -h broker.hivemq.com -t "dmtest/operation/$
 dm_success "Operation command published"
 
 dm_step 5 "Waiting for device and operation creation"
-sleep 2
-DEVICE_ID=$(dm_lookup_device_by_ext_id "$EXT_ID" "c8y_Serial" | head -1) || true
+sleep 8
+DEVICE_ID=$(dm_lookup_device_by_ext_id "$EXT_ID" "c8y_Serial" 2>/dev/null | head -1) || true
 
 if [ -z "$DEVICE_ID" ]; then
     dm_error "Device not created with externalId=$EXT_ID"
@@ -107,8 +108,17 @@ fi
 dm_success "Device created: $DEVICE_ID"
 
 dm_step 6 "Verifying operation was created"
-OPERATION=$(dm_api GET "/devicecontrol/operations?deviceId=$DEVICE_ID&pageSize=5" 2>/dev/null || echo '{"operations":[]}')
-OPERATION_COUNT=$(echo "$OPERATION" | jq '.operations | length')
+OPERATION='[]'
+OPERATION_COUNT=0
+for _attempt in 1 2 3 4 5; do
+    # c8y operations list emits one JSON object per line for --output json; slurp to count reliably.
+    OPERATION=$(c8y operations list --device "$DEVICE_ID" --pageSize 5 --output json 2>/dev/null || echo '[]')
+    OPERATION_COUNT=$(echo "$OPERATION" | jq -s 'length')
+    if [ "$OPERATION_COUNT" -ge 1 ]; then
+        break
+    fi
+    sleep 2
+done
 
 if [ "$OPERATION_COUNT" -ge 1 ]; then
     dm_success "Operation created: $OPERATION_COUNT operation(s) found"
@@ -117,10 +127,10 @@ else
 fi
 
 dm_step 7 "Verifying operation content"
-OPERATION_STATUS=$(echo "$OPERATION" | jq -r '.operations[0].status // empty')
-OPERATION_TYPE=$(echo "$OPERATION" | jq -r '.operations[0] | keys[] | select(startswith("c8y_")) | .[0]' 2>/dev/null || echo "unknown")
+OPERATION_STATUS=$(echo "$OPERATION" | jq -rs '.[0].status // empty')
+OPERATION_TYPE=$(echo "$OPERATION" | jq -rs '.[0] | keys[] | select(startswith("c8y_"))' 2>/dev/null | head -n 1 || echo "unknown")
 
 dm_info "Operation status: $OPERATION_STATUS"
 dm_info "Operation type: $OPERATION_TYPE"
 
-dm_banner "✅ Test PASSED: Inbound OPERATION transformation works correctly"
+dm_done "Inbound OPERATION Transformation"

@@ -69,15 +69,12 @@ COUNT=$(dm_api_json_array GET /mapping \
 dm_assert_eq "Mapping appears exactly once" "1" "$COUNT"
 
 dm_step "Deleting mapping ..."
+MAPPING_ID_SAVED="$MAPPING_ID"
 dm_delete_mapping "$MAPPING_ID"
 MAPPING_ID=""   # prevent double-delete in trap
 
 dm_step "Verifying mapping is gone from listing ..."
 dm_wait 2
-COUNT2=$(dm_api_json_array GET /mapping \
-    | jq -r --arg id "$MAPPING_ID_SAVED" '[.[] | select(.id == $id)] | length' 2>/dev/null || echo 0) || true
-# We re-read the old id to confirm absence
-MAPPING_ID_SAVED="${MAPPING_ID:-${_DM_LAST_MAPPING_ID}}"
 COUNT2=$(dm_api_json_array GET /mapping \
     | jq -r --arg id "$MAPPING_ID_SAVED" '[.[] | select(.id == $id)] | length' 2>/dev/null || echo 0)
 dm_assert_eq "Mapping is no longer listed" "0" "$COUNT2"

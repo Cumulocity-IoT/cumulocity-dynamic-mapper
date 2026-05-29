@@ -61,9 +61,15 @@ MAPPING_JSON=$(jq -cn \
       mappingTopicSample: ("spBv1.0/group1/NDATA/edgenode1/" + $extId),
       targetAPI: "MEASUREMENT",
       direction: "INBOUND",
-      mappingType: "BINARY",
+      mappingType: "PROTOBUF_INTERNAL",
       transformationType: "EXTENSION_JAVA",
-      processorExtensionName: "ProcessorExtensionSparkplugBMeasurement",
+      extension: {
+        extensionName: "sparkplugb-measurement-extension",
+        eventName: "SparkplugBMeasurement",
+        fqnClassName: "dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionSparkplugBMeasurement",
+        extensionType: "INBOUND_PROCESSOR",
+        direction: "INBOUND"
+      },
       sourceTemplate: "{}",
       targetTemplate: "{}",
       active: false,
@@ -81,12 +87,14 @@ MAPPING_JSON=$(jq -cn \
       qos: "AT_LEAST_ONCE"
     }')
 
-MAPPING_ID=$(dm_create_mapping "$MAPPING_JSON")
+dm_create_mapping "$MAPPING_JSON"
+MAPPING_ID="$_DM_LAST_MAPPING_ID"
 dm_success "Sparkplug B mapping created: $MAPPING_ID"
 
 dm_step 3 "Deploying and activating mapping"
 dm_deploy_mapping_to_mqtt_connector "$MAPPING_ID"
 dm_activate_mapping "$MAPPING_ID"
+dm_assert_mqtt_topics_active
 dm_success "Mapping deployed and activated"
 
 dm_step 4 "Note: Binary Sparkplug B protobuf payload publishing"
@@ -97,13 +105,14 @@ dm_success "Sparkplug B extension mapping ready for protobuf payloads"
 
 dm_step 5 "Verifying mapping configuration"
 MAPPING_CONFIG=$(dm_api GET "/mapping/$MAPPING_ID" 2>/dev/null || echo '{}')
-EXT_NAME=$(echo "$MAPPING_CONFIG" | jq -r '.processorExtensionName // empty')
+EXT_EVENT=$(echo "$MAPPING_CONFIG" | jq -r '.extension.eventName // empty')
+EXT_FQN=$(echo "$MAPPING_CONFIG" | jq -r '.extension.fqnClassName // empty')
 
-if [ "$EXT_NAME" = "ProcessorExtensionSparkplugBMeasurement" ]; then
-    dm_success "Extension correctly configured: $EXT_NAME"
+if [ "$EXT_EVENT" = "SparkplugBMeasurement" ] || [[ "$EXT_FQN" == *".ProcessorExtensionSparkplugBMeasurement" ]]; then
+    dm_success "Extension correctly configured: ${EXT_EVENT:-$EXT_FQN}"
 else
-    dm_warn "Extension name mismatch: $EXT_NAME"
+    dm_warn "Extension mismatch: event=${EXT_EVENT:-n/a} fqn=${EXT_FQN:-n/a}"
 fi
 
-dm_banner "✅ Test PASSED: Sparkplug B measurement extension mapping is configured correctly"
+dm_done "Inbound Extension Sparkplug B Measurement"
 dm_info "Note: Full protobuf payload testing requires binary message generation"

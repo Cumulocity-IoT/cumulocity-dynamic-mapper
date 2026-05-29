@@ -40,7 +40,8 @@ dm_banner "Outbound C8Y Operation → MQTT Broker"
 
 dm_step "Waiting for Dynamic Mapper service ..."
 dm_wait_for_service
-dm_require_connected_connector
+dm_require_mqtt_broker
+dm_verify_mqtt_connector_ready
 
 dm_step "Creating test device (with agent fragment for operations) ..."
 dm_create_device "$DEVICE_NAME" "$DEVICE_TYPE"
@@ -52,9 +53,7 @@ c8y inventory update --id "$DEVICE_ID" \
     --output json >/dev/null
 
 dm_step "Creating static subscription for device ..."
-dm_api POST /subscription \
-    "{\"api\": \"OPERATION\", \"devices\": [{\"id\": \"${DEVICE_ID}\", \"name\": \"${DEVICE_NAME}\"}]}" \
-    >/dev/null
+dm_create_static_subscription_must "OPERATION" "$DEVICE_ID" "$DEVICE_NAME"
 dm_wait 3
 
 dm_step "Creating outbound OPERATION mapping ..."
@@ -86,6 +85,7 @@ EOF
 )
 dm_create_mapping "$MAPPING_JSON"
 MAPPING_ID="$_DM_LAST_MAPPING_ID"
+dm_deploy_mapping_to_mqtt_connector "$MAPPING_ID"
 dm_activate_mapping "$MAPPING_ID"
 
 dm_step "Recording baseline messagesReceived count ..."

@@ -63,13 +63,14 @@ MAPPING_JSON=$(jq -cn \
       direction: "INBOUND",
       mappingType: "JSON",
       transformationType: "DEFAULT",
-      sourceTemplate: "{\"externalId\":\"\",\"alarmType\":\"\",\"severity\":\"\",\"text\":\"\"}",
-      targetTemplate: "{\"type\":\"c8y_SystemAlarm\",\"severity\":\"MAJOR\",\"status\":\"ACTIVE\",\"text\":\"Device alarm triggered\"}",
+      sourceTemplate: "{\"externalId\":\"\",\"alarmType\":\"\",\"severity\":\"\",\"text\":\"\",\"time\":\"\"}",
+            targetTemplate: "{\"type\":\"c8y_SystemAlarm\",\"severity\":\"MAJOR\",\"status\":\"ACTIVE\",\"text\":\"Device alarm triggered\",\"time\":\"1970-01-01T00:00:00Z\"}",
       substitutions: [
         {"pathSource":"_TOPIC_LEVEL_[2]","pathTarget":"_IDENTITY_.externalId","repairStrategy":"DEFAULT","expandArray":false},
         {"pathSource":"alarmType","pathTarget":"type","repairStrategy":"DEFAULT","expandArray":false},
         {"pathSource":"severity","pathTarget":"severity","repairStrategy":"DEFAULT","expandArray":false},
-        {"pathSource":"text","pathTarget":"text","repairStrategy":"DEFAULT","expandArray":false}
+        {"pathSource":"text","pathTarget":"text","repairStrategy":"DEFAULT","expandArray":false},
+        {"pathSource":"time","pathTarget":"time","repairStrategy":"DEFAULT","expandArray":false}
       ],
       active: false,
       debug: false,
@@ -80,26 +81,29 @@ MAPPING_JSON=$(jq -cn \
       qos: "AT_LEAST_ONCE"
     }')
 
-MAPPING_ID=$(dm_create_mapping "$MAPPING_JSON")
+dm_create_mapping "$MAPPING_JSON"
+MAPPING_ID="$_DM_LAST_MAPPING_ID"
 dm_success "Mapping created: $MAPPING_ID"
 
 dm_step 3 "Deploying and activating mapping"
 dm_deploy_mapping_to_mqtt_connector "$MAPPING_ID"
 dm_activate_mapping "$MAPPING_ID"
+dm_assert_mqtt_topics_active
 dm_success "Mapping deployed and activated"
 
 dm_step 4 "Publishing alarm JSON via MQTT"
 TEST_PAYLOAD=$(jq -cn '{
   alarmType: "c8y_TemperatureAlarm",
   severity: "CRITICAL",
-  text: "Temperature sensor malfunction detected"
+  text: "Temperature sensor malfunction detected",
+  time: (now | todate)
 }')
 
 echo "$TEST_PAYLOAD" | mosquitto_pub -h broker.hivemq.com -t "dmtest/alarm/$EXT_ID" -s -q 1
-dm_success "Alarm JSON published: $TEST_PAYLOAD"
+dm_success "Alarm JSON published"
 
 dm_step 5 "Waiting for device and alarm creation"
-sleep 2
+sleep 8
 DEVICE_ID=$(dm_lookup_device_by_ext_id "$EXT_ID" "c8y_Serial" | head -1) || true
 
 if [ -z "$DEVICE_ID" ]; then
@@ -109,8 +113,17 @@ fi
 dm_success "Device created: $DEVICE_ID"
 
 dm_step 6 "Verifying alarm was created"
-ALARM=$(dm_api GET "/alarm/alarms?source=$DEVICE_ID&pageSize=5" 2>/dev/null || echo '{"alarms":[]}')
-ALARM_COUNT=$(echo "$ALARM" | jq '.alarms | length')
+ALARM='[]'
+ALARM_COUNT=0
+for _attempt in 1 2 3 4 5; do
+    # c8y alarms list emits one JSON object per line for --output json; slurp to count reliably.
+    ALARM=$(c8y alarms list --device "$DEVICE_ID" --pageSize 5 --output json 2>/dev/null || echo '[]')
+    ALARM_COUNT=$(echo "$ALARM" | jq -s 'length')
+    if [ "$ALARM_COUNT" -ge 1 ]; then
+        break
+    fi
+    sleep 2
+done
 
 if [ "$ALARM_COUNT" -ge 1 ]; then
     dm_success "Alarm created: $ALARM_COUNT alarm(s) found"
@@ -119,10 +132,10 @@ else
 fi
 
 dm_step 7 "Verifying alarm content"
-ALARM_TEXT=$(echo "$ALARM" | jq -r '.alarms[0].text // empty')
-ALARM_SEVERITY=$(echo "$ALARM" | jq -r '.alarms[0].severity // empty')
+ALARM_TEXT=$(echo "$ALARM" | jq -rs '.[0].text // empty')
+ALARM_SEVERITY=$(echo "$ALARM" | jq -rs '.[0].severity // empty')
 
 dm_info "Alarm text: $ALARM_TEXT"
 dm_info "Alarm severity: $ALARM_SEVERITY"
 
-dm_banner "✅ Test PASSED: Inbound ALARM transformation works correctly"
+dm_done "Inbound ALARM Transformation"

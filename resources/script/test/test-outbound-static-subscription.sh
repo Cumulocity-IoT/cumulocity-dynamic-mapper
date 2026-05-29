@@ -49,9 +49,7 @@ DEVICE_NAME_ACTUAL=$_DM_LAST_DEVICE_NAME
 
 # Step 2: Create static subscription
 dm_step 2 "Create static subscription"
-dm_api POST /subscription \
-    "{\"api\": \"MEASUREMENT\", \"devices\": [{\"id\": \"${DEVICE_ID}\", \"name\": \"${DEVICE_NAME_ACTUAL}\"}]}" \
-    | jq '.'
+dm_create_static_subscription_must "MEASUREMENT" "$DEVICE_ID" "$DEVICE_NAME_ACTUAL"
 
 # Step 3: Send a test measurement
 dm_step 3 "Send test measurement for device $DEVICE_ID"

@@ -57,9 +57,7 @@ dm_banner "Outbound Subscription Persistence After Restart"
 dm_step 1 "Set up static subscription"
 dm_create_device "$STATIC_DEVICE_NAME" "$STATIC_DEVICE_TYPE"
 STATIC_DEVICE_ID=$_DM_LAST_DEVICE_ID
-dm_api POST /subscription \
-    "{\"api\": \"MEASUREMENT\", \"devices\": [{\"id\": \"${STATIC_DEVICE_ID}\", \"name\": \"${STATIC_DEVICE_NAME}\"}]}" \
-    | jq '.status // "submitted"'
+dm_create_static_subscription_must "MEASUREMENT" "$STATIC_DEVICE_ID" "$STATIC_DEVICE_NAME"
 dm_info "Static subscription created."
 
 # Step 2: Create dynamic type subscription and device

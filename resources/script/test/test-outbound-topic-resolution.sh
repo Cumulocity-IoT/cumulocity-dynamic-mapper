@@ -41,7 +41,8 @@ dm_banner "Outbound Dynamic Topic Resolution"
 
 dm_step "Waiting for Dynamic Mapper service ..."
 dm_wait_for_service
-dm_require_connected_connector
+dm_require_mqtt_broker
+dm_verify_mqtt_connector_ready
 
 dm_step "Creating test device with external id ..."
 dm_create_device "$DEVICE_NAME" "$DEVICE_TYPE"
@@ -56,9 +57,7 @@ c8y identity create \
     --output json 2>/dev/null || dm_warn "External id may already exist"
 
 dm_step "Creating static subscription for device ..."
-dm_api POST /subscription \
-    "{\"api\": \"EVENT\", \"devices\": [{\"id\": \"${DEVICE_ID}\", \"name\": \"${DEVICE_NAME}\"}]}" \
-    >/dev/null
+dm_create_static_subscription_must "EVENT" "$DEVICE_ID" "$DEVICE_NAME"
 dm_wait 3
 
 # publishTopic uses # to include the dynamic part resolved from _IDENTITY_.c8ySourceId → externalId
@@ -93,6 +92,7 @@ EOF
 )
 dm_create_mapping "$MAPPING_JSON"
 MAPPING_ID="$_DM_LAST_MAPPING_ID"
+dm_deploy_mapping_to_mqtt_connector "$MAPPING_ID"
 dm_activate_mapping "$MAPPING_ID"
 
 dm_step "Recording baseline messagesReceived count ..."

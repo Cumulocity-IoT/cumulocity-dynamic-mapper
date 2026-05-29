@@ -74,6 +74,8 @@ import com.cumulocity.sdk.client.devicecontrol.DeviceControlApi;
 import com.cumulocity.sdk.client.event.EventApi;
 import com.cumulocity.sdk.client.measurement.MeasurementApi;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import c8y.IsDevice;
 import dynamic.mapper.configuration.ServiceConfiguration;
@@ -642,14 +644,18 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                         else
                             log.info("{} - SEND: measurement(s) posted: {} measurement(s)", tenant, count);
                     } else if (targetAPI.equals(API.OPERATION)) {
+                        // C8Y DeviceControl API rejects 'status' on create (HTTP 422 "status is not allowed here")
+                        JsonNode opNode = configurationRegistry.getObjectMapper().readTree(payload);
+                        if (opNode.isObject()) {
+                            ((ObjectNode) opNode).remove("status");
+                        }
                         OperationRepresentation operationRepresentation = configurationRegistry.getObjectMapper()
-                                .readValue(
-                                        payload, OperationRepresentation.class);
+                                .treeToValue(opNode, OperationRepresentation.class);
                         try {
                             c8ySemaphore.acquire();
                             rt = deviceControlApi.create(operationRepresentation);
                         } catch (InterruptedException e) {
-                            log.error("{} - Failed to acquire semaphore for creating Alarm", tenant, e);
+                            log.error("{} - Failed to acquire semaphore for creating Operation", tenant, e);
                         } finally {
                             c8ySemaphore.release();
                         }

@@ -92,10 +92,12 @@ JSCODE
 
 SF_CODE=$(dm_wrap_onmessage_code "$SF_CODE")
 
+SF_CODE_B64=$(printf '%s' "$SF_CODE" | base64)
+
 MAPPING_JSON=$(jq -cn \
-    --arg name         "test-sf-outbound-$$" \
-    --arg identifier   "sf-out-$$" \
-    --arg code         "$SF_CODE" \
+    --arg name         "test-outbound-sf-$$" \
+    --arg identifier   "obsf$$" \
+    --arg code         "$SF_CODE_B64" \
     --arg externalId   "$EXT_ID" \
     '{
       name: $name,
@@ -103,7 +105,10 @@ MAPPING_JSON=$(jq -cn \
       direction: "OUTBOUND",
       mappingType: "JSON",
       transformationType: "SMART_FUNCTION",
-      customProcessingCode: $code,
+      sourceTemplate: "{}",
+      targetTemplate: "{}",
+      substitutions: [],
+      code: $code,
       active: false,
       debug: false,
       useExternalId: true,
@@ -114,7 +119,8 @@ MAPPING_JSON=$(jq -cn \
       qos: "AT_LEAST_ONCE"
     }')
 
-MAPPING_ID=$(dm_create_mapping "$MAPPING_JSON")
+dm_create_mapping "$MAPPING_JSON"
+MAPPING_ID="$_DM_LAST_MAPPING_ID"
 dm_success "Outbound mapping created: $MAPPING_ID"
 
 dm_step 5 "Deploying and activating mapping"
@@ -174,4 +180,4 @@ fi
 kill $MQTT_PID 2>/dev/null || true
 rm -f "$TEMP_FILE"
 
-dm_banner "✅ Test PASSED: Outbound Smart Function works correctly"
+dm_done "Outbound Smart Function"

@@ -86,7 +86,6 @@ function onMessage(msg, context) {
         action: "create",
         payload: {
             type: "c8y_VoltageMeasurement",
-            source: { id: externalId },
             c8y_VoltageMeasurement: {
                 U: {
                     value: payload.sensorData.val,
@@ -95,7 +94,7 @@ function onMessage(msg, context) {
             },
             time: new Date().toISOString()
         },
-        externalSource: externalId
+        externalSource: [{ type: "c8y_Serial", externalId: externalId }]
     };
     
     return [measurement];
@@ -105,10 +104,12 @@ JSCODE
 
 SF_CODE=$(dm_wrap_onmessage_code "$SF_CODE")
 
+SF_CODE_B64=$(printf '%s' "$SF_CODE" | base64)
+
 MAPPING_JSON=$(jq -cn \
     --arg name         "test-sf-02-$$" \
     --arg identifier   "sf-02-$$" \
-    --arg code         "$SF_CODE" \
+    --arg code         "$SF_CODE_B64" \
     '{
       name: $name,
       identifier: $identifier,
@@ -118,7 +119,10 @@ MAPPING_JSON=$(jq -cn \
       direction: "INBOUND",
       mappingType: "JSON",
       transformationType: "SMART_FUNCTION",
-      customProcessingCode: $code,
+      sourceTemplate: "{}",
+      targetTemplate: "{}",
+      substitutions: [],
+      code: $code,
       active: false,
       debug: false,
       createNonExistingDevice: false,
@@ -128,12 +132,14 @@ MAPPING_JSON=$(jq -cn \
       qos: "AT_LEAST_ONCE"
     }')
 
-MAPPING_ID=$(dm_create_mapping "$MAPPING_JSON")
+dm_create_mapping "$MAPPING_JSON"
+MAPPING_ID="$_DM_LAST_MAPPING_ID"
 dm_success "Mapping created: $MAPPING_ID"
 
 dm_step 5 "Deploying and activating mapping"
 dm_deploy_mapping_to_mqtt_connector "$MAPPING_ID"
 dm_activate_mapping "$MAPPING_ID"
+dm_assert_mqtt_topics_active
 dm_success "Mapping deployed and activated"
 
 dm_step 6 "Publishing voltage sensor reading via MQTT"
@@ -149,7 +155,7 @@ echo "$TEST_PAYLOAD" | mosquitto_pub -h broker.hivemq.com -t "testSmartInbound/s
 dm_success "Voltage reading published"
 
 dm_step 7 "Waiting for measurement creation"
-sleep 2
+sleep 8
 MEASUREMENT=$(dm_get_latest_measurement "$EXT_ID" "c8y_Serial" "c8y_VoltageMeasurement") 2>/dev/null || echo "{}"
 VOLTAGE=$(echo "$MEASUREMENT" | jq -r '.c8y_VoltageMeasurement.U.value // empty')
 
@@ -159,4 +165,4 @@ else
     dm_warn "Voltage value not as expected: $VOLTAGE (expected: 230.5)"
 fi
 
-dm_banner "✅ Test PASSED: Smart Function Pattern 02 (topic-based external ID) works correctly"
+dm_done "Inbound Smart Function Pattern 02"

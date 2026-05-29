@@ -67,7 +67,6 @@ function onMessage(msg, context) {
             action: "create",
             payload: {
                 type: "c8y_TemperatureMeasurement",
-                source: { id: externalId },
                 c8y_TemperatureMeasurement: {
                     T: {
                         value: payload.sensorData.temp_val,
@@ -76,7 +75,7 @@ function onMessage(msg, context) {
                 },
                 time: new Date().toISOString()
             },
-            externalSource: externalId
+            externalSource: [{ type: "c8y_Serial", externalId: externalId }]
         };
         return [measurement];
     } 
@@ -95,10 +94,9 @@ function onMessage(msg, context) {
                     severity: "MAJOR",
                     status: "ACTIVE",
                     text: currentError,
-                    source: { id: externalId },
                     time: new Date().toISOString()
                 },
-                externalSource: externalId
+                externalSource: [{ type: "c8y_Serial", externalId: externalId }]
             };
             return [alarm];
         }
@@ -113,10 +111,12 @@ JSCODE
 
 SF_CODE=$(dm_wrap_onmessage_code "$SF_CODE")
 
+SF_CODE_B64=$(printf '%s' "$SF_CODE" | base64)
+
 MAPPING_JSON=$(jq -cn \
     --arg name         "test-sf-04-$$" \
     --arg identifier   "sf-04-$$" \
-    --arg code         "$SF_CODE" \
+    --arg code         "$SF_CODE_B64" \
     '{
       name: $name,
       identifier: $identifier,
@@ -126,7 +126,10 @@ MAPPING_JSON=$(jq -cn \
       direction: "INBOUND",
       mappingType: "JSON",
       transformationType: "SMART_FUNCTION",
-      customProcessingCode: $code,
+      sourceTemplate: "{}",
+      targetTemplate: "{}",
+      substitutions: [],
+      code: $code,
       active: false,
       debug: false,
       createNonExistingDevice: true,
@@ -136,12 +139,14 @@ MAPPING_JSON=$(jq -cn \
       qos: "AT_LEAST_ONCE"
     }')
 
-MAPPING_ID=$(dm_create_mapping "$MAPPING_JSON")
+dm_create_mapping "$MAPPING_JSON"
+MAPPING_ID="$_DM_LAST_MAPPING_ID"
 dm_success "Mapping created: $MAPPING_ID"
 
 dm_step 3 "Deploying and activating mapping"
 dm_deploy_mapping_to_mqtt_connector "$MAPPING_ID"
 dm_activate_mapping "$MAPPING_ID"
+dm_assert_mqtt_topics_active
 dm_success "Mapping deployed and activated"
 
 dm_step 4 "Publishing telemetry data"
@@ -186,7 +191,7 @@ echo "$ERROR2" | mosquitto_pub -h broker.hivemq.com -t "flowState/$EXT_ID" -s -q
 dm_success "Duplicate error published (should be deduplicated)"
 
 dm_step 7 "Verifying measurements and alarms"
-sleep 2
+sleep 8
 DEVICE_ID=$(dm_lookup_device_by_ext_id "$EXT_ID" "c8y_Serial" | head -1) || true
 
 if [ -z "$DEVICE_ID" ]; then
@@ -209,4 +214,4 @@ else
     dm_warn "Deduplication count: $ALARM_COUNT (expected: 1)"
 fi
 
-dm_banner "✅ Test PASSED: Smart Function Pattern 04 (dual payload + deduplication) works correctly"
+dm_done "Inbound Smart Function Pattern 04"

@@ -137,6 +137,7 @@ dm_info()    { printf "%s\n" "$1"; }
 dm_success() { printf "${_C_GREEN}SUCCESS: %s${_C_RESET}\n" "$1"; }
 dm_warn()    { printf "${_C_YELLOW}WARN: %s${_C_RESET}\n" "$1"; }
 dm_fail()    { printf "${_C_RED}FAIL: %s${_C_RESET}\n" "$1"; }
+dm_error()   { printf "${_C_RED}ERROR: %s${_C_RESET}\n" "$1" >&2; exit 1; }
 
 # ── Tool validation ────────────────────────────────────────────────────────────
 
@@ -326,6 +327,54 @@ dm_api_json_array() {   # <method> <path> [json_body]
     fi
 }
 
+# Strict API call helper. Exits on any API error to avoid false-positive test progress.
+dm_api_must() {     # <method> <path> [json_body]
+    local _method=$1 _path=$2 _body=${3:-} _err _out
+    _err=$(mktemp)
+    if [ -n "$_body" ]; then
+        if printf '%s' "$_body" | grep -Eq '^[[:space:]]*\['; then
+            if _out=$(printf '%s\n' "$_body" | c8y api --method "$_method" \
+                    --url "${DM_SERVICE}${_path}" \
+                    --template "input.value" \
+                    --header 'Content-Type: application/json' \
+                    --output json 2>"$_err"); then
+                rm -f "$_err"
+                [ -n "$_out" ] && printf '%s\n' "$_out" || printf '{}'
+            else
+                local _msg=""
+                [ -s "$_err" ] && _msg="$(tr '\n' ' ' <"$_err" | head -c 500)"
+                rm -f "$_err"
+                dm_error "dm_api_must ${_method} ${_path} failed${_msg:+: $_msg}"
+            fi
+        elif _out=$(c8y api --method "$_method" \
+                --url "${DM_SERVICE}${_path}" \
+                --data "$_body" \
+                --header 'Content-Type: application/json' \
+                --output json 2>"$_err"); then
+            rm -f "$_err"
+            [ -n "$_out" ] && printf '%s\n' "$_out" || printf '{}'
+        else
+            local _msg=""
+            [ -s "$_err" ] && _msg="$(tr '\n' ' ' <"$_err" | head -c 500)"
+            rm -f "$_err"
+            dm_error "dm_api_must ${_method} ${_path} failed${_msg:+: $_msg}"
+        fi
+    else
+        if _out=$(c8y api --method "$_method" \
+                --url "${DM_SERVICE}${_path}" \
+                --header 'Content-Type: application/json' \
+                --output json 2>"$_err"); then
+            rm -f "$_err"
+            [ -n "$_out" ] && printf '%s\n' "$_out" || printf '{}'
+        else
+            local _msg=""
+            [ -s "$_err" ] && _msg="$(tr '\n' ' ' <"$_err" | head -c 500)"
+            rm -f "$_err"
+            dm_error "dm_api_must ${_method} ${_path} failed${_msg:+: $_msg}"
+        fi
+    fi
+}
+
 # ── Subscription helpers ───────────────────────────────────────────────────────
 _DM_LAST_SUB_COUNT=0
 
@@ -356,6 +405,14 @@ dm_assert_has_subscription() {  # <label> <device_id>
 dm_assert_no_subscription() {   # <label> <device_id>
     dm_count_subscriptions "$2" >/dev/null
     dm_assert_eq_zero "$1" "$_DM_LAST_SUB_COUNT"
+}
+
+# Create a static subscription for a single device and fail hard on API errors.
+dm_create_static_subscription_must() {  # <api> <device_id> <device_name>
+    local _api=$1 _id=$2 _name=$3
+    dm_api_must POST /subscription \
+        "{\"api\": \"${_api}\", \"devices\": [{\"id\": \"${_id}\", \"name\": \"${_name}\"}]}" >/dev/null
+    dm_info "Created static subscription (api=${_api}, device=${_id})"
 }
 
 # Delete a named static subscription for a device; silently ignores errors.
@@ -507,11 +564,92 @@ dm_wrap_onmessage_code() { # <code_without_export>
 _DM_LAST_MAPPING_ID=""
 _DM_MQTT_CONNECTOR_ID=""  # Will be set by dm_require_mqtt_broker
 
+# Resolve a processor extension class/name to a full extension entry payload.
+# Output: JSON object containing extensionName, eventName, fqnClassName, extensionType, direction
+dm_resolve_extension_entry() {   # <processor_extension_name_or_fqn> [direction]
+    local _needle=${1:-}
+    local _direction=${2:-}
+    local _all _entry
+
+    [ -z "$_needle" ] && return 1
+    _all=$(dm_api GET /extension)
+
+    _entry=$(printf '%s' "$_all" | jq -cer --arg n "$_needle" --arg d "$_direction" '
+        to_entries
+        | map(
+            .key as $extName
+            | (.value.extensionEntries // {})
+            | to_entries
+            | map(
+                .value
+                | . + { extensionName: $extName }
+            )
+        )
+        | add // []
+        | map(
+            select(
+                (.extensionName == $n)
+                or (.eventName == $n)
+                or (.fqnClassName == $n)
+                or ((.fqnClassName // "") | endswith("." + $n))
+            )
+            | if ($d == "") then . else select((.direction // "") == $d) end
+        )
+        | .[0]
+        | {
+            extensionName: .extensionName,
+            eventName: .eventName,
+            fqnClassName: .fqnClassName,
+            extensionType: .extensionType,
+            direction: .direction
+        }
+    ' 2>/dev/null || printf '')
+
+    [ -n "$_entry" ] && printf '%s\n' "$_entry"
+}
+
+# Normalize legacy mapping payloads used by tests to current backend contract.
+dm_normalize_mapping_payload() {   # <json_body>
+    local _raw=${1:-}
+    local _normalized _has_extension _legacy_ext _direction _resolved
+
+    _normalized="$_raw"
+
+    # Backward compatibility: BINARY was removed, use PROTOBUF_INTERNAL.
+    _normalized=$(printf '%s' "$_normalized" | jq -c '
+        if .mappingType == "BINARY" then .mappingType = "PROTOBUF_INTERNAL" else . end
+    ' 2>/dev/null || printf '%s' "$_normalized")
+
+    # Backward compatibility: processorExtensionName -> extension object.
+    # Skip if extension object is already present (new API contract)
+    _has_extension=$(printf '%s' "$_normalized" | jq -r '.extension | if . == null then "no" else "yes" end' 2>/dev/null || printf 'no')
+    if [ "$_has_extension" = "no" ]; then
+        _legacy_ext=$(printf '%s' "$_normalized" | jq -r '.processorExtensionName // empty' 2>/dev/null || printf '')
+        if [ -n "$_legacy_ext" ]; then
+            _direction=$(printf '%s' "$_normalized" | jq -r '.direction // empty' 2>/dev/null || printf '')
+            _resolved=$(dm_resolve_extension_entry "$_legacy_ext" "$_direction" 2>/dev/null || true)
+
+            if [ -n "$_resolved" ]; then
+                _normalized=$(printf '%s' "$_normalized" | jq -c --argjson ext "$_resolved" '
+                    .extension = $ext
+                    | del(.processorExtensionName)
+                ' 2>/dev/null || printf '%s' "$_normalized")
+                dm_info "Resolved legacy extension reference: $_legacy_ext -> $(printf '%s' "$_resolved" | jq -r '.extensionName + ":" + .eventName' 2>/dev/null || printf 'extension')"
+            else
+                dm_warn "Could not resolve legacy extension reference: $_legacy_ext (extension might not be registered)"
+            fi
+        fi
+    fi
+
+    printf '%s\n' "$_normalized"
+}
+
 # Create a mapping via POST /mapping. The raw JSON body is the only argument.
 # Stores the new mapping id in _DM_LAST_MAPPING_ID.
 dm_create_mapping() {   # <json_body>
-    local _json
-    _json=$(dm_api POST /mapping "$1")
+    local _json _payload
+    _payload=$(dm_normalize_mapping_payload "$1")
+    _json=$(dm_api POST /mapping "$_payload")
     _DM_LAST_MAPPING_ID=$(printf '%s' "$_json" | jq -er '.id // empty' 2>/dev/null || printf '')
     if [ -z "${_DM_LAST_MAPPING_ID:-}" ]; then
         dm_fail "Mapping creation failed — API returned: $(printf '%s' "$_json" | head -c 200)"
@@ -578,9 +716,114 @@ dm_deploy_mapping_to_mqtt_connector() {  # <mapping_id>
         dm_fail "MQTT connector ID not set — call dm_require_mqtt_broker first"
         return 1
     fi
-    dm_api PUT "/deployment/defined/$1" \
-        "[\"${_DM_MQTT_CONNECTOR_ID}\"]" >/dev/null || true
-    dm_info "Deployed mapping to MQTT connector: $1 -> ${_DM_MQTT_CONNECTOR_ID}"
+    local _mapping_ref _deployment_key _mapping_json _resolved_identifier
+    _mapping_ref="$1"
+    _deployment_key="$_mapping_ref"
+
+    # Deployment map is keyed by mapping identifier (not inventory id).
+    # Tests pass mapping id from create response, so resolve it when possible.
+    _mapping_json=$(dm_api GET "/mapping/${_mapping_ref}" 2>/dev/null || printf '{}')
+    _resolved_identifier=$(printf '%s' "$_mapping_json" | jq -r '.identifier // empty' 2>/dev/null || printf '')
+    if [ -n "${_resolved_identifier:-}" ]; then
+        _deployment_key="$_resolved_identifier"
+    fi
+
+    dm_api_must PUT "/deployment/defined/${_deployment_key}" \
+        "[\"${_DM_MQTT_CONNECTOR_ID}\"]" >/dev/null
+
+    # Verify deployment assignment is persisted before test publish.
+    local _assigned _deployment _retry_err
+    _deployment=$(dm_api_must GET "/deployment/defined/${_deployment_key}")
+    _assigned=$(printf '%s' "$_deployment" | jq -r --arg cid "${_DM_MQTT_CONNECTOR_ID}" '
+        if type == "string" then
+            . == $cid
+        elif type == "array" then
+            (index($cid) != null)
+            or (map(select(type == "object") | (.identifier // .connectorIdentifier // .id // "")) | index($cid) != null)
+        elif type == "object" then
+            (.identifier // .connectorIdentifier // .id // "") == $cid
+            or (.connectors // [] | if type == "array" then (index($cid) != null) else false end)
+        else
+            false
+        end' 2>/dev/null || printf 'false')
+
+    # Some c8y api versions serialize top-level array bodies differently with --template input.value.
+    # If deployment did not stick, retry with a literal template expression body.
+    if [ "${_assigned:-false}" != "true" ]; then
+        _retry_err=$(mktemp)
+        if ! c8y api --method PUT \
+                --url "${DM_SERVICE}/deployment/defined/${_deployment_key}" \
+                --template "[\"${_DM_MQTT_CONNECTOR_ID}\"]" \
+                --header 'Content-Type: application/json' \
+                --output json > /dev/null 2>"$_retry_err"; then
+            local _retry_msg=""
+            [ -s "$_retry_err" ] && _retry_msg="$(tr '\n' ' ' <"$_retry_err" | head -c 400)"
+            rm -f "$_retry_err"
+            dm_error "Deployment retry failed for key=${_deployment_key}${_retry_msg:+: $_retry_msg}"
+        fi
+        rm -f "$_retry_err"
+
+        _deployment=$(dm_api_must GET "/deployment/defined/${_deployment_key}")
+        _assigned=$(printf '%s' "$_deployment" | jq -r --arg cid "${_DM_MQTT_CONNECTOR_ID}" '
+            if type == "string" then
+                . == $cid
+            elif type == "array" then
+                (index($cid) != null)
+                or (map(select(type == "object") | (.identifier // .connectorIdentifier // .id // "")) | index($cid) != null)
+            elif type == "object" then
+                (.identifier // .connectorIdentifier // .id // "") == $cid
+                or (.connectors // [] | if type == "array" then (index($cid) != null) else false end)
+            else
+                false
+            end' 2>/dev/null || printf 'false')
+    fi
+
+    if [ "${_assigned:-false}" != "true" ]; then
+        dm_error "Deployment verification failed for mapping ${_mapping_ref} (key=${_deployment_key}): connector ${_DM_MQTT_CONNECTOR_ID} not assigned; response=${_deployment}"
+    fi
+    dm_info "Deployed mapping to MQTT connector: ${_mapping_ref} (key=${_deployment_key}) -> ${_DM_MQTT_CONNECTOR_ID}"
+}
+
+# Assert that connector runtime has at least one active subscribed topic.
+# Call this after activating mapping and before publishing test payload.
+dm_assert_mqtt_topics_active() {   # [connector_identifier]
+    local _cid="${1:-${_DM_MQTT_CONNECTOR_ID:-}}"
+    [ -z "${_cid:-}" ] && dm_error "Connector ID not set for active topic assertion"
+
+    local _connected
+    _connected=$(dm_get_connector_status "$_cid" | jq -r '.status // "UNKNOWN"' 2>/dev/null || printf 'UNKNOWN')
+    if [ "$_connected" != "CONNECTED" ]; then
+        dm_error "Connector $_cid is not CONNECTED (status=$_connected)"
+    fi
+
+        # Runtime subscription updates are asynchronous. Poll briefly before failing.
+        local _topic_count=0 _sub_map='{}' _attempt
+        for _attempt in 1 2 3 4 5 6 7 8; do
+                _sub_map=$(dm_api_must GET "/monitoring/subscription/${_cid}")
+                _topic_count=$(printf '%s' "$_sub_map" | jq -r '
+                        if type == "object" then
+                            (to_entries | map(select((.value | tonumber? // 0) > 0)) | length)
+                        else
+                            0
+                        end' 2>/dev/null || printf '0')
+
+                if [ "${_topic_count:-0}" -gt 0 ]; then
+                        break
+                fi
+                sleep 1
+        done
+
+        if [ "${_topic_count:-0}" -lt 1 ]; then
+                local _deploy _mapping_stats
+                _deploy=$(dm_api_must GET "/deployment/defined" | jq -c . 2>/dev/null || printf '{}')
+                _mapping_stats=$(dm_api GET "/monitoring/status/mapping/statistic" | jq -c . 2>/dev/null || printf '[]')
+                dm_warn "Connector $_cid has 0 active inbound subscriptions after activation. subscriptionMap=${_sub_map}"
+                dm_warn "Deployment map snapshot: ${_deploy}"
+                dm_warn "Mapping statistics snapshot: ${_mapping_stats}"
+                dm_error "No active MQTT topic subscriptions detected for connector $_cid after mapping activation"
+        fi
+
+        dm_info "Connector $_cid active inbound topic subscriptions: $_topic_count"
 }
 
 # ── Connector helpers ──────────────────────────────────────────────────────────
@@ -909,4 +1152,17 @@ dm_assert_alarm_count_gt() {    # <label> <device_id> <since_iso8601> <min_count
     local _label=$1 _device=$2 _since=$3 _min=$4 _count
     _count=$(dm_count_alarms_since "$_device" "$_since")
     dm_assert_gt "$_label" "${_count:-0}" "$(( _min - 1 ))"
+}
+
+dm_get_latest_measurement() {  # <ext_id> <ext_id_type> <measurement_type>
+    local _extid=$1 _extidtype=$2 _meastype=$3
+    [ -z "$_extid" ] && { printf '{}'; return 0; }
+    local _device_id
+    _device_id=$(dm_lookup_device_by_ext_id "$_extid" "$_extidtype")
+    [ -z "$_device_id" ] && { printf '{}'; return 0; }
+    c8y measurement list \
+        --device "$_device_id" \
+        --type "$_meastype" \
+        --pageSize 1 --output json 2>/dev/null \
+        | jq '.data[0] // {}' 2>/dev/null || printf '{}'
 }
