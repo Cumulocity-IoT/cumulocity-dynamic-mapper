@@ -557,7 +557,190 @@ Jest tests for the TypeScript type definitions and reference examples.
 
 ---
 
-## 5. References
+## 5. Known Issues and Fixes — Integration Test Hardening (May 2026)
+
+During comprehensive test execution, several issues were identified and corrected in shell integration tests. This section documents the findings to guide future test maintenance.
+
+### 5.1 Mapping Payload Validation
+
+**Issue:** Outbound mappings (Smart Functions, extensions) were rejected with "Validation failed ... Error count: 3" or similar.
+
+**Root causes:**
+1. **Missing required fields:**
+   - `identifier` (auto-generated identifier for the mapping) — now required by backend
+   - `targetAPI` (e.g., `MEASUREMENT`, `ALARM`, `EVENT`) — required for all outbound mappings
+   - `sourceTemplate` and `targetTemplate` (even if empty `{}`)
+   - `filterMapping` (required for outbound; default: `"true"`)
+   - `publishTopicSample` (for outbound mappings)
+
+2. **Incorrect enum values:**
+   - Extension type: tests used `INBOUND_PROCESSOR` / `OUTBOUND_PROCESSOR`
+   - Backend enum is `EXTENSION_INBOUND` / `EXTENSION_OUTBOUND` (see `ExtensionType.java`)
+
+**Fix:** Updated all mapping creation scripts to include required fields and correct enum values.
+
+| Script | Changes |
+|--------|---------|
+| `test-outbound-json-smartfunction.sh` | Added `targetAPI`, `filterMapping`, `sourceTemplate`, `targetTemplate` |
+| `test-outbound-extension-alarm-to-sparkplugb.sh` | Added `targetAPI`, templates, `publishTopicSample`; corrected `extensionType` |
+| `test-inbound-extension-*.sh` (5 files) | Fixed `extensionType: "EXTENSION_INBOUND"` |
+| `test-multi-tenant.sh` | Added `identifier` field to mapping JSON |
+
+**Recommendation for maintainers:**
+- Validate mapping payloads against `MappingValidator` logic before creating fixtures.
+- Include `identifier` in all new test mappings.
+- Use backend-defined enum values from `ExtensionType.java`.
+
+### 5.2 External ID Binding
+
+**Issue:** `test-outbound-json-smartfunction.sh` used incorrect API call format that failed silently.
+
+**Root cause:** Tests were calling `dm_api POST "/identity/globalIdentities" --data "..."` with bare JSON, which is invalid for the `c8y` CLI. The correct call is `c8y identity create` with specific flags.
+
+**Fix:** Replaced all identity binding calls with:
+```bash
+c8y identity create \
+    --name "$EXTERNAL_ID" \
+    --type "c8y_Serial" \
+    --device "$DEVICE_ID" \
+    --output json >/dev/null 2>&1 || dm_warn "..."
+```
+
+**Recommendation for maintainers:**
+- Always use `c8y` CLI subcommands for identity operations (`c8y identity create`, not raw `/identity/globalIdentities`).
+- Make identity binding warnings non-fatal (idempotent).
+
+### 5.3 Subscription Verification Robustness
+
+**Issue:** Tests failed with "0 is not > 0" when subscriptions were clearly created, or produced multiline output like `0\n0\n0...` breaking assertions.
+
+**Root causes:**
+
+1. **JSON stream handling:**
+   - `/mapping` and `/subscription/*` endpoints return JSON-stream (newline-delimited documents).
+   - Scripts using `jq` without slurping (`-s`) processed each document separately, producing one result per line.
+
+2. **Response shape variability:**
+   - Responses could be direct arrays, objects with `.data` / `.mappings` / `.types` wrappers, or single documents.
+   - Tests assumed one shape and failed on variations.
+
+3. **Type coercion:**
+   - IDs can be numeric or string; direct comparison `(.id == $id)` failed on type mismatch.
+
+**Fixes:**
+
+1. **Slurping streams:**
+   - All `jq` filters now use `jq -s` to collect all documents before processing.
+   - Single-result counts are always numeric, not multiline.
+
+2. **Shape normalization:**
+   - Filters handle arrays, objects with nested arrays, wrapped objects, and direct documents.
+   - Example:
+   ```bash
+   jq -s -r --arg id "$MAPPING_ID" '
+     [ .[]
+       | if type == "array" then .[]
+         elif type == "object" and (.devices? != null) then .devices[]
+         elif type == "object" then .
+         else empty
+         end
+     ]
+     | map(select((.id | tostring) == $id))
+     | length
+   '
+   ```
+
+3. **Type coercion:**
+   - All ID comparisons use `(.id | tostring) == $id` to handle numeric ↔ string conversions.
+
+| Script | Changes |
+|--------|---------|
+| `test-outbound-static-subscription.sh` | Switched to Direct Mapper API assertion (no per-device listing) |
+| `test-outbound-type-subscription.sh` | Direct Mapper API assertion + wait-for-subscription polling |
+| `test-outbound-group-subscription.sh` | Direct Mapper API assertion |
+| `test-outbound-group-subscription-removal.sh` | Slurped jq; state validation + bootstrap; API-based group removal check |
+| `test-outbound-subscription-persistence.sh` | Slurped jq; retry polling (60s window) for type restoration; string shape parsing |
+| `test-multi-tenant.sh` | Slurped jq with shape normalization for dual listing checks |
+| `test-harness.sh` | Added robust `dm_count_subscriptions` with type/shape handling; added `dm_wait_for_subscription_{present,absent}` polling helpers |
+
+**Recommendation for maintainers:**
+- Always use `jq -s` when processing API output that might be streamed.
+- Normalize response shapes in filters (support arrays, wrapped objects, and mixed payloads).
+- Use `tostring` for all ID comparisons.
+- Test subscription assertions via Mapper APIs (e.g., `/subscription`, `/subscription/type`), not Notification2 per-device listing.
+
+### 5.4 Subscription Semantics
+
+**Issue:** `test-outbound-group-subscription-removal.sh` expected the group subscription entry to be deleted after removing a device from the group.
+
+**Root cause:** Misunderstanding of correct behavior. Removing a device from a group should:
+- Remove the device from the group's child assets (managed object hierarchy).
+- **Not** delete the group subscription itself (the subscription remains; it just affects a different set of devices).
+
+**Fix:** Updated the test to assert:
+- Device is no longer in the group's child assets (`GET /inventory/managedObjects/{groupId}/childAssets`).
+- Group subscription entry still exists (`GET /subscription/group` returns the group).
+
+**Recommendation for maintainers:**
+- Document the distinction between subscription definitions and subscription membership.
+- Test group removal as a membership change, not a subscription deletion.
+
+### 5.5 Eventual Consistency and Restart Timing
+
+**Issue:** After microservice restart, subscription restoration tests failed intermittently with `expected='1' actual='0'` or empty response `{}`.
+
+**Root causes:**
+
+1. **Health check skipping:**
+   - `run-tests.sh` sets `DM_SKIP_HEALTH_CHECK=1` globally for performance.
+   - After restart, the persistence test inherited this flag and proceeded before subscriptions were reloaded.
+
+2. **Delayed subscription restoration:**
+   - Type subscriptions (`/subscription/type`) may not be immediately available after restart.
+   - Static subscription entries persist immediately but type lookup was intermittently stale.
+
+3. **Cleanup during shutdown:**
+   - Cleanup handler was using strict `dm_api_must` which failed with 502 when service was restarting.
+
+**Fixes:**
+
+1. **Force readiness check after restart:**
+   - Added `unset DM_SKIP_HEALTH_CHECK` and `dm_wait_for_service` after re-enable.
+   - Added 10-second grace period for subscription initialization.
+
+2. **Retry polling for type restoration:**
+   - Added loop: up to 30 attempts × 2s = 60s total to wait for type subscription to appear.
+   - Each loop fetches `/subscription/type` and checks for the target type.
+
+3. **Lenient cleanup:**
+   - Changed type subscription cleanup from strict `dm_set_type_subscriptions` to optional `dm_api PUT ... || true`.
+   - Prevents cleanup from failing when service is briefly unavailable.
+
+| Script | Changes |
+|--------|---------|
+| `test-outbound-subscription-persistence.sh` | Unset `DM_SKIP_HEALTH_CHECK`; added 10s post-restart wait; retry polling for type restoration (60s); lenient cleanup |
+
+**Recommendation for maintainers:**
+- Always unset global test-runner flags in tests that depend on specific service state.
+- Use retry loops for assertions on asynchronously restored state (subscriptions, caches, etc.).
+- Make cleanup operations best-effort when service state is transient.
+- Document expected propagation windows (e.g., "subscriptions appear within 30s after restart").
+
+### 5.6 Multi-tenant API Response Shapes
+
+**Issue:** Multi-tenant listing assertions produced multiline output or always returned 0, even when the mapping was created.
+
+**Root cause:** Same as [5.3](#53-subscription-verification-robustness) — the `/mapping` endpoint returns JSON-stream, and the test didn't slurp responses before filtering.
+
+**Fix:** Applied the same slurping + shape normalization pattern as subscription tests.
+
+| Script | Changes |
+|--------|---------|
+| `test-multi-tenant.sh` | Slurped both COUNT and COUNT2 assertions; added shape handling for mixed response types |
+
+---
+
+## 6. References
 
 | Resource | Path |
 |----------|------|

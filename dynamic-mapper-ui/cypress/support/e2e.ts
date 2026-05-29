@@ -13,12 +13,11 @@
 // https://on.cypress.io/configuration
 // ***********************************************************
 
-// Import commands.js using ES2015 syntax:
-import 'cumulocity-cypress/lib/commands/';
-import './commands';
+import 'cumulocity-cypress/commands';
+import { registerCommands } from './commands';
 
-// Alternatively you can use CommonJS syntax:
-// require('./commands')
+registerCommands();
 
 before(() => {
-  });
+  Cypress.session.clearAllSavedSessions();
+});

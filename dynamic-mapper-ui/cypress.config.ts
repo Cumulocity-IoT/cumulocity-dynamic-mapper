@@ -17,18 +17,38 @@
  *
  * @authors Christof Strack
  */
+import dotenv from 'dotenv';
 import { defineConfig } from 'cypress';
 
+dotenv.config({ path: '.env' });
+
 export default defineConfig({
-  e2e: {
-   baseUrl: 'http://localhost:4200',
-   env: {
-    // https://github.com/bahmutov/cypress-slow-down
-    commandDelay: 150,
-  },
-  },
   viewportWidth: 1920,
   viewportHeight: 1080,
-  video:true,
+  responseTimeout: 60000,
+  pageLoadTimeout: 300000,
+  video: true,
   videoCompression: 0,
+  e2e: {
+    baseUrl: process.env['C8Y_CYPRESS_URL'] || 'http://localhost:4200',
+    specPattern: 'cypress/e2e/**/*.cy.ts',
+    supportFile: 'cypress/support/e2e.ts',
+    env: {
+      // https://github.com/bahmutov/cypress-slow-down
+      commandDelay: 150,
+      // Cumulocity credentials — support CYPRESS_* prefix overrides
+      C8Y_TENANT: process.env['CYPRESS_C8Y_TENANT'] || process.env['C8Y_TENANT'],
+      C8Y_BASEURL: process.env['CYPRESS_C8Y_BASEURL'] || process.env['C8Y_BASEURL'],
+      C8Y_USERNAME: process.env['CYPRESS_C8Y_USERNAME'] || process.env['C8Y_USERNAME'],
+      C8Y_PASSWORD: process.env['CYPRESS_C8Y_PASSWORD'] || process.env['C8Y_PASSWORD'],
+      // Shell configuration for visitShellAndWaitForSelector
+      C8Y_SHELL_TARGET:
+        process.env['CYPRESS_C8Y_SHELL_TARGET'] ||
+        process.env['C8Y_SHELL_TARGET'] ||
+        'administration',
+      C8Y_SHELL_EXTENSION: JSON.stringify({
+        'c8y-pkg-dynamic-mapper': ['DynamicMappingModule'],
+      }),
+    },
+  },
 });

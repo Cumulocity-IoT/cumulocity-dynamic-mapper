@@ -44,6 +44,7 @@ dist
 node_modules
 .angular
 dynamic-mapper-ui/cypress.env.js
+dynamic-mapper-ui/cypress.env.json
 dynamic-mapper-ui/cypress/videos
 dynamic-mapper-ui/cypress/screenshots
 dynamic-mapper-ui/cypress/fixtures/mqttConnectionPostRequest.json

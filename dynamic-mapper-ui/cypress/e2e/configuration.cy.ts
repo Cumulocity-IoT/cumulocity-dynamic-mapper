@@ -1,9 +1,20 @@
-/* eslint-disable no-useless-escape */
 import { slowCypressDown } from 'cypress-slow-down';
 slowCypressDown();
 
+type MqttConnectionInput = {
+  name: string;
+  mqttHost: string;
+  mqttPort: number;
+  user: string;
+  password: string;
+  clientId: string;
+};
+
 describe('Specs for connector configuration', () => {
-  beforeEach(() => {
+  const createdConnectorIds: string[] = [];
+  let mqttConnectionInput: MqttConnectionInput;
+
+  const navigateToConnectorConfiguration = () => {
     // login
     cy.getAuth().login();
     cy.hideCookieBanner();
@@ -23,68 +34,113 @@ describe('Specs for connector configuration', () => {
     // navigate to configuration
     cy.get('a[title="Connector"]').as('configuration').should('exist');
     cy.get('@configuration').click();
-  });
+  };
 
-  before(function () {
-    cy.fixture('mqttConnectionInput').then((data) => {
-      this.mqttConnectionInput = data;
+  const addConnectorViaUi = (
+    mqttConnectionInput: MqttConnectionInput,
+    connectorName: string
+  ): Cypress.Chainable<string> => {
+    cy.get('#addConfiguration').should('exist').click();
+    cy.wait('@getConnectorSpecifications');
+
+    cy.get('#connectorType').should('exist').should('be.visible').select('MQTT');
+    cy.get('#name').clear();
+    cy.get('#name').type(connectorName);
+    cy.get('#mqttHost').clear();
+    cy.get('#mqttHost').type(mqttConnectionInput.mqttHost);
+    cy.get('#mqttPort').clear();
+    cy.get('#mqttPort').type(String(mqttConnectionInput.mqttPort));
+    cy.get('#user').clear();
+    cy.get('#user').type(mqttConnectionInput.user);
+    cy.get('#password').clear();
+    cy.get('#password').type(mqttConnectionInput.password);
+    cy.get('#clientId').clear();
+    cy.get('#clientId').type(mqttConnectionInput.clientId);
+    cy.get('button[title="Save"]').click();
+
+    return cy.wait('@postConnector').then((interception) => {
+      const identifier =
+        interception.response?.body?.identifier ??
+        interception.request.body?.identifier;
+
+      expect(identifier, 'created connector identifier').to.be.a('string');
+      expect(String(identifier), 'created connector identifier').to.not.equal('');
+
+      return String(identifier);
     });
+  };
 
-    // Setup interceptors
-    cy.intercept(
-      'POST',
-      '/service/dynamic-mapper-service/configuration/connector/instance'
-    ).as('postMqttConnection');
+  beforeEach(() => {
     cy.intercept(
       'GET',
       '/service/dynamic-mapper-service/configuration/connector/specifications'
     ).as('getConnectorSpecifications');
+    cy.intercept(
+      'POST',
+      '/service/dynamic-mapper-service/configuration/connector/instance'
+    ).as('postConnector');
+    cy.intercept(
+      'DELETE',
+      '/service/dynamic-mapper-service/configuration/connector/instance/**'
+    ).as('deleteConnector');
+
+    navigateToConnectorConfiguration();
   });
 
-  it('Add connector', function () {
-    // click button 'Add connector'
-    cy.get('#addConfiguration').should('exist').click();
-    cy.wait('@getConnectorSpecifications');
-    // cy.get('#connectorType').should('exist').should('be.visible');
-    cy.get('#connectorType')
-      .should('exist')
-      .should('be.visible')
-      .select('MQTT');
-    // // fill in form
-    cy.get('#name').type(this.mqttConnectionInput.name);
-    cy.get('#mqttHost').type(this.mqttConnectionInput.mqttHost);
-    cy.get('#mqttPort').type(this.mqttConnectionInput.mqttPort);
-    cy.get('#user').type(this.mqttConnectionInput.user);
-    cy.get('#password').type(this.mqttConnectionInput.password);
-    cy.get('#clientId').type(this.mqttConnectionInput.clientId);
-
-    // // save
-    // cy.get('.modal-footer > .btn-primary').click();
-    cy.get('button[title="Save"]').click();
-    // // record post request of new connector
-    cy.wait('@postMqttConnection').then((interception) => {
-      const requestData = interception.request.body;
-      cy.writeFile(
-        'cypress/fixtures/mqttConnectionPostRequest.json',
-        requestData
-      );
+  before(() => {
+    cy.fixture('mqttConnectionInput').then((data) => {
+      mqttConnectionInput = data as MqttConnectionInput;
     });
-    cy.screenshot();
   });
 
-  it('Delete connector', function () {
-    // navigate to configuration
-    cy.get('a[title="Connector"]').as('configuration').should('exist');
-    cy.get('@configuration').click();
+  afterEach(() => {
+    if (!createdConnectorIds.length) {
+      return;
+    }
 
-    // read identifier from previously added connector
-    cy.fixture('mqttConnectionPostRequest').then((data) => {
-      this.mqttConnectionPostRequest = data;
-      // cy.get(`#connector_${this.mqttConnectionPostRequest.identifier} btn[title="Action"]`)
-      // identify respective row with connector
-      cy.get(`#connector_${this.mqttConnectionPostRequest.identifier}`, { timeout: 10000 }).click();
-      cy.get('.dropdown #delete').click({ force: true });
-      cy.get('[data-cy="c8y-confirm-modal--ok"]').click();
+    createdConnectorIds.splice(0).forEach((identifier) => {
+      cy.request({
+        method: 'DELETE',
+        url: `/service/dynamic-mapper-service/configuration/connector/instance/${identifier}`,
+        failOnStatusCode: false,
+      });
     });
+  });
+
+  it('Add connector', () => {
+    const connectorName = `${mqttConnectionInput.name}-${Date.now()}`;
+
+    addConnectorViaUi(mqttConnectionInput, connectorName).then(
+      (identifier) => {
+        createdConnectorIds.push(identifier);
+
+        cy.get(`#connector_${identifier}`, { timeout: 10000 }).should('exist');
+      }
+    );
+
+    cy.screenshot('connector-added');
+  });
+
+  it('Delete connector', () => {
+    const connectorName = `${mqttConnectionInput.name}-delete-${Date.now()}`;
+
+    addConnectorViaUi(mqttConnectionInput, connectorName).then(
+      (identifier) => {
+        createdConnectorIds.push(identifier);
+
+        cy.get(`#connector_${identifier}`, { timeout: 10000 }).click();
+        cy.get('.dropdown #delete').click({ force: true });
+        cy.get('[data-cy="c8y-confirm-modal--ok"]').click();
+        cy.wait('@deleteConnector');
+
+        cy.get(`#connector_${identifier}`).should('not.exist');
+
+        const index = createdConnectorIds.indexOf(identifier);
+        if (index >= 0) {
+          createdConnectorIds.splice(index, 1);
+        }
+      }
+    );
+    cy.screenshot('connector-deleted');
   });
 });
