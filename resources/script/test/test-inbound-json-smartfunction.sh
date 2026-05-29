@@ -68,10 +68,10 @@ function onMessage(msg, ctx) {
         externalSource: [{ type: 'c8y_Serial', externalId: externalId }]
     }];
 }
-
-export { onMessage };
 JSCODE
 )
+
+SF_CODE=$(dm_wrap_onmessage_code "$SF_CODE")
 
 SF_CODE_B64=$(printf '%s' "$SF_CODE" | base64)
 

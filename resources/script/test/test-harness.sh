@@ -21,6 +21,8 @@
 #   dm_validate_tools                   — verify all required tools are installed
 #   dm_test_setup_and_validate          — complete setup validation (session, tools, service, mqtt)
 #   dm_verify_mqtt_connector_ready      — check MQTT connector is CONNECTED
+#   dm_get_support_esm                  — fetch supportESM from service configuration
+#   dm_wrap_onmessage_code              — append export { onMessage } only when supportESM=true
 #
 # Assertions  (update _DM_PASS_COUNT / _DM_FAIL_COUNT)
 #   dm_assert_eq      <label> <expected> <actual>
@@ -464,6 +466,40 @@ dm_test_setup_and_validate() {     # [require_mqtt_connector=true]
     if [ "$_require_mqtt" = "true" ]; then
         dm_require_mqtt_broker
         dm_verify_mqtt_connector_ready
+    fi
+}
+
+# ── Smart Function helpers ────────────────────────────────────────────────────
+_DM_SUPPORT_ESM=""
+
+# Read supportESM from the tenant service configuration.
+# Prints 'true' or 'false'. Falls back to 'false' when unavailable.
+dm_get_support_esm() {
+    if [ -n "${_DM_SUPPORT_ESM:-}" ]; then
+        printf '%s\n' "$_DM_SUPPORT_ESM"
+        return 0
+    fi
+
+    local _cfg _esm
+    _cfg=$(dm_api GET /configuration/service)
+    _esm=$(printf '%s' "$_cfg" | jq -r '.supportESM // false' 2>/dev/null || printf 'false')
+
+    case "$_esm" in
+        true|false) _DM_SUPPORT_ESM="$_esm" ;;
+        *) _DM_SUPPORT_ESM="false" ;;
+    esac
+
+    printf '%s\n' "$_DM_SUPPORT_ESM"
+}
+
+# Wrap Smart Function source code for runtime mode.
+# In ESM mode we require explicit export.
+dm_wrap_onmessage_code() { # <code_without_export>
+    local _base_code=$1
+    if [ "$(dm_get_support_esm)" = "true" ]; then
+        printf '%s\n\nexport { onMessage };\n' "$_base_code"
+    else
+        printf '%s\n' "$_base_code"
     fi
 }
 

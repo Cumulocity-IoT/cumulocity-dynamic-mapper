@@ -58,6 +58,16 @@ declare -a TESTS=(
     "inbound|test-inbound-http-connector|HTTP connector → MEASUREMENT"
     "inbound|test-inbound-implicit-device|Implicit device auto-creation"
     "inbound|test-inbound-multi-device|Array payload → multiple devices"
+    "inbound|test-inbound-alarm|JSON / DEFAULT → ALARM"
+    "inbound|test-inbound-operation|JSON / DEFAULT → OPERATION"
+    # ── Inbound (Smart Function patterns) ──────────────────────────────────────
+    "smartfunction|test-inbound-smartfunction-02|Pattern 02: Topic-based external ID + sensor filter"
+    "smartfunction|test-inbound-smartfunction-04|Pattern 04: Dual payload type + deduplication"
+    # ── Inbound (Java Extensions) ─────────────────────────────────────────────
+    "extension|test-inbound-extension-custom-measurement|Extension: JSON → Measurement"
+    "extension|test-inbound-extension-custom-alarm|Extension: JSON → Alarm"
+    "extension|test-inbound-extension-custom-event|Extension: Protobuf → Event"
+    "extension|test-inbound-extension-sparkplugb-measurement|Extension: Sparkplug B → Measurement"
     # ── Outbound (payload) ────────────────────────────────────────────────────
     "outbound|test-outbound-measurement|C8Y Measurement → MQTT broker"
     "outbound|test-outbound-event|C8Y Event → MQTT broker"
@@ -65,12 +75,15 @@ declare -a TESTS=(
     "outbound|test-outbound-operation|C8Y Operation → MQTT broker"
     "outbound|test-outbound-filter|filterMapping — selective forwarding"
     "outbound|test-outbound-topic-resolution|Dynamic publish topic resolution"
+    "outbound|test-outbound-json-smartfunction|Smart Function: Measurement → MQTT JSON"
     # ── Outbound (subscription management) ────────────────────────────────────
     "outbound|test-outbound-static-subscription|Static subscription management"
     "outbound|test-outbound-type-subscription|Dynamic type subscription"
     "outbound|test-outbound-group-subscription|Dynamic group subscription"
     "outbound|test-outbound-group-subscription-removal|Group subscription removal"
     "outbound|test-outbound-subscription-persistence|Subscription persistence after restart"
+    # ── Outbound (Extensions/Protocols) ───────────────────────────────────────
+    "extension|test-outbound-extension-alarm-to-sparkplugb|Extension: Alarm → Sparkplug B DCMD"
     # ── Reliability ───────────────────────────────────────────────────────────
     "reliability|test-multi-tenant|Mapping CRUD / tenant isolation"
     "reliability|test-multi-connector|Multiple connector status check"
@@ -108,6 +121,8 @@ _print_menu() {
     printf "  ${C_BOLD}%2s${C_RESET}  %-14s %s\n" "a"  "[all]"         "Run all tests"
     printf "  ${C_BOLD}%2s${C_RESET}  %-14s %s\n" "i"  "[inbound]"     "Run all inbound tests"
     printf "  ${C_BOLD}%2s${C_RESET}  %-14s %s\n" "o"  "[outbound]"    "Run all outbound tests"
+    printf "  ${C_BOLD}%2s${C_RESET}  %-14s %s\n" "e"  "[extension]"   "Run extension tests"
+    printf "  ${C_BOLD}%2s${C_RESET}  %-14s %s\n" "s"  "[smartfunc]"   "Run Smart Function pattern tests"
     printf "  ${C_BOLD}%2s${C_RESET}  %-14s %s\n" "r"  "[reliability]" "Run reliability tests"
     printf "  ${C_BOLD}%2s${C_RESET}  %-14s %s\n" "q"  ""              "Quit"
     echo ""
@@ -332,6 +347,8 @@ _dispatch_args() {
         all)         _run_all ;;
         inbound)     _run_category "inbound" ;;
         outbound)    _run_category "outbound" ;;
+        extension)   _run_category "extension" ;;
+        smartfunc|smartfunction) _run_category "smartfunction" ;;
         reliability) _run_category "reliability" ;;
         *)
             # Numeric index(es): already handled by caller
@@ -356,7 +373,7 @@ _dispatch_args() {
 # ── Interactive selection ──────────────────────────────────────────────────────
 _interactive() {
     _print_menu
-    printf "Select tests (e.g. 1 3 5, or a/i/o/r): "
+    printf "Select tests (e.g. 1 3 5, or a/i/o/e/s/r): "
     read -r REPLY
     echo ""
 
@@ -365,6 +382,8 @@ _interactive() {
         a|all)         _run_all ;;
         i|inbound)     _run_category "inbound" ;;
         o|outbound)    _run_category "outbound" ;;
+        e|extension)   _run_category "extension" ;;
+        s|smartfunc|smartfunction) _run_category "smartfunction" ;;
         r|reliability) _run_category "reliability" ;;
         *)
             local -a selections
