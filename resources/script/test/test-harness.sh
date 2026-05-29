@@ -17,6 +17,11 @@
 #   dm_warn    <msg>
 #   dm_fail    <msg>
 #
+# Validation
+#   dm_validate_tools                   — verify all required tools are installed
+#   dm_test_setup_and_validate          — complete setup validation (session, tools, service, mqtt)
+#   dm_verify_mqtt_connector_ready      — check MQTT connector is CONNECTED
+#
 # Assertions  (update _DM_PASS_COUNT / _DM_FAIL_COUNT)
 #   dm_assert_eq      <label> <expected> <actual>
 #   dm_assert_gt      <label> <value>    <than>
@@ -130,6 +135,30 @@ dm_info()    { printf "%s\n" "$1"; }
 dm_success() { printf "${_C_GREEN}SUCCESS: %s${_C_RESET}\n" "$1"; }
 dm_warn()    { printf "${_C_YELLOW}WARN: %s${_C_RESET}\n" "$1"; }
 dm_fail()    { printf "${_C_RED}FAIL: %s${_C_RESET}\n" "$1"; }
+
+# ── Tool validation ────────────────────────────────────────────────────────────
+
+# Validate that required tools are installed and available
+dm_validate_tools() {
+    local _missing=0
+    local _tools=("jq" "mosquitto_pub" "c8y" "nc")
+    
+    for _tool in "${_tools[@]}"; do
+        if ! command -v "$_tool" >/dev/null 2>&1; then
+            dm_fail "Required tool not found: $_tool"
+            _missing=1
+        fi
+    done
+    
+    if [ $_missing -eq 1 ]; then
+        printf "\n%sRequired tools to install:%s\n" "${_C_RED}" "${_C_RESET}"
+        printf "  macOS:  brew install jq mosquitto-clients c8y\n"
+        printf "  Linux:  apt-get install jq mosquitto-clients (c8y from https://github.com/reubenmiller/go-c8y-cli)\n"
+        exit 1
+    fi
+    
+    dm_info "All required tools found ✓"
+}
 
 # ── Assertion counters ─────────────────────────────────────────────────────────
 _DM_PASS_COUNT=0
@@ -400,6 +429,42 @@ dm_wait_for_service() {     # [max_retries] [interval_secs]
 
     dm_fail "Service did not come UP after $_retries attempts."
     return 1
+}
+
+# Verify that an MQTT connector is available and connected (for INBOUND tests)
+# Returns 0 if ready, exits with 1 if not
+dm_verify_mqtt_connector_ready() {
+    local _host="${MQTT_HOST:-broker.hivemq.com}" _port="${MQTT_PORT:-1883}"
+    
+    if [ -z "${_DM_MQTT_CONNECTOR_ID:-}" ]; then
+        dm_fail "No MQTT connector configured — call dm_setup_and_connect_mqtt_connector first"
+        return 1
+    fi
+    
+    local _status
+    _status=$(dm_get_connector_status "$_DM_MQTT_CONNECTOR_ID" | jq -r '.status // "UNKNOWN"' 2>/dev/null)
+    
+    if [ "$_status" != "CONNECTED" ]; then
+        dm_fail "MQTT connector $_DM_MQTT_CONNECTOR_ID is not CONNECTED (status: $_status)"
+        return 1
+    fi
+    
+    dm_success "MQTT connector ready at ${_host}:${_port} (status: CONNECTED)"
+    return 0
+}
+
+# Comprehensive test setup validation (call at start of every test)
+# Validates: session, tools, service, and optionally mqtt connector
+dm_test_setup_and_validate() {     # [require_mqtt_connector=true]
+    local _require_mqtt=${1:-true}
+    
+    dm_validate_tools
+    dm_wait_for_service
+    
+    if [ "$_require_mqtt" = "true" ]; then
+        dm_require_mqtt_broker
+        dm_verify_mqtt_connector_ready
+    fi
 }
 
 # ── Mapping helpers ────────────────────────────────────────────────────────────
