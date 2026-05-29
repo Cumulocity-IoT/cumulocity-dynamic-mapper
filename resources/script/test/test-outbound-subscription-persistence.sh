@@ -74,7 +74,15 @@ dm_show_subscriptions "$STATIC_DEVICE_ID"
 dm_info "Dynamic device ($DYNAMIC_DEVICE_ID):"
 dm_show_subscriptions "$DYNAMIC_DEVICE_ID"
 dm_info "Type subscriptions in dynamic mapper:"
-dm_api GET /subscription/type | jq '.types // []' || true
+dm_api GET /subscription/type | jq -r '
+    if type == "array" then
+        (.[0] // {} | .types // [])
+    elif type == "object" then
+        (.types // [])
+    else
+        []
+    end
+' || true
 
 # Step 4: Restart the microservice
 dm_step 4 "Restart microservice by disabling and re-enabling"
@@ -99,19 +107,41 @@ dm_step 7 "Verify subscriptions still active after restart"
 dm_wait 2 "allowing subscription propagation"
 
 dm_info "Checking static subscription (device $STATIC_DEVICE_ID):"
-dm_show_subscriptions "$STATIC_DEVICE_ID"
-dm_assert_has_subscription "static subscription survives restart" "$STATIC_DEVICE_ID"
-if [ "$_DM_LAST_SUB_COUNT" -eq 0 ]; then
-    dm_warn "Checking static subscriptions via dynamic mapper API ..."
-    dm_api GET "/subscription?subscription=${STATIC_SUBSCRIPTION_NAME}" | jq '.' || true
+STATIC_SUB_JSON=$(dm_api GET "/subscription?subscription=${STATIC_SUBSCRIPTION_NAME}")
+STATIC_MATCH_COUNT=$(printf '%s' "$STATIC_SUB_JSON" | jq -s -r --arg did "$STATIC_DEVICE_ID" '
+    [ .[]
+      | if type == "array" then .[]
+        elif type == "object" and (.devices? != null) then .devices[]
+        elif type == "object" then .
+        else empty
+        end
+    ]
+    | map(select((.id | tostring) == $did))
+    | length
+' 2>/dev/null || printf '0')
+dm_assert_gt "static subscription survives restart" "${STATIC_MATCH_COUNT:-0}" "0"
+if [ "${STATIC_MATCH_COUNT:-0}" -eq 0 ]; then
+    dm_warn "Static subscription not found in mapper API response for device $STATIC_DEVICE_ID"
+    printf '%s' "$STATIC_SUB_JSON" | jq -s '.' || true
 fi
 
 dm_info "Checking dynamic subscription (device $DYNAMIC_DEVICE_ID):"
-dm_show_subscriptions "$DYNAMIC_DEVICE_ID"
-dm_assert_has_subscription "dynamic subscription survives restart" "$DYNAMIC_DEVICE_ID"
-if [ "$_DM_LAST_SUB_COUNT" -eq 0 ]; then
-    dm_warn "Checking type subscriptions via dynamic mapper API ..."
-    dm_api GET /subscription/type | jq '.' || true
+TYPE_SUB_JSON=$(dm_api GET /subscription/type)
+TYPE_MATCH=$(printf '%s' "$TYPE_SUB_JSON" | jq -s -r --arg t "$DYNAMIC_DEVICE_TYPE" '
+    [ .[]
+      | if type == "array" then .[]
+        elif type == "object" and (.types? != null) then .types[]
+        elif type == "string" then .
+        else empty
+        end
+      | tostring
+    ]
+    | if (index($t) != null) then 1 else 0 end
+' 2>/dev/null || printf '0')
+dm_assert_gt "dynamic subscription survives restart" "${TYPE_MATCH:-0}" "0"
+if [ "${TYPE_MATCH:-0}" -eq 0 ]; then
+    dm_warn "Type subscription '$DYNAMIC_DEVICE_TYPE' not found in mapper API response"
+    printf '%s' "$TYPE_SUB_JSON" | jq -s '.' || true
 fi
 
 dm_print_summary

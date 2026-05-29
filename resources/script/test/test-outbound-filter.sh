@@ -27,6 +27,7 @@ source "${SCRIPT_DIR}/test-harness.sh"
 SUBSCRIPTION_NAME="DynamicMapperStaticDeviceSubscription"
 DEVICE_NAME="dmtest-out-filter-$(date +%s)"
 DEVICE_TYPE="dmtest-out-type"
+EXT_ID="$DEVICE_NAME"
 DEVICE_ID=""
 MAPPING_A_ID=""
 MAPPING_B_ID=""
@@ -53,6 +54,13 @@ dm_step "Creating test device ..."
 dm_create_device "$DEVICE_NAME" "$DEVICE_TYPE"
 DEVICE_ID=$_DM_LAST_DEVICE_ID
 dm_info "Device id: $DEVICE_ID"
+
+dm_step "Binding c8y_Serial external id ..."
+c8y identity create \
+  --name "$EXT_ID" \
+  --type "c8y_Serial" \
+  --device "$DEVICE_ID" \
+  --output json >/dev/null 2>&1 || dm_warn "External id may already exist: $EXT_ID"
 
 dm_step "Creating static subscription for device ..."
 dm_create_static_subscription_must "EVENT" "$DEVICE_ID" "$DEVICE_NAME"

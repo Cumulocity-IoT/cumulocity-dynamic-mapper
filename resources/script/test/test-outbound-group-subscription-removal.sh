@@ -49,10 +49,14 @@ fi
 
 dm_banner "Outbound Group Subscription Removal"
 
-# Load state
+# Load state; if missing, auto-bootstrap by running test-case-III first.
 if [ ! -f "$STATE_FILE" ]; then
-    dm_fail "State file $STATE_FILE not found."
-    echo "       Please run test-case-III.sh first."
+    dm_warn "State file $STATE_FILE not found — bootstrapping via test-outbound-group-subscription.sh"
+    "${SCRIPT_DIR}/test-outbound-group-subscription.sh"
+fi
+
+if [ ! -f "$STATE_FILE" ]; then
+    dm_fail "State file $STATE_FILE not found after bootstrap."
     exit 1
 fi
 
@@ -83,6 +87,9 @@ dm_wait "$REMOVAL_WAIT" "group-removal propagation"
 
 # Step 4: Verify subscription is deleted
 dm_step 4 "Verify dynamic subscription is deleted for device $DEVICE_ID"
+if ! dm_wait_for_subscription_absent "$DEVICE_ID" 30 1; then
+    dm_warn "Subscription still present after wait window for device $DEVICE_ID"
+fi
 dm_show_subscriptions "$DEVICE_ID"
 dm_assert_no_subscription "subscription removed after group unassign" "$DEVICE_ID"
 

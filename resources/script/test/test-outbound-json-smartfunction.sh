@@ -66,9 +66,11 @@ fi
 dm_success "Test device created: $DEVICE_ID"
 
 dm_step 3 "Binding external ID"
-dm_api POST "/identity/globalIdentities" \
-    --data "{\"externalId\":\"$EXT_ID\",\"type\":\"c8y_Serial\",\"managedObject\":{\"id\":\"$DEVICE_ID\"}}" \
-    > /dev/null 2>&1 || true
+c8y identity create \
+    --name "$EXT_ID" \
+    --type "c8y_Serial" \
+    --device "$DEVICE_ID" \
+    --output json >/dev/null 2>&1 || dm_warn "External ID may already exist: $EXT_ID"
 dm_success "External ID bound: $EXT_ID"
 
 dm_step 4 "Creating outbound Smart Function mapping"
@@ -103,8 +105,10 @@ MAPPING_JSON=$(jq -cn \
       name: $name,
       identifier: $identifier,
       direction: "OUTBOUND",
+            targetAPI: "MEASUREMENT",
       mappingType: "JSON",
       transformationType: "SMART_FUNCTION",
+            filterMapping: "true",
       sourceTemplate: "{}",
       targetTemplate: "{}",
       substitutions: [],

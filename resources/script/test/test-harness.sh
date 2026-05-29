@@ -384,14 +384,30 @@ dm_count_subscriptions() {  # <device_id>
     local _device=$1 _subs
     _subs=$(c8y notification2 subscriptions list \
         --source "$_device" --output json 2>/dev/null || printf '[]')
-    _DM_LAST_SUB_COUNT=$(printf '%s' "$_subs" | jq -s 'length' 2>/dev/null || printf '0')
+    _DM_LAST_SUB_COUNT=$(printf '%s' "$_subs" | jq -r '
+        if type == "array" then
+            length
+        elif type == "object" then
+            (.subscriptions // .data // [] | length)
+        else
+            0
+        end
+    ' 2>/dev/null || printf '0')
     printf '%s' "$_subs"
 }
 
 # Print a summary line listing subscription names for a device.
 dm_show_subscriptions() {   # <device_id>
     dm_count_subscriptions "$1" \
-        | jq -s '.[].subscription // .[].subscriptionName // .[].id' 2>/dev/null \
+        | jq -r '
+            if type == "array" then
+                .[] | (.subscription // .subscriptionName // .id // empty)
+            elif type == "object" then
+                (.subscriptions // .data // [])[] | (.subscription // .subscriptionName // .id // empty)
+            else
+                empty
+            end
+        ' 2>/dev/null \
         || dm_warn "Could not retrieve subscription names for device $1"
 }
 
@@ -405,6 +421,36 @@ dm_assert_has_subscription() {  # <label> <device_id>
 dm_assert_no_subscription() {   # <label> <device_id>
     dm_count_subscriptions "$2" >/dev/null
     dm_assert_eq_zero "$1" "$_DM_LAST_SUB_COUNT"
+}
+
+# Wait until at least one notification2 subscription exists for <device_id>.
+dm_wait_for_subscription_present() {  # <device_id> [timeout_secs=30] [interval_secs=1]
+    local _device=$1 _timeout=${2:-30} _interval=${3:-1} _elapsed=0
+    while [ "$_elapsed" -lt "$_timeout" ]; do
+        dm_count_subscriptions "$_device" >/dev/null
+        if [ "${_DM_LAST_SUB_COUNT:-0}" -gt 0 ]; then
+            return 0
+        fi
+        sleep "$_interval"
+        _elapsed=$((_elapsed + _interval))
+    done
+    dm_count_subscriptions "$_device" >/dev/null
+    return 1
+}
+
+# Wait until no notification2 subscriptions exist for <device_id>.
+dm_wait_for_subscription_absent() {  # <device_id> [timeout_secs=30] [interval_secs=1]
+    local _device=$1 _timeout=${2:-30} _interval=${3:-1} _elapsed=0
+    while [ "$_elapsed" -lt "$_timeout" ]; do
+        dm_count_subscriptions "$_device" >/dev/null
+        if [ "${_DM_LAST_SUB_COUNT:-0}" -eq 0 ]; then
+            return 0
+        fi
+        sleep "$_interval"
+        _elapsed=$((_elapsed + _interval))
+    done
+    dm_count_subscriptions "$_device" >/dev/null
+    return 1
 }
 
 # Create a static subscription for a single device and fail hard on API errors.
@@ -428,8 +474,8 @@ dm_delete_static_subscription() {  # <device_id> <subscription_name>
 # Example: dm_set_type_subscriptions MEASUREMENT '["auto-type"]'
 dm_set_type_subscriptions() {   # <api> <types_json_array>
     local _api=$1 _types=$2
-    dm_api PUT /subscription/type \
-        "{\"api\": \"${_api}\", \"types\": ${_types}}" >/dev/null || true
+    dm_api_must PUT /subscription/type \
+        "{\"api\": \"${_api}\", \"types\": ${_types}}" >/dev/null
     dm_info "Set type subscriptions (api=${_api}): ${_types}"
 }
 

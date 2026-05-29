@@ -45,7 +45,15 @@ dm_banner "Outbound Dynamic Subscription by Device Type"
 # Step 1: Add dynamic type subscription
 dm_step 1 "Add dynamic type subscription for '$DEVICE_TYPE'"
 dm_set_type_subscriptions MEASUREMENT "[\"${DEVICE_TYPE}\"]"
-dm_api GET /subscription/type | jq -s '(.[0] // {}) | .types // []' || true
+dm_api GET /subscription/type | jq -r '
+    if type == "array" then
+        (.[0] // {} | .types // [])
+    elif type == "object" then
+        (.types // [])
+    else
+        []
+    end
+' || true
 
 # Step 2: Create device with type
 dm_step 2 "Create device with type '$DEVICE_TYPE'"
@@ -63,12 +71,23 @@ dm_send_measurement "$DEVICE_ID" "18.3"
 # Step 5: Verify notification subscription exists
 dm_step 5 "Verify notification subscription exists for device $DEVICE_ID"
 dm_wait 2 "allowing subscription propagation"
+if ! dm_wait_for_subscription_present "$DEVICE_ID" 30 1; then
+    dm_warn "No subscription observed after wait window for device $DEVICE_ID"
+fi
 dm_show_subscriptions "$DEVICE_ID"
 dm_assert_has_subscription "type-based subscription exists" "$DEVICE_ID"
 
 if [ "$_DM_LAST_SUB_COUNT" -eq 0 ]; then
     dm_warn "Checking current type subscriptions via dynamic mapper service API ..."
-    dm_api GET /subscription/type | jq -s '(.[0] // {}) | .types // []' || true
+        dm_api GET /subscription/type | jq -r '
+            if type == "array" then
+                (.[0] // {} | .types // [])
+            elif type == "object" then
+                (.types // [])
+            else
+                []
+            end
+        ' || true
 fi
 
 dm_print_summary
