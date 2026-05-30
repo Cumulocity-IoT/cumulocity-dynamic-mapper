@@ -31,15 +31,14 @@
       <div class="card-block">
         <c8y-device-grid [title]="'Devices'" [columns]="columns" [actionControls]="[]"
           (itemsSelect)="onItemsSelect($event)" [selectable]="true"
-          data-cy="device-table-grid"
           (onDeviceQueryStringChange)="onDeviceQueryStringChange($event)"></c8y-device-grid>
       </div>
     </div>
     <div class="card-footer separator p-24 text-center flex-no-shrink">
-      <button type="button" name="cancel" class="btn btn-default" (click)="clickedCancel()" data-cy="device-table-cancel" translate>
+      <button type="button" name="cancel" class="btn btn-default" (click)="clickedCancel()" translate>
         Cancel
       </button>
-      <button type="button" name="update" class="btn btn-primary m-l-8" (click)="clickedUpdateSubscription()" data-cy="device-table-save" translate>
+      <button type="button" name="update" class="btn btn-primary m-l-8" (click)="clickedUpdateSubscription()" translate>
         Save
       </button>
     </div>

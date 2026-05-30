@@ -59,7 +59,7 @@ export interface DeviceGroupInfo {
 
               <!-- Skip -->
               <c8y-li role="listitem">
-                <c8y-li-radio name="subscriptionChoice" [value]="'skip'" [(ngModel)]="choice" [attr.data-cy]="'subscription-choice-skip'"></c8y-li-radio>
+                <c8y-li-radio name="subscriptionChoice" [value]="'skip'" [(ngModel)]="choice"></c8y-li-radio>
                 <c8y-li-icon icon="forward"></c8y-li-icon>
                 <c8y-li-body>
                   <strong translate>Skip for now</strong>
@@ -71,7 +71,7 @@ export interface DeviceGroupInfo {
 
               <!-- By device type -->
               <c8y-li role="listitem">
-                <c8y-li-radio name="subscriptionChoice" [value]="'type'" [(ngModel)]="choice" [attr.data-cy]="'subscription-choice-type'"></c8y-li-radio>
+                <c8y-li-radio name="subscriptionChoice" [value]="'type'" [(ngModel)]="choice"></c8y-li-radio>
                 <c8y-li-icon icon="speaker-notes"></c8y-li-icon>
                 <c8y-li-body>
                   <strong translate>By device type</strong>
@@ -90,7 +90,7 @@ export interface DeviceGroupInfo {
 
               <!-- By device group -->
               <c8y-li role="listitem">
-                <c8y-li-radio name="subscriptionChoice" [value]="'group'" [(ngModel)]="choice" [attr.data-cy]="'subscription-choice-group'"></c8y-li-radio>
+                <c8y-li-radio name="subscriptionChoice" [value]="'group'" [(ngModel)]="choice"></c8y-li-radio>
                 <c8y-li-icon icon="c8y-group"></c8y-li-icon>
                 <c8y-li-body>
                   <strong translate>By device group</strong>
@@ -105,7 +105,6 @@ export interface DeviceGroupInfo {
                       @for (g of deviceGroups; track g.id) {
                         <c8y-li [dense]="true" role="listitem">
                           <c8y-li-radio name="groupChoice" [value]="g.id"
-                            [attr.data-cy]="'subscription-choice-group-' + g.id"
                             [(ngModel)]="selectedGroupId"
                             (onSelect)="choice = 'group'">
                           </c8y-li-radio>
@@ -125,9 +124,8 @@ export interface DeviceGroupInfo {
           </div>
         </div>
         <div class="card-footer separator p-24 text-center flex-no-shrink">
-            <button class="btn btn-default" [attr.data-cy]="'subscription-choice-cancel'" (click)="onCancel()" translate>Cancel</button>
+            <button class="btn btn-default" (click)="onCancel()" translate>Cancel</button>
             <button class="btn btn-primary m-l-8"
-            [attr.data-cy]="'subscription-choice-confirm'"
             [disabled]="submitting || (choice === 'group' && !selectedGroupId)"
             (click)="onConfirm()" translate>Continue</button>
         </div>

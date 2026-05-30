@@ -28,7 +28,7 @@
     <div class="form-group">
       <div class="c8y-select-wrapper" style="width: 50%">
         <select class="form-control" (change)="onSelectSnoopedTemplate($event)"
-          [disabled]="mapping.snoopedTemplates?.length === 0" data-cy="snoop-explorer-template-select">
+          [disabled]="mapping.snoopedTemplates?.length === 0">
           @for (template of mapping.snoopedTemplates; track template; let i = $index) {
             <option [value]="i" [selected]="i === 0">
               {{ 'Template - ' + (i + 1) }}
@@ -44,15 +44,15 @@
     </div>
   </div>
   <div class="modal-footer" c8y-modal-footer-custom>
-    <button class="btn btn-default" (click)="onCancel()" data-cy="snoop-explorer-cancel">
+    <button class="btn btn-default" (click)="onCancel()">
       {{ 'Cancel' }}
     </button>
-    <button class="btn btn-primary" (click)="onResetSnoop()" data-cy="snoop-explorer-delete"
+    <button class="btn btn-primary" (click)="onResetSnoop()"
       [disabled]="mapping.snoopedTemplates?.length === 0 || pending || (!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole)"
       [ngClass]="{ 'btn-pending': pending }">
       {{ 'Delete templates' }}
     </button>
-    <button class="btn btn-primary" (click)="onUpdateSourceTemplate()" data-cy="snoop-explorer-set-source"
+    <button class="btn btn-primary" (click)="onUpdateSourceTemplate()"
       [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole"
       [ngClass]="{ 'btn-pending': pending }">
       {{ 'Set as source template' }}

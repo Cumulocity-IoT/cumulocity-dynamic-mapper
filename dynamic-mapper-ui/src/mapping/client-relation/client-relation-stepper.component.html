@@ -55,11 +55,9 @@
                     <label translate>Client Name</label>
                   </div>
                   <c8y-typeahead container="body" name="selectedClient" [placeholder]="'Search for clients...'"
-                    data-cy="client-relation-client-input"
                     [allowFreeEntries]="true" [(ngModel)]="selectedClient" (onSearch)="onSearch($event)">
                     @for (client of filteredClients; track client) {
                       <c8y-li class="p-l-8 p-r-8 c8y-list__item--link"
-                        [attr.data-cy]="'client-relation-client-option-' + client.name"
                         (click)="selectClient(client)">
                         <c8y-highlight [text]="client.name" [pattern]="pattern"></c8y-highlight>
                       </c8y-li>
@@ -68,7 +66,7 @@
                       <c8y-li class="bg-level-2 p-8 sticky-bottom">
                         <span translate>New client: {{selectedClient.name}}</span>
                         <button class="btn btn-default btn-sm m-l-8" title="Add new client" type="button"
-                          (click)="addNewClient(searchTerm)" data-cy="client-relation-add-client" translate>
+                          (click)="addNewClient(searchTerm)" translate>
                           Add new client
                         </button>
                       </c8y-li>
@@ -82,7 +80,6 @@
       </div>
     </div>
     <c8y-stepper-buttons [disabled]="false" class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0"
-      data-cy="client-relation-step1-buttons"
       (onCancel)="cancel.emit()" (onNext)="onNextStep($event)" [labels]="labels">
     </c8y-stepper-buttons>
   </cdk-step>
@@ -95,7 +92,7 @@
         </h4>
       </div>
       <div class="flex-grow">
-        <c8y-asset-selector-miller [(ngModel)]="selectedDevices" data-cy="client-relation-device-selector" (onSelected)="selectionChanged($event)" [config]="{
+        <c8y-asset-selector-miller [(ngModel)]="selectedDevices" (onSelected)="selectionChanged($event)" [config]="{
           groupsSelectable: true,
           columnHeaders: true,
           showFilter: true,
@@ -108,7 +105,6 @@
       </div>
     </div>
     <c8y-stepper-buttons class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0"
-      data-cy="client-relation-step2-buttons"
       (onCancel)="cancel.emit()" (onCustom)="onCommitButton()" [labels]="{ custom: 'Confirm' }"
       [class.user-no-admin-or-create-role]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole">
     </c8y-stepper-buttons>

@@ -26,12 +26,12 @@ import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
   template: `
     @for (con of connectors; track con) {
       <div>
-        <span class="text-12 tag tag--success" [attr.data-cy]="'mapping-deployment-' + context.item.id + '-' + con.name">{{ con.name }}</span>
+        <span class="text-12 tag tag--success">{{ con.name }}</span>
       </div>
     }
     @if (showNoConnectorWarning) {
       <div>
-        <span class="text-12 tag tag--danger" [attr.data-cy]="'mapping-deployment-none-' + context.item.id">No active connector</span>
+        <span class="text-12 tag tag--danger">No active connector</span>
       </div>
     }
     `,

@@ -25,7 +25,6 @@ import { CellRendererContext, CommonModule } from '@c8y/ngx-components';
   template: `
     <textarea
       class="text-monospace font-smaller"
-      [attr.data-cy]="'mapping-template-cell'"
       style="border:none; background-color: transparent;"
       rows="3"
       cols="40"

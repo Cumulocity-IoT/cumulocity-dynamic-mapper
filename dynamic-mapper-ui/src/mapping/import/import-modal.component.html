@@ -36,11 +36,11 @@
           style="max-width: 285px">
           <c8y-drop-area (dropped)="onFileDroppedEvent($event)" [accept]="'.json'" [loading]="isLoading"
             [maxAllowedFiles]="1" [message]="'Upload a JSON file' | translate" [progress]="progress$ | async"
-            class="drop-area" data-cy="import-file-input">
+            class="drop-area">
           </c8y-drop-area>
           <c8y-messages>
             @if (errorMessage) {
-              <c8y-message data-cy="import-error">
+              <c8y-message>
                 {{ errorMessage | translate }}
               </c8y-message>
             }

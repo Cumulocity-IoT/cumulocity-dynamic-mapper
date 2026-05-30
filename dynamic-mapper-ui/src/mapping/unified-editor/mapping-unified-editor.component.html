@@ -29,23 +29,23 @@
   <!-- Tab registration – tabs skipped by advanceFromStepToEndStep are omitted -->
   @if (isTabVisible(0)) {
   <c8y-tab [icon]="'c8y-device-management'" [label]="'Connector'" [priority]="50" [tabsOutlet]="'unified-editor'"
-    [isActive]="activeTabIndex === 0" (onSelect)="onTabSelected(0)" data-cy="unified-editor-tab-connector"></c8y-tab>
+    [isActive]="activeTabIndex === 0" (onSelect)="onTabSelected(0)"></c8y-tab>
   }
   @if (isTabVisible(1)) {
   <c8y-tab [icon]="'settings'" [label]="'General Settings'" [priority]="40" [tabsOutlet]="'unified-editor'"
-    [isActive]="activeTabIndex === 1" (onSelect)="onTabSelected(1)" data-cy="unified-editor-tab-general-settings"></c8y-tab>
+    [isActive]="activeTabIndex === 1" (onSelect)="onTabSelected(1)"></c8y-tab>
   }
   @if (isTabVisible(2)) {
   <c8y-tab [icon]="'document-body'" [label]="'Templates'" [priority]="30" [tabsOutlet]="'unified-editor'"
-    [isActive]="activeTabIndex === 2" (onSelect)="onTabSelected(2)" data-cy="unified-editor-tab-templates"></c8y-tab>
+    [isActive]="activeTabIndex === 2" (onSelect)="onTabSelected(2)"></c8y-tab>
   }
   @if (isTabVisible(3)) {
   <c8y-tab [icon]="'code'" [label]="'Transformation'" [priority]="20" [tabsOutlet]="'unified-editor'"
-    [isActive]="activeTabIndex === 3" (onSelect)="onTabSelected(3)" data-cy="unified-editor-tab-transformation"></c8y-tab>
+    [isActive]="activeTabIndex === 3" (onSelect)="onTabSelected(3)"></c8y-tab>
   }
   @if (isTabVisible(4)) {
   <c8y-tab [icon]="'play-arrow'" [label]="'Testing'" [priority]="10" [tabsOutlet]="'unified-editor'"
-    [isActive]="activeTabIndex === 4" (onSelect)="onTabSelected(4)" data-cy="unified-editor-tab-testing"></c8y-tab>
+    [isActive]="activeTabIndex === 4" (onSelect)="onTabSelected(4)"></c8y-tab>
   }
 
   <!-- Tab content – [hidden] keeps all components alive so editors/forms retain state -->
@@ -53,7 +53,7 @@
 
     <!-- Deprecation notice for legacy SUBSTITUTION_AS_CODE mappings -->
     @if (mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE) {
-    <div class="alert alert-warning m-16" data-cy="unified-editor-deprecated-status">
+    <div class="alert alert-warning m-16">
       <strong translate>Deprecated mapping type</strong>
       &nbsp;
       <span translate>This mapping uses the removed <code>SUBSTITUTION_AS_CODE</code> transformation type. It can only be <strong>exported</strong> or <strong>deleted</strong>. Editing and testing are disabled. Please recreate it using <strong>Smart Function</strong>.</span>
@@ -138,13 +138,13 @@
 
   <!-- Footer must be inside the card so flex layout pins it to the bottom -->
   <div class="card-footer separator p-24 text-center flex-no-shrink">
-    <button type="button" class="btn btn-default" (click)="onCancel()" translate data-cy="unified-editor-cancel">
+    <button type="button" class="btn btn-default" (click)="onCancel()" translate>
       Cancel
     </button>
     <button type="button" class="btn btn-primary" (click)="onCommitButton()"
       [disabled]="(!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole) || stepperConfiguration.editorMode === EditorMode.READ_ONLY || mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE"
       [title]="mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE ? ('Saving is disabled: SUBSTITUTION_AS_CODE mappings are deprecated and can no longer be modified.' | translate) : ''"
-      translate data-cy="unified-editor-save">
+      translate>
       Save
     </button>
   </div>
@@ -247,7 +247,6 @@
       </div>
       <div class="flex-grow col-lg-2 p-t-4">
         <button type="button" name="generateSubstitution" class="btn btn-ai btn-sm"
-          data-cy="unified-editor-generate-with-ai"
           (click)="openGenerateSubstitutionDrawer()"
           title="{{ (stepperConfiguration.editorMode === EditorMode.UPDATE ? 'Review / Refine with AI' : 'Generate with AI') | translate }}"
           [disabled]="!stepperViewModel.config.showEditorSource || stepperViewModel.config.editorMode === EditorMode.READ_ONLY || !aiAgentDeployed">
@@ -263,11 +262,11 @@
         <div class="input-group">
           <c8y-select [items]="codeTemplateItems" [(ngModel)]="templateId" (ngModelChange)="onSelectCodeTemplate()"
             name="templateSelect" [filterItems]="true" labelProperty="label" placeholder="{{ 'Select template...' | translate }}"
-            aria-label="Code Template" class="select-template" data-cy="unified-editor-code-template-select">
+            aria-label="Code Template" class="select-template">
           </c8y-select>
           <div class="input-group-btn">
             <button type="button" name="update" class="btn btn-default btn-sm" (click)="onCreateCodeTemplate()"
-              translate data-cy="unified-editor-create-code-template">
+              translate>
               Create new code template
             </button>
           </div>

@@ -22,7 +22,7 @@ import { CellRendererContext, CommonModule } from '@c8y/ngx-components';
 
 @Component({
 	selector: 'd11r-mapping-renderer-name',
-  template: ` <span [attr.data-cy]="'mapping-name-' + context.item.id" [class]="context.value == 'Unspecified' ? 'text-bold': 'text-normal' " title="{{ context.item.id }}">{{ context.value }}</span> `,
+  template: ` <span [class]="context.value == 'Unspecified' ? 'text-bold': 'text-normal' " title="{{ context.item.id }}">{{ context.value }}</span> `,
   standalone: true,
   imports: []
 })

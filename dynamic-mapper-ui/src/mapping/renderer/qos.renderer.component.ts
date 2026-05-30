@@ -22,7 +22,7 @@ import { CellRendererContext } from '@c8y/ngx-components';
 
 @Component({
   selector: 'd11r-mapping-renderer-qos',
-  template: `<span [attr.data-cy]="'mapping-qos-' + context.item.id">{{ qosLabel }}</span>`,
+  template: `<span>{{ qosLabel }}</span>`,
   standalone: true
 })
 export class QOSRendererComponent {

@@ -39,7 +39,6 @@
               <label translate class="m-b-0">Target Template - {{ targetSystem }}</label>
               @if (stepperViewModel.showTargetContent) {
               <button type="button" name="sample" class="btn btn-default btn-xs"
-                data-cy="mapping-template-reset-target"
                 (click)="onSampleTargetTemplatesButton()" translate
                 title="{{ 'Use Sample Target Templates' | translate }}"
                 [disabled]="templateForm.get('sampleTargetTemplatesButton')?.value || (!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole)">
@@ -92,7 +91,6 @@
         <div class="col-lg-6 d-col g-8">
           <div>
             <button type="button" name="updateFilterExecutionMapping" class="btn btn-default btn-sm m-b-4"
-              data-cy="mapping-template-update-filter"
               (click)="onOverwriteFilterMapping()" translate
               title="{{ 'Update Filter Execution Mapping' | translate }}"
               [disabled]="!selectedPathFilterFilterMapping">
@@ -103,7 +101,6 @@
           <div class="form-group m-l-0 m-b-4">
             <label translate class="p-l-8">Filter Result [{{ filterModel.filterExpression?.resultType }}]</label>
             <textarea class="form-control font-smaller" #filterModelFilterExpression c8y-textarea-autoresize
-              data-cy="mapping-template-filter-result"
               [readonly]="true">{{ filterModel.filterExpression?.result }}</textarea>
           </div>
         </div>

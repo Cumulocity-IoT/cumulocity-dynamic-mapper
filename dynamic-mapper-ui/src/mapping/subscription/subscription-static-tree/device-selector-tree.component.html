@@ -28,7 +28,7 @@
       </h4>
     </div>
     <div class="card-block flex-grow">
-      <c8y-asset-selector-miller [(ngModel)]="deviceList" data-cy="device-tree-selector" [config]="{
+      <c8y-asset-selector-miller [(ngModel)]="deviceList" [config]="{
             groupsSelectable: true,
             columnHeaders: true,
             showFilter: true,
@@ -40,10 +40,10 @@
           }" class="bg-component"></c8y-asset-selector-miller>
     </div>
     <div class="card-footer separator p-24 text-center flex-no-shrink">
-      <button type="button" name="cancel" class="btn btn-default" (click)="clickedCancel()" data-cy="device-tree-cancel" translate>
+      <button type="button" name="cancel" class="btn btn-default" (click)="clickedCancel()" translate>
         Cancel
       </button>
-      <button type="button" name="update" class="btn btn-primary m-l-8" (click)="clickedUpdateSubscription()" data-cy="device-tree-save" translate>
+      <button type="button" name="update" class="btn btn-primary m-l-8" (click)="clickedUpdateSubscription()" translate>
         Save
       </button>
     </div>
