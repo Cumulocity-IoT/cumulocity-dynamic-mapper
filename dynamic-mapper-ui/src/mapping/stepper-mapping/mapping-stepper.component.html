@@ -37,7 +37,7 @@
         [deploymentMapEntry]="deploymentMapEntry"
         (deploymentMapEntryChange)="deploymentMapEntryChange($event)"></d11r-mapping-connector>
     </div>
-    <c8y-stepper-buttons class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0"
+    <c8y-stepper-buttons data-cy="mapping-stepper-buttons-connector" class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0"
       [disabled]="isButtonDisabled$ | async" (onCancel)="cancel.emit()" (onNext)="onNextStep($event)"
       [labels]="labels"></c8y-stepper-buttons>
   </cdk-step>
@@ -49,7 +49,7 @@
       </d11r-mapping-properties>
     </div>
 
-    <c8y-stepper-buttons class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0"
+    <c8y-stepper-buttons data-cy="mapping-stepper-buttons-general" class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0"
       (onCancel)="cancel.emit()" (onNext)="onNextStep($event)" [labels]="labels">
     </c8y-stepper-buttons>
   </cdk-step>
@@ -93,7 +93,7 @@
         }
       </d11r-mapping-template-step>
     </div>
-    <c8y-stepper-buttons class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0" (onCancel)="cancel.emit()"
+    <c8y-stepper-buttons data-cy="mapping-stepper-buttons-templates" class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0" (onCancel)="cancel.emit()"
       (onNext)="onNextStep($event)" (onBack)="onBackStep($event)"
       [labels]="{ next: 'Next', cancel: 'Cancel' }"></c8y-stepper-buttons>
   </cdk-step>
@@ -117,7 +117,7 @@
       </d11r-mapping-transformation-step>
     </div>
 
-    <c8y-stepper-buttons class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0"
+    <c8y-stepper-buttons data-cy="mapping-stepper-buttons-transformation" class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0"
       (onCancel)="cancel.emit()" (onNext)="onNextStep($event)" (onBack)="onBackStep($event)"
       [labels]="{ next: 'Next', cancel: 'Cancel' }">
     </c8y-stepper-buttons>
@@ -130,7 +130,7 @@
             " [mapping]="mapping" [stepperConfiguration]="stepperConfiguration"
         (sourceTemplateChanged)="onTestingSourceTemplateChanged($event)"></d11r-mapping-testing>
     </div>
-    <c8y-stepper-buttons class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0"
+    <c8y-stepper-buttons data-cy="mapping-stepper-buttons-test" class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0"
       (onCustom)="onCommitButton()" (onCancel)="cancel.emit()" (onBack)="onBackStep($event)"
       [disabled]="( !feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole)"
       [labels]="{ custom: 'Confirm' }">
@@ -145,7 +145,7 @@
     <div class="form-group p-b-8"
       [class.has-error]="form.get('extensionName')?.invalid && form.get('extensionName')?.touched">
       <label translate>Extensions for {{ MappingTypeLabels[mapping.mappingType] }}</label>
-      <c8y-select [items]="extensionItems" formControlName="extensionName" [filterItems]="true"
+      <c8y-select data-cy="mapping-stepper-extension-source-name-select" [items]="extensionItems" formControlName="extensionName" [filterItems]="true"
         aria-label="Extension Name">
       </c8y-select>
       @if (form.get('extensionName')?.invalid && form.get('extensionName')?.touched) {
@@ -154,7 +154,7 @@
     </div>
     <div class="form-group" [class.has-error]="form.get('eventName')?.invalid && form.get('eventName')?.touched">
       <label translate>Events for {{ mapping?.extension?.extensionName }}</label>
-      <c8y-select [items]="extensionEventItems$ | async" formControlName="eventName" [filterItems]="true" aria-label="Event Name">
+      <c8y-select data-cy="mapping-stepper-extension-source-event-select" [items]="extensionEventItems$ | async" formControlName="eventName" [filterItems]="true" aria-label="Event Name">
       </c8y-select>
       @if (form.get('eventName')?.invalid && form.get('eventName')?.touched) {
       <span class="help-block"><small translate>Event name is required.</small></span>
@@ -163,7 +163,7 @@
     @if (hasExtensionParameter) {
     <div class="form-group">
       <label translate>Extension Parameter (YAML)</label>
-      <textarea class="form-control font-smaller font-monospace" formControlName="extensionParameter" rows="6"
+      <textarea class="form-control font-smaller font-monospace" data-cy="mapping-stepper-extension-source-parameter-input" formControlName="extensionParameter" rows="6"
         placeholder="parameter:&#10;  key: value">
           </textarea>
       <small class="text-muted" translate>Optional YAML parameter passed to the extension.</small>
@@ -195,7 +195,7 @@
         </div>
       </div>
       <div class="flex-grow col-lg-2 p-t-4">
-        <button type="button" name="generateSubstitution" class="btn btn-ai btn-sm"
+        <button type="button" name="generateSubstitution" data-cy="mapping-stepper-generate-ai" class="btn btn-ai btn-sm"
           (click)="openGenerateSubstitutionDrawer()"
           title="{{ (stepperConfiguration.editorMode === EditorMode.UPDATE ? 'Review / Refine with AI' : 'Generate with AI') | translate }}" [disabled]="
                             !stepperViewModel.config.showEditorSource ||
@@ -212,12 +212,12 @@
       </div>
       <div class="col-lg-5 p-r-16">
         <div class="input-group">
-          <c8y-select [items]="codeTemplateItems" [(ngModel)]="templateId" (ngModelChange)="onSelectCodeTemplate()"
+          <c8y-select data-cy="mapping-stepper-code-template-select" [items]="codeTemplateItems" [(ngModel)]="templateId" (ngModelChange)="onSelectCodeTemplate()"
             name="templateSelect" [filterItems]="true" labelProperty="label" placeholder="{{ 'Select template...' | translate }}"
             aria-label="Code Template" class="select-template">
           </c8y-select>
           <div class="input-group-btn">
-            <button type="button" name="update" class="btn btn-default btn-sm" (click)="onCreateCodeTemplate()"
+            <button type="button" name="update" data-cy="mapping-stepper-code-template-create" class="btn btn-default btn-sm" (click)="onCreateCodeTemplate()"
               translate>
               Create new code template
             </button>
@@ -225,7 +225,7 @@
         </div>
       </div>
     </div>
-    <c8y-editor [editorOptions]="editorOptions" class="form-control flex-grow" style="min-height: 630px"
+    <c8y-editor data-cy="mapping-stepper-code-editor" [editorOptions]="editorOptions" class="form-control flex-grow" style="min-height: 630px"
       monacoEditorMarkerValidator [ngModel]="mappingCode" (ngModelChange)="onValueCodeChange($event)"
       (editorInit)="registerCompletionProvider()">
     </c8y-editor>
@@ -244,7 +244,7 @@
     <div class="form-group p-b-8"
       [class.has-error]="form.get('extensionName')?.invalid && form.get('extensionName')?.touched">
       <label translate>Extensions for {{ MappingTypeLabels[mapping.mappingType] }}</label>
-      <c8y-select [items]="extensionItems" formControlName="extensionName" [filterItems]="true"
+      <c8y-select data-cy="mapping-stepper-extension-target-name-select" [items]="extensionItems" formControlName="extensionName" [filterItems]="true"
         aria-label="Extension Name">
       </c8y-select>
       @if (form.get('extensionName')?.invalid && form.get('extensionName')?.touched) {
@@ -253,7 +253,7 @@
     </div>
     <div class="form-group" [class.has-error]="form.get('eventName')?.invalid && form.get('eventName')?.touched">
       <label translate>Events for {{ mapping?.extension?.extensionName }}</label>
-      <c8y-select [items]="extensionEventItems$ | async" formControlName="eventName" [filterItems]="true" aria-label="Event Name">
+      <c8y-select data-cy="mapping-stepper-extension-target-event-select" [items]="extensionEventItems$ | async" formControlName="eventName" [filterItems]="true" aria-label="Event Name">
       </c8y-select>
       @if (form.get('eventName')?.invalid && form.get('eventName')?.touched) {
       <span class="help-block"><small translate>Event name is required.</small></span>
@@ -262,7 +262,7 @@
     @if (hasExtensionParameter) {
     <div class="form-group">
       <label translate>Extension Parameter (YAML)</label>
-      <textarea class="form-control font-smaller font-monospace" formControlName="extensionParameter" rows="6"
+      <textarea class="form-control font-smaller font-monospace" data-cy="mapping-stepper-extension-target-parameter-input" formControlName="extensionParameter" rows="6"
         placeholder="parameter:&#10;  key: value">
           </textarea>
       <small class="text-muted" translate>Optional YAML parameter passed to the extension.</small>

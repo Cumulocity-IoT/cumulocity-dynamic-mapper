@@ -23,6 +23,7 @@
 <c8y-action-bar-item [placement]="'right'">
   @if (path == 'dynamic') {
     <button class="btn btn-link" title="{{ 'Manage subscriptions' | translate }}" (click)="onDefineSubscription4()"
+      data-cy="subscription-manage-by-type"
       [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole">
       <i c8yIcon="subscription"></i>
       {{ 'Manage subscriptions (by device type)' | translate }}
@@ -38,6 +39,7 @@
 <c8y-action-bar-item [placement]="'right'">
   @if (path == 'dynamic') {
     <button class="btn btn-link" title="{{ 'Manage subscriptions' | translate }}" (click)="onDefineSubscription3()"
+      data-cy="subscription-manage-by-group"
       [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole">
       <i c8yIcon="subscription"></i>
       {{ 'Manage subscriptions (by device groups)' | translate }}
@@ -53,6 +55,7 @@
 <c8y-action-bar-item [placement]="'right'">
   @if (path == 'static') {
     <button class="btn btn-link" title="{{ 'Manage subscriptions' | translate }}" (click)="onDefineSubscription1()"
+      data-cy="subscription-manage-device-selection"
       [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole">
       <i c8yIcon="subscription"></i>
       {{ 'Manage subscriptions (device selection)' | translate }}
@@ -69,6 +72,7 @@
   @if (path == 'static') {
     <button class="btn btn-link" title="{{ 'Manage subscriptions (table)' | translate }}"
       (click)="onDefineSubscription2()"
+      data-cy="subscription-manage-device-table"
       [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole">
       <i c8yIcon="subscription"></i>
       {{ 'Manage subscriptions (device table )' | translate }}
@@ -86,7 +90,7 @@
   <i c8yIcon="info-circle" class="m-r-8"></i>
   <span translate>Subscriptions are processed asynchronously. Verify the result in the list below or</span>
   &nbsp;
-  <button class="btn btn-link p-0" (click)="navigateToServiceEvents()">
+  <button class="btn btn-link p-0" (click)="navigateToServiceEvents()" data-cy="subscription-service-events">
     {{ 'check Service Events' | translate }}
   </button>
   &nbsp;
@@ -104,7 +108,7 @@
         [title]="'No subscriptions for devices exist.' | translate" [subtitle]="
     'Create your first subscription for a device.' | translate
   " [horizontal]="true"> <button class="btn btn-link m-t-16" title="{{ 'Manage subscriptions' | translate }}"
-          (click)="onDefineSubscription1()">
+          (click)="onDefineSubscription1()" data-cy="subscription-empty-manage">
           <i c8yIcon="subscription"></i>
           {{ 'Manage subscriptions' | translate }}
         </button>

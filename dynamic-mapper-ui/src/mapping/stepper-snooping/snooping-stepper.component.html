@@ -61,7 +61,7 @@
     </div>
     <c8y-stepper-buttons [disabled]="isButtonDisabled$ | async"
       class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0" (onCancel)="cancel.emit()"
-      (onNext)="onNextStep($event)" [labels]="labels">
+      (onNext)="onNextStep($event)" [labels]="labels" data-cy="snooping-step-connector-buttons">
     </c8y-stepper-buttons>
   </cdk-step>
   <cdk-step label="Properties snooping" state="final" [stepControl]="propertyFormly">
@@ -72,7 +72,8 @@
     </div>
     <c8y-stepper-buttons class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0"
       (onCancel)="cancel.emit()" (onCustom)="onCommitButton()" [labels]="{ custom: 'Confirm' }"
-      [class.user-no-admin-or-create-role]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole">
+      [class.user-no-admin-or-create-role]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole"
+      data-cy="snooping-step-properties-buttons">
     </c8y-stepper-buttons>
   </cdk-step>
 </c8y-stepper>

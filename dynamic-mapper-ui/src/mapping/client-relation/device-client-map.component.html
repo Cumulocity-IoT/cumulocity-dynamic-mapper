@@ -24,6 +24,7 @@
 <c8y-action-bar-item [placement]="'right'">
   <button class="btn btn-link" title="{{ 'Delete all relations (table)' | translate }}"
     (click)="onDeleteAllClientRelations()"
+    data-cy="client-map-delete-all"
     [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole">
     <i c8yIcon="subscription"></i>
     {{ 'Delete all relations' | translate }}
@@ -36,6 +37,7 @@
 
 <c8y-action-bar-item [placement]="'right'">
   <button class="btn btn-link" title="{{ 'Add relations (device selection)' | translate }}" (click)="onAddRelations()"
+    data-cy="client-map-add"
     [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole">
     <i c8yIcon="add"></i>
     {{ 'Add relations' | translate }}
@@ -56,7 +58,7 @@
         [title]="'No relations exist.' | translate" [subtitle]="
     'Create your first relation for a device.' | translate
   " [horizontal]="true"> <button class="btn btn-link m-t-16" title="{{ 'Manage relations' | translate }}"
-        (click)="onAddRelations()">
+        (click)="onAddRelations()" data-cy="client-map-empty-add">
         <i c8yIcon="plus"></i>
         {{ 'Manage relations' | translate }}
       </button>

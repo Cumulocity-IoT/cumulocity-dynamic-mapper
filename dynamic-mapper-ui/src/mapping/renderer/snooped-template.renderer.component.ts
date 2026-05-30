@@ -31,6 +31,7 @@ import { SnoopStatus } from '../../shared';
       <div>
         <button
           class="btn btn-link"
+          [attr.data-cy]="'mapping-snooped-' + context.item.id"
           [title]="context.item.id"
           (click)="exploreSnoopedTemplates()"
           style="padding-top: 0px; padding-bottom: 10px;"

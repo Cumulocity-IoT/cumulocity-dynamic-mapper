@@ -34,7 +34,7 @@
             </d11r-mapping-json-editor>
             <c8y-messages>
               @if (testingModel.errorMsg) {
-              <c8y-message translate><span class="text-warning">{{ testingModel.errorMsg
+              <c8y-message translate><span class="text-warning" data-cy="mapping-test-source-error">{{ testingModel.errorMsg
                   }}</span>
               </c8y-message>
               }
@@ -60,7 +60,7 @@
                   }
                 </div>
                 <div>
-                  <span class="badge badge-success">{{
+                  <span class="badge badge-success" data-cy="mapping-test-result-index">{{
                     selectedResult$ | async
                     }}</span>
                 </div>
@@ -72,7 +72,7 @@
             </d11r-mapping-json-editor>
             <c8y-messages>
               @if (testingModel.errorMsg) {
-              <c8y-message translate><span class="text-warning">{{ testingModel.errorMsg
+              <c8y-message translate><span class="text-warning" data-cy="mapping-test-target-error">{{ testingModel.errorMsg
                   }}</span>
               </c8y-message>
               }
@@ -85,7 +85,7 @@
       }
       @if (mapping.direction !== Direction.OUTBOUND && !isSubstitutionsAsCode(mapping)) {
       <!-- Collapsible response header -->
-      <div class="d-flex a-i-center p-t-4 p-b-4" (click)="showResponse = !showResponse" style="cursor:pointer">
+      <div class="d-flex a-i-center p-t-4 p-b-4" data-cy="mapping-test-response-toggle" (click)="showResponse = !showResponse" style="cursor:pointer">
         <i [c8yIcon]="showResponse ? 'chevron-down' : 'chevron-right'" class="m-r-8"></i>
         <span translate>{{ targetSystem }} Response</span>
         @if ((selectedResult$ | async) > 0) {
@@ -107,7 +107,7 @@
       }
       <hr />
       <!-- Collapsible console header -->
-      <div class="d-flex a-i-center p-t-4 p-b-4" (click)="showConsole = !showConsole" style="cursor:pointer">
+      <div class="d-flex a-i-center p-t-4 p-b-4" data-cy="mapping-test-console-toggle" (click)="showConsole = !showConsole" style="cursor:pointer">
         <i [c8yIcon]="showConsole ? 'chevron-down' : 'chevron-right'" class="m-r-8"></i>
         <span translate>Console output</span>
       </div>
@@ -135,25 +135,25 @@
   <!-- Pinned button bar — sits below the scroll area, always visible -->
   <div class="d-flex separator p-t-8 p-b-8 flex-no-shrink" style="justify-content: center;">
     <div class="btn-group">
-      <button type="button" class="btn btn-default btn-sm m-r-8" (click)="onTestTransformation()"
+      <button type="button" class="btn btn-default btn-sm m-r-8" data-cy="mapping-test-transform" (click)="onTestTransformation()"
         [disabled]="!stepperConfiguration.allowTestTransformation || (testingModel.results.length > 0) || isLoading">
         @if (isLoading && !isSubstitutionsAsCode(mapping) && !requiresRawPayload()) {
         <i class="fa fa-circle-o-notch fa-spin m-r-4"></i>
         }
         Transform Test Message
       </button>
-      <button type="button" class="btn btn-default btn-sm m-r-8" (click)="onNextTestResult()"
+      <button type="button" class="btn btn-default btn-sm m-r-8" data-cy="mapping-test-next-result" (click)="onNextTestResult()"
         [disabled]="!stepperConfiguration.allowTestTransformation || testingModel.results.length <= 1">
         Show Next Test Result&nbsp;@if (testingModel.results.length > 0) {
         <span class="badge badge-success">
           total {{ testingModel.results.length }}</span>
         }
       </button>
-      <button type="button" class="btn btn-default btn-sm m-r-8" (click)="onResetTransformation()"
+      <button type="button" class="btn btn-default btn-sm m-r-8" data-cy="mapping-test-reset" (click)="onResetTransformation()"
         [disabled]="!stepperConfiguration.allowTestTransformation || testingModel.results.length == 0">
         Reset Transform
       </button>
-      <button type="button" class="btn btn-default btn-sm" [disabled]="disableTestSending() || isLoading" (click)="onSendTest()">
+      <button type="button" class="btn btn-default btn-sm" data-cy="mapping-test-send" [disabled]="disableTestSending() || isLoading" (click)="onSendTest()">
         @if (isLoading && !isSubstitutionsAsCode(mapping) && !requiresRawPayload()) {
         <i class="fa fa-circle-o-notch fa-spin m-r-4"></i>
         }
@@ -164,7 +164,7 @@
         type="button" container="body" allow></button>
       @if (mapping.direction !== Direction.OUTBOUND) {
       <label class="c8y-checkbox m-l-16 m-b-0" title="Create a real device in C8Y inventory before sending (tagged d11r_testDevice)">
-        <input type="checkbox" [(ngModel)]="createTestDevice" [disabled]="disableTestSending()" />
+        <input type="checkbox" data-cy="mapping-test-create-device-toggle" [(ngModel)]="createTestDevice" [disabled]="disableTestSending()" />
         <span></span>
         <span translate>Create test device</span>
       </label>

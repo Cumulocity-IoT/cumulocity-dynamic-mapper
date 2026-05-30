@@ -48,14 +48,16 @@
               <label class="c8y-radio radio-inline" title="{{ 'Inbound' | translate }}"
                 aria-label="{{ 'Inbound' | translate }}">
                 <input type="radio" name="direction" value="INBOUND" [(ngModel)]="direction"
-                  (ngModelChange)="onDirectionChange()" [attr.aria-checked]="direction === 'INBOUND'" />
+                  (ngModelChange)="onDirectionChange()" [attr.aria-checked]="direction === 'INBOUND'"
+                  data-cy="msg-explorer-drawer-direction-inbound" />
                 <span></span>
                 <span><i c8yIcon="swipe-right" class="text-success m-r-4"></i><span translate>Inbound</span></span>
               </label>
               <label class="c8y-radio radio-inline" title="{{ 'Outbound' | translate }}"
                 aria-label="{{ 'Outbound' | translate }}">
                 <input type="radio" name="direction" value="OUTBOUND" [(ngModel)]="direction"
-                  (ngModelChange)="onDirectionChange()" [attr.aria-checked]="direction === 'OUTBOUND'" />
+                  (ngModelChange)="onDirectionChange()" [attr.aria-checked]="direction === 'OUTBOUND'"
+                  data-cy="msg-explorer-drawer-direction-outbound" />
                 <span></span>
                 <span><i c8yIcon="swipe-left" style="color: orange" class="m-r-4"></i><span translate>Outbound</span></span>
               </label>
@@ -64,7 +66,7 @@
           <div class="form-group m-b-0" style="flex: 0 0 calc(50% - 12px)">
             <label class="control-label" for="explorerMaxMessages" translate>Max messages to buffer</label>
             <input id="explorerMaxMessages" type="number" class="form-control" [(ngModel)]="maxMessages"
-              name="maxMessages" min="1" max="500" />
+              name="maxMessages" min="1" max="500" data-cy="msg-explorer-drawer-max-messages-input" />
             <span class="help-block" translate>Between 1 and 500. Oldest messages are discarded when the limit is reached.</span>
           </div>
         </div>
@@ -79,14 +81,16 @@
               <label class="c8y-radio radio-inline" title="{{ 'By device or device group' | translate }}"
                 aria-label="{{ 'By device or device group' | translate }}">
                 <input type="radio" name="outboundFilterMode" value="source"
-                  [(ngModel)]="outboundFilterMode" (ngModelChange)="onOutboundFilterModeChange()" />
+                  [(ngModel)]="outboundFilterMode" (ngModelChange)="onOutboundFilterModeChange()"
+                  data-cy="msg-explorer-drawer-filter-source" />
                 <span></span>
                 <span translate>Device or device group</span>
               </label>
               <label class="c8y-radio radio-inline" title="{{ 'By device type' | translate }}"
                 aria-label="{{ 'By device type' | translate }}">
                 <input type="radio" name="outboundFilterMode" value="deviceType"
-                  [(ngModel)]="outboundFilterMode" (ngModelChange)="onOutboundFilterModeChange()" />
+                  [(ngModel)]="outboundFilterMode" (ngModelChange)="onOutboundFilterModeChange()"
+                  data-cy="msg-explorer-drawer-filter-device-type" />
                 <span></span>
                 <span translate>Device type</span>
               </label>
@@ -98,7 +102,7 @@
             <label class="control-label" translate>Source</label>
             <span class="help-block m-t-0 m-b-8" translate>Select a device or group to create a dedicated Notification 2.0 subscription.</span>
             <c8y-asset-selector-miller [(ngModel)]="selectedDeviceList" (onSelected)="onDeviceSelected($event)"
-              name="explorerDevice" [config]="{
+              name="explorerDevice" data-cy="msg-explorer-drawer-device-selector" [config]="{
                   groupsSelectable: true,
                   columnHeaders: true,
                   showFilter: true,
@@ -114,7 +118,8 @@
           <div class="form-group m-b-0">
             <label class="control-label" for="explorerDeviceType" translate>Device type filter</label>
             <input id="explorerDeviceType" type="text" class="form-control" [(ngModel)]="deviceTypeFilter"
-              name="deviceTypeFilter" placeholder="{{ 'e.g. c8y_MQTTDevice' | translate }}" />
+              name="deviceTypeFilter" placeholder="{{ 'e.g. c8y_MQTTDevice' | translate }}"
+              data-cy="msg-explorer-drawer-device-type-input" />
             <span class="help-block" translate>Show only messages from devices whose C8Y type matches this value.</span>
           </div>
           }
@@ -128,7 +133,7 @@
             <label class="control-label" for="explorerConnector" translate>Connector</label>
             <div class="c8y-select-wrapper">
               <select id="explorerConnector" class="form-control" [(ngModel)]="selectedConnectorIdentifier"
-                name="connectorIdentifier">
+                name="connectorIdentifier" data-cy="msg-explorer-drawer-connector-select">
                 <option value="" disabled selected translate>-- Select connector --</option>
                 @for (c of connectors; track c.identifier) {
                 <option [value]="c.identifier" [disabled]="isConnectorDisabled(c)">
@@ -147,7 +152,8 @@
           <div class="form-group m-b-0">
             <label class="control-label" for="explorerTopic" translate>Topic</label>
             <input id="explorerTopic" type="text" class="form-control" [(ngModel)]="topic" name="topic"
-              placeholder="{{ 'e.g. sensors/#  or  devices/+/data' | translate }}" />
+              placeholder="{{ 'e.g. sensors/#  or  devices/+/data' | translate }}"
+              data-cy="msg-explorer-drawer-topic-input" />
             <span class="help-block" translate>
               Wildcards: <code>+</code> matches one level, <code>#</code> matches the rest of the path.
             </span>
@@ -158,8 +164,8 @@
       </div>
     </div>
     <div class="card-footer separator p-24 text-center flex-no-shrink">
-      <button class="btn btn-default" (click)="onCancel()" translate>Cancel</button>
-      <button class="btn btn-primary m-l-8" (click)="onStart()"
+      <button class="btn btn-default" (click)="onCancel()" data-cy="msg-explorer-drawer-cancel" translate>Cancel</button>
+      <button class="btn btn-primary m-l-8" (click)="onStart()" data-cy="msg-explorer-drawer-start"
         [disabled]="(direction === 'INBOUND' && (!selectedConnectorIdentifier || !topic)) ||
                     (direction === 'OUTBOUND' && outboundFilterMode === 'source' && selectedDeviceList.length === 0) ||
                     (direction === 'OUTBOUND' && outboundFilterMode === 'deviceType' && !deviceTypeFilter.trim())" translate>
