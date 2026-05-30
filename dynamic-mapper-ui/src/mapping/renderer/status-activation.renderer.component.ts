@@ -38,6 +38,7 @@ import { SubscriptionService } from '../core/subscription.service';
       >
         <input
           type="checkbox"
+          [attr.data-cy]="'dm-mapping-activation-' + context.item.id"
           [checked]="context.value"
           (click)="onToggleClick($event)"
           [disabled]="!canEdit || isCheckingValidity"

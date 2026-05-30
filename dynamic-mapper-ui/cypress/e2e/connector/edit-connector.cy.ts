@@ -71,7 +71,7 @@ describe('Connector — Edit connector', () => {
 
       cy.get('#name').clear();
       cy.get('#name').type(updatedName);
-      cy.getByData('connector-save').should('be.enabled').click();
+      cy.getByData('dm-connector-save').should('be.enabled').click();
       cy.wait('@putConnector');
 
       // The identifier is stable across the rename, so the same row hook now
@@ -93,7 +93,7 @@ describe('Connector — Edit connector', () => {
 
       cy.get('#mqttPort').clear();
       cy.get('#mqttPort').type(newPort);
-      cy.getByData('connector-save').should('be.enabled').click();
+      cy.getByData('dm-connector-save').should('be.enabled').click();
       cy.wait('@putConnector');
 
       getConnector(identifier).should('exist').and('contain', connectorName);

@@ -63,22 +63,22 @@
     <div [formGroup]="substitutionFormly">
       <!-- Action Buttons -->
       <div class="d-flex j-c-center p-t-8">
-        <button type="button" class="btn btn-default btn-sm" (click)="onAddSubstitution()"
+        <button type="button" class="btn btn-default btn-sm" data-cy="dm-mapping-transform-add-substitution" (click)="onAddSubstitution()"
           [disabled]="addSubstitutionDisabled()">
           <i c8yIcon="plus-circle-o"></i>&nbsp;Add substitution
         </button>
-        <button type="button" class="btn btn-default btn-sm m-l-4" (click)="onUpdateSubstitution()"
+        <button type="button" class="btn btn-default btn-sm m-l-4" data-cy="dm-mapping-transform-update-substitution" (click)="onUpdateSubstitution()"
           [disabled]="updateSubstitutionDisabled()">
           <i c8yIcon="pencil"></i>&nbsp;Update substitution
         </button>
-        <button type="button" class="btn btn-ai btn-sm m-l-4" (click)="openGenerateSubstitutionDrawer()" [disabled]="!stepperConfiguration.showEditorSource ||
+        <button type="button" class="btn btn-ai btn-sm m-l-4" data-cy="dm-mapping-transform-generate-ai" (click)="openGenerateSubstitutionDrawer()" [disabled]="!stepperConfiguration.showEditorSource ||
               stepperConfiguration.editorMode === EditorMode.READ_ONLY || 
               !aiAgentDeployed">
           <span>{{ stepperConfiguration.editorMode === EditorMode.UPDATE ? 'Review / Refine with AI' : 'Generate substitutions' }}</span>
         </button>
       </div>
       <!-- Expert Mode collapsible header -->
-      <div class="d-flex a-i-center p-t-4 p-b-4" (click)="toggleExpertMode()" style="cursor:pointer">
+      <div class="d-flex a-i-center p-t-4 p-b-4" data-cy="dm-mapping-transform-expert-toggle" (click)="toggleExpertMode()" style="cursor:pointer">
         <i [c8yIcon]="expertMode ? 'chevron-down' : 'chevron-right'" class="m-r-8"></i>
         <span translate>Expert Mode</span>
         <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"

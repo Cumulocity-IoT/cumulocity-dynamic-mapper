@@ -104,7 +104,7 @@ export const navigateToConnectorConfiguration = (): void => {
   cy.visitShellAndWaitForSelector(
     'c8y-pkg-dynamic-mapper/node3/connectorConfiguration',
     'en',
-    '[data-cy="connector-add"]',
+    '[data-cy="dm-connector-add"]',
     60000
   );
 };
@@ -118,7 +118,7 @@ export const getConnector = (
 ): Cypress.Chainable<JQuery<HTMLElement>> =>
   // Use a generous timeout: the grid reloads asynchronously after create/update,
   // and the status fetch can lag when connectors are actively (re)connecting.
-  cy.get(`[data-cy="connector-name-${identifier}"]`, { timeout: 15000 });
+  cy.get(`[data-cy="dm-connector-name-${identifier}"]`, { timeout: 15000 });
 
 /**
  * Fill MQTT connector form with provided values
@@ -153,12 +153,12 @@ export const addConnectorViaUi = (
   mqttConnectionInput: MqttConnectionInput,
   connectorName: string
 ): Cypress.Chainable<string> => {
-  cy.getByData('connector-add').should('be.enabled').click();
+  cy.getByData('dm-connector-add').should('be.enabled').click();
   cy.wait('@getConnectorSpecifications');
   fillMqttConnectorForm(mqttConnectionInput, connectorName);
   // The drawer's save button stays disabled until the form is valid, so wait
   // for it to enable before clicking.
-  cy.getByData('connector-save').should('be.enabled').click();
+  cy.getByData('dm-connector-save').should('be.enabled').click();
 
   return cy.wait('@postConnector').then((interception) => {
     const identifier =
@@ -209,7 +209,7 @@ export const openConnectorRowAction = (
  * connector PUT — see ConnectorStatusEnabledRendererComponent.
  */
 export const toggleConnectorEnabled = (identifier: string): void => {
-  cy.getByData(`connector-toggle-${identifier}`).click({ force: true });
+  cy.getByData(`dm-connector-toggle-${identifier}`).click({ force: true });
 };
 
 /**

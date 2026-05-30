@@ -34,7 +34,7 @@
       <c8y-list-group class="separator-top" role="list">
         <c8y-li role="listitem">
           <label class="c8y-radio input-sm">
-            <input title="{{ 'Continue snooping' | translate }}" aria-label="{{ 'Continue snooping' | translate }}" type="radio" (change)="onSelection(AdvisorAction.CONTINUE_SNOOPING)"
+            <input data-cy="dm-advice-continue-snooping" title="{{ 'Continue snooping' | translate }}" aria-label="{{ 'Continue snooping' | translate }}" type="radio" (change)="onSelection(AdvisorAction.CONTINUE_SNOOPING)"
               [checked]="AdvisorAction.CONTINUE_SNOOPING == selectedAction"
               [attr.aria-checked]="AdvisorAction.CONTINUE_SNOOPING == selectedAction">
             <span></span>
@@ -43,7 +43,7 @@
         </c8y-li>
         <c8y-li role="listitem">
           <label class="c8y-radio input-sm">
-            <input title="{{ 'Stop snooping and edit' | translate }}" aria-label="{{ 'Stop snooping and edit' | translate }}" type="radio"
+            <input data-cy="dm-advice-stop-snooping-and-edit" title="{{ 'Stop snooping and edit' | translate }}" aria-label="{{ 'Stop snooping and edit' | translate }}" type="radio"
               (change)="onSelection(AdvisorAction.STOP_SNOOPING_AND_EDIT)"
               [checked]="AdvisorAction.STOP_SNOOPING_AND_EDIT == selectedAction"
               [attr.aria-checked]="AdvisorAction.STOP_SNOOPING_AND_EDIT == selectedAction">
@@ -53,7 +53,7 @@
         </c8y-li>
         <c8y-li role="listitem">
           <label class="c8y-radio input-sm">
-            <input title="{{ 'Continue snooping and edit' | translate }}" aria-label="{{ 'Continue snooping and edit' | translate }}" type="radio" (change)="onSelection(AdvisorAction.EDIT)"
+            <input data-cy="dm-advice-edit" title="{{ 'Continue snooping and edit' | translate }}" aria-label="{{ 'Continue snooping and edit' | translate }}" type="radio" (change)="onSelection(AdvisorAction.EDIT)"
               [checked]="AdvisorAction.EDIT == selectedAction"
               [attr.aria-checked]="AdvisorAction.EDIT == selectedAction">
             <span></span><span>{{ 'Continue snooping and edit mapping ...' | translate }}</span>
@@ -61,7 +61,7 @@
         </c8y-li>
         <c8y-li role="listitem">
           <label class="c8y-radio input-sm">
-            <input title="{{ 'Continue snooping and view' | translate }}" aria-label="{{ 'Continue snooping and view' | translate }}" type="radio" (change)="onSelection(AdvisorAction.VIEW)"
+            <input data-cy="dm-advice-view" title="{{ 'Continue snooping and view' | translate }}" aria-label="{{ 'Continue snooping and view' | translate }}" type="radio" (change)="onSelection(AdvisorAction.VIEW)"
               [checked]="AdvisorAction.VIEW == selectedAction"
               [attr.aria-checked]="AdvisorAction.VIEW == selectedAction">
             <span></span><span>{{ 'Continue snooping and view mapping ...' | translate }}</span>

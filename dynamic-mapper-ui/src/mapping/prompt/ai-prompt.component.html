@@ -33,11 +33,11 @@
   <div class="d-flex d-col j-c-center a-i-center fit-h p-24">
     <p class="text-medium m-b-24" translate>What would you like to do with the existing {{ isCodeMapping ? 'Smart Function' : 'substitutions' }}?</p>
     <div class="btn-group d-col" style="gap: 12px; min-width: 280px">
-      <button type="button" class="btn btn-ai" (click)="chooseReview()">
+      <button type="button" class="btn btn-ai" (click)="chooseReview()" data-cy="dm-ai-prompt-review">
         <i c8yIcon="search"></i>&nbsp;
         <span translate>Review / Refine existing {{ isCodeMapping ? 'Smart Function' : 'substitutions' }}</span>
       </button>
-      <button type="button" class="btn btn-default" (click)="chooseGenerate()">
+      <button type="button" class="btn btn-default" (click)="chooseGenerate()" data-cy="dm-ai-prompt-generate">
         <i c8yIcon="plus-circle-o"></i>&nbsp;
         <span translate>Generate new {{ isCodeMapping ? 'Smart Function' : 'substitutions' }} from scratch</span>
       </button>
@@ -61,10 +61,10 @@
 
 <div class="card-footer separator text-center flex-no-shrink">
   <div class="form-group">
-    <button type="button" name="update" class="btn btn-primary" (click)="save()" [disabled]="!valid" translate>
+    <button type="button" name="update" class="btn btn-primary" (click)="save()" [disabled]="!valid" data-cy="dm-ai-prompt-save" translate>
       Save
     </button>
-    <button type="button" name="update" class="btn btn-primary" (click)="cancel()" translate>
+    <button type="button" name="update" class="btn btn-primary" (click)="cancel()" data-cy="dm-ai-prompt-cancel" translate>
       Cancel
     </button>
   </div>

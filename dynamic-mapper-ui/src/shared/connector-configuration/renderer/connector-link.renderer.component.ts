@@ -33,13 +33,13 @@ import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
       <a
         class="interact"
         [title]="context.item.name"
-        [attr.data-cy]="'connector-name-' + context.item.identifier"
+        [attr.data-cy]="'dm-connector-name-' + context.item.identifier"
         (click)="context.property['callback'](context.item)"
         >
         {{ context.item.name }}
       </a>
     } @else {
-      <a class="interact" [title]="context.item.name" [attr.data-cy]="'connector-name-' + context.item.identifier" [routerLink]="['details/' + context.item.identifier]">
+      <a class="interact" [title]="context.item.name" [attr.data-cy]="'dm-connector-name-' + context.item.identifier" [routerLink]="['details/' + context.item.identifier]">
         {{ context.item.name }}
       </a>
     }

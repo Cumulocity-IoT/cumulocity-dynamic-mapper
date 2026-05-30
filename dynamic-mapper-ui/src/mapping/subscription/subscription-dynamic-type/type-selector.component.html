@@ -31,10 +31,11 @@
       <div class="container-fluid p-24">
         <ul class="list-unstyled p-t-16" c8yInputGroupListContainer>
           @for (item of typeList; track trackByFn(i, item); let i = $index) {
-          <li class="m-b-8 fit-w">
+          <li class="m-b-8 fit-w" [attr.data-cy]="'dm-type-selector-row-' + i">
             <c8y-input-group-list [index]="i" (onAdd)="add()" (onRemove)="remove($event)" [minus]="typeList.length > 0">
               <div class="col-xs-11 p-l-0">
                 <input class="form-control" placeholder="{{ 'e.g.' }} placeholder" type="text" [required]="true"
+                  [attr.data-cy]="'dm-type-selector-input-' + i"
                   [(ngModel)]="typeList[i]" />
               </div>
             </c8y-input-group-list>
@@ -44,10 +45,10 @@
       </div>
     </div>
     <div class="card-footer separator p-24 text-center flex-no-shrink">
-      <button type="button" name="cancel" class="btn btn-default" (click)="clickedCancel()" translate>
+      <button type="button" name="cancel" class="btn btn-default" (click)="clickedCancel()" data-cy="dm-type-selector-cancel" translate>
         Cancel
       </button>
-      <button type="button" name="update" class="btn btn-primary m-l-8" (click)="clickedUpdateSubscription()" translate>
+      <button type="button" name="update" class="btn btn-primary m-l-8" (click)="clickedUpdateSubscription()" data-cy="dm-type-selector-save" translate>
         Save
       </button>
     </div>

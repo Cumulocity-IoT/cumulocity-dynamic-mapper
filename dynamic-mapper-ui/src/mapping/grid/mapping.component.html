@@ -21,37 +21,37 @@
 
 <c8y-title translate>{{'Mapping '}} {{ stepperConfiguration.direction| capitalCase}}</c8y-title>
 <c8y-action-bar-item [placement]="'right'">
-  <button class="btn btn-link" title="{{ 'Add mapping' | translate }}" (click)="onAddMapping()"
+  <button class="btn btn-link" data-cy="dm-mapping-add" title="{{ 'Add mapping' | translate }}" (click)="onAddMapping()"
     [disabled]="!canManageMappings">
     <i c8yIcon="plus-circle"></i>
     {{ 'Add mapping' | translate }}
   </button>
-  <button class="btn btn-link" title="{{ 'Install sample mapping' | translate }}" (click)="onAddSampleMappings()"
+  <button class="btn btn-link" data-cy="dm-mapping-add-sample" title="{{ 'Install sample mapping' | translate }}" (click)="onAddSampleMappings()"
     [disabled]="!canManageMappings">
     <i c8yIcon="registry-editor"></i>
     {{ 'Add sample mappings' | translate }}
   </button>
-  <button class="btn btn-link" title="{{ 'Reload mappings in service' | translate }}"
+  <button class="btn btn-link" data-cy="dm-mapping-reload" title="{{ 'Reload mappings in service' | translate }}"
     [disabled]="!canManageMappings" (click)="onReload()">
     <i c8yIcon="c8y-connector-out"></i>
     {{ 'Reload mappings in service' | translate }}
   </button>
-  <button class="btn btn-link" title="{{ 'Export all mappings' | translate }}" (click)="onExportAll()">
+  <button class="btn btn-link" data-cy="dm-mapping-export" title="{{ 'Export all mappings' | translate }}" (click)="onExportAll()">
     <i c8yIcon="download"></i>
     {{ 'Export all mappings' | translate }}
   </button>
-  <button class="btn btn-link" title="{{ 'Import mappings' | translate }}" (click)="onImport()"
+  <button class="btn btn-link" data-cy="dm-mapping-import" title="{{ 'Import mappings' | translate }}" (click)="onImport()"
     [disabled]="!canManageMappings">
     <i c8yIcon="upload"></i>
     {{ 'Import mappings' | translate }}
   </button>
-  <button class="btn btn-link" title="{{ 'Reset deployment cache' | translate }}"
+  <button class="btn btn-link" data-cy="dm-mapping-reset-cache" title="{{ 'Reset deployment cache' | translate }}"
     (click)="clickedResetDeploymentMapEndpoint()"
     [disabled]="!canManageMappings">
     <i c8yIcon="erase"></i>
     {{ 'Reset deployment cache' | translate }}
   </button>
-  <button class="btn btn-link" title="{{ 'Refresh' | translate }}" (click)="refreshMappings()">
+  <button class="btn btn-link" data-cy="dm-mapping-refresh" title="{{ 'Refresh' | translate }}" (click)="refreshMappings()">
     <i c8yIcon="refresh"></i>
     {{ 'Refresh' | translate }}
   </button>
@@ -66,7 +66,7 @@
       [pagination]="pagination" [actionControls]="actionControls">
       <c8y-ui-empty-state [icon]="'c8y-icon dlt-c8y-icon-rules'" [title]="'No mappings exist.' | translate" [subtitle]="
       'Create your first mapping.' | translate
-    " [horizontal]="true"> <button class="btn btn-link m-t-16" title="{{ 'Add mapping' | translate }}"
+    " [horizontal]="true"> <button class="btn btn-link m-t-16" data-cy="dm-mapping-add-empty" title="{{ 'Add mapping' | translate }}"
         (click)="onAddMapping()">
         <i c8yIcon="plus-circle"></i>
         {{ 'Add mapping' | translate }}

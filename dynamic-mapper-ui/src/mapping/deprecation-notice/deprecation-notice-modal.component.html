@@ -71,11 +71,11 @@
 
   <!-- Footer Buttons -->
   <div class="modal-footer" c8y-modal-footer-custom>
-    <button class="btn btn-default" (click)="onDismiss()">
+    <button class="btn btn-default" (click)="onDismiss()" data-cy="dm-deprecation-close">
       {{ 'Close' | translate }}
     </button>
     <button class="btn btn-primary" (click)="onAccept()" [disabled]="isPending"
-      [ngClass]="{ 'btn-pending': isPending }">
+      [ngClass]="{ 'btn-pending': isPending }" data-cy="dm-deprecation-accept">
       {{ 'Accept & don\'t show again' | translate }}
     </button>
   </div>
