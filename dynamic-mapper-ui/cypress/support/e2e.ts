@@ -15,9 +15,17 @@
 
 import 'cumulocity-cypress/commands';
 import { registerCommands } from './commands';
+import { deleteAllCypressConnectors } from '../e2e/connector/connector.helpers';
 
 registerCommands();
 
 before(() => {
   Cypress.session.clearAllSavedSessions();
+});
+
+// Guaranteed cleanup: after every spec file, sweep all "Cypress*" connectors via
+// the API (admin auth). This returns the tenant to its original state even if a
+// test failed before its afterEach ran, or leaked an untracked connector.
+after(() => {
+  deleteAllCypressConnectors();
 });

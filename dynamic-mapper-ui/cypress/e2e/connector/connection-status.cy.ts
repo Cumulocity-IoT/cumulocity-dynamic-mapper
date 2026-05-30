@@ -4,6 +4,7 @@ import {
   navigateToConnectorConfiguration,
   addConnectorViaUi,
   deleteConnectorViaApi,
+  getConnector,
   createConnectorTestUser,
   setupTestUser,
   cleanupTestUser,
@@ -61,11 +62,8 @@ describe('Connector — Connection status', () => {
     addConnectorViaUi(mqttConnectionInput, connectorName).then((identifier) => {
       createdConnectorIds.push(identifier);
 
-      cy.get(`#connector_${identifier}`, { timeout: 10000 })
-        .should('exist')
-        .should('be.visible');
-
-      cy.get(`#connector_${identifier}`).should('contain', connectorName);
+      // Assert the new connector is listed via its per-row data-cy hook.
+      getConnector(identifier).should('exist').and('contain', connectorName);
     });
 
     cy.screenshot('connector-status-visible');
@@ -77,9 +75,7 @@ describe('Connector — Connection status', () => {
     addConnectorViaUi(mqttConnectionInput, connectorName).then((identifier) => {
       createdConnectorIds.push(identifier);
 
-      cy.get('table').should('exist');
-      cy.get(`#connector_${identifier}`, { timeout: 10000 }).should('exist');
-      cy.get(`#connector_${identifier}`).should('be.visible');
+      getConnector(identifier).should('exist').and('contain', connectorName);
     });
 
     cy.screenshot('connector-in-table');

@@ -4,6 +4,8 @@ import {
   navigateToConnectorConfiguration,
   addConnectorViaUi,
   deleteConnectorViaApi,
+  openConnectorRowAction,
+  getConnector,
   createConnectorTestUser,
   setupTestUser,
   cleanupTestUser,
@@ -65,18 +67,16 @@ describe('Connector — Edit connector', () => {
     addConnectorViaUi(mqttConnectionInput, originalName).then((identifier) => {
       createdConnectorIds.push(identifier);
 
-      cy.get(`#connector_${identifier}`, { timeout: 10000 }).click();
-      cy.get('.dropdown #edit').click({ force: true });
+      openConnectorRowAction(identifier, 'Edit');
 
       cy.get('#name').clear();
       cy.get('#name').type(updatedName);
-      cy.get('button[title="Save"]').click();
+      cy.getByData('connector-save').should('be.enabled').click();
       cy.wait('@putConnector');
 
-      cy.get(`#connector_${identifier}`, { timeout: 10000 }).should(
-        'contain',
-        updatedName
-      );
+      // The identifier is stable across the rename, so the same row hook now
+      // shows the updated name.
+      getConnector(identifier).should('contain', updatedName);
     });
 
     cy.screenshot('connector-edited');
@@ -89,15 +89,14 @@ describe('Connector — Edit connector', () => {
     addConnectorViaUi(mqttConnectionInput, connectorName).then((identifier) => {
       createdConnectorIds.push(identifier);
 
-      cy.get(`#connector_${identifier}`, { timeout: 10000 }).click();
-      cy.get('.dropdown #edit').click({ force: true });
+      openConnectorRowAction(identifier, 'Edit');
 
       cy.get('#mqttPort').clear();
       cy.get('#mqttPort').type(newPort);
-      cy.get('button[title="Save"]').click();
+      cy.getByData('connector-save').should('be.enabled').click();
       cy.wait('@putConnector');
 
-      cy.get(`#connector_${identifier}`, { timeout: 10000 }).should('exist');
+      getConnector(identifier).should('exist').and('contain', connectorName);
     });
 
     cy.screenshot('connector-port-updated');

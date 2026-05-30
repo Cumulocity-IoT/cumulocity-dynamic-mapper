@@ -67,10 +67,10 @@
       </div>
     </div>
     <div class="card-footer separator p-24 text-center flex-no-shrink">
-      <button type="button" name="cancel" class="btn btn-default" (click)="onCancel()" translate>
+      <button type="button" name="cancel" class="btn btn-default" data-cy="connector-cancel" (click)="onCancel()" translate>
         Cancel
       </button>
-      <button type="button" name="save" class="btn btn-primary  m-l-8" (click)="onSave()"
+      <button type="button" name="save" class="btn btn-primary  m-l-8" data-cy="connector-save" (click)="onSave()"
         [disabled]="readOnly || !dynamicForm.valid || !feature?.userHasMappingAdminRole" translate>
         Save
       </button>

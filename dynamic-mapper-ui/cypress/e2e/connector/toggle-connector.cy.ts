@@ -4,6 +4,8 @@ import {
   navigateToConnectorConfiguration,
   addConnectorViaUi,
   deleteConnectorViaApi,
+  toggleConnectorEnabled,
+  getConnector,
   createConnectorTestUser,
   setupTestUser,
   cleanupTestUser,
@@ -44,10 +46,11 @@ describe('Connector — Toggle connector state', () => {
       'POST',
       '/service/dynamic-mapper-service/configuration/connector/instance'
     ).as('postConnector');
-    cy.intercept(
-      'PUT',
-      '/service/dynamic-mapper-service/configuration/connector/instance/**'
-    ).as('putConnector');
+    // Enabling/disabling a connector triggers a CONNECT/DISCONNECT operation
+    // (POST .../operation), not a connector PUT.
+    cy.intercept('POST', '/service/dynamic-mapper-service/operation').as(
+      'operation'
+    );
 
     navigateToConnectorConfiguration();
   });
@@ -61,14 +64,16 @@ describe('Connector — Toggle connector state', () => {
   it('should disable connector', () => {
     const connectorName = `${mqttConnectionInput.name}-disable-${Date.now()}`;
 
+    // A freshly created connector is disabled, so enable it first, then disable it.
     addConnectorViaUi(mqttConnectionInput, connectorName).then((identifier) => {
       createdConnectorIds.push(identifier);
 
-      cy.get(`#connector_${identifier}`, { timeout: 10000 }).click();
-      cy.get('.dropdown #disable').click({ force: true });
-      cy.wait('@putConnector');
+      toggleConnectorEnabled(identifier); // enable
+      cy.wait('@operation');
+      toggleConnectorEnabled(identifier); // disable
+      cy.wait('@operation');
 
-      cy.get(`#connector_${identifier}`, { timeout: 10000 }).should('exist');
+      getConnector(identifier).should('exist').and('contain', connectorName);
     });
 
     cy.screenshot('connector-disabled');
@@ -80,15 +85,18 @@ describe('Connector — Toggle connector state', () => {
     addConnectorViaUi(mqttConnectionInput, connectorName).then((identifier) => {
       createdConnectorIds.push(identifier);
 
-      cy.get(`#connector_${identifier}`, { timeout: 10000 }).click();
-      cy.get('.dropdown #disable').click({ force: true });
-      cy.wait('@putConnector');
+      toggleConnectorEnabled(identifier); // enable
+      cy.wait('@operation');
+      toggleConnectorEnabled(identifier); // disable
+      cy.wait('@operation');
+      toggleConnectorEnabled(identifier); // re-enable
+      cy.wait('@operation');
 
-      cy.get(`#connector_${identifier}`, { timeout: 10000 }).click();
-      cy.get('.dropdown #enable').click({ force: true });
-      cy.wait('@putConnector');
+      getConnector(identifier).should('exist').and('contain', connectorName);
 
-      cy.get(`#connector_${identifier}`, { timeout: 10000 }).should('exist');
+      // Leave it disabled so the afterEach API cleanup can remove it.
+      toggleConnectorEnabled(identifier);
+      cy.wait('@operation');
     });
 
     cy.screenshot('connector-reenabled');

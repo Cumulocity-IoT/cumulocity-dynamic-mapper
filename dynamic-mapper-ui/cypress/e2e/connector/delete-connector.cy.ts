@@ -3,7 +3,10 @@ import { slowCypressDown } from 'cypress-slow-down';
 import {
   navigateToConnectorConfiguration,
   addConnectorViaUi,
+  deleteConnectorViaUi,
   deleteConnectorViaApi,
+  openConnectorRowAction,
+  getConnector,
   createConnectorTestUser,
   setupTestUser,
   cleanupTestUser,
@@ -64,12 +67,10 @@ describe('Connector — Delete connector', () => {
     addConnectorViaUi(mqttConnectionInput, connectorName).then((identifier) => {
       createdConnectorIds.push(identifier);
 
-      cy.get(`#connector_${identifier}`, { timeout: 10000 }).click();
-      cy.get('.dropdown #delete').click({ force: true });
-      cy.get('[data-cy="c8y-confirm-modal--ok"]').click();
+      deleteConnectorViaUi(identifier);
       cy.wait('@deleteConnector');
 
-      cy.get(`#connector_${identifier}`).should('not.exist');
+      getConnector(identifier).should('not.exist');
 
       const index = createdConnectorIds.indexOf(identifier);
       if (index >= 0) {
@@ -86,14 +87,14 @@ describe('Connector — Delete connector', () => {
     addConnectorViaUi(mqttConnectionInput, connectorName).then((identifier) => {
       createdConnectorIds.push(identifier);
 
-      cy.get(`#connector_${identifier}`, { timeout: 10000 }).click();
-      cy.get('.dropdown #delete').click({ force: true });
+      openConnectorRowAction(identifier, 'Delete');
 
-      cy.get('[data-cy="c8y-confirm-modal"]').should('be.visible');
-      cy.get('[data-cy="c8y-confirm-modal--ok"]').click();
+      // The confirm dialog's OK button carries the c8y data-cy hook; assert it's
+      // shown (i.e. the modal opened) before confirming.
+      cy.get('[data-cy="c8y-confirm-modal--ok"]').should('be.visible').click();
       cy.wait('@deleteConnector');
 
-      cy.get(`#connector_${identifier}`, { timeout: 5000 }).should('not.exist');
+      getConnector(identifier).should('not.exist');
 
       const index = createdConnectorIds.indexOf(identifier);
       if (index >= 0) {
