@@ -111,6 +111,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
           {
             className: 'col-lg-6',
             key: 'name',
+            id: 'mappingName',
             wrappers: ['c8y-form-field'],
             type: 'input',
             templateOptions: {
@@ -122,6 +123,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
           {
             className: 'col-lg-6',
             key: 'mappingTopic',
+            id: 'mappingTopic',
             wrappers: ['c8y-form-field'],
             type: 'input',
             templateOptions: {
@@ -199,6 +201,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
           {
             className: 'col-lg-6',
             key: 'mappingTopicSample',
+            id: 'mappingTopicSample',
             type: 'input',
             wrappers: ['c8y-form-field'],
             templateOptions: {

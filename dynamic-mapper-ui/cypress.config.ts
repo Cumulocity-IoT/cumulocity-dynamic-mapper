@@ -43,7 +43,7 @@ export default defineConfig({
     },
     env: {
       // https://github.com/bahmutov/cypress-slow-down
-      commandDelay: 150,
+      commandDelay: 1000,
       // Cumulocity credentials — support CYPRESS_* prefix overrides
       C8Y_TENANT: process.env['CYPRESS_C8Y_TENANT'] || process.env['C8Y_TENANT'],
       // cumulocity-cypress' c8yclient runs from the browser at baseUrl, so its API
