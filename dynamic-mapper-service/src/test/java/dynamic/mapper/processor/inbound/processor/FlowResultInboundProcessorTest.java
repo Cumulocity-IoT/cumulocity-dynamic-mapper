@@ -55,7 +55,6 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.model.SnoopStatus;
 import dynamic.mapper.processor.model.CumulocityObject;
 import dynamic.mapper.processor.model.CumulocityType;
 import dynamic.mapper.processor.model.ExternalId;
@@ -122,7 +121,7 @@ class FlowResultInboundProcessorTest {
                 Direction.INBOUND,
                 "test/topic",
                 "output/topic",
-                0L, 0L, 0L, 0L, 0L, null);
+                0L, 0L, 0L, null);
 
         processingContext = createProcessingContext();
 
@@ -183,8 +182,6 @@ class FlowResultInboundProcessorTest {
                 .direction(Direction.INBOUND)
                 .debug(true)
                 .active(true)
-                .snoopStatus(SnoopStatus.NONE)
-                .snoopedTemplates(new ArrayList<>())
                 .qos(Qos.AT_MOST_ONCE)
                 .useExternalId(true)
                 .externalIdType(TEST_EXTERNAL_ID_TYPE)

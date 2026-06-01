@@ -65,7 +65,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.LoggingEventType;
-import dynamic.mapper.model.SnoopStatus;
 import org.joda.time.DateTime;
 import dynamic.mapper.service.ConnectorConfigurationService;
 import dynamic.mapper.service.MappingService;
@@ -151,11 +150,8 @@ public class OperationController {
             - `APPLY_MAPPING_FILTER`: Applies a filter to a mapping.
             - `UPDATE_CODE`: UPdate code for Smart Function or Substitution as Code.
             - `DEBUG_MAPPING`: Enables or disables debug mode for a mapping.
-            - `SNOOP_MAPPING`: Enables or disables snooping for a mapping.
-            - `SNOOP_RESET`: Resets snooping for a mapping.
             - `REFRESH_STATUS_MAPPING`: Refreshes the status of all mappings.
             - `ADD_SAMPLE_MAPPINGS`: Adds sample mappings for inbound or outbound direction.
-            - `COPY_SNOOPED_SOURCE_TEMPLATE`: Copies the source template from a snooped mapping.
 
 
             `ROLE_DYNAMIC_MAPPER_ADMIN` Operations:
@@ -285,18 +281,6 @@ public class OperationController {
                                 "User does not have permission to debug mappings");
                     }
                     return handleDebugMapping(tenant, parameters);
-                case SNOOP_MAPPING:
-                    if (!Utils.userHasMappingCreateRole()) {
-                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "User does not have permission to snoop mappings");
-                    }
-                    return handleSnoopMapping(tenant, parameters);
-                case SNOOP_RESET:
-                    if (!Utils.userHasMappingCreateRole()) {
-                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "User does not have permission to reset snoop");
-                    }
-                    return handleSnoopReset(tenant, parameters);
                 case REFRESH_NOTIFICATIONS_SUBSCRIPTIONS:
                     if (!Utils.userHasMappingAdminRole()) {
                         throw new ResponseStatusException(HttpStatus.FORBIDDEN,
@@ -309,12 +293,6 @@ public class OperationController {
                                 "User does not have permission to clear cache");
                     }
                     return handleClearCache(tenant, parameters);
-                case COPY_SNOOPED_SOURCE_TEMPLATE:
-                    if (!Utils.userHasMappingCreateRole()) {
-                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "User does not have permission to copy snooped source template");
-                    }
-                    return handleCopySnoopedSourceTemplate(tenant, parameters);
                 case ADD_SAMPLE_MAPPINGS:
                     if (!Utils.userHasMappingCreateRole()) {
                         throw new ResponseStatusException(HttpStatus.FORBIDDEN,
@@ -422,18 +400,6 @@ public class OperationController {
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
-    private ResponseEntity<?> handleCopySnoopedSourceTemplate(String tenant, Map<String, String> parameters)
-            throws Exception {
-        String id = parameters.get("id");
-        String indexParam = parameters.get("index");
-        if (indexParam == null || indexParam.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Parameter 'index' is required");
-        }
-        Integer index = Integer.parseInt(indexParam);
-        mappingService.updateSourceTemplate(tenant, id, index);
-        return ResponseEntity.status(HttpStatus.CREATED).build();
-    }
-
     private ResponseEntity<?> handleReloadMappings(String tenant) throws ConnectorRegistryException {
         // Rebuild all caches at once
         mappingService.rebuildMappingCaches(tenant, ConnectorId.INTERNAL);
@@ -457,12 +423,6 @@ public class OperationController {
 
     private ResponseEntity<?> handleResetDeploymentMap(String tenant) throws Exception {
         deploymentMapService.initializeTenantDeploymentMap(tenant, true);
-        return ResponseEntity.status(HttpStatus.CREATED).build();
-    }
-
-    private ResponseEntity<?> handleSnoopReset(String tenant, Map<String, String> parameters) throws Exception {
-        String id = parameters.get("id");
-        mappingService.resetSnoop(tenant, id);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
@@ -531,17 +491,6 @@ public class OperationController {
 
     private ResponseEntity<?> handleRefreshNotifications(String tenant) throws Exception {
         configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
-        return ResponseEntity.status(HttpStatus.CREATED).build();
-    }
-
-    private ResponseEntity<?> handleSnoopMapping(String tenant, Map<String, String> parameters) throws Exception {
-        String id = parameters.get("id");
-        String snoopStatusParam = parameters.get("snoopStatus");
-        if (snoopStatusParam == null || snoopStatusParam.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Parameter 'snoopStatus' is required");
-        }
-        SnoopStatus newSnoop = SnoopStatus.valueOf(snoopStatusParam);
-        mappingService.setSnoopStatusMapping(tenant, id, newSnoop);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 

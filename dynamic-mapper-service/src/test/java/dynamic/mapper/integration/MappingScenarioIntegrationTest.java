@@ -251,7 +251,7 @@ class MappingScenarioIntegrationTest {
         assertEquals(MappingType.HEX, mapping.getMappingType());
         assertEquals(API.EVENT, mapping.getTargetAPI());
         assertTrue(mapping.getSubstitutions().length == 0,
-                "HEX mappings use snooping, not substitutions initially");
+                "HEX mappings use no substitutions initially");
 
         log.info("✅ Mapping 10 - HEX payload type validated");
     }
@@ -677,24 +677,6 @@ class MappingScenarioIntegrationTest {
         }
 
         log.info("✅ Event with attachment flag validated for all mappings");
-    }
-
-    @Test
-    void testSnoopingConfiguration() {
-        // Given - Test snooping configuration
-        Mapping mapping = findMappingByName(inboundMappings, "Mapping - 11");
-
-        if (mapping != null && mapping.getSnoopStatus() != null) {
-            // Then - Verify snooping is enabled
-            assertEquals("ENABLED", mapping.getSnoopStatus().name(),
-                    "Should have snooping enabled");
-            assertNotNull(mapping.getSnoopedTemplates(),
-                    "Should have snoopedTemplates array");
-
-            log.info("✅ Snooping configuration validated");
-        } else {
-            log.warn("⚠️ Snooping mapping not found or snoopStatus is null");
-        }
     }
 
     @Test

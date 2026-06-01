@@ -1,6 +1,6 @@
 # Frontend — `dynamic-mapper-ui`
 
-The Angular plugin for Cumulocity. It uses the microservice REST endpoints to configure broker connections and create graphical or code-based mappings inside the Cumulocity IoT UI (connector config, mapping wizard, monitoring, message/snoop explorers, test device, AI-assisted mapping, import/export).
+The Angular plugin for Cumulocity. It uses the microservice REST endpoints to configure broker connections and create graphical or code-based mappings inside the Cumulocity IoT UI (connector config, mapping wizard, monitoring, message explorer, test device, AI-assisted mapping, import/export).
 
 Read the sub-document that matches your task:
 

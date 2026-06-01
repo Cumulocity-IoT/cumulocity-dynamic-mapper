@@ -22,7 +22,7 @@ import {
   StepperConfigurationContext,
   StepperConfigurationResolver
 } from './stepper-configuration.strategy';
-import { Direction, MappingType, StepperConfiguration, TransformationType,  SnoopStatus} from './mapping.model';
+import { Direction, MappingType, StepperConfiguration, TransformationType } from './mapping.model';
 import { EditorMode } from '../../mapping/shared/stepper.model';
 
 describe('StepperConfigurationResolver', () => {
@@ -71,44 +71,6 @@ describe('StepperConfigurationResolver', () => {
 
       expect(result.allowTestSending).toBe(false);
       expect(result.allowTestTransformation).toBe(true); // unchanged
-    });
-
-    it('should apply snoop status override for outbound with snoop enabled', () => {
-      const baseConfig: StepperConfiguration = {
-        advanceFromStepToEndStep: undefined
-      };
-
-      const context: StepperConfigurationContext = {
-        mappingType: MappingType.JSON,
-        transformationType: TransformationType.DEFAULT,
-        direction: Direction.OUTBOUND,
-        editorMode: EditorMode.CREATE,
-        substitutionsAsCode: false,
-        snoopStatus: SnoopStatus.ENABLED
-      };
-
-      const result = StepperConfigurationResolver.resolve(baseConfig, context);
-
-      expect(result.advanceFromStepToEndStep).toBe(0);
-    });
-
-    it('should not apply snoop status override when snoop is not enabled', () => {
-      const baseConfig: StepperConfiguration = {
-        advanceFromStepToEndStep: undefined
-      };
-
-      const context: StepperConfigurationContext = {
-        mappingType: MappingType.JSON,
-        transformationType: TransformationType.DEFAULT,
-        direction: Direction.OUTBOUND,
-        editorMode: EditorMode.CREATE,
-        substitutionsAsCode: false,
-        snoopStatus: SnoopStatus.STARTED
-      };
-
-      const result = StepperConfigurationResolver.resolve(baseConfig, context);
-
-      expect(result.advanceFromStepToEndStep).toBeUndefined();
     });
 
     it('should apply substitutionsAsCode override', () => {
@@ -358,9 +320,9 @@ describe('StepperConfigurationResolver', () => {
 
       const appliedOverrides = StepperConfigurationResolver.getAppliedOverrides(context);
 
-      expect(appliedOverrides).toContain(3); // substitutionsAsCode override
-      expect(appliedOverrides).toContain(4); // smart function (showEditorTarget/allowTest) override
-      expect(appliedOverrides).toContain(9); // smart function (allowTemplateExpansion) override
+      expect(appliedOverrides).toContain(2); // substitutionsAsCode override
+      expect(appliedOverrides).toContain(3); // smart function (showEditorTarget/allowTest) override
+      expect(appliedOverrides).toContain(8); // smart function (allowTemplateExpansion) override
     });
   });
 

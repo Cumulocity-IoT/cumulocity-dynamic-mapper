@@ -53,7 +53,6 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.model.SnoopStatus;
 import dynamic.mapper.processor.model.DeviceMessage;
 import dynamic.mapper.processor.model.ExternalSource;
 import dynamic.mapper.processor.model.MappingAction;
@@ -109,7 +108,7 @@ void setUp() throws Exception {
     mapping = createSmartFunctionOutboundMapping();
     mappingStatus = new MappingStatus(
             "47266329", "Mapping - 54", "6ecyap6t", Direction.OUTBOUND,
-            "smart/#", "external/topic", 0L, 0L, 0L, 0L, 0L, null);
+            "smart/#", "external/topic", 0L, 0L, 0L, null);
 
     // Create fresh processing context for each test
     processingContext = createProcessingContext();
@@ -202,8 +201,6 @@ void setUp() throws Exception {
                 .autoAckOperation(true)
                 .useExternalId(true)
                 .externalIdType(TEST_EXTERNAL_ID_TYPE)
-                .snoopStatus(SnoopStatus.NONE)
-                .snoopedTemplates(new ArrayList<>())
                 .filterMapping("$exists(c8y_TemperatureMeasurement)")
                 .filterInventory("")
                 .maxFailureCount(0)

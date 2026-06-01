@@ -108,9 +108,7 @@ MAPPING_JSON=$(jq -cn \
       externalIdType: "c8y_Serial",
     genericDeviceIdentifier: "_IDENTITY_.externalId",
       supportsMessageContext: true,
-      qos: "AT_LEAST_ONCE",
-      snoopStatus: "NONE",
-      snoopedTemplates: []
+      qos: "AT_LEAST_ONCE"
     }')
 
 dm_step "Creating and activating Smart Function mapping ..."

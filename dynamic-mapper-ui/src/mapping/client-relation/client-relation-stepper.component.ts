@@ -37,8 +37,7 @@ interface StepperLabels {
 }
 
 const CONSTANTS = {
-  HOUSEKEEPING_INTERVAL_SECONDS: 30,
-  SNOOP_TEMPLATES_MAX: 10
+  HOUSEKEEPING_INTERVAL_SECONDS: 30
 } as const;
 
 @Component({
@@ -60,7 +59,6 @@ export class ClientRelationStepperComponent implements OnInit, OnDestroy, AfterV
   isButtonDisabled = true;
   private readonly destroy$ = new Subject<void>();
 
-  snoopedTemplateCounter = 0;
   clientsAsOptions: any[] = [];
 
   @ViewChild('stepper', { static: false })

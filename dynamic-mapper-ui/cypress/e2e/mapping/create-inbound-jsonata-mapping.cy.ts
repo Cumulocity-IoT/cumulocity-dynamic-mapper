@@ -56,8 +56,6 @@ const buildMappingPayload = (suffix: number) => ({
   externalIdType: 'c8y_Serial',
   genericDeviceIdentifier: '_IDENTITY_.externalId',
   qos: 'AT_LEAST_ONCE',
-  snoopStatus: 'NONE',
-  snoopedTemplates: [],
 });
 
 describe('Mapping — create inbound JSON→EVENT (JSONata) mapping', () => {

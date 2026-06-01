@@ -44,7 +44,6 @@ import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
-import dynamic.mapper.model.SnoopStatus;
 import dynamic.mapper.model.Substitution;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
@@ -99,8 +98,6 @@ class AnyPayloadInboundTest {
                 .direction(Direction.INBOUND)
                 .externalIdType("c8y_Serial")
                 .active(false)
-                .snoopStatus(SnoopStatus.NONE)
-                .snoopedTemplates(new java.util.ArrayList<>())
                 .substitutions(new Substitution[0])
                 .filterMapping("")
                 .build();
@@ -108,7 +105,7 @@ class AnyPayloadInboundTest {
         mappingStatus = new MappingStatus(
                 "any-payload-test-id", "ANY_PAYLOAD Test Mapping", "any-payload-test",
                 Direction.INBOUND, "device/+/data", null,
-                0L, 0L, 0L, 0L, 0L, null);
+                0L, 0L, 0L, null);
 
         when(exchange.getIn()).thenReturn(message);
         when(message.getBody(Mapping.class)).thenReturn(mapping);

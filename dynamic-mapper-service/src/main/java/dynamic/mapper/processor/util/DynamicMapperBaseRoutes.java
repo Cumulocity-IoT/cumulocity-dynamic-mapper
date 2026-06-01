@@ -28,7 +28,6 @@ import org.springframework.stereotype.Component;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.connector.test.TestClient;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.SnoopStatus;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.TransformationType;
@@ -40,28 +39,6 @@ public abstract class DynamicMapperBaseRoutes extends RouteBuilder {
     protected ConnectorRegistry connectorRegistry;
 
     public abstract void configure() throws Exception;
-
-    /**
-     * Check if this is snooping mode
-     */
-    protected boolean isSnooping(Exchange exchange) {
-        try {
-            ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
-            if (context != null && context.getMapping() != null && context.getMapping().getSnoopStatus() != null) {
-                // Never snoop in test mode — test messages must go through the normal
-                // processing pipeline so the JS function is executed and results are returned.
-                if (Boolean.TRUE.equals(context.getTesting())) {
-                    return false;
-                }
-                return context.getMapping().getSnoopStatus().equals(SnoopStatus.ENABLED)
-                        || context.getMapping().getSnoopStatus().equals(SnoopStatus.STARTED);
-            }
-            return false;
-        } catch (Exception e) {
-            log.warn("Error checking snooping mode: {}", e.getMessage());
-            return false;
-        }
-    }
 
     /**
      * Check if this uses JSONata extraction

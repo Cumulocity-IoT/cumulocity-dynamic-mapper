@@ -49,7 +49,6 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.model.SnoopStatus;
 import dynamic.mapper.model.Substitution;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
@@ -95,7 +94,7 @@ class JSONataInboundProcessorTest {
         // Create real MappingStatus
         mappingStatus = new MappingStatus(
                 "test-id", "Test Mapping", "test-mapping", Direction.INBOUND,
-                "test/topic", "output/topic", 0L, 0L, 0L, 0L, 0L, null);
+                "test/topic", "output/topic", 0L, 0L, 0L, null);
 
         // Create ProcessingContext with payload
         processingContext = createProcessingContext(mapping);
@@ -166,8 +165,6 @@ class JSONataInboundProcessorTest {
                 .direction(Direction.INBOUND)
                 .debug(false)
                 .active(true)
-                .snoopStatus(SnoopStatus.NONE)
-                .snoopedTemplates(new ArrayList<>())
                 .qos(Qos.AT_MOST_ONCE)
                 .useExternalId(false)
                 .lastUpdate(System.currentTimeMillis())
@@ -273,8 +270,6 @@ class JSONataInboundProcessorTest {
                 .direction(Direction.INBOUND)
                 .debug(true) // Enable debug
                 .active(true)
-                .snoopStatus(SnoopStatus.NONE)
-                .snoopedTemplates(new ArrayList<>())
                 .qos(Qos.AT_MOST_ONCE)
                 .useExternalId(false)
                 .lastUpdate(System.currentTimeMillis())

@@ -43,8 +43,6 @@
     "autoAckOperation": true,
     "useExternalId": true,
     "externalIdType": "c8y_Serial",
-    "snoopStatus": "NONE",
-    "snoopedTemplates": [],
     "qos": "AT_LEAST_ONCE",
     "lastUpdate": 1735103012385,
     "genericDeviceIdentifier": "_IDENTITY_.externalId"
@@ -87,8 +85,6 @@
     "autoAckOperation": true,
     "useExternalId": true,
     "externalIdType": "c8y_Serial",
-    "snoopStatus": "NONE",
-    "snoopedTemplates": [],
     "qos": "AT_LEAST_ONCE",
     "lastUpdate": 1735047942734,
     "genericDeviceIdentifier": "_IDENTITY_.externalId"
@@ -137,8 +133,6 @@
     "autoAckOperation": true,
     "useExternalId": true,
     "externalIdType": "c8y_Serial",
-    "snoopStatus": "NONE",
-    "snoopedTemplates": [],
     "qos": "AT_LEAST_ONCE",
     "lastUpdate": 1735051880768,
     "genericDeviceIdentifier": "_IDENTITY_.externalId"
@@ -187,8 +181,6 @@
     "autoAckOperation": true,
     "useExternalId": true,
     "externalIdType": "c8y_Serial",
-    "snoopStatus": "NONE",
-    "snoopedTemplates": [],
     "qos": "AT_LEAST_ONCE",
     "lastUpdate": 1735053635181,
     "genericDeviceIdentifier": "_IDENTITY_.externalId"
@@ -231,8 +223,6 @@
     "autoAckOperation": true,
     "useExternalId": true,
     "externalIdType": "c8y_Serial",
-    "snoopStatus": "NONE",
-    "snoopedTemplates": [],
     "qos": "AT_LEAST_ONCE",
     "lastUpdate": 1735115603199,
     "genericDeviceIdentifier": "_IDENTITY_.externalId"
@@ -275,8 +265,6 @@
     "autoAckOperation": true,
     "useExternalId": true,
     "externalIdType": "c8y_Serial",
-    "snoopStatus": "NONE",
-    "snoopedTemplates": [],
     "qos": "AT_LEAST_ONCE",
     "lastUpdate": 1735115895894,
     "genericDeviceIdentifier": "_IDENTITY_.externalId"
@@ -319,8 +307,6 @@
     "autoAckOperation": true,
     "useExternalId": true,
     "externalIdType": "c8y_Serial",
-    "snoopStatus": "NONE",
-    "snoopedTemplates": [],
     "qos": "AT_LEAST_ONCE",
     "lastUpdate": 1735116237141,
     "genericDeviceIdentifier": "_IDENTITY_.externalId"
@@ -369,8 +355,6 @@
     "autoAckOperation": true,
     "useExternalId": true,
     "externalIdType": "c8y_Serial",
-    "snoopStatus": "NONE",
-    "snoopedTemplates": [],
     "qos": "AT_LEAST_ONCE",
     "lastUpdate": 1735118681579,
     "genericDeviceIdentifier": "_IDENTITY_.externalId"
@@ -417,8 +401,6 @@
     "autoAckOperation": true,
     "useExternalId": true,
     "externalIdType": "c8y_Serial",
-    "snoopStatus": "NONE",
-    "snoopedTemplates": [],
     "qos": "AT_LEAST_ONCE",
     "lastUpdate": 1735120994173,
     "genericDeviceIdentifier": "_IDENTITY_.externalId"
@@ -440,11 +422,6 @@
     "createNonExistingDevice": false,
     "updateExistingDevice": false,
     "externalIdType": "c8y_Serial",
-    "snoopStatus": "STARTED",
-    "snoopedTemplates": [
-      "{message=0x7b226964223a2231222c22696d616765223a222f396a2f34414151536b5a4a5267414241514141415141424141442f3277444641414d4341674d4341674d4441774d4541774d45425167464251514542516f484277594944416f4d4441734b5c725c6e4377734e4}",
-      "{message=0x7b226964223a2232222c22696d616765223a222f396a2f34414151536b5a4a5267414241514141415141424141442f3277444641414d4341674d4341674d4441774d4541774d45425167464251514542516f484277594944416f4d4441734b5c725c6e4377734e4}"
-    ],
     "qos": "AT_LEAST_ONCE",
     "lastUpdate": 1735180944611,
     "genericDeviceIdentifier": "_IDENTITY_.externalId"
@@ -480,7 +457,6 @@
     "updateExistingDevice": false,
     "autoAckOperation": true,
     "useExternalId": true,
-    "snoopedTemplates": [],
     "qos": "AT_LEAST_ONCE",
     "lastUpdate": 1735126296123,
     "genericDeviceIdentifier": "_IDENTITY_.externalId"
@@ -523,7 +499,6 @@
     "autoAckOperation": true,
     "useExternalId": true,
     "externalIdType": "c8y_Serial",
-    "snoopStatus": "NONE",
     "lastUpdate": 1735195857884,
     "genericDeviceIdentifier": "_IDENTITY_.externalId"
   },
@@ -559,8 +534,6 @@
     "autoAckOperation": true,
     "useExternalId": true,
     "externalIdType": "c8y_Serial",
-    "snoopStatus": "NONE",
-    "snoopedTemplates": [],
     "qos": "AT_LEAST_ONCE",
     "lastUpdate": 1735132247785,
     "genericDeviceIdentifier": "_IDENTITY_.externalId"
@@ -584,8 +557,6 @@
     "autoAckOperation": true,
     "useExternalId": true,
     "externalIdType": "c8y_Serial",
-    "snoopStatus": "NONE",
-    "snoopedTemplates": [],
     "qos": "AT_LEAST_ONCE",
     "lastUpdate": 1735217604570,
     "genericDeviceIdentifier": "_IDENTITY_.externalId"
@@ -610,8 +581,6 @@
     "autoAckOperation": true,
     "useExternalId": true,
     "externalIdType": "c8y_Serial",
-    "snoopStatus": "NONE",
-    "snoopedTemplates": [],
     "extension": {
       "extensionName": "dynamic-mapper-extension",
       "eventName": "CustomEvent",
@@ -659,8 +628,6 @@
     "autoAckOperation": true,
     "useExternalId": true,
     "externalIdType": "c8y_Serial",
-    "snoopStatus": "NONE",
-    "snoopedTemplates": [],
     "qos": "AT_LEAST_ONCE",
     "lastUpdate": 1735147212727,
     "genericDeviceIdentifier": "_IDENTITY_.externalId"
@@ -703,8 +670,6 @@
     "autoAckOperation": true,
     "useExternalId": true,
     "externalIdType": "c8y_Serial",
-    "snoopStatus": "NONE",
-    "snoopedTemplates": [],
     "qos": "AT_LEAST_ONCE",
     "lastUpdate": 1735147118337,
     "genericDeviceIdentifier": "_IDENTITY_.externalId"
@@ -759,8 +724,6 @@
     "autoAckOperation": true,
     "useExternalId": true,
     "externalIdType": "c8y_Serial",
-    "snoopStatus": "NONE",
-    "snoopedTemplates": [],
     "qos": "AT_LEAST_ONCE",
     "lastUpdate": 1735147692543,
     "genericDeviceIdentifier": "_IDENTITY_.externalId"
@@ -803,8 +766,6 @@
     "autoAckOperation": true,
     "useExternalId": true,
     "externalIdType": "c8y_Serial",
-    "snoopStatus": "NONE",
-    "snoopedTemplates": [],
     "qos": "AT_LEAST_ONCE",
     "lastUpdate": 1735149917156,
     "genericDeviceIdentifier": "_IDENTITY_.externalId"
@@ -830,8 +791,6 @@
     "autoAckOperation": true,
     "useExternalId": true,
     "externalIdType": "c8y_Serial",
-    "snoopStatus": "NONE",
-    "snoopedTemplates": [],
     "extension": {
       "extensionName": "dynamic-mapper-extension",
       "eventName": "CustomMeasurement",
@@ -883,8 +842,6 @@
     "autoAckOperation": true,
     "useExternalId": true,
     "externalIdType": "c8y_Serial",
-    "snoopStatus": "NONE",
-    "snoopedTemplates": [],
     "qos": "AT_LEAST_ONCE",
     "lastUpdate": 1735154200205,
     "genericDeviceIdentifier": "_IDENTITY_.externalId"
@@ -927,8 +884,6 @@
     "autoAckOperation": true,
     "useExternalId": true,
     "externalIdType": "c8y_Serial",
-    "snoopStatus": "NONE",
-    "snoopedTemplates": [],
     "qos": "AT_LEAST_ONCE",
     "lastUpdate": 1735159429006,
     "genericDeviceIdentifier": "_IDENTITY_.externalId"
@@ -971,8 +926,6 @@
     "autoAckOperation": true,
     "useExternalId": true,
     "externalIdType": "c8y_Serial",
-    "snoopStatus": "NONE",
-    "snoopedTemplates": [],
     "qos": "AT_LEAST_ONCE",
     "lastUpdate": 1735198002121,
     "genericDeviceIdentifier": "_IDENTITY_.externalId"
@@ -998,8 +951,6 @@
     "autoAckOperation": true,
     "useExternalId": true,
     "externalIdType": "c8y_Serial",
-    "snoopStatus": "NONE",
-    "snoopedTemplates": [],
     "extension": {
       "extensionName": "dynamic-mapper-extension",
       "eventName": "CustomAlarm",
@@ -1050,8 +1001,6 @@
     "updateExistingDevice": false,
     "autoAckOperation": true,
     "useExternalId": false,
-    "snoopStatus": "NONE",
-    "snoopedTemplates": [],
     "qos": "AT_LEAST_ONCE",
     "lastUpdate": 1735420127589
   },
@@ -1106,10 +1055,6 @@
     "autoAckOperation": true,
     "useExternalId": true,
     "externalIdType": "c8y_Serial",
-    "snoopStatus": "STOPPED",
-    "snoopedTemplates": [
-      "{\"payload\":\"+RESP:GTFRI,740B02,862524060786163,GV350CEU,,10,10,1,0.0,0,683.1,46.764443,24.818146,20250820150008\"}"
-    ],
     "filterMapping": "",
     "maxFailureCount": 0,
     "qos": "AT_LEAST_ONCE",

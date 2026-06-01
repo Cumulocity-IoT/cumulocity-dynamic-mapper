@@ -72,7 +72,6 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
   @Input() targetSystem: string;
   @Input() sourceTemplate: any;
   @Input() targetTemplate: any;
-  @Input() snoopedTemplateItems: { label: string; value: string }[] = [];
   @Input() editorOptionsSourceTemplate: any;
   @Input() editorOptionsTargetTemplate: any;
   @Input() stepperViewModel: StepperViewModel;

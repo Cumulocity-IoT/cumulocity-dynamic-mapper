@@ -39,7 +39,6 @@ import {
   Direction,
   SharedService,
   MappingEnriched,
-  MappingTypeDescriptionMap,
   Operation,
   DeploymentMapEntryDetailed,
   PATH_DEPLOYMENT_EFFECTIVE_ENDPOINT,
@@ -125,27 +124,6 @@ export class MappingService {
   async changeDebuggingMapping(parameter: any): Promise<IFetchResponse> {
     return await this.sharedService.runOperation({
       operation: Operation.DEBUG_MAPPING,
-      parameter
-    });
-  }
-
-  async changeSnoopStatusMapping(parameter: any): Promise<IFetchResponse> {
-    return await this.sharedService.runOperation({
-      operation: Operation.SNOOP_MAPPING,
-      parameter
-    });
-  }
-
-  async resetSnoop(parameter: any): Promise<IFetchResponse> {
-    return await this.sharedService.runOperation({
-      operation: Operation.SNOOP_RESET,
-      parameter
-    });
-  }
-
-  async updateTemplate(parameter: any): Promise<IFetchResponse> {
-    return await this.sharedService.runOperation({
-      operation: Operation.COPY_SNOOPED_SOURCE_TEMPLATE,
       parameter
     });
   }
@@ -363,10 +341,6 @@ export class MappingService {
         return mappings.map(mapping => ({
           id: mapping.id,
           mapping,
-          snoopSupported:
-            MappingTypeDescriptionMap[mapping.mappingType]?.properties[
-              Direction.INBOUND
-            ].snoopSupported,
           connectors: mappingsDeployed[mapping.identifier]
         }));
       }),
@@ -384,10 +358,6 @@ export class MappingService {
         return mappings?.map(mapping => ({
           id: mapping.id,
           mapping,
-          snoopSupported:
-            MappingTypeDescriptionMap[mapping.mappingType]?.properties[
-              Direction.OUTBOUND
-            ].snoopSupported,
           connectors: mappingsDeployed[mapping.identifier]
         })) || [];
       }),

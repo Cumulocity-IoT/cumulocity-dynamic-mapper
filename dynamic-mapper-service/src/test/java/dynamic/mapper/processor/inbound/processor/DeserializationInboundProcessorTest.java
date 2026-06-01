@@ -82,11 +82,11 @@ class DeserializationInboundProcessorTest {
         // Create real MappingStatus objects
         mappingStatus = new MappingStatus(
                 "test-id", "Test Mapping", "test-mapping", Direction.INBOUND,
-                "test/topic", "output/topic", 0L, 0L, 0L, 0L, 0L, null);
+                "test/topic", "output/topic", 0L, 0L, 0L, null);
 
         unspecifiedMappingStatus = new MappingStatus(
                 "unspec-id", "Unspecified Mapping", "UNSPECIFIED", Direction.INBOUND,
-                "#", "#", 0L, 0L, 0L, 0L, 0L, null);
+                "#", "#", 0L, 0L, 0L, null);
 
         // Setup basic exchange and message mocks
         when(exchange.getIn()).thenReturn(message);

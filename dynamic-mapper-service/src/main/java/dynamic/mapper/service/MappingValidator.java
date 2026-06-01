@@ -135,9 +135,7 @@ public class MappingValidator {
                 .count();
 
         // Skip device identifier validation for certain mapping types and conditions
-        boolean skipDeviceIdentifierValidation = mapping.getSnoopStatus() == SnoopStatus.ENABLED ||
-                mapping.getSnoopStatus() == SnoopStatus.STARTED ||
-                mapping.getMappingType() == MappingType.PROTOBUF_INTERNAL ||
+        boolean skipDeviceIdentifierValidation = mapping.getMappingType() == MappingType.PROTOBUF_INTERNAL ||
                 mapping.getMappingType() == MappingType.ANY_PAYLOAD ||
                 mapping.getMappingType() == MappingType.SPARKPLUGB ||
                 mapping.getTransformationType() == TransformationType.EXTENSION_JAVA ||
