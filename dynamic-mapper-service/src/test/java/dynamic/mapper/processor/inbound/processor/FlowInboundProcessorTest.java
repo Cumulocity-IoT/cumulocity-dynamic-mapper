@@ -50,7 +50,6 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.model.SnoopStatus;
 import dynamic.mapper.processor.model.CumulocityObject;
 import dynamic.mapper.processor.model.CumulocityType;
 import dynamic.mapper.processor.model.SmartFunctionContext;
@@ -103,7 +102,7 @@ class FlowInboundProcessorTest {
                 Direction.INBOUND,
                 "flow",
                 null,
-                0L, 0L, 0L, 0L, 0L, null);
+                0L, 0L, 0L, null);
 
         processingContext = createProcessingContext();
 
@@ -195,8 +194,6 @@ class FlowInboundProcessorTest {
                 .autoAckOperation(true)
                 .useExternalId(true)
                 .externalIdType("c8y_Serial")
-                .snoopStatus(SnoopStatus.NONE)
-                .snoopedTemplates(new java.util.ArrayList<>())
                 .filterMapping("")
                 .maxFailureCount(0)
                 .qos(Qos.AT_LEAST_ONCE)

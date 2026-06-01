@@ -56,7 +56,6 @@ type CodeTemplateOption = SelectOption<CodeTemplate>;
 interface SaveResult {
   mappingType: MappingType;
   transformationType: TransformationType;
-  snoop: boolean;
   codeTemplate?: CodeTemplate;
   extension?: Partial<ExtensionEntry>;
 }
@@ -160,8 +159,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     }
     if (!this.formGroup.valid) return;
 
-    const { mappingType, transformationType, snoop, codeTemplate, extensionName, eventName } = this.formGroup.getRawValue();
-    const snoopSupported = this.getConfigForMappingType(mappingType.value).snoopSupported;
+    const { mappingType, transformationType, codeTemplate, extensionName, eventName } = this.formGroup.getRawValue();
     const resolvedType: TransformationType = transformationType?.value || TransformationType.DEFAULT;
 
     let extension: Partial<ExtensionEntry> | undefined;
@@ -195,7 +193,6 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     this._resolve({
       mappingType: mappingType.value,
       transformationType: resolvedType,
-      snoop: snoop && snoopSupported,
       codeTemplate: codeTemplate?.value
         ? this.applyESMToTemplate(codeTemplate.value, resolvedType)
         : undefined,
@@ -309,7 +306,6 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
       expertMode: [false],
       mappingType: [initialMappingType],
       transformationType: [initialTransformationType],
-      snoop: [{ value: false, disabled: !config.snoopSupported }],
       codeTemplate: [this.codeTemplateOptions[0] || null],
       extensionName: [null],
       eventName: [null],
@@ -361,14 +357,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     this.updateTransformationTypeValidators();
   }
 
-  private onMappingTypeChange(option: MappingTypeOption): void {
-    const config = this.getConfigForMappingType(option.value);
-    const snoopControl = this.formGroup.get('snoop');
-
-    // Update snoop control
-    config.snoopSupported ? snoopControl?.enable() : snoopControl?.disable();
-    if (!config.snoopSupported) snoopControl?.setValue(false);
-
+  private onMappingTypeChange(_option: MappingTypeOption): void {
     this.updateTransformationTypeOptions();
     this.updateTransformationTypeValidators();
   }
@@ -597,7 +586,6 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     return {
       description: mappingConfig?.description || '',
       enabled: mappingConfig?.enabled || false,
-      snoopSupported: directionConfig?.snoopSupported || false,
       substitutionsAsCodeSupported: directionConfig?.substitutionsAsCodeSupported || false,
       directionSupported: directionConfig?.directionSupported || false,
       supportedTransformationTypes: directionConfig?.supportedTransformationTypes || []

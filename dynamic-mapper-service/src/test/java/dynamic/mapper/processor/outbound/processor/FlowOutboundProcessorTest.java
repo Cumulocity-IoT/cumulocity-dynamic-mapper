@@ -102,7 +102,7 @@ class FlowOutboundProcessorTest {
         mapping = createSmartFunctionOutboundMapping();
         mappingStatus = new MappingStatus(
                 "47266329", "Mapping - 54", "6ecyap6t", Direction.OUTBOUND,
-                "smart/#", "external/topic", 0L, 0L, 0L, 0L, 0L, null);
+                "smart/#", "external/topic", 0L, 0L, 0L, null);
 
         processingContext = createProcessingContext();
 

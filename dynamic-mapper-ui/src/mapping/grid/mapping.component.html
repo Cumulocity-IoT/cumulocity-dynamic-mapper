@@ -86,15 +86,3 @@
     }
   </div>
 </div>
-
-
-<div [ngClass]="{ drawerOpen: showSnoopingMapping }">
-  <div class="bottom-drawer d-col has-backdrop" role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
-    @if (showSnoopingMapping) {
-      <d11r-snooping-stepper (cancel)="showSnoopingMapping = false"
-        (commit)="onCommitMapping($event)" [mapping]="mappingToUpdate" [stepperConfiguration]="stepperConfiguration"
-        [deploymentMapEntry]="deploymentMapEntry">
-      </d11r-snooping-stepper>
-    }
-  </div>
-</div>

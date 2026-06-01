@@ -120,24 +120,6 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       gridTrackSize: '12.5%'
     },
     {
-      header: 'Snooped total',
-      name: 'snoopedTemplatesTotal',
-      path: 'snoopedTemplatesTotal',
-      filterable: true,
-      cellRendererComponent: NumberRendererComponent,
-      dataType: ColumnDataType.Numeric,
-      gridTrackSize: '12.5%'
-    },
-    {
-      header: 'Snooped active',
-      name: 'snoopedTemplatesActive',
-      path: 'snoopedTemplatesActive',
-      filterable: true,
-      cellRendererComponent: NumberRendererComponent,
-      dataType: ColumnDataType.Numeric,
-      gridTrackSize: '12.5%'
-    },
-    {
       header: 'Errors',
       name: 'errors',
       path: 'errors',

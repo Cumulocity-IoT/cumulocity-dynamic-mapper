@@ -32,8 +32,6 @@ interface AccumulatedStats {
   direction: Direction;
   errors: number;
   messagesReceived: number;
-  snoopedTemplatesTotal: number;
-  snoopedTemplatesActive: number;
 }
 
 @Component({
@@ -51,7 +49,7 @@ export class MonitoringChartComponent implements OnInit, OnDestroy {
   echartsInstance: ECharts;
 
   private readonly destroy$ = new Subject<void>();
-  private readonly yAxisData = ['Errors', 'Messages received', 'Snooped templates total', 'Snooped templates active'];
+  private readonly yAxisData = ['Errors', 'Messages received'];
   private textColor: string;
   private fontFamily: string;
   private fontWeight: number;
@@ -129,32 +127,24 @@ export class MonitoringChartComponent implements OnInit, OnDestroy {
     return {
       direction,
       errors: 0,
-      messagesReceived: 0,
-      snoopedTemplatesTotal: 0,
-      snoopedTemplatesActive: 0
+      messagesReceived: 0
     };
   }
 
   private accumulateStats(target: AccumulatedStats, status: MappingStatus): void {
     target.errors += status.errors;
     target.messagesReceived += status.messagesReceived;
-    target.snoopedTemplatesTotal += status.snoopedTemplatesTotal;
-    target.snoopedTemplatesActive += status.snoopedTemplatesActive;
   }
 
   private updateChartData([inbound, outbound]: [AccumulatedStats, AccumulatedStats]): void {
     const inboundData = [
       inbound.errors,
-      inbound.messagesReceived,
-      inbound.snoopedTemplatesTotal,
-      inbound.snoopedTemplatesActive
+      inbound.messagesReceived
     ];
 
     const outboundData = [
       outbound.errors,
-      outbound.messagesReceived,
-      outbound.snoopedTemplatesTotal,
-      outbound.snoopedTemplatesActive
+      outbound.messagesReceived
     ];
 
     this.echartUpdateOptions = {

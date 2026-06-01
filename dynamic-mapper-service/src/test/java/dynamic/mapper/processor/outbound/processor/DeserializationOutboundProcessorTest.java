@@ -45,7 +45,6 @@ import dynamic.mapper.model.API;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.model.SnoopStatus;
 import dynamic.mapper.model.Substitution;
 import dynamic.mapper.processor.model.C8YMessage;
 import dynamic.mapper.processor.model.MappingType;
@@ -181,8 +180,6 @@ class DeserializationOutboundProcessorTest {
                 .autoAckOperation(true)
                 .useExternalId(true)
                 .externalIdType(TEST_EXTERNAL_ID_TYPE)
-                .snoopStatus(SnoopStatus.NONE)
-                .snoopedTemplates(new ArrayList<>())
                 .filterMapping("")
                 .filterInventory("")
                 .maxFailureCount(0)

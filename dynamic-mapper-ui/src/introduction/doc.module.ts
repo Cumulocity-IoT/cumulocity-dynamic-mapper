@@ -32,7 +32,7 @@ import { DocCustomRoutingComponent } from './doc-customrouting.component';
 const OVERVIEW_SECTIONS = [
   'overview', 'getting-started', 'managing-connectors', 'define-mapping',
   'sparkplugb', 'define-subscription-for-outbound', 'transformation-types',
-  'flow-state', 'code-templates', 'metadata', 'unknown-payload',
+  'flow-state', 'code-templates', 'metadata',
   'reliability-settings', 'access-control', 'monitoring', 'message-explorer', 'troubleshooting'
 ];
 

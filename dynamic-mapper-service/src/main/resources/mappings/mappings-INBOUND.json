@@ -44,8 +44,6 @@
     "autoAckOperation": true,
     "useExternalId": true,
     "externalIdType": "c8y_Serial",
-    "snoopStatus": "NONE",
-    "snoopedTemplates": [],
     "filterMapping": "value > 50",
     "qos": "AT_LEAST_ONCE",
     "lastUpdate": 1744101788851
@@ -89,8 +87,6 @@
     "autoAckOperation": true,
     "useExternalId": true,
     "externalIdType": "c8y_Serial",
-    "snoopStatus": "NONE",
-    "snoopedTemplates": [],
     "qos": "AT_LEAST_ONCE",
     "lastUpdate": 1744100522097
   },
@@ -115,8 +111,6 @@
     "autoAckOperation": true,
     "useExternalId": true,
     "externalIdType": "c8y_Serial",
-    "snoopStatus": "NONE",
-    "snoopedTemplates": [],
     "filterMapping": "",
     "maxFailureCount": 0,
     "qos": "AT_LEAST_ONCE",

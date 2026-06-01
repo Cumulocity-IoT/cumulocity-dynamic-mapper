@@ -157,12 +157,6 @@ export interface Mapping {
   /** Type of external ID to use (e.g., "c8y_Serial") */
   externalIdType: string;
 
-  /** Status of template snooping */
-  snoopStatus: SnoopStatus;
-
-  /** List of templates captured during snooping */
-  snoopedTemplates?: string[];
-
   /** Extension configuration for custom processing */
   extension?: ExtensionEntry;
 

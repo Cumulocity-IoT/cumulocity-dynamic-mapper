@@ -26,7 +26,6 @@ import {
   Mapping,
   MappingType,
   RepairStrategy,
-  SnoopStatus,
   StepperConfiguration,
   Substitution,
   TransformationType
@@ -46,8 +45,6 @@ function makeMapping(substitutions: Substitution[] = []): Mapping {
     mappingType: MappingType.JSON,
     transformationType: TransformationType.DEFAULT,
     substitutions,
-    snoopedTemplates: [],
-    snoopStatus: SnoopStatus.NONE,
     sourceTemplate: '{}',
     targetTemplate: '{}',
     mappingTopic: 'a/b',

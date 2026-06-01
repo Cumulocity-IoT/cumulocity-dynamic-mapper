@@ -12,8 +12,6 @@
 | **messagesReceived** | **Long** | Total number of messages processed by this mapping | [default to null] |
 | **errors** | **Long** | Total number of processing errors | [default to null] |
 | **currentFailureCount** | **Long** | Current consecutive failure count | [default to null] |
-| **snoopedTemplatesActive** | **Long** | Number of currently active snooped templates | [default to null] |
-| **snoopedTemplatesTotal** | **Long** | Total number of snooped templates collected | [default to null] |
 | **loadingError** | **String** | Error message if mapping failed to load | [default to null] |
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

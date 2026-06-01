@@ -29,7 +29,6 @@ import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 
-import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -58,7 +57,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonDeserialize(builder = Mapping.MappingBuilder.class)
-@ToString(exclude = { "sourceTemplate", "targetTemplate", "snoopedTemplates", "code" })
+@ToString(exclude = { "sourceTemplate", "targetTemplate", "code" })
 @Schema(description = "Mapping configuration for transforming data between external systems and Cumulocity IoT")
 public class Mapping implements Serializable {
 
@@ -69,7 +68,6 @@ public class Mapping implements Serializable {
     public static final String CONTEXT_DATA_METHOD_NAME = "method";
     public static final String KEY_TIME = "time";
 
-    public static int SNOOP_TEMPLATES_MAX = 10;
     public static final String SPLIT_TOPIC_REGEXP = "((?<=/)|(?=/))";
     public static Mapping UNSPECIFIED_MAPPING;
 
@@ -216,26 +214,6 @@ public class Mapping implements Serializable {
     @Schema(description = "Type of external ID to use", example = "c8y_Serial")
     private String externalIdType;
 
-    @Builder.Default
-    @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "Status of template snooping", implementation = SnoopStatus.class, example = "NONE")
-    @JsonSetter(nulls = Nulls.SKIP)
-    private SnoopStatus snoopStatus = SnoopStatus.NONE;
-
-    @Builder.Default
-    @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "List of templates captured during snooping")
-    @JsonSetter(nulls = Nulls.SKIP)
-    @Getter(AccessLevel.NONE)
-    @Setter(AccessLevel.NONE)
-    private List<String> snoopedTemplates = new java.util.ArrayList<>();
-
-    public List<String> getSnoopedTemplates() {
-        return new ArrayList<>(snoopedTemplates);
-    }
-
-    public void setSnoopedTemplates(List<String> snoopedTemplates) {
-        this.snoopedTemplates = snoopedTemplates == null ? new ArrayList<>() : new ArrayList<>(snoopedTemplates);
-    }
-
     @Schema(description = "Extension configuration for custom processing")
     @JsonSetter(nulls = Nulls.SKIP)
     private ExtensionEntry extension;
@@ -317,17 +295,6 @@ public class Mapping implements Serializable {
             } else {
                 return (Mapping.TOKEN_IDENTITY + ".c8ySourceId").equals(sub.getPathSource());
             }
-        }
-    }
-
-    @JsonIgnore
-    public void addSnoopedTemplate(String payloadMessage) {
-        snoopedTemplates.add(payloadMessage);
-        if (snoopedTemplates.size() > SNOOP_TEMPLATES_MAX) {
-            // remove oldest payload
-            snoopedTemplates.remove(0);
-        } else {
-            snoopStatus = SnoopStatus.STARTED;
         }
     }
 

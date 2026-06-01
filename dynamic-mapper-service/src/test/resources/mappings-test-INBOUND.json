@@ -29,10 +29,8 @@
         "expandArray": false
       }
     ],
-    "snoopedTemplates": [],
     "createNonExistingDevice": true,
     "direction": "INBOUND",
-    "snoopStatus": "NONE",
     "debug": false,
     "useExternalId": true,
     "active": false,
@@ -71,10 +69,8 @@
         "expandArray": false
       }
     ],
-    "snoopedTemplates": [],
     "createNonExistingDevice": true,
     "direction": "INBOUND",
-    "snoopStatus": "NONE",
     "debug": false,
     "useExternalId": true,
     "active": false,
@@ -113,10 +109,8 @@
         "expandArray": false
       }
     ],
-    "snoopedTemplates": [],
     "createNonExistingDevice": true,
     "direction": "INBOUND",
-    "snoopStatus": "NONE",
     "debug": false,
     "useExternalId": true,
     "active": false,
@@ -155,10 +149,8 @@
         "expandArray": false
       }
     ],
-    "snoopedTemplates": [],
     "createNonExistingDevice": true,
     "direction": "INBOUND",
-    "snoopStatus": "NONE",
     "debug": false,
     "useExternalId": true,
     "active": false,
@@ -197,10 +189,8 @@
         "expandArray": false
       }
     ],
-    "snoopedTemplates": [],
     "createNonExistingDevice": true,
     "direction": "INBOUND",
-    "snoopStatus": "NONE",
     "debug": false,
     "useExternalId": true,
     "active": false,
@@ -239,10 +229,8 @@
         "expandArray": false
       }
     ],
-    "snoopedTemplates": [],
     "createNonExistingDevice": true,
     "direction": "INBOUND",
-    "snoopStatus": "NONE",
     "debug": false,
     "useExternalId": true,
     "active": false,
@@ -281,10 +269,8 @@
         "expandArray": false
       }
     ],
-    "snoopedTemplates": [],
     "createNonExistingDevice": true,
     "direction": "INBOUND",
-    "snoopStatus": "NONE",
     "debug": false,
     "useExternalId": true,
     "active": false,
@@ -323,10 +309,8 @@
         "expandArray": false
       }
     ],
-    "snoopedTemplates": [],
     "createNonExistingDevice": true,
     "direction": "INBOUND",
-    "snoopStatus": "NONE",
     "debug": false,
     "useExternalId": true,
     "active": false,
@@ -365,10 +349,8 @@
         "expandArray": false
       }
     ],
-    "snoopedTemplates": [],
     "createNonExistingDevice": true,
     "direction": "INBOUND",
-    "snoopStatus": "NONE",
     "debug": false,
     "useExternalId": true,
     "active": false,

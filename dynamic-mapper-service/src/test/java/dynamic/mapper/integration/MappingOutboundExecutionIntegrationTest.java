@@ -169,7 +169,7 @@ class MappingOutboundExecutionIntegrationTest {
         // Setup mapping status mock
         MappingStatus mappingStatus = new MappingStatus(
                 mapping.getId(), mapping.getName(), mapping.getIdentifier(),
-                Direction.OUTBOUND, mapping.getMappingTopic(), "", 0L, 0L, 0L, 0L, 0L, null);
+                Direction.OUTBOUND, mapping.getMappingTopic(), "", 0L, 0L, 0L, null);
         when(mappingService.getMappingStatus(TEST_TENANT, mapping)).thenReturn(mappingStatus);
 
         // When - Execute extraction
@@ -304,7 +304,7 @@ class MappingOutboundExecutionIntegrationTest {
         // Setup mapping status mock
         MappingStatus mappingStatus = new MappingStatus(
                 mapping.getId(), mapping.getName(), mapping.getIdentifier(),
-                Direction.OUTBOUND, mapping.getMappingTopic(), "", 0L, 0L, 0L, 0L, 0L, null);
+                Direction.OUTBOUND, mapping.getMappingTopic(), "", 0L, 0L, 0L, null);
         when(mappingService.getMappingStatus(TEST_TENANT, mapping)).thenReturn(mappingStatus);
 
         // Setup exchange message

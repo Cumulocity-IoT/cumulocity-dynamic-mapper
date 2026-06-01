@@ -67,7 +67,6 @@ export const mappingEditResolver: ResolveFn<MappingEditData> = async (route) => 
     direction,
     editorMode: (mapping.active || isDeprecated) ? EditorMode.READ_ONLY : EditorMode.UPDATE,
     substitutionsAsCode: isSubstitutionsAsCode(mapping),
-    snoopStatus: mapping.snoopStatus,
     hasDeployedConnector: deploymentMapEntry.connectors.length > 0
   };
 

@@ -65,7 +65,6 @@ public class MappingService {
     private final MappingResolverService resolverService;
     private final DeploymentMapService deploymentMapService;
     private final DeviceToClientMapService deviceToClientMapService;
-    private final MappingSnoopService snoopService;
     private final ConfigurationRegistry configurationRegistry;
     private final MicroserviceSubscriptionsService subscriptionsService;
     private final MappingValidator mappingValidator;
@@ -344,9 +343,6 @@ public class MappingService {
         }
 
         try {
-            // Retrieve current snooped templates
-            snoopService.applySnoopedTemplates(tenant, mapping);
-
             mapping.setActive(active);
 
             updateMapping(tenant, mapping, true, !active); // ignore validation when deactivating
@@ -388,7 +384,6 @@ public class MappingService {
             throw new IllegalArgumentException("Mapping not found: " + mappingId);
         }
 
-        snoopService.applySnoopedTemplates(tenant, mapping);
         mapping.setDebug(debug);
 
         updateMapping(tenant, mapping, true, true);
@@ -406,31 +401,6 @@ public class MappingService {
     }
 
     /**
-     * Sets the snoop status for a mapping
-     */
-    public void setSnoopStatusMapping(String tenant, String mappingId, SnoopStatus snoopStatus) throws Exception {
-        Mapping mapping = getMapping(tenant, mappingId);
-        if (mapping == null) {
-            throw new IllegalArgumentException("Mapping not found: " + mappingId);
-        }
-
-        snoopService.applySnoopedTemplates(tenant, mapping);
-        mapping.setSnoopStatus(snoopStatus);
-
-        updateMapping(tenant, mapping, true, true);
-        updateCacheAfterChange(tenant, mapping);
-
-        configurationRegistry.getC8yAgent().createOperationEvent(
-                String.format("Mapping %s [%s] snoop status set to %s", mapping.getName(), mappingId, snoopStatus),
-                LoggingEventType.MAPPING_CHANGED_EVENT_TYPE,
-                DateTime.now(),
-                tenant,
-                null);
-
-        log.info("{} - Mapping {} snoop status set to {}", tenant, mappingId, snoopStatus);
-    }
-
-    /**
      * Updates the filter for a mapping
      */
     public Mapping setFilterMapping(String tenant, String mappingId, String filterMapping) throws Exception {
@@ -439,7 +409,6 @@ public class MappingService {
             throw new IllegalArgumentException("Mapping not found: " + mappingId);
         }
 
-        snoopService.applySnoopedTemplates(tenant, mapping);
         mapping.setFilterMapping(filterMapping);
 
         updateMapping(tenant, mapping, true, false);
@@ -465,7 +434,6 @@ public class MappingService {
             throw new IllegalArgumentException("Mapping not found: " + mappingId);
         }
 
-        snoopService.applySnoopedTemplates(tenant, mapping);
         mapping.setCode(code);
 
         updateMapping(tenant, mapping, true, false);
@@ -480,62 +448,6 @@ public class MappingService {
 
         log.info("{} - Mapping {} code updated", tenant, mappingId);
         return mapping;
-    }
-
-    /**
-     * Updates the source template from snooped templates
-     */
-    public void updateSourceTemplate(String tenant, String mappingId, Integer templateIndex) throws Exception {
-        Mapping mapping = getMapping(tenant, mappingId);
-        if (mapping == null) {
-            throw new IllegalArgumentException("Mapping not found: " + mappingId);
-        }
-
-        snoopService.applySnoopedTemplates(tenant, mapping);
-
-        if (templateIndex < 0 || templateIndex >= mapping.getSnoopedTemplates().size()) {
-            throw new IllegalArgumentException("Invalid template index: " + templateIndex);
-        }
-
-        String newSourceTemplate = mapping.getSnoopedTemplates().get(templateIndex);
-        mapping.setSourceTemplate(newSourceTemplate);
-
-        updateMapping(tenant, mapping, true, true);
-        updateCacheAfterChange(tenant, mapping);
-
-        configurationRegistry.getC8yAgent().createOperationEvent(
-                String.format("Mapping %s [%s] source template updated from snoop index %d",
-                        mapping.getName(), mappingId, templateIndex),
-                LoggingEventType.MAPPING_CHANGED_EVENT_TYPE,
-                DateTime.now(),
-                tenant,
-                null);
-
-        log.info("{} - Mapping {} source template updated from snoop index {}", tenant, mappingId, templateIndex);
-    }
-
-    /**
-     * Resets snooped templates for a mapping
-     */
-    public void resetSnoop(String tenant, String mappingId) throws Exception {
-        Mapping mapping = getMapping(tenant, mappingId);
-        if (mapping == null) {
-            throw new IllegalArgumentException("Mapping not found: " + mappingId);
-        }
-
-        mapping.setSnoopedTemplates(new ArrayList<>());
-
-        updateMapping(tenant, mapping, true, true);
-        updateCacheAfterChange(tenant, mapping);
-
-        configurationRegistry.getC8yAgent().createOperationEvent(
-                String.format("Mapping with id: %s snoop reset", mappingId),
-                LoggingEventType.MAPPING_CHANGED_EVENT_TYPE,
-                DateTime.now(),
-                tenant,
-                null);
-
-        log.info("{} - Mapping {} snoop reset", tenant, mappingId);
     }
 
     // ========== Cache Management ==========

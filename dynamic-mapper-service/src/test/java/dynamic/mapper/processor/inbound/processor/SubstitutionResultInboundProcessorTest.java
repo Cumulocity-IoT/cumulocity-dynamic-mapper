@@ -55,7 +55,6 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.model.SnoopStatus;
 import dynamic.mapper.model.Substitution;
 import dynamic.mapper.processor.model.C8YMessage;
 import dynamic.mapper.processor.model.MappingType;
@@ -112,7 +111,7 @@ class SubstitutionResultInboundProcessorTest {
         mapping = createCompleteMapping();
         mappingStatus = new MappingStatus(
                 "test-id", "Test Mapping", "test-mapping", Direction.INBOUND,
-                "test/topic", "output/topic", 0L, 0L, 0L, 0L, 0L, null);
+                "test/topic", "output/topic", 0L, 0L, 0L, null);
 
         processingContext = createProcessingContext();
 
@@ -172,8 +171,6 @@ class SubstitutionResultInboundProcessorTest {
                 .direction(Direction.INBOUND)
                 .debug(true)
                 .active(true)
-                .snoopStatus(SnoopStatus.NONE)
-                .snoopedTemplates(new ArrayList<>())
                 .qos(Qos.AT_MOST_ONCE)
                 .useExternalId(true)
                 .externalIdType(TEST_EXTERNAL_ID_TYPE)

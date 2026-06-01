@@ -394,7 +394,6 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
         payload: msg.payload,
         mappingType: mappingResult.mappingType,
         transformationType: mappingResult.transformationType,
-        snoop: mappingResult.snoop,
         codeTemplate: mappingResult.codeTemplate,
         targetAPI,
         publishTopic,
