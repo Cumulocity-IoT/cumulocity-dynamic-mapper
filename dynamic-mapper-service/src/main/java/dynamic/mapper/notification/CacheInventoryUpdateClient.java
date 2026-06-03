@@ -32,11 +32,11 @@ import dynamic.mapper.notification.websocket.Notification;
 import java.net.URI;
 import java.util.*;
 
-@Slf4j
 /**
  * Handles inventory cache update notifications.
  * Processes UPDATE operations to keep the local inventory cache synchronized.
  */
+@Slf4j
 public class CacheInventoryUpdateClient implements NotificationCallback {
 
     public static final String CONNECTOR_NAME = "CACHE_INVENTORY_SUBSCRIPTION_CONNECTOR";
@@ -44,16 +44,19 @@ public class CacheInventoryUpdateClient implements NotificationCallback {
 
     private final String tenant;
     private final C8YAgent c8yAgent;
+    private final NotificationSubscriber notificationSubscriber;
 
     public CacheInventoryUpdateClient(ConfigurationRegistry configurationRegistry, String tenant) {
         this.tenant = tenant;
         this.c8yAgent = configurationRegistry.getC8yAgent();
+        this.notificationSubscriber = configurationRegistry.getNotificationSubscriber();
         log.info("{} - CacheInventorySubscriptionClient initialized", tenant);
     }
 
     @Override
     public void onOpen(URI serverUri) {
         log.info("{} - Inventory cache update WebSocket connected", tenant);
+        notificationSubscriber.setCacheInventoryConnectionStatus(tenant, 200);
     }
 
     @Override
@@ -98,6 +101,12 @@ public class CacheInventoryUpdateClient implements NotificationCallback {
     @Override
     public void onClose(int statusCode, String reason) {
         log.info("{} - WebSocket closed: status={}, reason={}", tenant, statusCode, reason);
+
+        if (reason != null && reason.contains("401")) {
+            notificationSubscriber.setCacheInventoryConnectionStatus(tenant, 401);
+        } else {
+            notificationSubscriber.setCacheInventoryConnectionStatus(tenant, null);
+        }
     }
 
     @Override
