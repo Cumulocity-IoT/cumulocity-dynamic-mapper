@@ -2,13 +2,17 @@
     "extends": "../tsconfig.json",
     "include": [
       "../node_modules/cypress",
-      "**/*spec.ts"
+      "**/*.cy.ts",
+      "**/*.helpers.ts",
+      "support/**/*.ts"
     ],
     "compilerOptions": {
       "noEmit": false,
       "sourceMap": false,
       "target": "ES2022",
       "lib": ["ES2022", "dom"],
-      "types": ["cypress"]
+      "types": ["cypress"],
+      "paths": {},
+      "baseUrl": "."
     }
   }

@@ -1,45 +1,52 @@
-/* eslint-disable spaced-comment */
 /// <reference types="cypress" />
 
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
-Cypress.Commands.add('getByData', (selector) => {
+declare global {
+  namespace Cypress {
+    interface Chainable {
+      getByData(value: string): Chainable<JQuery<HTMLElement>>;
+      /**
+       * Visit a page inside the configured shell application and wait for a selector.
+       * Constructs the URL using C8Y_SHELL_TARGET and adds C8Y_SHELL_EXTENSION remotes
+       * as query parameters — mirrors the official Cumulocity Cypress guide pattern.
+       */
+      visitShellAndWaitForSelector(
+        url: string,
+        language?: 'en' | 'de',
+        selector?: string,
+        timeout?: number
+      ): Chainable<void>;
+    }
+  }
+}
+
+export function registerCommands() {
+  Cypress.Commands.add('getByData', (selector: string) => {
     return cy.get(`[data-cy=${selector}]`);
   });
 
-// ***********************************************
-// This example commands.ts shows you how to
-// create various custom commands and overwrite
-// existing commands.
-//
-// For more comprehensive examples of custom
-// commands please read more here:
-// https://on.cypress.io/custom-commands
-// ***********************************************
-//
-//
-// -- This is a parent command --
-// Cypress.Commands.add('login', (email, password) => { ... })
-//
-//
-// -- This is a child command --
-// Cypress.Commands.add('drag', { prevSubject: 'element'}, (subject, options) => { ... })
-//
-//
-// -- This is a dual command --
-// Cypress.Commands.add('dismiss', { prevSubject: 'optional'}, (subject, options) => { ... })
-//
-//
-// -- This will overwrite an existing command --
-// Cypress.Commands.overwrite('visit', (originalFn, url, options) => { ... })
-//
-// declare global {
-//   namespace Cypress {
-//     interface Chainable {
-//       login(email: string, password: string): Chainable<void>
-//       drag(subject: string, options?: Partial<TypeOptions>): Chainable<Element>
-//       dismiss(subject: string, options?: Partial<TypeOptions>): Chainable<Element>
-//       visit(originalFn: CommandOriginalFn, url: string, options: Partial<VisitOptions>): Chainable<Element>
-//     }
-//   }
-// }
+  Cypress.Commands.add(
+    'visitShellAndWaitForSelector',
+    (
+      url: string,
+      language: 'en' | 'de' = 'en',
+      selector = 'c8y-navigator-outlet c8y-app-icon',
+      timeout = Cypress.config().pageLoadTimeout || 60000
+    ) => {
+      if (Cypress.env('C8Y_SHELL_TARGET')) {
+        const app = Cypress.env('C8Y_SHELL_TARGET') as string;
+        url = `/apps/${app}/index.html#/${url}`;
+      }
+
+      cy.setLanguage(language);
+
+      if (Cypress.env('C8Y_SHELL_EXTENSION')) {
+        const plugins = Cypress.env('C8Y_SHELL_EXTENSION') as string;
+        cy.visit(url, { qs: { remotes: plugins } });
+      } else {
+        cy.visit(url);
+      }
+
+      cy.get(selector, { timeout }).should('be.visible');
+    }
+  );
+}

@@ -46,6 +46,21 @@
   </form>
 </ng-template>
 
+@if (!selectable) {
+<div class="d-flex a-i-center m-b-8 p-l-8 p-t-8">
+  <label class="text-normal text-muted flex-no-shrink m-r-8 m-b-0">{{ 'Direction' | translate }}</label>
+  <div class="c8y-select-wrapper" style="min-width: 130px">
+    <select class="form-control" [(ngModel)]="selectedDirectionFilter"
+      (ngModelChange)="onDirectionFilterChange($event)">
+      <option value="ALL">{{ 'All' | translate }}</option>
+      <option [value]="Direction.INBOUND">{{ 'Inbound' | translate }}</option>
+      <option [value]="Direction.OUTBOUND">{{ 'Outbound' | translate }}</option>
+    </select>
+    <span></span>
+  </div>
+</div>
+}
+
 <c8y-data-grid [ngClass]="customClasses" #connectorGrid [title]="'Connectors'" [selectable]="selectable && !readOnly"
   [columns]="columns" [selectionPrimaryKey]="'identifier'" [configureColumnsEnabled]="false"
   [rows]="configurations$ | async" [pagination]="pagination" [actionControls]="actionControls"

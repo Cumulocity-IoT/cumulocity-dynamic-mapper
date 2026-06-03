@@ -54,9 +54,16 @@ public class KafkaTestClient {
     static final String saslMechanism  = System.getenv().getOrDefault("SASL_MECHANISM", "SCRAM-SHA-512");
 
     final KafkaProducer<String, String> testClient;
+    final String testTopic;
 
     public KafkaTestClient(KafkaProducer<String, String> sampleClient) {
+        this(sampleClient, topic);
+    }
+
+    /** Constructor used in unit tests to inject a topic without relying on the environment. */
+    KafkaTestClient(KafkaProducer<String, String> sampleClient, String topicOverride) {
         testClient = sampleClient;
+        testTopic  = topicOverride;
     }
 
     public static void main(String[] args) {
@@ -89,9 +96,9 @@ public class KafkaTestClient {
         client.testSendMeasurement();
     }
 
-    private void testSendMeasurement() {
+    void testSendMeasurement() {
         log.info("Connecting to Kafka broker: {}", brokerHost);
-        log.info("Publishing message on topic: {}", topic);
+        log.info("Publishing message on topic: {}", testTopic);
 
         String payload = String.format(
                 "{ \"deviceId\": \"863859042393327\", \"version\": \"1\", \"deviceType\": \"20\","
@@ -99,7 +106,7 @@ public class KafkaTestClient {
                 System.currentTimeMillis());
         String key = "863859042393327";
 
-        testClient.send(new ProducerRecord<>(topic, key, payload));
+        testClient.send(new ProducerRecord<>(testTopic, key, payload));
         testClient.close();
 
         log.info("Message published");

@@ -1,0 +1,16 @@
+{
+  "/": {
+    "target": "https://ck4.eu-latest.cumulocity.com",
+    "secure": false,
+    "logLevel": "debug",
+    "changeOrigin": true,
+    "pathRewrite": {
+      "^/tenant/oauth": "/tenant/oauth",
+      "^/inventory": "/inventory",
+      "^/measurement": "/measurement",
+      "^/event": "/event",
+      "^/alarm": "/alarm",
+      "^/application": "/application"
+    }
+  }
+}

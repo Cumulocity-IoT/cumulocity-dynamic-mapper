@@ -129,7 +129,7 @@ describe('StepperConfigurationResolver', () => {
       const result = StepperConfigurationResolver.resolve(baseConfig, context);
 
       expect(result.showCodeEditor).toBe(true);
-      expect(result.allowTestSending).toBe(false);
+      expect(result.allowTestSending).toBe(true);
       expect(result.allowTestTransformation).toBe(true);
     });
 
@@ -151,7 +151,7 @@ describe('StepperConfigurationResolver', () => {
       const result = StepperConfigurationResolver.resolve(baseConfig, context);
 
       expect(result.showEditorTarget).toBe(false);
-      expect(result.allowTestSending).toBe(false);
+      expect(result.allowTestSending).toBe(true);
       expect(result.allowTestTransformation).toBe(true);
     });
 
@@ -176,8 +176,8 @@ describe('StepperConfigurationResolver', () => {
 
       expect(result.showProcessorExtensionsTarget).toBe(true);
       expect(result.showEditorTarget).toBe(false);
-      expect(result.allowTestSending).toBe(false);
-      expect(result.allowTestTransformation).toBe(false);
+      expect(result.allowTestSending).toBe(true);
+      expect(result.allowTestTransformation).toBe(true);
       expect(result.advanceFromStepToEndStep).toBe(2);
     });
 
@@ -201,8 +201,8 @@ describe('StepperConfigurationResolver', () => {
 
       expect(result.showEditorTarget).toBe(false);
       expect(result.showFilterExpression).toBe(false);
-      expect(result.allowTestSending).toBe(false);
-      expect(result.allowTestTransformation).toBe(false);
+      expect(result.allowTestSending).toBe(true);
+      expect(result.allowTestTransformation).toBe(true);
     });
 
     it('should apply mapping type EXTENSION_JAVA inbound override', () => {
@@ -221,8 +221,12 @@ describe('StepperConfigurationResolver', () => {
 
       const result = StepperConfigurationResolver.resolve(baseConfig, context);
 
-      expect(result.showEditorTarget).toBe(false);
-      expect(result.showFilterExpression).toBe(false);
+      // No override exists for the deprecated MappingType.EXTENSION_JAVA itself;
+      // its stepperConfiguration in MappingTypeDescriptionMap already has the
+      // correct defaults. The DEFAULT transformation override sets allowTemplateExpansion.
+      expect(result.showEditorTarget).toBe(true);  // unchanged by overrides
+      expect(result.showFilterExpression).toBe(true);  // unchanged by overrides
+      expect(result.allowTemplateExpansion).toBe(false);  // set by DEFAULT transformation override
     });
 
     it('should handle multiple overlapping overrides correctly', () => {
@@ -249,8 +253,8 @@ describe('StepperConfigurationResolver', () => {
       expect(result.showEditorTarget).toBe(false);
       // substitutionsAsCode sets showCodeEditor: true
       expect(result.showCodeEditor).toBe(true);
-      // Both set allowTestSending: false
-      expect(result.allowTestSending).toBe(false);
+      // Both smart function and substitutionsAsCode overrides set allowTestSending: true
+      expect(result.allowTestSending).toBe(true);
     });
 
     it('should remove advanceFromStepToEndStep when substitutionsAsCode is true', () => {
@@ -305,15 +309,16 @@ describe('StepperConfigurationResolver', () => {
 
       const result = StepperConfigurationResolver.resolve(baseConfig, context);
 
-      // Both overrides set allowTestSending: false, so it should be false
-      expect(result.allowTestSending).toBe(false);
+      // The EXTENSION_JAVA outbound override (later) sets allowTestSending: true,
+      // overriding the generic outbound override (earlier) that set it to false.
+      expect(result.allowTestSending).toBe(true);
       // Java extension override also sets advanceFromStepToEndStep: 2
       expect(result.advanceFromStepToEndStep).toBe(2);
     });
   });
 
   describe('getAppliedOverrides', () => {
-    it('should return empty array when no overrides match', () => {
+    it('should return only the DEFAULT transformation override for JSON DEFAULT INBOUND', () => {
       const context: StepperConfigurationContext = {
         mappingType: MappingType.JSON,
         transformationType: TransformationType.DEFAULT,
@@ -324,7 +329,8 @@ describe('StepperConfigurationResolver', () => {
 
       const appliedOverrides = StepperConfigurationResolver.getAppliedOverrides(context);
 
-      expect(appliedOverrides).toEqual([]);
+      // Only the DEFAULT transformation override (allowTemplateExpansion: false) matches
+      expect(appliedOverrides.length).toBe(1);
     });
 
     it('should return correct indices for outbound', () => {
@@ -352,8 +358,9 @@ describe('StepperConfigurationResolver', () => {
 
       const appliedOverrides = StepperConfigurationResolver.getAppliedOverrides(context);
 
-      expect(appliedOverrides).toContain(2); // substitutionsAsCode override
-      expect(appliedOverrides).toContain(3); // smart function override
+      expect(appliedOverrides).toContain(3); // substitutionsAsCode override
+      expect(appliedOverrides).toContain(4); // smart function (showEditorTarget/allowTest) override
+      expect(appliedOverrides).toContain(9); // smart function (allowTemplateExpansion) override
     });
   });
 

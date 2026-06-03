@@ -42,6 +42,20 @@
           </div>
           }
           @if (action === 'create') {
+          <div class="col-lg-12">
+            <div class="form-group">
+              <label class="control-label" for="directionFilter">{{ 'Filter by Direction' | translate }}</label>
+              <div class="c8y-select-wrapper">
+                <select id="directionFilter" class="form-control" [(ngModel)]="directionFilter"
+                  (ngModelChange)="onDirectionFilterChange()">
+                  <option value="ALL">{{ 'All' | translate }}</option>
+                  <option [value]="Direction.INBOUND">{{ 'Inbound' | translate }}</option>
+                  <option [value]="Direction.OUTBOUND">{{ 'Outbound' | translate }}</option>
+                </select>
+                <span></span>
+              </div>
+            </div>
+          </div>
           <div [formGroup]="brokerForm">
             <formly-form [form]="brokerForm" [fields]="brokerFormFields"></formly-form>
           </div>
@@ -53,10 +67,10 @@
       </div>
     </div>
     <div class="card-footer separator p-24 text-center flex-no-shrink">
-      <button type="button" name="cancel" class="btn btn-default" (click)="onCancel()" translate>
+      <button type="button" name="cancel" class="btn btn-default" data-cy="dm-connector-cancel" (click)="onCancel()" translate>
         Cancel
       </button>
-      <button type="button" name="save" class="btn btn-primary  m-l-8" (click)="onSave()"
+      <button type="button" name="save" class="btn btn-primary  m-l-8" data-cy="dm-connector-save" (click)="onSave()"
         [disabled]="readOnly || !dynamicForm.valid || !feature?.userHasMappingAdminRole" translate>
         Save
       </button>

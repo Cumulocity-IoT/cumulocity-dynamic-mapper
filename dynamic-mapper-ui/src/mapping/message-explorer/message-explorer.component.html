@@ -26,12 +26,12 @@
 <!-- Start / Stop button -->
 <c8y-action-bar-item [placement]="'left'">
   @if (!sessionId) {
-    <button class="btn btn-default btn-sm" (click)="onOpenDrawer()">
+    <button class="btn btn-default btn-sm" (click)="onOpenDrawer()" data-cy="dm-msg-explorer-start">
       <i c8yIcon="c8y-data-explorer"></i>
       <span translate>Start exploring messages…</span>
     </button>
   } @else {
-    <button class="btn btn-danger btn-sm" (click)="onStopSession()">
+    <button class="btn btn-danger btn-sm" (click)="onStopSession()" data-cy="dm-msg-explorer-stop">
       <i c8yIcon="stop"></i>
       <span translate>Stop session</span>
     </button>
@@ -42,12 +42,12 @@
 <c8y-action-bar-item [placement]="'left'">
   @if (sessionId) {
     @if (!paused) {
-      <button class="btn btn-default btn-sm" (click)="onTogglePause()">
+      <button class="btn btn-default btn-sm" (click)="onTogglePause()" data-cy="dm-msg-explorer-pause">
         <i c8yIcon="pause"></i>
         <span translate>Pause</span>
       </button>
     } @else {
-      <button class="btn btn-primary btn-sm" (click)="onTogglePause()">
+      <button class="btn btn-primary btn-sm" (click)="onTogglePause()" data-cy="dm-msg-explorer-resume">
         <i c8yIcon="play"></i>
         <span translate>Resume</span>
       </button>
@@ -57,7 +57,7 @@
 
 <!-- Clear button -->
 <c8y-action-bar-item [placement]="'left'">
-  <button class="btn btn-default btn-sm" (click)="onClear()" [disabled]="messages.length === 0">
+  <button class="btn btn-default btn-sm" (click)="onClear()" [disabled]="messages.length === 0" data-cy="dm-msg-explorer-clear">
     <i c8yIcon="delete"></i>
     <span translate>Clear</span>
   </button>
@@ -72,7 +72,7 @@
     <div class="input-group">
       <label class="toggle-countdown">
         <input type="checkbox" formControlName="intervalToggle"
-          (click)="trackUserClickOnIntervalToggle($event)" />
+          (click)="trackUserClickOnIntervalToggle($event)" data-cy="dm-msg-explorer-auto-refresh-toggle" />
         <c8y-countdown-interval
           [countdownInterval]="nextTriggerCountdown$ | async"
           (countdownEnded)="onCountdownEnded()">
@@ -80,7 +80,7 @@
         <i c8yIcon="pause"></i>
       </label>
       <div class="c8y-select-wrapper" style="max-width: 180px">
-        <select class="form-control" formControlName="refreshInterval">
+        <select class="form-control" formControlName="refreshInterval" data-cy="dm-msg-explorer-refresh-interval">
           @for (item of intervals; track item) {
             <option [value]="item.value">{{ item.label }}</option>
           }
@@ -151,7 +151,7 @@
 
     <c8y-list-group>
       @for (msg of messages; track msg.seqNo; let i = $index) {
-        <c8y-li>
+        <c8y-li [attr.data-cy]="'dm-msg-explorer-row-' + msg.seqNo">
           <c8y-li-body>
             <div class="d-flex a-i-start">
               <!-- Index -->
@@ -179,7 +179,7 @@
               <div class="col-md-4" style="padding-right: 16px; overflow: hidden;">
                 @if (expandedIndex !== i) {
                   <span class="text-monospace text-12 cursor-pointer" (click)="toggleExpand(i, msg.payload)"
-                    title="{{ 'Click to expand' | translate }}">
+                    title="{{ 'Click to expand' | translate }}" [attr.data-cy]="'dm-msg-explorer-expand-' + msg.seqNo">
                     {{ truncate(msg.payload) }}
                     @if (msg.payload.length > 120) {
                       <a class="text-primary m-l-4" translate>show more</a>
@@ -196,7 +196,7 @@
                   } @else {
                     <pre class="text-12 m-0">{{ expandedPayload?.raw }}</pre>
                   }
-                  <a class="text-primary m-t-4 d-block" (click)="toggleExpand(i, msg.payload)" translate>show less</a>
+                  <a class="text-primary m-t-4 d-block" (click)="toggleExpand(i, msg.payload)" [attr.data-cy]="'dm-msg-explorer-collapse-' + msg.seqNo" translate>show less</a>
                 }
                 @if (msg.binary) {
                   <span class="label label-warning m-l-4" translate>binary (base64)</span>
@@ -207,7 +207,8 @@
                 <button
                   class="btn btn-xs btn-default"
                   title="{{ 'Create mapping from this message' | translate }}"
-                  (click)="onCreateMappingFromMessage(msg)">
+                  (click)="onCreateMappingFromMessage(msg)"
+                  [attr.data-cy]="'dm-msg-explorer-create-mapping-' + msg.seqNo">
                   <i c8yIcon="plus-circle"></i>
                 </button>
               </div>

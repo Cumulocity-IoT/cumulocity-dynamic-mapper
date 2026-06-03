@@ -18,17 +18,15 @@
  * @authors Christof Strack
  */
 
+import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ChangeDetectorRef } from '@angular/core';
-import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { BsModalService } from 'ngx-bootstrap/modal';
 import { of, Subject } from 'rxjs';
-import { Content } from 'vanilla-jsoneditor';
 import { MappingStepperComponent } from './mapping-stepper.component';
 import { MappingStepperService } from '../service/mapping-stepper.service';
 import { SubstitutionManagementService } from '../service/substitution-management.service';
 import { SharedService } from '../../shared';
 import { AlertService, BottomDrawerService } from '@c8y/ngx-components';
+import { BsModalService } from 'ngx-bootstrap/modal';
 import {
   Direction,
   Extension,
@@ -39,11 +37,25 @@ import {
   SnoopStatus,
   DeploymentMapEntry,
   Feature,
-  Qos,
-  RepairStrategy
+  Qos
 } from '../../shared';
-import { EditorMode, STEP_GENERAL_SETTINGS, STEP_SELECT_TEMPLATES, STEP_DEFINE_SUBSTITUTIONS, STEP_TEST_MAPPING } from '../shared/stepper.model';
+import {
+  EditorMode,
+  STEP_GENERAL_SETTINGS,
+  STEP_SELECT_TEMPLATES,
+  STEP_DEFINE_SUBSTITUTIONS,
+  STEP_TEST_MAPPING
+} from '../shared/stepper.model';
 
+/**
+ * Unit tests for {@link MappingStepperComponent}.
+ *
+ * Setup note: the component imports `CoreModule` and several heavy child step components,
+ * which eagerly bootstrap the Cumulocity app-shell DI graph (`ApplicationService`, …) that
+ * a unit-test `TestBed` does not provide. We therefore `overrideComponent` to drop those
+ * imports, the component-level service providers (so our spies are injected instead of the
+ * real services), and the template (these tests exercise the component CLASS, not rendering).
+ */
 describe('MappingStepperComponent', () => {
   let component: MappingStepperComponent;
   let fixture: ComponentFixture<MappingStepperComponent>;
@@ -53,9 +65,12 @@ describe('MappingStepperComponent', () => {
   let mockAlertService: jasmine.SpyObj<AlertService>;
   let mockBottomDrawerService: jasmine.SpyObj<BottomDrawerService>;
   let mockBsModalService: jasmine.SpyObj<BsModalService>;
-  let mockCdr: jasmine.SpyObj<ChangeDetectorRef>;
 
-  const mockMapping: Mapping = {
+  let mappingPropertyChanged$: Subject<Mapping>;
+  let isButtonDisabled$: Subject<boolean>;
+  let isSubstitutionValid$: Subject<boolean>;
+
+  const buildMapping = (overrides: Partial<Mapping> = {}): Mapping => ({
     id: '1',
     identifier: 'test-mapping',
     name: 'Test Mapping',
@@ -80,8 +95,9 @@ describe('MappingStepperComponent', () => {
     externalIdType: '',
     supportsMessageContext: false,
     qos: Qos.AT_MOST_ONCE,
-    lastUpdate: Date.now()
-  };
+    lastUpdate: Date.now(),
+    ...overrides
+  });
 
   const mockStepperConfiguration: StepperConfiguration = {
     editorMode: EditorMode.CREATE,
@@ -109,32 +125,40 @@ describe('MappingStepperComponent', () => {
     pulsarAvailable: false,
     deviceIsolationMQTTServiceEnabled: false,
     suppressDeprecationWarning: false,
-    acceptedDeprecationNotice: null,
+    acceptedDeprecationNotice: null
   };
 
   beforeEach(async () => {
-    // Create spy objects for all dependencies
-    mockStepperService = jasmine.createSpyObj('MappingStepperService', [
-      'loadExtensions',
-      'selectExtensionName',
-      'updateSubstitutionValidity',
-      'expandTemplates',
-      'expandExistingTemplates',
-      'parseSnoopedTemplate',
-      'evaluateFilterExpression',
-      'checkAIAgentDeployment',
-      'loadCodeTemplates',
-      'createCodeTemplate',
-      'cleanup'
-    ], {
-      countDeviceIdentifiers$: of(0),
-      isSubstitutionValid$: of(true),
-      isContentChangeValid$: new Subject(),
-      extensionEvents$: of([]),
-      isButtonDisabled$: new Subject(),
-      sourceCustomMessage$: of(''),
-      targetCustomMessage$: of('')
-    });
+    mappingPropertyChanged$ = new Subject<Mapping>();
+    isButtonDisabled$ = new Subject<boolean>();
+    isSubstitutionValid$ = new Subject<boolean>();
+
+    mockStepperService = jasmine.createSpyObj(
+      'MappingStepperService',
+      [
+        'loadExtensions',
+        'selectExtensionName',
+        'updateSubstitutionValidity',
+        'expandTemplates',
+        'expandExistingTemplates',
+        'parseSnoopedTemplate',
+        'evaluateFilterExpression',
+        'checkAIAgentDeployment',
+        'loadCodeTemplates',
+        'createCodeTemplate',
+        'cleanup'
+      ],
+      {
+        countDeviceIdentifiers$: of(0),
+        isSubstitutionValid$: isSubstitutionValid$,
+        isContentChangeValid$: new Subject(),
+        extensionEvents$: of([]),
+        isButtonDisabled$: isButtonDisabled$,
+        sourceCustomMessage$: of(''),
+        targetCustomMessage$: of(''),
+        mappingPropertyChanged$: mappingPropertyChanged$
+      }
+    );
 
     mockSubstitutionService = jasmine.createSpyObj('SubstitutionManagementService', [
       'isSubstitutionValid',
@@ -147,497 +171,486 @@ describe('MappingStepperComponent', () => {
       'getCodeTemplates'
     ]);
 
-    mockAlertService = jasmine.createSpyObj('AlertService', [
-      'add',
-      'remove',
-      'clearAll',
-      'success',
-      'danger'
-    ], {
+    mockAlertService = jasmine.createSpyObj('AlertService', ['add', 'remove', 'clearAll', 'success', 'danger'], {
       state: []
     });
 
-    mockBottomDrawerService = jasmine.createSpyObj('BottomDrawerService', [
-      'openDrawer'
-    ]);
+    mockBottomDrawerService = jasmine.createSpyObj('BottomDrawerService', ['openDrawer']);
+    mockBsModalService = jasmine.createSpyObj('BsModalService', ['show']);
 
-    mockBsModalService = jasmine.createSpyObj('BsModalService', [
-      'show'
-    ]);
-
-    mockCdr = jasmine.createSpyObj('ChangeDetectorRef', [
-      'markForCheck',
-      'detectChanges'
-    ]);
-
-    // Setup default return values
     mockStepperService.loadExtensions.and.returnValue(Promise.resolve(new Map<string, Extension>()));
-    mockStepperService.expandTemplates.and.returnValue({
-      sourceTemplate: {},
-      targetTemplate: {}
-    });
-    mockStepperService.expandExistingTemplates.and.returnValue({
-      sourceTemplate: {},
-      targetTemplate: {}
-    });
-    mockStepperService.evaluateFilterExpression.and.returnValue(Promise.resolve({
-      result: '',
-      resultType: 'empty',
-      valid: true
-    }));
-    mockStepperService.checkAIAgentDeployment.and.returnValue(Promise.resolve({
-      aiAgent: null,
-      aiAgentDeployed: false
-    }));
+    mockStepperService.expandTemplates.and.returnValue({ sourceTemplate: {}, targetTemplate: {} });
+    mockStepperService.expandExistingTemplates.and.returnValue({ sourceTemplate: {}, targetTemplate: {} });
+    mockStepperService.evaluateFilterExpression.and.returnValue(
+      Promise.resolve({ result: '', resultType: 'empty', valid: true })
+    );
+    mockStepperService.checkAIAgentDeployment.and.returnValue(
+      Promise.resolve({ aiAgent: null, aiAgentDeployed: false })
+    );
     mockStepperService.loadCodeTemplates.and.returnValue(Promise.resolve(new Map()));
     mockSharedService.getFeatures.and.returnValue(Promise.resolve(mockFeature));
     mockSharedService.getServiceConfiguration.and.returnValue(Promise.resolve({} as any));
     mockSharedService.getCodeTemplates.and.returnValue(Promise.resolve({} as any));
 
+    TestBed.overrideComponent(MappingStepperComponent, {
+      set: { imports: [], providers: [], schemas: [NO_ERRORS_SCHEMA], template: '<div></div>' }
+    });
+
     await TestBed.configureTestingModule({
-      imports: [
-        MappingStepperComponent,
-        ReactiveFormsModule
-      ],
+      imports: [MappingStepperComponent],
       providers: [
         { provide: MappingStepperService, useValue: mockStepperService },
         { provide: SubstitutionManagementService, useValue: mockSubstitutionService },
         { provide: SharedService, useValue: mockSharedService },
         { provide: AlertService, useValue: mockAlertService },
         { provide: BottomDrawerService, useValue: mockBottomDrawerService },
-        { provide: BsModalService, useValue: mockBsModalService },
-        { provide: ChangeDetectorRef, useValue: mockCdr }
+        { provide: BsModalService, useValue: mockBsModalService }
       ]
     }).compileComponents();
 
     fixture = TestBed.createComponent(MappingStepperComponent);
     component = fixture.componentInstance;
 
-    // Set required inputs
-    component.mapping = mockMapping;
-    component.stepperConfiguration = mockStepperConfiguration;
+    component.mapping = buildMapping();
+    component.stepperConfiguration = { ...mockStepperConfiguration };
     component.deploymentMapEntry = mockDeploymentMapEntry;
   });
 
   describe('Component Initialization', () => {
-    it('should create the component', () => {
+    it('creates the component', () => {
       expect(component).toBeTruthy();
     });
 
-    it('should initialize view model on ngOnInit', async () => {
-      await component.ngOnInit();
-      expect(component.stepperViewModel).toBeDefined();
+    it('injects the mocked services (component-level providers are overridden)', () => {
+      expect(component['stepperService']).toBe(mockStepperService);
+      expect(component['sharedService']).toBe(mockSharedService);
     });
 
-    it('should load extensions and features on init', async () => {
+    it('builds the view model and template form on ngOnInit', async () => {
+      await component.ngOnInit();
+      expect(component.stepperViewModel).toBeDefined();
+      expect(component.templateForm).toBeDefined();
+      expect(component.templateForm.get('extensionName')).toBeTruthy();
+      expect(component.templateForm.get('eventName')).toBeTruthy();
+      expect(component.templateForm.get('snoopedTemplateIndex')).toBeTruthy();
+    });
+
+    it('loads features, service configuration and AI-agent status on init', async () => {
       await component.ngOnInit();
       expect(mockSharedService.getFeatures).toHaveBeenCalled();
       expect(mockSharedService.getServiceConfiguration).toHaveBeenCalled();
       expect(mockStepperService.checkAIAgentDeployment).toHaveBeenCalled();
     });
 
-    it('should initialize template form with correct controls', async () => {
+    it('sets source/target systems from direction (INBOUND)', async () => {
+      component.mapping = buildMapping({ direction: Direction.INBOUND });
       await component.ngOnInit();
-      expect(component.templateForm).toBeDefined();
-      expect(component.templateForm.get('extensionName')).toBeDefined();
-      expect(component.templateForm.get('eventName')).toBeDefined();
-      expect(component.templateForm.get('snoopedTemplateIndex')).toBeDefined();
+      expect(component.sourceSystem).toBe('Broker');
+      expect(component.targetSystem).toBe('Cumulocity');
     });
 
-    it('should set correct source and target systems based on direction', async () => {
-      component.mapping.direction = Direction.INBOUND;
+    it('sets source/target systems from direction (OUTBOUND)', async () => {
+      component.mapping = buildMapping({ direction: Direction.OUTBOUND });
       await component.ngOnInit();
-      expect(component.targetSystem).toBe('Cumulocity');
-      expect(component.sourceSystem).toBe('Broker');
-
-      component.mapping.direction = Direction.OUTBOUND;
-      await component.ngOnInit();
-      expect(component.targetSystem).toBe('Broker');
       expect(component.sourceSystem).toBe('Cumulocity');
+      expect(component.targetSystem).toBe('Broker');
+    });
+
+    it('resolves source/target JSON schemas', async () => {
+      await component.ngOnInit();
+      expect(component.schemaSource).toBeDefined();
+      expect(component.schemaTarget).toBeDefined();
+    });
+
+    it('offers a "Start snooping" label when snooping is not running', async () => {
+      component.mapping = buildMapping({ snoopStatus: SnoopStatus.NONE });
+      await component.ngOnInit();
+      expect(component.labels.custom).toBe('Start snooping');
+    });
+
+    it('sets code-editor help/label text for Smart Function mappings', async () => {
+      component.mapping = buildMapping({ transformationType: TransformationType.SMART_FUNCTION });
+      await component.ngOnInit();
+      expect(component.codeEditorLabel).toContain('Smart functions');
+    });
+
+    it('makes editors read-only when the user lacks admin and create roles', async () => {
+      mockSharedService.getFeatures.and.returnValue(
+        Promise.resolve({ ...mockFeature, userHasMappingAdminRole: false, userHasMappingCreateRole: false })
+      );
+      await component.ngOnInit();
+      expect(component.editorOptionsSourceTemplate.readOnly).toBe(true);
+      expect(component.editorOptionsTargetTemplate.readOnly).toBe(true);
     });
   });
 
-  describe('Step Transitions', () => {
+  describe('YAML <-> configuration helpers', () => {
+    it('serialises a configuration object to YAML', () => {
+      const yaml = component.configurationToYaml({ host: 'localhost', port: 1883 });
+      expect(yaml).toContain('host: localhost');
+      expect(yaml).toContain('port: 1883');
+    });
+
+    it('returns an empty string for an undefined configuration', () => {
+      expect(component.configurationToYaml(undefined)).toBe('');
+    });
+
+    it('parses YAML back to a configuration object', () => {
+      expect(component.yamlToConfiguration('host: localhost\nport: 1883')).toEqual({
+        host: 'localhost',
+        port: 1883
+      });
+    });
+
+    it('returns undefined for blank YAML', () => {
+      expect(component.yamlToConfiguration('   ')).toBeUndefined();
+      expect(component.yamlToConfiguration('')).toBeUndefined();
+    });
+
+    it('returns undefined for YAML that is not an object (scalar)', () => {
+      expect(component.yamlToConfiguration('just-a-scalar')).toBeUndefined();
+    });
+
+    it('returns undefined for invalid YAML instead of throwing', () => {
+      expect(component.yamlToConfiguration('key: : : bad')).toBeUndefined();
+    });
+  });
+
+  describe('Extension selection', () => {
     beforeEach(async () => {
       await component.ngOnInit();
     });
 
-    it('should handle transition to general settings step', async () => {
-      const event = { selectedIndex: STEP_GENERAL_SETTINGS };
-      await component.onStepChange(event);
+    it('creates the extension object and stores the name', () => {
+      component.mapping = buildMapping();
+      delete component.mapping.extension;
+      component.onSelectExtensionName('my-extension');
 
-      expect(component.currentStepIndex).toBe(STEP_GENERAL_SETTINGS);
-      expect(mockStepperService.loadExtensions).toHaveBeenCalledWith(mockMapping);
-    });
-
-    it('should handle transition to select templates step', async () => {
-      const event = { selectedIndex: STEP_SELECT_TEMPLATES };
-      component.stepperForward = true;
-      component.mapping.filterMapping = 'test-filter';
-
-      await component.onStepChange(event);
-
-      expect(component.currentStepIndex).toBe(STEP_SELECT_TEMPLATES);
-      expect(mockStepperService.evaluateFilterExpression).toHaveBeenCalled();
-    });
-
-    it('should handle transition to define substitutions step', async () => {
-      const event = { selectedIndex: STEP_DEFINE_SUBSTITUTIONS };
-      component.sourceTemplate = { test: 'source' };
-      component.targetTemplate = { test: 'target' };
-
-      await component.onStepChange(event);
-
-      expect(component.currentStepIndex).toBe(STEP_DEFINE_SUBSTITUTIONS);
-      expect(mockStepperService.updateSubstitutionValidity).toHaveBeenCalled();
-    });
-
-    it('should handle transition to test mapping step', async () => {
-      const event = { selectedIndex: STEP_TEST_MAPPING };
-      component.mappingCode = 'test-code';
-      component.sourceTemplate = { test: 'source' };
-      component.targetTemplate = { test: 'target' };
-
-      await component.onStepChange(event);
-
-      expect(component.currentStepIndex).toBe(STEP_TEST_MAPPING);
-    });
-
-    it('should update substitution validity on each step change', async () => {
-      const event = { selectedIndex: STEP_SELECT_TEMPLATES };
-      await component.onStepChange(event);
-
-      expect(mockStepperService.updateSubstitutionValidity).toHaveBeenCalledWith(
-        mockMapping,
-        mockStepperConfiguration.allowNoDefinedIdentifier,
-        STEP_SELECT_TEMPLATES,
-        mockStepperConfiguration.showCodeEditor
+      expect(component.mapping.extension?.extensionName).toBe('my-extension');
+      expect(mockStepperService.selectExtensionName).toHaveBeenCalledWith(
+        'my-extension',
+        component.extensions,
+        component.mapping
       );
     });
+
+    it('copies the matching event entry and flags the parameter block on event selection', () => {
+      const eventEntry = {
+        eventName: 'evt',
+        extensionType: 'SOURCE',
+        direction: Direction.INBOUND,
+        fqnClassName: 'com.acme.Ext',
+        loaded: true,
+        message: 'ok',
+        parameter: { foo: 'bar' }
+      };
+      const extension = { extensionEntries: { evt: eventEntry } } as unknown as Extension;
+      component.extensions = new Map([['my-extension', extension]]);
+      component.mapping.extension = { extensionName: 'my-extension' } as any;
+
+      component.onSelectExtensionEvent('evt');
+
+      expect(component.mapping.extension.eventName).toBe('evt');
+      expect(component.mapping.extension.fqnClassName).toBe('com.acme.Ext');
+      expect(component.hasExtensionParameter).toBe(true);
+      // Pre-fills the parameter when none was set yet
+      expect(component.mapping.extension.parameter).toEqual({ foo: 'bar' });
+    });
+
+    it('marks no parameter block when the matched event has none', () => {
+      const eventEntry = { eventName: 'evt', extensionType: 'SOURCE' };
+      const extension = { extensionEntries: { evt: eventEntry } } as unknown as Extension;
+      component.extensions = new Map([['my-extension', extension]]);
+      component.mapping.extension = { extensionName: 'my-extension' } as any;
+
+      component.onSelectExtensionEvent('evt');
+
+      expect(component.hasExtensionParameter).toBe(false);
+    });
   });
 
-  describe('Subscription Management', () => {
+  describe('Code editing & templates', () => {
     beforeEach(async () => {
       await component.ngOnInit();
     });
 
-    it('should subscribe to extension name changes', (done) => {
-      const extensionName = 'test-extension';
-      component.templateForm.get('extensionName')?.setValue(extensionName);
-
-      setTimeout(() => {
-        expect(mockStepperService.selectExtensionName).toHaveBeenCalledWith(
-          extensionName,
-          component.extensions,
-          mockMapping
-        );
-        done();
-      }, 150); // Wait for debounce
+    it('updates mappingCode on value change', () => {
+      component.onValueCodeChange('const x = 1;');
+      expect(component.mappingCode).toBe('const x = 1;');
     });
 
-    it('should subscribe to event name changes', (done) => {
-      const eventName = 'test-event';
-      component.mapping.extension = { extensionName: 'test-ext' } as any;
-
-      component.templateForm.get('eventName')?.setValue(eventName);
-
-      setTimeout(() => {
-        expect(component.mapping.extension?.eventName).toBe(eventName);
-        done();
-      }, 150); // Wait for debounce
+    it('does nothing when the selected code template is unknown', () => {
+      component.templateId = 'missing' as any;
+      component.mappingCode = 'untouched';
+      component.onSelectCodeTemplate();
+      expect(component.mappingCode).toBe('untouched');
     });
 
-    it('should unsubscribe on component destroy', () => {
-      spyOn(component['destroy$'], 'next');
-      spyOn(component['destroy$'], 'complete');
+    it('loads the selected code template into mappingCode', () => {
+      component.codeTemplatesDecoded.set('t1', { code: 'function onMessage() {}' } as any);
+      component.templateId = 't1' as any;
+      component.serviceConfiguration = { supportESM: false } as any;
 
-      component.ngOnDestroy();
+      component.onSelectCodeTemplate();
 
-      expect(component['destroy$'].next).toHaveBeenCalled();
-      expect(component['destroy$'].complete).toHaveBeenCalled();
-      expect(mockStepperService.cleanup).toHaveBeenCalled();
+      expect(component.mappingCode).toContain('function onMessage() {}');
     });
 
-    it('should handle isSubstitutionValid$ subscription', (done) => {
-      const validSubject = mockStepperService.isSubstitutionValid$ as Subject<boolean>;
+    it('appends an ESM export for Smart Functions when Support ESM is enabled', () => {
+      component.mapping = buildMapping({ transformationType: TransformationType.SMART_FUNCTION });
+      component.codeTemplatesDecoded.set('t1', { code: 'function onMessage() {}' } as any);
+      component.templateId = 't1' as any;
+      component.serviceConfiguration = { supportESM: true } as any;
 
-      component.ngOnInit().then(() => {
-        validSubject.next(false);
+      component.onSelectCodeTemplate();
 
-        setTimeout(() => {
-          expect(component.templateForm.errors).toEqual({ 'incorrect': true });
+      expect(component.mappingCode).toContain('export { onMessage };');
+    });
 
-          validSubject.next(true);
-          setTimeout(() => {
-            expect(component.templateForm.errors).toBeNull();
-            done();
-          }, 10);
-        }, 10);
-      });
+    it('does not duplicate an ESM export that is already present', () => {
+      component.mapping = buildMapping({ transformationType: TransformationType.SMART_FUNCTION });
+      component.codeTemplatesDecoded.set('t1', {
+        code: 'function onMessage() {}\nexport { onMessage };'
+      } as any);
+      component.templateId = 't1' as any;
+      component.serviceConfiguration = { supportESM: true } as any;
+
+      component.onSelectCodeTemplate();
+
+      expect(component.mappingCode!.match(/export \{ onMessage \}/g)?.length).toBe(1);
     });
   });
 
-  describe('Template Changes', () => {
-    beforeEach(async () => {
-      await component.ngOnInit();
-      component.sourceTemplate = { test: 'value' };
-      component.targetTemplate = { test: 'value' };
-    });
-
-    it('should handle source template changes with valid JSON', () => {
-      const contentChanges = {
-        previousContent: { json: { test: 'value' } } as Content,
-        updatedContent: { json: { newTest: 'value' } } as Content
-      };
-
-      component.templateStepRef?.onSourceTemplateChanged(contentChanges);
-
-      expect(component.templateStepRef?.sourceTemplateUpdated).toEqual({ newTest: 'value' });
-    });
-
-    it('should handle source template changes with text content', () => {
-      const contentChanges = {
-        previousContent: { json: { test: 'value' } } as Content,
-        updatedContent: { text: '{"newTest": "value"}' } as Content
-      };
-
-      component.templateStepRef?.onSourceTemplateChanged(contentChanges);
-
-      expect(component.templateStepRef?.sourceTemplateUpdated).toEqual({ newTest: 'value' });
-    });
-
-    it('should handle invalid JSON during editing', () => {
-      const contentChanges = {
-        previousContent: { json: { test: 'value' } } as Content,
-        updatedContent: { text: '{invalid json' } as Content
-      };
-
-      component.templateStepRef?.onSourceTemplateChanged(contentChanges);
-
-      // Should allow invalid JSON during editing
-      expect(component.templateStepRef?.sourceTemplateUpdated).toBeDefined();
-    });
-
-    it('should handle target template changes', () => {
-      const contentChanges = {
-        previousContent: { json: { test: 'value' } } as Content,
-        updatedContent: { json: { newTest: 'value' } } as Content
-      };
-
-      component.templateStepRef?.onTargetTemplateChanged(contentChanges);
-
-      // targetTemplateUpdated is now internal to the MappingTemplateStepComponent
-    });
-  });
-
-  describe('Event Emitters', () => {
+  describe('Target API changes', () => {
     beforeEach(async () => {
       await component.ngOnInit();
     });
 
-    it('should emit cancel event', (done) => {
-      component.cancel.subscribe(() => {
-        expect(true).toBe(true);
-        done();
-      });
+    it('refreshes templates and the target schema for INBOUND', async () => {
+      component.stepperConfiguration.direction = Direction.INBOUND;
+      await component.onTargetAPIChanged('EVENT');
+      expect(component.mapping.targetTemplate).toBeDefined();
+      expect(component.mapping.sourceTemplate).toBeDefined();
+      expect(component.schemaTarget).toBeDefined();
+    });
 
+    it('refreshes templates and the source schema for OUTBOUND', async () => {
+      component.mapping = buildMapping({ direction: Direction.OUTBOUND });
+      component.stepperConfiguration.direction = Direction.OUTBOUND;
+      await component.onTargetAPIChanged('EVENT');
+      expect(component.mapping.sourceTemplate).toBeDefined();
+      expect(component.schemaSource).toBeDefined();
+    });
+  });
+
+  describe('Step transitions', () => {
+    beforeEach(async () => {
+      await component.ngOnInit();
+    });
+
+    it('updates the current index and revalidates substitutions on every step change', async () => {
+      await component.onStepChange({ selectedIndex: STEP_SELECT_TEMPLATES });
+      expect(component.currentStepIndex).toBe(STEP_SELECT_TEMPLATES);
+      expect(mockStepperService.updateSubstitutionValidity).toHaveBeenCalledWith(
+        component.mapping,
+        component.stepperConfiguration.allowNoDefinedIdentifier,
+        STEP_SELECT_TEMPLATES,
+        component.stepperConfiguration.showCodeEditor
+      );
+    });
+
+    it('loads extensions when entering the general-settings step', async () => {
+      await component.onStepChange({ selectedIndex: STEP_GENERAL_SETTINGS });
+      expect(mockStepperService.loadExtensions).toHaveBeenCalledWith(component.mapping);
+    });
+
+    it('expands templates when moving forward into the select-templates step', async () => {
+      component.stepperForward = true;
+      await component.onStepChange({ selectedIndex: STEP_SELECT_TEMPLATES });
+      // CREATE mode + default source template => expandTemplates is used.
+      expect(mockStepperService.expandTemplates).toHaveBeenCalled();
+      expect(component.sourceTemplate).toBeDefined();
+    });
+
+    it('pushes a testing template when entering the test-mapping step', async () => {
+      component.sourceTemplate = { a: 1 };
+      component.targetTemplate = { b: 2 };
+      const emitted: Mapping[] = [];
+      component.updateTestingTemplate.subscribe((m) => emitted.push(m));
+
+      await component.onStepChange({ selectedIndex: STEP_TEST_MAPPING });
+
+      expect(emitted.length).toBeGreaterThan(0);
+      expect(emitted[emitted.length - 1].sourceTemplate).toBe(JSON.stringify({ a: 1 }));
+    });
+
+    it('revalidates and emits a testing template on the define-substitutions step', async () => {
+      component.sourceTemplate = { a: 1 };
+      component.targetTemplate = { b: 2 };
+      const emitted: Mapping[] = [];
+      component.updateTestingTemplate.subscribe((m) => emitted.push(m));
+
+      await component.onStepChange({ selectedIndex: STEP_DEFINE_SUBSTITUTIONS });
+
+      expect(component.currentStepIndex).toBe(STEP_DEFINE_SUBSTITUTIONS);
+      expect(emitted.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('Commit & cancel', () => {
+    beforeEach(async () => {
+      await component.ngOnInit();
+    });
+
+    it('emits cancel', (done) => {
+      component.cancel.subscribe(() => done());
       component.onCancelButton();
     });
 
-    it('should emit commit event with updated mapping', (done) => {
-      component.sourceTemplate = { test: 'source' };
-      component.targetTemplate = { test: 'target' };
-      component.mappingCode = 'test-code';
+    it('serialises templates as JSON strings and emits the mapping on commit (no expansion)', (done) => {
+      component.stepperConfiguration.allowTemplateExpansion = false;
+      component.sourceTemplate = { a: 1 };
+      component.targetTemplate = { b: 2 };
 
       component.commit.subscribe((mapping: Mapping) => {
-        expect(mapping).toBe(mockMapping);
-        expect(mapping.code).toBeDefined();
+        expect(mapping).toBe(component.mapping);
+        expect(mapping.sourceTemplate).toBe(JSON.stringify({ a: 1 }));
+        expect(mapping.targetTemplate).toBe(JSON.stringify({ b: 2 }));
         done();
       });
 
       component.onCommitButton();
     });
 
-    it('should have schemaSource set after ngOnInit', () => {
-      expect(component.schemaSource).toBeDefined();
-    });
+    it('encodes mappingCode to base64 on commit', (done) => {
+      component.sourceTemplate = {};
+      component.targetTemplate = {};
+      component.mappingCode = 'function onMessage() {}';
 
-    it('should have schemaTarget set after ngOnInit', () => {
-      expect(component.schemaTarget).toBeDefined();
+      component.commit.subscribe((mapping: Mapping) => {
+        expect(mapping.code).toBeTruthy();
+        // base64 round-trips back to the original code (sans metadata tags)
+        expect(atob(mapping.code!)).toContain('function onMessage');
+        done();
+      });
+
+      component.onCommitButton();
     });
   });
 
-  describe('Filter Expression Evaluation', () => {
+  describe('Snooped templates', () => {
     beforeEach(async () => {
       await component.ngOnInit();
     });
 
-    it('should update filter expression result on path change', async () => {
-      const path = '$.test.path';
-      const expectedResult = {
-        result: 'test-result',
-        resultType: 'string',
-        valid: true
-      };
+    it('parses a snooped template and stops snooping', async () => {
+      component.mapping = buildMapping({ snoopedTemplates: ['{"x":1}'], snoopStatus: SnoopStatus.STARTED });
+      component.snoopedTemplateCounter = 0;
+      mockStepperService.parseSnoopedTemplate.and.returnValue({ x: 1 });
 
-      mockStepperService.evaluateFilterExpression.and.returnValue(Promise.resolve(expectedResult));
+      await component.onSnoopedSourceTemplates();
 
-      // updateFilterExpressionResult is now on MappingTemplateStepComponent
-      await component.templateStepRef?.updateFilterExpressionResult(path);
-
-      if (component.templateStepRef) {
-        expect(mockStepperService.evaluateFilterExpression).toHaveBeenCalled();
-        expect(component.templateStepRef.filterModel.filterExpression).toEqual(expectedResult);
-        expect(component.mapping.filterMapping).toBe(path);
-      }
+      expect(mockStepperService.parseSnoopedTemplate).toHaveBeenCalledWith('{"x":1}');
+      expect(component.sourceTemplate).toEqual({ x: 1 });
+      expect(component.mapping.snoopStatus).toBe(SnoopStatus.STOPPED);
+      expect(component.snoopedTemplateCounter).toBe(1);
     });
 
-    it('should handle filter expression evaluation errors', async () => {
-      const path = '$.invalid';
-      mockStepperService.evaluateFilterExpression.and.returnValue(
-        Promise.reject(new Error('Invalid expression'))
-      );
+    it('wraps the counter back to zero when it exceeds the template count', async () => {
+      component.mapping = buildMapping({ snoopedTemplates: ['{"x":1}'] });
+      component.snoopedTemplateCounter = 5; // out of range
+      mockStepperService.parseSnoopedTemplate.and.returnValue({ x: 1 });
 
-      await component.templateStepRef?.updateFilterExpressionResult(path);
+      await component.onSnoopedSourceTemplates();
 
-      if (component.templateStepRef) {
-        expect(component.templateStepRef.filterModel.filterExpression?.valid).toBe(false);
-      }
-    });
-
-    it('should clear alerts before evaluating filter expression', async () => {
-      await component.templateStepRef?.updateFilterExpressionResult('$.test');
-
-      expect(mockAlertService.clearAll).toHaveBeenCalled();
+      expect(mockStepperService.parseSnoopedTemplate).toHaveBeenCalledWith('{"x":1}');
     });
   });
 
-  describe('Code Template Management', () => {
+  describe('Alert management', () => {
     beforeEach(async () => {
       await component.ngOnInit();
     });
 
-    it('should select code template and update mappingCode', () => {
-      const mockTemplate = {
-        id: 'test-id',
-        code: 'test-code',
-        name: 'Test',
-        templateType: 'INBOUND_DEFAULT' as any,
-        internal: false,
-        readonly: false,
-        defaultTemplate: false
-      };
-      component.codeTemplatesDecoded.set('test-id', mockTemplate);
-      component.templateId = 'test-id' as any;
-
-      component.onSelectCodeTemplate();
-
-      expect(component.mappingCode).toBe('test-code');
-    });
-
-    it('should handle code value changes', () => {
-      const newCode = 'new-code-value';
-
-      component.onValueCodeChange(newCode);
-
-      expect(component.mappingCode).toBe(newCode);
-    });
-  });
-
-  describe('Substitution Selection', () => {
-    beforeEach(async () => {
-      await component.ngOnInit();
-      component.mapping.substitutions = [
-        {
-          pathSource: '$.source',
-          pathTarget: '$.target',
-          repairStrategy: RepairStrategy.DEFAULT,
-          expandArray: false
-        }
-      ];
-    });
-
-    it('should select substitution by index', async () => {
-      await component.onSelectSubstitution(0);
-
-      expect(component.selectedSubstitution).toBe(0);
-      expect(component.substitutionModel.pathSource).toBe('$.source');
-      expect(component.substitutionModel.pathTarget).toBe('$.target');
-    });
-
-    it('should not select invalid substitution index', async () => {
-      const initialSelection = component.selectedSubstitution;
-
-      await component.onSelectSubstitution(-1);
-      expect(component.selectedSubstitution).toBe(initialSelection);
-
-      await component.onSelectSubstitution(999);
-      expect(component.selectedSubstitution).toBe(initialSelection);
-    });
-  });
-
-  describe('Alert Management', () => {
-    beforeEach(async () => {
-      await component.ngOnInit();
-    });
-
-    it('should raise alert', () => {
-      const alert = { type: 'warning', text: 'Test warning' } as any;
-
+    it('adds an alert via the alert service', () => {
+      const alert = { type: 'danger', text: 'boom' } as any;
       component.raiseAlert(alert);
-
       expect(mockAlertService.add).toHaveBeenCalledWith(alert);
     });
 
-    it('should clear all alerts', () => {
-      component.clearAlerts();
-
-      expect(mockAlertService.clearAll).toHaveBeenCalled();
-    });
-
-    it('should remove info alerts before adding new alert', () => {
-      const infoAlert = { type: 'info', text: 'Info alert' } as any;
-      const warningAlert = { type: 'warning', text: 'Warning alert' } as any;
-
-      // Mock the state getter to return alerts
+    it('removes pre-existing info/warning alerts before adding a new one', () => {
+      const infoAlert = { type: 'info', text: 'info' } as any;
+      const warnAlert = { type: 'warning', text: 'warn' } as any;
       Object.defineProperty(mockAlertService, 'state', {
-        get: () => [infoAlert, warningAlert],
+        get: () => [infoAlert, warnAlert],
         configurable: true
       });
 
-      component.raiseAlert({ type: 'danger', text: 'New alert' } as any);
+      component.raiseAlert({ type: 'danger', text: 'new' } as any);
 
+      expect(mockAlertService.remove).toHaveBeenCalledWith(infoAlert);
+      expect(mockAlertService.remove).toHaveBeenCalledWith(warnAlert);
+    });
+
+    it('clears info/warning alerts on clearAlerts', () => {
+      const infoAlert = { type: 'info', text: 'info' } as any;
+      Object.defineProperty(mockAlertService, 'state', {
+        get: () => [infoAlert],
+        configurable: true
+      });
+      component.clearAlerts();
       expect(mockAlertService.remove).toHaveBeenCalledWith(infoAlert);
     });
   });
 
-  describe('Deployment Map Entry Changes', () => {
+  describe('Deployment map entry changes', () => {
     beforeEach(async () => {
       await component.ngOnInit();
     });
 
-    it('should disable button when no connectors', (done) => {
-      const entryWithoutConnectors = { identifier: 'test', connectors: [] };
-
-      component.deploymentMapEntryChange(entryWithoutConnectors);
-
-      // Wait for queueMicrotask
-      queueMicrotask(() => {
-        expect(mockCdr.markForCheck).toHaveBeenCalled();
+    it('disables the button when no connectors are assigned', (done) => {
+      component.deploymentMapEntry = { identifier: 'x', connectors: [] };
+      isButtonDisabled$.subscribe((disabled) => {
+        expect(disabled).toBe(true);
         done();
       });
+      component.deploymentMapEntryChange({ identifier: 'x', connectors: [] });
     });
 
-    it('should enable button when connectors exist', (done) => {
-      const entryWithConnectors = { identifier: 'test', connectors: ['conn-1'] };
-
-      component.deploymentMapEntryChange(entryWithConnectors);
-
-      // Wait for queueMicrotask
-      queueMicrotask(() => {
-        expect(mockCdr.markForCheck).toHaveBeenCalled();
+    it('enables the button when connectors are assigned', (done) => {
+      component.deploymentMapEntry = { identifier: 'x', connectors: ['c1'] };
+      isButtonDisabled$.subscribe((disabled) => {
+        expect(disabled).toBe(false);
         done();
       });
+      component.deploymentMapEntryChange({ identifier: 'x', connectors: ['c1'] });
+    });
+  });
+
+  describe('Substitution validity subscription', () => {
+    it('mirrors the service validity stream into the template form errors', async () => {
+      await component.ngOnInit();
+
+      isSubstitutionValid$.next(false);
+      expect(component.templateForm.errors).toEqual({ incorrect: true });
+
+      isSubstitutionValid$.next(true);
+      expect(component.templateForm.errors).toBeNull();
+    });
+  });
+
+  describe('Lifecycle', () => {
+    it('tears down subscriptions and the stepper service on destroy', async () => {
+      await component.ngOnInit();
+      const destroy$ = component['destroy$'];
+      spyOn(destroy$, 'next').and.callThrough();
+      spyOn(destroy$, 'complete').and.callThrough();
+
+      component.ngOnDestroy();
+
+      expect(destroy$.next).toHaveBeenCalled();
+      expect(destroy$.complete).toHaveBeenCalled();
+      expect(mockStepperService.cleanup).toHaveBeenCalled();
     });
   });
 });

@@ -488,13 +488,13 @@ When you select **Smart Function** as the **Transformation Type** in the modal d
 The signature and structure of a **Smart Function** has the form:
 
 ```javascript
-function onMessage (inputMsg, context) {
+function onMessage(inputMsg, context) {
     const msg = inputMsg;
-    var payload = msg.getPayload(); // contains payload
+    const payload = msg.payload; // pre-deserialized JSON object
 
-    console.log("Context" + context.getStateAll());
-    console.log("Payload Raw:" + msg.getPayload());
-    console.log("Payload messageId" +  msg.getPayload().get('messageId'));
+    console.log("Config:", context.getConfig());
+    console.log("Payload:", msg.payload);
+    console.log("Payload messageId:", msg.payload["messageId"]);
     // insert transformation logic here
 
     // then return result
@@ -511,7 +511,7 @@ function onMessage (inputMsg, context) {
                 }
             }
         },
-        externalSource: [{"type":"c8y_Serial", "externalId": payload.get("clientId")}]
+        externalSource: [{"type":"c8y_Serial", "externalId": payload["clientId"]}]
     }];
 }
 ```
@@ -519,11 +519,15 @@ function onMessage (inputMsg, context) {
 The **Smart Function** allows to enrich the payload with inventory data from the device e.g.:
 
 ```javascript
-// lookup device for enrichment
-var deviceByDeviceId = context.getManagedObjectByDeviceId(payload.get("deviceId"));
+// lookup device for enrichment by internal Cumulocity ID
+var deviceByDeviceId = context.getManagedObject(payload["deviceId"]);
 console.log("Device (by device id): " + deviceByDeviceId);
 
-var deviceByExternalId = context.getManagedObject({externalId: payload.get("clientId"),externalId:"c8y_Serial"} );
+// lookup device by external ID (recommended)
+var deviceByExternalId = context.getManagedObjectByExternalId({
+    externalId: payload["clientId"],
+    type: "c8y_Serial"
+});
 console.log("Device (by external id): " + deviceByExternalId);
 ```
 

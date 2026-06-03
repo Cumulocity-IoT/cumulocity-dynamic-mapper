@@ -45,6 +45,7 @@ import { TranslatePipe } from '@ngx-translate/core';
       >
         <input
           type="checkbox"
+          [attr.data-cy]="'dm-connector-toggle-' + context.item.identifier"
           [checked]="context.value"
           [disabled]="isInputDisabled || isLoading"
           (change)="onConfigurationToggle()"

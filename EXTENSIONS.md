@@ -1,4 +1,12 @@
-# Enhance and Extensions
+# Extensions Guide
+
+This document describes the two extension points available in the Dynamic Mapper:
+
+1. **Custom broker connectors** — extend the mapper to support additional message brokers by implementing a new `AConnectorClient` subclass. Connectors are bundled inside `dynamic-mapper-service`.
+
+2. **Processor extensions** — implement custom payload transformation logic in Java, packaged as a separate JAR and uploaded at runtime via the UI. This is the right choice when JSONata or Smart Functions are insufficient (e.g., binary/Protobuf payloads). Extensions are developed in `dynamic-mapper-extension` and implement either `ProcessorExtensionInbound<O>` (Broker → C8Y) or `ProcessorExtensionOutbound<O>` (C8Y → Broker).
+
+---
 
 ## Custom message broker connector
 
@@ -733,47 +741,147 @@ All changes are backward compatible at the API level. Existing connectors will c
 - Reduced code duplication
 - Consistent behavior across all connectors
 
-## Mapper Extensions - general
-In the folder [dynamic.mapper.processor.extension](dynamic-mapper-service/src/main/java/dynamic/mapper/processor/extension) you can implement  the Interface `ProcessorExtensionSource<O>` to implement the processing of your own messages. Together with the Java representation of your message you can build your own processor extension. This needs to be packages in a `jar` file. <br>
-The extension packaged as a `jar` you can upload this extension using the tab `Processor Extension`, see [Processing Extensions (Protobuf, ...)](#processing-extensions-protobuf) for details.
-In order for the mapper backend (`dynamic-mapper-service`) to find your extension you need to add the properties file `extension-external.properties`. The content could be as follows:
+## Processor Extensions
+
+Processor extensions allow you to handle payloads that cannot be mapped with JSONata or Smart Functions — for example, binary formats like Protobuf or CBOR. Extensions are compiled Java classes packaged as JARs and uploaded to the mapper at runtime.
+
+### Inbound extensions (Broker → C8Y)
+
+Implement the `ProcessorExtensionInbound<O>` interface from `dynamic-mapper-service`:
+
+```java
+package dynamic.mapper.processor.extension;
+
+import dynamic.mapper.processor.model.CumulocityObject;
+import dynamic.mapper.processor.model.JavaExtensionContext;
+import dynamic.mapper.processor.model.Message;
+
+public interface ProcessorExtensionInbound<O> {
+    CumulocityObject[] onMessage(Message<O> message, JavaExtensionContext context);
+}
 ```
-CustomEvent=external.extension.processor.dynamic.mapper.ProcessorExtensionCustomEvent
-CustomMeasurement=external.extension.processor.dynamic.mapper.ProcessorExtensionCustomMeasurement
+
+The method receives:
+- **`message`** — immutable wrapper exposing `getPayload()`, `getTopic()`, `getClientId()`, `getTransportFields()`
+- **`context`** — access to the active mapping (`context.getMapping()`), C8Y inventory, logging, and cache
+
+Return an array of `CumulocityObject` instances built with the builder API:
+
+```java
+@Slf4j
+public class ProcessorExtensionCustomMeasurement implements ProcessorExtensionInbound<byte[]> {
+
+    @Override
+    public CumulocityObject[] onMessage(Message<byte[]> message, JavaExtensionContext context) {
+        String jsonString = new String(message.getPayload(), "UTF-8");
+        Map<String, Object> json = (Map<String, Object>) Json.parseJson(jsonString);
+
+        return new CumulocityObject[] {
+            CumulocityObject.measurement()
+                .type("c8y_Temperature")
+                .time(new DateTime(json.get("time")))
+                .fragment("c8y_Temperature", "T", (Number) json.get("temperature"), json.get("unit").toString())
+                .externalId(json.get("externalId").toString(), context.getMapping().getExternalIdType())
+                .build()
+        };
+    }
+}
 ```
 
-The steps required for an external extension are as follows. The extension:
-1. has to implement the interface `ProcessorExtensionSource<O>`
-2. be registered in the properties file <code>dynamic-mapper-extension/src/main/resources/extension-external.properties</code>
-3. be developed /packed in the maven module <code>dynamic-mapper-extension</code>. **Not** in the maven module <code>dynamic-mapper-service</code>. This is reserved for internal extensions.
-4. be uploaded through the Web UI.
+### Outbound extensions (C8Y → Broker)
 
-> **_NOTE:_** When you implement `ProcessorExtensionSource<O>` an additional <code>RepairStrategy.CREATE_IF_MISSING</code> can be used. This helps to address mapping cases, where you want to create a mapping that adapts to different structures of source payloads. It is used to create a node in the target if it doesn't exist and allows for using mapping with dynamic content. See [sample 25](./resources/script/mapping/sampleMapping/SampleMappings_06.pdf).
+Implement `ProcessorExtensionOutbound<O>` and return `DeviceMessage[]`:
 
-A sample how to build an extension is contained in the maven module [dynamic-mapper-extension](dynamic-mapper-extension).
-The following diagram shows how the dispatcher handles messages with different format:
+```java
+public interface ProcessorExtensionOutbound<O> {
+    DeviceMessage[] onMessage(Message<O> message, JavaExtensionContext context)
+        throws ProcessingException;
+}
+```
 
+Example — convert a Cumulocity alarm to a custom device payload:
+
+```java
+@Slf4j
+public class ProcessorExtensionAlarmToCustomJson implements ProcessorExtensionOutbound<byte[]> {
+
+    @Override
+    public DeviceMessage[] onMessage(Message<byte[]> message, JavaExtensionContext context)
+            throws ProcessingException {
+        Map<?, ?> alarm = (Map<?, ?>) Json.parseJson(new String(message.getPayload(), "UTF-8"));
+
+        Map<String, Object> custom = new HashMap<>();
+        custom.put("alarmType", alarm.get("type"));
+        custom.put("severity", alarm.get("severity"));
+        custom.put("message", alarm.get("text"));
+
+        return new DeviceMessage[] {
+            DeviceMessage.forTopic(context.getMapping().getPublishTopic())
+                .payload(new ObjectMapper().writeValueAsString(custom))
+                .build()
+        };
+    }
+}
+```
+
+### Registration
+
+Register each extension class in `dynamic-mapper-extension/src/main/resources/extension-external.properties`:
+
+```properties
+CustomMeasurement=dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionCustomMeasurement
+AlarmToCustomJson=dynamic.mapper.processor.extension.external.outbound.ProcessorExtensionAlarmToCustomJson
+```
+
+### Packaging and deployment
+
+Extensions must be developed in the `dynamic-mapper-extension` maven module — **not** in `dynamic-mapper-service` (reserved for built-in extensions).
+
+Build steps:
+1. Implement `ProcessorExtensionInbound<O>` or `ProcessorExtensionOutbound<O>` in `dynamic-mapper-extension`
+2. Register the class in `extension-external.properties`
+3. Build the JAR: `cd dynamic-mapper-extension && mvn package`
+4. Upload the JAR via **Configuration → Processor Extension → Add Extension** in the UI
+5. Create a mapping of type **Extension Source** (inbound) or **Extension Sink** (outbound) and select the uploaded extension in the Transformation section
+
+> **Note:** The `RepairStrategy.CREATE_IF_MISSING` strategy is available in inbound extensions. It creates a target node if it does not exist, which is useful for mappings that must adapt to payloads with dynamic or optional fields.
+
+The following diagram shows how the dispatcher handles messages across all transformation types:
 
 <p align="center">
 <img src="resources/image/Dynamic_Mapper_Diagram_Dispatcher.png"  style="width: 70%;" />
 </p>
 <br/>
 
-The following diagram gives an overview on the step to build and use your own extension:
+The following diagram gives an overview of the steps to build and use your own extension:
 
 <p align="center">
 <img src="resources/image/Dynamic_Mapper_Diagram_ProcessorExtensionSource_Guide.png"  style="width: 70%;" />
 </p>
 <br/>
 
-## Mapper Extensions - portobuf
+### Reference implementations
 
-To process your own Protobuf message, you always need to write a Java class.
-The workflow is as follows:
+See `dynamic-mapper-extension/src/main/java/dynamic/mapper/processor/extension/external/` for complete examples:
 
-1. Describe the structure of your Protobuf message in a proto file, for example:
+| File | Direction | Description |
+|------|-----------|-------------|
+| `inbound/ProcessorExtensionCustomMeasurement.java` | Inbound | Custom JSON → C8Y measurement |
+| `inbound/ProcessorExtensionCustomEvent.java` | Inbound | Custom JSON → C8Y event |
+| `inbound/ProcessorExtensionCustomAlarm.java` | Inbound | Custom JSON → C8Y alarm |
+| `inbound/ProcessorExtensionSparkplugBMeasurement.java` | Inbound | Sparkplug B binary → C8Y measurement |
+| `outbound/ProcessorExtensionAlarmToCustomJson.java` | Outbound | C8Y alarm → custom JSON |
+| `outbound/ProcessorExtensionAlarmToSparkplugB.java` | Outbound | C8Y alarm → Sparkplug B binary |
 
-```
+---
+
+## Processor Extensions — Protobuf
+
+To process Protobuf payloads, follow the same extension pattern with `Message<byte[]>` as the payload type.
+
+1. Describe your message in a `.proto` file:
+
+```protobuf
 package processor.protobuf;
 
 option java_package = "dynamic.mapper.processor.extension.external";
@@ -789,32 +897,41 @@ message CustomEvent {
 }
 ```
 
-2. Generate Java binding classes using the `protoc` compiler, resulting in `CustomEventOuter.java`
-Write your own extension in Java, for example `ProcessorExtensionCustomEvent.java`, by implementing the <code>ProcessorExtensionSource<byte[]></code> interface.
+2. Generate Java binding classes using `protoc`, producing `CustomEventOuter.java`.
 
-The actual mapping consists of the following lines:
-```
-javaCopycontext.addSubstitution("time", new DateTime(
-        payloadProtobuf.getTimestamp())
-        .toString(), TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
-context.addSubstitution("text",
-        payloadProtobuf.getTxt(), TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
-context.addSubstitution("type", 
-        payloadProtobuf.getEventType(), TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
+3. Implement `ProcessorExtensionInbound<byte[]>` using the generated bindings and the return-value pattern:
 
-// as the mapping uses useExternalId we have to map the id to
-// _IDENTITY_.externalId
-context.addSubstitution(context.getMapping().getGenericDeviceIdentifier(),
-        payloadProtobuf.getExternalId()
-                .toString(),
-        TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
-```
-3. Create a property file named extension-external.properties with the following information:
+```java
+@Slf4j
+public class ProcessorExtensionCustomEvent implements ProcessorExtensionInbound<byte[]> {
 
-```
-<YOUR_EVENT_NAME>=<FQN_NAME_EXTENSION_JAVA_CLASS>
-# For example: CustomEvent=dynamic.mapper.processor.extension.external.ProcessorExtensionCustomEvent
+    @Override
+    public CumulocityObject[] onMessage(Message<byte[]> message, JavaExtensionContext context) {
+        try {
+            CustomEventOuter.CustomEvent proto =
+                CustomEventOuter.CustomEvent.parseFrom(message.getPayload());
+
+            return new CumulocityObject[] {
+                CumulocityObject.event()
+                    .type(proto.getEventType())
+                    .time(new DateTime(proto.getTimestamp()))
+                    .text(proto.getTxt())
+                    .externalId(proto.getExternalId(), proto.getExternalIdType())
+                    .build()
+            };
+        } catch (Exception e) {
+            log.error("Failed to parse Protobuf payload", e);
+            return new CumulocityObject[0];
+        }
+    }
+}
 ```
 
-4. Package the class as a JAR file and upload it via the UI: Configuration -> Processor extension -> Add extension (button)
-5. To use the extension, select a mapping of type "Extension Source" and choose the extension uploaded in step 5 in the "Transformation" section.
+4. Register in `extension-external.properties`:
+
+```properties
+CustomEvent=dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionCustomEvent
+```
+
+5. Package as a JAR and upload via **Configuration → Processor Extension → Add Extension**.
+6. Create a mapping of type **Extension Source** and select the uploaded extension.

@@ -1,90 +1,97 @@
-/* eslint-disable no-useless-escape */
+import type { IUser } from '@c8y/client';
 import { slowCypressDown } from 'cypress-slow-down';
+import {
+  navigateToConnectorConfiguration,
+  addConnectorViaUi,
+  deleteConnectorViaUi,
+  deleteConnectorViaApi,
+  getConnector,
+  createConnectorTestUser,
+  setupTestUser,
+  cleanupTestUser,
+  type MqttConnectionInput,
+} from './connector/connector.helpers';
+
 slowCypressDown();
 
 describe('Specs for connector configuration', () => {
-  beforeEach(() => {
-    // login
-    cy.getAuth().login();
-    cy.hideCookieBanner();
-    cy.disableGainsight();
+  const createdConnectorIds: string[] = [];
+  let mqttConnectionInput: MqttConnectionInput;
+  let testUser: IUser;
 
-    cy.visitAndWaitForSelector(
-      '/apps/administration/index.html?remotes=%7B%22c8y-pkg-dynamic-mapper%22%3A%5B%22DynamicMappingModule%22%5D%7D',
-      'en',
-      '#navigator'
-    );
-    cy.get('[data-cy="Settings"]').should('exist').click();
-    cy.get('[data-cy="Dynamic Mapper"]')
-      .should('exist')
-      .should('be.visible')
-      .click();
+  before(() => {
+    Cypress.session.clearAllSavedSessions();
 
-    // navigate to configuration
-    cy.get('a[title="Connector"]').as('configuration').should('exist');
-    cy.get('@configuration').click();
-  });
-
-  before(function () {
     cy.fixture('mqttConnectionInput').then((data) => {
-      this.mqttConnectionInput = data;
+      mqttConnectionInput = data as MqttConnectionInput;
     });
 
-    // Setup interceptors
-    cy.intercept(
-      'POST',
-      '/service/dynamic-mapper-service/configuration/connector/instance'
-    ).as('postMqttConnection');
+    testUser = createConnectorTestUser();
+    setupTestUser(testUser);
+  });
+
+  after(() => {
+    cleanupTestUser(testUser);
+  });
+
+  beforeEach(() => {
+    cy.getAuth(testUser.userName, testUser.password as string)
+      .login()
+      .disableGainsight();
+
     cy.intercept(
       'GET',
       '/service/dynamic-mapper-service/configuration/connector/specifications'
     ).as('getConnectorSpecifications');
+    cy.intercept(
+      'POST',
+      '/service/dynamic-mapper-service/configuration/connector/instance'
+    ).as('postConnector');
+    cy.intercept(
+      'DELETE',
+      '/service/dynamic-mapper-service/configuration/connector/instance/**'
+    ).as('deleteConnector');
+
+    navigateToConnectorConfiguration();
   });
 
-  it('Add connector', function () {
-    // click button 'Add connector'
-    cy.get('#addConfiguration').should('exist').click();
-    cy.wait('@getConnectorSpecifications');
-    // cy.get('#connectorType').should('exist').should('be.visible');
-    cy.get('#connectorType')
-      .should('exist')
-      .should('be.visible')
-      .select('MQTT');
-    // // fill in form
-    cy.get('#name').type(this.mqttConnectionInput.name);
-    cy.get('#mqttHost').type(this.mqttConnectionInput.mqttHost);
-    cy.get('#mqttPort').type(this.mqttConnectionInput.mqttPort);
-    cy.get('#user').type(this.mqttConnectionInput.user);
-    cy.get('#password').type(this.mqttConnectionInput.password);
-    cy.get('#clientId').type(this.mqttConnectionInput.clientId);
-
-    // // save
-    // cy.get('.modal-footer > .btn-primary').click();
-    cy.get('button[title="Save"]').click();
-    // // record post request of new connector
-    cy.wait('@postMqttConnection').then((interception) => {
-      const requestData = interception.request.body;
-      cy.writeFile(
-        'cypress/fixtures/mqttConnectionPostRequest.json',
-        requestData
-      );
+  afterEach(() => {
+    createdConnectorIds.splice(0).forEach((identifier) => {
+      deleteConnectorViaApi(identifier);
     });
-    cy.screenshot();
   });
 
-  it('Delete connector', function () {
-    // navigate to configuration
-    cy.get('a[title="Connector"]').as('configuration').should('exist');
-    cy.get('@configuration').click();
+  it('Add connector', () => {
+    const connectorName = `${mqttConnectionInput.name}-${Date.now()}`;
 
-    // read identifier from previously added connector
-    cy.fixture('mqttConnectionPostRequest').then((data) => {
-      this.mqttConnectionPostRequest = data;
-      // cy.get(`#connector_${this.mqttConnectionPostRequest.identifier} btn[title="Action"]`)
-      // identify respective row with connector
-      cy.get(`#connector_${this.mqttConnectionPostRequest.identifier}`, { timeout: 10000 }).click();
-      cy.get('.dropdown #delete').click({ force: true });
-      cy.get('[data-cy="c8y-confirm-modal--ok"]').click();
+    addConnectorViaUi(mqttConnectionInput, connectorName).then((identifier) => {
+      createdConnectorIds.push(identifier);
+
+      getConnector(identifier).should('exist').and('contain', connectorName);
     });
+
+    cy.screenshot('connector-added');
+  });
+
+  it('Delete connector', () => {
+    const connectorName = `${mqttConnectionInput.name}-delete-${Date.now()}`;
+
+    addConnectorViaUi(mqttConnectionInput, connectorName).then((identifier) => {
+      createdConnectorIds.push(identifier);
+
+      getConnector(identifier).should('exist').and('contain', connectorName);
+
+      deleteConnectorViaUi(identifier);
+      cy.wait('@deleteConnector');
+      getConnector(identifier).should('not.exist');
+
+      // Deleted via UI — drop it from the API-cleanup list (afterEach is a backstop).
+      const index = createdConnectorIds.indexOf(identifier);
+      if (index >= 0) {
+        createdConnectorIds.splice(index, 1);
+      }
+    });
+
+    cy.screenshot('connector-deleted');
   });
 });

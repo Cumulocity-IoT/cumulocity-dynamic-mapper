@@ -26,23 +26,23 @@ import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
   template: `
       @if (context.value.debug) {
         <div class="d-flex flex-col">
-        <span class="text-12 label label-success">debug</span>
+        <span class="text-12 label label-success" [attr.data-cy]="'dm-mapping-status-debug-' + context.item.id">debug</span>
       </div>
       }
       @switch (context.value.snoopStatus) {
         @case ('STARTED') {
           <div class="d-flex flex-col">
-            <span class="text-12 label label-success">snoop: started</span>
+            <span class="text-12 label label-success" [attr.data-cy]="'dm-mapping-status-' + context.item.id">snoop: started</span>
           </div>
         }
         @case ('STOPPED') {
           <div class="d-flex flex-col">
-            <span class="text-12 label label-success">snoop: stopped</span>
+            <span class="text-12 label label-success" [attr.data-cy]="'dm-mapping-status-' + context.item.id">snoop: stopped</span>
           </div>
         }
         @case ('ENABLED') {
           <div class="d-flex flex-col">
-            <span class="text-12 label label-success">snoop: pending</span>
+            <span class="text-12 label label-success" [attr.data-cy]="'dm-mapping-status-' + context.item.id">snoop: pending</span>
           </div>
         }
 

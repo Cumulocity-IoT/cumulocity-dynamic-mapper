@@ -42,11 +42,11 @@
             {{ 'Substitution [ pathSource —> pathTarget ]' | translate }}
           </span>
         </label>
-        <input type="text" readOnly formControlName="substitution" class="form-control" />
+        <input type="text" readOnly formControlName="substitution" class="form-control" data-cy="dm-substitution-edit-substitution-input" />
       </c8y-form-group>
       <c8y-form-group>
         <label class="c8y-switch d-inline p-t-8" title="Expand as array">
-          <input type="checkbox" formControlName="expandArray" />
+          <input type="checkbox" formControlName="expandArray" data-cy="dm-substitution-edit-expand-array-toggle" />
           <span></span>
           <span>
             {{ 'Expand as array' | translate }}
@@ -66,7 +66,7 @@
             values handled.'" triggers="focus" class="btn-help" aria-label="Help content"></button>
         </label>
         <div class="c8y-select-wrapper">
-          <select class="form-control" formControlName="repairStrategy" name="repairStrategy">
+          <select class="form-control" formControlName="repairStrategy" name="repairStrategy" data-cy="dm-substitution-edit-repair-strategy-select">
             @for (t of repairStrategyOptions; track t) {
               <option [value]="t.value">
                 {{ t.label | formatStringAsWords}}

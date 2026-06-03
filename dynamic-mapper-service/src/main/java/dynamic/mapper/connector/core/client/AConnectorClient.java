@@ -799,12 +799,10 @@ public abstract class AConnectorClient {
      * Called when a mapping is created, updated, or its activation state changes
      */
     public void updateSubscriptionForOutbound(Mapping mapping, Boolean create, Boolean activationChanged) {
-        boolean isDeployed = isDeployedInConnector(mapping);
-
-        if (mapping.getActive() && isDeployed) {
+        if (mapping.getActive() && isDeployedInConnector(mapping)) {
             mappingSubscriptionManager.addSubscriptionOutbound(mapping.getIdentifier(), mapping);
             log.debug("{} - Added outbound mapping: {}", tenant, mapping.getIdentifier());
-        } else {
+        } else if (!mapping.getActive()) {
             mappingSubscriptionManager.removeSubscriptionOutbound(mapping.getIdentifier());
             log.debug("{} - Removed outbound mapping: {}", tenant, mapping.getIdentifier());
         }
@@ -823,25 +821,21 @@ public abstract class AConnectorClient {
     }
 
     private void deleteInboundSubscription(Mapping mapping) {
-        String topic = mapping.getMappingTopic();
-
-        if (mappingSubscriptionManager.getSubscriptionCountsView().containsKey(topic) && isConnected()) {
-            MutableInt count = mappingSubscriptionManager.getSubscriptionCountsView().get(topic);
-            count.decrement();
-
-            if (count.intValue() <= 0) {
-                try {
-                    unsubscribe(topic);
-                    mappingSubscriptionManager.removeSubscriptionInbound(mapping);
-                    //mappingSubscriptionManager.getSubscriptionCountsView().remove(topic);
-                    log.info("{} - Unsubscribed from topic: [{}] after mapping deletion", tenant, topic);
-                } catch (Exception e) {
-                    log.error("{} - Error unsubscribing from topic: [{}]", tenant, topic, e);
-                }
-            }
+        boolean wasEffective = mappingSubscriptionManager.isMappingInboundEffective(mapping.getIdentifier());
+        if (!wasEffective) {
+            log.debug("{} - Skip deleting inbound subscription for non-effective mapping: {}",
+                    tenant, mapping.getIdentifier());
+            return;
         }
 
-        log.info("{} - Deleted inbound subscription for mapping: {}", tenant, mapping.getIdentifier());
+        try {
+            // Single source of truth: manager handles effective-mapping removal,
+            // reference-count decrement and broker unsubscribe when count reaches zero.
+            mappingSubscriptionManager.removeSubscriptionInbound(mapping);
+            log.info("{} - Deleted inbound subscription for mapping: {}", tenant, mapping.getIdentifier());
+        } catch (Exception e) {
+            log.error("{} - Error deleting inbound subscription for mapping: {}", tenant, mapping.getIdentifier(), e);
+        }
     }
 
     private void deleteOutboundSubscription(Mapping mapping) {
@@ -891,6 +885,9 @@ public abstract class AConnectorClient {
      */
     private Boolean isDeployedInConnector(Mapping mapping) {
         List<String> deploymentMapEntry = mappingService.getDeploymentMapEntry(tenant, mapping.getIdentifier());
+        // Explicit deployment required: if no deployment entry is configured,
+        // the mapping is NOT deployed (default is no-deployment, not deploy-everywhere).
+        // Only return true if deployment entry exists AND contains this connector's identifier.
         return deploymentMapEntry != null && deploymentMapEntry.contains(getConnectorIdentifier());
     }
 

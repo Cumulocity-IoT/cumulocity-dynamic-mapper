@@ -244,9 +244,17 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
                 }
 
                  if (onMessageFunction == null || onMessageFunction.isNull()) {
+                     if (supportESM) {
                      throw new ProcessingException(String.format(
-                             "Function '%s' not found in mapping code. Ensure the script defines and exports a function named '%s'.",
-                             Mapping.SMART_FUNCTION_NAME, Mapping.SMART_FUNCTION_NAME));
+                         "Function '%s' not found in mapping code. " +
+                             "Ensure the script defines and exports a function named '%s' (for example: export { %s };).",
+                         Mapping.SMART_FUNCTION_NAME, Mapping.SMART_FUNCTION_NAME, Mapping.SMART_FUNCTION_NAME));
+                     }
+                     throw new ProcessingException(String.format(
+                         "Function '%s' not found in mapping code. " +
+                             "Ensure the script defines a function named '%s'. " +
+                             "Export is not required when supportESM is disabled.",
+                         Mapping.SMART_FUNCTION_NAME, Mapping.SMART_FUNCTION_NAME));
                  }
 
                  inputMessage = createInputMessage(graalContext, context);
