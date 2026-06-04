@@ -226,6 +226,14 @@ public class NotificationSubscriber {
         return connectionManager.getManagementConnectionStatus(tenant);
     }
 
+    public void setCacheInventoryConnectionStatus(String tenant, Integer status) {
+        connectionManager.setCacheInventoryConnectionStatus(tenant, status);
+    }
+
+    public Integer getCacheInventoryConnectionStatus(String tenant) {
+        return connectionManager.getCacheInventoryConnectionStatus(tenant);
+    }
+
     public void startTokenRefresh(String tenant) {
         tokenManager.startTokenRefreshScheduler(tenant);
     }
