@@ -228,9 +228,13 @@ public class NotificationConnectionManager {
     }
 
     public void initializeManagementClient(String tenant) {
-        CustomWebSocketClient existing = managementClients.get(tenant);
-        if (existing != null && existing.isOpen()) {
-            log.debug("{} - Management client already connected, skipping initialization", tenant);
+        CustomWebSocketClient existingManagement = managementClients.get(tenant);
+        CustomWebSocketClient existingCache = cacheInventoryClients.get(tenant);
+
+        // Only skip initialization if BOTH clients are connected
+        if (existingManagement != null && existingManagement.isOpen() &&
+            existingCache != null && existingCache.isOpen()) {
+            log.debug("{} - Management and cache inventory clients already connected, skipping initialization", tenant);
             return;
         }
 
@@ -256,9 +260,18 @@ public class NotificationConnectionManager {
             // Cache monitored groups
             cacheMonitoredGroups(tenant, managementSubs, managementCallback);
 
-            // Create connections
-            createManagementConnection(tenant, managementCallback);
-            createCacheInventoryConnection(tenant, cacheInventoryCallback);
+            // Create connections - only if not already connected
+            if (existingManagement == null || !existingManagement.isOpen()) {
+                createManagementConnection(tenant, managementCallback);
+            } else {
+                log.debug("{} - Management client already connected, skipping creation", tenant);
+            }
+
+            if (existingCache == null || !existingCache.isOpen()) {
+                createCacheInventoryConnection(tenant, cacheInventoryCallback);
+            } else {
+                log.debug("{} - Cache inventory client already connected, skipping creation", tenant);
+            }
 
         } catch (InterruptedException e) {
             log.error("{} - Interrupted while initializing management client", tenant);
