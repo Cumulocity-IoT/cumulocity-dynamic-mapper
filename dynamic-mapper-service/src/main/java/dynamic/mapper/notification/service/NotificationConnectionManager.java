@@ -101,6 +101,7 @@ public class NotificationConnectionManager {
     //FIXME As we have multiple WS connections the statusCode will only reflect the last connection attempt. We should consider a more granular status tracking if needed.
     private final Map<String, Integer> deviceWSStatusCodes = new ConcurrentHashMap<>();
     private final Map<String, Integer> managementWSStatusCodes = new ConcurrentHashMap<>();
+    private final Map<String, Integer> cacheInventoryWSStatusCodes = new ConcurrentHashMap<>();
 
     // Scheduled executor for reconnection
     private volatile ScheduledExecutorService reconnectExecutor;
@@ -451,12 +452,26 @@ public class NotificationConnectionManager {
         }
     }
 
+    public void setCacheInventoryConnectionStatus(String tenant, Integer status) {
+        if (tenant != null) {
+            if (status != null) {
+                cacheInventoryWSStatusCodes.put(tenant, status);
+            } else {
+                cacheInventoryWSStatusCodes.remove(tenant);
+            }
+        }
+    }
+
     public Integer getDeviceConnectionStatus(String tenant) {
         return tenant != null ? deviceWSStatusCodes.get(tenant) : null;
     }
 
     public Integer getManagementConnectionStatus(String tenant) {
-        return tenant != null ? deviceWSStatusCodes.get(tenant) : null;
+        return tenant != null ? managementWSStatusCodes.get(tenant) : null;
+    }
+
+    public Integer getCacheInventoryConnectionStatus(String tenant) {
+        return tenant != null ? cacheInventoryWSStatusCodes.get(tenant) : null;
     }
 
     public void startReconnectScheduler() {
@@ -880,7 +895,7 @@ public class NotificationConnectionManager {
         if (cacheClient != null && !cacheClient.isOpen()) {
             try {
                 if (cacheClient.getReadyState() == ReadyState.NOT_YET_CONNECTED ||
-                        (managementWSStatusCodes.get(tenant) != null && managementWSStatusCodes.get(tenant) == 401)) {
+                        (cacheInventoryWSStatusCodes.get(tenant) != null && cacheInventoryWSStatusCodes.get(tenant) == 401)) {
                     log.info("{} - Re-initializing cache inventory WS", tenant);
                     if(!reinitializing)
                         initializeManagementClient(tenant);
@@ -967,6 +982,7 @@ public class NotificationConnectionManager {
         cacheInventoryCallbacks.clear();
         deviceWSStatusCodes.clear();
         managementWSStatusCodes.clear();
+        cacheInventoryWSStatusCodes.clear();
 
         log.info("ConnectionManager cleanup completed");
     }

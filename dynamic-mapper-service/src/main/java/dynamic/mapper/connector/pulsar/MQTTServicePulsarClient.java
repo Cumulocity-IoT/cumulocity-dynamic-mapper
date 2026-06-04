@@ -352,7 +352,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         }
 
         String subscriptionName = getSubscriptionName(connectorIdentifier, additionalSubscriptionIdTest);
-        long negativeAckRedeliveryDelay = (long) connectorConfiguration.getProperties()
+        Integer negativeAckRedeliveryDelay = (Integer) connectorConfiguration.getProperties()
                 .getOrDefault("negativeAckRedeliveryDelay", DEFAULT_NEGATIVE_ACK_DELAY)*1000;
 
         // Try multiple subscription strategies
@@ -367,7 +367,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                     .subscriptionType(SubscriptionType.Failover)
                     .negativeAckRedeliveryBackoff(MultiplierRedeliveryBackoff.builder()
                             .minDelayMs(negativeAckRedeliveryDelay)
-                            .maxDelayMs(negativeAckRedeliveryDelay * 10)
+                            .maxDelayMs(negativeAckRedeliveryDelay * 10L)
                             .multiplier(2)
                             .build())
                     .messageListener(mqttServiceCallback)
@@ -414,7 +414,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                     .subscriptionType(SubscriptionType.Failover)
                     .negativeAckRedeliveryBackoff(MultiplierRedeliveryBackoff.builder()
                             .minDelayMs(negativeAckRedeliveryDelay)
-                            .maxDelayMs(negativeAckRedeliveryDelay * 10)
+                            .maxDelayMs(negativeAckRedeliveryDelay * 10L)
                             .multiplier(2)
                             .build())
                     .subscribeAsync()
@@ -922,7 +922,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                         .hidden(true)
                         .defaultValue(PULSAR_NAMESPACE))
 
-                .property("negativeAckRedeliveryDelay", ConnectorPropertyBuilder.optionalString()
+                .property("negativeAckRedeliveryDelay", ConnectorPropertyBuilder.requiredNumeric()
                         .order(16)
                         .description("Delay for redelivery of negatively acknowledged messages in s (Default: 60")
                         .defaultValue(60))
