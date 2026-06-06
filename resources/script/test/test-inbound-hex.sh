@@ -33,7 +33,8 @@ cleanup() {
     fi
 }
 
-[[ "${1:-}" == "--cleanup" ]] && trap cleanup EXIT
+dm_parse_args "$@"
+dm_register_cleanup cleanup
 
 # ── Test ───────────────────────────────────────────────────────────────────────
 dm_banner "Inbound HEX Binary Transformation (EVENT)"
@@ -41,6 +42,7 @@ dm_banner "Inbound HEX Binary Transformation (EVENT)"
 dm_step "Waiting for Dynamic Mapper service ..."
 dm_wait_for_service
 dm_require_mqtt_broker
+dm_validate_only_exit
 
 # Mapping mirrors attic/test-I example "Mapping - 12" (binaryEvent/+)
 # source template shows {"message":"<hex bytes>"} — substitution: $substring(message,0,4) for text

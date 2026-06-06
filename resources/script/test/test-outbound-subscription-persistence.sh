@@ -48,9 +48,8 @@ cleanup() {
     echo "Cleanup done."
 }
 
-if [ "${1}" = "--cleanup" ]; then
-    trap cleanup EXIT
-fi
+dm_parse_args "$@"
+dm_register_cleanup cleanup
 
 dm_banner "Outbound Subscription Persistence After Restart"
 
@@ -101,6 +100,7 @@ dm_wait "$STARTUP_WAIT" "initial startup period"
 # run-tests.sh may set DM_SKIP_HEALTH_CHECK globally; force a real readiness probe after restart
 unset DM_SKIP_HEALTH_CHECK
 dm_wait_for_service
+dm_validate_only_exit
 dm_wait 10 "post-restart subscription initialization"
 
 # Step 6: Send test messages for both devices

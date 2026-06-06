@@ -5,21 +5,32 @@ This directory contains bash-based integration tests for the Dynamic Mapper's in
 ## Quick Start
 
 ```bash
-# Validate environment (no test data modified)
+# Validate environment only — exits before any test data is created
 bash test-inbound-json-smartfunction.sh --validate-only
 
-# Run a single test with auto-cleanup
-bash test-inbound-json-smartfunction.sh --cleanup
+# Run a single test (created data is cleaned up by default)
+bash test-inbound-json-smartfunction.sh
+
+# Keep created test data for debugging (skip cleanup)
+bash test-inbound-json-smartfunction.sh --keep
 
 # Run all inbound tests
 bash run-tests.sh inbound
 
 # Run all tests
 bash run-tests.sh
-
-# Keep test data on failure (for debugging)
-bash test-inbound-json-smartfunction.sh --keep
 ```
+
+### Standard flags
+
+Every test script accepts the same flags (parsed by `dm_parse_args` in the
+harness):
+
+| Flag | Effect |
+|------|--------|
+| _(none)_ / `--cleanup` | Run the test and delete created data on exit (default). |
+| `--keep` | Run the test but retain created data for post-mortem debugging. |
+| `--validate-only` | Run environment validation, then exit `0` before creating data. |
 
 ## Architecture & Best Practices
 
@@ -195,9 +206,11 @@ function onMessage(msg, ctx) {
         externalSource: [{ type: 'c8y_Serial', externalId: externalId }]
     }];
 }
-export { onMessage };
 EOF
 )
+
+# Append `export { onMessage }` only when the tenant runs in ESM mode:
+SF_CODE=$(dm_wrap_onmessage_code "$SF_CODE")
 ```
 
 **Key points for Smart Functions:**
@@ -205,7 +218,9 @@ EOF
 - Must call `msg.getPayload()` to access deserialized JSON
 - Must return array of Cumulocity objects (even if empty)
 - Each object must have `cumulocityType`, `action`, `payload`, and `externalSource`
-- Must export function explicitly: `export { onMessage };`
+- The `export { onMessage };` line is **only** required in ESM mode. Don't hardcode
+  it — wrap the source with `dm_wrap_onmessage_code` (in the harness), which appends
+  the export only when the tenant's `supportESM` is `true`.
 - Topic levels accessible via `config.topic.split('/')` or `sourceObject._TOPIC_LEVEL_` array
 
 ### Debugging Failed Tests
@@ -236,16 +251,64 @@ EOF
 
 ## Test Inventory
 
-| Test | Type | Purpose |
-|------|------|---------|
-| `test-inbound-json-smartfunction.sh` | Smart Func | JavaScript transformation (temperature JSON → measurement) |
-| `test-inbound-json-jsonata.sh` | JSONata | JSONata expression (JSON payload → measurement) |
-| `test-inbound-json-default.sh` | Default | No transformation (raw JSON passthrough) |
-| `test-inbound-flatfile.sh` | Flat File | CSV parsing via substitution |
-| `test-inbound-hex.sh` | Binary HEX | HEX decoding via Smart Function → event |
-| `test-inbound-implicit-device.sh` | Implicit Device | Auto-create device from external ID |
-| `test-inbound-multi-device.sh` | Array Expansion | JSON array → multiple measurements |
-| `test-inbound-http-connector.sh` | HTTP Connector | HTTP webhook inbound transformation |
+The authoritative catalogue lives in [run-tests.sh](run-tests.sh) (the `TESTS`
+array) and drives the interactive menu. The categories below mirror it:
+
+### Inbound (payload)
+| Test | Purpose |
+|------|---------|
+| `test-inbound-json-default` | JSON / DEFAULT → MEASUREMENT |
+| `test-inbound-json-jsonata` | JSON / JSONATA → EVENT |
+| `test-inbound-json-smartfunction` | JSON / Smart Function → MEASUREMENT |
+| `test-inbound-flatfile` | FLAT_FILE / CSV → MEASUREMENT |
+| `test-inbound-hex` | HEX → EVENT |
+| `test-inbound-http-connector` | HTTP connector → MEASUREMENT |
+| `test-inbound-implicit-device` | Implicit device auto-creation |
+| `test-inbound-multi-device` | Array payload → multiple devices |
+| `test-inbound-alarm` | JSON / DEFAULT → ALARM |
+| `test-inbound-operation` | JSON / DEFAULT → OPERATION |
+
+### Inbound (Smart Function patterns)
+| Test | Purpose |
+|------|---------|
+| `test-inbound-smartfunction-02` | Topic-based external ID + sensor filter |
+| `test-inbound-smartfunction-04` | Dual payload type + deduplication |
+
+### Inbound (Java extensions)
+| Test | Purpose |
+|------|---------|
+| `test-inbound-extension-custom-measurement` | Extension: JSON → Measurement |
+| `test-inbound-extension-custom-alarm` | Extension: JSON → Alarm |
+| `test-inbound-extension-custom-event` | Extension: Protobuf → Event |
+| `test-inbound-extension-sparkplugb-measurement` | Extension: Sparkplug B → Measurement |
+
+### Outbound (payload + subscriptions)
+| Test | Purpose |
+|------|---------|
+| `test-outbound-measurement` | C8Y Measurement → MQTT broker |
+| `test-outbound-event` | C8Y Event → MQTT broker |
+| `test-outbound-alarm` | C8Y Alarm → MQTT broker |
+| `test-outbound-operation` | C8Y Operation → MQTT broker |
+| `test-outbound-filter` | `filterMapping` — selective forwarding |
+| `test-outbound-topic-resolution` | Dynamic publish topic resolution |
+| `test-outbound-json-smartfunction` | Smart Function: Measurement → MQTT JSON |
+| `test-outbound-static-subscription` | Static subscription management |
+| `test-outbound-type-subscription` | Dynamic type subscription |
+| `test-outbound-group-subscription` | Dynamic group subscription |
+| `test-outbound-group-subscription-removal` | Group subscription removal |
+| `test-outbound-subscription-persistence` | Subscription persistence after restart |
+| `test-outbound-extension-alarm-to-sparkplugb` | Extension: Alarm → Sparkplug B DCMD |
+
+### Reliability
+| Test | Purpose |
+|------|---------|
+| `test-multi-tenant` | Mapping CRUD / tenant isolation |
+| `test-multi-connector` | Multiple connector status check |
+| `test-reconnect` | Connector disconnect / reconnect cycle |
+
+> **Note:** `test-outbound-group-subscription` hands off state to
+> `test-outbound-group-subscription-removal`; when run via `run-tests.sh` the
+> former is invoked with `--keep` so its group/device survive for the latter.
 
 ## Test Execution Order
 

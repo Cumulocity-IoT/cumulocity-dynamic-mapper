@@ -23,11 +23,14 @@ source "${SCRIPT_DIR}/test-harness.sh"
 
 CONNECTOR_ID="${DM_CONNECTOR_ID:-}"
 
+dm_parse_args "$@"   # supports --validate-only (this test creates no persistent data)
+
 # ── Test ───────────────────────────────────────────────────────────────────────
 dm_banner "Connector Disconnect / Reconnect Cycle"
 
 dm_step "Waiting for Dynamic Mapper service ..."
 dm_wait_for_service
+dm_validate_only_exit
 
 if [ -z "$CONNECTOR_ID" ]; then
     dm_step "DM_CONNECTOR_ID not set — discovering first MQTT connector ..."

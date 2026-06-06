@@ -13,24 +13,14 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/test-harness.sh"
 
-KEEP_ON_FAILURE=false
 EXT_ID="dmtest-sf-out-$(date +%s)"
 MAPPING_ID=""
 DEVICE_ID=""
 DEVICE_NAME="dmtest-sf-device-$RANDOM"
 
-for arg in "$@"; do
-    case "$arg" in
-        --keep) KEEP_ON_FAILURE=true ;;
-        --cleanup) trap cleanup EXIT ;;
-    esac
-done
+dm_parse_args "$@"
 
 cleanup() {
-    if [ "$KEEP_ON_FAILURE" = "true" ]; then
-        dm_warn "Skipping cleanup (--keep flag set)"
-        return 0
-    fi
     dm_info "Cleaning up test resources ..."
     [ -n "$MAPPING_ID" ] && dm_delete_mapping "$MAPPING_ID" 2>/dev/null || true
     if [ -n "${DEVICE_ID:-}" ]; then
@@ -42,7 +32,7 @@ cleanup() {
     dm_info "Cleanup complete"
 }
 
-trap cleanup EXIT
+dm_register_cleanup cleanup
 
 dm_banner "Test: Outbound Smart Function (C8Y Measurement → MQTT JSON)"
 
@@ -51,6 +41,7 @@ dm_validate_tools
 dm_wait_for_service
 dm_require_mqtt_broker
 dm_verify_mqtt_connector_ready
+dm_validate_only_exit
 
 dm_step 2 "Creating test device"
 DEVICE=$(c8y inventory create \
@@ -136,9 +127,10 @@ dm_step 6 "Subscribing to MQTT output topic"
 MQTT_TOPIC="measurements/outbound/$EXT_ID"
 dm_info "Subscribing to: $MQTT_TOPIC"
 
-# Background MQTT subscriber (collects messages for verification)
+# Background MQTT subscriber (collects messages for verification).
+# Uses the harness helper so MQTT_HOST/PORT/USER/PASS/TLS overrides apply.
 TEMP_FILE=$(mktemp)
-timeout 15 mosquitto_sub -h broker.hivemq.com -t "$MQTT_TOPIC" -q 1 > "$TEMP_FILE" 2>&1 &
+( dm_mqtt_subscribe_one "$MQTT_TOPIC" 15 > "$TEMP_FILE" 2>&1 ) &
 MQTT_PID=$!
 sleep 1
 
@@ -158,30 +150,32 @@ MEASUREMENT=$(jq -cn \
       }
     }')
 
-dm_api POST "/measurement/measurements" --data "$MEASUREMENT" > /dev/null 2>&1
+# /measurement/measurements is a core C8Y endpoint, not a Dynamic Mapper one —
+# create it through the c8y CLI rather than dm_api (which prefixes DM_SERVICE).
+printf '%s' "$MEASUREMENT" | c8y measurements create --template "input.value" \
+    --output json > /dev/null 2>&1 || dm_warn "Measurement creation may have failed"
 dm_success "Test measurement created"
 
 dm_step 8 "Waiting for MQTT message"
 sleep 3
 
 # Check if message was received
+MQTT_MSG=""
 if [ -f "$TEMP_FILE" ] && [ -s "$TEMP_FILE" ]; then
-    MQTT_MSG=$(cat "$TEMP_FILE" | head -1)
-    dm_success "MQTT message received: $MQTT_MSG"
-    
-    # Verify content
-    TEMP_VALUE=$(echo "$MQTT_MSG" | jq -r '.temperature // empty' 2>/dev/null)
-    if [ "$TEMP_VALUE" = "22.5" ]; then
-        dm_success "Temperature value verified in MQTT message"
-    else
-        dm_warn "Temperature value not as expected: $TEMP_VALUE"
-    fi
-else
-    dm_warn "No MQTT message received (may still be pending)"
+    MQTT_MSG=$(head -1 "$TEMP_FILE")
+    dm_info "MQTT message received: $MQTT_MSG"
 fi
+_received=false
+[ -n "$MQTT_MSG" ] && _received=true
+dm_assert_eq "Outbound MQTT message received" "true" "$_received"
+
+# Verify transformed content
+TEMP_VALUE=$(echo "$MQTT_MSG" | jq -r '.temperature // empty' 2>/dev/null || echo "")
+dm_assert_eq "Transformed temperature value" "22.5" "$TEMP_VALUE"
 
 # Cleanup
-kill $MQTT_PID 2>/dev/null || true
+kill "$MQTT_PID" 2>/dev/null || true
 rm -f "$TEMP_FILE"
 
 dm_done "Outbound Smart Function"
+dm_print_summary

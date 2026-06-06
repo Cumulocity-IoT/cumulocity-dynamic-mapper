@@ -13,23 +13,13 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/test-harness.sh"
 
-KEEP_ON_FAILURE=false
 EXT_ID="sensor-berlin-01"
 MAPPING_ID=""
 DEVICE_ID=""
 
-for arg in "$@"; do
-    case "$arg" in
-        --keep) KEEP_ON_FAILURE=true ;;
-        --cleanup) trap cleanup EXIT ;;
-    esac
-done
+dm_parse_args "$@"
 
 cleanup() {
-    if [ "$KEEP_ON_FAILURE" = "true" ]; then
-        dm_warn "Skipping cleanup (--keep flag set)"
-        return 0
-    fi
     dm_info "Cleaning up test resources ..."
     [ -n "$MAPPING_ID" ] && dm_delete_mapping "$MAPPING_ID" 2>/dev/null || true
     if [ -n "${DEVICE_ID:-}" ]; then
@@ -39,7 +29,7 @@ cleanup() {
     dm_info "Cleanup complete"
 }
 
-trap cleanup EXIT
+dm_register_cleanup cleanup
 
 dm_banner "Test: Smart Function Pattern 02 (Topic-based external ID + sensor type filter)"
 
@@ -48,6 +38,7 @@ dm_validate_tools
 dm_wait_for_service
 dm_require_mqtt_broker
 dm_verify_mqtt_connector_ready
+dm_validate_only_exit
 
 dm_step 2 "Creating sensor device with type filter"
 DEVICE=$(c8y inventory create \
@@ -64,9 +55,12 @@ fi
 dm_success "Sensor device created: $DEVICE_ID"
 
 dm_step 3 "Binding external ID for topic-based lookup"
-dm_api POST "/identity/globalIdentities" \
-    --data "{\"externalId\":\"$EXT_ID\",\"type\":\"c8y_Serial\",\"managedObject\":{\"id\":\"$DEVICE_ID\"}}" \
-    > /dev/null 2>&1 || true
+# Identity is a core C8Y endpoint — bind via the c8y CLI, not dm_api.
+c8y identity create \
+    --name "$EXT_ID" \
+    --type "c8y_Serial" \
+    --device "$DEVICE_ID" \
+    --output json > /dev/null 2>&1 || dm_warn "External ID may already exist: $EXT_ID"
 dm_success "External ID bound: $EXT_ID"
 
 dm_step 4 "Creating mapping with template pattern 02"
@@ -151,18 +145,14 @@ TEST_PAYLOAD=$(jq -cn '{
   }
 }')
 
-echo "$TEST_PAYLOAD" | mosquitto_pub -h broker.hivemq.com -t "testSmartInbound/sensor-berlin-01" -s -q 1
+dm_mqtt_publish "testSmartInbound/sensor-berlin-01" "$TEST_PAYLOAD" 1
 dm_success "Voltage reading published"
 
 dm_step 7 "Waiting for measurement creation"
 sleep 8
 MEASUREMENT=$(dm_get_latest_measurement "$EXT_ID" "c8y_Serial" "c8y_VoltageMeasurement") 2>/dev/null || echo "{}"
 VOLTAGE=$(echo "$MEASUREMENT" | jq -r '.c8y_VoltageMeasurement.U.value // empty')
-
-if [ "$VOLTAGE" = "230.5" ]; then
-    dm_success "Voltage measurement created and verified: $VOLTAGE V"
-else
-    dm_warn "Voltage value not as expected: $VOLTAGE (expected: 230.5)"
-fi
+dm_assert_eq "Voltage measurement value" "230.5" "$VOLTAGE"
 
 dm_done "Inbound Smart Function Pattern 02"
+dm_print_summary

@@ -24,13 +24,15 @@ MAPPING_ID=""
 cleanup() {
     [ -n "$MAPPING_ID" ] && dm_delete_mapping "$MAPPING_ID" 2>/dev/null || true
 }
-trap cleanup EXIT
+dm_parse_args "$@"
+dm_register_cleanup cleanup
 
 # ── Test ───────────────────────────────────────────────────────────────────────
 dm_banner "Mapping CRUD / Tenant Isolation"
 
 dm_step "Waiting for Dynamic Mapper service ..."
 dm_wait_for_service
+dm_validate_only_exit
 
 MAPPING_JSON=$(cat <<EOF
 {

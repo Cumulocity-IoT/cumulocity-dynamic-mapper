@@ -13,13 +13,13 @@
 #
 # Environment:
 #   DM_SERVICE          Base path to dynamic mapper (default /service/dynamic-mapper-service)
-#   MQTT_HOST           MQTT broker host  (default localhost)
+#   MQTT_HOST           MQTT broker host  (default broker.hivemq.com)
 #   MQTT_PORT           MQTT broker port  (default 1883)
 #   MQTT_USER           MQTT username     (optional)
 #   MQTT_PASS           MQTT password     (optional)
 #   MQTT_TLS            Enable TLS for MQTT publish/subscribe (true/false, default false)
 #   MQTT_CAFILE         CA certificate path for MQTT TLS validation (optional)
-#   MQTT_INSECURE       Skip MQTT TLS cert verification (true/false, default false)
+#   MQTT_INSECURE       Skip MQTT TLS cert verification (true/false, default true)
 #   DM_DEFAULT_DISCOVERY_WAIT  Wait for dynamic discovery checks in some tests (default 10)
 #   DM_DEFAULT_STARTUP_WAIT    Wait used by restart/persistence tests (default 60)
 #   DM_DEFAULT_HEALTH_RETRIES  Service health retries in harness (default 24)
@@ -149,7 +149,7 @@ Environment variables:
 
     MQTT_HOST
         MQTT broker host used by test publish/subscribe helpers.
-        Default: localhost
+        Default: broker.hivemq.com
 
     MQTT_PORT
         MQTT broker port used by test publish/subscribe helpers.
@@ -282,16 +282,12 @@ _run_one() {   # <entry-from-TESTS>
     _cleanup_flag="--cleanup"
     if [ "$name" = "test-outbound-group-subscription" ]; then
         # Stateful handoff: test-outbound-group-subscription-removal consumes
-        # the state emitted by this test. Running with --cleanup here deletes
-        # the group/device before the removal test can validate unassign logic.
-        _cleanup_flag=""
+        # the state emitted by this test. Tests now clean up by default, so we
+        # pass --keep here to retain the group/device for the removal test.
+        _cleanup_flag="--keep"
     fi
     set +e
-    if [ -n "$_cleanup_flag" ]; then
-        bash "$script" "$_cleanup_flag"
-    else
-        bash "$script"
-    fi
+    bash "$script" "$_cleanup_flag"
     exit_code=$?
     set -e
 
@@ -358,7 +354,7 @@ _dispatch_args() {
             if [ -n "$script" ]; then
                 _suite_health_check
                 if [ "$arg" = "test-outbound-group-subscription" ] || [ "$arg" = "test-outbound-group-subscription.sh" ]; then
-                    bash "$script"
+                    bash "$script" --keep
                 else
                     bash "$script" --cleanup
                 fi

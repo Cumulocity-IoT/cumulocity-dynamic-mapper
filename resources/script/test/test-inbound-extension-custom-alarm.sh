@@ -13,23 +13,13 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/test-harness.sh"
 
-KEEP_ON_FAILURE=false
 EXT_ID="dmtest-ext-alarm-$(date +%s)"
 MAPPING_ID=""
 DEVICE_ID=""
 
-for arg in "$@"; do
-    case "$arg" in
-        --keep) KEEP_ON_FAILURE=true ;;
-        --cleanup) trap cleanup EXIT ;;
-    esac
-done
+dm_parse_args "$@"
 
 cleanup() {
-    if [ "$KEEP_ON_FAILURE" = "true" ]; then
-        dm_warn "Skipping cleanup (--keep flag set)"
-        return 0
-    fi
     dm_info "Cleaning up test resources ..."
     [ -n "$MAPPING_ID" ] && dm_delete_mapping "$MAPPING_ID" 2>/dev/null || true
     if [ -n "${DEVICE_ID:-}" ]; then
@@ -39,7 +29,7 @@ cleanup() {
     dm_info "Cleanup complete"
 }
 
-trap cleanup EXIT
+dm_register_cleanup cleanup
 
 dm_banner "Test: Inbound Extension Custom Alarm (JSON → Cumulocity Alarm)"
 
@@ -48,6 +38,7 @@ dm_validate_tools
 dm_wait_for_service
 dm_require_mqtt_broker
 dm_verify_mqtt_connector_ready
+dm_validate_only_exit
 
 dm_step 2 "Creating mapping with CustomAlarm extension"
 MAPPING_JSON=$(jq -cn \
@@ -104,38 +95,31 @@ TEST_PAYLOAD=$(jq -cn \
       level: "MAJOR"
     }')
 
-echo "$TEST_PAYLOAD" | mosquitto_pub -h broker.hivemq.com -t "dmtest/ext/alarm/$EXT_ID" -s -q 1
+dm_mqtt_publish "dmtest/ext/alarm/$EXT_ID" "$TEST_PAYLOAD" 1
 dm_success "Alarm event published"
 
 dm_step 6 "Waiting and verifying alarm creation"
-sleep 2
-ALARM=$(dm_api GET "/alarm/alarms?source=$DEVICE_ID&type=c8y_TemperatureAlarm&pageSize=1" 2>/dev/null || echo "{}")
-ALARM_COUNT=$(echo "$ALARM" | jq '.alarms | length')
-
-if [ "$ALARM_COUNT" -ge 1 ]; then
-    dm_success "Alarm created successfully"
-else
-    # Try looking up by external ID
+# The mapper creates the device lazily; resolve it then poll for the alarm.
+ALARM='[]'
+ALARM_COUNT=0
+for _attempt in 1 2 3 4 5; do
     DEVICE_ID=$(dm_lookup_device_by_ext_id "$EXT_ID" "c8y_Serial" | head -1) || true
-    if [ -n "$DEVICE_ID" ]; then
-        ALARM=$(dm_api GET "/alarm/alarms?source=$DEVICE_ID&type=c8y_TemperatureAlarm&pageSize=1" 2>/dev/null || echo "{}")
-        ALARM_COUNT=$(echo "$ALARM" | jq '.alarms | length')
-        dm_success "Alarm found: $ALARM_COUNT alarm(s)"
-    else
-        dm_warn "Could not verify alarm creation"
+    if [ -n "${DEVICE_ID:-}" ]; then
+        # c8y alarms list is a core C8Y endpoint (one JSON object per line) — slurp to count.
+        ALARM=$(c8y alarms list --device "$DEVICE_ID" --type "c8y_TemperatureAlarm" \
+            --pageSize 5 --output json 2>/dev/null || echo '[]')
+        ALARM_COUNT=$(echo "$ALARM" | jq -s 'length')
+        [ "$ALARM_COUNT" -ge 1 ] && break
     fi
-fi
+    sleep 2
+done
+dm_assert_gt "Alarm created" "$ALARM_COUNT" 0
 
 dm_step 7 "Verifying alarm content"
-if [ "$ALARM_COUNT" -ge 1 ]; then
-    ALARM_TEXT=$(echo "$ALARM" | jq -r '.alarms[0].text // empty')
-    ALARM_SEVERITY=$(echo "$ALARM" | jq -r '.alarms[0].severity // empty')
-    
-    if [[ "$ALARM_TEXT" == *"Temperature"* ]]; then
-        dm_success "Alarm text verified: $ALARM_TEXT"
-    else
-        dm_warn "Alarm text not as expected: $ALARM_TEXT"
-    fi
-fi
+ALARM_TEXT=$(echo "$ALARM" | jq -rs '.[0].text // empty')
+_text_match=false
+[[ "$ALARM_TEXT" == *"Temperature"* ]] && _text_match=true
+dm_assert_eq "Alarm text contains 'Temperature' ($ALARM_TEXT)" "true" "$_text_match"
 
 dm_done "Inbound Extension Custom Alarm"
+dm_print_summary

@@ -24,10 +24,16 @@
 #   dm_get_support_esm                  — fetch supportESM from service configuration
 #   dm_wrap_onmessage_code              — append export { onMessage } only when supportESM=true
 #
+# CLI flags / lifecycle
+#   dm_parse_args        "$@"             — parse --cleanup / --keep / --validate-only
+#   dm_register_cleanup  <function>       — run <function> on exit unless --keep
+#   dm_validate_only_exit                 — exit 0 here when --validate-only was passed
+#
 # Assertions  (update _DM_PASS_COUNT / _DM_FAIL_COUNT)
 #   dm_assert_eq      <label> <expected> <actual>
 #   dm_assert_gt      <label> <value>    <than>
 #   dm_assert_eq_zero <label> <value>
+#   dm_assert_measurement_present <label> <ext_id> <ext_id_type> [min] [timeout]
 #   dm_print_summary  — prints pass/fail totals; exits 1 when any failure
 #
 # Devices
@@ -66,7 +72,7 @@
 #   dm_assert_connector_status      <label> <connectorIdentifier> <expected_status>
 #
 # MQTT Publish/Subscribe
-#   dm_mqtt_publish                 <topic> <payload>
+#   dm_mqtt_publish                 <topic> <payload> [qos=0]
 #   dm_mqtt_subscribe_one           <topic> [timeout_secs=10]
 #
 # Environment overrides (set before sourcing or exporting)
@@ -231,6 +237,66 @@ dm_require_connected_connector() {
         exit 0
     fi
     dm_info "Found ${_connected} CONNECTED connector(s) — proceeding."
+}
+
+# ── CLI flag parsing (shared by every test script) ────────────────────────────
+# Tests clean up their data by default. Pass --keep to retain it for debugging,
+# or --validate-only to run setup/validation checks and then exit 0.
+#
+#   --cleanup        Delete created test data on exit (default; accepted for
+#                    backward compatibility).
+#   --keep           Keep created test data on exit (for post-mortem debugging).
+#   --validate-only  Run environment validation only, then exit before mutating.
+#
+# Usage in a test script:
+#   dm_parse_args "$@"
+#   dm_register_cleanup cleanup       # 'cleanup' is a function the script defines
+#   ...
+#   dm_validate_only_exit             # call right after the validation block
+_DM_DO_CLEANUP=true
+_DM_VALIDATE_ONLY=false
+_DM_CLEANUP_FN=""
+
+dm_parse_args() {   # "$@"
+    local _arg
+    for _arg in "$@"; do
+        case "$_arg" in
+            --cleanup)       _DM_DO_CLEANUP=true ;;
+            --keep)          _DM_DO_CLEANUP=false ;;
+            --validate-only) _DM_VALIDATE_ONLY=true ;;
+            "" ) ;;
+            *) dm_warn "Ignoring unknown argument: $_arg" ;;
+        esac
+    done
+}
+
+# Internal: invoked on EXIT. Runs the registered cleanup unless --keep was given.
+_dm_on_exit() {
+    local _rc=$?
+    # Validation-only runs created no data — nothing to clean up or warn about.
+    [ "${_DM_VALIDATE_ONLY}" = "true" ] && return "$_rc"
+    if [ "${_DM_DO_CLEANUP}" = "true" ] && [ -n "${_DM_CLEANUP_FN}" ]; then
+        "$_DM_CLEANUP_FN" || true
+    elif [ -n "${_DM_CLEANUP_FN}" ]; then
+        dm_warn "Skipping cleanup (--keep set) — test data retained."
+    fi
+    return "$_rc"
+}
+
+# Register a cleanup function to run on exit (honours --keep / --cleanup).
+dm_register_cleanup() {   # <function_name>
+    _DM_CLEANUP_FN=$1
+    trap _dm_on_exit EXIT
+}
+
+# Exit early (success) when --validate-only was passed. Call after the
+# validation/setup block and before creating any test data.
+dm_validate_only_exit() {
+    [ "${_DM_VALIDATE_ONLY}" = "true" ] || return 0
+    dm_success "Validation-only run — environment OK, exiting before test data is created."
+    # Skip the registered cleanup: nothing was created yet.
+    _DM_DO_CLEANUP=false
+    exit 0
 }
 
 # ── Device helpers ─────────────────────────────────────────────────────────────
@@ -943,7 +1009,7 @@ dm_setup_and_connect_mqtt_connector() {     # [identifier] [name] [mqtt_host] [m
 
 # ── MQTT helpers ───────────────────────────────────────────────────────────────
 # Environment variables:
-#   MQTT_HOST      (default localhost)
+#   MQTT_HOST      (default broker.hivemq.com)
 #   MQTT_PORT      (default 1883)
 #   MQTT_USER      (optional)
 #   MQTT_PASS      (optional)
@@ -954,7 +1020,7 @@ dm_setup_and_connect_mqtt_connector() {     # [identifier] [name] [mqtt_host] [m
 # Skip the calling test if the MQTT broker is unreachable or mosquitto_pub is
 # not installed.  Call this once, right after dm_wait_for_service.
 dm_require_mqtt_broker() {
-    local _host="${MQTT_HOST:-localhost}" _port="${MQTT_PORT:-1883}"
+    local _host="${MQTT_HOST:-broker.hivemq.com}" _port="${MQTT_PORT:-1883}"
     local _cfg _match_count _matching_ids _statuses _connected_count _first_id _first_match _proto _user
     if ! command -v mosquitto_pub >/dev/null 2>&1; then
         dm_skip "mosquitto_pub not installed — install mosquitto-clients to run MQTT tests."
@@ -1113,22 +1179,22 @@ _dm_mqtt_append_tls_args() {  # <array_name>
     fi
 }
 
-dm_mqtt_publish() {     # <topic> <payload>
-    local _topic=$1 _payload=$2
-    local _host="${MQTT_HOST:-localhost}" _port="${MQTT_PORT:-1883}"
-    local _args=(-h "$_host" -p "$_port" -t "$_topic" -m "$_payload")
+dm_mqtt_publish() {     # <topic> <payload> [qos=0]
+    local _topic=$1 _payload=$2 _qos=${3:-0}
+    local _host="${MQTT_HOST:-broker.hivemq.com}" _port="${MQTT_PORT:-1883}"
+    local _args=(-h "$_host" -p "$_port" -t "$_topic" -m "$_payload" -q "$_qos")
     [ -n "${MQTT_USER:-}" ] && _args+=(-u "$MQTT_USER")
     [ -n "${MQTT_PASS:-}" ] && _args+=(-P "$MQTT_PASS")
     _dm_mqtt_append_tls_args _args
     mosquitto_pub "${_args[@]}"
-    dm_info "Published to $_topic (broker=$_host:$_port)"
+    dm_info "Published to $_topic (broker=$_host:$_port, qos=$_qos)"
 }
 
 # Subscribe and capture at most 1 message with a timeout.
 # Prints the received message to stdout.  Returns 1 on timeout.
 dm_mqtt_subscribe_one() {   # <topic> [timeout_secs=10]
     local _topic=$1 _timeout=${2:-10}
-    local _host="${MQTT_HOST:-localhost}" _port="${MQTT_PORT:-1883}"
+    local _host="${MQTT_HOST:-broker.hivemq.com}" _port="${MQTT_PORT:-1883}"
     local _args=(-h "$_host" -p "$_port" -t "$_topic" -C 1 -W "$_timeout")
     [ -n "${MQTT_USER:-}" ] && _args+=(-u "$MQTT_USER")
     [ -n "${MQTT_PASS:-}" ] && _args+=(-P "$MQTT_PASS")
@@ -1198,6 +1264,39 @@ dm_assert_alarm_count_gt() {    # <label> <device_id> <since_iso8601> <min_count
     local _label=$1 _device=$2 _since=$3 _min=$4 _count
     _count=$(dm_count_alarms_since "$_device" "$_since")
     dm_assert_gt "$_label" "${_count:-0}" "$(( _min - 1 ))"
+}
+
+# Poll until a device (resolved by external id) has at least <min_count>
+# measurements, or until <timeout> seconds elapse. Returns 0 on success, 1 on
+# timeout. Tolerates the device not existing yet (mapper may create it lazily).
+dm_wait_for_measurement_count() {  # <ext_id> <ext_id_type> <min_count> [timeout=30] [interval=2]
+    local _extid=$1 _type=$2 _min=$3 _timeout=${4:-30} _interval=${5:-2}
+    local _elapsed=0 _devid _count
+    while [ "$_elapsed" -lt "$_timeout" ]; do
+        _devid=$(dm_lookup_device_by_ext_id "$_extid" "$_type")
+        if [ -n "$_devid" ]; then
+            _count=$(c8y measurements list --device "$_devid" \
+                --pageSize 200 --output json 2>/dev/null \
+                | jq -s 'length' 2>/dev/null || printf '0')
+            [ "${_count:-0}" -ge "$_min" ] 2>/dev/null && return 0
+        fi
+        sleep "$_interval"
+        _elapsed=$((_elapsed + _interval))
+    done
+    return 1
+}
+
+# Poll for a measurement and record a pass/fail assertion (for use with
+# dm_print_summary). Wraps dm_wait_for_measurement_count.
+dm_assert_measurement_present() {  # <label> <ext_id> <ext_id_type> [min=1] [timeout=30]
+    local _label=$1 _extid=$2 _type=$3 _min=${4:-1} _timeout=${5:-30}
+    if dm_wait_for_measurement_count "$_extid" "$_type" "$_min" "$_timeout"; then
+        _DM_PASS_COUNT=$((_DM_PASS_COUNT + 1))
+        dm_success "[$_label] >= $_min measurement(s) found"
+    else
+        _DM_FAIL_COUNT=$((_DM_FAIL_COUNT + 1))
+        dm_fail "[$_label] no measurement found after ${_timeout}s"
+    fi
 }
 
 dm_get_latest_measurement() {  # <ext_id> <ext_id_type> <measurement_type>

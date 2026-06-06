@@ -36,9 +36,9 @@ cleanup() {
     echo "Cleanup done."
 }
 
-if [ "${1}" = "--cleanup" ]; then
-    trap cleanup EXIT
-fi
+dm_parse_args "$@"
+dm_register_cleanup cleanup
+dm_validate_only_exit
 
 dm_banner "Outbound Dynamic Subscription by Device Type"
 
