@@ -34,21 +34,24 @@ dm_validate_only_exit
 
 if [ -z "$CONNECTOR_ID" ]; then
     dm_step "DM_CONNECTOR_ID not set — discovering first MQTT connector ..."
-    CONNECTORS_JSON=$(dm_api GET /monitoring/status/connectors)
-    # Prefer connectors with "MQTT" in type or name
-    CONNECTOR_ID=$(printf '%s' "$CONNECTORS_JSON" \
-        | jq -r '[.[] | select(
-                (.connectorType // "" | ascii_upcase | contains("MQTT")) or
-                (.name // "" | ascii_upcase | contains("MQTT"))
-              )][0] | .connectorIdentifier // .name // empty' 2>/dev/null || echo "")
-    # Fall back to first connector of any type
+    # /monitoring/status/connectors may be a JSON array, a single status object,
+    # or a map keyed by connector id — and c8y may emit it as NDJSON. Slurp (-s)
+    # and normalize to a flat array of status objects before selecting.
+    CONNECTORS=$(dm_api GET /monitoring/status/connectors | jq -s '
+        [ .[]
+          | if type == "array" then .[]
+            elif (type == "object" and (.connectorIdentifier // "") != "" and (.status // "") != "") then .
+            elif type == "object" then (to_entries[] | .value)
+            else empty end ]' 2>/dev/null || echo '[]')
+    # Prefer a connector whose type/name looks like MQTT; else take the first one.
+    CONNECTOR_ID=$(printf '%s' "$CONNECTORS" | jq -r '
+        ( [ .[] | select(
+              ((.connectorType // "") | ascii_upcase | contains("MQTT"))
+              or ((.name // .connectorName // "") | ascii_upcase | contains("MQTT"))
+          ) ][0] // .[0] )
+        | (.connectorIdentifier // .name // .connectorName // empty)' 2>/dev/null || echo "")
     if [ -z "$CONNECTOR_ID" ]; then
-        CONNECTOR_ID=$(printf '%s' "$CONNECTORS_JSON" \
-            | jq -r 'first | .connectorIdentifier // .name // empty' 2>/dev/null || echo "")
-    fi
-    if [ -z "$CONNECTOR_ID" ]; then
-        dm_warn "No connectors found — cannot run reconnect test"
-        exit 0
+        dm_skip_exit "No connectors found — cannot run reconnect test."
     fi
     dm_info "Using connector: $CONNECTOR_ID"
 fi

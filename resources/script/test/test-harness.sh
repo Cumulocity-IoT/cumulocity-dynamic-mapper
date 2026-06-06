@@ -88,6 +88,11 @@ _DM_HARNESS_LOADED=1
 
 # ── Configuration ──────────────────────────────────────────────────────────────
 DM_SERVICE="${DM_SERVICE:-/service/dynamic-mapper-service}"
+
+# Reserved exit code a test uses to signal "skipped" (prerequisite absent) rather
+# than passed or failed. run-tests.sh classifies this code as SKIP. Keep in sync
+# with DM_SKIP_EXIT_CODE in run-tests.sh.
+DM_EXIT_SKIP="${DM_EXIT_SKIP:-42}"
 DM_DEFAULT_DISCOVERY_WAIT="${DM_DEFAULT_DISCOVERY_WAIT:-10}"
 DM_DEFAULT_STARTUP_WAIT="${DM_DEFAULT_STARTUP_WAIT:-60}"
 DM_DEFAULT_HEALTH_RETRIES="${DM_DEFAULT_HEALTH_RETRIES:-24}"
@@ -220,6 +225,14 @@ dm_skip() {     # <reason>
     printf "${_C_YELLOW}SKIP: %s${_C_RESET}\n" "$*" >&2
 }
 
+# Print a SKIP reason and exit the test with the reserved skip code so the runner
+# tallies it as SKIP (not PASS). Use for "prerequisite absent" bail-outs.
+dm_skip_exit() {   # <reason...>
+    local _r
+    for _r in "$@"; do dm_skip "$_r"; done
+    exit "$DM_EXIT_SKIP"
+}
+
 # Require at least one CONNECTED connector; skip this test if none are found.
 # Call immediately after dm_wait_for_service in outbound tests.
 # When no connector is connected the outbound dispatcher drops every
@@ -232,9 +245,8 @@ dm_require_connected_connector() {
         | jq '[.[] | select(.status == "CONNECTED")] | length' 2>/dev/null \
         || printf '0')
     if [ "${_connected:-0}" -lt 1 ]; then
-        dm_skip "No connector is CONNECTED — outbound tests require a connected broker connector."
-        dm_skip "Configure and connect an MQTT (or other) connector, then re-run."
-        exit 0
+        dm_skip_exit "No connector is CONNECTED — outbound tests require a connected broker connector." \
+                     "Configure and connect an MQTT (or other) connector, then re-run."
     fi
     dm_info "Found ${_connected} CONNECTED connector(s) — proceeding."
 }
@@ -733,9 +745,8 @@ dm_require_extension() {   # <eventName_or_fqn> [direction]
     _entry=$(dm_resolve_extension_entry "$_needle" "$_direction" 2>/dev/null || true)
     _evt=$(printf '%s' "$_entry" | jq -r '.eventName // empty' 2>/dev/null || printf '')
     if [ -z "$_entry" ] || [ -z "$_evt" ]; then
-        dm_skip "Processor extension '${_needle}'${_direction:+ (${_direction})} is not registered on this tenant."
-        dm_skip "Upload the dynamic-mapper-extension JAR (see EXTENSIONS.md), then re-run."
-        exit 0
+        dm_skip_exit "Processor extension '${_needle}'${_direction:+ (${_direction})} is not registered on this tenant." \
+                     "Upload the dynamic-mapper-extension JAR (see EXTENSIONS.md), then re-run."
     fi
     _DM_RESOLVED_EXTENSION="$_entry"
     dm_info "Resolved extension '${_needle}' -> $(printf '%s' "$_entry" | jq -r '.extensionName + ":" + .eventName' 2>/dev/null || printf '%s' "$_needle")"
@@ -1044,14 +1055,12 @@ dm_require_mqtt_broker() {
     local _host="${MQTT_HOST:-broker.hivemq.com}" _port="${MQTT_PORT:-1883}"
     local _cfg _match_count _matching_ids _statuses _connected_count _first_id _first_match _proto _user
     if ! command -v mosquitto_pub >/dev/null 2>&1; then
-        dm_skip "mosquitto_pub not installed — install mosquitto-clients to run MQTT tests."
-        exit 0
+        dm_skip_exit "mosquitto_pub not installed — install mosquitto-clients to run MQTT tests."
     fi
     # Quick TCP reachability check (3-second timeout)
     if ! nc -z -w 3 "$_host" "$_port" >/dev/null 2>&1; then
-        dm_skip "MQTT broker not reachable at ${_host}:${_port}."
-        dm_skip "Set MQTT_HOST / MQTT_PORT / MQTT_USER / MQTT_PASS and retry."
-        exit 0
+        dm_skip_exit "MQTT broker not reachable at ${_host}:${_port}." \
+                     "Set MQTT_HOST / MQTT_PORT / MQTT_USER / MQTT_PASS and retry."
     fi
 
     # Ensure the selected publish target matches at least one enabled MQTT
@@ -1066,9 +1075,8 @@ dm_require_mqtt_broker() {
           | select((.properties.mqttPort | tostring) == $port)
         ] | length' 2>/dev/null || printf '0')
     if [ "${_match_count:-0}" -lt 1 ]; then
-        dm_skip "No enabled MQTT connector is configured for ${_host}:${_port}."
-        dm_skip "Update MQTT_HOST/MQTT_PORT to match the mapper connector configuration (or update connector config)."
-        exit 0
+        dm_skip_exit "No enabled MQTT connector is configured for ${_host}:${_port}." \
+                     "Update MQTT_HOST/MQTT_PORT to match the mapper connector configuration (or update connector config)."
     fi
 
     _matching_ids=$(printf '%s' "$_cfg" | jq -r --arg host "$_host" --arg port "$_port" '
@@ -1175,9 +1183,8 @@ dm_require_mqtt_broker() {
                   | { id: $id, status: (($statuses[] | select((.connectorIdentifier // "") == $id) | .status) // "UNKNOWN") }
                 ]' 2>/dev/null || printf '[]')
         dm_warn "Matching connector statuses for ${_host}:${_port}: ${_matching_statuses}"
-        dm_skip "No matching MQTT connector for ${_host}:${_port} is CONNECTED."
-        dm_skip "Connect the matching connector in Dynamic Mapper and retry."
-        exit 0
+        dm_skip_exit "No matching MQTT connector for ${_host}:${_port} is CONNECTED." \
+                     "Connect the matching connector in Dynamic Mapper and retry."
     fi
 
     dm_info "MQTT broker reachable at ${_host}:${_port} — proceeding."

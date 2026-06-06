@@ -13,6 +13,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/test-harness.sh"
 
+SUBSCRIPTION_NAME="DynamicMapperStaticDeviceSubscription"
 EXT_ID="dmtest-sf-out-$(date +%s)"
 MAPPING_ID=""
 DEVICE_ID=""
@@ -23,6 +24,7 @@ dm_parse_args "$@"
 cleanup() {
     dm_info "Cleaning up test resources ..."
     [ -n "$MAPPING_ID" ] && dm_delete_mapping "$MAPPING_ID" 2>/dev/null || true
+    [ -n "${DEVICE_ID:-}" ] && dm_delete_static_subscription "$DEVICE_ID" "$SUBSCRIPTION_NAME" 2>/dev/null || true
     if [ -n "${DEVICE_ID:-}" ]; then
         c8y inventory delete --id "$DEVICE_ID" 2>/dev/null || true
     fi
@@ -63,6 +65,12 @@ c8y identity create \
     --device "$DEVICE_ID" \
     --output json >/dev/null 2>&1 || dm_warn "External ID may already exist: $EXT_ID"
 dm_success "External ID bound: $EXT_ID"
+
+dm_step "Creating static subscription for device"
+# Without a notification subscription the outbound dispatcher never receives the
+# device's measurement, so the Smart Function never runs and nothing is published.
+dm_create_static_subscription_must "MEASUREMENT" "$DEVICE_ID" "$DEVICE_NAME"
+dm_wait 5 "for subscription propagation"
 
 dm_step 4 "Creating outbound Smart Function mapping"
 SF_CODE=$(cat <<'JSCODE'
@@ -123,6 +131,9 @@ dm_deploy_mapping_to_mqtt_connector "$MAPPING_ID"
 dm_activate_mapping "$MAPPING_ID"
 dm_success "Mapping deployed and activated"
 
+BASELINE=$(dm_mapping_received_count "$MAPPING_ID")
+dm_info "Baseline messagesReceived=$BASELINE"
+
 dm_step 6 "Subscribing to MQTT output topic"
 MQTT_TOPIC="measurements/outbound/$EXT_ID"
 dm_info "Subscribing to: $MQTT_TOPIC"
@@ -157,9 +168,14 @@ printf '%s' "$MEASUREMENT" | c8y measurements create --template "input.value" \
 dm_success "Test measurement created"
 
 dm_step 8 "Waiting for MQTT message"
-sleep 3
+# Block until the background subscriber gets a message (it exits on the first
+# one via -C 1) or its 15s window elapses — don't read the temp file early.
+wait "$MQTT_PID" 2>/dev/null || true
 
-# Check if message was received
+# Reliable signal: confirm the outbound mapping actually processed the measurement.
+dm_assert_mapping_received_gt "Outbound mapping processed measurement" "$MAPPING_ID" "$BASELINE"
+
+# Check if the transformed message was published to the broker.
 MQTT_MSG=""
 if [ -f "$TEMP_FILE" ] && [ -s "$TEMP_FILE" ]; then
     MQTT_MSG=$(head -1 "$TEMP_FILE")

@@ -35,6 +35,10 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # Run c8y CLI non-interactively: suppress all confirmation prompts and spinners.
 export C8Y_SETTINGS_CI=true
 
+# Reserved exit code a test uses to signal "skipped" (prerequisite absent).
+# Kept in sync with DM_EXIT_SKIP in test-harness.sh.
+DM_SKIP_EXIT_CODE=42
+
 # ── ANSI colours ───────────────────────────────────────────────────────────────
 if [ -t 1 ]; then
     C_GREEN=$'\033[0;32m'
@@ -270,6 +274,7 @@ _SUITE_PASS=0
 _SUITE_FAIL=0
 _SUITE_SKIP=0
 declare -a _FAILED_TESTS=()
+declare -a _SKIPPED_TESTS=()
 
 _run_one() {   # <entry-from-TESTS>
     local name script exit_code _cleanup_flag
@@ -300,6 +305,10 @@ _run_one() {   # <entry-from-TESTS>
     if [ "$exit_code" -eq 0 ]; then
         printf "${C_GREEN}PASS${C_RESET}  %s\n" "$name"
         _SUITE_PASS=$((_SUITE_PASS + 1))
+    elif [ "$exit_code" -eq "$DM_SKIP_EXIT_CODE" ]; then
+        printf "${C_YELLOW}SKIP${C_RESET}  %s  (prerequisite absent)\n" "$name"
+        _SUITE_SKIP=$((_SUITE_SKIP + 1))
+        _SKIPPED_TESTS+=("$name")
     else
         printf "${C_RED}FAIL${C_RESET}  %s  (exit %d)\n" "$name" "$exit_code"
         _SUITE_FAIL=$((_SUITE_FAIL + 1))
@@ -327,11 +336,19 @@ _print_suite_summary() {
     local total=$((_SUITE_PASS + _SUITE_FAIL + _SUITE_SKIP))
     echo ""
     printf "${C_BOLD}%s${C_RESET}\n" "══════════════════════════════════════════════"
-    printf "${C_BOLD} Suite results: %d/%d passed" "$_SUITE_PASS" "$total"
-    [ "$_SUITE_SKIP" -gt 0 ] && printf ", %d skipped" "$_SUITE_SKIP"
-    [ "$_SUITE_FAIL" -gt 0 ] && printf "${C_RED}, %d FAILED${C_RESET}" "$_SUITE_FAIL" \
-        || printf "${C_GREEN} ✓${C_RESET}"
+    printf "${C_BOLD} Suite results: %d passed" "$_SUITE_PASS"
+    [ "$_SUITE_SKIP" -gt 0 ] && printf "${C_YELLOW}, %d skipped${C_RESET}${C_BOLD}" "$_SUITE_SKIP"
+    [ "$_SUITE_FAIL" -gt 0 ] && printf "${C_RED}, %d FAILED${C_RESET}${C_BOLD}" "$_SUITE_FAIL"
+    printf " (of %d)" "$total"
+    [ "$_SUITE_FAIL" -eq 0 ] && printf "${C_GREEN} ✓${C_RESET}"
     printf "${C_BOLD}\n%s${C_RESET}\n" "══════════════════════════════════════════════"
+    if [ "${#_SKIPPED_TESTS[@]}" -gt 0 ]; then
+        printf "${C_YELLOW}Skipped tests (prerequisite absent):${C_RESET}\n"
+        for t in "${_SKIPPED_TESTS[@]}"; do
+            printf "  ${C_YELLOW}–${C_RESET}  %s\n" "$t"
+        done
+        echo ""
+    fi
     if [ "${#_FAILED_TESTS[@]}" -gt 0 ]; then
         printf "${C_RED}Failed tests:${C_RESET}\n"
         for t in "${_FAILED_TESTS[@]}"; do
@@ -353,18 +370,15 @@ _dispatch_args() {
         s|smartfunc|smartfunction) _run_category "smartfunction" ;;
         r|reliability) _run_category "reliability" ;;
         *)
-            # Numeric index(es): already handled by caller
-            # Script name (with or without .sh)
+            # Numeric index(es): already handled by caller.
+            # Script name (with or without .sh): run via _run_one so PASS/SKIP/FAIL
+            # classification, the group-subscription --keep handoff, and the suite
+            # tallies all apply uniformly.
             local script
             script=$(_resolve_script "$arg")
             if [ -n "$script" ]; then
-                _suite_health_check
-                if [ "$arg" = "test-outbound-group-subscription" ] || [ "$arg" = "test-outbound-group-subscription.sh" ]; then
-                    bash "$script" --keep
-                else
-                    bash "$script" --cleanup
-                fi
-                return $?
+                _run_one "single|${arg%.sh}|"
+                return 0
             fi
             printf "${C_RED}Unknown argument: %s${C_RESET}\n" "$arg"
             exit 1
