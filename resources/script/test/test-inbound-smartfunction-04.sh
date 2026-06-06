@@ -47,9 +47,10 @@ function onMessage(msg, context) {
     var externalId = payload.externalId;
     var payloadType = payload.payloadType;
     
-    // Get or initialize deduplication cache
+    // Get or initialize deduplication state (persisted across invocations
+    // via the FlowStateStore). getState returns undefined for an unset key.
     var cacheKey = "lastError_" + externalId;
-    var lastError = context.getCache(cacheKey);
+    var lastError = context.getState(cacheKey);
     
     if (payloadType === "telemetry") {
         // Process telemetry data
@@ -75,7 +76,7 @@ function onMessage(msg, context) {
         var currentError = payload.logMessage;
         if (lastError !== currentError) {
             // New error or different from last - create alarm
-            context.setCache(cacheKey, currentError);
+            context.setState(cacheKey, currentError);
             
             var alarm = {
                 cumulocityType: "alarm",
@@ -167,6 +168,11 @@ ERROR1=$(jq -cn \
 
 dm_mqtt_publish "flowState/$EXT_ID" "$ERROR1" 1
 dm_success "First error published"
+
+# Let the first error be processed and its dedup state persisted before sending
+# the duplicate — otherwise the second message may load state before the first
+# writes it back, and deduplication can't take effect.
+dm_wait 5 "for first error to be processed and dedup state persisted"
 
 dm_step 6 "Publishing duplicate error (should be suppressed)"
 ERROR2=$(jq -cn \

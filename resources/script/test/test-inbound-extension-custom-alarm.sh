@@ -39,12 +39,14 @@ dm_wait_for_service
 dm_require_mqtt_broker
 dm_verify_mqtt_connector_ready
 dm_validate_only_exit
+dm_require_extension "CustomAlarm" "INBOUND"
 
 dm_step 2 "Creating mapping with CustomAlarm extension"
 MAPPING_JSON=$(jq -cn \
     --arg name       "test-ext-alarm-$$" \
     --arg identifier "ext-alarm-$$" \
     --arg extId      "$EXT_ID" \
+    --argjson extension "$_DM_RESOLVED_EXTENSION" \
     '{
       name: $name,
       identifier: $identifier,
@@ -52,15 +54,9 @@ MAPPING_JSON=$(jq -cn \
       mappingTopicSample: ("dmtest/ext/alarm/" + $extId),
       targetAPI: "ALARM",
       direction: "INBOUND",
-      mappingType: "JSON",
+      mappingType: "ANY_PAYLOAD",
       transformationType: "EXTENSION_JAVA",
-      extension: {
-        extensionName: "custom-alarm-extension",
-        eventName: "CustomAlarm",
-        fqnClassName: "dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionCustomAlarm",
-                extensionType: "EXTENSION_INBOUND",
-        direction: "INBOUND"
-      },
+      extension: $extension,
       sourceTemplate: "{}",
       targetTemplate: "{}",
       active: false,
@@ -82,10 +78,7 @@ dm_activate_mapping "$MAPPING_ID"
 dm_assert_mqtt_topics_active
 dm_success "Mapping deployed and activated"
 
-dm_step 4 "Recording baseline for verification"
-BASELINE=$(date +%s%N | cut -b1-13)
-
-dm_step 5 "Publishing alarm event via MQTT"
+dm_step 4 "Publishing alarm event via MQTT"
 TEST_PAYLOAD=$(jq -cn \
     --arg extId "$EXT_ID" \
     '{
@@ -98,25 +91,26 @@ TEST_PAYLOAD=$(jq -cn \
 dm_mqtt_publish "dmtest/ext/alarm/$EXT_ID" "$TEST_PAYLOAD" 1
 dm_success "Alarm event published"
 
-dm_step 6 "Waiting and verifying alarm creation"
+dm_step 5 "Waiting and verifying alarm creation"
 # The mapper creates the device lazily; resolve it then poll for the alarm.
-ALARM='[]'
 ALARM_COUNT=0
-for _attempt in 1 2 3 4 5; do
+ALARM_JSON='[]'
+for _attempt in 1 2 3 4 5 6; do
     DEVICE_ID=$(dm_lookup_device_by_ext_id "$EXT_ID" "c8y_Serial" | head -1) || true
     if [ -n "${DEVICE_ID:-}" ]; then
-        # c8y alarms list is a core C8Y endpoint (one JSON object per line) — slurp to count.
-        ALARM=$(c8y alarms list --device "$DEVICE_ID" --type "c8y_TemperatureAlarm" \
-            --pageSize 5 --output json 2>/dev/null || echo '[]')
-        ALARM_COUNT=$(echo "$ALARM" | jq -s 'length')
-        [ "$ALARM_COUNT" -ge 1 ] && break
+        # c8y alarms list emits NDJSON (one object per line) — slurp into a proper
+        # JSON array so empty results don't break downstream jq indexing.
+        ALARM_JSON=$(c8y alarms list --device "$DEVICE_ID" --type "c8y_TemperatureAlarm" \
+            --pageSize 5 --output json 2>/dev/null | jq -s '.' 2>/dev/null || echo '[]')
+        ALARM_COUNT=$(echo "$ALARM_JSON" | jq 'length')
+        [ "${ALARM_COUNT:-0}" -ge 1 ] && break
     fi
-    sleep 2
+    sleep 3
 done
-dm_assert_gt "Alarm created" "$ALARM_COUNT" 0
+dm_assert_gt "Alarm created" "${ALARM_COUNT:-0}" 0
 
-dm_step 7 "Verifying alarm content"
-ALARM_TEXT=$(echo "$ALARM" | jq -rs '.[0].text // empty')
+dm_step 6 "Verifying alarm content"
+ALARM_TEXT=$(echo "$ALARM_JSON" | jq -r '.[0].text // empty')
 _text_match=false
 [[ "$ALARM_TEXT" == *"Temperature"* ]] && _text_match=true
 dm_assert_eq "Alarm text contains 'Temperature' ($ALARM_TEXT)" "true" "$_text_match"

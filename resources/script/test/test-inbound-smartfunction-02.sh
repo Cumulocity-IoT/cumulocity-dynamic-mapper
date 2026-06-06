@@ -13,7 +13,10 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/test-harness.sh"
 
-EXT_ID="sensor-berlin-01"
+# Unique per run so a stale c8y_Serial identity binding from a previous run
+# can't shadow this run's device. The SF derives the external id from the last
+# topic level, so the publish topic must use the same value.
+EXT_ID="sensor-berlin-01-$(date +%s)"
 MAPPING_ID=""
 DEVICE_ID=""
 
@@ -104,11 +107,12 @@ MAPPING_JSON=$(jq -cn \
     --arg name         "test-sf-02-$$" \
     --arg identifier   "sf-02-$$" \
     --arg code         "$SF_CODE_B64" \
+    --arg extId        "$EXT_ID" \
     '{
       name: $name,
       identifier: $identifier,
       mappingTopic: "testSmartInbound/+",
-      mappingTopicSample: "testSmartInbound/sensor-berlin-01",
+      mappingTopicSample: ("testSmartInbound/" + $extId),
       targetAPI: "MEASUREMENT",
       direction: "INBOUND",
       mappingType: "JSON",
@@ -145,13 +149,32 @@ TEST_PAYLOAD=$(jq -cn '{
   }
 }')
 
-dm_mqtt_publish "testSmartInbound/sensor-berlin-01" "$TEST_PAYLOAD" 1
+dm_mqtt_publish "testSmartInbound/$EXT_ID" "$TEST_PAYLOAD" 1
 dm_success "Voltage reading published"
 
 dm_step 7 "Waiting for measurement creation"
-sleep 8
-MEASUREMENT=$(dm_get_latest_measurement "$EXT_ID" "c8y_Serial" "c8y_VoltageMeasurement") 2>/dev/null || echo "{}"
-VOLTAGE=$(echo "$MEASUREMENT" | jq -r '.c8y_VoltageMeasurement.U.value // empty')
+RESOLVED_DEVICE_ID=$(dm_lookup_device_by_ext_id "$EXT_ID" "c8y_Serial")
+dm_info "Resolved device for $EXT_ID: ${RESOLVED_DEVICE_ID:-<none>}"
+
+# Processing + C8Y indexing can lag a few seconds after publish — and the first
+# message after a connector reconnect is especially slow — so poll rather than
+# reading once.
+VOLTAGE=""
+for _i in 1 2 3 4 5 6 7 8; do
+    MEASUREMENT=$(dm_get_latest_measurement "$EXT_ID" "c8y_Serial" "c8y_VoltageMeasurement")
+    VOLTAGE=$(echo "$MEASUREMENT" | jq -r '.c8y_VoltageMeasurement.U.value // empty')
+    [ -n "$VOLTAGE" ] && break
+    sleep 3
+done
+
+if [ -z "$VOLTAGE" ]; then
+    dm_warn "No c8y_VoltageMeasurement found for $EXT_ID (device=${RESOLVED_DEVICE_ID:-<none>})."
+    if [ -n "${RESOLVED_DEVICE_ID:-}" ]; then
+        dm_warn "Recent measurements for device ${RESOLVED_DEVICE_ID}:"
+        c8y measurements list --device "$RESOLVED_DEVICE_ID" \
+            --pageSize 5 --output json 2>/dev/null | jq -s '[.[] | {time, type}]' || true
+    fi
+fi
 dm_assert_eq "Voltage measurement value" "230.5" "$VOLTAGE"
 
 dm_done "Inbound Smart Function Pattern 02"

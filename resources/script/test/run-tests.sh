@@ -4,10 +4,12 @@
 #
 # Usage:
 #   ./run-tests.sh                   # interactive menu
-#   ./run-tests.sh all               # run every test
-#   ./run-tests.sh inbound           # all inbound tests
-#   ./run-tests.sh outbound          # all outbound + subscription tests
-#   ./run-tests.sh reliability       # reliability tests
+#   ./run-tests.sh all   (or a)      # run every test
+#   ./run-tests.sh inbound     (i)   # all inbound tests
+#   ./run-tests.sh outbound    (o)   # all outbound + subscription tests
+#   ./run-tests.sh extension   (e)   # all extension tests
+#   ./run-tests.sh smartfunc   (s)   # all Smart Function pattern tests
+#   ./run-tests.sh reliability (r)   # reliability tests
 #   ./run-tests.sh <script-name>     # single test, e.g. test-inbound-json-default
 #   ./run-tests.sh <n> [n2 ...]      # one or more menu numbers
 #
@@ -134,13 +136,17 @@ Dynamic Mapper integration test runner
 
 Usage:
     ./run-tests.sh                   Interactive menu
-    ./run-tests.sh all               Run every test
-    ./run-tests.sh inbound           Run all inbound tests
-    ./run-tests.sh outbound          Run all outbound tests
-    ./run-tests.sh reliability       Run reliability tests
+    ./run-tests.sh all   | a         Run every test
+    ./run-tests.sh inbound | i       Run all inbound tests
+    ./run-tests.sh outbound | o      Run all outbound tests
+    ./run-tests.sh extension | e     Run all extension tests
+    ./run-tests.sh smartfunc | s     Run all Smart Function pattern tests
+    ./run-tests.sh reliability | r   Run reliability tests
     ./run-tests.sh <script-name>     Run one script (with or without .sh)
     ./run-tests.sh <n> [n2 ...]      Run one or more menu indices
     ./run-tests.sh --help            Show this help
+
+Category shortcuts (single letters a/i/o/e/s/r) match the interactive menu.
 
 Environment variables:
     DM_SERVICE
@@ -340,12 +346,12 @@ _dispatch_args() {
     local arg="$1"
     case "$arg" in
         -h|--help|help) _print_help ; exit 0 ;;
-        all)         _run_all ;;
-        inbound)     _run_category "inbound" ;;
-        outbound)    _run_category "outbound" ;;
-        extension)   _run_category "extension" ;;
-        smartfunc|smartfunction) _run_category "smartfunction" ;;
-        reliability) _run_category "reliability" ;;
+        a|all)         _run_all ;;
+        i|inbound)     _run_category "inbound" ;;
+        o|outbound)    _run_category "outbound" ;;
+        e|extension)   _run_category "extension" ;;
+        s|smartfunc|smartfunction) _run_category "smartfunction" ;;
+        r|reliability) _run_category "reliability" ;;
         *)
             # Numeric index(es): already handled by caller
             # Script name (with or without .sh)

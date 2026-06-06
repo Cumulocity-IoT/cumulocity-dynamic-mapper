@@ -42,6 +42,7 @@ dm_wait_for_service
 dm_require_mqtt_broker
 dm_verify_mqtt_connector_ready
 dm_validate_only_exit
+dm_require_extension "AlarmToSparkplugB" "OUTBOUND"
 
 dm_step 2 "Creating test device"
 DEVICE=$(c8y inventory create \
@@ -69,6 +70,7 @@ MAPPING_JSON=$(jq -cn \
     --arg name         "test-sparkplugb-alarm-$$" \
     --arg identifier   "sparkplug-alarm-$$" \
     --arg externalId   "$EXT_ID" \
+    --argjson extension "$_DM_RESOLVED_EXTENSION" \
     '{
       name: $name,
       identifier: $identifier,
@@ -77,13 +79,7 @@ MAPPING_JSON=$(jq -cn \
       mappingType: "PROTOBUF_INTERNAL",
       transformationType: "EXTENSION_JAVA",
       filterMapping: "true",
-      extension: {
-        extensionName: "alarm-to-sparkplugb-extension",
-        eventName: "AlarmToSparkplugB",
-        fqnClassName: "dynamic.mapper.processor.extension.external.outbound.ProcessorExtensionAlarmToSparkplugB",
-                extensionType: "EXTENSION_OUTBOUND",
-        direction: "OUTBOUND"
-      },
+      extension: $extension,
             sourceTemplate: "{}",
             targetTemplate: "{}",
       active: false,

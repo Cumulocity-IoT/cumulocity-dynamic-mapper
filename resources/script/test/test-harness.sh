@@ -720,6 +720,27 @@ dm_resolve_extension_entry() {   # <processor_extension_name_or_fqn> [direction]
     [ -n "$_entry" ] && printf '%s\n' "$_entry"
 }
 
+# Require a processor extension to be registered on the tenant, resolving it by
+# eventName/fqn (NOT by a hardcoded extensionName — that is assigned at upload
+# time and is environment-specific). On success stores the resolved entry in
+# _DM_RESOLVED_EXTENSION; build the mapping's `extension` field from it via:
+#     jq -cn --argjson extension "$_DM_RESOLVED_EXTENSION" '{ ..., extension: $extension }'
+# On absence the test is SKIPPED (exit 0) with guidance — these tests need the
+# dynamic-mapper-extension JAR uploaded to the tenant.
+_DM_RESOLVED_EXTENSION=""
+dm_require_extension() {   # <eventName_or_fqn> [direction]
+    local _needle=$1 _direction=${2:-} _entry _evt
+    _entry=$(dm_resolve_extension_entry "$_needle" "$_direction" 2>/dev/null || true)
+    _evt=$(printf '%s' "$_entry" | jq -r '.eventName // empty' 2>/dev/null || printf '')
+    if [ -z "$_entry" ] || [ -z "$_evt" ]; then
+        dm_skip "Processor extension '${_needle}'${_direction:+ (${_direction})} is not registered on this tenant."
+        dm_skip "Upload the dynamic-mapper-extension JAR (see EXTENSIONS.md), then re-run."
+        exit 0
+    fi
+    _DM_RESOLVED_EXTENSION="$_entry"
+    dm_info "Resolved extension '${_needle}' -> $(printf '%s' "$_entry" | jq -r '.extensionName + ":" + .eventName' 2>/dev/null || printf '%s' "$_needle")"
+}
+
 # Normalize legacy mapping payloads used by tests to current backend contract.
 dm_normalize_mapping_payload() {   # <json_body>
     local _raw=${1:-}
@@ -1305,9 +1326,11 @@ dm_get_latest_measurement() {  # <ext_id> <ext_id_type> <measurement_type>
     local _device_id
     _device_id=$(dm_lookup_device_by_ext_id "$_extid" "$_extidtype")
     [ -z "$_device_id" ] && { printf '{}'; return 0; }
-    c8y measurement list \
+    # c8y --output json emits NDJSON (one object per line), not a {data:[...]}
+    # wrapper — slurp with jq -s and take the newest by time.
+    c8y measurements list \
         --device "$_device_id" \
         --type "$_meastype" \
-        --pageSize 1 --output json 2>/dev/null \
-        | jq '.data[0] // {}' 2>/dev/null || printf '{}'
+        --pageSize 100 --output json 2>/dev/null \
+        | jq -s 'sort_by(.time) | last // {}' 2>/dev/null || printf '{}'
 }

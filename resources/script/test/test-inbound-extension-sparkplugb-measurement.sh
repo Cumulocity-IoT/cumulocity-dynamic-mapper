@@ -39,12 +39,14 @@ dm_wait_for_service
 dm_require_mqtt_broker
 dm_verify_mqtt_connector_ready
 dm_validate_only_exit
+dm_require_extension "SparkplugBMeasurement" "INBOUND"
 
 dm_step 2 "Creating mapping with Sparkplug B extension"
 MAPPING_JSON=$(jq -cn \
     --arg name       "test-sparkplugb-measure-$$" \
     --arg identifier "sparkplugb-measure-$$" \
     --arg extId      "$EXT_ID" \
+    --argjson extension "$_DM_RESOLVED_EXTENSION" \
     '{
       name: $name,
       identifier: $identifier,
@@ -54,13 +56,7 @@ MAPPING_JSON=$(jq -cn \
       direction: "INBOUND",
       mappingType: "PROTOBUF_INTERNAL",
       transformationType: "EXTENSION_JAVA",
-      extension: {
-        extensionName: "sparkplugb-measurement-extension",
-        eventName: "SparkplugBMeasurement",
-        fqnClassName: "dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionSparkplugBMeasurement",
-        extensionType: "EXTENSION_INBOUND",
-        direction: "INBOUND"
-      },
+      extension: $extension,
       sourceTemplate: "{}",
       targetTemplate: "{}",
       active: false,
