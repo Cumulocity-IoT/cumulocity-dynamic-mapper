@@ -177,8 +177,8 @@
               </div>
               <!-- Payload (truncated) -->
               <div class="col-md-4" style="padding-right: 16px; overflow: hidden;">
-                @if (expandedIndex !== i) {
-                  <span class="text-monospace text-12 cursor-pointer" (click)="toggleExpand(i, msg.payload)"
+                @if (expandedSeqNo !== msg.seqNo) {
+                  <span class="text-monospace text-12 cursor-pointer" (click)="toggleExpand(msg.seqNo, msg.payload)"
                     title="{{ 'Click to expand' | translate }}" [attr.data-cy]="'dm-msg-explorer-expand-' + msg.seqNo">
                     {{ truncate(msg.payload) }}
                     @if (msg.payload.length > 120) {
@@ -196,7 +196,7 @@
                   } @else {
                     <pre class="text-12 m-0">{{ expandedPayload?.raw }}</pre>
                   }
-                  <a class="text-primary m-t-4 d-block" (click)="toggleExpand(i, msg.payload)" [attr.data-cy]="'dm-msg-explorer-collapse-' + msg.seqNo" translate>show less</a>
+                  <a class="text-primary m-t-4 d-block" (click)="toggleExpand(msg.seqNo, msg.payload)" [attr.data-cy]="'dm-msg-explorer-collapse-' + msg.seqNo" translate>show less</a>
                 }
                 @if (msg.binary) {
                   <span class="label label-warning m-l-4" translate>binary (base64)</span>

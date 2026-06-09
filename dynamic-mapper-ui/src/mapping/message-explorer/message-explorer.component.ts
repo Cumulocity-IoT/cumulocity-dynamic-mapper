@@ -73,7 +73,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
   sessionSourceId: string | null = null;
   messages: IndexedMessage[] = [];
   paused: boolean = false;
-  expandedIndex: number | null = null;
+  expandedSeqNo: number | null = null;
   private nextSeqNo = 1;
   // Pre-parsed payload for the expanded row — avoids calling JSON.parse on every CD cycle
   expandedPayload: { isJson: boolean; parsed: any; raw: string } | null = null;
@@ -181,7 +181,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
         this.sessionTopic = '';
         this.messages = [];
         this.paused = false;
-        this.expandedIndex = null;
+        this.expandedSeqNo = null;
         this.countdownIntervalComponent?.stop();
         this.alertService.warning('Explorer session has expired. Start a new session.');
       } else {
@@ -232,7 +232,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       this.sessionSourceId = result.sourceId ?? null;
       this.nextSeqNo = 1;
       this.paused = false;
-      this.expandedIndex = null;
+      this.expandedSeqNo = null;
       this.expandedPayload = null;
       this.messages = [];
 
@@ -266,7 +266,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
     this.sessionTopic = '';
     this.sessionDirection = 'INBOUND';
     this.paused = false;
-    this.expandedIndex = null;
+    this.expandedSeqNo = null;
     this.expandedPayload = null;
     this.countdownIntervalComponent?.stop();
     this.alertService.add({ text: 'Explorer session stopped.', type: 'info', timeout: ALERT_INFO_TIMEOUT });
@@ -277,16 +277,16 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       await this.explorerService.clearMessages(this.sessionId).catch(() => {});
     }
     this.messages = [];
-    this.expandedIndex = null;
+    this.expandedSeqNo = null;
     this.expandedPayload = null;
   }
 
-  toggleExpand(index: number, payload: string): void {
-    if (this.expandedIndex === index) {
-      this.expandedIndex = null;
+  toggleExpand(seqNo: number, payload: string): void {
+    if (this.expandedSeqNo === seqNo) {
+      this.expandedSeqNo = null;
       this.expandedPayload = null;
     } else {
-      this.expandedIndex = index;
+      this.expandedSeqNo = seqNo;
       try {
         this.expandedPayload = { isJson: true, parsed: JSON.parse(payload), raw: payload };
       } catch {
