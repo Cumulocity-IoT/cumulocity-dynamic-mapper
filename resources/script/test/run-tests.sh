@@ -179,7 +179,7 @@ Environment variables:
     MQTT_INSECURE
         Skip TLS certificate verification for MQTT helpers.
         Values: true|false
-        Default: false
+        Default: true
 
     DM_DEFAULT_DISCOVERY_WAIT
         Default wait (seconds) for discovery checks in selected tests.

@@ -295,7 +295,7 @@ describe('StepperConfigurationResolver', () => {
       expect(appliedOverrides.length).toBe(1);
     });
 
-    it('should return correct indices for outbound', () => {
+    it('should include outbound and DEFAULT semantics for outbound JSON DEFAULT', () => {
       const context: StepperConfigurationContext = {
         mappingType: MappingType.JSON,
         transformationType: TransformationType.DEFAULT,
@@ -305,11 +305,18 @@ describe('StepperConfigurationResolver', () => {
       };
 
       const appliedOverrides = StepperConfigurationResolver.getAppliedOverrides(context);
+      const descriptions = StepperConfigurationResolver.getAppliedOverrideDescriptions(context);
+      const result = StepperConfigurationResolver.resolve({ allowTestSending: true }, context);
 
-      expect(appliedOverrides).toContain(0); // outbound override
+      // Two overrides should match semantically: outbound + DEFAULT transformation.
+      expect(appliedOverrides.length).toBe(2);
+      expect(descriptions.some(d => d.includes('allowTestSending'))).toBe(true);
+      expect(descriptions.some(d => d.includes('allowTemplateExpansion'))).toBe(true);
+      expect(result.allowTestSending).toBe(false);
+      expect(result.allowTemplateExpansion).toBe(false);
     });
 
-    it('should return correct indices for multiple overrides', () => {
+    it('should include semantic overrides for smart function with substitutionsAsCode', () => {
       const context: StepperConfigurationContext = {
         mappingType: MappingType.JSON,
         transformationType: TransformationType.SMART_FUNCTION,
@@ -319,10 +326,30 @@ describe('StepperConfigurationResolver', () => {
       };
 
       const appliedOverrides = StepperConfigurationResolver.getAppliedOverrides(context);
+      const descriptions = StepperConfigurationResolver.getAppliedOverrideDescriptions(context);
+      const result = StepperConfigurationResolver.resolve(
+        {
+          showEditorTarget: true,
+          allowTestSending: false,
+          allowTestTransformation: false,
+          showCodeEditor: false,
+          allowTemplateExpansion: false,
+          advanceFromStepToEndStep: 2
+        },
+        context
+      );
 
-      expect(appliedOverrides).toContain(2); // substitutionsAsCode override
-      expect(appliedOverrides).toContain(3); // smart function (showEditorTarget/allowTest) override
-      expect(appliedOverrides).toContain(8); // smart function (allowTemplateExpansion) override
+      // Should match substitutionsAsCode + smart function behavior (two SMART_FUNCTION overrides).
+      expect(appliedOverrides.length).toBe(3);
+      expect(descriptions.some(d => d.includes('showCodeEditor'))).toBe(true);
+      expect(descriptions.some(d => d.includes('showEditorTarget'))).toBe(true);
+      expect(descriptions.some(d => d.includes('allowTemplateExpansion'))).toBe(true);
+      expect(result.showCodeEditor).toBe(true);
+      expect(result.showEditorTarget).toBe(false);
+      expect(result.allowTestSending).toBe(true);
+      expect(result.allowTestTransformation).toBe(true);
+      expect(result.allowTemplateExpansion).toBe(true);
+      expect(result.advanceFromStepToEndStep).toBeUndefined();
     });
   });
 

@@ -141,7 +141,8 @@ dm_info "Subscribing to: $MQTT_TOPIC"
 # Background MQTT subscriber (collects messages for verification).
 # Uses the harness helper so MQTT_HOST/PORT/USER/PASS/TLS overrides apply.
 TEMP_FILE=$(mktemp)
-( dm_mqtt_subscribe_one "$MQTT_TOPIC" 15 > "$TEMP_FILE" 2>&1 ) &
+TEMP_ERR_FILE=$(mktemp)
+( dm_mqtt_subscribe_one "$MQTT_TOPIC" 15 > "$TEMP_FILE" 2>"$TEMP_ERR_FILE" ) &
 MQTT_PID=$!
 sleep 1
 
@@ -170,7 +171,12 @@ dm_success "Test measurement created"
 dm_step 8 "Waiting for MQTT message"
 # Block until the background subscriber gets a message (it exits on the first
 # one via -C 1) or its 15s window elapses — don't read the temp file early.
-wait "$MQTT_PID" 2>/dev/null || true
+set +e
+wait "$MQTT_PID"
+MQTT_SUB_RC=$?
+set -e
+
+dm_assert_eq "MQTT subscriber exit code" "0" "$MQTT_SUB_RC"
 
 # Reliable signal: confirm the outbound mapping actually processed the measurement.
 dm_assert_mapping_received_gt "Outbound mapping processed measurement" "$MAPPING_ID" "$BASELINE"
@@ -185,6 +191,12 @@ _received=false
 [ -n "$MQTT_MSG" ] && _received=true
 dm_assert_eq "Outbound MQTT message received" "true" "$_received"
 
+_json_payload=false
+if printf '%s' "$MQTT_MSG" | jq -e . >/dev/null 2>&1; then
+  _json_payload=true
+fi
+dm_assert_eq "Outbound MQTT payload is valid JSON" "true" "$_json_payload"
+
 # Verify transformed content
 TEMP_VALUE=$(echo "$MQTT_MSG" | jq -r '.temperature // empty' 2>/dev/null || echo "")
 dm_assert_eq "Transformed temperature value" "22.5" "$TEMP_VALUE"
@@ -192,6 +204,7 @@ dm_assert_eq "Transformed temperature value" "22.5" "$TEMP_VALUE"
 # Cleanup
 kill "$MQTT_PID" 2>/dev/null || true
 rm -f "$TEMP_FILE"
+rm -f "$TEMP_ERR_FILE"
 
 dm_done "Outbound Smart Function"
 dm_print_summary

@@ -737,8 +737,9 @@ dm_resolve_extension_entry() {   # <processor_extension_name_or_fqn> [direction]
 # time and is environment-specific). On success stores the resolved entry in
 # _DM_RESOLVED_EXTENSION; build the mapping's `extension` field from it via:
 #     jq -cn --argjson extension "$_DM_RESOLVED_EXTENSION" '{ ..., extension: $extension }'
-# On absence the test is SKIPPED (exit 0) with guidance — these tests need the
-# dynamic-mapper-extension JAR uploaded to the tenant.
+# On absence the test exits with DM_EXIT_SKIP (default 42), which run-tests.sh
+# classifies as SKIP (not PASS). These tests need the dynamic-mapper-extension
+# JAR uploaded to the tenant.
 _DM_RESOLVED_EXTENSION=""
 dm_require_extension() {   # <eventName_or_fqn> [direction]
     local _needle=$1 _direction=${2:-} _entry _evt
@@ -1047,7 +1048,7 @@ dm_setup_and_connect_mqtt_connector() {     # [identifier] [name] [mqtt_host] [m
 #   MQTT_PASS      (optional)
 #   MQTT_TLS       (optional, true/false, default false)
 #   MQTT_CAFILE    (optional path to CA certificate)
-#   MQTT_INSECURE  (optional, true/false, default false)
+#   MQTT_INSECURE  (optional, true/false, default true)
 
 # Skip the calling test if the MQTT broker is unreachable or mosquitto_pub is
 # not installed.  Call this once, right after dm_wait_for_service.
@@ -1193,7 +1194,7 @@ dm_require_mqtt_broker() {
 _dm_mqtt_append_tls_args() {  # <array_name>
     local _arr_name=$1
     local _tls="${MQTT_TLS:-false}"
-    local _insecure="${MQTT_INSECURE:-false}"
+    local _insecure="${MQTT_INSECURE:-true}"
     local _cafile="${MQTT_CAFILE:-}"
 
     [ "$_tls" = "true" ] || return 0
@@ -1329,15 +1330,37 @@ dm_assert_measurement_present() {  # <label> <ext_id> <ext_id_type> [min=1] [tim
 
 dm_get_latest_measurement() {  # <ext_id> <ext_id_type> <measurement_type>
     local _extid=$1 _extidtype=$2 _meastype=$3
+    local _device_id _resp _row
     [ -z "$_extid" ] && { printf '{}'; return 0; }
-    local _device_id
     _device_id=$(dm_lookup_device_by_ext_id "$_extid" "$_extidtype")
     [ -z "$_device_id" ] && { printf '{}'; return 0; }
-    # c8y --output json emits NDJSON (one object per line), not a {data:[...]}
-    # wrapper — slurp with jq -s and take the newest by time.
-    c8y measurements list \
-        --device "$_device_id" \
-        --type "$_meastype" \
-        --pageSize 100 --output json 2>/dev/null \
-        | jq -s 'sort_by(.time) | last // {}' 2>/dev/null || printf '{}'
+
+    # Prefer a deterministic single-record fetch from the measurements REST API.
+    _resp=$(c8y api --method GET \
+        --url "/measurement/measurements?source=${_device_id}&type=${_meastype}&pageSize=1&revert=true" \
+        --output json 2>/dev/null || printf '{}')
+    _row=$(printf '%s' "$_resp" | jq -c '
+        if (.measurements // null) != null and ((.measurements | type) == "array") then
+            (.measurements[0] // {})
+        elif (.data // null) != null and ((.data | type) == "array") then
+            (.data[0] // {})
+        elif type == "array" then
+            (.[0] // {})
+        elif type == "object" then
+            .
+        else
+            {}
+        end
+    ' 2>/dev/null || printf '{}')
+
+    # Fallback for environments where query handling differs.
+    if [ "$_row" = "{}" ]; then
+        _row=$(c8y measurements list \
+            --device "$_device_id" \
+            --type "$_meastype" \
+            --pageSize 1 --output json 2>/dev/null \
+            | jq -s '.[0] // {}' 2>/dev/null || printf '{}')
+    fi
+
+    printf '%s\n' "$_row"
 }
