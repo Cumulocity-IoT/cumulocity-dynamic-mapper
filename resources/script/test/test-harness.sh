@@ -24,10 +24,16 @@
 #   dm_get_support_esm                  — fetch supportESM from service configuration
 #   dm_wrap_onmessage_code              — append export { onMessage } only when supportESM=true
 #
+# CLI flags / lifecycle
+#   dm_parse_args        "$@"             — parse --cleanup / --keep / --validate-only
+#   dm_register_cleanup  <function>       — run <function> on exit unless --keep
+#   dm_validate_only_exit                 — exit 0 here when --validate-only was passed
+#
 # Assertions  (update _DM_PASS_COUNT / _DM_FAIL_COUNT)
 #   dm_assert_eq      <label> <expected> <actual>
 #   dm_assert_gt      <label> <value>    <than>
 #   dm_assert_eq_zero <label> <value>
+#   dm_assert_measurement_present <label> <ext_id> <ext_id_type> [min] [timeout]
 #   dm_print_summary  — prints pass/fail totals; exits 1 when any failure
 #
 # Devices
@@ -66,7 +72,7 @@
 #   dm_assert_connector_status      <label> <connectorIdentifier> <expected_status>
 #
 # MQTT Publish/Subscribe
-#   dm_mqtt_publish                 <topic> <payload>
+#   dm_mqtt_publish                 <topic> <payload> [qos=0]
 #   dm_mqtt_subscribe_one           <topic> [timeout_secs=10]
 #
 # Environment overrides (set before sourcing or exporting)
@@ -82,6 +88,11 @@ _DM_HARNESS_LOADED=1
 
 # ── Configuration ──────────────────────────────────────────────────────────────
 DM_SERVICE="${DM_SERVICE:-/service/dynamic-mapper-service}"
+
+# Reserved exit code a test uses to signal "skipped" (prerequisite absent) rather
+# than passed or failed. run-tests.sh classifies this code as SKIP. Keep in sync
+# with DM_SKIP_EXIT_CODE in run-tests.sh.
+DM_EXIT_SKIP="${DM_EXIT_SKIP:-42}"
 DM_DEFAULT_DISCOVERY_WAIT="${DM_DEFAULT_DISCOVERY_WAIT:-10}"
 DM_DEFAULT_STARTUP_WAIT="${DM_DEFAULT_STARTUP_WAIT:-60}"
 DM_DEFAULT_HEALTH_RETRIES="${DM_DEFAULT_HEALTH_RETRIES:-24}"
@@ -91,7 +102,7 @@ DM_DEFAULT_HEALTH_INTERVAL="${DM_DEFAULT_HEALTH_INTERVAL:-10}"
 export MQTT_HOST="${MQTT_HOST:-broker.hivemq.com}"
 export MQTT_PORT="${MQTT_PORT:-1883}"
 export MQTT_TLS="${MQTT_TLS:-false}"
-export MQTT_INSECURE="${MQTT_INSECURE:-true}"
+export MQTT_INSECURE="${MQTT_INSECURE:-false}"
 
 # Run c8y CLI non-interactively: suppress all confirmation prompts and spinners.
 export C8Y_SETTINGS_CI=true
@@ -214,6 +225,14 @@ dm_skip() {     # <reason>
     printf "${_C_YELLOW}SKIP: %s${_C_RESET}\n" "$*" >&2
 }
 
+# Print a SKIP reason and exit the test with the reserved skip code so the runner
+# tallies it as SKIP (not PASS). Use for "prerequisite absent" bail-outs.
+dm_skip_exit() {   # <reason...>
+    local _r
+    for _r in "$@"; do dm_skip "$_r"; done
+    exit "$DM_EXIT_SKIP"
+}
+
 # Require at least one CONNECTED connector; skip this test if none are found.
 # Call immediately after dm_wait_for_service in outbound tests.
 # When no connector is connected the outbound dispatcher drops every
@@ -226,11 +245,70 @@ dm_require_connected_connector() {
         | jq '[.[] | select(.status == "CONNECTED")] | length' 2>/dev/null \
         || printf '0')
     if [ "${_connected:-0}" -lt 1 ]; then
-        dm_skip "No connector is CONNECTED — outbound tests require a connected broker connector."
-        dm_skip "Configure and connect an MQTT (or other) connector, then re-run."
-        exit 0
+        dm_skip_exit "No connector is CONNECTED — outbound tests require a connected broker connector." \
+                     "Configure and connect an MQTT (or other) connector, then re-run."
     fi
     dm_info "Found ${_connected} CONNECTED connector(s) — proceeding."
+}
+
+# ── CLI flag parsing (shared by every test script) ────────────────────────────
+# Tests clean up their data by default. Pass --keep to retain it for debugging,
+# or --validate-only to run setup/validation checks and then exit 0.
+#
+#   --cleanup        Delete created test data on exit (default; accepted for
+#                    backward compatibility).
+#   --keep           Keep created test data on exit (for post-mortem debugging).
+#   --validate-only  Run environment validation only, then exit before mutating.
+#
+# Usage in a test script:
+#   dm_parse_args "$@"
+#   dm_register_cleanup cleanup       # 'cleanup' is a function the script defines
+#   ...
+#   dm_validate_only_exit             # call right after the validation block
+_DM_DO_CLEANUP=true
+_DM_VALIDATE_ONLY=false
+_DM_CLEANUP_FN=""
+
+dm_parse_args() {   # "$@"
+    local _arg
+    for _arg in "$@"; do
+        case "$_arg" in
+            --cleanup)       _DM_DO_CLEANUP=true ;;
+            --keep)          _DM_DO_CLEANUP=false ;;
+            --validate-only) _DM_VALIDATE_ONLY=true ;;
+            "" ) ;;
+            *) dm_warn "Ignoring unknown argument: $_arg" ;;
+        esac
+    done
+}
+
+# Internal: invoked on EXIT. Runs the registered cleanup unless --keep was given.
+_dm_on_exit() {
+    local _rc=$?
+    # Validation-only runs created no data — nothing to clean up or warn about.
+    [ "${_DM_VALIDATE_ONLY}" = "true" ] && return "$_rc"
+    if [ "${_DM_DO_CLEANUP}" = "true" ] && [ -n "${_DM_CLEANUP_FN}" ]; then
+        "$_DM_CLEANUP_FN" || true
+    elif [ -n "${_DM_CLEANUP_FN}" ]; then
+        dm_warn "Skipping cleanup (--keep set) — test data retained."
+    fi
+    return "$_rc"
+}
+
+# Register a cleanup function to run on exit (honours --keep / --cleanup).
+dm_register_cleanup() {   # <function_name>
+    _DM_CLEANUP_FN=$1
+    trap _dm_on_exit EXIT
+}
+
+# Exit early (success) when --validate-only was passed. Call after the
+# validation/setup block and before creating any test data.
+dm_validate_only_exit() {
+    [ "${_DM_VALIDATE_ONLY}" = "true" ] || return 0
+    dm_success "Validation-only run — environment OK, exiting before test data is created."
+    # Skip the registered cleanup: nothing was created yet.
+    _DM_DO_CLEANUP=false
+    exit 0
 }
 
 # ── Device helpers ─────────────────────────────────────────────────────────────
@@ -654,6 +732,27 @@ dm_resolve_extension_entry() {   # <processor_extension_name_or_fqn> [direction]
     [ -n "$_entry" ] && printf '%s\n' "$_entry"
 }
 
+# Require a processor extension to be registered on the tenant, resolving it by
+# eventName/fqn (NOT by a hardcoded extensionName — that is assigned at upload
+# time and is environment-specific). On success stores the resolved entry in
+# _DM_RESOLVED_EXTENSION; build the mapping's `extension` field from it via:
+#     jq -cn --argjson extension "$_DM_RESOLVED_EXTENSION" '{ ..., extension: $extension }'
+# On absence the test exits with DM_EXIT_SKIP (default 42), which run-tests.sh
+# classifies as SKIP (not PASS). These tests need the dynamic-mapper-extension
+# JAR uploaded to the tenant.
+_DM_RESOLVED_EXTENSION=""
+dm_require_extension() {   # <eventName_or_fqn> [direction]
+    local _needle=$1 _direction=${2:-} _entry _evt
+    _entry=$(dm_resolve_extension_entry "$_needle" "$_direction" 2>/dev/null || true)
+    _evt=$(printf '%s' "$_entry" | jq -r '.eventName // empty' 2>/dev/null || printf '')
+    if [ -z "$_entry" ] || [ -z "$_evt" ]; then
+        dm_skip_exit "Processor extension '${_needle}'${_direction:+ (${_direction})} is not registered on this tenant." \
+                     "Upload the dynamic-mapper-extension JAR (see EXTENSIONS.md), then re-run."
+    fi
+    _DM_RESOLVED_EXTENSION="$_entry"
+    dm_info "Resolved extension '${_needle}' -> $(printf '%s' "$_entry" | jq -r '.extensionName + ":" + .eventName' 2>/dev/null || printf '%s' "$_needle")"
+}
+
 # Normalize legacy mapping payloads used by tests to current backend contract.
 dm_normalize_mapping_payload() {   # <json_body>
     local _raw=${1:-}
@@ -943,7 +1042,7 @@ dm_setup_and_connect_mqtt_connector() {     # [identifier] [name] [mqtt_host] [m
 
 # ── MQTT helpers ───────────────────────────────────────────────────────────────
 # Environment variables:
-#   MQTT_HOST      (default localhost)
+#   MQTT_HOST      (default broker.hivemq.com)
 #   MQTT_PORT      (default 1883)
 #   MQTT_USER      (optional)
 #   MQTT_PASS      (optional)
@@ -954,17 +1053,15 @@ dm_setup_and_connect_mqtt_connector() {     # [identifier] [name] [mqtt_host] [m
 # Skip the calling test if the MQTT broker is unreachable or mosquitto_pub is
 # not installed.  Call this once, right after dm_wait_for_service.
 dm_require_mqtt_broker() {
-    local _host="${MQTT_HOST:-localhost}" _port="${MQTT_PORT:-1883}"
+    local _host="${MQTT_HOST:-broker.hivemq.com}" _port="${MQTT_PORT:-1883}"
     local _cfg _match_count _matching_ids _statuses _connected_count _first_id _first_match _proto _user
     if ! command -v mosquitto_pub >/dev/null 2>&1; then
-        dm_skip "mosquitto_pub not installed — install mosquitto-clients to run MQTT tests."
-        exit 0
+        dm_skip_exit "mosquitto_pub not installed — install mosquitto-clients to run MQTT tests."
     fi
     # Quick TCP reachability check (3-second timeout)
     if ! nc -z -w 3 "$_host" "$_port" >/dev/null 2>&1; then
-        dm_skip "MQTT broker not reachable at ${_host}:${_port}."
-        dm_skip "Set MQTT_HOST / MQTT_PORT / MQTT_USER / MQTT_PASS and retry."
-        exit 0
+        dm_skip_exit "MQTT broker not reachable at ${_host}:${_port}." \
+                     "Set MQTT_HOST / MQTT_PORT / MQTT_USER / MQTT_PASS and retry."
     fi
 
     # Ensure the selected publish target matches at least one enabled MQTT
@@ -979,9 +1076,8 @@ dm_require_mqtt_broker() {
           | select((.properties.mqttPort | tostring) == $port)
         ] | length' 2>/dev/null || printf '0')
     if [ "${_match_count:-0}" -lt 1 ]; then
-        dm_skip "No enabled MQTT connector is configured for ${_host}:${_port}."
-        dm_skip "Update MQTT_HOST/MQTT_PORT to match the mapper connector configuration (or update connector config)."
-        exit 0
+        dm_skip_exit "No enabled MQTT connector is configured for ${_host}:${_port}." \
+                     "Update MQTT_HOST/MQTT_PORT to match the mapper connector configuration (or update connector config)."
     fi
 
     _matching_ids=$(printf '%s' "$_cfg" | jq -r --arg host "$_host" --arg port "$_port" '
@@ -1088,9 +1184,8 @@ dm_require_mqtt_broker() {
                   | { id: $id, status: (($statuses[] | select((.connectorIdentifier // "") == $id) | .status) // "UNKNOWN") }
                 ]' 2>/dev/null || printf '[]')
         dm_warn "Matching connector statuses for ${_host}:${_port}: ${_matching_statuses}"
-        dm_skip "No matching MQTT connector for ${_host}:${_port} is CONNECTED."
-        dm_skip "Connect the matching connector in Dynamic Mapper and retry."
-        exit 0
+        dm_skip_exit "No matching MQTT connector for ${_host}:${_port} is CONNECTED." \
+                     "Connect the matching connector in Dynamic Mapper and retry."
     fi
 
     dm_info "MQTT broker reachable at ${_host}:${_port} — proceeding."
@@ -1098,37 +1193,38 @@ dm_require_mqtt_broker() {
 
 _dm_mqtt_append_tls_args() {  # <array_name>
     local _arr_name=$1
+    local -n _args_ref="$_arr_name"
     local _tls="${MQTT_TLS:-false}"
     local _insecure="${MQTT_INSECURE:-false}"
     local _cafile="${MQTT_CAFILE:-}"
 
     [ "$_tls" = "true" ] || return 0
 
-    eval "${_arr_name}+=(--tls-version tlsv1.2)"
+    _args_ref+=(--tls-version tlsv1.2)
     if [ -n "$_cafile" ]; then
-        eval "${_arr_name}+=(--cafile \"$_cafile\")"
+        _args_ref+=(--cafile "$_cafile")
     fi
     if [ "$_insecure" = "true" ]; then
-        eval "${_arr_name}+=(--insecure)"
+        _args_ref+=(--insecure)
     fi
 }
 
-dm_mqtt_publish() {     # <topic> <payload>
-    local _topic=$1 _payload=$2
-    local _host="${MQTT_HOST:-localhost}" _port="${MQTT_PORT:-1883}"
-    local _args=(-h "$_host" -p "$_port" -t "$_topic" -m "$_payload")
+dm_mqtt_publish() {     # <topic> <payload> [qos=0]
+    local _topic=$1 _payload=$2 _qos=${3:-0}
+    local _host="${MQTT_HOST:-broker.hivemq.com}" _port="${MQTT_PORT:-1883}"
+    local _args=(-h "$_host" -p "$_port" -t "$_topic" -m "$_payload" -q "$_qos")
     [ -n "${MQTT_USER:-}" ] && _args+=(-u "$MQTT_USER")
     [ -n "${MQTT_PASS:-}" ] && _args+=(-P "$MQTT_PASS")
     _dm_mqtt_append_tls_args _args
     mosquitto_pub "${_args[@]}"
-    dm_info "Published to $_topic (broker=$_host:$_port)"
+    dm_info "Published to $_topic (broker=$_host:$_port, qos=$_qos)"
 }
 
 # Subscribe and capture at most 1 message with a timeout.
 # Prints the received message to stdout.  Returns 1 on timeout.
 dm_mqtt_subscribe_one() {   # <topic> [timeout_secs=10]
     local _topic=$1 _timeout=${2:-10}
-    local _host="${MQTT_HOST:-localhost}" _port="${MQTT_PORT:-1883}"
+    local _host="${MQTT_HOST:-broker.hivemq.com}" _port="${MQTT_PORT:-1883}"
     local _args=(-h "$_host" -p "$_port" -t "$_topic" -C 1 -W "$_timeout")
     [ -n "${MQTT_USER:-}" ] && _args+=(-u "$MQTT_USER")
     [ -n "${MQTT_PASS:-}" ] && _args+=(-P "$MQTT_PASS")
@@ -1155,7 +1251,8 @@ dm_lookup_device_by_ext_id() {  # <externalId> <externalIdType>
     c8y identity get \
     --name "$1" --type "$2" \
         --output json 2>/dev/null \
-        | jq -r '.managedObject.id // empty' 2>/dev/null || printf ''
+    | jq -r '.managedObject.id // empty' 2>/dev/null \
+    | head -n 1 || printf ''
 }
 
 dm_count_measurements_since() {     # <device_id> <since_iso8601>
@@ -1163,7 +1260,23 @@ dm_count_measurements_since() {     # <device_id> <since_iso8601>
     c8y measurements list \
         --device "$1" --dateFrom "$2" \
         --pageSize 200 --output json 2>/dev/null \
-        | jq -s 'length' 2>/dev/null || printf '0'
+        | jq -s '
+            def rows:
+                if length == 0 then
+                    []
+                elif length == 1 then
+                    if (.[0] | type) == "array" then
+                        .[0]
+                    elif (.[0] | type) == "object" then
+                        (.[0].data // .[0].measurements // [.[0]])
+                    else
+                        []
+                    end
+                else
+                    .
+                end;
+            rows | length
+        ' 2>/dev/null || printf '0'
 }
 
 dm_count_events_since() {   # <device_id> <since_iso8601>
@@ -1171,7 +1284,23 @@ dm_count_events_since() {   # <device_id> <since_iso8601>
     c8y events list \
         --device "$1" --dateFrom "$2" \
         --pageSize 200 --output json 2>/dev/null \
-        | jq -s 'length' 2>/dev/null || printf '0'
+        | jq -s '
+            def rows:
+                if length == 0 then
+                    []
+                elif length == 1 then
+                    if (.[0] | type) == "array" then
+                        .[0]
+                    elif (.[0] | type) == "object" then
+                        (.[0].data // .[0].events // [.[0]])
+                    else
+                        []
+                    end
+                else
+                    .
+                end;
+            rows | length
+        ' 2>/dev/null || printf '0'
 }
 
 dm_count_alarms_since() {   # <device_id> <since_iso8601>
@@ -1179,7 +1308,23 @@ dm_count_alarms_since() {   # <device_id> <since_iso8601>
     c8y alarms list \
         --device "$1" --dateFrom "$2" \
         --pageSize 200 --output json 2>/dev/null \
-        | jq -s 'length' 2>/dev/null || printf '0'
+        | jq -s '
+            def rows:
+                if length == 0 then
+                    []
+                elif length == 1 then
+                    if (.[0] | type) == "array" then
+                        .[0]
+                    elif (.[0] | type) == "object" then
+                        (.[0].data // .[0].alarms // [.[0]])
+                    else
+                        []
+                    end
+                else
+                    .
+                end;
+            rows | length
+        ' 2>/dev/null || printf '0'
 }
 
 dm_assert_measurement_count_gt() {  # <label> <device_id> <since_iso8601> <min_count>
@@ -1200,15 +1345,88 @@ dm_assert_alarm_count_gt() {    # <label> <device_id> <since_iso8601> <min_count
     dm_assert_gt "$_label" "${_count:-0}" "$(( _min - 1 ))"
 }
 
+# Poll until a device (resolved by external id) has at least <min_count>
+# measurements, or until <timeout> seconds elapse. Returns 0 on success, 1 on
+# timeout. Tolerates the device not existing yet (mapper may create it lazily).
+dm_wait_for_measurement_count() {  # <ext_id> <ext_id_type> <min_count> [timeout=30] [interval=2]
+    local _extid=$1 _type=$2 _min=$3 _timeout=${4:-30} _interval=${5:-2}
+    local _elapsed=0 _devid _count
+    while [ "$_elapsed" -lt "$_timeout" ]; do
+        _devid=$(dm_lookup_device_by_ext_id "$_extid" "$_type")
+        if [ -n "$_devid" ]; then
+            _count=$(c8y measurements list --device "$_devid" \
+                --pageSize 200 --output json 2>/dev/null \
+                | jq -s 'length' 2>/dev/null || printf '0')
+            [ "${_count:-0}" -ge "$_min" ] 2>/dev/null && return 0
+        fi
+        sleep "$_interval"
+        _elapsed=$((_elapsed + _interval))
+    done
+    return 1
+}
+
+# Poll for a measurement and record a pass/fail assertion (for use with
+# dm_print_summary). Wraps dm_wait_for_measurement_count.
+dm_assert_measurement_present() {  # <label> <ext_id> <ext_id_type> [min=1] [timeout=30]
+    local _label=$1 _extid=$2 _type=$3 _min=${4:-1} _timeout=${5:-30}
+    if dm_wait_for_measurement_count "$_extid" "$_type" "$_min" "$_timeout"; then
+        _DM_PASS_COUNT=$((_DM_PASS_COUNT + 1))
+        dm_success "[$_label] >= $_min measurement(s) found"
+    else
+        _DM_FAIL_COUNT=$((_DM_FAIL_COUNT + 1))
+        dm_fail "[$_label] no measurement found after ${_timeout}s"
+    fi
+}
+
 dm_get_latest_measurement() {  # <ext_id> <ext_id_type> <measurement_type>
     local _extid=$1 _extidtype=$2 _meastype=$3
+    local _device_id _resp _row
     [ -z "$_extid" ] && { printf '{}'; return 0; }
-    local _device_id
     _device_id=$(dm_lookup_device_by_ext_id "$_extid" "$_extidtype")
     [ -z "$_device_id" ] && { printf '{}'; return 0; }
-    c8y measurement list \
-        --device "$_device_id" \
-        --type "$_meastype" \
-        --pageSize 1 --output json 2>/dev/null \
-        | jq '.data[0] // {}' 2>/dev/null || printf '{}'
+
+    # Prefer a deterministic single-record fetch from the measurements REST API.
+    _resp=$(c8y api --method GET \
+        --url "/measurement/measurements?source=${_device_id}&type=${_meastype}&pageSize=1&revert=true" \
+        --output json 2>/dev/null || printf '{}')
+    _row=$(printf '%s' "$_resp" | jq -c '
+        if (.measurements // null) != null and ((.measurements | type) == "array") then
+            (.measurements[0] // {})
+        elif (.data // null) != null and ((.data | type) == "array") then
+            (.data[0] // {})
+        elif type == "array" then
+            (.[0] // {})
+        elif type == "object" then
+            .
+        else
+            {}
+        end
+    ' 2>/dev/null || printf '{}')
+
+    # Fallback for environments where query handling differs.
+    if [ "$_row" = "{}" ]; then
+        _row=$(c8y measurements list \
+            --device "$_device_id" \
+            --type "$_meastype" \
+            --pageSize 1 --output json 2>/dev/null \
+            | jq -s '
+                def rows:
+                    if length == 0 then
+                        []
+                    elif length == 1 then
+                        if (.[0] | type) == "array" then
+                            .[0]
+                        elif (.[0] | type) == "object" then
+                            (.[0].data // .[0].measurements // [.[0]])
+                        else
+                            []
+                        end
+                    else
+                        .
+                    end;
+                (rows[0] // {})
+            ' 2>/dev/null || printf '{}')
+    fi
+
+    printf '%s\n' "$_row"
 }

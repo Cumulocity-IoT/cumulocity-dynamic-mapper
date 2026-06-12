@@ -81,8 +81,6 @@
     "autoAckOperation": true,
     "useExternalId": true,
     "externalIdType": "c8y_Serial",
-    "snoopStatus": "NONE",
-    "snoopedTemplates": [],
     "maxFailureCount": 0,
     "qos": "AT_MOST_ONCE",
     "lastUpdate": 1761752628421

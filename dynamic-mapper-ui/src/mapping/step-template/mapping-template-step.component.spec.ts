@@ -32,7 +32,6 @@ import {
   StepperConfiguration,
   TransformationType,
   MappingType,
-  SnoopStatus,
   Qos,
   ContentChanges
 } from '../../shared';
@@ -63,8 +62,6 @@ describe('MappingTemplateStepComponent', () => {
     mappingType: MappingType.JSON,
     transformationType: TransformationType.DEFAULT,
     substitutions: [],
-    snoopedTemplates: [],
-    snoopStatus: SnoopStatus.NONE,
     sourceTemplate: '{}',
     targetTemplate: '{}',
     mappingTopic: 'test/topic',

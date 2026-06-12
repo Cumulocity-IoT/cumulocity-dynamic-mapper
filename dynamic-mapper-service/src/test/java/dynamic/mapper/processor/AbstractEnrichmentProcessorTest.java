@@ -173,7 +173,7 @@ class AbstractEnrichmentProcessorTest {
                 Direction.INBOUND,
                 "test/topic",
                 null,
-                0L, 0L, 0L, 0L, 0L, null);
+                0L, 0L, 0L, null);
 
         processingContext = createProcessingContext();
 

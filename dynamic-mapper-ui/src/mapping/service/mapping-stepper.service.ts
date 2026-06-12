@@ -396,15 +396,6 @@ export class MappingStepperService {
             .toPromise();
     }
 
-    parseSnoopedTemplate(snoopedTemplate: string): any {
-        try {
-            return JSON.parse(snoopedTemplate);
-        } catch (error) {
-            console.warn('The payload was not in JSON format, now wrap it');
-            return { message: snoopedTemplate };
-        }
-    }
-
     cleanup(): void {
         this.countDeviceIdentifiers$.complete();
         this.isSubstitutionValid$.complete();

@@ -19,7 +19,6 @@ import dynamic.mapper.processor.inbound.processor.FlowInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.FlowResultInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.InternalProtobufProcessor;
 import dynamic.mapper.processor.inbound.processor.SendInboundProcessor;
-import dynamic.mapper.processor.inbound.processor.SnoopingInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.JSONataInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.EnrichmentInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.SubstitutionResultInboundProcessor;
@@ -55,9 +54,6 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
 
     @Autowired
     private SubstitutionResultInboundProcessor substitutionInboundProcessor;
-
-    @Autowired
-    private SnoopingInboundProcessor snoopingInboundProcessor;
 
     @Autowired
     private DeserializationInboundProcessor deserializationInboundProcessor;
@@ -177,10 +173,6 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
 
                 // 1. Branch based on processing type
                 .choice()
-                // 1a. Snooping path
-                .when(exchange -> isSnooping(exchange))
-                .to("direct:processSnooping")
-
                 // 1f. Extension processing path
                 .when(exchange -> isInternalProtobuf(exchange))
                 .to("direct:processInternalProtobuf")
@@ -209,13 +201,6 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
                 })
                 .to("direct:processJSONataExtraction")
                 .end();
-
-        // 1a. Snooping processing route
-        from("direct:processSnooping")
-                .routeId("snooping-processor")
-                .process(snoopingInboundProcessor)
-                .to("log:snooping-message?level=DEBUG&showBody=false")
-                .process(consolidationProcessor);
 
         // 1b. JSONata extraction processing route
         from("direct:processJSONataExtraction")

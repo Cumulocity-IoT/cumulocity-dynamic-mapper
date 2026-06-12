@@ -23,17 +23,15 @@
   <ng-container c8y-modal-title>
     <span [c8yIcon]="'warning'"></span>
     <h4 class="modal-title">
-      {{ 'Upcoming change: Snooping removed in 6.4.0' | translate }}
+      {{ 'Feature changes in release 6.4.0' | translate }}
     </h4>
   </ng-container>
 
   <div class="p-24 animated fadeIn">
-    <div class="alert alert-warning" style="min-width:stretch">
-      <i c8yIcon="warning" class="m-r-8"></i>
-      <strong>{{ 'Upcoming removal in 6.4.0 (July 2026): ' | translate }}</strong>
-      {{ 'The ' | translate }}
-      <strong>{{ 'Snooping' | translate }}</strong>
-      {{ ' feature will be removed in release 6.4.0. It is replaced by the ' | translate }}
+    <div class="alert alert-info" style="min-width:stretch">
+      <i c8yIcon="info-circle" class="m-r-8"></i>
+      <strong>{{ 'Removed in 6.4.0: ' | translate }}</strong>
+      {{ 'The message recording (formerly “snooping”) feature has been removed. It is replaced by the ' | translate }}
       <strong>{{ 'Message Explorer' | translate }}</strong>
       {{ ', which provides a dedicated, more powerful interface to inspect incoming messages and build mappings from real payloads.' | translate }}
     </div>

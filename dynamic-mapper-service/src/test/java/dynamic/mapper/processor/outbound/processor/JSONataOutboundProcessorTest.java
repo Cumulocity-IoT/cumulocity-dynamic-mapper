@@ -49,7 +49,6 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.model.SnoopStatus;
 import dynamic.mapper.model.Substitution;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
@@ -101,7 +100,7 @@ class JSONataOutboundProcessorTest {
                 Direction.OUTBOUND,
                 "evt/outbound/#",
                 null,
-                0L, 0L, 0L, 0L, 0L, null);
+                0L, 0L, 0L, null);
 
         processingContext = createProcessingContext();
 
@@ -145,8 +144,6 @@ class JSONataOutboundProcessorTest {
                 .autoAckOperation(true)
                 .useExternalId(true)
                 .externalIdType(TEST_EXTERNAL_ID_TYPE)
-                .snoopStatus(SnoopStatus.STOPPED)
-                .snoopedTemplates(createSnoopedTemplates())
                 .filterMapping("$exists(reason)")
                 .filterInventory("")
                 .maxFailureCount(0)
@@ -189,14 +186,6 @@ class JSONataOutboundProcessorTest {
         };
     }
 
-    private List<String> createSnoopedTemplates() {
-        List<String> templates = new ArrayList<>();
-        templates.add(
-                "{\"lastUpdated\":\"2025-09-17T10:04:28.309Z\",\"creationTime\":\"2025-09-17T10:04:28.309Z\",\"self\":\"https://t2050305588.eu-latest.cumulocity.com/event/events/266308\",\"id\":\"266308\",\"time\":\"2025-09-17T12:04:28.180+02:00\",\"text\":\"'Bus stopped at traffic light\",\"source\":{\"name\":\"PGW2x.100\",\"self\":\"https://t2050305588.eu-latest.cumulocity.com/inventory/managedObjects/6926746\",\"id\":\"6926746\"},\"type\":\"c8y_BusEvent\",\"bus_event\":\"stop_event\",\"reason\":\"poor road conditions\",\"_IDENTITY_\":{\"c8ySourceId\":\"6926746\",\"externalId\":\"berlin_01\",\"externalIdType\":\"c8y_Serial\"},\"_TOPIC_LEVEL_\":[\"evt\",\"outbound\",\"#\"]}");
-        templates.add(
-                "{\"lastUpdated\":\"2025-09-17T10:40:36.496Z\",\"creationTime\":\"2025-09-17T10:40:36.496Z\",\"self\":\"https://t2050305588.eu-latest.cumulocity.com/event/events/266315\",\"id\":\"266315\",\"time\":\"2025-09-17T12:40:36.383+02:00\",\"text\":\"'Bus stopped at traffic light\",\"source\":{\"name\":\"PGW2x.100\",\"self\":\"https://t2050305588.eu-latest.cumulocity.com/inventory/managedObjects/6926746\",\"id\":\"6926746\"},\"type\":\"c8y_BusEvent\",\"bus_event\":\"stop_event\",\"reason\":\"poor road conditions now\",\"_IDENTITY_\":{\"c8ySourceId\":\"6926746\",\"externalId\":\"berlin_01\",\"externalIdType\":\"c8y_Serial\"},\"_TOPIC_LEVEL_\":[\"evt\",\"outbound\",\"#\"]}");
-        return templates;
-    }
 
     private ProcessingContext<Object> createProcessingContext() {
         Map<String, Object> payload = createEventPayload();

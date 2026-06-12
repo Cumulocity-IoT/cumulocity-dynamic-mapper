@@ -19,11 +19,14 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
+dm_parse_args "$@"   # supports --validate-only (read-only test, no cleanup needed)
+
 # ── Test ───────────────────────────────────────────────────────────────────────
 dm_banner "Multiple Connector Status Check"
 
 dm_step "Waiting for Dynamic Mapper service ..."
 dm_wait_for_service
+dm_validate_only_exit
 
 dm_step "Fetching all connector statuses ..."
 CONNECTORS_JSON=$(dm_api GET /monitoring/status/connectors)

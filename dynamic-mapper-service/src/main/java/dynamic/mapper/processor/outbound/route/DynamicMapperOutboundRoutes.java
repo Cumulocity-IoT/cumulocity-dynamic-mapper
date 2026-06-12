@@ -41,7 +41,6 @@ import dynamic.mapper.processor.outbound.processor.ExtensibleOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.JSONataOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.EnrichmentOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.SendOutboundProcessor;
-import dynamic.mapper.processor.outbound.processor.SnoopingOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.SubstitutionResultOutboundProcessor;
 import dynamic.mapper.processor.util.ProcessingContextAggregationStrategy;
 import dynamic.mapper.processor.util.ConsolidationProcessor;
@@ -68,9 +67,6 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
 
     @Autowired
     private SubstitutionResultOutboundProcessor substitutionOutboundProcessor;
-
-    @Autowired
-    private SnoopingOutboundProcessor snoopingOutboundProcessor;
 
     @Autowired
     private DeserializationOutboundProcessor deserializationOutboundProcessor;
@@ -184,10 +180,6 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
 
                 // 1. Branch based on processing type
                 .choice()
-                // 1a. Snooping path
-                .when(exchange -> isSnooping(exchange))
-                .to("direct:processOutboundSnooping")
-
                 // 1b. Extension processing path
                 .when(exchange -> isExtension(exchange))
                 .to("direct:processOutboundExtension")
@@ -205,12 +197,6 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
                 .to("direct:processOutboundJSONataExtraction") // Default to JSONata
                 .end();
 
-        // 1a. Snooping processing route
-        from("direct:processOutboundSnooping")
-                .routeId("outbound-snooping-processor")
-                .process(snoopingOutboundProcessor)
-                .to("log:outbound-snooping-message?level=DEBUG&showBody=false")
-                .process(consolidationProcessor);
 
         // 1b. Extension processing route
         from("direct:processOutboundExtension")

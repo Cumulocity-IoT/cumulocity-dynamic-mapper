@@ -40,7 +40,8 @@ cleanup() {
     [ -n "$DEVICE_ID" ] && dm_delete_device "$DEVICE_ID" || true
 }
 
-[[ "${1:-}" == "--cleanup" ]] && trap cleanup EXIT
+dm_parse_args "$@"
+dm_register_cleanup cleanup
 
 # ── Test ───────────────────────────────────────────────────────────────────────
 dm_banner "Outbound filterMapping — Selective Event Forwarding"
@@ -49,6 +50,7 @@ dm_step "Waiting for Dynamic Mapper service ..."
 dm_wait_for_service
 dm_require_mqtt_broker
 dm_verify_mqtt_connector_ready
+dm_validate_only_exit
 
 dm_step "Creating test device ..."
 dm_create_device "$DEVICE_NAME" "$DEVICE_TYPE"
@@ -88,9 +90,7 @@ MAPPING_A_JSON=$(cat <<EOF
   "debug": false,
   "useExternalId": true,
   "externalIdType": "c8y_Serial",
-  "qos": "AT_LEAST_ONCE",
-  "snoopStatus": "NONE",
-  "snoopedTemplates": []
+  "qos": "AT_LEAST_ONCE"
 }
 EOF
 )
@@ -121,9 +121,7 @@ MAPPING_B_JSON=$(cat <<EOF
   "debug": false,
   "useExternalId": true,
   "externalIdType": "c8y_Serial",
-  "qos": "AT_LEAST_ONCE",
-  "snoopStatus": "NONE",
-  "snoopedTemplates": []
+  "qos": "AT_LEAST_ONCE"
 }
 EOF
 )

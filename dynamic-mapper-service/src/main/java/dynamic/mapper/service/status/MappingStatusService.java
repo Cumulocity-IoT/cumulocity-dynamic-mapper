@@ -161,7 +161,7 @@ public class MappingStatusService {
                     mapping.getDirection(),
                     mapping.getMappingTopic(),
                     mapping.getPublishTopic(),
-                    0, 0, 0, 0, 0, null);
+                    0, 0, 0, null);
         });
     }
 

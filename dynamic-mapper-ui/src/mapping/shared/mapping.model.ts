@@ -19,7 +19,6 @@
  */
 
 
-export const SNOOP_TEMPLATES_MAX = 10;
 export const HOUSEKEEPING_INTERVAL_SECONDS = 30;
 
 export interface PayloadWrapper {

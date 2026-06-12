@@ -33,7 +33,8 @@ cleanup() {
     fi
 }
 
-[[ "${1:-}" == "--cleanup" ]] && trap cleanup EXIT
+dm_parse_args "$@"
+dm_register_cleanup cleanup
 
 # ── Test ───────────────────────────────────────────────────────────────────────
 dm_banner "Inbound JSON JSONata Transformation (EVENT)"
@@ -41,6 +42,7 @@ dm_banner "Inbound JSON JSONata Transformation (EVENT)"
 dm_step "Waiting for Dynamic Mapper service ..."
 dm_wait_for_service
 dm_require_mqtt_broker
+dm_validate_only_exit
 
 MAPPING_JSON=$(cat <<EOF
 {
@@ -67,9 +69,7 @@ MAPPING_JSON=$(cat <<EOF
   "useExternalId": true,
   "externalIdType": "c8y_Serial",
   "genericDeviceIdentifier": "_IDENTITY_.externalId",
-  "qos": "AT_LEAST_ONCE",
-  "snoopStatus": "NONE",
-  "snoopedTemplates": []
+  "qos": "AT_LEAST_ONCE"
 }
 EOF
 )

@@ -54,7 +54,6 @@ import {
   RepairStrategy,
   SAMPLE_TEMPLATES_C8Y,
   SharedService,
-  SnoopStatus,
   StepperConfiguration,
   Feature,
   isSubstitutionsAsCode,
@@ -159,7 +158,6 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
   readonly COLOR_HIGHLIGHTED = COLOR_HIGHLIGHTED;
   readonly TransformationType = TransformationType;
   readonly EditorMode = EditorMode;
-  readonly SnoopStatus = SnoopStatus;
   readonly MappingTypeDescriptions = MappingTypeDescriptions;
 
   updateTestingTemplate = new ReplaySubject<Mapping>(1);
@@ -203,22 +201,10 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
   extensionEventItems$: Observable<{ label: string; value: string }[]>;
   /** True when the selected extension event has a parameter block defined */
   hasExtensionParameter = false;
-  snoopedTemplateItems: Array<{label: string, value: string}> = [];
   codeTemplateItems: Array<{label: string, value: string}> = [];
 
   private updateExtensionItems(): void {
     this.extensionItems = Array.from(this.extensions.keys());
-  }
-
-  private updateSnoopedTemplateItems(): void {
-    if (!this.mapping?.snoopedTemplates) {
-      this.snoopedTemplateItems = [];
-      return;
-    }
-    this.snoopedTemplateItems = Array.from({ length: this.mapping.snoopedTemplates.length }, (_, i) => ({
-      label: `Template - ${i}`,
-      value: String(i)
-    }));
   }
 
   private updateCodeTemplateItems(): void {
@@ -269,7 +255,6 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
   };
 
   selectedSubstitution = -1;
-  snoopedTemplateCounter = -1;
   step?: string;
   expertMode = false;
   templatesInitialized = false;
@@ -300,11 +285,6 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
       ),
       shareReplay(1)
     );
-    this.updateSnoopedTemplateItems();
-
-    if (this.mapping.snoopStatus === SnoopStatus.NONE || this.mapping.snoopStatus === SnoopStatus.STOPPED) {
-      this.labels = { ...this.labels, custom: 'Start snooping' } as const;
-    }
 
     this.targetSystem = this.mapping.direction === Direction.INBOUND ? 'Cumulocity' : 'Broker';
     this.sourceSystem = this.mapping.direction === Direction.OUTBOUND ? 'Cumulocity' : 'Broker';
@@ -439,12 +419,6 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
         value: this.configurationToYaml(this.mapping?.extension?.parameter),
         disabled: this.stepperConfiguration.editorMode === EditorMode.READ_ONLY
       }),
-      snoopedTemplateIndex: new FormControl({
-        value: '-1',
-        disabled: !this.stepperConfiguration.showEditorSource ||
-          this.mapping.snoopedTemplates.length === 0 ||
-          this.stepperConfiguration.editorMode === EditorMode.READ_ONLY
-      }),
       sampleTargetTemplatesButton: new FormControl({
         value: !this.stepperConfiguration.showEditorSource ||
           this.stepperConfiguration.editorMode === EditorMode.READ_ONLY,
@@ -489,21 +463,6 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
         const eventName = typeof selected === 'string' ? selected : selected?.value ?? selected;
         if (eventName) {
           this.onSelectExtensionEvent(eventName);
-        }
-      });
-
-    // Subscribe to snooped template selection changes
-    this.templateForm.get('snoopedTemplateIndex')?.valueChanges
-      .pipe(
-        distinctUntilChanged(),
-        debounceTime(100),
-        takeUntil(this.destroy$)
-      )
-      .subscribe(selected => {
-        // c8y-select with labelProperty binds the entire object {label, value}
-        const index = selected?.value ?? selected;
-        if (index !== null && index !== undefined && index !== '-1') {
-          this.onSelectSnoopedSourceTemplate(null as any);
         }
       });
 
@@ -754,9 +713,6 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
       this.mappingCode = stripTemplateMetadataTags(base64ToString(this.mapping.code));
     }
 
-    // Update snooped template items in case new templates were added
-    this.updateSnoopedTemplateItems();
-
     // Trigger extension event filtering if extension is already selected
     // This handles the case when navigating to step 3 with a pre-selected extension
     if (this.mapping?.extension?.extensionName && this.extensions) {
@@ -902,54 +858,6 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
     );
     this.sourceTemplate = templates.sourceTemplate;
     this.targetTemplate = templates.targetTemplate;
-  }
-
-  async onSnoopedSourceTemplates(): Promise<void> {
-    if (this.snoopedTemplateCounter >= this.mapping.snoopedTemplates.length) {
-      this.snoopedTemplateCounter = 0;
-    }
-
-    this.sourceTemplate = this.stepperService.parseSnoopedTemplate(
-      this.mapping.snoopedTemplates[this.snoopedTemplateCounter]
-    );
-
-    if (this.stepperConfiguration.allowTemplateExpansion) {
-      if (this.stepperConfiguration.direction === Direction.INBOUND) {
-        this.sourceTemplate = expandExternalTemplate(
-          this.sourceTemplate,
-          this.mapping, splitTopicExcludingSeparator(this.mapping.mappingTopicSample, false)
-        );
-      } else {
-        this.sourceTemplate = expandC8YTemplate(this.sourceTemplate, this.mapping);
-      }
-    }
-
-    this.mapping.snoopStatus = SnoopStatus.STOPPED;
-    this.snoopedTemplateCounter++;
-  }
-
-  async onSelectSnoopedSourceTemplate(event: Event): Promise<void> {
-    const selected = this.templateForm.get('snoopedTemplateIndex')?.value;
-    // c8y-select with labelProperty binds the entire object {label, value}
-    const indexValue = selected?.value ?? selected;
-    const index = typeof indexValue === 'string' ? parseInt(indexValue, 10) : indexValue;
-    this.sourceTemplate = this.stepperService.parseSnoopedTemplate(
-      this.mapping.snoopedTemplates[index]
-    );
-
-    if (this.stepperConfiguration.allowTemplateExpansion) {
-      if (this.stepperConfiguration.direction === Direction.INBOUND) {
-        this.sourceTemplate = expandExternalTemplate(
-          this.sourceTemplate,
-          this.mapping,
-          splitTopicExcludingSeparator(this.mapping.mappingTopicSample, false)
-        );
-      } else {
-        this.sourceTemplate = expandC8YTemplate(this.sourceTemplate, this.mapping);
-      }
-    }
-
-    this.mapping.snoopStatus = SnoopStatus.STOPPED;
   }
 
   async onTargetAPIChanged(changedTargetAPI: string): Promise<void> {

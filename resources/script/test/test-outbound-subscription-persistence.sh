@@ -48,11 +48,14 @@ cleanup() {
     echo "Cleanup done."
 }
 
-if [ "${1}" = "--cleanup" ]; then
-    trap cleanup EXIT
-fi
+dm_parse_args "$@"
+dm_register_cleanup cleanup
 
 dm_banner "Outbound Subscription Persistence After Restart"
+
+dm_step 0 "Validating environment"
+dm_wait_for_service
+dm_validate_only_exit
 
 # Step 1: Create static device and subscription
 dm_step 1 "Set up static subscription"

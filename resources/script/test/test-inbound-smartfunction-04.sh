@@ -13,23 +13,13 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/test-harness.sh"
 
-KEEP_ON_FAILURE=false
 EXT_ID="dmtest-dual-payload-$(date +%s)"
 MAPPING_ID=""
 DEVICE_ID=""
 
-for arg in "$@"; do
-    case "$arg" in
-        --keep) KEEP_ON_FAILURE=true ;;
-        --cleanup) trap cleanup EXIT ;;
-    esac
-done
+dm_parse_args "$@"
 
 cleanup() {
-    if [ "$KEEP_ON_FAILURE" = "true" ]; then
-        dm_warn "Skipping cleanup (--keep flag set)"
-        return 0
-    fi
     dm_info "Cleaning up test resources ..."
     [ -n "$MAPPING_ID" ] && dm_delete_mapping "$MAPPING_ID" 2>/dev/null || true
     if [ -n "${DEVICE_ID:-}" ]; then
@@ -39,7 +29,7 @@ cleanup() {
     dm_info "Cleanup complete"
 }
 
-trap cleanup EXIT
+dm_register_cleanup cleanup
 
 dm_banner "Test: Smart Function Pattern 04 (Dual payload + deduplication)"
 
@@ -48,6 +38,7 @@ dm_validate_tools
 dm_wait_for_service
 dm_require_mqtt_broker
 dm_verify_mqtt_connector_ready
+dm_validate_only_exit
 
 dm_step 2 "Creating mapping with dual payload type handling"
 SF_CODE=$(cat <<'JSCODE'
@@ -56,9 +47,10 @@ function onMessage(msg, context) {
     var externalId = payload.externalId;
     var payloadType = payload.payloadType;
     
-    // Get or initialize deduplication cache
+    // Get or initialize deduplication state (persisted across invocations
+    // via the FlowStateStore). getState returns undefined for an unset key.
     var cacheKey = "lastError_" + externalId;
-    var lastError = context.getCache(cacheKey);
+    var lastError = context.getState(cacheKey);
     
     if (payloadType === "telemetry") {
         // Process telemetry data
@@ -84,7 +76,7 @@ function onMessage(msg, context) {
         var currentError = payload.logMessage;
         if (lastError !== currentError) {
             // New error or different from last - create alarm
-            context.setCache(cacheKey, currentError);
+            context.setState(cacheKey, currentError);
             
             var alarm = {
                 cumulocityType: "alarm",
@@ -161,7 +153,7 @@ TELEMETRY=$(jq -cn \
       }
     }')
 
-echo "$TELEMETRY" | mosquitto_pub -h broker.hivemq.com -t "flowState/$EXT_ID" -s -q 1
+dm_mqtt_publish "flowState/$EXT_ID" "$TELEMETRY" 1
 dm_success "Telemetry published"
 
 dm_step 5 "Publishing first error event"
@@ -174,8 +166,13 @@ ERROR1=$(jq -cn \
       logMessage: "Sensor malfunction detected"
     }')
 
-echo "$ERROR1" | mosquitto_pub -h broker.hivemq.com -t "flowState/$EXT_ID" -s -q 1
+dm_mqtt_publish "flowState/$EXT_ID" "$ERROR1" 1
 dm_success "First error published"
+
+# Let the first error be processed and its dedup state persisted before sending
+# the duplicate — otherwise the second message may load state before the first
+# writes it back, and deduplication can't take effect.
+dm_wait 5 "for first error to be processed and dedup state persisted"
 
 dm_step 6 "Publishing duplicate error (should be suppressed)"
 ERROR2=$(jq -cn \
@@ -187,7 +184,7 @@ ERROR2=$(jq -cn \
       logMessage: "Sensor malfunction detected"
     }')
 
-echo "$ERROR2" | mosquitto_pub -h broker.hivemq.com -t "flowState/$EXT_ID" -s -q 1
+dm_mqtt_publish "flowState/$EXT_ID" "$ERROR2" 1
 dm_success "Duplicate error published (should be deduplicated)"
 
 dm_step 7 "Verifying measurements and alarms"
@@ -198,20 +195,15 @@ if [ -z "$DEVICE_ID" ]; then
     dm_error "Device not found"
 fi
 
-# Check measurement count
-MEASUREMENTS=$(dm_api GET "/measurement/measurements?source=$DEVICE_ID&pageSize=10" 2>/dev/null || echo '{"measurements":[]}')
-MEAS_COUNT=$(echo "$MEASUREMENTS" | jq '.measurements | length')
-dm_success "Measurements created: $MEAS_COUNT"
+# Check measurement count (core C8Y endpoints — use the c8y CLI, not dm_api).
+MEAS_COUNT=$(c8y measurements list --device "$DEVICE_ID" \
+    --pageSize 10 --output json 2>/dev/null | jq -s 'length')
+dm_assert_gt "Telemetry measurement created" "${MEAS_COUNT:-0}" 0
 
-# Check alarm count (should be 1, not 2)
-ALARMS=$(dm_api GET "/alarm/alarms?source=$DEVICE_ID&type=c8y_DeviceError&pageSize=10" 2>/dev/null || echo '{"alarms":[]}')
-ALARM_COUNT=$(echo "$ALARMS" | jq '.alarms | length')
-dm_success "Error alarms created: $ALARM_COUNT (expected: 1, deduplication prevented duplicates)"
-
-if [ "$ALARM_COUNT" -eq 1 ]; then
-    dm_success "✅ Deduplication verified - only 1 alarm despite 2 errors"
-else
-    dm_warn "Deduplication count: $ALARM_COUNT (expected: 1)"
-fi
+# Check error alarm count: two identical errors should be deduplicated to 1.
+ALARM_COUNT=$(c8y alarms list --device "$DEVICE_ID" --type "c8y_DeviceError" \
+    --pageSize 10 --output json 2>/dev/null | jq -s 'length')
+dm_assert_eq "Error alarm deduplicated to single alarm" "1" "${ALARM_COUNT:-0}"
 
 dm_done "Inbound Smart Function Pattern 04"
+dm_print_summary

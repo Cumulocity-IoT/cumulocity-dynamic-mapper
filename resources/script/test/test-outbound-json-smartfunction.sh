@@ -13,36 +13,38 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/test-harness.sh"
 
-KEEP_ON_FAILURE=false
+SUBSCRIPTION_NAME=""
 EXT_ID="dmtest-sf-out-$(date +%s)"
 MAPPING_ID=""
 DEVICE_ID=""
 DEVICE_NAME="dmtest-sf-device-$RANDOM"
+TEMP_FILE=""
+TEMP_ERR_FILE=""
 
-for arg in "$@"; do
-    case "$arg" in
-        --keep) KEEP_ON_FAILURE=true ;;
-        --cleanup) trap cleanup EXIT ;;
-    esac
-done
+dm_parse_args "$@"
 
 cleanup() {
-    if [ "$KEEP_ON_FAILURE" = "true" ]; then
-        dm_warn "Skipping cleanup (--keep flag set)"
-        return 0
-    fi
     dm_info "Cleaning up test resources ..."
     [ -n "$MAPPING_ID" ] && dm_delete_mapping "$MAPPING_ID" 2>/dev/null || true
+    if [ -n "${DEVICE_ID:-}" ] && [ -n "${SUBSCRIPTION_NAME:-}" ]; then
+        dm_delete_static_subscription "$DEVICE_ID" "$SUBSCRIPTION_NAME" 2>/dev/null || true
+    fi
     if [ -n "${DEVICE_ID:-}" ]; then
         c8y inventory delete --id "$DEVICE_ID" 2>/dev/null || true
     fi
     if [ -n "${DEVICE_NAME:-}" ]; then
         c8y identity delete --name "$EXT_ID" --type "c8y_Serial" 2>/dev/null || true
     fi
+    if [ -n "${TEMP_FILE:-}" ] && [ -f "$TEMP_FILE" ]; then
+      rm -f "$TEMP_FILE"
+    fi
+    if [ -n "${TEMP_ERR_FILE:-}" ] && [ -f "$TEMP_ERR_FILE" ]; then
+      rm -f "$TEMP_ERR_FILE"
+    fi
     dm_info "Cleanup complete"
 }
 
-trap cleanup EXIT
+dm_register_cleanup cleanup
 
 dm_banner "Test: Outbound Smart Function (C8Y Measurement → MQTT JSON)"
 
@@ -51,6 +53,7 @@ dm_validate_tools
 dm_wait_for_service
 dm_require_mqtt_broker
 dm_verify_mqtt_connector_ready
+dm_validate_only_exit
 
 dm_step 2 "Creating test device"
 DEVICE=$(c8y inventory create \
@@ -72,6 +75,52 @@ c8y identity create \
     --device "$DEVICE_ID" \
     --output json >/dev/null 2>&1 || dm_warn "External ID may already exist: $EXT_ID"
 dm_success "External ID bound: $EXT_ID"
+
+dm_step "Creating static subscription for device"
+# Without a notification subscription the outbound dispatcher never receives the
+# device's measurement, so the Smart Function never runs and nothing is published.
+_before_subs=$(c8y notification2 subscriptions list --source "$DEVICE_ID" --output json 2>/dev/null || printf '[]')
+_before_names_json=$(printf '%s' "$_before_subs" | jq -c '
+    def rows:
+      if type == "array" then .
+      elif type == "object" then
+        if ((.subscriptions // null) != null and ((.subscriptions | type) == "array")) then .subscriptions
+        elif ((.data // null) != null and ((.data | type) == "array")) then .data
+        elif ((.subscription // .subscriptionName // .id // empty) | tostring | length) > 0 then [.]
+        else [] end
+      else [] end;
+    rows
+    | map(.subscription // .subscriptionName // .id // empty)
+    | map(select(length > 0))
+    | unique
+' 2>/dev/null || printf '[]')
+dm_create_static_subscription_must "MEASUREMENT" "$DEVICE_ID" "$DEVICE_NAME"
+dm_wait 5 "for subscription propagation"
+_after_subs=$(c8y notification2 subscriptions list --source "$DEVICE_ID" --output json 2>/dev/null || printf '[]')
+_after_names_json=$(printf '%s' "$_after_subs" | jq -c '
+    def rows:
+      if type == "array" then .
+      elif type == "object" then
+        if ((.subscriptions // null) != null and ((.subscriptions | type) == "array")) then .subscriptions
+        elif ((.data // null) != null and ((.data | type) == "array")) then .data
+        elif ((.subscription // .subscriptionName // .id // empty) | tostring | length) > 0 then [.]
+        else [] end
+      else [] end;
+    rows
+    | map(.subscription // .subscriptionName // .id // empty)
+    | map(select(length > 0))
+    | unique
+' 2>/dev/null || printf '[]')
+SUBSCRIPTION_NAME=$(jq -nr \
+    --argjson before "$_before_names_json" \
+    --argjson after "$_after_names_json" \
+    '($after - $before | .[0]) // ($after[0] // "")')
+
+if [ -z "${SUBSCRIPTION_NAME:-}" ]; then
+    dm_warn "Could not resolve created static subscription name; cleanup may skip explicit subscription deletion."
+else
+    dm_info "Resolved static subscription name for cleanup: $SUBSCRIPTION_NAME"
+fi
 
 dm_step 4 "Creating outbound Smart Function mapping"
 SF_CODE=$(cat <<'JSCODE'
@@ -132,13 +181,18 @@ dm_deploy_mapping_to_mqtt_connector "$MAPPING_ID"
 dm_activate_mapping "$MAPPING_ID"
 dm_success "Mapping deployed and activated"
 
+BASELINE=$(dm_mapping_received_count "$MAPPING_ID")
+dm_info "Baseline messagesReceived=$BASELINE"
+
 dm_step 6 "Subscribing to MQTT output topic"
 MQTT_TOPIC="measurements/outbound/$EXT_ID"
 dm_info "Subscribing to: $MQTT_TOPIC"
 
-# Background MQTT subscriber (collects messages for verification)
+# Background MQTT subscriber (collects messages for verification).
+# Uses the harness helper so MQTT_HOST/PORT/USER/PASS/TLS overrides apply.
 TEMP_FILE=$(mktemp)
-timeout 15 mosquitto_sub -h broker.hivemq.com -t "$MQTT_TOPIC" -q 1 > "$TEMP_FILE" 2>&1 &
+TEMP_ERR_FILE=$(mktemp)
+( dm_mqtt_subscribe_one "$MQTT_TOPIC" 15 > "$TEMP_FILE" 2>"$TEMP_ERR_FILE" ) &
 MQTT_PID=$!
 sleep 1
 
@@ -158,30 +212,49 @@ MEASUREMENT=$(jq -cn \
       }
     }')
 
-dm_api POST "/measurement/measurements" --data "$MEASUREMENT" > /dev/null 2>&1
+# /measurement/measurements is a core C8Y endpoint, not a Dynamic Mapper one —
+# create it through the c8y CLI rather than dm_api (which prefixes DM_SERVICE).
+printf '%s' "$MEASUREMENT" | c8y measurements create --template "input.value" \
+    --output json > /dev/null 2>&1 || dm_warn "Measurement creation may have failed"
 dm_success "Test measurement created"
 
 dm_step 8 "Waiting for MQTT message"
-sleep 3
+# Block until the background subscriber gets a message (it exits on the first
+# one via -C 1) or its 15s window elapses — don't read the temp file early.
+set +e
+wait "$MQTT_PID"
+MQTT_SUB_RC=$?
+set -e
 
-# Check if message was received
+dm_assert_eq "MQTT subscriber exit code" "0" "$MQTT_SUB_RC"
+
+# Reliable signal: confirm the outbound mapping actually processed the measurement.
+dm_assert_mapping_received_gt "Outbound mapping processed measurement" "$MAPPING_ID" "$BASELINE"
+
+# Check if the transformed message was published to the broker.
+MQTT_MSG=""
 if [ -f "$TEMP_FILE" ] && [ -s "$TEMP_FILE" ]; then
-    MQTT_MSG=$(cat "$TEMP_FILE" | head -1)
-    dm_success "MQTT message received: $MQTT_MSG"
-    
-    # Verify content
-    TEMP_VALUE=$(echo "$MQTT_MSG" | jq -r '.temperature // empty' 2>/dev/null)
-    if [ "$TEMP_VALUE" = "22.5" ]; then
-        dm_success "Temperature value verified in MQTT message"
-    else
-        dm_warn "Temperature value not as expected: $TEMP_VALUE"
-    fi
-else
-    dm_warn "No MQTT message received (may still be pending)"
+    MQTT_MSG=$(head -1 "$TEMP_FILE")
+    dm_info "MQTT message received: $MQTT_MSG"
 fi
+_received=false
+[ -n "$MQTT_MSG" ] && _received=true
+dm_assert_eq "Outbound MQTT message received" "true" "$_received"
+
+_json_payload=false
+if printf '%s' "$MQTT_MSG" | jq -e . >/dev/null 2>&1; then
+  _json_payload=true
+fi
+dm_assert_eq "Outbound MQTT payload is valid JSON" "true" "$_json_payload"
+
+# Verify transformed content
+TEMP_VALUE=$(echo "$MQTT_MSG" | jq -r '.temperature // empty' 2>/dev/null || echo "")
+dm_assert_eq "Transformed temperature value" "22.5" "$TEMP_VALUE"
 
 # Cleanup
-kill $MQTT_PID 2>/dev/null || true
+kill "$MQTT_PID" 2>/dev/null || true
 rm -f "$TEMP_FILE"
+rm -f "$TEMP_ERR_FILE"
 
 dm_done "Outbound Smart Function"
+dm_print_summary

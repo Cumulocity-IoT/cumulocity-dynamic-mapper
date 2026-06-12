@@ -23,7 +23,6 @@ import {
   API,
   Direction,
   Mapping,
-  SnoopStatus,
   TransformationType
 } from '../../shared';
 import { ValidationFormlyError } from './mapping.model';
@@ -117,28 +116,6 @@ export function isWildcardTopic(topic: string): boolean {
     topic.includes(TOPIC_WILDCARD_MULTI) ||
     topic.includes(TOPIC_WILDCARD_SINGLE);
   return result;
-}
-
-export function checkNotSnooping(control: AbstractControl) {
-  let errors = {};
-
-  const { snoopStatus } = control['controls'];
-  snoopStatus.setErrors(null);
-
-  const isSnoop =
-    snoopStatus.value === SnoopStatus.ENABLED ||
-    snoopStatus.value === SnoopStatus.STARTED;
-
-  if (isSnoop) {
-    errors = {
-      Only_One_MuNot_Snooping: {
-        message: 'Disable snooping before continuing',
-        errorPath: 'snoopStatus'
-      }
-    };
-  }
-
-  return Object.keys(errors).length > 0 ? errors : null;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars

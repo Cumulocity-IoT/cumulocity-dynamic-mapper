@@ -173,14 +173,6 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       priority: 602,
       preventDuplicates: true
     }),
-    unknownPayloadNode: new NavigatorNode({
-      parent: gettext('Introduction'),
-      icon: 'empty',
-      label: gettext('Snooping'),
-      path: '/c8y-pkg-dynamic-mapper/introduction/unknown-payload',
-      priority: 601,
-      preventDuplicates: true
-    }),
     reliabilitySettingsNode: new NavigatorNode({
       parent: gettext('Introduction'),
       icon: 'empty',

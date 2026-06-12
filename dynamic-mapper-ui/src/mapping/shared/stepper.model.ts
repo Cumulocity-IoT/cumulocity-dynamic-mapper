@@ -27,15 +27,6 @@ export enum EditorMode {
   COPY = 'COPY'
 }
 
-export enum AdvisorAction {
-  CONTINUE = 'CONTINUE',
-  CANCEL = 'CANCEL',
-  STOP_SNOOPING_AND_EDIT = 'STOP_SNOOPING_AND_EDIT',
-  CONTINUE_SNOOPING = 'CONTINUE_SNOOPING',
-  EDIT = 'EDIT',
-  VIEW = 'VIEW',
-}
-
 export const STEP_SELECT_CONNECTOR = 0;
 export const STEP_GENERAL_SETTINGS = 1;
 export const STEP_SELECT_TEMPLATES = 2;

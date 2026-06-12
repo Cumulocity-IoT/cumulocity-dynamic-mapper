@@ -111,8 +111,6 @@ class EnrichmentInboundProcessorTest {
                 0L, // messagesReceived
                 0L, // errors
                 0L, // currentFailureCount
-                0L, // snoopedTemplatesActive
-                0L, // snoopedTemplatesTotal
                 null // loadingError
         );
 

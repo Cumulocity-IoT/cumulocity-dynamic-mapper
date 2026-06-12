@@ -49,7 +49,6 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.model.SnoopStatus;
 import dynamic.mapper.model.Substitution;
 import dynamic.mapper.processor.model.C8YMessage;
 import dynamic.mapper.processor.model.MappingType;
@@ -185,7 +184,6 @@ class EnrichmentOutboundProcessorTest {
                 .transformationType(TransformationType.DEFAULT)
                 .debug(false)
                 .active(true)
-                .snoopStatus(SnoopStatus.NONE)
                 .qos(Qos.AT_MOST_ONCE)
                 .lastUpdate(System.currentTimeMillis())
                 .sourceTemplate("{\"id\":\"string\",\"time\":\"string\"}")
@@ -217,8 +215,6 @@ class EnrichmentOutboundProcessorTest {
                 0L, // messagesReceived
                 0L, // errors
                 0L, // currentFailureCount
-                0L, // snoopedTemplatesActive
-                0L, // snoopedTemplatesTotal
                 null // loadingError
         );
     }

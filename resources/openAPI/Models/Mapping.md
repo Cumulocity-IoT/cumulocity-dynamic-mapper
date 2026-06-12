@@ -25,8 +25,6 @@
 | **autoAckOperation** | **Boolean** | Whether to automatically acknowledge operations | [optional] [default to null] |
 | **useExternalId** | **Boolean** | Whether to use external ID for device identification | [default to null] |
 | **externalIdType** | **String** | Type of external ID to use | [optional] [default to null] |
-| **snoopStatus** | **String** | Status of template snooping | [default to null] |
-| **snoopedTemplates** | **List** | List of templates captured during snooping | [default to null] |
 | **extension** | [**ExtensionEntry**](ExtensionEntry.md) | Extension configuration for custom processing | [optional] [default to null] |
 | **filterMapping** | **String** | Filter expression for mapping conditions | [optional] [default to null] |
 | **filterInventory** | **String** | Filter expression for inventory queries | [optional] [default to null] |

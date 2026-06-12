@@ -211,7 +211,7 @@ public class MonitoringController {
         }
     }
 
-    @Operation(summary = "Get mapping statistics", description = "Retrieves statistics for all mappings including message counts, error counts, snooping status, and loading errors. Useful for monitoring mapping performance and health.")
+    @Operation(summary = "Get mapping statistics", description = "Retrieves statistics for all mappings including message counts, error counts, and loading errors. Useful for monitoring mapping performance and health.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Mapping statistics retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(type = "array", description = "List of mapping statistics", implementation = MappingStatus.class))),
             @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)

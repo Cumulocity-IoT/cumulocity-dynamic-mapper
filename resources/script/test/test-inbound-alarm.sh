@@ -13,23 +13,13 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/test-harness.sh"
 
-KEEP_ON_FAILURE=false
 EXT_ID="dmtest-alarm-$(date +%s)"
 MAPPING_ID=""
 DEVICE_ID=""
 
-for arg in "$@"; do
-    case "$arg" in
-        --keep) KEEP_ON_FAILURE=true ;;
-        --cleanup) trap cleanup EXIT ;;
-    esac
-done
+dm_parse_args "$@"
 
 cleanup() {
-    if [ "$KEEP_ON_FAILURE" = "true" ]; then
-        dm_warn "Skipping cleanup (--keep flag set)"
-        return 0
-    fi
     dm_info "Cleaning up test resources ..."
     [ -n "$MAPPING_ID" ] && dm_delete_mapping "$MAPPING_ID" 2>/dev/null || true
     if [ -n "${DEVICE_ID:-}" ]; then
@@ -39,7 +29,7 @@ cleanup() {
     dm_info "Cleanup complete"
 }
 
-trap cleanup EXIT
+dm_register_cleanup cleanup
 
 dm_banner "Test: Inbound Alarm (JSON → c8y_Alarm via DEFAULT substitution)"
 
@@ -48,6 +38,7 @@ dm_validate_tools
 dm_wait_for_service
 dm_require_mqtt_broker
 dm_verify_mqtt_connector_ready
+dm_validate_only_exit
 
 dm_step 2 "Creating alarm mapping with DEFAULT transformation"
 MAPPING_JSON=$(jq -cn \
@@ -99,7 +90,7 @@ TEST_PAYLOAD=$(jq -cn '{
   time: (now | todate)
 }')
 
-echo "$TEST_PAYLOAD" | mosquitto_pub -h broker.hivemq.com -t "dmtest/alarm/$EXT_ID" -s -q 1
+dm_mqtt_publish "dmtest/alarm/$EXT_ID" "$TEST_PAYLOAD" 1
 dm_success "Alarm JSON published"
 
 dm_step 5 "Waiting for device and alarm creation"
@@ -125,17 +116,14 @@ for _attempt in 1 2 3 4 5; do
     sleep 2
 done
 
-if [ "$ALARM_COUNT" -ge 1 ]; then
-    dm_success "Alarm created: $ALARM_COUNT alarm(s) found"
-else
-    dm_error "No alarms found for device $DEVICE_ID"
-fi
+dm_assert_gt "Alarm created" "$ALARM_COUNT" 0
 
 dm_step 7 "Verifying alarm content"
 ALARM_TEXT=$(echo "$ALARM" | jq -rs '.[0].text // empty')
 ALARM_SEVERITY=$(echo "$ALARM" | jq -rs '.[0].severity // empty')
-
 dm_info "Alarm text: $ALARM_TEXT"
 dm_info "Alarm severity: $ALARM_SEVERITY"
+dm_assert_eq "Alarm severity" "CRITICAL" "$ALARM_SEVERITY"
 
 dm_done "Inbound ALARM Transformation"
+dm_print_summary

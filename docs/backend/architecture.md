@@ -24,13 +24,13 @@ Under `dynamic-mapper-service/src/main/java/dynamic/mapper/`:
 **Inbound** (Broker → C8Y):
 
 ```
-AConnectorClient → CamelDispatcherInbound → deserialize → snoop → enrich → substitute/eval → emit to C8Y
+AConnectorClient → CamelDispatcherInbound → deserialize → enrich → substitute/eval → emit to C8Y
 ```
 
 **Outbound** (C8Y → Broker): entry point is `CamelDispatcherOutbound`.
 
 Abstract processor hierarchy:
-`AbstractSnoopingProcessor` → `AbstractEnrichmentProcessor` → `AbstractCodeExtractionProcessor` / `AbstractJSONataExtractionProcessor` / `AbstractExtensibleProcessor`
+`AbstractEnrichmentProcessor` → `AbstractFlowProcessor` / `AbstractJSONataExtractionProcessor` / `AbstractExtensibleProcessor`
 
 ## Transformation Types
 

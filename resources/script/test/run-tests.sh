@@ -4,16 +4,18 @@
 #
 # Usage:
 #   ./run-tests.sh                   # interactive menu
-#   ./run-tests.sh all               # run every test
-#   ./run-tests.sh inbound           # all inbound tests
-#   ./run-tests.sh outbound          # all outbound + subscription tests
-#   ./run-tests.sh reliability       # reliability tests
+#   ./run-tests.sh all   (or a)      # run every test
+#   ./run-tests.sh inbound     (i)   # all inbound tests
+#   ./run-tests.sh outbound    (o)   # all outbound + subscription tests
+#   ./run-tests.sh extension   (e)   # all extension tests
+#   ./run-tests.sh smartfunc   (s)   # all Smart Function pattern tests
+#   ./run-tests.sh reliability (r)   # reliability tests
 #   ./run-tests.sh <script-name>     # single test, e.g. test-inbound-json-default
 #   ./run-tests.sh <n> [n2 ...]      # one or more menu numbers
 #
 # Environment:
 #   DM_SERVICE          Base path to dynamic mapper (default /service/dynamic-mapper-service)
-#   MQTT_HOST           MQTT broker host  (default localhost)
+#   MQTT_HOST           MQTT broker host  (default broker.hivemq.com)
 #   MQTT_PORT           MQTT broker port  (default 1883)
 #   MQTT_USER           MQTT username     (optional)
 #   MQTT_PASS           MQTT password     (optional)
@@ -32,6 +34,10 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # Run c8y CLI non-interactively: suppress all confirmation prompts and spinners.
 export C8Y_SETTINGS_CI=true
+
+# Reserved exit code a test uses to signal "skipped" (prerequisite absent).
+# Kept in sync with DM_EXIT_SKIP in test-harness.sh.
+DM_SKIP_EXIT_CODE="${DM_EXIT_SKIP:-42}"
 
 # ── ANSI colours ───────────────────────────────────────────────────────────────
 if [ -t 1 ]; then
@@ -134,13 +140,17 @@ Dynamic Mapper integration test runner
 
 Usage:
     ./run-tests.sh                   Interactive menu
-    ./run-tests.sh all               Run every test
-    ./run-tests.sh inbound           Run all inbound tests
-    ./run-tests.sh outbound          Run all outbound tests
-    ./run-tests.sh reliability       Run reliability tests
+    ./run-tests.sh all   | a         Run every test
+    ./run-tests.sh inbound | i       Run all inbound tests
+    ./run-tests.sh outbound | o      Run all outbound tests
+    ./run-tests.sh extension | e     Run all extension tests
+    ./run-tests.sh smartfunc | s     Run all Smart Function pattern tests
+    ./run-tests.sh reliability | r   Run reliability tests
     ./run-tests.sh <script-name>     Run one script (with or without .sh)
     ./run-tests.sh <n> [n2 ...]      Run one or more menu indices
     ./run-tests.sh --help            Show this help
+
+Category shortcuts (single letters a/i/o/e/s/r) match the interactive menu.
 
 Environment variables:
     DM_SERVICE
@@ -149,7 +159,7 @@ Environment variables:
 
     MQTT_HOST
         MQTT broker host used by test publish/subscribe helpers.
-        Default: localhost
+        Default: broker.hivemq.com
 
     MQTT_PORT
         MQTT broker port used by test publish/subscribe helpers.
@@ -264,6 +274,7 @@ _SUITE_PASS=0
 _SUITE_FAIL=0
 _SUITE_SKIP=0
 declare -a _FAILED_TESTS=()
+declare -a _SKIPPED_TESTS=()
 
 _run_one() {   # <entry-from-TESTS>
     local name script exit_code _cleanup_flag
@@ -282,22 +293,22 @@ _run_one() {   # <entry-from-TESTS>
     _cleanup_flag="--cleanup"
     if [ "$name" = "test-outbound-group-subscription" ]; then
         # Stateful handoff: test-outbound-group-subscription-removal consumes
-        # the state emitted by this test. Running with --cleanup here deletes
-        # the group/device before the removal test can validate unassign logic.
-        _cleanup_flag=""
+        # the state emitted by this test. Tests now clean up by default, so we
+        # pass --keep here to retain the group/device for the removal test.
+        _cleanup_flag="--keep"
     fi
     set +e
-    if [ -n "$_cleanup_flag" ]; then
-        bash "$script" "$_cleanup_flag"
-    else
-        bash "$script"
-    fi
+    bash "$script" "$_cleanup_flag"
     exit_code=$?
     set -e
 
     if [ "$exit_code" -eq 0 ]; then
         printf "${C_GREEN}PASS${C_RESET}  %s\n" "$name"
         _SUITE_PASS=$((_SUITE_PASS + 1))
+    elif [ "$exit_code" -eq "$DM_SKIP_EXIT_CODE" ]; then
+        printf "${C_YELLOW}SKIP${C_RESET}  %s  (prerequisite absent)\n" "$name"
+        _SUITE_SKIP=$((_SUITE_SKIP + 1))
+        _SKIPPED_TESTS+=("$name")
     else
         printf "${C_RED}FAIL${C_RESET}  %s  (exit %d)\n" "$name" "$exit_code"
         _SUITE_FAIL=$((_SUITE_FAIL + 1))
@@ -325,11 +336,19 @@ _print_suite_summary() {
     local total=$((_SUITE_PASS + _SUITE_FAIL + _SUITE_SKIP))
     echo ""
     printf "${C_BOLD}%s${C_RESET}\n" "══════════════════════════════════════════════"
-    printf "${C_BOLD} Suite results: %d/%d passed" "$_SUITE_PASS" "$total"
-    [ "$_SUITE_SKIP" -gt 0 ] && printf ", %d skipped" "$_SUITE_SKIP"
-    [ "$_SUITE_FAIL" -gt 0 ] && printf "${C_RED}, %d FAILED${C_RESET}" "$_SUITE_FAIL" \
-        || printf "${C_GREEN} ✓${C_RESET}"
+    printf "${C_BOLD} Suite results: %d passed" "$_SUITE_PASS"
+    [ "$_SUITE_SKIP" -gt 0 ] && printf "${C_YELLOW}, %d skipped${C_RESET}${C_BOLD}" "$_SUITE_SKIP"
+    [ "$_SUITE_FAIL" -gt 0 ] && printf "${C_RED}, %d FAILED${C_RESET}${C_BOLD}" "$_SUITE_FAIL"
+    printf " (of %d)" "$total"
+    [ "$_SUITE_FAIL" -eq 0 ] && printf "${C_GREEN} ✓${C_RESET}"
     printf "${C_BOLD}\n%s${C_RESET}\n" "══════════════════════════════════════════════"
+    if [ "${#_SKIPPED_TESTS[@]}" -gt 0 ]; then
+        printf "${C_YELLOW}Skipped tests (prerequisite absent):${C_RESET}\n"
+        for t in "${_SKIPPED_TESTS[@]}"; do
+            printf "  ${C_YELLOW}–${C_RESET}  %s\n" "$t"
+        done
+        echo ""
+    fi
     if [ "${#_FAILED_TESTS[@]}" -gt 0 ]; then
         printf "${C_RED}Failed tests:${C_RESET}\n"
         for t in "${_FAILED_TESTS[@]}"; do
@@ -344,25 +363,22 @@ _dispatch_args() {
     local arg="$1"
     case "$arg" in
         -h|--help|help) _print_help ; exit 0 ;;
-        all)         _run_all ;;
-        inbound)     _run_category "inbound" ;;
-        outbound)    _run_category "outbound" ;;
-        extension)   _run_category "extension" ;;
-        smartfunc|smartfunction) _run_category "smartfunction" ;;
-        reliability) _run_category "reliability" ;;
+        a|all)         _run_all ;;
+        i|inbound)     _run_category "inbound" ;;
+        o|outbound)    _run_category "outbound" ;;
+        e|extension)   _run_category "extension" ;;
+        s|smartfunc|smartfunction) _run_category "smartfunction" ;;
+        r|reliability) _run_category "reliability" ;;
         *)
-            # Numeric index(es): already handled by caller
-            # Script name (with or without .sh)
+            # Numeric index(es): already handled by caller.
+            # Script name (with or without .sh): run via _run_one so PASS/SKIP/FAIL
+            # classification, the group-subscription --keep handoff, and the suite
+            # tallies all apply uniformly.
             local script
             script=$(_resolve_script "$arg")
             if [ -n "$script" ]; then
-                _suite_health_check
-                if [ "$arg" = "test-outbound-group-subscription" ] || [ "$arg" = "test-outbound-group-subscription.sh" ]; then
-                    bash "$script"
-                else
-                    bash "$script" --cleanup
-                fi
-                return $?
+                _run_one "single|${arg%.sh}|"
+                return 0
             fi
             printf "${C_RED}Unknown argument: %s${C_RESET}\n" "$arg"
             exit 1

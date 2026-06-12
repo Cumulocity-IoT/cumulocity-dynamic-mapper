@@ -50,8 +50,6 @@
     "autoAckOperation": true,
     "useExternalId": true,
     "externalIdType": "c8y_Serial",
-    "snoopStatus": "NONE",
-    "snoopedTemplates": [],
     "filterMapping": "bus_event = \"stop_event\"",
     "qos": "AT_LEAST_ONCE",
     "lastUpdate": 1744100776902
@@ -95,8 +93,6 @@
     "autoAckOperation": true,
     "useExternalId": true,
     "externalIdType": "c8y_Serial",
-    "snoopStatus": "NONE",
-    "snoopedTemplates": [],
     "filterMapping": "$exists(bus_opp)",
     "qos": "AT_LEAST_ONCE",
     "lastUpdate": 1744211243282
@@ -122,8 +118,6 @@
     "autoAckOperation": true,
     "useExternalId": true,
     "externalIdType": "c8y_Serial",
-    "snoopStatus": "NONE",
-    "snoopedTemplates": [],
     "filterMapping": "$exists(c8y_TemperatureMeasurement)",
     "maxFailureCount": 0,
     "qos": "AT_LEAST_ONCE",

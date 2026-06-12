@@ -52,7 +52,6 @@ import {
   RepairStrategy,
   SAMPLE_TEMPLATES_C8Y,
   SharedService,
-  SnoopStatus,
   StepperConfiguration,
   Feature,
   isSubstitutionsAsCode,
@@ -178,7 +177,6 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
   readonly COLOR_HIGHLIGHTED = COLOR_HIGHLIGHTED;
   readonly TransformationType = TransformationType;
   readonly EditorMode = EditorMode;
-  readonly SnoopStatus = SnoopStatus;
   readonly MappingTypeDescriptions = MappingTypeDescriptions;
 
   updateTestingTemplate = new ReplaySubject<Mapping>(1);
@@ -222,11 +220,9 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
   extensionEventItems$: Observable<{ label: string; value: string }[]>;
   /** True when the selected extension event has a configuration block defined */
   hasExtensionParameter = false;
-  snoopedTemplateItems: Array<{ label: string, value: string }> = [];
   codeTemplateItems: Array<{ label: string, value: string }> = [];
 
   selectedSubstitution = -1;
-  snoopedTemplateCounter = -1;
   expertMode = false;
   templatesInitialized = false;
   extensions = new Map<string, Extension>();
@@ -286,17 +282,6 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     this.extensionItems = Array.from(this.extensions.keys());
   }
 
-  private updateSnoopedTemplateItems(): void {
-    if (!this.mapping?.snoopedTemplates) {
-      this.snoopedTemplateItems = [];
-      return;
-    }
-    this.snoopedTemplateItems = Array.from({ length: this.mapping.snoopedTemplates.length }, (_, i) => ({
-      label: `Template - ${i}`,
-      value: String(i)
-    }));
-  }
-
   private updateCodeTemplateItems(): void {
     this.codeTemplateItems = this.codeTemplateEntries.map(item => ({
       label: `${item.name.charAt(0).toUpperCase() + item.name.slice(1)} (${item.type})`,
@@ -332,7 +317,6 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
       ),
       shareReplay(1)
     );
-    this.updateSnoopedTemplateItems();
 
     this.targetSystem = this.mapping.direction === Direction.INBOUND ? 'Cumulocity' : 'Broker';
     this.sourceSystem = this.mapping.direction === Direction.OUTBOUND ? 'Cumulocity' : 'Broker';
@@ -517,12 +501,6 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
         value: this.configurationToYaml(this.mapping?.extension?.parameter),
         disabled: this.stepperConfiguration.editorMode === EditorMode.READ_ONLY
       }),
-      snoopedTemplateIndex: new FormControl({
-        value: '-1',
-        disabled: !this.stepperConfiguration.showEditorSource ||
-          (this.mapping.snoopedTemplates?.length ?? 0) === 0 ||
-          this.stepperConfiguration.editorMode === EditorMode.READ_ONLY
-      }),
       sampleTargetTemplatesButton: new FormControl({
         value: !this.stepperConfiguration.showEditorSource ||
           this.stepperConfiguration.editorMode === EditorMode.READ_ONLY,
@@ -555,15 +533,6 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
         const eventName = typeof selected === 'string' ? selected : selected?.value ?? selected;
         if (eventName) {
           this.onSelectExtensionEvent(eventName);
-        }
-      });
-
-    this.templateForm.get('snoopedTemplateIndex')?.valueChanges
-      .pipe(distinctUntilChanged(), debounceTime(100), takeUntil(this.destroy$))
-      .subscribe(selected => {
-        const index = selected?.value ?? selected;
-        if (index !== null && index !== undefined && index !== '-1') {
-          this.onSelectSnoopedSourceTemplate(null as any);
         }
       });
 
@@ -674,8 +643,6 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     if (this.mapping.code) {
       this.mappingCode = stripTemplateMetadataTags(base64ToString(this.mapping.code));
     }
-
-    this.updateSnoopedTemplateItems();
 
     if (this.mapping?.extension?.extensionName && this.extensions) {
       this.stepperService.selectExtensionName(
@@ -1079,28 +1046,6 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     ]);
   }
 
-  async onSelectSnoopedSourceTemplate(event: Event): Promise<void> {
-    const selected = this.templateForm.get('snoopedTemplateIndex')?.value;
-    const indexValue = selected?.value ?? selected;
-    const index = typeof indexValue === 'string' ? parseInt(indexValue, 10) : indexValue;
-    this.sourceTemplate = this.stepperService.parseSnoopedTemplate(
-      this.mapping.snoopedTemplates[index]
-    );
-
-    if (this.stepperConfiguration.allowTemplateExpansion) {
-      if (this.stepperConfiguration.direction === Direction.INBOUND) {
-        this.sourceTemplate = expandExternalTemplate(
-          this.sourceTemplate,
-          this.mapping,
-          splitTopicExcludingSeparator(this.mapping.mappingTopicSample, false)
-        );
-      } else {
-        this.sourceTemplate = expandC8YTemplate(this.sourceTemplate, this.mapping);
-      }
-    }
-
-    this.mapping.snoopStatus = SnoopStatus.STOPPED;
-  }
 
   private manualResize(source: string): void {
     let element;

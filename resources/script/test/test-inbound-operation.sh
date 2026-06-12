@@ -13,23 +13,13 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/test-harness.sh"
 
-KEEP_ON_FAILURE=false
 EXT_ID="dmtest-operation-$(date +%s)"
 MAPPING_ID=""
 DEVICE_ID=""
 
-for arg in "$@"; do
-    case "$arg" in
-        --keep) KEEP_ON_FAILURE=true ;;
-        --cleanup) trap cleanup EXIT ;;
-    esac
-done
+dm_parse_args "$@"
 
 cleanup() {
-    if [ "$KEEP_ON_FAILURE" = "true" ]; then
-        dm_warn "Skipping cleanup (--keep flag set)"
-        return 0
-    fi
     dm_info "Cleaning up test resources ..."
     [ -n "$MAPPING_ID" ] && dm_delete_mapping "$MAPPING_ID" 2>/dev/null || true
     if [ -n "${DEVICE_ID:-}" ]; then
@@ -39,7 +29,7 @@ cleanup() {
     dm_info "Cleanup complete"
 }
 
-trap cleanup EXIT
+dm_register_cleanup cleanup
 
 dm_banner "Test: Inbound Operation (JSON → c8y_Operation via DEFAULT substitution)"
 
@@ -48,6 +38,7 @@ dm_validate_tools
 dm_wait_for_service
 dm_require_mqtt_broker
 dm_verify_mqtt_connector_ready
+dm_validate_only_exit
 
 dm_step 2 "Creating operation mapping with DEFAULT transformation"
 MAPPING_JSON=$(jq -cn \
@@ -94,7 +85,7 @@ TEST_PAYLOAD=$(jq -cn '{
   status: "PENDING"
 }')
 
-echo "$TEST_PAYLOAD" | mosquitto_pub -h broker.hivemq.com -t "dmtest/operation/$EXT_ID" -s -q 1
+dm_mqtt_publish "dmtest/operation/$EXT_ID" "$TEST_PAYLOAD" 1
 dm_success "Operation command published"
 
 dm_step 5 "Waiting for device and operation creation"
@@ -120,17 +111,13 @@ for _attempt in 1 2 3 4 5; do
     sleep 2
 done
 
-if [ "$OPERATION_COUNT" -ge 1 ]; then
-    dm_success "Operation created: $OPERATION_COUNT operation(s) found"
-else
-    dm_error "No operations found for device $DEVICE_ID"
-fi
+dm_assert_gt "Operation created" "$OPERATION_COUNT" 0
 
 dm_step 7 "Verifying operation content"
 OPERATION_STATUS=$(echo "$OPERATION" | jq -rs '.[0].status // empty')
 OPERATION_TYPE=$(echo "$OPERATION" | jq -rs '.[0] | keys[] | select(startswith("c8y_"))' 2>/dev/null | head -n 1 || echo "unknown")
-
 dm_info "Operation status: $OPERATION_STATUS"
 dm_info "Operation type: $OPERATION_TYPE"
 
 dm_done "Inbound OPERATION Transformation"
+dm_print_summary

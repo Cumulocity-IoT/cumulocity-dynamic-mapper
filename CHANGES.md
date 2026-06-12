@@ -1,6 +1,27 @@
 # Dynamic Mapper Service for Cumulocity
 
-## Changes
+## Release 6.4.0
+
+### Removal of the Snooping feature (breaking change)
+
+The **snooping** feature has been removed. Snooping previously allowed a mapping to passively
+record sample messages from the broker so the recorded payloads could be copied into the source
+template. This capability is superseded by the **Message Explorer**, which provides a dedicated,
+more powerful interface to inspect incoming messages and build mappings from real payloads.
+
+**Breaking API change:** the following service operations have been **removed** and will return an
+error if invoked:
+
+- `SNOOP_MAPPING`
+- `SNOOP_RESET`
+- `COPY_SNOOPED_SOURCE_TEMPLATE`
+
+The `snoopStatus` / `snoopedTemplates` fields on mappings and the `snoopedTemplatesActive` /
+`snoopedTemplatesTotal` fields on mapping status are no longer produced. Mappings persisted by
+earlier versions that still contain these fields continue to load — the now-unknown properties are
+ignored on deserialization and disappear the next time the mapping is saved.
+
+## Release 5.5.0
 
 In this release 5.5.0 of the Cumulocity Dynamic Mapper, there is a breaking change concerning the naming of roles and the enforcement of permissions for features.
 
