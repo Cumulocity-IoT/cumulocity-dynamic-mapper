@@ -21,7 +21,7 @@ The `snoopStatus` / `snoopedTemplates` fields on mappings and the `snoopedTempla
 earlier versions that still contain these fields continue to load — the now-unknown properties are
 ignored on deserialization and disappear the next time the mapping is saved.
 
-## Changes
+## Release 5.5.0
 
 In this release 5.5.0 of the Cumulocity Dynamic Mapper, there is a breaking change concerning the naming of roles and the enforcement of permissions for features.
 
