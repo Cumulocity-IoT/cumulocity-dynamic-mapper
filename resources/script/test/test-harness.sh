@@ -99,10 +99,27 @@ DM_DEFAULT_HEALTH_RETRIES="${DM_DEFAULT_HEALTH_RETRIES:-24}"
 DM_DEFAULT_HEALTH_INTERVAL="${DM_DEFAULT_HEALTH_INTERVAL:-10}"
 
 # ── MQTT Broker Defaults ────────────────────────────────────────────────────────
-export MQTT_HOST="${MQTT_HOST:-broker.hivemq.com}"
-export MQTT_PORT="${MQTT_PORT:-1883}"
-export MQTT_TLS="${MQTT_TLS:-false}"
+# DM_BROKER_MODE selects which broker the MQTT helpers drive:
+#   public           — public HiveMQ/EMQX broker (default; unchanged behaviour)
+#   c8y-mqtt-service — the Cumulocity MQTT Service via a CUMULOCITY_MQTT_SERVICE_PULSAR
+#                      connector, authenticated with an X.509 client cert (TLS :9883).
+export DM_BROKER_MODE="${DM_BROKER_MODE:-public}"
+if [ "$DM_BROKER_MODE" = "c8y-mqtt-service" ]; then
+    # Endpoint is the tenant domain on the TLS MQTT port. dm_require_mqtt_broker
+    # re-derives and is authoritative; these are the standalone/reachability values.
+    export MQTT_HOST="${MQTT_HOST:-${DM_C8Y_MQTT_HOST:-${C8Y_DOMAIN:-}}}"
+    export MQTT_PORT="${MQTT_PORT:-${DM_C8Y_MQTT_PORT:-9883}}"
+    export MQTT_TLS="${MQTT_TLS:-true}"
+else
+    export MQTT_HOST="${MQTT_HOST:-broker.hivemq.com}"
+    export MQTT_PORT="${MQTT_PORT:-1883}"
+    export MQTT_TLS="${MQTT_TLS:-false}"
+fi
 export MQTT_INSECURE="${MQTT_INSECURE:-false}"
+
+# Set by dm_require_mqtt_broker in c8y-mqtt-service mode (see _dm_require_mqtt_service_broker):
+_DM_MQTT_SVC_MODE=false   # true → publish/subscribe use cert auth (-i CN, -u tenant, --cert/--key)
+_DM_MQTT_CLIENT_ID=""     # MQTT clientId == cert CN (the MQTT Service requires they match)
 
 # Run c8y CLI non-interactively: suppress all confirmation prompts and spinners.
 export C8Y_SETTINGS_CI=true
@@ -298,9 +315,11 @@ _dm_on_exit() {
     local _rc=$?
     # Validation-only runs created no data — nothing to clean up or warn about.
     [ "${_DM_VALIDATE_ONLY}" = "true" ] && return "$_rc"
-    if [ "${_DM_DO_CLEANUP}" = "true" ] && [ -n "${_DM_CLEANUP_FN}" ]; then
-        "$_DM_CLEANUP_FN" || true
-    elif [ -n "${_DM_CLEANUP_FN}" ]; then
+    if [ "${_DM_DO_CLEANUP}" = "true" ]; then
+        [ -n "${_DM_CLEANUP_FN}" ] && { "$_DM_CLEANUP_FN" || true; }
+        # Always remove a provisioned MQTT Service trust anchor (no-op if none).
+        [ -n "${_DM_MQTT_CERT_NAME:-}" ] && { dm_cleanup_mqtt_service_cert || true; }
+    elif [ -n "${_DM_CLEANUP_FN}" ] || [ -n "${_DM_MQTT_CERT_NAME:-}" ]; then
         dm_warn "Skipping cleanup (--keep set) — test data retained."
     fi
     return "$_rc"
@@ -889,8 +908,41 @@ dm_deploy_mapping_to_connector() {  # <mapping_id> <connector_identifier>
     _mapping_json=$(dm_api GET "/mapping/${_mapping_ref}" 2>/dev/null || printf '{}')
     _resolved=$(printf '%s' "$_mapping_json" | jq -r '.identifier // empty' 2>/dev/null || printf '')
     _deployment_key="${_resolved:-$_mapping_ref}"
-    dm_api_must PUT "/deployment/defined/${_deployment_key}" "[\"${_conn}\"]" >/dev/null
-    dm_info "Deployed mapping ${_mapping_ref} (key=${_deployment_key}) -> ${_conn}"
+
+    # IMPORTANT: PUT the connector list with a LITERAL --template array body.
+    # The generic dm_api_must path serializes a top-level JSON array via
+    # `--template input.value`, which some go-c8y-cli versions mangle so the
+    # deployment registers NO connector (symptom: the mapping shows "No active
+    # connector" in the UI and inbound messages are dropped by the route filter).
+    # The literal form below is reliable; we then verify the assignment stuck.
+    local _err _retry_msg=""
+    _err=$(mktemp)
+    if ! c8y api --method PUT \
+            --url "${DM_SERVICE}/deployment/defined/${_deployment_key}" \
+            --template "[\"${_conn}\"]" \
+            --header 'Content-Type: application/json' \
+            --force --output json </dev/null >/dev/null 2>"$_err"; then
+        [ -s "$_err" ] && _retry_msg="$(tr '\n' ' ' <"$_err" | head -c 400)"
+        rm -f "$_err"
+        dm_error "Deploy PUT failed for key=${_deployment_key}${_retry_msg:+: $_retry_msg}"
+    fi
+    rm -f "$_err"
+
+    # Verify the connector is actually present in the deployment map.
+    local _deployment _assigned
+    _deployment=$(dm_api_must GET "/deployment/defined/${_deployment_key}")
+    _assigned=$(printf '%s' "$_deployment" | jq -r --arg cid "${_conn}" '
+        if type == "string" then . == $cid
+        elif type == "array" then
+            (index($cid) != null)
+            or (map(select(type == "object") | (.identifier // .connectorIdentifier // .id // "")) | index($cid) != null)
+        elif type == "object" then
+            (.identifier // .connectorIdentifier // .id // "") == $cid
+            or (.connectors // [] | if type == "array" then (index($cid) != null) else false end)
+        else false end' 2>/dev/null || printf 'false')
+    [ "${_assigned:-false}" = "true" ] \
+        || dm_error "Deployment did not stick for mapping ${_mapping_ref} (key=${_deployment_key}): connector ${_conn} not assigned; response=${_deployment}"
+    dm_info "Deployed mapping ${_mapping_ref} (key=${_deployment_key}) -> ${_conn} (verified)"
 }
 
 # Deploy a mapping to the MQTT connector (uses _DM_MQTT_CONNECTOR_ID set by dm_require_mqtt_broker).
@@ -978,6 +1030,16 @@ dm_assert_mqtt_topics_active() {   # [connector_identifier]
     _connected=$(dm_get_connector_status "$_cid" | jq -r '.status // "UNKNOWN"' 2>/dev/null || printf 'UNKNOWN')
     if [ "$_connected" != "CONNECTED" ]; then
         dm_error "Connector $_cid is not CONNECTED (status=$_connected)"
+    fi
+
+    # The per-MQTT-topic subscription count below reflects the public-broker model
+    # (one MQTT subscription per mapping topic). The Cumulocity MQTT Service Pulsar
+    # connector consumes a single internal Pulsar topic regardless of the MQTT
+    # topic filters, so that count does not apply — the verified deployment +
+    # measurement assertion are the real signal. Assert CONNECTED only here.
+    if [ "${_DM_MQTT_SVC_MODE:-false}" = "true" ]; then
+        dm_info "Connector $_cid CONNECTED (c8y-mqtt-service mode — skipping per-topic subscription count)"
+        return 0
     fi
 
         # Runtime subscription updates are asynchronous. Poll briefly before failing.
@@ -1255,17 +1317,88 @@ dm_ca_bundle() {
 
 # ── MQTT helpers ───────────────────────────────────────────────────────────────
 # Environment variables:
-#   MQTT_HOST      (default broker.hivemq.com)
-#   MQTT_PORT      (default 1883)
-#   MQTT_USER      (optional)
-#   MQTT_PASS      (optional)
-#   MQTT_TLS       (optional, true/false, default false)
-#   MQTT_CAFILE    (optional path to CA certificate)
+#   DM_BROKER_MODE (public | c8y-mqtt-service; default public)
+#   MQTT_HOST      (default broker.hivemq.com; c8y mode: tenant domain)
+#   MQTT_PORT      (default 1883; c8y mode: 9883)
+#   MQTT_USER      (optional; public mode only — c8y mode uses the tenant id)
+#   MQTT_PASS      (optional; public mode only — c8y mode uses a client cert)
+#   MQTT_TLS       (optional, true/false; default false, c8y mode: true)
+#   MQTT_CAFILE    (optional path to CA certificate; c8y mode auto-discovers)
 #   MQTT_INSECURE  (optional, true/false, default false)
+# c8y-mqtt-service mode additionally honours:
+#   DM_C8Y_MQTT_HOST / DM_C8Y_MQTT_PORT (override the tenant domain / 9883)
+
+# In c8y-mqtt-service mode: require a CONNECTED CUMULOCITY_MQTT_SERVICE_PULSAR
+# connector and provision a client cert, FAILING LOUDLY if unavailable. Sets
+# _DM_MQTT_CONNECTOR_ID, _DM_MQTT_CLIENT_ID, _DM_MQTT_SVC_MODE=true, and the cert
+# state used by the publish/subscribe helpers. Cert is torn down on exit.
+_dm_require_mqtt_service_broker() {
+    local _conn_type="CUMULOCITY_MQTT_SERVICE_PULSAR" _status _ca
+    _DM_MQTT_SVC_MODE=true
+
+    command -v mosquitto_pub >/dev/null 2>&1 \
+        || dm_error "mosquitto_pub not installed — install mosquitto-clients to run MQTT Service tests."
+    command -v openssl >/dev/null 2>&1 \
+        || dm_error "openssl is required for MQTT Service client-certificate auth."
+
+    # The MQTT Service endpoint is authoritative here (independent of when
+    # DM_BROKER_MODE was set relative to sourcing this harness).
+    export MQTT_HOST="${DM_C8Y_MQTT_HOST:-${C8Y_DOMAIN:-}}"
+    export MQTT_PORT="${DM_C8Y_MQTT_PORT:-9883}"
+    export MQTT_TLS=true
+    local _host="$MQTT_HOST" _port="$MQTT_PORT" _tenant="${C8Y_TENANT:-}"
+
+    [ -n "$_host" ]   || dm_error "MQTT host unknown — set DM_C8Y_MQTT_HOST or ensure C8Y_DOMAIN is exported."
+    [ -n "$_tenant" ] || dm_error "Tenant unknown — ensure C8Y_TENANT is exported by the c8y session."
+
+    nc -z -w 5 "$_host" "$_port" >/dev/null 2>&1 \
+        || dm_error "MQTT Service endpoint ${_host}:${_port} is not reachable from this host."
+
+    # CA bundle for TLS server verification (unless explicitly skipping).
+    if [ -z "${MQTT_CAFILE:-}" ] && [ "${MQTT_INSECURE:-false}" != "true" ]; then
+        _ca="$(dm_ca_bundle || true)"
+        [ -n "$_ca" ] || dm_error "No CA bundle found. Set MQTT_CAFILE (e.g. /etc/ssl/cert.pem) or MQTT_INSECURE=true."
+        export MQTT_CAFILE="$_ca"
+        dm_info "Using CA bundle: $MQTT_CAFILE"
+    fi
+
+    # Resolve the singleton Pulsar connector, creating it if none exists, then
+    # make sure it is CONNECTED. A missing connector config is a setup gap we fill
+    # deterministically; a connector that won't connect (service down / no rights)
+    # still FAILS LOUDLY below. The fixed id is shared by all subset tests so they
+    # reuse one connector rather than churning the singleton.
+    _DM_MQTT_CONNECTOR_ID="$(dm_list_connector_ids_by_type "$_conn_type" | head -n 1 || true)"
+    if [ -z "${_DM_MQTT_CONNECTOR_ID:-}" ]; then
+        _DM_MQTT_CONNECTOR_ID="${DM_C8Y_MQTT_CONNECTOR_ID:-dmmqttsvc}"
+        dm_info "No ${_conn_type} connector found — creating ${_DM_MQTT_CONNECTOR_ID}"
+        dm_setup_c8y_mqtt_service_connector "$_DM_MQTT_CONNECTOR_ID" "Dynamic Mapper MQTT Service (test)" "$_conn_type"
+    fi
+    dm_enable_connector "$_DM_MQTT_CONNECTOR_ID"  >/dev/null 2>&1 || true
+    dm_connect_connector "$_DM_MQTT_CONNECTOR_ID" >/dev/null 2>&1 || true
+    _status="$(dm_wait_for_connector_status "$_DM_MQTT_CONNECTOR_ID" "CONNECTED" 45 3)"
+    [ "$_status" = "CONNECTED" ] \
+        || dm_error "${_conn_type} connector ${_DM_MQTT_CONNECTOR_ID} is not CONNECTED (status=$_status) — check the MQTT Service is reachable and the user has the 'Mqtt service' permission."
+
+    # Provision a run-unique X.509 client cert (CN == MQTT clientId). The exit
+    # hook (_dm_on_exit) deletes the trust anchor; ensure the trap is armed even
+    # if the test registered no cleanup function of its own.
+    if [ -z "${_DM_MQTT_CLIENT_ID:-}" ]; then
+        _DM_MQTT_CLIENT_ID="dmtest$$"
+        dm_provision_mqtt_service_cert "$_DM_MQTT_CLIENT_ID"
+        dm_wait 5 "for the trusted certificate to be registered"
+    fi
+    trap _dm_on_exit EXIT
+
+    dm_success "MQTT Service ready: connector=${_DM_MQTT_CONNECTOR_ID}, clientId=${_DM_MQTT_CLIENT_ID}, ${_host}:${_port} (cert auth)"
+}
 
 # Skip the calling test if the MQTT broker is unreachable or mosquitto_pub is
 # not installed.  Call this once, right after dm_wait_for_service.
 dm_require_mqtt_broker() {
+    if [ "${DM_BROKER_MODE:-public}" = "c8y-mqtt-service" ]; then
+        _dm_require_mqtt_service_broker
+        return
+    fi
     local _host="${MQTT_HOST:-broker.hivemq.com}" _port="${MQTT_PORT:-1883}"
     local _cfg _match_count _matching_ids _statuses _connected_count _first_id _first_match _proto _user
     if ! command -v mosquitto_pub >/dev/null 2>&1; then
@@ -1424,12 +1557,39 @@ _dm_mqtt_append_tls_args() {  # <array_name>
     fi
 }
 
+# Append client identity + credentials to a mosquitto arg array. In
+# c8y-mqtt-service mode this is X.509 cert auth (clientId == cert CN, tenant in
+# the username field); in public mode it is the optional MQTT_USER/MQTT_PASS plus
+# the caller-supplied default client id.
+#   $1 = array name   $2 = default client id for public mode ("" = none)
+_dm_mqtt_append_auth_args() {  # <array_name> <public_default_client_id>
+    local _arr_name=$1 _public_cid=$2
+    if [ "${_DM_MQTT_SVC_MODE:-false}" = "true" ]; then
+        # clientId MUST equal the cert CN, and the tenant id goes in the username.
+        eval "${_arr_name}+=(-i \"\$_DM_MQTT_CLIENT_ID\" -u \"\$C8Y_TENANT\")"
+        [ -n "${_DM_MQTT_CERT:-}" ] && eval "${_arr_name}+=(--cert \"\$_DM_MQTT_CERT\")"
+        [ -n "${_DM_MQTT_KEY:-}" ]  && eval "${_arr_name}+=(--key \"\$_DM_MQTT_KEY\")"
+    else
+        [ -n "${MQTT_USER:-}" ] && eval "${_arr_name}+=(-u \"\$MQTT_USER\")"
+        [ -n "${MQTT_PASS:-}" ] && eval "${_arr_name}+=(-P \"\$MQTT_PASS\")"
+        [ -n "$_public_cid" ]   && eval "${_arr_name}+=(-i \"\$_public_cid\")"
+    fi
+}
+
+# Guard against MQTT Service constraints (QoS 2 / retained are rejected). No-op
+# in public mode. Fails loudly so a migrated test surfaces the unsupported usage.
+_dm_mqtt_guard_qos() {  # <qos>
+    [ "${_DM_MQTT_SVC_MODE:-false}" = "true" ] || return 0
+    [ "${1:-0}" = "2" ] && dm_error "QoS 2 is not supported by the Cumulocity MQTT Service — use QoS 0 or 1."
+    return 0
+}
+
 dm_mqtt_publish() {     # <topic> <payload> [qos=0]
     local _topic=$1 _payload=$2 _qos=${3:-0}
     local _host="${MQTT_HOST:-broker.hivemq.com}" _port="${MQTT_PORT:-1883}"
+    _dm_mqtt_guard_qos "$_qos"
     local _args=(-h "$_host" -p "$_port" -t "$_topic" -m "$_payload" -q "$_qos")
-    [ -n "${MQTT_USER:-}" ] && _args+=(-u "$MQTT_USER")
-    [ -n "${MQTT_PASS:-}" ] && _args+=(-P "$MQTT_PASS")
+    _dm_mqtt_append_auth_args _args ""
     _dm_mqtt_append_tls_args _args
     mosquitto_pub "${_args[@]}"
     dm_info "Published to $_topic (broker=$_host:$_port, qos=$_qos)"
@@ -1437,15 +1597,17 @@ dm_mqtt_publish() {     # <topic> <payload> [qos=0]
 
 # Subscribe and capture at most 1 message with a timeout.
 # Prints the received message to stdout.  Returns 1 on timeout.
+# NOTE (c8y-mqtt-service mode): the clientId is fixed to the cert CN, so only ONE
+# mosquitto client (publish OR subscribe) may be connected at a time — adequate
+# for the migrated inbound (publish-only) and outbound (subscribe-only) tests.
 dm_mqtt_subscribe_one() {   # <topic> [timeout_secs=10]
     local _topic=$1 _timeout=${2:-10}
     local _host="${MQTT_HOST:-broker.hivemq.com}" _port="${MQTT_PORT:-1883}"
     local _args=(-h "$_host" -p "$_port" -t "$_topic" -C 1 -W "$_timeout")
-    [ -n "${MQTT_USER:-}" ] && _args+=(-u "$MQTT_USER")
-    [ -n "${MQTT_PASS:-}" ] && _args+=(-P "$MQTT_PASS")
     # Unique client id avoids any collision with the broker connector or other
     # clients on a shared public broker (a collision shows up as MOSQ_ERR_PROTOCOL).
-    _args+=(-i "dmtest-sub-$$-${RANDOM}")
+    # In c8y mode the auth helper overrides this with the cert CN.
+    _dm_mqtt_append_auth_args _args "dmtest-sub-$$-${RANDOM}"
     _dm_mqtt_append_tls_args _args
     # Do NOT swallow stderr — callers capture it for diagnostics (e.g. exit 2 =
     # MOSQ_ERR_PROTOCOL, 27 = timeout). Suppressing it hid the real failure.

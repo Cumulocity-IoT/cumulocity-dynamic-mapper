@@ -94,44 +94,69 @@ Open spike items for this workflow (verify in Phase 0, don't block the plan):
 
 ## Plan (phased)
 
-**Phase 0 — Spike — ✅ IMPLEMENTED (inbound); run it to gate the rest:**
+**Phase 0 — Spike — ✅ DONE (inbound round-trip green):**
 - `test-c8y-mqtt-service-spike.sh` automates the inbound round-trip: validate tools +
   reachability of `:9883` + CA bundle → resolve/connect a `CUMULOCITY_MQTT_SERVICE_PULSAR`
   connector → generate a self-signed cert (CN=clientId) and upload it via
-  `c8y devicemanagement certificates create --autoRegistrationEnabled` → deploy a
-  JSON/DEFAULT→MEASUREMENT mapping → cert-authenticated `mosquitto_pub` to `:9883` →
-  assert the measurement was created. Fails loudly at each gate.
+  `c8y devicemanagement certificates create --autoRegistrationEnabled` → create the device
+  (external id `c8y_Serial`=clientId) → deploy (**verified**) + activate a JSON/DEFAULT→
+  MEASUREMENT mapping → cert-authenticated `mosquitto_pub` to `:9883` → assert the
+  measurement was created. Fails loudly at each gate.
 - New harness helpers: `dm_provision_mqtt_service_cert`, `dm_cleanup_mqtt_service_cert`,
   `dm_ca_bundle`.
 - Run: `bash test-c8y-mqtt-service-spike.sh` (add `--keep` to inspect artifacts).
-  Verified locally: syntax, openssl self-signed gen, CA discovery (`/etc/ssl/cert.pem`).
-- **Outbound round-trip (`mosquitto_sub`) is the remaining Phase 0 step** — implement
-  after the inbound spike confirms the cert model end-to-end.
-- This single run resolves the open items below (self-signed vs chain, `--cafile`,
-  device-source attribution under device isolation).
+- **Root cause of the long-running "no measurement" failure (resolved):** the mapping was
+  resolved but bound to NO connector ("No active connector" in the UI). `PUT
+  /deployment/defined/{id}` takes a top-level array body `["<conn>"]`; the generic
+  `dm_api_must` path serialized it via `--template input.value`, which the installed
+  go-c8y-cli mangled so the deployment registered no connector (PUT still 2xx). Fixed:
+  `dm_deploy_mapping_to_connector` now PUTs a **literal** `--template "[\"<conn>\"]"` and
+  **verifies** the connector is present, failing loudly otherwise. Not a backend bug.
+- Resolved open items: self-signed-as-trust-anchor cert works directly; `--cafile` from the
+  system CA bundle is needed on macOS; the device is resolved from the topic external id
+  independent of the publishing client identity.
+- **Outbound round-trip (`mosquitto_sub`) remains** — fold into the Phase 2 outbound test.
 
-**Phase 1 — Harness plumbing (additive, public mode untouched):**
-4. `DM_BROKER_MODE=public|c8y-mqtt-service` (default `public`). In c8y-mqtt-service mode,
-   preset `MQTT_HOST/PORT/TLS` and the cert flags from `DM_C8Y_MQTT_*`.
-5. `dm_provision_mqtt_service_cert` / `dm_cleanup_mqtt_service_cert` (generate+upload /
-   delete the trusted cert + device). Register cleanup.
-6. Extend `dm_mqtt_publish`/`dm_mqtt_subscribe_one` to add `--cert/--key/-i/-u` in
-   c8y-mqtt-service mode.
-7. `dm_require_mqtt_broker` (c8y-mqtt-service mode): require the singleton Pulsar
-   connector CONNECTED; resolve its identifier; **fail** if absent.
-   `dm_deploy_mapping_to_mqtt_connector`: deploy to that connector.
-8. Guard QoS-2 / retained usage in migrated tests.
+**Phase 1 — Harness plumbing — ✅ IMPLEMENTED (additive, public mode untouched):**
+4. ✅ `DM_BROKER_MODE=public|c8y-mqtt-service` (default `public`). In c8y-mqtt-service mode
+   the harness presets `MQTT_HOST/PORT/TLS` from `DM_C8Y_MQTT_*` / `C8Y_DOMAIN`;
+   `_dm_require_mqtt_service_broker` is authoritative.
+5. ✅ `dm_provision_mqtt_service_cert` / `dm_cleanup_mqtt_service_cert` exist; cert teardown
+   is now wired into `_dm_on_exit` (runs on exit whenever a cert was provisioned, honours
+   `--keep`), so migrated tests need no extra cleanup wiring.
+6. ✅ `dm_mqtt_publish`/`dm_mqtt_subscribe_one` add `--cert/--key/-i <CN>/-u <tenant>` in
+   c8y-mqtt-service mode via `_dm_mqtt_append_auth_args` (public mode unchanged).
+7. ✅ `dm_require_mqtt_broker` branches: c8y mode requires the singleton Pulsar connector
+   CONNECTED (auto-connects it; **fails loudly** if absent/not connected), provisions a
+   run-unique cert, and sets `_DM_MQTT_CONNECTOR_ID`. `dm_deploy_mapping_to_connector` /
+   `dm_deploy_mapping_to_mqtt_connector` deploy to it (both verified).
+8. ✅ `_dm_mqtt_guard_qos` rejects QoS 2 in c8y mode; `dm_mqtt_publish` has no retained flag.
+   **Constraint:** in c8y mode the clientId is fixed to the cert CN, so only one mosquitto
+   client (pub OR sub) may connect at a time — fine for the inbound (pub-only) and outbound
+   (sub-only) subset, but a test that publishes and subscribes concurrently would need a
+   second cert.
 
-**Phase 2 — Migrate a representative subset (proposed):**
-9. Port these behind the switch (run in BOTH modes):
-   - `test-inbound-json-default` (inbound MEASUREMENT)
-   - `test-outbound-measurement` (outbound to broker)
-   - one subscription test (e.g. `test-outbound-static-subscription`)
-   Plus the existing `test-cumulocity-mqtt-service` lifecycle test.
+**Phase 2 — Migrate a representative subset — ✅ IMPLEMENTED:**
+9. The subset runs in BOTH modes **with no per-file edits** — all broker-specific
+   behaviour lives in the Phase 1 harness branches:
+   - `test-inbound-json-default` (inbound MEASUREMENT — publish-only)
+   - `test-outbound-measurement` (outbound; asserts `messagesReceived`, broker-agnostic)
+   - `test-outbound-static-subscription` (subscription mgmt; broker-independent)
+   The only enabling harness change was guarding `dm_assert_mqtt_topics_active` to a
+   CONNECTED-only check in c8y mode (the Pulsar connector consumes one internal topic,
+   so the per-MQTT-topic subscription count doesn't apply).
+10. `run-tests.sh` gained a **`c8y-mqtt-service` lane** (`./run-tests.sh c`): exports
+    `DM_BROKER_MODE=c8y-mqtt-service` and runs the subset. The first test
+    provisions/connects the shared Pulsar connector (`dmmqttsvc` by default, or
+    `DM_C8Y_MQTT_CONNECTOR_ID`); the rest reuse it. Each provisions its own run-unique
+    cert (cleaned up on exit).
 
-**Phase 3 — Document + wire up:**
-10. README / TEST_REFERENCE: the new mode, cert prerequisites, the MQTT Service
-    constraints; a `run-tests.sh` lane or env preset for the c8y-mqtt-service subset.
+**Phase 3 — Document + wire up (remaining):**
+11. ✅ `run-tests.sh` lane + `DM_BROKER_MODE` env docs done.
+12. ⬜ README / TEST_REFERENCE: the new mode, cert prerequisites, MQTT Service constraints.
+13. ⬜ Optional: a true outbound `mosquitto_sub` broker-receipt assertion (closes the
+    Phase 0 outbound step) — currently the outbound test only checks `messagesReceived`.
+    Needs the device/topic subscription-delivery question (below) resolved first.
 
 ## Remaining open items (non-blocking; resolved in the spike)
 

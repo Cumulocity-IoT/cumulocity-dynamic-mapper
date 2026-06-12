@@ -1,16 +1,21 @@
 #!/bin/bash
 #
-# test-c8y-mqtt-service-spike: Phase 0 spike for the MQTT Service migration
+# test-c8y-mqtt-service-spike: Phase 0 spike — full inbound round-trip
 #
 # Proves the gating end-to-end path: an X.509-cert-authenticated MQTT client
 # publishes to the Cumulocity MQTT Service, the message flows through a
-# CUMULOCITY_MQTT_SERVICE_PULSAR connector, and a mapping produces a measurement.
+# CUMULOCITY_MQTT_SERVICE_PULSAR connector, and a deployed+active mapping
+# produces a measurement on the resolved device.
 #
-# This resolves the open Phase 0 questions in ENHANCEMENT.md:
-#   - does a self-signed cert uploaded as a trusted cert work for MQTT auth?
-#   - is :9883 reachable and does the user have the rights?
-#   - does the inbound mapping resolve the device from the topic, independent of
-#     the publishing client's identity (device isolation)?
+# Flow:
+#   1. Validate tools + reachability of :9883 + CA bundle.
+#   2. Resolve/create a CONNECTED CUMULOCITY_MQTT_SERVICE_PULSAR connector.
+#   3. Provision a self-signed X.509 client cert (CN == clientId), uploaded as a
+#      trusted cert.
+#   4. Create the device + register external id c8y_Serial == clientId.
+#   5. Create + DEPLOY (verified) + activate the inbound mapping.
+#   6. Publish via cert-authenticated mosquitto_pub to :9883.
+#   7. Assert the measurement was created.
 #
 # Auth (per docs): TLS on port 9883; client cert with CN == MQTT clientId;
 # tenant id in the MQTT username field. QoS 0/1 only; no retained; clean session.
@@ -48,13 +53,14 @@ PULSAR_ID=""
 _CREATED_CONNECTOR=false
 MAPPING_ID=""
 DEVICE_ID=""
+_CREATED_DEVICE=false
 
 dm_parse_args "$@"
 
 cleanup() {
     dm_info "Cleaning up spike resources ..."
     [ -n "${MAPPING_ID:-}" ] && dm_delete_mapping "$MAPPING_ID" 2>/dev/null || true
-    if [ -n "${DEVICE_ID:-}" ]; then
+    if [ "${_CREATED_DEVICE}" = "true" ] && [ -n "${DEVICE_ID:-}" ]; then
         c8y inventory delete --id "$DEVICE_ID" --force </dev/null >/dev/null 2>&1 || true
     fi
     dm_cleanup_mqtt_service_cert
@@ -72,6 +78,7 @@ dm_banner "MQTT Service Spike — cert-auth inbound round-trip"
 dm_step "Validating environment ..."
 dm_validate_tools
 command -v openssl >/dev/null 2>&1 || dm_error "openssl is required for this spike"
+command -v mosquitto_pub >/dev/null 2>&1 || dm_error "mosquitto_pub is required for this spike"
 dm_wait_for_service
 
 [ -n "$MQTT_HOST" ] || dm_error "MQTT host unknown — set DM_C8Y_MQTT_HOST or ensure C8Y_DOMAIN is exported"
@@ -111,13 +118,26 @@ dm_step "Provisioning X.509 client certificate (CN=${CLIENT_ID}) ..."
 dm_provision_mqtt_service_cert "$CLIENT_ID"
 dm_wait 5 "for the trusted certificate to be registered"
 
+dm_step "Creating the device (external id c8y_Serial=${EXT_ID}) ..."
+DEVICE_ID="$(dm_lookup_device_by_ext_id "$EXT_ID" "c8y_Serial")"
+if [ -n "$DEVICE_ID" ]; then
+    dm_info "Device already exists for external id ${EXT_ID}: ${DEVICE_ID}"
+else
+    dm_create_device "spike-mqttsvc-${CLIENT_ID}" "c8y_MQTTService"
+    DEVICE_ID="$_DM_LAST_DEVICE_ID"
+    _CREATED_DEVICE=true
+    c8y identity create --device "$DEVICE_ID" --type c8y_Serial --name "$EXT_ID" \
+        --force --output json </dev/null >/dev/null 2>&1 \
+        || dm_error "Failed to register external id ${EXT_ID} (c8y_Serial) on device ${DEVICE_ID}"
+    dm_info "Registered external id c8y_Serial=${EXT_ID} → device ${DEVICE_ID}"
+fi
+dm_success "Device ready: $DEVICE_ID"
+
 dm_step "Creating + deploying inbound mapping (JSON/DEFAULT → MEASUREMENT) ..."
-# Mirror the known-good mapping from test-inbound-json-default.sh (non-empty
-# sourceTemplate + a `$now()` → time substitution are both required; an empty
-# sourceTemplate or a missing time breaks the legacy→JSONATA migration and no
-# measurement is produced). Exact topic (no `+`) keeps this single-device spike
-# simple; _TOPIC_LEVEL_[2] still resolves the external id from the 3-level topic.
-# The connector is connected AFTER this mapping is deployed + active (below).
+# Non-empty sourceTemplate + a `$now()` → time substitution are both required
+# (an empty sourceTemplate or a missing time breaks the legacy→JSONATA migration
+# and no measurement is produced). Exact topic (no `+`); _TOPIC_LEVEL_[2] resolves
+# the external id from the 3-level topic.
 MAPPING_JSON=$(cat <<EOF
 {
   "name": "spike-mqttsvc-$$",
@@ -148,14 +168,16 @@ EOF
 )
 dm_create_mapping "$MAPPING_JSON"
 MAPPING_ID="$_DM_LAST_MAPPING_ID"
+# Deploy is verified (fails loudly if the connector isn't actually registered in
+# the deployment map — the cause of the earlier "No active connector" symptom).
 dm_deploy_mapping_to_connector "$MAPPING_ID" "$PULSAR_ID"
 dm_activate_mapping "$MAPPING_ID"
 # Order matters: deploy + activate while the connector is CONNECTED. Activate
 # notifies the live connector to bind the mapping
 # (OperationController#handleActivateMapping → updateSubscriptionForInbound →
-# addSubscriptionInbound → effectiveMappingsInbound). A connector that isn't
-# connected at activate time is never notified.
+# addSubscriptionInbound → effectiveMappingsInbound).
 dm_wait 6 "for the connector to bind the activated mapping"
+dm_success "Mapping ${MAPPING_ID} deployed + active on connector ${PULSAR_ID}"
 
 dm_step "Publishing via cert-authenticated MQTT to the MQTT Service ..."
 TEST_START="$(dm_now -10)"
@@ -188,15 +210,7 @@ dm_info "Mapping ${MAPPING_ID} status: ${MAPPING_STATUS}"
 dm_info "Connector ${PULSAR_ID} status: $(dm_get_connector_status "$PULSAR_ID" | jq -c '{status,message}' 2>/dev/null || echo '?')"
 
 dm_step "Verifying the measurement was created ..."
-DEVICE_ID="$(dm_lookup_device_by_ext_id "$EXT_ID" "c8y_Serial")"
-if [ -z "$DEVICE_ID" ]; then
-    dm_fail "Device not found for external id ${EXT_ID}."
-    dm_info "→ If 'Mapping status' above is 'NO STATUS ENTRY', the message never reached enrichment (resolved but not applied)."
-    dm_info "→ If messagesReceived>0 with errors, the substitution/device-creation failed — inspect the mapping status 'errors'."
-else
-    dm_success "Device created/resolved: $DEVICE_ID"
-    dm_assert_measurement_count_gt "Inbound measurement via MQTT Service" "$DEVICE_ID" "$TEST_START" 0
-fi
+dm_assert_measurement_count_gt "Inbound measurement via MQTT Service" "$DEVICE_ID" "$TEST_START" 0
 
 dm_done "MQTT Service Spike — cert-auth inbound round-trip"
 dm_print_summary

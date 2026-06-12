@@ -97,6 +97,16 @@ declare -a TESTS=(
     "reliability|test-cumulocity-mqtt-service|Cumulocity MQTT Service connector lifecycle"
 )
 
+# Subset that ALSO runs against the Cumulocity MQTT Service (cert auth) when the
+# 'c8y-mqtt-service' lane is selected. These same scripts run unchanged against
+# the public broker in every other lane; here they are re-run with
+# DM_BROKER_MODE=c8y-mqtt-service. See ENHANCEMENT.md.
+C8Y_MQTT_SERVICE_SUBSET=(
+    "test-inbound-json-default"
+    "test-outbound-measurement"
+    "test-outbound-static-subscription"
+)
+
 # ── Helpers ───────────────────────────────────────────────────────────────────
 _n_tests=${#TESTS[@]}
 
@@ -131,6 +141,7 @@ _print_menu() {
     printf "  ${C_BOLD}%2s${C_RESET}  %-14s %s\n" "e"  "[extension]"   "Run extension tests"
     printf "  ${C_BOLD}%2s${C_RESET}  %-14s %s\n" "s"  "[smartfunc]"   "Run Smart Function pattern tests"
     printf "  ${C_BOLD}%2s${C_RESET}  %-14s %s\n" "r"  "[reliability]" "Run reliability tests"
+    printf "  ${C_BOLD}%2s${C_RESET}  %-14s %s\n" "c"  "[mqtt-service]" "Run subset against the Cumulocity MQTT Service"
     printf "  ${C_BOLD}%2s${C_RESET}  %-14s %s\n" "q"  ""              "Quit"
     echo ""
 }
@@ -147,20 +158,33 @@ Usage:
     ./run-tests.sh extension | e     Run all extension tests
     ./run-tests.sh smartfunc | s     Run all Smart Function pattern tests
     ./run-tests.sh reliability | r   Run reliability tests
+    ./run-tests.sh c8y-mqtt-service | c
+                                     Run the migrated subset against the
+                                     Cumulocity MQTT Service (X.509 cert auth,
+                                     DM_BROKER_MODE=c8y-mqtt-service)
     ./run-tests.sh <script-name>     Run one script (with or without .sh)
     ./run-tests.sh <n> [n2 ...]      Run one or more menu indices
     ./run-tests.sh --help            Show this help
 
-Category shortcuts (single letters a/i/o/e/s/r) match the interactive menu.
+Category shortcuts (single letters a/i/o/e/s/r/c) match the interactive menu.
 
 Environment variables:
     DM_SERVICE
         Base Dynamic Mapper API path.
         Default: /service/dynamic-mapper-service
 
+    DM_BROKER_MODE
+        Which broker the MQTT helpers drive.
+        Values: public | c8y-mqtt-service
+        Default: public
+        In c8y-mqtt-service mode the helpers target the Cumulocity MQTT Service
+        on TLS :9883 with X.509 client-certificate auth (clientId == cert CN,
+        tenant id in the username). The 'c' lane sets this automatically.
+        Honours DM_C8Y_MQTT_HOST / DM_C8Y_MQTT_PORT / DM_C8Y_MQTT_CONNECTOR_ID.
+
     MQTT_HOST
         MQTT broker host used by test publish/subscribe helpers.
-        Default: broker.hivemq.com
+        Default: broker.hivemq.com (c8y-mqtt-service mode: tenant domain)
 
     MQTT_PORT
         MQTT broker port used by test publish/subscribe helpers.
@@ -333,6 +357,20 @@ _run_all() {
     done
 }
 
+# Run the migrated subset against the Cumulocity MQTT Service (X.509 cert auth on
+# the TLS :9883 endpoint) by exporting DM_BROKER_MODE for the child test scripts.
+# The first test provisions/connects the shared Pulsar connector; the rest reuse
+# it. Each child fails loudly if the MQTT Service is unreachable or cert auth fails.
+_run_c8y_mqtt_service() {
+    printf "\n${C_BOLD}── Cumulocity MQTT Service lane (DM_BROKER_MODE=c8y-mqtt-service, cert auth) ──${C_RESET}\n"
+    export DM_BROKER_MODE=c8y-mqtt-service
+    local name
+    for name in "${C8Y_MQTT_SERVICE_SUBSET[@]}"; do
+        _run_one "c8y-mqtt-service|${name}|"
+    done
+    unset DM_BROKER_MODE
+}
+
 _print_suite_summary() {
     local total=$((_SUITE_PASS + _SUITE_FAIL + _SUITE_SKIP))
     echo ""
@@ -370,6 +408,7 @@ _dispatch_args() {
         e|extension)   _run_category "extension" ;;
         s|smartfunc|smartfunction) _run_category "smartfunction" ;;
         r|reliability) _run_category "reliability" ;;
+        c|c8y-mqtt-service|mqtt-service) _run_c8y_mqtt_service ;;
         *)
             # Numeric index(es): already handled by caller.
             # Script name (with or without .sh): run via _run_one so PASS/SKIP/FAIL
@@ -390,7 +429,7 @@ _dispatch_args() {
 # ── Interactive selection ──────────────────────────────────────────────────────
 _interactive() {
     _print_menu
-    printf "Select tests (e.g. 1 3 5, or a/i/o/e/s/r): "
+    printf "Select tests (e.g. 1 3 5, or a/i/o/e/s/r/c): "
     read -r REPLY
     echo ""
 
@@ -402,6 +441,7 @@ _interactive() {
         e|extension)   _run_category "extension" ;;
         s|smartfunc|smartfunction) _run_category "smartfunction" ;;
         r|reliability) _run_category "reliability" ;;
+        c|c8y-mqtt-service|mqtt-service) _run_c8y_mqtt_service ;;
         *)
             local -a selections
             # shellcheck disable=SC2206
