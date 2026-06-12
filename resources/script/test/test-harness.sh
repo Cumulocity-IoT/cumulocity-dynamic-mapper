@@ -1098,17 +1098,38 @@ dm_list_connector_ids_by_type() {   # <connectorType>
             | (.identifier // empty)' 2>/dev/null || true
 }
 
+# Build the default `properties` object for a connector type from its
+# specification (GET /connector/specifications), exactly as the UI pre-populates
+# a new connector: every spec property that has a non-null defaultValue becomes
+# {key: defaultValue}. Prints a JSON object ('{}' if the spec can't be resolved).
+dm_connector_default_properties() {   # <connectorType>
+    local _type="$1" _props
+    _props=$(dm_api GET /configuration/connector/specifications \
+        | jq -cs --arg t "$_type" '
+            [ .[] | if type == "array" then .[] else . end ]
+            | map(select(type == "object" and .connectorType == $t))
+            | (.[0].properties // {})
+            | with_entries(select(.value.defaultValue != null)
+                           | {key: .key, value: .value.defaultValue})' 2>/dev/null)
+    [ -z "$_props" ] && _props='{}'
+    printf '%s' "$_props"
+}
+
 # Create (or replace) a Cumulocity MQTT Service connector configuration (disabled).
 # The Cumulocity MQTT Service is the Pulsar-based singleton
-# CUMULOCITY_MQTT_SERVICE_PULSAR, whose connection parameters (service URL /
-# credentials) are derived from the microservice credentials at connect time
-# (copied from the connector specification via copyPredefinedValues), so only the
-# identifier and name need to be supplied here. NOTE: the identifier must be
-# alphanumeric — it becomes part of the reliable-notification subscriber name.
+# CUMULOCITY_MQTT_SERVICE_PULSAR. The create body is populated with the full set
+# of default properties from the connector specification (like the UI does), not
+# just an empty object — so the stored connector carries all properties. The
+# readonly connection params (serviceUrl / credentials) are still refreshed from
+# the microservice credentials at connect time via copyPredefinedValues.
+# NOTE: the identifier must be alphanumeric — it becomes part of the
+# reliable-notification subscriber name.
 dm_setup_c8y_mqtt_service_connector() {     # [identifier] [name] [connectorType]
     local _identifier="${1:-testc8ymqttservice}"
     local _name="${2:-Test Cumulocity MQTT Service}"
     local _type="${3:-CUMULOCITY_MQTT_SERVICE_PULSAR}"
+    local _props
+    _props=$(dm_connector_default_properties "$_type")
 
     dm_api POST /configuration/connector/instance "{
       \"identifier\": \"$_identifier\",
@@ -1116,10 +1137,10 @@ dm_setup_c8y_mqtt_service_connector() {     # [identifier] [name] [connectorType
       \"name\": \"$_name\",
       \"description\": \"Auto-configured Cumulocity MQTT Service connector for integration tests\",
       \"enabled\": false,
-      \"properties\": {}
+      \"properties\": $_props
     }" >/dev/null || true
 
-    dm_info "Created Cumulocity MQTT Service connector: $_identifier (type=$_type)"
+    dm_info "Created Cumulocity MQTT Service connector: $_identifier (type=$_type) with $(printf '%s' "$_props" | jq 'length') default properties"
 }
 
 # Poll a connector's status until it equals the expected value or a timeout
