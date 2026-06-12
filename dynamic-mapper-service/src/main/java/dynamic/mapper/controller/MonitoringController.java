@@ -107,9 +107,33 @@ public class MonitoringController {
             String tenant = contextService.getContext().getTenant();
             AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
                     connectorIdentifier);
-            ConnectorStatusEvent st = client.getConnectionStateManager().getConnectorStatus().get();
-            log.info("{} - Get status for connector: {}: {}", tenant, connectorIdentifier, st);
-            return new ResponseEntity<>(st, HttpStatus.OK);
+
+            // An active client is registered — return its live status.
+            if (client != null) {
+                ConnectorStatusEvent st = client.getConnectionStateManager().getConnectorStatus().get();
+                log.info("{} - Get status for connector: {}: {}", tenant, connectorIdentifier, st);
+                return new ResponseEntity<>(st, HttpStatus.OK);
+            }
+
+            // No active client (e.g. the connector is configured/enabled but not yet
+            // connected, or has been disconnected). Mirror the aggregate status
+            // endpoint's fallback instead of dereferencing a null client (which
+            // previously caused a NullPointerException -> 500):
+            //   1. last-remembered status from the registry status map, else
+            //   2. an UNKNOWN status derived from the configuration, else
+            //   3. 404 if no such connector is configured at all.
+            Map<String, ConnectorStatusEvent> registryStatusMap = connectorRegistry.getConnectorStatusMap(tenant);
+            if (registryStatusMap != null && registryStatusMap.get(connectorIdentifier) != null) {
+                return new ResponseEntity<>(registryStatusMap.get(connectorIdentifier), HttpStatus.OK);
+            }
+
+            ConnectorConfiguration conf = connectorConfigurationService.getConnectorConfiguration(connectorIdentifier,
+                    tenant);
+            if (conf == null) {
+                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            }
+            return new ResponseEntity<>(ConnectorStatusEvent.unknown(conf.getName(), conf.getIdentifier()),
+                    HttpStatus.OK);
         } catch (ConnectorRegistryException e) {
             throw new RuntimeException(e);
         }
