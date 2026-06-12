@@ -1191,6 +1191,68 @@ dm_setup_and_connect_mqtt_connector() {     # [identifier] [name] [mqtt_host] [m
     dm_wait 5 "waiting for MQTT connector to establish connection"
 }
 
+# ── Cumulocity MQTT Service X.509 certificate helpers ───────────────────────────
+# The Cumulocity MQTT Service exposes a standard MQTT interface (TLS, port 9883).
+# Test clients authenticate with an X.509 client certificate whose CN equals the
+# MQTT clientId; the tenant id goes in the MQTT username field. A self-signed cert
+# uploaded as a trusted certificate is accepted as its own trust anchor.
+_DM_MQTT_CERT_DIR=""
+_DM_MQTT_CERT=""        # client certificate (PEM) path — pass to mosquitto --cert
+_DM_MQTT_KEY=""         # client private key path     — pass to mosquitto --key
+_DM_MQTT_CERT_NAME=""   # name used to register/delete the trusted cert
+
+# Generate a self-signed client cert (CN=<clientId>) and upload it as a trusted
+# certificate so the MQTT Service accepts it for X.509 auth. The MQTT clientId
+# MUST equal the CN. Sets _DM_MQTT_CERT / _DM_MQTT_KEY / _DM_MQTT_CERT_NAME.
+dm_provision_mqtt_service_cert() {   # <clientId> [days=2]
+    local _client_id="$1" _days="${2:-2}"
+    command -v openssl >/dev/null 2>&1 || dm_error "openssl is required to provision an MQTT Service client certificate"
+
+    _DM_MQTT_CERT_DIR=$(mktemp -d)
+    _DM_MQTT_KEY="${_DM_MQTT_CERT_DIR}/${_client_id}.key"
+    _DM_MQTT_CERT="${_DM_MQTT_CERT_DIR}/${_client_id}.pem"
+    _DM_MQTT_CERT_NAME="$_client_id"
+
+    openssl req -x509 -newkey rsa:2048 -nodes \
+        -keyout "$_DM_MQTT_KEY" -out "$_DM_MQTT_CERT" \
+        -days "$_days" -subj "/CN=${_client_id}" >/dev/null 2>&1 \
+        || dm_error "Failed to generate self-signed certificate for ${_client_id}"
+
+    # Upload as a trusted certificate; auto-register so a device MO is created.
+    if ! c8y devicemanagement certificates create \
+            --name "$_DM_MQTT_CERT_NAME" \
+            --file "$_DM_MQTT_CERT" \
+            --autoRegistrationEnabled \
+            --force --output json </dev/null >/dev/null 2>&1; then
+        dm_error "Failed to upload trusted certificate '${_DM_MQTT_CERT_NAME}'. Does the user have the rights to manage trusted certificates / the 'Mqtt service' permission?"
+    fi
+    dm_info "Provisioned MQTT Service client cert: CN=${_client_id} (cert=${_DM_MQTT_CERT})"
+}
+
+# Delete the uploaded trusted certificate and remove the temp key/cert (best-effort).
+dm_cleanup_mqtt_service_cert() {
+    if [ -n "${_DM_MQTT_CERT_NAME:-}" ]; then
+        c8y devicemanagement certificates delete --id "$_DM_MQTT_CERT_NAME" --force </dev/null >/dev/null 2>&1 || true
+        dm_info "Deleted trusted certificate: ${_DM_MQTT_CERT_NAME}"
+    fi
+    [ -n "${_DM_MQTT_CERT_DIR:-}" ] && rm -rf "$_DM_MQTT_CERT_DIR" 2>/dev/null || true
+}
+
+# Echo a usable CA bundle path for server (TLS) verification, or non-zero if none
+# is found. Honour MQTT_CAFILE first, then common macOS / Linux / brew locations.
+dm_ca_bundle() {
+    local _c
+    for _c in "${MQTT_CAFILE:-}" \
+              /etc/ssl/cert.pem \
+              /opt/homebrew/etc/openssl@3/cert.pem \
+              /usr/local/etc/openssl@3/cert.pem \
+              /etc/ssl/certs/ca-certificates.crt \
+              /etc/pki/tls/certs/ca-bundle.crt; do
+        [ -n "$_c" ] && [ -f "$_c" ] && { printf '%s' "$_c"; return 0; }
+    done
+    return 1
+}
+
 # ── MQTT helpers ───────────────────────────────────────────────────────────────
 # Environment variables:
 #   MQTT_HOST      (default broker.hivemq.com)
