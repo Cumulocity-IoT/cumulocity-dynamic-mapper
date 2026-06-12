@@ -1192,20 +1192,22 @@ dm_require_mqtt_broker() {
 }
 
 _dm_mqtt_append_tls_args() {  # <array_name>
+    # NOTE: appends to the named array via eval rather than a `local -n` nameref —
+    # namerefs require bash 4.3+, and macOS ships bash 3.2 where `local -n` fails
+    # with "invalid option" (exit 2), aborting the caller under `set -e`.
     local _arr_name=$1
-    local -n _args_ref="$_arr_name"
     local _tls="${MQTT_TLS:-false}"
     local _insecure="${MQTT_INSECURE:-false}"
     local _cafile="${MQTT_CAFILE:-}"
 
     [ "$_tls" = "true" ] || return 0
 
-    _args_ref+=(--tls-version tlsv1.2)
+    eval "${_arr_name}+=(--tls-version tlsv1.2)"
     if [ -n "$_cafile" ]; then
-        _args_ref+=(--cafile "$_cafile")
+        eval "${_arr_name}+=(--cafile \"\$_cafile\")"
     fi
     if [ "$_insecure" = "true" ]; then
-        _args_ref+=(--insecure)
+        eval "${_arr_name}+=(--insecure)"
     fi
 }
 
@@ -1228,8 +1230,13 @@ dm_mqtt_subscribe_one() {   # <topic> [timeout_secs=10]
     local _args=(-h "$_host" -p "$_port" -t "$_topic" -C 1 -W "$_timeout")
     [ -n "${MQTT_USER:-}" ] && _args+=(-u "$MQTT_USER")
     [ -n "${MQTT_PASS:-}" ] && _args+=(-P "$MQTT_PASS")
+    # Unique client id avoids any collision with the broker connector or other
+    # clients on a shared public broker (a collision shows up as MOSQ_ERR_PROTOCOL).
+    _args+=(-i "dmtest-sub-$$-${RANDOM}")
     _dm_mqtt_append_tls_args _args
-    mosquitto_sub "${_args[@]}" 2>/dev/null
+    # Do NOT swallow stderr — callers capture it for diagnostics (e.g. exit 2 =
+    # MOSQ_ERR_PROTOCOL, 27 = timeout). Suppressing it hid the real failure.
+    mosquitto_sub "${_args[@]}"
 }
 
 # ── C8Y data helpers ───────────────────────────────────────────────────────────

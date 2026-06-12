@@ -226,6 +226,11 @@ wait "$MQTT_PID"
 MQTT_SUB_RC=$?
 set -e
 
+if [ "$MQTT_SUB_RC" -ne 0 ]; then
+    # 0=ok, 27=timeout (no message), 2=MOSQ_ERR_PROTOCOL (broker disconnect),
+    # 5=connection refused, 8=TLS error. Surface mosquitto's own message.
+    dm_warn "mosquitto_sub exited $MQTT_SUB_RC; stderr: $(tr '\n' ' ' < "$TEMP_ERR_FILE" 2>/dev/null | head -c 400)"
+fi
 dm_assert_eq "MQTT subscriber exit code" "0" "$MQTT_SUB_RC"
 
 # Reliable signal: confirm the outbound mapping actually processed the measurement.
@@ -253,7 +258,7 @@ dm_assert_eq "Transformed temperature value" "22.5" "$TEMP_VALUE"
 
 # Cleanup
 kill "$MQTT_PID" 2>/dev/null || true
-rm -f "$TEMP_FILE"
+rm -f "$TEMP_FILE" "$TEMP_ERR_FILE"
 rm -f "$TEMP_ERR_FILE"
 
 dm_done "Outbound Smart Function"
