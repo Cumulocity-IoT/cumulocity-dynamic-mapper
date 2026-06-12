@@ -76,7 +76,20 @@ EOF
 dm_step "Creating and activating HTTP inbound mapping ..."
 dm_create_mapping "$MAPPING_JSON"
 MAPPING_ID="$_DM_LAST_MAPPING_ID"
+# The built-in HTTP connector (identifier HTTP_CONNECTOR_IDENTIFIER) is
+# auto-bootstrapped per tenant. A mapping is only processed by a connector it is
+# deployed to, so deploy BEFORE activating — otherwise onMessage runs but the
+# mapping is skipped and messagesReceived stays 0.
+dm_deploy_mapping_to_connector "$MAPPING_ID" "HTTP_CONNECTOR_IDENTIFIER"
 dm_activate_mapping "$MAPPING_ID"
+
+# The HTTP connector rebuilds its inbound mapping resolver only on connect()
+# (initializeSubscriptionsInbound). Activation alone is a no-op while the
+# connector is not "connected" — updateSubscriptionForInbound short-circuits on
+# !isConnected(). Connecting it picks up the freshly deployed+active mapping.
+dm_step "Connecting HTTP connector so it (re)builds inbound mappings ..."
+dm_connect_connector "HTTP_CONNECTOR_IDENTIFIER"
+dm_wait 4 "for HTTP connector to rebuild inbound mappings"
 
 dm_step "Recording test start time ..."
 TEST_START=$(dm_now -10)
@@ -109,9 +122,8 @@ dm_wait 8
 dm_step "Checking whether HTTP message was processed ..."
 RECEIVED=$(dm_mapping_received_count "$MAPPING_ID")
 if [ "${RECEIVED:-0}" -lt 1 ]; then
-  dm_skip "HTTP connector accepted request but mapping processed 0 messages."
-  dm_skip "Verify HTTP connector route/role and microservice endpoint wiring in this tenant."
-  exit 0
+  dm_skip_exit "HTTP connector accepted request but mapping processed 0 messages." \
+               "Ensure the HTTP connector (HTTP_CONNECTOR_IDENTIFIER) is CONNECTED and the mapping is deployed to it."
 fi
 
 dm_step "Looking up device by external id ..."

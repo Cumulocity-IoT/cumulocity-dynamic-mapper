@@ -95,11 +95,8 @@ dm_wait 10
 
 dm_step "Asserting device was auto-created ..."
 DEVICE_ID=$(dm_lookup_device_by_ext_id "$EXT_ID" "c8y_Serial")
-if [ -z "$DEVICE_ID" ]; then
-    dm_fail "Device '$EXT_ID' was NOT auto-created by the mapper"
-  exit 1
-fi
-dm_success "Device auto-created: id=$DEVICE_ID"
+# Counted assertion (was a bare dm_success → 0/0 in the summary).
+dm_assert_gt "Device auto-created (id=${DEVICE_ID:-none})" "${#DEVICE_ID}" 0
 
 dm_done "Inbound Implicit Device Creation"
 dm_print_summary

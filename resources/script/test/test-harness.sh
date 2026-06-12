@@ -854,6 +854,20 @@ dm_assert_mapping_received_gt() {   # <label> <mapping_id> <baseline>
     fi
 }
 
+# Deploy a mapping to an arbitrary connector by identifier. Inbound mappings are
+# only processed by a connector they are deployed to (the deployment map is keyed
+# by mapping identifier and lists the connector identifiers). Resolves the mapping
+# identifier from its id when needed. Fails hard on API error.
+dm_deploy_mapping_to_connector() {  # <mapping_id> <connector_identifier>
+    local _mapping_ref=$1 _conn=$2 _mapping_json _deployment_key _resolved
+    [ -z "${_conn:-}" ] && dm_error "dm_deploy_mapping_to_connector: connector identifier required"
+    _mapping_json=$(dm_api GET "/mapping/${_mapping_ref}" 2>/dev/null || printf '{}')
+    _resolved=$(printf '%s' "$_mapping_json" | jq -r '.identifier // empty' 2>/dev/null || printf '')
+    _deployment_key="${_resolved:-$_mapping_ref}"
+    dm_api_must PUT "/deployment/defined/${_deployment_key}" "[\"${_conn}\"]" >/dev/null
+    dm_info "Deployed mapping ${_mapping_ref} (key=${_deployment_key}) -> ${_conn}"
+}
+
 # Deploy a mapping to the MQTT connector (uses _DM_MQTT_CONNECTOR_ID set by dm_require_mqtt_broker).
 # Requires: dm_require_mqtt_broker must be called first to initialize the connector ID.
 dm_deploy_mapping_to_mqtt_connector() {  # <mapping_id>

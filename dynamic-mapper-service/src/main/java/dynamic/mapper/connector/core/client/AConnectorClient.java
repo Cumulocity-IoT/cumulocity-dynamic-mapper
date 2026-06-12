@@ -745,6 +745,25 @@ public abstract class AConnectorClient {
     }
 
     /**
+     * Whether this connector is a passive receiver that does not maintain an
+     * outbound broker connection to receive inbound messages — it is driven by
+     * incoming requests instead (e.g. the HTTP connector, fed by REST calls).
+     * <p>
+     * For such connectors there is no broker {@code subscribe} to perform, and
+     * messages can arrive at any time via {@link #onMessage} regardless of the
+     * reported connection state. Inbound subscription/resolver updates must
+     * therefore be applied even when {@link #isConnected()} is {@code false};
+     * otherwise a mapping deployed/activated after the connector was last
+     * connected would never be added to the dispatch resolver.
+     * <p>
+     * Default: {@code false} (connection-backed connectors like MQTT/Kafka must
+     * be connected to (un)subscribe at the broker).
+     */
+    protected boolean isPassiveReceiver() {
+        return false;
+    }
+
+    /**
      * Update subscription for inbound mapping
      * Called when a mapping is created, updated, or its activation state changes
      * returns true if successful, false if connector is not connected or mapping is
@@ -753,7 +772,9 @@ public abstract class AConnectorClient {
     public boolean updateSubscriptionForInbound(Mapping mapping, Boolean create, Boolean activationChanged) {
         boolean result = true;
 
-        if (!isConnected()) {
+        // Passive receivers (e.g. HTTP) have no broker subscribe and accept messages
+        // at any time, so their resolver must be updated even when not "connected".
+        if (!isConnected() && !isPassiveReceiver()) {
             log.debug("{} - Not connected, skipping subscription update for mapping: {}",
                     tenant, mapping.getIdentifier());
             return true;
