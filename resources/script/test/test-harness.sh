@@ -102,7 +102,7 @@ DM_DEFAULT_HEALTH_INTERVAL="${DM_DEFAULT_HEALTH_INTERVAL:-10}"
 export MQTT_HOST="${MQTT_HOST:-broker.hivemq.com}"
 export MQTT_PORT="${MQTT_PORT:-1883}"
 export MQTT_TLS="${MQTT_TLS:-false}"
-export MQTT_INSECURE="${MQTT_INSECURE:-true}"
+export MQTT_INSECURE="${MQTT_INSECURE:-false}"
 
 # Run c8y CLI non-interactively: suppress all confirmation prompts and spinners.
 export C8Y_SETTINGS_CI=true
@@ -1048,7 +1048,7 @@ dm_setup_and_connect_mqtt_connector() {     # [identifier] [name] [mqtt_host] [m
 #   MQTT_PASS      (optional)
 #   MQTT_TLS       (optional, true/false, default false)
 #   MQTT_CAFILE    (optional path to CA certificate)
-#   MQTT_INSECURE  (optional, true/false, default true)
+#   MQTT_INSECURE  (optional, true/false, default false)
 
 # Skip the calling test if the MQTT broker is unreachable or mosquitto_pub is
 # not installed.  Call this once, right after dm_wait_for_service.
@@ -1193,18 +1193,19 @@ dm_require_mqtt_broker() {
 
 _dm_mqtt_append_tls_args() {  # <array_name>
     local _arr_name=$1
+    local -n _args_ref="$_arr_name"
     local _tls="${MQTT_TLS:-false}"
-    local _insecure="${MQTT_INSECURE:-true}"
+    local _insecure="${MQTT_INSECURE:-false}"
     local _cafile="${MQTT_CAFILE:-}"
 
     [ "$_tls" = "true" ] || return 0
 
-    eval "${_arr_name}+=(--tls-version tlsv1.2)"
+    _args_ref+=(--tls-version tlsv1.2)
     if [ -n "$_cafile" ]; then
-        eval "${_arr_name}+=(--cafile \"$_cafile\")"
+        _args_ref+=(--cafile "$_cafile")
     fi
     if [ "$_insecure" = "true" ]; then
-        eval "${_arr_name}+=(--insecure)"
+        _args_ref+=(--insecure)
     fi
 }
 
@@ -1250,7 +1251,8 @@ dm_lookup_device_by_ext_id() {  # <externalId> <externalIdType>
     c8y identity get \
     --name "$1" --type "$2" \
         --output json 2>/dev/null \
-        | jq -r '.managedObject.id // empty' 2>/dev/null || printf ''
+    | jq -r '.managedObject.id // empty' 2>/dev/null \
+    | head -n 1 || printf ''
 }
 
 dm_count_measurements_since() {     # <device_id> <since_iso8601>

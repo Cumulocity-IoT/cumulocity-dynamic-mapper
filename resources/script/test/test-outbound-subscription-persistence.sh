@@ -53,6 +53,10 @@ dm_register_cleanup cleanup
 
 dm_banner "Outbound Subscription Persistence After Restart"
 
+dm_step 0 "Validating environment"
+dm_wait_for_service
+dm_validate_only_exit
+
 # Step 1: Create static device and subscription
 dm_step 1 "Set up static subscription"
 dm_create_device "$STATIC_DEVICE_NAME" "$STATIC_DEVICE_TYPE"
@@ -100,7 +104,6 @@ dm_wait "$STARTUP_WAIT" "initial startup period"
 # run-tests.sh may set DM_SKIP_HEALTH_CHECK globally; force a real readiness probe after restart
 unset DM_SKIP_HEALTH_CHECK
 dm_wait_for_service
-dm_validate_only_exit
 dm_wait 10 "post-restart subscription initialization"
 
 # Step 6: Send test messages for both devices

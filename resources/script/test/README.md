@@ -162,7 +162,7 @@ All tests use this default broker configuration:
 MQTT_HOST=${MQTT_HOST:-broker.hivemq.com}
 MQTT_PORT=${MQTT_PORT:-1883}
 MQTT_TLS=${MQTT_TLS:-false}
-MQTT_INSECURE=${MQTT_INSECURE:-true}
+MQTT_INSECURE=${MQTT_INSECURE:-false}
 ```
 
 Override via environment variables:

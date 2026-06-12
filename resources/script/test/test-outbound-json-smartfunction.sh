@@ -13,7 +13,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/test-harness.sh"
 
-SUBSCRIPTION_NAME="DynamicMapperStaticDeviceSubscription"
+SUBSCRIPTION_NAME=""
 EXT_ID="dmtest-sf-out-$(date +%s)"
 MAPPING_ID=""
 DEVICE_ID=""
@@ -24,7 +24,9 @@ dm_parse_args "$@"
 cleanup() {
     dm_info "Cleaning up test resources ..."
     [ -n "$MAPPING_ID" ] && dm_delete_mapping "$MAPPING_ID" 2>/dev/null || true
-    [ -n "${DEVICE_ID:-}" ] && dm_delete_static_subscription "$DEVICE_ID" "$SUBSCRIPTION_NAME" 2>/dev/null || true
+    if [ -n "${DEVICE_ID:-}" ] && [ -n "${SUBSCRIPTION_NAME:-}" ]; then
+        dm_delete_static_subscription "$DEVICE_ID" "$SUBSCRIPTION_NAME" 2>/dev/null || true
+    fi
     if [ -n "${DEVICE_ID:-}" ]; then
         c8y inventory delete --id "$DEVICE_ID" 2>/dev/null || true
     fi
@@ -69,8 +71,48 @@ dm_success "External ID bound: $EXT_ID"
 dm_step "Creating static subscription for device"
 # Without a notification subscription the outbound dispatcher never receives the
 # device's measurement, so the Smart Function never runs and nothing is published.
+_before_subs=$(c8y notification2 subscriptions list --source "$DEVICE_ID" --output json 2>/dev/null || printf '[]')
+_before_names_json=$(printf '%s' "$_before_subs" | jq -c '
+    def rows:
+      if type == "array" then .
+      elif type == "object" then
+        if ((.subscriptions // null) != null and ((.subscriptions | type) == "array")) then .subscriptions
+        elif ((.data // null) != null and ((.data | type) == "array")) then .data
+        elif ((.subscription // .subscriptionName // .id // empty) | tostring | length) > 0 then [.]
+        else [] end
+      else [] end;
+    rows
+    | map(.subscription // .subscriptionName // .id // empty)
+    | map(select(length > 0))
+    | unique
+' 2>/dev/null || printf '[]')
 dm_create_static_subscription_must "MEASUREMENT" "$DEVICE_ID" "$DEVICE_NAME"
 dm_wait 5 "for subscription propagation"
+_after_subs=$(c8y notification2 subscriptions list --source "$DEVICE_ID" --output json 2>/dev/null || printf '[]')
+_after_names_json=$(printf '%s' "$_after_subs" | jq -c '
+    def rows:
+      if type == "array" then .
+      elif type == "object" then
+        if ((.subscriptions // null) != null and ((.subscriptions | type) == "array")) then .subscriptions
+        elif ((.data // null) != null and ((.data | type) == "array")) then .data
+        elif ((.subscription // .subscriptionName // .id // empty) | tostring | length) > 0 then [.]
+        else [] end
+      else [] end;
+    rows
+    | map(.subscription // .subscriptionName // .id // empty)
+    | map(select(length > 0))
+    | unique
+' 2>/dev/null || printf '[]')
+SUBSCRIPTION_NAME=$(jq -nr \
+    --argjson before "$_before_names_json" \
+    --argjson after "$_after_names_json" \
+    '($after - $before | .[0]) // ($after[0] // "")')
+
+if [ -z "${SUBSCRIPTION_NAME:-}" ]; then
+    dm_warn "Could not resolve created static subscription name; cleanup may skip explicit subscription deletion."
+else
+    dm_info "Resolved static subscription name for cleanup: $SUBSCRIPTION_NAME"
+fi
 
 dm_step 4 "Creating outbound Smart Function mapping"
 SF_CODE=$(cat <<'JSCODE'

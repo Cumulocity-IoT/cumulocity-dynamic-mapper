@@ -21,7 +21,7 @@
 #   MQTT_PASS           MQTT password     (optional)
 #   MQTT_TLS            Enable TLS for MQTT publish/subscribe (true/false, default false)
 #   MQTT_CAFILE         CA certificate path for MQTT TLS validation (optional)
-#   MQTT_INSECURE       Skip MQTT TLS cert verification (true/false, default true)
+#   MQTT_INSECURE       Skip MQTT TLS cert verification (true/false, default false)
 #   DM_DEFAULT_DISCOVERY_WAIT  Wait for dynamic discovery checks in some tests (default 10)
 #   DM_DEFAULT_STARTUP_WAIT    Wait used by restart/persistence tests (default 60)
 #   DM_DEFAULT_HEALTH_RETRIES  Service health retries in harness (default 24)
@@ -179,7 +179,7 @@ Environment variables:
     MQTT_INSECURE
         Skip TLS certificate verification for MQTT helpers.
         Values: true|false
-        Default: true
+        Default: false
 
     DM_DEFAULT_DISCOVERY_WAIT
         Default wait (seconds) for discovery checks in selected tests.
