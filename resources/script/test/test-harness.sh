@@ -1063,15 +1063,33 @@ dm_setup_mqtt_test_connector() {    # [identifier] [name] [mqtt_host] [mqtt_port
     dm_info "Created MQTT test connector: $_identifier (host=$_host:$_port)"
 }
 
+# Set a connector's `enabled` flag via a full-config round-trip.
+# The update endpoint binds a @Valid ConnectorConfiguration whose identifier,
+# connectorType, name and properties are all @NotNull — a partial PUT of just
+# {"enabled": <bool>} fails validation (MethodArgumentNotValidException → 400).
+# So GET the current config, flip `enabled`, and PUT the whole object back.
+# Sensitive properties returned masked as "****" are restored to their original
+# values server-side, so the round-trip is safe.
+_dm_set_connector_enabled() {   # <connectorIdentifier> <true|false>
+    local _id="$1" _enabled="$2" _cfg _body
+    _cfg=$(dm_api GET "/configuration/connector/instance/$_id")
+    if [ -z "$_cfg" ] || [ "$_cfg" = "{}" ]; then
+        dm_warn "Cannot set enabled=$_enabled for connector $_id — configuration not found"
+        return 1
+    fi
+    _body=$(printf '%s' "$_cfg" | jq -c --argjson e "$_enabled" '.enabled = $e')
+    dm_api PUT "/configuration/connector/instance/$_id" "$_body" >/dev/null || true
+}
+
 # Enable a connector configuration
 dm_enable_connector() {     # <connectorIdentifier>
-    dm_api PUT "/configuration/connector/instance/$1" "{\"enabled\": true}" >/dev/null || true
+    _dm_set_connector_enabled "$1" true
     dm_info "Enabled connector: $1"
 }
 
 # Disable a connector configuration
 dm_disable_connector() {    # <connectorIdentifier>
-    dm_api PUT "/configuration/connector/instance/$1" "{\"enabled\": false}" >/dev/null || true
+    _dm_set_connector_enabled "$1" false
     dm_info "Disabled connector: $1"
 }
 
