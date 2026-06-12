@@ -94,6 +94,7 @@ declare -a TESTS=(
     "reliability|test-multi-tenant|Mapping CRUD / tenant isolation"
     "reliability|test-multi-connector|Multiple connector status check"
     "reliability|test-reconnect|Connector disconnect / reconnect cycle"
+    "reliability|test-cumulocity-mqtt-service|Cumulocity MQTT Service connector lifecycle"
 )
 
 # ── Helpers ───────────────────────────────────────────────────────────────────

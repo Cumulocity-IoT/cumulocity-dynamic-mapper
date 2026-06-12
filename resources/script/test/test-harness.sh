@@ -193,6 +193,17 @@ dm_assert_eq_zero() {   # <label> <value>
     dm_assert_eq "$1" "0" "$2"
 }
 
+dm_assert_ne() {    # <label> <not_expected> <actual>
+    local label=$1 not_expected=$2 actual=$3
+    if [ "$not_expected" != "$actual" ]; then
+        _DM_PASS_COUNT=$((_DM_PASS_COUNT + 1))
+        dm_success "[$label] actual='$actual' (not '$not_expected')"
+    else
+        _DM_FAIL_COUNT=$((_DM_FAIL_COUNT + 1))
+        dm_fail    "[$label] actual='$actual' should not equal '$not_expected'"
+    fi
+}
+
 dm_assert_gt() {    # <label> <value> <than>
     local label=$1 value=$2 than=$3
     if [ "$value" -gt "$than" ] 2>/dev/null; then
@@ -346,6 +357,15 @@ dm_send_measurement() {     # <device_id> <temp_value> [unit=C]
 
 # Call the Dynamic Mapper REST API.
 # Returns the JSON response, or '{}' on failure (error printed as warning).
+#
+# Two non-obvious requirements for c8y calls here:
+#   - </dev/null : when a c8y call without --data runs inside a `while read` loop,
+#     it inherits the loop's piped stdin. go-c8y-cli then enters "pipeline mode",
+#     tries to read items from stdin, finds none ("something is not being
+#     detected"), and SKIPS the request entirely (exit 0, silent no-op). Feeding
+#     /dev/null keeps it out of pipeline mode so the request is always sent.
+#   - --force : skip go-c8y-cli's confirmation prompt for destructive methods
+#     (DELETE) in non-interactive runs. Harmless for GET/POST/PUT.
 dm_api() {      # <method> <path> [json_body]
     local _method=$1 _path=$2 _body=${3:-} _err _out
     _err=$(mktemp)
@@ -354,7 +374,8 @@ dm_api() {      # <method> <path> [json_body]
                 --url "${DM_SERVICE}${_path}" \
                 --data "$_body" \
                 --header 'Content-Type: application/json' \
-                --output json 2>"$_err"); then
+                --force \
+                --output json </dev/null 2>"$_err"); then
             rm -f "$_err"
             [ -n "$_out" ] && printf '%s\n' "$_out" || printf '{}'
         else
@@ -365,10 +386,12 @@ dm_api() {      # <method> <path> [json_body]
     else
         if _out=$(c8y api --method "$_method" \
                 --url "${DM_SERVICE}${_path}" \
-                --output json 2>"$_err"); then
+                --force \
+                --output json </dev/null 2>"$_err"); then
             rm -f "$_err"
             [ -n "$_out" ] && printf '%s\n' "$_out" || printf '{}'
         else
+            [ -s "$_err" ] && dm_warn "dm_api ${_method} ${_path}: $(tr '\n' ' ' <"$_err" | head -c 400)"
             rm -f "$_err"
             printf '{}'
         fi
@@ -384,7 +407,8 @@ dm_api_json_array() {   # <method> <path> [json_body]
                 --url "${DM_SERVICE}${_path}" \
                 --data "$_body" \
                 --header 'Content-Type: application/json' \
-                --output json 2>"$_err"); then
+                --force \
+                --output json </dev/null 2>"$_err"); then
             rm -f "$_err"
             [ -n "$_out" ] && printf '%s\n' "$_out" || printf '[]'
         else
@@ -395,7 +419,8 @@ dm_api_json_array() {   # <method> <path> [json_body]
     else
         if _out=$(c8y api --method "$_method" \
                 --url "${DM_SERVICE}${_path}" \
-                --output json 2>"$_err"); then
+                --force \
+                --output json </dev/null 2>"$_err"); then
             rm -f "$_err"
             [ -n "$_out" ] && printf '%s\n' "$_out" || printf '[]'
         else
@@ -1042,6 +1067,79 @@ dm_setup_mqtt_test_connector() {    # [identifier] [name] [mqtt_host] [mqtt_port
 dm_enable_connector() {     # <connectorIdentifier>
     dm_api PUT "/configuration/connector/instance/$1" "{\"enabled\": true}" >/dev/null || true
     dm_info "Enabled connector: $1"
+}
+
+# Disable a connector configuration
+dm_disable_connector() {    # <connectorIdentifier>
+    dm_api PUT "/configuration/connector/instance/$1" "{\"enabled\": false}" >/dev/null || true
+    dm_info "Disabled connector: $1"
+}
+
+# Delete a connector configuration by identifier. Goes through dm_api, which
+# passes --force and feeds /dev/null to stdin (required inside `while read` loops
+# — see dm_api). Without those, go-c8y-cli silently skips the DELETE.
+dm_delete_connector() {     # <connectorIdentifier>
+    dm_api DELETE "/configuration/connector/instance/$1" >/dev/null
+    dm_info "Requested delete of connector: $1"
+}
+
+# Print the identifiers (one per line) of all connectors matching a connectorType.
+# Robust to both response shapes c8y may emit for a list endpoint:
+#   - NDJSON: one object per line  → slurp yields [ {..}, {..} ]
+#   - a single JSON array          → slurp yields [ [ {..}, {..} ] ]
+# The leading flatten step normalises both into a flat stream of objects.
+dm_list_connector_ids_by_type() {   # <connectorType>
+    dm_api_json_array GET /configuration/connector/instance \
+        | jq -rs --arg t "$1" '
+            [ .[] | if type == "array" then .[] else . end ]
+            | map(select(type == "object"))
+            | .[]
+            | select((.connectorType // "") == $t)
+            | (.identifier // empty)' 2>/dev/null || true
+}
+
+# Create (or replace) a Cumulocity MQTT Service connector configuration (disabled).
+# The Cumulocity MQTT Service is the Pulsar-based singleton
+# CUMULOCITY_MQTT_SERVICE_PULSAR, whose connection parameters (service URL /
+# credentials) are derived from the microservice credentials at connect time
+# (copied from the connector specification via copyPredefinedValues), so only the
+# identifier and name need to be supplied here. NOTE: the identifier must be
+# alphanumeric — it becomes part of the reliable-notification subscriber name.
+dm_setup_c8y_mqtt_service_connector() {     # [identifier] [name] [connectorType]
+    local _identifier="${1:-testc8ymqttservice}"
+    local _name="${2:-Test Cumulocity MQTT Service}"
+    local _type="${3:-CUMULOCITY_MQTT_SERVICE_PULSAR}"
+
+    dm_api POST /configuration/connector/instance "{
+      \"identifier\": \"$_identifier\",
+      \"connectorType\": \"$_type\",
+      \"name\": \"$_name\",
+      \"description\": \"Auto-configured Cumulocity MQTT Service connector for integration tests\",
+      \"enabled\": false,
+      \"properties\": {}
+    }" >/dev/null || true
+
+    dm_info "Created Cumulocity MQTT Service connector: $_identifier (type=$_type)"
+}
+
+# Poll a connector's status until it equals the expected value or a timeout
+# elapses. Returns 0 (and prints the status) once matched, 1 on timeout.
+# Useful for connectors that connect asynchronously (e.g. Pulsar with retry).
+dm_wait_for_connector_status() {    # <connectorIdentifier> <expected_status> [timeout_secs=30] [interval_secs=3]
+    local _id="$1" _expected="$2" _timeout="${3:-30}" _interval="${4:-3}"
+    local _elapsed=0 _status
+    while [ "$_elapsed" -lt "$_timeout" ]; do
+        _status=$(dm_get_connector_status "$_id" | jq -r '.status // "UNKNOWN"' 2>/dev/null || printf 'UNKNOWN')
+        if [ "$_status" = "$_expected" ]; then
+            printf '%s\n' "$_status"
+            return 0
+        fi
+        sleep "$_interval"
+        _elapsed=$((_elapsed + _interval))
+    done
+    _status=$(dm_get_connector_status "$_id" | jq -r '.status // "UNKNOWN"' 2>/dev/null || printf 'UNKNOWN')
+    printf '%s\n' "$_status"
+    [ "$_status" = "$_expected" ]
 }
 
 # Complete setup: create, enable, and connect MQTT test connector

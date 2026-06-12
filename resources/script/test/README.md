@@ -305,6 +305,7 @@ array) and drives the interactive menu. The categories below mirror it:
 | `test-multi-tenant` | Mapping CRUD / tenant isolation |
 | `test-multi-connector` | Multiple connector status check |
 | `test-reconnect` | Connector disconnect / reconnect cycle |
+| `test-cumulocity-mqtt-service` | Cumulocity MQTT Service connector: delete → create → connect → disconnect |
 
 > **Note:** `test-outbound-group-subscription` hands off state to
 > `test-outbound-group-subscription-removal`; when run via `run-tests.sh` the
