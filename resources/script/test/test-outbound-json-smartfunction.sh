@@ -18,6 +18,8 @@ EXT_ID="dmtest-sf-out-$(date +%s)"
 MAPPING_ID=""
 DEVICE_ID=""
 DEVICE_NAME="dmtest-sf-device-$RANDOM"
+TEMP_FILE=""
+TEMP_ERR_FILE=""
 
 dm_parse_args "$@"
 
@@ -32,6 +34,12 @@ cleanup() {
     fi
     if [ -n "${DEVICE_NAME:-}" ]; then
         c8y identity delete --name "$EXT_ID" --type "c8y_Serial" 2>/dev/null || true
+    fi
+    if [ -n "${TEMP_FILE:-}" ] && [ -f "$TEMP_FILE" ]; then
+      rm -f "$TEMP_FILE"
+    fi
+    if [ -n "${TEMP_ERR_FILE:-}" ] && [ -f "$TEMP_ERR_FILE" ]; then
+      rm -f "$TEMP_ERR_FILE"
     fi
     dm_info "Cleanup complete"
 }

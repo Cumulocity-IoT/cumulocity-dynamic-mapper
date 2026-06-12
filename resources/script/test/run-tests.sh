@@ -37,7 +37,7 @@ export C8Y_SETTINGS_CI=true
 
 # Reserved exit code a test uses to signal "skipped" (prerequisite absent).
 # Kept in sync with DM_EXIT_SKIP in test-harness.sh.
-DM_SKIP_EXIT_CODE=42
+DM_SKIP_EXIT_CODE="${DM_EXIT_SKIP:-42}"
 
 # ── ANSI colours ───────────────────────────────────────────────────────────────
 if [ -t 1 ]; then

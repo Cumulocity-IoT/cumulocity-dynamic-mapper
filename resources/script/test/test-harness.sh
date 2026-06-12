@@ -1260,7 +1260,23 @@ dm_count_measurements_since() {     # <device_id> <since_iso8601>
     c8y measurements list \
         --device "$1" --dateFrom "$2" \
         --pageSize 200 --output json 2>/dev/null \
-        | jq -s 'length' 2>/dev/null || printf '0'
+        | jq -s '
+            def rows:
+                if length == 0 then
+                    []
+                elif length == 1 then
+                    if (.[0] | type) == "array" then
+                        .[0]
+                    elif (.[0] | type) == "object" then
+                        (.[0].data // .[0].measurements // [.[0]])
+                    else
+                        []
+                    end
+                else
+                    .
+                end;
+            rows | length
+        ' 2>/dev/null || printf '0'
 }
 
 dm_count_events_since() {   # <device_id> <since_iso8601>
@@ -1268,7 +1284,23 @@ dm_count_events_since() {   # <device_id> <since_iso8601>
     c8y events list \
         --device "$1" --dateFrom "$2" \
         --pageSize 200 --output json 2>/dev/null \
-        | jq -s 'length' 2>/dev/null || printf '0'
+        | jq -s '
+            def rows:
+                if length == 0 then
+                    []
+                elif length == 1 then
+                    if (.[0] | type) == "array" then
+                        .[0]
+                    elif (.[0] | type) == "object" then
+                        (.[0].data // .[0].events // [.[0]])
+                    else
+                        []
+                    end
+                else
+                    .
+                end;
+            rows | length
+        ' 2>/dev/null || printf '0'
 }
 
 dm_count_alarms_since() {   # <device_id> <since_iso8601>
@@ -1276,7 +1308,23 @@ dm_count_alarms_since() {   # <device_id> <since_iso8601>
     c8y alarms list \
         --device "$1" --dateFrom "$2" \
         --pageSize 200 --output json 2>/dev/null \
-        | jq -s 'length' 2>/dev/null || printf '0'
+        | jq -s '
+            def rows:
+                if length == 0 then
+                    []
+                elif length == 1 then
+                    if (.[0] | type) == "array" then
+                        .[0]
+                    elif (.[0] | type) == "object" then
+                        (.[0].data // .[0].alarms // [.[0]])
+                    else
+                        []
+                    end
+                else
+                    .
+                end;
+            rows | length
+        ' 2>/dev/null || printf '0'
 }
 
 dm_assert_measurement_count_gt() {  # <label> <device_id> <since_iso8601> <min_count>
@@ -1361,7 +1409,23 @@ dm_get_latest_measurement() {  # <ext_id> <ext_id_type> <measurement_type>
             --device "$_device_id" \
             --type "$_meastype" \
             --pageSize 1 --output json 2>/dev/null \
-            | jq -s '.[0] // {}' 2>/dev/null || printf '{}')
+            | jq -s '
+                def rows:
+                    if length == 0 then
+                        []
+                    elif length == 1 then
+                        if (.[0] | type) == "array" then
+                            .[0]
+                        elif (.[0] | type) == "object" then
+                            (.[0].data // .[0].measurements // [.[0]])
+                        else
+                            []
+                        end
+                    else
+                        .
+                    end;
+                (rows[0] // {})
+            ' 2>/dev/null || printf '{}')
     fi
 
     printf '%s\n' "$_row"

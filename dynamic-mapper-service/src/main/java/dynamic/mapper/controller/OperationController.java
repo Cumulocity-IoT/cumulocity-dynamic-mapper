@@ -148,7 +148,7 @@ public class OperationController {
             - `RELOAD_MAPPINGS`: Reloads all mappings for the current tenant.
             - `ACTIVATE_MAPPING`: Activates or deactivates a mapping.
             - `APPLY_MAPPING_FILTER`: Applies a filter to a mapping.
-            - `UPDATE_CODE`: UPdate code for Smart Function or Substitution as Code.
+            - `UPDATE_CODE`: Update code for Smart Function or Substitution as Code.
             - `DEBUG_MAPPING`: Enables or disables debug mode for a mapping.
             - `REFRESH_STATUS_MAPPING`: Refreshes the status of all mappings.
             - `ADD_SAMPLE_MAPPINGS`: Adds sample mappings for inbound or outbound direction.
