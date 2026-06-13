@@ -773,14 +773,16 @@ export class MappingComponent implements OnInit, OnDestroy {
   async onCommitMapping(mapping: Mapping) {
     // test if new/updated mapping was committed or if cancel
     mapping.lastUpdate = Date.now();
+    let mappingSaved = false;
     if (this.stepperConfiguration.editorMode == EditorMode.UPDATE) {
       // console.log('Update existing mapping:', mapping);
       try {
         await this.mappingService.updateMapping(mapping);
+        mappingSaved = true;
         this.alertService.success(gettext(`Mapping ${mapping.name} updated successfully`));
       } catch (error) {
         this.alertService.danger(
-          gettext(`Failed to updated mapping ${mapping.name}: `) + error.message
+          gettext(`Failed to update mapping ${mapping.name}: `) + error.message
         );
       }
     } else if (
@@ -791,18 +793,31 @@ export class MappingComponent implements OnInit, OnDestroy {
       // console.log('Push new mapping:', mapping);
       try {
         await this.mappingService.createMapping(mapping);
+        mappingSaved = true;
         this.alertService.success(gettext(`Mapping ${mapping.name} created successfully`));
       } catch (error) {
         this.alertService.danger(
-          gettext(`Failed to updated mapping ${mapping.name}: `) + error
+          gettext(`Failed to create mapping ${mapping.name}: `) + error.message
         );
       }
     }
     this.isConnectionToMQTTEstablished = true;
 
-    await this.mappingService.updateDefinedDeploymentMapEntry(
-      this.deploymentMapEntry
-    );
+    // Only persist the deployment once the mapping itself exists; updating the deployment for a
+    // mapping that failed to save would target a non-existent mapping. The backend validates the
+    // connector identifiers and reconciles subscriptions live, so a failure here means the
+    // deployment was not applied and must be surfaced rather than silently swallowed.
+    if (mappingSaved) {
+      try {
+        await this.mappingService.updateDefinedDeploymentMapEntry(
+          this.deploymentMapEntry
+        );
+      } catch (error) {
+        this.alertService.danger(
+          gettext(`Failed to deploy mapping ${mapping.name} to connectors: `) + error.message
+        );
+      }
+    }
     this.mappingService.refreshMappings(this.stepperConfiguration.direction);
 
     this.showConfigMapping = false;

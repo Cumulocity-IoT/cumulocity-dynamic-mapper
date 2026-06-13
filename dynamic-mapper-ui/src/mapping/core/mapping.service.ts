@@ -207,7 +207,7 @@ export class MappingService {
   // ===== DEPLOYMENT OPERATIONS =====
 
   async getEffectiveDeploymentMap(): Promise<DeploymentMapEntryDetailed[]> {
-    const response = this.client.fetch(
+    const response = await this.client.fetch(
       `${BASE_URL}/${PATH_DEPLOYMENT_EFFECTIVE_ENDPOINT}`,
       {
         headers: {
@@ -216,16 +216,15 @@ export class MappingService {
         method: 'GET'
       }
     );
-    const data = await response;
-    if (!data.ok) throw new Error(data.statusText)!;
-    const mappings: Promise<DeploymentMapEntryDetailed[]> = await data.json();
+    if (!response.ok) throw new Error(await this.extractErrorMessage(response));
+    const mappings: DeploymentMapEntryDetailed[] = await response.json();
     return mappings;
   }
 
   async getDefinedDeploymentMapEntry(
     mappingIdent: string
   ): Promise<DeploymentMapEntry> {
-    const response = this.client.fetch(
+    const response = await this.client.fetch(
       `${BASE_URL}/${PATH_DEPLOYMENT_DEFINED_ENDPOINT}/${mappingIdent}`,
       {
         headers: {
@@ -234,9 +233,8 @@ export class MappingService {
         method: 'GET'
       }
     );
-    const data = await response;
-    if (!data.ok) throw new Error(data.statusText)!;
-    const mapEntry: string[] = await data.json();
+    if (!response.ok) throw new Error(await this.extractErrorMessage(response));
+    const mapEntry: string[] = await response.json();
     const result: DeploymentMapEntry = {
       identifier: mappingIdent,
       connectors: mapEntry
@@ -246,21 +244,36 @@ export class MappingService {
 
   async updateDefinedDeploymentMapEntry(
     entry: DeploymentMapEntry
-  ): Promise<any> {
-    const response = this.client.fetch(
+  ): Promise<string> {
+    const response = await this.client.fetch(
       `${BASE_URL}/${PATH_DEPLOYMENT_DEFINED_ENDPOINT}/${entry.identifier}`,
       {
         headers: {
           'content-type': 'application/json'
         },
-        body: JSON.stringify(entry.connectors),
+        body: JSON.stringify(entry.connectors ?? []),
         method: 'PUT'
       }
     );
-    const data = await response;
-    if (!data.ok) throw new Error(data.statusText)!;
-    const m = await data.text();
-    return m;
+    // The backend validates connector identifiers (400 on unknown/stale connectors)
+    // and reconciles subscriptions live, so surface its message rather than a bare status text.
+    if (!response.ok) throw new Error(await this.extractErrorMessage(response));
+    return response.text();
+  }
+
+  /**
+   * Extracts a human-readable error message from a failed response. The backend returns a
+   * Spring error body with a `message` field (e.g. "Unknown connector identifier(s): [...]");
+   * fall back to the status text when the body is empty or not JSON.
+   */
+  private async extractErrorMessage(response: Response): Promise<string> {
+    try {
+      const body = await response.json();
+      if (body?.message) return body.message;
+    } catch {
+      // body was not JSON; fall through to status text
+    }
+    return response.statusText || `Request failed (${response.status})`;
   }
 
 
