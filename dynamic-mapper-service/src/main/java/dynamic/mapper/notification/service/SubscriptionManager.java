@@ -296,11 +296,25 @@ public class SubscriptionManager {
 
         subscriptionsService.runForTenant(tenant, () -> {
             try {
-                subscriptionAPI.deleteByFilter(
-                        new NotificationSubscriptionFilter().bySubscription(Utils.STATIC_DEVICE_SUBSCRIPTION));
-                subscriptionAPI.deleteByFilter(
-                        new NotificationSubscriptionFilter().bySubscription(Utils.DYNAMIC_DEVICE_SUBSCRIPTION));
-                log.info("{} - Successfully unsubscribed all devices", tenant);
+                Iterator<NotificationSubscriptionRepresentation> staticIt = subscriptionAPI
+                    .getSubscriptionsByFilter(
+                        new NotificationSubscriptionFilter().bySubscription(Utils.STATIC_DEVICE_SUBSCRIPTION))
+                    .get().allPages().iterator();
+                int deletedCount = 0;
+                while (staticIt.hasNext()) {
+                    subscriptionAPI.delete(staticIt.next());
+                    deletedCount++;
+                }
+
+                Iterator<NotificationSubscriptionRepresentation> dynamicIt = subscriptionAPI
+                    .getSubscriptionsByFilter(
+                        new NotificationSubscriptionFilter().bySubscription(Utils.DYNAMIC_DEVICE_SUBSCRIPTION))
+                    .get().allPages().iterator();
+                while (dynamicIt.hasNext()) {
+                    subscriptionAPI.delete(dynamicIt.next());
+                    deletedCount++;
+                }
+                log.info("{} - Successfully unsubscribed {} devices", tenant, deletedCount);
             } catch (Exception e) {
                 log.error("{} - Error unsubscribing all devices: {}", tenant, e.getMessage(), e);
             }
