@@ -21,7 +21,6 @@
 
 package dynamic.mapper.controller;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -404,18 +403,17 @@ public class OperationController {
         // Rebuild all caches at once
         mappingService.rebuildMappingCaches(tenant, ConnectorId.INTERNAL);
 
-        // Get the updated mappings from cache
-        List<Mapping> updatedMappingsInbound = new ArrayList<>(
-                mappingService.getCacheMappingInbound(tenant).values());
-        List<Mapping> updatedMappingsOutbound = new ArrayList<>(
-                mappingService.getCacheOutboundMappings(tenant).values());
-
-        // Update connector subscriptions
+        // Reconcile each connector against the freshly rebuilt caches and the deployment map.
+        // This (un)subscribes inbound mappings and rebuilds the effective outbound set, so that
+        // mappings removed/un-deployed since the last reload are also dropped (not just added).
         Map<String, AConnectorClient> connectorMap = connectorRegistry.getClientsForTenant(tenant);
         connectorMap.values().forEach(client -> {
-            // We always start with a cleanSession in case we reload the mappings
-            client.initializeSubscriptionsInbound(updatedMappingsInbound, false);
-            updatedMappingsOutbound.forEach(mapping -> client.updateSubscriptionForOutbound(mapping, false, false));
+            try {
+                client.reconcileSubscriptions();
+            } catch (Exception e) {
+                log.error("{} - Error reloading mappings for connector {}",
+                        tenant, client.getConnectorIdentifier(), e);
+            }
         });
 
         return ResponseEntity.status(HttpStatus.CREATED).build();

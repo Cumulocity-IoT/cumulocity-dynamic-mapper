@@ -234,6 +234,7 @@ public class MappingSubscriptionManager {
 
         Map<String, MutableInt> newSubscriptions = new HashMap<>();
         Map<String, Qos> topicQosMap = new HashMap<>();
+        Set<String> desiredMappingIds = new HashSet<>();
 
         // Build new subscription state from active, valid, deployed mappings
         updatedMappings.stream()
@@ -243,6 +244,7 @@ public class MappingSubscriptionManager {
                     String topic = mapping.getMappingTopic();
                     newSubscriptions.computeIfAbsent(topic, k -> new MutableInt(0)).increment();
                     effectiveMappingsInbound.put(mapping.getIdentifier(), mapping);
+                    desiredMappingIds.add(mapping.getIdentifier());
 
                     // Track max QoS per topic (use highest QoS among all mappings for that topic)
                     Qos currentQos = topicQosMap.getOrDefault(topic, Qos.AT_MOST_ONCE);
@@ -251,12 +253,21 @@ public class MappingSubscriptionManager {
                     }
                 });
 
-        // Remove subscriptions for topics no longer needed
+        // Drop mappings that are no longer effective on this connector (e.g. un-deployed
+        // or deactivated). Without this, a full reconcile would only ever add mappings and
+        // never remove them, leaving stale entries in the effective set.
+        effectiveMappingsInbound.keySet().retainAll(desiredMappingIds);
+
+        // Remove subscriptions for topics no longer needed (broker unsubscribe).
+        // Must run before subscriptionCounts is replaced so the diff sees the old topics.
         unsubscribeUnusedTopics(newSubscriptions);
 
         // Add subscriptions for new topics
         subscribeToNewTopics(newSubscriptions, topicQosMap);
 
+        // Replace the reference counts wholesale with the freshly computed desired state.
+        // A putAll would leave stale keys for topics that are no longer subscribed.
+        subscriptionCounts.clear();
         subscriptionCounts.putAll(newSubscriptions);
 
         log.info("{} - Updated subscriptions for connector: {}, active topics: {}",

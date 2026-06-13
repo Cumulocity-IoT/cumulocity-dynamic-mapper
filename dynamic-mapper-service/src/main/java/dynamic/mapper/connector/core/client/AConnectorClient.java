@@ -654,7 +654,7 @@ public abstract class AConnectorClient {
                     .filter(this::isDeployedInConnector)
                     .toList();
             mappingSubscriptionManager.prePopulateEffectiveMappingsInbound(
-                    deployedMappings, this::isMappingValidForDeployment);
+                    deployedMappings, this::isMappingCompatibleWithConnector);
 
             log.debug("{} - Pre-populated {} effective inbound mappings for persistent session on connector: {}",
                     tenant, deployedMappings.size(), connectorName);
@@ -719,29 +719,54 @@ public abstract class AConnectorClient {
                 mappingsEffective,
                 reset,
                 isConnected(),
-                this::isMappingValidForDeployment);
+                this::isMappingCompatibleWithConnector);
     }
 
     /**
-     * Initialize subscriptions for outbound mappings
+     * Initialize subscriptions for outbound mappings.
+     * <p>
+     * Delegates to {@link MappingSubscriptionManager#updateSubscriptionsOutbound} which
+     * clears and rebuilds the effective outbound set. This makes the operation a true
+     * reconcile: mappings that are no longer active or no longer deployed to this connector
+     * are dropped, not just added.
      */
     public void initializeSubscriptionsOutbound(List<Mapping> mappings) {
-        // Clear existing outbound mappings
-        // (This happens automatically in updateOutboundMappings, but you could also
-        // clear manually)
-
-        // Add active, valid mappings
-        mappings.stream()
-                .filter(Mapping::getActive)
-                .filter(this::isMappingValidForDeployment)
+        List<Mapping> deployedMappings = mappings.stream()
                 .filter(this::isDeployedInConnector)
-                .forEach(mapping -> mappingSubscriptionManager.addSubscriptionOutbound(mapping.getIdentifier(),
-                        mapping));
+                .toList();
+        mappingSubscriptionManager.updateSubscriptionsOutbound(deployedMappings,
+                this::isMappingCompatibleWithConnector);
 
         log.info("{} - Initialized {} outbound mappings for connector: {}",
                 tenant,
                 mappingSubscriptionManager.getEffectiveOutboundMappingCount(),
                 connectorName);
+    }
+
+    /**
+     * Re-evaluate all inbound and outbound subscriptions for this connector against the
+     * current mapping caches and deployment map.
+     * <p>
+     * Called when the deployment map changes (a mapping is assigned to / removed from this
+     * connector) so that newly deployed mappings are subscribed and un-deployed mappings are
+     * unsubscribed live, without requiring a connector reconnect or a manual mappings reload.
+     */
+    public void reconcileSubscriptions() {
+        if (!isConnected() && !isPassiveReceiver()) {
+            log.debug("{} - Not connected, skipping subscription reconcile for connector: {}",
+                    tenant, connectorName);
+            return;
+        }
+
+        List<Mapping> inboundMappings = new ArrayList<>(
+                mappingService.getCacheInboundMappings(tenant).values());
+        List<Mapping> outboundMappings = new ArrayList<>(
+                mappingService.getCacheOutboundMappings(tenant).values());
+
+        initializeSubscriptionsInbound(inboundMappings, false);
+        initializeSubscriptionsOutbound(outboundMappings);
+
+        log.info("{} - Reconciled subscriptions for connector: {}", tenant, connectorName);
     }
 
     /**
@@ -783,12 +808,11 @@ public abstract class AConnectorClient {
         // Always allow deactivation
         boolean isDeactivation = activationChanged && !mapping.getActive();
 
-        if (!isMappingValidForDeployment(mapping) && !isDeactivation) {
-            boolean isDeployed = isDeployedInConnector(mapping);
-
-            if (isDeployed) {
-                log.warn("{} - Mapping {} contains unsupported wildcards",
-                        tenant, mapping.getId());
+        if (!isMappingCompatibleWithConnector(mapping) && !isDeactivation) {
+            // isMappingCompatibleWithConnector already logged the incompatibility.
+            // Report failure only if the mapping is actually assigned to this connector;
+            // otherwise the incompatibility is irrelevant here.
+            if (isDeployedInConnector(mapping)) {
                 result = false;
             }
             return result;
@@ -913,24 +937,26 @@ public abstract class AConnectorClient {
     }
 
     /**
-     * Check if mapping is valid for deployment
+     * Checks whether this connector is capable of handling the mapping's topic.
+     * <p>
+     * Currently this means: if the mapping's inbound topic contains MQTT wildcards
+     * ({@code #} / {@code +}), the connector must support wildcard subscriptions. Outbound
+     * mappings are always compatible (no broker subscription is performed).
+     * <p>
+     * This is a <em>capability</em> check only. Whether the mapping is actually assigned to
+     * this connector is a separate concern handled by {@link #isDeployedInConnector(Mapping)}.
      */
-    private Boolean isMappingValidForDeployment(Mapping mapping) {
-        // Check for unsupported wildcards only for inbound, ignore for outbound
+    private boolean isMappingCompatibleWithConnector(Mapping mapping) {
+        // Wildcards are only relevant for inbound subscriptions; ignore for outbound.
         boolean containsWildcards = mapping.getDirection().equals(Direction.INBOUND)
-                ? mapping.getMappingTopic().matches(".*[#+].*")
-                : false;
-        boolean validDeployment = supportsWildcardInTopic(mapping.getDirection()) || !containsWildcards;
+                && mapping.getMappingTopic().matches(".*[#+].*");
+        boolean compatible = supportsWildcardInTopic(mapping.getDirection()) || !containsWildcards;
 
-        if (!validDeployment) {
+        if (!compatible) {
             log.warn("{} - Mapping {} contains unsupported wildcards", tenant, mapping.getId());
-            return false;
         }
 
-        // Check if mapping is deployed in this connector
-        // Implement deployment check logic here
-
-        return validDeployment;
+        return compatible;
     }
 
     /**

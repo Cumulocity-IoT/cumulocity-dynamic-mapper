@@ -22,8 +22,11 @@
 package dynamic.mapper.controller;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -41,6 +44,7 @@ import org.springframework.web.server.ResponseStatusException;
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
 
+import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.connector.core.registry.ConnectorRegistryException;
@@ -218,6 +222,7 @@ public class DeploymentController {
 	)
 	@ApiResponses(value = {
 		@ApiResponse(responseCode = "201", description = "Deployment configuration updated successfully", content = @Content),
+		@ApiResponse(responseCode = "400", description = "One or more connector identifiers are unknown", content = @Content),
 		@ApiResponse(responseCode = "403", description = "Forbidden - insufficient permissions", content = @Content),
 		@ApiResponse(responseCode = "404", description = "Mapping not found", content = @Content),
 		@ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
@@ -229,12 +234,74 @@ public class DeploymentController {
 			@Valid @RequestBody List<String> deployment) {
 		String tenant = contextService.getContext().getTenant();
 		log.info("{} - Update deployment for mapping, mappingIdentifier: {}, deployment: {}", tenant, mappingIdentifier, deployment);
+
+		// Reject unknown connector identifiers up front (400) rather than silently storing
+		// dangling references that only get cleaned up at the next startup.
+		validateConnectorsExist(tenant, deployment);
+
 		try {
+			// Capture the previous assignment so we only reconcile connectors that actually
+			// gained or lost this mapping.
+			Set<String> affected = new HashSet<>(mappingService.getDeploymentMapEntry(tenant, mappingIdentifier));
+			affected.addAll(deployment);
+
 			mappingService.updateDeploymentMapEntry(tenant, mappingIdentifier, deployment);
+
+			// Apply the new deployment immediately: reconcile the affected connectors so the
+			// mapping is (un)subscribed live. Without this the change is only persisted and would
+			// not take effect until a connector reconnect or an explicit RELOAD_MAPPINGS.
+			reconcileConnectors(tenant, affected);
 			return ResponseEntity.status(HttpStatus.CREATED).build();
 		} catch (Exception ex) {
 			log.error("{} - Error updating deployment for mapping: {}", tenant, mappingIdentifier, ex);
 			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+		}
+	}
+
+	/**
+	 * Validates that every connector identifier in the deployment exists for the tenant.
+	 *
+	 * @throws ResponseStatusException with status 400 if any identifier is unknown
+	 */
+	private void validateConnectorsExist(String tenant, List<String> deployment) {
+		if (deployment == null || deployment.isEmpty()) {
+			return;
+		}
+		Set<String> validIdentifiers = connectorConfigurationService.getConnectorConfigurations(tenant).stream()
+				.map(ConnectorConfiguration::getIdentifier)
+				.collect(Collectors.toSet());
+		List<String> unknown = deployment.stream()
+				.filter(id -> !validIdentifiers.contains(id))
+				.distinct()
+				.collect(Collectors.toList());
+		if (!unknown.isEmpty()) {
+			log.warn("{} - Rejecting deployment with unknown connector identifier(s): {}", tenant, unknown);
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+					"Unknown connector identifier(s): " + unknown);
+		}
+	}
+
+	/**
+	 * Reconcile the subscriptions of the given connectors against the current deployment map.
+	 * Only connectors whose identifier is in {@code affectedConnectorIdentifiers} are touched;
+	 * each is reconciled independently so a failure on one does not prevent the others.
+	 */
+	private void reconcileConnectors(String tenant, Set<String> affectedConnectorIdentifiers)
+			throws ConnectorRegistryException {
+		Map<String, AConnectorClient> connectorMap = connectorRegistry.getClientsForTenant(tenant);
+		if (connectorMap == null) {
+			return;
+		}
+		for (AConnectorClient client : connectorMap.values()) {
+			if (!affectedConnectorIdentifiers.contains(client.getConnectorIdentifier())) {
+				continue;
+			}
+			try {
+				client.reconcileSubscriptions();
+			} catch (Exception e) {
+				log.error("{} - Error reconciling subscriptions for connector {} after deployment change",
+						tenant, client.getConnectorIdentifier(), e);
+			}
 		}
 	}
 
