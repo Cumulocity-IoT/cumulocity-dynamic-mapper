@@ -179,6 +179,41 @@ class MappingTreeTest {
             assertEquals(1, resolvedMappings.size(), "Should resolve 1 mapping");
             assertEquals("Mapping - 08", resolvedMappings.get(0).getName(), "Should resolve mapping 01");
         }
+
+        @Test
+        @DisplayName("Should remove every mapping sharing the same topic")
+        void testDeleteBothMappingsSharingSameTopic() throws ResolveException {
+            MappingTreeNode tree = MappingTreeNode.createRootNode("TEST_TENANT");
+            Mapping m1 = Mapping.builder().id("s1").name("Same - 1").mappingTopic("shared/topic").active(true).build();
+            Mapping m2 = Mapping.builder().id("s2").name("Same - 2").mappingTopic("shared/topic").active(true).build();
+            tree.addMapping(m1);
+            tree.addMapping(m2);
+            assertEquals(2, tree.resolveMapping("shared/topic").size(), "Both mappings should resolve");
+
+            tree.deleteMapping(m1);
+            List<Mapping> afterFirst = tree.resolveMapping("shared/topic");
+            assertEquals(1, afterFirst.size(), "Deleting one mapping must keep the other");
+            assertEquals("Same - 2", afterFirst.get(0).getName());
+
+            tree.deleteMapping(m2);
+            assertTrue(tree.resolveMapping("shared/topic").isEmpty(),
+                    "Deleting the second mapping must remove the topic entirely");
+        }
+
+        @Test
+        @DisplayName("Should ignore mappings without a usable mapping topic")
+        void testAddAndDeleteMappingWithBlankTopicIsIgnored() throws ResolveException {
+            MappingTreeNode tree = MappingTreeNode.createRootNode("TEST_TENANT");
+            Mapping blankTopic = Mapping.builder().id("blank-1").name("blank").mappingTopic("   ").active(true).build();
+            Mapping nullTopic = Mapping.builder().id("blank-2").name("null-topic").active(true).build();
+
+            // Must not throw despite the missing/blank topic.
+            tree.addMapping(blankTopic);
+            tree.addMapping(nullTopic);
+            tree.deleteMapping(nullTopic);
+
+            assertTrue(tree.resolveMapping("device/test").isEmpty(), "No mapping should have been registered");
+        }
     }
 
     private List<Mapping> deserializeMappings(String filePath) throws IOException {
