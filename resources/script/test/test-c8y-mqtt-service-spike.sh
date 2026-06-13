@@ -2,6 +2,14 @@
 #
 # test-c8y-mqtt-service-spike: Phase 0 spike — full inbound round-trip
 #
+# OPTIONAL standalone diagnostic — NOT part of the suite (run-tests.sh) and not
+# required for regression. The same inbound path is covered by
+#   ./run-tests.sh test-inbound-json-default m
+# Keep this as a self-contained, verbose probe for first-time MQTT Service setup
+# on a new tenant or when diagnosing cert/reachability/connector problems: it
+# creates its own throwaway connector and tears everything down (use --keep to
+# inspect). See ENHANCEMENT.md (Phase 0).
+#
 # Proves the gating end-to-end path: an X.509-cert-authenticated MQTT client
 # publishes to the Cumulocity MQTT Service, the message flows through a
 # CUMULOCITY_MQTT_SERVICE_PULSAR connector, and a deployed+active mapping

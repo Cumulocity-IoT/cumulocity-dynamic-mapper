@@ -1,6 +1,6 @@
 # Dynamic Mapper Integration Tests
 
-This directory contains bash-based integration tests for the Dynamic Mapper's inbound and outbound transformation pipelines. All tests use the public HiveMQ MQTT broker by default.
+This directory contains bash-based integration tests for the Dynamic Mapper's inbound and outbound transformation pipelines. By default they use the public HiveMQ MQTT broker; the same MQTT tests can also be driven through the **Cumulocity MQTT Service** (`CUMULOCITY_MQTT_SERVICE_PULSAR` connector, X.509 cert auth) — see [Running against the Cumulocity MQTT Service](#running-against-the-cumulocity-mqtt-service).
 
 ## Quick Start
 
@@ -19,7 +19,14 @@ bash run-tests.sh inbound
 
 # Run all tests
 bash run-tests.sh
+
+# Pick suite + connector: g = generic MQTT (default), m = Cumulocity MQTT Service
+bash run-tests.sh inbound m       # inbound suite against the MQTT Service
+bash run-tests.sh all g           # everything against the public broker
 ```
+
+The runner takes two parameters — `[SUITE] [CONNECTOR]`. See
+[Running against the Cumulocity MQTT Service](#running-against-the-cumulocity-mqtt-service).
 
 ### Standard flags
 
@@ -173,6 +180,98 @@ export MQTT_PORT=8883
 export MQTT_TLS=true
 bash test-inbound-json-smartfunction.sh
 ```
+
+## Running against the Cumulocity MQTT Service
+
+The MQTT tests can run against the **Cumulocity MQTT Service** instead of a public
+broker. The service exposes a standard MQTT interface to clients (TLS port **9883**)
+and is backed by a `CUMULOCITY_MQTT_SERVICE_PULSAR` connector inside the mapper. The
+public-broker path is unchanged and remains the default — this is an additive,
+opt-in mode.
+
+### Selecting the connector
+
+Pick the broker with the runner's second parameter, or with `DM_BROKER_MODE`:
+
+```bash
+# via run-tests.sh — second token g (generic) | m (Cumulocity MQTT Service)
+bash run-tests.sh inbound m
+bash run-tests.sh 1 3 5 m          # menu items 1/3/5 against the MQTT Service
+
+# via environment (a single script, or your own lane)
+export DM_BROKER_MODE=c8y-mqtt-service
+bash test-inbound-json-default.sh
+```
+
+| `DM_BROKER_MODE` | Broker | Auth |
+|---|---|---|
+| `public` _(default)_ | public HiveMQ/EMQX (or your `MQTT_HOST`) | `MQTT_USER`/`MQTT_PASS` (optional) |
+| `c8y-mqtt-service` | Cumulocity MQTT Service on `:9883` (TLS) | X.509 client certificate |
+
+In `c8y-mqtt-service` mode the harness presets the endpoint from the active c8y
+session (`MQTT_HOST=$C8Y_DOMAIN`, `MQTT_PORT=9883`, `MQTT_TLS=true`) — override with
+`DM_C8Y_MQTT_HOST` / `DM_C8Y_MQTT_PORT` if needed.
+
+### How it works (handled automatically by the harness)
+
+`dm_require_mqtt_broker` (called by every MQTT test) does the following in
+`c8y-mqtt-service` mode:
+
+1. **Connector** — resolves the singleton `CUMULOCITY_MQTT_SERVICE_PULSAR` connector,
+   **creating** it (`dmmqttsvc`, or `DM_C8Y_MQTT_CONNECTOR_ID`) if absent, and ensures
+   it is `CONNECTED`.
+2. **Certificate** — generates a self-signed cert (`CN == clientId`) and uploads it as
+   a trusted (trust-anchor) certificate via
+   `c8y devicemanagement certificates create --autoRegistrationEnabled`.
+3. **Publish/subscribe** — `dm_mqtt_publish` / `dm_mqtt_subscribe_one` automatically add
+   `--cert/--key`, `-i <clientId>` and `-u <tenant>`.
+4. **Teardown** — the trust anchor is deleted on exit (honours `--keep`).
+
+So the test scripts themselves need no changes — the same file runs against either
+broker.
+
+### Prerequisites
+
+- An active **c8y session** (`C8Y_DOMAIN` / `C8Y_TENANT` exported) with the
+  **_Mqtt service_** permission and the right to manage trusted certificates.
+- `mosquitto_pub` / `mosquitto_sub`, `openssl`, and a system **CA bundle** for TLS
+  server verification (auto-discovered; set `MQTT_CAFILE` to override, or
+  `MQTT_INSECURE=true` to skip — not recommended).
+- Network egress to `<tenant-domain>:9883`.
+
+If any of these is missing the MQTT-Service tests **fail loudly** (they do not skip),
+so a misconfiguration is never silently ignored.
+
+### Constraints of the MQTT Service (vs a public broker)
+
+| Aspect | Rule |
+|---|---|
+| Port / TLS | `9883`, TLS required (no plaintext on shared public tenants) |
+| Auth | X.509 cert; **cert CN must equal the MQTT clientId**; tenant id in the username |
+| QoS | **0 and 1 only** — QoS 2 is rejected (the harness fails fast on QoS 2) |
+| Retained | not allowed |
+| Clean session | required |
+| Reserved topics | `$...` and Core-MQTT (`s/`, `t/`, `measurement/…`) are off-limits — tests use `dmtest/...` |
+| Concurrent clients | the clientId is fixed to the cert CN, so only **one** mosquitto client (publish *or* subscribe) at a time per run |
+
+### Migrated subset
+
+These tests are verified to run against **both** brokers with no per-file changes:
+
+- `test-inbound-json-default` — inbound JSON → MEASUREMENT (cert-authenticated publish)
+- `test-outbound-measurement` — outbound MEASUREMENT (asserts the mapper processed it)
+- `test-outbound-static-subscription` — outbound subscription management
+- `test-outbound-topic-resolution` — outbound EVENT with a dynamic topic; also
+  subscribes with `mosquitto_sub` to verify the **actual broker round-trip** (in `m`
+  mode this exercises real MQTT Service delivery — best-effort, since service-side
+  delivery is scoped to the publishing device's identity; see ENHANCEMENT.md)
+
+Other tests may run against `m` too, but those that need broker-specific features
+(HTTP connector, Kafka/Sparkplug extensions, multi-connector) are not expected to pass.
+
+See [ENHANCEMENT.md](ENHANCEMENT.md) for the full design and
+[test-c8y-mqtt-service-spike.sh](test-c8y-mqtt-service-spike.sh) for a standalone
+end-to-end cert-auth round-trip spike.
 
 ### Smart Function Test Pattern
 

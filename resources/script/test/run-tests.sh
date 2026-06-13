@@ -2,16 +2,16 @@
 #
 # run-tests.sh — Dynamic Mapper integration test runner
 #
-# Usage:
-#   ./run-tests.sh                   # interactive menu
-#   ./run-tests.sh all   (or a)      # run every test
-#   ./run-tests.sh inbound     (i)   # all inbound tests
-#   ./run-tests.sh outbound    (o)   # all outbound + subscription tests
-#   ./run-tests.sh extension   (e)   # all extension tests
-#   ./run-tests.sh smartfunc   (s)   # all Smart Function pattern tests
-#   ./run-tests.sh reliability (r)   # reliability tests
-#   ./run-tests.sh <script-name>     # single test, e.g. test-inbound-json-default
-#   ./run-tests.sh <n> [n2 ...]      # one or more menu numbers
+# Usage:  ./run-tests.sh [SUITE ...] [CONNECTOR]
+#   SUITE      a/all i/inbound o/outbound e/extension s/smartfunc r/reliability,
+#             a <script-name>, menu number(s), or omit for the interactive menu.
+#   CONNECTOR  g = generic MQTT (public broker, default)
+#             m = Cumulocity MQTT Service (CUMULOCITY_MQTT_SERVICE_PULSAR, cert auth)
+#   The g/m token may appear in any position. Examples:
+#     ./run-tests.sh                 # interactive (prompts for suite + connector)
+#     ./run-tests.sh inbound m       # inbound suite against the MQTT Service
+#     ./run-tests.sh 1 3 5 g         # menu items 1/3/5 against the public broker
+#     ./run-tests.sh all             # every test, generic MQTT
 #
 # Environment:
 #   DM_SERVICE          Base path to dynamic mapper (default /service/dynamic-mapper-service)
@@ -97,16 +97,6 @@ declare -a TESTS=(
     "reliability|test-cumulocity-mqtt-service|Cumulocity MQTT Service connector lifecycle"
 )
 
-# Subset that ALSO runs against the Cumulocity MQTT Service (cert auth) when the
-# 'c8y-mqtt-service' lane is selected. These same scripts run unchanged against
-# the public broker in every other lane; here they are re-run with
-# DM_BROKER_MODE=c8y-mqtt-service. See ENHANCEMENT.md.
-C8Y_MQTT_SERVICE_SUBSET=(
-    "test-inbound-json-default"
-    "test-outbound-measurement"
-    "test-outbound-static-subscription"
-)
-
 # ── Helpers ───────────────────────────────────────────────────────────────────
 _n_tests=${#TESTS[@]}
 
@@ -141,8 +131,9 @@ _print_menu() {
     printf "  ${C_BOLD}%2s${C_RESET}  %-14s %s\n" "e"  "[extension]"   "Run extension tests"
     printf "  ${C_BOLD}%2s${C_RESET}  %-14s %s\n" "s"  "[smartfunc]"   "Run Smart Function pattern tests"
     printf "  ${C_BOLD}%2s${C_RESET}  %-14s %s\n" "r"  "[reliability]" "Run reliability tests"
-    printf "  ${C_BOLD}%2s${C_RESET}  %-14s %s\n" "c"  "[mqtt-service]" "Run subset against the Cumulocity MQTT Service"
     printf "  ${C_BOLD}%2s${C_RESET}  %-14s %s\n" "q"  ""              "Quit"
+    echo ""
+    printf "  ${C_DIM}After selecting tests you'll choose a connector: g=generic MQTT, m=Cumulocity MQTT Service${C_RESET}\n"
     echo ""
 }
 
@@ -151,22 +142,33 @@ _print_help() {
 Dynamic Mapper integration test runner
 
 Usage:
-    ./run-tests.sh                   Interactive menu
-    ./run-tests.sh all   | a         Run every test
-    ./run-tests.sh inbound | i       Run all inbound tests
-    ./run-tests.sh outbound | o      Run all outbound tests
-    ./run-tests.sh extension | e     Run all extension tests
-    ./run-tests.sh smartfunc | s     Run all Smart Function pattern tests
-    ./run-tests.sh reliability | r   Run reliability tests
-    ./run-tests.sh c8y-mqtt-service | c
-                                     Run the migrated subset against the
-                                     Cumulocity MQTT Service (X.509 cert auth,
-                                     DM_BROKER_MODE=c8y-mqtt-service)
-    ./run-tests.sh <script-name>     Run one script (with or without .sh)
-    ./run-tests.sh <n> [n2 ...]      Run one or more menu indices
-    ./run-tests.sh --help            Show this help
+    ./run-tests.sh [SUITE ...] [CONNECTOR]
 
-Category shortcuts (single letters a/i/o/e/s/r/c) match the interactive menu.
+  SUITE — which tests to run:
+    a | all                          Run every test
+    i | inbound                      Run all inbound tests
+    o | outbound                     Run all outbound tests
+    e | extension                    Run all extension tests
+    s | smartfunc                    Run all Smart Function pattern tests
+    r | reliability                  Run reliability tests
+    <script-name>                    Run one script (with or without .sh)
+    <n> [n2 ...]                     Run one or more menu indices
+    (omit)                           Pick interactively
+
+  CONNECTOR — which broker the MQTT tests drive (default g):
+    g                                Generic MQTT (public broker)
+    m                                Cumulocity MQTT Service
+                                     (CUMULOCITY_MQTT_SERVICE_PULSAR, TLS :9883,
+                                     X.509 cert auth → DM_BROKER_MODE=c8y-mqtt-service)
+
+Examples:
+    ./run-tests.sh inbound m         All inbound tests against the MQTT Service
+    ./run-tests.sh 1 3 5 g           Menu items 1/3/5 against the public broker
+    ./run-tests.sh all               Everything, generic MQTT (default)
+    ./run-tests.sh m                 Interactive suite pick, MQTT Service connector
+
+Category shortcuts (single letters a/i/o/e/s/r) match the interactive menu;
+the connector token (g/m) may appear in any position.
 
 Environment variables:
     DM_SERVICE
@@ -357,18 +359,21 @@ _run_all() {
     done
 }
 
-# Run the migrated subset against the Cumulocity MQTT Service (X.509 cert auth on
-# the TLS :9883 endpoint) by exporting DM_BROKER_MODE for the child test scripts.
-# The first test provisions/connects the shared Pulsar connector; the rest reuse
-# it. Each child fails loudly if the MQTT Service is unreachable or cert auth fails.
-_run_c8y_mqtt_service() {
-    printf "\n${C_BOLD}── Cumulocity MQTT Service lane (DM_BROKER_MODE=c8y-mqtt-service, cert auth) ──${C_RESET}\n"
-    export DM_BROKER_MODE=c8y-mqtt-service
-    local name
-    for name in "${C8Y_MQTT_SERVICE_SUBSET[@]}"; do
-        _run_one "c8y-mqtt-service|${name}|"
-    done
-    unset DM_BROKER_MODE
+# Map the connector selector ($1: g|m) to DM_BROKER_MODE for the child test
+# scripts and announce it. g = generic MQTT (public broker, default);
+# m = Cumulocity MQTT Service (CUMULOCITY_MQTT_SERVICE_PULSAR, X.509 cert auth).
+_apply_connector_selection() {   # <g|m>
+    case "${1:-g}" in
+        g|generic|public)
+            export DM_BROKER_MODE=public
+            printf "${C_DIM}Connector: generic MQTT (public broker)${C_RESET}\n" ;;
+        m|mqtt-service|c8y-mqtt-service)
+            export DM_BROKER_MODE=c8y-mqtt-service
+            printf "${C_CYAN}Connector: Cumulocity MQTT Service — CUMULOCITY_MQTT_SERVICE_PULSAR (TLS :9883, cert auth)${C_RESET}\n" ;;
+        *)
+            printf "${C_RED}ERROR: unknown connector '%s' — use g (generic MQTT) or m (Cumulocity MQTT Service)${C_RESET}\n" "$1"
+            exit 1 ;;
+    esac
 }
 
 _print_suite_summary() {
@@ -408,7 +413,6 @@ _dispatch_args() {
         e|extension)   _run_category "extension" ;;
         s|smartfunc|smartfunction) _run_category "smartfunction" ;;
         r|reliability) _run_category "reliability" ;;
-        c|c8y-mqtt-service|mqtt-service) _run_c8y_mqtt_service ;;
         *)
             # Numeric index(es): already handled by caller.
             # Script name (with or without .sh): run via _run_one so PASS/SKIP/FAIL
@@ -429,9 +433,17 @@ _dispatch_args() {
 # ── Interactive selection ──────────────────────────────────────────────────────
 _interactive() {
     _print_menu
-    printf "Select tests (e.g. 1 3 5, or a/i/o/e/s/r/c): "
+    printf "Select tests (e.g. 1 3 5, or a/i/o/e/s/r): "
     read -r REPLY
     echo ""
+
+    # Choose the connector for this run unless one was already preset on the CLI.
+    if [ "${_CONN_PRESET:-false}" != "true" ]; then
+        printf "Connector  [g] generic MQTT (default)   [m] Cumulocity MQTT Service: "
+        read -r _conn_reply
+        echo ""
+        _apply_connector_selection "${_conn_reply:-g}"
+    fi
 
     case "$REPLY" in
         q|Q) exit 0 ;;
@@ -441,7 +453,6 @@ _interactive() {
         e|extension)   _run_category "extension" ;;
         s|smartfunc|smartfunction) _run_category "smartfunction" ;;
         r|reliability) _run_category "reliability" ;;
-        c|c8y-mqtt-service|mqtt-service) _run_c8y_mqtt_service ;;
         *)
             local -a selections
             # shellcheck disable=SC2206
@@ -464,17 +475,45 @@ _interactive() {
 }
 
 # ── Entry point ────────────────────────────────────────────────────────────────
-if [ $# -eq 0 ]; then
+# Two parameters:
+#   1. the test SUITE  — a category (a/i/o/e/s/r), one or more menu indices, or a
+#                        script name. Omit to pick interactively.
+#   2. the CONNECTOR   — g (generic MQTT, default) or m (Cumulocity MQTT Service).
+# The connector token (g/m) may appear in any position; everything else is the
+# suite selection. Example:  ./run-tests.sh inbound m   /   ./run-tests.sh 1 3 m
+
+# Help short-circuits before anything else.
+for arg in "$@"; do
+    case "$arg" in -h|--help|help) _print_help; exit 0 ;; esac
+done
+
+# Split args into the connector selector and the suite selection.
+_CONN_PRESET=false
+_conn_token="g"
+_suite_args=()
+for arg in "$@"; do
+    case "$arg" in
+        g|m|generic|mqtt-service|c8y-mqtt-service|public)
+            _conn_token="$arg"; _CONN_PRESET=true ;;
+        *)
+            _suite_args+=("$arg") ;;
+    esac
+done
+
+# Apply the connector now (interactive mode skips its own prompt when preset).
+[ "$_CONN_PRESET" = "true" ] && _apply_connector_selection "$_conn_token"
+
+if [ "${#_suite_args[@]}" -eq 0 ]; then
     _interactive
 else
-    # All args could be numbers (menu indices) or keywords / script names
+    # Suite args could be numbers (menu indices) or keywords / script names.
     all_numeric=true
-    for arg in "$@"; do
+    for arg in "${_suite_args[@]}"; do
         [[ "$arg" =~ ^[0-9]+$ ]] || { all_numeric=false; break; }
     done
 
     if $all_numeric; then
-        for num in "$@"; do
+        for num in "${_suite_args[@]}"; do
             idx=$(( num - 1 ))
             if [ "$idx" -ge 0 ] && [ "$idx" -lt "$_n_tests" ]; then
                 _run_one "${TESTS[$idx]}"
@@ -485,7 +524,7 @@ else
             fi
         done
     else
-        for arg in "$@"; do
+        for arg in "${_suite_args[@]}"; do
             _dispatch_args "$arg"
         done
     fi

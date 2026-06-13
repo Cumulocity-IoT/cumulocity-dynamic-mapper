@@ -145,18 +145,32 @@ Open spike items for this workflow (verify in Phase 0, don't block the plan):
    The only enabling harness change was guarding `dm_assert_mqtt_topics_active` to a
    CONNECTED-only check in c8y mode (the Pulsar connector consumes one internal topic,
    so the per-MQTT-topic subscription count doesn't apply).
-10. `run-tests.sh` gained a **`c8y-mqtt-service` lane** (`./run-tests.sh c`): exports
-    `DM_BROKER_MODE=c8y-mqtt-service` and runs the subset. The first test
-    provisions/connects the shared Pulsar connector (`dmmqttsvc` by default, or
-    `DM_C8Y_MQTT_CONNECTOR_ID`); the rest reuse it. Each provisions its own run-unique
-    cert (cleaned up on exit).
+10. `run-tests.sh` takes **two parameters: `[SUITE] [CONNECTOR]`** — the suite
+    (category / indices / script name) and the connector: `g` = generic MQTT (public,
+    default) or `m` = Cumulocity MQTT Service (`CUMULOCITY_MQTT_SERVICE_PULSAR`, sets
+    `DM_BROKER_MODE=c8y-mqtt-service`). The `g`/`m` token may appear in any position;
+    interactive mode prompts for both. E.g. `./run-tests.sh inbound m`,
+    `./run-tests.sh all g`. In `m` mode the first test provisions/connects the shared
+    Pulsar connector (`dmmqttsvc` by default, or `DM_C8Y_MQTT_CONNECTOR_ID`); the rest
+    reuse it; each provisions its own run-unique cert (cleaned up on exit).
 
-**Phase 3 — Document + wire up (remaining):**
-11. ✅ `run-tests.sh` lane + `DM_BROKER_MODE` env docs done.
-12. ⬜ README / TEST_REFERENCE: the new mode, cert prerequisites, MQTT Service constraints.
-13. ⬜ Optional: a true outbound `mosquitto_sub` broker-receipt assertion (closes the
-    Phase 0 outbound step) — currently the outbound test only checks `messagesReceived`.
-    Needs the device/topic subscription-delivery question (below) resolved first.
+**Phase 3 — Document + wire up — ✅ IMPLEMENTED:**
+11. ✅ `run-tests.sh` two-param interface (`[SUITE] [CONNECTOR]`) + `DM_BROKER_MODE` env docs.
+12. ✅ `README.md` → new section **"Running against the Cumulocity MQTT Service"**: connector
+    selection, the automatic connector/cert/teardown flow, prerequisites, the MQTT Service
+    constraints table, and the migrated subset.
+13. ✅ Outbound `mosquitto_sub` broker-receipt check: `test-outbound-topic-resolution`
+    already subscribes (best-effort) to verify the broker round-trip; with cert auth in the
+    harness it now exercises **real MQTT Service delivery** in `m` mode. Its miss-message is
+    mode-aware and points at the one remaining open question below. (Kept best-effort, not a
+    hard assertion, precisely because that question is unresolved.)
+
+**Open question surfaced by the outbound round-trip:** MQTT Service delivery appears to be
+scoped to the **publishing device's identity**, so a separate cert-authenticated test
+subscriber (different CN) may not receive a message the mapper published for another device.
+To assert outbound receipt hard, the subscriber likely has to authenticate as (a cert whose
+CN maps to) the target device. Resolving this is the next concrete spike if hard outbound
+verification is wanted.
 
 ## Remaining open items (non-blocking; resolved in the spike)
 

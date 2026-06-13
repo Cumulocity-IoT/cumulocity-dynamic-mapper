@@ -117,10 +117,15 @@ dm_wait 10
 dm_step "Asserting messagesReceived increased (mapping processed notification) ..."
 dm_assert_mapping_received_gt "Outbound topic resolution processed" "$MAPPING_ID" "$BASELINE"
 
-# Also check if mosquitto_sub received something (best-effort)
+# Also check if mosquitto_sub received the published message (best-effort).
+# In c8y-mqtt-service mode this verifies actual outbound delivery through the
+# Cumulocity MQTT Service (the real broker round-trip), so a miss is more
+# significant than on a public broker.
 wait "$SUB_PID" 2>/dev/null || true
 if [ -s "$RECEIVED_FILE" ]; then
-    dm_success "MQTT message received on topic: $(cat "$RECEIVED_FILE" | head -c 200)"
+    dm_success "MQTT message received on topic: $(head -c 200 "$RECEIVED_FILE")"
+elif [ "${_DM_MQTT_SVC_MODE:-false}" = "true" ]; then
+    dm_warn "No message captured from the MQTT Service. The mapping processed the notification (asserted above), but the cert-authenticated subscriber did not receive it — likely because MQTT Service delivery is scoped to the publishing device's identity, not this test's client cert. (Open item — see ENHANCEMENT.md.)"
 else
     dm_warn "mosquitto_sub did not capture a message within timeout (OK if broker not reachable from test host)"
 fi

@@ -830,6 +830,13 @@ dm_normalize_mapping_payload() {   # <json_body>
         fi
     fi
 
+    # Force debug logging on every test mapping so the message flow is traceable
+    # in the backend log. Overridable: set DM_MAPPING_DEBUG=false to keep each
+    # mapping's own debug value.
+    if [ "${DM_MAPPING_DEBUG:-true}" = "true" ]; then
+        _normalized=$(printf '%s' "$_normalized" | jq -c '.debug = true' 2>/dev/null || printf '%s' "$_normalized")
+    fi
+
     printf '%s\n' "$_normalized"
 }
 
@@ -1574,6 +1581,10 @@ _dm_mqtt_append_auth_args() {  # <array_name> <public_default_client_id>
         [ -n "${MQTT_PASS:-}" ] && eval "${_arr_name}+=(-P \"\$MQTT_PASS\")"
         [ -n "$_public_cid" ]   && eval "${_arr_name}+=(-i \"\$_public_cid\")"
     fi
+    # Must end with a success status: the conditionals above can leave $? = 1
+    # (e.g. publish passes an empty client id), which would abort a caller running
+    # under `set -e` before mosquitto_pub/sub is ever invoked.
+    return 0
 }
 
 # Guard against MQTT Service constraints (QoS 2 / retained are rejected). No-op
