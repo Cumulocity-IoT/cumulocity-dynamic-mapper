@@ -394,10 +394,9 @@ void setUp() throws Exception {
                     return customDeviceId;
                 });
 
-        // Inject dependencies into the custom processor
-        ProcessorTestHelper.injectField(customProcessor, "mappingService", mappingService);
+        // mappingService and objectMapper are supplied via the constructor; only c8yAgent
+        // (declared on the CommonProcessor base) still needs field injection.
         ProcessorTestHelper.injectField(customProcessor, "c8yAgent", c8yAgent);
-        ProcessorTestHelper.injectField(customProcessor, "objectMapper", objectMapper);
 
         DeviceMessage deviceMsg = createTemperatureMeasurementDeviceMessage();
         processingContext.setFlowResult(deviceMsg);
@@ -529,10 +528,9 @@ void setUp() throws Exception {
                 .withDefaultDeviceId(TEST_DEVICE_ID)
                 .withSimplifiedProcessing(false); // Use full processing, not simplified
 
-        // Inject dependencies
-        ProcessorTestHelper.injectField(fullProcessor, "mappingService", mappingService);
+        // mappingService and objectMapper are supplied via the constructor; only c8yAgent
+        // (declared on the CommonProcessor base) still needs field injection.
         ProcessorTestHelper.injectField(fullProcessor, "c8yAgent", c8yAgent);
-        ProcessorTestHelper.injectField(fullProcessor, "objectMapper", objectMapper);
 
         return fullProcessor;
     }

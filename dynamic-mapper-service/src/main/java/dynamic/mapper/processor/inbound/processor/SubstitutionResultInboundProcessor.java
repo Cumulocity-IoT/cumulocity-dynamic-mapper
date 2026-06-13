@@ -21,13 +21,14 @@
 
 package dynamic.mapper.processor.inbound.processor;
 
+import dynamic.mapper.processor.util.CamelHeaders;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import org.apache.camel.Exchange;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.jayway.jsonpath.DocumentContext;
@@ -55,18 +56,22 @@ import com.cumulocity.sdk.client.ProcessingMode;
 @Component
 public class SubstitutionResultInboundProcessor extends BaseProcessor {
 
-    @Autowired
-    private C8YAgent c8yAgent;
+    private final C8YAgent c8yAgent;
 
-    @Autowired
-    private MappingService mappingService;
+    private final MappingService mappingService;
 
-    @Autowired
-    private ConfigurationRegistry configurationRegistry;
+    private final ConfigurationRegistry configurationRegistry;
+
+    public SubstitutionResultInboundProcessor(C8YAgent c8yAgent, MappingService mappingService,
+            ConfigurationRegistry configurationRegistry) {
+        this.c8yAgent = c8yAgent;
+        this.mappingService = mappingService;
+        this.configurationRegistry = configurationRegistry;
+    }
 
     @Override
     public void process(Exchange exchange) throws Exception {
-        ProcessingContext<Object> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+        ProcessingContext<Object> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
 
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
@@ -158,10 +163,10 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
         // else clone context and add multiContext to exchange
         // then in pipeline split and process in parallel
         if (!mapping.getCreateNonExistingDevice()) {
-            exchange.getIn().setHeader("parallelProcessing", true);
+            exchange.getIn().setHeader(CamelHeaders.PARALLEL_PROCESSING, true);
             log.debug("Marked requests for parallel processing for mapping: {}", mapping.getName());
         } else {
-            exchange.getIn().setHeader("parallelProcessing", false);
+            exchange.getIn().setHeader(CamelHeaders.PARALLEL_PROCESSING, false);
             log.debug("Marked requests for sequential processing for mapping: {}", mapping.getName());
         }
     }

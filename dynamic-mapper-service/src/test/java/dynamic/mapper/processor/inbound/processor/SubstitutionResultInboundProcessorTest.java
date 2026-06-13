@@ -25,7 +25,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -104,8 +103,7 @@ class SubstitutionResultInboundProcessorTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        processor = new SubstitutionResultInboundProcessor();
-        injectDependencies();
+        processor = new SubstitutionResultInboundProcessor(c8yAgent, mappingService, configurationRegistry);
 
         mapping = createCompleteMapping();
         mappingStatus = new MappingStatus(
@@ -145,18 +143,6 @@ class SubstitutionResultInboundProcessorTest {
                 any(Mapping.class), // mapping
                 any(C8YMessage.class) // message
         )).thenReturn(true);
-    }
-
-    private void injectDependencies() throws Exception {
-        injectField("mappingService", mappingService);
-        injectField("c8yAgent", c8yAgent);
-                injectField("configurationRegistry", configurationRegistry);
-    }
-
-    private void injectField(String fieldName, Object value) throws Exception {
-        Field field = SubstitutionResultInboundProcessor.class.getDeclaredField(fieldName);
-        field.setAccessible(true);
-        field.set(processor, value);
     }
 
     private Mapping createCompleteMapping() {

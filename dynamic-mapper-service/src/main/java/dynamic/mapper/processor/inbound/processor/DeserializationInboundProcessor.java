@@ -1,13 +1,12 @@
 package dynamic.mapper.processor.inbound.processor;
 
+import dynamic.mapper.processor.util.CamelHeaders;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-import jakarta.annotation.PostConstruct;
-
 import org.apache.camel.Exchange;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
@@ -30,39 +29,34 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class DeserializationInboundProcessor extends BaseProcessor {
 
-    @Autowired
-    private MappingService mappingService;
-
-    @Autowired
-    private SparkPlugBDeserializer sparkPlugBDeserializer;
+    private final MappingService mappingService;
 
     private final Map<MappingType, PayloadDeserializer<?>> deserializers = new HashMap<>();
 
-    public DeserializationInboundProcessor() {
+    public DeserializationInboundProcessor(MappingService mappingService,
+            SparkPlugBDeserializer sparkPlugBDeserializer) {
+        this.mappingService = mappingService;
         // Map MappingType enum values to deserializers
         deserializers.put(MappingType.JSON, new JSONPayloadDeserializer());
         deserializers.put(MappingType.FLAT_FILE, new FlatFilePayloadDeserializer());
         deserializers.put(MappingType.HEX, new HexPayloadDeserializer());
         deserializers.put(MappingType.PROTOBUF_INTERNAL, new BytePayloadDeserializer());
         deserializers.put(MappingType.ANY_PAYLOAD, new BytePayloadDeserializer());
-    }
-
-    @PostConstruct
-    private void registerSparkPlugBDeserializer() {
-        // SparkPlugBDeserializer is a Spring bean (needs C8YAgent), registered after injection
+        // SparkPlugBDeserializer is a Spring bean (needs C8YAgent); registered here now that
+        // it is provided via constructor injection.
         deserializers.put(MappingType.SPARKPLUGB, sparkPlugBDeserializer);
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public void process(Exchange exchange) throws Exception {
-        String tenant = exchange.getIn().getHeader("tenant", String.class);
+        String tenant = exchange.getIn().getHeader(CamelHeaders.TENANT, String.class);
         Mapping mapping = exchange.getIn().getBody(Mapping.class);
-        Boolean testing = exchange.getIn().getHeader("testing", Boolean.class);
+        Boolean testing = exchange.getIn().getHeader(CamelHeaders.TESTING, Boolean.class);
         
-        ServiceConfiguration serviceConfiguration = exchange.getIn().getHeader("serviceConfiguration",
+        ServiceConfiguration serviceConfiguration = exchange.getIn().getHeader(CamelHeaders.SERVICE_CONFIGURATION,
                 ServiceConfiguration.class);
-        ConnectorMessage connectorMessage = exchange.getIn().getHeader("connectorMessage", ConnectorMessage.class);
+        ConnectorMessage connectorMessage = exchange.getIn().getHeader(CamelHeaders.CONNECTOR_MESSAGE, ConnectorMessage.class);
 
         // Create a ConnectorMessage from the context for deserialization
 
@@ -75,16 +69,16 @@ public class DeserializationInboundProcessor extends BaseProcessor {
                     .get(mapping.getMappingType());
             if (deserializer == null) {
                 handleMissingProcessor(tenant, mapping, context);
-                exchange.getIn().setHeader("processingContext", context); // Set context with error
+                exchange.getIn().setHeader(CamelHeaders.PROCESSING_CONTEXT, context); // Set context with error
                 return;
             }
             try {
                 byte[] deserializedPayload = deserializer.deserializePayload(mapping, connectorMessage); // <--- line 73
                 context.setPayload(deserializedPayload);
-                exchange.getIn().setHeader("processingContext", context);
+                exchange.getIn().setHeader(CamelHeaders.PROCESSING_CONTEXT, context);
             } catch (IOException e) {
                 handleDeserializationError(tenant, mapping, e, context);
-                exchange.getIn().setHeader("processingContext", context);
+                exchange.getIn().setHeader(CamelHeaders.PROCESSING_CONTEXT, context);
                 return;
             }
         } else {
@@ -95,17 +89,17 @@ public class DeserializationInboundProcessor extends BaseProcessor {
                     .get(mapping.getMappingType());
             if (deserializer == null) {
                 handleMissingProcessor(tenant, mapping, context);
-                exchange.getIn().setHeader("processingContext", context); // Set context with error
+                exchange.getIn().setHeader(CamelHeaders.PROCESSING_CONTEXT, context); // Set context with error
                 return;
             }
 
             try {
                 Object deserializedPayload = deserializer.deserializePayload(mapping, connectorMessage);
                 context.setPayload(deserializedPayload);
-                exchange.getIn().setHeader("processingContext", context);
+                exchange.getIn().setHeader(CamelHeaders.PROCESSING_CONTEXT, context);
             } catch (IOException e) {
                 handleDeserializationError(tenant, mapping, e, context);
-                exchange.getIn().setHeader("processingContext", context);
+                exchange.getIn().setHeader(CamelHeaders.PROCESSING_CONTEXT, context);
                 return;
             }
         }

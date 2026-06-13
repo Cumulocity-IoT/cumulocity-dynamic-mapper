@@ -339,14 +339,10 @@ class EnrichmentOutboundProcessorTest {
         // Given
         when(processingContext.getMapping()).thenReturn(null);
 
-        // When & Then - if the processor should handle null gracefully
-        try {
-            processor.process(exchange);
-            fail("Should have thrown NullPointerException");
-        } catch (NullPointerException e) {
-            // Expected - verify it's the mapping that's null
-            assertTrue(true, "Correctly threw NPE for null mapping");
-        }
+        // When & Then - a null mapping is a programming error and must fail fast
+        // rather than silently producing an empty/invalid context.
+        assertThrows(NullPointerException.class, () -> processor.process(exchange),
+                "a null mapping must fail fast with a NullPointerException");
     }
 
     @Test

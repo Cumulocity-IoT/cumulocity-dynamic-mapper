@@ -25,7 +25,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 
 import org.apache.camel.Exchange;
@@ -80,6 +79,9 @@ class AnyPayloadInboundTest {
 
     @Mock
     private ConnectorMessage connectorMessage;
+
+    @Mock
+    private dynamic.mapper.processor.inbound.deserializer.SparkPlugBDeserializer sparkPlugBDeserializer;
 
     private static final String TEST_TENANT = "testTenant";
     private Mapping mapping;
@@ -241,25 +243,7 @@ class AnyPayloadInboundTest {
 
     // ── helpers ───────────────────────────────────────────────────────────────
 
-    private DeserializationInboundProcessor createProcessor() throws Exception {
-        DeserializationInboundProcessor processor = new DeserializationInboundProcessor();
-        injectField(processor, "mappingService", mappingService);
-        return processor;
-    }
-
-    private static void injectField(Object target, String fieldName, Object value)
-            throws Exception {
-        Field field = findField(target.getClass(), fieldName);
-        field.setAccessible(true);
-        field.set(target, value);
-    }
-
-    private static Field findField(Class<?> clazz, String name) {
-        for (Class<?> c = clazz; c != null; c = c.getSuperclass()) {
-            for (Field f : c.getDeclaredFields()) {
-                if (f.getName().equals(name)) return f;
-            }
-        }
-        throw new RuntimeException("Field '" + name + "' not found in " + clazz);
+    private DeserializationInboundProcessor createProcessor() {
+        return new DeserializationInboundProcessor(mappingService, sparkPlugBDeserializer);
     }
 }

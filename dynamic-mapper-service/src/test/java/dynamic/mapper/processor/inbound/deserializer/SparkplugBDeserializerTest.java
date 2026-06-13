@@ -26,7 +26,6 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -79,11 +78,7 @@ class SparkplugBDeserializerTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        deserializer = new SparkPlugBDeserializer();
-
-        // Inject mocked dependencies via reflection (mirrors @Autowired @Lazy)
-        injectField(deserializer, "c8yAgent",     c8yAgent);
-        injectField(deserializer, "cacheManager", cacheManager);
+        deserializer = new SparkPlugBDeserializer(c8yAgent, cacheManager);
 
         // Default stubs
         when(connectorMessage.getTenant()).thenReturn(TENANT);
@@ -246,11 +241,5 @@ class SparkplugBDeserializerTest {
         mapping.setMappingType(MappingType.SPARKPLUGB);
         mapping.setExternalIdType("c8y_Serial");
         return mapping;
-    }
-
-    private static void injectField(Object target, String fieldName, Object value) throws Exception {
-        Field field = target.getClass().getDeclaredField(fieldName);
-        field.setAccessible(true);
-        field.set(target, value);
     }
 }

@@ -34,6 +34,7 @@ import org.apache.camel.Exchange;
 import org.apache.camel.Message;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Value;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -84,6 +85,9 @@ class FlowInboundProcessorTest {
 
     private FlowInboundProcessor processor;
 
+    /** Produces real GraalVM Values from JS, replacing brittle hand-built Value mocks. */
+    private GraalValueFixtures graal;
+
     private static final String TEST_TENANT = "testTenant";
     private Mapping mapping;
     private MappingStatus mappingStatus;
@@ -91,7 +95,7 @@ class FlowInboundProcessorTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        // FIX: Pass the mocked ConfigurationController to the constructor
+        graal = new GraalValueFixtures();
         processor = new FlowInboundProcessor(mappingService);
 
         mapping = createSampleMapping();
@@ -113,6 +117,13 @@ class FlowInboundProcessorTest {
 
         // Mock service configuration - avoid mocking fields directly
         when(serviceConfiguration.getLogPayload()).thenReturn(false);
+    }
+
+    @AfterEach
+    void tearDown() {
+        if (graal != null) {
+            graal.close();
+        }
     }
 
     private Mapping createSampleMapping() {
@@ -381,55 +392,22 @@ class FlowInboundProcessorTest {
 
     @Test
     void testProcessResultWithCumulocityObjects() throws Exception {
-        // Given - Mock GraalVM context and create a result Value with CumulocityObject
-        Context mockGraalContext = mock(Context.class);
-        Value mockResult = mock(Value.class);
-        Value mockElement = mock(Value.class);
-
-        // Setup result array
-        when(mockResult.hasArrayElements()).thenReturn(true);
-        when(mockResult.getArraySize()).thenReturn(1L);
-        when(mockResult.getArrayElement(0)).thenReturn(mockElement);
-
-        // Setup element as CumulocityObject
-        when(mockElement.hasMembers()).thenReturn(true);
-        when(mockElement.hasMember("cumulocityType")).thenReturn(true);
-        when(mockElement.hasMember("action")).thenReturn(true);
-        when(mockElement.hasMember("payload")).thenReturn(true);
-        when(mockElement.hasMember("externalSource")).thenReturn(true);
-
-        // Setup member values
-        Value cumulocityTypeValue = mock(Value.class);
-        Value actionValue = mock(Value.class);
-        Value payloadValue = mock(Value.class);
-        Value externalSourceValue = mock(Value.class);
-
-        when(mockElement.getMember("cumulocityType")).thenReturn(cumulocityTypeValue);
-        when(mockElement.getMember("action")).thenReturn(actionValue);
-        when(mockElement.getMember("payload")).thenReturn(payloadValue);
-        when(mockElement.getMember("externalSource")).thenReturn(externalSourceValue);
-
-        when(cumulocityTypeValue.asString()).thenReturn("measurement");
-        when(actionValue.asString()).thenReturn("create");
-
-        // Setup payload as nested object
-        Map<String, Object> expectedPayload = createExpectedMeasurementPayload();
-        when(payloadValue.hasMembers()).thenReturn(true);
-        when(payloadValue.getMemberKeys()).thenReturn(expectedPayload.keySet());
-
-        // Mock payload members
-        setupPayloadMembers(payloadValue, expectedPayload);
-
-        // Setup external source
-        setupExternalSource(externalSourceValue);
-
-        processingContext.setGraalContext(mockGraalContext);
+        // Given - a real onMessage result array with one CumulocityObject
+        Value result = graal.eval("""
+                [{
+                    cumulocityType: 'measurement',
+                    action: 'create',
+                    payload: {
+                        time: '2024-03-19T13:30:18.619Z',
+                        type: 'c8y_TemperatureMeasurement',
+                        c8y_Steam: { Temperature: { value: 100, unit: 'C' } }
+                    },
+                    externalSource: [{ type: 'c8y_Serial', externalId: 'C333646781' }]
+                }]
+                """);
 
         // When - Call processResult directly using reflection
-        java.lang.reflect.Method processResultMethod = FlowInboundProcessor.class
-                .getDeclaredMethod("processResult", Value.class, ProcessingContext.class, String.class);
-        processResultMethod.setAccessible(true);
-        processResultMethod.invoke(processor, mockResult, processingContext, TEST_TENANT);
+        invokeProcessResult(result);
 
         // Then - Verify flow result
         assertNotNull(processingContext.getFlowResult(), "Flow result should not be null");
@@ -450,20 +428,11 @@ class FlowInboundProcessorTest {
 
     @Test
     void testProcessResultWithEmptyArray() throws Exception {
-        // Given - Mock GraalVM context with empty result array
-        Context mockGraalContext = mock(Context.class);
-        Value mockResult = mock(Value.class);
+        // Given - a real empty result array
+        Value result = graal.eval("[]");
 
-        when(mockResult.hasArrayElements()).thenReturn(true);
-        when(mockResult.getArraySize()).thenReturn(0L);
-
-        processingContext.setGraalContext(mockGraalContext);
-
-        // When - Call processResult directly using reflection
-        java.lang.reflect.Method processResultMethod = FlowInboundProcessor.class
-                .getDeclaredMethod("processResult", Value.class, ProcessingContext.class, String.class);
-        processResultMethod.setAccessible(true);
-        processResultMethod.invoke(processor, mockResult, processingContext, TEST_TENANT);
+        // When
+        invokeProcessResult(result);
 
         // Then - Verify processing is ignored
         assertTrue(processingContext.getIgnoreFurtherProcessing(),
@@ -474,19 +443,12 @@ class FlowInboundProcessorTest {
 
     @Test
     void testProcessResultWithNonArrayResult() throws Exception {
-        // Given - Mock GraalVM context with non-array result
-        Context mockGraalContext = mock(Context.class);
-        Value mockResult = mock(Value.class);
+        // Given - a real non-array, non-object result (a bare number has neither
+        // array elements nor members), exercising the "unexpected result type" path
+        Value result = graal.eval("42");
 
-        when(mockResult.hasArrayElements()).thenReturn(false);
-
-        processingContext.setGraalContext(mockGraalContext);
-
-        // When - Call processResult directly using reflection
-        java.lang.reflect.Method processResultMethod = FlowInboundProcessor.class
-                .getDeclaredMethod("processResult", Value.class, ProcessingContext.class, String.class);
-        processResultMethod.setAccessible(true);
-        processResultMethod.invoke(processor, mockResult, processingContext, TEST_TENANT);
+        // When
+        invokeProcessResult(result);
 
         // Then - Verify processing is ignored
         assertTrue(processingContext.getIgnoreFurtherProcessing(),
@@ -497,27 +459,11 @@ class FlowInboundProcessorTest {
 
     @Test
     void testProcessResultWithUnknownMessageType() throws Exception {
-        // Given - Mock GraalVM context with unknown message type
-        Context mockGraalContext = mock(Context.class);
-        Value mockResult = mock(Value.class);
-        Value mockElement = mock(Value.class);
+        // Given - a real array whose element has neither topic nor cumulocityType
+        Value result = graal.eval("[{ foo: 'bar' }]");
 
-        when(mockResult.hasArrayElements()).thenReturn(true);
-        when(mockResult.getArraySize()).thenReturn(1L);
-        when(mockResult.getArrayElement(0)).thenReturn(mockElement);
-
-        // Setup element as unknown type (no topic or cumulocityType)
-        when(mockElement.hasMembers()).thenReturn(true);
-        when(mockElement.hasMember("topic")).thenReturn(false);
-        when(mockElement.hasMember("cumulocityType")).thenReturn(false);
-
-        processingContext.setGraalContext(mockGraalContext);
-
-        // When - Call processResult directly using reflection
-        java.lang.reflect.Method processResultMethod = FlowInboundProcessor.class
-                .getDeclaredMethod("processResult", Value.class, ProcessingContext.class, String.class);
-        processResultMethod.setAccessible(true);
-        processResultMethod.invoke(processor, mockResult, processingContext, TEST_TENANT);
+        // When
+        invokeProcessResult(result);
 
         // Then - Verify flow result is empty (unknown types are ignored)
         assertNotNull(processingContext.getFlowResult(), "Flow result should not be null");
@@ -527,79 +473,29 @@ class FlowInboundProcessorTest {
         log.info("Successfully validated unknown message type handling");
     }
 
-    // Helper methods for setting up mocks
-
-    private Map<String, Object> createExpectedMeasurementPayload() {
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("time", "2024-03-19T13:30:18.619Z");
-        payload.put("type", "c8y_TemperatureMeasurement");
-
-        Map<String, Object> measurement = new HashMap<>();
-        Map<String, Object> temperature = new HashMap<>();
-        temperature.put("value", 100.0);
-        temperature.put("unit", "C");
-        measurement.put("Temperature", temperature);
-        payload.put("c8y_Steam", measurement);
-
-        return payload;
+    /** Invokes the package-private processResult method under test via reflection. */
+    private void invokeProcessResult(Value result) throws Exception {
+        java.lang.reflect.Method processResultMethod = FlowInboundProcessor.class
+                .getDeclaredMethod("processResult", Value.class, ProcessingContext.class, String.class);
+        processResultMethod.setAccessible(true);
+        processResultMethod.invoke(processor, result, processingContext, TEST_TENANT);
     }
 
-    private void setupPayloadMembers(Value payloadValue, Map<String, Object> expectedPayload) {
-        for (Map.Entry<String, Object> entry : expectedPayload.entrySet()) {
-            Value memberValue = mock(Value.class);
-            when(payloadValue.getMember(entry.getKey())).thenReturn(memberValue);
-
-            Object value = entry.getValue();
-            if (value instanceof String) {
-                when(memberValue.isString()).thenReturn(true);
-                when(memberValue.asString()).thenReturn((String) value);
-            } else if (value instanceof Map) {
-                when(memberValue.hasMembers()).thenReturn(true);
-                Map<String, Object> nestedMap = (Map<String, Object>) value;
-                when(memberValue.getMemberKeys()).thenReturn(nestedMap.keySet());
-                setupPayloadMembers(memberValue, nestedMap);
-            } else if (value instanceof Number) {
-                when(memberValue.isNumber()).thenReturn(true);
-                when(memberValue.asDouble()).thenReturn(((Number) value).doubleValue());
-            }
-        }
-    }
-
-    private void setupExternalSource(Value externalSourceValue) {
-        when(externalSourceValue.hasArrayElements()).thenReturn(true);
-        when(externalSourceValue.getArraySize()).thenReturn(1L);
-
-        Value sourceElement = mock(Value.class);
-        when(externalSourceValue.getArrayElement(0)).thenReturn(sourceElement);
-        when(sourceElement.hasMembers()).thenReturn(true);
-        when(sourceElement.getMemberKeys()).thenReturn(java.util.Set.of("type", "externalId"));
-
-        Value typeValue = mock(Value.class);
-        Value externalIdValue = mock(Value.class);
-        when(sourceElement.getMember("type")).thenReturn(typeValue);
-        when(sourceElement.getMember("externalId")).thenReturn(externalIdValue);
-        when(typeValue.asString()).thenReturn("c8y_Serial");
-        when(externalIdValue.asString()).thenReturn("C333646781");
-    }
-
-    private void setupCumulocityObjectMock(Value mockElement) {
-        when(mockElement.hasMembers()).thenReturn(true);
-        when(mockElement.hasMember("cumulocityType")).thenReturn(true);
-        when(mockElement.hasMember("action")).thenReturn(true);
-        when(mockElement.hasMember("payload")).thenReturn(true);
-
-        Value typeValue = mock(Value.class);
-        Value actionValue = mock(Value.class);
-        Value payloadValue = mock(Value.class);
-
-        when(mockElement.getMember("cumulocityType")).thenReturn(typeValue);
-        when(mockElement.getMember("action")).thenReturn(actionValue);
-        when(mockElement.getMember("payload")).thenReturn(payloadValue);
-
-        when(typeValue.asString()).thenReturn("measurement");
-        when(actionValue.asString()).thenReturn("create");
-        when(payloadValue.isString()).thenReturn(true);
-        when(payloadValue.asString()).thenReturn("{\"type\":\"c8y_TemperatureMeasurement\"}");
+    /**
+     * A real onMessage result array with two CumulocityObject measurement
+     * elements, used by the multiple-result tests.
+     */
+    private Value twoMeasurementResult() {
+        return graal.eval("""
+                [
+                    { cumulocityType: 'measurement', action: 'create',
+                      payload: { type: 'c8y_TemperatureMeasurement' },
+                      externalSource: [{ type: 'c8y_Serial', externalId: 'test-client' }] },
+                    { cumulocityType: 'measurement', action: 'create',
+                      payload: { type: 'c8y_ProcessedEvent', processed: true, originalValue: 100 },
+                      externalSource: [{ type: 'c8y_Serial', externalId: 'test-client' }] }
+                ]
+                """);
     }
 
     @Test
@@ -674,7 +570,9 @@ class FlowInboundProcessorTest {
         Map<String, Object> temperature = (Map<String, Object>) steamMeasurement.get("Temperature");
         assertEquals("C", temperature.get("unit"),
                 "Should have Celsius unit as per sample code");
-        assertEquals(100.0, temperature.get("value"),
+        // JavaScriptInteropHelper coerces an integral JS number (100) to an Integer,
+        // so compare numerically rather than asserting a specific boxed type.
+        assertEquals(100, ((Number) temperature.get("value")).intValue(),
                 "Should have temperature value from input payload temp_val");
 
         // Verify external source
@@ -743,241 +641,38 @@ class FlowInboundProcessorTest {
         log.info("✅ Error handling flow processing test passed - errors properly handled");
     }
 
-    // Helper method to create expected JavaScript result that matches the sample
-    // code
+    /**
+     * A real single-element onMessage result matching the sample mapping: one
+     * measurement CumulocityObject with a nested c8y_Steam payload and a
+     * c8y_Serial external source using the clientId.
+     */
     private Value createExpectedJavaScriptResult() {
-        Value mockResult = mock(Value.class);
-        Value mockElement = mock(Value.class);
-
-        // Setup result array with one element
-        when(mockResult.hasArrayElements()).thenReturn(true);
-        when(mockResult.getArraySize()).thenReturn(1L);
-        when(mockResult.getArrayElement(0)).thenReturn(mockElement);
-
-        // Setup element as CumulocityObject
-        when(mockElement.hasMembers()).thenReturn(true);
-        when(mockElement.hasMember("cumulocityType")).thenReturn(true);
-        when(mockElement.hasMember("action")).thenReturn(true);
-        when(mockElement.hasMember("payload")).thenReturn(true);
-        when(mockElement.hasMember("externalSource")).thenReturn(true);
-
-        // Setup member values
-        mockStringMember(mockElement, "cumulocityType", "measurement");
-        mockStringMember(mockElement, "action", "create");
-
-        // Setup payload
-        Value payloadValue = mock(Value.class);
-        when(mockElement.getMember("payload")).thenReturn(payloadValue);
-        setupCompletePayloadMock(payloadValue);
-
-        // Setup external source
-        Value externalSourceValue = mock(Value.class);
-        when(mockElement.getMember("externalSource")).thenReturn(externalSourceValue);
-        setupCompleteExternalSourceMock(externalSourceValue);
-
-        return mockResult;
+        return graal.eval("""
+                [{
+                    cumulocityType: 'measurement',
+                    action: 'create',
+                    payload: {
+                        time: '2024-03-19T13:30:18.619Z',
+                        type: 'c8y_TemperatureMeasurement',
+                        c8y_Steam: { Temperature: { value: 100, unit: 'C' } }
+                    },
+                    externalSource: [{ type: 'c8y_Serial', externalId: 'test-client' }]
+                }]
+                """);
     }
 
     private Value createMultipleResultsJavaScriptResult() {
-        Value mockResult = mock(Value.class);
-        Value mockFirstElement = mock(Value.class);
-        Value mockSecondElement = mock(Value.class);
-
-        // Setup result array with two elements
-        when(mockResult.hasArrayElements()).thenReturn(true);
-        when(mockResult.getArraySize()).thenReturn(2L);
-        when(mockResult.getArrayElement(0)).thenReturn(mockFirstElement);
-        when(mockResult.getArrayElement(1)).thenReturn(mockSecondElement);
-
-        // Setup BOTH elements as CumulocityObjects (not DeviceMessage)
-        setupCompleteCumulocityObjectMock(mockFirstElement);
-        setupCompleteCumulocityObjectMock(mockSecondElement); // Changed from setupCompleteDeviceMessageMock
-
-        return mockResult;
+        return twoMeasurementResult();
     }
 
-    private void mockStringMember(Value parentValue, String memberName, String value) {
-        Value memberValue = mock(Value.class);
-        when(parentValue.getMember(memberName)).thenReturn(memberValue);
-        when(memberValue.asString()).thenReturn(value);
-    }
-
-    private void setupCompletePayloadMock(Value payloadValue) {
-        // Setup the payload value to be properly converted by convertValueToJavaObject
-        when(payloadValue.isNull()).thenReturn(false);
-        when(payloadValue.isString()).thenReturn(false);
-        when(payloadValue.isNumber()).thenReturn(false);
-        when(payloadValue.isBoolean()).thenReturn(false);
-        when(payloadValue.isDate()).thenReturn(false);
-        when(payloadValue.hasArrayElements()).thenReturn(false);
-        when(payloadValue.hasMembers()).thenReturn(true);
-        when(payloadValue.hasBufferElements()).thenReturn(false);
-
-        when(payloadValue.getMemberKeys()).thenReturn(java.util.Set.of("time", "type", "c8y_Steam"));
-
-        // Mock time - setup as string
-        Value timeValue = mock(Value.class);
-        when(payloadValue.getMember("time")).thenReturn(timeValue);
-        setupStringValueMock(timeValue, "2024-03-19T13:30:18.619Z");
-
-        // Mock type - setup as string
-        Value typeValue = mock(Value.class);
-        when(payloadValue.getMember("type")).thenReturn(typeValue);
-        setupStringValueMock(typeValue, "c8y_TemperatureMeasurement");
-
-        // Mock c8y_Steam - setup as nested object
-        Value steamValue = mock(Value.class);
-        when(payloadValue.getMember("c8y_Steam")).thenReturn(steamValue);
-        setupSteamMeasurementMock(steamValue);
-    }
-
-    private void setupStringValueMock(Value value, String stringValue) {
-        when(value.isNull()).thenReturn(false);
-        when(value.isString()).thenReturn(true);
-        when(value.isNumber()).thenReturn(false);
-        when(value.isBoolean()).thenReturn(false);
-        when(value.isDate()).thenReturn(false);
-        when(value.hasArrayElements()).thenReturn(false);
-        when(value.hasMembers()).thenReturn(false);
-        when(value.hasBufferElements()).thenReturn(false);
-        when(value.asString()).thenReturn(stringValue);
-    }
-
-    private void setupSteamMeasurementMock(Value steamValue) {
-        when(steamValue.isNull()).thenReturn(false);
-        when(steamValue.isString()).thenReturn(false);
-        when(steamValue.isNumber()).thenReturn(false);
-        when(steamValue.isBoolean()).thenReturn(false);
-        when(steamValue.isDate()).thenReturn(false);
-        when(steamValue.hasArrayElements()).thenReturn(false);
-        when(steamValue.hasMembers()).thenReturn(true);
-        when(steamValue.hasBufferElements()).thenReturn(false);
-
-        when(steamValue.getMemberKeys()).thenReturn(java.util.Set.of("Temperature"));
-
-        Value temperatureValue = mock(Value.class);
-        when(steamValue.getMember("Temperature")).thenReturn(temperatureValue);
-        setupTemperatureMock(temperatureValue);
-    }
-
-    private void setupTemperatureMock(Value temperatureValue) {
-        when(temperatureValue.isNull()).thenReturn(false);
-        when(temperatureValue.isString()).thenReturn(false);
-        when(temperatureValue.isNumber()).thenReturn(false);
-        when(temperatureValue.isBoolean()).thenReturn(false);
-        when(temperatureValue.isDate()).thenReturn(false);
-        when(temperatureValue.hasArrayElements()).thenReturn(false);
-        when(temperatureValue.hasMembers()).thenReturn(true);
-        when(temperatureValue.hasBufferElements()).thenReturn(false);
-
-        when(temperatureValue.getMemberKeys()).thenReturn(java.util.Set.of("unit", "value"));
-
-        // Setup unit
-        Value unitValue = mock(Value.class);
-        when(temperatureValue.getMember("unit")).thenReturn(unitValue);
-        setupStringValueMock(unitValue, "C");
-
-        // Setup value
-        Value valueValue = mock(Value.class);
-        when(temperatureValue.getMember("value")).thenReturn(valueValue);
-        setupNumberValueMock(valueValue, 100.0);
-    }
-
-    private void setupNumberValueMock(Value value, double numberValue) {
-        when(value.isNull()).thenReturn(false);
-        when(value.isString()).thenReturn(false);
-        when(value.isNumber()).thenReturn(true);
-        when(value.isBoolean()).thenReturn(false);
-        when(value.isDate()).thenReturn(false);
-        when(value.hasArrayElements()).thenReturn(false);
-        when(value.hasMembers()).thenReturn(false);
-        when(value.hasBufferElements()).thenReturn(false);
-
-        // Determine if it should fit in int based on the value
-        boolean fitsInInt = (numberValue == Math.floor(numberValue)) &&
-                (numberValue >= Integer.MIN_VALUE) &&
-                (numberValue <= Integer.MAX_VALUE);
-
-        when(value.fitsInInt()).thenReturn(!fitsInInt); // Return false to force double conversion
-        when(value.fitsInLong()).thenReturn(!fitsInInt); // Return false to force double conversion
-        when(value.asInt()).thenReturn((int) numberValue);
-        when(value.asLong()).thenReturn((long) numberValue);
-        when(value.asDouble()).thenReturn(numberValue);
-    }
-
-    private void setupCompleteExternalSourceMock(Value externalSourceValue) {
-        when(externalSourceValue.isNull()).thenReturn(false);
-        when(externalSourceValue.isString()).thenReturn(false);
-        when(externalSourceValue.isNumber()).thenReturn(false);
-        when(externalSourceValue.isBoolean()).thenReturn(false);
-        when(externalSourceValue.isDate()).thenReturn(false);
-        when(externalSourceValue.hasArrayElements()).thenReturn(true);
-        when(externalSourceValue.hasMembers()).thenReturn(false);
-        when(externalSourceValue.hasBufferElements()).thenReturn(false);
-        when(externalSourceValue.getArraySize()).thenReturn(1L);
-
-        Value sourceElement = mock(Value.class);
-        when(externalSourceValue.getArrayElement(0)).thenReturn(sourceElement);
-
-        when(sourceElement.isNull()).thenReturn(false);
-        when(sourceElement.isString()).thenReturn(false);
-        when(sourceElement.isNumber()).thenReturn(false);
-        when(sourceElement.isBoolean()).thenReturn(false);
-        when(sourceElement.isDate()).thenReturn(false);
-        when(sourceElement.hasArrayElements()).thenReturn(false);
-        when(sourceElement.hasMembers()).thenReturn(true);
-        when(sourceElement.hasBufferElements()).thenReturn(false);
-        when(sourceElement.getMemberKeys()).thenReturn(java.util.Set.of("type", "externalId"));
-
-        Value typeValue = mock(Value.class);
-        when(sourceElement.getMember("type")).thenReturn(typeValue);
-        setupStringValueMock(typeValue, "c8y_Serial");
-
-        Value externalIdValue = mock(Value.class);
-        when(sourceElement.getMember("externalId")).thenReturn(externalIdValue);
-        setupStringValueMock(externalIdValue, "test-client");
-    }
-
-    private void setupCompleteCumulocityObjectMock(Value mockElement) {
-        when(mockElement.hasMembers()).thenReturn(true);
-        when(mockElement.hasMember("cumulocityType")).thenReturn(true);
-        when(mockElement.hasMember("action")).thenReturn(true);
-        when(mockElement.hasMember("payload")).thenReturn(true);
-
-        mockStringMember(mockElement, "cumulocityType", "measurement");
-        mockStringMember(mockElement, "action", "create");
-
-        Value payloadValue = mock(Value.class);
-        when(mockElement.getMember("payload")).thenReturn(payloadValue);
-        when(payloadValue.isString()).thenReturn(true);
-        when(payloadValue.asString()).thenReturn("{\"type\":\"c8y_TemperatureMeasurement\"}");
-    }
 
     @Test
     void testProcessResultWithMultipleMessages() throws Exception {
-        // Given - Mock GraalVM context with multiple result messages
-        Context mockGraalContext = mock(Context.class);
-        Value mockResult = mock(Value.class);
-        Value mockCumulocityElement = mock(Value.class);
-        Value mockSecondElement = mock(Value.class);
-
-        // Setup result array with 2 elements
-        when(mockResult.hasArrayElements()).thenReturn(true);
-        when(mockResult.getArraySize()).thenReturn(2L);
-        when(mockResult.getArrayElement(0)).thenReturn(mockCumulocityElement);
-        when(mockResult.getArrayElement(1)).thenReturn(mockSecondElement);
-
-       // Setup BOTH elements as CumulocityObject
-        setupCumulocityObjectMock(mockCumulocityElement);
-        setupCumulocityObjectMock(mockSecondElement); 
-
-        processingContext.setGraalContext(mockGraalContext);
+        // Given - a real result array with two CumulocityObject elements
+        Value result = twoMeasurementResult();
 
         // When - Call processResult directly using reflection
-        java.lang.reflect.Method processResultMethod = FlowInboundProcessor.class
-                .getDeclaredMethod("processResult", Value.class, ProcessingContext.class, String.class);
-        processResultMethod.setAccessible(true);
-        processResultMethod.invoke(processor, mockResult, processingContext, TEST_TENANT);
+        invokeProcessResult(result);
 
         // Then - Verify flow result
         assertNotNull(processingContext.getFlowResult(), "Flow result should not be null");

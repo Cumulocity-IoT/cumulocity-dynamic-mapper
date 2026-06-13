@@ -25,7 +25,9 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import java.lang.reflect.Field;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import dynamic.mapper.service.cache.FlowStateStore;
 import org.apache.camel.Exchange;
@@ -39,17 +41,28 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
-import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.model.API;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Qos;
+import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Behavioural tests for {@link EnrichmentInboundProcessor}.
+ *
+ * <p>These tests drive a <em>real</em> {@link ProcessingContext} with a real
+ * payload through the processor and assert the concrete side effects of
+ * enrichment (token injection, QoS propagation, message counting, error
+ * recording) rather than merely asserting that processing did not throw.
+ * Smart-function / GraalVM enrichment is covered by
+ * {@code AbstractEnrichmentProcessorTest} which uses a real GraalVM engine.
+ */
 @Slf4j
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -73,34 +86,25 @@ class EnrichmentInboundProcessorTest {
     @Mock
     private ServiceConfiguration serviceConfiguration;
 
-    @Mock
-    private ConnectorMessage connectorMessage;
-
-    @Mock
-    private ProcessingContext<Object> processingContext;
-
-    @Mock
-    private dynamic.mapper.processor.model.RoutingContext routingContext;
-
-    @Mock
-    private dynamic.mapper.processor.model.PayloadContext<Object> payloadContext;
-
-    @Mock
-    private dynamic.mapper.processor.model.ProcessingState processingState;
-
     private EnrichmentInboundProcessor processor;
 
     private static final String TEST_TENANT = "testTenant";
+    private static final String TEST_TOPIC = "device/sensor01/measurement";
+
     private Mapping mapping;
     private MappingStatus mappingStatus;
 
     @BeforeEach
-    void setUp() throws Exception {
-        // Create real Mapping object
-        mapping = Mapping.builder().identifier("test-mapping").name("Test Mapping").debug(false).qos(Qos.AT_LEAST_ONCE)
+    void setUp() {
+        mapping = Mapping.builder()
+                .identifier("test-mapping")
+                .name("Test Mapping")
+                .debug(false)
+                .qos(Qos.AT_LEAST_ONCE)
+                .targetAPI(API.MEASUREMENT)
+                .mappingType(MappingType.JSON)
                 .build();
 
-        // Create real MappingStatus object with all required fields initialized
         mappingStatus = new MappingStatus(
                 "test-id",
                 "Test Mapping",
@@ -114,201 +118,137 @@ class EnrichmentInboundProcessorTest {
                 null // loadingError
         );
 
-        // Create the processor
         processor = new EnrichmentInboundProcessor(configurationRegistry, mappingService, flowStateStore);
 
-        // Setup basic exchange and message mocks
         when(exchange.getIn()).thenReturn(message);
-        when(message.getBody(Mapping.class)).thenReturn(mapping);
-        when(message.getHeader("tenant", String.class)).thenReturn(TEST_TENANT);
-        when(message.getHeader("serviceConfiguration", ServiceConfiguration.class)).thenReturn(serviceConfiguration);
-        when(message.getHeader("connectorMessage", ConnectorMessage.class)).thenReturn(connectorMessage);
-        when(message.getHeader("processingContext", ProcessingContext.class)).thenReturn(processingContext);
-
-        // Mock processing context methods to prevent null pointer exceptions
-        when(processingContext.getServiceConfiguration()).thenReturn(serviceConfiguration);
-        when(processingContext.getTenant()).thenReturn(TEST_TENANT);
-        when(processingContext.getMapping()).thenReturn(mapping);
-
-        // Mock focused contexts
-        when(processingContext.getRoutingContext()).thenReturn(routingContext);
-        when(processingContext.getPayloadContext()).thenReturn(payloadContext);
-        when(processingContext.getProcessingState()).thenReturn(processingState);
-
-        // Mock routing context
-        when(routingContext.getTenant()).thenReturn(TEST_TENANT);
-
-        // Setup mapping status mocks - this is crucial!
-        when(mappingService.getMappingStatus(eq(TEST_TENANT), eq(mapping))).thenReturn(mappingStatus);
-        when(mappingService.getMappingStatus(any(String.class), any(Mapping.class))).thenReturn(mappingStatus);
-
-        // Also mock for null tenant case
-        when(mappingService.getMappingStatus(isNull(), any(Mapping.class))).thenReturn(mappingStatus);
-
-        // Mock connector message
-        when(connectorMessage.getPayload()).thenReturn("test payload".getBytes());
+        when(mappingService.getMappingStatus(any(), any(Mapping.class))).thenReturn(mappingStatus);
     }
 
-    private Field findMappingServiceField(Class<?> clazz) {
-        while (clazz != null) {
-            try {
-                Field field = clazz.getDeclaredField("mappingService");
-                log.info("Found mappingService field in " + clazz.getSimpleName());
-                return field;
-            } catch (NoSuchFieldException e) {
-                log.info("No mappingService field in " + clazz.getSimpleName() + ", checking parent class");
-                clazz = clazz.getSuperclass();
-            }
-        }
-        return null;
+    /**
+     * Builds a real ProcessingContext and wires it onto the exchange header the
+     * way the upstream DeserializationInboundProcessor would.
+     */
+    private ProcessingContext<Object> stageContext(Object payload, String key) {
+        ProcessingContext<Object> context = ProcessingContext.builder()
+                .tenant(TEST_TENANT)
+                .topic(TEST_TOPIC)
+                .mapping(mapping)
+                .mappingType(mapping.getMappingType())
+                .serviceConfiguration(serviceConfiguration)
+                .api(mapping.getTargetAPI())
+                .key(key)
+                .payload(payload)
+                .build();
+        when(message.getHeader("processingContext", ProcessingContext.class)).thenReturn(context);
+        when(message.getHeader("connectorIdentifier", String.class)).thenReturn("connector-1");
+        return context;
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    void injectsTopicLevelTokenIntoMapPayload() throws Exception {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("temperature", 21.5);
+        ProcessingContext<Object> context = stageContext(payload, null);
+
+        processor.process(exchange);
+
+        assertTrue(payload.containsKey(Mapping.TOKEN_TOPIC_LEVEL),
+                "enrichment must inject the _TOPIC_LEVEL_ token into a Map payload");
+        Object topicLevel = payload.get(Mapping.TOKEN_TOPIC_LEVEL);
+        assertInstanceOf(List.class, topicLevel, "_TOPIC_LEVEL_ must be the split topic as a list");
+        assertTrue(((List<String>) topicLevel).contains("sensor01"),
+                "split topic should contain each topic segment");
+        assertFalse(context.hasError(), "valid enrichment must not record an error");
     }
 
     @Test
-    void testProcessWithValidProcessingContext() throws Exception {
-        // Given
-        mapping.setMappingType(MappingType.JSON);
+    void propagatesQosFromMappingToContext() throws Exception {
+        ProcessingContext<Object> context = stageContext(new HashMap<>(), null);
 
-        // When & Then
-        try {
-            processor.process(exchange);
-            // If we get here without exception, the test passes
-            assertTrue(true, "Process completed without exception");
-        } catch (Exception e) {
-            log.info("Exception details:");
-            log.info("Message: " + e.getMessage());
-            log.info("Cause: " + e.getCause());
-            e.printStackTrace();
-            fail("Unexpected exception: " + e.getMessage());
-        }
+        processor.process(exchange);
+
+        assertEquals(Qos.AT_LEAST_ONCE, context.getQos(),
+                "performPreEnrichmentSetup must copy the mapping QoS onto the context");
     }
 
     @Test
-    void testProcessWithDifferentMappingTypes() throws Exception {
-        MappingType[] mappingTypes = {
-                MappingType.JSON,
-                MappingType.FLAT_FILE,
-                MappingType.HEX,
-                MappingType.PROTOBUF_INTERNAL,
-            MappingType.valueOf("EXTENSION_JAVA"),
-        };
+    void incrementsMessagesReceivedExactlyOnce() throws Exception {
+        stageContext(new HashMap<>(), null);
 
-        for (MappingType type : mappingTypes) {
-            try {
-                // Given
-                mapping.setMappingType(type);
+        processor.process(exchange);
 
-                // When
-                processor.process(exchange);
+        assertEquals(1L, mappingStatus.messagesReceived,
+                "each processed message must increment messagesReceived once");
+        assertEquals(0L, mappingStatus.errors, "a successful enrichment must not increment errors");
+    }
 
-                // If we get here, the processing was successful
-                assertTrue(true, "Successfully processed " + type);
+    @SuppressWarnings("unchecked")
+    @Test
+    void injectsContextDataTokenWhenMessageKeyPresent() throws Exception {
+        Map<String, Object> payload = new HashMap<>();
+        stageContext(payload, "partition-key-7");
 
-            } catch (Exception e) {
-                log.info("Failed to process mapping type " + type + ": " + e.getMessage());
-                e.printStackTrace();
-                fail("Failed to process mapping type " + type + ": " + e.getMessage());
-            }
-        }
+        processor.process(exchange);
+
+        assertTrue(payload.containsKey(Mapping.TOKEN_CONTEXT_DATA),
+                "a present message key must produce a _CONTEXT_DATA_ token");
+        Map<String, String> contextData = (Map<String, String>) payload.get(Mapping.TOKEN_CONTEXT_DATA);
+        assertEquals("partition-key-7", contextData.get(Mapping.CONTEXT_DATA_KEY_NAME),
+                "the message key must be carried in _CONTEXT_DATA_");
+        assertEquals(API.MEASUREMENT.toString(), contextData.get("api"),
+                "the target API must be carried in _CONTEXT_DATA_");
     }
 
     @Test
-    void testProcessWithNullMapping() throws Exception {
-        // Given
-        when(processingContext.getMapping()).thenReturn(null);
+    void doesNotInjectContextDataWhenNoKey() throws Exception {
+        Map<String, Object> payload = new HashMap<>();
+        stageContext(payload, null);
 
-        // When & Then - if the processor should handle null gracefully
-        try {
-            processor.process(exchange);
-            fail("Should have thrown NullPointerException");
-        } catch (NullPointerException e) {
-            // Expected - verify it's the mapping that's null
-            assertTrue(true, "Correctly threw NPE for null mapping");
-        }
+        processor.process(exchange);
+
+        assertFalse(payload.containsKey(Mapping.TOKEN_CONTEXT_DATA),
+                "absent message key must not create a _CONTEXT_DATA_ token");
     }
 
     @Test
-    void testConstructorInitialization() {
-        // Given & When
-        EnrichmentInboundProcessor newProcessor = new EnrichmentInboundProcessor(configurationRegistry, mappingService, flowStateStore);
+    void leavesNonMapPayloadUntouched() throws Exception {
+        // A byte[] payload (e.g. a custom format handled later by an extension)
+        // must pass through enrichment without modification or error.
+        byte[] payload = "raw-binary".getBytes();
+        ProcessingContext<Object> context = stageContext(payload, null);
 
-        // Then
-        assertNotNull(newProcessor);
+        processor.process(exchange);
+
+        assertSame(payload, context.getPayload(), "non-Map payload must not be replaced");
+        assertFalse(context.hasError(), "passing through a non-Map payload is not an error");
+        assertEquals(1L, mappingStatus.messagesReceived);
     }
 
     @Test
-    void testProcessHandlesNullProcessingContext() throws Exception {
-        // Given
+    void recordsEnrichmentFailureAsProcessingException() throws Exception {
+        // An immutable payload map makes the in-place _TOPIC_LEVEL_ injection throw,
+        // exercising the handleEnrichmentError path.
+        ProcessingContext<Object> context = stageContext(Map.of("temperature", 21.5), null);
+
+        processor.process(exchange);
+
+        assertTrue(context.hasError(), "an enrichment exception must be recorded on the context");
+        assertInstanceOf(ProcessingException.class, context.getErrors().get(0),
+                "errors must be wrapped as ProcessingException");
+        assertEquals(1L, mappingStatus.errors, "enrichment failure must increment the error count");
+        verify(mappingService).increaseAndHandleFailureCount(eq(TEST_TENANT), eq(mapping), eq(mappingStatus));
+    }
+
+    @Test
+    void skipsEnrichmentGracefullyWhenContextHeaderMissing() throws Exception {
+        // Upstream deserialization failed and never set the processingContext header.
         when(message.getHeader("processingContext", ProcessingContext.class)).thenReturn(null);
-        mapping.setMappingType(MappingType.JSON);
 
-        // When & Then - null context is handled gracefully (upstream deserialization failure)
         assertDoesNotThrow(() -> processor.process(exchange));
-    }
 
-    @Test
-    void testProcessWithValidInputs() throws Exception {
-        // Given
-        mapping.setMappingType(MappingType.JSON);
-
-        // When & Then
-        try {
-            processor.process(exchange);
-            assertTrue(true, "Process completed successfully");
-        } catch (Exception e) {
-            log.info("Exception during testProcessWithValidInputs:");
-            log.info("Message: " + e.getMessage());
-            e.printStackTrace();
-            fail("Unexpected exception: " + e.getMessage());
-        }
-    }
-
-    @Test
-    void testMappingServiceInjection() throws Exception {
-        // Test that our mapping service injection worked
-        Field field = findMappingServiceField(processor.getClass());
-        if (field != null) {
-            field.setAccessible(true);
-            Object injectedService = field.get(processor);
-            assertNotNull(injectedService, "MappingService should be injected");
-            assertEquals(mappingService, injectedService, "Injected service should be our mock");
-        } else {
-            log.info("No mappingService field found - processor might not use MappingService");
-        }
-    }
-
-    @Test
-    void testMappingStatusAccess() throws Exception {
-        // Test that mappingService.getMappingStatus returns our mock
-        MappingStatus status = mappingService.getMappingStatus(TEST_TENANT, mapping);
-        assertNotNull(status, "MappingStatus should not be null");
-        assertEquals(0L, status.messagesReceived, "messagesReceived should be initialized to 0");
-        assertEquals(0L, status.errors, "errors should be initialized to 0");
-    }
-
-    @Test
-    void testWithMinimalMocking() throws Exception {
-        // Create a completely fresh processor with minimal mocking
-        EnrichmentInboundProcessor freshProcessor = new EnrichmentInboundProcessor(configurationRegistry, mappingService, flowStateStore);
-
-        // Only inject mappingService if the field exists
-        try {
-            Field field = findMappingServiceField(freshProcessor.getClass());
-            if (field != null) {
-                field.setAccessible(true);
-                field.set(freshProcessor, mappingService);
-
-                // Given
-                mapping.setMappingType(MappingType.JSON);
-
-                // When & Then
-                assertDoesNotThrow(() -> freshProcessor.process(exchange));
-            } else {
-                // If no mappingService field exists, the processor might not need it
-                log.info("Processor does not have mappingService field - skipping test");
-            }
-        } catch (Exception e) {
-            log.info("Minimal mocking test failed: " + e.getMessage());
-            e.printStackTrace();
-        }
+        // No work should have been attempted against the (absent) mapping.
+        verify(mappingService, never()).getMappingStatus(any(), any());
+        assertEquals(0L, mappingStatus.messagesReceived);
     }
 }

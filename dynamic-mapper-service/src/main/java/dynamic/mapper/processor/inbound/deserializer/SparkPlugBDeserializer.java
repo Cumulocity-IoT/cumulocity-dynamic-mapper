@@ -31,7 +31,6 @@ import dynamic.mapper.core.cache.InventoryCache;
 import dynamic.mapper.model.Mapping;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.tahu.protobuf.SparkplugBProto;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
@@ -129,13 +128,20 @@ public class SparkPlugBDeserializer implements PayloadDeserializer<Object> {
         return SPARKPLUGB_IS_ACTIVE_FRAGMENT_PREFIX + sparkplugDeviceId;
     }
 
-    @Autowired
-    @Lazy
-    private C8YAgent c8yAgent;
+    private final C8YAgent c8yAgent;
 
-    @Autowired
-    @Lazy
-    private CacheManager cacheManager;
+    private final CacheManager cacheManager;
+
+    /**
+     * @param c8yAgent     resolved lazily to avoid a circular dependency during
+     *                     bean initialization
+     * @param cacheManager resolved lazily to avoid a circular dependency during
+     *                     bean initialization
+     */
+    public SparkPlugBDeserializer(@Lazy C8YAgent c8yAgent, @Lazy CacheManager cacheManager) {
+        this.c8yAgent = c8yAgent;
+        this.cacheManager = cacheManager;
+    }
 
     @Override
     public Object deserializePayload(Mapping mapping, ConnectorMessage message) throws IOException {

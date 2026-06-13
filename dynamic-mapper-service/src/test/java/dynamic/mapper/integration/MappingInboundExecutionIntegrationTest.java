@@ -27,7 +27,6 @@ import static org.mockito.Mockito.*;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -121,11 +120,8 @@ class MappingInboundExecutionIntegrationTest {
 
         // Create processors
         jsonataProcessor = new JSONataInboundProcessor(mappingService);
-        substitutionProcessor = new SubstitutionResultInboundProcessor();
-
-        // Inject dependencies via reflection
-        injectField(substitutionProcessor, "c8yAgent", c8yAgent);
-        injectField(substitutionProcessor, "mappingService", mappingService);
+        // configurationRegistry is not exercised by these tests (no inventory-filter mappings)
+        substitutionProcessor = new SubstitutionResultInboundProcessor(c8yAgent, mappingService, null);
 
         // Setup common mocks
         when(serviceConfiguration.getLogPayload()).thenReturn(false);
@@ -537,12 +533,6 @@ class MappingInboundExecutionIntegrationTest {
     }
 
     // ========== HELPER METHODS ==========
-
-    private void injectField(Object target, String fieldName, Object value) throws Exception {
-        Field field = target.getClass().getDeclaredField(fieldName);
-        field.setAccessible(true);
-        field.set(target, value);
-    }
 
     private List<Mapping> loadMappingsFromFile(String relativePath) throws IOException {
         // Get the project root directory by navigating up from the test class location

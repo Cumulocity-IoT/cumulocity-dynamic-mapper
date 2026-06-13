@@ -194,8 +194,16 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
                 .when(exchange -> isJSONataExtraction(exchange))
                 .to("direct:processOutboundJSONataExtraction")
 
-                // Default fallback
+                // Default fallback — unknown/unmatched TransformationType
                 .otherwise()
+                .process(exchange -> {
+                    ProcessingContext<?> ctx = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT,
+                            ProcessingContext.class);
+                    log.warn("{} - No matching transformation type for mapping '{}' (type={}), falling back to JSONata",
+                            ctx != null ? ctx.getTenant() : "unknown",
+                            ctx != null && ctx.getMapping() != null ? ctx.getMapping().getName() : "unknown",
+                            ctx != null && ctx.getMapping() != null ? ctx.getMapping().getTransformationType() : "null");
+                })
                 .to("direct:processOutboundJSONataExtraction") // Default to JSONata
                 .end();
 
