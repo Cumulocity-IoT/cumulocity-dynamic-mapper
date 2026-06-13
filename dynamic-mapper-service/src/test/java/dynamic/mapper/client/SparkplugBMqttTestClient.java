@@ -19,7 +19,7 @@
  *
  */
 
-package dynamic.mapper;
+package dynamic.mapper.client;
 
 import com.google.protobuf.CodedOutputStream;
 import com.hivemq.client.mqtt.datatypes.MqttQos;

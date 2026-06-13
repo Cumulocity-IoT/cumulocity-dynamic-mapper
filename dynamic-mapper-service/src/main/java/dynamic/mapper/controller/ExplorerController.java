@@ -35,9 +35,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import lombok.RequiredArgsConstructor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -50,16 +50,14 @@ import java.util.List;
 import java.util.Map;
 
 @Slf4j
+@RequiredArgsConstructor
 @RestController
 @RequestMapping("/explorer")
 @Tag(name = "Message Explorer Controller", description = "API for live exploration of raw inbound messages from broker connectors")
 public class ExplorerController {
 
-    @Autowired
-    private ExplorerService explorerService;
-
-    @Autowired
-    private ContextService<UserCredentials> contextService;
+    private final ExplorerService explorerService;
+    private final ContextService<UserCredentials> contextService;
 
     // ---- DTOs ---------------------------------------------------------------
 

@@ -28,7 +28,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -48,12 +47,9 @@ import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.connector.core.registry.ConnectorRegistryException;
-import dynamic.mapper.core.BootstrapService;
-import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.model.DeploymentMapEntry;
 import dynamic.mapper.service.ConnectorConfigurationService;
 import dynamic.mapper.service.MappingService;
-import dynamic.mapper.service.ServiceConfigurationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -63,34 +59,20 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@RequiredArgsConstructor
 @RequestMapping("/deployment")
 @RestController
 @Tag(name = "Deployment Controller", description = "API for managing mapping deployments across connectors. Controls which mappings are active on which connectors and provides visibility into the current deployment state.")
 public class DeploymentController {
 
-	@Autowired
-	ConnectorRegistry connectorRegistry;
-
-	@Autowired
-	MappingService mappingService;
-
-	@Autowired
-	ConnectorConfigurationService connectorConfigurationService;
-
-	@Autowired
-	ServiceConfigurationService serviceConfigurationService;
-
-	@Autowired
-	BootstrapService bootstrapService;
-
-	@Autowired
-	C8YAgent c8YAgent;
-
-	@Autowired
-	private ContextService<UserCredentials> contextService;
+	private final ConnectorRegistry connectorRegistry;
+	private final MappingService mappingService;
+	private final ConnectorConfigurationService connectorConfigurationService;
+	private final ContextService<UserCredentials> contextService;
 
 	@Operation(
 		summary = "Get effective deployments",

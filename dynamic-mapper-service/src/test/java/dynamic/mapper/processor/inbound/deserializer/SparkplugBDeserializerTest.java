@@ -31,7 +31,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import dynamic.mapper.SparkplugBMqttTestClient;
+import dynamic.mapper.client.SparkplugBMqttTestClient;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.CacheManager;

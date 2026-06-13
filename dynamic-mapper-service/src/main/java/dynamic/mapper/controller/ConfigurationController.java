@@ -37,7 +37,6 @@ import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.*;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -59,6 +58,7 @@ import com.cumulocity.microservice.context.credentials.UserCredentials;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.model.Feature;
 import dynamic.mapper.service.ConnectorConfigurationService;
@@ -84,6 +84,7 @@ import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 @Slf4j
+@RequiredArgsConstructor
 @RequestMapping("/configuration")
 @RestController
 @SecurityScheme(type = SecuritySchemeType.HTTP, name = "basicAuth", scheme = "basic", in = SecuritySchemeIn.HEADER, description = "Basic Authentication using Cumulocity IoT credentials")
@@ -102,32 +103,14 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @Tag(name = "Configuration Management", description = "Core configuration endpoints for connectors, service settings, and code templates")
 public class ConfigurationController {
 
-    @Autowired
-    ConnectorRegistry connectorRegistry;
-
-    @Autowired
-    MappingService mappingService;
-
-    @Autowired
-    ConnectorConfigurationService connectorConfigurationService;
-
-    @Autowired
-    ServiceConfigurationService serviceConfigurationService;
-
-    @Autowired
-    BootstrapService bootstrapService;
-
-    @Autowired
-    C8YAgent c8YAgent;
-
-    @Autowired
-    private ContextService<UserCredentials> contextService;
-
-    @Autowired
-    private ConfigurationRegistry configurationRegistry;
-
-    @Autowired
-    private ObjectMapper objectMapper;
+    private final ConnectorRegistry connectorRegistry;
+    private final MappingService mappingService;
+    private final ConnectorConfigurationService connectorConfigurationService;
+    private final ServiceConfigurationService serviceConfigurationService;
+    private final BootstrapService bootstrapService;
+    private final ContextService<UserCredentials> contextService;
+    private final ConfigurationRegistry configurationRegistry;
+    private final ObjectMapper objectMapper;
 
     @Value("${APP.externalExtensionsEnabled}")
     private Boolean externalExtensionsEnabled;

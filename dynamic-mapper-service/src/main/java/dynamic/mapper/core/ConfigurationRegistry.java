@@ -140,6 +140,13 @@ public class ConfigurationRegistry {
     @Autowired
     private ExecutorService virtualThreadPool;
 
+    // @Lazy breaks the ConfigurationRegistry <-> camelContext circular dependency: the Camel
+    // context pulls in the RouteBuilder beans during its own creation, and those routes depend
+    // (transitively, via their processors) back on ConfigurationRegistry. Injecting a lazy proxy
+    // lets ConfigurationRegistry be constructed without forcing camelContext creation; the real
+    // context is resolved on first use (when connector dispatchers are built at runtime). Without
+    // this the cycle surfaces under lazy bean initialization (e.g. the test profile).
+    @Lazy
     @Autowired
     private CamelContext camelContext;
 

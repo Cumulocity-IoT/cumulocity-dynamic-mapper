@@ -24,7 +24,6 @@ package dynamic.mapper.core;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -37,17 +36,16 @@ import dynamic.mapper.core.facade.IdentityFacade;
 import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.DeviceToClientMapRepresentation;
 import dynamic.mapper.model.MapperServiceRepresentation;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class DeviceBootstrapService {
 
-    @Autowired
-    private InventoryFacade inventoryApi;
-
-    @Autowired
-    private IdentityFacade identityApi;
+    private final InventoryFacade inventoryApi;
+    private final IdentityFacade identityApi;
 
     @Value("${application.version}")
     private String version;

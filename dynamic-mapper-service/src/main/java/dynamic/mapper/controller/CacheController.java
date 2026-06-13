@@ -1,6 +1,5 @@
 package dynamic.mapper.controller;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,19 +20,18 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@RequiredArgsConstructor
 @RestController
 @RequestMapping("/cache")
 @Tag(name = "Cache Controller", description = "Endpoints for querying cache sizes")
 public class CacheController {
 
-    @Autowired
-    private CacheManager cacheManager;
-
-    @Autowired
-    private ContextService<UserCredentials> contextService;
+    private final CacheManager cacheManager;
+    private final ContextService<UserCredentials> contextService;
 
     @Operation(summary = "Get cache size", description = "Returns the current number of entries in the specified cache. Supported values for cacheId: INVENTORY_CACHE, INBOUND_ID_CACHE.")
     @ApiResponses(value = {

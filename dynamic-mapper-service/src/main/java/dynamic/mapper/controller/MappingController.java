@@ -24,7 +24,6 @@ package dynamic.mapper.controller;
 import java.util.List;
 import java.util.Map;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -51,6 +50,7 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.service.MappingValidationException;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -63,19 +63,15 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 @Slf4j
+@RequiredArgsConstructor
 @RequestMapping("/mapping")
 @RestController
 @Tag(name = "Mapping Controller", description = "API for managing dynamic mappings between external systems and Cumulocity IoT")
 public class MappingController {
 
-    @Autowired
-    private ConnectorRegistry connectorRegistry;
-
-    @Autowired
-    private MappingService mappingService;
-
-    @Autowired
-    private ContextService<UserCredentials> contextService;
+    private final ConnectorRegistry connectorRegistry;
+    private final MappingService mappingService;
+    private final ContextService<UserCredentials> contextService;
 
     // ========== GET Endpoints ==========
 

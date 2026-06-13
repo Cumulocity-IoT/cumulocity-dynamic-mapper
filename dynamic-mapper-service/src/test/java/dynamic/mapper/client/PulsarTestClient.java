@@ -19,7 +19,7 @@
  *
  */
 
-package dynamic.mapper;
+package dynamic.mapper.client;
 
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;

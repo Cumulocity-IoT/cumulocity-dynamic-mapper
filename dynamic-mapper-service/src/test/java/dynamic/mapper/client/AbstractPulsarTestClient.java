@@ -19,7 +19,7 @@
  *
  */
 
-package dynamic.mapper;
+package dynamic.mapper.client;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pulsar.client.api.AuthenticationFactory;

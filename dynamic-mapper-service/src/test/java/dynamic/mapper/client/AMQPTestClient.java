@@ -19,7 +19,7 @@
  *
  */
 
-package dynamic.mapper;
+package dynamic.mapper.client;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

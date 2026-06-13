@@ -422,7 +422,7 @@ public class MappingTreeNode {
     }
 
     private boolean shouldDeleteNode(boolean deleted, int currentLevel, MutableInt branchingLevel) {
-        if (currentLevel < branchingLevel.getValue()) {
+        if (currentLevel < branchingLevel.intValue()) {
             log.debug(TENANT_LOG_PREFIX + "Deleting innerNode stopped: currentLevel [{}], branchingLevel [{}]",
                     tenant, currentLevel, branchingLevel);
             return false;

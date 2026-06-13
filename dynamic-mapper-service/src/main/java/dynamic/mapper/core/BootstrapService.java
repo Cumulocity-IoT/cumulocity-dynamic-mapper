@@ -110,7 +110,7 @@ public class BootstrapService {
             ConnectorConfigurationService connectorConfigurationService,
             MicroserviceSubscriptionsService subscriptionsService,
             ExtensionInboundRegistry extensionInboundRegistry,
-            @Value("${APP.additionalSubscriptionIdTest}") String additionalSubscriptionIdTest,
+            @Value("${APP.additionalSubscriptionIdTest:}") String additionalSubscriptionIdTest,
             @Value("#{new Integer('${APP.inboundExternalIdCacheSize}')}") Integer inboundExternalIdCacheSize,
             @Value("#{new Integer('${APP.inventoryCacheSize}')}") Integer inventoryCacheSize) {
 

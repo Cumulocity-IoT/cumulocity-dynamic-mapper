@@ -44,8 +44,6 @@ import dynamic.mapper.core.ExtensionManager;
 import dynamic.mapper.core.facade.IdentityFacade;
 import dynamic.mapper.core.facade.InventoryFacade;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -61,6 +59,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.LoggingEventType;
@@ -82,62 +81,27 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 @Slf4j
+@RequiredArgsConstructor
 @RequestMapping("/operation")
 @RestController
 @Tag(name = "Operation Controller", description = "API for executing various administrative and operational tasks on the dynamic mapper service")
 public class OperationController {
 
-    @Autowired
-    ConnectorRegistry connectorRegistry;
-
-    @Autowired
-    MappingService mappingService;
-
-    @Autowired
-    ConnectorConfigurationService connectorConfigurationService;
-
-    @Autowired
-    ServiceConfigurationService serviceConfigurationService;
-
-    @Autowired
-    BootstrapService bootstrapService;
-
-    @Autowired
-    C8YAgent c8YAgent;
-
-    @Autowired
-    private ContextService<UserCredentials> contextService;
-
-    @Autowired
-    private ConfigurationRegistry configurationRegistry;
-
-    @Value("${APP.externalExtensionsEnabled}")
-    private Boolean externalExtensionsEnabled;
-
-    @Autowired
-    private DeploymentMapService deploymentMapService;
-
-    @Autowired
-    private MappingStatusService mappingStatusService;
-
-    @Autowired
-    private IdentityFacade identityFacade;
-
-    @Autowired
-    private InventoryFacade inventoryFacade;
-
-    @Autowired
-    private dynamic.mapper.service.cache.FlowStateStore flowStateStore;
-
-    @Autowired
-    private ExtensionManager extensionManager;
-
-    private ObjectMapper objectMapper;
-
-    @Autowired
-    public void setObjectMapper(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
-    }
+    private final ConnectorRegistry connectorRegistry;
+    private final MappingService mappingService;
+    private final ConnectorConfigurationService connectorConfigurationService;
+    private final ServiceConfigurationService serviceConfigurationService;
+    private final BootstrapService bootstrapService;
+    private final C8YAgent c8YAgent;
+    private final ContextService<UserCredentials> contextService;
+    private final ConfigurationRegistry configurationRegistry;
+    private final DeploymentMapService deploymentMapService;
+    private final MappingStatusService mappingStatusService;
+    private final IdentityFacade identityFacade;
+    private final InventoryFacade inventoryFacade;
+    private final dynamic.mapper.service.cache.FlowStateStore flowStateStore;
+    private final ExtensionManager extensionManager;
+    private final ObjectMapper objectMapper;
 
     @io.swagger.v3.oas.annotations.Operation(summary = "Execute a service operation", description = """
             Executes various administrative and operational tasks such as reloading mappings, connecting/disconnecting connectors, managing caches, and other maintenance operations. Different operations require different permission levels.

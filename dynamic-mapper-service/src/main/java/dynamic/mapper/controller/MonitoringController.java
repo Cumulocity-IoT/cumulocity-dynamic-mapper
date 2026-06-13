@@ -34,9 +34,7 @@ import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.connector.core.registry.ConnectorRegistryException;
-import dynamic.mapper.core.*;
 import org.apache.commons.lang3.mutable.MutableInt;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -47,11 +45,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.model.MappingTreeNode;
 import dynamic.mapper.service.ConnectorConfigurationService;
 import dynamic.mapper.service.MappingService;
-import dynamic.mapper.service.ServiceConfigurationService;
 import dynamic.mapper.model.ConnectorStatusEvent;
 import dynamic.mapper.model.MappingStatus;
 
@@ -64,31 +62,16 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 @Slf4j
+@RequiredArgsConstructor
 @RequestMapping("/monitoring")
 @RestController
 @Tag(name = "Monitoring Controller", description = "API for monitoring connector status, mapping statistics, and system health")
 public class MonitoringController {
 
-    @Autowired
-    ConnectorRegistry connectorRegistry;
-
-    @Autowired
-    MappingService mappingService;
-
-    @Autowired
-    ConnectorConfigurationService connectorConfigurationService;
-
-    @Autowired
-    ServiceConfigurationService serviceConfigurationService;
-
-    @Autowired
-    BootstrapService bootstrapService;
-
-    @Autowired
-    C8YAgent c8YAgent;
-
-    @Autowired
-    private ContextService<UserCredentials> contextService;
+    private final ConnectorRegistry connectorRegistry;
+    private final MappingService mappingService;
+    private final ConnectorConfigurationService connectorConfigurationService;
+    private final ContextService<UserCredentials> contextService;
 
     @Value("${APP.externalExtensionsEnabled}")
     private Boolean externalExtensionsEnabled;
@@ -288,7 +271,7 @@ public class MonitoringController {
             Map<String, MutableInt> as = client.getCountSubscriptionsPerTopicInbound();
             Map<String, Integer> result = as.entrySet().stream()
                     .map(entry -> new AbstractMap.SimpleEntry<String, Integer>(entry.getKey(),
-                            entry.getValue().getValue()))
+                            entry.getValue().intValue()))
                     .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
 
             log.debug("{} - Getting active subscriptions!", tenant);

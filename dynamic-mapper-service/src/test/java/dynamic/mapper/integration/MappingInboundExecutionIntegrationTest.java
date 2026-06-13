@@ -126,7 +126,6 @@ class MappingInboundExecutionIntegrationTest {
         // Inject dependencies via reflection
         injectField(substitutionProcessor, "c8yAgent", c8yAgent);
         injectField(substitutionProcessor, "mappingService", mappingService);
-        injectField(substitutionProcessor, "objectMapper", new ObjectMapper());
 
         // Setup common mocks
         when(serviceConfiguration.getLogPayload()).thenReturn(false);

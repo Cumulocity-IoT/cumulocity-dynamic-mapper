@@ -21,6 +21,6 @@ public class ClientRelationRequest {
     
     @NotBlank(message = "Client ID cannot be blank")
     @Size(min = 1, max = 255, message = "Client ID must be between 1 and 255 characters")
-    @Schema(description = "The client ID to map to the device", example = "mqtt-client-001", required = true)
+    @Schema(description = "The client ID to map to the device", example = "mqtt-client-001", requiredMode = Schema.RequiredMode.REQUIRED)
     private String clientId;
 }

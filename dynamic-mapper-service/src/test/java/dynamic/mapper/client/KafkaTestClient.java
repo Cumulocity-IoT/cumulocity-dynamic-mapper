@@ -19,7 +19,7 @@
  *
  */
 
-package dynamic.mapper;
+package dynamic.mapper.client;
 
 import java.util.Properties;
 
@@ -61,7 +61,7 @@ public class KafkaTestClient {
     }
 
     /** Constructor used in unit tests to inject a topic without relying on the environment. */
-    KafkaTestClient(KafkaProducer<String, String> sampleClient, String topicOverride) {
+    public KafkaTestClient(KafkaProducer<String, String> sampleClient, String topicOverride) {
         testClient = sampleClient;
         testTopic  = topicOverride;
     }
@@ -96,7 +96,7 @@ public class KafkaTestClient {
         client.testSendMeasurement();
     }
 
-    void testSendMeasurement() {
+    public void testSendMeasurement() {
         log.info("Connecting to Kafka broker: {}", brokerHost);
         log.info("Publishing message on topic: {}", testTopic);
 
