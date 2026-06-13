@@ -21,6 +21,8 @@
 
 package dynamic.mapper.processor;
 
+import dynamic.mapper.processor.util.CamelHeaders;
+
 import org.apache.camel.Exchange;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -78,7 +80,7 @@ public abstract class AbstractExtensibleResultProcessor extends CommonProcessor 
      */
     @Override
     public void process(Exchange exchange) throws Exception {
-        ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+        ProcessingContext<?> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
 
         // Extract focused contexts at entry point
         RoutingContext routing = context.getRoutingContext();

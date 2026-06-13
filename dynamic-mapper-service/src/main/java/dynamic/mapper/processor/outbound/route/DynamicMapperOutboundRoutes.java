@@ -20,6 +20,8 @@
  */
 package dynamic.mapper.processor.outbound.route;
 
+import dynamic.mapper.processor.util.CamelHeaders;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -118,7 +120,7 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
                             .maxCPUTimeMS(0)
                             .build();
 
-                    exchange.getIn().setHeader("processingResult", result);
+                    exchange.getIn().setHeader(CamelHeaders.PROCESSING_RESULT, result);
                 })
                 .to("direct:outboundErrorHandling");
 
@@ -126,10 +128,10 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
         from("direct:processOutboundMessage")
                 .routeId("outbound-message-processor")
                 .choice()
-                .when(header("mappings").isNull())
+                .when(header(CamelHeaders.MAPPINGS).isNull())
                 .process(exchange -> {
                     // No mappings found - return empty contexts list
-                    exchange.getIn().setHeader("processedContexts", new ArrayList<ProcessingContext<Object>>());
+                    exchange.getIn().setHeader(CamelHeaders.PROCESSED_CONTEXTS, new ArrayList<ProcessingContext<Object>>());
                 })
                 .stop()
                 .otherwise()
@@ -141,21 +143,21 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
                 .process(exchange -> {
                     // Filter mappings before splitting: active and deployed
                     @SuppressWarnings("unchecked")
-                    List<Mapping> allMappings = exchange.getIn().getHeader("mappings", List.class);
-                    String connectorIdentifier = exchange.getIn().getHeader("connectorIdentifier", String.class);
-                    String tenant = exchange.getIn().getHeader("tenant", String.class);
+                    List<Mapping> allMappings = exchange.getIn().getHeader(CamelHeaders.MAPPINGS, List.class);
+                    String connectorIdentifier = exchange.getIn().getHeader(CamelHeaders.CONNECTOR_IDENTIFIER, String.class);
+                    String tenant = exchange.getIn().getHeader(CamelHeaders.TENANT, String.class);
 
                     if (allMappings != null) {
                         List<Mapping> validMappings = allMappings.stream()
                                 .filter(mapping -> isValidMapping(tenant, mapping, connectorIdentifier))
                                 .collect(java.util.stream.Collectors.toList());
 
-                        exchange.getIn().setHeader("mappings", validMappings);
+                        exchange.getIn().setHeader(CamelHeaders.MAPPINGS, validMappings);
                         log.debug("Filtered {} outbound mappings to {} valid mappings",
                                 allMappings.size(), validMappings.size());
                     }
                 })
-                .split(header("mappings"))
+                .split(header(CamelHeaders.MAPPINGS))
                 .parallelProcessing(true)
                 .executorService(virtualThreadPool)
                 .aggregationStrategy(processingContextAggregationStrategy)

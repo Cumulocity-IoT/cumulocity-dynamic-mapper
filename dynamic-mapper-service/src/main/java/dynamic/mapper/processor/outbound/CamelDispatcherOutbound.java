@@ -20,6 +20,8 @@
  */
 package dynamic.mapper.processor.outbound;
 
+import dynamic.mapper.processor.util.CamelHeaders;
+
 import static com.dashjoin.jsonata.Jsonata.jsonata;
 
 import java.net.URI;
@@ -336,11 +338,11 @@ public class CamelDispatcherOutbound implements NotificationCallback {
                 // *** Set processingResultWrapper so AbstractFlowProcessor can register
                 // GraalVM cancel actions and check early-exit cancellation flags — same
                 // as CamelDispatcherInbound does at its exchange creation. ***
-                exchange.getIn().setHeader("processingResultWrapper", result);
+                exchange.getIn().setHeader(CamelHeaders.PROCESSING_RESULT_WRAPPER, result);
                 Exchange resultExchange = producerTemplate.send("direct:processOutboundMessage", exchange);
 
                 @SuppressWarnings("unchecked")
-                List<ProcessingContext<Object>> contexts = resultExchange.getIn().getHeader("processedContexts",
+                List<ProcessingContext<Object>> contexts = resultExchange.getIn().getHeader(CamelHeaders.PROCESSED_CONTEXTS,
                         List.class);
                 
                 return contexts != null ? contexts : new ArrayList<>();
@@ -378,19 +380,19 @@ public class CamelDispatcherOutbound implements NotificationCallback {
         camelMessage.setBody(message);
 
         // Set headers for processing
-        camelMessage.setHeader("connectorIdentifier", connectorClient.getConnectorIdentifier());
-        camelMessage.setHeader("tenant", message.getTenant());
-        camelMessage.setHeader("source", message.getSourceId());
-        camelMessage.setHeader("testing", testing);
-        camelMessage.setHeader("mappings", resolvedMappings);
-        camelMessage.setHeader("c8yMessage", message);
-        camelMessage.setHeader("serviceConfiguration",
+        camelMessage.setHeader(CamelHeaders.CONNECTOR_IDENTIFIER, connectorClient.getConnectorIdentifier());
+        camelMessage.setHeader(CamelHeaders.TENANT, message.getTenant());
+        camelMessage.setHeader(CamelHeaders.SOURCE, message.getSourceId());
+        camelMessage.setHeader(CamelHeaders.TESTING, testing);
+        camelMessage.setHeader(CamelHeaders.MAPPINGS, resolvedMappings);
+        camelMessage.setHeader(CamelHeaders.C8Y_MESSAGE, message);
+        camelMessage.setHeader(CamelHeaders.SERVICE_CONFIGURATION,
                 configurationRegistry.getServiceConfiguration(message.getTenant()));
 
         // Set payload information
-        camelMessage.setHeader("payloadBytes", message.getPayload());
+        camelMessage.setHeader(CamelHeaders.PAYLOAD_BYTES, message.getPayload());
         if (message.getPayload() != null) {
-            camelMessage.setHeader("payloadString", new String(message.getPayload()));
+            camelMessage.setHeader(CamelHeaders.PAYLOAD_STRING, new String(message.getPayload()));
         }
 
         return exchange;

@@ -21,6 +21,8 @@
 
 package dynamic.mapper.processor.outbound.processor;
 
+import dynamic.mapper.processor.util.CamelHeaders;
+
 import org.springframework.stereotype.Component;
 
 import dynamic.mapper.model.Direction;
@@ -112,7 +114,7 @@ public class ExtensibleOutboundProcessor extends AbstractExtensibleProcessor {
 
     @SuppressWarnings("unchecked")
     private ProcessingContext<Object> getProcessingContextAsObject(org.apache.camel.Exchange exchange) {
-        return exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+        return exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
     }
 
     /**

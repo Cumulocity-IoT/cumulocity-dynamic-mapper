@@ -21,6 +21,8 @@
 
 package dynamic.mapper.processor;
 
+import dynamic.mapper.processor.util.CamelHeaders;
+
 import static com.dashjoin.jsonata.Jsonata.jsonata;
 
 import java.nio.charset.StandardCharsets;
@@ -71,7 +73,7 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
 
     @Override
     public void process(Exchange exchange) throws Exception {
-        ProcessingContext<?> context = exchange.getIn().getHeader("processingContext",
+        ProcessingContext<?> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT,
                 ProcessingContext.class);
 
         if (context == null) {
@@ -89,7 +91,7 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
         MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
 
         // Extract additional info from headers if available
-        String connectorIdentifier = exchange.getIn().getHeader("connectorIdentifier", String.class);
+        String connectorIdentifier = exchange.getIn().getHeader(CamelHeaders.CONNECTOR_IDENTIFIER, String.class);
 
         // Hook for subclass-specific setup (e.g., QoS determination)
         performPreEnrichmentSetup(context, connectorIdentifier);

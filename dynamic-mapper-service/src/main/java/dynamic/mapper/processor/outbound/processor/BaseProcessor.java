@@ -20,6 +20,8 @@
  */
 package dynamic.mapper.processor.outbound.processor;
 
+import dynamic.mapper.processor.util.CamelHeaders;
+
 import static com.dashjoin.jsonata.Jsonata.jsonata;
 
 import org.apache.camel.Exchange;
@@ -41,7 +43,7 @@ public abstract class BaseProcessor extends CommonProcessor {
 
     @SuppressWarnings("unchecked")
     ProcessingContext<Object> createProcessingContextAsObject(Exchange exchange) {
-        return exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+        return exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
     }
 
     protected Object extractContent(ProcessingContext<?> context, Object payloadJsonNode,

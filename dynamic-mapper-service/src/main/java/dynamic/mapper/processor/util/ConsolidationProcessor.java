@@ -32,7 +32,7 @@ public class ConsolidationProcessor extends CommonProcessor {
     
     @Override
     public void process(Exchange exchange) throws Exception {
-        ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+        ProcessingContext<?> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
         
         // The ProcessingContext itself contains all the processed data
         // No need to extract a separate "processedData" - the context IS the result

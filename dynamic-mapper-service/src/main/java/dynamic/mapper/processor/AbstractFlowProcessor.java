@@ -21,6 +21,8 @@
 
 package dynamic.mapper.processor;
 
+import dynamic.mapper.processor.util.CamelHeaders;
+
 import static dynamic.mapper.model.Substitution.toPrettyJsonString;
 
 import java.util.Base64;
@@ -57,7 +59,7 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
 
     @Override
     public void process(Exchange exchange) throws Exception {
-        ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+        ProcessingContext<?> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
 
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
@@ -66,7 +68,7 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
         // TimeoutException in the MQTT callback can forcibly stop JS execution via
         // Context.close(cancelIfExecuting=true) — plain thread interruption is ignored by GraalVM.
         dynamic.mapper.processor.model.ProcessingResultWrapper<?> wrapper =
-                exchange.getIn().getHeader("processingResultWrapper",
+                exchange.getIn().getHeader(CamelHeaders.PROCESSING_RESULT_WRAPPER,
                         dynamic.mapper.processor.model.ProcessingResultWrapper.class);
 
         // ── Early-exit: cancellation was requested before this processor was even reached.

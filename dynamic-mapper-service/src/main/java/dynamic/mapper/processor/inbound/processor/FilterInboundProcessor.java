@@ -1,5 +1,7 @@
 package dynamic.mapper.processor.inbound.processor;
 
+import dynamic.mapper.processor.util.CamelHeaders;
+
 import static com.dashjoin.jsonata.Jsonata.jsonata;
 import static dynamic.mapper.model.Substitution.toPrettyJsonString;
 
@@ -22,7 +24,7 @@ public class FilterInboundProcessor extends BaseProcessor {
 
     @Override
     public void process(Exchange exchange) throws Exception {
-        ProcessingContext<Object> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+        ProcessingContext<Object> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
 
         applyFilter(context);
 

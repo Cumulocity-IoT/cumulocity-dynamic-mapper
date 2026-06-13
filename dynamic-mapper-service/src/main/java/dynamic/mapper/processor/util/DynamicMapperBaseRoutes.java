@@ -45,7 +45,7 @@ public abstract class DynamicMapperBaseRoutes extends RouteBuilder {
      */
     protected boolean isJSONataExtraction(Exchange exchange) {
         try {
-            ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+            ProcessingContext<?> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
             if (context != null && context.getMapping() != null) {
                 // Default processing or explicitly JSONata
                 TransformationType transformationType = context.getMapping().getTransformationType();
@@ -65,7 +65,7 @@ public abstract class DynamicMapperBaseRoutes extends RouteBuilder {
      */
     protected boolean isExtension(Exchange exchange) {
         try {
-            ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+            ProcessingContext<?> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
             return context != null &&
                     context.getMapping() != null &&
                     (context.getMapping().getExtension() != null);
@@ -80,7 +80,7 @@ public abstract class DynamicMapperBaseRoutes extends RouteBuilder {
      */
     protected boolean isInternalProtobuf(Exchange exchange) {
         try {
-            ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+            ProcessingContext<?> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
             return context != null &&
                     context.getMapping() != null &&
                     (MappingType.PROTOBUF_INTERNAL.equals(context.getMapping().getMappingType()));
@@ -95,7 +95,7 @@ public abstract class DynamicMapperBaseRoutes extends RouteBuilder {
      */
     protected boolean isFlowFunction(Exchange exchange) {
         try {
-            ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+            ProcessingContext<?> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
             if (context != null && context.getMapping() != null) {
                 TransformationType transformationType = context.getMapping().getTransformationType();
                 boolean isFlow = TransformationType.SMART_FUNCTION.equals(transformationType);
@@ -156,7 +156,7 @@ public abstract class DynamicMapperBaseRoutes extends RouteBuilder {
      */
     protected boolean shouldIgnoreFurtherProcessing(Exchange exchange) {
         try {
-            ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+            ProcessingContext<?> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
             return context != null && context.getIgnoreFurtherProcessing();
         } catch (Exception e) {
             log.warn("Error checking ignore further processing: {}", e.getMessage());

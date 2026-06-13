@@ -1,5 +1,7 @@
 package dynamic.mapper.processor.inbound;
 
+import dynamic.mapper.processor.util.CamelHeaders;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -160,7 +162,7 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
                 Exchange exchange = createExchange(connectorMessage, resolvedMappings, testing); // Now can use final variable
                 // Pass the result wrapper so in-flight processors can register cancel actions
                 // (e.g. GraalVM context closure) reachable from the timeout handler.
-                exchange.getIn().setHeader("processingResultWrapper", result);
+                exchange.getIn().setHeader(CamelHeaders.PROCESSING_RESULT_WRAPPER, result);
 
                 // Abort early if the MQTT callback already cancelled (timeout fired before
                 // we even reached the Camel route — cancel actions were not yet registered).
@@ -172,7 +174,7 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
                 Exchange resultExchange = producerTemplate.send("direct:processInboundMessage", exchange);
 
                 @SuppressWarnings("unchecked")
-                List<ProcessingContext<Object>> contexts = resultExchange.getIn().getHeader("processedContexts",
+                List<ProcessingContext<Object>> contexts = resultExchange.getIn().getHeader(CamelHeaders.PROCESSED_CONTEXTS,
                         List.class);
                 boolean resend = false;
                 if (contexts != null) {
@@ -211,7 +213,7 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
                         log.info("{} - Resending message to C8Y due to previous 422 error", tenant);
                     exchange = createExchange(connectorMessage, resolvedMappings, testing);
                     resultExchange = producerTemplate.send("direct:processInboundMessage", exchange);
-                    contexts = resultExchange.getIn().getHeader("processedContexts",
+                    contexts = resultExchange.getIn().getHeader(CamelHeaders.PROCESSED_CONTEXTS,
                             List.class);
                     if (contexts != null) {
                         for (ProcessingContext<?> retryContext : contexts) {
@@ -248,19 +250,19 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
         camelMessage.setBody(message);
 
         // Set headers for processing
-        camelMessage.setHeader("connectorIdentifier", message.getConnectorIdentifier());
-        camelMessage.setHeader("tenant", message.getTenant());
-        camelMessage.setHeader("client", message.getClientId());
-        camelMessage.setHeader("testing", testing);
-        camelMessage.setHeader("mappings", resolvedMappings);
-        camelMessage.setHeader("connectorMessage", message);
-        camelMessage.setHeader("serviceConfiguration",
+        camelMessage.setHeader(CamelHeaders.CONNECTOR_IDENTIFIER, message.getConnectorIdentifier());
+        camelMessage.setHeader(CamelHeaders.TENANT, message.getTenant());
+        camelMessage.setHeader(CamelHeaders.CLIENT, message.getClientId());
+        camelMessage.setHeader(CamelHeaders.TESTING, testing);
+        camelMessage.setHeader(CamelHeaders.MAPPINGS, resolvedMappings);
+        camelMessage.setHeader(CamelHeaders.CONNECTOR_MESSAGE, message);
+        camelMessage.setHeader(CamelHeaders.SERVICE_CONFIGURATION,
                 configurationRegistry.getServiceConfiguration(message.getTenant()));
 
         // Set payload information
-        camelMessage.setHeader("payloadBytes", message.getPayload());
+        camelMessage.setHeader(CamelHeaders.PAYLOAD_BYTES, message.getPayload());
         if (message.getPayload() != null) {
-            camelMessage.setHeader("payloadString", new String(message.getPayload()));
+            camelMessage.setHeader(CamelHeaders.PAYLOAD_STRING, new String(message.getPayload()));
         }
 
         return exchange;

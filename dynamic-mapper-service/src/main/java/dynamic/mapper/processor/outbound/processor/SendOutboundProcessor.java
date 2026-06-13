@@ -20,6 +20,8 @@
  */
 package dynamic.mapper.processor.outbound.processor;
 
+import dynamic.mapper.processor.util.CamelHeaders;
+
 import org.apache.camel.Exchange;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -64,14 +66,14 @@ public class SendOutboundProcessor extends BaseProcessor {
     @Override
     @SuppressWarnings("unchecked")
     public void process(Exchange exchange) throws Exception {
-        ProcessingContext<Object> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+        ProcessingContext<Object> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
 
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
         Boolean testing = context.getTesting();
 
         // Check if processing was cancelled due to timeout
-        ProcessingResultWrapper<?> wrapper = exchange.getIn().getHeader("processingResultWrapper",
+        ProcessingResultWrapper<?> wrapper = exchange.getIn().getHeader(CamelHeaders.PROCESSING_RESULT_WRAPPER,
                 ProcessingResultWrapper.class);
         if (wrapper != null && wrapper.getCancellationRequested().get()) {
             log.warn("{} - Processing was cancelled (timeout), skipping SendOutboundProcessor for mapping: {}",
@@ -84,7 +86,7 @@ public class SendOutboundProcessor extends BaseProcessor {
             autoAckOperation(context, tenant, mapping, OperationStatus.EXECUTING);
 
             // Process all C8Y requests that were created by SubstitutionProcessor
-            String connectorIdentifier = exchange.getIn().getHeader("connectorIdentifier", String.class);
+            String connectorIdentifier = exchange.getIn().getHeader(CamelHeaders.CONNECTOR_IDENTIFIER, String.class);
             processAndPrepareRequests(context, connectorIdentifier);
 
 

@@ -21,6 +21,8 @@
 
 package dynamic.mapper.processor.inbound.processor;
 
+import dynamic.mapper.processor.util.CamelHeaders;
+
 import com.google.protobuf.InvalidProtocolBufferException;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
@@ -103,7 +105,7 @@ public class InternalProtobufProcessor extends BaseProcessor {
 
     @SuppressWarnings("unchecked")
     ProcessingContext<byte[]> getProcessingContextAsByteArray(Exchange exchange) {
-        return exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+        return exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
     }
 
 }

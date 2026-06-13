@@ -21,6 +21,8 @@
 
 package dynamic.mapper.processor;
 
+import dynamic.mapper.processor.util.CamelHeaders;
+
 import static dynamic.mapper.model.Substitution.toPrettyJsonString;
 
 import java.util.ArrayList;
@@ -62,7 +64,7 @@ public abstract class AbstractJSONataExtractionProcessor extends CommonProcessor
      */
     @Override
     public void process(Exchange exchange) throws Exception {
-        ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+        ProcessingContext<?> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
 
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();

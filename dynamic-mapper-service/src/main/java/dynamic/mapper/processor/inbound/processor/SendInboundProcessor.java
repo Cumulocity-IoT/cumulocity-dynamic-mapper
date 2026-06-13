@@ -1,5 +1,7 @@
 package dynamic.mapper.processor.inbound.processor;
 
+import dynamic.mapper.processor.util.CamelHeaders;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -51,14 +53,14 @@ public class SendInboundProcessor extends BaseProcessor {
     @Override
     @SuppressWarnings("unchecked")
     public void process(Exchange exchange) throws Exception {
-        ProcessingContext<Object> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+        ProcessingContext<Object> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
 
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
         Boolean testing = context.getTesting();
 
         // Check if processing was cancelled due to timeout
-        ProcessingResultWrapper<?> wrapper = exchange.getIn().getHeader("processingResultWrapper",
+        ProcessingResultWrapper<?> wrapper = exchange.getIn().getHeader(CamelHeaders.PROCESSING_RESULT_WRAPPER,
                 ProcessingResultWrapper.class);
         if (wrapper != null && wrapper.getCancellationRequested().get()) {
             log.warn("{} - Processing was cancelled (timeout), skipping SendInboundProcessor for mapping: {}",

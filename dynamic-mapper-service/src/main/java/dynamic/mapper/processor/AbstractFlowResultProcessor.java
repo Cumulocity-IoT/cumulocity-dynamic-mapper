@@ -21,6 +21,8 @@
 
 package dynamic.mapper.processor;
 
+import dynamic.mapper.processor.util.CamelHeaders;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -63,7 +65,7 @@ public abstract class AbstractFlowResultProcessor extends CommonProcessor {
      */
     @Override
     public void process(Exchange exchange) throws Exception {
-        ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+        ProcessingContext<?> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
 
         // Extract focused contexts at entry point
         RoutingContext routing = context.getRoutingContext();
