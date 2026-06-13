@@ -19,7 +19,7 @@
  *
  */
 
-package dynamic.mapper;
+package dynamic.mapper.tools;
 
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Engine;
@@ -34,9 +34,9 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicLong;
 
-public class GraalVMTest {
+public class GraalVMBenchmark {
 
-    private static final Logger log = LoggerFactory.getLogger("GraalVMTest");
+    private static final Logger log = LoggerFactory.getLogger("GraalVMBenchmark");
     private static final int ITERATIONS = 50;
 
     private String createFibonacciScript(int n) {
@@ -50,7 +50,7 @@ public class GraalVMTest {
     }
 
     public static void main(String[] args) {
-        GraalVMTest test = new GraalVMTest();
+        GraalVMBenchmark test = new GraalVMBenchmark();
 
         log.info("========================================");
         log.info("Test Set 1: Fibonacci(20)");

@@ -207,10 +207,10 @@ These wire the full Apache Camel pipeline with a mocked `C8YAgent`.
 | ~~ANY_PAYLOAD outbound~~ | 🚫 Not supported | — |
 | ANY_PAYLOAD inbound (SMART_FUNCTION + EXTENSION_JAVA) | ✅ Implemented | `AnyPayloadInboundTest` |
 | SPARKPLUGB inbound deserialization | ✅ Implemented | `SparkplugBDeserializerTest` |
-| GraalVM sandbox security | ✅ Implemented | `GraalVMSandboxSecurityTest` |
+| GraalVM sandbox security | ✅ Implemented | `TenantRegistryGraalVMSandboxSecurityTest` |
 | Multi-tenancy isolation | ✅ Implemented | `MultiTenancyIsolationTest` |
 | Connector retry / reconnect | ✅ Implemented | `ConnectorRetryReconnectTest` |
-| Kafka producer configuration | ✅ Implemented | `KafkaConnectorUnitTest` |
+| Kafka producer configuration | ✅ Implemented | `KafkaTestClientTest` |
 
 ---
 

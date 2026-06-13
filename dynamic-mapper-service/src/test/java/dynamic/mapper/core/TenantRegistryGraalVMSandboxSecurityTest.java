@@ -19,7 +19,7 @@
  *
  */
 
-package dynamic.mapper;
+package dynamic.mapper.core;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -27,7 +27,6 @@ import java.time.Duration;
 
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Engine;
-import org.graalvm.polyglot.HostAccess;
 import org.graalvm.polyglot.PolyglotException;
 import org.graalvm.polyglot.Value;
 import org.junit.jupiter.api.AfterEach;
@@ -36,13 +35,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 /**
- * Verifies that the production GraalVM {@link HostAccess} configuration
+ * Verifies that the production GraalVM host-access configuration
  * enforces sandbox boundaries:
  * <ul>
  *   <li>Normal JS executes correctly.</li>
- *   <li>Java class access ({@code Java.type}) is blocked — the production
- *       config uses {@link HostAccess#newBuilder()} without
- *       {@code allowAllAccess(true)}, so {@code Java.type} should throw.</li>
+ *   <li>Java class access ({@code Java.type}) is blocked — production does
+ *       not use {@code allowAllAccess(true)}, so {@code Java.type} should throw.</li>
  *   <li>Environment access ({@code process.env}) is blocked.</li>
  *   <li>Infinite loops can be interrupted via
  *       {@link Context#interrupt(Duration)}.</li>
@@ -50,34 +48,26 @@ import org.junit.jupiter.api.Timeout;
  *       affect subsequent contexts.</li>
  * </ul>
  *
- * <p>The {@link HostAccess} used here mirrors the production configuration
- * in {@code TenantRegistry.getHostAccess()}.</p>
+ * <p>The test uses {@link TenantRegistry#getHostAccess()} directly so
+ * assertions stay aligned with production configuration.</p>
  */
-class GraalVMSandboxSecurityTest {
+class TenantRegistryGraalVMSandboxSecurityTest {
 
     private Engine engine;
     private Context context;
-
-    /** Production-equivalent HostAccess — no allowAllAccess, no Java.type. */
-    private static HostAccess productionHostAccess() {
-        return HostAccess.newBuilder()
-                .allowPublicAccess(true)
-                .allowArrayAccess(true)
-                .allowListAccess(true)
-                .allowMapAccess(true)
-                .build();
-    }
+    private TenantRegistry tenantRegistry;
 
     private Context newContext() {
         return Context.newBuilder("js")
                 .engine(engine)
-                .allowHostAccess(productionHostAccess())
+                .allowHostAccess(tenantRegistry.getHostAccess())
                 // Do NOT call allowAllAccess(true) — mirrors production
                 .build();
     }
 
     @BeforeEach
     void setUp() {
+        tenantRegistry = new TenantRegistry();
         engine = Engine.newBuilder()
                 .option("engine.WarnInterpreterOnly", "false")
                 .build();

@@ -19,7 +19,7 @@
  *
  */
 
-package dynamic.mapper;
+package dynamic.mapper.client;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -32,7 +32,6 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringSerializer;
 
-import dynamic.mapper.client.KafkaTestClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -53,13 +52,10 @@ import org.mockito.quality.Strictness;
  *   <li>The record key is non-null and non-blank.</li>
  *   <li>The SASL SCRAM-SHA-512 properties are built correctly.</li>
  * </ul>
- *
- * <p>{@code testSendMeasurement()} is package-private; this test lives in the
- * same package {@code dynamic.mapper} to access it directly.</p>
  */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-class KafkaConnectorUnitTest {
+class KafkaTestClientTest {
 
     @Mock
     private KafkaProducer<String, String> kafkaProducer;
