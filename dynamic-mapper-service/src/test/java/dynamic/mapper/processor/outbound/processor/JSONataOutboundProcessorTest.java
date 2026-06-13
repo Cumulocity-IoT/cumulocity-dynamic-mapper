@@ -24,7 +24,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -40,6 +39,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -113,16 +113,6 @@ class JSONataOutboundProcessorTest {
 
         when(serviceConfiguration.getLogPayload()).thenReturn(false);
         when(serviceConfiguration.getLogSubstitution()).thenReturn(false);
-    }
-
-    private void injectDependencies() throws Exception {
-        injectField("mappingService", mappingService);
-    }
-
-    private void injectField(String fieldName, Object value) throws Exception {
-        Field field = JSONataOutboundProcessor.class.getDeclaredField(fieldName);
-        field.setAccessible(true);
-        field.set(processor, value);
     }
 
     private Mapping createOutboundEventMapping() {
@@ -303,7 +293,10 @@ class JSONataOutboundProcessorTest {
         substitutions[0].setExpandArray(true); // Enable array expansion for first substitution
 
         // Modify payload to have array in _TOPIC_LEVEL_
-        Map<String, Object> payload = (Map<String, Object>) processingContext.getPayload();
+        Object payloadObj = processingContext.getPayload();
+        assertTrue(payloadObj instanceof Map<?, ?>, "Payload should be a Map");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> payload = (Map<String, Object>) payloadObj;
         List<String> topicLevels = new ArrayList<>();
         topicLevels.add("evt");
         topicLevels.add("outbound");
@@ -670,7 +663,7 @@ class JSONataOutboundProcessorTest {
                     "}";
 
             JsonNode jsonNode = objectMapper.readTree(jsonPayload);
-            return objectMapper.convertValue(jsonNode, Map.class);
+                        return objectMapper.convertValue(jsonNode, new TypeReference<Map<String, Object>>() {});
         } catch (Exception e) {
             log.error("Failed to create complete payload", e);
             return createEventPayload(); // Fallback to simple payload

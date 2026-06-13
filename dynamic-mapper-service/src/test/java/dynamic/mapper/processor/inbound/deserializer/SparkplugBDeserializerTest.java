@@ -35,7 +35,6 @@ import dynamic.mapper.client.SparkplugBMqttTestClient;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.CacheManager;
-import dynamic.mapper.core.cache.InventoryCache;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.model.MappingType;
 

@@ -53,8 +53,6 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.processor.model.DataPrepContext;
-import dynamic.mapper.processor.model.SmartFunctionContext;
 import dynamic.mapper.configuration.CodeTemplate;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
@@ -102,7 +100,6 @@ class AbstractEnrichmentProcessorTest {
     private MappingStatus mappingStatus;
     private ProcessingContext<Object> processingContext;
     private Context graalContext;
-    private DataPrepContext flowContext;
 
     /**
      * Concrete test implementation of AbstractEnrichmentProcessor for testing.

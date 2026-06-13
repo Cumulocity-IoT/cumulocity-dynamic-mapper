@@ -62,7 +62,6 @@ import org.mockito.quality.Strictness;
 class KafkaConnectorUnitTest {
 
     @Mock
-    @SuppressWarnings("unchecked")
     private KafkaProducer<String, String> kafkaProducer;
 
     private KafkaTestClient client;

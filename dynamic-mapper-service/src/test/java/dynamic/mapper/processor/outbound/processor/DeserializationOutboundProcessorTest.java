@@ -56,6 +56,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
+@SuppressWarnings({ "rawtypes", "unchecked" })
 class DeserializationOutboundProcessorTest {
 
     @Mock
@@ -468,7 +469,6 @@ class DeserializationOutboundProcessorTest {
         assertEquals(complexPayload, capturedContext.getPayload(), "Should use parsed payload");
 
         // Verify nested structure is maintained
-        @SuppressWarnings("unchecked")
         Map<String, Object> payloadMap = (Map<String, Object>) capturedContext.getPayload();
         assertTrue(payloadMap.containsKey("measurements"), "Should contain measurements array");
         assertTrue(payloadMap.containsKey("metadata"), "Should contain metadata object");

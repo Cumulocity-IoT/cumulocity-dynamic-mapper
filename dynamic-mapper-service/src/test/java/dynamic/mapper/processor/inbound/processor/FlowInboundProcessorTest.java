@@ -25,7 +25,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import java.lang.reflect.Field;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
@@ -65,6 +64,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
+@SuppressWarnings({ "rawtypes", "unchecked" })
 class FlowInboundProcessorTest {
 
     @Mock
@@ -113,13 +113,6 @@ class FlowInboundProcessorTest {
 
         // Mock service configuration - avoid mocking fields directly
         when(serviceConfiguration.getLogPayload()).thenReturn(false);
-    }
-
-    private void injectMappingService(FlowInboundProcessor processor, MappingService mappingService)
-            throws Exception {
-        Field field = FlowInboundProcessor.class.getDeclaredField("mappingService");
-        field.setAccessible(true);
-        field.set(processor, mappingService);
     }
 
     private Mapping createSampleMapping() {
@@ -562,7 +555,6 @@ class FlowInboundProcessorTest {
                 when(memberValue.asString()).thenReturn((String) value);
             } else if (value instanceof Map) {
                 when(memberValue.hasMembers()).thenReturn(true);
-                @SuppressWarnings("unchecked")
                 Map<String, Object> nestedMap = (Map<String, Object>) value;
                 when(memberValue.getMemberKeys()).thenReturn(nestedMap.keySet());
                 setupPayloadMembers(memberValue, nestedMap);
@@ -621,7 +613,6 @@ class FlowInboundProcessorTest {
         Context mockGraalContext = mock(Context.class);
         Value mockBindings = mock(Value.class);
         Value mockOnMessageFunction = mock(Value.class);
-        Value mockInputMessage = mock(Value.class);
         DataPrepContext mockFlowContext = mock(DataPrepContext.class);
 
         // Setup GraalContext in processing context
@@ -667,7 +658,6 @@ class FlowInboundProcessorTest {
                 "Should have external source as defined in sample code");
 
         // Verify payload structure matches what the sample JavaScript should produce
-        @SuppressWarnings("unchecked")
         Map<String, Object> payload = (Map<String, Object>) cumulocityObj.getPayload();
         assertEquals("c8y_TemperatureMeasurement", payload.get("type"),
                 "Should have correct measurement type from sample code");
@@ -677,12 +667,10 @@ class FlowInboundProcessorTest {
                 "Should have c8y_Steam measurement as per sample code");
 
         // Verify the c8y_Steam structure
-        @SuppressWarnings("unchecked")
         Map<String, Object> steamMeasurement = (Map<String, Object>) payload.get("c8y_Steam");
         assertTrue(steamMeasurement.containsKey("Temperature"),
                 "Should have Temperature measurement");
 
-        @SuppressWarnings("unchecked")
         Map<String, Object> temperature = (Map<String, Object>) steamMeasurement.get("Temperature");
         assertEquals("C", temperature.get("unit"),
                 "Should have Celsius unit as per sample code");
@@ -690,7 +678,6 @@ class FlowInboundProcessorTest {
                 "Should have temperature value from input payload temp_val");
 
         // Verify external source
-        @SuppressWarnings("unchecked")
         List<ExternalId> externalSources = (List<ExternalId>) cumulocityObj.getExternalSource();
         assertNotNull(externalSources, "Should have external sources");
         assertEquals(1, externalSources.size(), "Should have one external source");

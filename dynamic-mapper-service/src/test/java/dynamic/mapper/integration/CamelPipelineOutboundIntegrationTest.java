@@ -36,7 +36,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.apache.camel.CamelContext;
-import org.apache.camel.ProducerTemplate;
 import org.apache.camel.impl.DefaultCamelContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -104,7 +103,6 @@ class CamelPipelineOutboundIntegrationTest {
     private NotificationSubscriber notificationSubscriber;
 
     private CamelContext camelContext;
-    private ProducerTemplate producerTemplate;
     private CamelDispatcherOutbound dispatcher;
     private ExecutorService virtualThreadPool;
 
@@ -125,7 +123,6 @@ class CamelPipelineOutboundIntegrationTest {
 
         // Setup Camel Context
         camelContext = new DefaultCamelContext();
-        producerTemplate = camelContext.createProducerTemplate();
         virtualThreadPool = Executors.newVirtualThreadPerTaskExecutor();
 
         // Setup ConfigurationRegistry mocks
@@ -565,7 +562,8 @@ class CamelPipelineOutboundIntegrationTest {
                 .count();
 
         long substitutionAsCode = outboundMappings.stream()
-                .filter(m -> m.getTransformationType() == TransformationType.SUBSTITUTION_AS_CODE)
+            .filter(m -> m.getTransformationType() != null
+                && "SUBSTITUTION_AS_CODE".equals(m.getTransformationType().name()))
                 .count();
 
         // Then - Log coverage

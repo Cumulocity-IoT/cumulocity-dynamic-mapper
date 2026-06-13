@@ -35,7 +35,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.apache.camel.CamelContext;
-import org.apache.camel.ProducerTemplate;
 import org.apache.camel.impl.DefaultCamelContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -61,7 +60,6 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.TransformationType;
 import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
-import dynamic.mapper.processor.inbound.route.DynamicMapperInboundRoutes;
 import dynamic.mapper.processor.model.ProcessingResultWrapper;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
@@ -104,8 +102,6 @@ class CamelPipelineInboundIntegrationTest {
     private AConnectorClient connectorClient;
 
     private CamelContext camelContext;
-    private ProducerTemplate producerTemplate;
-    private DynamicMapperInboundRoutes inboundRoutes;
     private CamelDispatcherInbound dispatcher;
     private ExecutorService virtualThreadPool;
 
@@ -126,7 +122,6 @@ class CamelPipelineInboundIntegrationTest {
 
         // Setup Camel Context
         camelContext = new DefaultCamelContext();
-        producerTemplate = camelContext.createProducerTemplate();
         virtualThreadPool = Executors.newVirtualThreadPerTaskExecutor();
 
         // Setup ConfigurationRegistry mocks
@@ -450,7 +445,8 @@ class CamelPipelineInboundIntegrationTest {
                 .count();
 
         long substitutionAsCode = inboundMappings.stream()
-                .filter(m -> m.getTransformationType() == TransformationType.SUBSTITUTION_AS_CODE)
+            .filter(m -> m.getTransformationType() != null
+                && "SUBSTITUTION_AS_CODE".equals(m.getTransformationType().name()))
                 .count();
 
         // Then - Log coverage

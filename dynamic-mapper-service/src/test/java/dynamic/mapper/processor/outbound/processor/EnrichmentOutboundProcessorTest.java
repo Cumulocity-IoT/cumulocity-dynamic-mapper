@@ -24,7 +24,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -235,33 +234,6 @@ class EnrichmentOutboundProcessorTest {
         templates.put(TemplateType.OUTBOUND_SMART_FUNCTION.name(), smartTemplate);
 
         return templates;
-    }
-
-    private void injectDependencies() throws Exception {
-        injectField("configurationRegistry", configurationRegistry);
-        injectField("mappingService", mappingService);
-    }
-
-    private void injectField(String fieldName, Object value) throws Exception {
-        Field field = findField(processor.getClass(), fieldName);
-        if (field != null) {
-            field.setAccessible(true);
-            field.set(processor, value);
-            log.info("Successfully injected {} into {}", fieldName, processor.getClass().getSimpleName());
-        } else {
-            log.warn("Field {} not found in {}", fieldName, processor.getClass().getSimpleName());
-        }
-    }
-
-    private Field findField(Class<?> clazz, String fieldName) {
-        while (clazz != null) {
-            try {
-                return clazz.getDeclaredField(fieldName);
-            } catch (NoSuchFieldException e) {
-                clazz = clazz.getSuperclass();
-            }
-        }
-        return null;
     }
 
     @Test

@@ -182,7 +182,9 @@ class FlowOutboundProcessorTest {
             processor.process(exchange);
 
             // Then
-            List<Object> flowResult = (List<Object>) processingContext.getFlowResult();
+            Object flowResultObj = processingContext.getFlowResult();
+            assertTrue(flowResultObj instanceof List<?>, "Flow result should be a list");
+            List<?> flowResult = (List<?>) flowResultObj;
             assertNotNull(flowResult, "Should have set flow result");
             assertEquals(1, flowResult.size(), "Should have one result");
 
@@ -249,7 +251,9 @@ class FlowOutboundProcessorTest {
             processor.process(exchange);
 
             // Then - Should process all messages
-            List<Object> flowResult = (List<Object>) processingContext.getFlowResult();
+            Object flowResultObj = processingContext.getFlowResult();
+            assertTrue(flowResultObj instanceof List<?>, "Flow result should be a list");
+            List<?> flowResult = (List<?>) flowResultObj;
             assertNotNull(flowResult, "Flow result should not be null");
             assertEquals(2, flowResult.size(), "Should have processed two messages");
 
@@ -476,7 +480,9 @@ class FlowOutboundProcessorTest {
             processor.process(exchange);
 
             // Then - Should skip null and process valid message
-            List<Object> flowResult = (List<Object>) processingContext.getFlowResult();
+            Object flowResultObj = processingContext.getFlowResult();
+            assertTrue(flowResultObj instanceof List<?>, "Flow result should be a list");
+            List<?> flowResult = (List<?>) flowResultObj;
             assertEquals(1, flowResult.size(), "Should have processed only one valid message");
 
             log.info("✅ Null element handling test passed");

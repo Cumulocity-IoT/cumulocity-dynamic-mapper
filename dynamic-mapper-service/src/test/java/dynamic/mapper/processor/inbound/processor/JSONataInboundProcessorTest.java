@@ -25,7 +25,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -216,13 +215,6 @@ class JSONataInboundProcessorTest {
                         .expandArray(false)
                         .build()
         };
-    }
-
-    private void injectMappingService(JSONataInboundProcessor processor, MappingService mappingService)
-            throws Exception {
-        Field field = JSONataInboundProcessor.class.getDeclaredField("mappingService");
-        field.setAccessible(true);
-        field.set(processor, mappingService);
     }
 
     @Test

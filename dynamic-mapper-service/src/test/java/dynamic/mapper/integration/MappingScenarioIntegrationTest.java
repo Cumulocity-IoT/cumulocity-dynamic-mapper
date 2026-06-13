@@ -299,7 +299,8 @@ class MappingScenarioIntegrationTest {
 
         // Then - Verify extension configuration
         assertEquals("protobuf/event", mapping.getMappingTopic());
-        assertEquals(MappingType.EXTENSION_JAVA, mapping.getMappingType());
+        assertNotNull(mapping.getMappingType());
+        assertEquals("EXTENSION_JAVA", mapping.getMappingType().name());
         assertNotNull(mapping.getExtension());
         assertEquals("dynamic-mapper-extension", mapping.getExtension().getExtensionName());
         assertEquals("CustomEvent", mapping.getExtension().getEventName());

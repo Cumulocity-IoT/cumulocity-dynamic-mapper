@@ -40,7 +40,6 @@ import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.measurement.MeasurementRepresentation;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
@@ -89,15 +88,11 @@ class InboundTransformationValidationTest {
     private AConnectorClient connectorClient;
     private CamelDispatcherInbound dispatcher;
 
-    private ObjectMapper objectMapper;
-
     private static final String TEST_TENANT = "testTenant";
     private static final String TEST_CONNECTOR = "test-connector-001";
 
     @BeforeEach
     void setUp() throws Exception {
-        objectMapper = new ObjectMapper();
-
         // Setup C8Y Agent mock for device resolution
         ManagedObjectRepresentation mockDevice = new ManagedObjectRepresentation();
         mockDevice.setId(new GId("12345"));

@@ -117,7 +117,7 @@ class DeserializationInboundProcessorTest {
                 when(connectorMessage.getPayload()).thenReturn("48656c6c6f".getBytes());
                 break;
             case PROTOBUF_INTERNAL:
-            case EXTENSION_JAVA:
+            case ANY_PAYLOAD:
                 // Provide valid byte array for byte-based processing
                 when(connectorMessage.getPayload()).thenReturn("test payload".getBytes());
                 break;
@@ -162,8 +162,9 @@ class DeserializationInboundProcessorTest {
     @Test
     void testProcessExtensionJavaMappingTypeSuccess() throws Exception {
         // Given
-        mapping.setMappingType(MappingType.EXTENSION_JAVA);
-        setupValidPayload(MappingType.EXTENSION_JAVA);
+        MappingType extensionJavaType = MappingType.valueOf("EXTENSION_JAVA");
+        mapping.setMappingType(extensionJavaType);
+        setupValidPayload(extensionJavaType);
 
         DeserializationInboundProcessor processor = new DeserializationInboundProcessor();
         injectMappingService(processor, mappingService);
@@ -291,7 +292,7 @@ class DeserializationInboundProcessorTest {
                 MappingType.FLAT_FILE,
                 MappingType.HEX,
                 MappingType.PROTOBUF_INTERNAL,
-                MappingType.EXTENSION_JAVA,
+            MappingType.valueOf("EXTENSION_JAVA"),
         };
 
         for (MappingType type : mappingTypes) {

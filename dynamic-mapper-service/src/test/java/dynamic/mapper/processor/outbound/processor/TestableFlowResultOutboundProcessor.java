@@ -182,8 +182,13 @@ public class TestableFlowResultOutboundProcessor extends FlowResultOutboundProce
                             externalIds.add(externalId);
                         }
                     } else if (first instanceof ExternalId) {
-                        // Already in correct format
-                        externalIds = (List<ExternalId>) sourceList;
+                        // Already in correct format; convert element-wise to avoid unchecked cast
+                        externalIds = new ArrayList<>();
+                        for (Object obj : sourceList) {
+                            if (obj instanceof ExternalId externalId) {
+                                externalIds.add(externalId);
+                            }
+                        }
                     }
                 }
             } else if (externalSourceObj instanceof ExternalSource) {

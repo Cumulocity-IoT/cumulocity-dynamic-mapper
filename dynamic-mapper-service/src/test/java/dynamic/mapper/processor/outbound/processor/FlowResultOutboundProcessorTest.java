@@ -91,7 +91,6 @@ class FlowResultOutboundProcessorTest {
 
     private static final String TEST_TENANT = "testTenant";
     private static final String TEST_DEVICE_ID = "6926746";
-    private static final String TEST_EXTERNAL_ID = "berlin_01";
     private static final String TEST_EXTERNAL_ID_TYPE = "c8y_Serial";
     private static final String TEST_CLIENT_ID = "test-client-123";
 
@@ -143,13 +142,6 @@ void setUp() throws Exception {
     // Reset Mockito invocations
     clearInvocations(mappingService, c8yAgent, objectMapper);
 }
-
-    private void injectDependencies() throws Exception {
-        ProcessorTestHelper.injectField(processor, "mappingService", mappingService);
-        ProcessorTestHelper.injectField(processor, "c8yAgent", c8yAgent);
-        ProcessorTestHelper.injectField(processor, "objectMapper", objectMapper);
-    }
-
     private void setupC8YAgentMocks() {
         ManagedObjectRepresentation mockDevice = new ManagedObjectRepresentation();
         GId deviceGId = new GId(TEST_DEVICE_ID);

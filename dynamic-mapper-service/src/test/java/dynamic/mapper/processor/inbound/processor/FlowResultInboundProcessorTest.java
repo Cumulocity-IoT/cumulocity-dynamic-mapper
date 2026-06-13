@@ -153,12 +153,6 @@ class FlowResultInboundProcessorTest {
         setupC8YAgentMocks();
     }
 
-    private void injectDependencies() throws Exception {
-        ProcessorTestHelper.injectField(processor, "mappingService", mappingService);
-        ProcessorTestHelper.injectField(processor, "c8yAgent", c8yAgent);
-        ProcessorTestHelper.injectField(processor, "objectMapper", objectMapper);
-    }
-
     private void setupC8YAgentMocks() {
         ManagedObjectRepresentation mockDevice = new ManagedObjectRepresentation();
         GId deviceGId = new GId(TEST_DEVICE_ID);
