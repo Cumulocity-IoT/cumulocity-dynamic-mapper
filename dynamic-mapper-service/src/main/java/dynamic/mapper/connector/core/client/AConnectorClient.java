@@ -819,7 +819,7 @@ public abstract class AConnectorClient {
         }
 
         try {
-            handleSubscriptionUpdateInbound(mapping, create, activationChanged);
+            handleSubscriptionUpdateInbound(mapping);
         } catch (Exception e) {
             log.error("{} - Error updating subscription for mapping {}: {}",
                     tenant, mapping.getIdentifier(), e.getMessage(), e);
@@ -829,12 +829,15 @@ public abstract class AConnectorClient {
         return result;
     }
 
-    private void handleSubscriptionUpdateInbound(Mapping mapping, Boolean create, Boolean activationChanged)
-            throws ConnectorException {
-        boolean isDeployed = isDeployedInConnector(mapping);
-        if (mapping.getActive() && isDeployed) {
+    private void handleSubscriptionUpdateInbound(Mapping mapping) throws ConnectorException {
+        // The desired state is simply: subscribed if and only if the mapping is active AND
+        // deployed to this connector. Both add and remove are idempotent, so this single
+        // invariant correctly covers activation, deactivation, (un)deployment and no-op
+        // updates — without depending on a separate "activationChanged" hint that callers
+        // do not always set (e.g. a mapping update that also flips the active flag).
+        if (mapping.getActive() && isDeployedInConnector(mapping)) {
             mappingSubscriptionManager.addSubscriptionInbound(mapping, mapping.getQos());
-        } else if (activationChanged && !mapping.getActive()) {
+        } else {
             mappingSubscriptionManager.removeSubscriptionInbound(mapping);
         }
     }
@@ -844,12 +847,13 @@ public abstract class AConnectorClient {
      * Called when a mapping is created, updated, or its activation state changes
      */
     public void updateSubscriptionForOutbound(Mapping mapping, Boolean create, Boolean activationChanged) {
+        // Same invariant as inbound: applied if and only if active AND deployed here.
+        // removeSubscriptionOutbound is idempotent and only logs on an actual removal.
         if (mapping.getActive() && isDeployedInConnector(mapping)) {
             mappingSubscriptionManager.addSubscriptionOutbound(mapping.getIdentifier(), mapping);
             log.debug("{} - Added outbound mapping: {}", tenant, mapping.getIdentifier());
-        } else if (!mapping.getActive()) {
+        } else {
             mappingSubscriptionManager.removeSubscriptionOutbound(mapping.getIdentifier());
-            log.debug("{} - Removed outbound mapping: {}", tenant, mapping.getIdentifier());
         }
     }
 

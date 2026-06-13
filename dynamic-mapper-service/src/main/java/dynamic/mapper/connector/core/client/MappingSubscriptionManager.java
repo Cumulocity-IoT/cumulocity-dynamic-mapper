@@ -142,8 +142,27 @@ public class MappingSubscriptionManager {
      * @throws ConnectorException if the subscription operation fails
      */
     public void addSubscriptionInbound(Mapping mapping, Qos qos) throws ConnectorException {
-        
+
         String topic = mapping.getMappingTopic();
+
+        // Idempotency guard (symmetric to removeSubscriptionInbound): if this mapping is
+        // already effective, do not increment the topic reference count again. Re-activating
+        // or merely re-saving an active mapping would otherwise inflate the count and leave
+        // the topic subscribed after the mapping is removed.
+        Mapping existing = effectiveMappingsInbound.get(mapping.getIdentifier());
+        if (existing != null) {
+            if (Objects.equals(existing.getMappingTopic(), topic)) {
+                // Same mapping on the same topic: refresh the stored reference, nothing else to do.
+                effectiveMappingsInbound.put(mapping.getIdentifier(), mapping);
+                log.debug("{} - Inbound mapping {} already subscribed to topic: [{}], skipping",
+                        tenant, mapping.getIdentifier(), topic);
+                return;
+            }
+            // The mapping's topic changed: release the old topic subscription before adding the
+            // new one, otherwise the old topic would stay subscribed forever.
+            removeSubscriptionInbound(existing);
+        }
+
         MutableInt count = subscriptionCounts.computeIfAbsent(topic, k -> new MutableInt(0));
 
         boolean isNewSubscription = count.intValue() == 0;

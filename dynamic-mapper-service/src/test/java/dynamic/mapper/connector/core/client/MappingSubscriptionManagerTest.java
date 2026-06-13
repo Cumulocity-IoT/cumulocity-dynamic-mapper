@@ -116,6 +116,45 @@ class MappingSubscriptionManagerTest {
     }
 
     @Test
+    void addSubscriptionInbound_isIdempotentForSameMapping() throws Exception {
+        RecordingCallback callback = new RecordingCallback();
+        MappingSubscriptionManager manager = new MappingSubscriptionManager("t1", "connector-1", callback);
+        Mapping m1 = inbound("m1", "topic/a");
+
+        // Subscribing the same mapping twice (e.g. re-activate, or re-save an active mapping)
+        // must not inflate the topic reference count.
+        manager.addSubscriptionInbound(m1, Qos.AT_LEAST_ONCE);
+        manager.addSubscriptionInbound(m1, Qos.AT_LEAST_ONCE);
+
+        assertEquals(1, manager.getSubscriptionCountsView().get("topic/a").intValue());
+        assertEquals(Set.of("topic/a"), callback.subscribedTopics);
+
+        // A single deactivation must therefore fully unsubscribe the topic.
+        manager.removeSubscriptionInbound(m1);
+
+        assertTrue(callback.subscribedTopics.isEmpty(),
+                "a single remove must unsubscribe after a duplicate add");
+        assertFalse(manager.getSubscriptionCountsView().containsKey("topic/a"));
+    }
+
+    @Test
+    void addSubscriptionInbound_topicChangeReleasesOldTopic() throws Exception {
+        RecordingCallback callback = new RecordingCallback();
+        MappingSubscriptionManager manager = new MappingSubscriptionManager("t1", "connector-1", callback);
+
+        manager.addSubscriptionInbound(inbound("m1", "topic/old"), Qos.AT_LEAST_ONCE);
+        assertEquals(Set.of("topic/old"), callback.subscribedTopics);
+
+        // Same mapping identifier, but its topic changed (mapping update).
+        manager.addSubscriptionInbound(inbound("m1", "topic/new"), Qos.AT_LEAST_ONCE);
+
+        assertEquals(Set.of("topic/new"), callback.subscribedTopics,
+                "the old topic must be unsubscribed when a mapping's topic changes");
+        assertFalse(manager.getSubscriptionCountsView().containsKey("topic/old"));
+        assertEquals(1, manager.getSubscriptionCountsView().get("topic/new").intValue());
+    }
+
+    @Test
     void reconcile_dropsDeactivatedMapping() {
         RecordingCallback callback = new RecordingCallback();
         MappingSubscriptionManager manager = new MappingSubscriptionManager("t1", "connector-1", callback);
