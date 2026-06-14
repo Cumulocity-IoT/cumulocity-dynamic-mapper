@@ -49,7 +49,7 @@ public class InboundExternalIdCache extends MetricLRUCache<ID, ExternalIDReprese
 
     // Method to put a new entry in the cache
     public void putIdForExternalId(ID key, ExternalIDRepresentation id) {
-        cache.put(key, id);
+        putEntry(key, id);
     }
 
     // Method to remove an entry from the cache

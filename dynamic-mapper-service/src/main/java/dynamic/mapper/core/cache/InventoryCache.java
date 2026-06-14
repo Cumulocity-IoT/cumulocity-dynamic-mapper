@@ -38,7 +38,7 @@ public class InventoryCache extends MetricLRUCache<String, Map<String, Object>> 
     }
 
     public void putMO(String sourceId, Map<String, Object> mo) {
-        cache.put(sourceId, mo);
+        putEntry(sourceId, mo);
     }
 
     public Map<String, Object> getMOBySource(String key) {

@@ -98,10 +98,27 @@ public class MappingRepository {
      * with proper tenant scope activated via subscriptionsService.callForTenant()
      */
     public List<Mapping> findAll(String tenant, Direction direction, ManagedObjectCollection moc) {
-        List<Mapping> mappings = StreamSupport.stream(moc.get().allPages().spliterator(), false)
+        // Phase 1: pure conversion + in-memory migration. The inventory pages are
+        // fully drained into a list here; no inventory writes happen while iterating.
+        List<LoadResult> loaded = StreamSupport.stream(moc.get().allPages().spliterator(), false)
                 .map(mo -> convertToMapping(tenant, mo))
-                .filter(Optional::isPresent)
-                .map(Optional::get)
+                .collect(Collectors.toList());
+
+        // Phase 2: persist migrations and emit notifications, now that the page
+        // iteration has completed. This avoids re-entrant inventory access (via
+        // updateMapping -> callForTenant) while the allPages() stream is still live.
+        for (LoadResult result : loaded) {
+            if (result.migration() != null) {
+                applyMigration(tenant, result.mapping(), result.source(), result.migration());
+            }
+            if (result.loadingError() != null) {
+                sendLoadingErrorSafe(tenant, result.source(), result.loadingError());
+            }
+        }
+
+        List<Mapping> mappings = loaded.stream()
+                .filter(result -> result.include() && result.mapping() != null)
+                .map(LoadResult::mapping)
                 .filter(mapping -> shouldIncludeMapping(mapping, direction))
                 .collect(Collectors.toList());
 
@@ -115,13 +132,11 @@ public class MappingRepository {
      * with proper tenant scope activated via subscriptionsService.callForTenant()
      */
     public Mapping prepareForCreate(String tenant, Mapping mapping) {
-        // Apply migrations before creating
-        migrateMapping(tenant, mapping);
+        // Normalize deprecated mappingType/transformationType combinations in memory
+        // before persisting. The MO is not yet known, so no notification is emitted.
+        migrateMapping(tenant, mapping, null);
 
-        MappingRepresentation mr = new MappingRepresentation();
         mapping.setLastUpdate(System.currentTimeMillis());
-        mr.setType(MappingRepresentation.MAPPING_TYPE);
-        mr.setC8yMQTTMapping(mapping);
         return mapping;
     }
 
@@ -139,8 +154,9 @@ public class MappingRepository {
                             tenant, mapping.getId()));
         }
 
-        // Apply migrations before updating
-        migrateMapping(tenant, mapping);
+        // Normalize deprecated mappingType/transformationType combinations in memory
+        // before persisting. The MO is already persisted, so no notification is emitted.
+        migrateMapping(tenant, mapping, null);
 
         mapping.setLastUpdate(System.currentTimeMillis());
         return mapping;
@@ -175,155 +191,181 @@ public class MappingRepository {
     // Helper methods
 
     /**
-     * Applies automatic migrations to a mapping
-     * This ensures legacy mappings are migrated to current standards
+     * Applies all automatic in-memory migrations, normalizing deprecated
+     * mappingType / transformationType combinations to current standards. Only the
+     * in-memory object is mutated; persistence and migration notifications are the
+     * caller's responsibility (see {@link #applyMigration}). At most one migration
+     * applies to a given mapping.
+     *
+     * @param mo the source managed object (may be {@code null} on the create/update
+     *           path, where the descriptor message is unused)
+     * @return a descriptor of the migration that was applied, or {@code null} if the
+     *         mapping already conforms
      */
-    private void migrateMapping(String tenant, Mapping mapping) {
+    private Migration migrateMapping(String tenant, Mapping mapping, ManagedObjectRepresentation mo) {
+        String moId = moId(mo);
+
+        // Migrate deprecated CODE_BASED mappings to JSON with SMART_FUNCTION transformation
+        if (MappingType.CODE_BASED.equals(mapping.getMappingType())) {
+            log.info("{} - Migrating deprecated CODE_BASED mapping {} to JSON with SMART_FUNCTION transformation",
+                    tenant, moId);
+            mapping.setMappingType(MappingType.JSON);
+            mapping.setTransformationType(TransformationType.SMART_FUNCTION);
+            return new Migration(String.format(
+                    "Mapping %s was automatically migrated from deprecated CODE_BASED to JSON with SMART_FUNCTION transformation",
+                    moId), MigrationNotice.LOADING_ERROR);
+        }
+
         // Migrate legacy JSON mappings without transformationType to JSONATA
         if (MappingType.JSON.equals(mapping.getMappingType()) &&
-            (mapping.getTransformationType() == null || TransformationType.DEFAULT.equals(mapping.getTransformationType()))) {
-
-            log.info("{} - Migrating legacy JSON mapping {} to JSONATA transformation",
-                    tenant, mapping.getName() != null ? mapping.getName() : mapping.getId());
-
+                (mapping.getTransformationType() == null
+                        || TransformationType.DEFAULT.equals(mapping.getTransformationType()))) {
+            log.info("{} - Migrating legacy JSON mapping {} to JSONATA transformation", tenant, moId);
             mapping.setTransformationType(TransformationType.JSONATA);
+            return new Migration(String.format(
+                    "Mapping %s [%s] was automatically migrated: transformationType set to JSONATA for legacy JSON mapping",
+                    mapping.getName(), moId), MigrationNotice.OPERATION_EVENT);
+        }
+
+        // Migrate deprecated EXTENSION_JAVA mappingType to ANY_PAYLOAD + EXTENSION_JAVA transformation
+        if (MappingType.EXTENSION_JAVA.equals(mapping.getMappingType())) {
+            log.info("{} - Migrating deprecated EXTENSION_JAVA mappingType for mapping {} to ANY_PAYLOAD with EXTENSION_JAVA transformation",
+                    tenant, moId);
+            mapping.setMappingType(MappingType.ANY_PAYLOAD);
+            mapping.setTransformationType(TransformationType.EXTENSION_JAVA);
+            return new Migration(String.format(
+                    "Mapping %s [%s] was automatically migrated: mappingType EXTENSION_JAVA → ANY_PAYLOAD, transformationType → EXTENSION_JAVA",
+                    mapping.getName(), moId), MigrationNotice.OPERATION_EVENT);
+        }
+
+        return null;
+    }
+
+    /**
+     * Converts a ManagedObjectRepresentation into a Mapping and applies in-memory
+     * migrations. Performs no inventory writes or notifications: any required
+     * persistence / notification is captured in the returned {@link LoadResult} and
+     * carried out by {@link #findAll} after the page iteration has completed.
+     */
+    private LoadResult convertToMapping(String tenant, ManagedObjectRepresentation mo) {
+        try {
+            MappingRepresentation mappingMO = toMappingObject(mo);
+            Mapping mapping = mappingMO.getC8yMQTTMapping();
+            if (mapping == null) {
+                log.warn("{} - This mapping with id {} seems to be outdated. Please migrate it to a newer version: https://github.com/Cumulocity-IoT/cumulocity-dynamic-mapper/blob/main/resources/script/mgmt/dm.sh",
+                        tenant, mappingMO.getId());
+                return LoadResult.skip(mo, null);
+            }
+            mapping.setId(mappingMO.getId());
+
+            Migration migration = migrateMapping(tenant, mapping, mo);
+
+            if (Direction.INBOUND.equals(mapping.getDirection()) && mapping.getMappingTopic() == null) {
+                log.warn("{} - Mapping {} has no mappingTopic, skipping", tenant, mapping.getId());
+                return LoadResult.exclude(mapping, mo, migration, null);
+            }
+
+            if (TransformationType.EXTENSION_JAVA.equals(mapping.getTransformationType())
+                    && mapping.getExtension() == null) {
+                String errorMsg = String.format(
+                        "Mapping %s [%s] has transformationType EXTENSION_JAVA but no extension defined - skipping",
+                        mapping.getName(), moId(mo));
+                // De-duplicate the warning per MO; only the first occurrence notifies.
+                if (reportedLoadingWarnings.add(tenant + ":" + moId(mo))) {
+                    log.warn("{} - {}", tenant, errorMsg);
+                    return LoadResult.exclude(mapping, mo, migration, errorMsg);
+                }
+                log.debug("{} - {}", tenant, errorMsg);
+                return LoadResult.exclude(mapping, mo, migration, null);
+            }
+
+            return LoadResult.include(mapping, mo, migration);
+        } catch (IllegalArgumentException e) {
+            String exceptionMsg = e.getCause() != null ? e.getCause().getMessage() : e.getMessage();
+            String detailedErrorMsg = String.format("Failed to convert MO %s to mapping in tenant %s: %s",
+                    moId(mo), tenant, exceptionMsg);
+            log.warn("{} - Failed to convert MO {} to mapping: {}", tenant, moId(mo), exceptionMsg);
+            return LoadResult.skip(mo, detailedErrorMsg);
         }
     }
 
     /**
-     * Converts a ManagedObjectRepresentation to a Mapping, handling deprecated CODE_BASED migration
-     * This is now called within MappingService with proper tenant scope active
+     * Persists a migrated mapping and emits its migration notification. Invoked from
+     * {@link #findAll} after inventory iteration, so the write does not run
+     * re-entrantly while the mapping pages are being streamed.
      */
-    private Optional<Mapping> convertToMapping(String tenant, ManagedObjectRepresentation mo) {
+    private void applyMigration(String tenant, Mapping mapping, ManagedObjectRepresentation mo, Migration migration) {
         try {
-            MappingRepresentation mappingMO = toMappingObject(mo);
-            Mapping mapping = mappingMO.getC8yMQTTMapping();
-            if(mapping == null) {
-                log.warn("{} - This mapping with id {} seems to be outdated. Please migrate it to a newer version: https://github.com/Cumulocity-IoT/cumulocity-dynamic-mapper/blob/main/resources/script/mgmt/dm.sh", tenant, mappingMO.getId());
-                return Optional.empty();
+            mappingService.updateMapping(tenant, mapping, true, true);
+            switch (migration.notice()) {
+                case LOADING_ERROR -> mappingService.sendMappingLoadingError(tenant, mo, migration.message());
+                case OPERATION_EVENT -> configurationRegistry.getC8yAgent().createOperationEvent(
+                        migration.message(), LoggingEventType.MAPPING_MIGRATION_EVENT_TYPE, DateTime.now(), tenant, null);
             }
-            mapping.setId(mappingMO.getId());
-
-            // Migrate deprecated CODE_BASED mappings to JSON with SMART_FUNCTION transformation
-            if (MappingType.CODE_BASED.equals(mapping.getMappingType())) {
-                String moId = mo.getId() != null ? mo.getId().getValue() : "unknown";
-                log.info("{} - Migrating deprecated CODE_BASED mapping {} to JSON with SMART_FUNCTION transformation",
-                        tenant, moId);
-
-                mapping.setMappingType(MappingType.JSON);
-                mapping.setTransformationType(TransformationType.SMART_FUNCTION);
-
-                try {
-                    // Persist the migrated mapping - now through MappingService with proper scope
-                    mappingService.updateMapping(tenant, mapping, true, true);
-
-                    // Notify about the automatic migration
-                    String migrationMsg = String.format(
-                            "Mapping %s was automatically migrated from deprecated CODE_BASED to JSON with SMART_FUNCTION transformation",
-                            moId);
-                    mappingService.sendMappingLoadingError(tenant, mo, migrationMsg);
-                } catch (Exception updateEx) {
-                    log.warn("{} - Failed to persist migrated mapping {}: {}", tenant, moId, updateEx.getMessage());
-                }
-            }
-
-            // Migrate legacy JSON mappings without transformationType to JSONATA
-            if (MappingType.JSON.equals(mapping.getMappingType()) &&
-                (mapping.getTransformationType() == null || TransformationType.DEFAULT.equals(mapping.getTransformationType()))) {
-                String moId = mo.getId() != null ? mo.getId().getValue() : null;
-                log.info("{} - Migrating legacy JSON mapping {} to JSONATA transformation",
-                        tenant, moId);
-
-                mapping.setTransformationType(TransformationType.JSONATA);
-
-                try {
-                    // Persist the migrated mapping - now through MappingService with proper scope
-                    mappingService.updateMapping(tenant, mapping, true, true);
-
-                    // Notify about the automatic migration using MAPPING_MIGRATION_EVENT_TYPE
-                    String migrationMsg = String.format(
-                            "Mapping %s [%s] was automatically migrated: transformationType set to JSONATA for legacy JSON mapping",
-                            mapping.getName(), moId);
-                    configurationRegistry.getC8yAgent().createOperationEvent(
-                            migrationMsg,
-                            LoggingEventType.MAPPING_MIGRATION_EVENT_TYPE,
-                            DateTime.now(),
-                            tenant,
-                            null);
-                } catch (Exception updateEx) {
-                    log.warn("{} - Failed to persist migrated mapping {}: {}", tenant, moId, updateEx.getMessage());
-                }
-            }
-
-            // Migrate deprecated EXTENSION_JAVA mappingType to ANY_PAYLOAD + TransformationType.EXTENSION_JAVA
-            if (MappingType.EXTENSION_JAVA.equals(mapping.getMappingType())) {
-                String moId = mo.getId() != null ? mo.getId().getValue() : "unknown";
-                log.info("{} - Migrating deprecated EXTENSION_JAVA mappingType for mapping {} to ANY_PAYLOAD with EXTENSION_JAVA transformation",
-                        tenant, moId);
-
-                mapping.setMappingType(MappingType.ANY_PAYLOAD);
-                mapping.setTransformationType(TransformationType.EXTENSION_JAVA);
-
-                try {
-                    mappingService.updateMapping(tenant, mapping, true, true);
-                    String migrationMsg = String.format(
-                            "Mapping %s [%s] was automatically migrated: mappingType EXTENSION_JAVA → ANY_PAYLOAD, transformationType → EXTENSION_JAVA",
-                            mapping.getName(), moId);
-                    configurationRegistry.getC8yAgent().createOperationEvent(
-                            migrationMsg,
-                            LoggingEventType.MAPPING_MIGRATION_EVENT_TYPE,
-                            DateTime.now(),
-                            tenant,
-                            null);
-                } catch (Exception updateEx) {
-                    log.warn("{} - Failed to persist migrated mapping {}: {}", tenant, moId, updateEx.getMessage());
-                }
-            }
-
-            if (Direction.INBOUND.equals(mapping.getDirection()) && mapping.getMappingTopic() == null) {
-                log.warn("{} - Mapping {} has no mappingTopic, skipping", tenant, mapping.getId());
-                return Optional.empty();
-            }
-
-            if (TransformationType.EXTENSION_JAVA.equals(mapping.getTransformationType()) && mapping.getExtension() == null) {
-                String moId = mo.getId() != null ? mo.getId().getValue() : null;
-                String deduplicationKey = tenant + ":" + moId;
-                String errorMsg = String.format(
-                        "Mapping %s [%s] has transformationType EXTENSION_JAVA but no extension defined - skipping",
-                        mapping.getName(), moId);
-                if (reportedLoadingWarnings.add(deduplicationKey)) {
-                    log.warn("{} - {}", tenant, errorMsg);
-                    try {
-                        mappingService.sendMappingLoadingError(tenant, mo, errorMsg);
-                    } catch (Exception notifyEx) {
-                        log.warn("{} - Failed to send mapping loading error for MO {}: {}", tenant, moId, notifyEx.getMessage());
-                    }
-                } else {
-                    log.debug("{} - {}", tenant, errorMsg);
-                }
-                return Optional.empty();
-            }
-
-            return Optional.of(mapping);
-        } catch (IllegalArgumentException e) {
-            String exceptionMsg = e.getCause() != null ? e.getCause().getMessage() : e.getMessage();
-            String moId = mo.getId() != null ? mo.getId().getValue() : null;
-
-            // Combine context information with exception details for comprehensive error notification
-            String detailedErrorMsg = String.format("Failed to convert MO %s to mapping in tenant %s: %s",
-                    moId, tenant, exceptionMsg);
-
-            log.warn("{} - Failed to convert MO {} to mapping: {}", tenant, moId, exceptionMsg);
-            try {
-                mappingService.sendMappingLoadingError(tenant, mo, detailedErrorMsg);
-            } catch (Exception notifyEx) {
-                log.warn("{} - Failed to send mapping loading error for MO {}: {}", tenant, moId, notifyEx.getMessage());
-            }
-            return Optional.empty();
+        } catch (Exception updateEx) {
+            log.warn("{} - Failed to persist migrated mapping {}: {}", tenant, moId(mo), updateEx.getMessage());
         }
     }
 
-    private Boolean shouldIncludeMapping(Mapping mapping, Direction direction) {
+    private void sendLoadingErrorSafe(String tenant, ManagedObjectRepresentation mo, String message) {
+        try {
+            mappingService.sendMappingLoadingError(tenant, mo, message);
+        } catch (Exception notifyEx) {
+            log.warn("{} - Failed to send mapping loading error for MO {}: {}", tenant, moId(mo), notifyEx.getMessage());
+        }
+    }
+
+    private static String moId(ManagedObjectRepresentation mo) {
+        return mo != null && mo.getId() != null ? mo.getId().getValue() : "unknown";
+    }
+
+    /** How a migration announces itself once persisted. */
+    private enum MigrationNotice { LOADING_ERROR, OPERATION_EVENT }
+
+    /** An in-memory migration that still needs to be persisted and announced. */
+    private record Migration(String message, MigrationNotice notice) {
+    }
+
+    /**
+     * Outcome of converting one managed object: the (possibly migrated) mapping,
+     * whether it should be included in the result, and any deferred side-effects
+     * (migration persistence, loading-error notification).
+     */
+    private record LoadResult(Mapping mapping, ManagedObjectRepresentation source, boolean include,
+            Migration migration, String loadingError) {
+
+        static LoadResult include(Mapping mapping, ManagedObjectRepresentation source, Migration migration) {
+            return new LoadResult(mapping, source, true, migration, null);
+        }
+
+        /** Excluded from the result, but the mapping may still carry a migration to persist. */
+        static LoadResult exclude(Mapping mapping, ManagedObjectRepresentation source, Migration migration,
+                String loadingError) {
+            return new LoadResult(mapping, source, false, migration, loadingError);
+        }
+
+        /** Conversion produced no usable mapping; only an optional loading-error notification. */
+        static LoadResult skip(ManagedObjectRepresentation source, String loadingError) {
+            return new LoadResult(null, source, false, null, loadingError);
+        }
+    }
+
+    /**
+     * Clears the de-duplicated loading-warning markers for a tenant. Called on
+     * tenant teardown so {@code reportedLoadingWarnings} does not grow unbounded
+     * across tenant churn.
+     */
+    public void clearReportedWarnings(String tenant) {
+        if (tenant == null) {
+            return;
+        }
+        // Keys are "tenant:moId"; the trailing colon keeps the prefix unambiguous
+        // (e.g. "t1:" does not match "t10:...").
+        String prefix = tenant + ":";
+        reportedLoadingWarnings.removeIf(key -> key.startsWith(prefix));
+    }
+
+    private boolean shouldIncludeMapping(Mapping mapping, Direction direction) {
         return direction == null ||
                 Direction.UNSPECIFIED.equals(direction) ||
                 (mapping.getDirection() != null && mapping.getDirection().equals(direction));

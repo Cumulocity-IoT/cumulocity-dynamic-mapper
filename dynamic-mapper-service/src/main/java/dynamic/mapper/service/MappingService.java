@@ -105,6 +105,7 @@ public class MappingService {
         statusService.removeTenantStatus(tenant);
         deploymentMapService.removeTenantDeploymentMap(tenant);
         flowStateStore.clearTenantState(tenant);
+        mappingRepository.clearReportedWarnings(tenant);
         dirtyMappings.remove(tenant);
 
         log.info("{} - Resources removed", tenant);

@@ -51,9 +51,17 @@ public abstract class MetricLRUCache<K, V> implements AutoCloseable {
 
     private final Gauge cacheSizeGauge;
 
-    // Set after construction and read from the eviction callback on other
-    // threads, hence volatile for visibility.
+    // Set after construction and read from putEntry on the writing thread,
+    // hence volatile for visibility.
     private volatile Consumer<K> evictionListener;
+
+    // Captures the key evicted by removeEldestEntry during a put, so the listener
+    // can be invoked by putEntry AFTER the cache lock is released. Per-thread
+    // because removeEldestEntry runs synchronously on the thread performing the
+    // put, and LinkedHashMap evicts at most one entry per insertion. Only ever
+    // set when an eviction listener is registered, and always cleared on read, so
+    // it leaves no residue on pooled threads.
+    private final ThreadLocal<K> pendingEviction = new ThreadLocal<>();
 
     protected MetricLRUCache(int cacheSize, String tenant, String metricName) {
         // Making it thread-safe
@@ -62,12 +70,11 @@ public abstract class MetricLRUCache<K, V> implements AutoCloseable {
             @Override
             protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
                 boolean shouldRemove = size() > cacheSize;
-                if (shouldRemove) {
-                    Consumer<K> listener = evictionListener;
-                    if (listener != null) {
-                        // Notify listener about eviction
-                        listener.accept(eldest.getKey());
-                    }
+                if (shouldRemove && evictionListener != null) {
+                    // Defer notification until the cache lock is released (see
+                    // putEntry); the listener may block on I/O and must not stall
+                    // other callers contending for the synchronized map.
+                    pendingEviction.set(eldest.getKey());
                 }
                 return shouldRemove;
             }
@@ -78,8 +85,34 @@ public abstract class MetricLRUCache<K, V> implements AutoCloseable {
     }
 
     /**
-     * Set a listener to be notified when entries are evicted. The listener runs
-     * while the cache lock is held, so it must not perform long-running work.
+     * Inserts an entry and dispatches any resulting eviction notification
+     * <em>outside</em> the cache lock. Subclasses MUST route all writes through
+     * this method so the eviction listener never runs while the synchronized
+     * map's monitor is held.
+     *
+     * @return the previous value associated with {@code key}, or {@code null}
+     */
+    protected V putEntry(K key, V value) {
+        // cache.put acquires and releases the synchronized-map monitor within this
+        // call; removeEldestEntry may stash an evicted key into pendingEviction.
+        V previous = cache.put(key, value);
+        K evicted = pendingEviction.get();
+        if (evicted != null) {
+            // Clear before invoking the listener so a re-entrant put on this thread
+            // starts clean.
+            pendingEviction.remove();
+            Consumer<K> listener = evictionListener;
+            if (listener != null) {
+                listener.accept(evicted);
+            }
+        }
+        return previous;
+    }
+
+    /**
+     * Set a listener to be notified when entries are evicted. The listener is
+     * invoked outside the cache lock (see {@link #putEntry}), so it may perform
+     * blocking work such as I/O without stalling other cache operations.
      */
     public void setEvictionListener(Consumer<K> listener) {
         this.evictionListener = listener;
