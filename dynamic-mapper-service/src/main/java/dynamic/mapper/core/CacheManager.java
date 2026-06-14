@@ -65,7 +65,12 @@ public class CacheManager {
     }
 
     public InboundExternalIdCache removeInboundExternalIdCache(String tenant) {
-        return inboundExternalIdCaches.remove(tenant);
+        InboundExternalIdCache removed = inboundExternalIdCaches.remove(tenant);
+        if (removed != null) {
+            // Deregister the size gauge so it does not leak across tenant churn
+            removed.close();
+        }
+        return removed;
     }
 
     public Integer getInboundExternalIdCacheSize(String tenant) {
@@ -74,7 +79,12 @@ public class CacheManager {
     }
 
     public InventoryCache removeInventoryCache(String tenant) {
-        return inventoryCaches.remove(tenant);
+        InventoryCache removed = inventoryCaches.remove(tenant);
+        if (removed != null) {
+            // Deregister the size gauge so it does not leak across tenant churn
+            removed.close();
+        }
+        return removed;
     }
 
     public InventoryCache getInventoryCache(String tenant) {
@@ -90,6 +100,11 @@ public class CacheManager {
             int previousSize = inboundExternalIdCache.getCacheSize();
 
             if (recreate) {
+                // Deregister the old gauge before the replacement registers a new
+                // one under the same name+tags, otherwise Micrometer keeps the old
+                // meter bound to the discarded map.
+                inboundExternalIdCaches.remove(tenant);
+                inboundExternalIdCache.close();
                 inboundExternalIdCaches.put(tenant, new InboundExternalIdCache(inboundExternalIdCacheSize, tenant));
             } else {
                 inboundExternalIdCache.clearCache();
@@ -136,7 +151,12 @@ public class CacheManager {
 
             if (recreate) {
                 configurationRegistry.getNotificationSubscriber().unsubscribeAllMOForInventoryCacheUpdates(tenant);
-                inventoryCaches.put(tenant, new InventoryCache(inventoryCacheSize, tenant));
+                // Deregister the old gauge before the replacement registers a new
+                // one under the same name+tags (see clearInboundExternalIdCache).
+                inventoryCaches.remove(tenant);
+                inventoryCache.close();
+                // Recreate via the initializer so the eviction listener is reinstalled.
+                initializeInventoryCache(tenant, inventoryCacheSize, configurationRegistry);
             } else {
                 configurationRegistry.getNotificationSubscriber().unsubscribeAllMOForInventoryCacheUpdates(tenant);
                 inventoryCache.clearCache();
