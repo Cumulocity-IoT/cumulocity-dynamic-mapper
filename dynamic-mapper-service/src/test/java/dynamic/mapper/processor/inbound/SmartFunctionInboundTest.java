@@ -22,6 +22,10 @@
 package dynamic.mapper.processor.inbound;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.net.URL;
@@ -44,7 +48,10 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import org.mockito.ArgumentCaptor;
+
 import dynamic.mapper.core.InventoryEnrichmentClient;
+import dynamic.mapper.processor.model.ExternalId;
 import dynamic.mapper.processor.model.InputMessage;
 import dynamic.mapper.processor.model.SmartFunctionContext;
 import dynamic.mapper.processor.util.JavaScriptModuleStripper;
@@ -366,6 +373,99 @@ class SmartFunctionInboundTest {
                 "Duplicate error message should be suppressed by flow state dedup");
 
         log.info("✅ template-SMART-INBOUND-04: duplicate error suppressed by flow state");
+    }
+
+    // =========================================================================
+    // Context methods for accessing incoming metadata
+    // (documented under "Metadata Properties for Inbound Smart Functions")
+    // =========================================================================
+
+    /**
+     * Documents {@code context.getManagedObjectByExternalId({externalId, type})}:
+     * the Smart Function looks a device up by its external id, and the resolved
+     * managed object's properties become available inside the function. The
+     * lookup is delegated to {@link InventoryEnrichmentClient}; here we stub the
+     * cache and assert both the resolved values reaching the JS code and the
+     * external id/type passed to the client.
+     */
+    @Test
+    void testContext_getManagedObjectByExternalId_ResolvesDeviceFromCache() {
+        Map<String, Object> device = Map.of(
+                "id", "98765",
+                "name", "Berlin Sensor",
+                "type", "c8y_Sensor",
+                "c8y_Hardware", Map.of("serialNumber", "SN-001"));
+        when(inventoryClient.getMOFromInventoryCacheByExternalId(eq("testTenant"), any(ExternalId.class), eq(true)))
+                .thenReturn(device);
+
+        String code = """
+                function onMessage(msg, context) {
+                  var dev = context.getManagedObjectByExternalId({ externalId: "sensor-berlin-01", type: "c8y_Serial" });
+                  return [{
+                    cumulocityType: "measurement",
+                    action: "create",
+                    payload: { resolvedName: dev.name, serial: dev.c8y_Hardware.serialNumber },
+                    externalSource: [{ type: "c8y_Serial", externalId: "sensor-berlin-01" }]
+                  }];
+                }
+                """;
+        Value onMessage = evalTemplate(code);
+
+        InputMessage msg = new InputMessage(new HashMap<>(), "testSmartInbound/sensor-berlin-01", "sensor-berlin-01",
+                null);
+        Value result = onMessage.execute(graalContext.asValue(msg), graalContext.asValue(smartFunctionContext));
+
+        Value first = assertSingleResult(result, "measurement", "create");
+        Value payload = first.getMember("payload");
+        assertEquals("Berlin Sensor", payload.getMember("resolvedName").asString(),
+                "device name resolved via getManagedObjectByExternalId should reach the Smart Function");
+        assertEquals("SN-001", payload.getMember("serial").asString(),
+                "nested fragment of the resolved device should be accessible");
+
+        // The lookup must carry the externalId and type passed from JavaScript.
+        ArgumentCaptor<ExternalId> captor = ArgumentCaptor.forClass(ExternalId.class);
+        verify(inventoryClient).getMOFromInventoryCacheByExternalId(eq("testTenant"), captor.capture(), eq(true));
+        assertEquals("sensor-berlin-01", captor.getValue().getExternalId(), "externalId passed to the cache lookup");
+        assertEquals("c8y_Serial", captor.getValue().getType(), "external id type passed to the cache lookup");
+
+        log.info("✅ context.getManagedObjectByExternalId: resolved device reached the Smart Function");
+    }
+
+    /**
+     * Documents {@code context.getTesting()}: returns the flag indicating whether
+     * the function runs inside a test cycle. Smart Functions use this to branch
+     * (e.g. skip side effects when testing). The value mirrors the flag the
+     * context was constructed with — {@code true} for the shared test context and
+     * {@code false} for a production-style context.
+     */
+    @Test
+    void testContext_getTesting_ReflectsTestingFlag() {
+        String code = """
+                function onMessage(msg, context) {
+                  return [{
+                    cumulocityType: "event",
+                    action: "create",
+                    payload: { testing: context.getTesting() },
+                    externalSource: [{ type: "c8y_Serial", externalId: "d1" }]
+                  }];
+                }
+                """;
+        Value onMessage = evalTemplate(code);
+        InputMessage msg = new InputMessage(new HashMap<>(), "topic/d1", "d1", null);
+
+        // Shared context constructed with testing=true.
+        Value testingResult = onMessage.execute(graalContext.asValue(msg), graalContext.asValue(smartFunctionContext));
+        Value testingFirst = assertSingleResult(testingResult, "event", "create");
+        assertTrue(testingFirst.getMember("payload").getMember("testing").asBoolean(),
+                "context.getTesting() should be true for the test context");
+
+        // A non-testing (production-style) context reports false.
+        SmartFunctionContext prodContext = new SmartFunctionContext(graalContext, "testTenant", inventoryClient, false);
+        Value prodResult = onMessage.execute(graalContext.asValue(msg), graalContext.asValue(prodContext));
+        assertFalse(prodResult.getArrayElement(0).getMember("payload").getMember("testing").asBoolean(),
+                "context.getTesting() should be false for a non-testing context");
+
+        log.info("✅ context.getTesting: reflects the testing flag (true/false)");
     }
 
     // =========================================================================

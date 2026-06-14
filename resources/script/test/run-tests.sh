@@ -66,6 +66,7 @@ declare -a TESTS=(
     "inbound|test-inbound-multi-device|Array payload → multiple devices"
     "inbound|test-inbound-alarm|JSON / DEFAULT → ALARM"
     "inbound|test-inbound-operation|JSON / DEFAULT → OPERATION"
+    "inbound|test-inbound-inventory|JSON / DEFAULT → INVENTORY (device metadata update)"
     # ── Inbound (Smart Function patterns) ──────────────────────────────────────
     "smartfunction|test-inbound-smartfunction-02|Pattern 02: Topic-based external ID + sensor filter"
     "smartfunction|test-inbound-smartfunction-04|Pattern 04: Dual payload type + deduplication"
@@ -79,9 +80,11 @@ declare -a TESTS=(
     "outbound|test-outbound-event|C8Y Event → MQTT broker"
     "outbound|test-outbound-alarm|C8Y Alarm → MQTT broker"
     "outbound|test-outbound-operation|C8Y Operation → MQTT broker"
+    "outbound|test-outbound-inventory|C8Y managed-object change → MQTT broker (metadata)"
     "outbound|test-outbound-filter|filterMapping — selective forwarding"
     "outbound|test-outbound-topic-resolution|Dynamic publish topic resolution"
     "outbound|test-outbound-json-smartfunction|Smart Function: Measurement → MQTT JSON"
+    "outbound|test-outbound-smartfunction-externalsource|Smart Function externalSource → _externalId_ topic (broker round-trip)"
     # ── Outbound (subscription management) ────────────────────────────────────
     "outbound|test-outbound-static-subscription|Static subscription management"
     "outbound|test-outbound-type-subscription|Dynamic type subscription"

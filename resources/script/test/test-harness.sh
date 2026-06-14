@@ -1625,6 +1625,19 @@ dm_mqtt_subscribe_one() {   # <topic> [timeout_secs=10]
     mosquitto_sub "${_args[@]}"
 }
 
+# Like dm_mqtt_subscribe_one but prints "<topic> <payload>" (mosquitto_sub -v),
+# so callers can assert the *topic* a message arrived on — needed to verify
+# broker-side topic resolution such as _externalId_ token replacement, where the
+# resolved external id appears in the topic rather than the payload.
+dm_mqtt_subscribe_one_verbose() {   # <topic> [timeout_secs=10]
+    local _topic=$1 _timeout=${2:-10}
+    local _host="${MQTT_HOST:-broker.hivemq.com}" _port="${MQTT_PORT:-1883}"
+    local _args=(-h "$_host" -p "$_port" -t "$_topic" -C 1 -W "$_timeout" -v)
+    _dm_mqtt_append_auth_args _args "dmtest-sub-$$-${RANDOM}"
+    _dm_mqtt_append_tls_args _args
+    mosquitto_sub "${_args[@]}"
+}
+
 # ── C8Y data helpers ───────────────────────────────────────────────────────────
 # Return a UTC ISO-8601 timestamp. Pass a negative offset in seconds for the past.
 # Examples: dm_now          -> now
@@ -1822,4 +1835,63 @@ dm_get_latest_measurement() {  # <ext_id> <ext_id_type> <measurement_type>
     fi
 
     printf '%s\n' "$_row"
+}
+
+# ── Inventory / managed-object helpers ─────────────────────────────────────────
+# Used by INVENTORY-targetAPI tests that modify device *metadata* (the managed
+# object itself: name, type, custom fragments) rather than creating
+# measurements/events/alarms.
+
+# Fetch a device's full managed object as JSON ({} if the id is empty/not found).
+dm_get_managed_object() {  # <device_id>
+    [ -z "${1:-}" ] && { printf '{}'; return 0; }
+    c8y inventory get --id "$1" --output json 2>/dev/null \
+        | jq -c '.' 2>/dev/null || printf '{}'
+}
+
+# Read a single field from a device's managed object using a jq filter.
+# The filter is applied to the managed-object root, e.g. '.type' or
+# '.dmtest_Meta.site'. Prints the raw value (empty string if absent).
+dm_get_mo_field() {  # <device_id> <jq_filter>
+    local _id=$1 _filter=$2
+    [ -z "${_id:-}" ] && { printf ''; return 0; }
+    dm_get_managed_object "$_id" \
+        | jq -r "(${_filter}) // empty" 2>/dev/null || printf ''
+}
+
+# Assert a managed-object field equals an expected value (records pass/fail).
+dm_assert_mo_field_eq() {  # <label> <device_id> <jq_filter> <expected>
+    local _label=$1 _id=$2 _filter=$3 _expected=$4 _actual
+    _actual=$(dm_get_mo_field "$_id" "$_filter")
+    dm_assert_eq "$_label" "$_expected" "$_actual"
+}
+
+# Poll until a managed-object field reaches the expected value, or timeout.
+# Returns 0 on match, 1 on timeout. Useful because inventory updates triggered
+# by a mapping are eventually-consistent.
+dm_wait_for_mo_field() {  # <device_id> <jq_filter> <expected> [timeout=30] [interval=2]
+    local _id=$1 _filter=$2 _expected=$3 _timeout=${4:-30} _interval=${5:-2}
+    local _elapsed=0 _actual
+    while [ "$_elapsed" -lt "$_timeout" ]; do
+        _actual=$(dm_get_mo_field "$_id" "$_filter")
+        [ "$_actual" = "$_expected" ] && return 0
+        sleep "$_interval"
+        _elapsed=$((_elapsed + _interval))
+    done
+    return 1
+}
+
+# Poll for an expected managed-object field value and record a pass/fail
+# assertion (wraps dm_wait_for_mo_field). Prefer this over dm_assert_mo_field_eq
+# when the value is set asynchronously by the mapper.
+dm_assert_mo_field_eventually() {  # <label> <device_id> <jq_filter> <expected> [timeout=30]
+    local _label=$1 _id=$2 _filter=$3 _expected=$4 _timeout=${5:-30} _actual
+    if dm_wait_for_mo_field "$_id" "$_filter" "$_expected" "$_timeout"; then
+        _DM_PASS_COUNT=$((_DM_PASS_COUNT + 1))
+        dm_success "[$_label] ${_filter}='$_expected'"
+    else
+        _actual=$(dm_get_mo_field "$_id" "$_filter")
+        _DM_FAIL_COUNT=$((_DM_FAIL_COUNT + 1))
+        dm_fail "[$_label] ${_filter} expected='$_expected' actual='$_actual' after ${_timeout}s"
+    fi
 }

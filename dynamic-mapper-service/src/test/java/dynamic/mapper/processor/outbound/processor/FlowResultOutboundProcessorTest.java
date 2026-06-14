@@ -31,6 +31,8 @@ import java.util.Map;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.Message;
+import org.graalvm.polyglot.Context;
+import org.graalvm.polyglot.Value;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -55,12 +57,14 @@ import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.model.DeviceMessage;
 import dynamic.mapper.processor.model.ExternalSource;
+import dynamic.mapper.processor.model.InputMessage;
 import dynamic.mapper.processor.model.MappingAction;
 import dynamic.mapper.processor.inbound.processor.ProcessorTestHelper;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.TransformationType;
+import dynamic.mapper.processor.util.JavaScriptInteropHelper;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -379,6 +383,92 @@ void setUp() throws Exception {
         log.info("✅ External ID token replacement test passed");
         log.info("   - Original topic: measurements/{}/data", BaseProcessor.EXTERNAL_ID_TOKEN);
         log.info("   - Resolved topic: {}", processingContext.getResolvedPublishTopic());
+    }
+
+    /**
+     * End-to-end coverage for the documented OUTBOUND {@code externalSource}
+     * return-object property: a Smart Function returns
+     * {@code { topic: "devices/_externalId_/data", externalSource: [{type: ...}] }}
+     * and the mapper must resolve the triggering device's external id <em>of that
+     * type</em> and substitute it into the broker topic.
+     *
+     * <p>This drives the real chain — JS execution →
+     * {@link JavaScriptInteropHelper#convertToDeviceMessage} (exactly what
+     * FlowOutboundProcessor does) → the real {@link FlowResultOutboundProcessor}
+     * full path → {@code resolveGlobalId2ExternalId} → {@code _externalId_}
+     * replacement. The C8Y identity lookup is the only mocked collaborator, so
+     * the test runs offline.</p>
+     *
+     * <p>The return-object type ({@code c8y_LoRaDevEUI}) is deliberately
+     * <em>different</em> from the mapping's {@code externalIdType}
+     * ({@code c8y_Serial}), so the assertion proves the type came from the
+     * returned object — not from a mapping-level fallback.</p>
+     */
+    @Test
+    void testExternalSourceFromReturnObjectResolvesExternalIdToken_endToEnd() throws Exception {
+        final String RETURN_TYPE = "c8y_LoRaDevEUI";          // != mapping.externalIdType (c8y_Serial)
+        final String RESOLVED_EXTERNAL_ID = "lora-berlin-01"; // != internal id and != clientId
+
+        // C8Y resolves internal source id + the externalSource type → external id used in the topic.
+        ManagedObjectRepresentation mo = new ManagedObjectRepresentation();
+        mo.setId(new GId(TEST_DEVICE_ID));
+        ExternalIDRepresentation extRep = new ExternalIDRepresentation();
+        extRep.setManagedObject(mo);
+        extRep.setExternalId(RESOLVED_EXTERNAL_ID);
+        extRep.setType(RETURN_TYPE);
+        when(c8yAgent.resolveGlobalId2ExternalId(eq(TEST_TENANT), any(GId.class), eq(RETURN_TYPE), anyBoolean()))
+                .thenReturn(extRep);
+
+        TestableFlowResultOutboundProcessor fullProcessor = createFullProcessingProcessor();
+
+        // Run the real Smart Function and convert its result exactly like FlowOutboundProcessor does.
+        DeviceMessage deviceMsg;
+        Context graalContext = Context.newBuilder("js")
+                .allowAllAccess(true)
+                .option("engine.WarnInterpreterOnly", "false")
+                .build();
+        try {
+            String code = """
+                    function onMessage(msg, context) {
+                      var payload = msg.getPayload();
+                      return [{
+                        topic: "devices/_externalId_/data",
+                        payload: { value: payload[payload.type].T.value },
+                        externalSource: [{ type: "c8y_LoRaDevEUI" }]
+                      }];
+                    }
+                    globalThis['onMessage'] = onMessage;
+                    """;
+            graalContext.eval("js", code);
+            Value onMessage = graalContext.getBindings("js").getMember("onMessage");
+
+            InputMessage inMsg = new InputMessage(
+                    createTemperatureMeasurementPayload(), "measurements/" + TEST_DEVICE_ID, null, TEST_DEVICE_ID,
+                    "measurement");
+            Value result = onMessage.execute(graalContext.asValue(inMsg), graalContext.asValue(new HashMap<>()));
+            deviceMsg = JavaScriptInteropHelper.convertToDeviceMessage(result.getArrayElement(0));
+        } finally {
+            graalContext.close();
+        }
+
+        // Sanity: the parsed DeviceMessage carries the externalSource type from the JS return object.
+        assertEquals("devices/" + BaseProcessor.EXTERNAL_ID_TOKEN + "/data", deviceMsg.getTopic(),
+                "DeviceMessage topic should carry the _externalId_ token from the Smart Function");
+
+        processingContext.setFlowResult(deviceMsg);
+
+        // When - run the real outbound result processor end-to-end
+        fullProcessor.process(exchange);
+
+        // Then - the _externalId_ token is filled with the C8Y-resolved external id, of the returned type
+        assertEquals("devices/" + RESOLVED_EXTERNAL_ID + "/data", processingContext.getResolvedPublishTopic(),
+                "externalSource type from the returned object should drive external-id resolution and fill _externalId_");
+
+        // And the resolution used the type from the returned object, not the mapping's externalIdType
+        verify(c8yAgent).resolveGlobalId2ExternalId(eq(TEST_TENANT), any(GId.class), eq(RETURN_TYPE), anyBoolean());
+
+        log.info("✅ End-to-end outbound externalSource: topic resolved to {}",
+                processingContext.getResolvedPublishTopic());
     }
 
     @Test

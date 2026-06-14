@@ -336,6 +336,78 @@ class SmartFunctionOutboundTest {
     }
 
     // =========================================================================
+    // externalSource in the returned object (PDF "Metadata Properties for
+    // Outbound Smart Functions"): selects the external-id type used to resolve
+    // the device identity for `_externalId_` token replacement in the broker
+    // topic. Earlier tests only fed externalId in via config; this asserts the
+    // function-returned externalSource structure itself.
+    // =========================================================================
+
+    @Test
+    void testOutbound_ExternalSource_InReturnObject_SelectsExternalIdType() throws Exception {
+        String code = """
+                function onMessage(msg, context) {
+                  var payload = msg.getPayload();
+                  return [{
+                    topic: "devices/_externalId_/data",
+                    payload: { value: payload[payload.type].T.value },
+                    externalSource: [{ type: "c8y_Serial" }]
+                  }];
+                }
+                """;
+        Value onMessage = evalTemplate(code);
+
+        Map<String, Object> c8yPayload = measurementPayload("c8y_TemperatureMeasurement", "T", 23.5, "12345");
+        InputMessage msg = new InputMessage(c8yPayload, "measurements/12345", null, "12345", "measurement");
+        Value result = onMessage.execute(graalContext.asValue(msg), graalContext.asValue(smartFunctionContext));
+
+        assertNotNull(result, "Result must not be null");
+        assertTrue(result.hasArrayElements(), "Result should be an array");
+        Value first = result.getArrayElement(0);
+
+        assertEquals("devices/_externalId_/data", first.getMember("topic").asString(),
+                "topic should carry the _externalId_ token to be replaced via externalSource");
+
+        assertTrue(first.hasMember("externalSource"), "Returned object should carry externalSource");
+        Value externalSource = first.getMember("externalSource");
+        assertTrue(externalSource.hasArrayElements(), "externalSource should be an array");
+        assertEquals(1, externalSource.getArraySize(), "externalSource should have one entry");
+        assertEquals("c8y_Serial", externalSource.getArrayElement(0).getMember("type").asString(),
+                "externalSource[0].type selects the external-id type for topic token replacement");
+
+        log.info("✅ outbound externalSource: returned object selects external-id type 'c8y_Serial'");
+    }
+
+    /**
+     * {@code sourceId} in the returned object overrides the triggering device
+     * (cross-device routing) and, per the docs, the {@code externalSource}
+     * lookup is then skipped. This asserts the function-returned sourceId value.
+     */
+    @Test
+    void testOutbound_SourceId_InReturnObject_OverridesDevice() throws Exception {
+        String code = """
+                function onMessage(msg, context) {
+                  return [{
+                    topic: "devices/child/data",
+                    payload: { forwarded: true },
+                    sourceId: "98765"
+                  }];
+                }
+                """;
+        Value onMessage = evalTemplate(code);
+
+        Map<String, Object> c8yPayload = measurementPayload("c8y_TemperatureMeasurement", "T", 23.5, "12345");
+        InputMessage msg = new InputMessage(c8yPayload, "measurements/12345", null, "12345", "measurement");
+        Value result = onMessage.execute(graalContext.asValue(msg), graalContext.asValue(smartFunctionContext));
+
+        Value first = result.getArrayElement(0);
+        assertEquals("98765", first.getMember("sourceId").asString(),
+                "sourceId override should be present in the returned object (cross-device routing)");
+
+        log.info("✅ outbound sourceId: returned object overrides device with internal id 98765");
+    }
+
+    // =========================================================================
     // Helpers
     // =========================================================================
 

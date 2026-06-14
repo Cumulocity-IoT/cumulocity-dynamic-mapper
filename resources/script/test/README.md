@@ -366,6 +366,7 @@ array) and drives the interactive menu. The categories below mirror it:
 | `test-inbound-multi-device` | Array payload → multiple devices |
 | `test-inbound-alarm` | JSON / DEFAULT → ALARM |
 | `test-inbound-operation` | JSON / DEFAULT → OPERATION |
+| `test-inbound-inventory` | JSON / DEFAULT → INVENTORY — updates **device metadata** (type + custom fragment) on an existing managed object (`updateExistingDevice: true`) |
 
 ### Inbound (Smart Function patterns)
 | Test | Purpose |
@@ -388,9 +389,11 @@ array) and drives the interactive menu. The categories below mirror it:
 | `test-outbound-event` | C8Y Event → MQTT broker |
 | `test-outbound-alarm` | C8Y Alarm → MQTT broker |
 | `test-outbound-operation` | C8Y Operation → MQTT broker |
+| `test-outbound-inventory` | C8Y managed-object change (**device metadata**) → MQTT broker |
 | `test-outbound-filter` | `filterMapping` — selective forwarding |
 | `test-outbound-topic-resolution` | Dynamic publish topic resolution |
 | `test-outbound-json-smartfunction` | Smart Function: Measurement → MQTT JSON |
+| `test-outbound-smartfunction-externalsource` | Smart Function `externalSource` resolves the `_externalId_` topic token — verified by a real broker round-trip (`mosquitto_sub -v`) |
 | `test-outbound-static-subscription` | Static subscription management |
 | `test-outbound-type-subscription` | Dynamic type subscription |
 | `test-outbound-group-subscription` | Dynamic group subscription |
