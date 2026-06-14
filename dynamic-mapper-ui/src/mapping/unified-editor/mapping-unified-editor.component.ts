@@ -298,6 +298,8 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     this.mapping = editData.mapping;
     this.stepperConfiguration = editData.stepperConfiguration;
     this.deploymentMapEntry = editData.deploymentMapEntry;
+    // Initialize the Save-button gate: a mapping requires at least one selected connector
+    this.isButtonDisabled$.next(this.isConnectorSelectionEmpty());
 
     // For EXTENSION_JAVA the transformation is configured in the templates tab
     this.activeTabIndex = this.mapping.mappingType === MappingType.PROTOBUF_INTERNAL || this.mapping.transformationType === TransformationType.EXTENSION_JAVA
@@ -725,6 +727,13 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
   }
 
   async onCommitButton(): Promise<void> {
+    // A mapping must be bound to at least one connector
+    if (this.isConnectorSelectionEmpty()) {
+      this.raiseAlert({ type: 'warning', text: gettext('Select at least one connector before saving.') });
+      this.activeTabIndex = TAB_CONNECTOR; // navigate to Connector tab
+      return;
+    }
+
     if (this.stepperViewModel.showExtensionSelectors) {
       const extensionName = this.templateForm.get('extensionName');
       const eventName = this.templateForm.get('eventName');
@@ -875,11 +884,16 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
 
 
   deploymentMapEntryChange(deploymentMapEntry: DeploymentMapEntry): void {
-    const isDisabled = !this.deploymentMapEntry?.connectors || this.deploymentMapEntry?.connectors?.length === 0;
+    this.deploymentMapEntry = deploymentMapEntry;
     queueMicrotask(() => {
-      this.isButtonDisabled$.next(isDisabled);
+      this.isButtonDisabled$.next(this.isConnectorSelectionEmpty());
       this.cdr.markForCheck();
     });
+  }
+
+  /** A mapping must be bound to at least one connector before it can be saved. */
+  private isConnectorSelectionEmpty(): boolean {
+    return !this.deploymentMapEntry?.connectors || this.deploymentMapEntry.connectors.length === 0;
   }
 
   onValueCodeChange(value: string): void {

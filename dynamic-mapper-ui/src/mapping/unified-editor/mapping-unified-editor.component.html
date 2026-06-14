@@ -141,8 +141,8 @@
       Cancel
     </button>
     <button type="button" class="btn btn-primary" (click)="onCommitButton()"
-      [disabled]="(!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole) || stepperConfiguration.editorMode === EditorMode.READ_ONLY || mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE"
-      [title]="mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE ? ('Saving is disabled: SUBSTITUTION_AS_CODE mappings are deprecated and can no longer be modified.' | translate) : ''"
+      [disabled]="(!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole) || stepperConfiguration.editorMode === EditorMode.READ_ONLY || mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE || (isButtonDisabled$ | async)"
+      [title]="mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE ? ('Saving is disabled: SUBSTITUTION_AS_CODE mappings are deprecated and can no longer be modified.' | translate) : ((isButtonDisabled$ | async) ? ('Select at least one connector before saving.' | translate) : '')"
       translate data-cy="dm-unified-editor-save">
       Save
     </button>
