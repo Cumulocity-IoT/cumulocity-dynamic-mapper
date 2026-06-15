@@ -39,6 +39,9 @@ public class ExplorerMessage {
     @Schema(description = "Unique identifier of the connector that received the message", example = "mqtt-broker-01")
     private String connectorIdentifier;
 
+    @Schema(description = "Client identifier of the broker client that sent the message", example = "device-1234")
+    private String clientId;
+
     @Schema(description = "Display name of the connector", example = "MQTT Broker")
     private String connectorName;
 

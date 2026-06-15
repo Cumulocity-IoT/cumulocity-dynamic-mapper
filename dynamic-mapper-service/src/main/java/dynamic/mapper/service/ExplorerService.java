@@ -473,6 +473,7 @@ public class ExplorerService {
                     .topic(message.getTopic())
                     .connectorIdentifier(session.getConnectorIdentifier())
                     .connectorName(session.getConnectorName())
+                    .clientId(message.getClientId())
                     .direction(session.getDirection())
                     .receivedAt(System.currentTimeMillis())
                     .payload(payload)

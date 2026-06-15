@@ -138,11 +138,10 @@
         <div class="c8y-list__item__body">
           <div class="d-flex">
             <div class="col-md-1" style="max-width: 40px"><label>#</label></div>
-            <div class="col-md-1"><label translate>Direction</label></div>
-            <div class="col-md-2"><label translate>Received at</label></div>
-            <div class="col-md-1"><label translate>Connector</label></div>
+            <div class="col-md-1"><label translate>Received at</label></div>
+            <div class="col-md-1"><label translate>Client ID</label></div>
             <div class="col-md-3"><label translate>Topic</label></div>
-            <div class="col-md-4" style="padding-right: 16px"><label translate>Payload</label></div>
+            <div class="col-md-5" style="padding-right: 16px"><label translate>Payload</label></div>
             <div class="col-md-1"></div>
           </div>
         </div>
@@ -156,27 +155,24 @@
             <div class="d-flex a-i-start">
               <!-- Index -->
               <div class="col-md-1 text-muted text-12" style="max-width: 40px">{{ msg.seqNo }}</div>
-              <!-- Direction badge -->
-              <div class="col-md-1">
-                <span class="label" [class.label-success]="msg.direction === 'INBOUND'" [class.label-info]="msg.direction === 'OUTBOUND'">
-                  <i [c8yIcon]="msg.direction === 'OUTBOUND' ? 'arrow-up' : 'arrow-down'"></i>
-                  {{ msg.direction }}
-                </span>
-              </div>
               <!-- Timestamp -->
-              <div class="col-md-2 text-muted text-12">
+              <div class="col-md-1 text-muted text-12">
                 {{ msg.receivedAt | c8yDate: 'MMM d, y, h:mm:ss a' }}
               </div>
-              <!-- Connector name -->
-              <div class="col-md-1">
-                <span class="label label-default">{{ msg.connectorName }}</span>
+              <!-- Client ID -->
+              <div class="col-md-1 text-12" style="word-break: break-all">
+                @if (msg.clientId) {
+                  <code>{{ msg.clientId }}</code>
+                } @else {
+                  <span class="text-muted">&mdash;</span>
+                }
               </div>
               <!-- Topic -->
               <div class="col-md-3" style="word-break: break-all">
                 <code>{{ msg.topic }}</code>
               </div>
               <!-- Payload (truncated) -->
-              <div class="col-md-4" style="padding-right: 16px; overflow: hidden;">
+              <div class="col-md-5" style="padding-right: 16px; overflow: hidden;">
                 @if (expandedSeqNo !== msg.seqNo) {
                   <span class="text-monospace text-12 cursor-pointer" (click)="toggleExpand(msg.seqNo, msg.payload)"
                     title="{{ 'Click to expand' | translate }}" [attr.data-cy]="'dm-msg-explorer-expand-' + msg.seqNo">

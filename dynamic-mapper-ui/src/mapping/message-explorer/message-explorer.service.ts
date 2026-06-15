@@ -26,6 +26,7 @@ export interface ExplorerMessage {
   topic: string;
   connectorIdentifier: string;
   connectorName: string;
+  clientId?: string;    // broker client identifier that sent the message
   receivedAt: number;   // epoch millis
   payload: string;
   binary: boolean;
