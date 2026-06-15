@@ -370,12 +370,16 @@ public class MappingVersionService {
             return null;
         }
         return subscriptionsService.callForTenant(tenant, () -> {
-            List<MappingVersion> existing = loadVersions(tenant, parentId);
-            if (!existing.isEmpty()) {
-                return existing.stream()
-                        .filter(v -> v.getVersionNumber() == runnable.getVersionNumber() && !v.isDraft())
+            // Only published versions count: a line may already have a draft while still
+            // never having captured its active config as a version.
+            List<MappingVersion> published = loadVersions(tenant, parentId).stream()
+                    .filter(v -> !v.isDraft())
+                    .toList();
+            if (!published.isEmpty()) {
+                return published.stream()
+                        .filter(v -> v.getVersionNumber() == runnable.getVersionNumber())
                         .findFirst()
-                        .orElse(existing.get(0));
+                        .orElse(published.get(0));
             }
 
             int versionNumber = runnable.getVersionNumber() > 0 ? runnable.getVersionNumber() : 1;

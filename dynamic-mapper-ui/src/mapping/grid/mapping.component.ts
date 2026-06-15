@@ -81,6 +81,7 @@ import { MappingService } from '../core/mapping.service';
 import { MappingBulkOperationsService } from '../core/mapping-bulk-operations.service';
 import { SubscriptionService } from '../core/subscription.service';
 import { ImportMappingsComponent } from '../import/import-modal.component';
+import { MappingVersionModalComponent } from '../versions/mapping-version-modal.component';
 import { MappingTypeDrawerComponent } from '../mapping-create/mapping-type-drawer.component';
 import { MappingDeploymentRendererComponent } from '../renderer/mapping-deployment.renderer.component';
 import { MappingIdCellRendererComponent } from '../renderer/mapping-id.renderer.component';
@@ -258,15 +259,17 @@ export class MappingComponent implements OnInit, OnDestroy {
   private setupActionControls() {
     this.actionControls.push(
       {
+        // Active mappings are editable too: edits are saved to a draft (D-8), not applied
+        // to the running configuration until published and activated.
         type: BuiltInActionType.Edit,
         callback: this.updateMapping.bind(this),
-        showIf: item => !item['mapping']['active'] && this.canManageMappings && !this.isDeprecatedMapping(item),
+        showIf: item => this.canManageMappings && !this.isDeprecatedMapping(item),
       },
       {
         type: 'VIEW',
         icon: 'eye',
         callback: this.updateMapping.bind(this),
-        showIf: item => (item['mapping']['active'] || !this.canManageMappings) && !this.isDeprecatedMapping(item)
+        showIf: item => !this.canManageMappings && !this.isDeprecatedMapping(item)
       },
       {
         type: 'VIEW_DEPRECATED',
@@ -281,6 +284,13 @@ export class MappingComponent implements OnInit, OnDestroy {
         icon: 'duplicate',
         callback: this.copyMapping.bind(this),
         showIf: item => this.canManageMappings && !this.isDeprecatedMapping(item)
+      },
+      {
+        text: 'Versions',
+        type: 'VERSIONS',
+        icon: 'list',
+        callback: this.openVersions.bind(this),
+        showIf: item => !this.isDeprecatedMapping(item)
       },
       {
         type: BuiltInActionType.Delete,
@@ -656,7 +666,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       mapping.mappingType,
       mapping.transformationType,
       this.stepperConfiguration.direction,
-      mapping.active ? EditorMode.READ_ONLY : EditorMode.UPDATE,
+      this.canManageMappings ? EditorMode.UPDATE : EditorMode.READ_ONLY,
       isSubstitutionsAsCode(mapping)
     );
 
@@ -676,6 +686,20 @@ export class MappingComponent implements OnInit, OnDestroy {
       connectors: deploymentMapEntry.connectors
     };
     this.router.navigate(['edit', mapping.identifier], { relativeTo: this.route });
+  }
+
+  openVersions(m: MappingEnriched) {
+    const modalRef = this.bsModalService.show(MappingVersionModalComponent, {
+      initialState: { mapping: m.mapping, canManage: this.canManageMappings }
+    });
+    modalRef.content.closeSubject
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((changed: boolean) => {
+        if (changed) {
+          this.mappingService.refreshMappings(this.stepperConfiguration.direction);
+        }
+        modalRef.hide();
+      });
   }
 
   async copyMapping(m: MappingEnriched) {
@@ -775,14 +799,17 @@ export class MappingComponent implements OnInit, OnDestroy {
     mapping.lastUpdate = Date.now();
     let mappingSaved = false;
     if (this.stepperConfiguration.editorMode == EditorMode.UPDATE) {
-      // console.log('Update existing mapping:', mapping);
+      // Edits are saved to the line's draft (D-8); the running configuration is unchanged
+      // until the draft is published as a version and that version is activated.
       try {
-        await this.mappingService.updateMapping(mapping);
+        await this.mappingService.saveDraft(mapping.id, mapping);
         mappingSaved = true;
-        this.alertService.success(gettext(`Mapping ${mapping.name} updated successfully`));
+        this.alertService.success(
+          gettext(`Saved draft for ${mapping.name}. Publish and activate it (Versions) to apply the changes.`)
+        );
       } catch (error) {
         this.alertService.danger(
-          gettext(`Failed to update mapping ${mapping.name}: `) + error.message
+          gettext(`Failed to save draft for ${mapping.name}: `) + error.message
         );
       }
     } else if (

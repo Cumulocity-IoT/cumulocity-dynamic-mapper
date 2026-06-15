@@ -365,6 +365,21 @@ class MappingVersionServiceTest {
     }
 
     @Test
+    void backfillIgnoresExistingDraftAndStillCapturesActiveConfig() {
+        // A draft exists but no published version yet — backfill must still capture v1.
+        service.saveDraft(TENANT, PARENT, mapping(IDENTIFIER));
+        Mapping runnable = mapping(IDENTIFIER);
+        runnable.setVersionNumber(1);
+
+        MappingVersion v = service.ensureBackfilled(TENANT, runnable);
+
+        assertNotNull(v);
+        assertEquals(1, v.getVersionNumber());
+        assertFalse(v.isDraft());
+        assertEquals(2, versionCount(), "draft plus the backfilled published v1");
+    }
+
+    @Test
     void backfillIsIdempotent() {
         Mapping runnable = mapping("legacy");
         runnable.setVersionNumber(1);

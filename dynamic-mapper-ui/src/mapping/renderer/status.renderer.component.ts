@@ -24,11 +24,15 @@ import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
 @Component({
   selector: 'd11r-mapping-renderer-status',
   template: `
-      @if (context.value.debug) {
-        <div class="d-flex flex-col">
-        <span class="text-12 label label-success" [attr.data-cy]="'dm-mapping-status-debug-' + context.item.id">debug</span>
+      <div class="d-flex flex-col">
+        @if (context.value.debug) {
+          <span class="text-12 label label-success" [attr.data-cy]="'dm-mapping-status-debug-' + context.item.id">debug</span>
+        }
+        @if (context.value.draftDirty) {
+          <span class="text-12 label label-info" [attr.data-cy]="'dm-mapping-status-draft-' + context.item.id"
+            title="This mapping has unpublished draft changes">draft</span>
+        }
       </div>
-      }
     `,
   standalone: true,
   imports: [CoreModule]

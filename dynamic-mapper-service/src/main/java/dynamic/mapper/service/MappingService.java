@@ -555,15 +555,29 @@ public class MappingService {
      * managed-object id; the draft is keyed by the line's functional identifier.
      */
     public Mapping saveDraftMapping(String tenant, String id, Mapping edits) {
-        Mapping runnable = getMapping(tenant, id);
-        if (runnable == null) {
-            throw new IllegalArgumentException("Mapping not found: " + id);
+        java.util.concurrent.locks.ReentrantLock lock = activationLockFor(tenant, id);
+        lock.lock();
+        try {
+            Mapping runnable = getMapping(tenant, id);
+            if (runnable == null) {
+                throw new IllegalArgumentException("Mapping not found: " + id);
+            }
+            edits.setId(id);
+            edits.setIdentifier(runnable.getIdentifier());
+            dynamic.mapper.model.MappingVersion draft = mappingVersionService.saveDraft(tenant, id, edits);
+
+            // Mark the line as having unpublished changes so the grid can flag it. Persisting
+            // under the per-line lock keeps this consistent with the version-activation swap.
+            if (!runnable.isDraftDirty()) {
+                runnable.setDraftDirty(true);
+                updateMapping(tenant, runnable, true, true);
+                updateCacheAfterChange(tenant, runnable);
+            }
+            log.info("{} - Saved draft for mapping {} [{}]", tenant, runnable.getIdentifier(), id);
+            return draft.getSnapshot();
+        } finally {
+            lock.unlock();
         }
-        edits.setId(id);
-        edits.setIdentifier(runnable.getIdentifier());
-        dynamic.mapper.model.MappingVersion draft = mappingVersionService.saveDraft(tenant, id, edits);
-        log.info("{} - Saved draft for mapping {} [{}]", tenant, runnable.getIdentifier(), id);
-        return draft.getSnapshot();
     }
 
     // ========== Version Management ==========
@@ -575,31 +589,43 @@ public class MappingService {
      * draft is cleared. Does not activate the new version.
      */
     public dynamic.mapper.model.MappingVersion publishDraft(String tenant, String id, String label) {
-        Mapping runnable = getMapping(tenant, id);
-        if (runnable == null) {
-            throw new IllegalArgumentException("Mapping not found: " + id);
+        java.util.concurrent.locks.ReentrantLock lock = activationLockFor(tenant, id);
+        lock.lock();
+        try {
+            Mapping runnable = getMapping(tenant, id);
+            if (runnable == null) {
+                throw new IllegalArgumentException("Mapping not found: " + id);
+            }
+            String identifier = runnable.getIdentifier();
+
+            // Preserve the currently active config in history before publishing a new version.
+            mappingVersionService.ensureBackfilled(tenant, runnable);
+
+            dynamic.mapper.model.MappingVersion draft = mappingVersionService.getDraft(tenant, id);
+            if (draft == null || draft.getSnapshot() == null) {
+                throw new IllegalStateException(
+                        String.format("Tenant %s - No draft to publish for mapping %s [%s]", tenant, identifier, id));
+            }
+
+            String effectiveLabel = label != null ? label : draft.getSnapshot().getVersionLabel();
+            dynamic.mapper.model.MappingVersion version = mappingVersionService.publish(tenant, draft.getSnapshot(),
+                    effectiveLabel, runnable.getVersionNumber());
+
+            // The draft's content now lives in an immutable version; clear the working copy
+            // and the line's draft flag.
+            mappingVersionService.deleteDraft(tenant, id);
+            if (runnable.isDraftDirty()) {
+                runnable.setDraftDirty(false);
+                updateMapping(tenant, runnable, true, true);
+                updateCacheAfterChange(tenant, runnable);
+            }
+
+            log.info("{} - Published draft of mapping {} [{}] as version {}", tenant, identifier, id,
+                    version.getVersionNumber());
+            return version;
+        } finally {
+            lock.unlock();
         }
-        String identifier = runnable.getIdentifier();
-
-        // Preserve the currently active config in history before publishing a new version.
-        mappingVersionService.ensureBackfilled(tenant, runnable);
-
-        dynamic.mapper.model.MappingVersion draft = mappingVersionService.getDraft(tenant, id);
-        if (draft == null || draft.getSnapshot() == null) {
-            throw new IllegalStateException(
-                    String.format("Tenant %s - No draft to publish for mapping %s [%s]", tenant, identifier, id));
-        }
-
-        String effectiveLabel = label != null ? label : draft.getSnapshot().getVersionLabel();
-        dynamic.mapper.model.MappingVersion version = mappingVersionService.publish(tenant, draft.getSnapshot(),
-                effectiveLabel, runnable.getVersionNumber());
-
-        // The draft's content now lives in an immutable version; clear the working copy.
-        mappingVersionService.deleteDraft(tenant, id);
-
-        log.info("{} - Published draft of mapping {} [{}] as version {}", tenant, identifier, id,
-                version.getVersionNumber());
-        return version;
     }
 
     /** Lists all published versions of a mapping line, identified by its managed-object id. */
