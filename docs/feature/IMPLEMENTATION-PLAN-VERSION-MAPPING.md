@@ -195,19 +195,22 @@ Plus model-level unit tests for legacy-object deserialization defaults.
 - **Deployment binding (FR-20):** confirm `DeploymentMapService` stays keyed by
   `identifier` so switching versions does not change connector bindings.
 
-## 8. Version query scaling — RESOLVED (childAdditions)
-Version records are stored as **child additions of the runnable mapping MO**, so
-`MappingVersionService.loadVersions(parentId)` reads only that line's children —
-bounded O(N), no tenant-wide scan.
+## 8. Version query scaling — REVERTED to query-based read
+The childAdditions storage was tried and **reverted**: against the real platform
+the child-addition *read* (`getManagedObjectApi(parentId).getChildAdditions()`)
+returned nothing even though writes succeeded — so the drawer showed no versions.
+Runtime testing caught what the mocked tests could not.
 
-- **Implemented:** `InventoryFacade.createChildAddition` / `getChildAdditions`;
-  `MappingVersionService` re-keyed from `identifier` to the parent MO `id` (always
-  in hand because every version route is id-keyed); `MappingVersionRepository.findAll`
-  takes the parent's child MO list; `deleteAllVersions` cascades on mapping-line
-  delete so version children don't orphan (FR-18, wired into `MappingService.deleteMapping`).
-- **Cost accepted:** reading children returns id-only references, so each child is
-  fetched for its fragments (bounded N+1 round trips per load — fine for
-  retention-capped N, and far cheaper than the old O(M·N) full-payload scan).
-- **Interim win retained:** `publish` threads its already-loaded list into prune
-  (one child lookup, not two).
+- **Current (working) design:** version records are standalone
+  `d11r_mapping_version` managed objects, each carrying the owning line's
+  functional `identifier`. `MappingVersionService` is keyed by `identifier`;
+  `loadVersions` queries by type (`getManagedObjectsByFilter`) and filters by
+  identifier in memory. Plain, reliable inventory query.
+- `deleteAllVersions(identifier)` deletes a line's records on mapping delete (FR-18);
+  `publish` threads its loaded list into prune (one query, not two).
+- **Known cost (deferred):** this is the tenant-wide O(M·N) scan flagged earlier —
+  correct but not optimal for very large tenants. A proper bounded read (e.g. an
+  inventory **query by fragment value** `d11r_mapping_version.identifier eq …`,
+  validated against the platform) is the future optimization. childAdditions is
+  NOT the answer (its read path is unreliable here).
 ```

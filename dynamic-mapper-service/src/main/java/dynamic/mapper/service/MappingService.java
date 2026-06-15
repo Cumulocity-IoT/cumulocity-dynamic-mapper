@@ -266,9 +266,8 @@ public class MappingService {
 
                 Mapping m = found.get();
                 mappingRepository.prepareForDelete(tenant, id, m);
-                // Remove the line's version child additions first so they do not leak
-                // as orphans once the parent runnable MO is gone (FR-18).
-                mappingVersionService.deleteAllVersions(tenant, id);
+                // Remove the line's version records too so they do not leak (FR-18).
+                mappingVersionService.deleteAllVersions(tenant, m.getIdentifier());
                 inventoryApi.delete(GId.asGId(id), false);
 
                 log.info("{} - Mapping deleted from Inventory: {}", tenant, id);
@@ -435,7 +434,7 @@ public class MappingService {
      */
     private Mapping applyVersion(String tenant, Mapping runnable, int versionNumber) {
         dynamic.mapper.model.MappingVersion version = mappingVersionService.getVersion(tenant,
-                runnable.getId(), versionNumber);
+                runnable.getIdentifier(), versionNumber);
         if (version == null || version.getSnapshot() == null) {
             throw new IllegalArgumentException(String.format(
                     "Tenant %s - No version %d found for mapping %s [%s]", tenant, versionNumber,
@@ -545,7 +544,7 @@ public class MappingService {
         if (runnable == null) {
             throw new IllegalArgumentException("Mapping not found: " + id);
         }
-        dynamic.mapper.model.MappingVersion draft = mappingVersionService.getDraft(tenant, id);
+        dynamic.mapper.model.MappingVersion draft = mappingVersionService.getDraft(tenant, runnable.getIdentifier());
         return draft != null ? draft.getSnapshot() : null;
     }
 
@@ -564,7 +563,8 @@ public class MappingService {
             }
             edits.setId(id);
             edits.setIdentifier(runnable.getIdentifier());
-            dynamic.mapper.model.MappingVersion draft = mappingVersionService.saveDraft(tenant, id, edits);
+            dynamic.mapper.model.MappingVersion draft = mappingVersionService.saveDraft(tenant,
+                    runnable.getIdentifier(), edits);
 
             // Mark the line as having unpublished changes so the grid can flag it. Persisting
             // under the per-line lock keeps this consistent with the version-activation swap.
@@ -601,7 +601,7 @@ public class MappingService {
             // Preserve the currently active config in history before publishing a new version.
             mappingVersionService.ensureBackfilled(tenant, runnable);
 
-            dynamic.mapper.model.MappingVersion draft = mappingVersionService.getDraft(tenant, id);
+            dynamic.mapper.model.MappingVersion draft = mappingVersionService.getDraft(tenant, identifier);
             if (draft == null || draft.getSnapshot() == null) {
                 throw new IllegalStateException(
                         String.format("Tenant %s - No draft to publish for mapping %s [%s]", tenant, identifier, id));
@@ -613,7 +613,7 @@ public class MappingService {
 
             // The draft's content now lives in an immutable version; clear the working copy
             // and the line's draft flag.
-            mappingVersionService.deleteDraft(tenant, id);
+            mappingVersionService.deleteDraft(tenant, identifier);
             if (runnable.isDraftDirty()) {
                 runnable.setDraftDirty(false);
                 updateMapping(tenant, runnable, true, true);
@@ -634,7 +634,7 @@ public class MappingService {
         if (runnable == null) {
             throw new IllegalArgumentException("Mapping not found: " + id);
         }
-        return mappingVersionService.listVersions(tenant, id);
+        return mappingVersionService.listVersions(tenant, runnable.getIdentifier());
     }
 
     /** Returns a single published version of a mapping line, or {@code null} if not found. */
@@ -643,7 +643,7 @@ public class MappingService {
         if (runnable == null) {
             throw new IllegalArgumentException("Mapping not found: " + id);
         }
-        return mappingVersionService.getVersion(tenant, id, versionNumber);
+        return mappingVersionService.getVersion(tenant, runnable.getIdentifier(), versionNumber);
     }
 
     /** Updates the change-note label of a published version (label is the only mutable field). */
@@ -653,7 +653,7 @@ public class MappingService {
         if (runnable == null) {
             throw new IllegalArgumentException("Mapping not found: " + id);
         }
-        return mappingVersionService.updateLabel(tenant, id, versionNumber, label);
+        return mappingVersionService.updateLabel(tenant, runnable.getIdentifier(), versionNumber, label);
     }
 
     /** Deletes an inactive published version; the active version cannot be deleted (FR-17). */
@@ -662,7 +662,8 @@ public class MappingService {
         if (runnable == null) {
             throw new IllegalArgumentException("Mapping not found: " + id);
         }
-        mappingVersionService.deleteVersion(tenant, id, versionNumber, runnable.getVersionNumber());
+        mappingVersionService.deleteVersion(tenant, runnable.getIdentifier(), versionNumber,
+                runnable.getVersionNumber());
     }
 
     // ========== Cache Management ==========

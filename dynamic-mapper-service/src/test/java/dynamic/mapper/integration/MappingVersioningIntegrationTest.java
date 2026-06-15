@@ -26,6 +26,7 @@ import com.cumulocity.microservice.context.credentials.UserCredentials;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
+import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
@@ -115,8 +116,7 @@ class MappingVersioningIntegrationTest {
 
     /** In-memory runnable mapping store (stands in for the d11r_mapping MO). */
     private final Map<String, Mapping> runnableStore = new HashMap<>();
-    /** Child-addition store: parent id -> version MO ids, plus a global id -> version index. */
-    private final Map<String, List<String>> childIds = new HashMap<>();
+    /** Flat store of version records (id -> version). */
     private final Map<String, MappingVersion> versionsById = new HashMap<>();
     private final AtomicInteger idSeq = new AtomicInteger(1000);
     private MappingVersion pendingVersion;
@@ -164,7 +164,7 @@ class MappingVersioningIntegrationTest {
             return m;
         }).when(mappingService).updateMapping(eq(TENANT), any(Mapping.class), anyBoolean(), anyBoolean());
 
-        // ----- version child-addition store (MappingVersionService inventory boundary) -----
+        // ----- version inventory boundary (query-based: type query + filter by identifier) -----
         lenient().when(versionRepository.toManagedObject(any())).thenAnswer(inv -> {
             MappingVersionRepresentation rep = inv.getArgument(0);
             ManagedObjectRepresentation mor = new ManagedObjectRepresentation();
@@ -174,33 +174,18 @@ class MappingVersioningIntegrationTest {
             pendingVersion = rep.getMappingVersion();
             return mor;
         });
-        lenient().when(inventoryApi.createChildAddition(any(), any(), any())).thenAnswer(inv -> {
-            GId parentId = inv.getArgument(0);
-            ManagedObjectRepresentation mor = inv.getArgument(1);
+        lenient().when(inventoryApi.create(any(), any())).thenAnswer(inv -> {
+            ManagedObjectRepresentation mor = inv.getArgument(0);
             String id = "ver-" + idSeq.incrementAndGet();
             mor.setId(GId.asGId(id));
             pendingVersion.setId(id);
             versionsById.put(id, pendingVersion);
-            childIds.computeIfAbsent(parentId.getValue(), k -> new ArrayList<>()).add(id);
             return mor;
         });
-        lenient().when(inventoryApi.getChildAdditions(any(), any())).thenAnswer(inv -> {
-            GId parentId = inv.getArgument(0);
-            List<ManagedObjectRepresentation> result = new ArrayList<>();
-            for (String id : childIds.getOrDefault(parentId.getValue(), List.of())) {
-                ManagedObjectRepresentation mo = new ManagedObjectRepresentation();
-                mo.setId(GId.asGId(id));
-                result.add(mo);
-            }
-            return result;
-        });
-        lenient().when(versionRepository.findAll(eq(TENANT), any())).thenAnswer(inv -> {
-            List<ManagedObjectRepresentation> mos = inv.getArgument(1);
-            List<MappingVersion> versions = new ArrayList<>();
-            for (ManagedObjectRepresentation mo : mos) {
-                MappingVersion v = versionsById.get(mo.getId().getValue());
-                if (v != null) versions.add(v);
-            }
+        lenient().when(inventoryApi.getManagedObjectsByFilter(any(), any()))
+                .thenReturn(mock(ManagedObjectCollection.class));
+        lenient().when(versionRepository.findAll(eq(TENANT), any(ManagedObjectCollection.class))).thenAnswer(inv -> {
+            List<MappingVersion> versions = new ArrayList<>(versionsById.values());
             versions.sort(Comparator.comparingInt(MappingVersion::getVersionNumber));
             return versions;
         });
@@ -210,9 +195,7 @@ class MappingVersioningIntegrationTest {
             return mor;
         });
         lenient().doAnswer(inv -> {
-            String id = inv.getArgument(0, GId.class).getValue();
-            versionsById.remove(id);
-            childIds.values().forEach(l -> l.remove(id));
+            versionsById.remove(inv.getArgument(0, GId.class).getValue());
             return null;
         }).when(inventoryApi).delete(any(), any());
     }

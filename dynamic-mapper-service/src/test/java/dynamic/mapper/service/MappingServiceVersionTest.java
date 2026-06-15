@@ -113,7 +113,7 @@ class MappingServiceVersionTest {
                 .snapshot(d.getSnapshot()).build();
 
         doReturn(runnable).when(service).getMapping(TENANT, MO_ID);
-        when(mappingVersionService.getDraft(TENANT, MO_ID)).thenReturn(d);
+        when(mappingVersionService.getDraft(TENANT, IDENTIFIER)).thenReturn(d);
         when(mappingVersionService.publish(eq(TENANT), eq(d.getSnapshot()), eq("explicit"), eq(1)))
                 .thenReturn(published);
 
@@ -123,7 +123,7 @@ class MappingServiceVersionTest {
         var inOrder = inOrder(mappingVersionService);
         inOrder.verify(mappingVersionService).ensureBackfilled(TENANT, runnable);
         inOrder.verify(mappingVersionService).publish(TENANT, d.getSnapshot(), "explicit", 1);
-        inOrder.verify(mappingVersionService).deleteDraft(TENANT, MO_ID);
+        inOrder.verify(mappingVersionService).deleteDraft(TENANT, IDENTIFIER);
         assertSame(published, result);
     }
 
@@ -132,7 +132,7 @@ class MappingServiceVersionTest {
         Mapping runnable = runnable();
         MappingVersion d = draft("x");
         doReturn(runnable).when(service).getMapping(TENANT, MO_ID);
-        when(mappingVersionService.getDraft(TENANT, MO_ID)).thenReturn(d);
+        when(mappingVersionService.getDraft(TENANT, IDENTIFIER)).thenReturn(d);
         when(mappingVersionService.publish(any(), any(), any(), anyInt()))
                 .thenReturn(MappingVersion.builder().versionNumber(2).build());
 
@@ -145,7 +145,7 @@ class MappingServiceVersionTest {
     @Test
     void publishDraftWithoutDraftThrowsAndDoesNotPublish() {
         doReturn(runnable()).when(service).getMapping(TENANT, MO_ID);
-        when(mappingVersionService.getDraft(TENANT, MO_ID)).thenReturn(null);
+        when(mappingVersionService.getDraft(TENANT, IDENTIFIER)).thenReturn(null);
 
         assertThrows(IllegalStateException.class, () -> service.publishDraft(TENANT, MO_ID, "x"));
 
@@ -159,7 +159,7 @@ class MappingServiceVersionTest {
 
         service.deleteVersion(TENANT, MO_ID, 3);
 
-        verify(mappingVersionService).deleteVersion(TENANT, MO_ID, 3, 1);
+        verify(mappingVersionService).deleteVersion(TENANT, IDENTIFIER, 3, 1);
     }
 
     @Test
@@ -170,9 +170,9 @@ class MappingServiceVersionTest {
         service.getVersion(TENANT, MO_ID, 2);
         service.updateVersionLabel(TENANT, MO_ID, 2, "note");
 
-        verify(mappingVersionService).listVersions(TENANT, MO_ID);
-        verify(mappingVersionService).getVersion(TENANT, MO_ID, 2);
-        verify(mappingVersionService).updateLabel(TENANT, MO_ID, 2, "note");
+        verify(mappingVersionService).listVersions(TENANT, IDENTIFIER);
+        verify(mappingVersionService).getVersion(TENANT, IDENTIFIER, 2);
+        verify(mappingVersionService).updateLabel(TENANT, IDENTIFIER, 2, "note");
     }
 
     @Test

@@ -26,6 +26,7 @@ import com.cumulocity.microservice.context.credentials.UserCredentials;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
+import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
@@ -61,17 +62,16 @@ import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for {@link MappingVersionService}. Version records are stored as
- * child additions of the runnable mapping MO, so the in-memory fake here is keyed
- * by parent id: {@code createChildAddition} files a version under its parent and
- * {@code getChildAddition}s returns that parent's versions only.
+ * standalone {@code d11r_mapping_version} managed objects keyed by the owning
+ * line's identifier; the in-memory fake here holds them in a flat store, with
+ * {@code getManagedObjectsByFilter} + {@code findAll} returning all of them and
+ * the service filtering by identifier.
  */
 @ExtendWith(MockitoExtension.class)
 class MappingVersionServiceTest {
 
     private static final String TENANT = "t1";
     private static final String IDENTIFIER = "abc";
-    /** mapping(IDENTIFIER) is created with this MO id; it is the parent for the line's versions. */
-    private static final String PARENT = "runnable-abc";
 
     @Mock private InventoryFacade inventoryApi;
     @Mock private MappingVersionRepository versionRepository;
@@ -83,8 +83,7 @@ class MappingVersionServiceTest {
 
     private MappingVersionService service;
 
-    /** parent id -> child version MO ids, plus a global id -> version index. */
-    private final Map<String, List<String>> childIds = new HashMap<>();
+    /** Flat store of all version records (id -> version), across the tenant. */
     private final Map<String, MappingVersion> byId = new HashMap<>();
     private final AtomicInteger idSeq = new AtomicInteger(1000);
     private final ServiceConfiguration config = new ServiceConfiguration();
@@ -113,7 +112,7 @@ class MappingVersionServiceTest {
         lenient().when(creds.getUsername()).thenReturn("tester");
         lenient().when(contextService.getContext()).thenReturn(creds);
 
-        // ----- Fake child-addition inventory -----
+        // ----- Fake query-based version inventory -----
         lenient().when(versionRepository.toManagedObject(any())).thenAnswer(inv -> {
             MappingVersionRepresentation rep = inv.getArgument(0);
             ManagedObjectRepresentation mor = new ManagedObjectRepresentation();
@@ -124,38 +123,23 @@ class MappingVersionServiceTest {
             return mor;
         });
 
-        lenient().when(inventoryApi.createChildAddition(any(), any(), any())).thenAnswer(inv -> {
-            GId parentId = inv.getArgument(0);
-            ManagedObjectRepresentation mor = inv.getArgument(1);
+        lenient().when(inventoryApi.create(any(), any())).thenAnswer(inv -> {
+            ManagedObjectRepresentation mor = inv.getArgument(0);
             String id = "mo-" + idSeq.incrementAndGet();
             mor.setId(GId.asGId(id));
             pendingVersion.setId(id);
             byId.put(id, pendingVersion);
-            childIds.computeIfAbsent(parentId.getValue(), k -> new ArrayList<>()).add(id);
             return mor;
         });
 
-        lenient().when(inventoryApi.getChildAdditions(any(), any())).thenAnswer(inv -> {
-            GId parentId = inv.getArgument(0);
-            List<ManagedObjectRepresentation> result = new ArrayList<>();
-            for (String id : childIds.getOrDefault(parentId.getValue(), List.of())) {
-                ManagedObjectRepresentation mo = new ManagedObjectRepresentation();
-                mo.setId(GId.asGId(id));
-                result.add(mo);
-            }
-            return result;
-        });
+        // The collection content is irrelevant since findAll is stubbed to return the store.
+        lenient().when(inventoryApi.getManagedObjectsByFilter(any(), any()))
+                .thenReturn(mock(ManagedObjectCollection.class));
 
-        // The real repository converts MOs back to versions; here we resolve via the index.
-        lenient().when(versionRepository.findAll(eq(TENANT), any())).thenAnswer(inv -> {
-            List<ManagedObjectRepresentation> mos = inv.getArgument(1);
-            List<MappingVersion> versions = new ArrayList<>();
-            for (ManagedObjectRepresentation mo : mos) {
-                MappingVersion v = byId.get(mo.getId().getValue());
-                if (v != null) {
-                    versions.add(v);
-                }
-            }
+        // findAll returns ALL version records (the service then filters by identifier),
+        // sorted ascending by version number like the real repository.
+        lenient().when(versionRepository.findAll(eq(TENANT), any(ManagedObjectCollection.class))).thenAnswer(inv -> {
+            List<MappingVersion> versions = new ArrayList<>(byId.values());
             versions.sort(Comparator.comparingInt(MappingVersion::getVersionNumber));
             return versions;
         });
@@ -168,9 +152,7 @@ class MappingVersionServiceTest {
 
         lenient().doAnswer(inv -> {
             GId gid = inv.getArgument(0);
-            String id = gid.getValue();
-            byId.remove(id);
-            childIds.values().forEach(list -> list.remove(id));
+            byId.remove(gid.getValue());
             return null;
         }).when(inventoryApi).delete(any(), any());
     }
@@ -206,7 +188,7 @@ class MappingVersionServiceTest {
         assertEquals(2, v2.getVersionNumber());
         assertEquals(3, v3.getVersionNumber());
         assertEquals("tester", v1.getCreatedBy());
-        assertEquals(3, service.listVersions(TENANT, PARENT).size());
+        assertEquals(3, service.listVersions(TENANT, IDENTIFIER).size());
         assertEquals(2, v2.getSnapshot().getVersionNumber());
         assertEquals("second", v2.getSnapshot().getVersionLabel());
     }
@@ -237,7 +219,7 @@ class MappingVersionServiceTest {
             service.publish(TENANT, mapping(IDENTIFIER), "v" + i, 0);
         }
 
-        List<MappingVersion> remaining = service.listVersions(TENANT, PARENT);
+        List<MappingVersion> remaining = service.listVersions(TENANT, IDENTIFIER);
         assertEquals(3, remaining.size(), "only the newest 3 versions are kept");
         List<Integer> numbers = remaining.stream().map(MappingVersion::getVersionNumber).sorted().toList();
         assertEquals(List.of(3, 4, 5), numbers);
@@ -251,7 +233,7 @@ class MappingVersionServiceTest {
             service.publish(TENANT, mapping(IDENTIFIER), "v" + i, 1);
         }
 
-        List<Integer> numbers = service.listVersions(TENANT, PARENT).stream()
+        List<Integer> numbers = service.listVersions(TENANT, IDENTIFIER).stream()
                 .map(MappingVersion::getVersionNumber).sorted().toList();
         assertTrue(numbers.contains(1), "active version 1 must not be pruned");
         assertEquals(List.of(1, 3, 4, 5), numbers);
@@ -260,7 +242,7 @@ class MappingVersionServiceTest {
     @Test
     void deleteVersionRejectsActive() {
         service.publish(TENANT, mapping(IDENTIFIER), "v1", 0); // version 1
-        assertThrows(IllegalStateException.class, () -> service.deleteVersion(TENANT, PARENT, 1, 1));
+        assertThrows(IllegalStateException.class, () -> service.deleteVersion(TENANT, IDENTIFIER, 1, 1));
         assertEquals(1, versionCount());
     }
 
@@ -269,9 +251,9 @@ class MappingVersionServiceTest {
         service.publish(TENANT, mapping(IDENTIFIER), "v1", 0);
         service.publish(TENANT, mapping(IDENTIFIER), "v2", 0);
 
-        service.deleteVersion(TENANT, PARENT, 1, 2);
+        service.deleteVersion(TENANT, IDENTIFIER, 1, 2);
 
-        List<Integer> numbers = service.listVersions(TENANT, PARENT).stream()
+        List<Integer> numbers = service.listVersions(TENANT, IDENTIFIER).stream()
                 .map(MappingVersion::getVersionNumber).sorted().toList();
         assertEquals(List.of(2), numbers);
     }
@@ -279,9 +261,9 @@ class MappingVersionServiceTest {
     @Test
     void updateLabelChangesOnlyTheLabel() {
         service.publish(TENANT, mapping(IDENTIFIER), "original", 0);
-        service.updateLabel(TENANT, PARENT, 1, "renamed");
+        service.updateLabel(TENANT, IDENTIFIER, 1, "renamed");
 
-        MappingVersion v = service.getVersion(TENANT, PARENT, 1);
+        MappingVersion v = service.getVersion(TENANT, IDENTIFIER, 1);
         assertEquals("renamed", v.getLabel());
         assertEquals("renamed", v.getSnapshot().getVersionLabel());
     }
@@ -290,9 +272,9 @@ class MappingVersionServiceTest {
     void saveDraftCreatesThenUpsertsSingleDraft() {
         Mapping edit1 = mapping(IDENTIFIER);
         edit1.setName("draft v1");
-        service.saveDraft(TENANT, PARENT, edit1);
+        service.saveDraft(TENANT, IDENTIFIER, edit1);
 
-        MappingVersion d1 = service.getDraft(TENANT, PARENT);
+        MappingVersion d1 = service.getDraft(TENANT, IDENTIFIER);
         assertNotNull(d1);
         assertTrue(d1.isDraft());
         assertEquals("draft v1", d1.getSnapshot().getName());
@@ -301,39 +283,39 @@ class MappingVersionServiceTest {
         Mapping edit2 = mapping(IDENTIFIER);
         edit2.setName("draft v2");
         edit2.setLastUpdate(d1.getSnapshot().getLastUpdate());
-        service.saveDraft(TENANT, PARENT, edit2);
+        service.saveDraft(TENANT, IDENTIFIER, edit2);
 
-        MappingVersion d2 = service.getDraft(TENANT, PARENT);
+        MappingVersion d2 = service.getDraft(TENANT, IDENTIFIER);
         assertEquals("draft v2", d2.getSnapshot().getName());
         assertEquals(1, versionCount(), "second save upserts the same draft, not a new record");
     }
 
     @Test
     void getDraftIsNullWhenNoneExists() {
-        assertNull(service.getDraft(TENANT, PARENT));
+        assertNull(service.getDraft(TENANT, IDENTIFIER));
     }
 
     @Test
     void saveDraftRejectsStaleOptimisticBase() {
-        service.saveDraft(TENANT, PARENT, mapping(IDENTIFIER)); // create (lastUpdate 0 -> accepted)
-        long stored = service.getDraft(TENANT, PARENT).getSnapshot().getLastUpdate();
+        service.saveDraft(TENANT, IDENTIFIER, mapping(IDENTIFIER)); // create (lastUpdate 0 -> accepted)
+        long stored = service.getDraft(TENANT, IDENTIFIER).getSnapshot().getLastUpdate();
 
         Mapping stale = mapping(IDENTIFIER);
         stale.setLastUpdate(stored - 1000);
-        assertThrows(IllegalStateException.class, () -> service.saveDraft(TENANT, PARENT, stale));
+        assertThrows(IllegalStateException.class, () -> service.saveDraft(TENANT, IDENTIFIER, stale));
 
         Mapping fresh = mapping(IDENTIFIER);
         fresh.setLastUpdate(stored);
-        assertDoesNotThrow(() -> service.saveDraft(TENANT, PARENT, fresh));
+        assertDoesNotThrow(() -> service.saveDraft(TENANT, IDENTIFIER, fresh));
     }
 
     @Test
     void draftIsExcludedFromPublishedListing() {
         service.publish(TENANT, mapping(IDENTIFIER), "v1", 0); // version 1
-        service.saveDraft(TENANT, PARENT, mapping(IDENTIFIER)); // a separate draft
+        service.saveDraft(TENANT, IDENTIFIER, mapping(IDENTIFIER)); // a separate draft
 
-        assertEquals(1, service.listVersions(TENANT, PARENT).size(), "listVersions excludes the draft");
-        assertNotNull(service.getDraft(TENANT, PARENT), "draft is still retrievable");
+        assertEquals(1, service.listVersions(TENANT, IDENTIFIER).size(), "listVersions excludes the draft");
+        assertNotNull(service.getDraft(TENANT, IDENTIFIER), "draft is still retrievable");
         assertEquals(2, versionCount(), "one published version + one draft");
     }
 
@@ -341,14 +323,14 @@ class MappingVersionServiceTest {
     void deleteAllVersionsRemovesPublishedAndDraft() {
         service.publish(TENANT, mapping(IDENTIFIER), "v1", 0);
         service.publish(TENANT, mapping(IDENTIFIER), "v2", 0);
-        service.saveDraft(TENANT, PARENT, mapping(IDENTIFIER));
+        service.saveDraft(TENANT, IDENTIFIER, mapping(IDENTIFIER));
         assertEquals(3, versionCount());
 
-        service.deleteAllVersions(TENANT, PARENT);
+        service.deleteAllVersions(TENANT, IDENTIFIER);
 
         assertEquals(0, versionCount());
-        assertTrue(service.listVersions(TENANT, PARENT).isEmpty());
-        assertNull(service.getDraft(TENANT, PARENT));
+        assertTrue(service.listVersions(TENANT, IDENTIFIER).isEmpty());
+        assertNull(service.getDraft(TENANT, IDENTIFIER));
     }
 
     @Test
@@ -367,7 +349,7 @@ class MappingVersionServiceTest {
     @Test
     void backfillIgnoresExistingDraftAndStillCapturesActiveConfig() {
         // A draft exists but no published version yet — backfill must still capture v1.
-        service.saveDraft(TENANT, PARENT, mapping(IDENTIFIER));
+        service.saveDraft(TENANT, IDENTIFIER, mapping(IDENTIFIER));
         Mapping runnable = mapping(IDENTIFIER);
         runnable.setVersionNumber(1);
 

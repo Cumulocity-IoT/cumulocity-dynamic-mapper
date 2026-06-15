@@ -1,0 +1,54 @@
+<!--
+~ Copyright (c) 2025 Cumulocity GmbH
+~
+~ SPDX-License-Identifier: Apache-2.0
+~
+~  Licensed under the Apache License, Version 2.0 (the "License");
+~  you may not use this file except in compliance with the License.
+~  You may obtain a copy of the License at
+~
+~       http://www.apache.org/licenses/LICENSE-2.0
+~
+~  Unless required by applicable law or agreed to in writing, software
+~  distributed under the License is distributed on an "AS IS" BASIS,
+~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+~  See the License for the specific language governing permissions and
+~  limitations under the License.
+-->
+<div class="d-col flex-nowrap no-align-items p-48 flex-grow col-md-12 col-md-offset-0 c8y-stepper--no-btns">
+  <div class="card card--fullpage d-col flex-grow">
+    <!-- Header -->
+    <div class="card-header separator j-c-center">
+      <h4 class="card-title d-flex">
+        <i [c8yIcon]="'list'" class="icon-32 m-r-16"></i>
+        <span class="m-t-8">{{ 'Versions of' | translate }} {{ mapping.name }}</span>
+      </h4>
+    </div>
+
+    <!-- Body -->
+    <div class="card-inner-scroll flex-grow">
+      <div class="card-block">
+        @if (loading) {
+          <c8y-loading></c8y-loading>
+        } @else {
+          <c8y-data-grid [title]="'Versions' | translate" [columns]="columns" [rows]="rows$ | async"
+            [pagination]="pagination" [actionControls]="actionControls" [selectable]="false"
+            [configureColumnsEnabled]="false">
+            <c8y-ui-empty-state [icon]="'c8y-icon dlt-c8y-icon-layers'"
+              [title]="'No versions yet.' | translate"
+              [subtitle]="'Edit the mapping to create a draft, then publish it to create the first version.' | translate"
+              [horizontal]="true">
+            </c8y-ui-empty-state>
+          </c8y-data-grid>
+        }
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="card-footer separator p-24 text-center flex-no-shrink">
+      <button type="button" class="btn btn-default" data-cy="dm-version-close" (click)="close()">
+        {{ 'Close' | translate }}
+      </button>
+    </div>
+  </div>
+</div>

@@ -81,7 +81,7 @@ import { MappingService } from '../core/mapping.service';
 import { MappingBulkOperationsService } from '../core/mapping-bulk-operations.service';
 import { SubscriptionService } from '../core/subscription.service';
 import { ImportMappingsComponent } from '../import/import-modal.component';
-import { MappingVersionModalComponent } from '../versions/mapping-version-modal.component';
+import { MappingVersionDrawerComponent } from '../versions/mapping-version-drawer.component';
 import { MappingTypeDrawerComponent } from '../mapping-create/mapping-type-drawer.component';
 import { MappingDeploymentRendererComponent } from '../renderer/mapping-deployment.renderer.component';
 import { MappingIdCellRendererComponent } from '../renderer/mapping-id.renderer.component';
@@ -689,16 +689,15 @@ export class MappingComponent implements OnInit, OnDestroy {
   }
 
   openVersions(m: MappingEnriched) {
-    const modalRef = this.bsModalService.show(MappingVersionModalComponent, {
+    const drawer = this.bottomDrawerService.openDrawer(MappingVersionDrawerComponent, {
       initialState: { mapping: m.mapping, canManage: this.canManageMappings }
     });
-    modalRef.content.closeSubject
+    drawer.instance.closeSubject
       .pipe(takeUntil(this.destroy$))
       .subscribe((changed: boolean) => {
         if (changed) {
           this.mappingService.refreshMappings(this.stepperConfiguration.direction);
         }
-        modalRef.hide();
       });
   }
 
@@ -795,8 +794,8 @@ export class MappingComponent implements OnInit, OnDestroy {
   }
 
   async onCommitMapping(mapping: Mapping) {
-    // test if new/updated mapping was committed or if cancel
-    mapping.lastUpdate = Date.now();
+    // Do NOT stamp lastUpdate here: for a draft save it is the optimistic-concurrency
+    // token that must be echoed back unchanged (the server assigns a fresh one on save).
     let mappingSaved = false;
     if (this.stepperConfiguration.editorMode == EditorMode.UPDATE) {
       // Edits are saved to the line's draft (D-8); the running configuration is unchanged

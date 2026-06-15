@@ -147,7 +147,7 @@ class MappingServiceActivationTest {
     @Test
     void activateSpecificVersionCopiesSnapshotIntoRunnable() throws Exception {
         doReturn(runnable()).when(service).getMapping(TENANT, MO_ID);
-        when(mappingVersionService.getVersion(TENANT, MO_ID, 2)).thenReturn(version(2, "V2 content", "{\"v\":2}"));
+        when(mappingVersionService.getVersion(TENANT, IDENTIFIER, 2)).thenReturn(version(2, "V2 content", "{\"v\":2}"));
 
         Mapping result = service.setActivationMapping(TENANT, MO_ID, true, 2);
 
@@ -172,7 +172,7 @@ class MappingServiceActivationTest {
     @Test
     void validationFailureLeavesRunningVersionUntouched() throws Exception {
         doReturn(runnable()).when(service).getMapping(TENANT, MO_ID);
-        when(mappingVersionService.getVersion(TENANT, MO_ID, 2)).thenReturn(version(2, "V2", "{\"v\":2}"));
+        when(mappingVersionService.getVersion(TENANT, IDENTIFIER, 2)).thenReturn(version(2, "V2", "{\"v\":2}"));
         // Persistence rejects the activation (e.g. validation) -> must propagate, cache untouched.
         doThrow(new MappingValidationException(java.util.List.of(
                 dynamic.mapper.model.ValidationError.Source_Template_Must_Be_Valid_JSON)))
@@ -231,8 +231,8 @@ class MappingServiceActivationTest {
     @Test
     void concurrentActivationsDoNotInterleaveOrFail() throws Exception {
         doAnswer(inv -> runnable()).when(service).getMapping(TENANT, MO_ID);
-        when(mappingVersionService.getVersion(TENANT, MO_ID, 2)).thenReturn(version(2, "V2", "{\"v\":2}"));
-        when(mappingVersionService.getVersion(TENANT, MO_ID, 3)).thenReturn(version(3, "V3", "{\"v\":3}"));
+        when(mappingVersionService.getVersion(TENANT, IDENTIFIER, 2)).thenReturn(version(2, "V2", "{\"v\":2}"));
+        when(mappingVersionService.getVersion(TENANT, IDENTIFIER, 3)).thenReturn(version(3, "V3", "{\"v\":3}"));
 
         CountDownLatch start = new CountDownLatch(1);
         Runnable activate2 = guarded(start, () -> service.setActivationMapping(TENANT, MO_ID, true, 2));

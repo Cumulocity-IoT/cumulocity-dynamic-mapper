@@ -17,30 +17,31 @@
  *
  * @authors Christof Strack
  */
-
 import { Component } from '@angular/core';
 import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
 
+/**
+ * Renders the state of a version row as a colored label. Expects
+ * {@code context.value} to be one of 'active' | 'published' | 'draft'.
+ */
 @Component({
-  selector: 'd11r-mapping-renderer-status',
+  selector: 'd11r-version-state-cell',
   template: `
-      <div class="d-flex flex-col">
-        @if (context.value.versionNumber) {
-          <span class="text-12 label label-default" [attr.data-cy]="'dm-mapping-status-version-' + context.item.id"
-            title="Active version">v{{ context.value.versionNumber }}</span>
-        }
-        @if (context.value.debug) {
-          <span class="text-12 label label-success" [attr.data-cy]="'dm-mapping-status-debug-' + context.item.id">debug</span>
-        }
-        @if (context.value.draftDirty) {
-          <span class="text-12 label label-info" [attr.data-cy]="'dm-mapping-status-draft-' + context.item.id"
-            title="This mapping has unpublished draft changes">draft</span>
-        }
-      </div>
-    `,
+    @switch (context.value) {
+      @case ('active') {
+        <span class="label label-primary" [attr.data-cy]="'dm-version-state-active'">{{ 'active' | translate }}</span>
+      }
+      @case ('draft') {
+        <span class="label label-info" [attr.data-cy]="'dm-version-state-draft'">{{ 'draft' | translate }}</span>
+      }
+      @default {
+        <span class="label label-default" [attr.data-cy]="'dm-version-state-published'">{{ 'published' | translate }}</span>
+      }
+    }
+  `,
   standalone: true,
   imports: [CoreModule]
 })
-export class StatusRendererComponent {
+export class VersionStateCellRendererComponent {
   constructor(public readonly context: CellRendererContext) { }
 }

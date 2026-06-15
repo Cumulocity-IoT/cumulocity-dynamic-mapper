@@ -22,6 +22,7 @@
 package dynamic.mapper.service;
 
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
+import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
 
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.MappingVersion;
@@ -33,6 +34,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 /**
  * Repository responsible for converting between {@link MappingVersion} domain
@@ -93,13 +95,14 @@ public class MappingVersionRepository {
     }
 
     /**
-     * Converts a list of managed objects (typically the child additions of one
-     * mapping line) into {@link MappingVersion}s, sorted ascending by version
-     * number. Drafts are included; callers filter by {@link MappingVersion#isDraft()}
-     * as needed. Managed objects that are not mapping versions are skipped.
+     * Converts and drains a collection of {@code d11r_mapping_version} managed
+     * objects into {@link MappingVersion}s, sorted ascending by version number.
+     * Drafts are included; callers filter by {@link MappingVersion#isDraft()} and
+     * by the owning line's identifier as needed. Managed objects that are not
+     * mapping versions are skipped.
      */
-    public List<MappingVersion> findAll(String tenant, List<ManagedObjectRepresentation> mos) {
-        return mos.stream()
+    public List<MappingVersion> findAll(String tenant, ManagedObjectCollection moc) {
+        return StreamSupport.stream(moc.get().allPages().spliterator(), false)
                 .map(mo -> findOne(tenant, mo))
                 .filter(Optional::isPresent)
                 .map(Optional::get)

@@ -765,12 +765,22 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
       return;
     }
 
-    this.mapping.lastUpdate = Date.now();
+    // Do NOT stamp lastUpdate here: for a draft save it is the optimistic-concurrency
+    // token that must be echoed back unchanged (the server assigns a fresh one on save).
     try {
-      await this.mappingService.updateMapping(this.mapping);
-      this.alertService.success(gettext(`Mapping ${this.mapping.name} updated successfully`));
+      if (this.stepperConfiguration.editorMode === EditorMode.UPDATE) {
+        // Edits are saved to the line's draft (D-8); the running configuration is unchanged
+        // until the draft is published as a version and that version is activated.
+        await this.mappingService.saveDraft(this.mapping.id, this.mapping);
+        this.alertService.success(
+          gettext(`Saved draft for ${this.mapping.name}. Publish and activate it (Versions) to apply the changes.`)
+        );
+      } else {
+        await this.mappingService.createMapping(this.mapping);
+        this.alertService.success(gettext(`Mapping ${this.mapping.name} created successfully`));
+      }
     } catch (error) {
-      this.alertService.danger(gettext(`Failed to update mapping ${this.mapping.name}: `) + error.message);
+      this.alertService.danger(gettext(`Failed to save mapping ${this.mapping.name}: `) + error.message);
       return;
     }
 

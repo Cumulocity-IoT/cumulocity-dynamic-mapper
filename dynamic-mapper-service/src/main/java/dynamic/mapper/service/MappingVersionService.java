@@ -26,6 +26,8 @@ import com.cumulocity.microservice.context.credentials.UserCredentials;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
+import com.cumulocity.sdk.client.inventory.InventoryFilter;
+import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.core.ConfigurationRegistry;
@@ -50,12 +52,14 @@ import java.util.stream.Collectors;
  * label edits, deletion, retention pruning, and lazy backfill of legacy
  * mappings.
  *
- * <p>Version records are stored as <b>child additions of the runnable mapping
- * managed object</b>, so all version operations are scoped by the parent
- * managed-object id ({@code parentId}) and bounded by that line's version count
- * (no tenant-wide scan). The active version number is supplied by the caller
- * (which owns the runnable {@code d11r_mapping} record), keeping this service
- * decoupled from {@link MappingService} and independently testable.
+ * <p>Version records are persisted as standalone managed objects of type
+ * {@code d11r_mapping_version}, each carrying the owning line's functional
+ * {@code identifier}. Lookups query by type and filter by that identifier — a
+ * plain, reliable inventory query (the earlier child-addition storage was
+ * dropped because the child-addition read path was not reliable against the
+ * platform). The active version number is supplied by the caller (which owns the
+ * runnable {@code d11r_mapping} record), keeping this service decoupled from
+ * {@link MappingService} and independently testable.
  *
  * <p>See {@code docs/feature/REQUIREMENTS-VERSION-MAPPING.md}.
  */
@@ -79,22 +83,20 @@ public class MappingVersionService {
 
     /**
      * Publishes the given mapping configuration as a new immutable version of its
-     * line. Assigns the next version number, validates the snapshot, persists it as
-     * a child addition of the runnable mapping, and applies retention pruning. The
-     * newly published version is not activated by this call.
+     * line. Assigns the next version number, validates the snapshot, persists it,
+     * and applies retention pruning. The newly published version is not activated
+     * by this call.
      *
-     * @param mapping             the configuration to freeze (typically the draft);
-     *                            its {@code id} is the parent/runnable managed-object id
+     * @param mapping             the configuration to freeze (typically the draft)
      * @param label               optional change note
      * @param activeVersionNumber the version number currently active for this line
      *                            (protected from pruning); use 0 if none
      */
     public MappingVersion publish(String tenant, Mapping mapping, String label, int activeVersionNumber) {
-        String parentId = mapping.getId();
         String identifier = mapping.getIdentifier();
-        if (parentId == null || identifier == null) {
-            throw new IllegalArgumentException(String.format(
-                    "Tenant %s - Cannot publish a mapping without an id and identifier", tenant));
+        if (identifier == null) {
+            throw new IllegalArgumentException(
+                    String.format("Tenant %s - Cannot publish a mapping without an identifier", tenant));
         }
 
         // Validate the snapshot - publish is the commitment point (a draft may be incomplete).
@@ -104,7 +106,7 @@ public class MappingVersionService {
         }
 
         return subscriptionsService.callForTenant(tenant, () -> {
-            List<MappingVersion> existing = loadVersions(tenant, parentId);
+            List<MappingVersion> existing = loadVersions(tenant, identifier);
             int nextVersionNumber = nextVersionNumber(existing);
 
             Mapping snapshot = copyOf(mapping);
@@ -122,15 +124,15 @@ public class MappingVersionService {
                     .label(label)
                     .build();
 
-            MappingVersion persisted = persistNewVersion(parentId, version);
+            MappingVersion persisted = persistNewVersion(version);
             log.info("{} - Published version {} of mapping line {} [{}]", tenant, nextVersionNumber,
                     identifier, persisted.getId());
 
             // Prune using the list we already loaded plus the just-persisted version,
-            // avoiding a second child lookup on the hot publish path.
+            // avoiding a second query on the hot publish path.
             List<MappingVersion> current = new ArrayList<>(existing);
             current.add(persisted);
-            prune(tenant, parentId, activeVersionNumber, current);
+            prune(tenant, identifier, activeVersionNumber, current);
             return persisted;
         });
     }
@@ -140,12 +142,10 @@ public class MappingVersionService {
     /**
      * Returns the single draft (mutable working copy) of a mapping line, or
      * {@code null} if the line has no draft.
-     *
-     * @param parentId the runnable mapping's managed-object id
      */
-    public MappingVersion getDraft(String tenant, String parentId) {
+    public MappingVersion getDraft(String tenant, String identifier) {
         return subscriptionsService.callForTenant(tenant,
-                () -> loadVersions(tenant, parentId).stream()
+                () -> loadVersions(tenant, identifier).stream()
                         .filter(MappingVersion::isDraft)
                         .findFirst()
                         .orElse(null));
@@ -161,13 +161,10 @@ public class MappingVersionService {
      * {@code lastUpdate}; otherwise the save is rejected as a concurrent
      * modification. On success the draft is stamped with a fresh {@code lastUpdate}
      * that the next edit must echo back.
-     *
-     * @param parentId the runnable mapping's managed-object id
-     * @param edits    the edited configuration; its {@code identifier} names the line
      */
-    public MappingVersion saveDraft(String tenant, String parentId, Mapping edits) {
+    public MappingVersion saveDraft(String tenant, String identifier, Mapping edits) {
         return subscriptionsService.callForTenant(tenant, () -> {
-            MappingVersion existingDraft = loadVersions(tenant, parentId).stream()
+            MappingVersion existingDraft = loadVersions(tenant, identifier).stream()
                     .filter(MappingVersion::isDraft)
                     .findFirst()
                     .orElse(null);
@@ -176,17 +173,18 @@ public class MappingVersionService {
                     && edits.getLastUpdate() != 0
                     && edits.getLastUpdate() != existingDraft.getSnapshot().getLastUpdate()) {
                 throw new IllegalStateException(String.format(
-                        "Tenant %s - Draft of mapping %s was modified concurrently; reload before saving",
-                        tenant, parentId));
+                        "Tenant %s - Draft of mapping line %s was modified concurrently; reload before saving",
+                        tenant, identifier));
             }
 
             Mapping snapshot = copyOf(edits);
+            snapshot.setIdentifier(identifier);
             snapshot.setDraftDirty(true);
             snapshot.setLastUpdate(System.currentTimeMillis());
 
             MappingVersion draft = MappingVersion.builder()
                     .id(existingDraft != null ? existingDraft.getId() : null)
-                    .identifier(edits.getIdentifier())
+                    .identifier(identifier)
                     .versionNumber(0) // drafts are not numbered
                     .snapshot(snapshot)
                     .isDraft(true)
@@ -196,10 +194,10 @@ public class MappingVersionService {
 
             if (existingDraft != null) {
                 updateVersionMO(draft);
-                log.info("{} - Updated draft of mapping {}", tenant, parentId);
+                log.info("{} - Updated draft of mapping line {}", tenant, identifier);
             } else {
-                persistNewVersion(parentId, draft);
-                log.info("{} - Created draft of mapping {} [{}]", tenant, parentId, draft.getId());
+                persistNewVersion(draft);
+                log.info("{} - Created draft of mapping line {} [{}]", tenant, identifier, draft.getId());
             }
             return draft;
         });
@@ -209,16 +207,14 @@ public class MappingVersionService {
      * Removes the draft of a mapping line, if any. Called after a draft is
      * published (its content now lives in an immutable version) or when the draft
      * is discarded. No-op when there is no draft.
-     *
-     * @param parentId the runnable mapping's managed-object id
      */
-    public void deleteDraft(String tenant, String parentId) {
-        subscriptionsService.runForTenant(tenant, () -> loadVersions(tenant, parentId).stream()
+    public void deleteDraft(String tenant, String identifier) {
+        subscriptionsService.runForTenant(tenant, () -> loadVersions(tenant, identifier).stream()
                 .filter(MappingVersion::isDraft)
                 .findFirst()
                 .ifPresent(draft -> {
                     deleteVersionMO(draft);
-                    log.info("{} - Deleted draft of mapping {}", tenant, parentId);
+                    log.info("{} - Deleted draft of mapping line {}", tenant, identifier);
                 }));
     }
 
@@ -227,12 +223,10 @@ public class MappingVersionService {
     /**
      * Lists all published versions of a mapping line, sorted ascending by version
      * number. Drafts are excluded.
-     *
-     * @param parentId the runnable mapping's managed-object id
      */
-    public List<MappingVersion> listVersions(String tenant, String parentId) {
+    public List<MappingVersion> listVersions(String tenant, String identifier) {
         return subscriptionsService.callForTenant(tenant,
-                () -> loadVersions(tenant, parentId).stream()
+                () -> loadVersions(tenant, identifier).stream()
                         .filter(v -> !v.isDraft())
                         .collect(Collectors.toList()));
     }
@@ -240,12 +234,10 @@ public class MappingVersionService {
     /**
      * Retrieves a single published version of a mapping line, or {@code null} if
      * not found.
-     *
-     * @param parentId the runnable mapping's managed-object id
      */
-    public MappingVersion getVersion(String tenant, String parentId, int versionNumber) {
+    public MappingVersion getVersion(String tenant, String identifier, int versionNumber) {
         return subscriptionsService.callForTenant(tenant,
-                () -> findPublished(loadVersions(tenant, parentId), versionNumber).orElse(null));
+                () -> findPublished(loadVersions(tenant, identifier), versionNumber).orElse(null));
     }
 
     // ========== Label edit ==========
@@ -253,20 +245,18 @@ public class MappingVersionService {
     /**
      * Updates the change-note label of a published version. The label is the only
      * mutable field of a version (D-3); all other fields are immutable.
-     *
-     * @param parentId the runnable mapping's managed-object id
      */
-    public MappingVersion updateLabel(String tenant, String parentId, int versionNumber, String label) {
+    public MappingVersion updateLabel(String tenant, String identifier, int versionNumber, String label) {
         return subscriptionsService.callForTenant(tenant, () -> {
-            MappingVersion version = findPublished(loadVersions(tenant, parentId), versionNumber)
+            MappingVersion version = findPublished(loadVersions(tenant, identifier), versionNumber)
                     .orElseThrow(() -> new IllegalArgumentException(String.format(
-                            "Tenant %s - No version %d found for mapping %s", tenant, versionNumber, parentId)));
+                            "Tenant %s - No version %d found for mapping line %s", tenant, versionNumber, identifier)));
             version.setLabel(label);
             if (version.getSnapshot() != null) {
                 version.getSnapshot().setVersionLabel(label);
             }
             updateVersionMO(version);
-            log.info("{} - Updated label of version {} of mapping {}", tenant, versionNumber, parentId);
+            log.info("{} - Updated label of version {} of mapping line {}", tenant, versionNumber, identifier);
             return version;
         });
     }
@@ -276,37 +266,33 @@ public class MappingVersionService {
     /**
      * Deletes a published, inactive version. The active version cannot be deleted
      * (FR-17).
-     *
-     * @param parentId the runnable mapping's managed-object id
      */
-    public void deleteVersion(String tenant, String parentId, int versionNumber, int activeVersionNumber) {
+    public void deleteVersion(String tenant, String identifier, int versionNumber, int activeVersionNumber) {
         if (versionNumber == activeVersionNumber) {
             throw new IllegalStateException(String.format(
-                    "Tenant %s - Version %d of mapping %s is active, cannot be deleted", tenant, versionNumber,
-                    parentId));
+                    "Tenant %s - Version %d of mapping line %s is active, cannot be deleted", tenant, versionNumber,
+                    identifier));
         }
         subscriptionsService.runForTenant(tenant, () -> {
-            MappingVersion version = findPublished(loadVersions(tenant, parentId), versionNumber)
+            MappingVersion version = findPublished(loadVersions(tenant, identifier), versionNumber)
                     .orElseThrow(() -> new IllegalArgumentException(String.format(
-                            "Tenant %s - No version %d found for mapping %s", tenant, versionNumber, parentId)));
+                            "Tenant %s - No version %d found for mapping line %s", tenant, versionNumber, identifier)));
             deleteVersionMO(version);
-            log.info("{} - Deleted version {} of mapping {}", tenant, versionNumber, parentId);
+            log.info("{} - Deleted version {} of mapping line {}", tenant, versionNumber, identifier);
         });
     }
 
     /**
      * Deletes all version records (published and draft) of a mapping line. Used
-     * when the mapping line itself is deleted so its child versions do not leak
+     * when the mapping line itself is deleted so its version records do not leak
      * (FR-18).
-     *
-     * @param parentId the runnable mapping's managed-object id
      */
-    public void deleteAllVersions(String tenant, String parentId) {
+    public void deleteAllVersions(String tenant, String identifier) {
         subscriptionsService.runForTenant(tenant, () -> {
-            List<MappingVersion> all = loadVersions(tenant, parentId);
+            List<MappingVersion> all = loadVersions(tenant, identifier);
             all.forEach(this::deleteVersionMO);
             if (!all.isEmpty()) {
-                log.info("{} - Deleted {} version record(s) of mapping {}", tenant, all.size(), parentId);
+                log.info("{} - Deleted {} version record(s) of mapping line {}", tenant, all.size(), identifier);
             }
         });
     }
@@ -317,19 +303,17 @@ public class MappingVersionService {
      * Prunes a mapping line down to the configured retention limit, deleting the
      * oldest published versions first. The active version is never pruned, even if
      * it falls outside the retention window (FR-19).
-     *
-     * @param parentId the runnable mapping's managed-object id
      */
-    public void pruneVersions(String tenant, String parentId, int activeVersionNumber) {
+    public void pruneVersions(String tenant, String identifier, int activeVersionNumber) {
         subscriptionsService.runForTenant(tenant,
-                () -> prune(tenant, parentId, activeVersionNumber, loadVersions(tenant, parentId)));
+                () -> prune(tenant, identifier, activeVersionNumber, loadVersions(tenant, identifier)));
     }
 
     /**
-     * Prunes from an already-loaded list of versions, avoiding a redundant child
-     * lookup. Callers must already hold the tenant scope.
+     * Prunes from an already-loaded list of versions, avoiding a redundant query.
+     * Callers must already hold the tenant scope.
      */
-    private void prune(String tenant, String parentId, int activeVersionNumber, List<MappingVersion> loaded) {
+    private void prune(String tenant, String identifier, int activeVersionNumber, List<MappingVersion> loaded) {
         int retention = retention(tenant);
         List<MappingVersion> published = loaded.stream()
                 .filter(v -> !v.isDraft())
@@ -348,31 +332,30 @@ public class MappingVersionService {
                 continue; // never prune the active version
             }
             deleteVersionMO(v);
-            log.info("{} - Pruned version {} of mapping {} (retention {})", tenant, v.getVersionNumber(),
-                    parentId, retention);
+            log.info("{} - Pruned version {} of mapping line {} (retention {})", tenant, v.getVersionNumber(),
+                    identifier, retention);
         }
     }
 
     // ========== Backfill ==========
 
     /**
-     * Ensures the given runnable mapping has at least one version record, creating
-     * a v1 record from its current snapshot if none exist. Idempotent: a no-op when
-     * any version record already exists for the line (NFR-1a).
+     * Ensures the given runnable mapping has at least one published version,
+     * creating a v1 record from its current snapshot if none exist. Idempotent:
+     * a no-op when any published version already exists for the line (NFR-1a). A
+     * draft alone does not count as a published version.
      *
      * @return the existing-or-newly-created version record for the line's current
-     *         version, or {@code null} if the mapping has no id
+     *         version, or {@code null} if the mapping has no identifier
      */
     public MappingVersion ensureBackfilled(String tenant, Mapping runnable) {
-        String parentId = runnable.getId();
-        if (parentId == null || runnable.getIdentifier() == null) {
-            log.warn("{} - Cannot backfill a mapping without an id/identifier [{}]", tenant, runnable.getId());
+        String identifier = runnable.getIdentifier();
+        if (identifier == null) {
+            log.warn("{} - Cannot backfill a mapping without an identifier [{}]", tenant, runnable.getId());
             return null;
         }
         return subscriptionsService.callForTenant(tenant, () -> {
-            // Only published versions count: a line may already have a draft while still
-            // never having captured its active config as a version.
-            List<MappingVersion> published = loadVersions(tenant, parentId).stream()
+            List<MappingVersion> published = loadVersions(tenant, identifier).stream()
                     .filter(v -> !v.isDraft())
                     .toList();
             if (!published.isEmpty()) {
@@ -387,7 +370,7 @@ public class MappingVersionService {
             snapshot.setVersionNumber(versionNumber);
 
             MappingVersion version = MappingVersion.builder()
-                    .identifier(runnable.getIdentifier())
+                    .identifier(identifier)
                     .versionNumber(versionNumber)
                     .snapshot(snapshot)
                     .isDraft(false)
@@ -396,8 +379,8 @@ public class MappingVersionService {
                     .label(runnable.getVersionLabel())
                     .build();
 
-            MappingVersion persisted = persistNewVersion(parentId, version);
-            log.info("{} - Backfilled version {} for legacy mapping {} [{}]", tenant, versionNumber, parentId,
+            MappingVersion persisted = persistNewVersion(version);
+            log.info("{} - Backfilled version {} for legacy mapping line {} [{}]", tenant, versionNumber, identifier,
                     persisted.getId());
             return persisted;
         });
@@ -407,12 +390,15 @@ public class MappingVersionService {
 
     /**
      * Loads all version records (published and draft) for one mapping line by
-     * reading the child additions of its runnable managed object. Bounded by the
-     * line's version count (retention), with no tenant-wide scan.
+     * querying for {@code d11r_mapping_version} managed objects and filtering by
+     * the owning line's functional identifier.
      */
-    private List<MappingVersion> loadVersions(String tenant, String parentId) {
-        List<ManagedObjectRepresentation> children = inventoryApi.getChildAdditions(GId.asGId(parentId), false);
-        return versionRepository.findAll(tenant, children);
+    private List<MappingVersion> loadVersions(String tenant, String identifier) {
+        InventoryFilter filter = new InventoryFilter().byType(MappingVersionRepresentation.MAPPING_VERSION_TYPE);
+        ManagedObjectCollection moc = inventoryApi.getManagedObjectsByFilter(filter, false);
+        return versionRepository.findAll(tenant, moc).stream()
+                .filter(v -> identifier.equals(v.getIdentifier()))
+                .collect(Collectors.toList());
     }
 
     private static int nextVersionNumber(List<MappingVersion> existing) {
@@ -435,14 +421,14 @@ public class MappingVersionService {
                 : version.getIdentifier() + " v" + version.getVersionNumber();
     }
 
-    private MappingVersion persistNewVersion(String parentId, MappingVersion version) {
+    private MappingVersion persistNewVersion(MappingVersion version) {
         MappingVersionRepresentation rep = new MappingVersionRepresentation();
         rep.setType(MappingVersionRepresentation.MAPPING_VERSION_TYPE);
         rep.setName(versionName(version));
         rep.setMappingVersion(version);
 
         ManagedObjectRepresentation mor = versionRepository.toManagedObject(rep);
-        mor = inventoryApi.createChildAddition(GId.asGId(parentId), mor, false);
+        mor = inventoryApi.create(mor, false);
         version.setId(mor.getId().getValue());
         return version;
     }
