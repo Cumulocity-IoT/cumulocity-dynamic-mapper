@@ -162,8 +162,9 @@ a rebuild, as today.
 | **P2 — Version service + backfill** | `MappingVersionService` (publish, list, get, label, delete, prune, ensureBackfilled). Tests for retention + idempotent backfill. | Core logic, still no controller wiring. |
 | **P3 — Activation is version-aware** | Extend `setActivationMapping` + per-line atomic swap; `OperationController` optional `versionNumber`. Tests for C-1 incl. concurrent activation, FR-9 rollback-on-failure. | Makes the single-active invariant real. |
 | **P4 — Draft editing (staged/additive)** | `saveDraft`/`getDraft` (optimistic concurrency IMP-2) + new `GET`/`PUT /mapping/{id}/draft` endpoints. **`PUT /mapping/{id}` kept as bridge** (still updates runnable). `draftDirty` not yet persisted on the runnable — derived from draft existence; persistence wired with publish in P5. The hard `PUT`→draft-only flip is deferred to the P5/P6 cutover (user decision: staged, no edit-apply gap). | Depends on version service. |
-| **P5 — REST surface + edit-path cutover** | publish/list/get/patch-label/delete endpoints + authz; flip `PUT /mapping/{id}` to draft-only and have publish clear `draftDirty`; replace the tenant-wide version scan (§8). Controller tests. | Exposes everything; completes D-8. |
-| **P6 — UI (separate plan)** | versions view, publish, activate/rollback, draftDirty indicator (UR-1..5). | Out of this plan's scope. |
+| **P5 — REST surface (done)** | `POST /mapping/{id}/publish`, `GET /mapping/{id}/version`, `GET /mapping/{id}/version/{n}`, `PATCH .../{n}` (label), `DELETE .../{n}` + authz; publish backfills active config, freezes draft, clears the draft. All version routes keyed by the runnable MO `id` (so the line `identifier` + active version are always resolved server-side). Service-level tests. | Exposes the full draft→publish→activate API. |
+| **P6 — UI + edit-path cutover** | versions view, publish, activate/rollback, draftDirty indicator (UR-1..5); **flip `PUT /mapping/{id}` to draft-only as the coordinated cutover** (D-8) once the UI drives the new flow. | Completes D-8 alongside the UI. |
+| **§8 scaling fix** | Replace the tenant-wide version scan. Now low-cost via childAdditions because all version routes are id-keyed (parent MO id always in hand). Decide & implement before GA. | Independent of phases above. |
 
 ---
 
@@ -194,23 +195,19 @@ Plus model-level unit tests for legacy-object deserialization defaults.
 - **Deployment binding (FR-20):** confirm `DeploymentMapService` stays keyed by
   `identifier` so switching versions does not change connector bindings.
 
-## 8. Tracked decision: version query scaling (deferred to P5)
-`MappingVersionService.loadVersions(identifier)` currently queries **all**
-`d11r_mapping_version` MOs by type and filters by `identifier` in memory —
-O(M·N) objects (M lines × N retained) fetched to use N, each carrying a full
-mapping snapshot. Correct, but does not scale for large tenants.
+## 8. Version query scaling — RESOLVED (childAdditions)
+Version records are stored as **child additions of the runnable mapping MO**, so
+`MappingVersionService.loadVersions(parentId)` reads only that line's children —
+bounded O(N), no tenant-wide scan.
 
-- **Status:** acceptable for P2/P3 (not shipped, no runtime callers yet; changing
-  the storage layout before release carries no migration cost).
-- **Interim win (done in P2):** `publish` threads its already-loaded list into
-  prune, so it scans once instead of twice.
-- **Target fix (decide & implement at P5, before GA):** replace the tenant-wide
-  scan with one of:
-  - **childAdditions** of the runnable mapping MO — bounded O(N) per line, free
-    cascade-delete (FR-18); cost: needs identifier→parent-MO-id resolution since
-    the public API is keyed by `identifier`.
-  - **inventory fragment-value query** (`d11r_mapping_version.identifier eq …`) —
-    no parent-id resolution; cost: bespoke RestOperations call and fragment-query
-    performance must be validated/indexed.
-  Do not ship GA on the tenant-wide scan.
+- **Implemented:** `InventoryFacade.createChildAddition` / `getChildAdditions`;
+  `MappingVersionService` re-keyed from `identifier` to the parent MO `id` (always
+  in hand because every version route is id-keyed); `MappingVersionRepository.findAll`
+  takes the parent's child MO list; `deleteAllVersions` cascades on mapping-line
+  delete so version children don't orphan (FR-18, wired into `MappingService.deleteMapping`).
+- **Cost accepted:** reading children returns id-only references, so each child is
+  fetched for its fragments (bounded N+1 round trips per load — fine for
+  retention-capped N, and far cheaper than the old O(M·N) full-payload scan).
+- **Interim win retained:** `publish` threads its already-loaded list into prune
+  (one child lookup, not two).
 ```

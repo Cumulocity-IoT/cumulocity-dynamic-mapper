@@ -34,7 +34,11 @@ import com.cumulocity.sdk.client.Platform;
 import com.cumulocity.sdk.client.RestOperations;
 import com.cumulocity.sdk.client.inventory.InventoryApi;
 import com.cumulocity.sdk.client.inventory.InventoryFilter;
+import com.cumulocity.sdk.client.inventory.ManagedObject;
 import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import dynamic.mapper.core.mock.MockInventory;
 import lombok.extern.slf4j.Slf4j;
@@ -301,5 +305,47 @@ public class InventoryFacade {
         ref.setManagedObject(deviceMO);
         RestOperations rest = platform.rest();
         rest.post(url, CumulocityMediaType.APPLICATION_JSON_TYPE, ref);
+    }
+
+    /**
+     * Creates a managed object as a child addition of the given parent. The child
+     * is owned by the parent, so listing/cleanup can be scoped to the parent.
+     *
+     * @param parentId the parent managed-object id
+     * @param child    the child managed object to create
+     * @param testing  flag indicating test mode (routes to mock storage)
+     * @return the created child managed object (with its assigned id)
+     */
+    public ManagedObjectRepresentation createChildAddition(GId parentId, ManagedObjectRepresentation child,
+            Boolean testing) {
+        if (Boolean.FALSE.equals(testing)) {
+            log.debug("Creating child addition under {} via real C8Y API", parentId);
+            return inventoryApi.getManagedObjectApi(parentId).addChildAddition(child);
+        } else {
+            log.debug("Creating child addition under {} via mock", parentId);
+            return inventoryMock.create(child);
+        }
+    }
+
+    /**
+     * Returns the full managed objects that are child additions of the given
+     * parent. References carry only the child id, so each child is fetched to
+     * obtain its fragments. The result is bounded by the parent's child count.
+     *
+     * @param parentId the parent managed-object id
+     * @param testing  flag indicating test mode
+     * @return the child addition managed objects (empty if none / mock mode)
+     */
+    public List<ManagedObjectRepresentation> getChildAdditions(GId parentId, Boolean testing) {
+        List<ManagedObjectRepresentation> result = new ArrayList<>();
+        if (Boolean.FALSE.equals(testing)) {
+            ManagedObject parentHandle = inventoryApi.getManagedObjectApi(parentId);
+            for (ManagedObjectReferenceRepresentation ref : parentHandle.getChildAdditions().get(2000).allPages()) {
+                if (ref.getManagedObject() != null && ref.getManagedObject().getId() != null) {
+                    result.add(inventoryApi.get(ref.getManagedObject().getId()));
+                }
+            }
+        }
+        return result;
     }
 }
