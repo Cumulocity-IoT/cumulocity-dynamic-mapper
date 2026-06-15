@@ -42,7 +42,8 @@ with exactly one version active at any time.
 | **Mapping line** | The logical, long-lived mapping that a user creates and references. Identified by the stable functional `identifier` (e.g. `l19zjk`). Owns one or more versions. |
 | **Mapping version** | An immutable snapshot of a mapping's full configuration (templates, substitutions, code, topics, flags) at a point in time. |
 | **Active version** | The single version of a mapping line that is currently loaded into the processing caches and evaluated at runtime. |
-| **Draft version** | A version that has been created/edited but is not active. |
+| **Draft** | The single mutable working copy of a mapping line. Edits accumulate here until the user **publishes**, which freezes the draft into a new immutable version. There is at most one draft per line. |
+| **Publish** | The explicit action that turns the current draft state into a new immutable version. |
 | **Version number** | A monotonically increasing integer scoped to a mapping line (1, 2, 3, …). |
 
 ---
@@ -111,32 +112,38 @@ concurrent requests and across the inbound/outbound caches.
 | **B. Separate MO per version** | Each version is its own managed object (e.g. type `d11r_mapping_version`) linked to a parent "mapping line" MO via `identifier` + `versionNumber`. | ✅ **Recommended.** Bounded objects, natural listing, reuses existing inventory CRUD patterns, easy retention/pruning. |
 | **C. External store** | New DB/blob store outside Cumulocity inventory. | ❌ Adds infrastructure & backup concerns; breaks the "everything in the tenant's inventory" model the service relies on. |
 
-**Recommendation: Option B.** Keep the active version as the existing
-`d11r_mapping` object (so the runtime/cache path is unchanged), and store
-inactive/historical versions as separate, lighter managed objects keyed by
-`(identifier, versionNumber)`. See §8 for the data-model detail and the open
-question OQ-1 on whether the active version is *also* duplicated as a version
-record for uniformity.
+**Decision: Option B, with uniform version records.** The runnable mapping stays
+as the existing `d11r_mapping` object (so the runtime/cache path is unchanged),
+and **every** version — including the currently active one — is also persisted as
+a separate `d11r_mapping_version` managed object keyed by `(identifier,
+versionNumber)`. This costs one extra write per publish/activation but gives a
+uniform, complete history where every version has a first-class record (no
+special-casing of "the active one"). See §8 for the data-model detail.
 
 ---
 
 ## 6. Functional Requirements
 
-### 6.1 Version creation
-- **FR-1** Editing a mapping shall create a **new version** rather than mutating
-  the active version in place. (See OQ-2 for whether every save = new version, or
-  only an explicit "save as new version" action.)
-- **FR-2** Each version shall capture the **complete** mapping configuration
-  needed to run it independently: templates (`sourceTemplate`, `targetTemplate`),
-  `substitutions`, `code`, topics, `transformationType`, `mappingType`, flags,
-  `filterMapping`, `extension`, `qos`, etc.
+### 6.1 Draft editing & version creation (explicit publish)
+- **FR-1** Editing a mapping shall accumulate changes in a **single mutable
+  draft** for the mapping line. Saving an edit updates the draft; it does **not**
+  create a new version and does **not** alter the currently active version.
+- **FR-1a** A user shall **publish** the draft to create a **new immutable
+  version**. Only publish creates a version; intermediate saves do not.
+- **FR-1b** There shall be **at most one draft** per mapping line. Publishing
+  clears the "dirty" state of the draft (its contents become the new version).
+- **FR-2** Each published version shall capture the **complete** mapping
+  configuration needed to run it independently: templates (`sourceTemplate`,
+  `targetTemplate`), `substitutions`, `code`, topics, `transformationType`,
+  `mappingType`, flags, `filterMapping`, `extension`, `qos`, etc.
 - **FR-3** Each version shall be assigned a **version number** that is unique and
   monotonically increasing within its mapping line.
 - **FR-4** Each version shall record **metadata**: creation timestamp, the user
-  who created it, and an optional free-text **change note / label**.
-- **FR-5** A version, once created, shall be **immutable**. Further edits produce
-  a new version. (Exception: lightweight metadata like the change-note label may
-  be editable — see OQ-3.)
+  who published it, and an optional free-text **change note / label** supplied at
+  publish time.
+- **FR-5** A published version, once created, shall be **immutable**. Further
+  edits go to the draft and produce a new version on the next publish. (Exception:
+  the change-note label may be editable after the fact as low-risk metadata.)
 
 ### 6.2 Activation (the single-active invariant)
 - **FR-6** A user shall be able to **activate** a specific version of a mapping line.
@@ -172,9 +179,13 @@ record for uniformity.
   the existing "active mapping cannot be deleted" rule). It must be deactivated or
   another version activated first.
 - **FR-18** Deleting the **entire mapping line** shall delete all of its versions.
-- **FR-19** The system shall support a **retention policy** (configurable cap,
-  e.g. keep last *N* versions) to bound storage growth; pruning shall never delete
-  the active version. (See OQ-4 on default and configurability.)
+  An active and/or deployed mapping line shall **not** be deletable until it has
+  been **deactivated and undeployed** first — consistent with the existing
+  "active mapping cannot be deleted" guard. No cascade.
+- **FR-19** The system shall enforce a **retention policy**: keep the last *N*
+  versions per mapping line, with *N* **configurable via service configuration**
+  (default *N* = 10). Pruning shall remove the oldest versions first and shall
+  **never** delete the active version (even if it falls outside the window).
 
 ### 6.6 Deployment interaction
 - **FR-20** Deployment configuration (connector bindings, keyed by `identifier`)
@@ -208,33 +219,39 @@ record for uniformity.
 
 ## 8. Proposed Data Model (informative)
 
-Aligned with Option B (§5).
+Aligned with Option B + uniform version records (§5).
 
-**Mapping line / active version** — keeps the existing `d11r_mapping` managed
-object as the active, runnable record. Add fields to `Mapping`:
+**Mapping line / runnable record** — keeps the existing `d11r_mapping` managed
+object as the active, runnable record (so the runtime/cache path is unchanged).
+Add fields to `Mapping`:
 
 | Field | Type | Notes |
 |-------|------|-------|
 | `versionNumber` | `int` | Version number of the currently active configuration. |
 | `versionLabel` | `String` (optional) | Free-text change note for the active version. |
+| `draftDirty` | `boolean` | Whether the line has unpublished draft edits (FR-1/1b). |
 
-**Historical version** — new managed object type, e.g. `d11r_mapping_version`:
+**Version record** — new managed object type, e.g. `d11r_mapping_version`. **Every**
+version is stored here, including the active one (uniform history):
 
 | Field | Type | Notes |
 |-------|------|-------|
 | `identifier` | `String` | Functional id of the owning mapping line (the join key). |
 | `versionNumber` | `int` | Unique within the line. |
 | `snapshot` | full mapping config | Immutable copy of all runnable fields (FR-2). |
-| `createdAt` | `long` | Creation timestamp. |
-| `createdBy` | `String` | User. |
+| `createdAt` | `long` | Publish timestamp. |
+| `createdBy` | `String` | User who published. |
 | `label` | `String` | Optional change note. |
 
-Activation = copy the chosen version's snapshot into the active `d11r_mapping`
-object, set its `versionNumber`, flip `active`, and rebuild caches — within the
-existing `setActivationMapping` flow extended to be version-aware.
+- **Publish** = freeze the current draft into a new `d11r_mapping_version` record
+  with the next `versionNumber`, then apply retention pruning (FR-19).
+- **Activate** = copy the chosen version's `snapshot` into the runnable
+  `d11r_mapping` object, set its `versionNumber`, flip `active`, and rebuild
+  caches — within the existing `setActivationMapping` flow extended to be
+  version-aware. The active version always has a corresponding version record.
 
 > Note: §8 is a sketch to make the requirements concrete; the final schema is a
-> design decision, pending OQ-1.
+> design decision.
 
 ---
 
@@ -242,9 +259,14 @@ existing `setActivationMapping` flow extended to be version-aware.
 
 Extends the existing mapping/operation controllers. Indicative shapes:
 
+- `PUT /mapping/{id}` — save draft edits (updates the mutable draft, no new
+  version; FR-1).
+- `POST /mapping/{identifier}/publish` — publish the current draft as a new
+  immutable version, with optional `label` (FR-1a); applies retention (FR-19).
 - `GET /mapping/{identifier}/version` — list versions of a mapping line (FR-13).
 - `GET /mapping/{identifier}/version/{versionNumber}` — fetch one version (FR-14).
-- `POST /mapping/{identifier}/version` — create a new version from a payload (FR-1).
+- `PATCH /mapping/{identifier}/version/{versionNumber}` — edit a version's label
+  only (FR-5 / D-3).
 - `POST /operation` `ACTIVATE_MAPPING` extended with an optional `versionNumber`
   parameter; absent = current behavior. Activating a version enforces C-1 (FR-6–9).
 - `DELETE /mapping/{identifier}/version/{versionNumber}` — delete an inactive
@@ -262,28 +284,42 @@ in design; note the existing split where CRUD uses `id` and deployment uses
   version number, author, timestamp, and change note (FR-13).
 - **UR-2** Activate / roll-back action from the versions list, with confirmation
   that it will deactivate the current version (surfaces C-1).
-- **UR-3** When editing, prompt for / capture an optional change note (FR-4).
+- **UR-3** Editing saves a draft; a distinct **Publish** action captures an
+  optional change note and creates the version (FR-1a/FR-4). The UI shall indicate
+  when a line has unpublished draft changes (`draftDirty`).
 - **UR-4** The mapping grid stays one-row-per-line by default (FR-15), with a way
   to drill into versions.
 - **UR-5 (nice-to-have)** Side-by-side compare of two versions.
 
 ---
 
-## 11. Open Questions
+## 11. Resolved Decisions
 
-- **OQ-1** Is the active version *also* stored as a `d11r_mapping_version` record
-  (uniform history, one extra write per activation), or only as the live
-  `d11r_mapping` object (less duplication, but "active" is a special case)?
-- **OQ-2** Does **every save** create a new version, or only an explicit
-  "save as version / publish" action, with intermediate edits being a single
-  mutable draft? (Affects version count / retention pressure.)
-- **OQ-3** Are version labels/notes editable after creation, or fully immutable?
-- **OQ-4** Default retention cap (FR-19) and whether it is tenant-configurable via
-  service configuration.
-- **OQ-5** Should there be a "dirty draft" distinct from committed versions, so a
-  user can park work-in-progress without it counting as a version?
-- **OQ-6** Behavior when deleting a mapping line that is currently active/deployed
-  — require deactivate+undeploy first (consistent with today), or cascade?
+- **D-1 (was OQ-1) — Uniform version records.** Every version, including the
+  active one, is stored as a `d11r_mapping_version` record. The runnable
+  `d11r_mapping` object remains for the runtime path. (§5, §8)
+- **D-2 (was OQ-2/OQ-5) — Explicit publish.** Edits accumulate in a single
+  mutable draft per line; a new immutable version is created only on an explicit
+  **publish**. Intermediate saves do not create versions. (FR-1, FR-1a, FR-1b)
+- **D-3 (was OQ-3) — Labels editable.** Version change-notes/labels may be edited
+  after creation as low-risk metadata; all other version fields are immutable.
+  (FR-5)
+- **D-4 (was OQ-4) — Retention configurable.** Keep last *N* versions per line,
+  *N* configurable via service configuration, default 10; active version never
+  pruned. (FR-19)
+- **D-5 (was OQ-6) — No cascade on delete.** A mapping line that is active and/or
+  deployed must be deactivated and undeployed before it (and its versions) can be
+  deleted. Consistent with the existing active-mapping guard. (FR-18)
+- **D-6 (was OQ-A) — Shared draft per mapping line.** There is one draft per
+  mapping line, not per user; any editor with access picks up and continues the
+  same working copy. (FR-1b)
+
+### Implications of D-6 (shared draft)
+- **IMP-1** Concurrent editors can overwrite each other's unpublished draft
+  changes. The UI should surface the last editor / last-saved timestamp on the
+  draft so a second editor sees they are not starting from a clean slate.
+- **IMP-2** Optimistic concurrency on draft saves is recommended (reject a save
+  whose base differs from the current draft state) to avoid silent lost updates.
 
 ---
 
