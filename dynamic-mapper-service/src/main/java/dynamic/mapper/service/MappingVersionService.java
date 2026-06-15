@@ -40,6 +40,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -123,8 +124,78 @@ public class MappingVersionService {
             log.info("{} - Published version {} of mapping line {} [{}]", tenant, nextVersionNumber,
                     identifier, persisted.getId());
 
-            pruneVersions(tenant, identifier, activeVersionNumber);
+            // Prune using the list we already loaded plus the just-persisted version,
+            // avoiding a second tenant-wide scan on the hot publish path.
+            List<MappingVersion> current = new ArrayList<>(existing);
+            current.add(persisted);
+            prune(tenant, identifier, activeVersionNumber, current);
             return persisted;
+        });
+    }
+
+    // ========== Draft editing ==========
+
+    /**
+     * Returns the single draft (mutable working copy) of a mapping line, or
+     * {@code null} if the line has no draft.
+     */
+    public MappingVersion getDraft(String tenant, String identifier) {
+        return subscriptionsService.callForTenant(tenant,
+                () -> loadVersions(tenant, identifier).stream()
+                        .filter(MappingVersion::isDraft)
+                        .findFirst()
+                        .orElse(null));
+    }
+
+    /**
+     * Saves edits into the line's single draft, creating it if absent. Editing
+     * never touches the runnable/active record (FR-1). There is at most one draft
+     * per line (D-6).
+     *
+     * <p>Optimistic concurrency (IMP-2): if a draft already exists and the incoming
+     * edits carry a non-zero {@code lastUpdate}, it must match the stored draft's
+     * {@code lastUpdate}; otherwise the save is rejected as a concurrent
+     * modification. On success the draft is stamped with a fresh {@code lastUpdate}
+     * that the next edit must echo back.
+     */
+    public MappingVersion saveDraft(String tenant, String identifier, Mapping edits) {
+        return subscriptionsService.callForTenant(tenant, () -> {
+            MappingVersion existingDraft = loadVersions(tenant, identifier).stream()
+                    .filter(MappingVersion::isDraft)
+                    .findFirst()
+                    .orElse(null);
+
+            if (existingDraft != null && existingDraft.getSnapshot() != null
+                    && edits.getLastUpdate() != 0
+                    && edits.getLastUpdate() != existingDraft.getSnapshot().getLastUpdate()) {
+                throw new IllegalStateException(String.format(
+                        "Tenant %s - Draft of mapping line %s was modified concurrently; reload before saving",
+                        tenant, identifier));
+            }
+
+            Mapping snapshot = copyOf(edits);
+            snapshot.setIdentifier(identifier);
+            snapshot.setDraftDirty(true);
+            snapshot.setLastUpdate(System.currentTimeMillis());
+
+            MappingVersion draft = MappingVersion.builder()
+                    .id(existingDraft != null ? existingDraft.getId() : null)
+                    .identifier(identifier)
+                    .versionNumber(0) // drafts are not numbered
+                    .snapshot(snapshot)
+                    .isDraft(true)
+                    .createdAt(System.currentTimeMillis())
+                    .createdBy(currentUser())
+                    .build();
+
+            if (existingDraft != null) {
+                updateVersionMO(draft);
+                log.info("{} - Updated draft of mapping line {}", tenant, identifier);
+            } else {
+                persistNewVersion(tenant, draft);
+                log.info("{} - Created draft of mapping line {} [{}]", tenant, identifier, draft.getId());
+            }
+            return draft;
         });
     }
 
@@ -200,29 +271,36 @@ public class MappingVersionService {
      * it falls outside the retention window (FR-19).
      */
     public void pruneVersions(String tenant, String identifier, int activeVersionNumber) {
-        subscriptionsService.runForTenant(tenant, () -> {
-            int retention = retention(tenant);
-            List<MappingVersion> published = loadVersions(tenant, identifier).stream()
-                    .filter(v -> !v.isDraft())
-                    .sorted(Comparator.comparingInt(MappingVersion::getVersionNumber))
-                    .collect(Collectors.toList());
+        subscriptionsService.runForTenant(tenant,
+                () -> prune(tenant, identifier, activeVersionNumber, loadVersions(tenant, identifier)));
+    }
 
-            if (published.size() <= retention) {
-                return;
-            }
+    /**
+     * Prunes from an already-loaded list of versions, avoiding a redundant
+     * inventory scan. Callers must already hold the tenant scope.
+     */
+    private void prune(String tenant, String identifier, int activeVersionNumber, List<MappingVersion> loaded) {
+        int retention = retention(tenant);
+        List<MappingVersion> published = loaded.stream()
+                .filter(v -> !v.isDraft())
+                .sorted(Comparator.comparingInt(MappingVersion::getVersionNumber))
+                .collect(Collectors.toList());
 
-            // Keep the newest `retention` versions; everything older is a deletion candidate.
-            int windowStart = published.size() - retention;
-            List<MappingVersion> candidates = published.subList(0, windowStart);
-            for (MappingVersion v : candidates) {
-                if (v.getVersionNumber() == activeVersionNumber) {
-                    continue; // never prune the active version
-                }
-                deleteVersionMO(v);
-                log.info("{} - Pruned version {} of mapping line {} (retention {})", tenant, v.getVersionNumber(),
-                        identifier, retention);
+        if (published.size() <= retention) {
+            return;
+        }
+
+        // Keep the newest `retention` versions; everything older is a deletion candidate.
+        int windowStart = published.size() - retention;
+        List<MappingVersion> candidates = published.subList(0, windowStart);
+        for (MappingVersion v : candidates) {
+            if (v.getVersionNumber() == activeVersionNumber) {
+                continue; // never prune the active version
             }
-        });
+            deleteVersionMO(v);
+            log.info("{} - Pruned version {} of mapping line {} (retention {})", tenant, v.getVersionNumber(),
+                    identifier, retention);
+        }
     }
 
     // ========== Backfill ==========
@@ -300,10 +378,16 @@ public class MappingVersionService {
                 .findFirst();
     }
 
+    private static String versionName(MappingVersion version) {
+        return version.isDraft()
+                ? version.getIdentifier() + " draft"
+                : version.getIdentifier() + " v" + version.getVersionNumber();
+    }
+
     private MappingVersion persistNewVersion(String tenant, MappingVersion version) {
         MappingVersionRepresentation rep = new MappingVersionRepresentation();
         rep.setType(MappingVersionRepresentation.MAPPING_VERSION_TYPE);
-        rep.setName(version.getIdentifier() + " v" + version.getVersionNumber());
+        rep.setName(versionName(version));
         rep.setMappingVersion(version);
 
         ManagedObjectRepresentation mor = versionRepository.toManagedObject(rep);
@@ -316,7 +400,7 @@ public class MappingVersionService {
         MappingVersionRepresentation rep = new MappingVersionRepresentation();
         rep.setType(MappingVersionRepresentation.MAPPING_VERSION_TYPE);
         rep.setId(version.getId());
-        rep.setName(version.getIdentifier() + " v" + version.getVersionNumber());
+        rep.setName(versionName(version));
         rep.setMappingVersion(version);
 
         ManagedObjectRepresentation mor = versionRepository.toManagedObject(rep);

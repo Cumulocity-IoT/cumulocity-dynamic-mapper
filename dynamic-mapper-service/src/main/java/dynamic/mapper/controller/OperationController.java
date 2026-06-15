@@ -391,7 +391,11 @@ public class OperationController {
     private ResponseEntity<?> handleActivateMapping(String tenant, Map<String, String> parameters) throws Exception {
         String id = parameters.get("id");
         Boolean activation = Boolean.parseBoolean(parameters.get("active"));
-        Mapping updatedMapping = mappingService.setActivationMapping(tenant, id, activation);
+        String versionParam = parameters.get("versionNumber");
+        Integer versionNumber = versionParam != null && !versionParam.isBlank()
+                ? Integer.valueOf(versionParam.trim())
+                : null;
+        Mapping updatedMapping = mappingService.setActivationMapping(tenant, id, activation, versionNumber);
         Map<String, AConnectorClient> connectorMap = connectorRegistry
                 .getClientsForTenant(tenant);
         // subscribe/unsubscribe respective mappingTopic of mapping only for

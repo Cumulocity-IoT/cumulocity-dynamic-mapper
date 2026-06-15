@@ -346,10 +346,83 @@ public class MappingController {
         }
     }
 
+    // ========== DRAFT Endpoints ==========
+
+    @Operation(
+        summary = "Get the draft (working copy) of a mapping",
+        description = """
+        Returns the unpublished draft for a mapping line, if one exists. Editing a mapping saves to
+        this draft and never changes the running/active configuration. Returns 204 when there is no draft.
+
+        **Security:** Requires ROLE_DYNAMIC_MAPPER_ADMIN or ROLE_DYNAMIC_MAPPER_CREATE role.
+        """
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Draft returned",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = Mapping.class))),
+        @ApiResponse(responseCode = "204", description = "No draft exists for this mapping", content = @Content),
+        @ApiResponse(responseCode = "404", description = "Mapping not found", content = @Content)
+    })
+    @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
+    @GetMapping(value = "/{id}/draft", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Mapping> getDraft(@PathVariable String id) {
+        String tenant = getTenant();
+        try {
+            Mapping draft = mappingService.getDraftMapping(tenant, id);
+            if (draft == null) {
+                return ResponseEntity.noContent().build();
+            }
+            return ResponseEntity.ok(draft);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+        } catch (Exception e) {
+            log.error("{} - Failed to get draft for mapping: {}", tenant, id, e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                "Failed to get draft: " + e.getMessage());
+        }
+    }
+
+    @Operation(
+        summary = "Save edits into the draft of a mapping",
+        description = """
+        Saves the supplied configuration into the mapping line's draft (working copy) without changing
+        the running/active configuration. To apply a draft, publish it as a version and activate that version.
+
+        Optimistic concurrency: include the draft's last `lastUpdate` value in the body; if the stored draft
+        has changed since then the request is rejected with 409.
+
+        **Security:** Requires ROLE_DYNAMIC_MAPPER_ADMIN or ROLE_DYNAMIC_MAPPER_CREATE role.
+        """
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Draft saved",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = Mapping.class))),
+        @ApiResponse(responseCode = "404", description = "Mapping not found", content = @Content),
+        @ApiResponse(responseCode = "409", description = "Draft was modified concurrently", content = @Content)
+    })
+    @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
+    @PutMapping(value = "/{id}/draft", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Mapping> saveDraft(@PathVariable String id, @RequestBody Mapping mapping) {
+        String tenant = getTenant();
+        try {
+            Mapping draft = mappingService.saveDraftMapping(tenant, id, mapping);
+            return ResponseEntity.ok(draft);
+        } catch (IllegalStateException e) {
+            log.warn("{} - Draft conflict for mapping {}: {}", tenant, id, e.getMessage());
+            throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+        } catch (Exception e) {
+            log.error("{} - Failed to save draft for mapping: {}", tenant, id, e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                "Failed to save draft: " + e.getMessage());
+        }
+    }
+
     // ========== DELETE Endpoint ==========
 
     @Operation(
-        summary = "Delete a mapping", 
+        summary = "Delete a mapping",
         description = """
         Deletes a mapping by its unique identifier. This will also remove all associated 
         subscriptions and cache entries. The mapping must be deactivated before deletion.

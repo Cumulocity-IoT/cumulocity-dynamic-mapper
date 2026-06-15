@@ -147,6 +147,16 @@ class MappingVersionServiceTest {
             return mor;
         });
 
+        // update replaces the matching version in the store (draft upsert).
+        lenient().when(inventoryApi.update(any(), any())).thenAnswer(inv -> {
+            ManagedObjectRepresentation mor = inv.getArgument(0);
+            String id = mor.getId().getValue();
+            store.removeIf(v -> id.equals(v.getId()));
+            pendingVersion.setId(id);
+            store.add(pendingVersion);
+            return mor;
+        });
+
         // delete removes the matching version from the store.
         lenient().doAnswer(inv -> {
             GId gid = inv.getArgument(0);
@@ -291,6 +301,57 @@ class MappingVersionServiceTest {
         service.ensureBackfilled(TENANT, runnable);
 
         assertEquals(1, store.size(), "backfill must not create duplicate version records");
+    }
+
+    @Test
+    void saveDraftCreatesThenUpsertsSingleDraft() {
+        Mapping edit1 = mapping("abc");
+        edit1.setName("draft v1");
+        service.saveDraft(TENANT, "abc", edit1);
+
+        MappingVersion d1 = service.getDraft(TENANT, "abc");
+        assertNotNull(d1);
+        assertTrue(d1.isDraft());
+        assertEquals("draft v1", d1.getSnapshot().getName());
+        assertEquals(1, store.size(), "first save creates one draft record");
+
+        Mapping edit2 = mapping("abc");
+        edit2.setName("draft v2");
+        edit2.setLastUpdate(d1.getSnapshot().getLastUpdate()); // correct optimistic base
+        service.saveDraft(TENANT, "abc", edit2);
+
+        MappingVersion d2 = service.getDraft(TENANT, "abc");
+        assertEquals("draft v2", d2.getSnapshot().getName());
+        assertEquals(1, store.size(), "second save upserts the same draft, not a new record");
+    }
+
+    @Test
+    void getDraftIsNullWhenNoneExists() {
+        assertNull(service.getDraft(TENANT, "abc"));
+    }
+
+    @Test
+    void saveDraftRejectsStaleOptimisticBase() {
+        service.saveDraft(TENANT, "abc", mapping("abc")); // create (lastUpdate 0 -> accepted)
+        long stored = service.getDraft(TENANT, "abc").getSnapshot().getLastUpdate();
+
+        Mapping stale = mapping("abc");
+        stale.setLastUpdate(stored - 1000);
+        assertThrows(IllegalStateException.class, () -> service.saveDraft(TENANT, "abc", stale));
+
+        Mapping fresh = mapping("abc");
+        fresh.setLastUpdate(stored);
+        assertDoesNotThrow(() -> service.saveDraft(TENANT, "abc", fresh));
+    }
+
+    @Test
+    void draftIsExcludedFromPublishedListing() {
+        service.publish(TENANT, mapping("abc"), "v1", 0); // version 1
+        service.saveDraft(TENANT, "abc", mapping("abc")); // a separate draft
+
+        assertEquals(1, service.listVersions(TENANT, "abc").size(), "listVersions excludes the draft");
+        assertNotNull(service.getDraft(TENANT, "abc"), "draft is still retrievable");
+        assertEquals(2, store.size(), "one published version + one draft");
     }
 
     @Test

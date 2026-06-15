@@ -161,8 +161,8 @@ a rebuild, as today.
 | **P1 — Model & persistence** | `Mapping` fields; `MappingVersion` + representation/constants; `MappingVersionRepository`; `ServiceConfiguration.mappingVersionRetention`. Unit tests for (de)serialization incl. legacy objects. | Foundation; no behavior change yet. |
 | **P2 — Version service + backfill** | `MappingVersionService` (publish, list, get, label, delete, prune, ensureBackfilled). Tests for retention + idempotent backfill. | Core logic, still no controller wiring. |
 | **P3 — Activation is version-aware** | Extend `setActivationMapping` + per-line atomic swap; `OperationController` optional `versionNumber`. Tests for C-1 incl. concurrent activation, FR-9 rollback-on-failure. | Makes the single-active invariant real. |
-| **P4 — Draft editing** | Relax `prepareForUpdate`; `PUT /mapping/{id}` → saveDraft; create-line-creates-draft; optimistic concurrency (IMP-2). | Depends on version service. |
-| **P5 — REST surface** | publish/list/get/patch-label/delete endpoints + authz. Controller tests. | Exposes everything above. |
+| **P4 — Draft editing (staged/additive)** | `saveDraft`/`getDraft` (optimistic concurrency IMP-2) + new `GET`/`PUT /mapping/{id}/draft` endpoints. **`PUT /mapping/{id}` kept as bridge** (still updates runnable). `draftDirty` not yet persisted on the runnable — derived from draft existence; persistence wired with publish in P5. The hard `PUT`→draft-only flip is deferred to the P5/P6 cutover (user decision: staged, no edit-apply gap). | Depends on version service. |
+| **P5 — REST surface + edit-path cutover** | publish/list/get/patch-label/delete endpoints + authz; flip `PUT /mapping/{id}` to draft-only and have publish clear `draftDirty`; replace the tenant-wide version scan (§8). Controller tests. | Exposes everything; completes D-8. |
 | **P6 — UI (separate plan)** | versions view, publish, activate/rollback, draftDirty indicator (UR-1..5). | Out of this plan's scope. |
 
 ---
@@ -193,4 +193,24 @@ Plus model-level unit tests for legacy-object deserialization defaults.
   may be intentionally incomplete). Decide where `validateMapping` is invoked.
 - **Deployment binding (FR-20):** confirm `DeploymentMapService` stays keyed by
   `identifier` so switching versions does not change connector bindings.
+
+## 8. Tracked decision: version query scaling (deferred to P5)
+`MappingVersionService.loadVersions(identifier)` currently queries **all**
+`d11r_mapping_version` MOs by type and filters by `identifier` in memory —
+O(M·N) objects (M lines × N retained) fetched to use N, each carrying a full
+mapping snapshot. Correct, but does not scale for large tenants.
+
+- **Status:** acceptable for P2/P3 (not shipped, no runtime callers yet; changing
+  the storage layout before release carries no migration cost).
+- **Interim win (done in P2):** `publish` threads its already-loaded list into
+  prune, so it scans once instead of twice.
+- **Target fix (decide & implement at P5, before GA):** replace the tenant-wide
+  scan with one of:
+  - **childAdditions** of the runnable mapping MO — bounded O(N) per line, free
+    cascade-delete (FR-18); cost: needs identifier→parent-MO-id resolution since
+    the public API is keyed by `identifier`.
+  - **inventory fragment-value query** (`d11r_mapping_version.identifier eq …`) —
+    no parent-id resolution; cost: bespoke RestOperations call and fragment-query
+    performance must be validated/indexed.
+  Do not ship GA on the tenant-wide scan.
 ```
