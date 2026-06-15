@@ -302,4 +302,28 @@ public class InventoryFacade {
         RestOperations rest = platform.rest();
         rest.post(url, CumulocityMediaType.APPLICATION_JSON_TYPE, ref);
     }
+
+    /**
+     * Registers an existing managed object as a child addition of a parent, so the
+     * parent → child relationship is navigable in the inventory (e.g. mapping →
+     * its version records). Uses the REST childAdditions endpoint, which reliably
+     * establishes the link. In testing mode the call is skipped (the mock does not
+     * model child relationships).
+     *
+     * @param parentId the parent managed-object id
+     * @param childId  the (already created) child managed-object id to link
+     * @param testing  flag indicating test mode
+     */
+    public void addChildAddition(GId parentId, GId childId, Boolean testing) {
+        if (Boolean.TRUE.equals(testing)) {
+            log.debug("Skipping child addition registration in testing mode: parent={}, child={}", parentId, childId);
+            return;
+        }
+        String url = "/inventory/managedObjects/" + parentId.getValue() + "/childAdditions";
+        ManagedObjectReferenceRepresentation ref = new ManagedObjectReferenceRepresentation();
+        ManagedObjectRepresentation childMO = new ManagedObjectRepresentation();
+        childMO.setId(childId);
+        ref.setManagedObject(childMO);
+        platform.rest().post(url, CumulocityMediaType.APPLICATION_JSON_TYPE, ref);
+    }
 }

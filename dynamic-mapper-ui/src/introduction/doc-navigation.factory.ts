@@ -93,6 +93,14 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       priority: 610,
       preventDuplicates: true
     }),
+    versioningNode: new NavigatorNode({
+      parent: gettext('Introduction'),
+      icon: 'empty',
+      label: gettext('Versioning mappings'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/versioning',
+      priority: 609.8,
+      preventDuplicates: true
+    }),
     sparkPlugBNode: new NavigatorNode({
       parent: gettext('Introduction'),
       icon: 'empty',

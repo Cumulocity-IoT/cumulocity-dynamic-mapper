@@ -124,7 +124,7 @@ public class MappingVersionService {
                     .label(label)
                     .build();
 
-            MappingVersion persisted = persistNewVersion(version);
+            MappingVersion persisted = persistNewVersion(tenant, version);
             log.info("{} - Published version {} of mapping line {} [{}]", tenant, nextVersionNumber,
                     identifier, persisted.getId());
 
@@ -196,7 +196,7 @@ public class MappingVersionService {
                 updateVersionMO(draft);
                 log.info("{} - Updated draft of mapping line {}", tenant, identifier);
             } else {
-                persistNewVersion(draft);
+                persistNewVersion(tenant, draft);
                 log.info("{} - Created draft of mapping line {} [{}]", tenant, identifier, draft.getId());
             }
             return draft;
@@ -379,7 +379,7 @@ public class MappingVersionService {
                     .label(runnable.getVersionLabel())
                     .build();
 
-            MappingVersion persisted = persistNewVersion(version);
+            MappingVersion persisted = persistNewVersion(tenant, version);
             log.info("{} - Backfilled version {} for legacy mapping line {} [{}]", tenant, versionNumber, identifier,
                     persisted.getId());
             return persisted;
@@ -421,7 +421,7 @@ public class MappingVersionService {
                 : version.getIdentifier() + " v" + version.getVersionNumber();
     }
 
-    private MappingVersion persistNewVersion(MappingVersion version) {
+    private MappingVersion persistNewVersion(String tenant, MappingVersion version) {
         MappingVersionRepresentation rep = new MappingVersionRepresentation();
         rep.setType(MappingVersionRepresentation.MAPPING_VERSION_TYPE);
         rep.setName(versionName(version));
@@ -430,6 +430,20 @@ public class MappingVersionService {
         ManagedObjectRepresentation mor = versionRepository.toManagedObject(rep);
         mor = inventoryApi.create(mor, false);
         version.setId(mor.getId().getValue());
+
+        // Register the version as a child addition of the runnable mapping MO so the
+        // parent -> versions relationship is navigable in the inventory. Best-effort:
+        // the version is found by query regardless, so a failed link must not fail the
+        // operation. The snapshot's id is the parent (runnable) mapping MO id.
+        String parentId = version.getSnapshot() != null ? version.getSnapshot().getId() : null;
+        if (parentId != null && !parentId.equals(version.getId())) {
+            try {
+                inventoryApi.addChildAddition(GId.asGId(parentId), mor.getId(), false);
+            } catch (Exception e) {
+                log.warn("{} - Could not register version {} [{}] as child addition of mapping {}: {}",
+                        tenant, version.getVersionNumber(), version.getId(), parentId, e.getMessage());
+            }
+        }
         return version;
     }
 

@@ -574,3 +574,19 @@ svg {
 /* SEARCH HIGHLIGHTS — rules live in global styles.less (Angular encapsulation  */
 /* prevents scoped styles from applying to runtime-created mark elements)        */
 /* ============================================================================ */
+/* ============================================================================ */
+/* SCREENSHOT PLACEHOLDERS — shown until the real screenshot image is added      */
+/* ============================================================================ */
+.doc-screenshot-placeholder {
+  border: 2px dashed var(--c8y-component-border-color, #c8c8c8);
+  border-radius: 8px;
+  background: var(--c8y-component-background-subtle, #f4f4f5);
+  padding: 24px;
+  width: 80%;
+  text-align: center;
+  color: var(--c8y-text-color-muted, #707070);
+}
+
+.doc-screenshot-placeholder code {
+  word-break: break-all;
+}

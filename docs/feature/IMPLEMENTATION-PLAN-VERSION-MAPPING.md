@@ -212,5 +212,13 @@ Runtime testing caught what the mocked tests could not.
   correct but not optimal for very large tenants. A proper bounded read (e.g. an
   inventory **query by fragment value** `d11r_mapping_version.identifier eq …`,
   validated against the platform) is the future optimization. childAdditions is
-  NOT the answer (its read path is unreliable here).
+  NOT the answer for the *read* (its `getChildAdditions()` read path is unreliable here).
+- **Child-addition registration (additive, write-only):** each version MO is *also*
+  registered as a child addition of the runnable mapping MO (via the REST
+  `/childAdditions` endpoint in `InventoryFacade.addChildAddition`, which reliably
+  establishes the link — only the SDK *read* was unreliable). This makes the
+  mapping → versions relationship navigable in the inventory / external tooling.
+  It is best-effort (a failed link never fails publish) and does NOT drive the
+  read path (still the type query + identifier filter). The parent id is the
+  version snapshot's `id`.
 ```

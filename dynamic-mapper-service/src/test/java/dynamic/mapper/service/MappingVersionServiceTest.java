@@ -194,6 +194,16 @@ class MappingVersionServiceTest {
     }
 
     @Test
+    void publishRegistersVersionAsChildAdditionOfMapping() {
+        MappingVersion v1 = service.publish(TENANT, mapping(IDENTIFIER), "first", 0);
+
+        // The version MO is registered as a child addition of the runnable mapping MO
+        // (its snapshot id) so the mapping -> versions relationship is navigable.
+        verify(inventoryApi).addChildAddition(
+                eq(GId.asGId("runnable-" + IDENTIFIER)), eq(GId.asGId(v1.getId())), eq(false));
+    }
+
+    @Test
     void publishDoesNotMutateCallerMapping() {
         Mapping original = mapping(IDENTIFIER);
         original.setVersionNumber(1);
