@@ -22,7 +22,6 @@ import {
   ActionControl,
   AlertService,
   BottomDrawerRef,
-  BuiltInActionType,
   Column,
   ColumnDataType,
   CoreModule,
@@ -30,7 +29,7 @@ import {
 } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, Subject, take } from 'rxjs';
-import { Mapping, SharedModule } from '../../shared';
+import { ConfirmationModalComponent, Mapping, SharedModule } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { LabelInputModalComponent } from './label-input-modal.component';
 import { VersionStateCellRendererComponent } from './version-state-cell.renderer.component';
@@ -117,15 +116,15 @@ export class MappingVersionDrawerComponent implements OnInit {
       // The draft is shown as its own row at the top, so the whole history lives in one grid.
       const draftRow: VersionRow[] = draft
         ? [{
-            id: DRAFT_ROW_ID,
-            versionNumber: 0,
-            versionDisplay: '—',
-            state: 'draft',
-            label: draft.versionLabel || '—',
-            updatedDisplay: draft.lastUpdate ? new Date(draft.lastUpdate).toLocaleString() : '—',
-            createdBy: '—',
-            isDraft: true
-          }]
+          id: DRAFT_ROW_ID,
+          versionNumber: 0,
+          versionDisplay: '—',
+          state: 'draft',
+          label: draft.versionLabel || '—',
+          updatedDisplay: draft.lastUpdate ? new Date(draft.lastUpdate).toLocaleString() : '—',
+          createdBy: '—',
+          isDraft: true
+        }]
         : [];
 
       this.rows$.next([...draftRow, ...versionRows]);
@@ -152,10 +151,14 @@ export class MappingVersionDrawerComponent implements OnInit {
   }
 
   async remove(row: VersionRow): Promise<void> {
+    const confirmed = await this.confirmDelete(row);
+    if (!confirmed) {
+      return;
+    }
     this.busy = true;
     try {
       await this.mappingService.deleteVersion(this.mapping.id, row.versionNumber);
-      this.alertService.success(`Deleted version ${row.versionNumber}`);
+      this.alertService.success(`Deleted version ${row.versionNumber} of ${this.mapping.name}`);
       this.changed = true;
       await this.reload();
     } catch (e) {
@@ -163,6 +166,23 @@ export class MappingVersionDrawerComponent implements OnInit {
     } finally {
       this.busy = false;
     }
+  }
+
+  /** Confirms deletion of a version; resolves true if the user proceeds. */
+  private confirmDelete(row: VersionRow): Promise<boolean> {
+    return new Promise(resolve => {
+      const ref = this.bsModalService.show(ConfirmationModalComponent, {
+        initialState: {
+          title: `Delete version ${row.versionDisplay}`,
+          message: `You are about to permanently delete ${row.versionDisplay} of ${this.mapping.name}. This cannot be undone. Do you want to proceed?`,
+          labels: { ok: 'Delete', cancel: 'Cancel' }
+        }
+      });
+      ref.content.closeSubject.pipe(take(1)).subscribe((result: boolean) => {
+        resolve(!!result);
+        ref.hide();
+      });
+    });
   }
 
   async publish(): Promise<void> {
@@ -226,30 +246,35 @@ export class MappingVersionDrawerComponent implements OnInit {
         header: 'State',
         path: 'state',
         dataType: ColumnDataType.TextShort,
+        gridTrackSize: '7%',
         cellRendererComponent: VersionStateCellRendererComponent
       },
       {
         name: 'versionDisplay',
         header: 'Version',
         path: 'versionDisplay',
+        gridTrackSize: '7%',
         dataType: ColumnDataType.TextShort
       },
       {
         name: 'label',
         header: 'Label',
         path: 'label',
+        gridTrackSize: '40%',
         dataType: ColumnDataType.TextShort
       },
       {
         name: 'updatedDisplay',
         header: 'Updated',
         path: 'updatedDisplay',
+        gridTrackSize: '17.5%',
         dataType: ColumnDataType.TextShort
       },
       {
         name: 'createdBy',
         header: 'By',
         path: 'createdBy',
+        gridTrackSize: '21.5%',
         dataType: ColumnDataType.TextShort
       }
     ];
@@ -279,7 +304,9 @@ export class MappingVersionDrawerComponent implements OnInit {
         showIf: (row: VersionRow) => this.canManage && !row.isDraft && row.state !== 'active' && !this.busy
       },
       {
-        type: BuiltInActionType.Delete,
+        type: 'DELETE_VERSION',
+        text: 'Delete',
+        icon: 'trash-o',
         callback: (row: VersionRow) => this.remove(row),
         showIf: (row: VersionRow) => this.canManage && !row.isDraft && row.state !== 'active' && !this.busy
       }

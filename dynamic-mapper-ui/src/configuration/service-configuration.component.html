@@ -460,6 +460,26 @@
 
           <c8y-li>
             <c8y-li-icon icon="list"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'Number of mapping versions to retain' | translate }}</p>
+                <p>
+                  <small translate>Maximum number of versions kept per mapping. When a new version is published, the
+                    oldest versions beyond this limit are deleted; the active version is never deleted.</small>
+                </p>
+              </div>
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                <label class="editable" title="{{ 'Number of mapping versions to retain' | translate }}">
+                  <input class="form-control" name="mappingVersionRetention" type="number" min="1"
+                    formControlName="mappingVersionRetention" />
+                  <span></span>
+                </label>
+              </div>
+            </div>
+          </c8y-li>
+
+          <c8y-li>
+            <c8y-li-icon icon="list"></c8y-li-icon>
             <div class="d-flex a-i-start">
               <div class="config-label-grow">
                 <p>{{ 'Fragments from inventory to cache' | translate }}</p>

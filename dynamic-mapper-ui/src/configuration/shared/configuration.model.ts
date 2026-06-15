@@ -35,6 +35,7 @@ export interface ServiceConfiguration {
   inventoryCacheSize: number;
   inventoryCacheRetention: number;
   flowStateRetention: number;
+  mappingVersionRetention?: number;
   inventoryFragmentsToCache?: string[];
   codeTemplates?: any;
   maxCPUTimeMS: number;
