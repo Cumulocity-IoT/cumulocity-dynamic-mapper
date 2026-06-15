@@ -198,9 +198,23 @@ special-casing of "the active one"). See §8 for the data-model detail.
 ## 7. Non-Functional Requirements
 
 - **NFR-1 (Backward compatibility).** Existing mappings (single `d11r_mapping`
-  objects with no version data) must continue to work. On first load they are
-  treated as version 1 / the active version. No data migration should be required
-  to keep running; version history simply starts accumulating from the upgrade.
+  objects with no version data) must continue to work unchanged after upgrade.
+  This is achievable additively because the `Mapping` deserializer ignores unknown
+  properties ([Mapping.java:86](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/Mapping.java#L86),
+  `@JsonIgnoreProperties(ignoreUnknown = true)`) and applies `@Builder.Default`
+  for fields absent from stored JSON. **Constraints on the new fields (§8):**
+  - they must carry `@Builder.Default` values, **not** be added as required
+    (`@NotNull`) boxed types without a default — otherwise old objects fail to
+    load and update-validation rejects them;
+  - `versionNumber` defaults to **1** (a legacy object missing the field is
+    version 1, not 0); `draftDirty` defaults to **false**.
+- **NFR-1a (Legacy version-record backfill).** Pre-upgrade mappings have a
+  runnable `d11r_mapping` object but **no** `d11r_mapping_version` record, which
+  violates D-1 ("the active version always has a version record"). On first
+  load/activation after upgrade, the service shall **lazily create a v1 version
+  record** from the existing `d11r_mapping` snapshot, restoring the D-1 invariant.
+  No bulk migration is required up front; backfill happens on demand and is
+  idempotent.
 - **NFR-2 (Concurrency / C-1 safety).** The activation swap must be safe under
   concurrent API calls and consistent with the existing thread-safety model
   (focused contexts, thread-safe caches). Two simultaneous activations on the same
@@ -297,7 +311,9 @@ in design; note the existing split where CRUD uses `id` and deployment uses
 
 - **D-1 (was OQ-1) — Uniform version records.** Every version, including the
   active one, is stored as a `d11r_mapping_version` record. The runnable
-  `d11r_mapping` object remains for the runtime path. (§5, §8)
+  `d11r_mapping` object remains for the runtime path. (§5, §8). Legacy mappings
+  that predate versioning are brought into this invariant by lazy backfill — see
+  NFR-1a.
 - **D-2 (was OQ-2/OQ-5) — Explicit publish.** Edits accumulate in a single
   mutable draft per line; a new immutable version is created only on an explicit
   **publish**. Intermediate saves do not create versions. (FR-1, FR-1a, FR-1b)
@@ -313,6 +329,19 @@ in design; note the existing split where CRUD uses `id` and deployment uses
 - **D-6 (was OQ-A) — Shared draft per mapping line.** There is one draft per
   mapping line, not per user; any editor with access picks up and continues the
   same working copy. (FR-1b)
+- **D-7 — Draft is stored separately from the runnable record.** The `d11r_mapping`
+  object remains the **active/runnable** record (caches and runtime read it,
+  unchanged — NFR-3). The **draft** is a distinct stored record (a draft slot per
+  line), so editing never mutates the running config (FR-1). `draftDirty` on the
+  line is the indicator that a draft exists and differs from the active version.
+  Publish freezes the draft into an immutable version; Activate copies a version's
+  snapshot into the runnable `d11r_mapping`.
+- **D-8 — Editing an active mapping is allowed (goes to draft).** The existing
+  guard that rejects updates to an active mapping
+  (`MappingRepository.prepareForUpdate`) changes meaning: an edit to an active
+  mapping is accepted and written to the draft; the active version keeps running
+  untouched until an explicit publish + activate. (Supersedes the old
+  deactivate-before-edit requirement; the delete guard in D-5 is unchanged.)
 
 ### Implications of D-6 (shared draft)
 - **IMP-1** Concurrent editors can overwrite each other's unpublished draft

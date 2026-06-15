@@ -264,6 +264,19 @@ public class Mapping implements Serializable {
     @NotNull
     private long lastUpdate;
 
+    @Builder.Default
+    @Schema(description = "Version number of the currently active configuration, unique and monotonically increasing within a mapping line", example = "1")
+    @JsonSetter(nulls = Nulls.SKIP)
+    private int versionNumber = 1;
+
+    @Builder.Default
+    @Schema(description = "Whether the mapping line has unpublished draft changes that differ from the active version", example = "false")
+    @JsonSetter(nulls = Nulls.SKIP)
+    private boolean draftDirty = false;
+
+    @Schema(description = "Free-text change note / label for the active version", example = "Initial version")
+    private String versionLabel;
+
     public static final String SMART_FUNCTION_NAME = "onMessage";
 
     @Override
