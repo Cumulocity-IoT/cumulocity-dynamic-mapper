@@ -119,7 +119,7 @@ export class MappingVersionDrawerComponent implements OnInit {
           createdBy: v.createdBy || '—',
           isDraft: false,
           onNoteChange: this.canManage
-            ? (note: string) => this.saveVersionNote(v.id, v.versionNumber, note)
+            ? (note: string) => this.saveVersionNote(v.id ?? `v${v.versionNumber}`, v.versionNumber, note)
             : undefined
         }));
 
