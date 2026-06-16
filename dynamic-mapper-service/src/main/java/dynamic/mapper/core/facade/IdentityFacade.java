@@ -60,7 +60,7 @@ public class IdentityFacade {
     }
 
     public ExternalIDRepresentation resolveExternalId2GlobalId(ID externalID, Boolean testing, Semaphore c8ySemaphore) {
-        if (!testing) {
+        if (testing == null || !testing) {
             try {
                 c8ySemaphore.acquire();
                 return identityApi.getExternalId(externalID);
