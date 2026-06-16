@@ -34,7 +34,7 @@
     [isActive]="activeTabIndex === 0" (onSelect)="onTabSelected(0)" data-cy="dm-unified-editor-tab-connector"></c8y-tab>
   }
   @if (isTabVisible(1)) {
-  <c8y-tab [icon]="'settings'" [label]="'General Settings'" [priority]="40" [tabsOutlet]="'unified-editor'"
+  <c8y-tab [icon]="'settings'" [label]="(stepperConfiguration.direction === Direction.INBOUND && !mapping.mappingTopic?.trim()) ? 'General Settings *' : 'General Settings'" [priority]="40" [tabsOutlet]="'unified-editor'"
     [isActive]="activeTabIndex === 1" (onSelect)="onTabSelected(1)" data-cy="dm-unified-editor-tab-general-settings"></c8y-tab>
   }
   @if (isTabVisible(2)) {
@@ -139,18 +139,26 @@
 
   <!-- Footer must be inside the card so flex layout pins it to the bottom -->
   <div class="card-footer separator p-24 flex-no-shrink d-flex a-i-center j-c-center" style="gap:16px;">
-    @if (mapping.versionNumber) {
-      <span class="text-muted">
+    @if (mapping.versionNumber || mapping.debug || mapping.draftDirty) {
+      <span class="text-muted d-flex a-i-center" style="gap:4px">
         <i c8yIcon="info-circle" class="m-r-4"></i>
-        Editing draft · Active: <strong>v{{ mapping.versionNumber }}</strong>
+        @if (mapping.versionNumber) {
+           <span translate>Active </span><span class="text-12 label label-default" title="Active version"> v{{ mapping.versionNumber }}</span>
+        }
+        @if (mapping.debug) {
+          <span class="text-12 label label-success">debug</span>
+        }
+        @if (mapping.draftDirty) {
+          <span translate>· Editing </span><span class="text-12 label label-info" title="This mapping has unpublished draft changes">draft</span>
+        }
       </span>
     }
     <button type="button" class="btn btn-default" (click)="onCancel()" translate data-cy="dm-unified-editor-cancel">
       Cancel
     </button>
     <button type="button" class="btn btn-primary" (click)="onCommitButton()"
-      [disabled]="(!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole) || stepperConfiguration.editorMode === EditorMode.READ_ONLY || mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE || (isButtonDisabled$ | async)"
-      [title]="mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE ? ('Saving is disabled: SUBSTITUTION_AS_CODE mappings are deprecated and can no longer be modified.' | translate) : ((isButtonDisabled$ | async) ? ('Select at least one connector before saving.' | translate) : '')"
+      [disabled]="(!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole) || stepperConfiguration.editorMode === EditorMode.READ_ONLY || mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE || (isButtonDisabled$ | async) || (stepperConfiguration.direction === Direction.INBOUND && !mapping.mappingTopic?.trim())"
+      [title]="mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE ? ('Saving is disabled: SUBSTITUTION_AS_CODE mappings are deprecated and can no longer be modified.' | translate) : ((isButtonDisabled$ | async) ? ('Select at least one connector before saving.' | translate) : ((stepperConfiguration.direction === Direction.INBOUND && !mapping.mappingTopic?.trim()) ? ('Mapping Topic is required.' | translate) : ''))"
       translate data-cy="dm-unified-editor-save">
       Save
     </button>

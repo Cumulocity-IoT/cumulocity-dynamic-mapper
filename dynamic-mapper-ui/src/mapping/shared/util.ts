@@ -134,12 +134,16 @@ export function checkTopicsInboundAreValid(control: AbstractControl) {
   mappingTopic.setErrors(null);
   mappingTopicSample.setErrors(null);
 
-  // avoid displaying the message error when values are empty
-  if (
-    mappingTopic.value == '' ||
-    mappingTopicSample.value == ''
-  ) {
-    return { required: false };
+  // Propagate required errors onto individual controls so Formly's c8y-form-field
+  // shows the error and propertyFormly.invalid is true. Returning { required: false }
+  // from the group validator is ineffective — Formly strips falsy-value keys.
+  if (!mappingTopic.value) {
+    mappingTopic.setErrors({ required: true });
+    return null;
+  }
+  if (!mappingTopicSample.value) {
+    mappingTopicSample.setErrors({ required: true });
+    return null;
   }
 
   // count number of "#" in mappingTopic

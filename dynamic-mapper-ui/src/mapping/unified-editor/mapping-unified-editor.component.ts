@@ -734,6 +734,21 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
       return;
     }
 
+    // Validate General Settings form (e.g. mappingTopic required for INBOUND).
+    // Belt-and-suspenders: also check the value directly because Formly's group
+    // validator strips falsy-keyed errors, so propertyFormly.invalid may be stale.
+    if (this.stepperConfiguration.direction === Direction.INBOUND && !this.mapping.mappingTopic?.trim()) {
+      this.propertyFormly.get('mappingTopic')?.setErrors({ required: true });
+      this.propertyFormly.get('mappingTopic')?.markAsTouched();
+      this.activeTabIndex = TAB_GENERAL_SETTINGS;
+      return;
+    }
+    if (this.propertyFormly.invalid) {
+      this.propertyFormly.markAllAsTouched();
+      this.activeTabIndex = TAB_GENERAL_SETTINGS;
+      return;
+    }
+
     if (this.stepperViewModel.showExtensionSelectors) {
       const extensionName = this.templateForm.get('extensionName');
       const eventName = this.templateForm.get('eventName');
