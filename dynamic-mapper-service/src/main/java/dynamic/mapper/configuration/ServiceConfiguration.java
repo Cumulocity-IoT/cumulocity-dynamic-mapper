@@ -67,7 +67,7 @@ public class ServiceConfiguration implements Cloneable {
         this.supportESM = false;
         this.cacheAliasMaps = false;
         this.externalIdBinding = true;
-        this.mappingVersionRetention = 10;
+        this.mappingVersionRetention = 5;
     }
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Enable logging of message payloads for debugging purposes. Caution: May expose sensitive data in logs.", example = "false")
