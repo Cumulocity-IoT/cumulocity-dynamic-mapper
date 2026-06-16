@@ -24,11 +24,11 @@ import { MappingService } from '../core/mapping.service';
 @Component({
   selector: 'd11r-mapping-id-renderer',
   template: `
-    <a
+    <a href=""
       class="interact"
       [attr.data-cy]="'dm-mapping-id-' + context.item.id"
       title="{{ context.item.id }} - {{ context.item.mapping.mappingType}} - {{ context.item.mapping.transformationType }}"
-      (click)="updateMapping()"
+      (click)="$event.preventDefault(); updateMapping()"
       style="padding-top: 0px; padding-bottom: 10px;"
     >
       {{ context.value }}
