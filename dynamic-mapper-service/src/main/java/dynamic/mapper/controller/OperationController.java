@@ -392,9 +392,14 @@ public class OperationController {
         String id = parameters.get("id");
         Boolean activation = Boolean.parseBoolean(parameters.get("active"));
         String versionParam = parameters.get("versionNumber");
-        Integer versionNumber = versionParam != null && !versionParam.isBlank()
-                ? Integer.valueOf(versionParam.trim())
-                : null;
+        Integer versionNumber = null;
+        if (versionParam != null && !versionParam.isBlank()) {
+            try {
+                versionNumber = Integer.valueOf(versionParam.trim());
+            } catch (NumberFormatException ex) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid versionNumber: " + versionParam);
+            }
+        }
         Mapping updatedMapping = mappingService.setActivationMapping(tenant, id, activation, versionNumber);
         Map<String, AConnectorClient> connectorMap = connectorRegistry
                 .getClientsForTenant(tenant);
