@@ -140,7 +140,7 @@ class MappingServiceActivationTest {
                 .versionNumber(number)
                 .snapshot(snapshot)
                 .isDraft(false)
-                .label("label-" + number)
+                .note("label-" + number)
                 .build();
     }
 
@@ -160,7 +160,7 @@ class MappingServiceActivationTest {
         assertEquals(2, persisted.getVersionNumber());
         assertEquals("V2 content", persisted.getName(), "content taken from the version snapshot");
         assertEquals("{\"v\":2}", persisted.getSourceTemplate());
-        assertEquals("label-2", persisted.getVersionLabel());
+        assertEquals("label-2", persisted.getVersionNote());
         assertTrue(persisted.isDraftDirty(), "line-level draft flag preserved from runnable");
         assertTrue(persisted.getActive());
 

@@ -444,7 +444,7 @@ public class MappingService {
         snapshot.setId(runnable.getId());
         snapshot.setIdentifier(runnable.getIdentifier());
         snapshot.setVersionNumber(version.getVersionNumber());
-        snapshot.setVersionLabel(version.getLabel());
+        snapshot.setVersionNote(version.getNote());
         snapshot.setDraftDirty(runnable.isDraftDirty());
         return snapshot;
     }

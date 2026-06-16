@@ -36,7 +36,7 @@ Add, each with `@Builder.Default` so legacy `d11r_mapping` objects load cleanly
 ```java
 @Builder.Default private int versionNumber = 1;     // NFR-1: missing → 1, not 0
 @Builder.Default private boolean draftDirty = false; // NFR-1: missing → false
-private String versionLabel;                         // nullable, no default
+private String versionNote;                          // nullable, no default
 ```
 
 > Do **not** make these `@NotNull` boxed types without a default (NFR-1 constraint).
@@ -51,7 +51,7 @@ snapshot     (Mapping) – immutable full config
 isDraft      (boolean) – true for the single draft slot, false for published versions
 createdAt    (long)
 createdBy    (String)
-label        (String)
+note         (String)
 ```
 Persisted as MO type `d11r_mapping_version`. Add constants
 `MAPPING_VERSION_TYPE = "d11r_mapping_version"` / fragment alongside the existing
@@ -82,10 +82,10 @@ patterns (tenant-scoped `inventoryApi` create/update/delete/query). Responsibili
 ### 2.2 `MappingVersionService` — new
 The lifecycle owner. Methods (sketch):
 - `Mapping getDraft(tenant, identifier)` / `Mapping saveDraft(tenant, identifier, Mapping edits)` — FR-1; with optimistic-concurrency check (IMP-2: reject if base ≠ current draft)
-- `MappingVersion publish(tenant, identifier, label)` — FR-1a: freeze draft → new immutable version with next `versionNumber`; then `pruneVersions(...)`
+- `MappingVersion publish(tenant, identifier, note)` — FR-1a: freeze draft → new immutable version with next `versionNumber`; then `pruneVersions(...)`
 - `List<MappingVersion> listVersions(tenant, identifier)` — FR-13
 - `MappingVersion getVersion(tenant, identifier, versionNumber)` — FR-14
-- `void updateLabel(tenant, identifier, versionNumber, label)` — FR-5 / D-3 (label-only)
+- `void updateNote(tenant, identifier, versionNumber, note)` — FR-5 / D-3 (note-only)
 - `void deleteVersion(tenant, identifier, versionNumber)` — FR-16/17 (block if active)
 - `void pruneVersions(tenant, identifier, retentionN)` — FR-19: drop oldest, never the active
 - `MappingVersion ensureBackfilled(tenant, Mapping runnable)` — **NFR-1a** lazy v1 backfill, idempotent
@@ -128,7 +128,7 @@ for mutating routes:
 - `POST   /mapping/{identifier}/publish`              → publish draft (FR-1a)
 - `GET    /mapping/{identifier}/version`              → list (FR-13)
 - `GET    /mapping/{identifier}/version/{versionNumber}` → fetch (FR-14)
-- `PATCH  /mapping/{identifier}/version/{versionNumber}` → edit label only (D-3)
+- `PATCH  /mapping/{identifier}/version/{versionNumber}` → edit note only (D-3)
 - `DELETE /mapping/{identifier}/version/{versionNumber}` → delete inactive version (FR-16/17)
 
 ### 3.4 Activation operation
@@ -162,7 +162,7 @@ a rebuild, as today.
 | **P2 — Version service + backfill** | `MappingVersionService` (publish, list, get, label, delete, prune, ensureBackfilled). Tests for retention + idempotent backfill. | Core logic, still no controller wiring. |
 | **P3 — Activation is version-aware** | Extend `setActivationMapping` + per-line atomic swap; `OperationController` optional `versionNumber`. Tests for C-1 incl. concurrent activation, FR-9 rollback-on-failure. | Makes the single-active invariant real. |
 | **P4 — Draft editing (staged/additive)** | `saveDraft`/`getDraft` (optimistic concurrency IMP-2) + new `GET`/`PUT /mapping/{id}/draft` endpoints. **`PUT /mapping/{id}` kept as bridge** (still updates runnable). `draftDirty` not yet persisted on the runnable — derived from draft existence; persistence wired with publish in P5. The hard `PUT`→draft-only flip is deferred to the P5/P6 cutover (user decision: staged, no edit-apply gap). | Depends on version service. |
-| **P5 — REST surface (done)** | `POST /mapping/{id}/publish`, `GET /mapping/{id}/version`, `GET /mapping/{id}/version/{n}`, `PATCH .../{n}` (label), `DELETE .../{n}` + authz; publish backfills active config, freezes draft, clears the draft. All version routes keyed by the runnable MO `id` (so the line `identifier` + active version are always resolved server-side). Service-level tests. | Exposes the full draft→publish→activate API. |
+| **P5 — REST surface (done)** | `POST /mapping/{id}/publish`, `GET /mapping/{id}/version`, `GET /mapping/{id}/version/{n}`, `PATCH .../{n}` (note), `DELETE .../{n}` + authz; publish backfills active config, freezes draft, clears the draft. All version routes keyed by the runnable MO `id` (so the line `identifier` + active version are always resolved server-side). Service-level tests. | Exposes the full draft→publish→activate API. |
 | **P6 — UI + edit cutover (code-complete)** | DONE: TS model fields + `MappingVersion`; frontend `MappingService` version/draft API client; `MappingVersionModalComponent` (list/activate/rollback/delete/publish) as a grid "Versions" action; **edit-path cutover (D-8)** — active mappings editable, editor Save → `saveDraft`, edit resolver loads the existing draft so the working copy continues. Verified by `tsc --noEmit` + `ng build` (AOT). REMAINING: (a) optional grid "has draft" badge (needs backend `draftDirty` in `getMappings`); (b) runtime verification against a live tenant; (c) full versioning integration test (backend). | Completes D-8. |
 | **§8 scaling fix** | Replace the tenant-wide version scan. Now low-cost via childAdditions because all version routes are id-keyed (parent MO id always in hand). Decide & implement before GA. | Independent of phases above. |
 

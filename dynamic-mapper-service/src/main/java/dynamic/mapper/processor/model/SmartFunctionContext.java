@@ -115,6 +115,15 @@ public class SmartFunctionContext implements DataPrepContext {
     }
 
     @Override
+    public String getExternalId() {
+        if (config == null) {
+            return null;
+        }
+        Object val = config.get("externalId");
+        return val != null ? val.toString() : null;
+    }
+
+    @Override
     public void setState(String key, Value value) {
         if (key == null) {
             log.warn("{} - Cannot set state with null key", tenant);

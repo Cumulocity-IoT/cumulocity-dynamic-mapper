@@ -190,7 +190,7 @@ class MappingVersionServiceTest {
         assertEquals("tester", v1.getCreatedBy());
         assertEquals(3, service.listVersions(TENANT, IDENTIFIER).size());
         assertEquals(2, v2.getSnapshot().getVersionNumber());
-        assertEquals("second", v2.getSnapshot().getVersionLabel());
+        assertEquals("second", v2.getSnapshot().getVersionNote());
     }
 
     @Test
@@ -209,7 +209,7 @@ class MappingVersionServiceTest {
         original.setVersionNumber(1);
         service.publish(TENANT, original, "note", 0);
         assertEquals(1, original.getVersionNumber());
-        assertNull(original.getVersionLabel());
+        assertNull(original.getVersionNote());
     }
 
     @Test
@@ -269,13 +269,13 @@ class MappingVersionServiceTest {
     }
 
     @Test
-    void updateLabelChangesOnlyTheLabel() {
+    void updateNoteChangesOnlyTheNote() {
         service.publish(TENANT, mapping(IDENTIFIER), "original", 0);
-        service.updateLabel(TENANT, IDENTIFIER, 1, "renamed");
+        service.updateNote(TENANT, IDENTIFIER, 1, "renamed");
 
         MappingVersion v = service.getVersion(TENANT, IDENTIFIER, 1);
-        assertEquals("renamed", v.getLabel());
-        assertEquals("renamed", v.getSnapshot().getVersionLabel());
+        assertEquals("renamed", v.getNote());
+        assertEquals("renamed", v.getSnapshot().getVersionNote());
     }
 
     @Test

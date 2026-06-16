@@ -31,7 +31,7 @@ import { BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, Subject, take } from 'rxjs';
 import { ConfirmationModalComponent, Mapping, SharedModule } from '../../shared';
 import { MappingService } from '../core/mapping.service';
-import { LabelInputModalComponent } from './label-input-modal.component';
+import { NoteEditCellRendererComponent } from './note-edit-cell-renderer.component';
 import { VersionStateCellRendererComponent } from './version-state-cell.renderer.component';
 
 type VersionState = 'active' | 'published' | 'draft';
@@ -46,6 +46,8 @@ interface VersionRow {
   updatedDisplay: string;
   createdBy: string;
   isDraft: boolean;
+  /** Injected per-row by the drawer. Absent when canManage=false (makes the cell read-only). */
+  onNoteChange?: (note: string) => void;
 }
 
 const DRAFT_ROW_ID = '__draft__';
@@ -56,6 +58,8 @@ const DRAFT_ROW_ID = '__draft__';
  * (active / published / draft). Row actions are contextual — Publish on the draft,
  * Activate / Delete on inactive published versions. The active version (the one
  * whose number matches the mapping's {@code versionNumber}) has no actions.
+ *
+ * Notes are edited inline via the Cumulocity "edit on focus" pattern; no modal is shown.
  */
 @Component({
   selector: 'd11r-mapping-version-drawer',
@@ -80,12 +84,14 @@ export class MappingVersionDrawerComponent implements OnInit {
 
   columns: Column[] = this.buildColumns();
   actionControls: ActionControl[] = this.buildActionControls();
-  // c8y-data-grid reacts to an observable of rows (like the main mappings grid),
-  // not to a plain array reassigned asynchronously.
   readonly rows$ = new BehaviorSubject<VersionRow[]>([]);
   readonly pagination: Pagination = { pageSize: 100, currentPage: 1 };
   loading = true;
   busy = false;
+
+  /** Tracks the note entered in the draft row; used when publishing. */
+  draftNote = '';
+
   private changed = false;
 
   async ngOnInit(): Promise<void> {
@@ -108,23 +114,30 @@ export class MappingVersionDrawerComponent implements OnInit {
           versionNumber: v.versionNumber,
           versionDisplay: `v${v.versionNumber}`,
           state: (v.versionNumber === this.mapping.versionNumber ? 'active' : 'published') as VersionState,
-          note: v.note || '—',
+          note: v.note || '',
           updatedDisplay: v.createdAt ? new Date(v.createdAt).toLocaleString() : '—',
           createdBy: v.createdBy || '—',
-          isDraft: false
+          isDraft: false,
+          onNoteChange: this.canManage
+            ? (note: string) => this.saveVersionNote(v.id, v.versionNumber, note)
+            : undefined
         }));
 
-      // The draft is shown as its own row at the top, so the whole history lives in one grid.
+      this.draftNote = draft?.versionNote ?? '';
+
       const draftRow: VersionRow[] = draft
         ? [{
           id: DRAFT_ROW_ID,
           versionNumber: 0,
           versionDisplay: '—',
           state: 'draft',
-          note: draft.versionNote || '—',
+          note: this.draftNote,
           updatedDisplay: draft.lastUpdate ? new Date(draft.lastUpdate).toLocaleString() : '—',
           createdBy: '—',
-          isDraft: true
+          isDraft: true,
+          onNoteChange: this.canManage
+            ? (note: string) => { this.draftNote = note; }
+            : undefined
         }]
         : [];
 
@@ -133,6 +146,22 @@ export class MappingVersionDrawerComponent implements OnInit {
       this.alertService.danger('Failed to load versions', (e as Error).message);
     } finally {
       this.loading = false;
+    }
+  }
+
+  private async saveVersionNote(versionId: string, versionNumber: number, note: string): Promise<void> {
+    try {
+      await this.mappingService.updateVersionNote(this.mapping.id, versionNumber, note);
+      this.changed = true;
+      // Update the row value in-place so the grid reflects the saved state.
+      const rows = this.rows$.getValue();
+      const row = rows.find(r => r.id === versionId);
+      if (row) {
+        row.note = note || '';
+        this.rows$.next([...rows]);
+      }
+    } catch (e) {
+      this.alertService.danger('Failed to update note', (e as Error).message);
     }
   }
 
@@ -187,14 +216,11 @@ export class MappingVersionDrawerComponent implements OnInit {
   }
 
   async publish(): Promise<void> {
-    const label = await this.promptNote('Publish draft as new version', '');
-    if (label === undefined) {
-      return; // cancelled
-    }
     this.busy = true;
     try {
-      const version = await this.mappingService.publishDraft(this.mapping.id, label || undefined);
+      const version = await this.mappingService.publishDraft(this.mapping.id, this.draftNote || undefined);
       this.alertService.success(`Published version ${version.versionNumber} of ${this.mapping.name}`);
+      this.draftNote = '';
       this.changed = true;
       await this.reload();
     } catch (e) {
@@ -204,34 +230,6 @@ export class MappingVersionDrawerComponent implements OnInit {
     }
   }
 
-  async editNote(row: VersionRow): Promise<void> {
-    const note = await this.promptNote(`Edit note of v${row.versionNumber}`, row.note === '—' ? '' : row.note);
-    if (note === undefined) {
-      return; // cancelled
-    }
-    this.busy = true;
-    try {
-      await this.mappingService.updateVersionNote(this.mapping.id, row.versionNumber, note);
-      this.changed = true;
-      await this.reload();
-    } catch (e) {
-      this.alertService.danger('Failed to update note', (e as Error).message);
-    } finally {
-      this.busy = false;
-    }
-  }
-
-  /** Opens the note input modal, resolving to the entered text or undefined if cancelled. */
-  private promptNote(title: string, value: string): Promise<string | undefined> {
-    return new Promise(resolve => {
-      const ref = this.bsModalService.show(LabelInputModalComponent, { initialState: { title, value } });
-      ref.content.closeSubject.pipe(take(1)).subscribe((result: string | undefined) => {
-        resolve(result);
-        ref.hide();
-      });
-    });
-  }
-
   close(): void {
     this.closeSubject.next(this.changed);
     this.closeSubject.complete();
@@ -239,8 +237,6 @@ export class MappingVersionDrawerComponent implements OnInit {
   }
 
   private buildColumns(): Column[] {
-    // No explicit gridTrackSize: let the grid auto-distribute and reserve space for
-    // the row-actions (⋮) column, otherwise the actions are pushed off-screen.
     return [
       {
         name: 'state',
@@ -258,11 +254,12 @@ export class MappingVersionDrawerComponent implements OnInit {
         dataType: ColumnDataType.TextShort
       },
       {
-        name: 'label',
+        name: 'note',
         header: 'Note',
-        path: 'label',
+        path: 'note',
         gridTrackSize: '40%',
-        dataType: ColumnDataType.TextShort
+        dataType: ColumnDataType.TextShort,
+        cellRendererComponent: NoteEditCellRendererComponent
       },
       {
         name: 'updatedDisplay',
@@ -289,13 +286,6 @@ export class MappingVersionDrawerComponent implements OnInit {
         icon: 'upload',
         callback: () => this.publish(),
         showIf: (row: VersionRow) => this.canManage && row.isDraft && !this.busy
-      },
-      {
-        type: 'EDIT_LABEL',
-        text: 'Edit note',
-        icon: 'pencil',
-        callback: (row: VersionRow) => this.editNote(row),
-        showIf: (row: VersionRow) => this.canManage && !row.isDraft && !this.busy
       },
       {
         type: 'ACTIVATE',

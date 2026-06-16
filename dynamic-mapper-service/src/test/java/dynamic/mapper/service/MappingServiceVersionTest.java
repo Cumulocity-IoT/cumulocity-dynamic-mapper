@@ -100,7 +100,7 @@ class MappingServiceVersionTest {
                 .mappingType(MappingType.JSON).transformationType(TransformationType.JSONATA)
                 .active(false).debug(false).qos(Qos.AT_LEAST_ONCE)
                 .sourceTemplate("{}").targetTemplate("{}")
-                .versionLabel("draft-label")
+                .versionNote("draft-label")
                 .build();
         return MappingVersion.builder().identifier(IDENTIFIER).isDraft(true).snapshot(snapshot).build();
     }
@@ -138,7 +138,7 @@ class MappingServiceVersionTest {
 
         service.publishDraft(TENANT, MO_ID, null);
 
-        // Falls back to the draft snapshot's own label.
+        // Falls back to the draft snapshot's own note.
         verify(mappingVersionService).publish(TENANT, d.getSnapshot(), "draft-label", 1);
     }
 
@@ -168,11 +168,11 @@ class MappingServiceVersionTest {
 
         service.listVersions(TENANT, MO_ID);
         service.getVersion(TENANT, MO_ID, 2);
-        service.updateVersionLabel(TENANT, MO_ID, 2, "note");
+        service.updateVersionNote(TENANT, MO_ID, 2, "note");
 
         verify(mappingVersionService).listVersions(TENANT, IDENTIFIER);
         verify(mappingVersionService).getVersion(TENANT, IDENTIFIER, 2);
-        verify(mappingVersionService).updateLabel(TENANT, IDENTIFIER, 2, "note");
+        verify(mappingVersionService).updateNote(TENANT, IDENTIFIER, 2, "note");
     }
 
     @Test

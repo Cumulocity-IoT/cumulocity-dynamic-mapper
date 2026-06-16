@@ -42,7 +42,7 @@ class MappingVersioningTest {
 
     @Test
     void legacyMappingWithoutVersionFieldsGetsDefaults() throws Exception {
-        // A mapping persisted before versioning existed: no versionNumber / draftDirty / versionLabel.
+        // A mapping persisted before versioning existed: no versionNumber / draftDirty / versionNote.
         String legacyJson = """
                 {
                   "id": "34573838974",
@@ -58,7 +58,7 @@ class MappingVersioningTest {
 
         assertEquals(1, mapping.getVersionNumber(), "missing versionNumber must default to 1, not 0");
         assertFalse(mapping.isDraftDirty(), "missing draftDirty must default to false");
-        assertNull(mapping.getVersionLabel(), "missing versionLabel must be null");
+        assertNull(mapping.getVersionNote(), "missing versionNote must be null");
         assertEquals("l19zjk", mapping.getIdentifier());
     }
 
@@ -74,7 +74,7 @@ class MappingVersioningTest {
                   "debug": false,
                   "versionNumber": 5,
                   "draftDirty": true,
-                  "versionLabel": "note"
+                  "versionNote": "note"
                 }
                 """;
 
@@ -82,7 +82,7 @@ class MappingVersioningTest {
 
         assertEquals(5, mapping.getVersionNumber());
         assertTrue(mapping.isDraftDirty());
-        assertEquals("note", mapping.getVersionLabel());
+        assertEquals("note", mapping.getVersionNote());
     }
 
     @Test
@@ -145,7 +145,7 @@ class MappingVersioningTest {
                 .isDraft(false)
                 .createdAt(123L)
                 .createdBy("admin")
-                .label("v3")
+                .note("v3")
                 .build();
 
         String json = objectMapper.writeValueAsString(version);
@@ -155,7 +155,7 @@ class MappingVersioningTest {
         assertEquals(3, restored.getVersionNumber());
         assertEquals(123L, restored.getCreatedAt());
         assertEquals("admin", restored.getCreatedBy());
-        assertEquals("v3", restored.getLabel());
+        assertEquals("v3", restored.getNote());
         assertFalse(restored.isDraft());
         assertNotNull(restored.getSnapshot());
         assertEquals("M", restored.getSnapshot().getName());
