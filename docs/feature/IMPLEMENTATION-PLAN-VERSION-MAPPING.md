@@ -1,8 +1,8 @@
-# Implementation Plan: Mapping Versioning (Backend)
+# Implementation Plan: Mapping Versioning
 
-**Status:** Plan for review — no code written yet
+**Status:** Implemented
 **Companion to:** [REQUIREMENTS-VERSION-MAPPING.md](REQUIREMENTS-VERSION-MAPPING.md)
-**Scope of this plan:** Backend (`dynamic-mapper-service`). Frontend is a follow-up.
+**Scope of this plan:** Backend (`dynamic-mapper-service`) with corresponding UI notes (`dynamic-mapper-ui`).
 
 This plan maps each requirement/decision to concrete code changes, grounded in the
 current codebase. It is sequenced so the system stays runnable and green after each
