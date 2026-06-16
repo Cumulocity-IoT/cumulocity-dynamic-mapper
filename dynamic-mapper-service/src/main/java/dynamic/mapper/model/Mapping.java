@@ -274,8 +274,8 @@ public class Mapping implements Serializable {
     @JsonSetter(nulls = Nulls.SKIP)
     private boolean draftDirty = false;
 
-    @Schema(description = "Free-text change note / label for the active version", example = "Initial version")
-    private String versionLabel;
+    @Schema(description = "Free-text change note for the active version", example = "Initial version")
+    private String versionNote;
 
     public static final String SMART_FUNCTION_NAME = "onMessage";
 

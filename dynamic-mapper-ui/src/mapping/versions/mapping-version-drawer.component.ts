@@ -42,7 +42,7 @@ interface VersionRow {
   versionNumber: number;
   versionDisplay: string;
   state: VersionState;
-  label: string;
+  note: string;
   updatedDisplay: string;
   createdBy: string;
   isDraft: boolean;
@@ -108,7 +108,7 @@ export class MappingVersionDrawerComponent implements OnInit {
           versionNumber: v.versionNumber,
           versionDisplay: `v${v.versionNumber}`,
           state: (v.versionNumber === this.mapping.versionNumber ? 'active' : 'published') as VersionState,
-          label: v.label || '—',
+          note: v.note || '—',
           updatedDisplay: v.createdAt ? new Date(v.createdAt).toLocaleString() : '—',
           createdBy: v.createdBy || '—',
           isDraft: false
@@ -121,7 +121,7 @@ export class MappingVersionDrawerComponent implements OnInit {
           versionNumber: 0,
           versionDisplay: '—',
           state: 'draft',
-          label: draft.versionLabel || '—',
+          note: draft.versionNote || '—',
           updatedDisplay: draft.lastUpdate ? new Date(draft.lastUpdate).toLocaleString() : '—',
           createdBy: '—',
           isDraft: true
@@ -187,7 +187,7 @@ export class MappingVersionDrawerComponent implements OnInit {
   }
 
   async publish(): Promise<void> {
-    const label = await this.promptLabel('Publish draft as new version', '');
+    const label = await this.promptNote('Publish draft as new version', '');
     if (label === undefined) {
       return; // cancelled
     }
@@ -204,25 +204,25 @@ export class MappingVersionDrawerComponent implements OnInit {
     }
   }
 
-  async editLabel(row: VersionRow): Promise<void> {
-    const label = await this.promptLabel(`Edit label of v${row.versionNumber}`, row.label === '—' ? '' : row.label);
-    if (label === undefined) {
+  async editNote(row: VersionRow): Promise<void> {
+    const note = await this.promptNote(`Edit note of v${row.versionNumber}`, row.note === '—' ? '' : row.note);
+    if (note === undefined) {
       return; // cancelled
     }
     this.busy = true;
     try {
-      await this.mappingService.updateVersionLabel(this.mapping.id, row.versionNumber, label);
+      await this.mappingService.updateVersionNote(this.mapping.id, row.versionNumber, note);
       this.changed = true;
       await this.reload();
     } catch (e) {
-      this.alertService.danger('Failed to update label', (e as Error).message);
+      this.alertService.danger('Failed to update note', (e as Error).message);
     } finally {
       this.busy = false;
     }
   }
 
-  /** Opens the label input modal, resolving to the entered text or undefined if cancelled. */
-  private promptLabel(title: string, value: string): Promise<string | undefined> {
+  /** Opens the note input modal, resolving to the entered text or undefined if cancelled. */
+  private promptNote(title: string, value: string): Promise<string | undefined> {
     return new Promise(resolve => {
       const ref = this.bsModalService.show(LabelInputModalComponent, { initialState: { title, value } });
       ref.content.closeSubject.pipe(take(1)).subscribe((result: string | undefined) => {
@@ -259,7 +259,7 @@ export class MappingVersionDrawerComponent implements OnInit {
       },
       {
         name: 'label',
-        header: 'Label',
+        header: 'Note',
         path: 'label',
         gridTrackSize: '40%',
         dataType: ColumnDataType.TextShort
@@ -292,9 +292,9 @@ export class MappingVersionDrawerComponent implements OnInit {
       },
       {
         type: 'EDIT_LABEL',
-        text: 'Edit label',
+        text: 'Edit note',
         icon: 'pencil',
-        callback: (row: VersionRow) => this.editLabel(row),
+        callback: (row: VersionRow) => this.editNote(row),
         showIf: (row: VersionRow) => this.canManage && !row.isDraft && !this.busy
       },
       {

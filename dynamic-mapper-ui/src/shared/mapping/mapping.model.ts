@@ -183,8 +183,8 @@ export interface Mapping {
   /** Whether the line has unpublished draft changes that differ from the active version */
   draftDirty?: boolean;
 
-  /** Free-text change note / label for the active version */
-  versionLabel?: string;
+  /** Free-text change note for the active version */
+  versionNote?: string;
 }
 
 /** An immutable snapshot of a mapping configuration together with its version metadata. */
@@ -211,7 +211,7 @@ export interface MappingVersion {
   createdBy?: string;
 
   /** Optional free-text change note */
-  label?: string;
+  note?: string;
 }
 
 export interface MappingEnriched {

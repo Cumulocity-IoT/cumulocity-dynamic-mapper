@@ -49,7 +49,7 @@ import java.util.stream.Collectors;
 /**
  * Lifecycle owner for mapping versions (managed object type
  * {@code d11r_mapping_version}). Implements publish, listing, retrieval,
- * label edits, deletion, retention pruning, and lazy backfill of legacy
+ * note edits, deletion, retention pruning, and lazy backfill of legacy
  * mappings.
  *
  * <p>Version records are persisted as standalone managed objects of type
@@ -88,11 +88,11 @@ public class MappingVersionService {
      * by this call.
      *
      * @param mapping             the configuration to freeze (typically the draft)
-     * @param label               optional change note
+     * @param note                optional change note
      * @param activeVersionNumber the version number currently active for this line
      *                            (protected from pruning); use 0 if none
      */
-    public MappingVersion publish(String tenant, Mapping mapping, String label, int activeVersionNumber) {
+    public MappingVersion publish(String tenant, Mapping mapping, String note, int activeVersionNumber) {
         String identifier = mapping.getIdentifier();
         if (identifier == null) {
             throw new IllegalArgumentException(
@@ -111,7 +111,7 @@ public class MappingVersionService {
 
             Mapping snapshot = copyOf(mapping);
             snapshot.setVersionNumber(nextVersionNumber);
-            snapshot.setVersionLabel(label);
+            snapshot.setVersionNote(note);
             snapshot.setDraftDirty(false);
 
             MappingVersion version = MappingVersion.builder()
@@ -121,7 +121,7 @@ public class MappingVersionService {
                     .isDraft(false)
                     .createdAt(System.currentTimeMillis())
                     .createdBy(currentUser())
-                    .label(label)
+                    .note(note)
                     .build();
 
             MappingVersion persisted = persistNewVersion(tenant, version);
@@ -240,23 +240,23 @@ public class MappingVersionService {
                 () -> findPublished(loadVersions(tenant, identifier), versionNumber).orElse(null));
     }
 
-    // ========== Label edit ==========
+    // ========== Note edit ==========
 
     /**
-     * Updates the change-note label of a published version. The label is the only
+     * Updates the change note of a published version. The note is the only
      * mutable field of a version (D-3); all other fields are immutable.
      */
-    public MappingVersion updateLabel(String tenant, String identifier, int versionNumber, String label) {
+    public MappingVersion updateNote(String tenant, String identifier, int versionNumber, String note) {
         return subscriptionsService.callForTenant(tenant, () -> {
             MappingVersion version = findPublished(loadVersions(tenant, identifier), versionNumber)
                     .orElseThrow(() -> new IllegalArgumentException(String.format(
                             "Tenant %s - No version %d found for mapping line %s", tenant, versionNumber, identifier)));
-            version.setLabel(label);
+            version.setNote(note);
             if (version.getSnapshot() != null) {
-                version.getSnapshot().setVersionLabel(label);
+                version.getSnapshot().setVersionNote(note);
             }
             updateVersionMO(version);
-            log.info("{} - Updated label of version {} of mapping line {}", tenant, versionNumber, identifier);
+            log.info("{} - Updated note of version {} of mapping line {}", tenant, versionNumber, identifier);
             return version;
         });
     }
@@ -376,7 +376,7 @@ public class MappingVersionService {
                     .isDraft(false)
                     .createdAt(System.currentTimeMillis())
                     .createdBy(currentUser())
-                    .label(runnable.getVersionLabel())
+                    .note(runnable.getVersionNote())
                     .build();
 
             MappingVersion persisted = persistNewVersion(tenant, version);

@@ -76,5 +76,5 @@ public class MappingVersion implements Serializable {
     private String createdBy;
 
     @Schema(description = "Optional free-text change note", example = "Initial version")
-    private String label;
+    private String note;
 }

@@ -36,7 +36,7 @@ import { Subject } from 'rxjs';
       </ng-container>
       <div class="p-24">
         <c8y-form-group>
-          <label>{{ 'Label' | translate }}</label>
+          <label>{{ 'Note' | translate }}</label>
           <input type="text" class="form-control" [(ngModel)]="value" data-cy="dm-version-label-input"
             placeholder="{{ 'Optional change note (e.g. what changed and why)' | translate }}" />
         </c8y-form-group>

@@ -443,10 +443,10 @@ public class MappingController {
     @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
     @PostMapping(value = "/{id}/publish", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<MappingVersion> publishDraft(@PathVariable String id,
-            @RequestParam(required = false) String label) {
+            @RequestParam(required = false) String note) {
         String tenant = getTenant();
         try {
-            MappingVersion version = mappingService.publishDraft(tenant, id, label);
+            MappingVersion version = mappingService.publishDraft(tenant, id, note);
             return ResponseEntity.status(HttpStatus.CREATED).body(version);
         } catch (MappingValidationException e) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
@@ -516,26 +516,26 @@ public class MappingController {
     }
 
     @Operation(
-        summary = "Update a version's label",
+        summary = "Update a version's note",
         description = """
-        Updates the change-note label of a published version. The label is the only mutable field of a
+        Updates the change note of a published version. The note is the only mutable field of a
         version; all other fields are immutable.
 
         **Security:** Requires ROLE_DYNAMIC_MAPPER_ADMIN or ROLE_DYNAMIC_MAPPER_CREATE role.
         """
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Label updated",
+        @ApiResponse(responseCode = "200", description = "Note updated",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = MappingVersion.class))),
         @ApiResponse(responseCode = "404", description = "Mapping or version not found", content = @Content)
     })
     @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
     @PatchMapping(value = "/{id}/version/{versionNumber}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<MappingVersion> updateVersionLabel(@PathVariable String id,
-            @PathVariable int versionNumber, @RequestParam(required = false) String label) {
+    public ResponseEntity<MappingVersion> updateVersionNote(@PathVariable String id,
+            @PathVariable int versionNumber, @RequestParam(required = false) String note) {
         String tenant = getTenant();
         try {
-            return ResponseEntity.ok(mappingService.updateVersionLabel(tenant, id, versionNumber, label));
+            return ResponseEntity.ok(mappingService.updateVersionNote(tenant, id, versionNumber, note));
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
         }

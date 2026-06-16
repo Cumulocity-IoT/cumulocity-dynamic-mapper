@@ -588,7 +588,7 @@ public class MappingService {
      * none yet (NFR-1a), then the draft snapshot becomes the next version and the
      * draft is cleared. Does not activate the new version.
      */
-    public dynamic.mapper.model.MappingVersion publishDraft(String tenant, String id, String label) {
+    public dynamic.mapper.model.MappingVersion publishDraft(String tenant, String id, String note) {
         java.util.concurrent.locks.ReentrantLock lock = activationLockFor(tenant, id);
         lock.lock();
         try {
@@ -607,9 +607,9 @@ public class MappingService {
                         String.format("Tenant %s - No draft to publish for mapping %s [%s]", tenant, identifier, id));
             }
 
-            String effectiveLabel = label != null ? label : draft.getSnapshot().getVersionLabel();
+            String effectiveNote = note != null ? note : draft.getSnapshot().getVersionNote();
             dynamic.mapper.model.MappingVersion version = mappingVersionService.publish(tenant, draft.getSnapshot(),
-                    effectiveLabel, runnable.getVersionNumber());
+                    effectiveNote, runnable.getVersionNumber());
 
             // The draft's content now lives in an immutable version; clear the working copy
             // and the line's draft flag.
@@ -646,14 +646,14 @@ public class MappingService {
         return mappingVersionService.getVersion(tenant, runnable.getIdentifier(), versionNumber);
     }
 
-    /** Updates the change-note label of a published version (label is the only mutable field). */
-    public dynamic.mapper.model.MappingVersion updateVersionLabel(String tenant, String id, int versionNumber,
-            String label) {
+    /** Updates the change note of a published version (note is the only mutable field). */
+    public dynamic.mapper.model.MappingVersion updateVersionNote(String tenant, String id, int versionNumber,
+            String note) {
         Mapping runnable = getMapping(tenant, id);
         if (runnable == null) {
             throw new IllegalArgumentException("Mapping not found: " + id);
         }
-        return mappingVersionService.updateLabel(tenant, runnable.getIdentifier(), versionNumber, label);
+        return mappingVersionService.updateNote(tenant, runnable.getIdentifier(), versionNumber, note);
     }
 
     /** Deletes an inactive published version; the active version cannot be deleted (FR-17). */

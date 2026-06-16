@@ -249,8 +249,8 @@ export class MappingService {
    * Publishes the mapping line's current draft as a new immutable version. Does not
    * activate it.
    */
-  async publishDraft(id: string, label?: string): Promise<MappingVersion> {
-    const query = label ? `?label=${encodeURIComponent(label)}` : '';
+  async publishDraft(id: string, note?: string): Promise<MappingVersion> {
+    const query = note ? `?note=${encodeURIComponent(note)}` : '';
     const response = await this.client.fetch(
       `${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${id}/publish${query}`,
       { headers: { 'content-type': 'application/json' }, method: 'POST' }
@@ -296,10 +296,10 @@ export class MappingService {
     return response.json();
   }
 
-  /** Updates the change-note label of a published version (the only mutable field). */
-  async updateVersionLabel(id: string, versionNumber: number, label: string): Promise<MappingVersion> {
+  /** Updates the change note of a published version (the only mutable field). */
+  async updateVersionNote(id: string, versionNumber: number, note: string): Promise<MappingVersion> {
     const response = await this.client.fetch(
-      `${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${id}/version/${versionNumber}?label=${encodeURIComponent(label ?? '')}`,
+      `${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${id}/version/${versionNumber}?note=${encodeURIComponent(note ?? '')}`,
       { headers: { 'content-type': 'application/json' }, method: 'PATCH' }
     );
     if (!response.ok) throw new Error(response.statusText);
