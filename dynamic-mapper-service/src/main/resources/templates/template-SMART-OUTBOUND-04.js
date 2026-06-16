@@ -35,10 +35,10 @@
 function onMessage(msg, context) {
     var payload = msg.getPayload();
 
-    // context.getConfig().externalId is the resolved external id of the source device.
+    // context.getExternalId() returns the resolved external id of the source device.
     // For SparkPlug B edge nodes the expected format is "GroupID_EdgeNodeID".
     // Requires the mapping to have 'useExternalId' enabled and 'externalIdType' configured.
-    const externalId = context.getConfig().externalId;
+    const externalId = context.getExternalId();
 
     // Split the external id into group and edge node parts on the FIRST underscore.
     // SparkPlugBDeserializer stores the key as groupId + "_" + edgeNodeId, so splitting

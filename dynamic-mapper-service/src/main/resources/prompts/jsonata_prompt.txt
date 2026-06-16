@@ -782,40 +782,21 @@ The optional `limit` parameter,  is a number that specifies the maximum number o
 
 __Examples__
 
-  <div class="jsonata-ex">
-    <div>$replace("John Smith and John Jones", "John", "Mr")</div>
-    <div>"Mr Smith and Mr Jones"</div>
-  </div>
-
-  <div class="jsonata-ex">
-    <div>$replace("John Smith and John Jones", "John", "Mr", 1)</div>
-    <div>"Mr Smith and John Jones"</div>
-  </div>
-
-  <div class="jsonata-ex">
-    <div>$replace("abracadabra", /a.*?a/, "*")</div>
-    <div>"*c*bra"</div>
-  </div>
-
-  <div class="jsonata-ex">
-    <div>$replace("John Smith", /(\w+)\s(\w+)/, "$2, $1")</div>
-    <div>"Smith, John"</div>
-  </div>
-
-  <div class="jsonata-ex">
-    <div>$replace("265USD", /([0-9]+)USD/, "$$$1")</div>
-    <div>"$265"</div>
-  </div>
-
-  <div class="jsonata-ex">
-    <div>(
+- `$replace("John Smith and John Jones", "John", "Mr")` => `"Mr Smith and Mr Jones"`
+- `$replace("John Smith and John Jones", "John", "Mr", 1)` => `"Mr Smith and John Jones"`
+- `$replace("abracadabra", /a.*?a/, "*")` => `"*c*bra"`
+- `$replace("John Smith", /(\w+)\s(\w+)/, "$2, $1")` => `"Smith, John"`
+- `$replace("265USD", /([0-9]+)USD/, "$$$1")` => `"$265"`
+- Lambda replacement: converts Fahrenheit to Celsius
+```
+(
   $convert := function($m) {
     ($number($m.groups[0]) - 32) * 5/9 & "C"
   };
   $replace("temperature = 68F today", /(\d+)F/, $convert)
-)</div>
-    <div>"temperature = 20C today"</div>
-  </div>
+)
+```
+=> `"temperature = 20C today"`
 
 
 ## `$eval()`

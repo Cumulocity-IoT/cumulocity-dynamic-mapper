@@ -30,7 +30,7 @@ function onMessage(msg, context) {
             "deviceId": deviceId,
             "command": command,
             "operationId": payload["id"],
-            "timestamp": new Date().toISOString()
+            "timestamp": payload["time"] || msg.time
         }
     };
 }
