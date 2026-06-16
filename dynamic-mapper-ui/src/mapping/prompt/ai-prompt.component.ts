@@ -152,14 +152,14 @@ export class AIPromptComponent implements OnInit {
         "Please review it and let me know if you see any issues or improvements. " +
         "Feel free to ask me questions about specific changes you'd like to make.\n\n" +
         "Complete Mapping (including existing code):\n\n" +
-        JSON.stringify(this.mappingForAI, null, 2) + "\n";
+        "```json\n" + JSON.stringify(this.mappingForAI, null, 2) + "\n```\n";
     } else {
       this.drawerTitle = 'Review / Refine Substitutions';
       this.chatConfig = { ...this.chatConfig, title: 'Review / Refine Substitutions' };
       this.newMessage = "I have existing substitutions for the following mapping. " +
         "Please review them and let me know if you see any issues or improvements. " +
         "Feel free to ask me questions about specific changes you'd like to make.\n\n" +
-        JSON.stringify({ ...this.mappingForAI, substitutions: this.mapping.substitutions }, null, 2) + "\n";
+        "```json\n" + JSON.stringify({ ...this.mappingForAI, substitutions: this.mapping.substitutions }, null, 2) + "\n```\n";
     }
   }
 
@@ -168,12 +168,12 @@ export class AIPromptComponent implements OnInit {
       this.drawerTitle = 'Generate Smart Function';
       this.chatConfig = { ...this.chatConfig, title: 'Generate Smart Function' };
       this.newMessage = "Map for the following mapping the source template to the target template:\n\n" +
-        JSON.stringify(this.mappingForAI, null, 2) + "\n";
+        "```json\n" + JSON.stringify(this.mappingForAI, null, 2) + "\n```\n";
     } else {
       this.drawerTitle = 'Generate Substitutions';
       this.chatConfig = { ...this.chatConfig, title: 'Generate Substitutions' };
       this.newMessage = "Map for the following mapping the source template to the target template:\n\n" +
-        JSON.stringify(this.mappingForAI, null, 2) + "\n";
+        "```json\n" + JSON.stringify(this.mappingForAI, null, 2) + "\n```\n";
     }
   }
 
