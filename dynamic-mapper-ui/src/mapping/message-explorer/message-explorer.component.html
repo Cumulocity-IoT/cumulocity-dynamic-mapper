@@ -63,7 +63,7 @@
   </button>
 </c8y-action-bar-item>
 
-<!-- Auto-refresh toggle (mirrors connector-grid.component.html) -->
+<!-- Auto-refresh toggle with inline refresh button -->
 <c8y-action-bar-item [placement]="'right'" itemClass="navbar-form min-width-fit">
   <form [formGroup]="toggleIntervalForm" class="d-flex a-i-center">
     <label class="text-normal text-muted flex-no-shrink m-r-8" style="margin-top:6px">
@@ -88,6 +88,11 @@
         <span></span>
       </div>
     </div>
+    <button type="button" class="btn btn-default m-l-4"
+      (click)="onCountdownEnded()" [disabled]="!sessionId || paused"
+      data-cy="dm-msg-explorer-refresh-now" title="{{ 'Refresh' | translate }}">
+      <i c8yIcon="refresh"></i>
+    </button>
   </form>
 </c8y-action-bar-item>
 
@@ -132,87 +137,15 @@
 
   <!-- ---- Message list ------------------------------------------------------ -->
   @if (messages.length > 0) {
-    <!-- Header row — same pattern as mapping-service-event.component.html -->
-    <div class="page-sticky-header hidden-xs c8y-list__item">
-      <div class="c8y-list__item__block">
-        <div class="c8y-list__item__body">
-          <div class="d-flex">
-            <div class="col-md-1" style="max-width: 40px"><label>#</label></div>
-            <div class="col-md-1"><label translate>Received at</label></div>
-            <div class="col-md-1"><label translate>Client ID</label></div>
-            <div class="col-md-3"><label translate>Topic</label></div>
-            <div class="col-md-5" style="padding-right: 16px"><label translate>Payload</label></div>
-            <div class="col-md-1"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <c8y-list-group>
-      @for (msg of messages; track msg.seqNo; let i = $index) {
-        <c8y-li [attr.data-cy]="'dm-msg-explorer-row-' + msg.seqNo">
-          <c8y-li-body>
-            <div class="d-flex a-i-start">
-              <!-- Index -->
-              <div class="col-md-1 text-muted text-12" style="max-width: 40px">{{ msg.seqNo }}</div>
-              <!-- Timestamp -->
-              <div class="col-md-1 text-muted text-12">
-                {{ msg.receivedAt | c8yDate: 'MMM d, y, h:mm:ss a' }}
-              </div>
-              <!-- Client ID -->
-              <div class="col-md-1 text-12" style="word-break: break-all">
-                @if (msg.clientId) {
-                  <code>{{ msg.clientId }}</code>
-                } @else {
-                  <span class="text-muted">&mdash;</span>
-                }
-              </div>
-              <!-- Topic -->
-              <div class="col-md-3" style="word-break: break-all">
-                <code>{{ msg.topic }}</code>
-              </div>
-              <!-- Payload (truncated) -->
-              <div class="col-md-5" style="padding-right: 16px; overflow: hidden;">
-                @if (expandedSeqNo !== msg.seqNo) {
-                  <span class="text-monospace text-12 cursor-pointer" (click)="toggleExpand(msg.seqNo, msg.payload)"
-                    title="{{ 'Click to expand' | translate }}" [attr.data-cy]="'dm-msg-explorer-expand-' + msg.seqNo">
-                    {{ truncate(msg.payload) }}
-                    @if (msg.payload.length > 120) {
-                      <a class="text-primary m-l-4" translate>show more</a>
-                    }
-                  </span>
-                } @else {
-                  <!-- Expanded view — uses pre-parsed expandedPayload, never calls JSON.parse on every CD cycle -->
-                  @if (expandedPayload?.isJson) {
-                    <d11r-mapping-json-editor
-                      [options]="editorOptionsPayload"
-                      [class]="'jse-main-small'"
-                      [data]="expandedPayload.parsed">
-                    </d11r-mapping-json-editor>
-                  } @else {
-                    <pre class="text-12 m-0">{{ expandedPayload?.raw }}</pre>
-                  }
-                  <a class="text-primary m-t-4 d-block" (click)="toggleExpand(msg.seqNo, msg.payload)" [attr.data-cy]="'dm-msg-explorer-collapse-' + msg.seqNo" translate>show less</a>
-                }
-                @if (msg.binary) {
-                  <span class="label label-warning m-l-4" translate>binary (base64)</span>
-                }
-              </div>
-              <!-- Create mapping action -->
-              <div class="col-md-1 d-flex a-i-start j-c-end">
-                <button
-                  class="btn btn-xs btn-default"
-                  title="{{ 'Create mapping from this message' | translate }}"
-                  (click)="onCreateMappingFromMessage(msg)"
-                  [attr.data-cy]="'dm-msg-explorer-create-mapping-' + msg.seqNo">
-                  <i c8yIcon="plus-circle"></i>
-                </button>
-              </div>
-            </div>
-          </c8y-li-body>
-        </c8y-li>
-      }
-    </c8y-list-group>
+    <c8y-data-grid
+      [title]="'Messages' | translate"
+      [columns]="columns"
+      [rows]="messages"
+      [pagination]="pagination"
+      [actionControls]="actionControls"
+      [configureColumnsEnabled]="false"
+      [selectable]="false">
+    </c8y-data-grid>
   }
 
 </div>

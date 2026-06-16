@@ -91,7 +91,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       sortOrder: 'asc',
       dataType: ColumnDataType.TextShort,
       cellRendererComponent: NameRendererComponent,
-      gridTrackSize: '15%',
+      gridTrackSize: '25%',
       visible: true
     },
     {

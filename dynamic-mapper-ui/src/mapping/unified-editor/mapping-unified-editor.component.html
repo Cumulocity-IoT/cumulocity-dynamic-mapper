@@ -28,7 +28,9 @@
 
   <!-- Tab registration – tabs skipped by advanceFromStepToEndStep are omitted -->
   @if (isTabVisible(0)) {
-  <c8y-tab [icon]="'c8y-device-management'" [label]="'Connector'" [priority]="50" [tabsOutlet]="'unified-editor'"
+  <c8y-tab [icon]="'c8y-device-management'"
+    [label]="(isButtonDisabled$ | async) ? 'Connector *' : 'Connector'"
+    [priority]="50" [tabsOutlet]="'unified-editor'"
     [isActive]="activeTabIndex === 0" (onSelect)="onTabSelected(0)" data-cy="dm-unified-editor-tab-connector"></c8y-tab>
   }
   @if (isTabVisible(1)) {
@@ -136,7 +138,13 @@
   </div> <!-- end scrollable content -->
 
   <!-- Footer must be inside the card so flex layout pins it to the bottom -->
-  <div class="card-footer separator p-24 text-center flex-no-shrink">
+  <div class="card-footer separator p-24 flex-no-shrink d-flex a-i-center j-c-center" style="gap:16px;">
+    @if (mapping.versionNumber) {
+      <span class="text-muted">
+        <i c8yIcon="info-circle" class="m-r-4"></i>
+        Editing draft · Active: <strong>v{{ mapping.versionNumber }}</strong>
+      </span>
+    }
     <button type="button" class="btn btn-default" (click)="onCancel()" translate data-cy="dm-unified-editor-cancel">
       Cancel
     </button>

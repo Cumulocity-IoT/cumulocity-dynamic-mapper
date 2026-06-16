@@ -78,6 +78,7 @@ export class MappingService {
   private readonly JSONATA = require('jsonata');
   private deprecationWarningsShown: Set<Direction> = new Set();
   deprecationModalShown = false;
+  private readonly versionsCache = new Map<string, MappingVersion[]>();
 
   constructor(
     private readonly sharedService: SharedService,
@@ -261,14 +262,28 @@ export class MappingService {
     return response.json();
   }
 
-  /** Lists all published versions of a mapping line. */
+  /** Lists all published versions of a mapping line. Results are cached until clearVersionsCache() is called. */
   async getVersions(id: string): Promise<MappingVersion[]> {
+    if (this.versionsCache.has(id)) {
+      return this.versionsCache.get(id)!;
+    }
     const response = await this.client.fetch(
       `${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${id}/version`,
       { headers: { 'content-type': 'application/json' }, method: 'GET' }
     );
     if (!response.ok) throw new Error(response.statusText);
-    return response.json();
+    const versions: MappingVersion[] = await response.json();
+    this.versionsCache.set(id, versions);
+    return versions;
+  }
+
+  /** Clears the versions cache. Pass an id to evict a single mapping; omit to clear all. */
+  clearVersionsCache(id?: string): void {
+    if (id) {
+      this.versionsCache.delete(id);
+    } else {
+      this.versionsCache.clear();
+    }
   }
 
   /** Returns a single published version of a mapping line. */

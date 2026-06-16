@@ -24,7 +24,7 @@ import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
 @Component({
   selector: 'd11r-mapping-renderer-status',
   template: `
-      <div class="d-flex flex-col">
+      <div class="d-flex a-i-center" style="gap:4px;white-space:nowrap">
         @if (context.value.versionNumber) {
           <span class="text-12 label label-default" [attr.data-cy]="'dm-mapping-status-version-' + context.item.id"
             title="Active version">v{{ context.value.versionNumber }}</span>

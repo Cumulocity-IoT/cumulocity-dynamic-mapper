@@ -21,6 +21,27 @@ c8y-data-grid button[title='Reload'] {
   display: none;
 }
 
+/* Name column: make the <td> a flex container so text is vertically centred like the checkbox */
+td.cdk-column-name {
+  display: flex !important;
+  align-items: center;
+}
+td.cdk-column-name > c8y-cell-renderer {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+td.cdk-column-name d11r-mapping-id-renderer {
+  display: block;
+  overflow: hidden;
+}
+td.cdk-column-name d11r-mapping-id-renderer a {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .text-align-center {
   text-align: center;
 }

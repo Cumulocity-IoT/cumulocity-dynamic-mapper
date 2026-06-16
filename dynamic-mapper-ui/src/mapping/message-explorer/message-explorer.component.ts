@@ -30,10 +30,14 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import {
+  ActionControl,
   AlertService,
   BottomDrawerService,
+  Column,
+  ColumnDataType,
   CoreModule,
-  CountdownIntervalComponent
+  CountdownIntervalComponent,
+  Pagination
 } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
 import { filter, takeUntil } from 'rxjs/operators';
@@ -44,7 +48,7 @@ import { ConnectorConfigurationService } from '../../shared/service/connector-co
 import { PollingInterval } from '../../shared/connector-configuration/connector.model';
 import { ExplorerMessage, MessageExplorerService, SessionExpiredError } from './message-explorer.service';
 
-export type IndexedMessage = ExplorerMessage & { seqNo: number };
+export type IndexedMessage = ExplorerMessage & { id: number; seqNo: number };
 import {
   ExplorerStartResult,
   MessageExplorerDrawerComponent
@@ -52,7 +56,10 @@ import {
 import { MappingTypeDrawerComponent } from '../mapping-create/mapping-type-drawer.component';
 import { SubscriptionChoiceDrawerComponent } from './subscription-choice-drawer.component';
 import { ALERT_INFO_TIMEOUT, Direction } from '../../shared';
-import { JsonEditorComponent } from '../../shared/component/json-editor/jsoneditor.component';
+import {
+  MessageExplorerDateRendererComponent,
+  MessageExplorerPayloadRendererComponent
+} from './message-explorer-payload.renderer.component';
 
 @Component({
   selector: 'd11r-message-explorer',
@@ -60,7 +67,7 @@ import { JsonEditorComponent } from '../../shared/component/json-editor/jsonedit
   styleUrls: ['../shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
-  imports: [CoreModule, CommonModule, ReactiveFormsModule, JsonEditorComponent]
+  imports: [CoreModule, CommonModule, ReactiveFormsModule]
 })
 export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestroy {
 
@@ -73,10 +80,70 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
   sessionSourceId: string | null = null;
   messages: IndexedMessage[] = [];
   paused: boolean = false;
-  expandedSeqNo: number | null = null;
   private nextSeqNo = 1;
-  // Pre-parsed payload for the expanded row — avoids calling JSON.parse on every CD cycle
-  expandedPayload: { isJson: boolean; parsed: any; raw: string } | null = null;
+
+  columns: Column[] = [
+    {
+      name: 'seqNo',
+      header: '#',
+      path: 'seqNo',
+      dataType: ColumnDataType.TextShort,
+      sortable: false,
+      filterable: false,
+      gridTrackSize: '60px'
+    },
+    {
+      name: 'receivedAt',
+      header: 'Received at',
+      path: 'receivedAt',
+      dataType: ColumnDataType.TextShort,
+      sortable: true,
+      filterable: false,
+      cellRendererComponent: MessageExplorerDateRendererComponent,
+      gridTrackSize: '200px'
+    },
+    {
+      name: 'clientId',
+      header: 'Client ID',
+      path: 'clientId',
+      dataType: ColumnDataType.TextShort,
+      sortable: false,
+      filterable: false,
+      gridTrackSize: '140px'
+    },
+    {
+      name: 'topic',
+      header: 'Topic',
+      path: 'topic',
+      dataType: ColumnDataType.TextShort,
+      sortable: false,
+      filterable: true,
+      gridTrackSize: '220px'
+    },
+    {
+      name: 'payload',
+      header: 'Payload',
+      path: 'payload',
+      dataType: ColumnDataType.TextShort,
+      sortable: false,
+      filterable: false,
+      cellRendererComponent: MessageExplorerPayloadRendererComponent
+    }
+  ];
+
+  actionControls: ActionControl[] = [
+    {
+      text: 'Create mapping',
+      type: 'CREATE_MAPPING',
+      icon: 'plus-circle',
+      callback: (item: object) => this.onCreateMappingFromMessage(item as IndexedMessage)
+    }
+  ];
+
+  pagination: Pagination = {
+    pageSize: 50,
+    currentPage: 1
+  };
 
   // ---- countdown / polling (mirrors connector-grid.component.ts) ------------
   toggleIntervalForm: FormGroup;
@@ -89,15 +156,6 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
   countdownIntervalComponent!: CountdownIntervalComponent;
 
   private readonly destroy$ = new Subject<void>();
-
-  readonly editorOptionsPayload = {
-    mode: 'tree',
-    removeModes: ['text', 'table'],
-    mainMenuBar: false,
-    navigationBar: false,
-    readOnly: true,
-    statusBar: false
-  };
 
   // ---- DI -------------------------------------------------------------------
   private readonly fb = inject(FormBuilder);
@@ -166,11 +224,12 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       const msgs = await this.explorerService.getMessages(this.sessionId);
       // Identify which messages are new (not yet indexed) and assign consecutive seqNos.
       // Existing messages keep their seqNo even when the backend drops old ones from the buffer.
-      const existingKeys = new Set(this.messages.map(m => `${m.receivedAt}|${m.topic}|${m.connectorIdentifier}`));
       const indexed: IndexedMessage[] = msgs.map(m => {
         const key = `${m.receivedAt}|${m.topic}|${m.connectorIdentifier}`;
         const existing = this.messages.find(em => `${em.receivedAt}|${em.topic}|${em.connectorIdentifier}` === key);
-        return existing ?? { ...m, seqNo: this.nextSeqNo++ };
+        if (existing) return existing;
+        const seqNo = this.nextSeqNo++;
+        return { ...m, id: seqNo, seqNo };
       });
       this.messages = indexed.slice().reverse();
     } catch (e) {
@@ -181,7 +240,6 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
         this.sessionTopic = '';
         this.messages = [];
         this.paused = false;
-        this.expandedSeqNo = null;
         this.countdownIntervalComponent?.stop();
         this.alertService.warning('Explorer session has expired. Start a new session.');
       } else {
@@ -232,8 +290,6 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       this.sessionSourceId = result.sourceId ?? null;
       this.nextSeqNo = 1;
       this.paused = false;
-      this.expandedSeqNo = null;
-      this.expandedPayload = null;
       this.messages = [];
 
       this.nextTriggerCountdown$.next(this.currentPollingInterval);
@@ -266,8 +322,6 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
     this.sessionTopic = '';
     this.sessionDirection = 'INBOUND';
     this.paused = false;
-    this.expandedSeqNo = null;
-    this.expandedPayload = null;
     this.countdownIntervalComponent?.stop();
     this.alertService.add({ text: 'Explorer session stopped.', type: 'info', timeout: ALERT_INFO_TIMEOUT });
   }
@@ -277,26 +331,6 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       await this.explorerService.clearMessages(this.sessionId).catch(() => {});
     }
     this.messages = [];
-    this.expandedSeqNo = null;
-    this.expandedPayload = null;
-  }
-
-  toggleExpand(seqNo: number, payload: string): void {
-    if (this.expandedSeqNo === seqNo) {
-      this.expandedSeqNo = null;
-      this.expandedPayload = null;
-    } else {
-      this.expandedSeqNo = seqNo;
-      try {
-        this.expandedPayload = { isJson: true, parsed: JSON.parse(payload), raw: payload };
-      } catch {
-        this.expandedPayload = { isJson: false, parsed: null, raw: payload };
-      }
-    }
-  }
-
-  truncate(text: string, maxLen = 120): string {
-    return text && text.length > maxLen ? text.substring(0, maxLen) + '…' : text;
   }
 
   // ---- create mapping from captured message ---------------------------------

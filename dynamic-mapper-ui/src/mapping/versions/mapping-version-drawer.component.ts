@@ -93,6 +93,7 @@ export class MappingVersionDrawerComponent implements OnInit {
   }
 
   private async reload(): Promise<void> {
+    this.mappingService.clearVersionsCache(this.mapping.id);
     this.loading = true;
     try {
       const [versions, draft] = await Promise.all([

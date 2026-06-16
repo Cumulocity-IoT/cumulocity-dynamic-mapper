@@ -491,7 +491,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         sortable: true,
         dataType: ColumnDataType.TextShort,
         cellRendererComponent: LabelTaggedRendererComponent,
-        gridTrackSize: '8%'
+        gridTrackSize: '9%'
       },
       {
         header: 'For connectors',
@@ -503,14 +503,14 @@ export class MappingComponent implements OnInit, OnDestroy {
         cellRendererComponent: MappingDeploymentRendererComponent
       },
       {
-        header: 'Status',
+        header: 'Version/Status',
         name: 'status',
         path: 'mapping',
         filterable: false,
         sortable: false,
         dataType: ColumnDataType.TextShort,
         cellRendererComponent: StatusRendererComponent,
-        gridTrackSize: '10%'
+        gridTrackSize: '16%'
       },
       {
         header: 'Activate',

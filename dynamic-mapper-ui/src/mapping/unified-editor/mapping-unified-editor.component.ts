@@ -772,11 +772,13 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
         // Edits are saved to the line's draft (D-8); the running configuration is unchanged
         // until the draft is published as a version and that version is activated.
         await this.mappingService.saveDraft(this.mapping.id, this.mapping);
+        this.mappingService.refreshMappings(this.stepperConfiguration.direction);
         this.alertService.success(
           gettext(`Saved draft for ${this.mapping.name}. Publish and activate it (Versions) to apply the changes.`)
         );
       } else {
         await this.mappingService.createMapping(this.mapping);
+        this.mappingService.refreshMappings(this.stepperConfiguration.direction);
         this.alertService.success(gettext(`Mapping ${this.mapping.name} created successfully`));
       }
     } catch (error) {
