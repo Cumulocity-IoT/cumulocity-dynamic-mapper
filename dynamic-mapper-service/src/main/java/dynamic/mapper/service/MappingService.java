@@ -634,6 +634,9 @@ public class MappingService {
         if (runnable == null) {
             throw new IllegalArgumentException("Mapping not found: " + id);
         }
+        // Lazily create the v1 record for imported / pre-versioning mappings that have
+        // never been published or activated through the versioning flow.
+        mappingVersionService.ensureBackfilled(tenant, runnable);
         return mappingVersionService.listVersions(tenant, runnable.getIdentifier());
     }
 

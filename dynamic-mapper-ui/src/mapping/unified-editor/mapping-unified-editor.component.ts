@@ -669,7 +669,10 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
       return;
     }
 
-    if (this.stepperViewModel.showExtensionSelectors) {
+    // Only validate extensionName/eventName when the user-visible selectors are shown.
+    // showExtensionSelectors also covers showInternalExtensionNote (PROTOBUF_INTERNAL) where
+    // no selectors are rendered and the form controls are always null.
+    if (this.stepperViewModel.showExtensionSelectorsSource || this.stepperViewModel.showExtensionSelectorsTarget) {
       const extensionName = this.templateForm.get('extensionName');
       const eventName = this.templateForm.get('eventName');
       extensionName?.markAsTouched();
