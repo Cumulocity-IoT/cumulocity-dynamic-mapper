@@ -31,7 +31,7 @@ import {
 } from '@angular/core';
 import { AlertService, CoreModule } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
-import { BehaviorSubject, ReplaySubject, Subject, takeUntil } from 'rxjs';
+import { BehaviorSubject, firstValueFrom, ReplaySubject, Subject, takeUntil } from 'rxjs';
 import { Content } from 'vanilla-jsoneditor';
 import {
   ConfirmationModalComponent,
@@ -52,14 +52,9 @@ import { PopoverModule } from 'ngx-bootstrap/popover';
 import { CommonModule } from '@angular/common';
 
 interface TestingModel {
-  payload?: any;
   results: DynamicMapperRequest[];
-  selectedResult: number;
   request?: any;
   response?: any;
-  errorMsg?: string;
-  api?: any;
-  publishTopic?: string;
   logs?: string[];
 }
 
@@ -77,7 +72,6 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   @Input() mapping!: Mapping;
   @Input() stepperConfiguration!: StepperConfiguration;
   @Input() updateTestingTemplate!: ReplaySubject<Mapping>;
-  @Output() testResult = new EventEmitter<boolean>();
   @Output() sourceTemplateChanged = new EventEmitter<any>();
 
   @ViewChild('editorTestingPayload') editorTestingPayload!: JsonEditorComponent;
@@ -115,17 +109,18 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();
 
   // State
-  testingModel: TestingModel = { results: [], selectedResult: -1 };
+  testingModel: TestingModel = { results: [] };
   createTestDevice = false;
   testMapping!: Mapping;
   sourceTemplate: any;
   sourceSystem = '';
   targetSystem = '';
-  selectedResult$ = new BehaviorSubject<number>(0);
-  hasResponse = true; // Tracks if current result has a response
+  selectedResult$ = new BehaviorSubject<number>(-1);
   isLoading = false; // Tracks whether a test request is in progress
   showResponse = false; // Controls collapsible response section
   showConsole = true; // Controls collapsible console section (expanded by default)
+  currentApi: string | undefined;
+  currentPublishTopic: string | undefined;
 
   async ngOnInit(): Promise<void> {
     this.initializeMapping();
@@ -228,14 +223,10 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     const logs: string[] = this.requiresRawPayload()
       ? ['INFO Validate the mapping logic with real payloads. The specific parsing of whitespace and line terminators (CR/LF) may differ from the test environment, potentially altering the results.']
       : [];
-    this.testingModel = {
-      payload: this.sourceTemplate,
-      results: [],
-      selectedResult: -1,
-      request: {},
-      response: {},
-      logs,
-    };
+    this.testingModel = { results: [], request: {}, response: {}, logs };
+    this.selectedResult$.next(-1);
+    this.currentApi = undefined;
+    this.currentPublishTopic = undefined;
   }
 
   private updateEditors(): void {
@@ -246,35 +237,31 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   }
 
   private getNextVisibleResultIndex(): number {
-    const { results, selectedResult } = this.testingModel;
-    let nextIndex = selectedResult;
+    const { results } = this.testingModel;
+    const current = this.selectedResult$.getValue();
+    let nextIndex = current;
 
     do {
       nextIndex = (nextIndex >= results.length - 1) ? 0 : nextIndex + 1;
-    } while (nextIndex !== selectedResult && results[nextIndex]?.hidden);
+    } while (nextIndex !== current && results[nextIndex]?.hidden);
 
     return nextIndex;
   }
 
   private displayTestResult(index: number): void {
-    this.testingModel.selectedResult = index;
-    this.selectedResult$.next(index + 1);
+    this.selectedResult$.next(index);
 
     const result = this.testingModel.results[index];
 
     if (result) {
       this.testingModel.request = sortObjectKeys(result.request);
-      this.testingModel.api = result.api;
-      this.testingModel.publishTopic = result.publishTopic;
+      this.currentApi = result.api;
+      this.currentPublishTopic = result.publishTopic;
 
-      // Clear response if not present (test mode) - show empty object
       if (result.response) {
         this.testingModel.response = sortObjectKeys(result.response);
-        this.hasResponse = true;
       } else {
-        // Show empty object and info message for test mode
         this.testingModel.response = {};
-        this.hasResponse = false;
         const testModeMsg = 'INFO No response in test mode. Data operations (MEASUREMENT, EVENT, ALARM) are prepared but not executed. Use "Send Test Message" to get actual responses.';
         if (!this.testingModel.logs) {
           this.testingModel.logs = [];
@@ -283,16 +270,11 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
           this.testingModel.logs = [testModeMsg, ...this.testingModel.logs.filter(l => l !== testModeMsg)];
         }
       }
-
-      this.testingModel.errorMsg = result.error;
     } else {
       this.testingModel.request = {};
       this.testingModel.response = {};
-      this.testingModel.errorMsg = undefined;
-      this.hasResponse = false;
     }
 
-    // Force editor update to clear stale content when switching between results
     this.updateEditors();
   }
 
@@ -367,9 +349,6 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     if (!result.success) {
       const errorLogs = (result.errors ?? []).map(e => `ERROR: ${e}`);
       this.testingModel.logs = [...(this.testingModel.logs ?? []), ...errorLogs];
-      if (sendPayload) {
-        this.testResult.emit(false);
-      }
       return;
     }
 
@@ -378,7 +357,11 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
         w.includes('createNonExistingDevice is disabled')
       );
       if (createDeviceWarning) {
-        const shouldEnable = await this.confirmEnableCreateNonExistingDevice();
+        const shouldEnable = await this.showConfirmation(
+          'Enable device creation during testing',
+          'Do you want to set createNonExistingDevice during testing to true?',
+          { ok: 'Enable', cancel: 'Cancel' }
+        );
         if (shouldEnable) {
           this.testMapping.createNonExistingDevice = true;
           await this.executeTest(sendPayload);
@@ -394,28 +377,16 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       const responseLabel = responseId ?? result.requests?.[0]?.sourceId ?? 'unknown';
       const deviceInfo = result.testDeviceId ? `, test device: ${result.testDeviceId}` : '';
       this.alertService.add({ text: `Sending mapping result was successful: ${responseLabel}${deviceInfo}`, type: 'info', timeout: ALERT_INFO_TIMEOUT });
-      this.testResult.emit(true);
-    } else {
-      // this.alertService.success(`Test of mapping ${this.testMapping.name} was successful.`);
     }
   }
 
-  private async confirmEnableCreateNonExistingDevice(): Promise<boolean> {
-    const modalRef = this.bsModalService.show(ConfirmationModalComponent, {
-      initialState: {
-        title: 'Enable device creation during testing',
-        message: 'Do you want to set createNonExistingDevice during testing to true?',
-        labels: { ok: 'Enable', cancel: 'Cancel' }
-      }
-    });
-    return await modalRef.content.closeSubject.toPromise();
-  }
-
   private async handleError(message: string, error: unknown): Promise<void> {
-    // Check if this is a non-existing device error that can be ignored
-    if (this.isIgnorableDeviceError(error)) {
-      const shouldIgnore = await this.confirmIgnoreDeviceError();
-
+    if (typeof error === 'object' && error !== null && 'possibleIgnoreErrorNonExisting' in error) {
+      const shouldIgnore = await this.showConfirmation(
+        'Ignore error non existing device',
+        'The testing resulted in an error, that the referenced device does not exist! Would you like to test again and ignore this error?',
+        { ok: 'Ignore', cancel: 'Cancel' }
+      );
       if (shouldIgnore) {
         this.testMapping.createNonExistingDevice = true;
         await this.executeTest(false);
@@ -423,29 +394,13 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       }
     }
 
-    // Display error message
     const errorMsg = this.extractErrorMessage(error);
-    const fullMessage = errorMsg ? `${message}: ${errorMsg}` : message;
-    this.alertService.danger(fullMessage);
+    this.alertService.danger(errorMsg ? `${message}: ${errorMsg}` : message);
   }
 
-  private isIgnorableDeviceError(error: unknown): boolean {
-    return typeof error === 'object' &&
-      error !== null &&
-      'possibleIgnoreErrorNonExisting' in error;
-  }
-
-  private async confirmIgnoreDeviceError(): Promise<boolean> {
-    const modalRef = this.bsModalService.show(ConfirmationModalComponent, {
-      initialState: {
-        title: 'Ignore error non existing device',
-        message: 'The testing resulted in an error, that the referenced device does not exist! ' +
-          'Would you like to test again and ignore this error?',
-        labels: { ok: 'Ignore', cancel: 'Cancel' }
-      }
-    });
-
-    return await modalRef.content.closeSubject.toPromise();
+  private showConfirmation(title: string, message: string, labels: { ok: string; cancel: string }): Promise<boolean> {
+    const modalRef = this.bsModalService.show(ConfirmationModalComponent, { initialState: { title, message, labels } });
+    return firstValueFrom(modalRef.content.closeSubject);
   }
 
   private extractErrorMessage(error: unknown): string {

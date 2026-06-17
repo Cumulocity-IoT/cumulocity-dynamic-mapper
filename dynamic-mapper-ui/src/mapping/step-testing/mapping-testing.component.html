@@ -25,43 +25,32 @@
     <div class="card-block p-b-0">
       <div class="d-grid grid__col--6-6 gap-4">
         <div class="column-right-border p-r-2">
-          <div class="form-group">
+          <div class="form-group  m-b-0">
             <div style="display: flex">
               <label for="testResult" translate>{{ sourceSystem }} Payload&nbsp;</label>
             </div>
             <d11r-mapping-json-editor [options]="editorOptionsSource" (contentChanged)="onSourceTemplateChanged($event)"
-              [data]="testingModel.payload" [class]="'jse-main-tiny'" #editorTestingPayload id="editorTestingPayload">
+              [data]="sourceTemplate" [class]="'jse-main-tiny'" #editorTestingPayload id="editorTestingPayload">
             </d11r-mapping-json-editor>
-            <c8y-messages>
-              @if (testingModel.errorMsg) {
-              <c8y-message translate><span class="text-warning" data-cy="dm-mapping-test-source-error">{{ testingModel.errorMsg
-                  }}</span>
-              </c8y-message>
-              }
-            </c8y-messages>
           </div>
         </div>
         <div class="column-left-border p-l-2">
-          <div class="form-group">
+          <div class="form-group  m-b-0">
             <div style="display: flex">
               <label for="testResult" translate>{{ targetSystem }} Request&nbsp;</label>
-              @if ((selectedResult$ | async) > 0) {
+              @if ((selectedResult$ | async) >= 0) {
               <ng-container class="m-r-8">
                 <div class="m-l-auto">
-                  @if (testingModel.api) {
-                  <span class="tag tag--success m-b-4">{{
-                    testingModel.api
-                    }}</span>
+                  @if (currentApi) {
+                  <span class="tag tag--success m-b-4">{{ currentApi }}</span>
                   }
-                  @if (testingModel.publishTopic) {
-                  <span class="tag tag--info m-b-4">{{
-                    testingModel.publishTopic
-                    }}</span>
+                  @if (currentPublishTopic) {
+                  <span class="tag tag--info m-b-4">{{ currentPublishTopic }}</span>
                   }
                 </div>
                 <div>
                   <span class="badge badge-success" data-cy="dm-mapping-test-result-index">{{
-                    selectedResult$ | async
+                    (selectedResult$ | async) + 1
                     }}</span>
                 </div>
               </ng-container>
@@ -70,13 +59,6 @@
             <d11r-mapping-json-editor [options]="editorOptionsDefault" [data]="testingModel.request"
               [class]="'jse-main-tiny'" #editorTestingRequest id="editorTestingRequest">
             </d11r-mapping-json-editor>
-            <c8y-messages>
-              @if (testingModel.errorMsg) {
-              <c8y-message translate><span class="text-warning" data-cy="dm-mapping-test-target-error">{{ testingModel.errorMsg
-                  }}</span>
-              </c8y-message>
-              }
-            </c8y-messages>
           </div>
         </div>
       </div>
@@ -88,8 +70,8 @@
       <div class="d-flex a-i-center p-t-4 p-b-4" data-cy="dm-mapping-test-response-toggle" (click)="showResponse = !showResponse" style="cursor:pointer">
         <i [c8yIcon]="showResponse ? 'chevron-down' : 'chevron-right'" class="m-r-8"></i>
         <span translate>{{ targetSystem }} Response</span>
-        @if ((selectedResult$ | async) > 0) {
-        <span class="badge badge-success m-l-8">{{ selectedResult$ | async }}</span>
+        @if ((selectedResult$ | async) >= 0) {
+        <span class="badge badge-success m-l-8">{{ (selectedResult$ | async) + 1 }}</span>
         }
       </div>
       <div class="collapse" [isAnimated]="true" [collapse]="!showResponse">

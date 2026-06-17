@@ -22,7 +22,6 @@ import {
   AfterViewInit,
   ChangeDetectorRef,
   Component,
-  ElementRef,
   inject,
   OnDestroy,
   OnInit,
@@ -40,7 +39,6 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { debounceTime, distinctUntilChanged, map, Observable, ReplaySubject, shareReplay, Subject, takeUntil } from 'rxjs';
 import { Mode } from 'vanilla-jsoneditor';
 import {
-  COLOR_HIGHLIGHTED,
   DeploymentMapEntry,
   Direction,
   Extension,
@@ -49,7 +47,6 @@ import {
   getSchema,
   JsonEditorComponent,
   Mapping,
-  RepairStrategy,
   SAMPLE_TEMPLATES_C8Y,
   SharedService,
   StepperConfiguration,
@@ -57,12 +54,8 @@ import {
   isSubstitutionsAsCode,
   TransformationType,
   MappingTypeLabels,
-  ContentChanges,
-  MappingTypeDescriptions,
-  Substitution,
   MappingType
 } from '../../shared';
-import { ValidationError } from '../shared/mapping.model';
 import { createCompletionProviderFlowFunction, EditorMode } from '../shared/stepper.model';
 import { MappingService } from '../core/mapping.service';
 import { MappingEditData } from '../core/mapping-edit.resolver';
@@ -72,14 +65,12 @@ import {
   checkTransformationType,
   expandC8YTemplate,
   expandExternalTemplate,
-  isExpression,
   reduceSourceTemplate,
   splitTopicExcludingSeparator,
   stringToBase64,
   stripTemplateMetadataTags,
   validateProtectedFields
 } from '../shared/util';
-import { SubstitutionRendererComponent } from '../substitution/substitution-grid.component';
 import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType, toTemplateType } from '../../configuration/shared/configuration.model';
 import { ManageTemplateComponent } from '../../shared/component/code-template/manage-template.component';
 import { AIPromptComponent } from '../prompt/ai-prompt.component';
@@ -95,17 +86,6 @@ import { MappingTemplateStepComponent } from '../step-template/mapping-template-
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { StepperViewModel, StepperViewModelFactory } from '../stepper-mapping/stepper-view.model';
 import * as jsYaml from 'js-yaml';
-
-/**
- * Extended substitution model with UI-specific properties
- */
-interface SubstitutionModel extends Partial<Substitution> {
-  stepperConfiguration?: StepperConfiguration;
-  pathSourceIsExpression?: boolean;
-  pathTargetIsExpression?: boolean;
-  targetExpression?: { result: string; resultType: string; valid: boolean };
-  sourceExpression?: { result: string; resultType: string; valid: boolean };
-}
 
 // Tab index constants
 const TAB_CONNECTOR = 0;
@@ -149,12 +129,7 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
 
   @ViewChild('templateStep', { static: false }) templateStepRef!: MappingTemplateStepComponent;
   @ViewChild('mappingTestingStep', { static: false }) mappingTestingStep!: MappingStepTestingComponent;
-  @ViewChild('editorSourceStepSubstitution', { static: false }) editorSourceStepSubstitution!: JsonEditorComponent;
-  @ViewChild('editorTargetStepSubstitution', { static: false }) editorTargetStepSubstitution!: JsonEditorComponent;
-  @ViewChild(SubstitutionRendererComponent, { static: false }) substitutionChild!: SubstitutionRendererComponent;
   @ViewChild('codeEditor', { static: false }) codeEditor!: EditorComponent;
-  @ViewChild('substitutionModelSourceExpression') substitutionModelSourceExpression!: ElementRef<HTMLTextAreaElement>;
-  @ViewChild('substitutionModelTargetExpression') substitutionModelTargetExpression!: ElementRef<HTMLTextAreaElement>;
 
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly bsModalService = inject(BsModalService);
@@ -169,15 +144,12 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
   private readonly location = inject(Location);
   private readonly globalContextService = inject(GlobalContextService);
 
-  readonly ValidationError = ValidationError;
   readonly checkTransformationType = checkTransformationType;
   readonly validateProtectedFields = validateProtectedFields;
   readonly MappingTypeLabels = MappingTypeLabels;
   readonly Direction = Direction;
-  readonly COLOR_HIGHLIGHTED = COLOR_HIGHLIGHTED;
   readonly TransformationType = TransformationType;
   readonly EditorMode = EditorMode;
-  readonly MappingTypeDescriptions = MappingTypeDescriptions;
 
   updateTestingTemplate = new ReplaySubject<Mapping>(1);
   schemaSource: any;
@@ -185,10 +157,8 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
 
   templateForm!: FormGroup;
   templateModel: { stepperConfiguration?: StepperConfiguration; mapping?: Mapping } = {};
-  substitutionFormly = new FormGroup({});
   filterFormly = new FormGroup({});
   filterFormlyFields!: FormlyFieldConfig[];
-  substitutionModel: SubstitutionModel = {};
   propertyFormly = new FormGroup({});
   isGenerateSubstitutionOpen = false;
 
@@ -222,7 +192,6 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
   hasExtensionParameter = false;
   codeTemplateItems: Array<{ label: string, value: string }> = [];
 
-  selectedSubstitution = -1;
   expertMode = false;
   templatesInitialized = false;
   extensions = new Map<string, Extension>();
@@ -250,25 +219,6 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     navigationBar: false,
     statusBar: true,
     readOnly: false
-  };
-
-  editorOptionsSourceSubstitution = {
-    mode: Mode.tree,
-    removeModes: ['text', 'table'],
-    mainMenuBar: true,
-    navigationBar: false,
-    statusBar: false,
-    readOnly: true,
-    name: 'message'
-  };
-
-  editorOptionsTargetSubstitution = {
-    mode: Mode.tree,
-    removeModes: ['text', 'table'],
-    mainMenuBar: true,
-    navigationBar: false,
-    readOnly: true,
-    statusBar: true
   };
 
   targetTemplateHelp = 'The template contains the dummy field <code>_TOPIC_LEVEL_</code> for outbound to map device identifiers.';
@@ -335,24 +285,10 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
       readOnly: this.stepperConfiguration.editorMode === EditorMode.READ_ONLY
     };
 
-    this.substitutionModel = {
-      stepperConfiguration: this.stepperConfiguration,
-      pathSource: '',
-      pathTarget: '',
-      pathSourceIsExpression: false,
-      pathTargetIsExpression: false,
-      repairStrategy: RepairStrategy.DEFAULT,
-      expandArray: false,
-      targetExpression: { result: '', resultType: 'empty', valid: false },
-      sourceExpression: { result: '', resultType: 'empty', valid: false }
-    };
-
     this.setTemplateForm();
 
     this.feature = await this.sharedService.getFeatures();
     if (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole) {
-      this.editorOptionsSourceSubstitution.readOnly = true;
-      this.editorOptionsTargetSubstitution.readOnly = true;
       this.editorOptionsSourceTemplate.readOnly = true;
       this.editorOptionsTargetTemplate.readOnly = true;
     }
@@ -549,7 +485,6 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     this.stepperService.mappingPropertyChanged$.pipe(takeUntil(this.destroy$)).subscribe(mapping => {
       if (mapping.direction === Direction.OUTBOUND && this.sourceTemplate) {
         this.sourceTemplate = expandC8YTemplate(this.sourceTemplate, mapping);
-        this.editorSourceStepSubstitution?.set(this.sourceTemplate);
       }
     });
   }
@@ -671,7 +606,6 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
       this.currentStepIndex,
       this.stepperConfiguration.showCodeEditor
     );
-    this.onSelectSubstitution(0);
 
     const testMapping = structuredClone(this.mapping);
     testMapping.sourceTemplate = JSON.stringify(this.sourceTemplate);
@@ -693,20 +627,6 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     if (this.templateStepRef?.sourceTemplateUpdated) {
       this.sourceTemplate = this.templateStepRef.sourceTemplateUpdated;
     }
-    this.editorSourceStepSubstitution?.set(this.sourceTemplate);
-    this.editorTargetStepSubstitution?.set(this.targetTemplate);
-  }
-
-  onEditorSourceInitialized(): void {
-    // No-op: schema now flows via [schemaSource] @Input directly to the editor
-  }
-
-  onEditorTargetInitialized(): void {
-    // No-op: schema now flows via [schemaTarget] @Input directly to the editor
-  }
-
-  isSubstitutionValid(): boolean {
-    return this.substitutionService.isSubstitutionValid(this.substitutionModel);
   }
 
   onTestingSourceTemplateChanged(template: any): void {
@@ -1071,35 +991,4 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     this.isGenerateSubstitutionOpen = false;
   }
 
-  async onSelectSubstitution(selected: number): Promise<void> {
-    if (selected < 0 || selected >= this.mapping.substitutions.length) return;
-
-    this.selectedSubstitution = selected;
-    this.substitutionModel = {
-      ...this.mapping.substitutions[selected],
-      stepperConfiguration: this.stepperConfiguration
-    };
-    this.substitutionModel.pathSourceIsExpression = isExpression(this.substitutionModel.pathSource);
-
-    await Promise.all([
-      this.editorSourceStepSubstitution?.setSelectionToPath(this.substitutionModel.pathSource),
-      this.editorTargetStepSubstitution?.setSelectionToPath(this.substitutionModel.pathTarget)
-    ]);
-  }
-
-
-  private manualResize(source: string): void {
-    let element;
-
-    if (source === 'substitutionModelSourceExpression' && this.substitutionModelSourceExpression?.nativeElement) {
-      element = this.substitutionModelSourceExpression.nativeElement;
-    } else if (source === 'substitutionModelTargetExpression' && this.substitutionModelTargetExpression?.nativeElement) {
-      element = this.substitutionModelTargetExpression.nativeElement;
-    }
-
-    if (element) {
-      element.style.height = '32px';
-      element.style.height = element.scrollHeight + 'px';
-    }
-  }
 }

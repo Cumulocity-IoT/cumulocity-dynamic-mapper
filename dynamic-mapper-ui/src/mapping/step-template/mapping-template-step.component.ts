@@ -204,52 +204,28 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
   // ─── Template content changes ───────────────────────────────────────────────
 
   onSourceTemplateChanged(contentChanges: ContentChanges): void {
-    const { previousContent, updatedContent } = contentChanges;
-    let updatedJson: any;
-
-    if ('text' in updatedContent && updatedContent['text']) {
-      try { updatedJson = JSON.parse(updatedContent['text']); }
-      catch {
-        this.sourceTemplateUpdated = updatedContent;
-        this.stepperService.isContentChangeValid$.next(true);
-        return;
-      }
-    } else {
-      updatedJson = updatedContent['json'];
-    }
-
-    this.sourceTemplateUpdated = updatedJson;
     // Do NOT emit here — emitting would update [sourceTemplate] on the parent
     // which re-seeds the editor and discards the in-progress edit.
     // The parent reads sourceTemplateUpdated via templateStepRef when leaving the step.
-
-    let baseline = this.sourceTemplate;
-    if (previousContent) {
-      if ('text' in previousContent && previousContent['text']) {
-        try { baseline = JSON.parse(previousContent['text']); } catch { /* keep fallback */ }
-      } else if ('json' in previousContent) {
-        baseline = previousContent['json'];
-      }
-    }
-
-    const hasProtectedChanges = this.stepperConfiguration.allowTemplateExpansion
-      && !validateProtectedFields(baseline, updatedJson);
-    const isTransformationTypeValid = checkTransformationType(this.mapping.transformationType, updatedJson);
-    const isValid = !hasProtectedChanges && isTransformationTypeValid;
-    this.stepperService.isContentChangeValid$.next(isValid);
-
-    if (hasProtectedChanges && this.stepperConfiguration.allowTemplateExpansion) {
-      this.raiseAlert({ type: 'warning', text: 'Warning: Changes to _IDENTITY_, _TOPIC_LEVEL_, or _CONTEXT_DATA_ will be reverted when saving.' });
-    }
+    this.onTemplateChanged(contentChanges, this.sourceTemplate, json => { this.sourceTemplateUpdated = json; });
   }
 
   onTargetTemplateChanged(contentChanges: ContentChanges): void {
+    this.onTemplateChanged(contentChanges, this.targetTemplate);
+  }
+
+  private onTemplateChanged(
+    contentChanges: ContentChanges,
+    baseline: any,
+    onUpdated?: (json: any) => void
+  ): void {
     const { previousContent, updatedContent } = contentChanges;
     let updatedJson: any;
 
     if ('text' in updatedContent && updatedContent['text']) {
       try { updatedJson = JSON.parse(updatedContent['text']); }
       catch {
+        onUpdated?.(updatedContent);
         this.stepperService.isContentChangeValid$.next(true);
         return;
       }
@@ -257,7 +233,8 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
       updatedJson = updatedContent['json'];
     }
 
-    let baseline = this.targetTemplate;
+    onUpdated?.(updatedJson);
+
     if (previousContent) {
       if ('text' in previousContent && previousContent['text']) {
         try { baseline = JSON.parse(previousContent['text']); } catch { /* keep fallback */ }
@@ -300,9 +277,7 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
   // ─── Helpers ───────────────────────────────────────────────────────────────
 
   raiseAlert(alert: Alert): void {
-    this.alertService.state.forEach(a => {
-      if (a.type === 'info' || a.type === 'warning') this.alertService.remove(a);
-    });
+    this.clearAlerts();
     this.alertService.add(alert);
   }
 

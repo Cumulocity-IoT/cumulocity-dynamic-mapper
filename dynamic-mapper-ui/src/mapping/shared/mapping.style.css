@@ -199,3 +199,7 @@ d11r-mapping-template-step {
   100% { content: '....'; }
 }
 
+d11r-mapping-properties .form-group {
+  margin-bottom: 8px;
+}
+
