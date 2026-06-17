@@ -130,9 +130,14 @@ public class MappingService {
             throw new MappingValidationException(errors);
         }
 
+        // Capture activation intent; always persist inactive first so that
+        // setActivationMapping can register subscriptions through the normal channel.
+        boolean activateAfterCreate = Boolean.TRUE.equals(mapping.getActive());
+
         // Create with proper tenant context
-        return subscriptionsService.callForTenant(tenant, () -> {
+        Mapping created = subscriptionsService.callForTenant(tenant, () -> {
             mappingRepository.prepareForCreate(tenant, mapping);
+            mapping.setActive(false);
 
             MappingRepresentation mr = new MappingRepresentation();
             mr.setType(MappingRepresentation.MAPPING_TYPE);
@@ -159,6 +164,24 @@ public class MappingService {
             log.info("{} - Mapping created: {} [{}]", tenant, mapping.getName(), mapping.getId());
             return mapping;
         });
+
+        // Backfill v1 and stamp versionNumber on the mapping so the grid shows the badge.
+        dynamic.mapper.model.MappingVersion v1 = mappingVersionService.ensureBackfilled(tenant, created);
+        if (v1 != null && created.getVersionNumber() != v1.getVersionNumber()) {
+            created.setVersionNumber(v1.getVersionNumber());
+            updateMapping(tenant, created, false, true);
+        }
+
+        // Activate through the proper channel so subscriptions are registered.
+        if (activateAfterCreate) {
+            try {
+                created = setActivationMapping(tenant, created.getId(), true, null);
+            } catch (Exception e) {
+                log.warn("{} - Mapping {} created but activation failed: {}", tenant, created.getId(), e.getMessage());
+            }
+        }
+
+        return created;
     }
 
     /**

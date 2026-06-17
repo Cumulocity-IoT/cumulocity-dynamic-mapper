@@ -138,30 +138,36 @@
   </div> <!-- end scrollable content -->
 
   <!-- Footer must be inside the card so flex layout pins it to the bottom -->
-  <div class="card-footer separator p-24 flex-no-shrink d-flex a-i-center j-c-center" style="gap:16px;">
-    @if (mapping.versionNumber || mapping.debug || mapping.draftDirty) {
-      <span class="text-muted d-flex a-i-center" style="gap:4px">
-        <i c8yIcon="info-circle" class="m-r-4"></i>
+  <div class="card-footer separator p-24 flex-no-shrink d-flex a-i-center">
+    <!-- left: status text, right-aligned so it sits flush against Cancel -->
+    <div class="d-flex a-i-center j-c-end" style="flex:1; gap:4px; padding-right:16px;">
+      @if (mapping.versionNumber || mapping.debug || mapping.draftDirty) {
+        <i c8yIcon="info-circle" class="text-muted"></i>
         @if (mapping.versionNumber) {
-           <span translate>Active </span><span class="text-12 label label-default" title="Active version"> v{{ mapping.versionNumber }}</span>
+          <span translate class="text-muted">Active </span><span class="text-12 label label-default" title="Active version">v{{ mapping.versionNumber }}</span>
         }
         @if (mapping.debug) {
           <span class="text-12 label label-success">debug</span>
         }
         @if (mapping.draftDirty) {
-          <span translate>· Editing </span><span class="text-12 label label-info" title="This mapping has unpublished draft changes">draft</span>
+          <span translate class="text-muted">· Editing </span><span class="text-12 label label-info" title="This mapping has unpublished draft changes">draft</span>
         }
-      </span>
-    }
-    <button type="button" class="btn btn-default" (click)="onCancel()" translate data-cy="dm-unified-editor-cancel">
-      Cancel
-    </button>
-    <button type="button" class="btn btn-primary" (click)="onCommitButton()"
-      [disabled]="(!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole) || stepperConfiguration.editorMode === EditorMode.READ_ONLY || mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE || (isButtonDisabled$ | async) || (stepperConfiguration.direction === Direction.INBOUND && !mapping.mappingTopic?.trim())"
-      [title]="mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE ? ('Saving is disabled: SUBSTITUTION_AS_CODE mappings are deprecated and can no longer be modified.' | translate) : ((isButtonDisabled$ | async) ? ('Select at least one connector before saving.' | translate) : ((stepperConfiguration.direction === Direction.INBOUND && !mapping.mappingTopic?.trim()) ? ('Mapping Topic is required.' | translate) : ''))"
-      translate data-cy="dm-unified-editor-save">
-      Save
-    </button>
+      }
+    </div>
+    <!-- center: buttons (truly centered because both flanking divs are flex:1) -->
+    <div class="d-flex a-i-center" style="gap:16px;">
+      <button type="button" class="btn btn-default" (click)="onCancel()" translate data-cy="dm-unified-editor-cancel">
+        Cancel
+      </button>
+      <button type="button" class="btn btn-primary" (click)="onCommitButton()"
+        [disabled]="(!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole) || stepperConfiguration.editorMode === EditorMode.READ_ONLY || mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE || (isButtonDisabled$ | async) || (stepperConfiguration.direction === Direction.INBOUND && !mapping.mappingTopic?.trim())"
+        [title]="mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE ? ('Saving is disabled: SUBSTITUTION_AS_CODE mappings are deprecated and can no longer be modified.' | translate) : ((isButtonDisabled$ | async) ? ('Select at least one connector before saving.' | translate) : ((stepperConfiguration.direction === Direction.INBOUND && !mapping.mappingTopic?.trim()) ? ('Mapping Topic is required.' | translate) : ''))"
+        translate data-cy="dm-unified-editor-save">
+        Save
+      </button>
+    </div>
+    <!-- right: spacer matching the left column width to keep buttons centered -->
+    <div style="flex:1;"></div>
   </div>
 
 </div> <!-- end fullpage card -->

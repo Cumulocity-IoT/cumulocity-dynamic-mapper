@@ -718,7 +718,10 @@ export class MappingComponent implements OnInit, OnDestroy {
       name: `${this.mappingToUpdate.name} - Copy`,
       identifier: createCustomUuid(),
       id: createCustomUuid(),
-      active: false,
+      active: true,
+      versionNumber: undefined,
+      draftDirty: false,
+      versionNote: `Copy from ${mapping.name}`,
     }
 
     const deploymentMapEntry =
