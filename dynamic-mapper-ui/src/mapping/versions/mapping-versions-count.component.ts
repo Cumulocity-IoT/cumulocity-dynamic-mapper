@@ -34,7 +34,7 @@ import {
 } from '@c8y/ngx-components';
 import { BehaviorSubject, firstValueFrom, Subject } from 'rxjs';
 import { Router } from '@angular/router';
-import { Direction, MappingEnriched } from '../../shared';
+import { Direction } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { NumberRendererComponent } from '../../monitoring/renderer/number.renderer.component';
 import { NameRendererComponent } from '../renderer/name.renderer.component';
@@ -94,31 +94,23 @@ export class MappingVersionsCountComponent implements OnInit, OnDestroy {
   private async loadRows(): Promise<void> {
     this.isLoading$.next(true);
     try {
-      const enriched = await firstValueFrom(
-        this.mappingService.getMappingsObservable(this.direction)
-      );
+      const [enriched, counts] = await Promise.all([
+        firstValueFrom(this.mappingService.getMappingsObservable(this.direction)),
+        this.mappingService.getVersionCounts(this.direction)
+      ]);
 
-      const rows = await Promise.all(
-        enriched.map(async (e): Promise<VersionCountRow> => {
-          let versionCount = 0;
-          try {
-            const versions = await this.mappingService.getVersions(e.mapping.id);
-            versionCount = versions?.length ?? 0;
-          } catch {
-            // leave count at 0 if fetch fails for this mapping
-          }
-          return {
-            id: e.mapping.id,
-            name: e.mapping.name,
-            identifier: e.mapping.identifier,
-            topic: this.direction === Direction.INBOUND
-              ? (e.mapping.mappingTopic ?? '—')
-              : (e.mapping.publishTopic ?? '—'),
-            activeVersion: e.mapping.versionNumber ?? 0,
-            versionCount
-          };
-        })
-      );
+      const countById = new Map(counts.map(c => [c.id, c.versionCount]));
+
+      const rows: VersionCountRow[] = enriched.map(e => ({
+        id: e.mapping.id,
+        name: e.mapping.name,
+        identifier: e.mapping.identifier,
+        topic: this.direction === Direction.INBOUND
+          ? (e.mapping.mappingTopic ?? '—')
+          : (e.mapping.publishTopic ?? '—'),
+        activeVersion: e.mapping.versionNumber ?? 0,
+        versionCount: countById.get(e.mapping.id) ?? 0
+      }));
 
       this.rows$.next(rows);
     } catch (err) {

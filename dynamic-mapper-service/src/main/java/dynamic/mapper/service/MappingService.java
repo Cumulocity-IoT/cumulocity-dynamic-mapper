@@ -262,6 +262,22 @@ public class MappingService {
     }
 
     /**
+     * Returns the published version count for every mapping that matches the given
+     * direction in a single inventory scan, instead of one query per mapping line.
+     */
+    public List<MappingVersionCount> getVersionCounts(String tenant, Direction direction) {
+        List<Mapping> mappings = getMappings(tenant, direction);
+        Set<String> identifiers = mappings.stream()
+                .map(Mapping::getIdentifier)
+                .collect(java.util.stream.Collectors.toSet());
+        Map<String, Long> counts = mappingVersionService.countVersionsForIdentifiers(tenant, identifiers);
+        return mappings.stream()
+                .map(m -> new MappingVersionCount(m.getId(),
+                        counts.getOrDefault(m.getIdentifier(), 0L).intValue()))
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    /**
      * Gets all outbound mappings from cache
      */
     public Map<String, Mapping> getCacheOutboundMappings(String tenant) {

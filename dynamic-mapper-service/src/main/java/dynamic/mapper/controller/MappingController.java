@@ -49,6 +49,7 @@ import dynamic.mapper.connector.core.registry.ConnectorRegistryException;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingVersion;
+import dynamic.mapper.model.MappingVersionCount;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.service.MappingValidationException;
 import jakarta.validation.Valid;
@@ -121,7 +122,47 @@ public class MappingController {
     }
 
     @Operation(
-        summary = "Get a specific mapping", 
+        summary = "Get published version counts for all mappings",
+        description = "Returns the number of published versions per mapping in a single inventory scan. "
+                    + "Optionally filter by direction.",
+        parameters = {
+            @Parameter(
+                name = "direction",
+                description = "Filter mappings by direction",
+                required = false,
+                schema = @Schema(implementation = Direction.class)
+            )
+        }
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Version counts retrieved successfully",
+            content = @Content(
+                mediaType = "application/json",
+                array = @ArraySchema(schema = @Schema(implementation = MappingVersionCount.class))
+            )
+        ),
+        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
+    })
+    @GetMapping(value = "/version-counts", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<List<MappingVersionCount>> getVersionCounts(
+            @RequestParam(required = false) Direction direction) {
+        String tenant = getTenant();
+        try {
+            List<MappingVersionCount> result = mappingService.getVersionCounts(tenant, direction);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("{} - Failed to retrieve version counts", tenant, e);
+            throw new ResponseStatusException(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "Failed to retrieve version counts: " + e.getMessage()
+            );
+        }
+    }
+
+    @Operation(
+        summary = "Get a specific mapping",
         description = "Retrieves a mapping by its unique identifier.",
         parameters = {
             @Parameter(

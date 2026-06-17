@@ -214,6 +214,13 @@ export interface MappingVersion {
   note?: string;
 }
 
+export interface MappingVersionCount {
+  /** Managed-object id of the mapping */
+  id: string;
+  /** Number of published (non-draft) versions */
+  versionCount: number;
+}
+
 export interface MappingEnriched {
   id: string;
   mapping: Mapping;

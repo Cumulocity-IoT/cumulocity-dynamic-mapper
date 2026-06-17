@@ -43,7 +43,9 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -229,6 +231,29 @@ public class MappingVersionService {
                 () -> loadVersions(tenant, identifier).stream()
                         .filter(v -> !v.isDraft())
                         .collect(Collectors.toList()));
+    }
+
+    /**
+     * Returns the number of published (non-draft) versions for each of the given
+     * mapping line identifiers in a single inventory scan — avoiding the N-query
+     * problem when counting versions for many mappings at once.
+     *
+     * @param tenant      the tenant scope
+     * @param identifiers functional identifiers of the mapping lines to count
+     * @return map of identifier → published version count; identifiers with no
+     *         versions are present with count 0
+     */
+    public Map<String, Long> countVersionsForIdentifiers(String tenant, Set<String> identifiers) {
+        return subscriptionsService.callForTenant(tenant, () -> {
+            InventoryFilter filter = new InventoryFilter().byType(MappingVersionRepresentation.MAPPING_VERSION_TYPE);
+            ManagedObjectCollection moc = inventoryApi.getManagedObjectsByFilter(filter, false);
+            Map<String, Long> counts = versionRepository.findAll(tenant, moc).stream()
+                    .filter(v -> !v.isDraft() && identifiers.contains(v.getIdentifier()))
+                    .collect(Collectors.groupingBy(MappingVersion::getIdentifier, Collectors.counting()));
+            // Ensure every requested identifier is present, defaulting to 0
+            identifiers.forEach(id -> counts.putIfAbsent(id, 0L));
+            return counts;
+        });
     }
 
     /**

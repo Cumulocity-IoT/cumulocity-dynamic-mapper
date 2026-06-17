@@ -114,19 +114,22 @@ export class MappingVersionDrawerComponent implements OnInit {
 
       const versionRows: VersionRow[] = (versions ?? [])
         .sort((a, b) => b.versionNumber - a.versionNumber)
-        .map(v => ({
-          id: v.id ?? `v${v.versionNumber}`,
-          versionNumber: v.versionNumber,
-          versionDisplay: `v${v.versionNumber}`,
-          state: (v.versionNumber === this.mapping.versionNumber ? 'active' : 'published') as VersionState,
-          note: v.note || '',
-          updatedDisplay: v.createdAt ? new Date(v.createdAt).toLocaleString() : '—',
-          createdBy: v.createdBy || '—',
-          isDraft: false,
-          onNoteChange: this.canManage
-            ? (note: string) => this.saveVersionNote(v.id ?? `v${v.versionNumber}`, v.versionNumber, note)
-            : undefined
-        }));
+        .map(v => {
+          const rowId = v.id ?? `v${v.versionNumber}`;
+          return {
+            id: rowId,
+            versionNumber: v.versionNumber,
+            versionDisplay: `v${v.versionNumber}`,
+            state: (v.versionNumber === this.mapping.versionNumber ? 'active' : 'published') as VersionState,
+            note: v.note || '',
+            updatedDisplay: v.createdAt ? new Date(v.createdAt).toLocaleString() : '—',
+            createdBy: v.createdBy || '—',
+            isDraft: false,
+            onNoteChange: this.canManage
+              ? (note: string) => this.saveVersionNote(rowId, v.versionNumber, note)
+              : undefined
+          };
+        });
 
       this.draftNote = draft?.versionNote ?? '';
 

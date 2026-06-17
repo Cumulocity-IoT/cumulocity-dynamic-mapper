@@ -46,6 +46,7 @@ import {
   PATH_DEPLOYMENT_DEFINED_ENDPOINT,
   Mapping,
   MappingVersion,
+  MappingVersionCount,
   PATH_MAPPING_ENDPOINT,
   LoggingEventTypeMap,
   LoggingEventType,
@@ -280,6 +281,19 @@ export class MappingService {
       const error = await response.json().catch(() => ({}));
       throw new Error(error.message ?? response.statusText);
     }
+    const version = await response.json();
+    this.clearVersionsCache(id);
+    return version;
+  }
+
+  /** Returns the published version count for every mapping matching the direction in one backend call. */
+  async getVersionCounts(direction?: Direction): Promise<MappingVersionCount[]> {
+    const query = direction ? `?direction=${direction}` : '';
+    const response = await this.client.fetch(
+      `${BASE_URL}/${PATH_MAPPING_ENDPOINT}/version-counts${query}`,
+      { headers: { 'content-type': 'application/json' }, method: 'GET' }
+    );
+    if (!response.ok) throw new Error(response.statusText);
     return response.json();
   }
 
@@ -324,7 +338,9 @@ export class MappingService {
       { headers: { 'content-type': 'application/json' }, method: 'PATCH' }
     );
     if (!response.ok) throw new Error(response.statusText);
-    return response.json();
+    const version = await response.json();
+    this.clearVersionsCache(id);
+    return version;
   }
 
   /** Deletes an inactive published version. The active version cannot be deleted. */
@@ -337,6 +353,7 @@ export class MappingService {
       const error = await response.json().catch(() => ({}));
       throw new Error(error.message ?? response.statusText);
     }
+    this.clearVersionsCache(id);
   }
 
   /**
