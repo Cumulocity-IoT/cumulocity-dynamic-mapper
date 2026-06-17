@@ -281,7 +281,7 @@ public class Mapping implements Serializable {
 
     @Override
     public boolean equals(Object m) {
-        return (m instanceof Mapping) && id == ((Mapping) m).id;
+        return (m instanceof Mapping) && id.equals(((Mapping) m).id);
     }
 
     @JsonIgnore
