@@ -102,10 +102,15 @@ export class MappingVersionDrawerComponent implements OnInit {
     this.mappingService.clearVersionsCache(this.mapping.id);
     this.loading = true;
     try {
-      const [versions, draft] = await Promise.all([
+      const [versions, draft, freshMapping] = await Promise.all([
         this.mappingService.getVersions(this.mapping.id),
-        this.mappingService.getDraft(this.mapping.id)
+        this.mappingService.getDraft(this.mapping.id),
+        this.mappingService.getMapping(this.mapping.id)
       ]);
+      // Always use the server's authoritative active version — the input mapping can be stale.
+      if (freshMapping?.versionNumber != null) {
+        this.mapping.versionNumber = freshMapping.versionNumber;
+      }
 
       const versionRows: VersionRow[] = (versions ?? [])
         .sort((a, b) => b.versionNumber - a.versionNumber)
@@ -198,14 +203,17 @@ export class MappingVersionDrawerComponent implements OnInit {
     }
   }
 
-  /** Confirms deletion of a version; resolves true if the user proceeds. */
-  private confirmDelete(row: VersionRow): Promise<boolean> {
+  /** Confirms deletion of a version or draft; resolves true if the user proceeds. */
+  private confirmDelete(row: Pick<VersionRow, 'versionDisplay'>): Promise<boolean> {
+    const isDraft = row.versionDisplay === 'draft';
     return new Promise(resolve => {
       const ref = this.bsModalService.show(ConfirmationModalComponent, {
         initialState: {
-          title: `Delete version ${row.versionDisplay}`,
-          message: `You are about to permanently delete ${row.versionDisplay} of ${this.mapping.name}. This cannot be undone. Do you want to proceed?`,
-          labels: { ok: 'Delete', cancel: 'Cancel' }
+          title: isDraft ? 'Discard draft' : `Delete version ${row.versionDisplay}`,
+          message: isDraft
+            ? `You are about to permanently discard the draft of ${this.mapping.name}. All unsaved changes will be lost. Do you want to proceed?`
+            : `You are about to permanently delete ${row.versionDisplay} of ${this.mapping.name}. This cannot be undone. Do you want to proceed?`,
+          labels: { ok: isDraft ? 'Discard' : 'Delete', cancel: 'Cancel' }
         }
       });
       ref.content.closeSubject.pipe(take(1)).subscribe((result: boolean) => {
@@ -213,6 +221,22 @@ export class MappingVersionDrawerComponent implements OnInit {
         ref.hide();
       });
     });
+  }
+
+  async removeDraft(): Promise<void> {
+    const confirmed = await this.confirmDelete({ versionDisplay: 'draft' } as VersionRow);
+    if (!confirmed) return;
+    this.busy = true;
+    try {
+      await this.mappingService.deleteDraft(this.mapping.id);
+      this.alertService.success(`Discarded draft of ${this.mapping.name}`);
+      this.changed = true;
+      await this.reload();
+    } catch (e) {
+      this.alertService.danger('Failed to discard draft', (e as Error).message);
+    } finally {
+      this.busy = false;
+    }
   }
 
   async publish(): Promise<void> {
@@ -285,6 +309,13 @@ export class MappingVersionDrawerComponent implements OnInit {
         text: 'Publish',
         icon: 'upload',
         callback: () => this.publish(),
+        showIf: (row: VersionRow) => this.canManage && row.isDraft && !this.busy
+      },
+      {
+        type: 'DISCARD_DRAFT',
+        text: 'Discard',
+        icon: 'trash-o',
+        callback: () => this.removeDraft(),
         showIf: (row: VersionRow) => this.canManage && row.isDraft && !this.busy
       },
       {

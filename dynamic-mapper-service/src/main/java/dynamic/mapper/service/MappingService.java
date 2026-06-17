@@ -666,6 +666,20 @@ public class MappingService {
                 runnable.getVersionNumber());
     }
 
+    public void deleteDraftMapping(String tenant, String id) {
+        Mapping runnable = getMapping(tenant, id);
+        if (runnable == null) {
+            throw new IllegalArgumentException("Mapping not found: " + id);
+        }
+        mappingVersionService.deleteDraft(tenant, runnable.getIdentifier());
+        if (runnable.isDraftDirty()) {
+            runnable.setDraftDirty(false);
+            updateMapping(tenant, runnable, true, true);
+            updateCacheAfterChange(tenant, runnable);
+        }
+        log.info("{} - Discarded draft of mapping {}", tenant, id);
+    }
+
     // ========== Cache Management ==========
 
     /**

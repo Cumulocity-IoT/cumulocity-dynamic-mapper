@@ -136,6 +136,15 @@ export class MappingService {
 
   // ===== MAPPING CRUD OPERATIONS =====
 
+  async getMapping(id: string): Promise<Mapping> {
+    const response = await this.client.fetch(
+      `${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${id}`,
+      { headers: { 'content-type': 'application/json' }, method: 'GET' }
+    );
+    if (!response.ok) throw new Error(response.statusText);
+    return response.json();
+  }
+
   async getMappings(direction: Direction): Promise<Mapping[]> {
     const path = direction ? `${BASE_URL}/${PATH_MAPPING_ENDPOINT}?direction=${direction}` : `${BASE_URL}/${PATH_MAPPING_ENDPOINT}`;
     const response = await this.client.fetch(path,
@@ -243,6 +252,18 @@ export class MappingService {
       throw new Error(error.message ?? response.statusText);
     }
     return response.json();
+  }
+
+  /** Discards the mapping line's current draft. No-op when there is no draft. */
+  async deleteDraft(id: string): Promise<void> {
+    const response = await this.client.fetch(
+      `${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${id}/draft`,
+      { method: 'DELETE' }
+    );
+    if (!response.ok && response.status !== 204) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message ?? response.statusText);
+    }
   }
 
   /**

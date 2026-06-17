@@ -421,6 +421,35 @@ public class MappingController {
         }
     }
 
+    @Operation(
+        summary = "Discard the draft of a mapping",
+        description = """
+        Permanently deletes the mapping line's current draft (working copy) without affecting
+        published versions or the active configuration. No-op when there is no draft.
+
+        **Security:** Requires ROLE_DYNAMIC_MAPPER_ADMIN or ROLE_DYNAMIC_MAPPER_CREATE role.
+        """
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "204", description = "Draft discarded (or no draft existed)", content = @Content),
+        @ApiResponse(responseCode = "404", description = "Mapping not found", content = @Content)
+    })
+    @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
+    @DeleteMapping(value = "/{id}/draft")
+    public ResponseEntity<Void> deleteDraft(@PathVariable String id) {
+        String tenant = getTenant();
+        try {
+            mappingService.deleteDraftMapping(tenant, id);
+            return ResponseEntity.noContent().build();
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+        } catch (Exception e) {
+            log.error("{} - Failed to delete draft for mapping: {}", tenant, id, e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                "Failed to delete draft: " + e.getMessage());
+        }
+    }
+
     // ========== VERSION Endpoints ==========
 
     @Operation(
