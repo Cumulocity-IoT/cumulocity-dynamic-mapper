@@ -21,11 +21,13 @@
 
 package dynamic.mapper.service;
 
+import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.connector.core.registry.ConnectorRegistryException;
 import dynamic.mapper.core.C8YAgent;
+import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.ExplorerMessage;
 import dynamic.mapper.model.ExplorerSession;
@@ -72,6 +74,10 @@ public class ExplorerService {
 
     @Autowired
     private ConnectorRegistry connectorRegistry;
+
+    @Autowired
+    @Lazy
+    private ConfigurationRegistry configurationRegistry;
 
     @Autowired
     @Lazy
@@ -123,7 +129,7 @@ public class ExplorerService {
      * @return the new session id
      * @throws ConnectorRegistryException if the connector is not registered for the tenant (INBOUND only)
      */
-    public String startSession(String tenant, String connectorIdentifier, String topic, int maxMessages,
+    public String startSession(String tenant, String userId, String connectorIdentifier, String topic, int maxMessages,
             String direction, String sourceId, String deviceType)
             throws ConnectorRegistryException {
 
@@ -144,6 +150,7 @@ public class ExplorerService {
 
             session = ExplorerSession.builder()
                     .sessionId(sessionId)
+                    .userId(userId)
                     .connectorIdentifier("*")
                     .connectorName(connName)
                     .topic(topic)
@@ -165,7 +172,8 @@ public class ExplorerService {
                     sessions.computeIfAbsent(tenant, t -> new ConcurrentHashMap<>());
             List<String> stale = tenantSessions.entrySet().stream()
                     .filter(e -> "OUTBOUND".equals(e.getValue().getDirection())
-                            && Objects.equals(resolvedSourceId, e.getValue().getSourceId()))
+                            && Objects.equals(resolvedSourceId, e.getValue().getSourceId())
+                            && Objects.equals(userId, e.getValue().getUserId()))
                     .map(Map.Entry::getKey)
                     .collect(java.util.stream.Collectors.toList());
             for (String staleId : stale) {
@@ -232,6 +240,7 @@ public class ExplorerService {
 
             session = ExplorerSession.builder()
                     .sessionId(sessionId)
+                    .userId(userId)
                     .connectorIdentifier(connectorIdentifier)
                     .connectorName(client.getConnectorName())
                     .topic(topic)
@@ -250,7 +259,8 @@ public class ExplorerService {
             List<String> staleInbound = tenantSessionsInbound.entrySet().stream()
                     .filter(e -> "INBOUND".equals(e.getValue().getDirection())
                             && connectorIdentifier.equals(e.getValue().getConnectorIdentifier())
-                            && topic.equals(e.getValue().getTopic()))
+                            && topic.equals(e.getValue().getTopic())
+                            && Objects.equals(userId, e.getValue().getUserId()))
                     .map(Map.Entry::getKey)
                     .collect(java.util.stream.Collectors.toList());
             for (String staleId : staleInbound) {
@@ -342,14 +352,16 @@ public class ExplorerService {
         long now = System.currentTimeMillis();
         for (Map.Entry<String, ConcurrentHashMap<String, ExplorerSession>> tenantEntry : sessions.entrySet()) {
             String tenant = tenantEntry.getKey();
+            long sessionTTLMs = resolveSessionTtlMs(tenant);
             Iterator<Map.Entry<String, ExplorerSession>> it = tenantEntry.getValue().entrySet().iterator();
             while (it.hasNext()) {
                 Map.Entry<String, ExplorerSession> entry = it.next();
                 ExplorerSession session = entry.getValue();
-                if (now - session.getLastPolledAt() > SESSION_TTL_MS) {
+                if (now - session.getLastPolledAt() > sessionTTLMs) {
                     it.remove();
                     unregisterListener(tenant, session.getSessionId(), session);
-                    log.info("{} - Explorer session expired (TTL): sessionId={}", tenant, session.getSessionId());
+                    log.info("{} - Explorer session expired (TTL={}min): sessionId={}", tenant,
+                            sessionTTLMs / 60_000, session.getSessionId());
                 }
             }
         }
@@ -360,6 +372,19 @@ public class ExplorerService {
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
+
+    private long resolveSessionTtlMs(String tenant) {
+        try {
+            ServiceConfiguration config = configurationRegistry.getServiceConfiguration(tenant);
+            if (config != null && config.getExplorerSessionTTLMinutes() != null
+                    && config.getExplorerSessionTTLMinutes() > 0) {
+                return config.getExplorerSessionTTLMinutes() * 60_000L;
+            }
+        } catch (Exception e) {
+            log.debug("{} - Could not read service configuration for explorer TTL: {}", tenant, e.getMessage());
+        }
+        return SESSION_TTL_MS;
+    }
 
     private ExplorerSession findSession(String tenant, String sessionId) {
         Map<String, ExplorerSession> tenantSessions = sessions.get(tenant);

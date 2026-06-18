@@ -39,6 +39,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class ExplorerSession {
 
     private String sessionId;
+    private String userId;
     private String connectorIdentifier;
     private String connectorName;
     private String topic;

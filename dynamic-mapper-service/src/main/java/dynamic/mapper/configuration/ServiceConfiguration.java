@@ -68,6 +68,7 @@ public class ServiceConfiguration implements Cloneable {
         this.cacheAliasMaps = false;
         this.externalIdBinding = true;
         this.mappingVersionRetention = 5;
+        this.explorerSessionTTLMinutes = 1;
     }
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Enable logging of message payloads for debugging purposes. Caution: May expose sensitive data in logs.", example = "false")
@@ -199,4 +200,9 @@ public class ServiceConfiguration implements Cloneable {
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     private Integer mappingVersionRetention;
+
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Session TTL in minutes for the Message Explorer. A session is automatically removed if the UI has not polled within this window. Increase this value for devices that send messages infrequently (e.g. every 2-3 hours) so that messages are buffered until the UI reconnects.", example = "1", minimum = "1")
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    private Integer explorerSessionTTLMinutes;
 }

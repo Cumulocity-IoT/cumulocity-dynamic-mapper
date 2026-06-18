@@ -47,6 +47,7 @@ export interface ServiceConfiguration {
   supportESM?: boolean;
   cacheAliasMaps?: boolean;
   externalIdBinding?: boolean;
+  explorerSessionTTLMinutes?: number;
 }
 
 export enum TemplateType {
