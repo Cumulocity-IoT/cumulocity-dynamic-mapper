@@ -82,6 +82,8 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
   paused: boolean = false;
   private nextSeqNo = 1;
 
+  private static readonly SESSION_STORAGE_KEY = 'd11r-explorer-session';
+
   columns: Column[] = [
     {
       name: 'seqNo',
@@ -189,18 +191,81 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
           this.resetCountdown();
         });
       });
+
+    this.tryResumeSession();
   }
 
   ngAfterViewInit(): void {
     setTimeout(() => this.startCountdown());
   }
 
+  private persistSession(): void {
+    const state = {
+      sessionId: this.sessionId,
+      connectorName: this.connectorName,
+      sessionTopic: this.sessionTopic,
+      sessionDirection: this.sessionDirection,
+      sessionDeviceType: this.sessionDeviceType,
+      sessionSourceId: this.sessionSourceId
+    };
+    localStorage.setItem(MessageExplorerComponent.SESSION_STORAGE_KEY, JSON.stringify(state));
+  }
+
+  private clearPersistedSession(): void {
+    localStorage.removeItem(MessageExplorerComponent.SESSION_STORAGE_KEY);
+  }
+
+  private async tryResumeSession(): Promise<void> {
+    const raw = localStorage.getItem(MessageExplorerComponent.SESSION_STORAGE_KEY);
+    if (!raw) return;
+    let state: any;
+    try {
+      state = JSON.parse(raw);
+    } catch {
+      this.clearPersistedSession();
+      return;
+    }
+    if (!state?.sessionId) {
+      this.clearPersistedSession();
+      return;
+    }
+    try {
+      const msgs = await this.explorerService.getMessages(state.sessionId);
+      this.sessionId = state.sessionId;
+      this.connectorName = state.connectorName ?? '';
+      this.sessionTopic = state.sessionTopic ?? '';
+      this.sessionDirection = state.sessionDirection ?? 'INBOUND';
+      this.sessionDeviceType = state.sessionDeviceType ?? null;
+      this.sessionSourceId = state.sessionSourceId ?? null;
+      const indexed: IndexedMessage[] = msgs.map(m => {
+        const seqNo = this.nextSeqNo++;
+        return { ...m, id: seqNo, seqNo };
+      });
+      this.messages = indexed.slice().reverse();
+      // Defer countdown start — @ViewChild is not available until ngAfterViewInit
+      setTimeout(() => {
+        this.nextTriggerCountdown$.next(this.currentPollingInterval);
+        if (this.shouldRefreshAutomatic) {
+          this.countdownIntervalComponent?.start();
+        }
+      });
+      this.alertService.add({ text: 'Explorer session resumed.', type: 'info', timeout: ALERT_INFO_TIMEOUT });
+    } catch (e) {
+      this.clearPersistedSession();
+      if (!(e instanceof SessionExpiredError)) {
+        console.warn('Explorer session resume failed:', e);
+      }
+    }
+  }
+
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
-    // Stop any active session when navigating away
+    // Stop session on explicit navigation away, but NOT on hard reload
+    // (reload doesn't fire ngOnDestroy, so the persisted sessionId survives for resumption).
     if (this.sessionId) {
       this.explorerService.stopSession(this.sessionId).catch(() => {});
+      this.clearPersistedSession();
     }
   }
 
@@ -241,6 +306,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
         this.messages = [];
         this.paused = false;
         this.countdownIntervalComponent?.stop();
+        this.clearPersistedSession();
         this.alertService.warning('Explorer session has expired. Start a new session.');
       } else {
         // Transient network error — leave session alive, try again next tick
@@ -291,6 +357,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       this.nextSeqNo = 1;
       this.paused = false;
       this.messages = [];
+      this.persistSession();
 
       this.nextTriggerCountdown$.next(this.currentPollingInterval);
       if (this.shouldRefreshAutomatic) {
@@ -323,6 +390,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
     this.sessionDirection = 'INBOUND';
     this.paused = false;
     this.countdownIntervalComponent?.stop();
+    this.clearPersistedSession();
     this.alertService.add({ text: 'Explorer session stopped.', type: 'info', timeout: ALERT_INFO_TIMEOUT });
   }
 

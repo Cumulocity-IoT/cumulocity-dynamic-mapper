@@ -106,6 +106,15 @@ public class ExplorerService {
     private final ConcurrentHashMap<String, Long> outboundDedupCache = new ConcurrentHashMap<>();
     static final long OUTBOUND_DEDUP_WINDOW_MS = 3_000L;
 
+    /**
+     * Short-lived deduplication cache for INBOUND messages.
+     * Overlapping MQTT subscriptions (e.g. mapping on "a/b" + explorer on "a/#") cause the
+     * broker to deliver the same message once per matching subscription. We suppress duplicates
+     * seen within INBOUND_DEDUP_WINDOW_MS using a key of (sessionId, topic, payloadHash).
+     */
+    private final ConcurrentHashMap<String, Long> inboundDedupCache = new ConcurrentHashMap<>();
+    static final long INBOUND_DEDUP_WINDOW_MS = 500L;
+
     // -------------------------------------------------------------------------
     // Public API
     // -------------------------------------------------------------------------
@@ -464,18 +473,22 @@ public class ExplorerService {
                 }
             }
 
-            // OUTBOUND deduplication: Notification 2.0 events are delivered once per connector,
-            // so with N connectors the same event would appear N times. Suppress duplicates
-            // seen within OUTBOUND_DEDUP_WINDOW_MS.
-            // The key is scoped per session so that independent sessions each receive the message
-            // exactly once (instead of the first session's dedup blocking all others).
+            int payloadHash = Arrays.hashCode(message.getPayload());
+            String dedupKey = session.getSessionId() + "::" + message.getTopic() + "::" + payloadHash;
+            long now = System.currentTimeMillis();
+
             if ("OUTBOUND".equals(session.getDirection())) {
-                int hash = Arrays.hashCode(message.getPayload());
-                String dedupKey = session.getSessionId() + "::" + message.getTopic() + "::" + hash;
-                long now = System.currentTimeMillis();
+                // Notification 2.0 events are delivered once per connector; N connectors → N copies.
                 Long prev = outboundDedupCache.put(dedupKey, now);
                 if (prev != null && now - prev < OUTBOUND_DEDUP_WINDOW_MS) {
-                    return; // duplicate delivery from another connector — skip
+                    return;
+                }
+            } else {
+                // Overlapping MQTT subscriptions (e.g. mapping on "a/b" + explorer on "a/#") cause
+                // the broker to deliver the same message once per matching subscription.
+                Long prev = inboundDedupCache.put(dedupKey, now);
+                if (prev != null && now - prev < INBOUND_DEDUP_WINDOW_MS) {
+                    return;
                 }
             }
 

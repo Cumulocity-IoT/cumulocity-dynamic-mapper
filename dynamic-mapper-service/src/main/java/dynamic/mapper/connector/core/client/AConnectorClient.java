@@ -200,6 +200,12 @@ public abstract class AConnectorClient {
      */
     public void subscribeExplorerTopic(String topic) {
         try {
+            boolean alreadySubscribed = mappingSubscriptionManager != null
+                    && mappingSubscriptionManager.isTopicSubscribed(topic);
+            if (alreadySubscribed) {
+                log.debug("{} - Explorer topic [{}] already subscribed via mapping — skipping duplicate subscribe", tenant, topic);
+                return;
+            }
             subscribe(topic, Qos.AT_LEAST_ONCE);
             log.info("{} - Explorer subscribed to topic: [{}] on connector: {}", tenant, topic, connectorName);
         } catch (Exception e) {
