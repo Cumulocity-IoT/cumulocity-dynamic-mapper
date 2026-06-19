@@ -48,7 +48,11 @@
     (onMessage)="handleMessage($event)" [config]="chatConfig">
     @for (message of getCompatibleMessages(); track $index) {
     <c8y-ai-chat-message [role]="$any(message.role)" [message]="formatMessage(message)">
-      <div [innerHTML]="getMessageContent(message) | markdownToHtml | async"></div>
+      @if (message.role === 'assistant') {
+        <div [innerHTML]="getMessageContent(message) | markdownToHtml | async"></div>
+      } @else {
+        <div style="white-space: pre-wrap">{{ getMessageContent(message) }}</div>
+      }
     </c8y-ai-chat-message>
     }
   </c8y-ai-chat>

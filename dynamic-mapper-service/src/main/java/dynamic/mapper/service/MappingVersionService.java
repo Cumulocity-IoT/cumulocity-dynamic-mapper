@@ -244,6 +244,9 @@ public class MappingVersionService {
      *         versions are present with count 0
      */
     public Map<String, Long> countVersionsForIdentifiers(String tenant, Set<String> identifiers) {
+        if (identifiers.isEmpty()) {
+            return new java.util.HashMap<>();
+        }
         return subscriptionsService.callForTenant(tenant, () -> {
             InventoryFilter filter = new InventoryFilter().byType(MappingVersionRepresentation.MAPPING_VERSION_TYPE);
             ManagedObjectCollection moc = inventoryApi.getManagedObjectsByFilter(filter, false);

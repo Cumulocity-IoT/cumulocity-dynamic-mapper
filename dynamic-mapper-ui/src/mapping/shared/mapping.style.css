@@ -22,22 +22,22 @@ c8y-data-grid button[title='Reload'] {
 }
 
 /* Name column: make the <td> a flex container so text is vertically centred like the checkbox.
-   Scoped to cells that contain the mapping-id renderer so other grids with a "name" column
-   are not affected. */
-td.cdk-column-name:has(d11r-mapping-id-renderer) {
+   Scoped under d11r-mapping-mapping-grid (the host element of MappingComponent) so other
+   grids with a "name" column are not affected. No :has() required. */
+d11r-mapping-mapping-grid td.cdk-column-name {
   display: flex !important;
   align-items: center;
 }
-td.cdk-column-name:has(d11r-mapping-id-renderer) > c8y-cell-renderer {
+d11r-mapping-mapping-grid td.cdk-column-name > c8y-cell-renderer {
   flex: 1;
   min-width: 0;
   overflow: hidden;
 }
-td.cdk-column-name d11r-mapping-id-renderer {
+d11r-mapping-mapping-grid td.cdk-column-name d11r-mapping-id-renderer {
   display: block;
   overflow: hidden;
 }
-td.cdk-column-name d11r-mapping-id-renderer a {
+d11r-mapping-mapping-grid td.cdk-column-name d11r-mapping-id-renderer a {
   display: block;
   white-space: nowrap;
   overflow: hidden;

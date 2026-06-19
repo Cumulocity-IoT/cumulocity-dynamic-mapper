@@ -392,4 +392,70 @@ class MappingVersionServiceTest {
 
         assertEquals(7, runnable.getVersionNumber(), "runnable (cache-resident) mapping must be untouched");
     }
+
+    // ========== countVersionsForIdentifiers ==========
+
+    @Test
+    void countVersionsForIdentifiers_emptySetReturnsEmptyMapWithoutQueryingInventory() {
+        Map<String, Long> result = service.countVersionsForIdentifiers(TENANT, java.util.Set.of());
+
+        assertTrue(result.isEmpty(), "empty input must return empty map");
+        verify(inventoryApi, never()).getManagedObjectsByFilter(any(), any());
+    }
+
+    @Test
+    void countVersionsForIdentifiers_identifierWithNoVersionsReturnsZero() {
+        // No versions published yet — byId is empty
+        Map<String, Long> result = service.countVersionsForIdentifiers(TENANT, java.util.Set.of("unknown-id"));
+
+        assertEquals(1, result.size());
+        assertEquals(0L, result.get("unknown-id"));
+    }
+
+    @Test
+    void countVersionsForIdentifiers_draftsAreExcluded() {
+        String id = "id-with-draft";
+        // Publish one real version
+        service.publish(TENANT, mapping(id), "v1", 0);
+        // Manually inject a draft record into the fake store
+        MappingVersion draft = MappingVersion.builder()
+                .identifier(id).versionNumber(0).isDraft(true)
+                .snapshot(mapping(id)).build();
+        draft.setId("draft-mo");
+        byId.put("draft-mo", draft);
+
+        Map<String, Long> result = service.countVersionsForIdentifiers(TENANT, java.util.Set.of(id));
+
+        assertEquals(1L, result.get(id), "draft must not be counted");
+    }
+
+    @Test
+    void countVersionsForIdentifiers_countsPublishedVersionsPerIdentifier() {
+        String idA = "id-a";
+        String idB = "id-b";
+        service.publish(TENANT, mapping(idA), "a-v1", 0);
+        service.publish(TENANT, mapping(idA), "a-v2", 1);
+        service.publish(TENANT, mapping(idB), "b-v1", 0);
+
+        Map<String, Long> result = service.countVersionsForIdentifiers(TENANT,
+                java.util.Set.of(idA, idB, "id-c"));
+
+        assertEquals(2L, result.get(idA));
+        assertEquals(1L, result.get(idB));
+        assertEquals(0L, result.get("id-c"), "identifier with no versions must default to 0");
+    }
+
+    @Test
+    void countVersionsForIdentifiers_identifiersNotInRequestAreIgnored() {
+        String idA = "id-a";
+        String idB = "id-b";
+        service.publish(TENANT, mapping(idA), "v1", 0);
+        service.publish(TENANT, mapping(idB), "v1", 0);
+
+        // Only ask for idA — idB versions should not appear in the result
+        Map<String, Long> result = service.countVersionsForIdentifiers(TENANT, java.util.Set.of(idA));
+
+        assertEquals(1, result.size());
+        assertEquals(1L, result.get(idA));
+    }
 }

@@ -287,7 +287,7 @@ public class MappingService {
         Map<String, Long> counts = mappingVersionService.countVersionsForIdentifiers(tenant, identifiers);
         return mappings.stream()
                 .map(m -> new MappingVersionCount(m.getId(),
-                        counts.getOrDefault(m.getIdentifier(), 0L).intValue()))
+                        counts.getOrDefault(m.getIdentifier(), 0L)))
                 .collect(java.util.stream.Collectors.toList());
     }
 

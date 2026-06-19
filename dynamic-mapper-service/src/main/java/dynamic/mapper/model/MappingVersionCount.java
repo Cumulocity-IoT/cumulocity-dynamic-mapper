@@ -35,5 +35,5 @@ public record MappingVersionCount(
         String id,
 
         @Schema(description = "Number of published (non-draft) versions", example = "3")
-        int versionCount) {
+        long versionCount) {
 }

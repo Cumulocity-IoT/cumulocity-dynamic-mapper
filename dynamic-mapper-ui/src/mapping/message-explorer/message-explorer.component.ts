@@ -254,7 +254,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
           this.countdownIntervalComponent?.start();
         }
       });
-      this.alertService.add({ text: 'Explorer session resumed.', type: 'info', timeout: ALERT_INFO_TIMEOUT });
+      // this.alertService.add({ text: 'Explorer session resumed.', type: 'info', timeout: ALERT_INFO_TIMEOUT });
     } catch (e) {
       this.clearPersistedSession();
       if (!(e instanceof SessionExpiredError)) {

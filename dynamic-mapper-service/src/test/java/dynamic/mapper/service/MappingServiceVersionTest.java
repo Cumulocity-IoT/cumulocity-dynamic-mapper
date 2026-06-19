@@ -29,9 +29,14 @@ import dynamic.mapper.model.API;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingVersion;
+import dynamic.mapper.model.MappingVersionCount;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.TransformationType;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import dynamic.mapper.service.cache.FlowStateStore;
 import dynamic.mapper.service.cache.MappingCacheManager;
 import dynamic.mapper.service.deployment.DeploymentMapService;
@@ -182,5 +187,74 @@ class MappingServiceVersionTest {
         assertThrows(IllegalArgumentException.class, () -> service.publishDraft(TENANT, "missing", null));
         assertThrows(IllegalArgumentException.class, () -> service.listVersions(TENANT, "missing"));
         assertThrows(IllegalArgumentException.class, () -> service.deleteVersion(TENANT, "missing", 1));
+    }
+
+    // ========== getVersionCounts ==========
+
+    private Mapping mappingWithId(String moId, String identifier, Direction direction) {
+        return Mapping.builder()
+                .id(moId).identifier(identifier).name("M-" + moId)
+                .direction(direction).targetAPI(API.MEASUREMENT)
+                .mappingType(MappingType.JSON).transformationType(TransformationType.JSONATA)
+                .active(false).debug(false).qos(Qos.AT_LEAST_ONCE)
+                .sourceTemplate("{}").targetTemplate("{}")
+                .build();
+    }
+
+    @Test
+    void getVersionCounts_returnsCountPerMapping() {
+        Mapping m1 = mappingWithId("mo-1", "id-1", Direction.INBOUND);
+        Mapping m2 = mappingWithId("mo-2", "id-2", Direction.INBOUND);
+        doReturn(List.of(m1, m2)).when(service).getMappings(TENANT, Direction.INBOUND);
+        when(mappingVersionService.countVersionsForIdentifiers(TENANT, Set.of("id-1", "id-2")))
+                .thenReturn(Map.of("id-1", 3L, "id-2", 1L));
+
+        List<MappingVersionCount> result = service.getVersionCounts(TENANT, Direction.INBOUND);
+
+        assertEquals(2, result.size());
+        MappingVersionCount c1 = result.stream().filter(c -> "mo-1".equals(c.id())).findFirst().orElseThrow();
+        MappingVersionCount c2 = result.stream().filter(c -> "mo-2".equals(c.id())).findFirst().orElseThrow();
+        assertEquals(3L, c1.versionCount());
+        assertEquals(1L, c2.versionCount());
+    }
+
+    @Test
+    void getVersionCounts_identifierWithNoVersionsReturnsZero() {
+        Mapping m = mappingWithId("mo-1", "id-1", Direction.INBOUND);
+        doReturn(List.of(m)).when(service).getMappings(TENANT, Direction.INBOUND);
+        when(mappingVersionService.countVersionsForIdentifiers(TENANT, Set.of("id-1")))
+                .thenReturn(Map.of("id-1", 0L));
+
+        List<MappingVersionCount> result = service.getVersionCounts(TENANT, Direction.INBOUND);
+
+        assertEquals(1, result.size());
+        assertEquals(0L, result.get(0).versionCount());
+    }
+
+    @Test
+    void getVersionCounts_noMappingsReturnsEmptyList() {
+        doReturn(List.of()).when(service).getMappings(TENANT, Direction.OUTBOUND);
+        when(mappingVersionService.countVersionsForIdentifiers(TENANT, Set.of()))
+                .thenReturn(Map.of());
+
+        List<MappingVersionCount> result = service.getVersionCounts(TENANT, Direction.OUTBOUND);
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void getVersionCounts_directionFilterIsApplied() {
+        Mapping inbound = mappingWithId("mo-in", "id-in", Direction.INBOUND);
+        doReturn(List.of(inbound)).when(service).getMappings(TENANT, Direction.INBOUND);
+        when(mappingVersionService.countVersionsForIdentifiers(TENANT, Set.of("id-in")))
+                .thenReturn(Map.of("id-in", 2L));
+
+        List<MappingVersionCount> result = service.getVersionCounts(TENANT, Direction.INBOUND);
+
+        assertEquals(1, result.size());
+        assertEquals("mo-in", result.get(0).id());
+        // getMappings was called with INBOUND, not OUTBOUND
+        verify(service).getMappings(TENANT, Direction.INBOUND);
+        verify(service, never()).getMappings(TENANT, Direction.OUTBOUND);
     }
 }

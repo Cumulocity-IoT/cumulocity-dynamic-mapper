@@ -21,7 +21,6 @@
 
 package dynamic.mapper.service;
 
-import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
@@ -65,7 +64,7 @@ public class ExplorerService {
      * Session TTL in milliseconds: a session is automatically removed if the UI has not
      * polled within this window. Default = 2 × WATCHDOG_INTERVAL_MS.
      */
-    static final long SESSION_TTL_MS = 60_000L;        // 60 seconds
+    static final long SESSION_TTL_MS = 600_000L;       // 10 minutes — matches the drawer default
 
     /** How often the TTL watchdog runs. */
     static final long WATCHDOG_INTERVAL_MS = 30_000L;  // 30 seconds
@@ -389,15 +388,6 @@ public class ExplorerService {
     // -------------------------------------------------------------------------
 
     private long resolveSessionTtlMs(String tenant) {
-        try {
-            ServiceConfiguration config = configurationRegistry.getServiceConfiguration(tenant);
-            if (config != null && config.getExplorerSessionTTLMinutes() != null
-                    && config.getExplorerSessionTTLMinutes() > 0) {
-                return config.getExplorerSessionTTLMinutes() * 60_000L;
-            }
-        } catch (Exception e) {
-            log.debug("{} - Could not read service configuration for explorer TTL: {}", tenant, e.getMessage());
-        }
         return SESSION_TTL_MS;
     }
 

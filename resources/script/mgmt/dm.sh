@@ -39,6 +39,14 @@ function check_prerequisites() {
   fi
 }
 
+function validate_direction() {
+  local dir="$1"
+  if [[ "$dir" != "INBOUND" && "$dir" != "OUTBOUND" ]]; then
+    echo "Error: --direction must be INBOUND or OUTBOUND (got: '$dir')" >&2
+    exit 1
+  fi
+}
+
 function confirm_destructive() {
   local msg="$1"
   echo "WARNING: $msg" >&2
@@ -91,6 +99,8 @@ function mappings_list() {
       *) echo "Unknown option: $1" >&2; show_usage; exit 1 ;;
     esac
   done
+
+  [ -n "$direction" ] && validate_direction "$direction"
 
   if [ -n "$direction" ]; then
     c8y inventory find --type d11r_mapping \
@@ -169,18 +179,28 @@ function mappings_delete() {
     esac
   done
 
+  [ -n "$direction" ] && validate_direction "$direction"
+
   local scope="all mappings"
   [ -n "$direction" ] && scope="$direction mappings"
   [ "$force" = false ] && confirm_destructive "This will permanently delete $scope."
 
+  local ids
   if [ -n "$direction" ]; then
-    c8y inventory find --type d11r_mapping \
+    ids=$(c8y inventory find --type d11r_mapping \
       --query "d11r_mapping.direction eq '$direction'" \
-      --includeAll | c8y inventory delete
+      --includeAll --select id --output csv 2>/dev/null || true)
   else
-    c8y inventory list --type d11r_mapping --includeAll | c8y inventory delete
+    ids=$(c8y inventory list --type d11r_mapping \
+      --includeAll --select id --output csv 2>/dev/null || true)
   fi
-  echo "Deleted $scope."
+
+  if [ -z "$ids" ]; then
+    echo "No $scope found."
+  else
+    echo "$ids" | c8y inventory delete
+    echo "Deleted $scope."
+  fi
 }
 
 # ---------------------------------------------------------------------------
@@ -205,10 +225,18 @@ function connectors_delete() {
 
   [ "$force" = false ] && confirm_destructive "This will permanently delete all connector configurations."
 
-  c8y tenantoptions getForCategory --category "$TENANT_OPTIONS_CATEGORY" \
-    | jq 'keys[] | select(startswith("credentials.connection.")) | {key: .}' \
-    | c8y tenantoptions delete --category "$TENANT_OPTIONS_CATEGORY" --key -.key
-  echo "Connectors deleted."
+  local keys
+  keys=$(c8y tenantoptions getForCategory --category "$TENANT_OPTIONS_CATEGORY" --raw 2>/dev/null \
+    | jq -r 'keys[] | select(startswith("credentials.connection."))' || true)
+
+  if [ -z "$keys" ]; then
+    echo "No connector configurations found."
+  else
+    echo "$keys" \
+      | jq -Rc '{key: .}' \
+      | c8y tenantoptions delete --category "$TENANT_OPTIONS_CATEGORY" --key -.key
+    echo "Connectors deleted."
+  fi
 }
 
 # ---------------------------------------------------------------------------
@@ -233,10 +261,18 @@ function configurations_delete() {
 
   [ "$force" = false ] && confirm_destructive "This will permanently delete all service configurations."
 
-  c8y tenantoptions getForCategory --category "$TENANT_OPTIONS_CATEGORY" \
-    | jq 'keys[] | select(startswith("service.configuration")) | {key: .}' \
-    | c8y tenantoptions delete --category "$TENANT_OPTIONS_CATEGORY" --key -.key
-  echo "Configurations deleted."
+  local keys
+  keys=$(c8y tenantoptions getForCategory --category "$TENANT_OPTIONS_CATEGORY" --raw 2>/dev/null \
+    | jq -r 'keys[] | select(startswith("service.configuration"))' || true)
+
+  if [ -z "$keys" ]; then
+    echo "No service configurations found."
+  else
+    echo "$keys" \
+      | jq -Rc '{key: .}' \
+      | c8y tenantoptions delete --category "$TENANT_OPTIONS_CATEGORY" --key -.key
+    echo "Configurations deleted."
+  fi
 }
 
 # ---------------------------------------------------------------------------
