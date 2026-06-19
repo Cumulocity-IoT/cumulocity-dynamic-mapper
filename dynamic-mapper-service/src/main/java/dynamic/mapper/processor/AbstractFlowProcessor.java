@@ -51,6 +51,33 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public abstract class AbstractFlowProcessor extends CommonProcessor {
 
+    /**
+     * Polyfill for browser-standard atob() / btoa() functions.
+     * GraalVM's JS engine is ECMAScript-only — it does not include Web APIs.
+     * The polyfill uses the already-sandboxed java.util.Base64 host class so no
+     * additional host-class permissions are required.
+     */
+    private static final Source BASE64_POLYFILL_SOURCE = Source.newBuilder("js", """
+            (function() {
+              var _Base64   = Java.type('java.util.Base64');
+              var _JString  = Java.type('java.lang.String');
+              var _Charsets = Java.type('java.nio.charset.StandardCharsets');
+              var _Arrays   = Java.type('java.util.Arrays');
+              globalThis.atob = function(encoded) {
+                return new _JString(_Base64.getDecoder().decode(encoded), _Charsets.UTF_8);
+              };
+              globalThis.btoa = function(plain) {
+                // String.getBytes(Charset) has overload-resolution issues in GraalVM;
+                // use Charset.encode(String) → ByteBuffer and extract exact bytes via Arrays.copyOfRange.
+                var buf = _Charsets.UTF_8.encode(plain);
+                return _Base64.getEncoder().encodeToString(
+                  _Arrays.copyOfRange(buf.array(), buf.position(), buf.limit()));
+              };
+            })();
+            """, "__base64_polyfill__.js")
+            .cached(true)
+            .buildLiteral();
+
     protected final MappingService mappingService;
 
     protected AbstractFlowProcessor(MappingService mappingService) {
@@ -292,6 +319,9 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
      * Load shared and system code into GraalVM context using cached Sources - OPTIMIZED!
      */
     protected void loadSharedCode(Context graalContext, ProcessingContext<?> context) {
+        // Inject atob()/btoa() — GraalVM is ECMAScript-only; these are Web APIs not in the spec.
+        graalContext.eval(BASE64_POLYFILL_SOURCE);
+
         // Use pre-cached Source if available - no decoding or parsing needed
         if (context.getSharedSource() != null) {
             graalContext.eval(context.getSharedSource());

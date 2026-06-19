@@ -41,7 +41,7 @@
 # Environment overrides:
 #   DM_MQTT_CLIENT_ID   clientId / cert CN (default: dmx509testclient)
 #   DM_CERT_DIR         where cert/key/metadata are stored
-#                       (default: ${TMPDIR:-/tmp}/dm-mqtt-service-x509)
+#                       (default: <script-dir>/tmp/dm-mqtt-service-x509)
 #   DM_CERT_DAYS        certificate validity in days (default: 2)
 
 set -euo pipefail
@@ -53,7 +53,7 @@ source "${SCRIPT_DIR}/test-harness.sh"
 # ── Configuration ────────────────────────────────────────────────────────────────
 # CN MUST be alphanumeric (see header) — the MQTT clientId equals this value.
 CLIENT_ID_DEFAULT="dmx509testclient"
-CERT_DIR="${DM_CERT_DIR:-${TMPDIR:-/tmp}/dm-mqtt-service-x509}"
+CERT_DIR="${DM_CERT_DIR:-${SCRIPT_DIR}/tmp/dm-mqtt-service-x509}"
 CERT_DAYS="${DM_CERT_DAYS:-2}"
 CERT_NAME_FILE="${CERT_DIR}/cert-name.txt"
 UPLOADED_MARKER="${CERT_DIR}/uploaded"
@@ -201,7 +201,7 @@ do_cleanup() {
 case "$COMMAND" in
     create)        do_create "$@" ;;
     upload)        do_upload "$@" ;;
-    cleanup|clean) do_cleanup "$@" ;;
+    cleanup|clean|--cleanup) do_cleanup "$@" ;;
     -h|--help|help) usage ;;
     *)
         dm_warn "Unknown command: ${COMMAND}"
