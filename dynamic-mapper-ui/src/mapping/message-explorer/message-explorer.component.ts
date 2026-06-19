@@ -50,6 +50,7 @@ import { ExplorerMessage, MessageExplorerService, SessionExpiredError } from './
 
 export type IndexedMessage = ExplorerMessage & { id: number; seqNo: number };
 import {
+  ExplorerSessionSnapshot,
   ExplorerStartResult,
   MessageExplorerDrawerComponent
 } from './message-explorer-drawer.component';
@@ -74,10 +75,14 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
   // ---- state ----------------------------------------------------------------
   sessionId: string | null = null;
   connectorName: string = '';
+  sessionConnectorIdentifier: string = '';
   sessionTopic: string = '';
   sessionDirection: 'INBOUND' | 'OUTBOUND' = 'INBOUND';
+  sessionMaxMessages: number = 50;
+  sessionTTLMinutes: number = 10;
   sessionDeviceType: string | null = null;
   sessionSourceId: string | null = null;
+  sessionDeviceTypeFilter: string | null = null;
   messages: IndexedMessage[] = [];
   paused: boolean = false;
   private nextSeqNo = 1;
@@ -261,12 +266,8 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
-    // Stop session on explicit navigation away, but NOT on hard reload
-    // (reload doesn't fire ngOnDestroy, so the persisted sessionId survives for resumption).
-    if (this.sessionId) {
-      this.explorerService.stopSession(this.sessionId).catch(() => {});
-      this.clearPersistedSession();
-    }
+    // Do NOT stop the backend session here — navigating away and back should resume the session.
+    // The backend TTL expires idle sessions automatically. Explicit stop is handled by onStopSession().
   }
 
   // ---- polling --------------------------------------------------------------
@@ -345,15 +346,20 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
         connectorIdentifier: result.connectorIdentifier,
         topic: result.topic,
         maxMessages: result.maxMessages,
+        sessionTTLMinutes: result.sessionTTLMinutes,
         direction: result.direction,
         sourceId: result.sourceId,
         deviceType: result.deviceTypeFilter
       });
       this.connectorName = result.connectorName;
+      this.sessionConnectorIdentifier = result.connectorIdentifier;
       this.sessionTopic = result.topic;
       this.sessionDirection = result.direction;
+      this.sessionMaxMessages = result.maxMessages;
+      this.sessionTTLMinutes = result.sessionTTLMinutes;
       this.sessionDeviceType = result.deviceType ?? null;
       this.sessionSourceId = result.sourceId ?? null;
+      this.sessionDeviceTypeFilter = result.deviceTypeFilter ?? null;
       this.nextSeqNo = 1;
       this.paused = false;
       this.messages = [];
@@ -367,6 +373,61 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       this.alertService.success(`${result.direction === 'OUTBOUND' ? 'Outbound' : 'Inbound'}: exploring "${result.topic}" on "${result.connectorName}"${deviceLabel}`);
     } catch (e: any) {
       this.alertService.danger(`Failed to start explorer session: ${e.message}`);
+    }
+  }
+
+  async onEditSession(): Promise<void> {
+    if (!this.sessionId) return;
+    const snapshot: ExplorerSessionSnapshot = {
+      connectorIdentifier: this.sessionConnectorIdentifier,
+      topic: this.sessionTopic,
+      maxMessages: this.sessionMaxMessages,
+      sessionTTLMinutes: this.sessionTTLMinutes,
+      direction: this.sessionDirection,
+      sourceId: this.sessionSourceId ?? undefined,
+      deviceTypeFilter: this.sessionDeviceTypeFilter ?? undefined
+    };
+    const drawer = this.bottomDrawerService.openDrawer(MessageExplorerDrawerComponent, {
+      initialState: { activeSessionId: this.sessionId, editSnapshot: snapshot }
+    });
+    const result: ExplorerStartResult | null = await drawer.instance.result;
+    if (!result) return;
+
+    // Stop the current session before starting the updated one
+    await this.explorerService.stopSession(this.sessionId).catch(() => {});
+    this.sessionId = null;
+    this.messages = [];
+
+    try {
+      this.sessionId = await this.explorerService.startSession({
+        connectorIdentifier: result.connectorIdentifier,
+        topic: result.topic,
+        maxMessages: result.maxMessages,
+        sessionTTLMinutes: result.sessionTTLMinutes,
+        direction: result.direction,
+        sourceId: result.sourceId,
+        deviceType: result.deviceTypeFilter
+      });
+      this.connectorName = result.connectorName;
+      this.sessionConnectorIdentifier = result.connectorIdentifier;
+      this.sessionTopic = result.topic;
+      this.sessionDirection = result.direction;
+      this.sessionMaxMessages = result.maxMessages;
+      this.sessionTTLMinutes = result.sessionTTLMinutes;
+      this.sessionDeviceType = result.deviceType ?? null;
+      this.sessionSourceId = result.sourceId ?? null;
+      this.sessionDeviceTypeFilter = result.deviceTypeFilter ?? null;
+      this.nextSeqNo = 1;
+      this.paused = false;
+      this.persistSession();
+
+      this.nextTriggerCountdown$.next(this.currentPollingInterval);
+      if (this.shouldRefreshAutomatic) {
+        this.countdownIntervalComponent?.start();
+      }
+      this.alertService.add({ text: 'Explorer session updated.', type: 'success', timeout: ALERT_INFO_TIMEOUT });
+    } catch (e: any) {
+      this.alertService.danger(`Failed to update explorer session: ${e.message}`);
     }
   }
 
@@ -386,8 +447,14 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
     this.sessionId = null;
     this.messages = [];
     this.connectorName = '';
+    this.sessionConnectorIdentifier = '';
     this.sessionTopic = '';
     this.sessionDirection = 'INBOUND';
+    this.sessionMaxMessages = 50;
+    this.sessionTTLMinutes = 10;
+    this.sessionDeviceType = null;
+    this.sessionSourceId = null;
+    this.sessionDeviceTypeFilter = null;
     this.paused = false;
     this.countdownIntervalComponent?.stop();
     this.clearPersistedSession();

@@ -38,6 +38,16 @@
   }
 </c8y-action-bar-item>
 
+<!-- Edit session button -->
+<c8y-action-bar-item [placement]="'left'">
+  @if (sessionId) {
+    <button class="btn btn-default btn-sm" (click)="onEditSession()" data-cy="dm-msg-explorer-edit">
+      <i c8yIcon="edit"></i>
+      <span translate>Edit session</span>
+    </button>
+  }
+</c8y-action-bar-item>
+
 <!-- Pause / Resume button -->
 <c8y-action-bar-item [placement]="'left'">
   @if (sessionId) {

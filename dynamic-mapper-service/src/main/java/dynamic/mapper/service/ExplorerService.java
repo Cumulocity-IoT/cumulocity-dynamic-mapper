@@ -139,11 +139,14 @@ public class ExplorerService {
      * @throws ConnectorRegistryException if the connector is not registered for the tenant (INBOUND only)
      */
     public String startSession(String tenant, String userId, String connectorIdentifier, String topic, int maxMessages,
-            String direction, String sourceId, String deviceType)
+            String direction, String sourceId, String deviceType, Integer sessionTTLMinutes)
             throws ConnectorRegistryException {
 
         int cappedMax = Math.max(1, Math.min(500, maxMessages > 0 ? maxMessages : DEFAULT_MAX_MESSAGES));
         String dir = (direction != null && direction.equalsIgnoreCase("OUTBOUND")) ? "OUTBOUND" : "INBOUND";
+        long sessionTTLMs = (sessionTTLMinutes != null && sessionTTLMinutes > 0)
+                ? sessionTTLMinutes * 60_000L
+                : resolveSessionTtlMs(tenant);
 
         String sessionId = UUID.randomUUID().toString();
 
@@ -169,6 +172,7 @@ public class ExplorerService {
                     .sourceId(resolvedSourceId)
                     .deviceType(resolvedDeviceType)
                     .lastPolledAt(System.currentTimeMillis())
+                    .sessionTTLMs(sessionTTLMs)
                     .messages(new ConcurrentLinkedDeque<>())
                     .build();
 
@@ -257,6 +261,7 @@ public class ExplorerService {
                     .maxMessages(cappedMax)
                     .direction(dir)
                     .lastPolledAt(System.currentTimeMillis())
+                    .sessionTTLMs(sessionTTLMs)
                     .messages(new ConcurrentLinkedDeque<>())
                     .build();
 
@@ -361,11 +366,12 @@ public class ExplorerService {
         long now = System.currentTimeMillis();
         for (Map.Entry<String, ConcurrentHashMap<String, ExplorerSession>> tenantEntry : sessions.entrySet()) {
             String tenant = tenantEntry.getKey();
-            long sessionTTLMs = resolveSessionTtlMs(tenant);
+            long tenantDefaultTTLMs = resolveSessionTtlMs(tenant);
             Iterator<Map.Entry<String, ExplorerSession>> it = tenantEntry.getValue().entrySet().iterator();
             while (it.hasNext()) {
                 Map.Entry<String, ExplorerSession> entry = it.next();
                 ExplorerSession session = entry.getValue();
+                long sessionTTLMs = session.getSessionTTLMs() > 0 ? session.getSessionTTLMs() : tenantDefaultTTLMs;
                 if (now - session.getLastPolledAt() > sessionTTLMs) {
                     it.remove();
                     unregisterListener(tenant, session.getSessionId(), session);

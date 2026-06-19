@@ -45,6 +45,7 @@ export interface StartSessionRequest {
   connectorIdentifier: string;
   topic: string;
   maxMessages: number;
+  sessionTTLMinutes?: number;
   direction: 'INBOUND' | 'OUTBOUND';
   sourceId?: string;    // C8Y managed object ID (device or group) filter (OUTBOUND only)
   deviceType?: string;  // C8Y device type filter (OUTBOUND only)

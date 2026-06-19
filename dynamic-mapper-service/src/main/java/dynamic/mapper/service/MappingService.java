@@ -134,6 +134,12 @@ public class MappingService {
         // setActivationMapping can register subscriptions through the normal channel.
         boolean activateAfterCreate = Boolean.TRUE.equals(mapping.getActive());
 
+        // Capture version hints before prepareForCreate resets them to 0.
+        // This allows imports to restore the original version number (e.g. v4) rather
+        // than always starting at v1.
+        int importedVersionNumber = mapping.getVersionNumber();
+        String importedVersionNote = mapping.getVersionNote();
+
         // Create with proper tenant context
         Mapping created = subscriptionsService.callForTenant(tenant, () -> {
             mappingRepository.prepareForCreate(tenant, mapping);
@@ -165,9 +171,17 @@ public class MappingService {
             return mapping;
         });
 
-        // Backfill v1 and stamp versionNumber on the mapping so the grid shows the badge.
+        // Restore imported version hints so ensureBackfilled creates the right version
+        // number and note instead of always defaulting to v1.
+        if (importedVersionNumber > 0) {
+            created.setVersionNumber(importedVersionNumber);
+            created.setVersionNote(importedVersionNote);
+        }
+
+        // Backfill the version record and sync the MO's versionNumber badge.
+        // Always update the MO because prepareForCreate persisted it with versionNumber=0.
         dynamic.mapper.model.MappingVersion v1 = mappingVersionService.ensureBackfilled(tenant, created);
-        if (v1 != null && created.getVersionNumber() != v1.getVersionNumber()) {
+        if (v1 != null) {
             created.setVersionNumber(v1.getVersionNumber());
             updateMapping(tenant, created, false, true);
         }

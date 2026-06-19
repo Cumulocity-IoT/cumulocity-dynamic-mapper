@@ -82,6 +82,9 @@ public class ExplorerController {
 
         @Schema(description = "C8Y device type filter (OUTBOUND only; optional). When set, only messages from devices whose type matches this value are captured.", example = "c8y_MQTTDevice")
         private String deviceType;
+
+        @Schema(description = "Session TTL in minutes. Overrides the tenant-wide default. Sessions expire when not polled for longer than this value.", example = "10")
+        private Integer sessionTTLMinutes;
     }
 
     // ---- Endpoints ----------------------------------------------------------
@@ -113,7 +116,8 @@ public class ExplorerController {
                     request.getMaxMessages(),
                     request.getDirection(),
                     request.getSourceId(),
-                    request.getDeviceType());
+                    request.getDeviceType(),
+                    request.getSessionTTLMinutes());
             log.info("{} - Explorer session created: {}", tenant, sessionId);
             return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("sessionId", sessionId));
         } catch (ConnectorRegistryException e) {

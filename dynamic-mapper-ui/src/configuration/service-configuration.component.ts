@@ -76,7 +76,6 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     suppressDeprecationWarning: false,
     cacheAliasMaps: false,
     externalIdBinding: true,
-    explorerSessionTTLMinutes: 1,
   };
   agents$: BehaviorSubject<string[]> = new BehaviorSubject([]);
   destroy$: Subject<void> = new Subject<void>();
@@ -147,7 +146,6 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
       suppressDeprecationWarning: [''],
       cacheAliasMaps: [''],
       externalIdBinding: [''],
-      explorerSessionTTLMinutes: [''],
     });
   }
 

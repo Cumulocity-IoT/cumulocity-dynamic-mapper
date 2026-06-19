@@ -71,6 +71,9 @@ public class ExplorerSession {
     /** Epoch millis of the last GET /messages call — used for TTL calculation. */
     private volatile long lastPolledAt;
 
+    /** Per-session TTL in milliseconds, set at session start from the drawer input. */
+    private long sessionTTLMs;
+
     /** Bounded message store; thread-safe. */
     private ConcurrentLinkedDeque<ExplorerMessage> messages;
 

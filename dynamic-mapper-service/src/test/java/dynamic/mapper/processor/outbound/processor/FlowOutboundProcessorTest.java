@@ -278,8 +278,8 @@ class FlowOutboundProcessorTest {
         // When
         processor.process(exchange);
 
-        // Then - Should load shared code (main code + shared code = 2 eval calls)
-        verify(graalContext, times(2)).eval(any(Source.class));
+        // Then - polyfill + shared code + main code = 3 eval calls
+        verify(graalContext, times(3)).eval(any(Source.class));
 
         log.info("✅ Shared code test passed");
     }
@@ -293,8 +293,8 @@ class FlowOutboundProcessorTest {
         // When
         processor.process(exchange);
 
-        // Then - Should load system code
-        verify(graalContext, times(1)).eval(any(Source.class)); // Main code, system code is not called
+        // Then - polyfill + main code = 2 eval calls (system code cached as Source, no separate eval)
+        verify(graalContext, times(2)).eval(any(Source.class));
 
         log.info("✅ System code test passed");
     }
@@ -455,8 +455,8 @@ class FlowOutboundProcessorTest {
             // When
             processor.process(exchange);
 
-            // Then - Should load both codes (main + shared + system = 3 eval calls)
-            verify(graalContext, times(3)).eval(any(Source.class));
+            // Then - polyfill + shared + system + main = 4 eval calls
+            verify(graalContext, times(4)).eval(any(Source.class));
 
             log.info("✅ Both shared and system code test passed");
         }
