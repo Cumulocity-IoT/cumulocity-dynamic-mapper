@@ -39,14 +39,14 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
   isStandaloneApp: boolean = false;
   staticNodesStandalone = {
     rootNode: new NavigatorNode({
-      label: gettext('Introduction'),
+      label: gettext('Home'),
       icon: 'home',
       path: '/c8y-pkg-dynamic-mapper/introduction',
       priority: 614,
       preventDuplicates: true
     }),
     overviewNode: new NavigatorNode({
-      parent: gettext('Introduction'),
+      parent: gettext('Home'),
       icon: 'empty',
       label: gettext('Overview'),
       path: '/c8y-pkg-dynamic-mapper/introduction/overview',
@@ -54,7 +54,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       preventDuplicates: true
     }),
     gettingStartedNode: new NavigatorNode({
-      parent: gettext('Introduction'),
+      parent: gettext('Home'),
       icon: 'empty',
       label: gettext('Getting started'),
       path: '/c8y-pkg-dynamic-mapper/introduction/getting-started',
@@ -62,7 +62,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       preventDuplicates: true
     }),
     messageExplorerNode: new NavigatorNode({
-      parent: gettext('Introduction'),
+      parent: gettext('Home'),
       icon: 'empty',
       label: gettext('Message Explorer'),
       path: '/c8y-pkg-dynamic-mapper/introduction/message-explorer',
@@ -70,7 +70,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       preventDuplicates: true
     }),
     managingConnectorsNode: new NavigatorNode({
-      parent: gettext('Introduction'),
+      parent: gettext('Home'),
       icon: 'empty',
       label: gettext('Managing connectors'),
       path: '/c8y-pkg-dynamic-mapper/introduction/managing-connectors',
@@ -78,7 +78,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       preventDuplicates: true
     }),
     monitoringNode: new NavigatorNode({
-      parent: gettext('Introduction'),
+      parent: gettext('Home'),
       icon: 'empty',
       label: gettext('Monitoring overview'),
       path: '/c8y-pkg-dynamic-mapper/introduction/monitoring',
@@ -86,15 +86,23 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       preventDuplicates: true
     }),
     definingMappingNode: new NavigatorNode({
-      parent: gettext('Introduction'),
+      parent: gettext('Home'),
       icon: 'empty',
       label: gettext('Defining a mapping'),
       path: '/c8y-pkg-dynamic-mapper/introduction/define-mapping',
       priority: 610,
       preventDuplicates: true
     }),
+    versioningNode: new NavigatorNode({
+      parent: gettext('Home'),
+      icon: 'empty',
+      label: gettext('Versioning mappings'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/versioning',
+      priority: 609.8,
+      preventDuplicates: true
+    }),
     sparkPlugBNode: new NavigatorNode({
-      parent: gettext('Introduction'),
+      parent: gettext('Home'),
       icon: 'empty',
       label: gettext('SparkPlug B'),
       path: '/c8y-pkg-dynamic-mapper/introduction/sparkplugb',
@@ -102,7 +110,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       preventDuplicates: true
     }),
     subscriptionOutboundNode: new NavigatorNode({
-      parent: gettext('Introduction'),
+      parent: gettext('Home'),
       icon: 'empty',
       label: gettext('Outbound mapping'),
       path: '/c8y-pkg-dynamic-mapper/introduction/define-subscription-for-outbound',
@@ -110,7 +118,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       preventDuplicates: true
     }),
     transformationTypesNode: new NavigatorNode({
-      parent: gettext('Introduction'),
+      parent: gettext('Home'),
       icon: 'empty',
       label: gettext('Transformation Types'),
       path: '/c8y-pkg-dynamic-mapper/introduction/transformation-types',
@@ -150,7 +158,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       preventDuplicates: true
     }),
     flowStateNode: new NavigatorNode({
-      parent: gettext('Introduction'),
+      parent: gettext('Home'),
       icon: 'empty',
       label: gettext('Flow State'),
       path: '/c8y-pkg-dynamic-mapper/introduction/flow-state',
@@ -158,7 +166,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       preventDuplicates: true
     }),
     codeTemplatesNode: new NavigatorNode({
-      parent: gettext('Introduction'),
+      parent: gettext('Home'),
       icon: 'empty',
       label: gettext('Code Templates'),
       path: '/c8y-pkg-dynamic-mapper/introduction/code-templates',
@@ -166,7 +174,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       preventDuplicates: true
     }),
     metadataNode: new NavigatorNode({
-      parent: gettext('Introduction'),
+      parent: gettext('Home'),
       icon: 'empty',
       label: gettext('Metadata'),
       path: '/c8y-pkg-dynamic-mapper/introduction/metadata',
@@ -174,7 +182,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       preventDuplicates: true
     }),
     reliabilitySettingsNode: new NavigatorNode({
-      parent: gettext('Introduction'),
+      parent: gettext('Home'),
       icon: 'empty',
       label: gettext('Reliability settings'),
       path: '/c8y-pkg-dynamic-mapper/introduction/reliability-settings',
@@ -182,7 +190,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       preventDuplicates: true
     }),
     accessControlNode: new NavigatorNode({
-      parent: gettext('Introduction'),
+      parent: gettext('Home'),
       icon: 'empty',
       label: gettext('Managing permissions'),
       path: '/c8y-pkg-dynamic-mapper/introduction/access-control',
@@ -190,7 +198,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       preventDuplicates: true
     }),
     troubleshootingNode: new NavigatorNode({
-      parent: gettext('Introduction'),
+      parent: gettext('Home'),
       icon: 'empty',
       label: gettext('Troubleshooting'),
       path: '/c8y-pkg-dynamic-mapper/introduction/troubleshooting',

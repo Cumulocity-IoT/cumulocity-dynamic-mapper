@@ -67,6 +67,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     inventoryCacheSize: 0,
     inventoryCacheRetention: 0,
     flowStateRetention: 1440,
+    mappingVersionRetention: 10,
     inventoryFragmentsToCache: ['type'],  // always add type
     maxCPUTimeMS: 5000,  // 5 seconds
     jsonataAgent: undefined,
@@ -136,6 +137,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
       inventoryCacheRetention: [''],
       inventoryCacheSize: [''],
       flowStateRetention: [''],
+      mappingVersionRetention: [''],
       maxCPUTimeMS: [''],
       supportESM: [''],
       jsonataAgent: [{ value: '', disabled: true }],

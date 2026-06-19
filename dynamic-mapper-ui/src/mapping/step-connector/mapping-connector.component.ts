@@ -22,20 +22,16 @@ import {
   Component,
   EventEmitter,
   Input,
-  OnDestroy,
   OnInit,
   Output,
   ViewChild,
   ViewEncapsulation
 } from '@angular/core';
-import { BsModalService } from 'ngx-bootstrap/modal';
-import { ConnectorConfigurationService } from '../../connector';
 import {
   ConnectorConfiguration,
   ConnectorGridComponent,
   DeploymentMapEntry,
   Direction,
-  SharedService,
   StepperConfiguration
 } from '../../shared';
 import { EditorMode } from '../shared/stepper.model';
@@ -48,7 +44,7 @@ import { EditorMode } from '../shared/stepper.model';
   standalone: true,
   imports: [ConnectorGridComponent]
 })
-export class MappingConnectorComponent implements OnInit, OnDestroy {
+export class MappingConnectorComponent implements OnInit {
   @ViewChild(ConnectorGridComponent) connectorGrid!: ConnectorGridComponent;
   @Input() showHeader: boolean = false;
   @Input() stepperConfiguration: StepperConfiguration;
@@ -61,24 +57,16 @@ export class MappingConnectorComponent implements OnInit, OnDestroy {
 
   readOnly: boolean;
 
-  constructor(
-    private readonly sharedService: SharedService,
-    public readonly bsModalService: BsModalService,
-    public readonly connectorConfigurationService: ConnectorConfigurationService
-  ) {}
-
-  async ngOnInit(): Promise<void> {
+  ngOnInit(): void {
     this.readOnly = this.stepperConfiguration.editorMode === EditorMode.READ_ONLY;
   }
-
-  ngOnDestroy(): void {}
 
   onDeploymentMapEntryChanged(value: DeploymentMapEntry): void {
     this.deploymentMapEntry = value;
     this.deploymentMapEntryChange.emit(value);
   }
 
-  async onConfigurationAddOrUpdate(config: ConnectorConfiguration): Promise<void> {
+  onConfigurationAddOrUpdate(config: ConnectorConfiguration): void {
     this.connectorGrid.onConfigurationAddOrUpdate(config);
   }
 

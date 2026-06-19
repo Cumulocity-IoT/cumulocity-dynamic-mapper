@@ -23,7 +23,6 @@ import {
   AfterViewInit,
   ChangeDetectorRef,
   Component,
-  ElementRef,
   EventEmitter,
   inject,
   Input,
@@ -42,7 +41,6 @@ import { debounceTime, distinctUntilChanged, map, Observable, ReplaySubject, sha
 import { Mode } from 'vanilla-jsoneditor';
 import {
   API,
-  COLOR_HIGHLIGHTED,
   DeploymentMapEntry,
   Direction,
   Extension,
@@ -59,11 +57,8 @@ import {
   isSubstitutionsAsCode,
   TransformationType,
   MappingTypeLabels,
-  ContentChanges,
-  MappingTypeDescriptions,
   Substitution
 } from '../../shared';
-import { ValidationError } from '../shared/mapping.model';
 import { createCompletionProviderFlowFunction, EditorMode, STEP_DEFINE_SUBSTITUTIONS, STEP_GENERAL_SETTINGS, STEP_SELECT_TEMPLATES, STEP_TEST_MAPPING } from '../shared/stepper.model';
 import {
   base64ToString,
@@ -76,7 +71,6 @@ import {
   stripTemplateMetadataTags,
   validateProtectedFields
 } from '../shared/util';
-import { SubstitutionRendererComponent } from '../substitution/substitution-grid.component';
 import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType, toTemplateType } from '../../configuration/shared/configuration.model';
 import { ManageTemplateComponent } from '../../shared/component/code-template/manage-template.component';
 import { AIPromptComponent } from '../prompt/ai-prompt.component';
@@ -136,11 +130,8 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
 
   @ViewChild('templateStep', { static: false }) templateStepRef!: MappingTemplateStepComponent;
   @ViewChild('mappingTestingStep', { static: false }) mappingTestingStep!: MappingStepTestingComponent;
-  @ViewChild(SubstitutionRendererComponent, { static: false }) substitutionChild!: SubstitutionRendererComponent;
   @ViewChild('stepper', { static: false }) stepper!: C8yStepper;
   @ViewChild('codeEditor', { static: false }) codeEditor!: EditorComponent;
-  @ViewChild('substitutionModelSourceExpression') substitutionModelSourceExpression!: ElementRef<HTMLTextAreaElement>;
-  @ViewChild('substitutionModelTargetExpression') substitutionModelTargetExpression!: ElementRef<HTMLTextAreaElement>;
 
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly bsModalService = inject(BsModalService);
@@ -150,15 +141,12 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
   private readonly stepperService = inject(MappingStepperService);
   private readonly substitutionService = inject(SubstitutionManagementService);
 
-  readonly ValidationError = ValidationError;
   readonly checkTransformationType = checkTransformationType;
   readonly validateProtectedFields = validateProtectedFields;
   readonly MappingTypeLabels = MappingTypeLabels;
   readonly Direction = Direction;
-  readonly COLOR_HIGHLIGHTED = COLOR_HIGHLIGHTED;
   readonly TransformationType = TransformationType;
   readonly EditorMode = EditorMode;
-  readonly MappingTypeDescriptions = MappingTypeDescriptions;
 
   updateTestingTemplate = new ReplaySubject<Mapping>(1);
   schemaSource: any;
@@ -166,7 +154,6 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
 
   templateForm!: FormGroup;
   templateModel: { stepperConfiguration?: StepperConfiguration; mapping?: Mapping } = {};
-  substitutionFormly = new FormGroup({});
   filterFormly = new FormGroup({});
   filterFormlyFields!: FormlyFieldConfig[];
   substitutionModel: SubstitutionModel = {};
@@ -235,26 +222,6 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
     readOnly: false
   };
 
-  editorOptionsSourceSubstitution = {
-    mode: Mode.tree,
-    removeModes: ['text', 'table'],
-    mainMenuBar: true,
-    navigationBar: false,
-    statusBar: false,
-    readOnly: true,
-    name: 'message'
-  };
-
-  editorOptionsTargetSubstitution = {
-    mode: Mode.tree,
-    removeModes: ['text', 'table'],
-    mainMenuBar: true,
-    navigationBar: false,
-    readOnly: true,
-    statusBar: true
-  };
-
-  selectedSubstitution = -1;
   step?: string;
   expertMode = false;
   templatesInitialized = false;
@@ -317,8 +284,6 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
 
     this.feature = await this.sharedService.getFeatures();
     if (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole) {
-      this.editorOptionsSourceSubstitution.readOnly = true;
-      this.editorOptionsTargetSubstitution.readOnly = true;
       this.editorOptionsSourceTemplate.readOnly = true;
       this.editorOptionsTargetTemplate.readOnly = true;
     }
@@ -488,10 +453,6 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
       this.isButtonDisabled$.next(isDisabled);
       this.cdr.markForCheck();
     });
-  }
-
-  isSubstitutionValid(): boolean {
-    return this.substitutionService.isSubstitutionValid(this.substitutionModel);
   }
 
   onTestingSourceTemplateChanged(template: any): void {
@@ -745,7 +706,6 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
       this.currentStepIndex,
       this.stepperConfiguration.showCodeEditor
     );
-    this.onSelectSubstitution(0);
 
     const testMapping = structuredClone(this.mapping);
     testMapping.sourceTemplate = JSON.stringify(this.sourceTemplate);
@@ -1027,22 +987,4 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
     this.isGenerateSubstitutionOpen = false;
   }
 
-  onSelectSubstitution(_selected: number): void {
-    // no-op: selection state is managed entirely within MappingSubstitutionStepComponent
-  }
-
-  private manualResize(source: string): void {
-    let element;
-
-    if (source === 'substitutionModelSourceExpression' && this.substitutionModelSourceExpression?.nativeElement) {
-      element = this.substitutionModelSourceExpression.nativeElement;
-    } else if (source === 'substitutionModelTargetExpression' && this.substitutionModelTargetExpression?.nativeElement) {
-      element = this.substitutionModelTargetExpression.nativeElement;
-    }
-
-    if (element) {
-      element.style.height = '32px';
-      element.style.height = element.scrollHeight + 'px';
-    }
-  }
 }

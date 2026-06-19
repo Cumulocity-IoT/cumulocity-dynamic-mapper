@@ -49,9 +49,9 @@
     @for (message of getCompatibleMessages(); track $index) {
     <c8y-ai-chat-message [role]="$any(message.role)" [message]="formatMessage(message)">
       @if (message.role === 'assistant') {
-      <div [innerHTML]="getMessageContent(message) | markdownToHtml | async"></div>
+        <div [innerHTML]="getMessageContent(message) | markdownToHtml | async"></div>
       } @else {
-      <div class="text-pre-wrap">{{ getMessageContent(message) }}</div>
+        <div style="white-space: pre-wrap">{{ getMessageContent(message) }}</div>
       }
     </c8y-ai-chat-message>
     }

@@ -73,7 +73,8 @@ export interface Mapping {
   sourceTemplate: string;
 
   /**
-   * Ignore this property! JSON template for target data structure.
+   * Structural reference only — the Smart Function builds its own payload programmatically.
+   * Do NOT copy this into your return value; use it only to understand the expected output shape.
    * Example: {"source": {"id": "sensor001"}, "type": "c8y_TemperatureMeasurement"}
    */
   targetTemplate: string;

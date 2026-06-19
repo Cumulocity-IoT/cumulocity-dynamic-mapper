@@ -107,6 +107,18 @@ public interface DataPrepContext {
     }
 
     /**
+     * Convenience shortcut that returns the resolved external identifier of the source device
+     * for outbound Smart Functions. Equivalent to reading {@code context.getConfig().externalId}.
+     * Returns {@code null} when the mapping has no {@code useExternalId} / {@code externalIdType}
+     * configured, or when no config has been injected.
+     *
+     * @return the resolved external id string, or {@code null}
+     */
+    default String getExternalId() {
+        return null;
+    }
+
+    /**
      * Lookup DTM Asset properties
      *
      * @param assetId The asset ID to lookup.

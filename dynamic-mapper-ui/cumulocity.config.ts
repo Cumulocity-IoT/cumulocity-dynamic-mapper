@@ -102,6 +102,18 @@ export default {
         to: 'image/Dynamic_Mapper_Mapping_Message_Explorer.png'
       },
       {
+        from: '../resources/image/Dynamic_Mapper_Mapping_Versions_Drawer.png',
+        to: 'image/Dynamic_Mapper_Mapping_Versions_Drawer.png'
+      },
+      {
+        from: '../resources/image/Dynamic_Mapper_Mapping_Versions_Status_Badge.png',
+        to: 'image/Dynamic_Mapper_Mapping_Versions_Status_Badge.png'
+      },
+      {
+        from: '../resources/image/Dynamic_Mapper_Mapping_Versions_Retention_Config.png',
+        to: 'image/Dynamic_Mapper_Mapping_Versions_Retention_Config.png'
+      },
+      {
         from: '../LICENSE',
         to: 'LICENSE.txt'
       },

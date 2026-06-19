@@ -35,6 +35,7 @@ export interface ServiceConfiguration {
   inventoryCacheSize: number;
   inventoryCacheRetention: number;
   flowStateRetention: number;
+  mappingVersionRetention?: number;
   inventoryFragmentsToCache?: string[];
   codeTemplates?: any;
   maxCPUTimeMS: number;
@@ -46,6 +47,7 @@ export interface ServiceConfiguration {
   supportESM?: boolean;
   cacheAliasMaps?: boolean;
   externalIdBinding?: boolean;
+  explorerSessionTTLMinutes?: number;
 }
 
 export enum TemplateType {

@@ -18,26 +18,21 @@
  * @authors Christof Strack
  */
 import { Component } from '@angular/core';
-import { CellRendererContext, CommonModule } from '@c8y/ngx-components';
+import { CellRendererContext } from '@c8y/ngx-components';
 import { MappingService } from '../core/mapping.service';
 
-/**
- * The example component for custom cell renderer.
- * It gets `context` with the current row item and the column.
- * Additionally, a service is injected to provide a helper method.
- * The template displays the icon and the label with additional styling.
- */
 @Component({
+  selector: 'd11r-mapping-id-renderer',
   template: `
-    <button
-      class="btn btn-link"
+    <a href=""
+      class="interact"
       [attr.data-cy]="'dm-mapping-id-' + context.item.id"
       title="{{ context.item.id }} - {{ context.item.mapping.mappingType}} - {{ context.item.mapping.transformationType }}"
-      (click)="updateMapping()"
+      (click)="$event.preventDefault(); updateMapping()"
       style="padding-top: 0px; padding-bottom: 10px;"
     >
       {{ context.value }}
-    </button>
+    </a>
   `,
   standalone: true,
   imports: []

@@ -17,6 +17,8 @@
 function onMessage(msg, context) {
     var payload = msg.getPayload();
     var externalId = context.getClientId() || payload["externalId"];
+    // Prefer timestamp from payload; fall back to message arrival time
+    var time = payload["time"] ? payload["time"] : msg.time;
 
     return [
         // 1. Create a standard Cumulocity temperature measurement
@@ -24,7 +26,7 @@ function onMessage(msg, context) {
             cumulocityType: "measurement",
             action: "create",
             payload: {
-                "time": new Date().toISOString(),
+                "time": time,
                 "type": "c8y_TemperatureMeasurement",
                 "c8y_Steam": { "Temperature": { "unit": "C", "value": payload["temperature"] } }
             },
@@ -39,7 +41,7 @@ function onMessage(msg, context) {
             targetPath: "/service/my-processor/ingest",
             payload: {
                 "deviceId": externalId,
-                "timestamp": new Date().toISOString(),
+                "timestamp": time,
                 "reading": payload["temperature"]
             }
         }

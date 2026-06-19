@@ -82,6 +82,9 @@ public class ExplorerController {
 
         @Schema(description = "C8Y device type filter (OUTBOUND only; optional). When set, only messages from devices whose type matches this value are captured.", example = "c8y_MQTTDevice")
         private String deviceType;
+
+        @Schema(description = "Session TTL in minutes. Overrides the tenant-wide default. Sessions expire when not polled for longer than this value.", example = "10")
+        private Integer sessionTTLMinutes;
     }
 
     // ---- Endpoints ----------------------------------------------------------
@@ -98,6 +101,7 @@ public class ExplorerController {
     @PostMapping(value = "/session", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> startSession(@Valid @RequestBody StartSessionRequest request) {
         String tenant = contextService.getContext().getTenant();
+        String userId = contextService.getContext().getUsername();
         // connectorIdentifier is required for INBOUND sessions
         boolean isOutbound = "OUTBOUND".equalsIgnoreCase(request.getDirection());
         if (!isOutbound && (request.getConnectorIdentifier() == null || request.getConnectorIdentifier().isBlank())) {
@@ -106,12 +110,14 @@ public class ExplorerController {
         try {
             String sessionId = explorerService.startSession(
                     tenant,
+                    userId,
                     request.getConnectorIdentifier(),
                     request.getTopic(),
                     request.getMaxMessages(),
                     request.getDirection(),
                     request.getSourceId(),
-                    request.getDeviceType());
+                    request.getDeviceType(),
+                    request.getSessionTTLMinutes());
             log.info("{} - Explorer session created: {}", tenant, sessionId);
             return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("sessionId", sessionId));
         } catch (ConnectorRegistryException e) {

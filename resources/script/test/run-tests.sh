@@ -69,6 +69,7 @@ declare -a TESTS=(
     "inbound|test-inbound-inventory|JSON / DEFAULT → INVENTORY (device metadata update)"
     # ── Inbound (Smart Function patterns) ──────────────────────────────────────
     "smartfunction|test-inbound-smartfunction-02|Pattern 02: Topic-based external ID + sensor filter"
+    "smartfunction|test-inbound-smartfunction-03|Pattern 03: getManagedObjectByExternalId — MO enrichment"
     "smartfunction|test-inbound-smartfunction-04|Pattern 04: Dual payload type + deduplication"
     # ── Inbound (Java Extensions) ─────────────────────────────────────────────
     "extension|test-inbound-extension-custom-measurement|Extension: JSON → Measurement"
@@ -85,6 +86,7 @@ declare -a TESTS=(
     "outbound|test-outbound-topic-resolution|Dynamic publish topic resolution"
     "outbound|test-outbound-json-smartfunction|Smart Function: Measurement → MQTT JSON"
     "outbound|test-outbound-smartfunction-externalsource|Smart Function externalSource → _externalId_ topic (broker round-trip)"
+    "smartfunction|test-outbound-smartfunction-molookup|Pattern 03 outbound: getManagedObjectByExternalId — MO enrichment"
     # ── Outbound (subscription management) ────────────────────────────────────
     "outbound|test-outbound-static-subscription|Static subscription management"
     "outbound|test-outbound-type-subscription|Dynamic type subscription"

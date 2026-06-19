@@ -26,6 +26,7 @@ import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.connector.core.registry.ConnectorRegistryException;
 import dynamic.mapper.core.C8YAgent;
+import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.ExplorerMessage;
 import dynamic.mapper.model.ExplorerSession;
@@ -63,7 +64,7 @@ public class ExplorerService {
      * Session TTL in milliseconds: a session is automatically removed if the UI has not
      * polled within this window. Default = 2 × WATCHDOG_INTERVAL_MS.
      */
-    static final long SESSION_TTL_MS = 60_000L;        // 60 seconds
+    static final long SESSION_TTL_MS = 600_000L;       // 10 minutes — matches the drawer default
 
     /** How often the TTL watchdog runs. */
     static final long WATCHDOG_INTERVAL_MS = 30_000L;  // 30 seconds
@@ -72,6 +73,10 @@ public class ExplorerService {
 
     @Autowired
     private ConnectorRegistry connectorRegistry;
+
+    @Autowired
+    @Lazy
+    private ConfigurationRegistry configurationRegistry;
 
     @Autowired
     @Lazy
@@ -100,6 +105,15 @@ public class ExplorerService {
     private final ConcurrentHashMap<String, Long> outboundDedupCache = new ConcurrentHashMap<>();
     static final long OUTBOUND_DEDUP_WINDOW_MS = 3_000L;
 
+    /**
+     * Short-lived deduplication cache for INBOUND messages.
+     * Overlapping MQTT subscriptions (e.g. mapping on "a/b" + explorer on "a/#") cause the
+     * broker to deliver the same message once per matching subscription. We suppress duplicates
+     * seen within INBOUND_DEDUP_WINDOW_MS using a key of (sessionId, topic, payloadHash).
+     */
+    private final ConcurrentHashMap<String, Long> inboundDedupCache = new ConcurrentHashMap<>();
+    static final long INBOUND_DEDUP_WINDOW_MS = 500L;
+
     // -------------------------------------------------------------------------
     // Public API
     // -------------------------------------------------------------------------
@@ -123,12 +137,15 @@ public class ExplorerService {
      * @return the new session id
      * @throws ConnectorRegistryException if the connector is not registered for the tenant (INBOUND only)
      */
-    public String startSession(String tenant, String connectorIdentifier, String topic, int maxMessages,
-            String direction, String sourceId, String deviceType)
+    public String startSession(String tenant, String userId, String connectorIdentifier, String topic, int maxMessages,
+            String direction, String sourceId, String deviceType, Integer sessionTTLMinutes)
             throws ConnectorRegistryException {
 
         int cappedMax = Math.max(1, Math.min(500, maxMessages > 0 ? maxMessages : DEFAULT_MAX_MESSAGES));
         String dir = (direction != null && direction.equalsIgnoreCase("OUTBOUND")) ? "OUTBOUND" : "INBOUND";
+        long sessionTTLMs = (sessionTTLMinutes != null && sessionTTLMinutes > 0)
+                ? sessionTTLMinutes * 60_000L
+                : resolveSessionTtlMs(tenant);
 
         String sessionId = UUID.randomUUID().toString();
 
@@ -144,6 +161,7 @@ public class ExplorerService {
 
             session = ExplorerSession.builder()
                     .sessionId(sessionId)
+                    .userId(userId)
                     .connectorIdentifier("*")
                     .connectorName(connName)
                     .topic(topic)
@@ -153,6 +171,7 @@ public class ExplorerService {
                     .sourceId(resolvedSourceId)
                     .deviceType(resolvedDeviceType)
                     .lastPolledAt(System.currentTimeMillis())
+                    .sessionTTLMs(sessionTTLMs)
                     .messages(new ConcurrentLinkedDeque<>())
                     .build();
 
@@ -165,7 +184,8 @@ public class ExplorerService {
                     sessions.computeIfAbsent(tenant, t -> new ConcurrentHashMap<>());
             List<String> stale = tenantSessions.entrySet().stream()
                     .filter(e -> "OUTBOUND".equals(e.getValue().getDirection())
-                            && Objects.equals(resolvedSourceId, e.getValue().getSourceId()))
+                            && Objects.equals(resolvedSourceId, e.getValue().getSourceId())
+                            && Objects.equals(userId, e.getValue().getUserId()))
                     .map(Map.Entry::getKey)
                     .collect(java.util.stream.Collectors.toList());
             for (String staleId : stale) {
@@ -232,6 +252,7 @@ public class ExplorerService {
 
             session = ExplorerSession.builder()
                     .sessionId(sessionId)
+                    .userId(userId)
                     .connectorIdentifier(connectorIdentifier)
                     .connectorName(client.getConnectorName())
                     .topic(topic)
@@ -239,6 +260,7 @@ public class ExplorerService {
                     .maxMessages(cappedMax)
                     .direction(dir)
                     .lastPolledAt(System.currentTimeMillis())
+                    .sessionTTLMs(sessionTTLMs)
                     .messages(new ConcurrentLinkedDeque<>())
                     .build();
 
@@ -250,7 +272,8 @@ public class ExplorerService {
             List<String> staleInbound = tenantSessionsInbound.entrySet().stream()
                     .filter(e -> "INBOUND".equals(e.getValue().getDirection())
                             && connectorIdentifier.equals(e.getValue().getConnectorIdentifier())
-                            && topic.equals(e.getValue().getTopic()))
+                            && topic.equals(e.getValue().getTopic())
+                            && Objects.equals(userId, e.getValue().getUserId()))
                     .map(Map.Entry::getKey)
                     .collect(java.util.stream.Collectors.toList());
             for (String staleId : staleInbound) {
@@ -342,14 +365,17 @@ public class ExplorerService {
         long now = System.currentTimeMillis();
         for (Map.Entry<String, ConcurrentHashMap<String, ExplorerSession>> tenantEntry : sessions.entrySet()) {
             String tenant = tenantEntry.getKey();
+            long tenantDefaultTTLMs = resolveSessionTtlMs(tenant);
             Iterator<Map.Entry<String, ExplorerSession>> it = tenantEntry.getValue().entrySet().iterator();
             while (it.hasNext()) {
                 Map.Entry<String, ExplorerSession> entry = it.next();
                 ExplorerSession session = entry.getValue();
-                if (now - session.getLastPolledAt() > SESSION_TTL_MS) {
+                long sessionTTLMs = session.getSessionTTLMs() > 0 ? session.getSessionTTLMs() : tenantDefaultTTLMs;
+                if (now - session.getLastPolledAt() > sessionTTLMs) {
                     it.remove();
                     unregisterListener(tenant, session.getSessionId(), session);
-                    log.info("{} - Explorer session expired (TTL): sessionId={}", tenant, session.getSessionId());
+                    log.info("{} - Explorer session expired (TTL={}min): sessionId={}", tenant,
+                            sessionTTLMs / 60_000, session.getSessionId());
                 }
             }
         }
@@ -360,6 +386,10 @@ public class ExplorerService {
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
+
+    private long resolveSessionTtlMs(String tenant) {
+        return SESSION_TTL_MS;
+    }
 
     private ExplorerSession findSession(String tenant, String sessionId) {
         Map<String, ExplorerSession> tenantSessions = sessions.get(tenant);
@@ -439,18 +469,22 @@ public class ExplorerService {
                 }
             }
 
-            // OUTBOUND deduplication: Notification 2.0 events are delivered once per connector,
-            // so with N connectors the same event would appear N times. Suppress duplicates
-            // seen within OUTBOUND_DEDUP_WINDOW_MS.
-            // The key is scoped per session so that independent sessions each receive the message
-            // exactly once (instead of the first session's dedup blocking all others).
+            int payloadHash = Arrays.hashCode(message.getPayload());
+            String dedupKey = session.getSessionId() + "::" + message.getTopic() + "::" + payloadHash;
+            long now = System.currentTimeMillis();
+
             if ("OUTBOUND".equals(session.getDirection())) {
-                int hash = Arrays.hashCode(message.getPayload());
-                String dedupKey = session.getSessionId() + "::" + message.getTopic() + "::" + hash;
-                long now = System.currentTimeMillis();
+                // Notification 2.0 events are delivered once per connector; N connectors → N copies.
                 Long prev = outboundDedupCache.put(dedupKey, now);
                 if (prev != null && now - prev < OUTBOUND_DEDUP_WINDOW_MS) {
-                    return; // duplicate delivery from another connector — skip
+                    return;
+                }
+            } else {
+                // Overlapping MQTT subscriptions (e.g. mapping on "a/b" + explorer on "a/#") cause
+                // the broker to deliver the same message once per matching subscription.
+                Long prev = inboundDedupCache.put(dedupKey, now);
+                if (prev != null && now - prev < INBOUND_DEDUP_WINDOW_MS) {
+                    return;
                 }
             }
 

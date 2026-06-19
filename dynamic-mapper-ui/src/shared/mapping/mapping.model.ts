@@ -176,6 +176,49 @@ export interface Mapping {
 
   /** Timestamp of last update */
   lastUpdate: number;
+
+  /** Version number of the currently active configuration (monotonic within a line) */
+  versionNumber?: number;
+
+  /** Whether the line has unpublished draft changes that differ from the active version */
+  draftDirty?: boolean;
+
+  /** Free-text change note for the active version */
+  versionNote?: string;
+}
+
+/** An immutable snapshot of a mapping configuration together with its version metadata. */
+export interface MappingVersion {
+  /** Managed-object id of this version record */
+  id?: string;
+
+  /** Functional identifier of the owning mapping line */
+  identifier: string;
+
+  /** Version number, unique and monotonically increasing within the line */
+  versionNumber: number;
+
+  /** Immutable copy of the full mapping configuration for this version */
+  snapshot: Mapping;
+
+  /** Whether this record is the mutable draft (true) or a published version (false) */
+  isDraft?: boolean;
+
+  /** Timestamp the version was published (epoch millis) */
+  createdAt?: number;
+
+  /** User who published the version */
+  createdBy?: string;
+
+  /** Optional free-text change note */
+  note?: string;
+}
+
+export interface MappingVersionCount {
+  /** Managed-object id of the mapping */
+  id: string;
+  /** Number of published (non-draft) versions */
+  versionCount: number;
 }
 
 export interface MappingEnriched {

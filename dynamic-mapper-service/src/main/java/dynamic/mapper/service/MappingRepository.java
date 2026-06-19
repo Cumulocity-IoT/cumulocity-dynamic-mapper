@@ -136,6 +136,10 @@ public class MappingRepository {
         // before persisting. The MO is not yet known, so no notification is emitted.
         migrateMapping(tenant, mapping, null);
 
+        // A newly created mapping always starts at v1, regardless of the source
+        // (e.g. a duplicated mapping must not inherit the original's version history).
+        mapping.setVersionNumber(0);
+        mapping.setDraftDirty(false);
         mapping.setLastUpdate(System.currentTimeMillis());
         return mapping;
     }

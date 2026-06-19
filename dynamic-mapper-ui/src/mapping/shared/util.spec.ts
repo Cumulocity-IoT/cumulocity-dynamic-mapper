@@ -267,10 +267,18 @@ describe('checkTopicsInboundAreValid', () => {
     });
   }
 
-  it('should return a falsy required error when either field is empty', () => {
-    const result = checkTopicsInboundAreValid(makeControl('', 'a/b/c'));
-    expect(result).toBeTruthy();
-    expect(result['required']).toBe(false);
+  it('should return null and mark mappingTopic invalid when mappingTopic is empty', () => {
+    const control = makeControl('', 'a/b/c');
+    const result = checkTopicsInboundAreValid(control);
+    expect(result).toBeNull();
+    expect(control.get('mappingTopic').errors).toEqual({ required: true });
+  });
+
+  it('should return null and mark mappingTopicSample invalid when mappingTopicSample is empty', () => {
+    const control = makeControl('a/b/c', '');
+    const result = checkTopicsInboundAreValid(control);
+    expect(result).toBeNull();
+    expect(control.get('mappingTopicSample').errors).toEqual({ required: true });
   });
 
   it('should return null for matching topic and sample', () => {

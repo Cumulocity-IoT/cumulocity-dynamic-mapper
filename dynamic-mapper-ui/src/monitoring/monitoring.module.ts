@@ -27,6 +27,8 @@ import { MappingServiceEventComponent } from './event/mapping-service-event.comp
 import { MonitoringNavigationFactory } from './monitoring-navigation.factory';
 import { StatisticTabFactory } from './statistic-tab.factory';
 import { CacheStatisticComponent } from './cache/cache-statistic.component';
+import { MappingVersionsCountComponent } from '../mapping/versions/mapping-versions-count.component';
+import { VersionsTabFactory } from './versions-tab.factory';
 
 @NgModule({
   providers: [
@@ -56,8 +58,21 @@ import { CacheStatisticComponent } from './cache/cache-statistic.component';
         feature: featureResolver
       }
     }),
+    hookRoute({
+      path: `c8y-pkg-dynamic-mapper/${NODE2}/monitoring/versions/inbound`,
+      component: MappingVersionsCountComponent, resolve: {
+        feature: featureResolver
+      }
+    }),
+    hookRoute({
+      path: `c8y-pkg-dynamic-mapper/${NODE2}/monitoring/versions/outbound`,
+      component: MappingVersionsCountComponent, resolve: {
+        feature: featureResolver
+      }
+    }),
     hookNavigator(MonitoringNavigationFactory),
     hookTab(StatisticTabFactory),
+    hookTab(VersionsTabFactory),
   ]
 })
 export class MonitoringModule { }

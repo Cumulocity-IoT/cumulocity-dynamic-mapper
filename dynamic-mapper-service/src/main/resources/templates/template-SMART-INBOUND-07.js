@@ -47,12 +47,15 @@ function onMessage(msg, context) {
     console.log("Statistics after message " + count + ": avg=" + avg.toFixed(2) +
                 ", min=" + minTemp + ", max=" + maxTemp);
 
+    // Prefer timestamp from payload; fall back to message arrival time
+    var time = payload["time"] ? payload["time"] : msg.time;
+
     // --- Emit a measurement that includes the running statistics ---
     return [{
         cumulocityType: "measurement",
         action: "create",
         payload: {
-            time: new Date().toISOString(),
+            time: time,
             type: "c8y_TemperatureMeasurement",
             c8y_Temperature: {
                 T: { value: temperature, unit: "C" }

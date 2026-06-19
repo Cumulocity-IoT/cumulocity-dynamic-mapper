@@ -28,14 +28,16 @@ function onMessage(msg, context) {
     console.log("Payload Raw: " + payload);
     console.log("Payload messageId: " + payload["messageId"]);
 
-    // Get clientId from context first, fall back to payload
-    var clientId = context.getConfig()["clientId"] || payload["clientId"];
+    // Prefer context clientId (MQTT client id), fall back to payload field
+    var clientId = context.getClientId() || payload["clientId"];
+    // Prefer timestamp from payload; fall back to message arrival time
+    var time = payload["time"] ? payload["time"] : msg.time;
 
     return [{
         cumulocityType: "measurement",
         action: "create",
         payload: {
-            "time": new Date().toISOString(),
+            "time": time,
             "type": "c8y_TemperatureMeasurement",
             "c8y_Steam": {
                 "Temperature": {

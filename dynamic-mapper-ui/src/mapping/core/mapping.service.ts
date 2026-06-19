@@ -45,6 +45,8 @@ import {
   DeploymentMapEntry,
   PATH_DEPLOYMENT_DEFINED_ENDPOINT,
   Mapping,
+  MappingVersion,
+  MappingVersionCount,
   PATH_MAPPING_ENDPOINT,
   LoggingEventTypeMap,
   LoggingEventType,
@@ -77,6 +79,7 @@ export class MappingService {
   private readonly JSONATA = require('jsonata');
   private deprecationWarningsShown: Set<Direction> = new Set();
   deprecationModalShown = false;
+  private readonly versionsCache = new Map<string, MappingVersion[]>();
 
   constructor(
     private readonly sharedService: SharedService,
@@ -133,6 +136,15 @@ export class MappingService {
   }
 
   // ===== MAPPING CRUD OPERATIONS =====
+
+  async getMapping(id: string): Promise<Mapping> {
+    const response = await this.client.fetch(
+      `${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${id}`,
+      { headers: { 'content-type': 'application/json' }, method: 'GET' }
+    );
+    if (!response.ok) throw new Error(response.statusText);
+    return response.json();
+  }
 
   async getMappings(direction: Direction): Promise<Mapping[]> {
     const path = direction ? `${BASE_URL}/${PATH_MAPPING_ENDPOINT}?direction=${direction}` : `${BASE_URL}/${PATH_MAPPING_ENDPOINT}`;
@@ -202,6 +214,155 @@ export class MappingService {
     this.reloadInbound$.next();
     this.reloadOutbound$.next();
     return m;
+  }
+
+  // ===== VERSION & DRAFT OPERATIONS =====
+
+  /**
+   * Returns the unpublished draft (working copy) for a mapping line, or null when
+   * there is no draft (HTTP 204).
+   */
+  async getDraft(id: string): Promise<Mapping | null> {
+    const response = await this.client.fetch(
+      `${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${id}/draft`,
+      { headers: { 'content-type': 'application/json' }, method: 'GET' }
+    );
+    if (response.status === 204) return null;
+    if (!response.ok) throw new Error(response.statusText);
+    return response.json();
+  }
+
+  /**
+   * Saves edits into the mapping line's draft without changing the running/active
+   * configuration. Throws on a 409 (the draft was modified concurrently).
+   */
+  async saveDraft(id: string, mapping: Mapping): Promise<Mapping> {
+    const response = await this.client.fetch(
+      `${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${id}/draft`,
+      {
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(mapping),
+        method: 'PUT'
+      }
+    );
+    if (response.status === 409) {
+      throw new Error('The draft was modified concurrently. Please reload before saving.');
+    }
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message ?? response.statusText);
+    }
+    return response.json();
+  }
+
+  /** Discards the mapping line's current draft. No-op when there is no draft. */
+  async deleteDraft(id: string): Promise<void> {
+    const response = await this.client.fetch(
+      `${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${id}/draft`,
+      { method: 'DELETE' }
+    );
+    if (!response.ok && response.status !== 204) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message ?? response.statusText);
+    }
+  }
+
+  /**
+   * Publishes the mapping line's current draft as a new immutable version. Does not
+   * activate it.
+   */
+  async publishDraft(id: string, note?: string): Promise<MappingVersion> {
+    const query = note ? `?note=${encodeURIComponent(note)}` : '';
+    const response = await this.client.fetch(
+      `${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${id}/publish${query}`,
+      { headers: { 'content-type': 'application/json' }, method: 'POST' }
+    );
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message ?? response.statusText);
+    }
+    const version = await response.json();
+    this.clearVersionsCache(id);
+    return version;
+  }
+
+  /** Returns the published version count for every mapping matching the direction in one backend call. */
+  async getVersionCounts(direction?: Direction): Promise<MappingVersionCount[]> {
+    const query = direction ? `?direction=${direction}` : '';
+    const response = await this.client.fetch(
+      `${BASE_URL}/${PATH_MAPPING_ENDPOINT}/version-counts${query}`,
+      { headers: { 'content-type': 'application/json' }, method: 'GET' }
+    );
+    if (!response.ok) throw new Error(response.statusText);
+    return response.json();
+  }
+
+  /** Lists all published versions of a mapping line. Results are cached until clearVersionsCache() is called. */
+  async getVersions(id: string): Promise<MappingVersion[]> {
+    if (this.versionsCache.has(id)) {
+      return this.versionsCache.get(id)!;
+    }
+    const response = await this.client.fetch(
+      `${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${id}/version`,
+      { headers: { 'content-type': 'application/json' }, method: 'GET' }
+    );
+    if (!response.ok) throw new Error(response.statusText);
+    const versions: MappingVersion[] = await response.json();
+    this.versionsCache.set(id, versions);
+    return versions;
+  }
+
+  /** Clears the versions cache. Pass an id to evict a single mapping; omit to clear all. */
+  clearVersionsCache(id?: string): void {
+    if (id) {
+      this.versionsCache.delete(id);
+    } else {
+      this.versionsCache.clear();
+    }
+  }
+
+  /** Returns a single published version of a mapping line. */
+  async getVersion(id: string, versionNumber: number): Promise<MappingVersion> {
+    const response = await this.client.fetch(
+      `${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${id}/version/${versionNumber}`,
+      { headers: { 'content-type': 'application/json' }, method: 'GET' }
+    );
+    if (!response.ok) throw new Error(response.statusText);
+    return response.json();
+  }
+
+  /** Updates the change note of a published version (the only mutable field). */
+  async updateVersionNote(id: string, versionNumber: number, note: string): Promise<MappingVersion> {
+    const response = await this.client.fetch(
+      `${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${id}/version/${versionNumber}?note=${encodeURIComponent(note ?? '')}`,
+      { headers: { 'content-type': 'application/json' }, method: 'PATCH' }
+    );
+    if (!response.ok) throw new Error(response.statusText);
+    const version = await response.json();
+    this.clearVersionsCache(id);
+    return version;
+  }
+
+  /** Deletes an inactive published version. The active version cannot be deleted. */
+  async deleteVersion(id: string, versionNumber: number): Promise<void> {
+    const response = await this.client.fetch(
+      `${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${id}/version/${versionNumber}`,
+      { headers: { 'content-type': 'application/json' }, method: 'DELETE' }
+    );
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message ?? response.statusText);
+    }
+    this.clearVersionsCache(id);
+  }
+
+  /**
+   * Activates a specific version of a mapping line (rollback / roll-forward). The
+   * backend swaps the version's snapshot into the runnable mapping (single active
+   * version, C-1).
+   */
+  async activateVersion(id: string, versionNumber: number): Promise<IFetchResponse> {
+    return this.changeActivationMapping({ id, active: true, versionNumber });
   }
 
   // ===== DEPLOYMENT OPERATIONS =====

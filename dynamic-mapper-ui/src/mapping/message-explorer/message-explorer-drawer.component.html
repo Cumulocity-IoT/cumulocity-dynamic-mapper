@@ -24,17 +24,21 @@
     <div class="card-header separator j-c-center d-col">
       <h4 id="drawerTitle" class="card-title d-flex">
         <i c8yIcon="scan-wi-fi" class="icon-32 m-r-16"></i>
-        <span class="m-t-8" translate>Start exploring messages</span>
+        <span class="m-t-8" translate>{{ editMode ? 'Edit explorer session' : 'Start exploring messages' }}</span>
       </h4>
-      @if (direction === 'INBOUND') {
-      <p class="text-muted m-0" translate>
-        Capture raw payloads from a connected broker. Select a connector and a topic to start capturing live messages. And then select a message to build a mapping.
-      </p>
+      @if (!editMode) {
+        @if (direction === 'INBOUND') {
+        <p class="text-muted m-0" translate>
+          Capture raw payloads from a connected broker. Select a connector and a topic to start capturing live messages. And then select a message to build a mapping.
+        </p>
+        } @else {
+        <p class="text-muted m-0" translate>
+          Capture raw JSON payloads from the Cumulocity Notification 2.0 API.
+          Specify a device / device group to subscribe for messages. And then select a message to build a mapping.
+        </p>
+        }
       } @else {
-      <p class="text-muted m-0" translate>
-        Capture raw JSON payloads from the Cumulocity Notification 2.0 API.
-        Specify a device / device group to subscribe for messages. And then select a message to build a mapping.
-      </p>
+        <p class="text-muted m-0" translate>Modify the current session parameters. Existing messages will be cleared when the session is restarted.</p>
       }
     </div>
     <div class="card-inner-scroll flex-grow">
@@ -42,7 +46,7 @@
 
         <!-- ── Section 1: General settings ─────────────────────────── -->
         <div class="d-flex g-24 flex-wrap">
-          <div class="form-group m-b-0" style="flex: 0 0 calc(50% - 12px)">
+          <div class="form-group m-b-0" style="flex: 0 0 100%">
             <label class="control-label" translate>Direction</label>
             <div class="d-flex g-16">
               <label class="c8y-radio radio-inline" title="{{ 'Inbound' | translate }}"
@@ -68,6 +72,12 @@
             <input id="explorerMaxMessages" type="number" class="form-control" [(ngModel)]="maxMessages"
               name="maxMessages" min="1" max="500" data-cy="dm-msg-explorer-drawer-max-messages-input" />
             <span class="help-block" translate>Between 1 and 500. Oldest messages are discarded when the limit is reached.</span>
+          </div>
+          <div class="form-group m-b-0" style="flex: 0 0 calc(50% - 12px)">
+            <label class="control-label" for="explorerSessionTTL" translate>Session TTL (minutes)</label>
+            <input id="explorerSessionTTL" type="number" class="form-control" [(ngModel)]="sessionTTLMinutes"
+              name="sessionTTLMinutes" min="1" data-cy="dm-msg-explorer-drawer-session-ttl-input" />
+            <span class="help-block" translate>How long the session stays alive without being polled. Increase for devices that send infrequently.</span>
           </div>
         </div>
 
@@ -166,10 +176,11 @@
     <div class="card-footer separator p-24 text-center flex-no-shrink">
       <button class="btn btn-default" (click)="onCancel()" data-cy="dm-msg-explorer-drawer-cancel" translate>Cancel</button>
       <button class="btn btn-primary m-l-8" (click)="onStart()" data-cy="dm-msg-explorer-drawer-start"
+        [attr.data-cy]="editMode ? 'dm-msg-explorer-drawer-update' : 'dm-msg-explorer-drawer-start'"
         [disabled]="(direction === 'INBOUND' && (!selectedConnectorIdentifier || !topic)) ||
                     (direction === 'OUTBOUND' && outboundFilterMode === 'source' && selectedDeviceList.length === 0) ||
                     (direction === 'OUTBOUND' && outboundFilterMode === 'deviceType' && !deviceTypeFilter.trim())" translate>
-        Start
+        {{ editMode ? 'Update' : 'Start' }}
       </button>
     </div>
   </div>
