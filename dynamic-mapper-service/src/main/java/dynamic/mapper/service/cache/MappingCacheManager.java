@@ -94,7 +94,7 @@ public class MappingCacheManager {
      * Rebuilds the entire inbound cache from a list of mappings
      */
     public List<Mapping> rebuildInboundCache(String tenant, List<Mapping> mappings, ConnectorId connectorId) {
-        log.info("{} - Rebuilding inbound cache with {} mappings (triggered by {})", 
+        log.debug("{} - Rebuilding inbound cache with {} mappings (triggered by {})",
             tenant, mappings.size(), connectorId.getName());
 
         Map<String, Mapping> newCache = mappings.stream()
@@ -195,7 +195,7 @@ public class MappingCacheManager {
      * Rebuilds the entire outbound cache from a list of mappings
      */
     public List<Mapping> rebuildOutboundCache(String tenant, List<Mapping> mappings, ConnectorId connectorId) {
-        log.info("{} - Rebuilding outbound cache with {} mappings (triggered by {})", 
+        log.debug("{} - Rebuilding outbound cache with {} mappings (triggered by {})",
             tenant, mappings.size(), connectorId.getName());
 
         Map<String, Mapping> newCache = mappings.stream()

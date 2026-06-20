@@ -542,7 +542,7 @@ public abstract class AConnectorClient {
                             if (isConfigValid(connectorConfiguration)) {
                                 connectionStateManager.updateStatus(ConnectorStatus.CONFIGURED, true, true);
                             }
-                            log.info("{} - Connector initialized successfully", tenant);
+                            log.debug("{} - Connector initialized successfully", tenant);
                         } catch (Exception e) {
                             log.error("{} - Initialization failed: {}", tenant, e.getMessage(), e);
                             connectionStateManager.updateStatusWithError(e);
@@ -566,7 +566,7 @@ public abstract class AConnectorClient {
                         try {
                             connectionStateManager.updateStatus(ConnectorStatus.CONNECTING, true, true);
                             connect();
-                            log.info("{} - Connector connected successfully", tenant);
+                            log.debug("{} - Connector connected successfully", tenant);
                         } catch (Exception e) {
                             log.error("{} - Connection failed: {}", tenant, e.getMessage(), e);
                             connectionStateManager.updateStatusWithError(e);
@@ -599,7 +599,7 @@ public abstract class AConnectorClient {
                         try {
                             disconnect();
                             connectionStateManager.setConnected(false);
-                            log.info("{} - Connector disconnected successfully", tenant);
+                            log.debug("{} - Connector disconnected successfully", tenant);
                         } catch (Exception e) {
                             log.error("{} - Disconnection failed: {}", tenant, e.getMessage(), e);
                             connectionStateManager.updateStatusWithError(e);
@@ -742,11 +742,6 @@ public abstract class AConnectorClient {
                 .toList();
         mappingSubscriptionManager.updateSubscriptionsOutbound(deployedMappings,
                 this::isMappingCompatibleWithConnector);
-
-        log.info("{} - Initialized {} outbound mappings for connector: {}",
-                tenant,
-                mappingSubscriptionManager.getEffectiveOutboundMappingCount(),
-                connectorName);
     }
 
     /**

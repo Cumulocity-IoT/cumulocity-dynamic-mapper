@@ -416,7 +416,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                                 rt = eventApi.create(eventRepresentation);
                                 log.debug("{} - Using PERSISTENT processing mode for event", tenant);
                             }
-                            log.info("{} - SEND: event posted: {}", tenant, rt);
+                            log.info("{} - SEND: event posted with Id {}", tenant,
+                                    ((EventRepresentation) rt).getId().getValue());
                         } else if (targetAPI.equals(API.ALARM)) {
                             AlarmRepresentation alarmRepresentation = configurationRegistry.getObjectMapper().readValue(
                                     payload,
@@ -438,7 +439,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                                 rt = alarmApi.create(alarmRepresentation);
                                 log.debug("{} - Using PERSISTENT processing mode for alarm", tenant);
                             }
-                            log.info("{} - SEND: alarm posted: {}", tenant, rt);
+                            log.info("{} - SEND: alarm posted with Id {}", tenant,
+                                    ((AlarmRepresentation) rt).getId().getValue());
                         } else if (targetAPI.equals(API.MEASUREMENT)) {
                             // Auto-detect payload format: { "measurements": [...] } = collection; anything else = single.
                             // Always POST via createBulk — single measurements are wrapped in a one-element collection.
@@ -471,7 +473,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                                     .readValue(
                                             payload, OperationRepresentation.class);
                             rt = deviceControlApi.create(operationRepresentation);
-                            log.info("{} - SEND: operation posted: {}", tenant, rt);
+                            log.info("{} - SEND: operation posted with Id {}", tenant,
+                                    rt != null ? ((OperationRepresentation) rt).getId().getValue() : "null");
                         } else if (targetAPI.equals(API.CUSTOM)) {
                             String customPath = currentRequest.getPathCumulocity();
                             RequestMethod requestMethod = currentRequest.getMethod();
@@ -659,7 +662,11 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                         } finally {
                             c8ySemaphore.release();
                         }
-                        log.info("{} - SEND: operation posted: {}", tenant, rt);
+                        if (serviceConfiguration.getLogPayload())
+                            log.info("{} - SEND: operation posted: {}", tenant, rt);
+                        else
+                            log.info("{} - SEND: operation posted with Id {}", tenant,
+                                    rt != null ? ((OperationRepresentation) rt).getId().getValue() : "null");
                     } else if (targetAPI.equals(API.CUSTOM)) {
                         String customPath = currentRequest.getPathCumulocity();
                         RequestMethod requestMethod = currentRequest.getMethod();

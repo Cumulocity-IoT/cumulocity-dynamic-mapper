@@ -748,7 +748,8 @@ public class MappingService {
         cacheManager.rebuildInboundCache(tenant, inboundMappings, connectorId);
         cacheManager.rebuildOutboundCache(tenant, outboundMappings, connectorId);
 
-        log.info("{} - Caches rebuilt by connector: {}", tenant, connectorId.getName());
+        log.info("{} - Caches rebuilt by connector: {} ({} inbound, {} outbound)",
+                tenant, connectorId.getName(), inboundMappings.size(), outboundMappings.size());
     }
 
     /**

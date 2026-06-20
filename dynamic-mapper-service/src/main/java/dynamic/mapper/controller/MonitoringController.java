@@ -94,7 +94,7 @@ public class MonitoringController {
             // An active client is registered — return its live status.
             if (client != null) {
                 ConnectorStatusEvent st = client.getConnectionStateManager().getConnectorStatus().get();
-                log.info("{} - Get status for connector: {}: {}", tenant, connectorIdentifier, st);
+                log.debug("{} - Get status for connector: {}: {}", tenant, connectorIdentifier, st);
                 return new ResponseEntity<>(st, HttpStatus.OK);
             }
 

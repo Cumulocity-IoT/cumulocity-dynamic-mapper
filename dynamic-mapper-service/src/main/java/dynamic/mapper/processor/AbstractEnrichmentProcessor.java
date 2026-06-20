@@ -204,7 +204,7 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
                     tenant, context.getTopic(), connectorIdentifier, mapping.getName(),
                     mapping.getQos().ordinal(), ppLog);
         } else {
-            log.info(
+            log.debug(
                     "{} - PROCESSING message on topic: [{}], on  connector: {}, for Mapping {} with QoS: {}",
                     tenant, context.getTopic(), connectorIdentifier, mapping.getName(),
                     mapping.getQos().ordinal());
