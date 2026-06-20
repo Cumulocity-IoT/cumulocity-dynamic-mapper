@@ -632,7 +632,9 @@ dm_subscription_names_json() {  # <subscriptions_json>
 _DM_LAST_SUBSCRIPTION_NAME=""
 
 # Create a static subscription and best-effort resolve its created name for cleanup.
-# Sets _DM_LAST_SUBSCRIPTION_NAME and prints the value (possibly empty).
+# Sets _DM_LAST_SUBSCRIPTION_NAME. Do NOT call via $() — dm_info/dm_warn write to stdout
+# and would be captured instead of appearing on the terminal. Read $_DM_LAST_SUBSCRIPTION_NAME
+# directly after the call.
 dm_create_static_subscription_resolve_name() {  # <api> <device_id> <device_name> [propagation_wait_secs=5]
     local _api=$1 _id=$2 _name=$3 _wait=${4:-5}
     local _before_subs _after_subs _before_names_json _after_names_json _resolved
@@ -658,8 +660,6 @@ dm_create_static_subscription_resolve_name() {  # <api> <device_id> <device_name
     else
         dm_info "Resolved static subscription name for cleanup: $_DM_LAST_SUBSCRIPTION_NAME"
     fi
-
-    printf '%s' "$_DM_LAST_SUBSCRIPTION_NAME"
 }
 
 # Delete a named static subscription for a device; silently ignores errors.
@@ -1719,9 +1719,19 @@ dm_mqtt_subscribe_one_verbose() {   # <topic> [timeout_secs=10]
 
 # Prime a topic subscription to reduce timing races where a test publishes before
 # the background subscriber is fully established.
+#
+# In C8Y MQTT Service mode the clientId is fixed to the cert CN, so only one
+# connection is allowed at a time.  A separate probe publisher would immediately
+# kick the probe subscriber (same clientId), causing a spurious timeout (exit 27).
+# In that mode we skip the probe entirely — the real subscriber starts right after.
 dm_mqtt_probe_subscription() {  # <topic> [timeout_secs=10]
     local _topic=$1 _timeout=${2:-10}
     local _probe_file _probe_err _probe_pid _probe_rc
+
+    if [ "${_DM_MQTT_SVC_MODE:-false}" = "true" ]; then
+        dm_info "MQTT readiness probe skipped (C8Y MQTT Service mode — single clientId)"
+        return 0
+    fi
 
     _probe_file=$(mktemp)
     _probe_err=$(mktemp)

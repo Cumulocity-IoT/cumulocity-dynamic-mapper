@@ -76,7 +76,8 @@ dm_success "External ID bound: $EXT_ID"
 dm_step "Creating static subscription for device"
 # Without a notification subscription the outbound dispatcher never receives the
 # device's measurement, so the Smart Function never runs and nothing is published.
-SUBSCRIPTION_NAME=$(dm_create_static_subscription_resolve_name "MEASUREMENT" "$DEVICE_ID" "$DEVICE_NAME" 5)
+dm_create_static_subscription_resolve_name "MEASUREMENT" "$DEVICE_ID" "$DEVICE_NAME" 5
+SUBSCRIPTION_NAME="${_DM_LAST_SUBSCRIPTION_NAME:-}"
 
 dm_step 4 "Creating outbound Smart Function mapping"
 SF_CODE=$(cat <<'JSCODE'
