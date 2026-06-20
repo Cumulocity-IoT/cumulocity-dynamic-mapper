@@ -84,10 +84,9 @@ dm_register_cleanup cleanup
 dm_banner "MQTT Service Spike — cert-auth inbound round-trip"
 
 dm_step "Validating environment ..."
-dm_validate_tools
+dm_test_setup_and_validate false
 command -v openssl >/dev/null 2>&1 || dm_error "openssl is required for this spike"
 command -v mosquitto_pub >/dev/null 2>&1 || dm_error "mosquitto_pub is required for this spike"
-dm_wait_for_service
 
 [ -n "$MQTT_HOST" ] || dm_error "MQTT host unknown — set DM_C8Y_MQTT_HOST or ensure C8Y_DOMAIN is exported"
 [ -n "$TENANT" ]    || dm_error "Tenant unknown — ensure C8Y_TENANT is exported by the c8y session"

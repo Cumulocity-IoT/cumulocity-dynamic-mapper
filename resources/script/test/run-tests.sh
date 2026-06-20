@@ -117,7 +117,7 @@ _print_header() {
 _print_menu() {
     _print_header
     local idx=1 cat prev_cat=""
-    printf "  ${C_BOLD}%-4s %-14s %s${C_RESET}\n" "#" "Category" "Test"
+    printf "  ${C_BOLD}%-4s %-16s %s${C_RESET}\n" "#" "Category" "Test"
     printf "  %s\n" "$(printf '─%.0s' {1..60})"
     for entry in "${TESTS[@]}"; do
         cat=$(_cat_of "$entry")
@@ -125,18 +125,18 @@ _print_menu() {
             printf "\n  ${C_CYAN}${C_BOLD}%s${C_RESET}\n" "── $(echo "$cat" | tr '[:lower:]' '[:upper:]') ──"
             prev_cat="$cat"
         fi
-        printf "  ${C_BOLD}%2d${C_RESET}  %-14s %s\n" \
+        printf "  ${C_BOLD}%2d${C_RESET}  %-16s %s\n" \
             "$idx" "[$cat]" "$(_desc_of "$entry")"
         idx=$((idx + 1))
     done
     echo ""
-    printf "  ${C_BOLD}%2s${C_RESET}  %-14s %s\n" "a"  "[all]"         "Run all tests"
-    printf "  ${C_BOLD}%2s${C_RESET}  %-14s %s\n" "i"  "[inbound]"     "Run all inbound tests"
-    printf "  ${C_BOLD}%2s${C_RESET}  %-14s %s\n" "o"  "[outbound]"    "Run all outbound tests"
-    printf "  ${C_BOLD}%2s${C_RESET}  %-14s %s\n" "e"  "[extension]"   "Run extension tests"
-    printf "  ${C_BOLD}%2s${C_RESET}  %-14s %s\n" "s"  "[smartfunc]"   "Run Smart Function pattern tests"
-    printf "  ${C_BOLD}%2s${C_RESET}  %-14s %s\n" "r"  "[reliability]" "Run reliability tests"
-    printf "  ${C_BOLD}%2s${C_RESET}  %-14s %s\n" "q"  ""              "Quit"
+    printf "  ${C_BOLD}%2s${C_RESET}  %-16s %s\n" "a"  "[all]"           "Run all tests"
+    printf "  ${C_BOLD}%2s${C_RESET}  %-16s %s\n" "i"  "[inbound]"       "Run all inbound tests"
+    printf "  ${C_BOLD}%2s${C_RESET}  %-16s %s\n" "o"  "[outbound]"      "Run all outbound tests"
+    printf "  ${C_BOLD}%2s${C_RESET}  %-16s %s\n" "e"  "[extension]"     "Run extension tests"
+    printf "  ${C_BOLD}%2s${C_RESET}  %-16s %s\n" "s"  "[smartfunc]"     "Run Smart Function pattern tests"
+    printf "  ${C_BOLD}%2s${C_RESET}  %-16s %s\n" "r"  "[reliability]"   "Run reliability tests"
+    printf "  ${C_BOLD}%2s${C_RESET}  %-16s %s\n" "q"  "[quit]"          "Quit"
     echo ""
     printf "  ${C_DIM}After selecting tests you'll choose a connector: g=generic MQTT, m=Cumulocity MQTT Service${C_RESET}\n"
     echo ""

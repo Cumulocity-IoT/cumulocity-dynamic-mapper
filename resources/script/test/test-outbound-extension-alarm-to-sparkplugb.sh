@@ -37,10 +37,7 @@ dm_register_cleanup cleanup
 dm_banner "Test: Outbound Sparkplug B Alarm (Cumulocity Alarm → Sparkplug B DCMD)"
 
 dm_step 1 "Validating environment"
-dm_validate_tools
-dm_wait_for_service
-dm_require_mqtt_broker
-dm_verify_mqtt_connector_ready
+dm_test_setup_and_validate
 dm_validate_only_exit
 dm_require_extension "AlarmToSparkplugB" "OUTBOUND"
 

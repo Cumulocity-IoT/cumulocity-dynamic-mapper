@@ -49,10 +49,7 @@ dm_register_cleanup cleanup
 dm_banner "Test: Outbound Smart Function (C8Y Measurement → MQTT JSON)"
 
 dm_step 1 "Validating environment"
-dm_validate_tools
-dm_wait_for_service
-dm_require_mqtt_broker
-dm_verify_mqtt_connector_ready
+dm_test_setup_and_validate
 dm_validate_only_exit
 
 dm_step 2 "Creating test device"
@@ -79,48 +76,7 @@ dm_success "External ID bound: $EXT_ID"
 dm_step "Creating static subscription for device"
 # Without a notification subscription the outbound dispatcher never receives the
 # device's measurement, so the Smart Function never runs and nothing is published.
-_before_subs=$(c8y notification2 subscriptions list --source "$DEVICE_ID" --output json 2>/dev/null || printf '[]')
-_before_names_json=$(printf '%s' "$_before_subs" | jq -c '
-    def rows:
-      if type == "array" then .
-      elif type == "object" then
-        if ((.subscriptions // null) != null and ((.subscriptions | type) == "array")) then .subscriptions
-        elif ((.data // null) != null and ((.data | type) == "array")) then .data
-        elif ((.subscription // .subscriptionName // .id // empty) | tostring | length) > 0 then [.]
-        else [] end
-      else [] end;
-    rows
-    | map(.subscription // .subscriptionName // .id // empty)
-    | map(select(length > 0))
-    | unique
-' 2>/dev/null || printf '[]')
-dm_create_static_subscription_must "MEASUREMENT" "$DEVICE_ID" "$DEVICE_NAME"
-dm_wait 5 "for subscription propagation"
-_after_subs=$(c8y notification2 subscriptions list --source "$DEVICE_ID" --output json 2>/dev/null || printf '[]')
-_after_names_json=$(printf '%s' "$_after_subs" | jq -c '
-    def rows:
-      if type == "array" then .
-      elif type == "object" then
-        if ((.subscriptions // null) != null and ((.subscriptions | type) == "array")) then .subscriptions
-        elif ((.data // null) != null and ((.data | type) == "array")) then .data
-        elif ((.subscription // .subscriptionName // .id // empty) | tostring | length) > 0 then [.]
-        else [] end
-      else [] end;
-    rows
-    | map(.subscription // .subscriptionName // .id // empty)
-    | map(select(length > 0))
-    | unique
-' 2>/dev/null || printf '[]')
-SUBSCRIPTION_NAME=$(jq -nr \
-    --argjson before "$_before_names_json" \
-    --argjson after "$_after_names_json" \
-    '($after - $before | .[0]) // ($after[0] // "")')
-
-if [ -z "${SUBSCRIPTION_NAME:-}" ]; then
-    dm_warn "Could not resolve created static subscription name; cleanup may skip explicit subscription deletion."
-else
-    dm_info "Resolved static subscription name for cleanup: $SUBSCRIPTION_NAME"
-fi
+SUBSCRIPTION_NAME=$(dm_create_static_subscription_resolve_name "MEASUREMENT" "$DEVICE_ID" "$DEVICE_NAME" 5)
 
 dm_step 4 "Creating outbound Smart Function mapping"
 SF_CODE=$(cat <<'JSCODE'
@@ -129,7 +85,7 @@ function onMessage(msg, context) {
   var externalId = context.getConfig().externalId;
   
   return [{
-    topic: "measurements/outbound/" + externalId,
+    topic: "dmtest/out/sfjson/" + externalId,
     payload: {
       time: new Date().toISOString(),
       temperature: payload.c8y_TemperatureMeasurement.T.value,
@@ -185,10 +141,12 @@ BASELINE=$(dm_mapping_received_count "$MAPPING_ID")
 dm_info "Baseline messagesReceived=$BASELINE"
 
 dm_step 6 "Subscribing to MQTT output topic"
-MQTT_TOPIC="measurements/outbound/$EXT_ID"
+MQTT_TOPIC="dmtest/out/sfjson/$EXT_ID"
 dm_info "Subscribing to: $MQTT_TOPIC"
 
-# Background MQTT subscriber (collects messages for verification).
+dm_mqtt_probe_subscription "$MQTT_TOPIC" 10 || true
+
+# Background MQTT subscriber (collects the outbound mapping message).
 # Uses the harness helper so MQTT_HOST/PORT/USER/PASS/TLS overrides apply.
 TEMP_FILE=$(mktemp)
 TEMP_ERR_FILE=$(mktemp)
@@ -259,7 +217,6 @@ dm_assert_eq "Transformed temperature value" "22.5" "$TEMP_VALUE"
 # Cleanup
 kill "$MQTT_PID" 2>/dev/null || true
 rm -f "$TEMP_FILE" "$TEMP_ERR_FILE"
-rm -f "$TEMP_ERR_FILE"
 
 dm_done "Outbound Smart Function"
 dm_print_summary

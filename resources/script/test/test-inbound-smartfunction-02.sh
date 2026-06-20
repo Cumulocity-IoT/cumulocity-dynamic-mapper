@@ -37,10 +37,7 @@ dm_register_cleanup cleanup
 dm_banner "Test: Smart Function Pattern 02 (Topic-based external ID + sensor type filter)"
 
 dm_step 1 "Validating environment"
-dm_validate_tools
-dm_wait_for_service
-dm_require_mqtt_broker
-dm_verify_mqtt_connector_ready
+dm_test_setup_and_validate
 dm_validate_only_exit
 
 dm_step 2 "Creating sensor device with type filter"

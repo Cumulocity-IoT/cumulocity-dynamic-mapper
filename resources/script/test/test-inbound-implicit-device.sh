@@ -41,8 +41,7 @@ dm_register_cleanup cleanup
 dm_banner "Inbound Implicit Device Creation"
 
 dm_step "Waiting for Dynamic Mapper service ..."
-dm_wait_for_service
-dm_require_mqtt_broker
+dm_test_setup_and_validate
 dm_validate_only_exit
 
 MAPPING_JSON=$(cat <<EOF
@@ -90,11 +89,12 @@ dm_assert_mqtt_topics_active
 dm_step "Publishing MQTT message for unknown device ..."
 dm_mqtt_publish "dmtest/newdev/${EXT_ID}" '{"temperature":18.0}'
 
-dm_step "Waiting for processing ..."
-dm_wait 10
-
 dm_step "Asserting device was auto-created ..."
-DEVICE_ID=$(dm_lookup_device_by_ext_id "$EXT_ID" "c8y_Serial")
+if dm_wait_for_device_by_ext_id "$EXT_ID" "c8y_Serial" 20 2; then
+  DEVICE_ID="$_DM_LAST_DEVICE_ID"
+else
+  DEVICE_ID=""
+fi
 # Counted assertion (was a bare dm_success → 0/0 in the summary).
 dm_assert_gt "Device auto-created (id=${DEVICE_ID:-none})" "${#DEVICE_ID}" 0
 

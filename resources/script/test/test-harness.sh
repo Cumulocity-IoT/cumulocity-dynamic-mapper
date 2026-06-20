@@ -32,8 +32,14 @@
 # Assertions  (update _DM_PASS_COUNT / _DM_FAIL_COUNT)
 #   dm_assert_eq      <label> <expected> <actual>
 #   dm_assert_gt      <label> <value>    <than>
+#   dm_assert_num_eq  <label> <expected_num> <actual_num> [scale=1]
 #   dm_assert_eq_zero <label> <value>
+#   dm_wait_for_device_by_ext_id <ext_id> <ext_id_type> [timeout] [interval]
 #   dm_assert_measurement_present <label> <ext_id> <ext_id_type> [min] [timeout]
+#   dm_assert_event_present       <label> <ext_id> <ext_id_type> [min] [timeout]
+#   dm_assert_alarm_present       <label> <ext_id> <ext_id_type> [min] [timeout]
+#   dm_assert_operation_present   <label> <ext_id> <ext_id_type> [min] [timeout]
+#   dm_wait_for_mapping_processing <mapping_id> <baseline_count> [timeout] [interval]
 #   dm_print_summary  — prints pass/fail totals; exits 1 when any failure
 #
 # Devices
@@ -49,10 +55,13 @@
 # Subscriptions
 #   dm_count_subscriptions   <device_id>
 #     → sets _DM_LAST_SUB_COUNT; prints raw subscription JSON
+#   dm_subscription_names_json <subscriptions_json>
 #   dm_assert_has_subscription <label> <device_id>
 #   dm_assert_no_subscription  <label> <device_id>
 #   dm_show_subscriptions      <device_id>
 #   dm_delete_static_subscription <device_id> <subscription_name>
+#   dm_create_static_subscription_resolve_name <api> <device_id> <device_name> [wait]
+#     → sets _DM_LAST_SUBSCRIPTION_NAME and prints it
 #   dm_set_type_subscriptions     <api> <types_json_array>
 #     e.g. dm_set_type_subscriptions MEASUREMENT '["auto-type"]'
 #          dm_set_type_subscriptions MEASUREMENT '[]'   # clear
@@ -74,6 +83,7 @@
 # MQTT Publish/Subscribe
 #   dm_mqtt_publish                 <topic> <payload> [qos=0]
 #   dm_mqtt_subscribe_one           <topic> [timeout_secs=10]
+#   dm_mqtt_probe_subscription      <topic> [timeout_secs=10]
 #
 # Environment overrides (set before sourcing or exporting)
 #   DM_SERVICE                  (default /service/dynamic-mapper-service)
@@ -230,6 +240,24 @@ dm_assert_gt() {    # <label> <value> <than>
         _DM_FAIL_COUNT=$((_DM_FAIL_COUNT + 1))
         dm_fail    "[$label] $value is not > $than"
     fi
+}
+
+# Assert numeric equality after normalizing both values to a fixed decimal scale.
+# This avoids false negatives from JSON number formatting differences (e.g. 42 vs 42.0).
+dm_assert_num_eq() {   # <label> <expected_num> <actual_num> [scale=1]
+    local label=$1 expected_raw=$2 actual_raw=$3 scale=${4:-1}
+    local expected_fmt actual_fmt
+
+    expected_fmt=$(printf "%.*f" "$scale" "$expected_raw" 2>/dev/null || printf '')
+    actual_fmt=$(printf "%.*f" "$scale" "$actual_raw" 2>/dev/null || printf '')
+
+    if [ -z "$expected_fmt" ] || [ -z "$actual_fmt" ]; then
+        _DM_FAIL_COUNT=$((_DM_FAIL_COUNT + 1))
+        dm_fail "[$label] non-numeric input (expected='$expected_raw' actual='$actual_raw')"
+        return 0
+    fi
+
+    dm_assert_eq "$label" "$expected_fmt" "$actual_fmt"
 }
 
 # Print summary and return exit code 1 if any assertion failed.
@@ -581,6 +609,57 @@ dm_create_static_subscription_must() {  # <api> <device_id> <device_name>
     dm_api_must POST /subscription \
         "{\"api\": \"${_api}\", \"devices\": [{\"id\": \"${_id}\", \"name\": \"${_name}\"}]}" >/dev/null
     dm_info "Created static subscription (api=${_api}, device=${_id})"
+}
+
+# Convert a notification2 subscriptions response to a unique JSON array of names.
+dm_subscription_names_json() {  # <subscriptions_json>
+    printf '%s' "$1" | jq -c '
+        def rows:
+          if type == "array" then .
+          elif type == "object" then
+            if ((.subscriptions // null) != null and ((.subscriptions | type) == "array")) then .subscriptions
+            elif ((.data // null) != null and ((.data | type) == "array")) then .data
+            elif ((.subscription // .subscriptionName // .id // empty) | tostring | length) > 0 then [.]
+            else [] end
+          else [] end;
+        rows
+        | map(.subscription // .subscriptionName // .id // empty)
+        | map(select(length > 0))
+        | unique
+    ' 2>/dev/null || printf '[]'
+}
+
+_DM_LAST_SUBSCRIPTION_NAME=""
+
+# Create a static subscription and best-effort resolve its created name for cleanup.
+# Sets _DM_LAST_SUBSCRIPTION_NAME and prints the value (possibly empty).
+dm_create_static_subscription_resolve_name() {  # <api> <device_id> <device_name> [propagation_wait_secs=5]
+    local _api=$1 _id=$2 _name=$3 _wait=${4:-5}
+    local _before_subs _after_subs _before_names_json _after_names_json _resolved
+
+    _before_subs=$(c8y notification2 subscriptions list --source "$_id" --output json 2>/dev/null || printf '[]')
+    _before_names_json=$(dm_subscription_names_json "$_before_subs")
+
+    dm_create_static_subscription_must "$_api" "$_id" "$_name"
+    dm_wait "$_wait" "for subscription propagation"
+
+    _after_subs=$(c8y notification2 subscriptions list --source "$_id" --output json 2>/dev/null || printf '[]')
+    _after_names_json=$(dm_subscription_names_json "$_after_subs")
+
+    _resolved=$(jq -nr \
+        --argjson before "$_before_names_json" \
+        --argjson after  "$_after_names_json" \
+        '($after - $before | .[0]) // ($after[0] // "")')
+
+    _DM_LAST_SUBSCRIPTION_NAME="${_resolved:-}"
+
+    if [ -z "${_DM_LAST_SUBSCRIPTION_NAME:-}" ]; then
+        dm_warn "Could not resolve created static subscription name; cleanup may skip explicit subscription deletion."
+    else
+        dm_info "Resolved static subscription name for cleanup: $_DM_LAST_SUBSCRIPTION_NAME"
+    fi
+
+    printf '%s' "$_DM_LAST_SUBSCRIPTION_NAME"
 }
 
 # Delete a named static subscription for a device; silently ignores errors.
@@ -1638,6 +1717,36 @@ dm_mqtt_subscribe_one_verbose() {   # <topic> [timeout_secs=10]
     mosquitto_sub "${_args[@]}"
 }
 
+# Prime a topic subscription to reduce timing races where a test publishes before
+# the background subscriber is fully established.
+dm_mqtt_probe_subscription() {  # <topic> [timeout_secs=10]
+    local _topic=$1 _timeout=${2:-10}
+    local _probe_file _probe_err _probe_pid _probe_rc
+
+    _probe_file=$(mktemp)
+    _probe_err=$(mktemp)
+
+    ( dm_mqtt_subscribe_one "$_topic" "$_timeout" > "$_probe_file" 2>"$_probe_err" ) &
+    _probe_pid=$!
+    sleep 1
+
+    dm_mqtt_publish "$_topic" '{"_dmProbe":"ready"}' 0 >/dev/null 2>&1 || true
+
+    set +e
+    wait "$_probe_pid"
+    _probe_rc=$?
+    set -e
+
+    if [ "$_probe_rc" -ne 0 ]; then
+        dm_warn "MQTT readiness probe subscribe exited $_probe_rc; stderr: $(tr '\n' ' ' < "$_probe_err" 2>/dev/null | head -c 300)"
+    else
+        dm_info "MQTT readiness probe received"
+    fi
+
+    rm -f "$_probe_file" "$_probe_err"
+    return "$_probe_rc"
+}
+
 # ── C8Y data helpers ───────────────────────────────────────────────────────────
 # Return a UTC ISO-8601 timestamp. Pass a negative offset in seconds for the past.
 # Examples: dm_now          -> now
@@ -1733,6 +1842,30 @@ dm_count_alarms_since() {   # <device_id> <since_iso8601>
         ' 2>/dev/null || printf '0'
 }
 
+dm_count_operations_since() {   # <device_id> <since_iso8601>
+    [ -z "${1:-}" ] && { printf '0'; return 0; }
+    c8y operations list \
+        --device "$1" --dateFrom "$2" \
+        --pageSize 200 --output json 2>/dev/null \
+        | jq -s '
+            def rows:
+                if length == 0 then
+                    []
+                elif length == 1 then
+                    if (.[0] | type) == "array" then
+                        .[0]
+                    elif (.[0] | type) == "object" then
+                        (.[0].data // .[0].operations // [.[0]])
+                    else
+                        []
+                    end
+                else
+                    .
+                end;
+            rows | length
+        ' 2>/dev/null || printf '0'
+}
+
 dm_assert_measurement_count_gt() {  # <label> <device_id> <since_iso8601> <min_count>
     local _label=$1 _device=$2 _since=$3 _min=$4 _count
     _count=$(dm_count_measurements_since "$_device" "$_since")
@@ -1749,6 +1882,30 @@ dm_assert_alarm_count_gt() {    # <label> <device_id> <since_iso8601> <min_count
     local _label=$1 _device=$2 _since=$3 _min=$4 _count
     _count=$(dm_count_alarms_since "$_device" "$_since")
     dm_assert_gt "$_label" "${_count:-0}" "$(( _min - 1 ))"
+}
+
+dm_assert_operation_count_gt() {    # <label> <device_id> <since_iso8601> <min_count>
+    local _label=$1 _device=$2 _since=$3 _min=$4 _count
+    _count=$(dm_count_operations_since "$_device" "$_since")
+    dm_assert_gt "$_label" "${_count:-0}" "$(( _min - 1 ))"
+}
+
+_DM_LAST_DEVICE_ID=""
+
+dm_wait_for_device_by_ext_id() {  # <ext_id> <ext_id_type> [timeout=30] [interval=2]
+    local _extid=$1 _type=$2 _timeout=${3:-30} _interval=${4:-2}
+    local _elapsed=0 _devid
+    _DM_LAST_DEVICE_ID=""
+    while [ "$_elapsed" -lt "$_timeout" ]; do
+        _devid=$(dm_lookup_device_by_ext_id "$_extid" "$_type")
+        if [ -n "$_devid" ]; then
+            _DM_LAST_DEVICE_ID="$_devid"
+            return 0
+        fi
+        sleep "$_interval"
+        _elapsed=$((_elapsed + _interval))
+    done
+    return 1
 }
 
 # Poll until a device (resolved by external id) has at least <min_count>
@@ -1771,6 +1928,57 @@ dm_wait_for_measurement_count() {  # <ext_id> <ext_id_type> <min_count> [timeout
     return 1
 }
 
+dm_wait_for_event_count() {  # <ext_id> <ext_id_type> <min_count> [timeout=30] [interval=2]
+    local _extid=$1 _type=$2 _min=$3 _timeout=${4:-30} _interval=${5:-2}
+    local _elapsed=0 _devid _count
+    while [ "$_elapsed" -lt "$_timeout" ]; do
+        _devid=$(dm_lookup_device_by_ext_id "$_extid" "$_type")
+        if [ -n "$_devid" ]; then
+            _count=$(c8y events list --device "$_devid" \
+                --pageSize 200 --output json 2>/dev/null \
+                | jq -s 'length' 2>/dev/null || printf '0')
+            [ "${_count:-0}" -ge "$_min" ] 2>/dev/null && return 0
+        fi
+        sleep "$_interval"
+        _elapsed=$((_elapsed + _interval))
+    done
+    return 1
+}
+
+dm_wait_for_alarm_count() {  # <ext_id> <ext_id_type> <min_count> [timeout=30] [interval=2]
+    local _extid=$1 _type=$2 _min=$3 _timeout=${4:-30} _interval=${5:-2}
+    local _elapsed=0 _devid _count
+    while [ "$_elapsed" -lt "$_timeout" ]; do
+        _devid=$(dm_lookup_device_by_ext_id "$_extid" "$_type")
+        if [ -n "$_devid" ]; then
+            _count=$(c8y alarms list --device "$_devid" \
+                --pageSize 200 --output json 2>/dev/null \
+                | jq -s 'length' 2>/dev/null || printf '0')
+            [ "${_count:-0}" -ge "$_min" ] 2>/dev/null && return 0
+        fi
+        sleep "$_interval"
+        _elapsed=$((_elapsed + _interval))
+    done
+    return 1
+}
+
+dm_wait_for_operation_count() {  # <ext_id> <ext_id_type> <min_count> [timeout=30] [interval=2]
+    local _extid=$1 _type=$2 _min=$3 _timeout=${4:-30} _interval=${5:-2}
+    local _elapsed=0 _devid _count
+    while [ "$_elapsed" -lt "$_timeout" ]; do
+        _devid=$(dm_lookup_device_by_ext_id "$_extid" "$_type")
+        if [ -n "$_devid" ]; then
+            _count=$(c8y operations list --device "$_devid" \
+                --pageSize 200 --output json 2>/dev/null \
+                | jq -s 'length' 2>/dev/null || printf '0')
+            [ "${_count:-0}" -ge "$_min" ] 2>/dev/null && return 0
+        fi
+        sleep "$_interval"
+        _elapsed=$((_elapsed + _interval))
+    done
+    return 1
+}
+
 # Poll for a measurement and record a pass/fail assertion (for use with
 # dm_print_summary). Wraps dm_wait_for_measurement_count.
 dm_assert_measurement_present() {  # <label> <ext_id> <ext_id_type> [min=1] [timeout=30]
@@ -1782,6 +1990,56 @@ dm_assert_measurement_present() {  # <label> <ext_id> <ext_id_type> [min=1] [tim
         _DM_FAIL_COUNT=$((_DM_FAIL_COUNT + 1))
         dm_fail "[$_label] no measurement found after ${_timeout}s"
     fi
+}
+
+dm_assert_event_present() {  # <label> <ext_id> <ext_id_type> [min=1] [timeout=30]
+    local _label=$1 _extid=$2 _type=$3 _min=${4:-1} _timeout=${5:-30}
+    if dm_wait_for_event_count "$_extid" "$_type" "$_min" "$_timeout"; then
+        _DM_PASS_COUNT=$((_DM_PASS_COUNT + 1))
+        dm_success "[$_label] >= $_min event(s) found"
+    else
+        _DM_FAIL_COUNT=$((_DM_FAIL_COUNT + 1))
+        dm_fail "[$_label] no event found after ${_timeout}s"
+    fi
+}
+
+dm_assert_alarm_present() {  # <label> <ext_id> <ext_id_type> [min=1] [timeout=30]
+    local _label=$1 _extid=$2 _type=$3 _min=${4:-1} _timeout=${5:-30}
+    if dm_wait_for_alarm_count "$_extid" "$_type" "$_min" "$_timeout"; then
+        _DM_PASS_COUNT=$((_DM_PASS_COUNT + 1))
+        dm_success "[$_label] >= $_min alarm(s) found"
+    else
+        _DM_FAIL_COUNT=$((_DM_FAIL_COUNT + 1))
+        dm_fail "[$_label] no alarm found after ${_timeout}s"
+    fi
+}
+
+dm_assert_operation_present() {  # <label> <ext_id> <ext_id_type> [min=1] [timeout=30]
+    local _label=$1 _extid=$2 _type=$3 _min=${4:-1} _timeout=${5:-30}
+    if dm_wait_for_operation_count "$_extid" "$_type" "$_min" "$_timeout"; then
+        _DM_PASS_COUNT=$((_DM_PASS_COUNT + 1))
+        dm_success "[$_label] >= $_min operation(s) found"
+    else
+        _DM_FAIL_COUNT=$((_DM_FAIL_COUNT + 1))
+        dm_fail "[$_label] no operation found after ${_timeout}s"
+    fi
+}
+
+# Poll until a mapping has processed more messages than baseline, or timeout.
+# Useful for verifying that a connector accepted and processed messages after
+# deployment/activation. Returns 0 on success, 1 on timeout.
+dm_wait_for_mapping_processing() {  # <mapping_id> <baseline_count> [timeout=15] [interval=1]
+    local _mapping_id=$1 _baseline=${2:-0} _timeout=${3:-15} _interval=${4:-1}
+    local _elapsed=0 _count
+    while [ "$_elapsed" -lt "$_timeout" ]; do
+        _count=$(dm_mapping_received_count "$_mapping_id")
+        if [ "${_count:-0}" -gt "$_baseline" ]; then
+            return 0
+        fi
+        sleep "$_interval"
+        _elapsed=$((_elapsed + _interval))
+    done
+    return 1
 }
 
 dm_get_latest_measurement() {  # <ext_id> <ext_id_type> <measurement_type>

@@ -34,10 +34,7 @@ dm_register_cleanup cleanup
 dm_banner "Test: Smart Function Pattern 04 (Dual payload + deduplication)"
 
 dm_step 1 "Validating environment"
-dm_validate_tools
-dm_wait_for_service
-dm_require_mqtt_broker
-dm_verify_mqtt_connector_ready
+dm_test_setup_and_validate
 dm_validate_only_exit
 
 dm_step 2 "Creating mapping with dual payload type handling"
@@ -169,10 +166,9 @@ ERROR1=$(jq -cn \
 dm_mqtt_publish "flowState/$EXT_ID" "$ERROR1" 1
 dm_success "First error published"
 
-# Let the first error be processed and its dedup state persisted before sending
-# the duplicate — otherwise the second message may load state before the first
-# writes it back, and deduplication can't take effect.
-dm_wait 5 "for first error to be processed and dedup state persisted"
+# Wait for first measurement to be created, ensuring the mapping is processing
+# messages. This also gives the dedup state time to persist before the duplicate arrives.
+dm_wait_for_measurement_count "$EXT_ID" "c8y_Serial" 1 10 1 >/dev/null || true
 
 dm_step 6 "Publishing duplicate error (should be suppressed)"
 ERROR2=$(jq -cn \
@@ -188,22 +184,16 @@ dm_mqtt_publish "flowState/$EXT_ID" "$ERROR2" 1
 dm_success "Duplicate error published (should be deduplicated)"
 
 dm_step 7 "Verifying measurements and alarms"
-sleep 8
-DEVICE_ID=$(dm_lookup_device_by_ext_id "$EXT_ID" "c8y_Serial" | head -1) || true
+dm_assert_measurement_present "Telemetry measurement created" "$EXT_ID" "c8y_Serial" 1 15
+dm_assert_alarm_present "Error alarm present" "$EXT_ID" "c8y_Serial" 1 15
 
-if [ -z "$DEVICE_ID" ]; then
-    dm_error "Device not found"
+# Post-check: verify dedup worked (exactly 1 alarm, not 2)
+DEVICE_ID=$(dm_lookup_device_by_ext_id "$EXT_ID" "c8y_Serial")
+if [ -n "$DEVICE_ID" ]; then
+    ALARM_COUNT=$(c8y alarms list --device "$DEVICE_ID" --type "c8y_DeviceError" \
+        --pageSize 10 --output json 2>/dev/null | jq -s 'length')
+    dm_assert_eq "Error alarm deduplicated to single alarm" "1" "${ALARM_COUNT:-0}"
 fi
-
-# Check measurement count (core C8Y endpoints — use the c8y CLI, not dm_api).
-MEAS_COUNT=$(c8y measurements list --device "$DEVICE_ID" \
-    --pageSize 10 --output json 2>/dev/null | jq -s 'length')
-dm_assert_gt "Telemetry measurement created" "${MEAS_COUNT:-0}" 0
-
-# Check error alarm count: two identical errors should be deduplicated to 1.
-ALARM_COUNT=$(c8y alarms list --device "$DEVICE_ID" --type "c8y_DeviceError" \
-    --pageSize 10 --output json 2>/dev/null | jq -s 'length')
-dm_assert_eq "Error alarm deduplicated to single alarm" "1" "${ALARM_COUNT:-0}"
 
 dm_done "Inbound Smart Function Pattern 04"
 dm_print_summary

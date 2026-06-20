@@ -44,8 +44,7 @@ dm_register_cleanup cleanup
 dm_banner "Inbound Array Payload → Multiple Devices (expandArray)"
 
 dm_step "Waiting for Dynamic Mapper service ..."
-dm_wait_for_service
-dm_require_mqtt_broker
+dm_test_setup_and_validate
 dm_validate_only_exit
 
 MAPPING_JSON=$(cat <<EOF
@@ -84,9 +83,6 @@ dm_deploy_mapping_to_mqtt_connector "$MAPPING_ID"
 dm_activate_mapping "$MAPPING_ID"
 dm_assert_mqtt_topics_active
 
-dm_step "Recording test start time ..."
-TEST_START=$(dm_now -10)
-
 # Publish array payload with our two unique device ids
 PAYLOAD=$(cat <<EOF
 [{"deviceId":"${EXT_ID_1}","temperature":25.5},{"deviceId":"${EXT_ID_2}","temperature":26.0}]
@@ -96,24 +92,29 @@ EOF
 dm_step "Publishing array payload ..."
 dm_mqtt_publish "dmtest/multi" "$PAYLOAD"
 
-dm_step "Waiting for processing ..."
-dm_wait 10
-
 dm_step "Asserting device 1 was auto-created and has a measurement ..."
-DEV1=$(dm_lookup_device_by_ext_id "$EXT_ID_1" "c8y_Serial")
+if dm_wait_for_device_by_ext_id "$EXT_ID_1" "c8y_Serial" 20 2; then
+  DEV1="$_DM_LAST_DEVICE_ID"
+else
+  DEV1=""
+fi
 if [ -z "$DEV1" ]; then
     dm_fail "Device '$EXT_ID_1' was not created"
     exit 1
 fi
-dm_assert_measurement_count_gt "Measurement for device 1" "$DEV1" "$TEST_START" 1
+dm_assert_measurement_present "Measurement for device 1" "$EXT_ID_1" "c8y_Serial" 1 20
 
 dm_step "Asserting device 2 was auto-created and has a measurement ..."
-DEV2=$(dm_lookup_device_by_ext_id "$EXT_ID_2" "c8y_Serial")
+if dm_wait_for_device_by_ext_id "$EXT_ID_2" "c8y_Serial" 20 2; then
+  DEV2="$_DM_LAST_DEVICE_ID"
+else
+  DEV2=""
+fi
 if [ -z "$DEV2" ]; then
     dm_fail "Device '$EXT_ID_2' was not created"
     exit 1
 fi
-dm_assert_measurement_count_gt "Measurement for device 2" "$DEV2" "$TEST_START" 1
+dm_assert_measurement_present "Measurement for device 2" "$EXT_ID_2" "c8y_Serial" 1 20
 
 dm_done "Inbound Array Payload → Multiple Devices (expandArray)"
 dm_print_summary

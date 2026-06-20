@@ -34,10 +34,7 @@ dm_register_cleanup cleanup
 dm_banner "Test: Inbound Alarm (JSON → c8y_Alarm via DEFAULT substitution)"
 
 dm_step 1 "Validating environment"
-dm_validate_tools
-dm_wait_for_service
-dm_require_mqtt_broker
-dm_verify_mqtt_connector_ready
+dm_test_setup_and_validate
 dm_validate_only_exit
 
 dm_step 2 "Creating alarm mapping with DEFAULT transformation"
@@ -94,8 +91,11 @@ dm_mqtt_publish "dmtest/alarm/$EXT_ID" "$TEST_PAYLOAD" 1
 dm_success "Alarm JSON published"
 
 dm_step 5 "Waiting for device and alarm creation"
-sleep 8
-DEVICE_ID=$(dm_lookup_device_by_ext_id "$EXT_ID" "c8y_Serial" | head -1) || true
+if dm_wait_for_device_by_ext_id "$EXT_ID" "c8y_Serial" 20 2; then
+  DEVICE_ID="$_DM_LAST_DEVICE_ID"
+else
+  DEVICE_ID=""
+fi
 
 if [ -z "$DEVICE_ID" ]; then
     dm_error "Device not created with externalId=$EXT_ID"
@@ -104,19 +104,8 @@ fi
 dm_success "Device created: $DEVICE_ID"
 
 dm_step 6 "Verifying alarm was created"
-ALARM='[]'
-ALARM_COUNT=0
-for _attempt in 1 2 3 4 5; do
-    # c8y alarms list emits one JSON object per line for --output json; slurp to count reliably.
-    ALARM=$(c8y alarms list --device "$DEVICE_ID" --pageSize 5 --output json 2>/dev/null || echo '[]')
-    ALARM_COUNT=$(echo "$ALARM" | jq -s 'length')
-    if [ "$ALARM_COUNT" -ge 1 ]; then
-        break
-    fi
-    sleep 2
-done
-
-dm_assert_gt "Alarm created" "$ALARM_COUNT" 0
+dm_assert_alarm_present "Alarm created" "$EXT_ID" "c8y_Serial" 1 20
+ALARM=$(c8y alarms list --device "$DEVICE_ID" --pageSize 5 --output json 2>/dev/null || echo '[]')
 
 dm_step 7 "Verifying alarm content"
 ALARM_TEXT=$(echo "$ALARM" | jq -rs '.[0].text // empty')

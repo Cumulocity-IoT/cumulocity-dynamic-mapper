@@ -101,8 +101,7 @@ dm_register_cleanup cleanup
 dm_banner "Cumulocity MQTT Service Connector Lifecycle"
 
 dm_step "Waiting for Dynamic Mapper service ..."
-dm_validate_tools
-dm_wait_for_service
+dm_test_setup_and_validate false
 dm_validate_only_exit
 
 dm_step "Deleting any existing Cumulocity MQTT Service connector(s) ..."

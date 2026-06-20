@@ -40,8 +40,7 @@ dm_register_cleanup cleanup
 dm_banner "Inbound HEX Binary Transformation (EVENT)"
 
 dm_step "Waiting for Dynamic Mapper service ..."
-dm_wait_for_service
-dm_require_mqtt_broker
+dm_test_setup_and_validate
 dm_validate_only_exit
 
 # Mapping mirrors attic/test-I example "Mapping - 12" (binaryEvent/+)
@@ -82,27 +81,13 @@ dm_deploy_mapping_to_mqtt_connector "$MAPPING_ID"
 dm_activate_mapping "$MAPPING_ID"
 dm_assert_mqtt_topics_active
 
-dm_step "Recording test start time ..."
-TEST_START=$(dm_now -10)
-
 # "48657820 74657374" = "Hex test" in ASCII hex bytes
 HEX_PAYLOAD="48657820 74657374"
 dm_step "Publishing hex payload ..."
 dm_mqtt_publish "dmtest/hex/${EXT_ID}" "$HEX_PAYLOAD"
 
-dm_step "Waiting for processing ..."
-dm_wait 8
-
-dm_step "Looking up device by external id ..."
-DEVICE_ID=$(dm_lookup_device_by_ext_id "$EXT_ID" "c8y_Serial")
-if [ -z "$DEVICE_ID" ]; then
-    dm_fail "Device '$EXT_ID' not found — HEX mapper did not create it"
-  exit 1
-fi
-dm_info "Device id: $DEVICE_ID"
-
 dm_step "Asserting at least 1 event was created ..."
-dm_assert_event_count_gt "Event from HEX payload" "$DEVICE_ID" "$TEST_START" 1
+dm_assert_event_present "Event from HEX payload" "$EXT_ID" "c8y_Serial" 1 20
 
 dm_done "Inbound HEX Binary Transformation (EVENT)"
 dm_print_summary
