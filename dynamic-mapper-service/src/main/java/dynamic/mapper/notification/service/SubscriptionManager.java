@@ -34,7 +34,6 @@ import dynamic.mapper.model.NotificationSubscriptionResponse;
 import dynamic.mapper.notification.Utils;
 import lombok.extern.slf4j.Slf4j;
 import org.joda.time.DateTime;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -49,26 +48,24 @@ import java.util.concurrent.*;
 @Service
 public class SubscriptionManager {
 
-    @Autowired
-    private NotificationSubscriptionApi subscriptionAPI;
+    private final NotificationSubscriptionApi subscriptionAPI;
+    private final MicroserviceSubscriptionsService subscriptionsService;
+    private final NotificationConnectionManager connectionManager;
+    private final MqttPushManager mqttPushManager;
+    private final ExecutorService virtualThreadPool;
+    private final ConfigurationRegistry configurationRegistry;
 
-    @Autowired
-    private MicroserviceSubscriptionsService subscriptionsService;
-
-    @Autowired
-    private NotificationConnectionManager connectionManager;
-
-    @Autowired
-    private MqttPushManager mqttPushManager;
-
-    @Autowired
-    @Qualifier("virtualThreadPool")
-    private ExecutorService virtualThreadPool;
-
-    private ConfigurationRegistry configurationRegistry;
-
-    @Autowired
-    public void setConfigurationRegistry(@Lazy ConfigurationRegistry configurationRegistry) {
+    public SubscriptionManager(NotificationSubscriptionApi subscriptionAPI,
+                                MicroserviceSubscriptionsService subscriptionsService,
+                                NotificationConnectionManager connectionManager,
+                                MqttPushManager mqttPushManager,
+                                @Qualifier("virtualThreadPool") ExecutorService virtualThreadPool,
+                                @Lazy ConfigurationRegistry configurationRegistry) {
+        this.subscriptionAPI = subscriptionAPI;
+        this.subscriptionsService = subscriptionsService;
+        this.connectionManager = connectionManager;
+        this.mqttPushManager = mqttPushManager;
+        this.virtualThreadPool = virtualThreadPool;
         this.configurationRegistry = configurationRegistry;
     }
 

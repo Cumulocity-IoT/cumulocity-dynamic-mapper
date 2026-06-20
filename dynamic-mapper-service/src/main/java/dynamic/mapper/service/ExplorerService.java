@@ -34,7 +34,6 @@ import dynamic.mapper.notification.NotificationSubscriber;
 import dynamic.mapper.notification.Utils;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -71,20 +70,20 @@ public class ExplorerService {
 
     static final int DEFAULT_MAX_MESSAGES = 50;
 
-    @Autowired
-    private ConnectorRegistry connectorRegistry;
+    private final ConnectorRegistry connectorRegistry;
+    private final ConfigurationRegistry configurationRegistry;
+    private final NotificationSubscriber notificationSubscriber;
+    private final C8YAgent c8yAgent;
 
-    @Autowired
-    @Lazy
-    private ConfigurationRegistry configurationRegistry;
-
-    @Autowired
-    @Lazy
-    private NotificationSubscriber notificationSubscriber;
-
-    @Autowired
-    @Lazy
-    private C8YAgent c8yAgent;
+    public ExplorerService(ConnectorRegistry connectorRegistry,
+                            @Lazy ConfigurationRegistry configurationRegistry,
+                            @Lazy NotificationSubscriber notificationSubscriber,
+                            @Lazy C8YAgent c8yAgent) {
+        this.connectorRegistry = connectorRegistry;
+        this.configurationRegistry = configurationRegistry;
+        this.notificationSubscriber = notificationSubscriber;
+        this.c8yAgent = c8yAgent;
+    }
 
     /**
      * sessions: tenant → (sessionId → ExplorerSession)

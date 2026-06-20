@@ -121,7 +121,7 @@ public class SubstitutionResultOutboundProcessor extends BaseProcessor {
                 put(ProcessingContext.RETAIN, "false");
                 put(Mapping.CONTEXT_DATA_KEY_NAME, "dummy");
                 put(Mapping.CONTEXT_DATA_METHOD_NAME, "POST");
-                put("publishTopic", mapping.getPublishTopic());
+                put("publishTopic", "");
             }
         };
 

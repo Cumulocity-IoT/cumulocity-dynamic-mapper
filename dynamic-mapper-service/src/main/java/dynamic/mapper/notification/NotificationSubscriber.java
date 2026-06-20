@@ -32,8 +32,8 @@ import dynamic.mapper.model.NotificationSubscriptionResponse;
 import dynamic.mapper.notification.service.*;
 import dynamic.mapper.processor.outbound.CamelDispatcherOutbound;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import jakarta.annotation.PreDestroy;
@@ -48,32 +48,19 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class NotificationSubscriber {
 
-    @Autowired
-    private SubscriptionManager subscriptionManager;
+    private final SubscriptionManager subscriptionManager;
+    private final NotificationConnectionManager connectionManager;
+    private final MqttPushManager mqttPushManager;
+    private final TokenManager tokenManager;
+    private final MessagingManagementService messagingManagementService;
+    private final ConnectorRegistry connectorRegistry;
+    private final DeviceDiscoveryService deviceDiscoveryService;
 
-    @Autowired
-    private NotificationConnectionManager connectionManager;
-
-    @Autowired
-    private MqttPushManager mqttPushManager;
-
-    @Autowired
-    private TokenManager tokenManager;
-
-    @Autowired
-    private MessagingManagementService messagingManagementService;
-
-    @Autowired
-    private ConnectorRegistry connectorRegistry;
-
-    @Autowired
-    private DeviceDiscoveryService deviceDiscoveryService;
-
-    @Autowired
     @Getter
-    private SubscriptionQueryService queryService;
+    private final SubscriptionQueryService queryService;
 
     // === Lifecycle Methods ===
 

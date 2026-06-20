@@ -32,7 +32,6 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -45,8 +44,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class NotificationSubscriptionService {
 
-    @Autowired
-    C8YAgent c8yAgent;
+    private final C8YAgent c8yAgent;
 
     private final ConfigurationRegistry configurationRegistry;
 

@@ -26,7 +26,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.cumulocity.model.ID;
@@ -44,8 +43,11 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class InventoryCacheEnrichmentService {
 
-    @Autowired
-    private CacheManager cacheManager;
+    private final CacheManager cacheManager;
+
+    public InventoryCacheEnrichmentService(CacheManager cacheManager) {
+        this.cacheManager = cacheManager;
+    }
 
     public Map<String, Object> getMOFromInventoryCacheByExternalId(String tenant, ExternalId externalId,
             Boolean testing, IdentityResolver identityResolver, ConfigurationRegistry configurationRegistry) {

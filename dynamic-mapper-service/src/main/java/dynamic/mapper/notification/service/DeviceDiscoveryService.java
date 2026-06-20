@@ -27,7 +27,6 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.Device;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
@@ -44,10 +43,9 @@ public class DeviceDiscoveryService {
 
     private static final int MAX_RECURSION_DEPTH = 10;
 
-    private ConfigurationRegistry configurationRegistry;
+    private final ConfigurationRegistry configurationRegistry;
 
-    @Autowired
-    public void setConfigurationRegistry(@Lazy ConfigurationRegistry configurationRegistry) {
+    public DeviceDiscoveryService(@Lazy ConfigurationRegistry configurationRegistry) {
         this.configurationRegistry = configurationRegistry;
     }
 

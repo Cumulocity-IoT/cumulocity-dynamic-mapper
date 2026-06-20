@@ -33,7 +33,6 @@ import dynamic.mapper.model.Device;
 import dynamic.mapper.model.NotificationSubscriptionResponse;
 import dynamic.mapper.notification.Utils;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -50,22 +49,20 @@ import java.util.stream.Collectors;
 @Service
 public class SubscriptionQueryService {
 
-    @Autowired
-    private NotificationSubscriptionApi subscriptionAPI;
+    private final NotificationSubscriptionApi subscriptionAPI;
+    private final MicroserviceSubscriptionsService subscriptionsService;
+    private final ConfigurationRegistry configurationRegistry;
+    private final ExecutorService virtualThreadPool;
 
-    @Autowired
-    private MicroserviceSubscriptionsService subscriptionsService;
-
-    private ConfigurationRegistry configurationRegistry;
-
-    @Autowired
-    public void setConfigurationRegistry(@Lazy ConfigurationRegistry configurationRegistry) {
+    public SubscriptionQueryService(NotificationSubscriptionApi subscriptionAPI,
+                                     MicroserviceSubscriptionsService subscriptionsService,
+                                     @Lazy ConfigurationRegistry configurationRegistry,
+                                     @Qualifier("virtualThreadPool") ExecutorService virtualThreadPool) {
+        this.subscriptionAPI = subscriptionAPI;
+        this.subscriptionsService = subscriptionsService;
         this.configurationRegistry = configurationRegistry;
+        this.virtualThreadPool = virtualThreadPool;
     }
-
-    @Autowired
-    @Qualifier("virtualThreadPool")
-    private ExecutorService virtualThreadPool;
 
     // === Public API ===
 

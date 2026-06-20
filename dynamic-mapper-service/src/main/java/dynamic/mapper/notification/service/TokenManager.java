@@ -27,7 +27,6 @@ import com.cumulocity.sdk.client.messaging.notifications.Token;
 import com.cumulocity.sdk.client.messaging.notifications.TokenApi;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PreDestroy;
@@ -43,11 +42,13 @@ public class TokenManager {
 
     private static final Integer TOKEN_REFRESH_INTERVAL_HOURS = 12;
 
-    @Autowired
-    private TokenApi tokenApi;
+    private final TokenApi tokenApi;
+    private final MicroserviceSubscriptionsService subscriptionsService;
 
-    @Autowired
-    private MicroserviceSubscriptionsService subscriptionsService;
+    public TokenManager(TokenApi tokenApi, MicroserviceSubscriptionsService subscriptionsService) {
+        this.tokenApi = tokenApi;
+        this.subscriptionsService = subscriptionsService;
+    }
 
     // Token storage
     private final Map<String, Map<String, String>> deviceTokens = new ConcurrentHashMap<>();

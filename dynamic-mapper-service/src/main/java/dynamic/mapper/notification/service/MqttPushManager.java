@@ -31,7 +31,6 @@ import com.hivemq.client.mqtt.mqtt3.Mqtt3Client;
 import com.hivemq.client.mqtt.mqtt3.message.auth.Mqtt3SimpleAuth;
 import dynamic.mapper.core.ConfigurationRegistry;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -42,7 +41,24 @@ import java.util.*;
 import java.util.concurrent.*;
 
 /**
- * Manages MQTT push connectivity for devices.
+ * Manages outbound MQTT push connectivity for devices against the Cumulocity MQTT broker.
+ *
+ * <p>The service maintains a per-tenant map of persistent HiveMQ MQTT 3 client connections
+ * (TLS, port 8883). It is used by {@link dynamic.mapper.notification.service.SubscriptionManager}
+ * and {@link dynamic.mapper.notification.NotificationSubscriber} to activate or deactivate
+ * MQTT push sessions for individual devices whenever they are registered or removed from
+ * the Cumulocity notification subsystem.
+ *
+ * <p>Each device connection:
+ * <ul>
+ *   <li>authenticates using the tenant's microservice credentials,</li>
+ *   <li>subscribes to the SmartREST downstream topic {@code s/ds},</li>
+ *   <li>uses automatic reconnect and a configurable connection timeout.</li>
+ * </ul>
+ *
+ * <p>All connections for a tenant can be torn down at once via {@link #disconnectAll(String)},
+ * which is called during tenant unsubscription. The Spring {@code @PreDestroy} hook
+ * ensures all connections are closed on application shutdown.
  */
 @Slf4j
 @Service
@@ -50,13 +66,12 @@ public class MqttPushManager {
 
     private static final int CONNECTION_TIMEOUT_SECONDS = 30;
 
-    @Autowired
-    private MicroserviceSubscriptionsService subscriptionsService;
+    private final MicroserviceSubscriptionsService subscriptionsService;
+    private final ConfigurationRegistry configurationRegistry;
 
-    private ConfigurationRegistry configurationRegistry;
-
-    @Autowired
-    public void setConfigurationRegistry(@Lazy ConfigurationRegistry configurationRegistry) {
+    public MqttPushManager(MicroserviceSubscriptionsService subscriptionsService,
+                           @Lazy ConfigurationRegistry configurationRegistry) {
+        this.subscriptionsService = subscriptionsService;
         this.configurationRegistry = configurationRegistry;
     }
 
@@ -136,18 +151,16 @@ public class MqttPushManager {
                                 });
                     });
 
-            // Handle connection errors
-            connectionFuture.exceptionally(throwable -> {
-                logMqttError(tenant, deviceId, throwable);
-                return null;
-            });
-
-            // Add timeout
+            // Handle errors and timeout in a single handler to avoid duplicate log entries.
+            // orTimeout() completes the future exceptionally with TimeoutException, which would
+            // otherwise trigger both an exceptionally() handler and this whenComplete().
             connectionFuture.orTimeout(CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS)
                     .whenComplete((result, throwable) -> {
                         if (throwable instanceof TimeoutException) {
                             log.warn("{} - MQTT connection timeout for device {}", tenant, deviceId);
                             client.disconnect();
+                        } else if (throwable != null) {
+                            logMqttError(tenant, deviceId, throwable);
                         }
                     });
 

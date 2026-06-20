@@ -26,7 +26,6 @@ import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
@@ -47,11 +46,14 @@ public class MessagingManagementService {
     private static final String SUBSCRIBERS_PATH =
             "/service/messaging-management/tenants/%s/namespaces/relnotif/topics/%s/types/persistent/subscribers";
 
-    @Autowired
-    private CumulocityClientProperties clientProperties;
+    private final CumulocityClientProperties clientProperties;
+    private final ContextService<MicroserviceCredentials> contextService;
 
-    @Autowired
-    private ContextService<MicroserviceCredentials> contextService;
+    public MessagingManagementService(CumulocityClientProperties clientProperties,
+                                       ContextService<MicroserviceCredentials> contextService) {
+        this.clientProperties = clientProperties;
+        this.contextService = contextService;
+    }
 
     private final RestTemplate restTemplate = new RestTemplate();
 

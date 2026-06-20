@@ -38,7 +38,6 @@ import dynamic.mapper.notification.websocket.NotificationCallback;
 import dynamic.mapper.processor.outbound.CamelDispatcherOutbound;
 import lombok.extern.slf4j.Slf4j;
 import org.java_websocket.enums.ReadyState;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -56,25 +55,24 @@ import java.util.concurrent.*;
 @Service
 public class NotificationConnectionManager {
 
-    @Autowired
-    private MicroserviceSubscriptionsService subscriptionsService;
+    private final MicroserviceSubscriptionsService subscriptionsService;
+    private final TokenManager tokenManager;
+    private final MqttPushManager mqttPushManager;
+    private final ConnectorRegistry connectorRegistry;
+    private final SubscriptionQueryService queryService;
+    private final ConfigurationRegistry configurationRegistry;
 
-    @Autowired
-    private TokenManager tokenManager;
-
-    @Autowired
-    private MqttPushManager mqttPushManager;
-
-    @Autowired
-    private ConnectorRegistry connectorRegistry;
-
-    @Autowired
-    private SubscriptionQueryService queryService;
-
-    private ConfigurationRegistry configurationRegistry;
-
-    @Autowired
-    public void setConfigurationRegistry(@Lazy ConfigurationRegistry configurationRegistry) {
+    public NotificationConnectionManager(MicroserviceSubscriptionsService subscriptionsService,
+                                          TokenManager tokenManager,
+                                          MqttPushManager mqttPushManager,
+                                          ConnectorRegistry connectorRegistry,
+                                          SubscriptionQueryService queryService,
+                                          @Lazy ConfigurationRegistry configurationRegistry) {
+        this.subscriptionsService = subscriptionsService;
+        this.tokenManager = tokenManager;
+        this.mqttPushManager = mqttPushManager;
+        this.connectorRegistry = connectorRegistry;
+        this.queryService = queryService;
         this.configurationRegistry = configurationRegistry;
     }
 
