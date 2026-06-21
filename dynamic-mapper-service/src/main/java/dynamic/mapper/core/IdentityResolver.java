@@ -24,8 +24,10 @@ package dynamic.mapper.core;
 import com.cumulocity.model.ID;
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
+import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 
 public interface IdentityResolver {
     ExternalIDRepresentation resolveExternalId2GlobalId(String tenant, ID identity, Boolean testing);
     ExternalIDRepresentation resolveGlobalId2ExternalId(String tenant, GId gid, String idType, Boolean testing);
+    ManagedObjectRepresentation getManagedObjectForId(String tenant, String deviceId, Boolean testing, boolean withParents);
 }

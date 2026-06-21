@@ -72,6 +72,7 @@ import lombok.extern.slf4j.Slf4j;
 public class BootstrapService {
     private final ConnectorRegistry connectorRegistry;
     final ConfigurationRegistry configurationRegistry;
+    private final ConnectorClientFactory connectorClientFactory;
     private final C8YAgent c8YAgent;
     private final MappingService mappingService;
     private final ServiceConfigurationService serviceConfigurationService;
@@ -104,6 +105,7 @@ public class BootstrapService {
     public BootstrapService(
             ConnectorRegistry connectorRegistry,
             ConfigurationRegistry configurationRegistry,
+            ConnectorClientFactory connectorClientFactory,
             C8YAgent c8YAgent,
             MappingService mappingService,
             ServiceConfigurationService serviceConfigurationService,
@@ -116,6 +118,7 @@ public class BootstrapService {
 
         this.connectorRegistry = connectorRegistry;
         this.configurationRegistry = configurationRegistry;
+        this.connectorClientFactory = connectorClientFactory;
         this.c8YAgent = c8YAgent;
         this.mappingService = mappingService;
         this.serviceConfigurationService = serviceConfigurationService;
@@ -573,7 +576,7 @@ public class BootstrapService {
         Future<?> future = null;
         if (connectorConfiguration.getEnabled()) {
             try {
-                connectorClient = configurationRegistry.createConnectorClient(connectorConfiguration,
+                connectorClient = connectorClientFactory.createConnectorClient(connectorConfiguration,
                         additionalSubscriptionIdTest, tenant);
             } catch (ConnectorException e) {
                 log.error("{} - Error on creating connector {}", tenant,

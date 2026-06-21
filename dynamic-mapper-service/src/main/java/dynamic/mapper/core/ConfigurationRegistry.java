@@ -38,23 +38,9 @@ import org.springframework.stereotype.Component;
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.client.AConnectorClient;
-import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
-import dynamic.mapper.connector.amqp.AMQPClient;
-import dynamic.mapper.connector.amqp.AMQP10Client;
-import dynamic.mapper.connector.http.HttpClient;
-import dynamic.mapper.connector.kafka.KafkaClientV2;
-import dynamic.mapper.connector.mqtt.MQTT3Client;
-import dynamic.mapper.connector.mqtt.MQTT5Client;
-import dynamic.mapper.connector.mqtt.MQTTServiceClient;
-import dynamic.mapper.connector.pulsar.MQTTServicePulsarClient;
-import dynamic.mapper.connector.pulsar.PulsarConnectorClient;
-import dynamic.mapper.connector.test.TestClient;
-import dynamic.mapper.connector.webhook.WebHook;
-import dynamic.mapper.connector.webhook.WebHookInternal;
 import dynamic.mapper.model.DeviceToClientMapRepresentation;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.MapperServiceRepresentation;
@@ -73,6 +59,9 @@ public class ConfigurationRegistry implements IMapperConfiguration {
 
     @Getter
     private final TenantRegistry tenantRegistry;
+
+    @Getter
+    private final GraalVMContextService graalVMContextService;
 
     @Getter
     private C8YAgent c8yAgent;
@@ -148,10 +137,12 @@ public class ConfigurationRegistry implements IMapperConfiguration {
 
     public ConfigurationRegistry(
             TenantRegistry tenantRegistry,
+            GraalVMContextService graalVMContextService,
             ConnectorRegistry connectorRegistry,
             @Qualifier("virtualThreadPool") ExecutorService virtualThreadPool,
             @Lazy CamelContext camelContext) {
         this.tenantRegistry = tenantRegistry;
+        this.graalVMContextService = graalVMContextService;
         this.connectorRegistry = connectorRegistry;
         this.virtualThreadPool = virtualThreadPool;
         this.camelContext = camelContext;
@@ -163,113 +154,6 @@ public class ConfigurationRegistry implements IMapperConfiguration {
             return false;
         }
         return true;
-    }
-
-    public AConnectorClient createConnectorClient(ConnectorConfiguration connectorConfiguration,
-            String additionalSubscriptionIdTest, String tenant) throws ConnectorException {
-        AConnectorClient connectorClient = null;
-
-        switch (connectorConfiguration.getConnectorType()) {
-            case MQTT:
-                // if version is not set, default to 3.1.1, as this property was introduced
-                // later. This will not break existing configuration
-                String version = ((String) connectorConfiguration.getProperties().getOrDefault("version",
-                        AConnectorClient.MQTT_VERSION_3_1_1));
-                if (AConnectorClient.MQTT_VERSION_3_1_1.equals(version)) {
-                    connectorClient = new MQTT3Client(this, connectorRegistry, connectorConfiguration,
-                            null,
-                            additionalSubscriptionIdTest, tenant);
-                } else {
-                    connectorClient = new MQTT5Client(this, connectorRegistry, connectorConfiguration,
-                            null,
-                            additionalSubscriptionIdTest, tenant);
-                }
-                log.info("{} - MQTT Connector {} created, identifier: {}", tenant, version,
-                        connectorConfiguration.getIdentifier());
-                break;
-
-            case CUMULOCITY_MQTT_SERVICE:
-                connectorClient = new MQTTServiceClient(this, connectorRegistry, connectorConfiguration,
-                        null,
-                        additionalSubscriptionIdTest, tenant);
-                log.info("{} - MQTTService Connector created, identifier: {}", tenant,
-                        connectorConfiguration.getIdentifier());
-                break;
-
-            case KAFKA:
-                connectorClient = new KafkaClientV2(this, connectorRegistry, connectorConfiguration,
-                        null,
-                        additionalSubscriptionIdTest, tenant);
-                log.info("{} - Kafka Connector V2 created, identifier: {}", tenant,
-                        connectorConfiguration.getIdentifier());
-                break;
-
-            case HTTP:
-                connectorClient = new HttpClient(this, connectorRegistry, connectorConfiguration,
-                        null,
-                        additionalSubscriptionIdTest, tenant);
-                log.info("{} - HTTP Connector created, identifier: {}", tenant,
-                        connectorConfiguration.getIdentifier());
-                break;
-
-            case WEB_HOOK:
-                connectorClient = new WebHook(this, connectorRegistry, connectorConfiguration,
-                        null,
-                        additionalSubscriptionIdTest, tenant);
-                log.info("{} - WebHook Connector created, identifier: {}", tenant,
-                        connectorConfiguration.getIdentifier());
-                break;
-
-            case WEB_HOOK_INTERNAL:
-                connectorClient = new WebHookInternal(this, connectorRegistry, connectorConfiguration,
-                        null,
-                        additionalSubscriptionIdTest, tenant);
-                log.info("{} - WebHook Connector created, identifier: {}", tenant,
-                        connectorConfiguration.getIdentifier());
-                break;
-
-            case PULSAR:
-                connectorClient = new PulsarConnectorClient(this, connectorRegistry, connectorConfiguration,
-                        null,
-                        additionalSubscriptionIdTest, tenant);
-                log.info("{} - Pulsar Connector created, identifier: {}", tenant,
-                        connectorConfiguration.getIdentifier());
-                break;
-            case CUMULOCITY_MQTT_SERVICE_PULSAR:
-                if (isPulsarAvailable(tenant)) {
-                    connectorClient = new MQTTServicePulsarClient(this, connectorRegistry, connectorConfiguration,
-                            null, additionalSubscriptionIdTest, tenant);
-                    log.info("{} - MQTTService Pulsar Connector created, identifier: {}", tenant,
-                            connectorConfiguration.getIdentifier());
-                }
-                break;
-            case AMQP_091:
-                connectorClient = new AMQPClient(this, connectorRegistry, connectorConfiguration,
-                        null,
-                        additionalSubscriptionIdTest, tenant);
-                log.info("{} - AMQP Connector created, identifier: {}", tenant,
-                        connectorConfiguration.getIdentifier());
-                break;
-            case AMQP_10:
-                connectorClient = new AMQP10Client(this, connectorRegistry, connectorConfiguration,
-                        null,
-                        additionalSubscriptionIdTest, tenant);
-                log.info("{} - AMQP 1.0 Connector created, identifier: {}", tenant,
-                        connectorConfiguration.getIdentifier());
-                break;
-            case TEST:
-                connectorClient = new TestClient(this, connectorRegistry, connectorConfiguration,
-                        null,
-                        additionalSubscriptionIdTest, tenant);
-                log.info("{} - TestClient Connector created, identifier: {}", tenant,
-                        connectorConfiguration.getIdentifier());
-                break;
-            default:
-                log.warn("{} - Unknown connector type: {}", tenant, connectorConfiguration.getConnectorType());
-                break;
-        }
-
-        return connectorClient;
     }
 
     public void initializeResources(String tenant) {
@@ -296,27 +180,27 @@ public class ConfigurationRegistry implements IMapperConfiguration {
     }
 
     public void createGraalsResources(String tenant, ServiceConfiguration serviceConfiguration) {
-        tenantRegistry.createGraalsResources(tenant, serviceConfiguration);
+        graalVMContextService.createGraalsResources(tenant, serviceConfiguration);
     }
 
     public Engine getGraalEngine(String tenant) {
-        return tenantRegistry.getGraalEngine(tenant);
+        return graalVMContextService.getGraalEngine(tenant);
     }
 
     public void updateGraalsSourceShared(String tenant, String code) {
-        tenantRegistry.updateGraalsSourceShared(tenant, code);
+        graalVMContextService.updateGraalsSourceShared(tenant, code);
     }
 
     public Source getGraalsSourceShared(String tenant) {
-        return tenantRegistry.getGraalsSourceShared(tenant);
+        return graalVMContextService.getGraalsSourceShared(tenant);
     }
 
     public void updateGraalsSourceSystem(String tenant, String code) {
-        tenantRegistry.updateGraalsSourceSystem(tenant, code);
+        graalVMContextService.updateGraalsSourceSystem(tenant, code);
     }
 
     public Source getGraalsSourceSystem(String tenant) {
-        return tenantRegistry.getGraalsSourceSystem(tenant);
+        return graalVMContextService.getGraalsSourceSystem(tenant);
     }
 
     /**
@@ -329,11 +213,11 @@ public class ConfigurationRegistry implements IMapperConfiguration {
      *                    decoded+adapted JS code
      */
     public void warmupMappingCodes(String tenant, Map<String, String> sourceCodes) {
-        tenantRegistry.warmupMappingCodes(tenant, sourceCodes);
+        graalVMContextService.warmupMappingCodes(tenant, sourceCodes);
     }
 
     public void removeGraalsResources(String tenant) {
-        tenantRegistry.removeGraalsResources(tenant);
+        graalVMContextService.removeGraalsResources(tenant);
     }
 
     public ServiceConfiguration getServiceConfiguration(String tenant) {
@@ -395,7 +279,7 @@ public class ConfigurationRegistry implements IMapperConfiguration {
     }
 
     public HostAccess getHostAccess() {
-        return tenantRegistry.getHostAccess();
+        return graalVMContextService.getHostAccess();
     }
 
     public void addOrUpdateClientRelation(String tenant, String clientId, String deviceId) {

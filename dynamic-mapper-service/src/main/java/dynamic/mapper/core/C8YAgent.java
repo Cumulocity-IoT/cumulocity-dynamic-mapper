@@ -987,37 +987,16 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     }
 
     public List<ManagedObjectRepresentation> getManagedObjectsByType(String tenant, String type, Boolean testing) {
-        return subscriptionsService.callForTenant(tenant, () -> {
-            try {
-                com.cumulocity.sdk.client.inventory.InventoryFilter filter =
-                        new com.cumulocity.sdk.client.inventory.InventoryFilter().byType(type);
-                List<ManagedObjectRepresentation> result = new java.util.ArrayList<>();
-                for (ManagedObjectRepresentation mor : inventoryApi.getManagedObjectsByFilter(filter, testing).get().allPages()) {
-                    result.add(mor);
-                }
-                return result;
-            } catch (SDKException e) {
-                log.warn("{} - Error querying devices of type {}: {}", tenant, type, e.getMessage());
-                return java.util.Collections.emptyList();
-            }
-        });
+        return deviceBootstrapService.getManagedObjectsByType(tenant, type, testing);
     }
 
     public ManagedObjectRepresentation getManagedObjectForId(String tenant, String deviceId, Boolean testing) {
-        return getManagedObjectForId(tenant, deviceId, testing, false);
+        return deviceBootstrapService.getManagedObjectForId(tenant, deviceId, testing);
     }
 
+    @Override
     public ManagedObjectRepresentation getManagedObjectForId(String tenant, String deviceId, Boolean testing, boolean withParents) {
-        ManagedObjectRepresentation device = subscriptionsService.callForTenant(tenant, () -> {
-            try {
-                return inventoryApi.get(GId.asGId(deviceId), testing, withParents);
-            } catch (SDKException exception) {
-                log.warn("{} - Device with id {} not found!", tenant, deviceId);
-            }
-            return null;
-        });
-
-        return device;
+        return deviceBootstrapService.getManagedObjectForId(tenant, deviceId, testing, withParents);
     }
 
     public void updateOperationStatus(String tenant, OperationRepresentation op, OperationStatus status,

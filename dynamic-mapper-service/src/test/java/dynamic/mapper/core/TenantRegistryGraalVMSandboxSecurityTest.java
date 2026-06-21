@@ -48,26 +48,26 @@ import org.junit.jupiter.api.Timeout;
  *       affect subsequent contexts.</li>
  * </ul>
  *
- * <p>The test uses {@link TenantRegistry#getHostAccess()} directly so
+ * <p>The test uses {@link GraalVMContextService#getHostAccess()} directly so
  * assertions stay aligned with production configuration.</p>
  */
 class TenantRegistryGraalVMSandboxSecurityTest {
 
     private Engine engine;
     private Context context;
-    private TenantRegistry tenantRegistry;
+    private GraalVMContextService graalVMContextService;
 
     private Context newContext() {
         return Context.newBuilder("js")
                 .engine(engine)
-                .allowHostAccess(tenantRegistry.getHostAccess())
+                .allowHostAccess(graalVMContextService.getHostAccess())
                 // Do NOT call allowAllAccess(true) — mirrors production
                 .build();
     }
 
     @BeforeEach
     void setUp() {
-        tenantRegistry = new TenantRegistry();
+        graalVMContextService = new GraalVMContextService();
         engine = Engine.newBuilder()
                 .option("engine.WarnInterpreterOnly", "false")
                 .build();
