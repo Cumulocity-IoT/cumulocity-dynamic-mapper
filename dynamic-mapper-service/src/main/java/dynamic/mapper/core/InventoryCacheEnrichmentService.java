@@ -35,6 +35,7 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.core.cache.InventoryCache;
+import dynamic.mapper.notification.NotificationSubscriber;
 import dynamic.mapper.processor.inbound.deserializer.SparkPlugBDeserializer;
 import dynamic.mapper.processor.model.ExternalId;
 import lombok.extern.slf4j.Slf4j;
@@ -44,13 +45,18 @@ import lombok.extern.slf4j.Slf4j;
 public class InventoryCacheEnrichmentService {
 
     private final CacheManager cacheManager;
+    private final TenantRegistry tenantRegistry;
+    private final NotificationSubscriber notificationSubscriber;
 
-    public InventoryCacheEnrichmentService(CacheManager cacheManager) {
+    public InventoryCacheEnrichmentService(CacheManager cacheManager, TenantRegistry tenantRegistry,
+            NotificationSubscriber notificationSubscriber) {
         this.cacheManager = cacheManager;
+        this.tenantRegistry = tenantRegistry;
+        this.notificationSubscriber = notificationSubscriber;
     }
 
     public Map<String, Object> getMOFromInventoryCacheByExternalId(String tenant, ExternalId externalId,
-            Boolean testing, IdentityResolver identityResolver, ConfigurationRegistry configurationRegistry) {
+            Boolean testing, IdentityResolver identityResolver) {
         if (externalId == null || externalId.getExternalId() == null || externalId.getType() == null) {
             return null;
         }
@@ -58,19 +64,19 @@ public class InventoryCacheEnrichmentService {
         ExternalIDRepresentation sourceId = identityResolver.resolveExternalId2GlobalId(tenant, identity, testing);
         if (sourceId != null) {
             return getMOFromInventoryCache(tenant, sourceId.getManagedObject().getId().getValue(), testing,
-                    identityResolver, configurationRegistry);
+                    identityResolver);
         }
         return null;
     }
 
     public Map<String, Object> updateMOInInventoryCache(String tenant, String sourceId, Map<String, Object> updates,
-            Boolean testing, IdentityResolver identityResolver, ConfigurationRegistry configurationRegistry) {
+            Boolean testing, IdentityResolver identityResolver) {
         InventoryCache inventoryCache = cacheManager.getInventoryCache(tenant);
 
         final Map<String, Object> newMO = new HashMap<>();
         inventoryCache.putMO(sourceId, newMO);
 
-        ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
+        ServiceConfiguration serviceConfiguration = tenantRegistry.getServiceConfiguration(tenant);
         List<String> effectiveFragments = buildEffectiveFragmentList(serviceConfiguration);
         // Check if assetParents is requested in fragments to cache
         boolean withParents = effectiveFragments.stream()
@@ -90,7 +96,7 @@ public class InventoryCacheEnrichmentService {
     }
 
     public Map<String, Object> getMOFromInventoryCache(String tenant, String sourceId, Boolean testing,
-            IdentityResolver identityResolver, ConfigurationRegistry configurationRegistry) {
+            IdentityResolver identityResolver) {
         if (sourceId == null) {
             return null;
         }
@@ -106,9 +112,9 @@ public class InventoryCacheEnrichmentService {
         ManagedObjectRepresentation mor = new ManagedObjectRepresentation();
         mor.setId(new GId(sourceId));
 
-        configurationRegistry.getNotificationSubscriber().subscribeMOForInventoryCacheUpdates(tenant, mor);
+        notificationSubscriber.subscribeMOForInventoryCacheUpdates(tenant, mor);
 
-        ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
+        ServiceConfiguration serviceConfiguration = tenantRegistry.getServiceConfiguration(tenant);
         List<String> effectiveFragments = buildEffectiveFragmentList(serviceConfiguration);
         // Check if assetParents is requested in fragments to cache
         boolean withParents = effectiveFragments.stream()

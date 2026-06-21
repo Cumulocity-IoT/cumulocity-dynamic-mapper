@@ -121,7 +121,7 @@ class MappingInboundExecutionIntegrationTest {
         // Create processors
         jsonataProcessor = new JSONataInboundProcessor(mappingService);
         // configurationRegistry is not exercised by these tests (no inventory-filter mappings)
-        substitutionProcessor = new SubstitutionResultInboundProcessor(c8yAgent, mappingService, null);
+        substitutionProcessor = new SubstitutionResultInboundProcessor(c8yAgent, mappingService, null, null);
 
         // Setup common mocks
         when(serviceConfiguration.getLogPayload()).thenReturn(false);

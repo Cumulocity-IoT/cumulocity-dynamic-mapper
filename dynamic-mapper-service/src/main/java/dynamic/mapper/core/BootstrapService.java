@@ -283,11 +283,13 @@ public class BootstrapService {
         configurationRegistry.addMicroserviceCredentials(tenant, credentials);
         configurationRegistry.initializeResources(tenant);
         configurationRegistry.createGraalsResources(tenant, serviceConfiguration);
-        configurationRegistry.initializeMapperServiceRepresentation(tenant);
+        configurationRegistry.storeMapperServiceRepresentation(tenant,
+                c8YAgent.initializeMapperServiceRepresentation(tenant));
 
         // DO NOT REMOVE DeviceIsolationMQTTService feature
         if (serviceConfiguration.getDeviceIsolationMQTTServiceEnabled()) {
-            configurationRegistry.initializeDeviceToClientMapRepresentation(tenant);
+            configurationRegistry.storeDeviceToClientMapRepresentation(tenant,
+                        c8YAgent.initializeDeviceToClientMapRepresentation(tenant));
         }
 
         mappingService.createResources(tenant);

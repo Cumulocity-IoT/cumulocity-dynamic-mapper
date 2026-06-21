@@ -29,6 +29,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import dynamic.mapper.core.IdentityResolutionService;
 import org.apache.camel.Exchange;
 import org.apache.camel.Message;
 import org.junit.jupiter.api.BeforeEach;
@@ -85,7 +86,10 @@ class SubstitutionResultInboundProcessorTest {
     private C8YAgent c8yAgent;
 
         @Mock
-        private ConfigurationRegistry configurationRegistry;
+    private ConfigurationRegistry configurationRegistry;
+
+    @Mock
+    private IdentityResolutionService identityResolutionService;
 
     @Mock
     private MappingResolverService mappingResolverService;
@@ -103,7 +107,7 @@ class SubstitutionResultInboundProcessorTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        processor = new SubstitutionResultInboundProcessor(c8yAgent, mappingService, configurationRegistry);
+        processor = new SubstitutionResultInboundProcessor(c8yAgent, mappingService, configurationRegistry, identityResolutionService);
 
         mapping = createCompleteMapping();
         mappingStatus = new MappingStatus(

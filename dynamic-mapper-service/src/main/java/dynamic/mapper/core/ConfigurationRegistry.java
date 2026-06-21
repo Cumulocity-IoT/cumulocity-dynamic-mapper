@@ -30,6 +30,7 @@ import org.graalvm.polyglot.Engine;
 import org.graalvm.polyglot.HostAccess;
 import org.graalvm.polyglot.Source;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -68,11 +69,10 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
-public class ConfigurationRegistry {
+public class ConfigurationRegistry implements IMapperConfiguration {
 
-    @Autowired
     @Getter
-    private TenantRegistry tenantRegistry;
+    private final TenantRegistry tenantRegistry;
 
     @Getter
     private C8YAgent c8yAgent;
@@ -86,13 +86,12 @@ public class ConfigurationRegistry {
     String mqttServicePulsarUrl;
 
     @Autowired
-    public void setC8yAgent(C8YAgent c8yAgent) {
+    public void setC8yAgent(@Lazy C8YAgent c8yAgent) {
         this.c8yAgent = c8yAgent;
     }
 
-    @Autowired
     @Getter
-    private ConnectorRegistry connectorRegistry;
+    private final ConnectorRegistry connectorRegistry;
 
     @Getter
     private NotificationSubscriber notificationSubscriber;
@@ -137,7 +136,6 @@ public class ConfigurationRegistry {
 
     @Getter
     @Setter
-    @Autowired
     private ExecutorService virtualThreadPool;
 
     // @Lazy breaks the ConfigurationRegistry <-> camelContext circular dependency: the Camel
@@ -146,9 +144,18 @@ public class ConfigurationRegistry {
     // lets ConfigurationRegistry be constructed without forcing camelContext creation; the real
     // context is resolved on first use (when connector dispatchers are built at runtime). Without
     // this the cycle surfaces under lazy bean initialization (e.g. the test profile).
-    @Lazy
-    @Autowired
-    private CamelContext camelContext;
+    private final CamelContext camelContext;
+
+    public ConfigurationRegistry(
+            TenantRegistry tenantRegistry,
+            ConnectorRegistry connectorRegistry,
+            @Qualifier("virtualThreadPool") ExecutorService virtualThreadPool,
+            @Lazy CamelContext camelContext) {
+        this.tenantRegistry = tenantRegistry;
+        this.connectorRegistry = connectorRegistry;
+        this.virtualThreadPool = virtualThreadPool;
+        this.camelContext = camelContext;
+    }
 
     public boolean isPulsarAvailable(String tenant) {
         if (mqttServicePulsarUrl == null || mqttServicePulsarUrl.trim().isEmpty()) {
@@ -268,21 +275,19 @@ public class ConfigurationRegistry {
     public void initializeResources(String tenant) {
     }
 
-    public MapperServiceRepresentation initializeMapperServiceRepresentation(String tenant) {
-        ManagedObjectRepresentation mapperServiceMOR = c8yAgent
-                .initializeMapperServiceRepresentation(tenant);
+    public MapperServiceRepresentation storeMapperServiceRepresentation(String tenant,
+            ManagedObjectRepresentation mor) {
         MapperServiceRepresentation mapperServiceRepresentation = objectMapper
-                .convertValue(mapperServiceMOR, MapperServiceRepresentation.class);
+                .convertValue(mor, MapperServiceRepresentation.class);
         addMapperServiceRepresentation(tenant, mapperServiceRepresentation);
         return mapperServiceRepresentation;
     }
 
-    public DeviceToClientMapRepresentation initializeDeviceToClientMapRepresentation(String tenant) {
-        ManagedObjectRepresentation mapperServiceMOR = c8yAgent
-                .initializeDeviceToClientMapRepresentation(tenant);
+    public DeviceToClientMapRepresentation storeDeviceToClientMapRepresentation(String tenant,
+            ManagedObjectRepresentation mor) {
         DeviceToClientMapRepresentation deviceToClientMapRepresentation = objectMapper
-                .convertValue(mapperServiceMOR, DeviceToClientMapRepresentation.class);
-        addDeviceToClientMapRepresentation(tenant, deviceToClientMapRepresentation);
+                .convertValue(mor, DeviceToClientMapRepresentation.class);
+        tenantRegistry.initializeDeviceToClientMap(tenant, deviceToClientMapRepresentation);
         return deviceToClientMapRepresentation;
     }
 
@@ -354,11 +359,6 @@ public class ConfigurationRegistry {
 
     public void removeMapperServiceRepresentation(String tenant) {
         tenantRegistry.removeMapperServiceRepresentation(tenant);
-    }
-
-    private void addDeviceToClientMapRepresentation(String tenant,
-            DeviceToClientMapRepresentation deviceToClientMapRepresentation) {
-        tenantRegistry.initializeDeviceToClientMap(tenant, deviceToClientMapRepresentation);
     }
 
     public String getDeviceToClientMapId(String tenant) {
@@ -440,80 +440,6 @@ public class ConfigurationRegistry {
 
     public boolean hasClientRelation(String tenant, String deviceId) {
         return tenantRegistry.hasClientRelation(tenant, deviceId);
-    }
-
-    /**
-     * Thread-safe method to create or retrieve an implicit device.
-     * Prevents race conditions when multiple threads try to create the same device simultaneously.
-     * Uses double-check locking pattern with per-external-ID locks.
-     *
-     * @param tenant               the tenant identifier
-     * @param externalIdType       the external ID type
-     * @param externalIdValue      the external ID value
-     * @param identity             the ID object for C8Y API calls
-     * @param context              the processing context
-     * @return the C8Y internal device ID, or null if creation failed and device doesn't exist
-     * @throws Exception if an error occurs during device creation or lookup
-     */
-    public String getOrCreateDeviceThreadSafe(String tenant, String externalIdType, String externalIdValue,
-            com.cumulocity.model.ID identity, dynamic.mapper.processor.model.ProcessingContext<?> context) throws Exception {
-        String cacheKey = tenant + "|" + externalIdType + "|" + externalIdValue;
-
-        // First check: quick cache hit
-        String cached = tenantRegistry.getCachedExternalId(cacheKey);
-        if (cached != null) {
-            log.debug("{} - Device cache hit for {}: {}", tenant, cacheKey, cached);
-            return cached;
-        }
-
-        // Get or create lock for this specific externalId (per-ID locking, not global)
-        Object lock = tenantRegistry.getOrCreateExternalIdLock(cacheKey);
-
-        synchronized (lock) {
-            // Double-check after acquiring lock: another thread may have created it
-            cached = tenantRegistry.getCachedExternalId(cacheKey);
-            if (cached != null) {
-                log.debug("{} - Device found in cache after lock acquired for {}: {}", tenant, cacheKey, cached);
-                return cached;
-            }
-
-            // Check if device already exists in C8Y
-            com.cumulocity.rest.representation.identity.ExternalIDRepresentation resolved =
-                    c8yAgent.resolveExternalId2GlobalId(tenant, identity, context.getTesting());
-            if (resolved != null) {
-                String internalId = resolved.getManagedObject().getId().getValue();
-                // Only cache the resolved ID in production — during dry-run tests
-                // resolveExternalId2GlobalId routes to MockIdentity and returns a
-                // synthetic ID (e.g. "10000") that must never enter the production cache.
-                if (!Boolean.TRUE.equals(context.getTesting())) {
-                    tenantRegistry.cacheExternalId(cacheKey, internalId);
-                }
-                log.debug("{} - Device exists in C8Y for {}: {}", tenant, cacheKey, internalId);
-                return internalId;
-            }
-
-            // Device doesn't exist, check if we should create it
-            if (!Boolean.TRUE.equals(context.getMapping().getCreateNonExistingDevice())) {
-                log.debug("{} - Device creation disabled for {}, returning null", tenant, cacheKey);
-                return null;
-            }
-
-            // Create new device
-            log.info("{} - Creating new implicit device for {}/{}", tenant, externalIdType, externalIdValue);
-            String newId = dynamic.mapper.processor.util.ProcessingResultHelper.createImplicitDevice(
-                    identity, context, log, c8yAgent, objectMapper);
-
-            if (newId != null) {
-                if (!Boolean.TRUE.equals(context.getTesting())) {
-                    tenantRegistry.cacheExternalId(cacheKey, newId);
-                }
-                log.info("{} - Successfully created implicit device for {}: {}", tenant, cacheKey, newId);
-            } else {
-                log.error("{} - Failed to create implicit device for {}", tenant, cacheKey);
-            }
-
-            return newId;
-        }
     }
 
     /**

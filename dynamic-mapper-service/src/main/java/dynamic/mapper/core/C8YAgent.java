@@ -37,10 +37,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import com.cumulocity.rest.representation.user.UserRepresentation;
 import com.cumulocity.sdk.client.user.UserApi;
 import org.joda.time.DateTime;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -75,6 +73,7 @@ import com.cumulocity.sdk.client.event.EventApi;
 import com.cumulocity.sdk.client.measurement.MeasurementApi;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import c8y.IsDevice;
@@ -111,84 +110,88 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
 
     ConnectorStatus previousConnectorStatus = ConnectorStatus.UNKNOWN;
 
-    @Autowired
-    private EventApi eventApi;
-
-    @Autowired
-    private InventoryFacade inventoryApi;
-
-    @Autowired
-    private IdentityFacade identityApi;
-
-    @Autowired
-    private MeasurementApi measurementApi;
-
-    @Autowired
-    private AlarmApi alarmApi;
-
-    @Autowired
-    private UserApi userApi;
-
-    @Autowired
-    private DeviceControlApi deviceControlApi;
-
-    @Autowired
-    private ProcessingModeService processingModeService;
-
-    @Autowired
-    private MicroserviceSubscriptionsService subscriptionsService;
-
-    @Autowired
-    private ContextService<MicroserviceCredentials> contextService;
+    private final EventApi eventApi;
+    private final InventoryFacade inventoryApi;
+    private final IdentityFacade identityApi;
+    private final MeasurementApi measurementApi;
+    private final AlarmApi alarmApi;
+    private final UserApi userApi;
+    private final DeviceControlApi deviceControlApi;
+    private final ProcessingModeService processingModeService;
+    private final MicroserviceSubscriptionsService subscriptionsService;
+    private final ContextService<MicroserviceCredentials> contextService;
+    private final IMapperConfiguration mapperConfiguration;
 
     @Getter
-    private ConfigurationRegistry configurationRegistry;
+    private final ExtensionInboundRegistry extensionInboundRegistry;
 
-    @Getter
-    @Autowired
-    private ExtensionInboundRegistry extensionInboundRegistry;
+    final CumulocityClientProperties clientProperties;
+    private final ObjectMapper objectMapper;
+    private final TenantRegistry tenantRegistry;
+    private final ExtensionManager extensionManager;
+    private final CacheManager cacheManager;
+    private final CertificateService certificateService;
+    private final BinaryAttachmentService binaryAttachmentService;
+    private final DeviceBootstrapService deviceBootstrapService;
+    private final InventoryCacheEnrichmentService inventoryCacheEnrichmentService;
 
-    @Autowired
-    CumulocityClientProperties clientProperties;
-
-    private Semaphore c8ySemaphore;
-
-    @Autowired
-    private ExtensionManager extensionManager;
-
-    @Autowired
-    private CacheManager cacheManager;
-
-    @Autowired
-    private CertificateService certificateService;
-
-    @Autowired
-    private BinaryAttachmentService binaryAttachmentService;
-
-    @Autowired
-    private DeviceBootstrapService deviceBootstrapService;
-
-    @Autowired
-    private InventoryCacheEnrichmentService inventoryCacheEnrichmentService;
-
-    @Autowired
-    public void setConfigurationRegistry(@Lazy ConfigurationRegistry configurationRegistry) {
-        this.configurationRegistry = configurationRegistry;
-    }
+    private final String version;
+    private final Integer maxConnections;
+    private final Semaphore c8ySemaphore;
 
     private static final String C8Y_NOTIFICATION_CONNECTOR = "C8YNotificationConnector";
 
     public static final String MEASUREMENT_COLLECTION_PATH = "/measurement/measurements";
 
-    @Value("${application.version}")
-    private String version;
-
-    private Integer maxConnections = 100;
-
     private Timer c8yRequestTimer = Timer.builder("dynmapper_c8y_request_processing_time")
             .description("C8Y Request Processing time").register(Metrics.globalRegistry);
 
-    public C8YAgent(@Value("#{new Integer('${C8Y.httpClient.pool.perHost}')}") Integer maxConnections) {
+    public C8YAgent(
+            EventApi eventApi,
+            InventoryFacade inventoryApi,
+            IdentityFacade identityApi,
+            MeasurementApi measurementApi,
+            AlarmApi alarmApi,
+            UserApi userApi,
+            DeviceControlApi deviceControlApi,
+            ProcessingModeService processingModeService,
+            MicroserviceSubscriptionsService subscriptionsService,
+            ContextService<MicroserviceCredentials> contextService,
+            IMapperConfiguration mapperConfiguration,
+            ExtensionInboundRegistry extensionInboundRegistry,
+            CumulocityClientProperties clientProperties,
+            ObjectMapper objectMapper,
+            TenantRegistry tenantRegistry,
+            ExtensionManager extensionManager,
+            CacheManager cacheManager,
+            CertificateService certificateService,
+            BinaryAttachmentService binaryAttachmentService,
+            DeviceBootstrapService deviceBootstrapService,
+            InventoryCacheEnrichmentService inventoryCacheEnrichmentService,
+            @Value("${application.version}") String version,
+            @Value("#{new Integer('${C8Y.httpClient.pool.perHost}')}") Integer maxConnections) {
+        this.eventApi = eventApi;
+        this.inventoryApi = inventoryApi;
+        this.identityApi = identityApi;
+        this.measurementApi = measurementApi;
+        this.alarmApi = alarmApi;
+        this.userApi = userApi;
+        this.deviceControlApi = deviceControlApi;
+        this.processingModeService = processingModeService;
+        this.subscriptionsService = subscriptionsService;
+        this.contextService = contextService;
+        this.mapperConfiguration = mapperConfiguration;
+        this.extensionInboundRegistry = extensionInboundRegistry;
+        this.clientProperties = clientProperties;
+        this.objectMapper = objectMapper;
+        this.tenantRegistry = tenantRegistry;
+        this.extensionManager = extensionManager;
+        this.cacheManager = cacheManager;
+        this.certificateService = certificateService;
+        this.binaryAttachmentService = binaryAttachmentService;
+        this.deviceBootstrapService = deviceBootstrapService;
+        this.inventoryCacheEnrichmentService = inventoryCacheEnrichmentService;
+        this.version = version;
         this.maxConnections = maxConnections;
         this.c8ySemaphore = new Semaphore(maxConnections, false);
     }
@@ -316,7 +319,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
 
     public void createOperationEvent(String message, LoggingEventType loggingType, DateTime eventTime,
             String tenant, Map<String, String> properties) {
-        MapperServiceRepresentation source = configurationRegistry.getMapperServiceRepresentation(tenant);
+        MapperServiceRepresentation source = mapperConfiguration.getMapperServiceRepresentation(tenant);
         subscriptionsService.runForTenant(tenant, () -> {
             MicroserviceCredentials context = removeAppKeyHeaderFromContext(contextService.getContext());
             contextService.runWithinContext(context, () -> {
@@ -396,7 +399,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                     AbstractExtensibleRepresentation rt = null;
                     try {
                         if (targetAPI.equals(API.EVENT)) {
-                            EventRepresentation eventRepresentation = configurationRegistry.getObjectMapper().readValue(
+                            EventRepresentation eventRepresentation = objectMapper.readValue(
                                     payload,
                                     EventRepresentation.class);
                             // Set processing mode for events
@@ -419,7 +422,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                             log.info("{} - SEND: event posted with Id {}", tenant,
                                     ((EventRepresentation) rt).getId().getValue());
                         } else if (targetAPI.equals(API.ALARM)) {
-                            AlarmRepresentation alarmRepresentation = configurationRegistry.getObjectMapper().readValue(
+                            AlarmRepresentation alarmRepresentation = objectMapper.readValue(
                                     payload,
                                     AlarmRepresentation.class);
                             // Set processing mode for alarms
@@ -445,11 +448,11 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                             // Auto-detect payload format: { "measurements": [...] } = collection; anything else = single.
                             // Always POST via createBulk — single measurements are wrapped in a one-element collection.
                             MeasurementCollectionRepresentation collectionRepresentation;
-                            if (configurationRegistry.getObjectMapper().readTree(payload).has("measurements")) {
-                                collectionRepresentation = configurationRegistry.getObjectMapper()
+                            if (objectMapper.readTree(payload).has("measurements")) {
+                                collectionRepresentation = objectMapper
                                         .readValue(payload, MeasurementCollectionRepresentation.class);
                             } else {
-                                MeasurementRepresentation mr = configurationRegistry.getObjectMapper()
+                                MeasurementRepresentation mr = objectMapper
                                         .readValue(payload, MeasurementRepresentation.class);
                                 collectionRepresentation = new MeasurementCollectionRepresentation();
                                 collectionRepresentation.setMeasurements(List.of(mr));
@@ -469,7 +472,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                                     ? collectionRepresentation.getMeasurements().size() : 0;
                             log.info("{} - SEND: measurement(s) posted: {} measurement(s)", tenant, count);
                         } else if (targetAPI.equals(API.OPERATION)) {
-                            OperationRepresentation operationRepresentation = configurationRegistry.getObjectMapper()
+                            OperationRepresentation operationRepresentation = objectMapper
                                     .readValue(
                                             payload, OperationRepresentation.class);
                             rt = deviceControlApi.create(operationRepresentation);
@@ -529,7 +532,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         AtomicReference<ProcessingException> pe = new AtomicReference<>();
         DynamicMapperRequest currentRequest = context.getRequests().get(requestIndex);
         String payload = currentRequest.getRequest();
-        ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
+        ServiceConfiguration serviceConfiguration = tenantRegistry.getServiceConfiguration(tenant);
         // API is now always initialized when creating DynamicMapperRequest
         API targetAPI = currentRequest.getApi();
         AbstractExtensibleRepresentation result = subscriptionsService.callForTenant(tenant, () -> {
@@ -538,7 +541,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                 AbstractExtensibleRepresentation rt = null;
                 try {
                     if (targetAPI.equals(API.EVENT)) {
-                        EventRepresentation eventRepresentation = configurationRegistry.getObjectMapper().readValue(
+                        EventRepresentation eventRepresentation = objectMapper.readValue(
                                 payload,
                                 EventRepresentation.class);
                         try {
@@ -577,7 +580,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                                     ((EventRepresentation) rt).getId().getValue());
 
                     } else if (targetAPI.equals(API.ALARM)) {
-                        AlarmRepresentation alarmRepresentation = configurationRegistry.getObjectMapper().readValue(
+                        AlarmRepresentation alarmRepresentation = objectMapper.readValue(
                                 payload,
                                 AlarmRepresentation.class);
                         try {
@@ -613,11 +616,11 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                         // Auto-detect payload format: { "measurements": [...] } = collection; anything else = single.
                         // Always POST via createBulk — single measurements are wrapped in a one-element collection.
                         MeasurementCollectionRepresentation collectionRepresentation;
-                        if (configurationRegistry.getObjectMapper().readTree(payload).has("measurements")) {
-                            collectionRepresentation = configurationRegistry.getObjectMapper()
+                        if (objectMapper.readTree(payload).has("measurements")) {
+                            collectionRepresentation = objectMapper
                                     .readValue(payload, MeasurementCollectionRepresentation.class);
                         } else {
-                            MeasurementRepresentation mr = configurationRegistry.getObjectMapper()
+                            MeasurementRepresentation mr = objectMapper
                                     .readValue(payload, MeasurementRepresentation.class);
                             collectionRepresentation = new MeasurementCollectionRepresentation();
                             collectionRepresentation.setMeasurements(List.of(mr));
@@ -648,11 +651,11 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                             log.info("{} - SEND: measurement(s) posted: {} measurement(s)", tenant, count);
                     } else if (targetAPI.equals(API.OPERATION)) {
                         // C8Y DeviceControl API rejects 'status' on create (HTTP 422 "status is not allowed here")
-                        JsonNode opNode = configurationRegistry.getObjectMapper().readTree(payload);
+                        JsonNode opNode = objectMapper.readTree(payload);
                         if (opNode.isObject()) {
                             ((ObjectNode) opNode).remove("status");
                         }
-                        OperationRepresentation operationRepresentation = configurationRegistry.getObjectMapper()
+                        OperationRepresentation operationRepresentation = objectMapper
                                 .treeToValue(opNode, OperationRepresentation.class);
                         try {
                             c8ySemaphore.acquire();
@@ -786,7 +789,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         }
 
         boolean supportsExternalIdBinding = Boolean.TRUE.equals(
-                configurationRegistry.getServiceConfiguration(tenant).getExternalIdBinding());
+                tenantRegistry.getServiceConfiguration(tenant).getExternalIdBinding());
         return subscriptionsService.callForTenant(tenant, () -> {
             MicroserviceCredentials contextCredentials = removeAppKeyHeaderFromContext(contextService.getContext());
             return contextService.callWithinContext(contextCredentials, () -> {
@@ -816,7 +819,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         // StringBuffer error = new StringBuffer("");
         DynamicMapperRequest currentRequest = context.getRequests().get(requestIndex);
         Boolean testing = context.getTesting();
-        ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
+        ServiceConfiguration serviceConfiguration = tenantRegistry.getServiceConfiguration(tenant);
         AtomicReference<ProcessingException> pe = new AtomicReference<>();
         // API is now always initialized when creating DynamicMapperRequest
         API targetAPI = currentRequest.getApi();
@@ -824,7 +827,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         ManagedObjectRepresentation device = subscriptionsService.callForTenant(tenant, () -> {
             MicroserviceCredentials contextCredentials = removeAppKeyHeaderFromContext(contextService.getContext());
             return contextService.callWithinContext(contextCredentials, () -> {
-                ManagedObjectRepresentation mor = configurationRegistry.getObjectMapper().readValue(
+                ManagedObjectRepresentation mor = objectMapper.readValue(
                         currentRequest.getRequest(),
                         ManagedObjectRepresentation.class);
                 try {
@@ -1045,7 +1048,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     }
 
     public void sendNotificationLifecycle(String tenant, ConnectorStatus connectorStatus, String message) {
-        if (configurationRegistry.getServiceConfiguration(tenant).getSendNotificationLifecycle()
+        if (tenantRegistry.getServiceConfiguration(tenant).getSendNotificationLifecycle()
                 && !(connectorStatus.equals(previousConnectorStatus))) {
             previousConnectorStatus = connectorStatus;
             DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -1079,7 +1082,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     }
 
     public void initializeInventoryCache(String tenant, int size) {
-        cacheManager.initializeInventoryCache(tenant, size, configurationRegistry);
+        cacheManager.initializeInventoryCache(tenant, size);
     }
 
     public InboundExternalIdCache removeInboundExternalIdCache(String tenant) {
@@ -1099,7 +1102,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     }
 
     public void clearInboundExternalIdCache(String tenant, boolean recreate, int inboundExternalIdCacheSize) {
-        cacheManager.clearInboundExternalIdCache(tenant, recreate, inboundExternalIdCacheSize, configurationRegistry);
+        cacheManager.clearInboundExternalIdCache(tenant, recreate, inboundExternalIdCacheSize);
     }
 
     public void removeDeviceFromInboundExternalIdCache(String tenant, ID identity) {
@@ -1111,7 +1114,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     }
 
     public void clearInventoryCache(String tenant, boolean recreate, int inventoryCacheSize) {
-        cacheManager.clearInventoryCache(tenant, recreate, inventoryCacheSize, configurationRegistry);
+        cacheManager.clearInventoryCache(tenant, recreate, inventoryCacheSize);
     }
 
     public int getSizeInventoryCache(String tenant) {
@@ -1121,20 +1124,17 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     public Map<String, Object> getMOFromInventoryCacheByExternalId(String tenant, ExternalId externalId,
             Boolean testing) {
 
-        return inventoryCacheEnrichmentService.getMOFromInventoryCacheByExternalId(tenant, externalId, testing, this,
-                configurationRegistry);
+        return inventoryCacheEnrichmentService.getMOFromInventoryCacheByExternalId(tenant, externalId, testing, this);
     }
 
     public Map<String, Object> updateMOInInventoryCache(String tenant, String sourceId, Map<String, Object> updates,
             Boolean testing) {
-        return inventoryCacheEnrichmentService.updateMOInInventoryCache(tenant, sourceId, updates, testing, this,
-                configurationRegistry);
+        return inventoryCacheEnrichmentService.updateMOInInventoryCache(tenant, sourceId, updates, testing, this);
     }
 
     public Map<String, Object> getMOFromInventoryCache(String tenant, String sourceId, Boolean testing) {
 
-        return inventoryCacheEnrichmentService.getMOFromInventoryCache(tenant, sourceId, testing, this,
-                configurationRegistry);
+        return inventoryCacheEnrichmentService.getMOFromInventoryCache(tenant, sourceId, testing, this);
     }
 
     /**

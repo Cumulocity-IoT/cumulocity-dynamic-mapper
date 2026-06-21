@@ -28,7 +28,7 @@ import dynamic.mapper.processor.model.RoutingContext;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
 import dynamic.mapper.processor.util.APITopicUtil;
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.IdentityResolutionService;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,17 +38,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
 
     private final C8YAgent c8yAgent;
-    private final ConfigurationRegistry configurationRegistry;
+    private final IdentityResolutionService identityResolutionService;
 
     @Autowired
     public FlowResultInboundProcessor(
             MappingService mappingService,
             C8YAgent c8yAgent,
-            ConfigurationRegistry configurationRegistry,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            IdentityResolutionService identityResolutionService) {
         super(mappingService, objectMapper);
         this.c8yAgent = c8yAgent;
-        this.configurationRegistry = configurationRegistry;
+        this.identityResolutionService = identityResolutionService;
     }
 
     /**
@@ -275,7 +275,7 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
                         ID identity = new ID(externalId.getType(),
                                 externalId.getExternalId());
                         // Use thread-safe method to prevent race condition
-                        String sourceId = configurationRegistry.getOrCreateDeviceThreadSafe(
+                        String sourceId = identityResolutionService.getOrCreateDeviceThreadSafe(
                                 tenant, externalId.getType(), externalId.getExternalId(), identity, context);
                         if (sourceId != null) {
                             context.setSourceId(sourceId);

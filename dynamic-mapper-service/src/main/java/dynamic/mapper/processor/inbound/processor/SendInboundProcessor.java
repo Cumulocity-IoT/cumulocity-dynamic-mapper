@@ -22,6 +22,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.IdentityResolutionService;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
@@ -43,6 +44,9 @@ public class SendInboundProcessor extends BaseProcessor {
 
     @Autowired
     private ConfigurationRegistry configurationRegistry;
+
+    @Autowired
+    private IdentityResolutionService identityResolutionService;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -445,7 +449,7 @@ public class SendInboundProcessor extends BaseProcessor {
                     log.info("{} - storeSparkPlugBBirthMessage: NODE MO for {}/{} does not exist, "
                             + "auto-creating (createNonExistingDevice=true)", tenant, externalIdType, externalIdValue);
                     try {
-                        resolvedId = configurationRegistry.getOrCreateDeviceThreadSafe(
+                        resolvedId = identityResolutionService.getOrCreateDeviceThreadSafe(
                                 tenant, externalIdType, externalIdValue, identity, context);
                         if (resolvedId == null) {
                             log.error("{} - storeSparkPlugBBirthMessage: Failed to auto-create NODE device for {}/{}",

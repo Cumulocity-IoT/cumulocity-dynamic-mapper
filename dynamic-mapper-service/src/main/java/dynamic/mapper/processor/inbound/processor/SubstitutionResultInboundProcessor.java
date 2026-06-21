@@ -36,6 +36,7 @@ import com.jayway.jsonpath.JsonPath;
 
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.IdentityResolutionService;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
@@ -61,12 +62,14 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
     private final MappingService mappingService;
 
     private final ConfigurationRegistry configurationRegistry;
+    private final IdentityResolutionService identityResolutionService;
 
     public SubstitutionResultInboundProcessor(C8YAgent c8yAgent, MappingService mappingService,
-            ConfigurationRegistry configurationRegistry) {
+            ConfigurationRegistry configurationRegistry, IdentityResolutionService identityResolutionService) {
         this.c8yAgent = c8yAgent;
         this.mappingService = mappingService;
         this.configurationRegistry = configurationRegistry;
+        this.identityResolutionService = identityResolutionService;
     }
 
     @Override
@@ -190,7 +193,7 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
                 if (resolvedSourceId == null) {
                     if (mapping.getCreateNonExistingDevice()) {
                         try {
-                            String createdOrResolvedId = configurationRegistry.getOrCreateDeviceThreadSafe(
+                            String createdOrResolvedId = identityResolutionService.getOrCreateDeviceThreadSafe(
                                     tenant,
                                     identity.getType(),
                                     externalId,

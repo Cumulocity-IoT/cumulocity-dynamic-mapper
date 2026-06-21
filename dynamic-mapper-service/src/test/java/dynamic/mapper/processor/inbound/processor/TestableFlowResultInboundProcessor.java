@@ -26,7 +26,7 @@ import java.util.List;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.IdentityResolutionService;
 import dynamic.mapper.model.API;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.CumulocityObject;
@@ -61,9 +61,9 @@ public class TestableFlowResultInboundProcessor extends FlowResultInboundProcess
     public TestableFlowResultInboundProcessor(
             MappingService mappingService,
             C8YAgent c8yAgent,
-            ConfigurationRegistry configurationRegistry,
-            ObjectMapper objectMapper) {
-        super(mappingService, c8yAgent, configurationRegistry, objectMapper);
+            ObjectMapper objectMapper,
+            IdentityResolutionService identityResolutionService) {
+        super(mappingService, c8yAgent, objectMapper, identityResolutionService);
     }
 
     /**

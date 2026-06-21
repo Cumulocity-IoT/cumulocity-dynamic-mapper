@@ -24,6 +24,8 @@ package dynamic.mapper.core;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 import com.cumulocity.model.ID;
@@ -33,11 +35,19 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import dynamic.mapper.core.cache.InboundExternalIdCache;
 import dynamic.mapper.core.cache.InventoryCache;
 import dynamic.mapper.model.LoggingEventType;
+import dynamic.mapper.notification.NotificationSubscriber;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
 public class CacheManager {
+
+    @Autowired
+    @Lazy
+    private C8YAgent c8yAgent;
+
+    @Autowired
+    private NotificationSubscriber notificationSubscriber;
 
     private Map<String, InboundExternalIdCache> inboundExternalIdCaches = new ConcurrentHashMap<>();
     private Map<String, InventoryCache> inventoryCaches = new ConcurrentHashMap<>();
@@ -47,15 +57,14 @@ public class CacheManager {
         inboundExternalIdCaches.put(tenant, new InboundExternalIdCache(inboundExternalIdCacheSize, tenant));
     }
 
-    public void initializeInventoryCache(String tenant, int inventoryCacheSize, 
-            ConfigurationRegistry configurationRegistry) {
+    public void initializeInventoryCache(String tenant, int inventoryCacheSize) {
         log.info("{} - Initialize inventoryCache {}", tenant, inventoryCacheSize);
         InventoryCache inventoryCache = new InventoryCache(inventoryCacheSize, tenant);
         // Set up eviction listener
         inventoryCache.setEvictionListener(evictedSourceId -> {
             ManagedObjectRepresentation moRep = new ManagedObjectRepresentation();
             moRep.setId(new GId(evictedSourceId));
-            configurationRegistry.getNotificationSubscriber().unsubscribeMOForInventoryCacheUpdates(tenant, moRep);
+            notificationSubscriber.unsubscribeMOForInventoryCacheUpdates(tenant, moRep);
         });
         inventoryCaches.put(tenant, inventoryCache);
     }
@@ -91,8 +100,7 @@ public class CacheManager {
         return inventoryCaches.get(tenant);
     }
 
-    public void clearInboundExternalIdCache(String tenant, boolean recreate, int inboundExternalIdCacheSize,
-            ConfigurationRegistry configurationRegistry) {
+    public void clearInboundExternalIdCache(String tenant, boolean recreate, int inboundExternalIdCacheSize) {
         InboundExternalIdCache inboundExternalIdCache = inboundExternalIdCaches.get(tenant);
 
         if (inboundExternalIdCache != null) {
@@ -113,7 +121,7 @@ public class CacheManager {
             String message = String.format("InboundExternalIdCache %s (previous size: %d entries, new capacity: %d)",
                     action, previousSize, inboundExternalIdCacheSize);
 
-            configurationRegistry.getC8yAgent().createOperationEvent(
+            c8yAgent.createOperationEvent(
                     message,
                     LoggingEventType.CACHE_EVENT_TYPE,
                     org.joda.time.DateTime.now(),
@@ -141,8 +149,7 @@ public class CacheManager {
         }
     }
 
-    public void clearInventoryCache(String tenant, boolean recreate, int inventoryCacheSize,
-            ConfigurationRegistry configurationRegistry) {
+    public void clearInventoryCache(String tenant, boolean recreate, int inventoryCacheSize) {
         InventoryCache inventoryCache = inventoryCaches.get(tenant);
 
         if (inventoryCache != null) {
@@ -150,22 +157,22 @@ public class CacheManager {
             int previousSize = inventoryCache.getCacheSize();
 
             if (recreate) {
-                configurationRegistry.getNotificationSubscriber().unsubscribeAllMOForInventoryCacheUpdates(tenant);
+                notificationSubscriber.unsubscribeAllMOForInventoryCacheUpdates(tenant);
                 // Deregister the old gauge before the replacement registers a new
                 // one under the same name+tags (see clearInboundExternalIdCache).
                 inventoryCaches.remove(tenant);
                 inventoryCache.close();
                 // Recreate via the initializer so the eviction listener is reinstalled.
-                initializeInventoryCache(tenant, inventoryCacheSize, configurationRegistry);
+                initializeInventoryCache(tenant, inventoryCacheSize);
             } else {
-                configurationRegistry.getNotificationSubscriber().unsubscribeAllMOForInventoryCacheUpdates(tenant);
+                notificationSubscriber.unsubscribeAllMOForInventoryCacheUpdates(tenant);
                 inventoryCache.clearCache();
             }
 
             String message = String.format("InventoryCache %s (previous size: %d entries, new capacity: %d)",
                     action, previousSize, inventoryCacheSize);
 
-            configurationRegistry.getC8yAgent().createOperationEvent(
+            c8yAgent.createOperationEvent(
                     message,
                     LoggingEventType.CACHE_EVENT_TYPE,
                     org.joda.time.DateTime.now(),
