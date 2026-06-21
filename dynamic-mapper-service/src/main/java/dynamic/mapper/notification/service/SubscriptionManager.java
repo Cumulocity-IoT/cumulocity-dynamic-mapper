@@ -124,8 +124,10 @@ public class SubscriptionManager {
                     NotificationSubscriptionRepresentation nsr = createSubscriptionByMO(
                             tenant, mor, api, subscription);
 
-                    // Initialize connections if needed
-                    connectionManager.initializeConnectionsIfNeeded(tenant);
+                    // Reconnect existing static WebSocket clients so they immediately receive
+                    // notifications from the newly created device subscription without waiting
+                    // for the 60-second reconnect cycle.
+                    connectionManager.reconnectStaticDeviceClientsForNewSubscription(tenant);
 
                     // Activate push connectivity
                     mqttPushManager.activatePushConnectivityForDevice(tenant, mor);

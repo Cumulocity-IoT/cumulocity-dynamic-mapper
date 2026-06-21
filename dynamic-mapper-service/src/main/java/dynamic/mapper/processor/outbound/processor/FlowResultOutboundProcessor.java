@@ -260,6 +260,11 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             String internalSourceId = context.getSourceId();
             String brokerRoutingId = internalSourceId;
 
+            // Retrieve topic early: the external-ID REST call is only needed when the topic
+            // uses the _externalId_ token — skip it for all other messages to avoid unnecessary
+            // C8Y Identity Service calls and spurious WARN logs.
+            String publishTopic = deviceMessage.getTopic();
+
             if (deviceMessage.getSourceId() != null && !deviceMessage.getSourceId().isEmpty()) {
                 // Cross-device routing: the JS function explicitly set sourceId on the returned
                 // DeviceMessage to target a different device than the one that triggered the
@@ -274,9 +279,9 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
                 internalSourceId = deviceMessage.getSourceId();
                 brokerRoutingId = internalSourceId;
                 log.debug("{} - Using explicit sourceId from DeviceMessage: {}", tenant, internalSourceId);
-            } else {
-                // Derive the external ID (e.g. LoRa EUI) from the internal ID for broker-topic
-                // token replacement only. Falls back to internalSourceId if resolution fails.
+            } else if (publishTopic != null && publishTopic.contains(EXTERNAL_ID_TOKEN)) {
+                // Only resolve the external ID when the topic actually uses the _externalId_ token.
+                // Falls back to internalSourceId if resolution fails.
                 try {
                     brokerRoutingId = resolveGlobalId2ExternalId(deviceMessage, context, tenant);
                     log.debug("{} - Resolved external ID for broker routing: {}", tenant, brokerRoutingId);
@@ -315,8 +320,6 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             output.addRequest(request);
 
             // Override resolvedPublishTopic if DeviceMessage provides a topic
-            String publishTopic = deviceMessage.getTopic();
-
             if (publishTopic != null && !publishTopic.isEmpty()) {
                 // Handle EXTERNAL_ID_TOKEN replacement in the topic
                 if (publishTopic.contains(EXTERNAL_ID_TOKEN)) {

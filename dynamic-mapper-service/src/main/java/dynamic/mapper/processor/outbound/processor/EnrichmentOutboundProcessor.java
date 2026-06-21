@@ -187,9 +187,13 @@ public class EnrichmentOutboundProcessor extends AbstractEnrichmentProcessor {
                     context.getTesting());
             if (externalId == null) {
                 if (!context.getTesting()) {
-                    // Production: a missing external ID is a hard error — the broker topic cannot be resolved.
-                    throw new RuntimeException(String.format("External id %s for type %s not found!",
-                            sourceId.toString(), mapping.getExternalIdType()));
+                    // Device is not enrolled with this external ID type — the mapping does not apply
+                    // to this device. Skip without counting as an error: a missing external ID is a
+                    // device-enrollment issue, not a mapping configuration failure.
+                    log.debug("{} - Skipping mapping '{}': device {} has no external ID of type '{}'",
+                            tenant, mapping.getName(), sourceId, mapping.getExternalIdType());
+                    context.setIgnoreFurtherProcessing(true);
+                    return;
                 }
                 // Test mode: source is synthetic, so use sourceId as fallback to keep topic templates resolvable.
                 String fallbackExternalId = sourceId.toString();

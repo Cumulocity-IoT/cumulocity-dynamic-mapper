@@ -281,6 +281,44 @@ public class NotificationConnectionManager {
         }
     }
 
+    /**
+     * Reconnects existing static device WebSocket clients so they pick up pending
+     * notifications from a newly created device subscription without waiting for the
+     * 60-second {@link #reconnectAll()} cycle.  Calls {@code client.reconnect()} on
+     * each open client — the same lightweight path used by the scheduler — so C8Y
+     * delivers any queued messages (including the new subscription's events) as
+     * initial messages after the reconnect completes.
+     */
+    public void reconnectStaticDeviceClientsForNewSubscription(String tenant) {
+        if (tenant == null) {
+            return;
+        }
+        Map<String, CustomWebSocketClient> clients = staticDeviceClients.get(tenant);
+        if (clients == null || clients.isEmpty()) {
+            // No existing clients yet — initialize from scratch
+            try {
+                initializeStaticDeviceConnections(tenant);
+            } catch (URISyntaxException e) {
+                log.error("{} - Error initializing static device connections after subscription: {}", tenant,
+                        e.getMessage(), e);
+            }
+            return;
+        }
+        for (Map.Entry<String, CustomWebSocketClient> entry : clients.entrySet()) {
+            CustomWebSocketClient client = entry.getValue();
+            if (client != null && client.isOpen()) {
+                try {
+                    client.reconnect();
+                    log.info("{} - Triggered static device WebSocket reconnect for connector {} after new subscription",
+                            tenant, entry.getKey());
+                } catch (Exception e) {
+                    log.warn("{} - Error reconnecting static device client after subscription: {}", tenant,
+                            e.getMessage());
+                }
+            }
+        }
+    }
+
     public void reconnect(String tenant) {
         if (tenant == null) {
             log.warn("Cannot reconnect: tenant is null");
