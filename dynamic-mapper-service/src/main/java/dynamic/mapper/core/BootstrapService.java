@@ -26,7 +26,6 @@ import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
 import dynamic.mapper.configuration.*;
@@ -34,12 +33,10 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.model.TransformationType;
 import dynamic.mapper.processor.util.JavaScriptModuleStripper;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
@@ -85,22 +82,9 @@ public class BootstrapService {
     private final Map<String, Instant> cacheInventoryRetentionStartMap;
     private final ExtensionInboundRegistry extensionInboundRegistry;
 
-    @Qualifier("virtualThreadPool")
-    private ExecutorService virtualThreadPool;
-
-    @Autowired
-    public void setVirtualThreadPool(ExecutorService virtualThreadPool) {
-        this.virtualThreadPool = virtualThreadPool;
-    }
-
-    @Autowired
-    private AIAgentService aiAgentService;
-
-    @Autowired
-    private ExtensionManager extensionManager;
-
-    @Autowired
-    private dynamic.mapper.service.cache.FlowStateStore flowStateStore;
+    private final AIAgentService aiAgentService;
+    private final ExtensionManager extensionManager;
+    private final dynamic.mapper.service.cache.FlowStateStore flowStateStore;
 
     public BootstrapService(
             ConnectorRegistry connectorRegistry,
@@ -112,6 +96,9 @@ public class BootstrapService {
             ConnectorConfigurationService connectorConfigurationService,
             MicroserviceSubscriptionsService subscriptionsService,
             ExtensionInboundRegistry extensionInboundRegistry,
+            AIAgentService aiAgentService,
+            ExtensionManager extensionManager,
+            dynamic.mapper.service.cache.FlowStateStore flowStateStore,
             @Value("${APP.additionalSubscriptionIdTest:}") String additionalSubscriptionIdTest,
             @Value("#{new Integer('${APP.inboundExternalIdCacheSize}')}") Integer inboundExternalIdCacheSize,
             @Value("#{new Integer('${APP.inventoryCacheSize}')}") Integer inventoryCacheSize) {
@@ -125,6 +112,9 @@ public class BootstrapService {
         this.connectorConfigurationService = connectorConfigurationService;
         this.subscriptionsService = subscriptionsService;
         this.extensionInboundRegistry = extensionInboundRegistry;
+        this.aiAgentService = aiAgentService;
+        this.extensionManager = extensionManager;
+        this.flowStateStore = flowStateStore;
         this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
         this.inboundExternalIdCacheSize = inboundExternalIdCacheSize;
         this.inventoryCacheSize = inventoryCacheSize;
@@ -222,7 +212,7 @@ public class BootstrapService {
             }
 
             configurationRegistry.removeMapperServiceRepresentation(tenant);
-            configurationRegistry.removeGraalsResources(tenant);
+            configurationRegistry.getGraalVMContextService().removeGraalsResources(tenant);
             configurationRegistry.removeMicroserviceCredentials(tenant);
             log.debug("{} - Removed configuration registry resources", tenant);
         } catch (Exception e) {
@@ -285,7 +275,7 @@ public class BootstrapService {
 
         configurationRegistry.addMicroserviceCredentials(tenant, credentials);
         configurationRegistry.initializeResources(tenant);
-        configurationRegistry.createGraalsResources(tenant, serviceConfiguration);
+        configurationRegistry.getGraalVMContextService().createGraalsResources(tenant, serviceConfiguration);
         configurationRegistry.storeMapperServiceRepresentation(tenant,
                 c8YAgent.initializeMapperServiceRepresentation(tenant));
 
@@ -296,7 +286,7 @@ public class BootstrapService {
         }
 
         mappingService.createResources(tenant);
-        configurationRegistry.warmupMappingCodes(tenant, buildMappingCodeMap(tenant));
+        configurationRegistry.getGraalVMContextService().warmupMappingCodes(tenant, buildMappingCodeMap(tenant));
 
         connectorRegistry.initializeResources(tenant);
 

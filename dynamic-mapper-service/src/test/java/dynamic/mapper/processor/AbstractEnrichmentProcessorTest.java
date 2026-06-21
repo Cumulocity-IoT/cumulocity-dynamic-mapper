@@ -48,6 +48,7 @@ import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.configuration.TemplateType;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.GraalVMContextService;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
@@ -89,6 +90,9 @@ class AbstractEnrichmentProcessorTest {
 
     @Mock
     private C8YAgent c8yAgent;
+
+    @Mock
+    private GraalVMContextService graalVMContextService;
 
     // Real GraalVM engine and context (not mocked) as they need to work together
     private Engine graalEngine;
@@ -194,8 +198,9 @@ class AbstractEnrichmentProcessorTest {
         when(serviceConfiguration.getCodeTemplates()).thenReturn(codeTemplates);
 
         // Setup GraalVM engine and host access
-        when(configurationRegistry.getGraalEngine(TEST_TENANT)).thenReturn(graalEngine);
-        when(configurationRegistry.getHostAccess()).thenReturn(HostAccess.ALL);
+        when(configurationRegistry.getGraalVMContextService()).thenReturn(graalVMContextService);
+        when(graalVMContextService.getGraalEngine(TEST_TENANT)).thenReturn(graalEngine);
+        when(graalVMContextService.getHostAccess()).thenReturn(HostAccess.ALL);
         when(configurationRegistry.getC8yAgent()).thenReturn(c8yAgent);
     }
 
@@ -268,7 +273,7 @@ class AbstractEnrichmentProcessorTest {
         processor.process(exchange);
 
         // Then
-        verify(configurationRegistry).getGraalEngine(TEST_TENANT);
+        verify(graalVMContextService).getGraalEngine(TEST_TENANT);
         assertNotNull(processingContext.getSharedCode(), "Should have set shared code");
         assertNotNull(processingContext.getSystemCode(), "Should have set system code");
         assertTrue(processor.wasEnrichPayloadCalled(), "Should have called enrichPayload");
@@ -284,7 +289,7 @@ class AbstractEnrichmentProcessorTest {
         processor.process(exchange);
 
         // Then
-        verify(configurationRegistry).getGraalEngine(TEST_TENANT);
+        verify(graalVMContextService).getGraalEngine(TEST_TENANT);
         assertNotNull(processingContext.getSystemCode(), "Should have set system code");
         assertNotNull(processingContext.getFlowState(), "Should have initialized flow state");
         assertNotNull(processingContext.getFlowContext(), "Should have created flow context");
@@ -302,7 +307,7 @@ class AbstractEnrichmentProcessorTest {
         processor.process(exchange);
 
         // Then
-        verify(configurationRegistry, never()).getGraalEngine(any());
+        verify(graalVMContextService, never()).getGraalEngine(any());
         assertNull(processingContext.getGraalContext(), "Should not have created GraalVM context");
         assertTrue(processor.wasEnrichPayloadCalled(), "Should still call enrichPayload");
 
@@ -340,7 +345,7 @@ class AbstractEnrichmentProcessorTest {
     @Test
     void testProcessHandlesGraalVMSetupError() throws Exception {
         // Given
-        when(configurationRegistry.getGraalEngine(TEST_TENANT))
+        when(graalVMContextService.getGraalEngine(TEST_TENANT))
                 .thenThrow(new RuntimeException("Failed to get GraalVM engine"));
 
         // When
@@ -384,7 +389,7 @@ class AbstractEnrichmentProcessorTest {
     @Test
     void testCreateGraalContextWithSecuritySettings() throws Exception {
         // Given - Use the graalEngine from setUp (already configured)
-        when(configurationRegistry.getHostAccess()).thenReturn(HostAccess.ALL);
+        when(graalVMContextService.getHostAccess()).thenReturn(HostAccess.ALL);
 
         // When
         Context createdContext = processor.createGraalContext(graalEngine, false);

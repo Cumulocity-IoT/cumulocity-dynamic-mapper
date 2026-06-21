@@ -101,12 +101,13 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
         if (mapping.getCode() != null
                 && TransformationType.SMART_FUNCTION.equals(mapping.getTransformationType())) {
             try {
-                var graalEngine = configurationRegistry.getGraalEngine(tenant);
+                var graalVMContextService = configurationRegistry.getGraalVMContextService();
+                var graalEngine = graalVMContextService.getGraalEngine(tenant);
                 var graalContext = createGraalContext(graalEngine, supportESM);
 
                 // Set cached Source objects for performance
-                context.setSharedSource(configurationRegistry.getGraalsSourceShared(tenant));
-                context.setSystemSource(configurationRegistry.getGraalsSourceSystem(tenant));
+                context.setSharedSource(graalVMContextService.getGraalsSourceShared(tenant));
+                context.setSystemSource(graalVMContextService.getGraalsSourceSystem(tenant));
 
                 // Keep Base64 strings for backward compatibility if needed
                 CodeTemplate sharedTemplate = serviceConfiguration.getCodeTemplates().get(TemplateType.SHARED.name());
@@ -158,7 +159,7 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
         Context.Builder builder = Context.newBuilder("js")
                 .engine(graalEngine)
                 .option("js.text-encoding", "true")
-                .allowHostAccess(configurationRegistry.getHostAccess())
+                .allowHostAccess(configurationRegistry.getGraalVMContextService().getHostAccess())
                 .allowHostClassLookup(className ->
                 // Allow only the specific SubstitutionContext class
                 className.equals("dynamic.mapper.processor.model.SubstitutionContext")

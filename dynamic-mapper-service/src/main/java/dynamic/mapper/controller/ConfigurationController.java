@@ -640,10 +640,10 @@ public class ConfigurationController {
             // Clear cached GraalVM sources if SHARED or SYSTEM templates are deleted
             // (Though this should rarely happen since they're typically marked as internal)
             if (TemplateType.SHARED.name().equals(id)) {
-                configurationRegistry.updateGraalsSourceShared(tenant, "");
+                configurationRegistry.getGraalVMContextService().updateGraalsSourceShared(tenant, "");
                 log.info("{} - Cleared cached SHARED code source after deletion", tenant);
             } else if (TemplateType.SYSTEM.name().equals(id)) {
-                configurationRegistry.updateGraalsSourceSystem(tenant, "");
+                configurationRegistry.getGraalVMContextService().updateGraalsSourceSystem(tenant, "");
                 log.info("{} - Cleared cached SYSTEM code source after deletion", tenant);
             }
         } catch (Exception ex) {
@@ -707,10 +707,10 @@ public class ConfigurationController {
 
             // Invalidate cached GraalVM sources if SHARED or SYSTEM templates are updated
             if (TemplateType.SHARED.name().equals(id)) {
-                configurationRegistry.updateGraalsSourceShared(tenant, codeTemplate.getCode());
+                configurationRegistry.getGraalVMContextService().updateGraalsSourceShared(tenant, codeTemplate.getCode());
                 log.info("{} - Invalidated and updated cached SHARED code source", tenant);
             } else if (TemplateType.SYSTEM.name().equals(id)) {
-                configurationRegistry.updateGraalsSourceSystem(tenant, codeTemplate.getCode());
+                configurationRegistry.getGraalVMContextService().updateGraalsSourceSystem(tenant, codeTemplate.getCode());
                 log.info("{} - Invalidated and updated cached SYSTEM code source", tenant);
             }
 
@@ -752,10 +752,10 @@ public class ConfigurationController {
 
             // Invalidate cached GraalVM sources if SHARED or SYSTEM templates are created
             if (TemplateType.SHARED.name().equals(codeTemplate.id)) {
-                configurationRegistry.updateGraalsSourceShared(tenant, codeTemplate.getCode());
+                configurationRegistry.getGraalVMContextService().updateGraalsSourceShared(tenant, codeTemplate.getCode());
                 log.info("{} - Created and cached SHARED code source", tenant);
             } else if (TemplateType.SYSTEM.name().equals(codeTemplate.id)) {
-                configurationRegistry.updateGraalsSourceSystem(tenant, codeTemplate.getCode());
+                configurationRegistry.getGraalVMContextService().updateGraalsSourceSystem(tenant, codeTemplate.getCode());
                 log.info("{} - Created and cached SYSTEM code source", tenant);
             }
 

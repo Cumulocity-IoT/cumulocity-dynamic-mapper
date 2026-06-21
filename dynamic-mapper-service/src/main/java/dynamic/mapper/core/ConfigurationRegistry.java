@@ -26,9 +26,6 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 import org.apache.camel.CamelContext;
-import org.graalvm.polyglot.Engine;
-import org.graalvm.polyglot.HostAccess;
-import org.graalvm.polyglot.Source;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -50,7 +47,6 @@ import dynamic.mapper.service.ConnectorConfigurationService;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.service.ServiceConfigurationService;
 import lombok.Getter;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -83,20 +79,10 @@ public class ConfigurationRegistry implements IMapperConfiguration {
     private final ConnectorRegistry connectorRegistry;
 
     @Getter
-    private NotificationSubscriber notificationSubscriber;
-
-    @Autowired
-    public void setNotificationSubscriber(NotificationSubscriber notificationSubscriber) {
-        this.notificationSubscriber = notificationSubscriber;
-    }
+    private final NotificationSubscriber notificationSubscriber;
 
     @Getter
-    private ObjectMapper objectMapper;
-
-    @Autowired
-    public void setObjectMapper(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
-    }
+    private final ObjectMapper objectMapper;
 
     @Getter
     private MappingService mappingService;
@@ -124,8 +110,7 @@ public class ConfigurationRegistry implements IMapperConfiguration {
     }
 
     @Getter
-    @Setter
-    private ExecutorService virtualThreadPool;
+    private final ExecutorService virtualThreadPool;
 
     // @Lazy breaks the ConfigurationRegistry <-> camelContext circular dependency: the Camel
     // context pulls in the RouteBuilder beans during its own creation, and those routes depend
@@ -139,11 +124,15 @@ public class ConfigurationRegistry implements IMapperConfiguration {
             TenantRegistry tenantRegistry,
             GraalVMContextService graalVMContextService,
             ConnectorRegistry connectorRegistry,
+            NotificationSubscriber notificationSubscriber,
+            ObjectMapper objectMapper,
             @Qualifier("virtualThreadPool") ExecutorService virtualThreadPool,
             @Lazy CamelContext camelContext) {
         this.tenantRegistry = tenantRegistry;
         this.graalVMContextService = graalVMContextService;
         this.connectorRegistry = connectorRegistry;
+        this.notificationSubscriber = notificationSubscriber;
+        this.objectMapper = objectMapper;
         this.virtualThreadPool = virtualThreadPool;
         this.camelContext = camelContext;
     }
@@ -177,47 +166,6 @@ public class ConfigurationRegistry implements IMapperConfiguration {
 
     public MicroserviceCredentials getMicroserviceCredential(String tenant) {
         return tenantRegistry.getMicroserviceCredential(tenant);
-    }
-
-    public void createGraalsResources(String tenant, ServiceConfiguration serviceConfiguration) {
-        graalVMContextService.createGraalsResources(tenant, serviceConfiguration);
-    }
-
-    public Engine getGraalEngine(String tenant) {
-        return graalVMContextService.getGraalEngine(tenant);
-    }
-
-    public void updateGraalsSourceShared(String tenant, String code) {
-        graalVMContextService.updateGraalsSourceShared(tenant, code);
-    }
-
-    public Source getGraalsSourceShared(String tenant) {
-        return graalVMContextService.getGraalsSourceShared(tenant);
-    }
-
-    public void updateGraalsSourceSystem(String tenant, String code) {
-        graalVMContextService.updateGraalsSourceSystem(tenant, code);
-    }
-
-    public Source getGraalsSourceSystem(String tenant) {
-        return graalVMContextService.getGraalsSourceSystem(tenant);
-    }
-
-    /**
-     * Pre-compiles mapping-specific JavaScript into the Engine's Source cache.
-     * Call this after mappings are loaded so the first test for each existing
-     * mapping hits the cache instead of paying the full parse+compile cost.
-     *
-     * @param tenant      the tenant identifier
-     * @param sourceCodes map of source name (e.g. "onMessage_<id>.js") →
-     *                    decoded+adapted JS code
-     */
-    public void warmupMappingCodes(String tenant, Map<String, String> sourceCodes) {
-        graalVMContextService.warmupMappingCodes(tenant, sourceCodes);
-    }
-
-    public void removeGraalsResources(String tenant) {
-        graalVMContextService.removeGraalsResources(tenant);
     }
 
     public ServiceConfiguration getServiceConfiguration(String tenant) {
@@ -257,9 +205,8 @@ public class ConfigurationRegistry implements IMapperConfiguration {
         tenantRegistry.removeMicroserviceCredentials(tenant);
     }
 
-    // In ConfigurationRegistry
     public CamelContext getCamelContext() {
-        return this.camelContext; // Assuming you have it stored
+        return this.camelContext;
     }
 
     public void initializeOutboundMapping(String tenant, ServiceConfiguration serviceConfiguration,
@@ -276,10 +223,6 @@ public class ConfigurationRegistry implements IMapperConfiguration {
                     connectorClient.getConnectorIdentifier(),
                     dispatcherOutbound);
         }
-    }
-
-    public HostAccess getHostAccess() {
-        return graalVMContextService.getHostAccess();
     }
 
     public void addOrUpdateClientRelation(String tenant, String clientId, String deviceId) {
