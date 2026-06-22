@@ -61,5 +61,14 @@
     },
     "initialDelaySeconds": 90,
     "periodSeconds": 10
-  }
+  },
+  "exposeMcpServers": [
+    {
+      "name": "dynamic-mapper-mcp-server",
+      "description": "MCP Server for Dynamic Mapper service",
+      "url": "/service/dynamic-mapper-service/sse",
+      "type": "sse",
+      "sendAuthentication": true
+    }
+  ]
 }

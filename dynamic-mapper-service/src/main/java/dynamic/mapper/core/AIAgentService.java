@@ -72,13 +72,14 @@ public class AIAgentService {
     private static final String MCP_STREAMABLE_ENDPOINT = "/service/dynamic-mapper-service/mcp";
     private static final String MCP_SSE_ENDPOINT = "/service/dynamic-mapper-service/sse";
     private static final String JSONATA_TOOL_NAME = "evaluateJsonataExpression";
-    private static final String MCP_SERVER_NAME = "Dynamic Mapper MCP Server";
+    private static final String MCP_SERVER_NAME = "dynamic-mapper-mcp-server";
     private static final String AI_AGENT_MCP_SERVER_PATH = "/service/ai/mcp/servers";
     private static final String AI_AGENT_PATH = "/service/ai/agent";
     private static final String AI_AGENT_HEALTH_ENDPOINT = "/service/ai/health";
 
     public void initializeAIAgents() {
         if (checkAIAgentAvailable()) {
+            /*
             MCPServer mcpServer = null;
             ResponseEntity<MCPServers> mcpServerResponse = getMCPServer();
             if (mcpServerResponse != null && mcpServerResponse.getStatusCode().is2xxSuccessful()
@@ -142,14 +143,14 @@ public class AIAgentService {
             } else {
                 log.info("{} - Failed to retrieve MCP Servers", contextService.getContext().getTenant());
             }
-
+                */
             ResponseEntity<AIAgent[]> response = getAIAgents();
             if (response != null && response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 List<AIAgent> agents = Arrays.asList(response.getBody());
                 if (agents.isEmpty()) {
                     log.info("{} - No AIAgents found, creating default agents",
                             contextService.getContext().getTenant());
-                    createDefaultAIAgents(mcpServer);
+                    createDefaultAIAgents();
                     addingAIAgentsToServiceConfiguration();
                 } else {
                     if (agents.stream().anyMatch(agent -> agent.getName().equals(DEFAULT_JSONATA_AGENT_NAME)
@@ -160,7 +161,7 @@ public class AIAgentService {
                     } else {
                         log.info("{} - AIAgents not found, creating AI agents...",
                                 contextService.getContext().getTenant());
-                        createDefaultAIAgents(mcpServer);
+                        createDefaultAIAgents();
                         addingAIAgentsToServiceConfiguration();
                     }
                 }
@@ -242,7 +243,7 @@ public class AIAgentService {
      * }
      */
 
-    public void createDefaultAIAgents(MCPServer mcpServer) {
+    public void createDefaultAIAgents() {
         HashMap<String, String> prompts = getAgentPrompts();
 
         prompts.keySet().forEach(file -> {
@@ -257,9 +258,9 @@ public class AIAgentService {
             agent.setSystem(prompts.get(file));
             aiAgent.setAgent(agent);
             aiAgent.setType("text");
-            if (mcpServer != null && aiAgent.getName().equals(DEFAULT_JSONATA_AGENT_NAME)) {
+            if (aiAgent.getName().equals(DEFAULT_JSONATA_AGENT_NAME)) {
                 MCPUsage tools = new MCPUsage();
-                tools.setServerName(mcpServer.getName());
+                tools.setServerName(MCP_SERVER_NAME);
                 tools.setTools(new String[] { JSONATA_TOOL_NAME });
                 aiAgent.setMcp(List.of(tools));
             }
