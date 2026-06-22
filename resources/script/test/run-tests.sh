@@ -71,6 +71,7 @@ declare -a TESTS=(
     "smartfunction|test-inbound-smartfunction-02|Pattern 02: Topic-based external ID + sensor filter"
     "smartfunction|test-inbound-smartfunction-03|Pattern 03: getManagedObjectByExternalId — MO enrichment"
     "smartfunction|test-inbound-smartfunction-04|Pattern 04: Dual payload type + deduplication"
+    "smartfunction|test-inbound-smartfunction-05|Pattern 11: Per-device running statistics (device ID from context)"
     # ── Inbound (Java Extensions) ─────────────────────────────────────────────
     "extension|test-inbound-extension-custom-measurement|Extension: JSON → Measurement"
     "extension|test-inbound-extension-custom-alarm|Extension: JSON → Alarm"
