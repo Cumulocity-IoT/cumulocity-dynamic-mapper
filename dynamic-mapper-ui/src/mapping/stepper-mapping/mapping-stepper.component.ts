@@ -727,6 +727,9 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
     if (this.templateStepRef?.sourceTemplateUpdated) {
       this.sourceTemplate = this.templateStepRef.sourceTemplateUpdated;
     }
+    if (this.templateStepRef?.targetTemplateUpdated) {
+      this.targetTemplate = this.templateStepRef.targetTemplateUpdated;
+    }
   }
 
   onNextStep(event: StepperStepChange): void {

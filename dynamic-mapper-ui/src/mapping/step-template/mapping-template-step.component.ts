@@ -89,6 +89,7 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
   // ─── Internal state ────────────────────────────────────────────────────────
   filterModel: { filterMapping?: string; filterExpression?: { result: string; resultType: string; valid: boolean } } = {};
   sourceTemplateUpdated: any;
+  targetTemplateUpdated: any;
   selectedPathFilterFilterMapping: string;
   private readonly destroy$ = new Subject<void>();
 
@@ -204,14 +205,18 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
   // ─── Template content changes ───────────────────────────────────────────────
 
   onSourceTemplateChanged(contentChanges: ContentChanges): void {
-    // Do NOT emit here — emitting would update [sourceTemplate] on the parent
-    // which re-seeds the editor and discards the in-progress edit.
-    // The parent reads sourceTemplateUpdated via templateStepRef when leaving the step.
+    // sourceTemplateChange has no @Output emitter; the parent reads sourceTemplateUpdated
+    // via templateStepRef when leaving the step.
     this.onTemplateChanged(contentChanges, this.sourceTemplate, json => { this.sourceTemplateUpdated = json; });
   }
 
   onTargetTemplateChanged(contentChanges: ContentChanges): void {
-    this.onTemplateChanged(contentChanges, this.targetTemplate);
+    this.onTemplateChanged(contentChanges, this.targetTemplate, json => {
+      this.targetTemplateUpdated = json;
+      // Emit immediately so the parent's this.targetTemplate stays current.
+      // The data setter's isReverting guard prevents the editor from being re-seeded.
+      this.targetTemplateChange.emit(json);
+    });
   }
 
   private onTemplateChanged(
