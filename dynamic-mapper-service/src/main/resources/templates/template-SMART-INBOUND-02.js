@@ -20,7 +20,7 @@
 */
 
 function onMessage(msg, context) {
-    var payload = msg.getPayload();
+    var payload = msg.payload;
 
     console.log("Payload Raw:" + payload);
     console.log("Payload messageId: " +  payload["messageId"]);
@@ -59,8 +59,8 @@ function onMessage(msg, context) {
     var isVoltage = device?.c8y_Sensor?.type?.voltage === true;
     var isCurrent = device?.c8y_Sensor?.type?.current === true;
 
-    // Prefer timestamp from payload; fall back to message arrival time
-    var time = payload["time"] ? payload["time"] : msg.time;
+    // Prefer timestamp from payload; fall back to current time
+    var time = payload["time"] ? payload["time"] : new Date().toISOString();
     var measurementPayload;
 
     if (isVoltage) {

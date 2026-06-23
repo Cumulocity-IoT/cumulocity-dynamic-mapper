@@ -16,7 +16,7 @@
 */
 
 function onMessage(msg, context) {
-    var payload = msg.getPayload();
+    var payload = msg.payload;
     var deviceId = payload["deviceId"];
     var temperature = payload["temperature"];
 

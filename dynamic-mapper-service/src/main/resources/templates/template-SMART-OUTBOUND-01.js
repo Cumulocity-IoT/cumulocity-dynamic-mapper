@@ -22,13 +22,13 @@
 */
 
 function onMessage(msg, context) {
-    var payload = msg.getPayload();
+    var payload = msg.payload;
 
     // context.getExternalId() returns the resolved external id of the source device.
     // Requires the mapping to have 'useExternalId' enabled and an 'externalIdType' configured.
     const externalId = context.getExternalId();
-    // C8Y measurement payloads always carry a 'time' field; fall back to message arrival time
-    var time = payload["time"] || msg.time;
+    // C8Y measurement payloads always carry a 'time' field; fall back to current time
+    var time = payload["time"] || new Date().toISOString();
 
     return {
         topic: `measurements/${externalId}`,

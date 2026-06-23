@@ -278,7 +278,7 @@ function toC8yName(metricName) {
 function onMessage(msg, context) {
 
     // 1 ── Decode Base64 → raw bytes ────────────────────────────────────────
-    var base64 = msg.getPayload();
+    var base64 = msg.payload;
     if (!base64 || typeof base64 !== 'string') {
         console.log("Expected Base64 string from ANY_PAYLOAD mapping, got: " + typeof base64);
         return [];
@@ -309,7 +309,7 @@ function onMessage(msg, context) {
     }
 
     // 3 ── Extract device identity from topic ───────────────────────────────
-    var topic  = msg.getTopic();
+    var topic  = msg.topic;
     var parsed = parseSparkplugTopic(topic);
     if (!parsed) {
         console.log("Cannot parse SparkPlugB topic: " + topic);

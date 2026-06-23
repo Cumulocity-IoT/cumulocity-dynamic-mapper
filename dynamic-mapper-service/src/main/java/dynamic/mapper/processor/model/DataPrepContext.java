@@ -151,6 +151,17 @@ public interface DataPrepContext {
     Value getManagedObjectByExternalId(Value externalIdValue);
 
     /**
+     * Adds a warning message to the processing context.
+     *
+     * <p>Warnings are surfaced to users in the Dynamic Mapper UI for debugging.
+     * Use for non-fatal issues (e.g. fallback logic applied, optional field missing).
+     * Stored separately from log messages under the {@link #WARNINGS} key.</p>
+     *
+     * @param warning The warning message
+     */
+    void addWarning(String warning);
+
+    /**
      * Log message
      *
      * @param message Message to log

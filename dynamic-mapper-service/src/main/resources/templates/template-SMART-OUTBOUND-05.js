@@ -15,7 +15,7 @@
  * }
  */
 function onMessage(msg, context) {
-    var payload = msg.getPayload();
+    var payload = msg.payload;
     var deviceId = payload["deviceId"] || (payload["source"] && payload["source"]["id"]);
     var command = payload["c8y_Command"] && payload["c8y_Command"]["text"];
 
@@ -30,7 +30,7 @@ function onMessage(msg, context) {
             "deviceId": deviceId,
             "command": command,
             "operationId": payload["id"],
-            "timestamp": payload["time"] || msg.time
+            "timestamp": payload["time"] || new Date().toISOString()
         }
     };
 }

@@ -30,7 +30,7 @@
 */
 
 function onMessage(msg, context) {
-    var payload = msg.getPayload();
+    var payload = msg.payload;
     var temperature = payload["temperature"];
 
     if (temperature === undefined || temperature === null) {

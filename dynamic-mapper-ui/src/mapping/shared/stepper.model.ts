@@ -173,10 +173,9 @@ export function createCompletionProviderFlowFunction(monaco: any, direction: Dir
       properties: [
         { name: 'payload', type: 'Record<string, any>', documentation: 'Pre-deserialized JSON payload. Dynamic Mapper automatically deserializes JSON payloads to objects. Use bracket notation to access properties: payload["key"].\n\n**ANY_PAYLOAD (SparkPlugB, Protobuf, XML):** Base64-encoded binary string. Decode with a pure-JS Base64 decoder, for example:\n```js\nfunction decodeBase64(base64) {\n  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";\n  const clean = base64.replace(/=+$/, "");\n  const bytes = [];\n  let buffer = 0;\n  let bits = 0;\n\n  for (let i = 0; i < clean.length; i++) {\n    const value = chars.indexOf(clean.charAt(i));\n    if (value < 0) { continue; }\n    buffer = (buffer << 6) | value;\n    bits += 6;\n    if (bits >= 8) { bits -= 8; bytes.push((buffer >> bits) & 0xff); }\n  }\n  return new Uint8Array(bytes);\n}\nconst bytes = decodeBase64(msg.payload);\n```' },
         { name: 'topic', type: 'string', documentation: 'The broker topic on which the message arrived (e.g. MQTT topic).' },
-        { name: 'clientId', type: 'string', documentation: 'Transport/MQTT client ID of the sender.' },
-        { name: 'transportId', type: 'string', documentation: 'Identifier for the source/destination transport (e.g. "mqtt", "kafka").' },
-        { name: 'transportFields', type: 'Record<string, string>', documentation: 'Transport-specific fields/properties/headers.' },
-        { name: 'time', type: 'Date', documentation: 'Timestamp of the incoming message.' }
+        { name: 'clientId', type: 'string | undefined', documentation: 'Transport/MQTT client ID of the sender. Set for inbound messages; undefined for outbound.' },
+        { name: 'sourceId', type: 'string | undefined', documentation: 'Internal Cumulocity device ID of the originating device. Set for outbound messages; undefined for inbound.' },
+        { name: 'cumulocityType', type: 'string | undefined', documentation: 'Lowercase C8y object type string (e.g. "measurement", "alarm"). Set by the outbound processor; undefined for inbound messages.' }
       ],
       methods: [],
       documentation: 'Inbound device message passed to the Smart Function as the first argument (`msg`). Payloads are pre-deserialized from JSON for convenience — use bracket notation: msg.payload["key"].'

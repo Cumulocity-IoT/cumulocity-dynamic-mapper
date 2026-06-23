@@ -7,7 +7,7 @@
  * @direction INBOUND
  */
 function onMessage(msg, context) {
-    var payload = msg.getPayload();
+    var payload = msg.payload;
 
     console.log("Payload Raw: " + JSON.stringify(payload));
 

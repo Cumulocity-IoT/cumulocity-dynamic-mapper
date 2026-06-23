@@ -19,7 +19,7 @@
 */
 
 function onMessage(msg, context) {
-    var payload = msg.getPayload();
+    var payload = msg.payload;
 
     console.log("Context: " + context.getConfig());
     console.log("Payload Raw: " + payload);
@@ -27,8 +27,8 @@ function onMessage(msg, context) {
 
     // Prefer context clientId (MQTT client id), fall back to payload field
     var clientId = context.getClientId() || payload["clientId"];
-    // Prefer timestamp from payload; fall back to message arrival time
-    var time = payload["time"] ? payload["time"] : msg.time;
+    // Prefer timestamp from payload; fall back to current time
+    var time = payload["time"] ? payload["time"] : new Date().toISOString();
 
     // lookup device by c8y internal id for enrichment
     var deviceByDeviceId = context.getManagedObject(payload["deviceId"]);
