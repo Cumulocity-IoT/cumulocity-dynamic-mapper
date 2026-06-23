@@ -83,7 +83,7 @@ function onMessage(msg, context) {
     console.log("Device " + deviceId + " — message #" + count +
                 ": avg=" + avg.toFixed(2) + ", min=" + minTemp + ", max=" + maxTemp);
 
-    var time = payload["time"] ? payload["time"] : new Date().toISOString();
+    var time = payload["time"] || msg.time;
 
     return [{
         cumulocityType: "measurement",

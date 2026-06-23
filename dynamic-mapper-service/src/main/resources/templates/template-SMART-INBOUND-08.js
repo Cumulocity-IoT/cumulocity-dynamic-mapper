@@ -321,7 +321,7 @@ function onMessage(msg, context) {
     // 4 ── Determine measurement timestamp ─────────────────────────────────
     var isoTime = spPayload.timestamp
         ? new Date(spPayload.timestamp).toISOString()
-        : new Date().toISOString();
+        : msg.time;
 
     // 5 ── Build C8Y outputs ────────────────────────────────────────────────
     var output = [];

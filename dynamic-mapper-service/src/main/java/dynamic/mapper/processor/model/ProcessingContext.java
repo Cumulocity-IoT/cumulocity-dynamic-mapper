@@ -82,6 +82,8 @@ public class ProcessingContext<O> implements AutoCloseable {
 
     private String clientId;
 
+    private String connectorIdentifier;
+
     private API api;
 
     private Qos qos;

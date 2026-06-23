@@ -37,8 +37,8 @@ function onMessage(msg, context) {
 
     // Prefer context clientId (MQTT client id), fall back to payload field
     var externalId = context.getClientId() || payload["externalId"];
-    // Prefer timestamp from payload; fall back to current time
-    var time = payload["time"] ? payload["time"] : new Date().toISOString();
+    // Prefer timestamp from payload; fall back to connector receive time
+    var time = payload["time"] || msg.time;
 
     // --- Load persistent state ---
     var telemetryCount = context.getState("telemetryCount") || 0;

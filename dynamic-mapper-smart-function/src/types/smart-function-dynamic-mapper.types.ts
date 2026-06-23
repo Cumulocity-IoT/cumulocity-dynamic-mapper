@@ -82,16 +82,12 @@ export interface SmartFunctionPayload {
  * In Dynamic Mapper, we pre-deserialize JSON payloads to objects for convenience.
  * This interface represents the input message after deserialization.
  *
- * The Java runtime sets only `payload`, `topic`, and `clientId` (inbound) or
- * `payload`, `topic`, `sourceId`, and `cumulocityType` (outbound) on this object.
- * Fields like `transportId`, `transportFields`, and `time` are NOT set by the
- * runtime — use the {@link DeviceMessage} return type for those in outbound functions.
- *
  * @example
  * function onMessage(msg: DynamicMapperDeviceMessage, context: SmartFunctionContext) {
  *   const temp = msg.payload.temperature;  // Already parsed!
  *   const topic = msg.topic;
  *   const clientId = msg.clientId;
+ *   const time = msg.time;                 // ISO-8601 receive timestamp
  * }
  */
 export interface DynamicMapperDeviceMessage {
@@ -125,6 +121,25 @@ export interface DynamicMapperDeviceMessage {
    * Enables discriminant narrowing: `switch (msg.cumulocityType) { ... }`.
    */
   cumulocityType?: C8yObjectType;
+
+  /**
+   * ISO-8601 timestamp captured when the message was received by the connector.
+   * Use as a reliable receive-time fallback when the payload has no timestamp:
+   * `var time = payload["time"] ?? msg.time;`
+   */
+  time?: string;
+
+  /**
+   * Identifier of the connector that delivered this message (e.g. "my-mqtt-connector").
+   * Set for inbound messages; null for outbound (C8Y-originated) messages.
+   */
+  transportId?: string;
+
+  /**
+   * Transport-specific key/value pairs (e.g. Kafka record headers, MQTT 5 user properties).
+   * Empty map when no transport fields are available.
+   */
+  transportFields?: Record<string, string>;
 }
 
 /**

@@ -59,8 +59,8 @@ function onMessage(msg, context) {
     var isVoltage = device?.c8y_Sensor?.type?.voltage === true;
     var isCurrent = device?.c8y_Sensor?.type?.current === true;
 
-    // Prefer timestamp from payload; fall back to current time
-    var time = payload["time"] ? payload["time"] : new Date().toISOString();
+    // Prefer timestamp from payload; fall back to connector receive time
+    var time = payload["time"] || msg.time;
     var measurementPayload;
 
     if (isVoltage) {

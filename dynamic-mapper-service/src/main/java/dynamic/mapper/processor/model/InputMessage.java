@@ -20,6 +20,9 @@
  */
 package dynamic.mapper.processor.model;
 
+import java.util.Collections;
+import java.util.Map;
+
 /**
  * Input message wrapper passed to SMART_FUNCTION JavaScript code as the first argument ({@code msg}).
  *
@@ -28,18 +31,21 @@ package dynamic.mapper.processor.model;
  *
  * <p>Fields are {@code public} so that both access styles work in JavaScript:</p>
  * <ul>
- *   <li>{@code msg.payload} — direct field access (used by TypeScript-compiled code)</li>
- *   <li>{@code msg.getPayload()} — Java-style getter call (used by JS mapping templates)</li>
+ *   <li>{@code msg.payload} — direct field access</li>
+ *   <li>{@code msg.getPayload()} — Java-style getter (backward-compatible alias)</li>
  * </ul>
  *
  * <p>JavaScript usage:</p>
  * <pre>
  *   function onMessage(msg, context) {
- *       var payload        = msg.payload;         // or msg.getPayload()
- *       var topic          = msg.topic;           // or msg.getTopic()
- *       var client         = msg.clientId;        // inbound: MQTT client id; outbound: null
- *       var source         = msg.sourceId;        // outbound: C8Y device id; inbound: null
- *       var c8yType        = msg.cumulocityType;  // outbound: e.g. "measurement"; inbound: null
+ *       var payload        = msg.payload;          // or msg.getPayload()
+ *       var topic          = msg.topic;            // or msg.getTopic()
+ *       var client         = msg.clientId;         // inbound: MQTT client id; outbound: null
+ *       var source         = msg.sourceId;         // outbound: C8Y device id; inbound: null
+ *       var c8yType        = msg.cumulocityType;   // outbound: e.g. "measurement"; inbound: null
+ *       var time           = msg.time;             // ISO-8601 receive timestamp (both directions)
+ *       var transport      = msg.transportId;      // connector identifier, e.g. "my-mqtt-connector"
+ *       var headers        = msg.transportFields;  // transport-specific key/value pairs (e.g. Kafka headers)
  *   }
  * </pre>
  *
@@ -61,47 +67,73 @@ public class InputMessage {
      */
     public final String cumulocityType;
 
+    /** ISO-8601 timestamp captured when the message was received by the connector. */
+    public final String time;
+
     /**
-     * Full constructor — used by the outbound processor which knows the C8y event type.
+     * Identifier of the connector that delivered this message (e.g. the connector's configured name).
+     * Set for inbound messages; {@code null} for outbound messages (which originate from C8Y).
      */
-    public InputMessage(Object payload, String topic, String clientId, String sourceId, String cumulocityType) {
+    public final String transportId;
+
+    /**
+     * Transport-specific key/value pairs (e.g. Kafka record headers, MQTT 5 user properties).
+     * Never {@code null} — an empty map is returned when no transport fields are available.
+     */
+    public final Map<String, String> transportFields;
+
+    /**
+     * Full constructor.
+     */
+    public InputMessage(Object payload, String topic, String clientId, String sourceId, String cumulocityType,
+                        String time, String transportId, Map<String, String> transportFields) {
         this.payload = payload;
         this.topic = topic;
         this.clientId = clientId;
         this.sourceId = sourceId;
         this.cumulocityType = cumulocityType;
+        this.time = time;
+        this.transportId = transportId;
+        this.transportFields = transportFields != null ? transportFields : Collections.emptyMap();
+    }
+
+    /**
+     * Backward-compatible constructor — {@code time}, {@code transportId}, and {@code transportFields}
+     * default to {@code null} / empty map.
+     */
+    public InputMessage(Object payload, String topic, String clientId, String sourceId, String cumulocityType) {
+        this(payload, topic, clientId, sourceId, cumulocityType, null, null, null);
     }
 
     /**
      * Backward-compatible constructor for inbound messages where {@code cumulocityType} is not
-     * applicable. Sets {@code cumulocityType} to {@code null}.
+     * applicable.
      */
     public InputMessage(Object payload, String topic, String clientId, String sourceId) {
-        this(payload, topic, clientId, sourceId, null);
+        this(payload, topic, clientId, sourceId, null, null, null, null);
     }
 
     /** Alias for {@link #payload}. Supports {@code msg.getPayload()} in JS mapping templates. */
-    public Object getPayload() {
-        return payload;
-    }
+    public Object getPayload() { return payload; }
 
     /** Alias for {@link #topic}. Supports {@code msg.getTopic()} in JS mapping templates. */
-    public String getTopic() {
-        return topic;
-    }
+    public String getTopic() { return topic; }
 
     /** Alias for {@link #clientId}. Supports {@code msg.getClientId()} in JS mapping templates. */
-    public String getClientId() {
-        return clientId;
-    }
+    public String getClientId() { return clientId; }
 
     /** Alias for {@link #sourceId}. Supports {@code msg.getSourceId()} in JS mapping templates. */
-    public String getSourceId() {
-        return sourceId;
-    }
+    public String getSourceId() { return sourceId; }
 
     /** Alias for {@link #cumulocityType}. Supports {@code msg.getCumulocityType()} in JS mapping templates. */
-    public String getCumulocityType() {
-        return cumulocityType;
-    }
+    public String getCumulocityType() { return cumulocityType; }
+
+    /** Alias for {@link #time}. Supports {@code msg.getTime()} in JS mapping templates. */
+    public String getTime() { return time; }
+
+    /** Alias for {@link #transportId}. Supports {@code msg.getTransportId()} in JS mapping templates. */
+    public String getTransportId() { return transportId; }
+
+    /** Alias for {@link #transportFields}. Supports {@code msg.getTransportFields()} in JS mapping templates. */
+    public Map<String, String> getTransportFields() { return transportFields; }
 }

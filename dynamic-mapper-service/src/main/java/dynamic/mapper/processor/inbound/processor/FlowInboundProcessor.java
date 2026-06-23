@@ -1,7 +1,9 @@
 package dynamic.mapper.processor.inbound.processor;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.List;
 
 import org.graalvm.polyglot.Context;
@@ -54,7 +56,11 @@ public class FlowInboundProcessor extends AbstractFlowProcessor {
                 payload,
                 context.getTopic(),
                 context.getClientId(),
-                null));
+                null,
+                null,
+                Instant.now().toString(),
+                context.getConnectorIdentifier(),
+                Collections.emptyMap()));
     }
 
     @Override

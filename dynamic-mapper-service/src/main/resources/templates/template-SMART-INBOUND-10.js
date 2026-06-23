@@ -17,8 +17,8 @@
 function onMessage(msg, context) {
     var payload = msg.payload;
     var externalId = context.getClientId() || payload["externalId"];
-    // Prefer timestamp from payload; fall back to current time
-    var time = payload["time"] ? payload["time"] : new Date().toISOString();
+    // Prefer timestamp from payload; fall back to connector receive time
+    var time = payload["time"] || msg.time;
 
     return [
         // 1. Create a standard Cumulocity temperature measurement

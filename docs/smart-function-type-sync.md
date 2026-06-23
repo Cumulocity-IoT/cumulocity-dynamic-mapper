@@ -64,6 +64,9 @@ history. The resources listed below are now in sync.
 | `msg.clientId` | `InputMessage.clientId` | Inbound processor; `null` for outbound |
 | `msg.sourceId` | `InputMessage.sourceId` | Outbound processor; `null` for inbound |
 | `msg.cumulocityType` | `InputMessage.cumulocityType` | Outbound processor; `null` for inbound |
+| `msg.time` | `InputMessage.time` | Both processors (`Instant.now().toString()`) |
+| `msg.transportId` | `InputMessage.transportId` | Inbound processor (`context.getConnectorIdentifier()`); `null` for outbound |
+| `msg.transportFields` | `InputMessage.transportFields` | Inbound processor (empty map for now; reserved for Kafka headers) |
 
 **Templates**
 
@@ -134,7 +137,7 @@ Use this checklist whenever a Smart Function API change is made.
 1. Change the template in `resources/templates/`.
 2. Verify the template runs correctly against a local instance using the corresponding script in `resources/script/test/` (e.g., `test-inbound-json-smartfunction.sh`).
 3. Use **field style only** (`msg.payload`, `msg.topic`). Getter style (`msg.getPayload()`) is deprecated and must not appear in templates.
-4. Use `new Date().toISOString()` as the timestamp fallback — `msg.time` is not set by the runtime.
+4. Use `msg.time` as the timestamp fallback — it is set by the connector at receive time. Do NOT use `new Date().toISOString()`. Pattern: `var time = payload["time"] || msg.time;`
 5. If the template demonstrates a new pattern, add a matching JSDoc `@example` to the relevant TypeScript type.
 
 ### 4.5 TypeScript-only change (improve generics, add JSDoc, deprecate)
@@ -208,9 +211,9 @@ if grep -rn "context\.getDevice\|context\.getCache\|context\.setCache\|context\.
   exit 1
 fi
 
-echo "Checking for msg.time fallback..."
-if grep -rn "msg\.time" "$TEMPLATES"; then
-  echo "ERROR: msg.time is not set by the runtime. Use new Date().toISOString() as fallback."
+echo "Checking for obsolete new Date().toISOString() fallback..."
+if grep -rn "new Date().toISOString()" "$TEMPLATES"; then
+  echo "ERROR: new Date() fallback is obsolete. Use msg.time (set by the connector at receive time)."
   exit 1
 fi
 

@@ -47,8 +47,8 @@ function onMessage(msg, context) {
     console.log("Statistics after message " + count + ": avg=" + avg.toFixed(2) +
                 ", min=" + minTemp + ", max=" + maxTemp);
 
-    // Prefer timestamp from payload; fall back to current time
-    var time = payload["time"] ? payload["time"] : new Date().toISOString();
+    // Prefer timestamp from payload; fall back to connector receive time
+    var time = payload["time"] || msg.time;
 
     // --- Emit a measurement that includes the running statistics ---
     return [{

@@ -20,6 +20,7 @@
  */
 package dynamic.mapper.processor.outbound.processor;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -77,7 +78,10 @@ public class FlowOutboundProcessor extends AbstractFlowProcessor {
                 context.getTopic(),
                 null,
                 context.getSourceId(),
-                c8yObjectType));
+                c8yObjectType,
+                Instant.now().toString(),
+                null,
+                null));
     }
 
     @Override
