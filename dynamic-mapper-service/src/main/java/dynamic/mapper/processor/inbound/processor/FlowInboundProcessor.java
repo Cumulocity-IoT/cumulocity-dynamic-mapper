@@ -4,6 +4,8 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.List;
 
 import org.graalvm.polyglot.Context;
@@ -52,6 +54,11 @@ public class FlowInboundProcessor extends AbstractFlowProcessor {
         if (payload instanceof byte[] && mappingType != null && "ANY_PAYLOAD".equals(mappingType.toString())) {
             payload = Base64.getEncoder().encodeToString((byte[]) payload);
         }
+        Map<String, String> transportFields = Collections.emptyMap();
+        if (context.getKey() != null) {
+            transportFields = new HashMap<>();
+            transportFields.put(Mapping.CONTEXT_DATA_KEY_NAME, context.getKey());
+        }
         return graalContext.asValue(new dynamic.mapper.processor.model.InputMessage(
                 payload,
                 context.getTopic(),
@@ -60,7 +67,7 @@ public class FlowInboundProcessor extends AbstractFlowProcessor {
                 null,
                 Instant.now().toString(),
                 context.getConnectorIdentifier(),
-                Collections.emptyMap()));
+                transportFields));
     }
 
     @Override
