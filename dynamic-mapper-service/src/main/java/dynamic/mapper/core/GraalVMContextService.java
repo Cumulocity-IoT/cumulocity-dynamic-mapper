@@ -132,6 +132,9 @@ public class GraalVMContextService {
      */
     static final Duration ENGINE_MAX_AGE = Duration.ofHours(24);
 
+    // Prefix added by buildMappingCodeMap() to source names: "onMessage_<identifier>.js"
+    private static final String SMART_FUNCTION_PREFIX = "onMessage_";
+
     // Structure: < Tenant, Engine >
     private final Map<String, Engine> graalEngines = new ConcurrentHashMap<>();
 
@@ -437,6 +440,11 @@ public class GraalVMContextService {
         Engine eng = graalEngines.get(tenant);
         if (eng == null || sourceCodes.isEmpty()) return;
 
+        ServiceConfiguration config = tenantServiceConfigs.get(tenant);
+        boolean supportESM = config != null && Boolean.TRUE.equals(config.getSupportESM());
+
+        // The warmup context mirrors the non-ESM runtime context. ESM mode uses allowIO
+        // which is not needed here — mapping codes evaluated below are stripped of exports.
         try (Context warmupCtx = Context.newBuilder("js")
                 .engine(eng)
                 .allowHostAccess(getHostAccess())
@@ -448,10 +456,40 @@ public class GraalVMContextService {
 
             int warmed = 0;
             for (Map.Entry<String, String> entry : sourceCodes.entrySet()) {
+                // The key from buildMappingCodeMap() is "onMessage_<identifier>.js".
+                // Strip the prefix so the Source name matches what AbstractFlowProcessor
+                // builds at runtime — this ensures GraalVM's source cache is actually hit
+                // on the first real message execution.
+                String key = entry.getKey();
+                String runtimeName = key.startsWith(SMART_FUNCTION_PREFIX)
+                        ? key.substring(SMART_FUNCTION_PREFIX.length())
+                        : key;
+
                 try {
-                    Source source = Source.newBuilder("js", entry.getValue(), entry.getKey())
-                            .cached(true)
-                            .buildLiteral();
+                    Source source;
+                    if (supportESM) {
+                        // ESM path: raw code evaluated as .mjs, matching the runtime source.
+                        String msjName = runtimeName.endsWith(".js")
+                                ? runtimeName.substring(0, runtimeName.length() - 3) + ".mjs"
+                                : runtimeName;
+                        source = Source.newBuilder("js", entry.getValue(), msjName)
+                                .cached(true)
+                                .buildLiteral();
+                    } else {
+                        // Non-ESM path: strip ES module export/import statements and wrap in an
+                        // IIFE — identical to AbstractFlowProcessor. This prevents top-level
+                        // declarations in the mapping code (e.g. `const globalConfig` from a
+                        // bundled Zod library) from colliding with the same declarations in
+                        // shared.js or in preceding mapping evals within the same warmup context.
+                        // It also ensures the cached Source content matches the runtime source.
+                        String code = JavaScriptModuleStripper.toPlainScript(entry.getValue());
+                        String wrapped = "(function() {\n" + code + "\n"
+                                + "globalThis['onMessage'] = onMessage;\n"
+                                + "})();";
+                        source = Source.newBuilder("js", wrapped, runtimeName)
+                                .cached(true)
+                                .buildLiteral();
+                    }
                     warmupCtx.eval(source);
                     warmed++;
                 } catch (Exception e) {
