@@ -33,6 +33,8 @@ import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.*;
 import dynamic.mapper.processor.model.C8YMessage;
+import dynamic.mapper.processor.model.TransformationType;
+import dynamic.mapper.processor.util.JavaScriptModuleStripper;
 import dynamic.mapper.service.cache.FlowStateStore;
 import dynamic.mapper.service.cache.MappingCacheManager;
 import dynamic.mapper.service.deployment.DeploymentMapService;
@@ -462,6 +464,31 @@ public class MappingService {
                         null);
 
                 log.info("{} - Mapping {} set to active={}{}", tenant, mappingId, active, versionInfo);
+
+                // Pre-compile the mapping's JavaScript code on the current GraalVM Engine so
+                // the first real message does not pay the full JIT cold-start penalty (~30 s).
+                // Submitted as a virtual thread so the activation REST call is not delayed.
+                if (Boolean.TRUE.equals(active)
+                        && TransformationType.SMART_FUNCTION.equals(toPersist.getTransformationType())
+                        && toPersist.getCode() != null && !toPersist.getCode().isBlank()) {
+                    final String identifier = toPersist.getIdentifier();
+                    final String b64Code = toPersist.getCode();
+                    configurationRegistry.getVirtualThreadPool().submit(() -> {
+                        try {
+                            byte[] decoded = java.util.Base64.getDecoder().decode(b64Code);
+                            String code = JavaScriptModuleStripper.toPlainScript(new String(decoded));
+                            String sourceName = Mapping.SMART_FUNCTION_NAME + "_" + identifier + ".js";
+                            configurationRegistry.getGraalVMContextService()
+                                    .warmupMappingCodes(tenant, Map.of(sourceName, code));
+                            log.info("{} - Pre-compiled SmartFunction code for activated mapping [{}]",
+                                    tenant, identifier);
+                        } catch (Exception e) {
+                            log.warn("{} - Failed to pre-compile SmartFunction on activation [{}]: {}",
+                                    tenant, identifier, e.getMessage());
+                        }
+                    });
+                }
+
                 return toPersist;
             } catch (Exception e) {
                 configurationRegistry.getC8yAgent().createOperationEvent(

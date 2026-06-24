@@ -126,7 +126,7 @@ public class MQTTServicePulsarCallback implements MessageListener<byte[]> {
                     }
                     results = processedResults.getProcessingResult().get(effectiveTimeout, TimeUnit.MILLISECONDS);
                 } else {
-                    results = processedResults.getProcessingResult().get();
+                    results = processedResults.getProcessingResult().get(MAX_PROCESSING_TIMEOUT, TimeUnit.MILLISECONDS);
                 }
 
                 // Check for errors in results

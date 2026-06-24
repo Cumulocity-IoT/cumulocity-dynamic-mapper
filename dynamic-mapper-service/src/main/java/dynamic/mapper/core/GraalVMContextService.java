@@ -156,6 +156,12 @@ public class GraalVMContextService {
     // When each tenant's current Engine was created (for time-based rotation)
     private final Map<String, Instant> engineCreatedAt = new ConcurrentHashMap<>();
 
+    // Optional per-tenant supplier of mapping JS code — called after each Engine rotation
+    // so the new Engine's JIT is primed with all active mapping code before the first message.
+    // Registered by BootstrapService during tenant initialisation.
+    private final Map<String, java.util.function.Supplier<Map<String, String>>> mappingCodeSuppliers =
+            new ConcurrentHashMap<>();
+
     /** Lazily initialised; the same HostAccess config is shared across all tenants and contexts. */
     private HostAccess hostAccess;
 
@@ -305,6 +311,34 @@ public class GraalVMContextService {
         if (oldEngine != null) {
             closeEngineIfDrained(oldEngine);
         }
+        // Re-warm all active mapping codes on the new Engine so the first real message after
+        // rotation does not pay the full JIT cold-start penalty.
+        java.util.function.Supplier<Map<String, String>> codeSupplier = mappingCodeSuppliers.get(tenant);
+        if (codeSupplier != null) {
+            try {
+                warmupMappingCodes(tenant, codeSupplier.get());
+            } catch (Exception e) {
+                log.warn("{} - Failed to re-warm mapping codes after Engine rotation: {}", tenant, e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Registers a supplier of mapping JavaScript source code for the given tenant.
+     * The supplier is called after every Engine rotation so the replacement Engine
+     * is pre-compiled with all active mapping code before the first real message arrives.
+     *
+     * @param tenant   tenant identifier
+     * @param supplier returns a {@code sourceName → plainJS} map for all active SmartFunction mappings
+     */
+    public void setMappingCodeSupplier(String tenant,
+            java.util.function.Supplier<Map<String, String>> supplier) {
+        mappingCodeSuppliers.put(tenant, supplier);
+    }
+
+    /** Removes the mapping-code supplier registered for {@code tenant}. */
+    public void removeMappingCodeSupplier(String tenant) {
+        mappingCodeSuppliers.remove(tenant);
     }
 
     /**
@@ -444,6 +478,7 @@ public class GraalVMContextService {
         contextCounters.remove(tenant);
         tenantServiceConfigs.remove(tenant);
         engineCreatedAt.remove(tenant);
+        mappingCodeSuppliers.remove(tenant);
         log.info("{} - Removed GraalVM engine and cached sources", tenant);
     }
 

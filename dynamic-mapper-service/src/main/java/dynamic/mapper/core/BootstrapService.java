@@ -287,6 +287,10 @@ public class BootstrapService {
 
         mappingService.createResources(tenant);
         configurationRegistry.getGraalVMContextService().warmupMappingCodes(tenant, buildMappingCodeMap(tenant));
+        // Register a supplier so the service re-warms all active mapping codes automatically
+        // on every future Engine rotation, keeping cold-start latency bounded.
+        configurationRegistry.getGraalVMContextService()
+                .setMappingCodeSupplier(tenant, () -> buildMappingCodeMap(tenant));
 
         connectorRegistry.initializeResources(tenant);
 
