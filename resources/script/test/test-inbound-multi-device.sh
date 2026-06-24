@@ -41,7 +41,7 @@ dm_parse_args "$@"
 dm_register_cleanup cleanup
 
 # ── Test ───────────────────────────────────────────────────────────────────────
-dm_banner "Inbound Array Payload → Multiple Devices (expandArray)"
+dm_banner " 8. Array payload → multiple devices"
 
 dm_step "Waiting for Dynamic Mapper service ..."
 dm_test_setup_and_validate
@@ -116,5 +116,5 @@ if [ -z "$DEV2" ]; then
 fi
 dm_assert_measurement_present "Measurement for device 2" "$EXT_ID_2" "c8y_Serial" 1 20
 
-dm_done "Inbound Array Payload → Multiple Devices (expandArray)"
+dm_done " 8. Array payload → multiple devices"
 dm_print_summary

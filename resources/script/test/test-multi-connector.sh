@@ -22,7 +22,7 @@ source "${SCRIPT_DIR}/test-harness.sh"
 dm_parse_args "$@"   # supports --validate-only (read-only test, no cleanup needed)
 
 # ── Test ───────────────────────────────────────────────────────────────────────
-dm_banner "Multiple Connector Status Check"
+dm_banner "37. Multiple connector status check"
 
 dm_step "Waiting for Dynamic Mapper service ..."
 dm_wait_for_service
@@ -36,7 +36,7 @@ dm_info "Total connectors configured: $TOTAL"
 
 if [ "$TOTAL" -eq 0 ]; then
     dm_warn "No connectors configured — skipping status assertions"
-    dm_done "Multiple Connector Status Check (skipped — no connectors)"
+    dm_done "37. Multiple connector status check (skipped — no connectors)"
     dm_print_summary
     exit 0
 fi
@@ -60,5 +60,5 @@ printf '%s' "$CONNECTORS_JSON" \
         fi
     done
 
-dm_done "Multiple Connector Status Check"
+dm_done "37. Multiple connector status check"
 dm_print_summary

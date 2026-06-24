@@ -51,7 +51,7 @@ cleanup() {
 dm_parse_args "$@"
 dm_register_cleanup cleanup
 
-dm_banner "Outbound Subscription Persistence After Restart"
+dm_banner "34. Subscription persistence after restart"
 
 dm_step 0 "Validating environment"
 dm_wait_for_service
@@ -162,4 +162,4 @@ if [ "${TYPE_MATCH:-0}" -eq 0 ]; then
 fi
 
 dm_print_summary
-dm_done "Outbound Subscription Persistence After Restart"
+dm_done "34. Subscription persistence after restart"

@@ -26,7 +26,7 @@ CONNECTOR_ID="${DM_CONNECTOR_ID:-}"
 dm_parse_args "$@"   # supports --validate-only (this test creates no persistent data)
 
 # ── Test ───────────────────────────────────────────────────────────────────────
-dm_banner "Connector Disconnect / Reconnect Cycle"
+dm_banner "38. Connector disconnect / reconnect cycle"
 
 dm_step "Waiting for Dynamic Mapper service ..."
 dm_wait_for_service
@@ -78,5 +78,5 @@ dm_wait 10
 dm_step "Asserting connector is CONNECTED after reconnect ..."
 dm_assert_connector_status "Reconnected" "$CONNECTOR_ID" "CONNECTED"
 
-dm_done "Connector Disconnect / Reconnect Cycle"
+dm_done "38. Connector disconnect / reconnect cycle"
 dm_print_summary

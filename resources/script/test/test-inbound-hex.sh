@@ -37,7 +37,7 @@ dm_parse_args "$@"
 dm_register_cleanup cleanup
 
 # ── Test ───────────────────────────────────────────────────────────────────────
-dm_banner "Inbound HEX Binary Transformation (EVENT)"
+dm_banner " 5. HEX → EVENT"
 
 dm_step "Waiting for Dynamic Mapper service ..."
 dm_test_setup_and_validate
@@ -89,5 +89,5 @@ dm_mqtt_publish "dmtest/hex/${EXT_ID}" "$HEX_PAYLOAD"
 dm_step "Asserting at least 1 event was created ..."
 dm_assert_event_present "Event from HEX payload" "$EXT_ID" "c8y_Serial" 1 20
 
-dm_done "Inbound HEX Binary Transformation (EVENT)"
+dm_done " 5. HEX → EVENT"
 dm_print_summary

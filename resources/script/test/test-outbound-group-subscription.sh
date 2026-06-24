@@ -57,7 +57,7 @@ dm_parse_args "$@"
 dm_register_cleanup cleanup
 dm_validate_only_exit
 
-dm_banner "Outbound Dynamic Subscription by Device Group"
+dm_banner "32. Dynamic group subscription"
 
 # Step 1: Create device group
 dm_step 1 "Create device group '$GROUP_NAME'"
@@ -115,6 +115,6 @@ if [ "${GROUP_MATCH:-0}" -eq 0 ]; then
 fi
 
 dm_print_summary
-dm_done "Outbound Dynamic Subscription by Device Group"
+dm_done "32. Dynamic group subscription"
 echo " State saved to: $STATE_FILE"
 echo " Run test-case-IV.sh to test group removal."

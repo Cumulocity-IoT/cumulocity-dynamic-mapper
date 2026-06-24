@@ -31,7 +31,7 @@ cleanup() {
 
 dm_register_cleanup cleanup
 
-dm_banner "Test: Inbound Extension Custom Alarm (JSON → Cumulocity Alarm)"
+dm_banner "17. Extension: JSON → Alarm"
 
 dm_step 1 "Validating environment"
 dm_test_setup_and_validate
@@ -112,5 +112,5 @@ _text_match=false
 [[ "$ALARM_TEXT" == *"Temperature"* ]] && _text_match=true
 dm_assert_eq "Alarm text contains 'Temperature' ($ALARM_TEXT)" "true" "$_text_match"
 
-dm_done "Inbound Extension Custom Alarm"
+dm_done "17. Extension: JSON → Alarm"
 dm_print_summary

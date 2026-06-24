@@ -39,7 +39,7 @@ dm_parse_args "$@"
 dm_register_cleanup cleanup
 dm_validate_only_exit
 
-dm_banner "Outbound Static Device Subscription"
+dm_banner "30. Static subscription management"
 
 # Step 1: Create device
 dm_step 1 "Create test device"
@@ -78,4 +78,4 @@ if [ "${STATIC_MATCH_COUNT:-0}" -eq 0 ]; then
 fi
 
 dm_print_summary
-dm_done "Outbound Static Device Subscription"
+dm_done "30. Static subscription management"

@@ -38,7 +38,7 @@ dm_parse_args "$@"
 dm_register_cleanup cleanup
 
 # ── Test ───────────────────────────────────────────────────────────────────────
-dm_banner "Inbound Implicit Device Creation"
+dm_banner " 7. Implicit device auto-creation"
 
 dm_step "Waiting for Dynamic Mapper service ..."
 dm_test_setup_and_validate
@@ -98,5 +98,5 @@ fi
 # Counted assertion (was a bare dm_success → 0/0 in the summary).
 dm_assert_gt "Device auto-created (id=${DEVICE_ID:-none})" "${#DEVICE_ID}" 0
 
-dm_done "Inbound Implicit Device Creation"
+dm_done " 7. Implicit device auto-creation"
 dm_print_summary

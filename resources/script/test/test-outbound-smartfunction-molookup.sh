@@ -48,7 +48,7 @@ cleanup() {
 
 dm_register_cleanup cleanup
 
-dm_banner "Test: Outbound Smart Function (getManagedObjectByExternalId enrichment)"
+dm_banner "29. Pattern 03 outbound: getManagedObjectByExternalId — MO enrichment"
 
 dm_step 1 "Validating environment"
 dm_test_setup_and_validate
@@ -207,5 +207,5 @@ dm_assert_eq "MO-resolved device type in MQTT payload" "c8y_TemperatureSensor" "
 kill "$MQTT_PID" 2>/dev/null || true
 rm -f "$TEMP_FILE" "$TEMP_ERR_FILE"
 
-dm_done "Outbound Smart Function (getManagedObjectByExternalId)"
+dm_done "29. Pattern 03 outbound: getManagedObjectByExternalId — MO enrichment"
 dm_print_summary

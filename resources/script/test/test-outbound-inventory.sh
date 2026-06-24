@@ -51,7 +51,7 @@ dm_parse_args "$@"
 dm_register_cleanup cleanup
 
 # ── Test ───────────────────────────────────────────────────────────────────────
-dm_banner "Outbound INVENTORY — Managed-object Change → MQTT Broker"
+dm_banner "24. C8Y managed-object change → MQTT broker (metadata)"
 
 dm_step "Waiting for Dynamic Mapper service ..."
 dm_wait_for_service
@@ -126,5 +126,5 @@ dm_wait 12
 dm_step "Asserting messagesReceived increased ..."
 dm_assert_mapping_received_gt "Outbound inventory change processed" "$MAPPING_ID" "$BASELINE"
 
-dm_done "Outbound INVENTORY — Managed-object Change → MQTT Broker"
+dm_done "24. C8Y managed-object change → MQTT broker (metadata)"
 dm_print_summary

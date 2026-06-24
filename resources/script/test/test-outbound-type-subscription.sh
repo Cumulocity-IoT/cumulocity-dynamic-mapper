@@ -40,7 +40,7 @@ dm_parse_args "$@"
 dm_register_cleanup cleanup
 dm_validate_only_exit
 
-dm_banner "Outbound Dynamic Subscription by Device Type"
+dm_banner "31. Dynamic type subscription"
 
 # Step 1: Add dynamic type subscription
 dm_step 1 "Add dynamic type subscription for '$DEVICE_TYPE'"
@@ -91,4 +91,4 @@ if [ "${TYPE_MATCH:-0}" -eq 0 ]; then
 fi
 
 dm_print_summary
-dm_done "Outbound Dynamic Subscription by Device Type"
+dm_done "31. Dynamic type subscription"

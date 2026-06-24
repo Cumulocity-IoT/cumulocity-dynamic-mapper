@@ -47,7 +47,7 @@ dm_parse_args "$@"
 dm_register_cleanup cleanup
 dm_validate_only_exit
 
-dm_banner "Outbound Group Subscription Removal"
+dm_banner "33. Group subscription removal"
 
 # Load state; if missing, auto-bootstrap by running test-case-III first.
 if [ ! -f "$STATE_FILE" ]; then
@@ -141,4 +141,4 @@ dm_info "--- Group subscription status in dynamic mapper ---"
 dm_api GET /subscription/group | jq '.' || true
 
 dm_print_summary
-dm_done "Outbound Group Subscription Removal"
+dm_done "33. Group subscription removal"

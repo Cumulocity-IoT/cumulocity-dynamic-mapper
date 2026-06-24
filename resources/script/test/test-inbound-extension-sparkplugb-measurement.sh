@@ -31,7 +31,7 @@ cleanup() {
 
 dm_register_cleanup cleanup
 
-dm_banner "Test: Inbound Sparkplug B Measurement (protobuf → c8y_VoltageMeasurement)"
+dm_banner "19. Extension: Sparkplug B → Measurement"
 
 dm_step 1 "Validating environment"
 dm_test_setup_and_validate
@@ -98,6 +98,6 @@ if [ "$EXT_EVENT" = "SparkplugBMeasurement" ] || [[ "$EXT_FQN" == *".ProcessorEx
 fi
 dm_assert_eq "Sparkplug B extension configured (event=${EXT_EVENT:-n/a} fqn=${EXT_FQN:-n/a})" "true" "$_ext_match"
 
-dm_done "Inbound Extension Sparkplug B Measurement"
+dm_done "19. Extension: Sparkplug B → Measurement"
 dm_info "Note: Full protobuf payload testing requires binary message generation"
 dm_print_summary

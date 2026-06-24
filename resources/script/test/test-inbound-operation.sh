@@ -31,7 +31,7 @@ cleanup() {
 
 dm_register_cleanup cleanup
 
-dm_banner "Test: Inbound Operation (JSON → c8y_Operation via DEFAULT substitution)"
+dm_banner "10. JSON / DEFAULT → OPERATION"
 
 dm_step 1 "Validating environment"
 dm_test_setup_and_validate
@@ -108,5 +108,5 @@ OPERATION_TYPE=$(echo "$OPERATION" | jq -rs '.[0] | keys[] | select(startswith("
 dm_info "Operation status: $OPERATION_STATUS"
 dm_info "Operation type: $OPERATION_TYPE"
 
-dm_done "Inbound OPERATION Transformation"
+dm_done "10. JSON / DEFAULT → OPERATION"
 dm_print_summary

@@ -38,7 +38,7 @@ dm_parse_args "$@"
 dm_register_cleanup cleanup
 
 # ── Test ───────────────────────────────────────────────────────────────────────
-dm_banner "Outbound Dynamic Topic Resolution"
+dm_banner "26. Dynamic publish topic resolution"
 
 dm_step "Waiting for Dynamic Mapper service ..."
 dm_wait_for_service
@@ -131,5 +131,5 @@ else
 fi
 rm -f "$RECEIVED_FILE"
 
-dm_done "Outbound Dynamic Topic Resolution"
+dm_done "26. Dynamic publish topic resolution"
 dm_print_summary

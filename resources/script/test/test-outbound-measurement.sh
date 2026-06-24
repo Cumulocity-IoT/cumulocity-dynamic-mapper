@@ -37,7 +37,7 @@ dm_parse_args "$@"
 dm_register_cleanup cleanup
 
 # ── Test ───────────────────────────────────────────────────────────────────────
-dm_banner "Outbound C8Y Measurement → MQTT Broker"
+dm_banner "20. C8Y Measurement → MQTT broker"
 
 dm_step "Waiting for Dynamic Mapper service ..."
 dm_wait_for_service
@@ -110,5 +110,5 @@ dm_wait 12
 dm_step "Asserting messagesReceived increased ..."
 dm_assert_mapping_received_gt "Outbound measurement processed" "$MAPPING_ID" "$BASELINE"
 
-dm_done "Outbound C8Y Measurement → MQTT Broker"
+dm_done "20. C8Y Measurement → MQTT broker"
 dm_print_summary

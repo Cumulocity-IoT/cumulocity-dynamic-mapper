@@ -31,7 +31,7 @@ cleanup() {
 
 dm_register_cleanup cleanup
 
-dm_banner "Test: Inbound Alarm (JSON → c8y_Alarm via DEFAULT substitution)"
+dm_banner " 9. JSON / DEFAULT → ALARM"
 
 dm_step 1 "Validating environment"
 dm_test_setup_and_validate
@@ -114,5 +114,5 @@ dm_info "Alarm text: $ALARM_TEXT"
 dm_info "Alarm severity: $ALARM_SEVERITY"
 dm_assert_eq "Alarm severity" "CRITICAL" "$ALARM_SEVERITY"
 
-dm_done "Inbound ALARM Transformation"
+dm_done " 9. JSON / DEFAULT → ALARM"
 dm_print_summary

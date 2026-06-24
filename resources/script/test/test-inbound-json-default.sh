@@ -37,7 +37,7 @@ dm_parse_args "$@"
 dm_register_cleanup cleanup
 
 # ── Test ───────────────────────────────────────────────────────────────────────
-dm_banner "Inbound JSON Default Transformation (MEASUREMENT)"
+dm_banner " 1. JSON / DEFAULT → MEASUREMENT"
 
 dm_step "Waiting for Dynamic Mapper service ..."
 dm_test_setup_and_validate
@@ -85,5 +85,5 @@ dm_mqtt_publish "dmtest/json/${EXT_ID}" '{"temperature":42.5}'
 dm_step "Asserting at least 1 measurement was created ..."
 dm_assert_measurement_present "Measurement created" "$EXT_ID" "c8y_Serial" 1 20
 
-dm_done "Inbound JSON Default Transformation (MEASUREMENT)"
+dm_done " 1. JSON / DEFAULT → MEASUREMENT"
 dm_print_summary

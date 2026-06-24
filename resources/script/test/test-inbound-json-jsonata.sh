@@ -37,7 +37,7 @@ dm_parse_args "$@"
 dm_register_cleanup cleanup
 
 # ── Test ───────────────────────────────────────────────────────────────────────
-dm_banner "Inbound JSON JSONata Transformation (EVENT)"
+dm_banner " 2. JSON / JSONATA → EVENT"
 
 dm_step "Waiting for Dynamic Mapper service ..."
 dm_test_setup_and_validate
@@ -86,5 +86,5 @@ dm_mqtt_publish "dmtest/event/${EXT_ID}" '{"msg_type":"c8y_TestEvent","txt":"hel
 dm_step "Asserting at least 1 event was created ..."
 dm_assert_event_present "Event created" "$EXT_ID" "c8y_Serial" 1 20
 
-dm_done "Inbound JSON JSONata Transformation (EVENT)"
+dm_done " 2. JSON / JSONATA → EVENT"
 dm_print_summary

@@ -50,7 +50,7 @@ dm_parse_args "$@"
 dm_register_cleanup cleanup
 
 # ── Test ───────────────────────────────────────────────────────────────────────
-dm_banner "Inbound INVENTORY — Device Metadata Update (updateExistingDevice)"
+dm_banner "11. JSON / DEFAULT → INVENTORY (device metadata update)"
 
 dm_step "Waiting for Dynamic Mapper service ..."
 dm_wait_for_service
@@ -127,5 +127,5 @@ dm_step "Asserting the update was in place (no duplicate device created) ..."
 RESOLVED_ID=$(dm_lookup_device_by_ext_id "$EXT_ID" "c8y_Serial")
 dm_assert_eq "Same managed object updated in place" "$DEVICE_ID" "$RESOLVED_ID"
 
-dm_done "Inbound INVENTORY — Device Metadata Update (updateExistingDevice)"
+dm_done "11. JSON / DEFAULT → INVENTORY (device metadata update)"
 dm_print_summary

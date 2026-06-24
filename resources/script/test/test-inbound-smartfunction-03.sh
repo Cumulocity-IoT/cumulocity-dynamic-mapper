@@ -37,7 +37,7 @@ cleanup() {
 
 dm_register_cleanup cleanup
 
-dm_banner "Test: Smart Function Pattern 03 (getManagedObjectByExternalId enrichment)"
+dm_banner "13. Pattern 03: getManagedObjectByExternalId — MO enrichment"
 
 dm_step 1 "Validating environment"
 dm_test_setup_and_validate
@@ -155,5 +155,5 @@ fi
 dm_assert_eq "Event text contains MO-resolved device name and type" \
     "device=Sensor Berlin 03 type=c8y_Sensor" "$EVENT_TEXT"
 
-dm_done "Inbound Smart Function Pattern 03 (getManagedObjectByExternalId)"
+dm_done "13. Pattern 03: getManagedObjectByExternalId — MO enrichment"
 dm_print_summary

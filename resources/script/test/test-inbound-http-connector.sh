@@ -37,7 +37,7 @@ dm_parse_args "$@"
 dm_register_cleanup cleanup
 
 # ── Test ───────────────────────────────────────────────────────────────────────
-dm_banner "Inbound HTTP Connector (MEASUREMENT)"
+dm_banner " 6. HTTP connector → MEASUREMENT"
 
 dm_step "Waiting for Dynamic Mapper service ..."
 dm_wait_for_service
@@ -124,5 +124,5 @@ fi
 dm_step "Asserting at least 1 measurement was created ..."
 dm_assert_measurement_present "Measurement via HTTP connector" "$EXT_ID" "c8y_Serial" 1 15
 
-dm_done "Inbound HTTP Connector (MEASUREMENT)"
+dm_done " 6. HTTP connector → MEASUREMENT"
 dm_print_summary

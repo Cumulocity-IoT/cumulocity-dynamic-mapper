@@ -56,7 +56,7 @@ publish_with_cid() {  # <clientId> <topic> <payload> [qos=0]
     dm_info "Published to $_topic as client '$_cid' (qos=$_qos)"
 }
 
-dm_banner "Test: Smart Function Pattern 11 (Per-device state from context clientId)"
+dm_banner "15. Pattern 11: Per-device running statistics (device ID from context)"
 
 dm_step 1 "Validating environment"
 dm_test_setup_and_validate
@@ -215,5 +215,5 @@ LAST_A=$(c8y measurements list --device "$DEVICE_ID_A" --type "c8y_TemperatureMe
 MSG_COUNT_A=$(printf '%s' "$LAST_A" | jq -r '.c8y_TemperatureStatistics.messageCount.value // empty')
 dm_assert_eq "Device A messageCount=3 in statistics" "3" "${MSG_COUNT_A:-0}"
 
-dm_done "Inbound Smart Function Pattern 11 (per-device state from context)"
+dm_done "15. Pattern 11: Per-device running statistics (device ID from context)"
 dm_print_summary

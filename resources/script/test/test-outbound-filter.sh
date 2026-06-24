@@ -44,7 +44,7 @@ dm_parse_args "$@"
 dm_register_cleanup cleanup
 
 # ── Test ───────────────────────────────────────────────────────────────────────
-dm_banner "Outbound filterMapping — Selective Event Forwarding"
+dm_banner "25. filterMapping — selective forwarding"
 
 dm_step "Waiting for Dynamic Mapper service ..."
 dm_wait_for_service
@@ -163,5 +163,5 @@ dm_wait 8
 dm_assert_mapping_received_gt "Mapping A should process bus event" "$MAPPING_A_ID" "$BASELINE_A2"
 dm_assert_mapping_received_gt "Mapping B should process bus event" "$MAPPING_B_ID" "$BASELINE_B2"
 
-dm_done "Outbound filterMapping — Selective Event Forwarding"
+dm_done "25. filterMapping — selective forwarding"
 dm_print_summary

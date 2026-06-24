@@ -46,7 +46,7 @@ cleanup() {
 
 dm_register_cleanup cleanup
 
-dm_banner "Test: Outbound Smart Function (C8Y Measurement → MQTT JSON)"
+dm_banner "27. Smart Function: Measurement → MQTT JSON"
 
 dm_step 1 "Validating environment"
 dm_test_setup_and_validate
@@ -219,5 +219,5 @@ dm_assert_eq "Transformed temperature value" "22.5" "$TEMP_VALUE"
 kill "$MQTT_PID" 2>/dev/null || true
 rm -f "$TEMP_FILE" "$TEMP_ERR_FILE"
 
-dm_done "Outbound Smart Function"
+dm_done "27. Smart Function: Measurement → MQTT JSON"
 dm_print_summary
