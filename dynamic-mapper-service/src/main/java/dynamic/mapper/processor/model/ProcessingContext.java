@@ -161,6 +161,14 @@ public class ProcessingContext<O> implements AutoCloseable {
 
     private Context graalContext;
 
+    /**
+     * Callback invoked after the GraalVM {@link Context} is closed to notify
+     * {@code GraalVMContextService} that this in-flight context slot has been released.
+     * Set by {@code AbstractEnrichmentProcessor} so the service can close a retired
+     * {@link Engine} once all its contexts have drained.
+     */
+    private Runnable engineReleaseAction;
+
     private String sharedCode;
 
     private Source sharedSource;
@@ -521,6 +529,17 @@ public class ProcessingContext<O> implements AutoCloseable {
                     log.warn("{} - Error closing GraalVM Context: {}", getTenant(), e.getMessage());
                 }
                 graalContext = null;
+            }
+
+            // Notify GraalVMContextService that this context slot is freed so it can
+            // close a retired Engine once all its in-flight contexts have drained.
+            if (engineReleaseAction != null) {
+                try {
+                    engineReleaseAction.run();
+                } catch (Exception e) {
+                    log.warn("{} - Error in engineReleaseAction: {}", getTenant(), e.getMessage());
+                }
+                engineReleaseAction = null;
             }
         } catch (Exception e) {
             log.error("{} - Error during ProcessingContext cleanup: {}", getTenant(), e.getMessage(), e);

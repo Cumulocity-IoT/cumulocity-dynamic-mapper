@@ -105,6 +105,10 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
                 var graalEngine = graalVMContextService.getGraalEngine(tenant);
                 var graalContext = createGraalContext(graalEngine, supportESM);
 
+                // Register release callback so GraalVMContextService can close a retired
+                // Engine once all its in-flight Contexts have drained.
+                context.setEngineReleaseAction(() -> graalVMContextService.releaseEngine(graalEngine));
+
                 // Set cached Source objects for performance
                 context.setSharedSource(graalVMContextService.getGraalsSourceShared(tenant));
                 context.setSystemSource(graalVMContextService.getGraalsSourceSystem(tenant));

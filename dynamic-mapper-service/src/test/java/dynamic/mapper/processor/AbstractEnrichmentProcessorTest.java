@@ -61,6 +61,8 @@ import dynamic.mapper.processor.model.TransformationType;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 /**
  * Tests for AbstractEnrichmentProcessor base class.
  * Tests GraalVM context creation, message logging, JSONata extraction, and flow context helpers.
@@ -599,5 +601,84 @@ class AbstractEnrichmentProcessorTest {
         assertNotNull(processingContext.getSystemCode(), "Should have set system code");
 
         log.info("✅ Successfully set shared and system code");
+    }
+
+    // -------------------------------------------------------------------------
+    // Engine release-callback wiring
+    // -------------------------------------------------------------------------
+
+    @Test
+    void testProcessSetsEngineReleaseActionOnContext() throws Exception {
+        // When
+        processor.process(exchange);
+
+        // Then — the callback must be registered so GraalVMContextService can close
+        // a retired Engine once all its in-flight Contexts have drained.
+        assertNotNull(processingContext.getEngineReleaseAction(),
+                "engineReleaseAction should be set after process() for a SMART_FUNCTION mapping");
+
+        log.info("✅ process() sets engineReleaseAction on ProcessingContext");
+    }
+
+    @Test
+    void testProcessDoesNotSetEngineReleaseActionWhenNoCode() throws Exception {
+        // Given — no JavaScript code → no GraalVM context → no release action needed
+        mapping.setCode(null);
+
+        // When
+        processor.process(exchange);
+
+        // Then
+        assertNull(processingContext.getEngineReleaseAction(),
+                "engineReleaseAction should not be set when mapping has no code");
+
+        log.info("✅ process() leaves engineReleaseAction null when mapping has no code");
+    }
+
+    @Test
+    void testContextCloseInvokesEngineReleaseAction() throws Exception {
+        // Given — wire a custom release action so we can observe whether it fires
+        processor.process(exchange);
+        AtomicBoolean released = new AtomicBoolean(false);
+        processingContext.setEngineReleaseAction(() -> released.set(true));
+
+        // When
+        processingContext.close();
+
+        // Then
+        assertTrue(released.get(), "engineReleaseAction should be invoked when ProcessingContext is closed");
+
+        log.info("✅ ProcessingContext.close() invokes engineReleaseAction");
+    }
+
+    @Test
+    void testContextCloseClearsEngineReleaseActionAfterInvocation() throws Exception {
+        // Given
+        processor.process(exchange);
+        processingContext.setEngineReleaseAction(() -> {});
+
+        // When
+        processingContext.close();
+
+        // Then — nulled out to prevent double-invocation if close() is called again
+        assertNull(processingContext.getEngineReleaseAction(),
+                "engineReleaseAction should be cleared after ProcessingContext.close()");
+
+        log.info("✅ ProcessingContext.close() clears engineReleaseAction after invocation");
+    }
+
+    @Test
+    void testContextCloseCallsReleaseEngineOnService() throws Exception {
+        // Given — process() sets an engineReleaseAction that delegates to
+        // graalVMContextService.releaseEngine(graalEngine).
+        processor.process(exchange);
+
+        // When — simulate the context lifecycle ending
+        processingContext.close();
+
+        // Then — the service must be notified so it can drain retired Engines
+        verify(graalVMContextService).releaseEngine(graalEngine);
+
+        log.info("✅ ProcessingContext.close() calls GraalVMContextService.releaseEngine()");
     }
 }
