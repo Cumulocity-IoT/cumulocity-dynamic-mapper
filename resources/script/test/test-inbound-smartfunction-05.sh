@@ -25,11 +25,20 @@ MAPPING_ID=""
 DEVICE_ID_A=""
 DEVICE_ID_B=""
 
+# Per-device cert state (populated in c8y-mqtt-service mode only)
+_CERT_A="" _KEY_A="" _CERTDIR_A=""
+_CERT_B="" _KEY_B="" _CERTDIR_B=""
+
 dm_parse_args "$@"
 
 cleanup() {
     dm_info "Cleaning up test resources ..."
     [ -n "$MAPPING_ID" ] && dm_delete_mapping "$MAPPING_ID" 2>/dev/null || true
+    # Delete per-device trusted certs uploaded in c8y-mqtt-service mode
+    [ -n "${_CERT_A:-}" ] && c8y devicemanagement certificates delete --id "$EXT_ID_A" --force </dev/null >/dev/null 2>&1 || true
+    [ -n "${_CERT_B:-}" ] && c8y devicemanagement certificates delete --id "$EXT_ID_B" --force </dev/null >/dev/null 2>&1 || true
+    [ -n "${_CERTDIR_A:-}" ] && rm -rf "$_CERTDIR_A" 2>/dev/null || true
+    [ -n "${_CERTDIR_B:-}" ] && rm -rf "$_CERTDIR_B" 2>/dev/null || true
     for _eid in "$EXT_ID_A" "$EXT_ID_B"; do
         local _did
         _did=$(dm_lookup_device_by_ext_id "$_eid" "c8y_Serial" 2>/dev/null) || true
@@ -43,20 +52,56 @@ cleanup() {
 
 dm_register_cleanup cleanup
 
+# Generate a self-signed cert, upload it as a trusted certificate, and store
+# paths in the three caller-supplied variable names.
+# In c8y-mqtt-service mode the cert CN must equal the MQTT client ID.
+_provision_device_cert() {   # <dir_var> <cert_var> <key_var> <clientId>
+    local _dir_var="$1" _cert_var="$2" _key_var="$3" _cid="$4"
+    local _dir; _dir=$(mktemp -d)
+    local _key="${_dir}/${_cid}.key" _cert="${_dir}/${_cid}.pem"
+    openssl req -new -x509 -nodes -days 2 -newkey rsa:2048 \
+        -keyout "$_key" -out "$_cert" -subj "/CN=${_cid}" >/dev/null 2>&1 \
+        || { rm -rf "$_dir"; dm_error "Failed to generate cert for ${_cid}"; }
+    c8y devicemanagement certificates create --name "$_cid" --file "$_cert" \
+        --autoRegistrationEnabled true --status ENABLED </dev/null >/dev/null 2>&1 \
+        || { rm -rf "$_dir"; dm_error "Failed to upload cert for ${_cid}. Ensure the user has the 'Mqtt service' permission."; }
+    eval "${_dir_var}='${_dir}'"
+    eval "${_cert_var}='${_cert}'"
+    eval "${_key_var}='${_key}'"
+    dm_info "Uploaded trusted cert: CN=${_cid}"
+}
+
 # Publish with an explicit MQTT client ID so the Smart Function receives it via
-# context.getClientId().  The standard dm_mqtt_publish omits -i in public mode,
-# so we wrap mosquitto_pub directly here.
+# context.getClientId().
+#
+# In public mode mosquitto_pub sets the client ID directly with -i.
+# In c8y-mqtt-service mode the client ID is dictated by the X.509 cert CN, so
+# each device needs its own pre-provisioned cert (_CERT_A / _CERT_B).
 publish_with_cid() {  # <clientId> <topic> <payload> [qos=0]
     local _cid="$1" _topic="$2" _payload="$3" _qos="${4:-0}"
     local _host="${MQTT_HOST:-broker.hivemq.com}" _port="${MQTT_PORT:-1883}"
     local _args=(-h "$_host" -p "$_port" -t "$_topic" -m "$_payload" -q "$_qos" -i "$_cid")
-    [ -n "${MQTT_USER:-}" ] && _args+=(-u "$MQTT_USER")
-    [ -n "${MQTT_PASS:-}" ] && _args+=(-P "$MQTT_PASS")
+    if [ "${_DM_MQTT_SVC_MODE:-false}" = "true" ]; then
+        local _cert _key
+        if [ "$_cid" = "$EXT_ID_A" ]; then
+            _cert="$_CERT_A" _key="$_KEY_A"
+        elif [ "$_cid" = "$EXT_ID_B" ]; then
+            _cert="$_CERT_B" _key="$_KEY_B"
+        else
+            dm_error "No provisioned cert for device: $_cid"
+        fi
+        _args+=(-u "${C8Y_TENANT:-}")
+        _dm_mqtt_append_tls_args _args
+        _args+=(--cert "$_cert" --key "$_key")
+    else
+        [ -n "${MQTT_USER:-}" ] && _args+=(-u "$MQTT_USER")
+        [ -n "${MQTT_PASS:-}" ] && _args+=(-P "$MQTT_PASS")
+    fi
     mosquitto_pub "${_args[@]}"
     dm_info "Published to $_topic as client '$_cid' (qos=$_qos)"
 }
 
-dm_banner "15. Pattern 11: Per-device running statistics (device ID from context)"
+dm_banner "15. Inbound: Pattern 11: Per-device running statistics (device ID from context)"
 
 dm_step 1 "Validating environment"
 dm_test_setup_and_validate
@@ -178,6 +223,15 @@ dm_step 3 "Deploying and activating mapping"
 dm_deploy_mapping_to_mqtt_connector "$MAPPING_ID"
 dm_activate_mapping "$MAPPING_ID"
 dm_assert_mqtt_topics_active
+if [ "${_DM_MQTT_SVC_MODE:-false}" = "true" ]; then
+    # In c8y-mqtt-service mode each simulated device needs its own X.509 cert so
+    # the MQTT Service exposes the correct client ID to context.getClientId().
+    # Upload both certs first, then wait once for registration.
+    _provision_device_cert _CERTDIR_A _CERT_A _KEY_A "$EXT_ID_A"
+    _provision_device_cert _CERTDIR_B _CERT_B _KEY_B "$EXT_ID_B"
+    dm_info "Waiting 5s for device certs to be registered ..."
+    sleep 5
+fi
 dm_success "Mapping deployed and activated"
 
 dm_step 4 "Publishing 3 messages from device A (clientId=$EXT_ID_A)"
@@ -215,5 +269,5 @@ LAST_A=$(c8y measurements list --device "$DEVICE_ID_A" --type "c8y_TemperatureMe
 MSG_COUNT_A=$(printf '%s' "$LAST_A" | jq -r '.c8y_TemperatureStatistics.messageCount.value // empty')
 dm_assert_eq "Device A messageCount=3 in statistics" "3" "${MSG_COUNT_A:-0}"
 
-dm_done "15. Pattern 11: Per-device running statistics (device ID from context)"
+dm_done "15. Inbound: Pattern 11: Per-device running statistics (device ID from context)"
 dm_print_summary

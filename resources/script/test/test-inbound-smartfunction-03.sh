@@ -37,7 +37,7 @@ cleanup() {
 
 dm_register_cleanup cleanup
 
-dm_banner "13. Pattern 03: getManagedObjectByExternalId — MO enrichment"
+dm_banner "13. Inbound: Pattern 03: getManagedObjectByExternalId — MO enrichment"
 
 dm_step 1 "Validating environment"
 dm_test_setup_and_validate
@@ -143,7 +143,7 @@ for _i in 1 2 3 4 5 6 7 8; do
         --device "$RESOLVED_DEVICE_ID" \
         --type "dm_MoLookupTest" \
         --pageSize 10 --output json 2>/dev/null \
-        | jq -rs '.[0].text // empty')
+        | jq -rs '[.[] | select(.text | startswith("device=") and (startswith("device=undefined") | not))] | .[0].text // empty')
     [ -n "$EVENT_TEXT" ] && break
     sleep 3
 done
@@ -155,5 +155,5 @@ fi
 dm_assert_eq "Event text contains MO-resolved device name and type" \
     "device=Sensor Berlin 03 type=c8y_Sensor" "$EVENT_TEXT"
 
-dm_done "13. Pattern 03: getManagedObjectByExternalId — MO enrichment"
+dm_done "13. Inbound: Pattern 03: getManagedObjectByExternalId — MO enrichment"
 dm_print_summary

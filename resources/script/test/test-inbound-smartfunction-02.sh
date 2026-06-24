@@ -34,7 +34,7 @@ cleanup() {
 
 dm_register_cleanup cleanup
 
-dm_banner "12. Pattern 02: Topic-based external ID + sensor filter"
+dm_banner "12. Inbound: Pattern 02: Topic-based external ID + sensor filter"
 
 dm_step 1 "Validating environment"
 dm_test_setup_and_validate
@@ -174,5 +174,5 @@ if [ -z "$VOLTAGE" ]; then
 fi
 dm_assert_eq "Voltage measurement value" "230.5" "$VOLTAGE"
 
-dm_done "12. Pattern 02: Topic-based external ID + sensor filter"
+dm_done "12. Inbound: Pattern 02: Topic-based external ID + sensor filter"
 dm_print_summary
