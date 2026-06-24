@@ -235,13 +235,23 @@ fi
 dm_success "Mapping deployed and activated"
 
 dm_step 4 "Publishing 3 messages from device A (clientId=$EXT_ID_A)"
+# Publish sequentially with a gap between each message.  The Smart Function
+# accumulates running statistics via context.getState/setState, which are
+# persisted in FlowStateStore at the END of each invocation (in close()).
+# If messages arrive faster than one invocation completes, the next invocation
+# loads a stale snapshot and the counter resets to 1.  A 5 s delay covers the
+# worst case: first message triggers device auto-creation (~2 s) + SmartFunction
+# execution (~2 s) + flush to FlowStateStore.
 publish_with_cid "$EXT_ID_A" "perDevStats/$EXT_ID_A" '{"temperature":20.0}' 1
+sleep 5
 publish_with_cid "$EXT_ID_A" "perDevStats/$EXT_ID_A" '{"temperature":22.0}' 1
+sleep 5
 publish_with_cid "$EXT_ID_A" "perDevStats/$EXT_ID_A" '{"temperature":24.0}' 1
 dm_success "3 messages published for device A"
 
 dm_step 5 "Publishing 2 messages from device B (clientId=$EXT_ID_B)"
 publish_with_cid "$EXT_ID_B" "perDevStats/$EXT_ID_B" '{"temperature":30.0}' 1
+sleep 5
 publish_with_cid "$EXT_ID_B" "perDevStats/$EXT_ID_B" '{"temperature":32.0}' 1
 dm_success "2 messages published for device B"
 
