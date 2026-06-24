@@ -138,11 +138,15 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
             }
             result.setConsolidatedQos(connectorClient.determineMaxQosInbound(resolvedMappings));
 
-            // Set max CPU time if code-based mappings exist
+            // For code-based (Smart Function) mappings the JS execution itself is bounded
+            // by serviceConfiguration.getMaxCPUTimeMS() via GraalVM context interruption.
+            // The Pulsar callback wait must be longer: it covers JS time PLUS any C8Y REST
+            // calls (device auto-creation, measurement/alarm creation) that follow.
+            // Use 30 s to match MQTTServicePulsarCallback.MAX_PROCESSING_TIMEOUT.
             int tempMaxCPUTime = 0;
             for (Mapping mapping : resolvedMappings) {
                 if (mapping.isTransformationAsCode()) {
-                    tempMaxCPUTime = serviceConfiguration.getMaxCPUTimeMS();
+                    tempMaxCPUTime = 30_000;
                     break;
                 }
             }
@@ -157,6 +161,7 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
         }
 
         // Process using Camel routes asynchronously
+        final long processingStartNanos = System.nanoTime();
         Future<List<ProcessingContext<Object>>> futureProcessingResult = virtualThreadPool.submit(() -> {
             try {
                 Exchange exchange = createExchange(connectorMessage, resolvedMappings, testing); // Now can use final variable
@@ -231,6 +236,8 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
             } catch (Exception e) {
                 log.error("{} - Error processing inbound message through Camel routes: {}", tenant, e.getMessage(), e);
                 throw new RuntimeException("Camel processing failed", e);
+            } finally {
+                result.setProcessingTimeMS((System.nanoTime() - processingStartNanos) / 1_000_000L);
             }
         });
 

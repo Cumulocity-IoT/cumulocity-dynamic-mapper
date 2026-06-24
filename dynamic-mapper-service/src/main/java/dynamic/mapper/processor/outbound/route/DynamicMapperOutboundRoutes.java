@@ -170,7 +170,9 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
                 // 0. Common processing for all
                 .process(deserializationOutboundProcessor)
                 .process(enrichmentProcessor)
-
+                // Note: outbound has no topic/payload filter step (FilterInboundProcessor is
+                // inbound-only). Outbound filtering is entirely handled by the connector's
+                // subscription topic, not by a post-enrichment predicate.
 
                 // Check if further processing should be ignored after enrichment
                 .choice()

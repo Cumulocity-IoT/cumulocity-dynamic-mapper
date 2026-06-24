@@ -41,7 +41,6 @@ import dynamic.mapper.processor.model.CumulocityType;
 import dynamic.mapper.processor.model.DeviceMessage;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ExternalIdInfo;
-import dynamic.mapper.processor.model.OutputCollector;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingState;
 import dynamic.mapper.processor.model.RoutingContext;
@@ -186,15 +185,14 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             Object message,
             RoutingContext routing,
             ProcessingState state,
-            OutputCollector output,
             ProcessingContext<?> context) throws ProcessingException {
         String tenant = routing.getTenant();
         Mapping mapping = context.getMapping();
 
         if (message instanceof DeviceMessage) {
-            processDeviceMessage((DeviceMessage) message, routing, state, output, context, tenant, mapping);
+            processDeviceMessage((DeviceMessage) message, routing, state, context, tenant, mapping);
         } else if (message instanceof CumulocityObject) {
-            processCumulocityObject((CumulocityObject) message, routing, state, output, context, tenant, mapping);
+            processCumulocityObject((CumulocityObject) message, routing, state, context, tenant, mapping);
         } else {
             log.debug("{} - Message is not a recognized type, skipping: {}", tenant,
                     message.getClass().getSimpleName());
@@ -219,7 +217,6 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             DeviceMessage deviceMessage,
             RoutingContext routing,
             ProcessingState state,
-            OutputCollector output,
             ProcessingContext<?> context,
             String tenant,
             Mapping mapping) throws ProcessingException {
@@ -240,7 +237,7 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
                         .pathCumulocity(servicePath)
                         .request(objectMapper.writeValueAsString(deviceMessage.getPayload()))
                         .build();
-                output.addRequest(customRequest);
+                context.addRequest(customRequest);
                 log.debug("{} - Created CUSTOM route request from DeviceMessage: path={}, method={}",
                         tenant, servicePath, customRequest.getMethod());
                 return;
@@ -316,8 +313,7 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
                             "Failed to serialize SparkPlugB payload: " + serEx.getMessage(), serEx);
                 }
             }
-            // Add to thread-safe output collector (syncOutputToContext copies to context.requests once)
-            output.addRequest(request);
+            context.addRequest(request);
 
             // Override resolvedPublishTopic if DeviceMessage provides a topic
             if (publishTopic != null && !publishTopic.isEmpty()) {
@@ -431,7 +427,6 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             CumulocityObject cumulocityMessage,
             RoutingContext routing,
             ProcessingState state,
-            OutputCollector output,
             ProcessingContext<?> context,
             String tenant,
             Mapping mapping) throws ProcessingException {
@@ -451,7 +446,7 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
                         .pathCumulocity(targetPath)
                         .request(objectMapper.writeValueAsString(cumulocityMessage.getPayload()))
                         .build();
-                output.addRequest(customRequest);
+                context.addRequest(customRequest);
                 log.debug("{} - Created CUSTOM route request: path={}, method={}",
                         tenant, targetPath, customRequest.getMethod());
                 return;
@@ -463,7 +458,7 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
                         "CumulocityObject missing cumulocityType, cannot derive API for mapping '%s', skipping message",
                         mapping.getIdentifier());
                 log.warn("{} - {}", tenant, warnMsg);
-                output.addWarning(warnMsg);
+                context.getWarnings().add(warnMsg);
                 return;
             }
             API targetAPI = APITopicUtil.deriveAPIFromTopic(cumulocityMessage.getCumulocityType().toString());
@@ -472,7 +467,7 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
                         "CumulocityObject has unrecognized cumulocityType '%s' for mapping '%s', skipping message",
                         cumulocityMessage.getCumulocityType(), mapping.getIdentifier());
                 log.warn("{} - {}", tenant, warnMsg);
-                output.addWarning(warnMsg);
+                context.getWarnings().add(warnMsg);
                 return;
             }
 
@@ -488,15 +483,13 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             }
 
             if (cumulocityMessage.getSourceId() != null && !cumulocityMessage.getSourceId().isEmpty()) {
-                // Use explicitly provided sourceId
+                // Use explicitly provided sourceId — do NOT write back to context (shared across batch items)
                 resolvedDeviceId = cumulocityMessage.getSourceId();
-                context.setSourceId(resolvedDeviceId);
                 ProcessingResultHelper.setHierarchicalValue(payload, targetAPI.identifier, resolvedDeviceId);
                 log.debug("{} - Using explicit sourceId from CumulocityObject: {}", tenant, resolvedDeviceId);
             } else if ((resolvedDeviceId = resolveDeviceIdentifier(cumulocityMessage, context, tenant)) != null) {
-                // Use resolved device ID from externalSource
+                // Use resolved device ID from externalSource — do NOT write back to context
                 ProcessingResultHelper.setHierarchicalValue(payload, targetAPI.identifier, resolvedDeviceId);
-                context.setSourceId(resolvedDeviceId);
             } else if (externalIdInfo.isPresent()) {
                 // No device ID and not creating implicit devices - skip this message
                 log.warn(
@@ -515,12 +508,10 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             // Convert payload to JSON string for the request
             String payloadJson = objectMapper.writeValueAsString(payload);
 
-            // Create the request without adding to context (will be added via OutputCollector, matching inbound pattern)
             DynamicMapperRequest c8yRequest = ProcessingResultHelper.createDynamicMapperRequest(
                     context.getDeviceContext(), context.getRoutingContext(), payloadJson,
                     cumulocityMessage.getAction(), mapping);
-            // Add to thread-safe output collector (syncOutputToContext copies to context.requests once)
-            output.addRequest(c8yRequest);
+            context.addRequest(c8yRequest);
             c8yRequest.setApi(targetAPI);
             c8yRequest.setExternalIdType(externalIdInfo.getExternalType());
             c8yRequest.setExternalId(externalIdInfo.getExternalId());
@@ -555,7 +546,7 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
         @SuppressWarnings("unchecked")
         List<String> topicLevels = (List<String>) payload.get(Mapping.TOKEN_TOPIC_LEVEL);
 
-        if (topicLevels != null && topicLevels.size() > 0) {
+        if (topicLevels != null && !topicLevels.isEmpty()) {
             // Merge the replaced topic levels (logic from substituteInTargetAndSend)
             MutableInt c = new MutableInt(0);
             String[] splitTopicInAsList = Mapping.splitTopicIncludingSeparatorAsArray(context.getTopic());
@@ -599,10 +590,9 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
                 context.setKey(key);
             }
 
-            // Extract publish topic override
+            // Extract publish topic override — only set resolvedPublishTopic, never context.topic
             String publishTopic = contextData.get("publishTopic");
             if (publishTopic != null && !publishTopic.equals("")) {
-                context.setTopic(publishTopic);
                 context.setResolvedPublishTopic(publishTopic);
             }
 

@@ -331,7 +331,10 @@ public class SendInboundProcessor extends BaseProcessor {
             }
 
             if (context.getSendPayload()) {
-                // Send the request to C8Y and capture the actual response
+                if (context.getServiceConfiguration().getLogPayload()) {
+                    log.info("{} - Sending {} request to C8Y: externalId={}, payload={}",
+                            tenant, request.getApi(), request.getExternalId(), request.getRequest());
+                }
                 AbstractExtensibleRepresentation meaoResult = c8yAgent.createMEAO(context, requestIndex);
                 if (meaoResult != null) {
                     request.setResponse(objectMapper.writeValueAsString(meaoResult));

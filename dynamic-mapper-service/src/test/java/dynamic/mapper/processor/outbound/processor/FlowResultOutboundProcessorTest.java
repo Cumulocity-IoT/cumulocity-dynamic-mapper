@@ -55,6 +55,8 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Qos;
+import dynamic.mapper.processor.model.CumulocityObject;
+import dynamic.mapper.processor.model.CumulocityType;
 import dynamic.mapper.processor.model.DeviceMessage;
 import dynamic.mapper.processor.model.ExternalSource;
 import dynamic.mapper.processor.model.InputMessage;
@@ -861,6 +863,104 @@ void setUp() throws Exception {
         log.info("✅ Event update test passed");
         log.info("   - Method: {}", request.getMethod());
         log.info("   - Path Cumulocity: {}", request.getPathCumulocity());
+    }
+
+    // ==================== Bug regression tests ====================
+
+    /**
+     * Bug #1 regression: processCumulocityObject must NOT write back to context.setSourceId().
+     *
+     * A Smart Function can return a batch like [CumulocityObject(sourceId="childDevice"), DeviceMessage].
+     * Before the fix, the CumulocityObject path overwrites context.sourceId with "childDevice",
+     * and the subsequent DeviceMessage then reads the corrupted value.
+     *
+     * This test is expected to FAIL before the fix and PASS after.
+     */
+    @Test
+    void testCumulocityObjectBatch_doesNotCorruptContextSourceId() throws Exception {
+        TestableFlowResultOutboundProcessor fullProcessor = createFullProcessingProcessor();
+
+        final String triggerDeviceId = "triggerDevice-999";
+        processingContext.setSourceId(triggerDeviceId);
+
+        // A JS function returned [CumulocityObject for childDevice, DeviceMessage for the trigger device]
+        CumulocityObject childMeasurement = CumulocityObject.measurement()
+                .type("c8y_Temperature")
+                .time("2025-01-01T00:00:00Z")
+                .fragment("c8y_Temperature", "T", 22.5, "C")
+                .sourceId("childDevice-111")
+                .build();
+
+        DeviceMessage triggerDeviceMsg = new DeviceMessage();
+        triggerDeviceMsg.setCumulocityType(CumulocityType.MEASUREMENT);
+        triggerDeviceMsg.setPayload(createTemperatureMeasurementPayload());
+        // no explicit sourceId → should fall back to context.getSourceId() = triggerDeviceId
+
+        processingContext.setFlowResult(List.of(childMeasurement, triggerDeviceMsg));
+
+        fullProcessor.process(exchange);
+
+        // context.sourceId must not have been overwritten by the CumulocityObject iteration
+        assertEquals(triggerDeviceId, processingContext.getSourceId(),
+                "context.sourceId must not be overwritten by processCumulocityObject (Bug #1)");
+
+        assertEquals(2, processingContext.getRequests().size(),
+                "Should produce exactly 2 requests (one per batch item)");
+
+        // The first request is for childDevice-111 (from CumulocityObject)
+        DynamicMapperRequest childRequest = processingContext.getRequests().get(0);
+        assertEquals("childDevice-111", childRequest.getSourceId(),
+                "CumulocityObject request must carry the child device's sourceId");
+
+        // The second request is for the trigger device (from DeviceMessage, reads context.sourceId)
+        DynamicMapperRequest triggerRequest = processingContext.getRequests().get(1);
+        assertEquals(triggerDeviceId, triggerRequest.getSourceId(),
+                "DeviceMessage request must carry the original trigger device sourceId, not the child device's (Bug #1)");
+    }
+
+    /**
+     * Bug #2 regression: setResolvedPublishTopic must NOT call context.setTopic().
+     *
+     * When TOKEN_CONTEXT_DATA carries a "publishTopic" override, that value is the
+     * broker publish destination — it must be placed into context.resolvedPublishTopic only.
+     * Overwriting context.topic (the C8Y inbound notification topic) corrupts logging
+     * and any subsequent code that reads the inbound topic.
+     *
+     * This test is expected to FAIL before the fix and PASS after.
+     */
+    @Test
+    void testContextTopicNotOverwrittenByPublishTopicOverride() throws Exception {
+        TestableFlowResultOutboundProcessor fullProcessor = createFullProcessingProcessor();
+
+        final String inboundC8yTopic = "c8y/inbound/notification/device/67890";
+        processingContext.setTopic(inboundC8yTopic);
+        processingContext.setSourceId(TEST_DEVICE_ID);
+
+        final String brokerPublishTopic = "device/out/berlin-01/data";
+
+        // Build a payload that carries TOKEN_CONTEXT_DATA with a publishTopic override
+        Map<String, Object> payload = new HashMap<>(createTemperatureMeasurementPayload());
+        Map<String, String> contextData = new HashMap<>();
+        contextData.put("publishTopic", brokerPublishTopic);
+        payload.put(Mapping.TOKEN_CONTEXT_DATA, contextData);
+
+        DeviceMessage deviceMsg = new DeviceMessage();
+        // null topic: prevents the "Override resolvedPublishTopic if DeviceMessage provides a topic" branch (line 323)
+        // so resolvedPublishTopic is set exclusively by setResolvedPublishTopic → TOKEN_CONTEXT_DATA path
+        deviceMsg.setTopic(null);
+        deviceMsg.setCumulocityType(CumulocityType.MEASUREMENT);
+        deviceMsg.setPayload(payload);
+        processingContext.setFlowResult(deviceMsg);
+
+        fullProcessor.process(exchange);
+
+        // resolvedPublishTopic must be set from TOKEN_CONTEXT_DATA
+        assertEquals(brokerPublishTopic, processingContext.getResolvedPublishTopic(),
+                "resolvedPublishTopic should be set from TOKEN_CONTEXT_DATA publishTopic");
+
+        // context.topic (the C8Y notification topic) must NOT be overwritten (Bug #2)
+        assertEquals(inboundC8yTopic, processingContext.getTopic(),
+                "context.topic (C8Y inbound notification topic) must not be overwritten by the broker publish topic (Bug #2)");
     }
 
     @Test

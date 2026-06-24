@@ -27,16 +27,21 @@ import dynamic.mapper.processor.model.ProcessingContext;
 
 import org.apache.camel.Exchange;
 
+/**
+ * Sets the exchange body to the current ProcessingContext so that Camel's
+ * aggregation strategy ({@link ProcessingContextAggregationStrategy}) can read
+ * it after every split leg. Called before each {@code .stop()} and {@code .end()}
+ * in the inbound and outbound route pipelines.
+ *
+ * <p>The name "ConsolidationProcessor" is historical. Its only responsibility is
+ * moving the context from the in-header to the exchange body.
+ */
 @Component
 public class ConsolidationProcessor extends CommonProcessor {
-    
+
     @Override
     public void process(Exchange exchange) throws Exception {
         ProcessingContext<?> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
-        
-        // The ProcessingContext itself contains all the processed data
-        // No need to extract a separate "processedData" - the context IS the result
-        
-        exchange.getIn().setBody(context); // For aggregation - pass the context itself
+        exchange.getIn().setBody(context);
     }
 }

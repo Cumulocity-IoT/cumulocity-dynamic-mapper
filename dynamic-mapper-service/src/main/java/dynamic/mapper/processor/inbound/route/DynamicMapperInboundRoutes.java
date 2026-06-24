@@ -1,3 +1,23 @@
+/*
+ * Copyright (c) 2022-2025 Cumulocity GmbH.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ *  @authors Christof Strack, Stefan Witschel
+ *
+ */
 package dynamic.mapper.processor.inbound.route;
 
 import dynamic.mapper.processor.util.CamelHeaders;
@@ -146,8 +166,13 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
                                 .collect(java.util.stream.Collectors.toList());
 
                         exchange.getIn().setHeader(CamelHeaders.MAPPINGS, validMappings);
-                        log.debug("Filtered {} mappings to {} valid mappings",
-                                allMappings.size(), validMappings.size());
+                        if (validMappings.isEmpty()) {
+                            log.info("{} - All {} candidate mapping(s) filtered out for connector {} — no processing will occur",
+                                    tenant, allMappings.size(), connectorIdentifier);
+                        } else {
+                            log.info("{} - Filtered {} candidate mapping(s) to {} valid mapping(s) for connector {}",
+                                    tenant, allMappings.size(), validMappings.size(), connectorIdentifier);
+                        }
                     }
                 })
                 .split(header(CamelHeaders.MAPPINGS))
@@ -303,9 +328,16 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
                     log.debug("Completed parallel processing of all requests");
                 });
 
-        // Error handling route
+        // Error handling route — logs the exception and ensures PROCESSED_CONTEXTS is set to an
+        // empty list so the dispatcher's header read never returns null after an exception.
         from("direct:inboundErrorHandling")
                 .routeId("inbound-error-handler")
+                .process(exchange -> {
+                    if (exchange.getIn().getHeader(CamelHeaders.PROCESSED_CONTEXTS) == null) {
+                        exchange.getIn().setHeader(CamelHeaders.PROCESSED_CONTEXTS,
+                                new ArrayList<ProcessingContext<Object>>());
+                    }
+                })
                 .to("log:dynamic-mapper-error?level=ERROR&showException=true");
     }
 

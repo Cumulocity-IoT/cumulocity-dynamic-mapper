@@ -25,7 +25,9 @@ import dynamic.mapper.processor.util.CamelHeaders;
 
 import static dynamic.mapper.model.Substitution.toPrettyJsonString;
 
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
 import org.apache.camel.Exchange;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Source;
@@ -334,63 +336,71 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
     }
 
     /**
-     * Extract warnings from the flow context using thread-safe OutputCollector.
-     * NEW: Thread-safe version that uses focused contexts.
+     * Extract warnings from the flow context into a List target.
      */
-    protected void extractWarnings(DataPrepContext flowContext, OutputCollector output, String tenant) {
+    protected void extractWarnings(DataPrepContext flowContext, List<String> target, String tenant) {
         Value warnings = null;
         try {
             warnings = flowContext.getState(DataPrepContext.WARNINGS);
             if (warnings != null && warnings.hasArrayElements()) {
                 long size = warnings.getArraySize();
-
                 for (long i = 0; i < size; i++) {
                     Value warningElement = null;
                     try {
                         warningElement = warnings.getArrayElement(i);
                         if (warningElement != null && warningElement.isString()) {
-                            output.addWarning(warningElement.asString());
+                            target.add(warningElement.asString());
                         }
                     } finally {
                         warningElement = null;
                     }
                 }
-
-                log.debug("{} - Collected {} warning(s) from flow execution", tenant, output.getWarnings().size());
+                log.debug("{} - Collected {} warning(s) from flow execution", tenant, target.size());
             }
         } finally {
             warnings = null;
         }
     }
 
+    /** Overload for callers that accumulate into an OutputCollector. */
+    protected void extractWarnings(DataPrepContext flowContext, OutputCollector output, String tenant) {
+        List<String> temp = new ArrayList<>();
+        extractWarnings(flowContext, temp, tenant);
+        temp.forEach(output::addWarning);
+    }
+
     /**
-     * Extract logs from the flow context using thread-safe OutputCollector.
-     * NEW: Thread-safe version that uses focused contexts.
+     * Extract logs from the flow context into a List target.
      */
-    protected void extractLogs(DataPrepContext flowContext, OutputCollector output, String tenant) {
+    protected void extractLogs(DataPrepContext flowContext, List<String> target, String tenant) {
         Value logs = null;
         try {
             logs = flowContext.getState(DataPrepContext.LOGS);
             if (logs != null && logs.hasArrayElements()) {
                 long size = logs.getArraySize();
-
                 for (long i = 0; i < size; i++) {
                     Value logElement = null;
                     try {
                         logElement = logs.getArrayElement(i);
                         if (logElement != null && logElement.isString()) {
-                            output.addLog(logElement.asString());
+                            target.add(logElement.asString());
                         }
                     } finally {
                         logElement = null;
                     }
                 }
-
-                log.debug("{} - Collected {} logs from flow execution", tenant, output.getLogs().size());
+                log.debug("{} - Collected {} logs from flow execution", tenant, target.size());
             }
         } finally {
             logs = null;
         }
+    }
+
+    /** Overload for callers that accumulate into an OutputCollector. */
+    protected void extractLogs(DataPrepContext flowContext, OutputCollector output, String tenant) {
+        List<String> temp = new ArrayList<>();
+        extractLogs(flowContext, temp, tenant);
+        temp.forEach(output::addLog);
     }
 
     /**

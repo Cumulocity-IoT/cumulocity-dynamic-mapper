@@ -290,11 +290,14 @@ public class CamelDispatcherOutbound implements NotificationCallback {
             consolidatedQos = connectorClient.determineMaxQosOutbound(resolvedMappings);
             result.setConsolidatedQos(consolidatedQos);
 
-            // Set max CPU time if code-based mappings exist
+            // For code-based (Smart Function) mappings the JS execution is bounded by
+            // serviceConfiguration.getMaxCPUTimeMS() via GraalVM; the Pulsar wait must
+            // additionally cover broker publish latency. Use 30 s to match
+            // MQTTServicePulsarCallback.MAX_PROCESSING_TIMEOUT.
             int tempMaxCPUTime = 0;
             for (Mapping mapping : resolvedMappings) {
                 if (mapping.isTransformationAsCode()) {
-                    tempMaxCPUTime = serviceConfiguration.getMaxCPUTimeMS();
+                    tempMaxCPUTime = 30_000;
                     break;
                 }
             }
@@ -324,6 +327,7 @@ public class CamelDispatcherOutbound implements NotificationCallback {
         //   3. runs GraalVM cancel-actions (Context.close) to stop CPU-bound JS execution
         // All three paths are handled below.
         final String connectorIdentifier = connectorClient.getConnectorIdentifier();
+        final long processingStartNanos = System.nanoTime();
         Future<List<ProcessingContext<Object>>> futureProcessingResult = virtualThreadPool.submit(() -> {
             // ── Early-exit path ──────────────────────────────────────────────────────────
             // If cancelProcessing() was already called (e.g. the timeout fired before this
@@ -363,6 +367,8 @@ public class CamelDispatcherOutbound implements NotificationCallback {
                 }
                 log.error("{} - Error processing outbound message through Camel routes: {}", tenant, e.getMessage(), e);
                 throw new RuntimeException("Camel processing failed", e);
+            } finally {
+                result.setProcessingTimeMS((System.nanoTime() - processingStartNanos) / 1_000_000L);
             }
         });
         result.setProcessingResult((Future) futureProcessingResult);

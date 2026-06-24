@@ -68,45 +68,37 @@ import dynamic.mapper.processor.model.ProcessingResultWrapper;
 public class ProcessingResultHelper {
 
     /**
-     * Creates a successful processing result wrapper from a list of completed processing contexts.
-     *
-     * <p>This method consolidates multiple processing contexts into a single result, determining
-     * the highest QoS level across all contexts and calculating the total processing time.
+     * Creates a successful processing result wrapper from a list of already-completed processing
+     * contexts. The future is pre-completed so {@code processingTimeMS} is 0 — the caller
+     * (dispatcher) is responsible for setting the actual elapsed time via
+     * {@link dynamic.mapper.processor.model.ProcessingResultWrapper#setProcessingTimeMS}.
      *
      * @param <T> the type of payload in the processing contexts
      * @param contexts the list of processing contexts that were successfully processed
-     * @return a ProcessingResultWrapper containing the completed future, consolidated QoS, and processing time
+     * @return a ProcessingResultWrapper with a completed future and consolidated QoS
      */
     public static <T> ProcessingResultWrapper<T> success(List<ProcessingContext<T>> contexts) {
         CompletableFuture<List<ProcessingContext<T>>> future = CompletableFuture.completedFuture(contexts);
 
-        // Determine consolidated QoS from contexts
         Qos consolidatedQos = contexts.stream()
                 .map(ProcessingContext::getQos)
                 .filter(qos -> qos != null)
                 .reduce((q1, q2) -> getHigherQos(q1, q2))
                 .orElse(Qos.AT_LEAST_ONCE);
 
-        // Calculate processing time based on contexts
-        int processingTime = calculateProcessingTime(contexts);
-
         return ProcessingResultWrapper.<T>builder()
                 .processingResult(future)
                 .consolidatedQos(consolidatedQos)
-                .maxCPUTimeMS(processingTime)
                 .build();
     }
 
     /**
      * Creates a successful processing result wrapper for asynchronous operations.
      *
-     * <p>Use this method when processing is performed asynchronously and you want to return
-     * a result immediately while processing continues in the background.
-     *
      * @param <T> the type of payload in the processing contexts
-     * @param future a Future containing the list of processing contexts that will be completed asynchronously
+     * @param future a Future containing the list of processing contexts
      * @param qos the Quality of Service level for this processing operation
-     * @param maxCPUTimeMS the maximum CPU time in milliseconds allocated for this operation
+     * @param maxCPUTimeMS the JS-execution timeout budget (milliseconds) from service config
      * @return a ProcessingResultWrapper for the asynchronous operation
      */
     public static <T> ProcessingResultWrapper<T> successAsync(Future<List<ProcessingContext<T>>> future, Qos qos,
@@ -119,7 +111,7 @@ public class ProcessingResultHelper {
     }
 
     /**
-     * Creates a failure processing result wrapper with zero processing time.
+     * Creates a failure processing result wrapper.
      *
      * @param <T> the type of payload that would have been in the processing contexts
      * @param error the exception that caused the processing to fail
@@ -128,37 +120,14 @@ public class ProcessingResultHelper {
     public static <T> ProcessingResultWrapper<T> failure(Exception error) {
         return ProcessingResultWrapper.<T>builder()
                 .error(error)
-                .maxCPUTimeMS(0)
-                .build();
-    }
-
-    /**
-     * Creates a failure processing result wrapper with specified processing time.
-     *
-     * <p>Use this method when processing failed but you want to record how much CPU time
-     * was consumed before the failure occurred.
-     *
-     * @param <T> the type of payload that would have been in the processing contexts
-     * @param error the exception that caused the processing to fail
-     * @param maxCPUTimeMS the CPU time in milliseconds consumed before failure
-     * @return a ProcessingResultWrapper indicating failure with the provided error and timing
-     */
-    public static <T> ProcessingResultWrapper<T> failure(Exception error, int maxCPUTimeMS) {
-        return ProcessingResultWrapper.<T>builder()
-                .error(error)
-                .maxCPUTimeMS(maxCPUTimeMS)
                 .build();
     }
 
     /**
      * Creates an empty processing result wrapper indicating no processing was performed.
      *
-     * <p>This is typically used when there are no messages to process or when processing
-     * is skipped due to conditions not being met. The result has AT_MOST_ONCE QoS and
-     * zero processing time.
-     *
      * @param <T> the type of payload that would have been in the processing contexts
-     * @return a ProcessingResultWrapper with an empty context list and minimal resource usage
+     * @return a ProcessingResultWrapper with an empty context list and AT_MOST_ONCE QoS
      */
     public static <T> ProcessingResultWrapper<T> empty() {
         CompletableFuture<List<ProcessingContext<T>>> emptyFuture = CompletableFuture
@@ -167,7 +136,6 @@ public class ProcessingResultHelper {
         return ProcessingResultWrapper.<T>builder()
                 .processingResult(emptyFuture)
                 .consolidatedQos(Qos.AT_MOST_ONCE)
-                .maxCPUTimeMS(0)
                 .build();
     }
 
@@ -423,42 +391,6 @@ public class ProcessingResultHelper {
             return Qos.AT_LEAST_ONCE;
         }
         return Qos.AT_MOST_ONCE;
-    }
-
-    /**
-     * Calculates the estimated processing time based on processing contexts.
-     *
-     * <p>The calculation takes into account:
-     * <ul>
-     *   <li>Base time of 200ms per context</li>
-     *   <li>50ms per request in the context</li>
-     *   <li>Additional 100ms penalty for contexts with errors</li>
-     * </ul>
-     *
-     * <p>The minimum returned value is 100ms even for empty context lists.
-     *
-     * @param <T> the type of payload in the processing contexts
-     * @param contexts the list of processing contexts to calculate time for
-     * @return the estimated processing time in milliseconds, minimum 100ms
-     */
-    private static <T> int calculateProcessingTime(List<ProcessingContext<T>> contexts) {
-        if (contexts == null || contexts.isEmpty()) {
-            return 100;
-        }
-
-        // Calculate based on complexity - number of requests, errors, etc.
-        int totalTime = contexts.stream()
-                .mapToInt(ctx -> {
-                    int contextTime = 200; // Base time per context
-                    contextTime += ctx.getRequests().size() * 50; // Time per request
-                    if (ctx.hasError()) {
-                        contextTime += 100; // Additional time for error handling
-                    }
-                    return contextTime;
-                })
-                .sum();
-
-        return Math.max(100, totalTime); // Minimum 100ms
     }
 
     // ===== NEW FOCUSED CONTEXT METHODS =====

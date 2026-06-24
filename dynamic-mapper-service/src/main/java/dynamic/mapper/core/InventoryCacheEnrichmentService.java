@@ -107,11 +107,10 @@ public class InventoryCacheEnrichmentService {
             return result;
         }
 
-        final Map<String, Object> newMO = new HashMap<>();
-        inventoryCache.putMO(sourceId, newMO);
+        // Subscribe BEFORE fetching so update notifications that arrive while the
+        // REST call is in flight are not missed.
         ManagedObjectRepresentation mor = new ManagedObjectRepresentation();
         mor.setId(new GId(sourceId));
-
         notificationSubscriber.subscribeMOForInventoryCacheUpdates(tenant, mor);
 
         ServiceConfiguration serviceConfiguration = tenantRegistry.getServiceConfiguration(tenant);
@@ -121,6 +120,7 @@ public class InventoryCacheEnrichmentService {
                 .anyMatch(frag -> "assetParents".equals(frag.trim()));
 
         ManagedObjectRepresentation device = getManagedObjectFromResolver(tenant, sourceId, testing, identityResolver, withParents);
+        final Map<String, Object> newMO = new HashMap<>();
         if (device != null) {
             Map<String, Object> attrs = device.getAttrs();
 
@@ -129,6 +129,10 @@ public class InventoryCacheEnrichmentService {
             });
         }
 
+        // Store the fully-populated map. A concurrent thread that resolved the same
+        // sourceId may already have stored its own copy — the last write wins, but
+        // both contain equivalent data so correctness is preserved.
+        inventoryCache.putMO(sourceId, newMO);
         return newMO;
     }
 

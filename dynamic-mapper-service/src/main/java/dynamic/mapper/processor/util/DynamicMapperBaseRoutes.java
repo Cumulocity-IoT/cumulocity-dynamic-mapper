@@ -41,7 +41,9 @@ public abstract class DynamicMapperBaseRoutes extends RouteBuilder {
     public abstract void configure() throws Exception;
 
     /**
-     * Check if this uses JSONata extraction
+     * Check if this uses JSONata extraction.
+     * Returns false on exception so the caller's otherwise() branch handles it
+     * explicitly rather than silently routing to JSONata and masking the real bug.
      */
     protected boolean isJSONataExtraction(Exchange exchange) {
         try {
@@ -53,22 +55,26 @@ public abstract class DynamicMapperBaseRoutes extends RouteBuilder {
                         TransformationType.DEFAULT.equals(transformationType) ||
                         TransformationType.JSONATA.equals(transformationType);
             }
-            return true; // Default fallback
+            return false;
         } catch (Exception e) {
             log.warn("Error checking JSONata extraction: {}", e.getMessage());
-            return true;
+            return false;
         }
     }
 
     /**
-     * Check if this is extension processing
+     * Check if this is extension processing.
+     * Requires BOTH a non-null extension object AND TransformationType.EXTENSION_JAVA so that
+     * mappings which carry a leftover extension field from a previous type are not accidentally
+     * routed to the extension path.
      */
     protected boolean isExtension(Exchange exchange) {
         try {
             ProcessingContext<?> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
             return context != null &&
                     context.getMapping() != null &&
-                    (context.getMapping().getExtension() != null);
+                    context.getMapping().getExtension() != null &&
+                    TransformationType.EXTENSION_JAVA.equals(context.getMapping().getTransformationType());
         } catch (Exception e) {
             log.warn("Error checking extension: {}", e.getMessage());
             return false;
@@ -138,7 +144,7 @@ public abstract class DynamicMapperBaseRoutes extends RouteBuilder {
 
             // Check if mapping is deployed (you'll need to get connector info)
             if (connectorIdentifier != null && !isMappingDeployed(tenant, mapping, connectorIdentifier)) {
-                log.debug("Mapping {} not deployed for connector {}, skipping",
+                log.info("Mapping {} not deployed for connector {}, skipping",
                         mapping.getName(), connectorIdentifier);
                 return false;
             }

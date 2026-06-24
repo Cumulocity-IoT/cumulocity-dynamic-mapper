@@ -39,7 +39,10 @@ import lombok.extern.slf4j.Slf4j;
 public class ProcessingResultWrapper<O> {
     private Future<List<ProcessingContext<O>>> processingResult;
     private Qos consolidatedQos;
+    /** Configured JS-execution timeout (milliseconds). Consumed by broker callbacks as wait-timeout. */
     private int maxCPUTimeMS;
+    /** Actual wall-clock elapsed time (milliseconds) from lambda start to return. Zero for pre-completed futures. */
+    private long processingTimeMS;
     private Exception error;
     @SuppressWarnings("rawtypes")
     private Future future;

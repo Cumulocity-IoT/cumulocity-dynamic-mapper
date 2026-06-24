@@ -17,7 +17,6 @@ import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.AbstractFlowProcessor;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.CumulocityObject;
-import dynamic.mapper.processor.model.OutputCollector;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.util.JavaScriptInteropHelper;
 import dynamic.mapper.service.MappingService;
@@ -72,22 +71,15 @@ public class FlowInboundProcessor extends AbstractFlowProcessor {
 
     @Override
     protected void processResult(Value result, ProcessingContext<?> context, String tenant) {
-        // Use thread-safe OutputCollector internally
-        OutputCollector output = new OutputCollector();
-
-        // Extract warnings and logs using thread-safe methods
-        extractWarnings(context.getFlowContext(), output, tenant);
-        extractLogs(context.getFlowContext(), output, tenant);
+        extractWarnings(context.getFlowContext(), context.getWarnings(), tenant);
+        extractLogs(context.getFlowContext(), context.getLogs(), tenant);
 
         // Check if result is null or undefined
         if (result == null || result.isNull()) {
             log.warn("{} - onMessage function did not return any transformation result (null)", tenant);
-            output.addWarning("onMessage function did not return any transformation result");
+            context.getWarnings().add("onMessage function did not return any transformation result");
             context.setFlowResult(new ArrayList<>());
             context.setIgnoreFurtherProcessing(true);
-
-            // Sync back to context for backward compatibility
-            syncOutputToContext(output, context);
             return;
         }
 
@@ -102,22 +94,16 @@ public class FlowInboundProcessor extends AbstractFlowProcessor {
             } else {
                 log.warn("{} - onMessage function returned unexpected result type: {} ({})",
                         tenant, result.getClass().getSimpleName(), result.getMetaObject());
-                output.addWarning("onMessage function returned unexpected result type: " + result.getMetaObject());
+                context.getWarnings().add("onMessage function returned unexpected result type: " + result.getMetaObject());
                 context.setFlowResult(new ArrayList<>());
                 context.setIgnoreFurtherProcessing(true);
-
-                // Sync back to context for backward compatibility
-                syncOutputToContext(output, context);
                 return;
             }
         } catch (Exception e) {
             log.error("{} - Error processing onMessage result: {}", tenant, e.getMessage(), e);
-            output.addWarning("Error processing onMessage result: " + e.getMessage());
+            context.getWarnings().add("Error processing onMessage result: " + e.getMessage());
             context.setFlowResult(new ArrayList<>());
             context.setIgnoreFurtherProcessing(true);
-
-            // Sync back to context for backward compatibility
-            syncOutputToContext(output, context);
             return;
         }
 
@@ -126,20 +112,14 @@ public class FlowInboundProcessor extends AbstractFlowProcessor {
 
         if (outputMessages.isEmpty()) {
             log.info("{} - No valid messages produced from onMessage function", tenant);
-            output.addWarning("No valid messages produced from onMessage function");
+            context.getWarnings().add("No valid messages produced from onMessage function");
             context.setIgnoreFurtherProcessing(true);
-
-            // Sync back to context for backward compatibility
-            syncOutputToContext(output, context);
             return;
         }
 
         if (context.getMapping().getDebug() || context.getServiceConfiguration().getLogPayload()) {
             log.info("{} - onMessage function returned {} complete message(s)", tenant, outputMessages.size());
         }
-
-        // Sync back to context for backward compatibility
-        syncOutputToContext(output, context);
     }
 
     @Override
@@ -211,16 +191,4 @@ public class FlowInboundProcessor extends AbstractFlowProcessor {
         }
     }
 
-    /**
-     * Sync OutputCollector contents back to ProcessingContext for backward compatibility.
-     * Can be removed once all callers migrate to reading from OutputCollector directly.
-     */
-    private void syncOutputToContext(OutputCollector output, ProcessingContext<?> context) {
-        if (!output.getWarnings().isEmpty()) {
-            context.getWarnings().addAll(output.getWarnings());
-        }
-        if (!output.getLogs().isEmpty()) {
-            context.getLogs().addAll(output.getLogs());
-        }
-    }
 }

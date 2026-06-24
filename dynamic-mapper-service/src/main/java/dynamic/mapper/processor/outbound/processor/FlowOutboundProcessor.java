@@ -39,7 +39,6 @@ import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.AbstractFlowProcessor;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.DeviceMessage;
-import dynamic.mapper.processor.model.OutputCollector;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.util.JavaScriptInteropHelper;
 import dynamic.mapper.service.MappingService;
@@ -87,24 +86,17 @@ public class FlowOutboundProcessor extends AbstractFlowProcessor {
     @Override
     protected void processResult(Value result, ProcessingContext<?> context, String tenant)
             throws ProcessingException {
-        // Use thread-safe OutputCollector internally
-        OutputCollector output = new OutputCollector();
-
-        // Extract warnings and logs using thread-safe methods
-        extractWarnings(context.getFlowContext(), output, tenant);
-        extractLogs(context.getFlowContext(), output, tenant);
+        extractWarnings(context.getFlowContext(), context.getWarnings(), tenant);
+        extractLogs(context.getFlowContext(), context.getLogs(), tenant);
 
         // Always initialize an empty list
         List<Object> outputMessages = new ArrayList<>();
 
         if (isEmptyResult(result)) {
             log.warn("{} - onMessage function did not return any transformation result", tenant);
-            output.addWarning("onMessage function did not return any transformation result");
-            context.setFlowResult(outputMessages); // Set empty list
+            context.getWarnings().add("onMessage function did not return any transformation result");
+            context.setFlowResult(outputMessages);
             context.setIgnoreFurtherProcessing(true);
-
-            // Sync back to context for backward compatibility
-            syncOutputToContext(output, context);
             return;
         }
 
@@ -112,8 +104,8 @@ public class FlowOutboundProcessor extends AbstractFlowProcessor {
             outputMessages = extractOutputMessages(result, tenant);
         } catch (Exception e) {
             log.error("{} - Error extracting output messages: {}", tenant, e.getMessage(), e);
-            output.addWarning("Error extracting output messages: " + e.getMessage());
-            outputMessages = new ArrayList<>(); // Ensure it's empty
+            context.getWarnings().add("Error extracting output messages: " + e.getMessage());
+            outputMessages = new ArrayList<>();
         }
 
         // Always set flow result (even if empty)
@@ -121,11 +113,8 @@ public class FlowOutboundProcessor extends AbstractFlowProcessor {
 
         if (outputMessages.isEmpty()) {
             log.info("{} - No valid messages produced from onMessage function", tenant);
-            output.addWarning("No valid messages produced from onMessage function");
+            context.getWarnings().add("No valid messages produced from onMessage function");
             context.setIgnoreFurtherProcessing(true);
-
-            // Sync back to context for backward compatibility
-            syncOutputToContext(output, context);
             return;
         }
 
@@ -135,9 +124,6 @@ public class FlowOutboundProcessor extends AbstractFlowProcessor {
 
         // Create alarms for messages reported during processing
         createAlarmsForProcessing(context, tenant);
-
-        // Sync back to context for backward compatibility
-        syncOutputToContext(output, context);
 
         // IMPORTANT: Don't store the Value object itself, only extracted data
         // This ensures no GraalVM Value references leak
@@ -248,16 +234,4 @@ public class FlowOutboundProcessor extends AbstractFlowProcessor {
         }
     }
 
-    /**
-     * Sync OutputCollector contents back to ProcessingContext for backward compatibility.
-     * Can be removed once all callers migrate to reading from OutputCollector directly.
-     */
-    private void syncOutputToContext(OutputCollector output, ProcessingContext<?> context) {
-        if (!output.getWarnings().isEmpty()) {
-            context.getWarnings().addAll(output.getWarnings());
-        }
-        if (!output.getLogs().isEmpty()) {
-            context.getLogs().addAll(output.getLogs());
-        }
-    }
 }
