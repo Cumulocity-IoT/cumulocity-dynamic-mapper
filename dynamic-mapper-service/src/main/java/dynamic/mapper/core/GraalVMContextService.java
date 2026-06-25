@@ -21,6 +21,9 @@
 
 package dynamic.mapper.core;
 
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryPoolMXBean;
+import java.lang.management.MemoryUsage;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
@@ -299,8 +302,8 @@ public class GraalVMContextService {
             log.warn("{} - Cannot rotate GraalVM Engine: ServiceConfiguration not cached; skipping rotation", tenant);
             return;
         }
-        log.info("{} - Rotating GraalVM Engine to release Metaspace ({} retired engine(s) pending drain)",
-                tenant, retiredEngines.size());
+        log.info("{} - Rotating GraalVM Engine to release Metaspace ({} retired engine(s) pending drain) — {}",
+                tenant, retiredEngines.size(), metaspaceUsageSummary());
         // Retire the current Engine before creating the replacement.
         Engine oldEngine = graalEngines.get(tenant);
         if (oldEngine != null) {
@@ -324,6 +327,22 @@ public class GraalVMContextService {
                 log.warn("{} - Failed to re-warm mapping codes after Engine rotation: {}", tenant, e.getMessage());
             }
         }
+    }
+
+    private String metaspaceUsageSummary() {
+        for (MemoryPoolMXBean pool : ManagementFactory.getMemoryPoolMXBeans()) {
+            if (pool.getName().contains("Metaspace")) {
+                MemoryUsage usage = pool.getUsage();
+                long usedMB = usage.getUsed() / (1024 * 1024);
+                long maxMB = usage.getMax();
+                if (maxMB > 0) {
+                    long pct = usedMB * 100 / (maxMB / (1024 * 1024));
+                    return String.format("Metaspace %d MB / %d MB (%d%%)", usedMB, maxMB / (1024 * 1024), pct);
+                }
+                return String.format("Metaspace %d MB (no max set)", usedMB);
+            }
+        }
+        return "Metaspace pool not found";
     }
 
     /**
