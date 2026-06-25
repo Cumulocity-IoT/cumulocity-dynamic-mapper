@@ -756,24 +756,13 @@ public class MappingController {
 
     /**
      * Handles inbound mapping creation
-     * @throws ConnectorRegistryException 
+     * @throws ConnectorRegistryException
      */
     private void handleInboundMappingCreation(String tenant, Mapping mapping) throws ConnectorRegistryException {
-        // Update subscriptions in all connectors
-        Map<String, AConnectorClient> clients = connectorRegistry.getClientsForTenant(tenant);
-        
-        clients.values().forEach(client -> {
-            try {
-                client.updateSubscriptionForInbound(mapping, true, false);
-                log.debug("{} - Updated subscription for connector after creating mapping: {}", 
-                    tenant, mapping.getId());
-            } catch (Exception e) {
-                log.error("{} - Failed to update subscription for connector for mapping: {}", 
-                    tenant, mapping.getId(), e);
-                // Continue with other connectors
-            }
-        });
-        
+        // A brand-new mapping has no deployment yet, so notifying all connectors is wasteful.
+        // Notify only connectors it is already deployed to (covers import/restore scenarios).
+        notifyDeployedConnectorsInbound(tenant, mapping, true);
+
         // Add to inbound cache (automatically updates resolver)
         try {
             mappingService.addMappingInboundToCache(tenant, mapping.getId(), mapping);
@@ -812,23 +801,12 @@ public class MappingController {
 
     /**
      * Handles inbound mapping update
-     * @throws ConnectorRegistryException 
+     * @throws ConnectorRegistryException
      */
     private void handleInboundMappingUpdate(String tenant, Mapping mapping) throws ConnectorRegistryException {
-        // Update subscriptions in all connectors
-        Map<String, AConnectorClient> clients = connectorRegistry.getClientsForTenant(tenant);
-        
-        clients.values().forEach(client -> {
-            try {
-                client.updateSubscriptionForInbound(mapping, false, false);
-                log.debug("{} - Updated subscription for connector after updating mapping: {}", 
-                    tenant, mapping.getId());
-            } catch (Exception e) {
-                log.error("{} - Failed to update subscription for connector for mapping: {}", 
-                    tenant, mapping.getId(), e);
-            }
-        });
-        
+        // Only notify connectors where the mapping is deployed; others are unaffected.
+        notifyDeployedConnectorsInbound(tenant, mapping, false);
+
         // Remove old entry then add updated one so stale topics are cleaned from the resolver tree
         try {
             mappingService.removeFromMappingFromCaches(tenant, mapping);
@@ -836,6 +814,34 @@ public class MappingController {
             log.debug("{} - Updated inbound mapping in cache: {}", tenant, mapping.getId());
         } catch (Exception e) {
             log.error("{} - Failed to update mapping in cache: {}", tenant, mapping.getId(), e);
+        }
+    }
+
+    /**
+     * Notifies only the connectors where this mapping is deployed about a subscription change.
+     * Avoids iterating all connectors for operations that affect only a subset.
+     */
+    private void notifyDeployedConnectorsInbound(String tenant, Mapping mapping, boolean create)
+            throws ConnectorRegistryException {
+        List<String> deployedConnectorIds = mappingService.getDeploymentMapEntry(tenant, mapping.getIdentifier());
+        if (deployedConnectorIds == null || deployedConnectorIds.isEmpty()) {
+            log.debug("{} - Mapping {} has no deployed connectors, skipping subscription update",
+                    tenant, mapping.getId());
+            return;
+        }
+        for (String connectorId : deployedConnectorIds) {
+            try {
+                AConnectorClient client = connectorRegistry.getClientForTenant(tenant, connectorId);
+                client.updateSubscriptionForInbound(mapping, create, false);
+                log.debug("{} - Updated subscription on connector {} after {} mapping: {}",
+                        tenant, connectorId, create ? "creating" : "updating", mapping.getId());
+            } catch (ConnectorRegistryException e) {
+                log.warn("{} - Connector {} not found while updating mapping {}: {}",
+                        tenant, connectorId, mapping.getId(), e.getMessage());
+            } catch (Exception e) {
+                log.error("{} - Failed to update subscription on connector {} for mapping {}: {}",
+                        tenant, connectorId, mapping.getId(), e);
+            }
         }
     }
 

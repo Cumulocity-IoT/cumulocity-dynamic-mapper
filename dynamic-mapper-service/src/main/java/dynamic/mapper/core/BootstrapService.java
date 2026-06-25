@@ -578,6 +578,12 @@ public class BootstrapService {
                         e);
                 throw new ConnectorRegistryException(e.getMessage());
             }
+            if (connectorClient == null) {
+                log.warn("{} - Connector type {} (identifier: {}) could not be created and will be skipped.",
+                        tenant, connectorConfiguration.getConnectorType(),
+                        connectorConfiguration.getIdentifier());
+                return null;
+            }
             connectorRegistry.registerClient(tenant, connectorClient);
             // initialize AsynchronousDispatcherInbound
             // DispatcherInbound dispatcherInbound = new

@@ -809,13 +809,10 @@ public abstract class AConnectorClient {
         // Always allow deactivation
         boolean isDeactivation = activationChanged && !mapping.getActive();
 
-        if (!isMappingCompatibleWithConnector(mapping) && !isDeactivation) {
-            // isMappingCompatibleWithConnector already logged the incompatibility.
-            // Report failure only if the mapping is actually assigned to this connector;
-            // otherwise the incompatibility is irrelevant here.
-            if (isDeployedInConnector(mapping)) {
-                result = false;
-            }
+        // Only check compatibility if the mapping is actually assigned to this connector;
+        // otherwise the incompatibility is irrelevant and the warning would be misleading.
+        if (!isDeactivation && isDeployedInConnector(mapping) && !isMappingCompatibleWithConnector(mapping)) {
+            result = false;
             return result;
         }
 
@@ -958,7 +955,8 @@ public abstract class AConnectorClient {
         boolean compatible = supportsWildcardInTopic(mapping.getDirection()) || !containsWildcards;
 
         if (!compatible) {
-            log.warn("{} - Mapping {} contains unsupported wildcards", tenant, mapping.getId());
+            log.warn("{} - Mapping {} contains unsupported wildcards for connector {}",
+                    tenant, mapping.getId(), connectorName);
         }
 
         return compatible;

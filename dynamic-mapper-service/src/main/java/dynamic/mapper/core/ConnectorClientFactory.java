@@ -31,7 +31,6 @@ import dynamic.mapper.connector.http.HttpClient;
 import dynamic.mapper.connector.kafka.KafkaClientV2;
 import dynamic.mapper.connector.mqtt.MQTT3Client;
 import dynamic.mapper.connector.mqtt.MQTT5Client;
-import dynamic.mapper.connector.mqtt.MQTTServiceClient;
 import dynamic.mapper.connector.pulsar.MQTTServicePulsarClient;
 import dynamic.mapper.connector.pulsar.PulsarConnectorClient;
 import dynamic.mapper.connector.test.TestClient;
@@ -93,10 +92,8 @@ public class ConnectorClientFactory {
                 break;
 
             case CUMULOCITY_MQTT_SERVICE:
-                connectorClient = new MQTTServiceClient(configurationRegistry, connectorRegistry,
-                        connectorConfiguration, null, additionalSubscriptionIdTest, tenant);
-                log.info("{} - MQTTService Connector created, identifier: {}", tenant,
-                        connectorConfiguration.getIdentifier());
+                log.warn("{} - Connector type CUMULOCITY_MQTT_SERVICE (identifier: {}) is no longer supported and has been removed. Use CUMULOCITY_MQTT_SERVICE_PULSAR instead.",
+                        tenant, connectorConfiguration.getIdentifier());
                 break;
 
             case KAFKA:
