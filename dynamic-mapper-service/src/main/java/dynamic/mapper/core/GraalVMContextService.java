@@ -204,6 +204,7 @@ public class GraalVMContextService {
         graalEngines.put(tenant, eng);
         engineActiveContexts.put(eng, new AtomicInteger(0));
         engineCreatedAt.put(tenant, Instant.now());
+        log.info("{} - GraalVM Engine created — baseline {}", tenant, metaspaceUsageSummary());
 
         boolean supportESM = Boolean.TRUE.equals(serviceConfiguration.getSupportESM());
 
