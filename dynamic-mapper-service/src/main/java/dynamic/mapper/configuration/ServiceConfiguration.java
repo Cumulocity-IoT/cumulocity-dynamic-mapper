@@ -68,6 +68,8 @@ public class ServiceConfiguration implements Cloneable {
         this.cacheAliasMaps = false;
         this.externalIdBinding = true;
         this.mappingVersionRetention = 5;
+        this.engineRotationThreshold = 100;
+        this.engineMaxAgeMinutes = 1440;
     }
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Enable logging of message payloads for debugging purposes. Caution: May expose sensitive data in logs.", example = "false")
@@ -199,5 +201,15 @@ public class ServiceConfiguration implements Cloneable {
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     private Integer mappingVersionRetention;
+
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Number of GraalVM context creations after which the shared Engine is rotated for a tenant to reclaim JVM Metaspace. Lower values free memory more frequently; higher values retain JIT warm-up longer.", example = "100", minimum = "1")
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    private Integer engineRotationThreshold;
+
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Maximum wall-clock age in minutes of the GraalVM Engine before it is rotated, regardless of context-creation count. Prevents low-traffic tenants from accumulating unbounded Metaspace over time.", example = "1440", minimum = "1")
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    private Integer engineMaxAgeMinutes;
 
 }

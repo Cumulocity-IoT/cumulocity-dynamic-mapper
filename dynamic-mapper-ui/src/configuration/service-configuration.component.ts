@@ -70,6 +70,8 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     mappingVersionRetention: 10,
     inventoryFragmentsToCache: ['type'],  // always add type
     maxCPUTimeMS: 5000,  // 5 seconds
+    engineRotationThreshold: 100,
+    engineMaxAgeMinutes: 1440,
     jsonataAgent: undefined,
     javaScriptAgent: undefined,
     smartFunctionAgent: undefined,
@@ -139,6 +141,8 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
       flowStateRetention: [''],
       mappingVersionRetention: [''],
       maxCPUTimeMS: [''],
+      engineRotationThreshold: [''],
+      engineMaxAgeMinutes: [''],
       supportESM: [''],
       jsonataAgent: [{ value: '', disabled: true }],
       javaScriptAgent: [{ value: '', disabled: true }],

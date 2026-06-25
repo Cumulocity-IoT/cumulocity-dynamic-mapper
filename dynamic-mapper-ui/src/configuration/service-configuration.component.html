@@ -336,6 +336,48 @@
           </c8y-li>
 
           <c8y-li>
+            <c8y-li-icon icon="restore"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'GraalVM engine rotation threshold' | translate }}</p>
+                <p>
+                  <small translate>Number of SmartFunction context creations after which the GraalVM Engine is rotated
+                    to reclaim JVM Metaspace. Lower values free memory more often; higher values retain JIT warm-up
+                    longer. Default: 100.</small>
+                </p>
+              </div>
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                <label class="editable" title="{{ 'GraalVM engine rotation threshold' | translate }}">
+                  <input class="form-control" name="engineRotationThreshold" type="number" min="1"
+                    formControlName="engineRotationThreshold" />
+                  <span></span>
+                </label>
+              </div>
+            </div>
+          </c8y-li>
+
+          <c8y-li>
+            <c8y-li-icon icon="clock-o"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'GraalVM engine max age (minutes)' | translate }}</p>
+                <p>
+                  <small translate>Maximum wall-clock age in minutes of the GraalVM Engine before it is rotated,
+                    regardless of context count. Prevents low-traffic tenants from accumulating unbounded Metaspace
+                    over time. Default: 1440 (24 h).</small>
+                </p>
+              </div>
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                <label class="editable" title="{{ 'GraalVM engine max age (minutes)' | translate }}">
+                  <input class="form-control" name="engineMaxAgeMinutes" type="number" min="1"
+                    formControlName="engineMaxAgeMinutes" />
+                  <span></span>
+                </label>
+              </div>
+            </div>
+          </c8y-li>
+
+          <c8y-li>
             <c8y-li-icon icon="package"></c8y-li-icon>
             <div class="d-flex a-i-center">
               <div>

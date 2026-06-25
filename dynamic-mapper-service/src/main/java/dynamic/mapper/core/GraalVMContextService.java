@@ -272,12 +272,19 @@ public class GraalVMContextService {
         Engine currentEngine = graalEngines.get(tenant);
 
         // Count-based rotation: only the thread whose increment lands on the threshold triggers it
-        boolean atThreshold = counter != null && counter.incrementAndGet() == ENGINE_ROTATION_THRESHOLD;
+        ServiceConfiguration config = tenantServiceConfigs.get(tenant);
+        int rotationThreshold = (config != null && config.getEngineRotationThreshold() != null)
+                ? config.getEngineRotationThreshold()
+                : ENGINE_ROTATION_THRESHOLD;
+        boolean atThreshold = counter != null && counter.incrementAndGet() == rotationThreshold;
 
         // Time-based rotation: rotate if the Engine is older than ENGINE_MAX_AGE
+        int maxAgeMinutes = (config != null && config.getEngineMaxAgeMinutes() != null)
+                ? config.getEngineMaxAgeMinutes()
+                : (int) ENGINE_MAX_AGE.toMinutes();
         Instant createdAt = engineCreatedAt.get(tenant);
         boolean tooOld = createdAt != null
-                && Duration.between(createdAt, Instant.now()).compareTo(ENGINE_MAX_AGE) > 0;
+                && Duration.between(createdAt, Instant.now()).compareTo(Duration.ofMinutes(maxAgeMinutes)) > 0;
 
         if (atThreshold || tooOld) {
             rotateEngine(tenant);
