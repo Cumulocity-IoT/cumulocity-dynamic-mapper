@@ -1189,14 +1189,14 @@ function metric(name, type, value) &#123;
               <tr>
                 <td><strong>Count-based</strong></td>
                 <td>The Engine is rotated after <strong>100 GraalVM context creations</strong>
-                  (<code>ENGINE_ROTATION_THRESHOLD = 100</code>). Each inbound SmartFunction
+                  (configurable via <code>engineRotationThreshold</code>, default: 100). Each inbound SmartFunction
                   message that reaches a mapping creates one context.
                 </td>
               </tr>
               <tr>
                 <td><strong>Time-based</strong></td>
-                <td>The Engine is rotated after <strong>24 hours</strong> of age
-                  (<code>ENGINE_MAX_AGE = 24 h</code>), regardless of message volume. This
+                <td>The Engine is rotated after <strong>1440 minutes (24 hours)</strong> of age
+                  (configurable via <code>engineMaxAgeMinutes</code>, default: 1440), regardless of message volume. This
                   protects low-traffic tenants from accumulating compiled code indefinitely.
                 </td>
               </tr>
@@ -1208,6 +1208,84 @@ function metric(name, type, value) &#123;
           any in-flight messages continue to completion. The old Engine's Metaspace is reclaimed by the JVM once
           the last in-flight context closes. A replacement Engine is created immediately and pre-warmed
           with all active SmartFunction mapping codes before the first real message arrives.
+        </div>
+
+        <h5 class="p-t-8 p-b-4">What Grows Metaspace</h5>
+        <div class="p-b-8 text-16">
+          Not all usage patterns stress Metaspace equally. Four distinct scenarios drive growth:
+        </div>
+        <div class="table-responsive table-width-100">
+          <table class="table table-striped table-layout-fixed">
+            <thead class="thead-light">
+              <tr>
+                <th style="width: 30%;">Scenario</th>
+                <th style="width: 30%;">Growth pattern</th>
+                <th style="width: 40%;">Primary rotation trigger</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>High message volume — same mapping, same code</strong></td>
+                <td>
+                  Bounded. The source cache is hit on every call (same content hash → same compiled
+                  code). Growth occurs only as the JIT escalates through optimization tiers (interpreter
+                  → partial eval → full optimization). Once fully optimised, Metaspace usage for that
+                  mapping plateaus.
+                </td>
+                <td>Count-based (<code>engineRotationThreshold</code>) — rotation fires because many
+                  contexts are created, not because the code changes.</td>
+              </tr>
+              <tr>
+                <td><strong>Mapping iteration — delete &amp; recreate with new JS code</strong></td>
+                <td>
+                  Unbounded until rotation. Every unique code string produces a new GraalVM
+                  <code>Source</code> (different content hash), which is compiled to a new native
+                  code block in Metaspace. The compiled code from deleted or superseded mappings
+                  remains in Metaspace for the lifetime of the Engine — even a single character
+                  edit creates a new compilation.
+                </td>
+                <td>Time-based (<code>engineMaxAgeMinutes</code>) — the Engine may never accumulate
+                  enough context creations to hit the count threshold, but code churn accumulates
+                  silently over hours or days.</td>
+              </tr>
+              <tr>
+                <td><strong>Editing an existing mapping's JS code</strong></td>
+                <td>
+                  Unbounded until rotation. Each save of a modified mapping produces a new content
+                  hash and therefore a new native code block in Metaspace. The block compiled from
+                  the previous version remains resident for the lifetime of the Engine. A mapping
+                  edited 20 times before going to production has accumulated 20 compiled blocks, of
+                  which 19 are permanently unreachable.
+                </td>
+                <td>Time-based (<code>engineMaxAgeMinutes</code>) — code edits rarely generate
+                  enough context creations to hit the count threshold, but silent accumulation over
+                  a development session can be significant.</td>
+              </tr>
+              <tr>
+                <td><strong>Activate / deactivate a mapping</strong></td>
+                <td>
+                  <em>No additional Metaspace</em> if the code is unchanged. On reactivation the
+                  Engine's source cache is hit (same content hash → same compiled block reused). If
+                  the code was edited between deactivation and reactivation, one new block is
+                  compiled and the old one remains — equivalent to a single code edit.
+                </td>
+                <td>Neither trigger is directly driven by activate/deactivate alone. The risk arises
+                  only when deactivation is paired with a code change before reactivation.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="admonition info">
+          <div class="title">Info — Code churn is the primary Metaspace risk</div>
+          <div class="content">
+            Active development on SmartFunction code — whether through edits to existing mappings,
+            delete-and-recreate cycles, or deactivate-edit-reactivate workflows — is the dominant
+            driver of Metaspace growth. Each unique code version leaves a permanent compiled block
+            until the Engine is rotated. Keep <code>engineMaxAgeMinutes</code> low enough that the
+            Engine is replaced before accumulation becomes significant during development sessions.
+            For stable deployments where mapping code rarely changes, the count-based
+            <code>engineRotationThreshold</code> is the dominant lever.
+          </div>
         </div>
 
         <h5 class="p-t-8 p-b-4">Reading the Metaspace Logs</h5>
@@ -1235,7 +1313,7 @@ t2050305588 - GraalVM Engine created — baseline Metaspace 287 MB (no max set)<
             The difference between the baseline at creation and the value at rotation is the Metaspace consumed
             by the Engine over its lifetime. In the example above: <strong>287 − 112 = 175 MB</strong> for 100
             context creations across 39 compiled mappings. If this delta grows between rotations over time,
-            consider lowering <code>ENGINE_ROTATION_THRESHOLD</code> or setting an explicit
+            consider lowering <code>engineRotationThreshold</code> (in <strong>Service Configuration → General</strong>) or setting an explicit
             <code>-XX:MaxMetaspaceSize</code> JVM flag.
           </div>
         </div>
@@ -1262,7 +1340,7 @@ t2050305588 - GraalVM Engine created — baseline Metaspace 287 MB (no max set)<
             <tbody>
               <tr>
                 <td>Metaspace delta per rotation is large (&gt; 200 MB)</td>
-                <td>Lower <code>ENGINE_ROTATION_THRESHOLD</code> (e.g. to 50) so rotation fires more
+                <td>Lower <code>engineRotationThreshold</code> (e.g. to 50) in <strong>Service Configuration → General</strong> so rotation fires more
                   frequently and reclaims Metaspace earlier.</td>
               </tr>
               <tr>
@@ -1279,12 +1357,12 @@ t2050305588 - GraalVM Engine created — baseline Metaspace 287 MB (no max set)<
               </tr>
               <tr>
                 <td>Low message volume, Metaspace growing over days</td>
-                <td>The time-based rotation (24 h) should handle this. If not, reduce
-                  <code>ENGINE_MAX_AGE</code> in the service configuration.</td>
+                <td>The time-based rotation (default: 1440 min) should handle this. If not, reduce
+                  <code>engineMaxAgeMinutes</code> in <strong>Service Configuration → General</strong>.</td>
               </tr>
               <tr>
                 <td>High message volume, rotation fires too often</td>
-                <td>Increase <code>ENGINE_ROTATION_THRESHOLD</code>. Each rotation briefly pauses
+                <td>Increase <code>engineRotationThreshold</code> in <strong>Service Configuration → General</strong>. Each rotation briefly pauses
                   context creation for the tenant while the new Engine warms up.</td>
               </tr>
             </tbody>

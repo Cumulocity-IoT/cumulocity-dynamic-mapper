@@ -48,6 +48,8 @@ export interface ServiceConfiguration {
   cacheAliasMaps?: boolean;
   externalIdBinding?: boolean;
   explorerSessionTTLMinutes?: number;
+  engineRotationThreshold?: number;
+  engineMaxAgeMinutes?: number;
 }
 
 export enum TemplateType {
