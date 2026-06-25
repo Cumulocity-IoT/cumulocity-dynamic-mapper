@@ -345,6 +345,7 @@ public class ServiceConfigurationService {
                 } else {
                     rt = objectMapper.readValue(optionRepresentation.getValue(),
                             ServiceConfiguration.class);
+                    applyDefaults(rt);
                 }
                 log.debug("{} - Returning service configuration found: {}:", tenant, rt.getLogPayload());
                 log.debug("{} - Found connection configuration: {}", tenant, rt);
@@ -359,6 +360,11 @@ public class ServiceConfigurationService {
             return rt;
         });
         return result;
+    }
+
+    private void applyDefaults(ServiceConfiguration config) {
+        if (config.getEngineRotationThreshold() == null) config.setEngineRotationThreshold(100);
+        if (config.getEngineMaxAgeMinutes() == null)      config.setEngineMaxAgeMinutes(1440);
     }
 
     public void deleteServiceConfigurations(String tenant) {

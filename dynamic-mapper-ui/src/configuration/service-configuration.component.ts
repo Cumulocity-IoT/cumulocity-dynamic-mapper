@@ -204,6 +204,17 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     await this.clearCache('FLOW_STATE_CACHE');
   }
 
+  async clickedRotateGraalVMEngine() {
+    const response = await this.sharedService.runOperation({
+      operation: Operation.ROTATE_GRAALVM_ENGINE,
+    });
+    if (response.status === HttpStatusCode.Created) {
+      this.alertService.success(gettext('GraalVM Engine rotation triggered.'));
+    } else {
+      this.alertService.danger(gettext('Failed to rotate GraalVM Engine!'));
+    }
+  }
+
   private async clearCache(cacheId: string): Promise<void> {
     const response = await this.sharedService.runOperation({
       operation: Operation.CLEAR_CACHE,

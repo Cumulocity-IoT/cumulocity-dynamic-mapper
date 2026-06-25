@@ -304,7 +304,7 @@ public class GraalVMContextService {
      * Engine's Metaspace (JIT-compiled JS code) can be reclaimed by the GC once
      * every in-flight {@link Context} referencing it has been closed.
      */
-    private void rotateEngine(String tenant) {
+    public void rotateEngine(String tenant) {
         ServiceConfiguration config = tenantServiceConfigs.get(tenant);
         if (config == null) {
             log.warn("{} - Cannot rotate GraalVM Engine: ServiceConfiguration not cached; skipping rotation", tenant);

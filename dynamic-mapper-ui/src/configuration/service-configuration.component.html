@@ -20,6 +20,15 @@
 -->
 
 <c8y-title translate>Service configuration</c8y-title>
+@if (section == 'general'){
+<c8y-action-bar-item [placement]="'right'">
+  <button class="btn btn-link" title="{{ 'Rotate GraalVM Engine' | translate }}"
+    (click)="clickedRotateGraalVMEngine()" [disabled]="!feature?.userHasMappingAdminRole">
+    <i c8yIcon="restore"></i>
+    {{ 'Rotate GraalVM Engine' | translate }}
+  </button>
+</c8y-action-bar-item>
+}
 @if (section == 'caching'){
 <c8y-action-bar-item [placement]="'right'">
   <button class="btn btn-link" title="{{ 'Clear external ID cache' | translate }}"

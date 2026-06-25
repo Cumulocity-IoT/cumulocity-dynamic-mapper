@@ -274,6 +274,13 @@ public class OperationController {
                                 "User does not have permission to clear device-to-client cache");
                     }
                     return handleClearCacheDeviceToClient(tenant, parameters);
+                case ROTATE_GRAALVM_ENGINE:
+                    if (!Utils.userHasMappingAdminRole()) {
+                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                "User does not have permission to rotate GraalVM engine");
+                    }
+                    configurationRegistry.getGraalVMContextService().rotateEngine(tenant);
+                    return ResponseEntity.status(HttpStatus.CREATED).build();
                 default:
                     throw new IllegalArgumentException("Unknown operation: " + operationType);
             }
