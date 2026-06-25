@@ -41,6 +41,7 @@ import dynamic.mapper.processor.model.DataPrepContext;
 import dynamic.mapper.processor.util.JavaScriptModuleStripper;
 import dynamic.mapper.processor.model.OutputCollector;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.core.GraalVMContextService;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -81,9 +82,11 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
             .buildLiteral();
 
     protected final MappingService mappingService;
+    protected final GraalVMContextService graalVMContextService;
 
-    protected AbstractFlowProcessor(MappingService mappingService) {
+    protected AbstractFlowProcessor(MappingService mappingService, GraalVMContextService graalVMContextService) {
         this.mappingService = mappingService;
+        this.graalVMContextService = graalVMContextService;
     }
 
     @Override
@@ -265,6 +268,9 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
                             .cached(true)
                             .buildLiteral();
                 }
+
+                graalVMContextService.recordCompilation(tenant, source.getName(),
+                        source.getCharacters().toString());
 
                 if (supportESM) {
                     Value exports = graalContext.eval(source);

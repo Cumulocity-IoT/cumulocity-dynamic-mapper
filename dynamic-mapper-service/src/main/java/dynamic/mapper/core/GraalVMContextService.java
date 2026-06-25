@@ -121,17 +121,18 @@ import lombok.extern.slf4j.Slf4j;
 public class GraalVMContextService {
 
     /**
-     * Number of GraalVM {@link Context} creations after which the shared {@link Engine}
-     * is rotated for a tenant. Tune this based on the expected Metaspace budget:
-     * lower = more frequent GC opportunities, higher = better JIT warm-up reuse.
+     * Number of unique JS source compilations after which the shared {@link Engine}
+     * is rotated for a tenant. Each distinct (sourceName, content) pair compiled into
+     * the Engine increments the counter — repeated execution of the same code does not.
+     * Warmup compilations at Engine creation do not count toward this threshold.
      */
-    // static final int ENGINE_ROTATION_THRESHOLD = Integer.MAX_VALUE; // set to e.g. 100 to enable rotation
     static final int ENGINE_ROTATION_THRESHOLD = 100;
 
     /**
      * Maximum wall-clock age of a tenant's {@link Engine} before it is rotated,
-     * regardless of the context-creation count.  Prevents very-low-traffic tenants
-     * from accumulating unbounded Metaspace over days.
+     * regardless of the compilation count. Disabled by default (0 = off). Set to a
+     * positive value (minutes) only as an additional safeguard on top of the
+     * compilation-count trigger.
      */
     static final Duration ENGINE_MAX_AGE = Duration.ofHours(24);
 
@@ -147,8 +148,15 @@ public class GraalVMContextService {
     // Structure: < Tenant, Source > — pre-compiled system/built-in code (globalThis scope)
     private final Map<String, Source> graalSourceSystem = new ConcurrentHashMap<>();
 
-    // How many contexts have been created per tenant since the last Engine rotation
-    private final Map<String, AtomicInteger> contextCounters = new ConcurrentHashMap<>();
+    // Number of unique JS source compilations per tenant since the last Engine rotation.
+    // Incremented only when a new (sourceName, contentHash) pair is compiled — repeated
+    // execution of unchanged code does not increment this counter.
+    private final Map<String, AtomicInteger> compilationCounters = new ConcurrentHashMap<>();
+
+    // Tracks (sourceName:contentHash) keys already compiled into the current Engine per tenant.
+    // Warmup sources are registered here without incrementing the compilation counter so that
+    // the steady-state mapping set does not count toward the rotation threshold.
+    private final Map<String, Set<String>> compiledSourceKeys = new ConcurrentHashMap<>();
 
     // Stored ServiceConfiguration per tenant — needed to recreate Engine on rotation
     private final Map<String, ServiceConfiguration> tenantServiceConfigs = new ConcurrentHashMap<>();
@@ -196,7 +204,8 @@ public class GraalVMContextService {
      */
     public void createGraalsResources(String tenant, ServiceConfiguration serviceConfiguration) {
         tenantServiceConfigs.put(tenant, serviceConfiguration);
-        contextCounters.put(tenant, new AtomicInteger(0));
+        compilationCounters.put(tenant, new AtomicInteger(0));
+        compiledSourceKeys.put(tenant, ConcurrentHashMap.newKeySet());
 
         Engine eng = Engine.newBuilder()
                 .option("engine.WarnInterpreterOnly", "false")
@@ -261,34 +270,28 @@ public class GraalVMContextService {
     }
 
     /**
-     * Returns the shared GraalVM {@link Engine} for the tenant, rotating it when the
-     * context-creation count reaches {@link #ENGINE_ROTATION_THRESHOLD}.
+     * Returns the shared GraalVM {@link Engine} for the tenant.
      *
-     * <p>Only the thread whose increment lands exactly on the threshold triggers the
-     * rotation, avoiding concurrent double-rotations.
+     * <p>Rotation is now driven by {@link #recordCompilation} (unique source count).
+     * An optional time-based rotation fires here only when
+     * {@code engineMaxAgeMinutes > 0} in the tenant's {@link ServiceConfiguration}.
      */
     public Engine getGraalEngine(String tenant) {
-        AtomicInteger counter = contextCounters.get(tenant);
         Engine currentEngine = graalEngines.get(tenant);
 
-        // Count-based rotation: only the thread whose increment lands on the threshold triggers it
+        // Time-based rotation — opt-in only (engineMaxAgeMinutes == 0 means disabled)
         ServiceConfiguration config = tenantServiceConfigs.get(tenant);
-        int rotationThreshold = (config != null && config.getEngineRotationThreshold() != null)
-                ? config.getEngineRotationThreshold()
-                : ENGINE_ROTATION_THRESHOLD;
-        boolean atThreshold = counter != null && counter.incrementAndGet() == rotationThreshold;
-
-        // Time-based rotation: rotate if the Engine is older than ENGINE_MAX_AGE
         int maxAgeMinutes = (config != null && config.getEngineMaxAgeMinutes() != null)
                 ? config.getEngineMaxAgeMinutes()
-                : (int) ENGINE_MAX_AGE.toMinutes();
-        Instant createdAt = engineCreatedAt.get(tenant);
-        boolean tooOld = createdAt != null
-                && Duration.between(createdAt, Instant.now()).compareTo(Duration.ofMinutes(maxAgeMinutes)) > 0;
-
-        if (atThreshold || tooOld) {
-            rotateEngine(tenant);
-            currentEngine = graalEngines.get(tenant);
+                : 0;
+        if (maxAgeMinutes > 0) {
+            Instant createdAt = engineCreatedAt.get(tenant);
+            boolean tooOld = createdAt != null
+                    && Duration.between(createdAt, Instant.now()).compareTo(Duration.ofMinutes(maxAgeMinutes)) > 0;
+            if (tooOld) {
+                rotateEngine(tenant);
+                currentEngine = graalEngines.get(tenant);
+            }
         }
 
         // Track this in-flight Context so we know when the Engine can be safely closed
@@ -297,6 +300,54 @@ public class GraalVMContextService {
             activeCount.incrementAndGet();
         }
         return currentEngine;
+    }
+
+    /**
+     * Records that a unique JS source has been compiled into the tenant's Engine and
+     * triggers rotation when the compilation count reaches the configured threshold.
+     *
+     * <p>A source is considered new when its (sourceName, contentHash) pair has not been
+     * seen on the current Engine. Repeated execution of unchanged code is a GraalVM
+     * source-cache hit and does not increment the counter.
+     *
+     * <p>Called from {@link dynamic.mapper.processor.AbstractFlowProcessor} immediately
+     * before {@code graalContext.eval(source)}.
+     *
+     * @param tenant      tenant identifier
+     * @param sourceName  GraalVM source name (e.g. {@code "onMessage_abc123.js"})
+     * @param content     the exact JS string passed to GraalVM (after stripping/wrapping)
+     */
+    public void recordCompilation(String tenant, String sourceName, String content) {
+        Set<String> keys = compiledSourceKeys.get(tenant);
+        if (keys == null) return;
+        String key = sourceName + ":" + Integer.toHexString(content.hashCode());
+        if (!keys.add(key)) return; // already compiled into this Engine — cache hit
+
+        AtomicInteger counter = compilationCounters.get(tenant);
+        if (counter == null) return;
+
+        ServiceConfiguration config = tenantServiceConfigs.get(tenant);
+        int threshold = (config != null && config.getEngineRotationThreshold() != null)
+                ? config.getEngineRotationThreshold()
+                : ENGINE_ROTATION_THRESHOLD;
+
+        int count = counter.incrementAndGet();
+        log.debug("{} - New JS source compiled into Engine ({}/{}): {}", tenant, count, threshold, sourceName);
+        if (count >= threshold) {
+            rotateEngine(tenant);
+        }
+    }
+
+    /**
+     * Registers a warmup source in the compiled-keys set without incrementing the
+     * compilation counter. Called from {@link #warmupMappingCodes} so that the
+     * steady-state mapping set at Engine creation does not count toward the rotation
+     * threshold — only code changes after warmup trigger the counter.
+     */
+    private void registerWarmupSource(String tenant, String sourceName, String content) {
+        Set<String> keys = compiledSourceKeys.get(tenant);
+        if (keys == null) return;
+        keys.add(sourceName + ":" + Integer.toHexString(content.hashCode()));
     }
 
     /**
@@ -518,6 +569,10 @@ public class GraalVMContextService {
                                 .buildLiteral();
                     }
                     warmupCtx.eval(source);
+                    registerWarmupSource(tenant, runtimeName, supportESM
+                            ? entry.getValue()
+                            : "(function() {\n" + JavaScriptModuleStripper.toPlainScript(entry.getValue()) + "\n"
+                                    + "globalThis['onMessage'] = onMessage;\n" + "})();");
                     warmed++;
                 } catch (Exception e) {
                     log.warn("{} - Failed to pre-compile mapping {}: {}", tenant, entry.getKey(),
@@ -540,7 +595,8 @@ public class GraalVMContextService {
         }
         graalSourceShared.remove(tenant);
         graalSourceSystem.remove(tenant);
-        contextCounters.remove(tenant);
+        compilationCounters.remove(tenant);
+        compiledSourceKeys.remove(tenant);
         tenantServiceConfigs.remove(tenant);
         engineCreatedAt.remove(tenant);
         mappingCodeSuppliers.remove(tenant);

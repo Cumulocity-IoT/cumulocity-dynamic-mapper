@@ -55,6 +55,7 @@ import dynamic.mapper.processor.model.SmartFunctionContext;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.OutputCollector;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.core.GraalVMContextService;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -69,6 +70,9 @@ class AbstractFlowProcessorTest {
 
     @Mock
     private MappingService mappingService;
+
+    @Mock
+    private GraalVMContextService graalVMContextService;
 
     @Mock
     private Exchange exchange;
@@ -116,8 +120,8 @@ class AbstractFlowProcessorTest {
         private Exception lastError;
         private String lastErrorMessage;
 
-        public TestableAbstractFlowProcessorProcessor(MappingService mappingService) {
-            super(mappingService);
+        public TestableAbstractFlowProcessorProcessor(MappingService mappingService, GraalVMContextService graalVMContextService) {
+            super(mappingService, graalVMContextService);
         }
 
         @Override
@@ -168,7 +172,7 @@ class AbstractFlowProcessorTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        processor = new TestableAbstractFlowProcessorProcessor(mappingService);
+        processor = new TestableAbstractFlowProcessorProcessor(mappingService, graalVMContextService);
 
         mapping = createFlowProcessorMapping();
         processingContext = createProcessingContext();

@@ -59,6 +59,7 @@ import dynamic.mapper.processor.model.ExternalId;
 import dynamic.mapper.processor.model.DataPrepContext;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.TransformationType;
+import dynamic.mapper.core.GraalVMContextService;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -70,6 +71,9 @@ class FlowInboundProcessorTest {
 
     @Mock
     private MappingService mappingService;
+
+    @Mock
+    private GraalVMContextService graalVMContextService;
 
     @Mock
     private Exchange exchange;
@@ -96,7 +100,7 @@ class FlowInboundProcessorTest {
     @BeforeEach
     void setUp() throws Exception {
         graal = new GraalValueFixtures();
-        processor = new FlowInboundProcessor(mappingService);
+        processor = new FlowInboundProcessor(mappingService, graalVMContextService);
 
         mapping = createSampleMapping();
         mappingStatus = new MappingStatus(

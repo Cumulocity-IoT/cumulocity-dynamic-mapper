@@ -19,6 +19,7 @@ import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.CumulocityObject;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.util.JavaScriptInteropHelper;
+import dynamic.mapper.core.GraalVMContextService;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -30,8 +31,8 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class FlowInboundProcessor extends AbstractFlowProcessor {
 
-    public FlowInboundProcessor(MappingService mappingService) {
-        super(mappingService);
+    public FlowInboundProcessor(MappingService mappingService, GraalVMContextService graalVMContextService) {
+        super(mappingService, graalVMContextService);
     }
 
     @Override

@@ -1187,17 +1187,21 @@ function metric(name, type, value) &#123;
             </thead>
             <tbody>
               <tr>
-                <td><strong>Count-based</strong></td>
-                <td>The Engine is rotated after <strong>100 GraalVM context creations</strong>
-                  (configurable via <code>engineRotationThreshold</code>, default: 100). Each inbound SmartFunction
-                  message that reaches a mapping creates one context.
+                <td><strong>Compilation-based (primary)</strong></td>
+                <td>The Engine is rotated after <strong>100 unique JS source compilations</strong>
+                  (configurable via <code>engineRotationThreshold</code>, default: 100). A compilation
+                  is counted only when a new (sourceName, contentHash) pair is evaluated — repeated
+                  execution of the same code is a GraalVM source-cache hit and does not count.
+                  Warmup compilations at Engine creation are registered but do not count toward the
+                  threshold, so only code changes after startup drive rotation.
                 </td>
               </tr>
               <tr>
-                <td><strong>Time-based</strong></td>
-                <td>The Engine is rotated after <strong>1440 minutes (24 hours)</strong> of age
-                  (configurable via <code>engineMaxAgeMinutes</code>, default: 1440), regardless of message volume. This
-                  protects low-traffic tenants from accumulating compiled code indefinitely.
+                <td><strong>Time-based (opt-in)</strong></td>
+                <td>Disabled by default (<code>engineMaxAgeMinutes = 0</code>). When set to a
+                  positive value the Engine is rotated after that many minutes regardless of
+                  compilation count. Use only as an additional safeguard on top of the
+                  compilation-count trigger.
                 </td>
               </tr>
             </tbody>
@@ -1232,8 +1236,8 @@ function metric(name, type, value) &#123;
                   → partial eval → full optimization). Once fully optimised, Metaspace usage for that
                   mapping plateaus.
                 </td>
-                <td>Count-based (<code>engineRotationThreshold</code>) — rotation fires because many
-                  contexts are created, not because the code changes.</td>
+                <td><em>No rotation triggered.</em> Repeated execution of the same code is a cache hit
+                  and does not increment the compilation counter.</td>
               </tr>
               <tr>
                 <td><strong>Mapping iteration — delete &amp; recreate with new JS code</strong></td>
@@ -1244,9 +1248,8 @@ function metric(name, type, value) &#123;
                   remains in Metaspace for the lifetime of the Engine — even a single character
                   edit creates a new compilation.
                 </td>
-                <td>Time-based (<code>engineMaxAgeMinutes</code>) — the Engine may never accumulate
-                  enough context creations to hit the count threshold, but code churn accumulates
-                  silently over hours or days.</td>
+                <td>Compilation-based (<code>engineRotationThreshold</code>) — each unique code
+                  version increments the counter. Rotation fires once the threshold is reached.</td>
               </tr>
               <tr>
                 <td><strong>Editing an existing mapping's JS code</strong></td>
@@ -1257,9 +1260,8 @@ function metric(name, type, value) &#123;
                   edited 20 times before going to production has accumulated 20 compiled blocks, of
                   which 19 are permanently unreachable.
                 </td>
-                <td>Time-based (<code>engineMaxAgeMinutes</code>) — code edits rarely generate
-                  enough context creations to hit the count threshold, but silent accumulation over
-                  a development session can be significant.</td>
+                <td>Compilation-based (<code>engineRotationThreshold</code>) — every code edit
+                  increments the counter, making development sessions the primary driver of rotation.</td>
               </tr>
               <tr>
                 <td><strong>Activate / deactivate a mapping</strong></td>
@@ -1269,8 +1271,8 @@ function metric(name, type, value) &#123;
                   the code was edited between deactivation and reactivation, one new block is
                   compiled and the old one remains — equivalent to a single code edit.
                 </td>
-                <td>Neither trigger is directly driven by activate/deactivate alone. The risk arises
-                  only when deactivation is paired with a code change before reactivation.</td>
+                <td>Activate/deactivate alone does not increment the compilation counter. Only a
+                  code change paired with reactivation adds to the count.</td>
               </tr>
             </tbody>
           </table>
@@ -1281,10 +1283,10 @@ function metric(name, type, value) &#123;
             Active development on SmartFunction code — whether through edits to existing mappings,
             delete-and-recreate cycles, or deactivate-edit-reactivate workflows — is the dominant
             driver of Metaspace growth. Each unique code version leaves a permanent compiled block
-            until the Engine is rotated. Keep <code>engineMaxAgeMinutes</code> low enough that the
-            Engine is replaced before accumulation becomes significant during development sessions.
-            For stable deployments where mapping code rarely changes, the count-based
-            <code>engineRotationThreshold</code> is the dominant lever.
+            until the Engine is rotated. The compilation counter tracks exactly this: it increments
+            only when a new (sourceName, contentHash) pair is compiled, not on repeated execution
+            of unchanged code. Tune <code>engineRotationThreshold</code> to control how many code
+            changes accumulate before a rotation is triggered.
           </div>
         </div>
 
@@ -1311,8 +1313,8 @@ t2050305588 - GraalVM Engine created — baseline Metaspace 287 MB (no max set)<
           <div class="title">Info — Interpreting the delta</div>
           <div class="content">
             The difference between the baseline at creation and the value at rotation is the Metaspace consumed
-            by the Engine over its lifetime. In the example above: <strong>287 − 112 = 175 MB</strong> for 100
-            context creations across 39 compiled mappings. If this delta grows between rotations over time,
+            by the Engine over its lifetime. In the example above: <strong>287 − 112 = 175 MB</strong> across
+            39 pre-warmed mappings plus subsequent code changes. If this delta grows between rotations over time,
             consider lowering <code>engineRotationThreshold</code> (in <strong>Service Configuration → General</strong>) or setting an explicit
             <code>-XX:MaxMetaspaceSize</code> JVM flag.
           </div>
@@ -1356,9 +1358,12 @@ t2050305588 - GraalVM Engine created — baseline Metaspace 287 MB (no max set)<
                   OS-level kill, and makes the problem diagnosable.</td>
               </tr>
               <tr>
-                <td>Low message volume, Metaspace growing over days</td>
-                <td>The time-based rotation (default: 1440 min) should handle this. If not, reduce
-                  <code>engineMaxAgeMinutes</code> in <strong>Service Configuration → General</strong>.</td>
+                <td>Low message volume, Metaspace growing over days (active development)</td>
+                <td>The compilation counter handles this — each code change increments it regardless
+                  of message volume. If rotation is still too infrequent, lower
+                  <code>engineRotationThreshold</code>. As a last resort, enable the time-based
+                  trigger by setting <code>engineMaxAgeMinutes</code> to a positive value in
+                  <strong>Service Configuration → General</strong>.</td>
               </tr>
               <tr>
                 <td>High message volume, rotation fires too often</td>

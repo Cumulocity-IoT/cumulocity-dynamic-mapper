@@ -116,6 +116,8 @@ class GraalVMContextServiceTest {
         templates.put(TemplateType.SYSTEM.name(), system);
 
         config.setCodeTemplates(templates);
+        // Enable time-based rotation for tests (mirrors ENGINE_MAX_AGE = 24 h)
+        config.setEngineMaxAgeMinutes((int) GraalVMContextService.ENGINE_MAX_AGE.toMinutes());
         return config;
     }
 
@@ -137,10 +139,15 @@ class GraalVMContextServiceTest {
         createdAt.put(TENANT, Instant.now().minus(GraalVMContextService.ENGINE_MAX_AGE).minusSeconds(1));
     }
 
-    /** Sets the context counter for TENANT to {@code value} via reflection. */
-    private void setContextCounter(int value) throws Exception {
-        Map<String, AtomicInteger> counters = field(service, "contextCounters");
+    /** Sets the compilation counter for TENANT to {@code value} via reflection. */
+    private void setCompilationCounter(int value) throws Exception {
+        Map<String, AtomicInteger> counters = field(service, "compilationCounters");
         counters.get(TENANT).set(value);
+    }
+
+    /** Calls recordCompilation with a unique source to increment the compilation counter by 1. */
+    private void recordUniqueCompilation(String sourceName) {
+        service.recordCompilation(TENANT, sourceName, "function onMessage() { /* " + sourceName + " */ }");
     }
 
     // -------------------------------------------------------------------------
@@ -204,40 +211,36 @@ class GraalVMContextServiceTest {
         Engine originalEngine = currentEngine();
 
         // Wind the counter to one below the threshold
-        setContextCounter(GraalVMContextService.ENGINE_ROTATION_THRESHOLD - 1);
+        setCompilationCounter(GraalVMContextService.ENGINE_ROTATION_THRESHOLD - 1);
 
-        // This call increments to exactly the threshold and triggers rotation
-        Engine returned = service.getGraalEngine(TENANT);
+        // Recording one more unique source increments to exactly the threshold and triggers rotation
+        recordUniqueCompilation("onMessage_trigger.js");
         Engine newEngine = currentEngine();
 
         assertNotSame(originalEngine, newEngine, "Engine should have been replaced after threshold");
-        assertSame(newEngine, returned, "getGraalEngine should return the new engine after rotation");
-
-        // The new engine's tearDown will be handled via removeGraalsResources
-        log.info("✅ Count-based rotation replaces engine at threshold");
+        log.info("✅ Compilation-based rotation replaces engine at threshold");
     }
 
     @Test
     void countBasedRotation_resetsCounterAfterRotation() throws Exception {
-        setContextCounter(GraalVMContextService.ENGINE_ROTATION_THRESHOLD - 1);
-        service.getGraalEngine(TENANT); // triggers rotation
+        setCompilationCounter(GraalVMContextService.ENGINE_ROTATION_THRESHOLD - 1);
+        recordUniqueCompilation("onMessage_trigger.js"); // triggers rotation
 
-        Map<String, AtomicInteger> counters = field(service, "contextCounters");
-        // After rotation createGraalsResources resets the counter; one more call happened
-        // inside getGraalEngine on the NEW engine, so counter == 1.
+        Map<String, AtomicInteger> counters = field(service, "compilationCounters");
+        // After rotation createGraalsResources resets the counter to 0
         int counterAfter = counters.get(TENANT).get();
         assertTrue(counterAfter < GraalVMContextService.ENGINE_ROTATION_THRESHOLD,
                 "Counter should have reset after rotation, got: " + counterAfter);
 
-        log.info("✅ Count-based rotation resets context counter");
+        log.info("✅ Compilation-based rotation resets compilation counter");
     }
 
     @Test
     void countBasedRotation_retireOldEngineIntoRetiredSet() throws Exception {
         Engine originalEngine = currentEngine();
 
-        setContextCounter(GraalVMContextService.ENGINE_ROTATION_THRESHOLD - 1);
-        service.getGraalEngine(TENANT); // triggers rotation; old engine had count=0 → closes immediately
+        setCompilationCounter(GraalVMContextService.ENGINE_ROTATION_THRESHOLD - 1);
+        recordUniqueCompilation("onMessage_trigger.js"); // triggers rotation; old engine had count=0 → closes immediately
 
         // Old engine had no active contexts before rotation, so it should have been closed
         // (removed from retiredEngines and engineActiveContexts)
@@ -256,9 +259,9 @@ class GraalVMContextServiceTest {
         service.getGraalEngine(TENANT); // old engine count = 1
         service.getGraalEngine(TENANT); // old engine count = 2
 
-        // Trigger rotation: this call increments the NEW engine's counter, not the old one's
-        setContextCounter(GraalVMContextService.ENGINE_ROTATION_THRESHOLD - 1);
-        service.getGraalEngine(TENANT); // triggers rotation; old engine stays at count = 2
+        // Trigger rotation via compilation counter
+        setCompilationCounter(GraalVMContextService.ENGINE_ROTATION_THRESHOLD - 1);
+        recordUniqueCompilation("onMessage_trigger.js"); // triggers rotation; old engine stays at count = 2
 
         // Old engine is retired but not yet drained
         Set<Engine> retired = field(service, "retiredEngines");
@@ -456,8 +459,8 @@ class GraalVMContextServiceTest {
         Map<String, Engine> engines = field(service, "graalEngines");
         assertNull(engines.get(TENANT), "graalEngines should not contain tenant after remove");
 
-        Map<String, AtomicInteger> counters = field(service, "contextCounters");
-        assertNull(counters.get(TENANT), "contextCounters should not contain tenant after remove");
+        Map<String, AtomicInteger> counters = field(service, "compilationCounters");
+        assertNull(counters.get(TENANT), "compilationCounters should not contain tenant after remove");
 
         Map<String, Instant> createdAt = field(service, "engineCreatedAt");
         assertNull(createdAt.get(TENANT), "engineCreatedAt should not contain tenant after remove");

@@ -41,6 +41,7 @@ import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.DeviceMessage;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.util.JavaScriptInteropHelper;
+import dynamic.mapper.core.GraalVMContextService;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.util.Utils;
 import lombok.extern.slf4j.Slf4j;
@@ -56,8 +57,8 @@ public class FlowOutboundProcessor extends AbstractFlowProcessor {
     @Autowired
     private C8YAgent c8yAgent;
 
-    public FlowOutboundProcessor(MappingService mappingService) {
-        super(mappingService);
+    public FlowOutboundProcessor(MappingService mappingService, GraalVMContextService graalVMContextService) {
+        super(mappingService, graalVMContextService);
     }
 
     @Override
