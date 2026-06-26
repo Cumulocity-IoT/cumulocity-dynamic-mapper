@@ -129,8 +129,7 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
                     log.error("Full Stack Trace: ", cause);
 
                     ProcessingResultWrapper<Object> result = ProcessingResultWrapper.builder()
-                            .error(cause)
-                            .maxCPUTimeMS(0)
+                            .pipelineTimeoutMS(0)
                             .build();
 
                     exchange.getIn().setHeader(CamelHeaders.PROCESSING_RESULT, result);

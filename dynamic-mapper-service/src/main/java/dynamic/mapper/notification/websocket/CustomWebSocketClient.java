@@ -123,15 +123,8 @@ public class CustomWebSocketClient extends WebSocketClient {
             return;
         }
         int mappingQos = processedResults.getConsolidatedQos().ordinal();
-        int timeout = processedResults.getMaxCPUTimeMS();
-        //TODO Do we really need this log? as it is not logging any payload.
-        /*
-        if (serviceConfiguration.getLogPayload()) {
-            log.info(
-                    "{} - PREPARING_RESULTS: message on connector InternalWebSocket (notification 2.0) for outbound connector {}, API: {}, Operation: {}, QoS mappings: {}",
-                    tenant, connectorId.getIdentifier(), notification.getApi(), notification.getOperation(), mappingQos);
-        }
-         */
+        int timeout = processedResults.getPipelineTimeoutMS();
+
         if (mappingQos > 0) {
             // Use the provided virtualThreadPool instead of creating a new thread
             virtualThreadPool.submit(() -> {

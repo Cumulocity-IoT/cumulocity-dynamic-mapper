@@ -98,15 +98,15 @@ public class ProcessingResultHelper {
      * @param <T> the type of payload in the processing contexts
      * @param future a Future containing the list of processing contexts
      * @param qos the Quality of Service level for this processing operation
-     * @param maxCPUTimeMS the JS-execution timeout budget (milliseconds) from service config
+     * @param pipelineTimeoutMS broker callback wait-timeout (milliseconds); 30 s for SmartFunction mappings, 0 otherwise
      * @return a ProcessingResultWrapper for the asynchronous operation
      */
     public static <T> ProcessingResultWrapper<T> successAsync(Future<List<ProcessingContext<T>>> future, Qos qos,
-            int maxCPUTimeMS) {
+            int pipelineTimeoutMS) {
         return ProcessingResultWrapper.<T>builder()
                 .processingResult(future)
                 .consolidatedQos(qos)
-                .maxCPUTimeMS(maxCPUTimeMS)
+                .pipelineTimeoutMS(pipelineTimeoutMS)
                 .build();
     }
 

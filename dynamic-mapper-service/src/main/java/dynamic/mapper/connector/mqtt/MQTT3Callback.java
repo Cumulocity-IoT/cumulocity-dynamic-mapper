@@ -171,7 +171,7 @@ public class MQTT3Callback implements Consumer<Mqtt3Publish> {
         // consolidated QoS of the mappings
         int publishQos = mqttMessage.getQos().getCode();
         int mappingQos = processedResults.getConsolidatedQos().ordinal();
-        int timeout = processedResults.getMaxCPUTimeMS();
+        int timeout = processedResults.getPipelineTimeoutMS();
         int effectiveQos = Math.min(publishQos, mappingQos);
         if (serviceConfiguration.getLogPayload()) {
             log.info(

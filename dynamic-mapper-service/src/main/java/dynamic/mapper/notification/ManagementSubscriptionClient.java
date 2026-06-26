@@ -100,31 +100,29 @@ public class ManagementSubscriptionClient implements NotificationCallback {
         C8YMessage message = NotificationHelper.createC8YMessage(notification, notificationTenant);
         log.debug("{} - Handling group update for: {}", notificationTenant, message.getSourceId());
         
-        Future<?> future = virtualThreadPool.submit(
+        virtualThreadPool.submit(
             new UpdateSubscriptionDeviceGroupTask(
                 configurationRegistry,
                 message,
                 groupCacheManager
             )
         );
-        
+
         return ProcessingResultWrapper.builder()
             .consolidatedQos(Qos.AT_LEAST_ONCE)
-            .future(future)
             .build();
     }
 
     private ProcessingResultWrapper<?> handleDeviceCreation(Notification notification, String notificationTenant) {
         C8YMessage message = NotificationHelper.createC8YMessage(notification, notificationTenant);
         log.debug("{} - Handling device creation for: {}", notificationTenant, message.getSourceId());
-        
-        Future<?> future = virtualThreadPool.submit(
+
+        virtualThreadPool.submit(
             new UpdateSubscriptionDeviceTypeTask(configurationRegistry, message)
         );
-        
+
         return ProcessingResultWrapper.builder()
             .consolidatedQos(Qos.AT_LEAST_ONCE)
-            .future(future)
             .build();
     }
 

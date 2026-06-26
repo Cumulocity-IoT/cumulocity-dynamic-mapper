@@ -302,7 +302,7 @@ public class CamelDispatcherOutbound implements NotificationCallback {
                 }
             }
             maxCPUTime = tempMaxCPUTime; // Now final
-            result.setMaxCPUTimeMS(maxCPUTime);
+            result.setPipelineTimeoutMS(maxCPUTime);
 
         } catch (Exception e) {
             log.warn("{} - Error resolving appropriate mapping for C8Y message. Could NOT be parsed. Ignoring this message!",
@@ -327,7 +327,6 @@ public class CamelDispatcherOutbound implements NotificationCallback {
         //   3. runs GraalVM cancel-actions (Context.close) to stop CPU-bound JS execution
         // All three paths are handled below.
         final String connectorIdentifier = connectorClient.getConnectorIdentifier();
-        final long processingStartNanos = System.nanoTime();
         Future<List<ProcessingContext<Object>>> futureProcessingResult = virtualThreadPool.submit(() -> {
             // ── Early-exit path ──────────────────────────────────────────────────────────
             // If cancelProcessing() was already called (e.g. the timeout fired before this
@@ -368,7 +367,6 @@ public class CamelDispatcherOutbound implements NotificationCallback {
                 log.error("{} - Error processing outbound message through Camel routes: {}", tenant, e.getMessage(), e);
                 throw new RuntimeException("Camel processing failed", e);
             } finally {
-                result.setProcessingTimeMS((System.nanoTime() - processingStartNanos) / 1_000_000L);
             }
         });
         result.setProcessingResult((Future) futureProcessingResult);

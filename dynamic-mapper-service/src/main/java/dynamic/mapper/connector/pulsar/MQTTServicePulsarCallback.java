@@ -92,7 +92,7 @@ public class MQTTServicePulsarCallback implements MessageListener<byte[]> {
         // Process the message
         ProcessingResultWrapper<?> processedResults = genericMessageCallback.onMessage(connectorMessage);
 
-        int timeout = processedResults.getMaxCPUTimeMS();
+        int timeout = processedResults.getPipelineTimeoutMS();
 
         //TODO For what do we have this log output?
         /*

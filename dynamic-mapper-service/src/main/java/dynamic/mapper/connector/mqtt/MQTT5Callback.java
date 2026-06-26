@@ -182,7 +182,7 @@ public class MQTT5Callback implements Consumer<Mqtt5Publish> {
         // consolidated QoS of the mappings
         int publishQos = mqttMessage.getQos().getCode();
         int mappingQos = processedResults.getConsolidatedQos().ordinal();
-        int timeout = processedResults.getMaxCPUTimeMS();
+        int timeout = processedResults.getPipelineTimeoutMS();
         int effectiveQos = Math.min(publishQos, mappingQos);
         if (serviceConfiguration.getLogPayload()) {
             log.info(

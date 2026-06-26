@@ -86,7 +86,7 @@ public class PulsarCallback implements MessageListener<byte[]> {
         // Process the message
         ProcessingResultWrapper<?> processedResults = genericMessageCallback.onMessage(connectorMessage);
 
-        int timeout = processedResults.getMaxCPUTimeMS();
+        int timeout = processedResults.getPipelineTimeoutMS();
 
         if (serviceConfiguration.getLogPayload()) {
             log.info(

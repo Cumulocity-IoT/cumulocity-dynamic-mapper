@@ -151,7 +151,7 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
                 }
             }
             maxCPUTime = tempMaxCPUTime; // Now final
-            result.setMaxCPUTimeMS(maxCPUTime);
+            result.setPipelineTimeoutMS(maxCPUTime);
 
         } catch (Exception e) {
             log.warn("{} - Error resolving appropriate map for topic {}. Could NOT be parsed. Ignoring this message!",
@@ -161,7 +161,6 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
         }
 
         // Process using Camel routes asynchronously
-        final long processingStartNanos = System.nanoTime();
         Future<List<ProcessingContext<Object>>> futureProcessingResult = virtualThreadPool.submit(() -> {
             try {
                 Exchange exchange = createExchange(connectorMessage, resolvedMappings, testing); // Now can use final variable
@@ -237,7 +236,6 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
                 log.error("{} - Error processing inbound message through Camel routes: {}", tenant, e.getMessage(), e);
                 throw new RuntimeException("Camel processing failed", e);
             } finally {
-                result.setProcessingTimeMS((System.nanoTime() - processingStartNanos) / 1_000_000L);
             }
         });
 

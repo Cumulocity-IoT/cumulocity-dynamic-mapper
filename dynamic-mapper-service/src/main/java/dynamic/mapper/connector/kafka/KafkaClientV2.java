@@ -479,7 +479,7 @@ public class KafkaClientV2 extends AConnectorClient {
         ProcessingResultWrapper<?> processedResults = dispatcher.onMessage(connectorMessage);
 
         int mappingQos = processedResults.getConsolidatedQos().ordinal();
-        int timeout = processedResults.getMaxCPUTimeMS();
+        int timeout = processedResults.getPipelineTimeoutMS();
 
         if (mappingQos > 0) {
             virtualThreadPool.submit(() -> processMessageWithQos(record, processedResults, timeout));
