@@ -271,24 +271,36 @@ public class MQTT3Callback implements Consumer<Mqtt3Publish> {
                     var cancelResult = processedResults.cancelProcessing();
                     log.info("{} - Cancellation result: future was cancelled={}", tenant, cancelResult);
 
-                    // Give the cancellation a brief moment to take effect (e.g., interrupt flag propagation,
-                    // GraalVM context closure). This helps ensure that the processing task actually stops
-                    // rather than continuing to run after the timeout.
-                    try {
-                        Thread.sleep(50); //NOSONAR intentional wait for cancellation to take effect
-                    } catch (InterruptedException ie) {
-                        Thread.currentThread().interrupt();
+                    // Wait for the future to actually terminate after cancellation.
+                    // The active cancellation checks in C8YAgent.createMEAO() should prevent any new HTTP calls,
+                    // allowing threads to exit quickly. We wait up to 2 seconds as a fail-safe in case a thread
+                    // is already mid-flight in an HTTP call that cannot be interrupted immediately.
+                    boolean futureCompleted = false;
+                    int maxWaitIterations = 20; // 20 × 100ms = 2 seconds
+                    for (int i = 0; i < maxWaitIterations; i++) {
+                        if (processedResults.getProcessingResult().isDone()) {
+                            futureCompleted = true;
+                            log.info("{} - Future completed after {}ms wait", tenant, (i + 1) * 100);
+                            break;
+                        }
+                        try {
+                            Thread.sleep(100); //NOSONAR intentional wait for future completion
+                        } catch (InterruptedException ie) {
+                            Thread.currentThread().interrupt();
+                            log.warn("{} - Interrupted while waiting for future completion", tenant);
+                            break;
+                        }
                     }
 
-                    // If the future couldn't be cancelled but cancellation was requested,
-                    // the task is likely already running. Log this for diagnostics.
-                    if (!cancelResult && processedResults.getCancellationRequested().get()) {
-                        log.warn("{} - Future was already running when cancellation was requested. Waiting for it to complete or be interrupted.", tenant);
+                    if (!futureCompleted) {
+                        log.error("{} - Future did NOT complete within 2 seconds after cancellation! " +
+                                "This indicates that a thread is stuck in a blocking operation that cannot be interrupted. " +
+                                "Check for long-running HTTP calls or other blocking I/O.", tenant);
                     }
 
                     log.warn(
-                            "{} - END: Processing timed out after {}ms, not sending ACK. Triggering reconnect for retransmission. connector: {}, cancel result: {}",
-                            tenant, effectiveTimeout, connectorIdentifier, cancelResult);
+                            "{} - END: Processing timed out after {}ms, not sending ACK. Triggering reconnect for retransmission. connector: {}, cancel result: {}, future completed: {}",
+                            tenant, effectiveTimeout, connectorIdentifier, cancelResult, futureCompleted);
                     triggerReconnectOrAck(mqttMessage, topic, messageId);
                 } finally {
                     activeProcessingMessages.decrementAndGet();
