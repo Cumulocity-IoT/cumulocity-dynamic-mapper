@@ -535,6 +535,16 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         ServiceConfiguration serviceConfiguration = tenantRegistry.getServiceConfiguration(tenant);
         // API is now always initialized when creating DynamicMapperRequest
         API targetAPI = currentRequest.getApi();
+
+        // Check for cancellation BEFORE starting any C8Y API calls
+        // This prevents unnecessary HTTP requests when the processing has already timed out
+        dynamic.mapper.processor.model.ProcessingResultWrapper<?> wrapper = context.getProcessingResultWrapper();
+        if (wrapper != null && wrapper.getCancellationRequested().get()) {
+            log.info("{} - Cancellation detected in createMEAO before API call, aborting C8Y request for API: {}",
+                    tenant, targetAPI);
+            throw new ProcessingException("Processing cancelled before C8Y API call");
+        }
+
         AbstractExtensibleRepresentation result = subscriptionsService.callForTenant(tenant, () -> {
             MicroserviceCredentials contextCredentials = removeAppKeyHeaderFromContext(contextService.getContext());
             return contextService.callWithinContext(contextCredentials, () -> {
@@ -546,6 +556,13 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                                 EventRepresentation.class);
                         try {
                             c8ySemaphore.acquire();
+
+                            // Check cancellation before making HTTP call
+                            if (wrapper != null && wrapper.getCancellationRequested().get()) {
+                                log.info("{} - Cancellation detected before EVENT API call, aborting", tenant);
+                                throw new ProcessingException("Processing cancelled before EVENT API call");
+                            }
+
                             // Set processing mode for events
                             if (context.getProcessingMode() != null &&
                                     ProcessingMode.TRANSIENT.equals(context.getProcessingMode())) {
@@ -585,6 +602,13 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                                 AlarmRepresentation.class);
                         try {
                             c8ySemaphore.acquire();
+
+                            // Check cancellation before making HTTP call
+                            if (wrapper != null && wrapper.getCancellationRequested().get()) {
+                                log.info("{} - Cancellation detected before ALARM API call, aborting", tenant);
+                                throw new ProcessingException("Processing cancelled before ALARM API call");
+                            }
+
                             // Set processing mode for alarms
                             if (context.getProcessingMode() != null &&
                                     ProcessingMode.TRANSIENT.equals(context.getProcessingMode())) {
@@ -627,6 +651,13 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                         }
                         try {
                             c8ySemaphore.acquire();
+
+                            // Check cancellation before making HTTP call
+                            if (wrapper != null && wrapper.getCancellationRequested().get()) {
+                                log.info("{} - Cancellation detected before MEASUREMENT API call, aborting", tenant);
+                                throw new ProcessingException("Processing cancelled before MEASUREMENT API call");
+                            }
+
                             if (context.getProcessingMode() != null &&
                                     ProcessingMode.TRANSIENT.equals(context.getProcessingMode())) {
                                 final MeasurementCollectionRepresentation col = collectionRepresentation;
@@ -659,6 +690,13 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                                 .treeToValue(opNode, OperationRepresentation.class);
                         try {
                             c8ySemaphore.acquire();
+
+                            // Check cancellation before making HTTP call
+                            if (wrapper != null && wrapper.getCancellationRequested().get()) {
+                                log.info("{} - Cancellation detected before OPERATION API call, aborting", tenant);
+                                throw new ProcessingException("Processing cancelled before OPERATION API call");
+                            }
+
                             rt = deviceControlApi.create(operationRepresentation);
                         } catch (InterruptedException e) {
                             log.error("{} - Failed to acquire semaphore for creating Operation", tenant, e);
@@ -671,6 +709,12 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                             log.info("{} - SEND: operation posted with Id {}", tenant,
                                     rt != null ? ((OperationRepresentation) rt).getId().getValue() : "null");
                     } else if (targetAPI.equals(API.CUSTOM)) {
+                        // Check cancellation before making HTTP call
+                        if (wrapper != null && wrapper.getCancellationRequested().get()) {
+                            log.info("{} - Cancellation detected before CUSTOM API call, aborting", tenant);
+                            throw new ProcessingException("Processing cancelled before CUSTOM API call");
+                        }
+
                         String customPath = currentRequest.getPathCumulocity();
                         RequestMethod requestMethod = currentRequest.getMethod();
                         HttpMethod httpMethod;
