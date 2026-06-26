@@ -267,11 +267,11 @@ class CamelPipelineInboundIntegrationTest {
         assertNotNull(result, "Should return processing result");
 
         // Verify maxCPUTime is set for code-based mappings
-        assertTrue(result.getMaxCPUTimeMS() > 0,
+        assertTrue(result.getPipelineTimeoutMS() > 0,
                 "Should set max CPU time for SMART_FUNCTION");
 
         log.info("✅ Dispatcher onMessage - SMART_FUNCTION processed (maxCPUTime: {}ms)",
-                result.getMaxCPUTimeMS());
+                result.getPipelineTimeoutMS());
     }
 
     @Test

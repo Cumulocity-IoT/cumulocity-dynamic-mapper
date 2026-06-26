@@ -133,23 +133,23 @@ public class ProcessingContext<O> implements AutoCloseable {
     private Map<String, List<SubstituteValue>> processingCache = new TreeMap<String, List<SubstituteValue>>();
 
     @Builder.Default
-    private Boolean sendPayload = false;
+    private boolean sendPayload = false;
 
     @Builder.Default
-    private Boolean testing = false;
+    private boolean testing = false;
 
     @Builder.Default
-    private Boolean needsRepair = false;
+    private boolean needsRepair = false;
 
     @Builder.Default
-    private Boolean retain = false;
+    private boolean retain = false;
 
     private String tenant;
 
     private ServiceConfiguration serviceConfiguration;
 
     @Builder.Default
-    private Boolean ignoreFurtherProcessing = false;
+    private boolean ignoreFurtherProcessing = false;
 
     private String key;
 
@@ -218,7 +218,7 @@ public class ProcessingContext<O> implements AutoCloseable {
     private BinaryInfo binaryInfo = new BinaryInfo();
 
     public boolean hasError() {
-        return errors != null && errors.size() > 0;
+        return !errors.isEmpty();
     }
 
     /**
@@ -417,12 +417,8 @@ public class ProcessingContext<O> implements AutoCloseable {
         }
 
         // Copy flags
-        if (this.needsRepair != null) {
-            state.setNeedsRepair(this.needsRepair);
-        }
-        if (this.ignoreFurtherProcessing != null) {
-            state.setIgnoreFurtherProcessing(this.ignoreFurtherProcessing);
-        }
+        state.setNeedsRepair(this.needsRepair);
+        state.setIgnoreFurtherProcessing(this.ignoreFurtherProcessing);
 
         return state;
     }
