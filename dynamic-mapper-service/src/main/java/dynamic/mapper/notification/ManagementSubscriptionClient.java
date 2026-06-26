@@ -91,7 +91,6 @@ public class ManagementSubscriptionClient implements NotificationCallback {
             log.error("{} - Error processing notification: {}", notificationTenant, e.getMessage(), e);
             return ProcessingResultWrapper.builder()
                 .consolidatedQos(Qos.AT_LEAST_ONCE)
-                .error(e)
                 .build();
         }
     }

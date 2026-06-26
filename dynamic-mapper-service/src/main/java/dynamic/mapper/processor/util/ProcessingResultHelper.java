@@ -117,9 +117,8 @@ public class ProcessingResultHelper {
      * @param error the exception that caused the processing to fail
      * @return a ProcessingResultWrapper indicating failure with the provided error
      */
-    public static <T> ProcessingResultWrapper<T> failure(Exception error) {
+    public static <T> ProcessingResultWrapper<T> failure() {
         return ProcessingResultWrapper.<T>builder()
-                .error(error)
                 .build();
     }
 

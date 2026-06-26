@@ -88,7 +88,6 @@ public class CacheInventoryUpdateClient implements NotificationCallback {
             log.error("{} - Error processing inventory cache update: {}", tenant, e.getMessage(), e);
             return ProcessingResultWrapper.builder()
                 .consolidatedQos(Qos.AT_LEAST_ONCE)
-                .error(e)
                 .build();
         }
     }
