@@ -21,6 +21,10 @@
   -->
 
 <configuration>
+    <!-- Lock appender threshold before defaults.xml can set CONSOLE_LOG_THRESHOLD=TRACE (Spring Boot 3.5 default) -->
+    <property name="CONSOLE_LOG_THRESHOLD" value="INFO" />
+    <property name="FILE_LOG_THRESHOLD" value="INFO" />
+
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
     <include resource="org/springframework/boot/logging/logback/console-appender.xml" />
 
@@ -30,7 +34,6 @@
     <logger name="org.glassfish.jersey.client" level="ERROR" />
     <logger name="org.glassfish.jersey.internal.Errors" level="ERROR" />
     <logger name="org.glassfish.jersey.p.internal.ExecutorProviders" level="ERROR" />
-    <logger name="org.glassfish.jersey.media.multipart.MultiPartFeature" level="ERROR" />
 
     <springProfile name="dev">
         <logger name="org.springframework.web" level="INFO" />

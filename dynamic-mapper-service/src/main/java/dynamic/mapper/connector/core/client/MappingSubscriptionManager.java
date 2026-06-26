@@ -384,19 +384,6 @@ public class MappingSubscriptionManager {
     // ===== Read-only Access Methods =====
 
     /**
-     * Gets the subscription reference counts per topic.
-     * 
-     * <p><strong>Warning:</strong> Returns mutable map. Use {@link #getSubscriptionCountsView()}
-     * for read-only access.
-     * 
-     * @return mutable map of topic → reference count
-     * @deprecated Use {@link #getSubscriptionCountsView()} for safer read-only access
-     */
-    public Map<String, MutableInt> getSubscriptionCounts() {
-        return subscriptionCounts;
-    }
-
-    /**
      * Gets an unmodifiable view of subscription reference counts per topic.
      * 
      * @return read-only map of topic → reference count
