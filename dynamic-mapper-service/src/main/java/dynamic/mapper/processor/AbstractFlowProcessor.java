@@ -28,7 +28,12 @@ import static dynamic.mapper.model.Substitution.toPrettyJsonString;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import org.apache.camel.Exchange;
+import org.graalvm.polyglot.PolyglotException;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
@@ -38,7 +43,6 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.flow.JavaScriptConsole;
 import dynamic.mapper.processor.util.JavaScriptModuleStripper;
 import dynamic.mapper.processor.model.DataPrepContext;
-import dynamic.mapper.processor.util.JavaScriptModuleStripper;
 import dynamic.mapper.processor.model.OutputCollector;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.core.GraalVMContextService;
@@ -80,6 +84,13 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
             """, "__base64_polyfill__.js")
             .cached(true)
             .buildLiteral();
+
+    private static final ScheduledExecutorService JS_TIMEOUT_SCHEDULER =
+            Executors.newScheduledThreadPool(2, r -> {
+                Thread t = new Thread(r, "js-cpu-timeout");
+                t.setDaemon(true);
+                return t;
+            });
 
     protected final MappingService mappingService;
     protected final GraalVMContextService graalVMContextService;
@@ -159,8 +170,19 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
 
             int lineNumber = extractJsLineNumber(e);
             String errorMessage = String.format("%s, line %s", e.getMessage(), lineNumber);
-            log.error("{} - Error in {} for mapping {}: {}", tenant, getProcessorName(), mapping.getName(),
-                    errorMessage, e);
+
+            // isCancelled() = killed by Context.close(true) (CPU timeout or wall-clock cancel)
+            // isResourceExhausted() = future ResourceLimits enforcement; treat the same way
+            boolean isKilled = e instanceof PolyglotException
+                    && (((PolyglotException) e).isCancelled()
+                            || ((PolyglotException) e).isResourceExhausted());
+            if (isKilled) {
+                log.warn("{} - JS execution forcibly stopped in {} for mapping {}: {}",
+                        tenant, getProcessorName(), mapping.getName(), errorMessage);
+            } else {
+                log.error("{} - Error in {} for mapping {}: {}", tenant, getProcessorName(), mapping.getName(),
+                        errorMessage, e);
+            }
 
             handleProcessingError(e, errorMessage, context, tenant, mapping);
         } finally {
@@ -307,8 +329,48 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
                      return;
                  }
 
-                 // Execute the JavaScript function
-                 result = onMessageFunction.execute(inputMessage, context.getFlowContext());
+                 // Enforce maxCPUTimeMS: schedule a hard kill via Context.close(true) so an
+                 // infinite loop or runaway script cannot exceed the configured budget.
+                 // Context.close(true) is the only reliable interrupt for CPU-bound GraalVM JS;
+                 // plain thread interruption is ignored by the Truffle engine.
+                 int maxCPUTimeMS = serviceConfiguration.getMaxCPUTimeMS() != null
+                         ? serviceConfiguration.getMaxCPUTimeMS() : 0;
+                 ScheduledFuture<?> cpuTimeoutFuture = null;
+                 // Mutual exclusion between the timer and the finally-block: exactly one of
+                 // the two will win the compareAndSet(false→true). Only the timer calls
+                 // close(true) when it wins; if execute() completes first the timer sees
+                 // true and skips. This prevents a false PolyglotException(isCancelled=true)
+                 // in processResult() when JS finishes just as the deadline fires.
+                 final java.util.concurrent.atomic.AtomicBoolean executionWindowClosed =
+                         new java.util.concurrent.atomic.AtomicBoolean(false);
+                 if (maxCPUTimeMS > 0) {
+                     final Context graalCtxRef = graalContext;
+                     final dynamic.mapper.processor.model.ProcessingResultWrapper<?> wrapperRef =
+                             context.getProcessingResultWrapper();
+                     cpuTimeoutFuture = JS_TIMEOUT_SCHEDULER.schedule(() -> {
+                         if (!executionWindowClosed.compareAndSet(false, true)) return;
+                         log.warn("{} - JS CPU time limit exceeded ({}ms), closing GraalVM context for mapping: {}",
+                                 tenant, maxCPUTimeMS, mapping.getName());
+                         // Signal cancellation so post-JS C8Y calls in SendInboundProcessor
+                         // and C8YAgent.createMEAO() skip their requests.
+                         if (wrapperRef != null) {
+                             wrapperRef.getCancellationRequested().set(true);
+                         }
+                         try {
+                             graalCtxRef.close(true);
+                         } catch (Exception ex) {
+                             log.debug("{} - GraalVM close(true) on CPU timeout threw: {}", tenant, ex.getMessage());
+                         }
+                     }, maxCPUTimeMS, TimeUnit.MILLISECONDS);
+                 }
+                 try {
+                     result = onMessageFunction.execute(inputMessage, context.getFlowContext());
+                 } finally {
+                     executionWindowClosed.compareAndSet(false, true);
+                     if (cpuTimeoutFuture != null) {
+                         cpuTimeoutFuture.cancel(false);
+                     }
+                 }
 
                 // Task 2: Extracting the result
                 processResult(result, context, tenant);
