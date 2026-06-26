@@ -35,7 +35,7 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<revision>6.4.0-SNAPSHOT</revision>
-		<spring-boot-dependencies.version>3.3.5</spring-boot-dependencies.version>
+		<spring-boot-dependencies.version>3.5.13</spring-boot-dependencies.version>
 		<c8y.version>2026.32.0</c8y.version>
 		<lombok.version>1.18.38</lombok.version>
 		<slf4j.version>2.0.17</slf4j.version>
@@ -336,16 +336,21 @@
 				<version>${camel.version}</version>
 			</dependency>
 
-			<dependency>
-				<groupId>com.rabbitmq</groupId>
-				<artifactId>amqp-client</artifactId>
-				<version>5.21.0</version>
-			</dependency>
 		</dependencies>
 	</dependencyManagement>
 	<build>
 		<pluginManagement>
 			<plugins>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-compiler-plugin</artifactId>
+					<version>3.13.0</version>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-jar-plugin</artifactId>
+					<version>3.4.2</version>
+				</plugin>
 				<plugin>
 					<groupId>org.codehaus.mojo</groupId>
 					<artifactId>flatten-maven-plugin</artifactId>

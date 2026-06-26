@@ -1149,7 +1149,7 @@ export interface ManagedObject {
   /** Unique identifier of the object */
   id: string;
 
-  /** NHuman-readable name that is used for representing the object in user interfaces. */
+  /** Human-readable name that is used for representing the object in user interfaces. */
   name?: string;
 
   /** The fragment type can be interpreted as device class, this means, devices with the same type can receive the same types of configuration, software, firmware and operations. The type value is indexed and is therefore used for queries. */
