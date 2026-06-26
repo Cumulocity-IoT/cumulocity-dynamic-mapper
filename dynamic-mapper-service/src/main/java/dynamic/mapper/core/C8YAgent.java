@@ -862,7 +862,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
             throws ProcessingException {
         // StringBuffer error = new StringBuffer("");
         DynamicMapperRequest currentRequest = context.getRequests().get(requestIndex);
-        Boolean testing = context.getTesting();
+        Boolean testing = context.isTesting();
         ServiceConfiguration serviceConfiguration = tenantRegistry.getServiceConfiguration(tenant);
         AtomicReference<ProcessingException> pe = new AtomicReference<>();
         // API is now always initialized when creating DynamicMapperRequest

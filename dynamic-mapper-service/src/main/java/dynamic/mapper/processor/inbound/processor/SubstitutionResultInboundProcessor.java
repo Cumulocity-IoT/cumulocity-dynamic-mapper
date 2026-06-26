@@ -78,7 +78,7 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
 
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
-        Boolean testing = context.getTesting();
+        Boolean testing = context.isTesting();
 
         try {
             validateProcessingCache(context);
@@ -89,7 +89,7 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
             // !mapping.getCreateNonExistingDevice()) {
             if (mapping.getFilterInventory() != null) {
                 boolean filterInventory = evaluateInventoryFilter(tenant, mapping.getFilterInventory(),
-                        context.getSourceId(), context.getTesting());
+                        context.getSourceId(), context.isTesting());
                 if (context.getSourceId() == null
                         || !filterInventory) {
                     if (mapping.getDebug()) {
@@ -155,7 +155,7 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
                 String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
                 context.addError(new ProcessingException(msg, e));
 
-                if (!context.getNeedsRepair()) {
+                if (!context.isNeedsRepair()) {
                     throw e;
                 }
             }
@@ -189,7 +189,7 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
             SubstituteValue sourceId = new SubstituteValue(substitute.getValue(),
                     TYPE.TEXTUAL, RepairStrategy.CREATE_IF_MISSING, false);
             if (!context.getApi().equals(API.INVENTORY)) {
-                var resolvedSourceId = c8yAgent.resolveExternalId2GlobalId(tenant, identity, context.getTesting());
+                var resolvedSourceId = c8yAgent.resolveExternalId2GlobalId(tenant, identity, context.isTesting());
                 if (resolvedSourceId == null) {
                     if (mapping.getCreateNonExistingDevice()) {
                         try {

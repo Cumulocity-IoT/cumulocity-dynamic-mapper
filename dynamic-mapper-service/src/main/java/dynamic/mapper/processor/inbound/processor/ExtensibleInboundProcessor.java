@@ -131,7 +131,7 @@ public class ExtensibleInboundProcessor extends AbstractExtensibleProcessor {
             context.getFlowContext(),
             c8yAgent,
             tenant,
-            context.getTesting(),
+            context.isTesting(),
             mapping,
             context,
             flowStateStore,

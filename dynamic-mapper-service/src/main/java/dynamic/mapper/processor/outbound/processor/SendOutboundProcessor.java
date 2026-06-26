@@ -70,7 +70,7 @@ public class SendOutboundProcessor extends BaseProcessor {
 
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
-        Boolean testing = context.getTesting();
+        Boolean testing = context.isTesting();
 
         // Check if processing was cancelled due to timeout
         ProcessingResultWrapper<?> wrapper = exchange.getIn().getHeader(CamelHeaders.PROCESSING_RESULT_WRAPPER,
@@ -119,7 +119,7 @@ public class SendOutboundProcessor extends BaseProcessor {
      */
     private void autoAckOperation(ProcessingContext<Object> context, String tenant, Mapping mapping, OperationStatus operationStatus) {
         if (!API.OPERATION.equals(context.getApi()) || !Boolean.TRUE.equals(mapping.getAutoAckOperation())
-                || Boolean.TRUE.equals(context.getTesting())) {
+                || Boolean.TRUE.equals(context.isTesting())) {
             return;
         }
         try {
@@ -156,7 +156,7 @@ public class SendOutboundProcessor extends BaseProcessor {
             return;
         }
 
-        if (!context.getSendPayload()) {
+        if (!context.isSendPayload()) {
             log.warn("{} - Not sending messages: sendPayload is false", tenant);
             return;
         }
@@ -166,7 +166,7 @@ public class SendOutboundProcessor extends BaseProcessor {
             // that have the mapping deployed, mirroring how inbound send=true uses real C8Y.
             // Identity enrichment still uses mocks (testing=true) since the source payload
             // is always synthetic for outbound tests.
-            if (Boolean.TRUE.equals(context.getTesting())) {
+            if (Boolean.TRUE.equals(context.isTesting())) {
                 publishToRealConnectors(context, tenant);
                 return;
             }

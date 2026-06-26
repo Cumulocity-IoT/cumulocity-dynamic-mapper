@@ -244,7 +244,7 @@ void setUp() throws Exception {
         processingContext.getRequests().forEach(req -> log.info("Request: sourceId={}, externalId={}, method={}",
                 req.getSourceId(), req.getExternalId(), req.getMethod()));
 
-        assertFalse(processingContext.getIgnoreFurtherProcessing(),
+        assertFalse(processingContext.isIgnoreFurtherProcessing(),
                 "Should not ignore further processing");
         assertFalse(processingContext.getRequests().isEmpty(),
                 "Should have created requests");
@@ -273,7 +273,7 @@ void setUp() throws Exception {
         processor.process(exchange);
 
         // Then
-        assertFalse(processingContext.getIgnoreFurtherProcessing(),
+        assertFalse(processingContext.isIgnoreFurtherProcessing(),
                 "Should not ignore further processing");
         assertEquals(2, processingContext.getRequests().size(),
                 "Should have created two requests");
@@ -299,7 +299,7 @@ void setUp() throws Exception {
         processor.process(exchange);
 
         // Then
-        assertTrue(processingContext.getIgnoreFurtherProcessing(),
+        assertTrue(processingContext.isIgnoreFurtherProcessing(),
                 "Should ignore further processing for null flow result");
         assertTrue(processingContext.getRequests().isEmpty(),
                 "Should not create any requests");
@@ -316,7 +316,7 @@ void setUp() throws Exception {
         processor.process(exchange);
 
         // Then
-        assertTrue(processingContext.getIgnoreFurtherProcessing(),
+        assertTrue(processingContext.isIgnoreFurtherProcessing(),
                 "Should ignore further processing for empty flow result");
         assertTrue(processingContext.getRequests().isEmpty(),
                 "Should not create any requests");
@@ -337,7 +337,7 @@ void setUp() throws Exception {
         processor.process(exchange);
 
         // Then
-        assertTrue(processingContext.getIgnoreFurtherProcessing(),
+        assertTrue(processingContext.isIgnoreFurtherProcessing(),
                 "Should ignore further processing when no DeviceMessages");
         assertTrue(processingContext.getRequests().isEmpty(),
                 "Should not create any requests");

@@ -208,7 +208,7 @@ class FlowOutboundProcessorTest {
         processor.process(exchange);
 
         // Then - Should ignore further processing
-        assertTrue(processingContext.getIgnoreFurtherProcessing(),
+        assertTrue(processingContext.isIgnoreFurtherProcessing(),
                 "Should ignore further processing for empty result");
 
         log.info("✅ Empty result test passed");
@@ -223,7 +223,7 @@ class FlowOutboundProcessorTest {
         processor.process(exchange);
 
         // Then - Should ignore further processing
-        assertFalse(processingContext.getIgnoreFurtherProcessing(),
+        assertFalse(processingContext.isIgnoreFurtherProcessing(),
                 "Should not ignore further processing for non-array result");
 
         log.info("✅ Non-array result test passed");
@@ -389,7 +389,7 @@ class FlowOutboundProcessorTest {
             processor.process(exchange);
 
             // Then - Should handle null gracefully
-            assertTrue(processingContext.getIgnoreFurtherProcessing(),
+            assertTrue(processingContext.isIgnoreFurtherProcessing(),
                     "Should ignore further processing for null result");
             assertFalse(processingContext.getWarnings().isEmpty(),
                     "Should have warning about null result");
@@ -408,7 +408,7 @@ class FlowOutboundProcessorTest {
             processor.process(exchange);
 
             // Then - Should handle undefined gracefully
-            assertTrue(processingContext.getIgnoreFurtherProcessing(),
+            assertTrue(processingContext.isIgnoreFurtherProcessing(),
                     "Should ignore further processing for undefined result");
 
             log.info("✅ Undefined result test passed");
@@ -427,7 +427,7 @@ class FlowOutboundProcessorTest {
             processor.process(exchange);
 
             // Then - Should handle empty object gracefully
-            assertTrue(processingContext.getIgnoreFurtherProcessing(),
+            assertTrue(processingContext.isIgnoreFurtherProcessing(),
                     "Should ignore further processing for empty object");
 
             log.info("✅ Empty object test passed");

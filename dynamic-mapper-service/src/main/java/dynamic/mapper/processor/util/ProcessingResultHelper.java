@@ -225,7 +225,7 @@ public class ProcessingResultHelper {
             // Assign device to groups if specified via contextData
             if (context.getDeviceGroups() != null && !context.getDeviceGroups().isEmpty()) {
                 c8yAgent.assignDeviceToGroups(context.getTenant(), implicitDevice.getId().getValue(),
-                        context.getDeviceGroups(), context.getTesting());
+                        context.getDeviceGroups(), context.isTesting());
             }
 
             return implicitDevice.getId().getValue();

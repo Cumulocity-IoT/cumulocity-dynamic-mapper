@@ -57,7 +57,7 @@ public class JSONataInboundProcessor extends AbstractJSONataExtractionProcessor 
             context.addError(new ProcessingException(errorMessage, e));
         }
 
-        if (!context.getTesting()) {
+        if (!context.isTesting()) {
             MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
             mappingStatus.errors++;
             mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);

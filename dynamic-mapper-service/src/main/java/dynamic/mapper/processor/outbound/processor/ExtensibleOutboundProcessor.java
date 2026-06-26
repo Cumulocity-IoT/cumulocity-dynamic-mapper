@@ -70,7 +70,7 @@ public class ExtensibleOutboundProcessor extends AbstractExtensibleProcessor {
         ProcessingContext<Object> context = getProcessingContextAsObject(exchange);
         Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
-        Boolean testing = context.getTesting();
+        Boolean testing = context.isTesting();
 
         try {
             processWithExtensionOutbound(context);
@@ -154,7 +154,7 @@ public class ExtensibleOutboundProcessor extends AbstractExtensibleProcessor {
                 context.getFlowContext(),
                 null, // c8yAgent not typically needed for outbound
                 tenant,
-                context.getTesting(),
+                context.isTesting(),
                 context.getMapping(),
                 context
             );

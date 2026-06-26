@@ -407,7 +407,7 @@ public class MQTT5Client extends AMQTTClient {
             try {
                 Mqtt5PublishBuilder.Complete messageBuilder = Mqtt5Publish.builder()
                         .topic(topic)
-                        .retain(context.getRetain() == null ? false : context.getRetain())
+                        .retain(context.isRetain())
                         .qos(mqttQos)
                         .payload(payloadBytes);
 

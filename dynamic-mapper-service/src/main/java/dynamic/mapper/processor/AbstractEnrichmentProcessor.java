@@ -132,7 +132,7 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
                 Map<String, Object> initialState = flowStateStore.loadState(tenant, mapping.getIdentifier());
                 context.setFlowContext(new SmartFunctionContext(graalContext, tenant,
                         (InventoryEnrichmentClient) configurationRegistry.getC8yAgent(),
-                        context.getTesting(), flowStateStore, mapping.getIdentifier(), initialState));
+                        context.isTesting(), flowStateStore, mapping.getIdentifier(), initialState));
             } catch (Exception e) {
                 handleGraalVMError(tenant, mapping, e, context);
                 return;

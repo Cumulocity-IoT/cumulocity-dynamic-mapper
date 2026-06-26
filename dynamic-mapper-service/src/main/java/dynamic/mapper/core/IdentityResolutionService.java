@@ -85,13 +85,13 @@ public class IdentityResolutionService {
 
             // Check if device already exists in C8Y
             ExternalIDRepresentation resolved =
-                    c8yAgent.resolveExternalId2GlobalId(tenant, identity, context.getTesting());
+                    c8yAgent.resolveExternalId2GlobalId(tenant, identity, context.isTesting());
             if (resolved != null) {
                 String internalId = resolved.getManagedObject().getId().getValue();
                 // Only cache the resolved ID in production — during dry-run tests
                 // resolveExternalId2GlobalId routes to MockIdentity and returns a
                 // synthetic ID (e.g. "10000") that must never enter the production cache.
-                if (!Boolean.TRUE.equals(context.getTesting())) {
+                if (!Boolean.TRUE.equals(context.isTesting())) {
                     tenantRegistry.cacheExternalId(cacheKey, internalId);
                 }
                 log.debug("{} - Device exists in C8Y for {}: {}", tenant, cacheKey, internalId);
@@ -110,7 +110,7 @@ public class IdentityResolutionService {
                     identity, context, log, c8yAgent, objectMapper);
 
             if (newId != null) {
-                if (!Boolean.TRUE.equals(context.getTesting())) {
+                if (!Boolean.TRUE.equals(context.isTesting())) {
                     tenantRegistry.cacheExternalId(cacheKey, newId);
                 }
                 log.info("{} - Successfully created implicit device for {}: {}", tenant, cacheKey, newId);

@@ -439,7 +439,7 @@ class FlowInboundProcessorTest {
         invokeProcessResult(result);
 
         // Then - Verify processing is ignored
-        assertTrue(processingContext.getIgnoreFurtherProcessing(),
+        assertTrue(processingContext.isIgnoreFurtherProcessing(),
                 "Should ignore further processing for empty array");
 
         log.info("Successfully validated empty array flow result handling");
@@ -455,7 +455,7 @@ class FlowInboundProcessorTest {
         invokeProcessResult(result);
 
         // Then - Verify processing is ignored
-        assertTrue(processingContext.getIgnoreFurtherProcessing(),
+        assertTrue(processingContext.isIgnoreFurtherProcessing(),
                 "Should ignore further processing for non-array result");
 
         log.info("Successfully validated non-array flow result handling");
@@ -593,7 +593,7 @@ class FlowInboundProcessorTest {
         // Verify no errors occurred during processing
         assertTrue(processingContext.getErrors().isEmpty(),
                 "Should have no processing errors");
-        assertFalse(processingContext.getIgnoreFurtherProcessing(),
+        assertFalse(processingContext.isIgnoreFurtherProcessing(),
                 "Should not ignore further processing for successful result");
 
         log.info("✅ Complete flow processing test passed:");

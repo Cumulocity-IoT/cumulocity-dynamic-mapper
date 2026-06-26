@@ -70,7 +70,7 @@ public abstract class AbstractExtensibleProcessor extends CommonProcessor {
 
         Mapping mapping = context.getMapping();
         String tenant = routing.getTenant();
-        Boolean testing = context.getTesting();
+        Boolean testing = context.isTesting();
 
         try {
             processWithExtension(context);

@@ -432,7 +432,7 @@ class SmartFunctionInboundTest {
     }
 
     /**
-     * Documents {@code context.getTesting()}: returns the flag indicating whether
+     * Documents {@code context.isTesting()}: returns the flag indicating whether
      * the function runs inside a test cycle. Smart Functions use this to branch
      * (e.g. skip side effects when testing). The value mirrors the flag the
      * context was constructed with — {@code true} for the shared test context and
@@ -445,7 +445,7 @@ class SmartFunctionInboundTest {
                   return [{
                     cumulocityType: "event",
                     action: "create",
-                    payload: { testing: context.getTesting() },
+                    payload: { testing: context.isTesting() },
                     externalSource: [{ type: "c8y_Serial", externalId: "d1" }]
                   }];
                 }
@@ -457,13 +457,13 @@ class SmartFunctionInboundTest {
         Value testingResult = onMessage.execute(graalContext.asValue(msg), graalContext.asValue(smartFunctionContext));
         Value testingFirst = assertSingleResult(testingResult, "event", "create");
         assertTrue(testingFirst.getMember("payload").getMember("testing").asBoolean(),
-                "context.getTesting() should be true for the test context");
+                "context.isTesting() should be true for the test context");
 
         // A non-testing (production-style) context reports false.
         SmartFunctionContext prodContext = new SmartFunctionContext(graalContext, "testTenant", inventoryClient, false);
         Value prodResult = onMessage.execute(graalContext.asValue(msg), graalContext.asValue(prodContext));
         assertFalse(prodResult.getArrayElement(0).getMember("payload").getMember("testing").asBoolean(),
-                "context.getTesting() should be false for a non-testing context");
+                "context.isTesting() should be false for a non-testing context");
 
         log.info("✅ context.getTesting: reflects the testing flag (true/false)");
     }
