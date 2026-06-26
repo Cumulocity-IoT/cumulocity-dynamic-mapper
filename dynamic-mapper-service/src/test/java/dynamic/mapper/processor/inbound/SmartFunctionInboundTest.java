@@ -445,7 +445,7 @@ class SmartFunctionInboundTest {
                   return [{
                     cumulocityType: "event",
                     action: "create",
-                    payload: { testing: context.isTesting() },
+                    payload: { testing: context.getTesting() },
                     externalSource: [{ type: "c8y_Serial", externalId: "d1" }]
                   }];
                 }

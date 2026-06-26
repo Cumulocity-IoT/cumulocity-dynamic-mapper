@@ -228,6 +228,13 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
   private completionProviderDisposable: any;
   private readonly destroy$ = new Subject<void>();
 
+  // Snapshots for change detection — set once at load time
+  private initialMappingJson = '';
+  private initialSourceTemplateJson = '';
+  private initialTargetTemplateJson = '';
+  private initialMappingCode = '';
+  private initialDeploymentConnectors = '';
+
   private updateExtensionItems(): void {
     this.extensionItems = Array.from(this.extensions.keys());
   }
@@ -248,6 +255,7 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     this.mapping = editData.mapping;
     this.stepperConfiguration = editData.stepperConfiguration;
     this.deploymentMapEntry = editData.deploymentMapEntry;
+    this.initialDeploymentConnectors = JSON.stringify(this.deploymentMapEntry?.connectors ?? []);
     // Initialize the Save-button gate: a mapping requires at least one selected connector
     this.isButtonDisabled$.next(this.isConnectorSelectionEmpty());
 
@@ -339,6 +347,12 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     this.sourceTemplate = templates.sourceTemplate;
     this.targetTemplate = templates.targetTemplate;
     this.templatesInitialized = true;
+
+    // Snapshot initial state so we can distinguish connector-only changes from content changes
+    this.initialMappingJson = JSON.stringify(this.mapping);
+    this.initialSourceTemplateJson = JSON.stringify(this.sourceTemplate);
+    this.initialTargetTemplateJson = JSON.stringify(this.targetTemplate);
+    this.initialMappingCode = this.mappingCode ?? '';
 
     // Re-patch form values for extension selects if extension is selected
     if (this.mapping?.extension?.extensionName) {
@@ -686,6 +700,14 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     // Sync any pending template edits before saving
     this.updateTemplatesInEditors();
 
+    // Determine what changed after template sync but before transforms mutate the mapping.
+    // Connector-only changes must not create a draft — a draft only tracks content changes.
+    const mappingContentChanged = this.stepperConfiguration.editorMode === EditorMode.UPDATE
+      ? this.hasMappingContentChanged()
+      : true; // CREATE / COPY always persist
+    const deploymentChanged =
+      JSON.stringify(this.deploymentMapEntry?.connectors ?? []) !== this.initialDeploymentConnectors;
+
     if (this.stepperConfiguration.allowTemplateExpansion) {
       this.mapping.sourceTemplate = reduceSourceTemplate(this.sourceTemplate, false);
       this.mapping.targetTemplate = reduceSourceTemplate(this.targetTemplate, false);
@@ -707,13 +729,12 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     // token that must be echoed back unchanged (the server assigns a fresh one on save).
     try {
       if (this.stepperConfiguration.editorMode === EditorMode.UPDATE) {
-        // Edits are saved to the line's draft (D-8); the running configuration is unchanged
-        // until the draft is published as a version and that version is activated.
-        await this.mappingService.saveDraft(this.mapping.id, this.mapping);
-        this.mappingService.refreshMappings(this.stepperConfiguration.direction);
-        this.alertService.success(
-          gettext(`Saved draft for ${this.mapping.name}. Publish and activate it (Versions) to apply the changes.`)
-        );
+        if (mappingContentChanged) {
+          // Edits are saved to the line's draft; the running configuration is unchanged
+          // until the draft is published as a version and that version is activated.
+          await this.mappingService.saveDraft(this.mapping.id, this.mapping);
+          this.mappingService.refreshMappings(this.stepperConfiguration.direction);
+        }
       } else {
         await this.mappingService.createMapping(this.mapping);
         this.mappingService.refreshMappings(this.stepperConfiguration.direction);
@@ -724,10 +745,26 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
       return;
     }
 
-    try {
-      await this.mappingService.updateDefinedDeploymentMapEntry(this.deploymentMapEntry);
-    } catch (error) {
-      this.alertService.danger(gettext('Failed to update connector assignments: ') + error.message);
+    if (deploymentChanged || this.stepperConfiguration.editorMode !== EditorMode.UPDATE) {
+      try {
+        await this.mappingService.updateDefinedDeploymentMapEntry(this.deploymentMapEntry);
+      } catch (error) {
+        this.alertService.danger(gettext('Failed to update connector assignments: ') + error.message);
+      }
+    }
+
+    if (this.stepperConfiguration.editorMode === EditorMode.UPDATE) {
+      if (mappingContentChanged && deploymentChanged) {
+        this.alertService.success(
+          gettext(`Saved draft and connector assignments for ${this.mapping.name}. Publish and activate it (Versions) to apply the changes.`)
+        );
+      } else if (mappingContentChanged) {
+        this.alertService.success(
+          gettext(`Saved draft for ${this.mapping.name}. Publish and activate it (Versions) to apply the changes.`)
+        );
+      } else if (deploymentChanged) {
+        this.alertService.success(gettext(`Connector assignments for ${this.mapping.name} saved.`));
+      }
     }
 
     this.navigateToGrid();
@@ -844,6 +881,14 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
   /** A mapping must be bound to at least one connector before it can be saved. */
   private isConnectorSelectionEmpty(): boolean {
     return !this.deploymentMapEntry?.connectors || this.deploymentMapEntry.connectors.length === 0;
+  }
+
+  /** Returns true when any mapping content field has changed since the editor was opened. */
+  private hasMappingContentChanged(): boolean {
+    return JSON.stringify(this.mapping) !== this.initialMappingJson
+      || JSON.stringify(this.sourceTemplate) !== this.initialSourceTemplateJson
+      || JSON.stringify(this.targetTemplate) !== this.initialTargetTemplateJson
+      || (this.mappingCode ?? '') !== this.initialMappingCode;
   }
 
   onValueCodeChange(value: string): void {
