@@ -121,7 +121,7 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
 
         // Declare final variables for use in lambda
         List<Mapping> resolvedMappings;
-        int maxCPUTime;
+        int pipelineTimeout;
 
         try {
             // Resolve mappings for the topic
@@ -140,18 +140,20 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
 
             // For code-based (Smart Function) mappings the JS execution itself is bounded
             // by serviceConfiguration.getMaxCPUTimeMS() via GraalVM context interruption.
-            // The Pulsar callback wait must be longer: it covers JS time PLUS any C8Y REST
+            // The callback wait must be longer: it covers JS time PLUS any C8Y REST
             // calls (device auto-creation, measurement/alarm creation) that follow.
-            // Use 30 s to match MQTTServicePulsarCallback.MAX_PROCESSING_TIMEOUT.
-            int tempMaxCPUTime = 0;
-            for (Mapping mapping : resolvedMappings) {
-                if (mapping.isTransformationAsCode()) {
-                    tempMaxCPUTime = 30_000;
-                    break;
+            int tempPipelineTimeout = 0;
+            if (resolvedMappings != null) {
+                for (Mapping mapping : resolvedMappings) {
+                    if (mapping.isTransformationAsCode()) {
+                        tempPipelineTimeout = serviceConfiguration.getPipelineTimeoutMS() != null
+                                ? serviceConfiguration.getPipelineTimeoutMS() : 5_000;
+                        break;
+                    }
                 }
             }
-            maxCPUTime = tempMaxCPUTime; // Now final
-            result.setPipelineTimeoutMS(maxCPUTime);
+            pipelineTimeout = tempPipelineTimeout; // Now final
+            result.setPipelineTimeoutMS(pipelineTimeout);
 
         } catch (Exception e) {
             log.warn("{} - Error resolving appropriate map for topic {}. Could NOT be parsed. Ignoring this message!",

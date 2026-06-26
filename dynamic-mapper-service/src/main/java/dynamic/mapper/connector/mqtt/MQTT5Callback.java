@@ -57,10 +57,6 @@ public class MQTT5Callback implements Consumer<Mqtt5Publish> {
      */
     private static final long MIN_RECONNECT_INTERVAL_MS = 60_000L;
 
-    /** Maximum time a mapping can use CPU-time to process end to end. Only used in error cases,
-     *  otherwise configured timeout is used
-     */
-    private static final int MAX_PROCESSING_TIMEOUT = 30000;
 
     /**
      * Maximum number of consecutive failures (timeout or server error) before treating
@@ -206,10 +202,10 @@ public class MQTT5Callback implements Consumer<Mqtt5Publish> {
                     List<? extends ProcessingContext<?>> results;
                     if (timeout > 0) {
                         int attempt = failureCountPerMessage.getOrDefault(messageId, new AtomicInteger(0)).get();
-                        //Effective Timeout is capped at max 30s for processing
                         effectiveTimeout = Math.min(
                                 (long) timeout * (attempt + 1),
-                                MAX_PROCESSING_TIMEOUT);
+                                serviceConfiguration.getPipelineTimeoutMS() != null
+                                        ? serviceConfiguration.getPipelineTimeoutMS() : 30_000);
                         if (attempt > 0) {
                             log.info("{} - Retransmission attempt {}: using increased timeout {}ms (base: {}ms), connector: {}",
                                     tenant, attempt + 1, effectiveTimeout, timeout, connectorIdentifier);
@@ -217,6 +213,17 @@ public class MQTT5Callback implements Consumer<Mqtt5Publish> {
                         results = processedResults.getProcessingResult().get(effectiveTimeout, TimeUnit.MILLISECONDS);
                     } else {
                         results = processedResults.getProcessingResult().get();
+                    }
+
+                    // JS CPU timeout may have fired and closed the GraalVM context before the
+                    // wall-clock timeout expired. In that case the future completes early with
+                    // cancellationRequested=true. We must NOT ACK — treat it like a TimeoutException
+                    // so the broker retransmits the unACKed message.
+                    if (processedResults.getCancellationRequested().get()) {
+                        log.warn("{} - JS CPU timeout fired: processing cancelled before wall-clock timeout, not ACKing. connector: {}",
+                                tenant, connectorIdentifier);
+                        triggerReconnectOrAck(mqttMessage, topic, messageId);
+                        return null;
                     }
 
                     // Check for errors in results

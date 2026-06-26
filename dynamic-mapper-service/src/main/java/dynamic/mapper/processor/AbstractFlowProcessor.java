@@ -158,9 +158,17 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
             processSmartMapping(context);
             log.debug("{} - processSmartMapping completed successfully", tenant);
         } catch (Exception e) {
+            // isCancelled() = killed by Context.close(true) (CPU timeout or wall-clock cancel)
+            // isResourceExhausted() = future ResourceLimits enforcement; treat the same way
+            boolean isKilled = e instanceof PolyglotException
+                    && (((PolyglotException) e).isCancelled()
+                            || ((PolyglotException) e).isResourceExhausted());
+
             // Salvage any console.log() messages written before the exception so they
             // are included in the test/error response even when processing fails.
-            if (context.getFlowContext() != null) {
+            // Skip when the context was forcibly killed — the GraalVM context is already
+            // closed and any call into it (including getState()) throws another PolyglotException.
+            if (!isKilled && context != null && context.getFlowContext() != null) {
                 OutputCollector salvage = new OutputCollector();
                 extractLogs(context.getFlowContext(), salvage, tenant);
                 if (!salvage.getLogs().isEmpty()) {
@@ -171,11 +179,6 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
             int lineNumber = extractJsLineNumber(e);
             String errorMessage = String.format("%s, line %s", e.getMessage(), lineNumber);
 
-            // isCancelled() = killed by Context.close(true) (CPU timeout or wall-clock cancel)
-            // isResourceExhausted() = future ResourceLimits enforcement; treat the same way
-            boolean isKilled = e instanceof PolyglotException
-                    && (((PolyglotException) e).isCancelled()
-                            || ((PolyglotException) e).isResourceExhausted());
             if (isKilled) {
                 log.warn("{} - JS execution forcibly stopped in {} for mapping {}: {}",
                         tenant, getProcessorName(), mapping.getName(), errorMessage);

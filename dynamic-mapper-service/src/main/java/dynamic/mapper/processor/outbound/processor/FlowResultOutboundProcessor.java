@@ -365,7 +365,7 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             // brokerRoutingId (e.g. LoRa EUI) is only used for broker topic-token replacement above.
             finalizeRequest(request, internalSourceId, payloadJson, tenant);
 
-            context.setRetain(deviceMessage.getRetain());
+            context.setRetain(Boolean.TRUE.equals(deviceMessage.getRetain()));
 
             log.debug("{} - Created outbound request: deviceId={}, topic={}",
                     tenant, brokerRoutingId != null ? brokerRoutingId : "unresolved",
@@ -523,7 +523,7 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
 
             finalizeRequest(c8yRequest, resolvedDeviceId, payloadJson, tenant);
 
-            context.setRetain(c8yRequest.getRetain());
+            context.setRetain(Boolean.TRUE.equals(c8yRequest.getRetain()));
 
             log.debug("{} - Created C8Y request: API={}, action={}, deviceId={}, topic={}",
                     tenant, targetAPI.name, cumulocityMessage.getAction(), resolvedDeviceId,

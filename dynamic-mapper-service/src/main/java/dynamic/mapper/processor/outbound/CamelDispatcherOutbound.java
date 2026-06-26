@@ -297,7 +297,8 @@ public class CamelDispatcherOutbound implements NotificationCallback {
             int tempMaxCPUTime = 0;
             for (Mapping mapping : resolvedMappings) {
                 if (mapping.isTransformationAsCode()) {
-                    tempMaxCPUTime = 30_000;
+                    tempMaxCPUTime = serviceConfiguration.getPipelineTimeoutMS() != null
+                            ? serviceConfiguration.getPipelineTimeoutMS() : 30_000;
                     break;
                 }
             }

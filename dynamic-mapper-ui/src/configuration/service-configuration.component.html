@@ -329,15 +329,39 @@
             <c8y-li-icon icon="alarm1"></c8y-li-icon>
             <div class="d-flex a-i-center">
               <div>
-                <p>{{ 'MaxCPU time in milliseconds for JavaScript code' | translate }}</p>
+                <p>{{ 'Maximum CPU time for Smart Function JavaScript code' | translate }}</p>
                 <p>
-                  <small translate>Set the maxCPU time in milliseconds for JavaScript code, to avoid malicious code from
-                    starving the CPU</small>
+                  <small translate>Maximum CPU time in milliseconds the JavaScript engine is allowed to consume.
+                    The script is forcibly stopped when this limit is reached, preventing runaway or malicious code from
+                    starving the CPU.</small>
                 </p>
               </div>
               <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
-                <label class="editable" title="{{ ' maxCPU time in milliseconds ' | translate }}">
+                <label class="editable" title="{{ 'Maximum CPU time for Smart Function JavaScript code' | translate }}">
                   <input class="form-control" name="maxCPUTimeMS" type="number" formControlName="maxCPUTimeMS" />
+                  <span></span>
+                </label>
+              </div>
+            </div>
+          </c8y-li>
+
+          <c8y-li>
+            <c8y-li-icon icon="alarm1"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'Maximum end-to-end processing time for Smart Functions' | translate }}</p>
+                <p>
+                  <small translate>Maximum wall-clock time in milliseconds the system waits for a Smart Function to
+                    finish processing a message end-to-end — including JavaScript execution and any Cumulocity API calls.
+                    When exceeded the message is not acknowledged (QoS &gt; 0) and will be redelivered.
+                    Must be greater than the CPU time limit above.</small>
+                </p>
+              </div>
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                <label class="editable"
+                  title="{{ 'Maximum end-to-end processing time for Smart Functions' | translate }}">
+                  <input class="form-control" name="pipelineTimeoutMS" type="number" min="1000"
+                    formControlName="pipelineTimeoutMS" />
                   <span></span>
                 </label>
               </div>

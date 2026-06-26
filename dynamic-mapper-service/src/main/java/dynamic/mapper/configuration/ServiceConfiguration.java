@@ -60,6 +60,7 @@ public class ServiceConfiguration implements Cloneable {
         // Default fragments to cache: type, name, id
         this.inventoryFragmentsToCache = new ArrayList<>(Arrays.asList("type", "name", "id"));
         this.maxCPUTimeMS = 5000; // 5 seconds
+        this.pipelineTimeoutMS = 8000; // 8 seconds
         this.jsonataAgent = null;
         this.javaScriptAgent = null;
         this.smartFunctionAgent = null;
@@ -154,6 +155,11 @@ public class ServiceConfiguration implements Cloneable {
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     private Integer maxCPUTimeMS;
+
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Maximum end-to-end wall-clock time in milliseconds the system waits for a Smart Function to finish processing a message — including JavaScript execution and any Cumulocity API calls. Must be greater than maxCPUTimeMS.", example = "8000", minimum = "1000", maximum = "120000")
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    private Integer pipelineTimeoutMS;
 
     @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "Name of jsonata agent to be used when generating substitutions. The needs to be defined in the AI Agent Manager.", example = "jsonataAgent")
     @JsonSetter(nulls = Nulls.SKIP)

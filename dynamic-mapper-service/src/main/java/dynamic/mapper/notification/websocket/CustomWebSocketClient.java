@@ -56,11 +56,6 @@ public class CustomWebSocketClient extends WebSocketClient {
      */
     private static final int MAX_CONSECUTIVE_FAILURES = 5;
 
-    /**
-     * Maximum time a mapping can use CPU-time to process end to end. Only used in error cases,
-     * otherwise configured timeout is used.
-     */
-    private static final int MAX_PROCESSING_TIMEOUT = 30000;
 
     private final NotificationCallback callback;
     private ScheduledExecutorService executorService = null;
@@ -142,7 +137,8 @@ public class CustomWebSocketClient extends WebSocketClient {
                         int attempt = failureCountPerMessage.getOrDefault(messageId, new AtomicInteger(0)).get();
                         effectiveTimeout = Math.min(
                                 (long) timeout * (attempt + 1),
-                                MAX_PROCESSING_TIMEOUT);
+                                serviceConfiguration.getPipelineTimeoutMS() != null
+                                        ? serviceConfiguration.getPipelineTimeoutMS() : 30_000);
                         if (attempt > 0) {
                             log.info("{} - Retransmission attempt {}: using increased timeout {}ms (base: {}ms), connector: {}",
                                     tenant, attempt + 1, effectiveTimeout, timeout, connectorId.getIdentifier());
@@ -151,6 +147,17 @@ public class CustomWebSocketClient extends WebSocketClient {
                                 TimeUnit.MILLISECONDS);
                     } else if(processedResults.getProcessingResult() != null) {
                         results = processedResults.getProcessingResult().get();
+                    }
+
+                    // JS CPU timeout may have fired and closed the GraalVM context before the
+                    // wall-clock timeout expired. In that case the future completes early with
+                    // cancellationRequested=true. We must NOT ACK — treat it like a TimeoutException
+                    // so the broker retransmits the unACKed message.
+                    if (processedResults.getCancellationRequested().get()) {
+                        log.warn("{} - JS CPU timeout fired: processing cancelled before wall-clock timeout, not ACKing. connector: {}",
+                                tenant, connectorId.getIdentifier());
+                        handleFailureOrRetransmit(notification, messageId);
+                        return null;
                     }
 
                     // Check for errors in results
