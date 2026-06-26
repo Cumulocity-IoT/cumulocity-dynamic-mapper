@@ -29,6 +29,10 @@ import java.util.concurrent.Future;
 
 import org.slf4j.Logger;
 import org.springframework.stereotype.Component;
+
+import com.cumulocity.sdk.client.SDKException;
+
+import dynamic.mapper.processor.ProcessingException;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 import com.cumulocity.model.ID;
@@ -366,6 +370,40 @@ public class ProcessingResultHelper {
             default:
                 return RequestMethod.POST;
         }
+    }
+
+    /**
+     * Scans processing results for errors and returns the maximum HTTP status code found.
+     * <p>
+     * Used by broker callbacks (MQTT, Pulsar, WebSocket) to decide whether to ACK or retry:
+     * <ul>
+     *   <li>-1 → no errors at all → ACK</li>
+     *   <li>0–499 → error without SDK exception, or a client-side (4xx) error → ACK</li>
+     *   <li>≥500 → server-side error → do not ACK, trigger reconnect / negative-ACK</li>
+     * </ul>
+     *
+     * @param results the processing contexts to scan (may be null)
+     * @param tenant  tenant name for the error log line
+     * @param topic   topic name for the error log line
+     * @return -1 if no error, otherwise the highest HTTP status code (0 if no SDKException found)
+     */
+    public static int extractMaxHttpStatus(List<? extends ProcessingContext<?>> results,
+                                           String tenant, String topic, Logger log) {
+        if (results == null) return -1;
+        for (ProcessingContext<?> context : results) {
+            if (context.hasError()) {
+                int maxStatus = 0;
+                for (Exception error : context.getErrors()) {
+                    if (error instanceof ProcessingException pe
+                            && pe.getOriginException() instanceof SDKException sdk) {
+                        maxStatus = Math.max(maxStatus, sdk.getHttpStatus());
+                    }
+                }
+                log.error("{} - Error in processing context for topic: [{}]", tenant, topic);
+                return maxStatus;
+            }
+        }
+        return -1;
     }
 
     /**
