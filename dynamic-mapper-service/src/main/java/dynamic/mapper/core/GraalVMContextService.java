@@ -136,9 +136,6 @@ public class GraalVMContextService {
      */
     static final Duration ENGINE_MAX_AGE = Duration.ofHours(24);
 
-    // Prefix added by buildMappingCodeMap() to source names: "onMessage_<identifier>.js"
-    private static final String SMART_FUNCTION_PREFIX = "onMessage_";
-
     // Structure: < Tenant, Engine >
     private final Map<String, Engine> graalEngines = new ConcurrentHashMap<>();
 
@@ -535,13 +532,12 @@ public class GraalVMContextService {
             int warmed = 0;
             for (Map.Entry<String, String> entry : sourceCodes.entrySet()) {
                 // The key from buildMappingCodeMap() is "onMessage_<identifier>.js".
-                // Strip the prefix so the Source name matches what AbstractFlowProcessor
-                // builds at runtime — this ensures GraalVM's source cache is actually hit
-                // on the first real message execution.
+                // AbstractFlowProcessor builds its runtime Source name as
+                // SMART_FUNCTION_NAME + "_" + identifier + ".js" — the same full key.
+                // Do NOT strip the prefix: the Source name must match exactly so that
+                // GraalVM's source cache is hit on the first real message execution.
                 String key = entry.getKey();
-                String runtimeName = key.startsWith(SMART_FUNCTION_PREFIX)
-                        ? key.substring(SMART_FUNCTION_PREFIX.length())
-                        : key;
+                String runtimeName = key;
 
                 try {
                     Source source;

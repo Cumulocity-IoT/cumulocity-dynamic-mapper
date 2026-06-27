@@ -128,8 +128,9 @@ fi
 export MQTT_INSECURE="${MQTT_INSECURE:-false}"
 
 # Set by dm_require_mqtt_broker in c8y-mqtt-service mode (see _dm_require_mqtt_service_broker):
-_DM_MQTT_SVC_MODE=false   # true → publish/subscribe use cert auth (-i CN, -u tenant, --cert/--key)
-_DM_MQTT_CLIENT_ID=""     # MQTT clientId == cert CN (the MQTT Service requires they match)
+_DM_MQTT_SVC_MODE=false        # true → publish/subscribe use cert auth (-i CN, -u tenant, --cert/--key)
+_DM_MQTT_CLIENT_ID=""          # MQTT clientId == cert CN (the MQTT Service requires they match)
+_DM_MQTT_CERT_SUITE_OWNED=false  # true → cert owned by run-tests.sh; skip per-test cleanup
 
 # Run c8y CLI non-interactively: suppress all confirmation prompts and spinners.
 export C8Y_SETTINGS_CI=true
@@ -345,8 +346,10 @@ _dm_on_exit() {
     [ "${_DM_VALIDATE_ONLY}" = "true" ] && return "$_rc"
     if [ "${_DM_DO_CLEANUP}" = "true" ]; then
         [ -n "${_DM_CLEANUP_FN}" ] && { "$_DM_CLEANUP_FN" || true; }
-        # Always remove a provisioned MQTT Service trust anchor (no-op if none).
-        [ -n "${_DM_MQTT_CERT_NAME:-}" ] && { dm_cleanup_mqtt_service_cert || true; }
+        # Remove a provisioned MQTT Service trust anchor — but only when it was
+        # provisioned by this test (not shared by run-tests.sh suite runner).
+        [ "${_DM_MQTT_CERT_SUITE_OWNED:-false}" = "false" ] && \
+            [ -n "${_DM_MQTT_CERT_NAME:-}" ] && { dm_cleanup_mqtt_service_cert || true; }
     elif [ -n "${_DM_CLEANUP_FN}" ] || [ -n "${_DM_MQTT_CERT_NAME:-}" ]; then
         dm_warn "Skipping cleanup (--keep set) — test data retained."
     fi
@@ -1465,10 +1468,19 @@ _dm_require_mqtt_service_broker() {
     [ "$_status" = "CONNECTED" ] \
         || dm_error "${_conn_type} connector ${_DM_MQTT_CONNECTOR_ID} is not CONNECTED (status=$_status) — check the MQTT Service is reachable and the user has the 'Mqtt service' permission."
 
-    # Provision a run-unique X.509 client cert (CN == MQTT clientId). The exit
-    # hook (_dm_on_exit) deletes the trust anchor; ensure the trap is armed even
-    # if the test registered no cleanup function of its own.
-    if [ -z "${_DM_MQTT_CLIENT_ID:-}" ]; then
+    # Reuse a suite-provisioned cert when run-tests.sh has exported DM_MQTT_SVC_*
+    # (DM_REUSE_MQTT_CERT=true, the default). Otherwise provision a fresh per-test cert.
+    if [ -n "${DM_MQTT_SVC_CLIENT_ID:-}" ] && \
+       [ -f "${DM_MQTT_SVC_CERT:-}" ] && \
+       [ -f "${DM_MQTT_SVC_KEY:-}" ]; then
+        _DM_MQTT_CLIENT_ID="$DM_MQTT_SVC_CLIENT_ID"
+        _DM_MQTT_CERT="$DM_MQTT_SVC_CERT"
+        _DM_MQTT_KEY="$DM_MQTT_SVC_KEY"
+        _DM_MQTT_CERT_NAME="$DM_MQTT_SVC_CERT_NAME"
+        _DM_MQTT_CERT_DIR="${DM_MQTT_SVC_CERT_DIR:-}"
+        _DM_MQTT_CERT_SUITE_OWNED=true
+        dm_info "Reusing suite MQTT cert: CN=${_DM_MQTT_CLIENT_ID} (cert=${_DM_MQTT_CERT})"
+    else
         _DM_MQTT_CLIENT_ID="dmtest$$"
         dm_provision_mqtt_service_cert "$_DM_MQTT_CLIENT_ID"
         dm_wait 5 "for the trusted certificate to be registered"

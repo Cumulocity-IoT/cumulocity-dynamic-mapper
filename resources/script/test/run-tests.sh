@@ -72,11 +72,12 @@ declare -a TESTS=(
     "smartfunction|test-inbound-smartfunction-03|Inbound: Pattern 03: getManagedObjectByExternalId — MO enrichment"
     "smartfunction|test-inbound-smartfunction-04|Inbound: Pattern 04: Dual payload type + deduplication"
     "smartfunction|test-inbound-smartfunction-05|Inbound: Pattern 11: Per-device running statistics (device ID from context)"
-    # ── Inbound (Java Extensions) ─────────────────────────────────────────────
+    # ── Extensions (Inbound + Outbound) ──────────────────────────────────────
     "extension|test-inbound-extension-custom-measurement|Extension: JSON → Measurement"
     "extension|test-inbound-extension-custom-alarm|Extension: JSON → Alarm"
     "extension|test-inbound-extension-custom-event|Extension: Protobuf → Event"
     "extension|test-inbound-extension-sparkplugb-measurement|Extension: Sparkplug B → Measurement"
+    "extension|test-outbound-extension-alarm-to-sparkplugb|Extension: Alarm → Sparkplug B DCMD"
     # ── Outbound (payload) ────────────────────────────────────────────────────
     "outbound|test-outbound-measurement|C8Y Measurement → MQTT broker"
     "outbound|test-outbound-event|C8Y Event → MQTT broker"
@@ -94,8 +95,6 @@ declare -a TESTS=(
     "outbound|test-outbound-group-subscription|Dynamic group subscription"
     "outbound|test-outbound-group-subscription-removal|Group subscription removal"
     "outbound|test-outbound-subscription-persistence|Subscription persistence after restart"
-    # ── Outbound (Extensions/Protocols) ───────────────────────────────────────
-    "extension|test-outbound-extension-alarm-to-sparkplugb|Extension: Alarm → Sparkplug B DCMD"
     # ── Reliability ───────────────────────────────────────────────────────────
     "reliability|test-multi-tenant|Mapping CRUD / tenant isolation"
     "reliability|test-multi-connector|Multiple connector status check"
@@ -235,6 +234,14 @@ Environment variables:
         Values: 1 to enable
         Default: continue on failures
 
+    DM_REUSE_MQTT_CERT
+        Reuse a single X.509 client certificate across all tests in a suite
+        when DM_BROKER_MODE=c8y-mqtt-service. The cert is provisioned once
+        before the first test and deleted after the last. This avoids the
+        5 s per-test registration wait and reduces API churn on the tenant.
+        Values: true (default) | false
+        Set false to provision a fresh cert for each individual test.
+
 Notes:
     - Inbound MQTT tests require an enabled Dynamic Mapper MQTT connector that
         matches MQTT_HOST and MQTT_PORT.
@@ -302,6 +309,71 @@ _suite_health_check() {
     exit 1
 }
 
+# ── Suite-level MQTT Service cert (shared across tests) ───────────────────────
+# When DM_BROKER_MODE=c8y-mqtt-service and DM_REUSE_MQTT_CERT != false, one
+# X.509 client cert is provisioned before the first test and reused by all
+# subsequent tests. Test scripts detect the exported DM_MQTT_SVC_* variables
+# and skip their own per-test provisioning and 5 s registration wait.
+_SUITE_CERT_PROVISIONED=0
+
+_suite_provision_mqtt_service_cert() {
+    command -v openssl >/dev/null 2>&1 \
+        || { printf '%sERROR: openssl is required to provision an MQTT Service cert%s\n' "${C_RED}" "${C_RESET}" >&2; exit 1; }
+
+    printf "\n%s── Pre-suite: provisioning shared MQTT Service cert ──%s\n" "${C_BOLD}" "${C_RESET}"
+
+    local _client_id="dmtest$$"
+    local _cert_dir; _cert_dir=$(mktemp -d)
+    local _key="${_cert_dir}/${_client_id}.key"
+    local _cert="${_cert_dir}/${_client_id}.pem"
+
+    openssl req -x509 -newkey rsa:2048 -nodes \
+        -keyout "$_key" -out "$_cert" \
+        -days 2 -subj "/CN=${_client_id}" >/dev/null 2>&1 \
+        || { printf '%sERROR: Failed to generate suite MQTT Service cert%s\n' "${C_RED}" "${C_RESET}" >&2; exit 1; }
+
+    if ! c8y devicemanagement certificates create \
+            --name "$_client_id" --file "$_cert" \
+            --autoRegistrationEnabled \
+            --force --output json </dev/null >/dev/null 2>&1; then
+        printf '%sERROR: Failed to upload suite trusted certificate — check user has Mqtt service permission%s\n' "${C_RED}" "${C_RESET}" >&2
+        exit 1
+    fi
+
+    export DM_MQTT_SVC_CLIENT_ID="$_client_id"
+    export DM_MQTT_SVC_CERT="$_cert"
+    export DM_MQTT_SVC_KEY="$_key"
+    export DM_MQTT_SVC_CERT_NAME="$_client_id"
+    export DM_MQTT_SVC_CERT_DIR="$_cert_dir"
+    _SUITE_CERT_PROVISIONED=1
+
+    printf "%sSuite MQTT cert provisioned: CN=%s — waiting 5s for registration ...%s\n" \
+        "${C_CYAN}" "$_client_id" "${C_RESET}"
+    sleep 5
+}
+
+_suite_cleanup_mqtt_service_cert() {
+    [ "${_SUITE_CERT_PROVISIONED:-0}" -eq 0 ] && return 0
+    if [ -n "${DM_MQTT_SVC_CERT_NAME:-}" ]; then
+        c8y devicemanagement certificates delete --id "$DM_MQTT_SVC_CERT_NAME" \
+            --force </dev/null >/dev/null 2>&1 || true
+        printf "Deleted suite MQTT trusted certificate: %s\n" "$DM_MQTT_SVC_CERT_NAME"
+    fi
+    [ -n "${DM_MQTT_SVC_CERT_DIR:-}" ] && rm -rf "$DM_MQTT_SVC_CERT_DIR" 2>/dev/null || true
+}
+
+_ensure_suite_mqtt_cert() {
+    [ "${_SUITE_CERT_PROVISIONED:-0}" -eq 1 ] && return 0
+    [ "${DM_BROKER_MODE:-public}" = "c8y-mqtt-service" ] || return 0
+    [ "${DM_REUSE_MQTT_CERT:-true}" = "false" ] && return 0
+    _suite_provision_mqtt_service_cert
+}
+
+_dm_suite_on_exit() {
+    _suite_cleanup_mqtt_service_cert || true
+}
+trap _dm_suite_on_exit EXIT
+
 # ── Per-test execution ─────────────────────────────────────────────────────────
 _SUITE_PASS=0
 _SUITE_FAIL=0
@@ -321,6 +393,7 @@ _run_one() {   # <entry-from-TESTS>
     fi
 
     _suite_health_check
+    _ensure_suite_mqtt_cert
 
     printf "\n${C_BOLD}══ Running: %s ══${C_RESET}\n" "$name"
     _cleanup_flag="--cleanup"
