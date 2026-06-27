@@ -57,9 +57,8 @@ public class MappingVersion implements Serializable {
     @NotNull
     private String identifier;
 
-    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Version number, unique and monotonically increasing within the mapping line", example = "1")
-    @NotNull
-    private int versionNumber;
+    @Schema(description = "Semantic version (MAJOR.MINOR.PATCH), unique within the mapping line; null for the draft", example = "1.2.0")
+    private String version;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Immutable copy of the full mapping configuration for this version")
     @NotNull

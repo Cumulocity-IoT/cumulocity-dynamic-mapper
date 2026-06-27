@@ -138,7 +138,7 @@ public class MappingRepository {
 
         // A newly created mapping always starts at v1, regardless of the source
         // (e.g. a duplicated mapping must not inherit the original's version history).
-        mapping.setVersionNumber(0);
+        mapping.setVersion(null);
         mapping.setDraftDirty(false);
         mapping.setLastUpdate(System.currentTimeMillis());
         return mapping;

@@ -45,7 +45,7 @@ interface VersionCountRow {
   name: string;
   identifier: string;
   topic: string;
-  activeVersion: number;
+  activeVersion: string;
   versionCount: number;
 }
 
@@ -108,7 +108,7 @@ export class MappingVersionsCountComponent implements OnInit, OnDestroy {
         topic: this.direction === Direction.INBOUND
           ? (e.mapping.mappingTopic ?? '—')
           : (e.mapping.publishTopic ?? '—'),
-        activeVersion: e.mapping.versionNumber ?? 0,
+        activeVersion: e.mapping.version ?? '—',
         versionCount: countById.get(e.mapping.id) ?? 0
       }));
 

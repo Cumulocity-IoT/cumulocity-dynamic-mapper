@@ -39,6 +39,7 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingVersion;
 import dynamic.mapper.model.MappingVersionRepresentation;
 import dynamic.mapper.model.Qos;
+import dynamic.mapper.model.SemVer;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.TransformationType;
 import dynamic.mapper.service.DeviceToClientMapService;
@@ -186,7 +187,7 @@ class MappingVersioningIntegrationTest {
                 .thenReturn(mock(ManagedObjectCollection.class));
         lenient().when(versionRepository.findAll(eq(TENANT), any(ManagedObjectCollection.class))).thenAnswer(inv -> {
             List<MappingVersion> versions = new ArrayList<>(versionsById.values());
-            versions.sort(Comparator.comparingInt(MappingVersion::getVersionNumber));
+            versions.sort(Comparator.comparing(MappingVersion::getVersion, SemVer.STRING_COMPARATOR));
             return versions;
         });
         lenient().when(inventoryApi.update(any(), any())).thenAnswer(inv -> {
@@ -211,7 +212,7 @@ class MappingVersioningIntegrationTest {
                 .mappingType(MappingType.JSON).transformationType(TransformationType.JSONATA)
                 .active(true).debug(false).qos(Qos.AT_LEAST_ONCE)
                 .sourceTemplate("{\"v\":1}").targetTemplate("{}")
-                .versionNumber(1)
+                .version("1.0.0")
                 .build();
         runnableStore.put(MO_ID, m);
         return m;
@@ -234,34 +235,34 @@ class MappingVersioningIntegrationTest {
         assertNotNull(mappingService.getDraftMapping(TENANT, MO_ID), "a draft now exists");
 
         // 2) Publish the draft -> backfills the active config as v1, draft becomes v2
-        MappingVersion published = mappingService.publishDraft(TENANT, MO_ID, "second version");
-        assertEquals(2, published.getVersionNumber());
+        MappingVersion published = mappingService.publishDraft(TENANT, MO_ID, "2.0.0", "second version");
+        assertEquals("2.0.0", published.getVersion());
         assertNull(mappingService.getDraftMapping(TENANT, MO_ID), "draft cleared after publish");
 
         List<MappingVersion> versions = mappingService.listVersions(TENANT, MO_ID);
-        assertEquals(List.of(1, 2), versions.stream().map(MappingVersion::getVersionNumber).sorted().toList());
-        assertEquals("original", versions.stream().filter(v -> v.getVersionNumber() == 1).findFirst().get()
+        assertEquals(List.of("1.0.0", "2.0.0"), versions.stream().map(MappingVersion::getVersion).sorted().toList());
+        assertEquals("original", versions.stream().filter(v -> "1.0.0".equals(v.getVersion())).findFirst().get()
                 .getSnapshot().getName(), "v1 is the backfilled original active config");
-        assertEquals("edited", versions.stream().filter(v -> v.getVersionNumber() == 2).findFirst().get()
+        assertEquals("edited", versions.stream().filter(v -> "2.0.0".equals(v.getVersion())).findFirst().get()
                 .getSnapshot().getName(), "v2 is the published draft");
 
         // active config is STILL v1 until we activate v2 (publish does not activate)
-        assertEquals(1, runnableStore.get(MO_ID).getVersionNumber());
+        assertEquals("1.0.0", runnableStore.get(MO_ID).getVersion());
         assertEquals("original", runnableStore.get(MO_ID).getName());
 
         // 3) Activate v2 -> runnable swapped to the published content (C-1: one active version)
-        mappingService.setActivationMapping(TENANT, MO_ID, true, 2);
-        assertEquals(2, runnableStore.get(MO_ID).getVersionNumber());
+        mappingService.setActivationMapping(TENANT, MO_ID, true, "2.0.0");
+        assertEquals("2.0.0", runnableStore.get(MO_ID).getVersion());
         assertEquals("edited", runnableStore.get(MO_ID).getName());
         assertEquals("{\"v\":2}", runnableStore.get(MO_ID).getSourceTemplate());
 
         // 4) Roll back to v1 -> runnable swapped back; forward history (v2) survives
-        mappingService.setActivationMapping(TENANT, MO_ID, true, 1);
-        assertEquals(1, runnableStore.get(MO_ID).getVersionNumber());
+        mappingService.setActivationMapping(TENANT, MO_ID, true, "1.0.0");
+        assertEquals("1.0.0", runnableStore.get(MO_ID).getVersion());
         assertEquals("original", runnableStore.get(MO_ID).getName());
-        assertEquals(List.of(1, 2),
+        assertEquals(List.of("1.0.0", "2.0.0"),
                 mappingService.listVersions(TENANT, MO_ID).stream()
-                        .map(MappingVersion::getVersionNumber).sorted().toList(),
+                        .map(MappingVersion::getVersion).sorted().toList(),
                 "rollback must not delete newer versions");
     }
 
@@ -270,10 +271,10 @@ class MappingVersioningIntegrationTest {
         seedRunnable("original");
 
         assertThrows(IllegalArgumentException.class,
-                () -> mappingService.setActivationMapping(TENANT, MO_ID, true, 99));
+                () -> mappingService.setActivationMapping(TENANT, MO_ID, true, "99.0.0"));
 
         // FR-9: a failed activation does not change what is running
-        assertEquals(1, runnableStore.get(MO_ID).getVersionNumber());
+        assertEquals("1.0.0", runnableStore.get(MO_ID).getVersion());
         assertEquals("original", runnableStore.get(MO_ID).getName());
     }
 
@@ -281,15 +282,15 @@ class MappingVersioningIntegrationTest {
     void deleteInactiveVersionThenActiveIsProtected() throws Exception {
         seedRunnable("original");
         mappingService.saveDraftMapping(TENANT, MO_ID, edit("edited", "{\"v\":2}"));
-        mappingService.publishDraft(TENANT, MO_ID, "v2"); // versions 1 (backfill) + 2
+        mappingService.publishDraft(TENANT, MO_ID, "2.0.0", "v2"); // versions 1.0.0 (backfill) + 2.0.0
 
-        // v1 is active (runnable.versionNumber == 1); deleting it is rejected
-        assertThrows(IllegalStateException.class, () -> mappingService.deleteVersion(TENANT, MO_ID, 1));
-        // v2 is inactive; it can be deleted
-        mappingService.deleteVersion(TENANT, MO_ID, 2);
+        // v1.0.0 is active (runnable.version == 1.0.0); deleting it is rejected
+        assertThrows(IllegalStateException.class, () -> mappingService.deleteVersion(TENANT, MO_ID, "1.0.0"));
+        // v2.0.0 is inactive; it can be deleted
+        mappingService.deleteVersion(TENANT, MO_ID, "2.0.0");
 
-        assertEquals(List.of(1),
+        assertEquals(List.of("1.0.0"),
                 mappingService.listVersions(TENANT, MO_ID).stream()
-                        .map(MappingVersion::getVersionNumber).sorted().toList());
+                        .map(MappingVersion::getVersion).sorted().toList());
     }
 }

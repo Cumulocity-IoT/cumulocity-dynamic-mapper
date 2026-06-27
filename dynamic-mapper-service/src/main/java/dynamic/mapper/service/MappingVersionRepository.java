@@ -27,6 +27,7 @@ import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.MappingVersion;
 import dynamic.mapper.model.MappingVersionRepresentation;
+import dynamic.mapper.model.SemVer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
@@ -106,7 +107,7 @@ public class MappingVersionRepository {
                 .map(mo -> findOne(tenant, mo))
                 .filter(Optional::isPresent)
                 .map(Optional::get)
-                .sorted(Comparator.comparingInt(MappingVersion::getVersionNumber))
+                .sorted(Comparator.comparing(MappingVersion::getVersion, SemVer.STRING_COMPARATOR))
                 .collect(Collectors.toList());
     }
 

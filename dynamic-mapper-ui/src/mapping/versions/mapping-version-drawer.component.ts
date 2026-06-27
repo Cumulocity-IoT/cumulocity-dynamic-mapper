@@ -33,13 +33,14 @@ import { ConfirmationModalComponent, Mapping, SharedModule } from '../../shared'
 import { MappingService } from '../core/mapping.service';
 import { NoteEditCellRendererComponent } from './note-edit-cell-renderer.component';
 import { VersionStateCellRendererComponent } from './version-state-cell.renderer.component';
+import { PublishVersionModalComponent } from './publish-version-modal.component';
 
 type VersionState = 'active' | 'published' | 'draft';
 
 /** One row of the versions grid: a published version, or the single draft. */
 interface VersionRow {
   id: string;
-  versionNumber: number;
+  version: string;
   versionDisplay: string;
   state: VersionState;
   note: string;
@@ -52,12 +53,25 @@ interface VersionRow {
 
 const DRAFT_ROW_ID = '__draft__';
 
+/** Parses a semver string "X.Y.Z" into a numeric tuple for sorting. Falls back to [0,0,0]. */
+function parseSemVer(v: string | null | undefined): [number, number, number] {
+  if (!v) return [0, 0, 0];
+  const m = v.match(/^(\d+)\.(\d+)\.(\d+)$/);
+  return m ? [+m[1], +m[2], +m[3]] : [0, 0, 0];
+}
+
+function compareSemVerDesc(a: string | null | undefined, b: string | null | undefined): number {
+  const [aMaj, aMin, aPat] = parseSemVer(a);
+  const [bMaj, bMin, bPat] = parseSemVer(b);
+  return bMaj - aMaj || bMin - aMin || bPat - aPat;
+}
+
 /**
  * Bottom drawer listing all records of a mapping line in a single c8y-data-grid:
  * every published version plus the current draft, each tagged with a State
  * (active / published / draft). Row actions are contextual — Publish on the draft,
  * Activate / Delete on inactive published versions. The active version (the one
- * whose number matches the mapping's {@code versionNumber}) has no actions.
+ * whose `version` field matches the mapping's `version`) has no actions.
  *
  * Notes are edited inline via the Cumulocity "edit on focus" pattern; no modal is shown.
  */
@@ -89,9 +103,6 @@ export class MappingVersionDrawerComponent implements OnInit {
   loading = true;
   busy = false;
 
-  /** Tracks the note entered in the draft row; used when publishing. */
-  draftNote = '';
-
   private changed = false;
 
   async ngOnInit(): Promise<void> {
@@ -108,44 +119,42 @@ export class MappingVersionDrawerComponent implements OnInit {
         this.mappingService.getMapping(this.mapping.id)
       ]);
       // Always use the server's authoritative active version — the input mapping can be stale.
-      if (freshMapping?.versionNumber != null) {
-        this.mapping.versionNumber = freshMapping.versionNumber;
+      if (freshMapping?.version != null) {
+        this.mapping.version = freshMapping.version;
       }
 
       const versionRows: VersionRow[] = (versions ?? [])
-        .sort((a, b) => b.versionNumber - a.versionNumber)
+        .sort((a, b) => compareSemVerDesc(a.version, b.version))
         .map(v => {
-          const rowId = v.id ?? `v${v.versionNumber}`;
+          const rowId = v.id ?? `v${v.version}`;
           return {
             id: rowId,
-            versionNumber: v.versionNumber,
-            versionDisplay: `v${v.versionNumber}`,
-            state: (v.versionNumber === this.mapping.versionNumber ? 'active' : 'published') as VersionState,
+            version: v.version ?? '',
+            versionDisplay: v.version ? `v${v.version}` : '—',
+            state: (v.version === this.mapping.version ? 'active' : 'published') as VersionState,
             note: v.note || '',
             updatedDisplay: v.createdAt ? new Date(v.createdAt).toLocaleString() : '—',
             createdBy: v.createdBy || '—',
             isDraft: false,
             onNoteChange: this.canManage
-              ? (note: string) => this.saveVersionNote(rowId, v.versionNumber, note)
+              ? (note: string) => this.saveVersionNote(rowId, v.version ?? '', note)
               : undefined
           };
         });
 
-      this.draftNote = draft?.versionNote ?? '';
+      const draftNote = draft?.versionNote ?? '';
 
       const draftRow: VersionRow[] = draft
         ? [{
           id: DRAFT_ROW_ID,
-          versionNumber: 0,
+          version: '',
           versionDisplay: '—',
           state: 'draft',
-          note: this.draftNote,
+          note: draftNote,
           updatedDisplay: draft.lastUpdate ? new Date(draft.lastUpdate).toLocaleString() : '—',
           createdBy: '—',
           isDraft: true,
-          onNoteChange: this.canManage
-            ? (note: string) => { this.draftNote = note; }
-            : undefined
+          onNoteChange: undefined
         }]
         : [];
 
@@ -157,11 +166,10 @@ export class MappingVersionDrawerComponent implements OnInit {
     }
   }
 
-  private async saveVersionNote(versionId: string, versionNumber: number, note: string): Promise<void> {
+  private async saveVersionNote(versionId: string, version: string, note: string): Promise<void> {
     try {
-      await this.mappingService.updateVersionNote(this.mapping.id, versionNumber, note);
+      await this.mappingService.updateVersionNote(this.mapping.id, version, note);
       this.changed = true;
-      // Update the row value in-place so the grid reflects the saved state.
       const rows = this.rows$.getValue();
       const row = rows.find(r => r.id === versionId);
       if (row) {
@@ -176,9 +184,9 @@ export class MappingVersionDrawerComponent implements OnInit {
   async activate(row: VersionRow): Promise<void> {
     this.busy = true;
     try {
-      await this.mappingService.activateVersion(this.mapping.id, row.versionNumber);
-      this.alertService.success(`Activated version ${row.versionNumber} of ${this.mapping.name}`);
-      this.mapping.versionNumber = row.versionNumber;
+      await this.mappingService.activateVersion(this.mapping.id, row.version);
+      this.alertService.success(`Activated version ${row.version} of ${this.mapping.name}`);
+      this.mapping.version = row.version;
       this.changed = true;
       await this.reload();
     } catch (e) {
@@ -195,8 +203,8 @@ export class MappingVersionDrawerComponent implements OnInit {
     }
     this.busy = true;
     try {
-      await this.mappingService.deleteVersion(this.mapping.id, row.versionNumber);
-      this.alertService.success(`Deleted version ${row.versionNumber} of ${this.mapping.name}`);
+      await this.mappingService.deleteVersion(this.mapping.id, row.version);
+      this.alertService.success(`Deleted version ${row.version} of ${this.mapping.name}`);
       this.changed = true;
       await this.reload();
     } catch (e) {
@@ -243,11 +251,34 @@ export class MappingVersionDrawerComponent implements OnInit {
   }
 
   async publish(): Promise<void> {
+    // Fetch version suggestions first, then open the publish dialog.
+    let suggestions: { patch: string; minor: string; major: string };
+    try {
+      suggestions = await this.mappingService.suggestNextVersions(this.mapping.id);
+    } catch {
+      suggestions = { patch: '1.0.0', minor: '1.0.0', major: '1.0.0' };
+    }
+
+    const result = await new Promise<{ version: string; note: string } | null>(resolve => {
+      const ref = this.bsModalService.show(PublishVersionModalComponent, {
+        initialState: {
+          mappingName: this.mapping.name,
+          currentVersion: this.mapping.version ?? null,
+          suggestions
+        }
+      });
+      ref.content.closeSubject.pipe(take(1)).subscribe((r: { version: string; note: string } | null) => {
+        resolve(r);
+        ref.hide();
+      });
+    });
+
+    if (!result) return;
+
     this.busy = true;
     try {
-      const version = await this.mappingService.publishDraft(this.mapping.id, this.draftNote || undefined);
-      this.alertService.success(`Published version ${version.versionNumber} of ${this.mapping.name}`);
-      this.draftNote = '';
+      const mv = await this.mappingService.publishDraft(this.mapping.id, result.version, result.note || undefined);
+      this.alertService.success(`Published version ${mv.version} of ${this.mapping.name}`);
       this.changed = true;
       await this.reload();
     } catch (e) {

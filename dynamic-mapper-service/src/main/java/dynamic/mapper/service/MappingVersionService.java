@@ -35,6 +35,7 @@ import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingVersion;
 import dynamic.mapper.model.MappingVersionRepresentation;
+import dynamic.mapper.model.SemVer;
 import dynamic.mapper.model.ValidationError;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -85,20 +86,25 @@ public class MappingVersionService {
 
     /**
      * Publishes the given mapping configuration as a new immutable version of its
-     * line. Assigns the next version number, validates the snapshot, persists it,
-     * and applies retention pruning. The newly published version is not activated
-     * by this call.
+     * line. Uses the caller-supplied semver string, validates the snapshot and
+     * uniqueness, persists the version, and applies retention pruning. The newly
+     * published version is not activated by this call.
      *
-     * @param mapping             the configuration to freeze (typically the draft)
-     * @param note                optional change note
-     * @param activeVersionNumber the version number currently active for this line
-     *                            (protected from pruning); use 0 if none
+     * @param mapping       the configuration to freeze (typically the draft)
+     * @param version       the semver string for the new version (MAJOR.MINOR.PATCH)
+     * @param note          optional change note
+     * @param activeVersion the version string currently active for this line
+     *                      (protected from pruning); null if none
      */
-    public MappingVersion publish(String tenant, Mapping mapping, String note, int activeVersionNumber) {
+    public MappingVersion publish(String tenant, Mapping mapping, String version, String note, String activeVersion) {
         String identifier = mapping.getIdentifier();
         if (identifier == null) {
             throw new IllegalArgumentException(
                     String.format("Tenant %s - Cannot publish a mapping without an identifier", tenant));
+        }
+        if (!SemVer.isValid(version)) {
+            throw new IllegalArgumentException(
+                    String.format("Tenant %s - Invalid semver '%s': expected MAJOR.MINOR.PATCH", tenant, version));
         }
 
         // Validate the snapshot - publish is the commitment point (a draft may be incomplete).
@@ -109,16 +115,25 @@ public class MappingVersionService {
 
         return subscriptionsService.callForTenant(tenant, () -> {
             List<MappingVersion> existing = loadVersions(tenant, identifier);
-            int nextVersionNumber = nextVersionNumber(existing);
+
+            // Uniqueness check: each version label is immutable once published (semver contract).
+            boolean alreadyExists = existing.stream()
+                    .filter(v -> !v.isDraft())
+                    .anyMatch(v -> version.equals(v.getVersion()));
+            if (alreadyExists) {
+                throw new IllegalArgumentException(
+                        String.format("Tenant %s - Version %s already exists for mapping line %s",
+                                tenant, version, identifier));
+            }
 
             Mapping snapshot = copyOf(mapping);
-            snapshot.setVersionNumber(nextVersionNumber);
+            snapshot.setVersion(version);
             snapshot.setVersionNote(note);
             snapshot.setDraftDirty(false);
 
-            MappingVersion version = MappingVersion.builder()
+            MappingVersion mv = MappingVersion.builder()
                     .identifier(identifier)
-                    .versionNumber(nextVersionNumber)
+                    .version(version)
                     .snapshot(snapshot)
                     .isDraft(false)
                     .createdAt(System.currentTimeMillis())
@@ -126,16 +141,42 @@ public class MappingVersionService {
                     .note(note)
                     .build();
 
-            MappingVersion persisted = persistNewVersion(tenant, version);
-            log.info("{} - Published version {} of mapping line {} [{}]", tenant, nextVersionNumber,
+            MappingVersion persisted = persistNewVersion(tenant, mv);
+            log.info("{} - Published version {} of mapping line {} [{}]", tenant, version,
                     identifier, persisted.getId());
 
             // Prune using the list we already loaded plus the just-persisted version,
             // avoiding a second query on the hot publish path.
             List<MappingVersion> current = new ArrayList<>(existing);
             current.add(persisted);
-            prune(tenant, identifier, activeVersionNumber, current);
+            prune(tenant, identifier, activeVersion, current);
             return persisted;
+        });
+    }
+
+    /**
+     * Suggests the next patch, minor, and major versions based on the highest
+     * published version for the mapping line. Returns {@code "1.0.0"} suggestions
+     * when no versions exist yet.
+     *
+     * @return a three-element array: [patch, minor, major] suggestions
+     */
+    public String[] suggestNextVersions(String tenant, String identifier) {
+        return subscriptionsService.callForTenant(tenant, () -> {
+            SemVer highest = loadVersions(tenant, identifier).stream()
+                    .filter(v -> !v.isDraft() && SemVer.isValid(v.getVersion()))
+                    .map(v -> SemVer.parse(v.getVersion()))
+                    .max(SemVer::compareTo)
+                    .orElse(new SemVer(0, 9, 9)); // so patch → 1.0.0, minor → 0.10.0 → normalised
+            // When no versions exist at all, suggest starting at 1.0.0
+            if (highest.equals(new SemVer(0, 9, 9))) {
+                return new String[] { "1.0.0", "1.0.0", "1.0.0" };
+            }
+            return new String[] {
+                highest.bumpPatch().toString(),
+                highest.bumpMinor().toString(),
+                highest.bumpMajor().toString()
+            };
         });
     }
 
@@ -187,7 +228,7 @@ public class MappingVersionService {
             MappingVersion draft = MappingVersion.builder()
                     .id(existingDraft != null ? existingDraft.getId() : null)
                     .identifier(identifier)
-                    .versionNumber(0) // drafts are not numbered
+                    .version(null) // drafts have no version label
                     .snapshot(snapshot)
                     .isDraft(true)
                     .createdAt(System.currentTimeMillis())
@@ -263,9 +304,9 @@ public class MappingVersionService {
      * Retrieves a single published version of a mapping line, or {@code null} if
      * not found.
      */
-    public MappingVersion getVersion(String tenant, String identifier, int versionNumber) {
+    public MappingVersion getVersion(String tenant, String identifier, String version) {
         return subscriptionsService.callForTenant(tenant,
-                () -> findPublished(loadVersions(tenant, identifier), versionNumber).orElse(null));
+                () -> findPublished(loadVersions(tenant, identifier), version).orElse(null));
     }
 
     // ========== Note edit ==========
@@ -274,18 +315,18 @@ public class MappingVersionService {
      * Updates the change note of a published version. The note is the only
      * mutable field of a version (D-3); all other fields are immutable.
      */
-    public MappingVersion updateNote(String tenant, String identifier, int versionNumber, String note) {
+    public MappingVersion updateNote(String tenant, String identifier, String version, String note) {
         return subscriptionsService.callForTenant(tenant, () -> {
-            MappingVersion version = findPublished(loadVersions(tenant, identifier), versionNumber)
+            MappingVersion mv = findPublished(loadVersions(tenant, identifier), version)
                     .orElseThrow(() -> new IllegalArgumentException(String.format(
-                            "Tenant %s - No version %d found for mapping line %s", tenant, versionNumber, identifier)));
-            version.setNote(note);
-            if (version.getSnapshot() != null) {
-                version.getSnapshot().setVersionNote(note);
+                            "Tenant %s - No version %s found for mapping line %s", tenant, version, identifier)));
+            mv.setNote(note);
+            if (mv.getSnapshot() != null) {
+                mv.getSnapshot().setVersionNote(note);
             }
-            updateVersionMO(version);
-            log.info("{} - Updated note of version {} of mapping line {}", tenant, versionNumber, identifier);
-            return version;
+            updateVersionMO(mv);
+            log.info("{} - Updated note of version {} of mapping line {}", tenant, version, identifier);
+            return mv;
         });
     }
 
@@ -295,18 +336,18 @@ public class MappingVersionService {
      * Deletes a published, inactive version. The active version cannot be deleted
      * (FR-17).
      */
-    public void deleteVersion(String tenant, String identifier, int versionNumber, int activeVersionNumber) {
-        if (versionNumber == activeVersionNumber) {
+    public void deleteVersion(String tenant, String identifier, String version, String activeVersion) {
+        if (version != null && version.equals(activeVersion)) {
             throw new IllegalStateException(String.format(
-                    "Tenant %s - Version %d of mapping line %s is active, cannot be deleted", tenant, versionNumber,
+                    "Tenant %s - Version %s of mapping line %s is active, cannot be deleted", tenant, version,
                     identifier));
         }
         subscriptionsService.runForTenant(tenant, () -> {
-            MappingVersion version = findPublished(loadVersions(tenant, identifier), versionNumber)
+            MappingVersion mv = findPublished(loadVersions(tenant, identifier), version)
                     .orElseThrow(() -> new IllegalArgumentException(String.format(
-                            "Tenant %s - No version %d found for mapping line %s", tenant, versionNumber, identifier)));
-            deleteVersionMO(version);
-            log.info("{} - Deleted version {} of mapping line {}", tenant, versionNumber, identifier);
+                            "Tenant %s - No version %s found for mapping line %s", tenant, version, identifier)));
+            deleteVersionMO(mv);
+            log.info("{} - Deleted version {} of mapping line {}", tenant, version, identifier);
         });
     }
 
@@ -329,23 +370,23 @@ public class MappingVersionService {
 
     /**
      * Prunes a mapping line down to the configured retention limit, deleting the
-     * oldest published versions first. The active version is never pruned, even if
-     * it falls outside the retention window (FR-19).
+     * oldest published versions first (by publish date). The active version is
+     * never pruned, even if it falls outside the retention window (FR-19).
      */
-    public void pruneVersions(String tenant, String identifier, int activeVersionNumber) {
+    public void pruneVersions(String tenant, String identifier, String activeVersion) {
         subscriptionsService.runForTenant(tenant,
-                () -> prune(tenant, identifier, activeVersionNumber, loadVersions(tenant, identifier)));
+                () -> prune(tenant, identifier, activeVersion, loadVersions(tenant, identifier)));
     }
 
     /**
      * Prunes from an already-loaded list of versions, avoiding a redundant query.
      * Callers must already hold the tenant scope.
      */
-    private void prune(String tenant, String identifier, int activeVersionNumber, List<MappingVersion> loaded) {
+    private void prune(String tenant, String identifier, String activeVersion, List<MappingVersion> loaded) {
         int retention = retention(tenant);
         List<MappingVersion> published = loaded.stream()
                 .filter(v -> !v.isDraft())
-                .sorted(Comparator.comparingInt(MappingVersion::getVersionNumber))
+                .sorted(Comparator.comparingLong(MappingVersion::getCreatedAt))
                 .collect(Collectors.toList());
 
         if (published.size() <= retention) {
@@ -356,11 +397,11 @@ public class MappingVersionService {
         int windowStart = published.size() - retention;
         List<MappingVersion> candidates = published.subList(0, windowStart);
         for (MappingVersion v : candidates) {
-            if (v.getVersionNumber() == activeVersionNumber) {
+            if (v.getVersion() != null && v.getVersion().equals(activeVersion)) {
                 continue; // never prune the active version
             }
             deleteVersionMO(v);
-            log.info("{} - Pruned version {} of mapping line {} (retention {})", tenant, v.getVersionNumber(),
+            log.info("{} - Pruned version {} of mapping line {} (retention {})", tenant, v.getVersion(),
                     identifier, retention);
         }
     }
@@ -369,12 +410,13 @@ public class MappingVersionService {
 
     /**
      * Ensures the given runnable mapping has at least one published version,
-     * creating a v1 record from its current snapshot if none exist. Idempotent:
-     * a no-op when any published version already exists for the line (NFR-1a). A
-     * draft alone does not count as a published version.
+     * creating a {@code 1.0.0} record from its current snapshot if none exist.
+     * Idempotent: a no-op when any published version already exists for the line
+     * (NFR-1a). Handles legacy integer versions stored as strings by migrating them
+     * to MAJOR.0.0 format on first access. A draft alone does not count.
      *
-     * @return the existing-or-newly-created version record for the line's current
-     *         version, or {@code null} if the mapping has no identifier
+     * @return the existing-or-newly-created version record, or {@code null} if the
+     *         mapping has no identifier
      */
     public MappingVersion ensureBackfilled(String tenant, Mapping runnable) {
         String identifier = runnable.getIdentifier();
@@ -387,19 +429,22 @@ public class MappingVersionService {
                     .filter(v -> !v.isDraft())
                     .toList();
             if (!published.isEmpty()) {
+                String activeVer = runnable.getVersion();
                 return published.stream()
-                        .filter(v -> v.getVersionNumber() == runnable.getVersionNumber())
+                        .filter(v -> activeVer != null && activeVer.equals(v.getVersion()))
                         .findFirst()
                         .orElse(published.get(0));
             }
 
-            int versionNumber = runnable.getVersionNumber() > 0 ? runnable.getVersionNumber() : 1;
+            // Determine the version label: use the runnable's version if it looks like
+            // valid semver; migrate a bare integer (e.g. "3") to "3.0.0"; default 1.0.0.
+            String ver = resolveBackfillVersion(runnable.getVersion());
             Mapping snapshot = copyOf(runnable);
-            snapshot.setVersionNumber(versionNumber);
+            snapshot.setVersion(ver);
 
             MappingVersion version = MappingVersion.builder()
                     .identifier(identifier)
-                    .versionNumber(versionNumber)
+                    .version(ver)
                     .snapshot(snapshot)
                     .isDraft(false)
                     .createdAt(System.currentTimeMillis())
@@ -408,10 +453,24 @@ public class MappingVersionService {
                     .build();
 
             MappingVersion persisted = persistNewVersion(tenant, version);
-            log.info("{} - Backfilled version {} for legacy mapping line {} [{}]", tenant, versionNumber, identifier,
+            log.info("{} - Backfilled version {} for legacy mapping line {} [{}]", tenant, ver, identifier,
                     persisted.getId());
             return persisted;
         });
+    }
+
+    /** Derives a valid semver string from a raw version stored on an older mapping. */
+    private static String resolveBackfillVersion(String raw) {
+        if (SemVer.isValid(raw)) {
+            return raw;
+        }
+        if (raw != null) {
+            try {
+                int n = Integer.parseInt(raw.trim());
+                if (n > 0) return n + ".0.0";
+            } catch (NumberFormatException ignored) { }
+        }
+        return SemVer.INITIAL.toString();
     }
 
     // ========== Internal helpers ==========
@@ -429,24 +488,16 @@ public class MappingVersionService {
                 .collect(Collectors.toList());
     }
 
-    private static int nextVersionNumber(List<MappingVersion> existing) {
-        return existing.stream()
-                .filter(v -> !v.isDraft())
-                .mapToInt(MappingVersion::getVersionNumber)
-                .max()
-                .orElse(0) + 1;
-    }
-
-    private static Optional<MappingVersion> findPublished(List<MappingVersion> versions, int versionNumber) {
+    private static Optional<MappingVersion> findPublished(List<MappingVersion> versions, String version) {
         return versions.stream()
-                .filter(v -> !v.isDraft() && v.getVersionNumber() == versionNumber)
+                .filter(v -> !v.isDraft() && version != null && version.equals(v.getVersion()))
                 .findFirst();
     }
 
     private static String versionName(MappingVersion version) {
         return version.isDraft()
                 ? version.getIdentifier() + " draft"
-                : version.getIdentifier() + " v" + version.getVersionNumber();
+                : version.getIdentifier() + " v" + version.getVersion();
     }
 
     private MappingVersion persistNewVersion(String tenant, MappingVersion version) {
@@ -469,7 +520,7 @@ public class MappingVersionService {
                 inventoryApi.addChildAddition(GId.asGId(parentId), mor.getId(), false);
             } catch (Exception e) {
                 log.warn("{} - Could not register version {} [{}] as child addition of mapping {}: {}",
-                        tenant, version.getVersionNumber(), version.getId(), parentId, e.getMessage());
+                        tenant, version.getVersion(), version.getId(), parentId, e.getMessage());
             }
         }
         return version;

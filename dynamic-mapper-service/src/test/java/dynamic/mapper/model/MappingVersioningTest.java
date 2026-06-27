@@ -56,7 +56,7 @@ class MappingVersioningTest {
 
         Mapping mapping = objectMapper.readValue(legacyJson, Mapping.class);
 
-        assertEquals(1, mapping.getVersionNumber(), "missing versionNumber must default to 1, not 0");
+        assertEquals("1.0.0", mapping.getVersion(), "missing version must default to 1.0.0");
         assertFalse(mapping.isDraftDirty(), "missing draftDirty must default to false");
         assertNull(mapping.getVersionNote(), "missing versionNote must be null");
         assertEquals("l19zjk", mapping.getIdentifier());
@@ -72,7 +72,7 @@ class MappingVersioningTest {
                   "direction": "INBOUND",
                   "active": false,
                   "debug": false,
-                  "versionNumber": 5,
+                  "version": "5.0.0",
                   "draftDirty": true,
                   "versionNote": "note"
                 }
@@ -80,7 +80,7 @@ class MappingVersioningTest {
 
         Mapping mapping = objectMapper.readValue(json, Mapping.class);
 
-        assertEquals(5, mapping.getVersionNumber());
+        assertEquals("5.0.0", mapping.getVersion());
         assertTrue(mapping.isDraftDirty());
         assertEquals("note", mapping.getVersionNote());
     }
@@ -95,14 +95,14 @@ class MappingVersioningTest {
                   "direction": "INBOUND",
                   "active": false,
                   "debug": false,
-                  "versionNumber": null,
+                  "version": null,
                   "draftDirty": null
                 }
                 """;
 
         Mapping mapping = objectMapper.readValue(json, Mapping.class);
 
-        assertEquals(1, mapping.getVersionNumber());
+        assertEquals("1.0.0", mapping.getVersion(), "explicit JSON null must not override the default via @JsonSetter Nulls.SKIP");
         assertFalse(mapping.isDraftDirty());
     }
 
@@ -135,12 +135,12 @@ class MappingVersioningTest {
                 .active(true)
                 .debug(false)
                 .qos(Qos.AT_LEAST_ONCE)
-                .versionNumber(3)
+                .version("3.0.0")
                 .build();
 
         MappingVersion version = MappingVersion.builder()
                 .identifier("abc")
-                .versionNumber(3)
+                .version("3.0.0")
                 .snapshot(snapshot)
                 .isDraft(false)
                 .createdAt(123L)
@@ -152,21 +152,21 @@ class MappingVersioningTest {
         MappingVersion restored = objectMapper.readValue(json, MappingVersion.class);
 
         assertEquals("abc", restored.getIdentifier());
-        assertEquals(3, restored.getVersionNumber());
+        assertEquals("3.0.0", restored.getVersion());
         assertEquals(123L, restored.getCreatedAt());
         assertEquals("admin", restored.getCreatedBy());
         assertEquals("v3", restored.getNote());
         assertFalse(restored.isDraft());
         assertNotNull(restored.getSnapshot());
         assertEquals("M", restored.getSnapshot().getName());
-        assertEquals(3, restored.getSnapshot().getVersionNumber());
+        assertEquals("3.0.0", restored.getSnapshot().getVersion());
     }
 
     @Test
     void draftVersionRoundTrip() throws Exception {
         MappingVersion draft = MappingVersion.builder()
                 .identifier("abc")
-                .versionNumber(0)
+                .version(null)
                 .snapshot(Mapping.builder().identifier("abc").name("draft").build())
                 .isDraft(true)
                 .build();

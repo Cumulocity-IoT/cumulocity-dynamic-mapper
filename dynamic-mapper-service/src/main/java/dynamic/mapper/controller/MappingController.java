@@ -513,18 +513,24 @@ public class MappingController {
     @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
     @PostMapping(value = "/{id}/publish", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<MappingVersion> publishDraft(@PathVariable String id,
+            @RequestParam String version,
             @RequestParam(required = false) String note) {
         String tenant = getTenant();
         try {
-            MappingVersion version = mappingService.publishDraft(tenant, id, note);
-            return ResponseEntity.status(HttpStatus.CREATED).body(version);
+            MappingVersion mv = mappingService.publishDraft(tenant, id, version, note);
+            return ResponseEntity.status(HttpStatus.CREATED).body(mv);
         } catch (MappingValidationException e) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
                 "Draft validation failed: " + e.getMessage());
         } catch (IllegalStateException e) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
         } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+            // covers not-found AND duplicate-version (409 for the latter)
+            String msg = e.getMessage();
+            if (msg != null && msg.contains("already exists")) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, msg);
+            }
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, msg);
         } catch (Exception e) {
             log.error("{} - Failed to publish draft for mapping: {}", tenant, id, e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
@@ -535,8 +541,8 @@ public class MappingController {
     @Operation(
         summary = "List versions of a mapping",
         description = """
-        Returns all published versions of a mapping line. The active version is the one whose number
-        matches the mapping's current `versionNumber`.
+        Returns all published versions of a mapping line. The active version is the one whose
+        `version` field matches the mapping's current `version`.
 
         **Security:** Requires ROLE_DYNAMIC_MAPPER_ADMIN or ROLE_DYNAMIC_MAPPER_CREATE role.
         """
@@ -557,6 +563,35 @@ public class MappingController {
     }
 
     @Operation(
+        summary = "Suggest the next semver labels for a mapping",
+        description = """
+        Returns three semver suggestions — patch, minor, and major bumps — based on the
+        highest published version for the mapping line. Use these to pre-fill the publish dialog.
+
+        **Security:** Requires ROLE_DYNAMIC_MAPPER_ADMIN or ROLE_DYNAMIC_MAPPER_CREATE role.
+        """
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Suggestions returned (patch, minor, major)"),
+        @ApiResponse(responseCode = "404", description = "Mapping not found", content = @Content)
+    })
+    @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
+    @GetMapping(value = "/{id}/version/suggest", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<java.util.Map<String, String>> suggestNextVersions(@PathVariable String id) {
+        String tenant = getTenant();
+        try {
+            String[] suggestions = mappingService.suggestNextVersions(tenant, id);
+            return ResponseEntity.ok(java.util.Map.of(
+                "patch", suggestions[0],
+                "minor", suggestions[1],
+                "major", suggestions[2]
+            ));
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+        }
+    }
+
+    @Operation(
         summary = "Get a specific version of a mapping",
         description = """
         Returns the full configuration of a single published version.
@@ -570,16 +605,15 @@ public class MappingController {
         @ApiResponse(responseCode = "404", description = "Mapping or version not found", content = @Content)
     })
     @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
-    @GetMapping(value = "/{id}/version/{versionNumber}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<MappingVersion> getVersion(@PathVariable String id, @PathVariable int versionNumber) {
+    @GetMapping(value = "/{id}/version/{version:.+}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<MappingVersion> getVersion(@PathVariable String id, @PathVariable String version) {
         String tenant = getTenant();
         try {
-            MappingVersion version = mappingService.getVersion(tenant, id, versionNumber);
-            if (version == null) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                    "Version " + versionNumber + " not found");
+            MappingVersion mv = mappingService.getVersion(tenant, id, version);
+            if (mv == null) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Version " + version + " not found");
             }
-            return ResponseEntity.ok(version);
+            return ResponseEntity.ok(mv);
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
         }
@@ -600,12 +634,12 @@ public class MappingController {
         @ApiResponse(responseCode = "404", description = "Mapping or version not found", content = @Content)
     })
     @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
-    @PatchMapping(value = "/{id}/version/{versionNumber}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PatchMapping(value = "/{id}/version/{version:.+}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<MappingVersion> updateVersionNote(@PathVariable String id,
-            @PathVariable int versionNumber, @RequestParam(required = false) String note) {
+            @PathVariable String version, @RequestParam(required = false) String note) {
         String tenant = getTenant();
         try {
-            return ResponseEntity.ok(mappingService.updateVersionNote(tenant, id, versionNumber, note));
+            return ResponseEntity.ok(mappingService.updateVersionNote(tenant, id, version, note));
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
         }
@@ -625,11 +659,11 @@ public class MappingController {
         @ApiResponse(responseCode = "406", description = "Active version cannot be deleted", content = @Content)
     })
     @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
-    @DeleteMapping(value = "/{id}/version/{versionNumber}")
-    public ResponseEntity<Void> deleteVersion(@PathVariable String id, @PathVariable int versionNumber) {
+    @DeleteMapping(value = "/{id}/version/{version:.+}")
+    public ResponseEntity<Void> deleteVersion(@PathVariable String id, @PathVariable String version) {
         String tenant = getTenant();
         try {
-            mappingService.deleteVersion(tenant, id, versionNumber);
+            mappingService.deleteVersion(tenant, id, version);
             return ResponseEntity.noContent().build();
         } catch (IllegalStateException e) {
             throw new ResponseStatusException(HttpStatus.NOT_ACCEPTABLE, e.getMessage());

@@ -113,12 +113,13 @@ class MappingServiceActivationTest {
                 .qos(Qos.AT_LEAST_ONCE)
                 .sourceTemplate("{\"v\":1}")
                 .targetTemplate("{}")
-                .versionNumber(1)
+                .version("1.0.0")
                 .draftDirty(true)
                 .build();
     }
 
     private MappingVersion version(int number, String name, String source) {
+        String semver = number + ".0.0";
         Mapping snapshot = Mapping.builder()
                 .id(MO_ID)
                 .identifier(IDENTIFIER)
@@ -132,12 +133,12 @@ class MappingServiceActivationTest {
                 .qos(Qos.AT_LEAST_ONCE)
                 .sourceTemplate(source)
                 .targetTemplate("{}")
-                .versionNumber(number)
+                .version(semver)
                 .draftDirty(false)
                 .build();
         return MappingVersion.builder()
                 .identifier(IDENTIFIER)
-                .versionNumber(number)
+                .version(semver)
                 .snapshot(snapshot)
                 .isDraft(false)
                 .note("label-" + number)
@@ -147,9 +148,9 @@ class MappingServiceActivationTest {
     @Test
     void activateSpecificVersionCopiesSnapshotIntoRunnable() throws Exception {
         doReturn(runnable()).when(service).getMapping(TENANT, MO_ID);
-        when(mappingVersionService.getVersion(TENANT, IDENTIFIER, 2)).thenReturn(version(2, "V2 content", "{\"v\":2}"));
+        when(mappingVersionService.getVersion(TENANT, IDENTIFIER, "2.0.0")).thenReturn(version(2, "V2 content", "{\"v\":2}"));
 
-        Mapping result = service.setActivationMapping(TENANT, MO_ID, true, 2);
+        Mapping result = service.setActivationMapping(TENANT, MO_ID, true, "2.0.0");
 
         ArgumentCaptor<Mapping> captor = ArgumentCaptor.forClass(Mapping.class);
         verify(service).updateMapping(eq(TENANT), captor.capture(), eq(true), eq(true));
@@ -157,7 +158,7 @@ class MappingServiceActivationTest {
 
         assertEquals(MO_ID, persisted.getId(), "line MO id preserved");
         assertEquals(IDENTIFIER, persisted.getIdentifier(), "identifier preserved");
-        assertEquals(2, persisted.getVersionNumber());
+        assertEquals("2.0.0", persisted.getVersion());
         assertEquals("V2 content", persisted.getName(), "content taken from the version snapshot");
         assertEquals("{\"v\":2}", persisted.getSourceTemplate());
         assertEquals("label-2", persisted.getVersionNote());
@@ -166,19 +167,19 @@ class MappingServiceActivationTest {
 
         verify(cacheManager).addMapping(TENANT, persisted);
         verify(statusService).resetFailureCount(TENANT, IDENTIFIER);
-        assertEquals(2, result.getVersionNumber());
+        assertEquals("2.0.0", result.getVersion());
     }
 
     @Test
     void validationFailureLeavesRunningVersionUntouched() throws Exception {
         doReturn(runnable()).when(service).getMapping(TENANT, MO_ID);
-        when(mappingVersionService.getVersion(TENANT, IDENTIFIER, 2)).thenReturn(version(2, "V2", "{\"v\":2}"));
+        when(mappingVersionService.getVersion(TENANT, IDENTIFIER, "2.0.0")).thenReturn(version(2, "V2", "{\"v\":2}"));
         // Persistence rejects the activation (e.g. validation) -> must propagate, cache untouched.
         doThrow(new MappingValidationException(java.util.List.of(
                 dynamic.mapper.model.ValidationError.Source_Template_Must_Be_Valid_JSON)))
                 .when(service).updateMapping(eq(TENANT), any(Mapping.class), anyBoolean(), anyBoolean());
 
-        assertThrows(MappingValidationException.class, () -> service.setActivationMapping(TENANT, MO_ID, true, 2));
+        assertThrows(MappingValidationException.class, () -> service.setActivationMapping(TENANT, MO_ID, true, "2.0.0"));
 
         verify(cacheManager, never()).addMapping(any(), any());
         verify(statusService, never()).resetFailureCount(any(), any());
@@ -203,7 +204,7 @@ class MappingServiceActivationTest {
         service.setActivationMapping(TENANT, MO_ID, true, null);
 
         // No version lookup, and validation is NOT ignored when activating the current version.
-        verify(mappingVersionService, never()).getVersion(any(), any(), anyInt());
+        verify(mappingVersionService, never()).getVersion(any(), any(), any());
         verify(service).updateMapping(eq(TENANT), any(Mapping.class), eq(true), eq(false));
     }
 
@@ -211,9 +212,9 @@ class MappingServiceActivationTest {
     void deactivationIgnoresValidationAndVersion() throws Exception {
         doReturn(runnable()).when(service).getMapping(TENANT, MO_ID);
 
-        service.setActivationMapping(TENANT, MO_ID, false, 2);
+        service.setActivationMapping(TENANT, MO_ID, false, "2.0.0");
 
-        verify(mappingVersionService, never()).getVersion(any(), any(), anyInt());
+        verify(mappingVersionService, never()).getVersion(any(), any(), any());
         ArgumentCaptor<Mapping> captor = ArgumentCaptor.forClass(Mapping.class);
         verify(service).updateMapping(eq(TENANT), captor.capture(), eq(true), eq(true));
         assertFalse(captor.getValue().getActive());
@@ -223,20 +224,20 @@ class MappingServiceActivationTest {
     void activatingSameVersionNumberDoesNotSwap() throws Exception {
         doReturn(runnable()).when(service).getMapping(TENANT, MO_ID); // current versionNumber = 1
 
-        service.setActivationMapping(TENANT, MO_ID, true, 1);
+        service.setActivationMapping(TENANT, MO_ID, true, "1.0.0");
 
-        verify(mappingVersionService, never()).getVersion(any(), any(), anyInt());
+        verify(mappingVersionService, never()).getVersion(any(), any(), any());
     }
 
     @Test
     void concurrentActivationsDoNotInterleaveOrFail() throws Exception {
         doAnswer(inv -> runnable()).when(service).getMapping(TENANT, MO_ID);
-        when(mappingVersionService.getVersion(TENANT, IDENTIFIER, 2)).thenReturn(version(2, "V2", "{\"v\":2}"));
-        when(mappingVersionService.getVersion(TENANT, IDENTIFIER, 3)).thenReturn(version(3, "V3", "{\"v\":3}"));
+        when(mappingVersionService.getVersion(TENANT, IDENTIFIER, "2.0.0")).thenReturn(version(2, "V2", "{\"v\":2}"));
+        when(mappingVersionService.getVersion(TENANT, IDENTIFIER, "3.0.0")).thenReturn(version(3, "V3", "{\"v\":3}"));
 
         CountDownLatch start = new CountDownLatch(1);
-        Runnable activate2 = guarded(start, () -> service.setActivationMapping(TENANT, MO_ID, true, 2));
-        Runnable activate3 = guarded(start, () -> service.setActivationMapping(TENANT, MO_ID, true, 3));
+        Runnable activate2 = guarded(start, () -> service.setActivationMapping(TENANT, MO_ID, true, "2.0.0"));
+        Runnable activate3 = guarded(start, () -> service.setActivationMapping(TENANT, MO_ID, true, "3.0.0"));
 
         Thread t1 = new Thread(activate2);
         Thread t2 = new Thread(activate3);

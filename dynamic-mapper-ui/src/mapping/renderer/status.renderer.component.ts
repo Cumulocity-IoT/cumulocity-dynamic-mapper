@@ -25,9 +25,9 @@ import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
   selector: 'd11r-mapping-renderer-status',
   template: `
       <div class="d-flex a-i-center" style="gap:4px;white-space:nowrap">
-        @if (context.value.versionNumber) {
+        @if (context.value.version) {
           <span class="text-12 label label-default" [attr.data-cy]="'dm-mapping-status-version-' + context.item.id"
-            title="Active version">v{{ context.value.versionNumber }}</span>
+            title="Active version">v{{ context.value.version }}</span>
         }
         @if (context.value.debug) {
           <span class="text-12 label label-success" [attr.data-cy]="'dm-mapping-status-debug-' + context.item.id">debug</span>

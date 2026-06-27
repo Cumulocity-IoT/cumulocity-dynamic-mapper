@@ -61,11 +61,11 @@ export const mappingEditResolver: ResolveFn<MappingEditData> = async (route) => 
   // (preserving its optimistic-concurrency token); otherwise start from the active config.
   const draft = await mappingService.getDraft(mapping.id);
   const editable = draft ?? mapping;
-  // The draft carries the versionNumber that was active when it was last saved, which may
-  // be stale if a different version was activated since then. Always show the runnable
-  // mapping's versionNumber so the editor footer reflects the true current active version.
+  // The draft carries the version that was active when it was last saved, which may be stale
+  // if a different version was activated since then. Always show the runnable mapping's
+  // version so the editor footer reflects the true current active version.
   if (draft) {
-    editable.versionNumber = mapping.versionNumber;
+    editable.version = mapping.version;
   }
 
   // Deprecated SUBSTITUTION_AS_CODE mappings are always read-only (export/delete only).

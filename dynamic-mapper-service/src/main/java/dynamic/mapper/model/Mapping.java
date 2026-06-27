@@ -265,9 +265,9 @@ public class Mapping implements Serializable {
     private long lastUpdate;
 
     @Builder.Default
-    @Schema(description = "Version number of the currently active configuration, unique and monotonically increasing within a mapping line", example = "1")
+    @Schema(description = "Semantic version (MAJOR.MINOR.PATCH) of the currently active configuration, unique within a mapping line", example = "1.0.0")
     @JsonSetter(nulls = Nulls.SKIP)
-    private int versionNumber = 1;
+    private String version = "1.0.0";
 
     @Builder.Default
     @Schema(description = "Whether the mapping line has unpublished draft changes that differ from the active version", example = "false")

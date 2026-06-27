@@ -271,19 +271,30 @@ export class MappingService {
    * Publishes the mapping line's current draft as a new immutable version. Does not
    * activate it.
    */
-  async publishDraft(id: string, note?: string): Promise<MappingVersion> {
-    const query = note ? `?note=${encodeURIComponent(note)}` : '';
+  async publishDraft(id: string, version: string, note?: string): Promise<MappingVersion> {
+    const params = new URLSearchParams({ version });
+    if (note) params.set('note', note);
     const response = await this.client.fetch(
-      `${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${id}/publish${query}`,
+      `${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${id}/publish?${params}`,
       { headers: { 'content-type': 'application/json' }, method: 'POST' }
     );
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
       throw new Error(error.message ?? response.statusText);
     }
-    const version = await response.json();
+    const mv = await response.json();
     this.clearVersionsCache(id);
-    return version;
+    return mv;
+  }
+
+  /** Returns suggested semver bumps (patch / minor / major) based on the highest published version. */
+  async suggestNextVersions(id: string): Promise<{ patch: string; minor: string; major: string }> {
+    const response = await this.client.fetch(
+      `${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${id}/version/suggest`,
+      { headers: { 'content-type': 'application/json' }, method: 'GET' }
+    );
+    if (!response.ok) throw new Error(response.statusText);
+    return response.json();
   }
 
   /** Returns the published version count for every mapping matching the direction in one backend call. */
@@ -322,9 +333,9 @@ export class MappingService {
   }
 
   /** Returns a single published version of a mapping line. */
-  async getVersion(id: string, versionNumber: number): Promise<MappingVersion> {
+  async getVersion(id: string, version: string): Promise<MappingVersion> {
     const response = await this.client.fetch(
-      `${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${id}/version/${versionNumber}`,
+      `${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${id}/version/${encodeURIComponent(version)}`,
       { headers: { 'content-type': 'application/json' }, method: 'GET' }
     );
     if (!response.ok) throw new Error(response.statusText);
@@ -332,21 +343,21 @@ export class MappingService {
   }
 
   /** Updates the change note of a published version (the only mutable field). */
-  async updateVersionNote(id: string, versionNumber: number, note: string): Promise<MappingVersion> {
+  async updateVersionNote(id: string, version: string, note: string): Promise<MappingVersion> {
     const response = await this.client.fetch(
-      `${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${id}/version/${versionNumber}?note=${encodeURIComponent(note ?? '')}`,
+      `${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${id}/version/${encodeURIComponent(version)}?note=${encodeURIComponent(note ?? '')}`,
       { headers: { 'content-type': 'application/json' }, method: 'PATCH' }
     );
     if (!response.ok) throw new Error(response.statusText);
-    const version = await response.json();
+    const mv = await response.json();
     this.clearVersionsCache(id);
-    return version;
+    return mv;
   }
 
   /** Deletes an inactive published version. The active version cannot be deleted. */
-  async deleteVersion(id: string, versionNumber: number): Promise<void> {
+  async deleteVersion(id: string, version: string): Promise<void> {
     const response = await this.client.fetch(
-      `${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${id}/version/${versionNumber}`,
+      `${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${id}/version/${encodeURIComponent(version)}`,
       { headers: { 'content-type': 'application/json' }, method: 'DELETE' }
     );
     if (!response.ok) {
@@ -361,8 +372,8 @@ export class MappingService {
    * backend swaps the version's snapshot into the runnable mapping (single active
    * version, C-1).
    */
-  async activateVersion(id: string, versionNumber: number): Promise<IFetchResponse> {
-    return this.changeActivationMapping({ id, active: true, versionNumber });
+  async activateVersion(id: string, version: string): Promise<IFetchResponse> {
+    return this.changeActivationMapping({ id, active: true, version });
   }
 
   // ===== DEPLOYMENT OPERATIONS =====

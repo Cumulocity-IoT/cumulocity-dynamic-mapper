@@ -141,10 +141,10 @@
   <div class="card-footer separator p-24 flex-no-shrink d-flex a-i-center">
     <!-- left: status text, right-aligned so it sits flush against Cancel -->
     <div class="d-flex a-i-center j-c-end" style="flex:1; gap:4px; padding-right:16px;">
-      @if (mapping.versionNumber || mapping.debug || mapping.draftDirty) {
+      @if (mapping.version || mapping.debug || mapping.draftDirty) {
         <i c8yIcon="info-circle" class="text-muted"></i>
-        @if (mapping.versionNumber) {
-          <span translate class="text-muted">Active </span><span class="text-12 label label-default" title="Active version">v{{ mapping.versionNumber }}</span>
+        @if (mapping.version) {
+          <span translate class="text-muted">Active </span><span class="text-12 label label-default" title="Active version">v{{ mapping.version }}</span>
         }
         @if (mapping.debug) {
           <span class="text-12 label label-success">debug</span>

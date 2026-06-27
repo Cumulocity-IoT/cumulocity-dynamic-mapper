@@ -398,16 +398,10 @@ public class OperationController {
     private ResponseEntity<?> handleActivateMapping(String tenant, Map<String, String> parameters) throws Exception {
         String id = parameters.get("id");
         Boolean activation = Boolean.parseBoolean(parameters.get("active"));
-        String versionParam = parameters.get("versionNumber");
-        Integer versionNumber = null;
-        if (versionParam != null && !versionParam.isBlank()) {
-            try {
-                versionNumber = Integer.valueOf(versionParam.trim());
-            } catch (NumberFormatException ex) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid versionNumber: " + versionParam);
-            }
-        }
-        Mapping updatedMapping = mappingService.setActivationMapping(tenant, id, activation, versionNumber);
+        String versionParam = parameters.getOrDefault("version",
+                parameters.get("versionNumber")); // backward-compat alias
+        String version = (versionParam != null && !versionParam.isBlank()) ? versionParam.trim() : null;
+        Mapping updatedMapping = mappingService.setActivationMapping(tenant, id, activation, version);
         Map<String, AConnectorClient> connectorMap = connectorRegistry
                 .getClientsForTenant(tenant);
         // subscribe/unsubscribe respective mappingTopic of mapping only for

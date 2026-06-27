@@ -177,8 +177,8 @@ export interface Mapping {
   /** Timestamp of last update */
   lastUpdate: number;
 
-  /** Version number of the currently active configuration (monotonic within a line) */
-  versionNumber?: number;
+  /** Semantic version (MAJOR.MINOR.PATCH) of the currently active configuration; null/absent when no version published yet */
+  version?: string;
 
   /** Whether the line has unpublished draft changes that differ from the active version */
   draftDirty?: boolean;
@@ -195,8 +195,8 @@ export interface MappingVersion {
   /** Functional identifier of the owning mapping line */
   identifier: string;
 
-  /** Version number, unique and monotonically increasing within the line */
-  versionNumber: number;
+  /** Semantic version (MAJOR.MINOR.PATCH), unique within the mapping line; null for the draft */
+  version: string | null;
 
   /** Immutable copy of the full mapping configuration for this version */
   snapshot: Mapping;

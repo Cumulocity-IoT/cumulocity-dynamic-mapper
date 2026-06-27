@@ -94,7 +94,7 @@ class MappingServiceVersionTest {
                 .mappingType(MappingType.JSON).transformationType(TransformationType.JSONATA)
                 .active(true).debug(false).qos(Qos.AT_LEAST_ONCE)
                 .sourceTemplate("{}").targetTemplate("{}")
-                .versionNumber(1)
+                .version("1.0.0")
                 .build();
     }
 
@@ -114,20 +114,20 @@ class MappingServiceVersionTest {
     void publishDraftBackfillsThenPublishesThenClearsDraft() {
         Mapping runnable = runnable();
         MappingVersion d = draft("drafted content");
-        MappingVersion published = MappingVersion.builder().identifier(IDENTIFIER).versionNumber(2)
+        MappingVersion published = MappingVersion.builder().identifier(IDENTIFIER).version("2.0.0")
                 .snapshot(d.getSnapshot()).build();
 
         doReturn(runnable).when(service).getMapping(TENANT, MO_ID);
         when(mappingVersionService.getDraft(TENANT, IDENTIFIER)).thenReturn(d);
-        when(mappingVersionService.publish(eq(TENANT), eq(d.getSnapshot()), eq("explicit"), eq(1)))
+        when(mappingVersionService.publish(eq(TENANT), eq(d.getSnapshot()), eq("2.0.0"), eq("explicit"), eq("1.0.0")))
                 .thenReturn(published);
 
-        MappingVersion result = service.publishDraft(TENANT, MO_ID, "explicit");
+        MappingVersion result = service.publishDraft(TENANT, MO_ID, "2.0.0", "explicit");
 
         // Order matters: capture active config first, publish, then drop the draft.
         var inOrder = inOrder(mappingVersionService);
         inOrder.verify(mappingVersionService).ensureBackfilled(TENANT, runnable);
-        inOrder.verify(mappingVersionService).publish(TENANT, d.getSnapshot(), "explicit", 1);
+        inOrder.verify(mappingVersionService).publish(TENANT, d.getSnapshot(), "2.0.0", "explicit", "1.0.0");
         inOrder.verify(mappingVersionService).deleteDraft(TENANT, IDENTIFIER);
         assertSame(published, result);
     }
@@ -138,13 +138,13 @@ class MappingServiceVersionTest {
         MappingVersion d = draft("x");
         doReturn(runnable).when(service).getMapping(TENANT, MO_ID);
         when(mappingVersionService.getDraft(TENANT, IDENTIFIER)).thenReturn(d);
-        when(mappingVersionService.publish(any(), any(), any(), anyInt()))
-                .thenReturn(MappingVersion.builder().versionNumber(2).build());
+        when(mappingVersionService.publish(any(), any(), any(), any(), any()))
+                .thenReturn(MappingVersion.builder().version("2.0.0").build());
 
-        service.publishDraft(TENANT, MO_ID, null);
+        service.publishDraft(TENANT, MO_ID, "2.0.0", null);
 
         // Falls back to the draft snapshot's own note.
-        verify(mappingVersionService).publish(TENANT, d.getSnapshot(), "draft-label", 1);
+        verify(mappingVersionService).publish(TENANT, d.getSnapshot(), "2.0.0", "draft-label", "1.0.0");
     }
 
     @Test
@@ -152,19 +152,19 @@ class MappingServiceVersionTest {
         doReturn(runnable()).when(service).getMapping(TENANT, MO_ID);
         when(mappingVersionService.getDraft(TENANT, IDENTIFIER)).thenReturn(null);
 
-        assertThrows(IllegalStateException.class, () -> service.publishDraft(TENANT, MO_ID, "x"));
+        assertThrows(IllegalStateException.class, () -> service.publishDraft(TENANT, MO_ID, "1.0.0", "x"));
 
-        verify(mappingVersionService, never()).publish(any(), any(), any(), anyInt());
+        verify(mappingVersionService, never()).publish(any(), any(), any(), any(), any());
         verify(mappingVersionService, never()).deleteDraft(any(), any());
     }
 
     @Test
     void deleteVersionPassesActiveVersionNumberForGuard() {
-        doReturn(runnable()).when(service).getMapping(TENANT, MO_ID); // active versionNumber = 1
+        doReturn(runnable()).when(service).getMapping(TENANT, MO_ID); // active version = 1.0.0
 
-        service.deleteVersion(TENANT, MO_ID, 3);
+        service.deleteVersion(TENANT, MO_ID, "3.0.0");
 
-        verify(mappingVersionService).deleteVersion(TENANT, IDENTIFIER, 3, 1);
+        verify(mappingVersionService).deleteVersion(TENANT, IDENTIFIER, "3.0.0", "1.0.0");
     }
 
     @Test
@@ -172,21 +172,21 @@ class MappingServiceVersionTest {
         doReturn(runnable()).when(service).getMapping(TENANT, MO_ID);
 
         service.listVersions(TENANT, MO_ID);
-        service.getVersion(TENANT, MO_ID, 2);
-        service.updateVersionNote(TENANT, MO_ID, 2, "note");
+        service.getVersion(TENANT, MO_ID, "2.0.0");
+        service.updateVersionNote(TENANT, MO_ID, "2.0.0", "note");
 
         verify(mappingVersionService).listVersions(TENANT, IDENTIFIER);
-        verify(mappingVersionService).getVersion(TENANT, IDENTIFIER, 2);
-        verify(mappingVersionService).updateNote(TENANT, IDENTIFIER, 2, "note");
+        verify(mappingVersionService).getVersion(TENANT, IDENTIFIER, "2.0.0");
+        verify(mappingVersionService).updateNote(TENANT, IDENTIFIER, "2.0.0", "note");
     }
 
     @Test
     void operationsOnMissingMappingThrowNotFound() {
         doReturn(null).when(service).getMapping(TENANT, "missing");
 
-        assertThrows(IllegalArgumentException.class, () -> service.publishDraft(TENANT, "missing", null));
+        assertThrows(IllegalArgumentException.class, () -> service.publishDraft(TENANT, "missing", "1.0.0", null));
         assertThrows(IllegalArgumentException.class, () -> service.listVersions(TENANT, "missing"));
-        assertThrows(IllegalArgumentException.class, () -> service.deleteVersion(TENANT, "missing", 1));
+        assertThrows(IllegalArgumentException.class, () -> service.deleteVersion(TENANT, "missing", "1.0.0"));
     }
 
     // ========== getVersionCounts ==========

@@ -719,7 +719,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       identifier: createCustomUuid(),
       id: createCustomUuid(),
       active: true,
-      versionNumber: undefined,
+      version: undefined,
       draftDirty: false,
       versionNote: `Copy from ${mapping.name}`,
     }
